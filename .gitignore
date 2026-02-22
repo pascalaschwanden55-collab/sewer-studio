@@ -22,6 +22,9 @@ Thumbs.db
 desktop.ini
 .DS_Store
 
+# Build artifacts
+artifacts/
+
 # Logs / temp
 *.log
 buildlog.txt
