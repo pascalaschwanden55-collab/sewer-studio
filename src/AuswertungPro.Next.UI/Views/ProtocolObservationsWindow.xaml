@@ -1,0 +1,59 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.ProtocolObservationsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Beobachtungen / Schaeden"
+        Width="980"
+        Height="620"
+        MinWidth="900"
+        MinHeight="600"
+        ResizeMode="CanResizeWithGrip"
+        WindowState="Maximized"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,8">
+            <TextBlock x:Name="HeaderText" FontSize="16" FontWeight="SemiBold"/>
+            <TextBlock x:Name="RevisionText" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/>
+            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                <Button x:Name="StartNachprotokollButton" Content="Nachprotokoll starten" Margin="0,0,8,0"/>
+                <Button x:Name="StartNeuButton" Content="Neu-Protokoll" Margin="0,0,8,0"/>
+                <Button x:Name="RestoreOriginalButton" Content="Original wiederherstellen" Margin="0,0,8,0"/>
+                <Button x:Name="HistoryButton" Content="Historie..." />
+            </StackPanel>
+        </StackPanel>
+
+        <DataGrid x:Name="EntriesGrid"
+                  Grid.Row="1"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  SelectionMode="Single"
+                  IsReadOnly="True"
+                  SelectionChanged="EntriesGrid_SelectionChanged">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Code" Binding="{Binding Code}" Width="120"/>
+                <DataGridTextColumn Header="MeterStart" Binding="{Binding MeterStart, StringFormat=F2}" Width="110"/>
+                <DataGridTextColumn Header="MeterEnd" Binding="{Binding MeterEnd, StringFormat=F2}" Width="110"/>
+                <DataGridCheckBoxColumn Header="Streckenschaden" Binding="{Binding IsStreckenschaden}" Width="140"/>
+                <DataGridTextColumn Header="Beschreibung" Binding="{Binding Beschreibung}" Width="*"/>
+                <DataGridTextColumn Header="Zeit" Binding="{Binding Zeit, StringFormat={}{0:hh\\:mm\\:ss}}" Width="120"/>
+                <DataGridTextColumn Header="MPEG" Binding="{Binding Mpeg}" Width="110"/>
+                <DataGridTextColumn Header="Fotos" Binding="{Binding FotoPaths.Count}" Width="70"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button x:Name="NewButton" Content="Neu" Width="110" Margin="0,0,8,0"/>
+            <Button x:Name="CopyButton" Content="Kopieren" Width="110" Margin="0,0,8,0"/>
+            <Button x:Name="DeleteButton" Content="Loeschen" Width="110" Margin="0,0,8,0"/>
+            <Button x:Name="OverlayButton" Content="Im Video einblenden" Width="160" Margin="0,0,8,0"/>
+            <Button x:Name="TrainButton" Content="Als Training speichern" Width="160" Margin="0,0,8,0"/>
+            <Button x:Name="ExportPdfButton" Content="Haltungsprotokoll PDF" Width="190" Margin="0,0,8,0"/>
+            <Button x:Name="CloseButton" Content="Schliessen" Width="110" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,0 +1,106 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.CombinedOfferWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Kombinierte Offerte" 
+        Height="800" Width="1400" 
+        WindowStartupLocation="CenterOwner">
+    <DockPanel Margin="10">
+        <StackPanel DockPanel.Dock="Top" Orientation="Vertical" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                <Button Command="{Binding SelectMeasuresCommand}" 
+                        CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
+                        Content="Maßnahmen auswählen..." Width="180" Margin="0,0,8,0"/>
+
+                <TextBlock Text="Ausgewählt:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <ItemsControl ItemsSource="{Binding SelectedMeasures}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{StaticResource CardBrush}" Padding="4" Margin="0,0,4,0">
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="DN:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBox Text="{Binding Dn}" Width="80" Margin="0,0,12,0"/>
+
+                <TextBlock Text="Länge (m):" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBox Text="{Binding LengthM, StringFormat=F2}" Width="90" Margin="0,0,12,0"/>
+
+                <TextBlock Text="Anschlüsse (Stk):" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBox Text="{Binding Connections}" Width="70" Margin="0,0,12,0"/>
+
+                <TextBlock Text="Endmanschetten (Stk):" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBox Text="{Binding EndCuffs}" Width="70" Margin="0,0,12,0"/>
+
+                <CheckBox IsChecked="{Binding Waterholding}" 
+                          Content="Wasserhaltung" 
+                          VerticalAlignment="Center" Margin="0,0,12,0"/>
+
+                <TextBlock Text="Rabatt %:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBox Text="{Binding RabattPct}" Width="60" Margin="0,0,12,0"/>
+
+                <TextBlock Text="Skonto %:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBox Text="{Binding SkontoPct}" Width="60" Margin="0,0,12,0"/>
+
+                <Button Command="{Binding CalculateCommand}" 
+                        Content="Berechnen" Width="120" Margin="0,0,6,0"/>
+                <Button Command="{Binding OpenPriceEditorCommand}"
+                        CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
+                        Content="Preise..." Width="120" Margin="0,0,6,0"/>
+                <Button Command="{Binding CopyToClipboardCommand}" 
+                        Content="Offerte kopieren" Width="150"/>
+                <Button Command="{Binding ExportPdfCommand}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
+                    Content="PDF exportieren" Width="150" Margin="6,0,0,0"/>
+                <Button Command="{Binding InstallChromiumCommand}"
+                    CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
+                    Content="Chromium installieren" Width="170" Margin="6,0,0,0"/>
+            </StackPanel>
+        </StackPanel>
+
+        <TextBlock Text="{Binding WarningText}" 
+                   Foreground="{StaticResource NeonPinkBrush}" Margin="0,0,0,6" 
+                   TextWrapping="Wrap"/>
+
+        <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource BorderBrush}" 
+                BorderThickness="1" Padding="10" Margin="0,8,0,0">
+            <StackPanel>
+                <TextBlock Text="{Binding RabattText}"/>
+                <TextBlock Text="{Binding SubTotalNettoText}"/>
+                <TextBlock Text="{Binding SkontoText}"/>
+                <TextBlock Text="{Binding TotalNettoText}"/>
+                <TextBlock Text="{Binding MwstText}"/>
+                <TextBlock Text="{Binding TotalBruttoText}" FontWeight="Bold" FontSize="14"/>
+            </StackPanel>
+        </Border>
+
+        <DataGrid ItemsSource="{Binding Lines}"
+                  AutoGenerateColumns="False" 
+                  CanUserAddRows="False" 
+                  IsReadOnly="True"
+                  HeadersVisibility="Column" 
+                  RowHeaderWidth="0">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Gruppe" Binding="{Binding Group}" Width="150"/>
+                <DataGridTextColumn Header="Position" Binding="{Binding Label}" Width="*"/>
+                <DataGridTextColumn Header="Einheit" Binding="{Binding Unit}" Width="70"/>
+                <DataGridTextColumn Header="Menge" Binding="{Binding Qty, StringFormat=N3}" Width="80"/>
+                <DataGridTextColumn Header="EP" Binding="{Binding UnitPrice, StringFormat=N2}" Width="90"/>
+                <DataGridTextColumn Header="Betrag" Binding="{Binding Amount, StringFormat=N2}" Width="100"/>
+                <DataGridTextColumn Header="Quelle" Binding="{Binding Source}" Width="220"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

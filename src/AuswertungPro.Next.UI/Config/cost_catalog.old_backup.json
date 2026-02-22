@@ -1,0 +1,1546 @@
+﻿{
+    "currency":  "CHF",
+    "vatRate":  0.081,
+    "items":  [
+                  {
+                      "key":  "POS_01_08_0311_101",
+                      "name":  "01.08.0311.101 DN 100 - 300.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  271.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_08_0271_101",
+                      "name":  "01.08.0271.101 DN 100 - 300.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  80.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_08_0821_111",
+                      "name":  "01.08.0821.111 DN 100 - 300.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_08_0612_112",
+                      "name":  "01.08.0612.112 Quick Lock Manschette Liefern und Einbauen DN",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  1025.90,
+                      "active":  true,
+                      "aliases":  [
+                                      "Quick Lock Manschette Liefern und Einbauen DN"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_08_0211_101",
+                      "name":  "01.08.0211.101 DN 100 - 300.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  277.50,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_07_0852_111",
+                      "name":  "01.07.0852.111 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  194.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_08_0251_101",
+                      "name":  "01.08.0251.101 DN 100 - 300.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_08_0222_101",
+                      "name":  "01.08.0222.101 DN 200 - 500.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  316.80,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 200 - 500."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_08_0852_111",
+                      "name":  "01.08.0852.111 DN 100 - 300.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  194.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0612_112",
+                      "name":  "01.02.0612.112 Quick Lock Manschette Liefern und Einbauen DN",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  1179.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "Quick Lock Manschette Liefern und Einbauen DN"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0311_101_DN_100_350",
+                      "name":  "01.02.0311.101 DN 100 - 350.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  271.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 350."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0852_111_DN_100_350",
+                      "name":  "01.02.0852.111 DN 100 - 350.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  194.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 350."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0821_111_DN_100_350",
+                      "name":  "01.02.0821.111 DN 100 - 350.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 350."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0222_101",
+                      "name":  "01.02.0222.101 DN 200 - 500.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  316.80,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 200 - 500."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0211_101_DN_100_350",
+                      "name":  "01.02.0211.101 DN 100 - 350.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  277.50,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 350."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0271_101_DN_100_350",
+                      "name":  "01.02.0271.101 DN 100 - 350.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  80.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 350."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0251_101_DN_100_350",
+                      "name":  "01.02.0251.101 DN 100 - 350.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 350."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_07_0821_111",
+                      "name":  "01.07.0821.111 DN 100 - 200.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0612_110",
+                      "name":  "01.06.0612.110 Kanalisation NW 100 - 150 - Wandstärke: 4.0",
+                      "unit":  "m",
+                      "type":  "Fixed",
+                      "price":  233.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "Kanalisation NW 100 - 150 - Wandstärke: 4.0"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0311_101",
+                      "name":  "01.06.0311.101 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  271.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0619_112",
+                      "name":  "01.06.0619.112 DN 120",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  433.40,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 120"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0614_112",
+                      "name":  "01.06.0614.112 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  181.90,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0251_101",
+                      "name":  "01.06.0251.101 DN 100 - 200.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0221_101",
+                      "name":  "01.06.0221.101 DN 100 - 200.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  224.70,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0272_101",
+                      "name":  "01.06.0272.101 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  61.10,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0271_101",
+                      "name":  "01.06.0271.101 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  80.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0821_111",
+                      "name":  "01.06.0821.111 DN 100 - 200.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_07_0311_101",
+                      "name":  "01.07.0311.101 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  271.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_07_0271_101",
+                      "name":  "01.07.0271.101 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  80.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_07_0619_112",
+                      "name":  "01.07.0619.112 DN 150",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  366.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 150"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_07_0612_110",
+                      "name":  "01.07.0612.110 Kanalisation NW 100 - 150 - Wandstärke: 4.0",
+                      "unit":  "m",
+                      "type":  "Fixed",
+                      "price":  233.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "Kanalisation NW 100 - 150 - Wandstärke: 4.0"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_07_0211_101",
+                      "name":  "01.07.0211.101 DN 100 - 300.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  277.50,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0852_111",
+                      "name":  "01.06.0852.111 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  194.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_07_0251_101",
+                      "name":  "01.07.0251.101 DN 100 - 200.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_07_0221_101",
+                      "name":  "01.07.0221.101 DN 100 - 200.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  224.70,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0521_101",
+                      "name":  "01.05.0521.101 Bis DN 200 - Haltung 526-524",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  982.90,
+                      "active":  true,
+                      "aliases":  [
+                                      "Bis DN 200 - Haltung 526-524"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0400_010",
+                      "name":  "01.04.0400.010 Wasserhaltung bis 15 l/s",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  104.10,
+                      "active":  true,
+                      "aliases":  [
+                                      "Wasserhaltung bis 15 l/s"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0616_110",
+                      "name":  "01.06.0616.110 Seitlicher Anschluss DN 100 - 200 System: IMS-Roboter",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  210.40,
+                      "active":  true,
+                      "aliases":  [
+                                      "Seitlicher Anschluss DN 100 - 200 System: IMS-Roboter"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0522_104",
+                      "name":  "01.05.0522.104 DN 350",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  659.40,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 350"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0311_111",
+                      "name":  "01.03.0311.111 DN 150",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  250.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 150"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0221_102",
+                      "name":  "01.02.0221.102 DN 150 - 350",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  245.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 150 - 350"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0351_204",
+                      "name":  "01.03.0351.204 DN 150",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  95.80,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 150"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0351_101",
+                      "name":  "01.03.0351.101 DN 150 - 350",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  132.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 150 - 350"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0621_121",
+                      "name":  "01.06.0621.121 DN 150 mit Mörtel",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  88.80,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 150 mit Mörtel"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0821_112",
+                      "name":  "01.05.0821.112 NW 201 bis 400 mm",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  268.70,
+                      "active":  true,
+                      "aliases":  [
+                                      "NW 201 bis 400 mm"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0271_102",
+                      "name":  "01.02.0271.102 Kanalisation NW 201 bis 400 mm",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  248.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "Kanalisation NW 201 bis 400 mm"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0852_124",
+                      "name":  "01.05.0852.124 Gesamte Dokumentation",
+                      "unit":  "pau",
+                      "type":  "Fixed",
+                      "price":  379.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "Gesamte Dokumentation"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0852_123",
+                      "name":  "01.05.0852.123 NW 400 bis 600 mm",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  279.80,
+                      "active":  true,
+                      "aliases":  [
+                                      "NW 400 bis 600 mm"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_08_0821_415",
+                      "name":  "01.08.0821.415 Zusammenfassende Untersuchungsberichte auf",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  450.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "Zusammenfassende Untersuchungsberichte auf"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0621_122",
+                      "name":  "01.06.0621.122 Liner-Endmanschette DN 300",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  494.50,
+                      "active":  true,
+                      "aliases":  [
+                                      "Liner-Endmanschette DN 300"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0251_102",
+                      "name":  "01.02.0251.102 Kanalisation NW 201 bis 400 mm mit Beimann",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  268.70,
+                      "active":  true,
+                      "aliases":  [
+                                      "Kanalisation NW 201 bis 400 mm mit Beimann"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_08_0852_007",
+                      "name":  "01.08.0852.007 DN 150 - 300",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  265.60,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 150 - 300"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0211_112",
+                      "name":  "01.02.0211.112 DN 150 - 350",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  245.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 150 - 350"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0821_111_DN_100_200",
+                      "name":  "01.05.0821.111 DN 100 - 200.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0619_112_DN_200",
+                      "name":  "01.05.0619.112 DN 200",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  380.40,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 200"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0251_101_DN_100_300",
+                      "name":  "01.06.0251.101 DN 100 - 300.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0222_101",
+                      "name":  "01.06.0222.101 DN 200 - 500.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  316.80,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 200 - 500."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0251_101_DN_100_200",
+                      "name":  "01.05.0251.101 DN 100 - 200.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0521_130",
+                      "name":  "01.04.0521.130 Partliner vorgetränkt auf Schadstelle setzen und",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  1096.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "Partliner vorgetränkt auf Schadstelle setzen und"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0612_111",
+                      "name":  "01.05.0612.111 Kanalisation NW 150 - 200 - Wandstärke: 4.0",
+                      "unit":  "m",
+                      "type":  "Fixed",
+                      "price":  261.90,
+                      "active":  true,
+                      "aliases":  [
+                                      "Kanalisation NW 150 - 200 - Wandstärke: 4.0"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0311_101_DN_100_200",
+                      "name":  "01.05.0311.101 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  271.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0271_101_DN_100_300",
+                      "name":  "01.06.0271.101 DN 100 - 300.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  80.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_01_0112_001",
+                      "name":  "01.01.0112.001 Einrichtung nach Vorschlag Unternehmer.",
+                      "unit":  "gl",
+                      "type":  "Fixed",
+                      "price":  282.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "Einrichtung nach Vorschlag Unternehmer."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_01_0111_001",
+                      "name":  "01.01.0111.001 Einrichtung nach Vorschlag Unternehmer.",
+                      "unit":  "gl",
+                      "type":  "Fixed",
+                      "price":  286.50,
+                      "active":  true,
+                      "aliases":  [
+                                      "Einrichtung nach Vorschlag Unternehmer."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_01_0140_001",
+                      "name":  "01.01.0140.001 Einrichtung nach Vorschlag Unternehmer.",
+                      "unit":  "gl",
+                      "type":  "Fixed",
+                      "price":  413.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "Einrichtung nach Vorschlag Unternehmer."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_01_0121_001",
+                      "name":  "01.01.0121.001 Einrichtung nach Vorschlag Unternehmer (kombiniert",
+                      "unit":  "gl",
+                      "type":  "Fixed",
+                      "price":  860.60,
+                      "active":  true,
+                      "aliases":  [
+                                      "Einrichtung nach Vorschlag Unternehmer (kombiniert"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0612_112",
+                      "name":  "01.06.0612.112 Quick Lock Manschette Liefern und Einbauen DN",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  1025.90,
+                      "active":  true,
+                      "aliases":  [
+                                      "Quick Lock Manschette Liefern und Einbauen DN"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0311_101_DN_100_300",
+                      "name":  "01.06.0311.101 DN 100 - 300.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  271.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0852_111_DN_100_300",
+                      "name":  "01.06.0852.111 DN 100 - 300.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  194.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0821_111_DN_100_300",
+                      "name":  "01.06.0821.111 DN 100 - 300.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0821_111",
+                      "name":  "01.05.0821.111 DN 100 - 300.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0221_101",
+                      "name":  "01.05.0221.101 DN 100 - 200.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  224.70,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_01_0161_102",
+                      "name":  "01.01.0161.102 Installation Reiniger",
+                      "unit":  "p",
+                      "type":  "Fixed",
+                      "price":  230.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "Installation Reiniger"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_01_0161_101",
+                      "name":  "01.01.0161.101 Installation ganze Baustelle",
+                      "unit":  "p",
+                      "type":  "Fixed",
+                      "price":  1080.90,
+                      "active":  true,
+                      "aliases":  [
+                                      "Installation ganze Baustelle"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0852_111",
+                      "name":  "01.04.0852.111 DN 100 - 300.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  194.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0821_111",
+                      "name":  "01.04.0821.111 DN 100 - 300.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0211_111",
+                      "name":  "01.05.0211.111 Zuschlag Einsatz Rotierdüse",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  39.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "Zuschlag Einsatz Rotierdüse"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0211_101",
+                      "name":  "01.05.0211.101 DN 100 - 300.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  277.50,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_01_0161_103",
+                      "name":  "01.01.0161.103 Installation KA-TE Roboter-Anlage",
+                      "unit":  "p",
+                      "type":  "Fixed",
+                      "price":  976.80,
+                      "active":  true,
+                      "aliases":  [
+                                      "Installation KA-TE Roboter-Anlage"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0272_101",
+                      "name":  "01.02.0272.101 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  61.10,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0271_101",
+                      "name":  "01.02.0271.101 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  80.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0612_110",
+                      "name":  "01.02.0612.110 Kanalisation NW 100 - 150 - Wandstärke: 4.0",
+                      "unit":  "m",
+                      "type":  "Fixed",
+                      "price":  233.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "Kanalisation NW 100 - 150 - Wandstärke: 4.0"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0311_101",
+                      "name":  "01.02.0311.101 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  271.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0211_101",
+                      "name":  "01.02.0211.101 DN 100 - 300.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  277.50,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_01_0852_200",
+                      "name":  "01.01.0852.200 Gesamte Dokumentation in Papier und USB-Stick",
+                      "unit":  "p",
+                      "type":  "Fixed",
+                      "price":  191.90,
+                      "active":  true,
+                      "aliases":  [
+                                      "Gesamte Dokumentation in Papier und USB-Stick"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0251_101",
+                      "name":  "01.02.0251.101 DN 100 - 200.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0221_101",
+                      "name":  "01.02.0221.101 DN 100 - 200.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  224.70,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0522_108",
+                      "name":  "01.04.0522.108 Quick Lock Manschetten Mini mit EPDM-Dichtung",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  942.70,
+                      "active":  true,
+                      "aliases":  [
+                                      "Quick Lock Manschetten Mini mit EPDM-Dichtung"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0222_101",
+                      "name":  "01.03.0222.101 DN 200 - 500. ( Dichtung mit KA-TE Roboter abfräsen -",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  316.80,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 200 - 500. ( Dichtung mit KA-TE Roboter abfräsen -"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0211_101",
+                      "name":  "01.03.0211.101 DN 100 - 300. ( Seil einziehen für Quick-Lock Packer )",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  277.50,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300. ( Seil einziehen für Quick-Lock Packer )"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0271_101",
+                      "name":  "01.03.0271.101 DN 100 - 300.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  80.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0251_101",
+                      "name":  "01.03.0251.101 DN 100 - 300.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0161_102",
+                      "name":  "01.02.0161.102 Installation Reiniger",
+                      "unit":  "p",
+                      "type":  "Fixed",
+                      "price":  230.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "Installation Reiniger"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0161_101",
+                      "name":  "01.02.0161.101 Installation ganze Baustelle",
+                      "unit":  "p",
+                      "type":  "Fixed",
+                      "price":  867.80,
+                      "active":  true,
+                      "aliases":  [
+                                      "Installation ganze Baustelle"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0852_200",
+                      "name":  "01.02.0852.200 Gesamte Dokumentation in Papier und USB-Stick",
+                      "unit":  "p",
+                      "type":  "Fixed",
+                      "price":  191.90,
+                      "active":  true,
+                      "aliases":  [
+                                      "Gesamte Dokumentation in Papier und USB-Stick"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0161_103",
+                      "name":  "01.02.0161.103 Installation KA-TE Roboter-Anlage",
+                      "unit":  "p",
+                      "type":  "Fixed",
+                      "price":  976.80,
+                      "active":  true,
+                      "aliases":  [
+                                      "Installation KA-TE Roboter-Anlage"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0311_101",
+                      "name":  "01.03.0311.101 DN 100 - 300.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  271.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0251_101",
+                      "name":  "01.04.0251.101 DN 100 - 300.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0221_101",
+                      "name":  "01.04.0221.101 DN 100 - 200.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  224.70,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0311_101",
+                      "name":  "01.04.0311.101 DN 100 - 300.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  271.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0271_101",
+                      "name":  "01.04.0271.101 DN 100 - 300.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  80.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0821_111",
+                      "name":  "01.03.0821.111 DN 100 - 300.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0522_110",
+                      "name":  "01.03.0522.110 Quick Lock Manschetten mit EPDM-Dichtung liefern",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  1059.10,
+                      "active":  true,
+                      "aliases":  [
+                                      "Quick Lock Manschetten mit EPDM-Dichtung liefern"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0211_101",
+                      "name":  "01.04.0211.101 DN 100 - 300.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  277.50,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0852_111",
+                      "name":  "01.03.0852.111 DN 100 - 300.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  194.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0619_112",
+                      "name":  "01.04.0619.112 DN 250",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  446.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 250"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0614_113",
+                      "name":  "01.04.0614.113 Einläufe Einbinden in Liner Mittels KA-TE Roboter",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  667.60,
+                      "active":  true,
+                      "aliases":  [
+                                      "Einläufe Einbinden in Liner Mittels KA-TE Roboter"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0852_111_DN_100_200",
+                      "name":  "01.04.0852.111 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  194.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0821_111_DN_100_250",
+                      "name":  "01.04.0821.111 DN 100 - 250.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 250."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0311_101_DN_100_250",
+                      "name":  "01.04.0311.101 DN 100 - 250.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  271.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 250."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0272_101",
+                      "name":  "01.04.0272.101 DN 100 - 250.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  61.10,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 250."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0614_112",
+                      "name":  "01.04.0614.112 DN 250.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  195.80,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 250."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0612_112",
+                      "name":  "01.04.0612.112 Kanalisation NW 200 - 250 - Wandstärke: 4.0",
+                      "unit":  "m",
+                      "type":  "Fixed",
+                      "price":  248.70,
+                      "active":  true,
+                      "aliases":  [
+                                      "Kanalisation NW 200 - 250 - Wandstärke: 4.0"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0222_101",
+                      "name":  "01.05.0222.101 DN 200 - 500.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  316.80,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 200 - 500."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0821_111_DN_100_250",
+                      "name":  "01.05.0821.111 DN 100 - 250.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 250."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0619_112",
+                      "name":  "01.05.0619.112 DN 250",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  446.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 250"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_06_0211_101",
+                      "name":  "01.06.0211.101 DN 100 - 300.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  277.50,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0852_111",
+                      "name":  "01.05.0852.111 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  194.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0271_101",
+                      "name":  "01.05.0271.101 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  80.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0251_101",
+                      "name":  "01.05.0251.101 DN 100 - 250.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 250."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0612_112",
+                      "name":  "01.05.0612.112 Kanalisation NW 200 - 250 - Wandstärke: 4.0",
+                      "unit":  "m",
+                      "type":  "Fixed",
+                      "price":  248.70,
+                      "active":  true,
+                      "aliases":  [
+                                      "Kanalisation NW 200 - 250 - Wandstärke: 4.0"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_05_0311_101",
+                      "name":  "01.05.0311.101 DN 100 - 250.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  271.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 250."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0271_101_DN_100_200",
+                      "name":  "01.04.0271.101 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  80.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0221_101",
+                      "name":  "01.03.0221.101 DN 100 - 200.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  224.70,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0211_101_DN_100_300",
+                      "name":  "01.03.0211.101 DN 100 - 300.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  277.50,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 300."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0271_101_DN_100_200",
+                      "name":  "01.03.0271.101 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  80.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0251_101_DN_100_200",
+                      "name":  "01.03.0251.101 DN 100 - 200.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0619_112",
+                      "name":  "01.02.0619.112 DN 150",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  366.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 150"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0614_112",
+                      "name":  "01.02.0614.112 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  181.90,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0852_111",
+                      "name":  "01.02.0852.111 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  194.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_02_0821_111",
+                      "name":  "01.02.0821.111 DN 100 - 200.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0272_101",
+                      "name":  "01.03.0272.101 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  61.10,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0852_111_DN_100_200",
+                      "name":  "01.03.0852.111 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  194.30,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0821_111_DN_100_200",
+                      "name":  "01.03.0821.111 DN 100 - 200.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0251_101_DN_100_250",
+                      "name":  "01.04.0251.101 DN 100 - 250.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  207.00,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 250."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_04_0222_101",
+                      "name":  "01.04.0222.101 DN 200 - 500.",
+                      "unit":  "h",
+                      "type":  "Fixed",
+                      "price":  316.80,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 200 - 500."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0612_110",
+                      "name":  "01.03.0612.110 Kanalisation NW 100 - 150 - Wandstärke: 4.0",
+                      "unit":  "m",
+                      "type":  "Fixed",
+                      "price":  233.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "Kanalisation NW 100 - 150 - Wandstärke: 4.0"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0311_101_DN_100_200",
+                      "name":  "01.03.0311.101 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  271.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0619_112",
+                      "name":  "01.03.0619.112 DN 150",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  366.20,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 150"
+                                  ]
+                  },
+                  {
+                      "key":  "POS_01_03_0614_112",
+                      "name":  "01.03.0614.112 DN 100 - 200.",
+                      "unit":  "St",
+                      "type":  "Fixed",
+                      "price":  181.90,
+                      "active":  true,
+                      "aliases":  [
+                                      "DN 100 - 200."
+                                  ]
+                  }
+              ]
+}

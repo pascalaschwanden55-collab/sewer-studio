@@ -1,0 +1,103 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.SettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  CanContentScroll="True"
+                  Padding="0,0,8,0">
+        <StackPanel>
+            <TextBlock Text="Einstellungen" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+
+        <CheckBox Content="Diagnose aktiv (Fehlercodes anzeigen)" IsChecked="{Binding EnableDiagnostics}"/>
+
+        <TextBlock Text="pdftotext.exe Pfad" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <DockPanel>
+            <TextBox Text="{Binding PdfToTextPath}" MinWidth="400" />
+            <Button Content="..." Command="{Binding BrowsePdfToTextCommand}" Margin="8,0,0,0" Width="44"/>
+        </DockPanel>
+
+        <TextBlock Text="Projektpfad (*.json)" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <DockPanel>
+            <TextBox Text="{Binding ProjectPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="400" />
+            <Button Content="..." Command="{Binding BrowseProjectPathCommand}" Margin="8,0,0,0" Width="44"/>
+        </DockPanel>
+
+        <TextBlock Text="Video-Ordner (Haltungen)" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <DockPanel>
+            <TextBox Text="{Binding VideoFolder}" MinWidth="400" />
+            <Button Content="..." Command="{Binding BrowseVideoFolderCommand}" Margin="8,0,0,0" Width="44"/>
+        </DockPanel>
+
+        <TextBlock Text="Automatisches Speichern" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <ComboBox ItemsSource="{Binding AutoSaveModeOptions}"
+                  SelectedValuePath="Value"
+                  DisplayMemberPath="Label"
+                  SelectedValue="{Binding DataAutoSaveMode, Mode=TwoWay}"
+                  MinWidth="260"/>
+
+        <TextBlock Text="Sicherheit" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <StackPanel>
+            <CheckBox Content="Wiederherstellungspunkte vor dem Speichern erstellen" IsChecked="{Binding EnableRestorePoints}"/>
+            <DockPanel Margin="0,6,0,0">
+                <TextBox Text="{Binding RestorePointsFolderPath}" MinWidth="400" IsReadOnly="True" />
+                <Button Content="Wiederherstellung oeffnen" Command="{Binding OpenRestorePointsFolderCommand}" Margin="8,0,0,0" Width="180"/>
+            </DockPanel>
+        </StackPanel>
+
+        <TextBlock Text="Video-Player" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <StackPanel>
+            <CheckBox Content="Hardware-Decoding aktiv" IsChecked="{Binding VideoHwDecoding}"/>
+            <CheckBox Content="Drop late frames" IsChecked="{Binding VideoDropLateFrames}" Margin="0,4,0,0"/>
+            <CheckBox Content="Skip frames" IsChecked="{Binding VideoSkipFrames}" Margin="0,4,0,0"/>
+
+            <WrapPanel Margin="0,8,0,0">
+                <TextBlock Text="Video Output:" VerticalAlignment="Center" Width="120"/>
+                <ComboBox Width="220"
+                          ItemsSource="{Binding VideoOutputOptions}"
+                          SelectedValuePath="Value"
+                          DisplayMemberPath="Label"
+                          SelectedValue="{Binding VideoOutput, Mode=TwoWay}"/>
+            </WrapPanel>
+
+            <WrapPanel Margin="0,8,0,0">
+                <TextBlock Text="File Caching:" VerticalAlignment="Center" Width="120"/>
+                <ComboBox Width="140"
+                          ItemsSource="{Binding VideoCacheOptions}"
+                          SelectedValuePath="Value"
+                          DisplayMemberPath="Label"
+                          SelectedValue="{Binding VideoFileCachingMs, Mode=TwoWay}"/>
+
+                <TextBlock Text="Network Caching:" VerticalAlignment="Center" Width="130" Margin="16,0,0,0"/>
+                <ComboBox Width="140"
+                          ItemsSource="{Binding VideoCacheOptions}"
+                          SelectedValuePath="Value"
+                          DisplayMemberPath="Label"
+                          SelectedValue="{Binding VideoNetworkCachingMs, Mode=TwoWay}"/>
+            </WrapPanel>
+
+            <WrapPanel Margin="0,8,0,0">
+                <TextBlock Text="Codec Threads:" VerticalAlignment="Center" Width="120"/>
+                <ComboBox Width="140"
+                          ItemsSource="{Binding VideoCodecThreadOptions}"
+                          SelectedValuePath="Value"
+                          DisplayMemberPath="Label"
+                          SelectedValue="{Binding VideoCodecThreads, Mode=TwoWay}"/>
+            </WrapPanel>
+        </StackPanel>
+
+        <TextBlock Text="Datenordner (Settings/Logs)" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <DockPanel>
+            <TextBox Text="{Binding DataFolderPath}" MinWidth="400" IsReadOnly="True" />
+            <Button Content="Ordner oeffnen" Command="{Binding OpenDataFolderCommand}" Margin="8,0,0,0" Width="120"/>
+        </DockPanel>
+
+        <TextBlock Text="Logs" Margin="0,10,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <DockPanel>
+            <TextBox Text="{Binding LogsFolderPath}" MinWidth="400" IsReadOnly="True" />
+            <Button Content="Logs oeffnen" Command="{Binding OpenLogsFolderCommand}" Margin="8,0,0,0" Width="120"/>
+        </DockPanel>
+
+            <Button Content="Speichern" Command="{Binding SaveCommand}" Margin="0,18,0,0" Width="160"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

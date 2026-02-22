@@ -1,0 +1,129 @@
+﻿{
+  "version": 1,
+  "measures": [
+    {
+      "id": "SCHLAUCHLINER_NADELFILZ",
+      "name": "Schlauchliner (Nadelfilz)",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "INSTALL_UV_ANLAGE", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_FRAESEN", "enabled": true, "defaultQty": 3 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_EINMESSUNG", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_REINIGUNG", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_ANSCHLUSS_EINMESSEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_WASSERHALTUNG", "enabled": false, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "SCHLAUCHLINER_NADELFILZ", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DICHTHEITSPRUEFUNG", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_TV_ABNAHME", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "SCHLAUCHLINER_NADELFILZ_OPENEND",
+      "name": "Schlauchliner (Nadelfilz) Open-End",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "INSTALL_UV_ANLAGE", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_FRAESEN", "enabled": true, "defaultQty": 3 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_EINMESSUNG", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_REINIGUNG", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_ANSCHLUSS_EINMESSEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_WASSERHALTUNG", "enabled": false, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "SCHLAUCHLINER_NADELFILZ_OPENEND", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DICHTHEITSPRUEFUNG", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_TV_ABNAHME", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "SCHLAUCHLINER_GFK",
+      "name": "Schlauchliner (GFK)",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "INSTALL_UV_ANLAGE", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_FRAESEN", "enabled": true, "defaultQty": 3 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_EINMESSUNG", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_REINIGUNG", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_ANSCHLUSS_EINMESSEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_WASSERHALTUNG", "enabled": false, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "SCHLAUCHLINER_GFK", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DICHTHEITSPRUEFUNG", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_TV_ABNAHME", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "LINERENDMANSCHETTE_LEM",
+      "name": "Linerendmanschette (LEM)",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "INSTALL_ROBOTER", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_REINIGUNG", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "LINERENDMANSCHETTE_LEM", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_TV_ABNAHME", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "KURZLINER_PARTLINER",
+      "name": "Kurzliner (Pointliner, Partliner)",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "INSTALL_ROBOTER", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_REINIGUNG", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "KURZLINER_PARTLINER", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_TV_ABNAHME", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "KANALROBOTER",
+      "name": "Kanalroboter",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "INSTALL_ROBOTER", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_REINIGUNG", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "HAUPTARBEIT_HINDERNISSE_ROBOTER", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_TV_ABNAHME", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "MANSCHETTE_EDELSTAHL",
+      "name": "Manschette (Edelstahl)",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "INSTALL_ROBOTER", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_REINIGUNG", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "MANSCHETTE_EDELSTAHL", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_TV_ABNAHME", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "ANSCHLUSS_AUFFRAESEN",
+      "name": "Anschluss auffräsen",
+      "disabled": false,
+      "lines": [
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "ANSCHLUSS_AUFFRAESEN", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "ANSCHLUSS_EINBINDEN",
+      "name": "Anschlusseinbinden (verpressen)",
+      "disabled": false,
+      "lines": [
+        { "group": "Vorarbeiten", "itemKey": "VORARBEIT_TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "ANSCHLUSS_EINBINDEN", "enabled": true, "defaultQty": 1 }
+      ]
+    }
+  ]
+}

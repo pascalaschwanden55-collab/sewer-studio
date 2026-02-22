@@ -1,0 +1,37 @@
+<Window x:Class="AuswertungPro.Next.UI.Dialogs.OptionsEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Listen bearbeiten" Height="350" Width="400" WindowStartupLocation="CenterOwner">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,8">
+            <TextBox Width="200"
+                     IsEnabled="{Binding IsEditingEnabled}"
+                     Text="{Binding NewItemText, UpdateSourceTrigger=PropertyChanged}"/>
+            <Button Content="+ Hinzufuegen"
+                    IsEnabled="{Binding IsEditingEnabled}"
+                    Command="{Binding AddCommand}"
+                    Margin="8,0,0,0"/>
+        </StackPanel>
+        <ListBox Grid.Row="1" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}"/>
+        <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Right" Margin="0,8,0,0">
+            <Button Content="- Entfernen"
+                    IsEnabled="{Binding IsEditingEnabled}"
+                    Command="{Binding RemoveCommand}" Margin="0,0,8,0"/>
+            <Button Content="Nach oben"
+                    IsEnabled="{Binding IsEditingEnabled}"
+                    Command="{Binding MoveUpCommand}" Margin="0,0,8,0"/>
+            <Button Content="Nach unten"
+                    IsEnabled="{Binding IsEditingEnabled}"
+                    Command="{Binding MoveDownCommand}" Margin="0,0,8,0"/>
+            <Button Content="Speichern"
+                    IsEnabled="{Binding IsEditingEnabled}"
+                    Command="{Binding SaveCommand}" Margin="0,0,8,0" IsDefault="True"/>
+            <Button Content="Abbrechen" Command="{Binding CancelCommand}" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

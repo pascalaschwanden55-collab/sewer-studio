@@ -1,0 +1,153 @@
+﻿{
+  "version": 1,
+  "measures": [
+    {
+      "id": "SCHLAUCHLINER_DN100_200",
+      "name": "Schlauchliner (Nadelfilz) DN 100-200",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "POS_01_01_0161_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "POS_01_01_0161_102", "enabled": true, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "POS_01_01_0161_103", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0211_101", "enabled": true, "defaultQty": 1.5 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0221_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0311_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0271_101", "enabled": true, "defaultQty": 2 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0272_101", "enabled": false, "defaultQty": 1 },
+        { "group": "Wasserhaltung", "itemKey": "POS_01_04_0400_010", "enabled": false, "defaultQty": 2 },
+        { "group": "Liner", "itemKey": "POS_01_06_0612_110", "enabled": true, "defaultQty": 10 },
+        { "group": "Liner", "itemKey": "POS_01_06_0619_112", "enabled": true, "defaultQty": 2 },
+        { "group": "Liner", "itemKey": "POS_01_06_0614_112", "enabled": true, "defaultQty": 2 },
+        { "group": "Liner", "itemKey": "POS_01_06_0621_121", "enabled": true, "defaultQty": 2 },
+        { "group": "Anschluesse", "itemKey": "POS_01_06_0616_110", "enabled": false, "defaultQty": 1 },
+        { "group": "Qualitaet", "itemKey": "POS_01_06_0821_111", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaet", "itemKey": "POS_01_06_0852_111", "enabled": true, "defaultQty": 2 },
+        { "group": "Qualitaet", "itemKey": "POS_01_01_0852_200", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "SCHLAUCHLINER_DN200_300",
+      "name": "Schlauchliner (GFK) DN 200-300",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "POS_01_01_0161_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "POS_01_01_0161_102", "enabled": true, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "POS_01_01_0161_103", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_08_0211_101", "enabled": true, "defaultQty": 2 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_08_0222_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_08_0311_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_08_0271_101", "enabled": true, "defaultQty": 2 },
+        { "group": "Wasserhaltung", "itemKey": "POS_01_04_0400_010", "enabled": false, "defaultQty": 2 },
+        { "group": "Liner", "itemKey": "POS_01_05_0612_112", "enabled": true, "defaultQty": 15 },
+        { "group": "Liner", "itemKey": "POS_01_06_0621_122", "enabled": true, "defaultQty": 2 },
+        { "group": "Liner", "itemKey": "POS_01_04_0614_112", "enabled": true, "defaultQty": 2 },
+        { "group": "Qualitaet", "itemKey": "POS_01_08_0821_111", "enabled": true, "defaultQty": 1.5 },
+        { "group": "Qualitaet", "itemKey": "POS_01_08_0852_111", "enabled": true, "defaultQty": 2 },
+        { "group": "Qualitaet", "itemKey": "POS_01_01_0852_200", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "KURZLINER_PARTLINER",
+      "name": "Kurzliner / Partliner",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "POS_01_01_0161_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "POS_01_01_0161_102", "enabled": true, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "POS_01_01_0161_103", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0211_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0251_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0311_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0271_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Reparatur", "itemKey": "POS_01_04_0521_130", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaet", "itemKey": "POS_01_06_0821_111", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaet", "itemKey": "POS_01_06_0852_111", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaet", "itemKey": "POS_01_01_0852_200", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "MANSCHETTE_QUICKLOCK",
+      "name": "Manschette (Quick Lock)",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "POS_01_01_0161_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "POS_01_01_0161_102", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0211_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0251_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_03_0211_101", "enabled": true, "defaultQty": 0.5 },
+        { "group": "Reparatur", "itemKey": "POS_01_06_0612_112", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaet", "itemKey": "POS_01_06_0821_111", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaet", "itemKey": "POS_01_06_0852_111", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaet", "itemKey": "POS_01_01_0852_200", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "MANSCHETTE_EPDM",
+      "name": "Manschette (Quick Lock EPDM)",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "POS_01_01_0161_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "POS_01_01_0161_102", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0211_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0251_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_03_0211_101", "enabled": true, "defaultQty": 0.5 },
+        { "group": "Reparatur", "itemKey": "POS_01_03_0522_110", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaet", "itemKey": "POS_01_06_0821_111", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaet", "itemKey": "POS_01_06_0852_111", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaet", "itemKey": "POS_01_01_0852_200", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "POINTLINER",
+      "name": "Pointliner",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "POS_01_01_0161_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "POS_01_01_0161_103", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0211_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0251_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0311_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Reparatur", "itemKey": "POS_01_04_0521_130", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaet", "itemKey": "POS_01_06_0821_111", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaet", "itemKey": "POS_01_01_0852_200", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "ANSCHLUSS_VERPRESSEN",
+      "name": "Anschluss verpressen",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "POS_01_01_0161_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "POS_01_01_0161_103", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0211_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0251_101", "enabled": true, "defaultQty": 1 },
+        { "group": "Anschluesse", "itemKey": "POS_01_06_0616_110", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaet", "itemKey": "POS_01_06_0821_111", "enabled": true, "defaultQty": 1 },
+        { "group": "Qualitaet", "itemKey": "POS_01_01_0852_200", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "REINIGUNG_TV",
+      "name": "Reinigung + TV-Inspektion",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "POS_01_01_0161_102", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0211_101", "enabled": true, "defaultQty": 1.5 },
+        { "group": "Qualitaet", "itemKey": "POS_01_06_0821_111", "enabled": true, "defaultQty": 1.5 },
+        { "group": "Qualitaet", "itemKey": "POS_01_06_0271_101", "enabled": true, "defaultQty": 2 },
+        { "group": "Qualitaet", "itemKey": "POS_01_01_0852_200", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "ERNEUERUNG_NEUBAU",
+      "name": "Erneuerung / Neubau",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "POS_01_01_0121_001", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "POS_01_06_0211_101", "enabled": true, "defaultQty": 2 },
+        { "group": "Qualitaet", "itemKey": "POS_01_06_0821_111", "enabled": true, "defaultQty": 1.5 },
+        { "group": "Qualitaet", "itemKey": "POS_01_06_0852_111", "enabled": true, "defaultQty": 2 },
+        { "group": "Qualitaet", "itemKey": "POS_01_01_0852_200", "enabled": true, "defaultQty": 1 }
+      ]
+    }
+  ]
+}

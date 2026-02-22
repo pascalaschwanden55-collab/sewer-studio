@@ -1,0 +1,255 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.SanierungOptimizationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{Binding HaltungName, StringFormat='KI Sanierungsoptimierung — {0}'}"
+        Width="700" Height="640"
+        MinWidth="520" MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResizeWithGrip">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- BLOCK A: Regelbasierte Empfehlung -->
+        <Border Grid.Row="0" Margin="0,0,0,10"
+                Padding="12,10"
+                BorderThickness="1"
+                BorderBrush="{StaticResource BorderBrush}"
+                Background="{StaticResource CardBrush}"
+                CornerRadius="4">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="REGELBASIERTE EMPFEHLUNG"
+                           FontSize="11" FontWeight="Bold"
+                           Foreground="{StaticResource NeonCyanBrush}"
+                           Margin="0,0,0,8"/>
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Massnahmen:"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,10,4"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding RuleMeasures}"
+                               Foreground="{StaticResource TextBrush}"
+                               TextWrapping="Wrap" Margin="0,0,0,4"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Geschätzte Kosten:"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,10,0"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding RuleEstimatedCost}"
+                               Foreground="{StaticResource TextBrush}"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- BLOCK B: KI-Optimierung -->
+        <Border Grid.Row="1" Margin="0,0,0,10"
+                Padding="12,10"
+                BorderThickness="1"
+                BorderBrush="{StaticResource BorderBrush}"
+                Background="{StaticResource CardBrush}"
+                CornerRadius="4">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header row with button -->
+                <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                    <TextBlock DockPanel.Dock="Left"
+                               Text="KI-OPTIMIERUNG"
+                               FontSize="11" FontWeight="Bold"
+                               Foreground="{StaticResource NeonCyanBrush}"
+                               VerticalAlignment="Center"/>
+                    <Button DockPanel.Dock="Right"
+                            Content="Optimieren"
+                            Command="{Binding OptimizeCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            Width="110" Height="30"/>
+                </DockPanel>
+
+                <!-- Busy indicator -->
+                <TextBlock Grid.Row="1"
+                           Text="{Binding StatusText}"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           FontSize="9" Margin="0,0,0,8">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <!-- Result: visible only when HasResult=true -->
+                <Grid Grid.Row="2">
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasResult}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Empfehlung -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Empfehlung:"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,10,6"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AiMeasure}"
+                               Foreground="{StaticResource TextBrush}"
+                               FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,6"/>
+
+                    <!-- Konfidenz -->
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Konfidenz:"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,10,6" VerticalAlignment="Center"/>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,6">
+                        <ProgressBar Value="{Binding AiConfidence, Mode=OneWay}"
+                                     Minimum="0" Maximum="1"
+                                     Width="160" Height="14"
+                                     VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding AiConfidence, StringFormat=P0}"
+                                   Foreground="{StaticResource TextBrush}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Kostenbandbreite -->
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Kosten:"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,10,6"/>
+                    <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Foreground="{StaticResource TextBrush}">
+                            <Run Text="Min "/>
+                            <Run Text="{Binding CostMin, Mode=OneWay}" FontWeight="SemiBold"/>
+                            <Run Text="  |  Erwartet "/>
+                            <Run Text="{Binding CostExpected, Mode=OneWay}" FontWeight="Bold"
+                                 Foreground="{StaticResource NeonCyanBrush}"/>
+                            <Run Text="  |  Max "/>
+                            <Run Text="{Binding CostMax, Mode=OneWay}" FontWeight="SemiBold"/>
+                            <Run Text=" CHF"/>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <!-- Begründung -->
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Begründung:"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,10,0" VerticalAlignment="Top"/>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding AiReasoning}"
+                               Foreground="{StaticResource TextBrush}"
+                               TextWrapping="Wrap" FontSize="9"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- BLOCK C: Risiken & Einschränkungen -->
+        <Border Grid.Row="2"
+                Padding="12,10"
+                BorderThickness="1"
+                BorderBrush="{StaticResource BorderBrush}"
+                Background="{StaticResource CardBrush}"
+                CornerRadius="4">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasResult}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <StackPanel>
+                <TextBlock Text="RISIKEN &amp; EINSCHRÄNKUNGEN"
+                           FontSize="11" FontWeight="Bold"
+                           Foreground="{StaticResource NeonCyanBrush}"
+                           Margin="0,0,0,8"/>
+                <TextBlock Text="{Binding RiskText}"
+                           TextWrapping="Wrap"
+                           FontSize="9">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding RiskText}" Value="">
+                                    <Setter Property="Text" Value="Keine Risiken oder Verletzungen erkannt."/>
+                                    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                </DataTrigger>
+                                <!-- Non-empty risk text uses orange -->
+                                <DataTrigger Binding="{Binding RiskText}" Value="{x:Null}">
+                                    <Setter Property="Text" Value="Keine Risiken oder Verletzungen erkannt."/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <!-- Fallback badge -->
+                <Border Visibility="{Binding IsFallback, Converter={StaticResource BoolToVis}}"
+                        Background="#7F2F00" Margin="0,8,0,0" Padding="8,4" CornerRadius="3">
+                    <TextBlock Text="FALLBACK AKTIV – KI-Vorschlag wurde durch §8-Regelprüfung verworfen"
+                               Foreground="#FF8C00" FontSize="9" FontWeight="Bold"/>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- Status row -->
+        <TextBlock Grid.Row="3"
+                   Text="{Binding StatusText}"
+                   Foreground="{StaticResource TextSecondaryBrush}"
+                   FontSize="9" Margin="0,8,0,4"
+                   TextWrapping="Wrap"/>
+
+        <!-- Action buttons -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
+            <Button Content="Übernehmen (sek.)"
+                    Command="{Binding ApplyToSecondaryCommand}"
+                    Style="{StaticResource SecondaryButton}"
+                    Width="150" Height="34" Margin="0,0,8,0"
+                    ToolTip="Session speichern – KI-Vorschlag als Sekundärdaten markieren"/>
+            <Button Content="Übertragen (primär)"
+                    Command="{Binding TransferToPrimaryCommand}"
+                    Style="{StaticResource PrimaryButton}"
+                    Width="160" Height="34" Margin="0,0,8,0"
+                    ToolTip="Massnahme und Kosten direkt in Haltungsdaten schreiben"/>
+            <Button Content="Abbrechen"
+                    Command="{Binding CancelCommand}"
+                    Style="{StaticResource SecondaryButton}"
+                    Width="100" Height="34"/>
+        </StackPanel>
+    </Grid>
+</Window>

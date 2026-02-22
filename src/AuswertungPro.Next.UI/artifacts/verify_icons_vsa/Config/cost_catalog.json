@@ -1,0 +1,266 @@
+﻿{
+  "currency": "CHF",
+  "vatRate": 0.081,
+  "items": [
+    {
+      "key": "INSTALL_HL_ANLAGE",
+      "name": "Installation HL-Anlage mehrere Haltungen",
+      "unit": "pl",
+      "type": "Fixed",
+      "price": 500.00,
+      "active": true,
+      "aliases": ["Installation HL-Anlage"]
+    },
+    {
+      "key": "INSTALL_UV_ANLAGE",
+      "name": "Installation UV-Anlage",
+      "unit": "pl",
+      "type": "Fixed",
+      "price": 1500.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "INSTALL_MANUELL",
+      "name": "Installation Manuelle Gruppe",
+      "unit": "pl",
+      "type": "Fixed",
+      "price": 426.70,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "INSTALL_ROBOTER",
+      "name": "Installation Roboteranlage",
+      "unit": "pl",
+      "type": "Fixed",
+      "price": 976.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "VORARBEIT_REINIGUNG",
+      "name": "Kanalreinigung Vorreinigung",
+      "unit": "h",
+      "type": "Fixed",
+      "price": 250.00,
+      "active": true,
+      "aliases": ["Kanalreinigung"]
+    },
+    {
+      "key": "VORARBEIT_VD",
+      "name": "Verkehrsdienst (VD)",
+      "unit": "pro Tag",
+      "type": "Fixed",
+      "price": 1000.00,
+      "active": true,
+      "aliases": ["Verkehrsdienst"]
+    },
+    {
+      "key": "VORARBEIT_FRAESEN",
+      "name": "Fräsen",
+      "unit": "h",
+      "type": "Fixed",
+      "price": 290.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "VORARBEIT_EINMESSUNG",
+      "name": "Haltung einmessung",
+      "unit": "pl",
+      "type": "Fixed",
+      "price": 80.00,
+      "active": true,
+      "aliases": ["Haltung einmessen"]
+    },
+    {
+      "key": "VORARBEIT_TV_VORKONTROLLE",
+      "name": "TV Vorkontrolle",
+      "unit": "stk",
+      "type": "Fixed",
+      "price": 210.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "VORARBEIT_ANSCHLUSS_EINMESSEN",
+      "name": "Seitlicher Anschluss einmessen",
+      "unit": "stk",
+      "type": "Fixed",
+      "price": 80.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "VORARBEIT_WASSERHALTUNG",
+      "name": "Wasserhaltung",
+      "unit": "stk",
+      "type": "Fixed",
+      "price": 500.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "SCHLAUCHLINER_NADELFILZ",
+      "name": "Schlauchliner (Nadelfilz)",
+      "unit": "m",
+      "type": "ByDN",
+      "active": true,
+      "aliases": ["Nadelfilzliner"],
+      "dnPrices": [
+        { "dnFrom": 100, "dnTo": 100, "price": 240.00 },
+        { "dnFrom": 125, "dnTo": 125, "price": 240.00 },
+        { "dnFrom": 150, "dnTo": 150, "price": 250.00 },
+        { "dnFrom": 200, "dnTo": 200, "price": 270.00 },
+        { "dnFrom": 250, "dnTo": 250, "price": 300.00 },
+        { "dnFrom": 300, "dnTo": 300, "price": 320.00 }
+      ]
+    },
+    {
+      "key": "SCHLAUCHLINER_NADELFILZ_OPENEND",
+      "name": "Schlauchliner (Nadelfilz) Open-End",
+      "unit": "m",
+      "type": "ByDN",
+      "active": true,
+      "aliases": ["Nadelfilzliner Open-End"],
+      "dnPrices": [
+        { "dnFrom": 100, "dnTo": 100, "price": 240.00 },
+        { "dnFrom": 125, "dnTo": 125, "price": 240.00 },
+        { "dnFrom": 150, "dnTo": 150, "price": 250.00 },
+        { "dnFrom": 200, "dnTo": 200, "price": 270.00 },
+        { "dnFrom": 250, "dnTo": 250, "price": 300.00 },
+        { "dnFrom": 300, "dnTo": 300, "price": 320.00 }
+      ]
+    },
+    {
+      "key": "SCHLAUCHLINER_GFK",
+      "name": "Schlauchliner (GFK)",
+      "unit": "m",
+      "type": "ByDN",
+      "active": true,
+      "aliases": ["GFK-Schlauchliner"],
+      "dnPrices": [
+        { "dnFrom": 250, "dnTo": 250, "price": 200.00 },
+        { "dnFrom": 300, "dnTo": 300, "price": 220.00 },
+        { "dnFrom": 350, "dnTo": 350, "price": 230.00 },
+        { "dnFrom": 400, "dnTo": 400, "price": 275.00 },
+        { "dnFrom": 450, "dnTo": 450, "price": 280.00 },
+        { "dnFrom": 500, "dnTo": 500, "price": 300.00 },
+        { "dnFrom": 600, "dnTo": 600, "price": 400.00 },
+        { "dnFrom": 700, "dnTo": 700, "price": 550.00 },
+        { "dnFrom": 800, "dnTo": 800, "price": 800.00 },
+        { "dnFrom": 900, "dnTo": 900, "price": 900.00 }
+      ]
+    },
+    {
+      "key": "LINERENDMANSCHETTE_LEM",
+      "name": "Linerendmanschette (LEM)",
+      "unit": "stk",
+      "type": "ByDN",
+      "active": true,
+      "aliases": ["LEM", "Endmanschette"],
+      "dnPrices": [
+        { "dnFrom": 150, "dnTo": 150, "price": 420.00 },
+        { "dnFrom": 200, "dnTo": 200, "price": 450.00 },
+        { "dnFrom": 250, "dnTo": 250, "price": 490.00 },
+        { "dnFrom": 300, "dnTo": 300, "price": 500.00 },
+        { "dnFrom": 350, "dnTo": 350, "price": 580.00 },
+        { "dnFrom": 400, "dnTo": 400, "price": 640.00 },
+        { "dnFrom": 450, "dnTo": 450, "price": 720.00 },
+        { "dnFrom": 500, "dnTo": 500, "price": 780.00 },
+        { "dnFrom": 600, "dnTo": 600, "price": 850.00 },
+        { "dnFrom": 700, "dnTo": 700, "price": 900.00 },
+        { "dnFrom": 800, "dnTo": 800, "price": 950.00 }
+      ]
+    },
+    {
+      "key": "KURZLINER_PARTLINER",
+      "name": "Kurzliner (Pointliner, Partliner)",
+      "unit": "stk",
+      "type": "ByDN",
+      "active": true,
+      "aliases": ["Kurzliner", "Pointliner", "Partliner"],
+      "dnPrices": [
+        { "dnFrom": 100, "dnTo": 100, "price": 1000.00 },
+        { "dnFrom": 120, "dnTo": 120, "price": 1000.00 },
+        { "dnFrom": 150, "dnTo": 150, "price": 1200.00 },
+        { "dnFrom": 200, "dnTo": 200, "price": 1300.00 },
+        { "dnFrom": 250, "dnTo": 250, "price": 1400.00 }
+      ]
+    },
+    {
+      "key": "MANSCHETTE_EDELSTAHL",
+      "name": "Manschette (Edelstahl)",
+      "unit": "stk",
+      "type": "ByDN",
+      "active": true,
+      "aliases": ["Edelstahl-Manschette"],
+      "dnPrices": [
+        { "dnFrom": 150, "dnTo": 150, "price": 600.00 },
+        { "dnFrom": 200, "dnTo": 200, "price": 640.00 },
+        { "dnFrom": 250, "dnTo": 250, "price": 680.00 },
+        { "dnFrom": 300, "dnTo": 300, "price": 700.00 },
+        { "dnFrom": 350, "dnTo": 350, "price": 740.00 },
+        { "dnFrom": 400, "dnTo": 400, "price": 780.00 },
+        { "dnFrom": 450, "dnTo": 450, "price": 840.00 },
+        { "dnFrom": 500, "dnTo": 500, "price": 890.00 },
+        { "dnFrom": 600, "dnTo": 600, "price": 920.00 }
+      ]
+    },
+    {
+      "key": "ANSCHLUSS_AUFFRAESEN",
+      "name": "Anschluss auffräsen",
+      "unit": "stk",
+      "type": "Fixed",
+      "price": 100.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "ANSCHLUSS_EINBINDEN",
+      "name": "Anschlusseinbinden (verpressen)",
+      "unit": "stk",
+      "type": "Fixed",
+      "price": 900.00,
+      "active": true,
+      "aliases": ["Anschluss verpressen"]
+    },
+    {
+      "key": "HAUPTARBEIT_HINDERNISSE_ROBOTER",
+      "name": "Hindernisse mit Roboter entfernen",
+      "unit": "h",
+      "type": "Fixed",
+      "price": 0.00,
+      "active": true,
+      "aliases": ["Kanalroboter Hindernisse entfernen"]
+    },
+    {
+      "key": "QK_DICHTHEITSPRUEFUNG",
+      "name": "Dichtheitsprüfung (Luft nach SIA190/VSA)",
+      "unit": "stk",
+      "type": "Fixed",
+      "price": 220.00,
+      "active": true,
+      "aliases": ["Dichtheitsprüfung"]
+    },
+    {
+      "key": "QK_TV_ABNAHME",
+      "name": "TV Abnahme",
+      "unit": "stk",
+      "type": "Fixed",
+      "price": 260.00,
+      "active": true,
+      "aliases": []
+    },
+    {
+      "key": "QK_DOKUMENTATION",
+      "name": "Dokumentation",
+      "unit": "stk",
+      "type": "Fixed",
+      "price": 200.00,
+      "active": true,
+      "aliases": []
+    }
+  ]
+}

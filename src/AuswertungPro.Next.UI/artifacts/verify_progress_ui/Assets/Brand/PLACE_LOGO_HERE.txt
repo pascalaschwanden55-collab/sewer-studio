@@ -1,0 +1,9 @@
+Lege hier optional das Logo ab, damit es im Offerten-PDF erscheint.
+
+Erwarteter Dateiname:
+- abwasser-uri-logo.png
+
+Pfad (Repo):
+- src/AuswertungPro.Next.UI/Assets/Brand/abwasser-uri-logo.png
+
+Hinweis: Das Logo wird beim PDF-Export in das HTML eingebettet (Data-URI).

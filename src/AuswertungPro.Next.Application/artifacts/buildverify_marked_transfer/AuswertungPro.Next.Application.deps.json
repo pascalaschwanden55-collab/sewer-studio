@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "AuswertungPro.Next.Application/1.0.0": {
+        "dependencies": {
+          "AuswertungPro.Next.Domain": "1.0.0"
+        },
+        "runtime": {
+          "AuswertungPro.Next.Application.dll": {}
+        }
+      },
+      "AuswertungPro.Next.Domain/1.0.0": {
+        "runtime": {
+          "AuswertungPro.Next.Domain.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "AuswertungPro.Next.Application/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "AuswertungPro.Next.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

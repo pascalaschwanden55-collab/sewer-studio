@@ -1,0 +1,17 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.DiagnosticsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+            <Button Content="Log aktualisieren" Command="{Binding RefreshCommand}" Style="{StaticResource SecondaryButton}"/>
+        </StackPanel>
+
+        <TextBox Grid.Row="1" Text="{Binding LogTail}" AcceptsReturn="True" IsReadOnly="True"
+                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+    </Grid>
+</UserControl>

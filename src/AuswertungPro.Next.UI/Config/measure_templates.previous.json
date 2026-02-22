@@ -1,0 +1,120 @@
+{
+  "version": 1,
+  "measures": [
+    {
+      "id": "VOLLSANIERUNG_STANDARD",
+      "name": "Vollsanierung Standard",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "HL_INSTALL_HL", "enabled": true, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "HL_INSTALL_MANUAL", "enabled": false, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "HL_INSTALL_CLEANTRUCK", "enabled": false, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "FRAESEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "HALTUNG_EINMESSEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Liner", "itemKey": "NADELFILZ_LINER_PER_M", "enabled": true, "defaultQty": 0 },
+        { "group": "Liner", "itemKey": "NADELFILZ_LINER_BIS_5M", "enabled": false, "defaultQty": 1 },
+        { "group": "Qualitaet", "itemKey": "TV_ABNAHME", "enabled": true, "defaultQty": 0 },
+        { "group": "Qualitaet", "itemKey": "DICHTHEITSPRUEFUNG", "enabled": true, "defaultQty": 0 },
+        { "group": "Qualitaet", "itemKey": "DOKU_DATENTRAEGER", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "NADELFILZ",
+      "name": "Nadelfilz Schlauchliner",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "HL_INSTALL_HL", "enabled": true, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "HL_INSTALL_MANUAL", "enabled": true, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "HL_INSTALL_CLEANTRUCK", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "FRAESEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "HALTUNG_EINMESSEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Liner", "itemKey": "NADELFILZ_LINER_BIS_5M", "enabled": false, "defaultQty": 1 },
+        { "group": "Liner", "itemKey": "NADELFILZ_LINER_PER_M", "enabled": true, "defaultQty": 0 },
+        { "group": "Qualitaet", "itemKey": "TV_ABNAHME", "enabled": true, "defaultQty": 0 },
+        { "group": "Qualitaet", "itemKey": "DICHTHEITSPRUEFUNG", "enabled": true, "defaultQty": 0 },
+        { "group": "Qualitaet", "itemKey": "DOKU_DATENTRAEGER", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "OPEN_END_NADELFILZ",
+      "name": "Open End Nadelfilz Schlauchliner",
+      "disabled": false,
+      "lines": [
+        { "group": "Installation", "itemKey": "HL_INSTALL_HL", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "FRAESEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "HALTUNG_EINMESSEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Liner", "itemKey": "NADELFILZ_LINER_PER_M", "enabled": true, "defaultQty": 0 },
+        { "group": "Qualitaet", "itemKey": "TV_ABNAHME", "enabled": true, "defaultQty": 0 },
+        { "group": "Qualitaet", "itemKey": "DICHTHEITSPRUEFUNG", "enabled": true, "defaultQty": 0 },
+        { "group": "Qualitaet", "itemKey": "DOKU_DATENTRAEGER", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "GFK",
+      "name": "GFK Schlauchliner (UV)",
+      "disabled": false,
+      "lines": [
+        { "group": "Vorarbeiten", "itemKey": "TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "FRAESEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "HALTUNG_EINMESSEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Liner", "itemKey": "GFK_INSTALL_PER_M", "enabled": true, "defaultQty": 0 },
+        { "group": "Anschluesse", "itemKey": "ANSCHLUSS_AUFFRAESEN", "enabled": false, "defaultQty": 0 },
+        { "group": "Anschluesse", "itemKey": "ANSCHLUSS_EINBINDEN", "enabled": false, "defaultQty": 0 },
+        { "group": "Qualitaet", "itemKey": "TV_ABNAHME", "enabled": true, "defaultQty": 0 },
+        { "group": "Qualitaet", "itemKey": "DICHTHEITSPRUEFUNG", "enabled": true, "defaultQty": 0 },
+        { "group": "Qualitaet", "itemKey": "DOKU_DATENTRAEGER", "enabled": true, "defaultQty": 1 }
+      ]
+    },
+    {
+      "id": "MANSCHETTE",
+      "name": "Manschette",
+      "disabled": false,
+      "lines": [
+        { "group": "Vorarbeiten", "itemKey": "TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "FRAESEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "HALTUNG_EINMESSEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Reparatur", "itemKey": "MANSCHETTE_PER_ST", "enabled": true, "defaultQty": 0 }
+      ]
+    },
+    {
+      "id": "KURZLINER",
+      "name": "Kurzliner (Partliner/Pointliner)",
+      "disabled": false,
+      "lines": [
+        { "group": "Vorarbeiten", "itemKey": "TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "FRAESEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "HALTUNG_EINMESSEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Reparatur", "itemKey": "KURZLINER_PER_ST", "enabled": true, "defaultQty": 0 },
+        { "group": "Reparatur", "itemKey": "QUICKLOCK_PER_ST", "enabled": false, "defaultQty": 0 }
+      ]
+    },
+    {
+      "id": "ANSCHLUSS",
+      "name": "Anschluss verpressen/einbinden",
+      "disabled": false,
+      "lines": [
+        { "group": "Vorarbeiten", "itemKey": "TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "FRAESEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Vorarbeiten", "itemKey": "HALTUNG_EINMESSEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Anschluesse", "itemKey": "ANSCHLUSS_AUFFRAESEN", "enabled": true, "defaultQty": 0 },
+        { "group": "Anschluesse", "itemKey": "ANSCHLUSS_EINBINDEN", "enabled": true, "defaultQty": 0 }
+      ]
+    },
+    {
+      "id": "NUR_REPARATUR",
+      "name": "Nur Reparatur (ohne Vollsanierung)",
+      "disabled": false,
+      "lines": [
+        { "group": "Vorarbeiten", "itemKey": "TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
+        { "group": "Reparatur", "itemKey": "MANSCHETTE_PER_ST", "enabled": false, "defaultQty": 0 },
+        { "group": "Reparatur", "itemKey": "KURZLINER_PER_ST", "enabled": false, "defaultQty": 0 },
+        { "group": "Reparatur", "itemKey": "QUICKLOCK_PER_ST", "enabled": false, "defaultQty": 0 },
+        { "group": "Qualitaet", "itemKey": "TV_ABNAHME", "enabled": true, "defaultQty": 0 },
+        { "group": "Qualitaet", "itemKey": "DOKU_DATENTRAEGER", "enabled": true, "defaultQty": 1 }
+      ]
+    }
+  ]
+}

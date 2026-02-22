@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    @page { size: A4; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 10pt; margin: 0; color: #1a1a1a; line-height: 1.4; }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #0b5e7a;
+      margin-bottom: 14px;
+    }
+    .brand { display: flex; align-items: flex-start; gap: 12px; }
+    .logo { height: 52px; width: auto; }
+    .sender { white-space: pre-line; font-size: 9.5pt; line-height: 1.3; }
+    .doc-meta { text-align: right; font-size: 9.5pt; line-height: 1.35; }
+    .doc-meta .doc-label { font-size: 11pt; font-weight: 700; color: #0b5e7a; text-transform: uppercase; }
+
+    .title { font-size: 16pt; color: #0b5e7a; font-weight: 700; margin: 0 0 2px; }
+    .subtitle { margin: 0 0 12px; color: #444; }
+
+    .info-row { display: flex; gap: 14px; margin-bottom: 14px; }
+    .info-card {
+      flex: 1;
+      border: 1px solid #d4d8dc;
+      border-radius: 8px;
+      background: #fafbfc;
+      padding: 10px 12px;
+      min-height: 64px;
+    }
+    .info-card h4 {
+      margin: 0 0 6px;
+      font-size: 9pt;
+      text-transform: uppercase;
+      color: #0b5e7a;
+      letter-spacing: 0.04em;
+    }
+    .info-card .content { white-space: pre-line; }
+    .filter-chip {
+      margin: 0 0 10px;
+      border-left: 4px solid #0b5e7a;
+      background: #f3f7f9;
+      padding: 6px 10px;
+      font-size: 9.5pt;
+      color: #234;
+    }
+
+    h2.section {
+      margin: 18px 0 8px;
+      font-size: 10.5pt;
+      color: #0b5e7a;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+    th, td { padding: 7px 8px; vertical-align: top; }
+    thead th {
+      background: #0b5e7a;
+      color: #fff;
+      font-size: 9pt;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    tbody td { border-bottom: 1px solid #e8eaec; }
+    .right { text-align: right; }
+    .muted { color: #666; font-size: 9pt; }
+    .empty-box {
+      border: 1px dashed #c8cdd2;
+      background: #fafbfc;
+      padding: 9px 10px;
+      color: #556;
+      font-size: 9.5pt;
+    }
+    .group-row td {
+      border-bottom: 1px solid #cfd3d7;
+      background: #eef1f3;
+      font-weight: 700;
+      color: #0b5e7a;
+    }
+
+    .totals {
+      margin-top: 14px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .totals table { width: 340px; }
+    .totals td { border-bottom: 1px solid #eee; }
+    .totals tr:last-child td {
+      border-top: 2px solid #0b5e7a;
+      border-bottom: none;
+      font-weight: 700;
+      background: #f4f8fa;
+    }
+
+    .textblocks { margin-top: 14px; }
+    .textblocks .tb {
+      border-left: 4px solid #0b5e7a;
+      padding: 8px 10px;
+      margin: 6px 0;
+      background: #fbfcfd;
+      font-size: 9.5pt;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      {{ if LogoDataUri != "" }}
+        <img class="logo" src="{{ LogoDataUri }}" />
+      {{ end }}
+      <div class="sender">{{ SenderBlock }}</div>
+    </div>
+    <div class="doc-meta">
+      <div class="doc-label">{{ DocumentKindLabel }}</div>
+      <div>Nr.: {{ OfferNo }}</div>
+      <div>Datum: {{ DateText }}</div>
+    </div>
+  </div>
+
+  <h1 class="title">{{ ProjectTitle }}</h1>
+  {{ if VariantTitle != "" }}
+    <p class="subtitle">{{ VariantTitle }}</p>
+  {{ end }}
+
+  {{ if FilterSummaryText != "" }}
+    <div class="filter-chip">{{ FilterSummaryText }}</div>
+  {{ end }}
+
+  <div class="info-row">
+    <div class="info-card">
+      <h4>Auftraggeber</h4>
+      <div class="content">{{ CustomerBlock }}</div>
+    </div>
+    <div class="info-card">
+      <h4>Objekt / Filter</h4>
+      <div class="content">{{ ObjectBlock }}</div>
+    </div>
+  </div>
+
+  {{ if HoldingDataLines.size > 0 }}
+    <h2 class="section">Datenuebersicht (gefilterte Haltungen)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 13%;">Haltung</th>
+          <th style="width: 13%;">Strasse</th>
+          <th style="width: 10%;">Eigentuemer</th>
+          <th style="width: 8%;">Sanieren</th>
+          <th style="width: 10%;">Material</th>
+          <th style="width: 8%;">Zustand</th>
+          <th class="right" style="width: 12%;">Netto</th>
+          <th style="width: 10%;">Detail</th>
+          <th style="width: 16%;">Massnahmen</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ for row in HoldingDataLines }}
+          <tr>
+            <td>{{ row.Holding }}</td>
+            <td>{{ row.Street }}</td>
+            <td>{{ row.Owner }}</td>
+            <td>{{ row.Sanieren }}</td>
+            <td>{{ row.Material }}</td>
+            <td>{{ row.Zustand }}</td>
+            <td class="right">{{ row.NetText }}</td>
+            <td>{{ row.DetailText }}</td>
+            <td class="muted">{{ row.MeasuresText }}</td>
+          </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  {{ end }}
+
+  <h2 class="section">Kosten je Massnahme (Netto)</h2>
+  {{ if MeasureSummaryLines.size == 0 }}
+    <div class="empty-box">Keine Massnahmen fuer den gewaehlten Filter vorhanden.</div>
+  {{ else }}
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 62%;">Massnahme</th>
+          <th class="right" style="width: 14%;">Haltungen</th>
+          <th class="right" style="width: 24%;">Netto</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ for line in MeasureSummaryLines }}
+          <tr>
+            <td>{{ line.MeasureName }}</td>
+            <td class="right">{{ line.HoldingCountText }}</td>
+            <td class="right">{{ line.NetText }}</td>
+          </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  {{ end }}
+
+  {{ if SpecialStatsLines.size > 0 }}
+    <h2 class="section">Spezialstatistik (separate Auszuege)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 44%;">Kategorie</th>
+          <th class="right" style="width: 16%;">Menge</th>
+          <th style="width: 10%;">Einheit</th>
+          <th class="right" style="width: 30%;">Netto</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ for row in SpecialStatsLines }}
+          <tr>
+            <td>{{ row.Category }}</td>
+            <td class="right">{{ row.QtyText }}</td>
+            <td>{{ row.Unit }}</td>
+            <td class="right">{{ row.NetText }}</td>
+          </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  {{ end }}
+
+  {{ if OwnerSummaryLines.size > 0 }}
+    <h2 class="section">Kostenzusammenstellung nach Eigentuemer</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 34%;">Eigentuemer</th>
+          <th class="right" style="width: 16%;">Haltungen</th>
+          <th class="right" style="width: 20%;">Netto</th>
+          <th class="right" style="width: 10%;">MwSt.</th>
+          <th class="right" style="width: 20%;">Brutto</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ for row in OwnerSummaryLines }}
+          <tr>
+            <td>{{ row.Owner }}</td>
+            <td class="right">{{ row.HoldingCountText }}</td>
+            <td class="right">{{ row.NetText }}</td>
+            <td class="right">{{ row.VatText }}</td>
+            <td class="right">{{ row.GrossText }}</td>
+          </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  {{ end }}
+
+  {{ if PositionSummaryLines.size > 0 }}
+    <h2 class="section">Gesamtzusammenstellung nach Einzelposition</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 34%;">Position</th>
+          <th class="right" style="width: 12%;">Menge</th>
+          <th style="width: 10%;">Einheit</th>
+          <th class="right" style="width: 18%;">Einzelpreis</th>
+          <th class="right" style="width: 16%;">Total</th>
+          <th class="right" style="width: 10%;">Haltungen</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ current_group = "" }}
+        {{ for row in PositionSummaryLines }}
+          {{ if row.GroupLabel != current_group }}
+            <tr class="group-row">
+              <td colspan="6">{{ row.GroupLabel }}</td>
+            </tr>
+            {{ current_group = row.GroupLabel }}
+          {{ end }}
+          <tr>
+            <td>{{ row.Position }}</td>
+            <td class="right">{{ row.QtyText }}</td>
+            <td>{{ row.Unit }}</td>
+            <td class="right">{{ row.UnitPriceText }}</td>
+            <td class="right">{{ row.TotalText }}</td>
+            <td class="right">{{ row.HoldingCountText }}</td>
+          </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  {{ end }}
+
+  <div class="totals">
+    <table>
+      <tr>
+        <td>Zwischentotal (Netto)</td>
+        <td class="right">{{ Totals.NetText }}</td>
+      </tr>
+      <tr>
+        <td>{{ Totals.VatText | string.split ':' | array.first }}:</td>
+        <td class="right">{{ Totals.VatText | string.split ':' | array.last }}</td>
+      </tr>
+      <tr>
+        <td>Gesamttotal inkl. MwSt.</td>
+        <td class="right">{{ Totals.GrossText }}</td>
+      </tr>
+    </table>
+  </div>
+
+  {{ if TextBlocks.size > 0 }}
+    <div class="textblocks">
+      {{ for t in TextBlocks }}
+        <div class="tb">{{ t }}</div>
+      {{ end }}
+    </div>
+  {{ end }}
+
+  <h2 class="section">Komplette Aufstellung Einzelpositionen</h2>
+  {{ if Lines.size == 0 }}
+    <div class="empty-box">Keine Einzelpositionen fuer den gewaehlten Filter vorhanden.</div>
+  {{ else }}
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 36%;">Position</th>
+          <th style="width: 20%;">Massnahme</th>
+          <th class="right" style="width: 10%;">Menge</th>
+          <th style="width: 8%;">Einheit</th>
+          <th class="right" style="width: 13%;">Einzelpreis</th>
+          <th class="right" style="width: 13%;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ current_group = "" }}
+        {{ for row in Lines }}
+          {{ if row.GroupLabel != current_group }}
+            <tr class="group-row">
+              <td colspan="6">{{ row.GroupLabel }}</td>
+            </tr>
+            {{ current_group = row.GroupLabel }}
+          {{ end }}
+          <tr>
+            <td>{{ row.Text }}</td>
+            <td class="muted">{{ row.Note }}</td>
+            <td class="right">{{ row.QtyText }}</td>
+            <td>{{ row.Unit }}</td>
+            <td class="right">{{ row.UnitPriceText }}</td>
+            <td class="right">{{ row.TotalText }}</td>
+          </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  {{ end }}
+</body>
+</html>

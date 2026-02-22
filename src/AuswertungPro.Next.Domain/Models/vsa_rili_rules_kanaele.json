@@ -1,0 +1,15 @@
+[
+  {
+    "Schadencode": "R1",
+    "EZD": 1,
+    "EZS": 2,
+    "EZB": 3
+  },
+  {
+    "Schadencode": "R2",
+    "EZD": 2,
+    "EZS": 3,
+    "EZB": 4
+  }
+  // Weitere Regeln nach VSA-Richtlinie ergänzen
+]

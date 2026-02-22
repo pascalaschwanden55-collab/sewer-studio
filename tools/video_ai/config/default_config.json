@@ -1,0 +1,45 @@
+{
+    "ocr": {
+        "roi": {
+            "x": 10,
+            "y": 680,
+            "width": 200,
+            "height": 40
+        },
+        "language": "eng",
+        "pattern": "\\d+[.,]\\d+",
+        "unit": "m"
+    },
+    "frame_extraction": {
+        "fps": 3,
+        "scene_cut_threshold": 0.3,
+        "output_format": "jpg",
+        "quality": 85
+    },
+    "keyframes": {
+        "per_event": 3,
+        "margin_m": 0.3
+    },
+    "labels": {
+        "classes": [
+            "NONE",
+            "WURZELN",
+            "RISS",
+            "ANSCHLUSS",
+            "ABLAGERUNG",
+            "VERSATZ",
+            "EINLAUF",
+            "DEFORMATION",
+            "KORROSION",
+            "UNKNOWN"
+        ],
+        "severity_levels": [1, 2, 3, 4, 5]
+    },
+    "training": {
+        "train_split": 0.7,
+        "val_split": 0.15,
+        "test_split": 0.15,
+        "min_samples_per_class": 10,
+        "negative_sample_ratio": 0.3
+    }
+}

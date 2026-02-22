@@ -1,0 +1,240 @@
+{
+  "schema_version": 1,
+  "currency": "CHF",
+  "items": [
+    {
+      "id": "kran_anfahrt",
+      "group": "Installation",
+      "label": "Kran Anfahrt",
+      "unit": "Stk",
+      "unit_price": 450.0,
+      "source": { "file": "Lieferant A", "pos": null }
+    },
+    {
+      "id": "reinigung",
+      "group": "Installation",
+      "label": "Kanalreinigung",
+      "unit": "m",
+      "unit_price": 12.5,
+      "source": { "file": "Lieferant A", "pos": null }
+    },
+    {
+      "id": "tv_inspektion",
+      "group": "Installation",
+      "label": "TV-Inspektion",
+      "unit": "m",
+      "unit_price": 8.0,
+      "source": { "file": "Lieferant A", "pos": null }
+    },
+    {
+      "id": "anschlusssperre",
+      "group": "Vorarbeiten",
+      "label": "Anschlusssperren setzen",
+      "unit": "Stk",
+      "unit_price": 85.0,
+      "source": { "file": "Lieferant B", "pos": null }
+    },
+    {
+      "id": "wasserhaltung",
+      "group": "Vorarbeiten",
+      "label": "Wasserhaltung",
+      "unit": "Stk",
+      "unit_price": 320.0,
+      "source": { "file": "Lieferant B", "pos": null }
+    },
+    {
+      "id": "bohrkern",
+      "group": "Vorarbeiten",
+      "label": "Bohrkern für Anschluss",
+      "unit": "Stk",
+      "unit_price": 150.0,
+      "source": { "file": "Eigenleistung", "pos": null }
+    },
+
+    {
+      "id": "liner_nadelfilz",
+      "group": "Liner",
+      "label": "Nadelfilzliner DN150-199",
+      "unit": "m",
+      "dn_min": 150,
+      "dn_max": 199,
+      "unit_price": 285.0,
+      "source": { "file": "Lieferant C", "pos": null }
+    },
+    {
+      "id": "liner_nadelfilz",
+      "group": "Liner",
+      "label": "Nadelfilzliner DN200-249",
+      "unit": "m",
+      "dn_min": 200,
+      "dn_max": 249,
+      "unit_price": 340.0,
+      "source": { "file": "Lieferant C", "pos": null }
+    },
+    {
+      "id": "liner_nadelfilz",
+      "group": "Liner",
+      "label": "Nadelfilzliner DN250-299",
+      "unit": "m",
+      "dn_min": 250,
+      "dn_max": 299,
+      "unit_price": 410.0,
+      "source": { "file": "Lieferant C", "pos": null }
+    },
+    {
+      "id": "liner_nadelfilz",
+      "group": "Liner",
+      "label": "Nadelfilzliner DN300-399",
+      "unit": "m",
+      "dn_min": 300,
+      "dn_max": 399,
+      "unit_price": 520.0,
+      "source": { "file": "Lieferant C", "pos": null }
+    },
+    {
+      "id": "liner_nadelfilz",
+      "group": "Liner",
+      "label": "Nadelfilzliner DN400-499",
+      "unit": "m",
+      "dn_min": 400,
+      "dn_max": 499,
+      "unit_price": 680.0,
+      "source": { "file": "Lieferant C", "pos": null }
+    },
+    {
+      "id": "liner_nadelfilz",
+      "group": "Liner",
+      "label": "Nadelfilzliner DN500-600",
+      "unit": "m",
+      "dn_min": 500,
+      "dn_max": 600,
+      "unit_price": 850.0,
+      "source": { "file": "Lieferant C", "pos": null }
+    },
+
+    {
+      "id": "liner_gfk",
+      "group": "Liner",
+      "label": "GFK-Schlauchliner DN150-199",
+      "unit": "m",
+      "dn_min": 150,
+      "dn_max": 199,
+      "unit_price": 328.0,
+      "source": { "file": "Lieferant C", "pos": null }
+    },
+    {
+      "id": "liner_gfk",
+      "group": "Liner",
+      "label": "GFK-Schlauchliner DN200-249",
+      "unit": "m",
+      "dn_min": 200,
+      "dn_max": 249,
+      "unit_price": 391.0,
+      "source": { "file": "Lieferant C", "pos": null }
+    },
+    {
+      "id": "liner_gfk",
+      "group": "Liner",
+      "label": "GFK-Schlauchliner DN250-299",
+      "unit": "m",
+      "dn_min": 250,
+      "dn_max": 299,
+      "unit_price": 472.0,
+      "source": { "file": "Lieferant C", "pos": null }
+    },
+    {
+      "id": "liner_gfk",
+      "group": "Liner",
+      "label": "GFK-Schlauchliner DN300-399",
+      "unit": "m",
+      "dn_min": 300,
+      "dn_max": 399,
+      "unit_price": 598.0,
+      "source": { "file": "Lieferant C", "pos": null }
+    },
+    {
+      "id": "liner_gfk",
+      "group": "Liner",
+      "label": "GFK-Schlauchliner DN400-499",
+      "unit": "m",
+      "dn_min": 400,
+      "dn_max": 499,
+      "unit_price": 782.0,
+      "source": { "file": "Lieferant C", "pos": null }
+    },
+    {
+      "id": "liner_gfk",
+      "group": "Liner",
+      "label": "GFK-Schlauchliner DN500-600",
+      "unit": "m",
+      "dn_min": 500,
+      "dn_max": 600,
+      "unit_price": 978.0,
+      "source": { "file": "Lieferant C", "pos": null }
+    },
+
+    {
+      "id": "anschluss_herstellen",
+      "group": "Anschlüsse",
+      "label": "Anschluss herstellen",
+      "unit": "Stk",
+      "unit_price": 220.0,
+      "source": { "file": "Lieferant C", "pos": null }
+    },
+    {
+      "id": "endmanschette",
+      "group": "Renovierung",
+      "label": "Endmanschette",
+      "unit": "Stk",
+      "unit_price": 380.0,
+      "source": { "file": "Lieferant C", "pos": null }
+    },
+
+    {
+      "id": "manschette",
+      "group": "Renovierung",
+      "label": "Manschette DN150-249",
+      "unit": "Stk",
+      "dn_min": 150,
+      "dn_max": 249,
+      "unit_price": 650.0,
+      "source": { "file": "Lieferant D", "pos": null }
+    },
+    {
+      "id": "manschette",
+      "group": "Renovierung",
+      "label": "Manschette DN250-399",
+      "unit": "Stk",
+      "dn_min": 250,
+      "dn_max": 399,
+      "unit_price": 850.0,
+      "source": { "file": "Lieferant D", "pos": null }
+    },
+
+    {
+      "id": "pointliner",
+      "group": "Renovierung",
+      "label": "Pointliner (Punktreparatur)",
+      "unit": "Stk",
+      "unit_price": 720.0,
+      "source": { "file": "Lieferant E", "pos": null }
+    },
+
+    {
+      "id": "endabnahme",
+      "group": "Qualität",
+      "label": "Endabnahme TV-Inspektion",
+      "unit": "m",
+      "unit_price": 6.5,
+      "source": { "file": "Lieferant A", "pos": null }
+    },
+    {
+      "id": "dichtigkeitspruefung",
+      "group": "Qualität",
+      "label": "Dichtigkeitsprüfung",
+      "unit": "m",
+      "unit_price": 9.0,
+      "source": { "file": "Lieferant A", "pos": null }
+    }
+  ]
+}

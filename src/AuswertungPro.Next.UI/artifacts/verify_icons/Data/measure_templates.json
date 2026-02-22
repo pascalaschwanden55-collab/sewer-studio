@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "templates": [
+    {
+      "id": "nadelfilzliner",
+      "name": "Nadelfilzliner",
+      "description": "Standard Nadelfilzliner inkl. Vor-/Nacharbeiten",
+      "lines": [
+        { "group": "Installation", "item_ref": "kran_anfahrt", "qty": 1 },
+        { "group": "Installation", "item_ref": "reinigung", "qty": "length_m" },
+        { "group": "Installation", "item_ref": "tv_inspektion", "qty": "length_m" },
+        { "group": "Liner", "item_ref": "liner_nadelfilz", "qty": "length_m" },
+        { "group": "Anschlüsse", "item_ref": "anschluss_herstellen", "qty": "connections" },
+        { "group": "Renovierung", "item_ref": "endmanschette", "qty": "end_cuffs" },
+        { "group": "Qualität", "item_ref": "endabnahme", "qty": "length_m" },
+        { "group": "Vorarbeiten", "item_ref": "wasserhaltung", "qty": 1, "when": "waterholding" }
+      ]
+    },
+    {
+      "id": "gfk_schlauchliner",
+      "name": "GFK Schlauchliner (UV)",
+      "description": "GFK Schlauchliner inkl. Vor-/Nacharbeiten",
+      "lines": [
+        { "group": "Installation", "item_ref": "kran_anfahrt", "qty": 1 },
+        { "group": "Installation", "item_ref": "reinigung", "qty": "length_m" },
+        { "group": "Installation", "item_ref": "tv_inspektion", "qty": "length_m" },
+        { "group": "Liner", "item_ref": "liner_gfk", "qty": "length_m" },
+        { "group": "Anschlüsse", "item_ref": "anschluss_herstellen", "qty": "connections" },
+        { "group": "Qualität", "item_ref": "endabnahme", "qty": "length_m" },
+        { "group": "Vorarbeiten", "item_ref": "wasserhaltung", "qty": 1, "when": "waterholding" }
+      ]
+    },
+    {
+      "id": "manschette",
+      "name": "Manschette",
+      "description": "Manschetten-Reparatur",
+      "lines": [
+        { "group": "Renovierung", "item_ref": "manschette", "qty": 1 },
+        { "group": "Qualität", "item_ref": "tv_inspektion", "qty": 5 }
+      ]
+    },
+    {
+      "id": "kurzliner",
+      "name": "Kurzliner",
+      "description": "Kurzliner / Pointliner",
+      "lines": [
+        { "group": "Renovierung", "item_ref": "pointliner", "qty": 1 },
+        { "group": "Qualität", "item_ref": "tv_inspektion", "qty": 5 }
+      ]
+    },
+    {
+      "id": "pointliner",
+      "name": "Pointliner",
+      "description": "Pointliner",
+      "lines": [
+        { "group": "Renovierung", "item_ref": "pointliner", "qty": 1 }
+      ]
+    },
+    {
+      "id": "anschluss_verpressen",
+      "name": "Anschluss verpressen",
+      "description": "Anschlussverpressung",
+      "lines": [
+        { "group": "Vorarbeiten", "item_ref": "bohrkern", "qty": 1 },
+        { "group": "Anschlüsse", "item_ref": "anschluss_herstellen", "qty": 1 }
+      ]
+    }
+  ]
+}

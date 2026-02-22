@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 10.5pt; margin: 0; color: #111; }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #0b5e7a;
+      margin-bottom: 14px;
+    }
+    .brand { display: flex; align-items: flex-start; gap: 12px; }
+    .logo { height: 52px; width: auto; }
+    .sender { white-space: pre-line; font-size: 9.5pt; line-height: 1.25; }
+
+    .doc-meta {
+      text-align: right;
+      font-size: 9.5pt;
+      line-height: 1.35;
+      white-space: pre-line;
+    }
+    .title { font-size: 14pt; font-weight: 700; margin: 10px 0 4px; }
+    .subtitle { font-size: 10.5pt; margin: 0 0 12px; }
+
+    /* Address blocks */
+    .blocks { display: flex; gap: 18px; margin: 10px 0 14px; }
+    .block {
+      flex: 1;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px 12px;
+      white-space: pre-line;
+      line-height: 1.3;
+      font-size: 10pt;
+      min-height: 64px;
+    }
+    .block h4 { margin: 0 0 6px; font-size: 10pt; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 7px 8px; vertical-align: top; }
+    thead th {
+      border-bottom: 2px solid #333;
+      font-size: 9.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    tbody td { border-bottom: 1px solid #e6e6e6; }
+    .group-row td {
+      border-bottom: 1px solid #cfcfcf;
+      background: #f4f6f7;
+      font-weight: 700;
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+    .right { text-align: right; }
+    .muted { color: #555; font-size: 9.25pt; }
+    .note { margin-top: 3px; }
+
+    /* Totals */
+    .totals {
+      margin-top: 12px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .totals table { width: 320px; }
+    .totals td { border-bottom: none; padding: 6px 8px; }
+    .totals tr:last-child td {
+      border-top: 2px solid #333;
+      font-weight: 800;
+      padding-top: 8px;
+    }
+
+    /* Text blocks */
+    .textblocks { margin-top: 14px; }
+    .textblocks .tb {
+      border-left: 4px solid #0b5e7a;
+      padding: 8px 10px;
+      margin: 8px 0;
+      background: #fbfcfd;
+      font-size: 9.75pt;
+      line-height: 1.35;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <div class="brand">
+      {{ if LogoDataUri != "" }}
+        <img class="logo" src="{{ LogoDataUri }}" />
+      {{ end }}
+      <div class="sender">{{ SenderBlock }}</div>
+    </div>
+
+    <div class="doc-meta">
+      <div><b>Offerte</b></div>
+      <div>Offert-Nr.: {{ OfferNo }}</div>
+      <div>Datum: {{ DateText }}</div>
+      {{ if ValidityText != "" }}<div>Gültig bis: {{ ValidityText }}</div>{{ end }}
+    </div>
+  </div>
+
+  <div class="title">{{ ProjectTitle }}</div>
+  <div class="subtitle">{{ VariantTitle }}</div>
+
+  <div class="blocks">
+    <div class="block">
+      <h4>Kunde</h4>
+      {{ CustomerBlock }}
+    </div>
+    <div class="block">
+      <h4>Objekt / Hinweise</h4>
+      {{ ObjectBlock }}
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 48%;">Position</th>
+        <th class="right" style="width: 12%;">Menge</th>
+        <th style="width: 10%;">Einheit</th>
+        <th class="right" style="width: 15%;">EP</th>
+        <th class="right" style="width: 15%;">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ current_group = "" }}
+      {{ for line in Lines }}
+        {{ if line.GroupLabel != current_group }}
+          <tr class="group-row">
+            <td colspan="5">{{ line.GroupLabel }}</td>
+          </tr>
+          {{ current_group = line.GroupLabel }}
+        {{ end }}
+
+        <tr>
+          <td>
+            <div>{{ line.Text }}</div>
+            {{ if line.Note != "" }}<div class="muted note">{{ line.Note }}</div>{{ end }}
+          </td>
+          <td class="right">{{ line.QtyText }}</td>
+          <td>{{ line.Unit }}</td>
+          <td class="right">{{ line.UnitPriceText }}</td>
+          <td class="right">{{ line.TotalText }}</td>
+        </tr>
+      {{ end }}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <table>
+      <tr>
+        <td>Zwischentotal (Netto)</td>
+        <td class="right">{{ Totals.NetText }}</td>
+      </tr>
+      <tr>
+        <td>MwSt.</td>
+        <td class="right">{{ Totals.VatText }}</td>
+      </tr>
+      <tr>
+        <td>Total</td>
+        <td class="right">{{ Totals.GrossText }}</td>
+      </tr>
+    </table>
+  </div>
+
+  {{ if TextBlocks.size > 0 }}
+    <div class="textblocks">
+      {{ for t in TextBlocks }}
+        <div class="tb">{{ t }}</div>
+      {{ end }}
+    </div>
+  {{ end }}
+</body>
+</html>

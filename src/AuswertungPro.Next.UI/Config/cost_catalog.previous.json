@@ -1,0 +1,185 @@
+{
+  "currency": "CHF",
+  "vatRate": 0.081,
+  "items": [
+    {
+      "key": "HL_INSTALL_HL",
+      "name": "Installation HL-Anlage",
+      "unit": "pl",
+      "type": "Fixed",
+      "price": 924.55
+    },
+    {
+      "key": "HL_INSTALL_MANUAL",
+      "name": "Installation Manuelle Gruppe",
+      "unit": "pl",
+      "type": "Fixed",
+      "price": 426.70
+    },
+    {
+      "key": "HL_INSTALL_CLEANTRUCK",
+      "name": "Installation Kanalreinigungsfahrzeug",
+      "unit": "pl",
+      "type": "Fixed",
+      "price": 243.85
+    },
+    {
+      "key": "NADELFILZ_LINER_PER_M",
+      "name": "Nadelfilz Schlauchliner (liefern/impraegnieren/einbauen)",
+      "unit": "m",
+      "type": "ByDN",
+      "dnPrices": [
+        { "dnFrom": 100, "dnTo": 125, "price": 230.00 },
+        { "dnFrom": 126, "dnTo": 150, "price": 250.00 },
+        { "dnFrom": 151, "dnTo": 200, "price": 265.00 },
+        { "dnFrom": 201, "dnTo": 250, "price": 275.00 },
+        { "dnFrom": 251, "dnTo": 300, "price": 325.00 }
+      ]
+    },
+    {
+      "key": "NADELFILZ_LINER_BIS_5M",
+      "name": "Nadelfilz Schlauchliner bis 5m (pauschal)",
+      "unit": "pl",
+      "type": "ByDN",
+      "dnPrices": [
+        { "dnFrom": 100, "dnTo": 150, "price": 1500.00 },
+        { "dnFrom": 151, "dnTo": 200, "price": 1700.00 }
+      ]
+    },
+    {
+      "key": "GFK_SUPPLY_PER_M",
+      "name": "GFK Schlauchliner (Liefern)",
+      "unit": "m",
+      "type": "ByDN",
+      "dnPrices": [
+        { "dnFrom": 300, "dnTo": 300, "price": 66.70 }
+      ]
+    },
+    {
+      "key": "GFK_INSTALL_PER_M",
+      "name": "GFK Schlauchliner (Einbauen/UV)",
+      "unit": "m",
+      "type": "ByDN",
+      "dnPrices": [
+        { "dnFrom": 250, "dnTo": 250, "price": 200.00 },
+        { "dnFrom": 300, "dnTo": 300, "price": 230.00 },
+        { "dnFrom": 400, "dnTo": 400, "price": 275.00 },
+        { "dnFrom": 500, "dnTo": 500, "price": 300.00 },
+        { "dnFrom": 600, "dnTo": 600, "price": 400.00 },
+        { "dnFrom": 700, "dnTo": 700, "price": 600.00 },
+        { "dnFrom": 800, "dnTo": 800, "price": 700.00 },
+        { "dnFrom": 900, "dnTo": 900, "price": 800.00 }
+      ]
+    },
+    {
+      "key": "KURZLINER_PER_ST",
+      "name": "Pointliner (Kurzliner) bis 0.5m",
+      "unit": "St",
+      "type": "ByDN",
+      "dnPrices": [
+        { "dnFrom": 100, "dnTo": 100, "qtyFrom": 1, "qtyTo": 2, "price": 890.00 },
+        { "dnFrom": 100, "dnTo": 100, "qtyFrom": 3, "qtyTo": 4, "price": 695.00 },
+        { "dnFrom": 125, "dnTo": 125, "qtyFrom": 1, "qtyTo": 2, "price": 950.00 },
+        { "dnFrom": 125, "dnTo": 125, "qtyFrom": 3, "qtyTo": 4, "price": 760.00 },
+        { "dnFrom": 150, "dnTo": 150, "qtyFrom": 1, "qtyTo": 2, "price": 970.00 },
+        { "dnFrom": 150, "dnTo": 150, "qtyFrom": 3, "qtyTo": 4, "price": 800.00 }
+      ]
+    },
+    {
+      "key": "QUICKLOCK_PER_ST",
+      "name": "Quick-Lock (Mini/Standard)",
+      "unit": "St",
+      "type": "ByDN",
+      "dnPrices": [
+        { "dnFrom": 100, "dnTo": 100, "qtyFrom": 1, "qtyTo": 2, "price": 430.00 },
+        { "dnFrom": 100, "dnTo": 100, "qtyFrom": 3, "qtyTo": 4, "price": 400.00 },
+        { "dnFrom": 125, "dnTo": 125, "qtyFrom": 1, "qtyTo": 2, "price": 460.00 },
+        { "dnFrom": 125, "dnTo": 125, "qtyFrom": 3, "qtyTo": 4, "price": 440.00 },
+        { "dnFrom": 150, "dnTo": 150, "qtyFrom": 1, "qtyTo": 2, "price": 570.00 },
+        { "dnFrom": 150, "dnTo": 150, "qtyFrom": 3, "qtyTo": 4, "price": 530.00 },
+        { "dnFrom": 200, "dnTo": 200, "qtyFrom": 1, "qtyTo": 2, "price": 650.00 },
+        { "dnFrom": 200, "dnTo": 200, "qtyFrom": 3, "qtyTo": 4, "price": 610.00 },
+        { "dnFrom": 250, "dnTo": 250, "qtyFrom": 1, "qtyTo": 2, "price": 690.00 },
+        { "dnFrom": 250, "dnTo": 250, "qtyFrom": 3, "qtyTo": 4, "price": 650.00 },
+        { "dnFrom": 300, "dnTo": 300, "price": 720.00 },
+        { "dnFrom": 350, "dnTo": 350, "price": 740.00 },
+        { "dnFrom": 400, "dnTo": 400, "price": 780.00 },
+        { "dnFrom": 450, "dnTo": 450, "price": 840.00 },
+        { "dnFrom": 500, "dnTo": 500, "price": 890.00 },
+        { "dnFrom": 600, "dnTo": 600, "price": 920.00 }
+      ]
+    },
+    {
+      "key": "MANSCHETTE_PER_ST",
+      "name": "Linerendmanschette (V4A/EPDM)",
+      "unit": "St",
+      "type": "ByDN",
+      "dnPrices": [
+        { "dnFrom": 150, "dnTo": 150, "price": 420.00 },
+        { "dnFrom": 200, "dnTo": 200, "price": 450.00 },
+        { "dnFrom": 250, "dnTo": 250, "price": 490.00 },
+        { "dnFrom": 300, "dnTo": 300, "price": 550.00 },
+        { "dnFrom": 350, "dnTo": 350, "price": 580.00 },
+        { "dnFrom": 400, "dnTo": 400, "price": 640.00 },
+        { "dnFrom": 450, "dnTo": 450, "price": 720.00 },
+        { "dnFrom": 500, "dnTo": 500, "price": 780.00 }
+      ]
+    },
+    {
+      "key": "ANSCHLUSS_AUFFRAESEN",
+      "name": "Anschluss auffraesen (Roboter)",
+      "unit": "St",
+      "type": "Fixed",
+      "price": 191.75
+    },
+    {
+      "key": "ANSCHLUSS_EINBINDEN",
+      "name": "Anschluss einbinden/verpressen",
+      "unit": "St",
+      "type": "Fixed",
+      "price": 995.60
+    },
+    {
+      "key": "TV_VORKONTROLLE",
+      "name": "TV Vorkontrolle",
+      "unit": "pl",
+      "type": "Fixed",
+      "price": 210.00
+    },
+    {
+      "key": "FRAESEN",
+      "name": "Fraesen",
+      "unit": "pl",
+      "type": "Fixed",
+      "price": 580.00
+    },
+    {
+      "key": "HALTUNG_EINMESSEN",
+      "name": "Haltung Einmessen",
+      "unit": "pl",
+      "type": "Fixed",
+      "price": 80.00
+    },
+    {
+      "key": "TV_ABNAHME",
+      "name": "TV Abnahme",
+      "unit": "h",
+      "type": "Fixed",
+      "price": 216.40
+    },
+    {
+      "key": "DICHTHEITSPRUEFUNG",
+      "name": "Dichtheitspruefung",
+      "unit": "St",
+      "type": "Fixed",
+      "price": 216.95
+    },
+    {
+      "key": "DOKU_DATENTRAEGER",
+      "name": "Dokumentation/Datentraeger",
+      "unit": "St",
+      "type": "Fixed",
+      "price": 212.85
+    }
+  ]
+}
