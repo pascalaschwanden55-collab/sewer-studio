@@ -1,0 +1,244 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.MediaSearchWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Medien suchen und verlinken" Height="720" Width="1100"
+        WindowStartupLocation="CenterOwner"
+        Background="#111318"
+        ResizeMode="CanResize"
+        MinWidth="800" MinHeight="500">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <SolidColorBrush x:Key="BgMain"       Color="#111318"/>
+        <SolidColorBrush x:Key="BgCard"       Color="#1A1E28"/>
+        <SolidColorBrush x:Key="Border1"      Color="#2A3248"/>
+        <SolidColorBrush x:Key="TextPrimary"  Color="#EDF0F7"/>
+        <SolidColorBrush x:Key="TextMuted"    Color="#6B7A94"/>
+        <SolidColorBrush x:Key="Green"        Color="#22C55E"/>
+        <SolidColorBrush x:Key="Amber"        Color="#F59E0B"/>
+        <SolidColorBrush x:Key="Red"          Color="#EF4444"/>
+        <SolidColorBrush x:Key="Cyan"         Color="#06B6D4"/>
+
+        <Style x:Key="CardBorder" TargetType="Border">
+            <Setter Property="Background"       Value="#1A1E28"/>
+            <Setter Property="BorderBrush"      Value="#2A3248"/>
+            <Setter Property="BorderThickness"  Value="1"/>
+            <Setter Property="CornerRadius"     Value="10"/>
+            <Setter Property="Padding"          Value="14"/>
+        </Style>
+
+        <Style x:Key="LabelText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#EDF0F7"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="BtnPrimary" TargetType="Button">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#6366F1" Offset="0"/>
+                        <GradientStop Color="#3B82F6" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground"   Value="White"/>
+            <Setter Property="FontWeight"   Value="SemiBold"/>
+            <Setter Property="FontSize"     Value="13"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding"      Value="20,9"/>
+            <Setter Property="Cursor"       Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="7" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="BtnCancel" TargetType="Button">
+            <Setter Property="Background"   Value="#252B3A"/>
+            <Setter Property="Foreground"   Value="#8090A8"/>
+            <Setter Property="FontSize"     Value="13"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush"  Value="#2E3850"/>
+            <Setter Property="Padding"      Value="20,9"/>
+            <Setter Property="Cursor"       Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="7" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="BtnGreen" TargetType="Button">
+            <Setter Property="Background" Value="#166534"/>
+            <Setter Property="Foreground" Value="#BBF7D0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="20,9"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="7" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Row 0: Options -->
+        <Border Style="{StaticResource CardBorder}" Grid.Row="0" Margin="0,0,0,10">
+            <StackPanel>
+                <TextBlock Text="Medien-Suche" Foreground="{StaticResource TextPrimary}" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock Text="Suchordner:" Style="{StaticResource LabelText}" Width="90"/>
+                    <TextBox x:Name="FolderBox" Width="600" Margin="0,0,8,0"
+                             Background="#252B3A" Foreground="#EDF0F7" BorderBrush="#2A3248"
+                             Padding="6,4" FontSize="13" VerticalContentAlignment="Center"/>
+                    <Button x:Name="BrowseButton" Content="Durchsuchen..." Click="Browse_Click"
+                            Style="{StaticResource BtnCancel}"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                    <CheckBox x:Name="OverwriteCheck" Foreground="#EDF0F7" Margin="90,0,20,0"
+                              Content="Bereits verlinkte ueberschreiben" FontSize="12"/>
+                    <CheckBox x:Name="PdfCheck" Foreground="#EDF0F7" Margin="0,0,20,0"
+                              Content="PDFs suchen" IsChecked="True" FontSize="12"/>
+                    <CheckBox x:Name="RecursiveCheck" Foreground="#EDF0F7" Margin="0,0,20,0"
+                              Content="Rekursiv (Unterordner)" IsChecked="True" FontSize="12"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <Button x:Name="StartButton" Content="Suche starten" Click="Start_Click"
+                            Style="{StaticResource BtnPrimary}" Margin="90,0,10,0"/>
+                    <Button x:Name="CancelSearchButton" Content="Abbrechen" Click="CancelSearch_Click"
+                            Style="{StaticResource BtnCancel}" IsEnabled="False"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Row 1: Progress -->
+        <Border Style="{StaticResource CardBorder}" Grid.Row="1" Margin="0,0,0,10"
+                x:Name="ProgressPanel" Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock x:Name="ProgressText" Text="Suche laeuft..." Style="{StaticResource LabelText}" Margin="0,0,0,6"/>
+                <ProgressBar x:Name="ProgressBar" Height="8" Minimum="0" Maximum="100"
+                             Background="#252B3A" Foreground="#6366F1" BorderThickness="0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Row 2: Results DataGrid -->
+        <Border Style="{StaticResource CardBorder}" Grid.Row="2" Margin="0,0,0,10" Padding="0">
+            <DataGrid x:Name="ResultGrid" AutoGenerateColumns="False" IsReadOnly="False"
+                      CanUserSortColumns="True" CanUserResizeColumns="True"
+                      HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                      Background="#1A1E28" Foreground="#EDF0F7"
+                      RowBackground="#1A1E28" AlternatingRowBackground="#1E2330"
+                      BorderThickness="0" FontSize="12"
+                      HorizontalGridLinesBrush="#2A3248"
+                      VerticalGridLinesBrush="#2A3248"
+                      EnableRowVirtualization="True"
+                      SelectionMode="Single">
+                <DataGrid.ColumnHeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="#151822"/>
+                        <Setter Property="Foreground" Value="#8090A8"/>
+                        <Setter Property="FontSize" Value="11"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                        <Setter Property="Padding" Value="8,6"/>
+                        <Setter Property="BorderBrush" Value="#2A3248"/>
+                        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                    </Style>
+                </DataGrid.ColumnHeaderStyle>
+                <DataGrid.CellStyle>
+                    <Style TargetType="DataGridCell">
+                        <Setter Property="Padding" Value="6,4"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="DataGridCell">
+                                    <Border Background="{TemplateBinding Background}"
+                                            Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="#2A3248"/>
+                                <Setter Property="Foreground" Value="#EDF0F7"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.CellStyle>
+                <DataGrid.Columns>
+                    <DataGridCheckBoxColumn Header="" Binding="{Binding Apply, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="36"/>
+                    <DataGridTextColumn Header="Haltungsname" Binding="{Binding Haltungsname}" Width="160" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Video" Binding="{Binding VideoStatusText}" Width="90" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Video-Pfad" Binding="{Binding VideoPath}" Width="*" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="PDF" Binding="{Binding PdfStatusText}" Width="90" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="PDF-Pfad" Binding="{Binding PdfPath}" Width="200" IsReadOnly="True"/>
+                </DataGrid.Columns>
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Setter Property="Background" Value="#1A1E28"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding VideoStatusText}" Value="Gefunden">
+                                <Setter Property="Background" Value="#0D2818"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding VideoStatusText}" Value="Mehrdeutig">
+                                <Setter Property="Background" Value="#2D1F06"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding VideoStatusText}" Value="Nicht gefunden">
+                                <Setter Property="Background" Value="#2A1215"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
+            </DataGrid>
+        </Border>
+
+        <!-- Row 3: Footer -->
+        <Border Style="{StaticResource CardBorder}" Grid.Row="3" Padding="14,10">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <Button x:Name="ApplyButton" Content="Anwenden" Click="Apply_Click"
+                            Style="{StaticResource BtnGreen}" IsEnabled="False" Margin="0,0,8,0"/>
+                    <Button x:Name="CloseButton" Content="Schliessen" Click="Close_Click"
+                            Style="{StaticResource BtnCancel}"/>
+                </StackPanel>
+                <TextBlock x:Name="SummaryText" Style="{StaticResource LabelText}"
+                           Text="Starten Sie die Suche um Ergebnisse anzuzeigen."
+                           VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

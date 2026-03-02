@@ -20,6 +20,7 @@ using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.Infrastructure.Costs;
 using System.Net.Http;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Sanierung;
 using AuswertungPro.Next.UI.Ai.Sanierung.Dto;
 
@@ -84,8 +85,10 @@ public sealed partial class DataPageViewModel : ObservableObject
     public IRelayCommand<HaltungRecord?> OpenCostsCommand { get; }
     public IRelayCommand<HaltungRecord?> RestoreCostsCommand { get; }
     public IRelayCommand<HaltungRecord?> SuggestMeasuresCommand { get; }
+    public IRelayCommand SuggestAllMeasuresCommand { get; }
     public IRelayCommand<HaltungRecord?> OptimizeSanierungKiCommand { get; }
     public IRelayCommand ShowModelStatusCommand { get; }
+    public IRelayCommand SearchAndLinkMediaCommand { get; }
 
     public IReadOnlyList<string> Columns => FieldCatalog.ColumnOrder;
     public ObservableCollection<HaltungRecord> Records => _shell.Project.Data;
@@ -108,7 +111,14 @@ public sealed partial class DataPageViewModel : ObservableObject
     [ObservableProperty] private string _learningTrafficLightText = "Rot";
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _searchResultInfo = string.Empty;
+
+    /// <summary>
+    /// Normalisierte Haltungsnamen die im Training Center erfasst sind.
+    /// Wird beim Start geladen; DataPage nutzt dieses Set für die rote Zeilenmarkierung.
+    /// </summary>
+    public HashSet<string> TrainedHaltungen { get; } = new(StringComparer.OrdinalIgnoreCase);
     [ObservableProperty] private double _gridMinRowHeight = 38d;
+    [ObservableProperty] private double _gridZoom = 1.0d;
     [ObservableProperty] private bool _isColumnReorderEnabled;
     public IRelayCommand ClearSearchCommand { get; }
     public bool IsProjectReady => _shell.IsProjectReady;
@@ -142,9 +152,12 @@ public sealed partial class DataPageViewModel : ObservableObject
         };
 
         var uiLayout = _sp.Settings.DataPageLayout ?? new DataPageLayoutSettings();
-        GridMinRowHeight = uiLayout.GridMinRowHeight is >= 24d and <= 120d
+        GridMinRowHeight = uiLayout.GridMinRowHeight is >= 24d and <= 240d
             ? uiLayout.GridMinRowHeight
             : 38d;
+        GridZoom = uiLayout.GridZoom is >= 0.5d and <= 2.0d
+            ? uiLayout.GridZoom
+            : 1.0d;
         IsColumnReorderEnabled = uiLayout.IsColumnReorderEnabled;
 
         SanierenOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadSanierenOptions());
@@ -195,20 +208,35 @@ public sealed partial class DataPageViewModel : ObservableObject
         OpenCostsCommand = new RelayCommand<HaltungRecord?>(OpenCosts, CanOpenCosts);
         RestoreCostsCommand = new RelayCommand<HaltungRecord?>(RestoreCosts, CanRestoreCosts);
         SuggestMeasuresCommand = new RelayCommand<HaltungRecord?>(SuggestMeasures, CanSuggestMeasures);
+        SuggestAllMeasuresCommand = new RelayCommand(SuggestAllMeasures);
         OptimizeSanierungKiCommand = new RelayCommand<HaltungRecord?>(OpenSanierungOptimizationWindow, CanOpenCosts);
         ShowModelStatusCommand = new RelayCommand(ShowModelStatus);
+        SearchAndLinkMediaCommand = new RelayCommand(OpenMediaSearchWindow);
         ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
 
         PropertyChanged += DataPageViewModel_PropertyChanged;
         UpdateLearningInfo();
+        _ = LoadTrainedHaltungenAsync();
     }
 
     partial void OnGridMinRowHeightChanged(double value)
     {
-        var clamped = Math.Clamp(value, 24d, 120d);
+        var clamped = Math.Clamp(value, 24d, 240d);
         if (Math.Abs(clamped - value) > 0.001d)
         {
             GridMinRowHeight = clamped;
+            return;
+        }
+
+        PersistDataPageBasicUiSettings();
+    }
+
+    partial void OnGridZoomChanged(double value)
+    {
+        var clamped = Math.Clamp(value, 0.5d, 2.0d);
+        if (Math.Abs(clamped - value) > 0.001d)
+        {
+            GridZoom = clamped;
             return;
         }
 
@@ -656,9 +684,231 @@ public sealed partial class DataPageViewModel : ObservableObject
         dlg.Owner = System.Windows.Application.Current?.MainWindow;
         dlg.ShowDialog();
 
+        // Protokoll-Änderungen in die Haltungsfelder zurückschreiben.
+        SyncObservationsToHoldingFields(record);
+
         if (Selected?.Id == record.Id)
             RefreshSelectedProtocolEntries();
     }
+
+    public void SyncObservationsToHoldingFields(HaltungRecord? record, bool showStatus = false)
+    {
+        if (record is null)
+            return;
+
+        var entries = record.Protocol?.Current?.Entries?
+            .Where(e => !e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code))
+            .ToList();
+        if (entries is null)
+            return;
+
+        var changed = false;
+
+        var primaryLines = BuildPrimaryDamageLinesFromProtocolEntries(entries);
+        var primaryText = string.Join("\n", primaryLines);
+        var currentPrimary = record.GetFieldValue("Primaere_Schaeden") ?? string.Empty;
+        if (!string.Equals(currentPrimary, primaryText, StringComparison.Ordinal))
+        {
+            record.SetFieldValue("Primaere_Schaeden", primaryText, FieldSource.Manual, userEdited: true);
+            changed = true;
+        }
+
+        var mergedFindings = BuildFindingsFromProtocolEntries(entries, record.VsaFindings);
+        if (HasFindingChanges(record.VsaFindings, mergedFindings))
+        {
+            record.VsaFindings = mergedFindings;
+            changed = true;
+        }
+
+        if (!changed)
+            return;
+
+        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
+        _shell.Project.Dirty = true;
+        RefreshRecordInGrid(record);
+
+        if (Selected?.Id == record.Id)
+            RefreshSelectedProtocolEntries();
+
+        ScheduleAutoSave();
+        if (showStatus)
+            _shell.SetStatus("Beobachtungen in Haltungen-Feldern aktualisiert");
+    }
+
+    private static List<string> BuildPrimaryDamageLinesFromProtocolEntries(IEnumerable<ProtocolEntry> entries)
+    {
+        var lines = new List<string>();
+        foreach (var entry in entries)
+        {
+            var code = (entry.Code ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(code))
+                continue;
+
+            var parts = new List<string>();
+            var meter = entry.MeterStart ?? entry.MeterEnd;
+            if (meter.HasValue)
+                parts.Add($"{meter.Value:0.00}m");
+
+            parts.Add(code);
+
+            var description = NormalizeInlineText(entry.Beschreibung);
+            if (!string.IsNullOrWhiteSpace(description))
+                parts.Add(description);
+
+            var q1 = GetCodeMetaParameter(entry, "Quantifizierung1", "vsa.q1");
+            var q2 = GetCodeMetaParameter(entry, "Quantifizierung2", "vsa.q2");
+            if (!string.IsNullOrWhiteSpace(q1))
+                parts.Add($"Q1={q1}");
+            if (!string.IsNullOrWhiteSpace(q2))
+                parts.Add($"Q2={q2}");
+
+            lines.Add(string.Join(" ", parts.Where(p => !string.IsNullOrWhiteSpace(p))));
+        }
+
+        return lines;
+    }
+
+    private static List<VsaFinding> BuildFindingsFromProtocolEntries(
+        IReadOnlyList<ProtocolEntry> entries,
+        IReadOnlyList<VsaFinding>? existingFindings)
+    {
+        var existing = existingFindings ?? Array.Empty<VsaFinding>();
+        var list = new List<VsaFinding>(entries.Count);
+
+        foreach (var entry in entries)
+        {
+            var code = (entry.Code ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(code))
+                continue;
+
+            var meterStart = entry.MeterStart;
+            var meterEnd = entry.MeterEnd;
+            var q1 = GetCodeMetaParameter(entry, "Quantifizierung1", "vsa.q1");
+            var q2 = GetCodeMetaParameter(entry, "Quantifizierung2", "vsa.q2");
+            var photo = entry.FotoPaths?.FirstOrDefault(p => !string.IsNullOrWhiteSpace(p));
+
+            var template = existing.FirstOrDefault(f =>
+                AreCodesCompatible(code, f.KanalSchadencode) && AreMetersClose(meterStart, f.MeterStart ?? f.SchadenlageAnfang, 0.15));
+
+            var finding = new VsaFinding
+            {
+                KanalSchadencode = code,
+                Raw = (entry.Beschreibung ?? string.Empty).Trim(),
+                MeterStart = meterStart,
+                MeterEnd = meterEnd,
+                SchadenlageAnfang = meterStart,
+                SchadenlageEnde = meterEnd,
+                Quantifizierung1 = q1,
+                Quantifizierung2 = q2,
+                MPEG = string.IsNullOrWhiteSpace(entry.Mpeg) ? template?.MPEG : entry.Mpeg,
+                FotoPath = string.IsNullOrWhiteSpace(photo) ? template?.FotoPath : photo,
+                EZD = template?.EZD,
+                EZS = template?.EZS,
+                EZB = template?.EZB
+            };
+
+            if (entry.Zeit.HasValue)
+                finding.Timestamp = DateTime.Today.Add(entry.Zeit.Value);
+            else
+                finding.Timestamp = template?.Timestamp;
+
+            if (entry.IsStreckenschaden && meterStart.HasValue && meterEnd.HasValue && meterEnd.Value >= meterStart.Value)
+                finding.LL = meterEnd.Value - meterStart.Value;
+            else
+                finding.LL = template?.LL;
+
+            list.Add(finding);
+        }
+
+        return list;
+    }
+
+    private static bool HasFindingChanges(IReadOnlyList<VsaFinding>? oldFindings, IReadOnlyList<VsaFinding> newFindings)
+    {
+        var oldList = oldFindings ?? Array.Empty<VsaFinding>();
+        if (oldList.Count != newFindings.Count)
+            return true;
+
+        for (var i = 0; i < oldList.Count; i++)
+        {
+            if (!string.Equals(BuildFindingFingerprint(oldList[i]), BuildFindingFingerprint(newFindings[i]), StringComparison.Ordinal))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static string BuildFindingFingerprint(VsaFinding finding)
+    {
+        return string.Join("|",
+            NormalizeCodeToken(finding.KanalSchadencode),
+            FormatNullableDouble(finding.MeterStart),
+            FormatNullableDouble(finding.MeterEnd),
+            FormatNullableDouble(finding.SchadenlageAnfang),
+            FormatNullableDouble(finding.SchadenlageEnde),
+            finding.Raw?.Trim() ?? string.Empty,
+            finding.Quantifizierung1?.Trim() ?? string.Empty,
+            finding.Quantifizierung2?.Trim() ?? string.Empty,
+            finding.MPEG?.Trim() ?? string.Empty,
+            finding.FotoPath?.Trim() ?? string.Empty);
+    }
+
+    private static string NormalizeCodeToken(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+        var upper = value.Trim().ToUpperInvariant();
+        return Regex.Replace(upper, "[^A-Z0-9]", string.Empty);
+    }
+
+    private static bool AreCodesCompatible(string? left, string? right)
+    {
+        var a = NormalizeCodeToken(left);
+        var b = NormalizeCodeToken(right);
+        if (a.Length == 0 || b.Length == 0)
+            return false;
+        return string.Equals(a, b, StringComparison.Ordinal)
+               || a.StartsWith(b, StringComparison.Ordinal)
+               || b.StartsWith(a, StringComparison.Ordinal);
+    }
+
+    private static bool AreMetersClose(double? left, double? right, double tolerance)
+    {
+        if (!left.HasValue || !right.HasValue)
+            return false;
+        return Math.Abs(left.Value - right.Value) <= tolerance;
+    }
+
+    private static string NormalizeInlineText(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        var oneLine = string.Join(" ",
+            value.Replace("\r\n", "\n")
+                 .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                 .Select(s => s.Trim())
+                 .Where(s => s.Length > 0));
+
+        return string.Join(" ", oneLine.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    private static string? GetCodeMetaParameter(ProtocolEntry entry, params string[] keys)
+    {
+        if (entry.CodeMeta?.Parameters is null || keys.Length == 0)
+            return null;
+
+        foreach (var key in keys)
+        {
+            if (entry.CodeMeta.Parameters.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
+                return value.Trim();
+        }
+
+        return null;
+    }
+
+    private static string FormatNullableDouble(double? value)
+        => value.HasValue ? value.Value.ToString("0.###", CultureInfo.InvariantCulture) : string.Empty;
 
     private void OpenVideoAiPipeline(HaltungRecord? record)
     {
@@ -683,8 +933,12 @@ public sealed partial class DataPageViewModel : ObservableObject
             return;
         }
 
-        using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(30) };
-        var plausibility = new NoopAiSuggestionPlausibilityService();
+        var timeout = cfg.OllamaRequestTimeout > TimeSpan.Zero
+            ? cfg.OllamaRequestTimeout
+            : TimeSpan.FromMinutes(30);
+        using var http = new HttpClient { Timeout = timeout };
+        var allowedSet = new HashSet<string>(allowedCodes, StringComparer.OrdinalIgnoreCase);
+        var plausibility = new RuleBasedAiSuggestionPlausibilityService(allowedSet);
         var pipeline = new VideoAnalysisPipelineService(cfg, plausibility, http);
 
         var haltungId = record.GetFieldValue("Haltungsname") ?? record.Id.ToString();
@@ -1181,6 +1435,89 @@ public sealed partial class DataPageViewModel : ObservableObject
         UpdateLearningInfo(recommendation.SimilarCasesCount, recommendation.EstimatedTotalCost);
     }
 
+    /// <summary>
+    /// Batch: Fuer alle Haltungen mit Sanierungsbedarf (oder fehlenden Massnahmen)
+    /// automatisch Sanierungsmassnahmen vorschlagen.
+    /// </summary>
+    public void SuggestAllMeasures()
+    {
+        var records = _shell.Project.Data;
+        if (records.Count == 0)
+        {
+            MessageBox.Show("Keine Haltungen vorhanden.", "Massnahmen",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var filled = 0;
+        var skipped = 0;
+        var noSuggestion = 0;
+
+        foreach (var record in records)
+        {
+            // Nur Records mit Sanierungsbedarf oder schlechter Zustandsnote beruecksichtigen
+            var pruefung = (record.GetFieldValue("Pruefungsresultat") ?? "").Trim();
+            var existingMeasures = (record.GetFieldValue("Empfohlene_Sanierungsmassnahmen") ?? "").Trim();
+            var hasDamageCodes = record.VsaFindings is not null && record.VsaFindings.Count > 0
+                || !string.IsNullOrWhiteSpace(record.GetFieldValue("Primaere_Schaeden"));
+
+            // Ueberspringe Records die bereits manuell bearbeitete Massnahmen haben
+            if (!string.IsNullOrWhiteSpace(existingMeasures))
+            {
+                var meta = record.FieldMeta.GetValueOrDefault("Empfohlene_Sanierungsmassnahmen");
+                if (meta is not null && meta.UserEdited)
+                {
+                    skipped++;
+                    continue;
+                }
+            }
+
+            // Nur Records mit Sanierungsbedarf oder Schadenscodes verarbeiten
+            if (!string.Equals(pruefung, "Sanierungsbedarf", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(pruefung, "beobachten", StringComparison.OrdinalIgnoreCase)
+                && !hasDamageCodes)
+            {
+                skipped++;
+                continue;
+            }
+
+            var recommendation = _measureRecommendationService.Recommend(record, maxSuggestions: 5);
+            if (recommendation.Measures.Count == 0)
+            {
+                noSuggestion++;
+                continue;
+            }
+
+            var value = string.Join(Environment.NewLine, recommendation.Measures);
+            record.SetFieldValue("Empfohlene_Sanierungsmassnahmen", value, FieldSource.Unknown, userEdited: false);
+            foreach (var suggestion in recommendation.Measures)
+                AddOptionIfMissing(EmpfohleneSanierungsmassnahmenOptions, suggestion);
+
+            if (recommendation.EstimatedTotalCost is not null)
+                record.SetFieldValue("Kosten", recommendation.EstimatedTotalCost.Value.ToString("0.00", CultureInfo.InvariantCulture), FieldSource.Unknown, userEdited: false);
+            if (recommendation.RenovierungInlinerM is not null)
+                record.SetFieldValue("Renovierung_Inliner_m", FormatDecimal(recommendation.RenovierungInlinerM.Value), FieldSource.Unknown, userEdited: false);
+            if (recommendation.RenovierungInlinerStk is not null)
+                record.SetFieldValue("Renovierung_Inliner_Stk", FormatInt(recommendation.RenovierungInlinerStk.Value), FieldSource.Unknown, userEdited: false);
+            if (recommendation.AnschluesseVerpressen is not null)
+                record.SetFieldValue("Anschluesse_verpressen", FormatInt(recommendation.AnschluesseVerpressen.Value), FieldSource.Unknown, userEdited: false);
+            if (recommendation.ReparaturManschette is not null)
+                record.SetFieldValue("Reparatur_Manschette", FormatInt(recommendation.ReparaturManschette.Value), FieldSource.Unknown, userEdited: false);
+            if (recommendation.ReparaturKurzliner is not null)
+                record.SetFieldValue("Reparatur_Kurzliner", FormatInt(recommendation.ReparaturKurzliner.Value), FieldSource.Unknown, userEdited: false);
+
+            filled++;
+        }
+
+        if (filled > 0)
+        {
+            _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
+            _shell.Project.Dirty = true;
+        }
+
+        _shell.SetStatus($"Massnahmen: {filled} Haltungen befuellt, {skipped} uebersprungen, {noSuggestion} ohne Vorschlag");
+    }
+
     private void OpenSanierungOptimizationWindow(HaltungRecord? record)
     {
         record ??= Selected;
@@ -1316,6 +1653,32 @@ public sealed partial class DataPageViewModel : ObservableObject
         return path;
     }
 
+    public void OpenMediaSearchWindow()
+    {
+        if (Records.Count == 0)
+        {
+            _shell.SetStatus("Keine Haltungen vorhanden.");
+            return;
+        }
+
+        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
+            ? _sp.Settings.LastVideoSourceFolder
+            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
+                ? _sp.Settings.LastVideoFolder
+                : null;
+
+        var win = new MediaSearchWindow(Records.ToList(), initial);
+        win.Owner = System.Windows.Application.Current.MainWindow;
+
+        if (win.ShowDialog() == true && win.Applied)
+        {
+            _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
+            _shell.Project.Dirty = true;
+            OnPropertyChanged(nameof(Records));
+            _shell.SetStatus($"Medien verlinkt: {win.AppliedVideoCount} Videos, {win.AppliedPdfCount} PDFs");
+        }
+    }
+
     private string? ResolveExistingPath(string? raw)
     {
         var path = raw?.Trim();
@@ -1393,6 +1756,73 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         LearningTrafficLightColor = "#C62828";
         LearningTrafficLightText = "Rot";
+    }
+
+    /// <summary>
+    /// Lädt die CaseIds aus dem Training Center und normalisiert sie zu Haltungsnamen.
+    /// </summary>
+    private async Task LoadTrainedHaltungenAsync()
+    {
+        try
+        {
+            var store = new TrainingCenterStore();
+            var state = await store.LoadAsync();
+            TrainedHaltungen.Clear();
+            foreach (var tc in state.Cases)
+            {
+                var name = NormalizeTrainingCaseId(tc.CaseId);
+                if (!string.IsNullOrWhiteSpace(name))
+                    TrainedHaltungen.Add(name);
+            }
+        }
+        catch
+        {
+            // Training-Daten nicht verfügbar – kein Fehler
+        }
+    }
+
+    /// <summary>
+    /// Normalisiert eine Training-CaseId zu einem Haltungsnamen.
+    /// Entfernt Datums-Prefixe wie "20250602_" und Knoten-Prefixe wie "07.", "10.".
+    /// </summary>
+    private static string NormalizeTrainingCaseId(string caseId)
+    {
+        var v = (caseId ?? "").Trim();
+        // Datums-Prefix entfernen (z.B. "20250602_06.24341-35625" → "06.24341-35625")
+        v = Regex.Replace(v, @"^\d{8}_", "");
+        return v;
+    }
+
+    /// <summary>
+    /// Prüft ob eine Haltung im Training Center erfasst ist.
+    /// </summary>
+    public bool IsTrainedCase(string? haltungsname)
+    {
+        if (string.IsNullOrWhiteSpace(haltungsname) || TrainedHaltungen.Count == 0)
+            return false;
+        // Exakter Match
+        if (TrainedHaltungen.Contains(haltungsname))
+            return true;
+        // Ohne Knoten-Prefixe vergleichen (z.B. "07.1028055" → "1028055")
+        var stripped = StripNodePrefixes(haltungsname);
+        foreach (var trained in TrainedHaltungen)
+        {
+            if (string.Equals(StripNodePrefixes(trained), stripped, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
+    private static readonly Regex NodePrefixRx = new(@"^\d{1,2}\.", RegexOptions.Compiled);
+
+    private static string StripNodePrefixes(string holdingKey)
+    {
+        var dashIdx = holdingKey.IndexOf('-');
+        if (dashIdx < 0)
+            return NodePrefixRx.Replace(holdingKey, "");
+        var left = holdingKey[..dashIdx];
+        var right = holdingKey[(dashIdx + 1)..];
+        return $"{NodePrefixRx.Replace(left, "")}-{NodePrefixRx.Replace(right, "")}";
     }
 
     public void EnsureOptionForField(string fieldName, string? value)
@@ -1777,6 +2207,12 @@ public sealed partial class DataPageViewModel : ObservableObject
         return cost.TotalInclMwst;
     }
 
+    public void RefreshSelectedRecord()
+    {
+        if (Selected is not null)
+            RefreshRecordInGrid(Selected);
+    }
+
     private void RefreshRecordInGrid(HaltungRecord record)
     {
         var index = Records.IndexOf(record);
@@ -1967,6 +2403,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         var layout = _sp.Settings.DataPageLayout ?? new DataPageLayoutSettings();
         layout.GridMinRowHeight = GridMinRowHeight;
+        layout.GridZoom = GridZoom;
         layout.IsColumnReorderEnabled = IsColumnReorderEnabled;
         _sp.Settings.DataPageLayout = layout;
         _sp.Settings.Save();

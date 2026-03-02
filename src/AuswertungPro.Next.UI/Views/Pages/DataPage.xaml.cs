@@ -25,6 +25,21 @@ public partial class DataPage : System.Windows.Controls.UserControl
 {
     private static readonly IValueConverter CostDisplayConverter = new ChfAccountingDisplayConverter();
     private static readonly IValueConverter HorizontalAlignmentToTextAlignmentConverter = new HorizontalAlignmentToTextAlignmentValueConverter();
+    private static readonly Regex PrimaryMeterAtRegex = new(
+        @"@\s*(?<m>\d+(?:[.,]\d+)?)\s*m\b",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex PrimaryMeterLeadingRegex = new(
+        @"^\s*(?<m>\d+(?:[.,]\d+)?)\s*m\b",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex PrimaryQuant1Regex = new(
+        @"\b(?:Q1|Quantifizierung1)\s*[:=]\s*(?<v>[^\s;,|)]+)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex PrimaryQuant2Regex = new(
+        @"\b(?:Q2|Quantifizierung2)\s*[:=]\s*(?<v>[^\s;,|)]+)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex PrimaryQuantStripRegex = new(
+        @"\b(?:Q1|Q2|Quantifizierung1|Quantifizierung2)\s*[:=]\s*[^\s;,|)]+",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private bool _columnsBuilt;
     private System.Windows.Point _dragStartPoint;
@@ -37,6 +52,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private readonly DispatcherTimer _layoutSaveDebounceTimer;
     private bool _updatingAlignmentButtons;
     private bool _isRestoringLayout;
+    private bool _isUndocking;
     private DataGridColumn? _activeColumn;
 
     public DataPage()
@@ -67,6 +83,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
         {
             _layoutSaveDebounceTimer.Stop();
             SaveLayoutToSettings();
+            // Wenn die Seite gewechselt wird, Grid zurueck docken
+            // NICHT waehrend des Abdock-Vorgangs ausfuehren!
+            if (_floatingGridWindow is not null && !_isUndocking)
+                DockGridBack();
         };
         DataContextChanged += DataPage_DataContextChanged;
     }
@@ -888,9 +908,50 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void Grid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
+        if (ClearColumnMenuItem.IsChecked)
+        {
+            var header = FindAncestor<DataGridColumnHeader>((DependencyObject)e.OriginalSource);
+            if (header?.Column is not null)
+            {
+                var fieldName = header.Column.GetValue(FrameworkElement.TagProperty) as string;
+                if (!string.IsNullOrWhiteSpace(fieldName))
+                {
+                    var displayName = header.Column.Header?.ToString() ?? fieldName;
+                    ClearColumn(fieldName, displayName);
+                    e.Handled = true;
+                    return;
+                }
+            }
+        }
+
         var row = FindAncestor<DataGridRow>((DependencyObject)e.OriginalSource);
         if (row is not null)
             Grid.SelectedItem = row.Item;
+    }
+
+    private void ClearColumn(string fieldName, string displayName)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+
+        var result = MessageBox.Show(
+            $"Alle Werte in Spalte \"{displayName}\" loeschen?",
+            "Spalte leeren",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+        if (result != MessageBoxResult.Yes)
+            return;
+
+        foreach (var record in vm.Records)
+        {
+            // userEdited: true um die Guard-Clause zu umgehen (sonst wird das Leeren blockiert)
+            record.SetFieldValue(fieldName, string.Empty, FieldSource.Manual, userEdited: true);
+            // Danach UserEdited zuruecksetzen, damit Importe das Feld wieder fuellen koennen
+            if (record.FieldMeta.TryGetValue(fieldName, out var meta))
+                meta.UserEdited = false;
+        }
+
+        vm.ScheduleAutoSave();
     }
 
     private void Grid_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -903,13 +964,13 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        const double step = 2d;
+        const double step = 0.05d;
         var delta = e.Delta > 0 ? step : -step;
-        var next = Math.Clamp(vm.GridMinRowHeight + delta, 24d, 120d);
-        if (Math.Abs(next - vm.GridMinRowHeight) < 0.001d)
+        var next = Math.Clamp(vm.GridZoom + delta, 0.5d, 2.0d);
+        if (Math.Abs(next - vm.GridZoom) < 0.001d)
             return;
 
-        vm.GridMinRowHeight = next;
+        vm.GridZoom = next;
         e.Handled = true;
     }
 
@@ -1022,7 +1083,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
             var title = string.IsNullOrWhiteSpace(holding)
                 ? "Primäre Schäden"
                 : $"Primäre Schäden - {holding}";
-            ShowTextPreview(title, record.GetFieldValue(fieldName));
+            var preview = BuildPrimaryDamagePreviewContent(record);
+            ShowTextPreview(title, preview);
             e.Handled = true;
             return;
         }
@@ -1031,6 +1093,239 @@ public partial class DataPage : System.Windows.Controls.UserControl
         {
             ShowZustandsklasseExplanation(record);
             e.Handled = true;
+        }
+    }
+
+    private static readonly SolidColorBrush TrainedRowBrush = new(Color.FromArgb(60, 220, 40, 40));
+
+    private string BuildPrimaryDamagePreviewContent(HaltungRecord record)
+    {
+        var sp = App.Services as ServiceProvider;
+        var lines = BuildPrimaryDamageLinesFromFindings(record, sp);
+        if (lines.Count == 0)
+            lines = BuildPrimaryDamageLinesFromRaw(record.GetFieldValue("Primaere_Schaeden"), sp);
+
+        if (lines.Count == 0)
+            return record.GetFieldValue("Primaere_Schaeden");
+
+        return string.Join("\n", lines);
+    }
+
+    private static List<string> BuildPrimaryDamageLinesFromFindings(HaltungRecord record, ServiceProvider? sp)
+    {
+        var lines = new List<string>();
+        if (record.VsaFindings is null || record.VsaFindings.Count == 0)
+            return lines;
+
+        foreach (var finding in record.VsaFindings.Where(f => !string.IsNullOrWhiteSpace(f.KanalSchadencode)))
+        {
+            var code = NormalizePrimaryCode(finding.KanalSchadencode);
+            if (!IsLikelyPrimaryCode(code))
+                continue;
+
+            var meter = finding.MeterStart ?? finding.SchadenlageAnfang ?? TryExtractMeter(finding.Raw);
+            var title = TryResolveCodeTitle(sp, code);
+            var q1 = FirstNonEmpty(finding.Quantifizierung1, TryExtractQuantification(finding.Raw, PrimaryQuant1Regex));
+            var q2 = FirstNonEmpty(finding.Quantifizierung2, TryExtractQuantification(finding.Raw, PrimaryQuant2Regex));
+            var text = ExtractFreeText(finding.Raw, code, title);
+            var formatted = FormatPrimaryPreviewLine(meter, code, title, text, q1, q2);
+            if (!string.IsNullOrWhiteSpace(formatted))
+                lines.Add(formatted);
+        }
+
+        return lines;
+    }
+
+    private static List<string> BuildPrimaryDamageLinesFromRaw(string? rawText, ServiceProvider? sp)
+    {
+        var lines = new List<string>();
+        if (string.IsNullOrWhiteSpace(rawText))
+            return lines;
+
+        var rawLines = rawText.Replace("\r\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var raw in rawLines)
+        {
+            var line = raw.Trim();
+            if (line.Length == 0)
+                continue;
+
+            var code = TryExtractPrimaryCode(line);
+            if (!IsLikelyPrimaryCode(code))
+            {
+                lines.Add(line);
+                continue;
+            }
+
+            var meter = TryExtractMeter(line);
+            var title = TryResolveCodeTitle(sp, code);
+            var q1 = TryExtractQuantification(line, PrimaryQuant1Regex);
+            var q2 = TryExtractQuantification(line, PrimaryQuant2Regex);
+            var text = ExtractFreeText(line, code, title);
+            var formatted = FormatPrimaryPreviewLine(meter, code, title, text, q1, q2);
+            lines.Add(string.IsNullOrWhiteSpace(formatted) ? line : formatted);
+        }
+
+        return lines;
+    }
+
+    private static string FormatPrimaryPreviewLine(
+        double? meter,
+        string code,
+        string? title,
+        string? text,
+        string? q1,
+        string? q2)
+    {
+        var parts = new List<string>();
+        if (meter.HasValue)
+            parts.Add($"{meter.Value:0.00}m");
+
+        if (!string.IsNullOrWhiteSpace(code))
+            parts.Add(code);
+        if (!string.IsNullOrWhiteSpace(title))
+            parts.Add(title!);
+        if (!string.IsNullOrWhiteSpace(text))
+            parts.Add($"({text})");
+        if (!string.IsNullOrWhiteSpace(q1))
+            parts.Add($"Q1={q1}");
+        if (!string.IsNullOrWhiteSpace(q2))
+            parts.Add($"Q2={q2}");
+
+        return string.Join(" ", parts);
+    }
+
+    private static string TryExtractPrimaryCode(string line)
+    {
+        if (string.IsNullOrWhiteSpace(line))
+            return string.Empty;
+
+        var withoutLeadingMeter = PrimaryMeterLeadingRegex.Replace(line.Trim(), "").Trim();
+        var separators = new[] { ' ', '\t', '@', '(', ')', ':', ';', ',', '|' };
+        var token = withoutLeadingMeter.Split(separators, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        var code = NormalizePrimaryCode(token);
+        if (IsLikelyPrimaryCode(code))
+            return code;
+
+        var atIndex = withoutLeadingMeter.IndexOf('@');
+        if (atIndex > 0)
+        {
+            var beforeAt = withoutLeadingMeter.Substring(0, atIndex).Trim();
+            token = beforeAt.Split(separators, StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+            code = NormalizePrimaryCode(token);
+            if (IsLikelyPrimaryCode(code))
+                return code;
+        }
+
+        return string.Empty;
+    }
+
+    private static bool IsLikelyPrimaryCode(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            return false;
+        if (code.Length < 3 || code.Length > 6)
+            return false;
+        if (!char.IsLetter(code[0]))
+            return false;
+        if (!code.Any(char.IsLetter))
+            return false;
+        return true;
+    }
+
+    private static string NormalizePrimaryCode(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return string.Empty;
+        return Regex.Replace(raw.Trim().ToUpperInvariant(), @"[^A-Z0-9]", "");
+    }
+
+    private static double? TryExtractMeter(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        var leading = PrimaryMeterLeadingRegex.Match(raw);
+        if (leading.Success && TryParseDoubleInvariant(leading.Groups["m"].Value, out var leadingMeter))
+            return leadingMeter;
+
+        var at = PrimaryMeterAtRegex.Match(raw);
+        if (at.Success && TryParseDoubleInvariant(at.Groups["m"].Value, out var atMeter))
+            return atMeter;
+
+        return null;
+    }
+
+    private static bool TryParseDoubleInvariant(string raw, out double value)
+    {
+        var normalized = (raw ?? string.Empty).Trim().Replace(',', '.');
+        return double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+    }
+
+    private static string? TryExtractQuantification(string? raw, Regex pattern)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        var match = pattern.Match(raw);
+        if (!match.Success)
+            return null;
+
+        var value = match.Groups["v"].Value.Trim();
+        return value.Length == 0 ? null : value;
+    }
+
+    private static string? ExtractFreeText(string? raw, string code, string? title)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        var text = raw.Replace("\r\n", " ").Replace('\n', ' ').Trim();
+        if (text.Length == 0)
+            return null;
+
+        if (!string.IsNullOrWhiteSpace(code))
+            text = Regex.Replace(text, @"^\s*" + Regex.Escape(code) + @"\b", "", RegexOptions.IgnoreCase).Trim();
+        text = PrimaryMeterLeadingRegex.Replace(text, "").Trim();
+        text = PrimaryMeterAtRegex.Replace(text, "").Trim();
+        text = PrimaryQuantStripRegex.Replace(text, "").Trim();
+        if (text.StartsWith("(") && text.EndsWith(")") && text.Length > 2)
+            text = text[1..^1].Trim();
+        text = Regex.Replace(text, @"\s+", " ").Trim(' ', '-', ',', ';', '|');
+
+        if (text.Length == 0)
+            return null;
+        if (string.Equals(text, code, StringComparison.OrdinalIgnoreCase))
+            return null;
+        if (!string.IsNullOrWhiteSpace(title) && string.Equals(text, title, StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        return text;
+    }
+
+    private static string? TryResolveCodeTitle(ServiceProvider? sp, string code)
+    {
+        if (sp?.CodeCatalog is null || string.IsNullOrWhiteSpace(code))
+            return null;
+        if (!sp.CodeCatalog.TryGet(code, out var def))
+            return null;
+        return string.IsNullOrWhiteSpace(def.Title) ? null : def.Title.Trim();
+    }
+
+    private static string? FirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
+
+    private void Grid_LoadingRow(object? sender, DataGridRowEventArgs e)
+    {
+        if (e.Row.Item is not HaltungRecord record)
+            return;
+
+        if (DataContext is DataPageViewModel vm && vm.IsTrainedCase(record.GetFieldValue("Haltungsname")))
+        {
+            e.Row.Background = TrainedRowBrush;
+        }
+        else
+        {
+            e.Row.ClearValue(DataGridRow.BackgroundProperty);
         }
     }
 
@@ -1296,6 +1591,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
             Directory.Move(folder, targetFolder);
 
+            // Link-Feld aktualisieren (bestehende Logik)
             if (!string.IsNullOrWhiteSpace(linkPath))
             {
                 var newLinkPath = linkPath.Replace(folder, targetFolder, StringComparison.OrdinalIgnoreCase);
@@ -1303,12 +1599,101 @@ public partial class DataPage : System.Windows.Controls.UserControl
                     newLinkPath = renamed.Replace(folder, targetFolder, StringComparison.OrdinalIgnoreCase);
                 record.SetFieldValue("Link", newLinkPath, FieldSource.Manual, userEdited: true);
             }
+            // Link-Feld: auch relative Pfade aktualisieren
+            else
+            {
+                var relLink = record.GetFieldValue("Link")?.Trim();
+                if (!string.IsNullOrWhiteSpace(relLink) && !Path.IsPathRooted(relLink))
+                {
+                    var updated = ReplaceHoldingInPath(relLink, oldSan, newSan);
+                    if (!string.Equals(relLink, updated, StringComparison.OrdinalIgnoreCase))
+                        record.SetFieldValue("Link", updated, FieldSource.Manual, userEdited: true);
+                }
+            }
+
+            // Protocol.HaltungId aktualisieren
+            if (record.Protocol != null)
+                record.Protocol.HaltungId = newHolding;
+
+            // FotoPaths in allen Protokoll-Revisionen aktualisieren
+            if (record.Protocol != null)
+            {
+                UpdateRevisionPaths(record.Protocol.Original, oldSan, newSan);
+                UpdateRevisionPaths(record.Protocol.Current, oldSan, newSan);
+                foreach (var rev in record.Protocol.History)
+                    UpdateRevisionPaths(rev, oldSan, newSan);
+            }
+
+            // PDF_Path aktualisieren
+            var pdfPath = record.GetFieldValue("PDF_Path");
+            if (!string.IsNullOrWhiteSpace(pdfPath))
+            {
+                var updatedPdf = ReplaceHoldingInPath(pdfPath, oldSan, newSan);
+                if (!string.Equals(pdfPath, updatedPdf, StringComparison.OrdinalIgnoreCase))
+                    record.SetFieldValue("PDF_Path", updatedPdf, FieldSource.Manual, userEdited: true);
+            }
+
+            // PDF_All aktualisieren
+            var pdfAll = record.GetFieldValue("PDF_All");
+            if (!string.IsNullOrWhiteSpace(pdfAll))
+            {
+                var parts = pdfAll.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                var updatedParts = parts.Select(p => ReplaceHoldingInPath(p.Trim(), oldSan, newSan));
+                var newPdfAll = string.Join(";", updatedParts);
+                if (!string.Equals(pdfAll, newPdfAll, StringComparison.OrdinalIgnoreCase))
+                    record.SetFieldValue("PDF_All", newPdfAll, FieldSource.Manual, userEdited: true);
+            }
+
+            // VsaFindings FotoPath aktualisieren
+            if (record.VsaFindings != null)
+            {
+                foreach (var finding in record.VsaFindings)
+                {
+                    if (!string.IsNullOrWhiteSpace(finding.FotoPath))
+                        finding.FotoPath = ReplaceHoldingInPath(finding.FotoPath, oldSan, newSan);
+                }
+            }
         }
         catch (Exception ex)
         {
             MessageBox.Show($"Umbenennen fehlgeschlagen: {ex.Message}", "Umbenennen",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private static void UpdateRevisionPaths(
+        AuswertungPro.Next.Domain.Protocol.ProtocolRevision revision, string oldSan, string newSan)
+    {
+        foreach (var entry in revision.Entries)
+        {
+            for (var i = 0; i < entry.FotoPaths.Count; i++)
+            {
+                var path = entry.FotoPaths[i];
+                if (!string.IsNullOrWhiteSpace(path))
+                    entry.FotoPaths[i] = ReplaceHoldingInPath(path, oldSan, newSan);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Ersetzt das Haltungsname-Segment in einem Pfad (absolut oder relativ).
+    /// Funktioniert mit Backslash und Forward-Slash.
+    /// </summary>
+    private static string ReplaceHoldingInPath(string path, string oldSan, string newSan)
+    {
+        var result = path;
+
+        // Backslash-Pfade (absolut, Windows)
+        var oldBs = "\\" + oldSan + "\\";
+        var newBs = "\\" + newSan + "\\";
+        result = result.Replace(oldBs, newBs, StringComparison.OrdinalIgnoreCase);
+
+        // Forward-Slash-Pfade (relativ, JSON)
+        var oldFs = "/" + oldSan + "/";
+        var newFs = "/" + newSan + "/";
+        result = result.Replace(oldFs, newFs, StringComparison.OrdinalIgnoreCase);
+
+        return result;
     }
 
     private static string? TryResolvePath(string? raw, string? lastProjectPath)
@@ -1346,6 +1731,222 @@ public partial class DataPage : System.Windows.Controls.UserControl
         return string.IsNullOrWhiteSpace(cleaned) ? "UNKNOWN" : cleaned;
     }
 
+    private BeobachtungenWindow? _beobachtungenWindow;
+
+    // --- Abdocken / Andocken ---
+    private FloatingGridWindow? _floatingGridWindow;
+
+    private void UndockGrid_Click(object sender, RoutedEventArgs e)
+    {
+        UndockGrid();
+    }
+
+    private void DockBackFromPlaceholder_Click(object sender, RoutedEventArgs e)
+    {
+        DockGridBack();
+    }
+
+    private void UndockGrid()
+    {
+        if (_floatingGridWindow is not null)
+        {
+            _floatingGridWindow.Activate();
+            return;
+        }
+
+        try
+        {
+            // Guard-Flag setzen damit der Unloaded-Handler nicht interferiert
+            _isUndocking = true;
+
+            // FloatingGridWindow erstellen (VOR dem Entfernen des DataGrids!)
+            _floatingGridWindow = new FloatingGridWindow();
+            _floatingGridWindow.DockBackRequested += DockGridBack;
+            _floatingGridWindow.Closed += FloatingGridWindow_Closed;
+
+            // DataContext auf FloatingWindow setzen (damit Bindings funktionieren)
+            _floatingGridWindow.DataContext = DataContext;
+
+            // DataGrid aus dem visuellen Baum entfernen und ins Floating-Fenster verschieben
+            GridHost.Children.Remove(Grid);
+            _floatingGridWindow.SetGridContent(Grid);
+            Grid.Visibility = Visibility.Visible;
+
+            // Platzhalter anzeigen
+            UndockedPlaceholder.Visibility = Visibility.Visible;
+            UndockButton.IsEnabled = false;
+
+            // Fensterposition aus Settings laden
+            var settings = (App.Services as ServiceProvider)?.Settings;
+            _floatingGridWindow.ApplySavedBounds(settings?.FloatingGridBounds);
+
+            // Titel und Info aktualisieren
+            UpdateFloatingWindowInfo();
+
+            _floatingGridWindow.Show();
+
+            // Settings merken
+            if (settings is not null)
+                settings.IsGridFloating = true;
+        }
+        catch (Exception ex)
+        {
+            // Bei Fehler: alles zuruecksetzen
+            System.Diagnostics.Debug.WriteLine($"Undock error: {ex}");
+            MessageBox.Show($"Fehler beim Abdocken:\n{ex.Message}", "Abdocken", MessageBoxButton.OK, MessageBoxImage.Warning);
+
+            // DataGrid zuruecksetzen falls es entfernt wurde
+            if (!GridHost.Children.Contains(Grid))
+                GridHost.Children.Add(Grid);
+            Grid.Visibility = Visibility.Visible;
+            UndockedPlaceholder.Visibility = Visibility.Collapsed;
+            UndockButton.IsEnabled = true;
+
+            if (_floatingGridWindow is not null)
+            {
+                _floatingGridWindow.DockBackRequested -= DockGridBack;
+                _floatingGridWindow.Closed -= FloatingGridWindow_Closed;
+                try { _floatingGridWindow.Close(); } catch { }
+                _floatingGridWindow = null;
+            }
+        }
+        finally
+        {
+            _isUndocking = false;
+        }
+    }
+
+    private void DockGridBack()
+    {
+        if (_floatingGridWindow is null)
+            return;
+
+        // Fensterposition speichern
+        var settings = (App.Services as ServiceProvider)?.Settings;
+        if (settings is not null)
+        {
+            settings.FloatingGridBounds = _floatingGridWindow.GetBoundsString();
+            settings.IsGridFloating = false;
+        }
+
+        // DataGrid aus dem Floating-Fenster entfernen
+        var grid = _floatingGridWindow.RemoveGridContent();
+        _floatingGridWindow.DockBackRequested -= DockGridBack;
+        _floatingGridWindow.Closed -= FloatingGridWindow_Closed;
+        _floatingGridWindow.Close();
+        _floatingGridWindow = null;
+
+        // DataGrid zurueck in den GridHost setzen
+        if (grid is DataGrid dg)
+        {
+            GridHost.Children.Add(dg);
+            dg.Visibility = Visibility.Visible;
+        }
+
+        // Platzhalter ausblenden
+        UndockedPlaceholder.Visibility = Visibility.Collapsed;
+        UndockButton.IsEnabled = true;
+    }
+
+    private void FloatingGridWindow_Closed(object? sender, EventArgs e)
+    {
+        // Wenn das Floating-Fenster geschlossen wird (X-Button), Grid zurueck docken
+        if (_floatingGridWindow is null)
+            return;
+
+        var settings = (App.Services as ServiceProvider)?.Settings;
+        if (settings is not null)
+        {
+            settings.FloatingGridBounds = _floatingGridWindow.GetBoundsString();
+            settings.IsGridFloating = false;
+        }
+
+        var grid = _floatingGridWindow.RemoveGridContent();
+        _floatingGridWindow.DockBackRequested -= DockGridBack;
+        _floatingGridWindow = null;
+
+        if (grid is DataGrid dg)
+        {
+            GridHost.Children.Add(dg);
+            dg.Visibility = Visibility.Visible;
+        }
+
+        UndockedPlaceholder.Visibility = Visibility.Collapsed;
+        UndockButton.IsEnabled = true;
+    }
+
+    private void UpdateFloatingWindowInfo()
+    {
+        if (_floatingGridWindow is null)
+            return;
+
+        var vm = DataContext as DataPageViewModel;
+        var projectName = vm?.Project?.Name;
+        var count = vm?.Records?.Count ?? 0;
+        var selected = vm?.Selected?.GetFieldValue("Haltungsname");
+        _floatingGridWindow.UpdateInfo(projectName, count, selected);
+    }
+
+    private void BeobachtungenMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+        var record = GetContextMenuRecord(sender);
+        if (record is null)
+        {
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "Beobachtungen",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        vm.Selected = record;
+
+        var holdingName = record.GetFieldValue("Haltungsname");
+
+        Action vsaUpdateAction = () =>
+        {
+            var sp = App.Services as ServiceProvider;
+            if (sp?.Vsa is null) return;
+            var res = sp.Vsa.EvaluateRecord(record);
+            if (res.Ok)
+            {
+                vm.RefreshSelectedRecord();
+                MessageBox.Show($"VSA Zustand aktualisiert für {holdingName}.",
+                    "VSA", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show($"VSA Fehler: {res.ErrorMessage}",
+                    "VSA", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+
+        Action syncHoldingFieldsAction = () =>
+        {
+            vm.SyncObservationsToHoldingFields(record, showStatus: true);
+        };
+
+        if (_beobachtungenWindow is not null && _beobachtungenWindow.IsLoaded)
+        {
+            _beobachtungenWindow.UpdateEntries(vm.SelectedProtocolEntries, holdingName, vsaUpdateAction, syncHoldingFieldsAction);
+            _beobachtungenWindow.Activate();
+            return;
+        }
+
+        _beobachtungenWindow = new BeobachtungenWindow(
+            vm.SelectedProtocolEntries,
+            holdingName,
+            vm.OpenProtocolCommand,
+            record,
+            vsaUpdateAction,
+            syncHoldingFieldsAction)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        _beobachtungenWindow.Closed += (_, _) => _beobachtungenWindow = null;
+        _beobachtungenWindow.Show();
+    }
+
     private void PlayMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)
@@ -1358,6 +1959,52 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
         }
         vm.PlayVideoCommand.Execute(record);
+    }
+
+    private void MoveRecordUpMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+
+        var record = GetContextMenuRecord(sender) ?? vm.Selected;
+        if (record is null)
+        {
+            MessageBox.Show("Keine Zeile erkannt. Bitte zuerst eine Haltung auswaehlen.", "Position",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        vm.Selected = record;
+        if (vm.MoveUpCommand.CanExecute(null))
+            vm.MoveUpCommand.Execute(null);
+    }
+
+    private void MoveRecordDownMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+
+        var record = GetContextMenuRecord(sender) ?? vm.Selected;
+        if (record is null)
+        {
+            MessageBox.Show("Keine Zeile erkannt. Bitte zuerst eine Haltung auswaehlen.", "Position",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        vm.Selected = record;
+        if (vm.MoveDownCommand.CanExecute(null))
+            vm.MoveDownCommand.Execute(null);
+    }
+
+    private void DropdownButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.ContextMenu is null)
+            return;
+        btn.ContextMenu.PlacementTarget = btn;
+        btn.ContextMenu.Placement = PlacementMode.Bottom;
+        btn.ContextMenu.DataContext = DataContext;
+        btn.ContextMenu.IsOpen = true;
     }
 
     private void ProtocolMenu_Click(object sender, RoutedEventArgs e)
@@ -1428,6 +2075,20 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
         }
         vm.SuggestMeasuresCommand.Execute(record);
+    }
+
+    private void SuggestAllMeasuresMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+        vm.SuggestAllMeasuresCommand.Execute(null);
+    }
+
+    private void MediaSearchMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+        vm.SearchAndLinkMediaCommand.Execute(null);
     }
 
     private void SanierungKiMenu_Click(object sender, RoutedEventArgs e)
