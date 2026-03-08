@@ -1,4 +1,4 @@
-using AuswertungPro.Next.UI.Ai.Sanierung.Dto;
+using AuswertungPro.Next.Application.Ai.Sanierung;
 
 namespace AuswertungPro.Next.UI.Ai.Sanierung;
 
@@ -6,10 +6,10 @@ namespace AuswertungPro.Next.UI.Ai.Sanierung;
 public sealed class SanierungValidationService
 {
     /// <summary>
-    /// Returns true if any finding code starts with "BAD" (Einsturz/Collapse).
+    /// Returns true if any finding code starts with "BBB" (Einsturz/Collapse).
     /// </summary>
     public bool IsCollapseDetected(IReadOnlyList<DamageFindingDto> findings)
-        => findings.Any(f => f.Code.StartsWith("BAD", StringComparison.OrdinalIgnoreCase));
+        => findings.Any(f => f.Code.StartsWith("BBB", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Returns true if Zustandsklasse is Z4 or Z5 (full replacement justified).
@@ -25,7 +25,9 @@ public sealed class SanierungValidationService
     /// </summary>
     public IReadOnlyList<MeasureConstraint> ExtractConstraints(
         IReadOnlyList<DamageFindingDto> findings,
-        string? zustandsklasse)
+        string? zustandsklasse,
+        bool groundwater = false,
+        int? diameterMm = null)
     {
         var constraints = new List<MeasureConstraint>();
 
@@ -43,6 +45,13 @@ public sealed class SanierungValidationService
 
         if (hasStructural)
             constraints.Add(MeasureConstraint.RequiresStructuralCheck);
+
+        if (groundwater)
+            constraints.Add(MeasureConstraint.RequiresDewatering);
+
+        // Berstlining not feasible for large diameters (>DN500)
+        if (diameterMm is > 500)
+            constraints.Add(MeasureConstraint.NoBerstlining);
 
         return constraints;
     }
@@ -67,8 +76,17 @@ public sealed class SanierungValidationService
             riskFlags.Add("Zustandsklasse rechtfertigt keine Vollerneuerung (§8 NoFullReplacement)");
         }
 
+        if (constraints.Contains(MeasureConstraint.NoBerstlining) && IsBerstliningMeasure(measure))
+        {
+            violations.Add(MeasureConstraint.NoBerstlining);
+            riskFlags.Add("DN > 500 – Berstlining nicht zulässig (§8 NoBerstlining)");
+        }
+
         if (constraints.Contains(MeasureConstraint.RequiresStructuralCheck))
             riskFlags.Add("Struktureller Schaden vorhanden – bitte statische Prüfung veranlassen");
+
+        if (constraints.Contains(MeasureConstraint.RequiresDewatering))
+            riskFlags.Add("Grundwasser vorhanden – Wasserhaltung erforderlich, Kosten erhöht");
 
         return new ValidationResult
         {
@@ -78,20 +96,26 @@ public sealed class SanierungValidationService
         };
     }
 
-    private static bool IsLinerMeasure(string measure)
+    internal static bool IsLinerMeasure(string measure)
         => measure.Contains("Liner", StringComparison.OrdinalIgnoreCase)
         || measure.Contains("Inliner", StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsReplacementMeasure(string measure)
+    internal static bool IsReplacementMeasure(string measure)
         => measure.Contains("Erneuerung", StringComparison.OrdinalIgnoreCase)
         || measure.Contains("Neubau", StringComparison.OrdinalIgnoreCase);
+
+    internal static bool IsBerstliningMeasure(string measure)
+        => measure.Contains("Berstlining", StringComparison.OrdinalIgnoreCase)
+        || measure.Contains("Burst", StringComparison.OrdinalIgnoreCase);
 }
 
 public enum MeasureConstraint
 {
     NoLinerAllowed,
     NoFullReplacement,
-    RequiresStructuralCheck
+    RequiresStructuralCheck,
+    RequiresDewatering,
+    NoBerstlining
 }
 
 public sealed record ValidationResult

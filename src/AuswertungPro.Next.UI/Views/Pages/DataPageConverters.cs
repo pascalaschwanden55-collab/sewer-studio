@@ -95,6 +95,21 @@ public sealed class PhotoIndexToVisibilityConverter : IValueConverter
         => Binding.DoNothing;
 }
 
+public sealed class PathToFileNameConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        var raw = value as string;
+        if (string.IsNullOrWhiteSpace(raw))
+            return string.Empty;
+
+        return Path.GetFileName(raw.Trim());
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => Binding.DoNothing;
+}
+
 public sealed class StringNotEmptyToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)

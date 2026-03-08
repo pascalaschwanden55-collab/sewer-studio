@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,11 +15,13 @@ public sealed class MeterTimelineService
 {
     private readonly AiRuntimeConfig _cfg;
     private readonly OsdMeterDetectionService? _osd;
+    private readonly int _concurrency;
 
-    public MeterTimelineService(AiRuntimeConfig cfg, OsdMeterDetectionService? osd = null)
+    public MeterTimelineService(AiRuntimeConfig cfg, OsdMeterDetectionService? osd = null, int concurrency = 1)
     {
         _cfg = cfg;
         _osd = osd;
+        _concurrency = Math.Max(1, concurrency);
     }
 
     /// <summary>
@@ -61,27 +65,44 @@ public sealed class MeterTimelineService
             return Array.Empty<(double, double)>();
 
         var ffmpeg = _cfg.FfmpegPath ?? "ffmpeg";
-        var raw = new List<(double TimeSeconds, double? Meter)>();
 
-        for (var t = 0.0; t < videoDurationSeconds; t += stepSeconds)
+        // Collect all frames first (fast — ffmpeg decodes, no GPU needed)
+        var frames = new List<(int Index, FrameData Frame)>();
+        int idx = 0;
+
+        await using var stream = VideoFrameStream.Open(
+            ffmpeg, videoPath, stepSeconds, videoDurationSeconds, ct);
+
+        await foreach (var frame in stream.ReadFramesAsync(ct).ConfigureAwait(false))
         {
             ct.ThrowIfCancellationRequested();
+            frames.Add((idx++, frame));
+        }
 
-            var bytes = await VideoFrameExtractor.TryExtractFramePngAsync(
-                ffmpeg, videoPath, TimeSpan.FromSeconds(t), ct)
-                .ConfigureAwait(false);
+        // Parallel OSD reads — keeps GPU busy with multiple concurrent requests
+        var results = new ConcurrentDictionary<int, (double Time, double? Meter)>();
 
+        await Parallel.ForEachAsync(frames, new ParallelOptions
+        {
+            MaxDegreeOfParallelism = _concurrency,
+            CancellationToken = ct
+        }, async (item, token) =>
+        {
             double? meter = null;
-            if (bytes is not null)
+            if (item.Frame.PngBytes is { Length: > 0 })
             {
-                var base64 = Convert.ToBase64String(bytes);
-                var result = await _osd.ReadMeterAsync(base64, null, ct).ConfigureAwait(false);
+                var base64 = Convert.ToBase64String(item.Frame.PngBytes);
+                var result = await _osd.ReadMeterAsync(base64, null, token).ConfigureAwait(false);
                 if (result.Source != MeterSource.Unknown)
                     meter = result.Value;
             }
+            results[item.Index] = (item.Frame.TimestampSeconds, meter);
+        });
 
-            raw.Add((t, meter));
-        }
+        // Reassemble in original order
+        var raw = results.OrderBy(kv => kv.Key)
+            .Select(kv => (kv.Value.Time, kv.Value.Meter))
+            .ToList();
 
         return OsdMeterDetectionService.SmoothMeterTimeline(raw);
     }

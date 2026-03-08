@@ -27,7 +27,7 @@ namespace AuswertungPro.Next.UI.Ai.Training
                 var settings = await JsonSerializer.DeserializeAsync<TrainingCenterSettings>(stream);
                 return settings ?? new TrainingCenterSettings();
             }
-            catch (Exception ex)
+            catch
             {
                 var backup = path + $".bad_{DateTime.UtcNow:yyyyMMddHHmmss}";
                 File.Move(path, backup, overwrite: true);
@@ -39,8 +39,7 @@ namespace AuswertungPro.Next.UI.Ai.Training
         {
             var path = GetStorePath();
             using var stream = File.Create(path);
-            var opts = new JsonSerializerOptions { WriteIndented = true };
-            await JsonSerializer.SerializeAsync(stream, settings, opts);
+            await JsonSerializer.SerializeAsync(stream, settings, Application.Common.JsonDefaults.Indented);
         }
     }
 }

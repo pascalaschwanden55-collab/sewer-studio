@@ -27,15 +27,18 @@ internal static class PdfOcrExtractor
 
         try
         {
-            var renderArgs = $"-f {pageNumber} -l {pageNumber} -r 300 -gray -singlefile -png \"{pdfPath}\" \"{tempBase}\"";
-            var render = RunProcess(pdftoppm, renderArgs, timeoutMs: 45_000);
+            var render = RunProcess(pdftoppm,
+                ["-f", pageNumber.ToString(), "-l", pageNumber.ToString(),
+                 "-r", "300", "-gray", "-singlefile", "-png", pdfPath, tempBase],
+                timeoutMs: 45_000);
             if (!render.Success)
                 return new OcrPageExtractionResult(false, null, $"pdftoppm failed: {render.Message}");
             if (!File.Exists(pngPath))
                 return new OcrPageExtractionResult(false, null, "pdftoppm produced no image");
 
-            var ocrArgs = $"\"{pngPath}\" stdout -l deu+eng --oem 1 --psm 6";
-            var ocr = RunProcess(tesseract, ocrArgs, timeoutMs: 60_000);
+            var ocr = RunProcess(tesseract,
+                [pngPath, "stdout", "-l", "deu+eng", "--oem", "1", "--psm", "6"],
+                timeoutMs: 60_000);
             if (!ocr.Success)
                 return new OcrPageExtractionResult(false, null, $"tesseract failed: {ocr.Message}");
 
@@ -161,12 +164,11 @@ internal static class PdfOcrExtractor
         return null;
     }
 
-    private static ProcessRunResult RunProcess(string exePath, string arguments, int timeoutMs)
+    private static ProcessRunResult RunProcess(string exePath, string[] args, int timeoutMs)
     {
         var psi = new ProcessStartInfo
         {
             FileName = exePath,
-            Arguments = arguments,
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -174,6 +176,7 @@ internal static class PdfOcrExtractor
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8
         };
+        foreach (var a in args) psi.ArgumentList.Add(a);
 
         using var process = Process.Start(psi);
         if (process is null)

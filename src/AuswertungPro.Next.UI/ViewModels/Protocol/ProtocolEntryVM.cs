@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -104,32 +105,32 @@ public sealed class ProtocolEntryVM : INotifyPropertyChanged
     // --- VSA-KEK Parameter Mapping (CodeMeta.Parameters) ---
     public string? VsaDistanz
     {
-        get => GetParam("vsa.distanz");
-        set => SetParam("vsa.distanz", value);
+        get => GetFirstParam("vsa.distanz", "Distance");
+        set => SetParamAliases(value, "vsa.distanz", "Distance");
     }
 
     public string? VsaUhrVon
     {
-        get => GetParam("vsa.uhr.von");
-        set => SetParam("vsa.uhr.von", value);
+        get => GetFirstParam("vsa.uhr.von", "ClockPos1");
+        set => SetParamAliases(value, "vsa.uhr.von", "ClockPos1");
     }
 
     public string? VsaUhrBis
     {
-        get => GetParam("vsa.uhr.bis");
-        set => SetParam("vsa.uhr.bis", value);
+        get => GetFirstParam("vsa.uhr.bis", "ClockPos2");
+        set => SetParamAliases(value, "vsa.uhr.bis", "ClockPos2");
     }
 
     public string? VsaQ1
     {
-        get => GetParam("vsa.q1");
-        set => SetParam("vsa.q1", value);
+        get => GetFirstParam("vsa.q1", "Q1", "Quantifizierung1");
+        set => SetParamAliases(value, "vsa.q1", "Q1", "Quantifizierung1");
     }
 
     public string? VsaQ2
     {
-        get => GetParam("vsa.q2");
-        set => SetParam("vsa.q2", value);
+        get => GetFirstParam("vsa.q2", "Q2", "Quantifizierung2");
+        set => SetParamAliases(value, "vsa.q2", "Q2", "Quantifizierung2");
     }
 
     public string? VsaStrecke
@@ -152,8 +153,8 @@ public sealed class ProtocolEntryVM : INotifyPropertyChanged
 
     public string? VsaVideo
     {
-        get => GetParam("vsa.video");
-        set => SetParam("vsa.video", value);
+        get => GetFirstParam("vsa.video", "TimeCtr");
+        set => SetParamAliases(value, "vsa.video", "TimeCtr");
     }
 
     public string? VsaAnsicht
@@ -193,9 +194,11 @@ public sealed class ProtocolEntryVM : INotifyPropertyChanged
         MeterStart = meterStart;
         MeterEnd = meterEnd;
 
+        var normalizedParams = NormalizeSecAliases(parameters, code);
+
         Model.CodeMeta ??= new ProtocolEntryCodeMeta();
         Model.CodeMeta.Code = code;
-        Model.CodeMeta.Parameters = new Dictionary<string, string>(parameters, StringComparer.OrdinalIgnoreCase);
+        Model.CodeMeta.Parameters = normalizedParams;
         Model.CodeMeta.Severity = string.IsNullOrWhiteSpace(severity) ? null : severity.Trim();
         Model.CodeMeta.Count = count;
         Model.CodeMeta.Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
@@ -209,14 +212,14 @@ public sealed class ProtocolEntryVM : INotifyPropertyChanged
 
     public void EnsureVsaDefaults()
     {
-        if (string.IsNullOrWhiteSpace(GetParam("vsa.code")) && !string.IsNullOrWhiteSpace(Code))
-            SetParam("vsa.code", Code);
+        if (string.IsNullOrWhiteSpace(GetFirstParam("vsa.code", "Code")) && !string.IsNullOrWhiteSpace(Code))
+            SetParamAliases(Code, "vsa.code", "Code");
 
-        if (string.IsNullOrWhiteSpace(GetParam("vsa.distanz")) && MeterStart is not null)
-            SetParam("vsa.distanz", MeterStart.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
+        if (string.IsNullOrWhiteSpace(VsaDistanz) && MeterStart is not null)
+            VsaDistanz = MeterStart.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
 
-        if (string.IsNullOrWhiteSpace(GetParam("vsa.video")) && Zeit is not null)
-            SetParam("vsa.video", FormatTime(Zeit.Value));
+        if (string.IsNullOrWhiteSpace(VsaVideo) && Zeit is not null)
+            VsaVideo = FormatTime(Zeit.Value);
     }
 
     public void ApplyStreckenLogik()
@@ -292,6 +295,25 @@ public sealed class ProtocolEntryVM : INotifyPropertyChanged
         return Model.CodeMeta.Parameters.TryGetValue(key, out var v) ? v : null;
     }
 
+    private string? GetFirstParam(params string[] keys)
+    {
+        if (Model.CodeMeta?.Parameters is null || keys.Length == 0)
+            return null;
+
+        foreach (var key in keys)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+                continue;
+            if (!Model.CodeMeta.Parameters.TryGetValue(key, out var value))
+                continue;
+            if (string.IsNullOrWhiteSpace(value))
+                continue;
+            return value;
+        }
+
+        return null;
+    }
+
     private void SetParam(string key, string? value)
     {
         Model.CodeMeta ??= new ProtocolEntryCodeMeta { Code = Model.Code };
@@ -307,6 +329,62 @@ public sealed class ProtocolEntryVM : INotifyPropertyChanged
         }
 
         OnPropertyChanged(nameof(Parameters));
+    }
+
+    private void SetParamAliases(string? value, params string[] keys)
+    {
+        if (keys.Length == 0)
+            return;
+
+        foreach (var key in keys)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+                continue;
+            SetParam(key, value);
+        }
+    }
+
+    private static Dictionary<string, string> NormalizeSecAliases(
+        IReadOnlyDictionary<string, string> parameters,
+        string code)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in parameters)
+        {
+            if (string.IsNullOrWhiteSpace(kv.Key))
+                continue;
+            var value = kv.Value?.Trim();
+            if (string.IsNullOrWhiteSpace(value))
+                continue;
+            result[kv.Key.Trim()] = value;
+        }
+
+        void Mirror(string[] keys)
+        {
+            var value = keys
+                .Select(k => result.TryGetValue(k, out var v) ? v : null)
+                .FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
+            if (string.IsNullOrWhiteSpace(value))
+                return;
+            foreach (var key in keys)
+                result[key] = value;
+        }
+
+        Mirror(new[] { "vsa.code", "Code" });
+        Mirror(new[] { "vsa.distanz", "Distance" });
+        Mirror(new[] { "vsa.video", "TimeCtr" });
+        Mirror(new[] { "vsa.uhr.von", "ClockPos1" });
+        Mirror(new[] { "vsa.uhr.bis", "ClockPos2" });
+        Mirror(new[] { "vsa.q1", "Q1", "Quantifizierung1" });
+        Mirror(new[] { "vsa.q2", "Q2", "Quantifizierung2" });
+
+        if (!string.IsNullOrWhiteSpace(code))
+        {
+            result["vsa.code"] = code.Trim();
+            result["Code"] = code.Trim();
+        }
+
+        return result;
     }
 
     private static string FormatTime(TimeSpan value)

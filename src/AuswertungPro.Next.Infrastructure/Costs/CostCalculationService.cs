@@ -118,8 +118,7 @@ public sealed class CostCalculationService
     public void SaveCatalog(PriceCatalog catalog)
     {
         EnsureUserDataDirectory();
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        var json = JsonSerializer.Serialize(catalog, options);
+        var json = JsonSerializer.Serialize(catalog, Application.Common.JsonDefaults.Indented);
         File.WriteAllText(_userCatalogPath, json);
     }
 
@@ -165,8 +164,7 @@ public sealed class CostCalculationService
     public void SaveTemplates(MeasureTemplates templates)
     {
         EnsureUserDataDirectory();
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        var json = JsonSerializer.Serialize(templates, options);
+        var json = JsonSerializer.Serialize(templates, Application.Common.JsonDefaults.Indented);
         File.WriteAllText(_userTemplatesPath, json);
     }
 

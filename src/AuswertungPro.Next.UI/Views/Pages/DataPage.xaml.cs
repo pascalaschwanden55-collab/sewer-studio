@@ -18,6 +18,7 @@ using AuswertungPro.Next.UI.ViewModels.Pages;
 using System.IO;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Domain.Protocol;
+using CommunityToolkit.Mvvm.Input;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
@@ -903,7 +904,20 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void Grid_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+        // Don't capture drag start when clicking inside an editing TextBox
+        if (e.OriginalSource is DependencyObject dep && FindAncestor<TextBox>(dep) is not null)
+            return;
+
         _dragStartPoint = e.GetPosition(null);
+    }
+
+    private void Grid_PreparingCellForEdit(object sender, DataGridPreparingCellForEditEventArgs e)
+    {
+        if (e.EditingElement is TextBox tb)
+        {
+            tb.SelectAll();
+            tb.Focus();
+        }
     }
 
     private void Grid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
@@ -1021,6 +1035,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is DataPageViewModel vm && !vm.IsProjectReady)
             return;
 
+        // Don't start row drag when user is selecting text inside an editing TextBox
+        if (e.OriginalSource is DependencyObject dep && FindAncestor<TextBox>(dep) is not null)
+            return;
+
         if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
         {
             System.Windows.Point mousePos = e.GetPosition(null);
@@ -1093,7 +1111,205 @@ public partial class DataPage : System.Windows.Controls.UserControl
         {
             ShowZustandsklasseExplanation(record);
             e.Handled = true;
+            return;
         }
+
+        if (fieldName == "Haltungsname")
+        {
+            ShowHaltungRecordDetails(record);
+            e.Handled = true;
+        }
+    }
+
+    // ── Haltung Record Details ──────────────────────────────────────────
+
+    private void ShowHaltungRecordDetails(HaltungRecord record)
+    {
+        var holding = record.GetFieldValue("Haltungsname");
+        var header = string.IsNullOrWhiteSpace(holding)
+            ? "Haltungsdetails"
+            : $"Haltung {holding}";
+
+        var subtitle = "Komplette Zeile in Spaltenreihenfolge der Haltungs-Ansicht.";
+        var groups = BuildHaltungRecordDetails(record);
+
+        ICommand? suggestCmd = null;
+        if (DataContext is DataPageViewModel vm)
+        {
+            suggestCmd = new RelayCommand(() => vm.OpenCostsCommand.Execute(record));
+        }
+
+        var window = new RecordDetailsWindow(
+            title: string.IsNullOrWhiteSpace(holding) ? "Haltungsdetails" : $"Haltungsdetails - {holding}",
+            header: header,
+            subHeader: subtitle,
+            groups: groups,
+            suggestMeasuresCommand: suggestCmd)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        window.Show();
+    }
+
+    private List<RecordDetailGroup> BuildHaltungRecordDetails(HaltungRecord record)
+    {
+        var groups = new List<RecordDetailGroup>();
+        var added = new HashSet<string>(StringComparer.Ordinal);
+        var buckets = new Dictionary<string, List<RecordDetailItem>>(StringComparer.Ordinal)
+        {
+            ["Stammdaten"] = new(),
+            ["Zustand & Inspektion"] = new(),
+            ["Sanierung & Kosten"] = new(),
+            ["Dokumente & Medien"] = new(),
+            ["Weitere Angaben"] = new()
+        };
+
+        foreach (var column in FieldCatalog.ColumnOrder.Where(x => added.Add(x)))
+        {
+            var groupName = ResolveHaltungDetailGroup(column);
+            buckets[groupName].Add(CreateHaltungDetailItem(column, record));
+        }
+
+        foreach (var extraField in record.Fields.Keys
+                     .Where(x => !added.Contains(x))
+                     .OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+        {
+            buckets["Weitere Angaben"].Add(CreateHaltungDetailItem(extraField, record));
+        }
+
+        AddHaltungGroup(groups, buckets, "Stammdaten", "Identifikation und Lage der Haltung.");
+        AddHaltungGroup(groups, buckets, "Zustand & Inspektion", "Bewertung, Schaeden und Pruefresultate.");
+        AddHaltungGroup(groups, buckets, "Sanierung & Kosten", "Massnahmen, Kosten und Mengenangaben.");
+        AddHaltungGroup(groups, buckets, "Dokumente & Medien", "Verknuepfte Dateien, PDFs und Links.");
+        AddHaltungGroup(groups, buckets, "Weitere Angaben", "Felder ohne klare Zuordnung.");
+
+        return groups;
+    }
+
+    private RecordDetailItem CreateHaltungDetailItem(string fieldName, HaltungRecord record)
+    {
+        var def = FieldCatalog.Get(fieldName);
+        var label = def.Label;
+        var value = record.GetFieldValue(fieldName);
+
+        // Managed combo fields (ViewModel-driven dropdowns)
+        var managedCombo = ResolveManagedComboSpec(fieldName);
+        if (managedCombo is not null)
+        {
+            return new RecordDetailItem(
+                label,
+                value,
+                commitValue: next => CommitHaltungDetailField(record, fieldName, next),
+                isCombo: true,
+                allowFreeText: managedCombo.Value.AllowFreeText,
+                options: managedCombo.Value.Options,
+                editOptionsCommand: managedCombo.Value.EditCmd,
+                previewOptionsCommand: managedCombo.Value.PreviewCmd,
+                resetOptionsCommand: managedCombo.Value.ResetCmd,
+                addOptionCommand: managedCombo.Value.AddCmd,
+                removeOptionCommand: managedCombo.Value.RemoveCmd);
+        }
+
+        // Catalog combo fields
+        var catalogItems = FieldCatalog.GetComboItems(fieldName);
+        if (catalogItems.Count > 0)
+        {
+            return new RecordDetailItem(
+                label,
+                value,
+                commitValue: next => CommitHaltungDetailField(record, fieldName, next),
+                isCombo: true,
+                allowFreeText: false,
+                options: catalogItems);
+        }
+
+        var isMultiline = fieldName is "Primaere_Schaeden" or "Bemerkungen" or "Empfohlene_Sanierungsmassnahmen";
+        var digitsOnly = def.Type == FieldType.Int;
+
+        return new RecordDetailItem(
+            label,
+            value,
+            commitValue: next => CommitHaltungDetailField(record, fieldName, next),
+            isMultiline: isMultiline,
+            digitsOnly: digitsOnly);
+    }
+
+    private (IEnumerable<string> Options, bool AllowFreeText,
+        ICommand? EditCmd, ICommand? PreviewCmd, ICommand? ResetCmd,
+        ICommand? AddCmd, ICommand? RemoveCmd)? ResolveManagedComboSpec(string fieldName)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return null;
+
+        return fieldName switch
+        {
+            "Sanieren_JaNein" => (vm.SanierenOptions, true,
+                vm.EditSanierenOptionsCommand, vm.PreviewSanierenOptionsCommand,
+                vm.ResetSanierenOptionsCommand, null, null),
+            "Eigentuemer" => (vm.EigentuemerOptions, false,
+                vm.EditEigentuemerOptionsCommand, vm.PreviewEigentuemerOptionsCommand,
+                vm.ResetEigentuemerOptionsCommand, null, null),
+            "Pruefungsresultat" => (vm.PruefungsresultatOptions, true,
+                vm.EditPruefungsresultatOptionsCommand, vm.PreviewPruefungsresultatOptionsCommand,
+                vm.ResetPruefungsresultatOptionsCommand, null, null),
+            "Referenzpruefung" => (vm.ReferenzpruefungOptions, true,
+                vm.EditReferenzpruefungOptionsCommand, vm.PreviewReferenzpruefungOptionsCommand,
+                vm.ResetReferenzpruefungOptionsCommand, null, null),
+            _ => null
+        };
+    }
+
+    private void CommitHaltungDetailField(HaltungRecord record, string fieldName, string? value)
+    {
+        var next = value ?? string.Empty;
+        record.SetFieldValue(fieldName, next, FieldSource.Manual, userEdited: true);
+
+        if (DataContext is DataPageViewModel vm)
+        {
+            vm.EnsureOptionForField(fieldName, next);
+            vm.ScheduleAutoSave();
+        }
+    }
+
+    private static void AddHaltungGroup(
+        ICollection<RecordDetailGroup> groups,
+        IReadOnlyDictionary<string, List<RecordDetailItem>> buckets,
+        string title,
+        string description)
+    {
+        if (!buckets.TryGetValue(title, out var items) || items.Count == 0)
+            return;
+
+        groups.Add(new RecordDetailGroup(title, description, items));
+    }
+
+    private static string ResolveHaltungDetailGroup(string fieldName)
+    {
+        return fieldName switch
+        {
+            "NR" or "Haltungsname" or "Strasse" or "DN_mm" or "Rohrmaterial"
+                or "Nutzungsart" or "Haltungslaenge_m" or "Inspektionsrichtung"
+                or "Eigentuemer" or "FunktionHierarchisch"
+                => "Stammdaten",
+
+            "Zustandsklasse" or "VSA_Zustandsnote_D" or "VSA_Zustandsnote_S"
+                or "VSA_Zustandsnote_B" or "Primaere_Schaeden" or "Pruefungsresultat"
+                or "Referenzpruefung" or "Datum_Jahr" or "Ausgefuehrt_durch"
+                or "Gewaesserschutz" or "Grundwasserspiegel"
+                => "Zustand & Inspektion",
+
+            "Sanieren_JaNein" or "Empfohlene_Sanierungsmassnahmen" or "Kosten"
+                or "Renovierung_Inliner_Stk" or "Renovierung_Inliner_m"
+                or "Anschluesse_verpressen" or "Reparatur_Manschette"
+                or "Linerendmanschette_LEM"
+                or "Reparatur_Kurzliner" or "Erneuerung_Neubau_m"
+                or "Offen_abgeschlossen"
+                => "Sanierung & Kosten",
+
+            "Link" => "Dokumente & Medien",
+
+            _ => "Weitere Angaben"
+        };
     }
 
     private static readonly SolidColorBrush TrainedRowBrush = new(Color.FromArgb(60, 220, 40, 40));
@@ -1114,6 +1330,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private static List<string> BuildPrimaryDamageLinesFromFindings(HaltungRecord record, ServiceProvider? sp)
     {
         var lines = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (record.VsaFindings is null || record.VsaFindings.Count == 0)
             return lines;
 
@@ -1124,6 +1341,12 @@ public partial class DataPage : System.Windows.Controls.UserControl
                 continue;
 
             var meter = finding.MeterStart ?? finding.SchadenlageAnfang ?? TryExtractMeter(finding.Raw);
+            var dedupeKey = meter.HasValue
+                ? $"{code}|{meter.Value.ToString("F2", CultureInfo.InvariantCulture)}"
+                : $"{code}|";
+            if (!seen.Add(dedupeKey))
+                continue;
+
             var title = TryResolveCodeTitle(sp, code);
             var q1 = FirstNonEmpty(finding.Quantifizierung1, TryExtractQuantification(finding.Raw, PrimaryQuant1Regex));
             var q2 = FirstNonEmpty(finding.Quantifizierung2, TryExtractQuantification(finding.Raw, PrimaryQuant2Regex));
@@ -1339,7 +1562,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
 
         var sp = App.Services as ServiceProvider;
-        var resolved = TryResolvePath(rawPath, sp?.Settings.LastProjectPath) ?? rawPath;
+        var resolved = AuswertungPro.Next.Application.Common.ProjectPathResolver.ResolveFilePath(rawPath, sp?.Settings.LastProjectPath) ?? rawPath;
         if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
         {
             MessageBox.Show($"Foto nicht gefunden:\n{rawPath}", "Foto",
@@ -1493,9 +1716,24 @@ public partial class DataPage : System.Windows.Controls.UserControl
             var newValue = GetEditedTextValue(e.EditingElement) ?? oldValue;
             if (!string.Equals(oldValue, newValue, StringComparison.OrdinalIgnoreCase))
             {
+                var sp = App.Services as ServiceProvider;
+                var projectPath = sp?.Settings.LastProjectPath;
+
+                // Erst Ordner + Pfade umbenennen, DANN erst den Namen setzen
+                var renameResult = AuswertungPro.Next.Application.Common.HoldingRenameService.Rename(
+                    hRecord, oldValue, newValue, projectPath);
+
+                if (!renameResult.Success)
+                {
+                    MessageBox.Show(
+                        $"Umbenennen fehlgeschlagen:\n{renameResult.ErrorMessage}",
+                        "Umbenennen", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // Name erst nach erfolgreichem Rename setzen
                 hRecord.SetFieldValue("Haltungsname", newValue, FieldSource.Manual, userEdited: true);
                 PdfCorrectionMetadata.RegisterHoldingRename(vm.Project, oldValue, newValue);
-                TryRenameHoldingAssets(hRecord, oldValue, newValue);
             }
         }
 
@@ -1518,218 +1756,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
         col.CellStyle = style;
     }
 
-    private void TryRenameHoldingAssets(HaltungRecord record, string oldHolding, string newHolding)
-    {
-        try
-        {
-            var oldSan = SanitizePathSegment(oldHolding);
-            var newSan = SanitizePathSegment(newHolding);
-            if (string.IsNullOrWhiteSpace(oldSan) || string.IsNullOrWhiteSpace(newSan))
-                return;
-            if (string.Equals(oldSan, newSan, StringComparison.OrdinalIgnoreCase))
-                return;
-
-            var sp = App.Services as ServiceProvider;
-            var link = record.GetFieldValue("Link");
-            var linkPath = TryResolvePath(link, sp?.Settings.LastProjectPath);
-
-            var folder = !string.IsNullOrWhiteSpace(linkPath) ? Path.GetDirectoryName(linkPath) : null;
-            if (string.IsNullOrWhiteSpace(folder))
-            {
-                var projectPath = sp?.Settings.LastProjectPath;
-                var projectDir = string.IsNullOrWhiteSpace(projectPath) ? null : Path.GetDirectoryName(projectPath);
-                if (!string.IsNullOrWhiteSpace(projectDir))
-                {
-                    var holdingsRoot = Path.Combine(projectDir, "Haltungen");
-                    if (Directory.Exists(holdingsRoot))
-                    {
-                        folder = Directory.EnumerateDirectories(holdingsRoot, oldSan, SearchOption.AllDirectories)
-                            .FirstOrDefault();
-                    }
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
-                return;
-
-            var parent = Path.GetDirectoryName(folder);
-            if (string.IsNullOrWhiteSpace(parent))
-                return;
-
-            var targetFolder = Path.Combine(parent, newSan);
-            if (Directory.Exists(targetFolder))
-            {
-                MessageBox.Show($"Zielordner existiert bereits:\n{targetFolder}", "Umbenennen",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            var files = Directory.EnumerateFiles(folder).ToList();
-            var oldRx = new Regex(@"^(?<d>\d{8})_" + Regex.Escape(oldSan) + @"(?<g>-g)?(?<rest>.*)$", RegexOptions.IgnoreCase);
-            var renamedMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var f in files)
-            {
-                var name = Path.GetFileName(f);
-                if (string.IsNullOrWhiteSpace(name))
-                    continue;
-                var m = oldRx.Match(Path.GetFileNameWithoutExtension(name));
-                if (!m.Success)
-                    continue;
-
-                var ext = Path.GetExtension(name);
-                var date = m.Groups["d"].Value;
-                var g = m.Groups["g"].Value;
-                var newName = $"{date}_{newSan}{g}{ext}";
-                var dest = Path.Combine(folder, newName);
-                if (!string.Equals(f, dest, StringComparison.OrdinalIgnoreCase))
-                {
-                    File.Move(f, dest);
-                    renamedMap[f] = dest;
-                }
-            }
-
-            Directory.Move(folder, targetFolder);
-
-            // Link-Feld aktualisieren (bestehende Logik)
-            if (!string.IsNullOrWhiteSpace(linkPath))
-            {
-                var newLinkPath = linkPath.Replace(folder, targetFolder, StringComparison.OrdinalIgnoreCase);
-                if (renamedMap.TryGetValue(linkPath, out var renamed))
-                    newLinkPath = renamed.Replace(folder, targetFolder, StringComparison.OrdinalIgnoreCase);
-                record.SetFieldValue("Link", newLinkPath, FieldSource.Manual, userEdited: true);
-            }
-            // Link-Feld: auch relative Pfade aktualisieren
-            else
-            {
-                var relLink = record.GetFieldValue("Link")?.Trim();
-                if (!string.IsNullOrWhiteSpace(relLink) && !Path.IsPathRooted(relLink))
-                {
-                    var updated = ReplaceHoldingInPath(relLink, oldSan, newSan);
-                    if (!string.Equals(relLink, updated, StringComparison.OrdinalIgnoreCase))
-                        record.SetFieldValue("Link", updated, FieldSource.Manual, userEdited: true);
-                }
-            }
-
-            // Protocol.HaltungId aktualisieren
-            if (record.Protocol != null)
-                record.Protocol.HaltungId = newHolding;
-
-            // FotoPaths in allen Protokoll-Revisionen aktualisieren
-            if (record.Protocol != null)
-            {
-                UpdateRevisionPaths(record.Protocol.Original, oldSan, newSan);
-                UpdateRevisionPaths(record.Protocol.Current, oldSan, newSan);
-                foreach (var rev in record.Protocol.History)
-                    UpdateRevisionPaths(rev, oldSan, newSan);
-            }
-
-            // PDF_Path aktualisieren
-            var pdfPath = record.GetFieldValue("PDF_Path");
-            if (!string.IsNullOrWhiteSpace(pdfPath))
-            {
-                var updatedPdf = ReplaceHoldingInPath(pdfPath, oldSan, newSan);
-                if (!string.Equals(pdfPath, updatedPdf, StringComparison.OrdinalIgnoreCase))
-                    record.SetFieldValue("PDF_Path", updatedPdf, FieldSource.Manual, userEdited: true);
-            }
-
-            // PDF_All aktualisieren
-            var pdfAll = record.GetFieldValue("PDF_All");
-            if (!string.IsNullOrWhiteSpace(pdfAll))
-            {
-                var parts = pdfAll.Split(';', StringSplitOptions.RemoveEmptyEntries);
-                var updatedParts = parts.Select(p => ReplaceHoldingInPath(p.Trim(), oldSan, newSan));
-                var newPdfAll = string.Join(";", updatedParts);
-                if (!string.Equals(pdfAll, newPdfAll, StringComparison.OrdinalIgnoreCase))
-                    record.SetFieldValue("PDF_All", newPdfAll, FieldSource.Manual, userEdited: true);
-            }
-
-            // VsaFindings FotoPath aktualisieren
-            if (record.VsaFindings != null)
-            {
-                foreach (var finding in record.VsaFindings)
-                {
-                    if (!string.IsNullOrWhiteSpace(finding.FotoPath))
-                        finding.FotoPath = ReplaceHoldingInPath(finding.FotoPath, oldSan, newSan);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Umbenennen fehlgeschlagen: {ex.Message}", "Umbenennen",
-                MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
-    private static void UpdateRevisionPaths(
-        AuswertungPro.Next.Domain.Protocol.ProtocolRevision revision, string oldSan, string newSan)
-    {
-        foreach (var entry in revision.Entries)
-        {
-            for (var i = 0; i < entry.FotoPaths.Count; i++)
-            {
-                var path = entry.FotoPaths[i];
-                if (!string.IsNullOrWhiteSpace(path))
-                    entry.FotoPaths[i] = ReplaceHoldingInPath(path, oldSan, newSan);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Ersetzt das Haltungsname-Segment in einem Pfad (absolut oder relativ).
-    /// Funktioniert mit Backslash und Forward-Slash.
-    /// </summary>
-    private static string ReplaceHoldingInPath(string path, string oldSan, string newSan)
-    {
-        var result = path;
-
-        // Backslash-Pfade (absolut, Windows)
-        var oldBs = "\\" + oldSan + "\\";
-        var newBs = "\\" + newSan + "\\";
-        result = result.Replace(oldBs, newBs, StringComparison.OrdinalIgnoreCase);
-
-        // Forward-Slash-Pfade (relativ, JSON)
-        var oldFs = "/" + oldSan + "/";
-        var newFs = "/" + newSan + "/";
-        result = result.Replace(oldFs, newFs, StringComparison.OrdinalIgnoreCase);
-
-        return result;
-    }
-
-    private static string? TryResolvePath(string? raw, string? lastProjectPath)
-    {
-        var path = raw?.Trim();
-        if (string.IsNullOrWhiteSpace(path))
-            return null;
-        if (File.Exists(path))
-            return path;
-        if (!Path.IsPathRooted(path) && !string.IsNullOrWhiteSpace(lastProjectPath))
-        {
-            var baseDir = Path.GetDirectoryName(lastProjectPath);
-            if (!string.IsNullOrWhiteSpace(baseDir))
-            {
-                var combined = Path.GetFullPath(Path.Combine(baseDir, path));
-                if (File.Exists(combined))
-                    return combined;
-            }
-        }
-        return null;
-    }
-
-    private static string SanitizePathSegment(string value)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        var sb = new System.Text.StringBuilder(value.Length);
-        foreach (var ch in value)
-        {
-            if (invalid.Contains(ch))
-                sb.Append('_');
-            else
-                sb.Append(ch);
-        }
-        var cleaned = sb.ToString().Trim();
-        return string.IsNullOrWhiteSpace(cleaned) ? "UNKNOWN" : cleaned;
-    }
 
     private BeobachtungenWindow? _beobachtungenWindow;
 
@@ -2049,6 +2075,34 @@ public partial class DataPage : System.Windows.Controls.UserControl
         vm.OpenCostsCommand.Execute(record);
     }
 
+    private void PrintAwuHaltungsprotokollMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+        var record = GetContextMenuRecord(sender);
+        if (record is null)
+        {
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "Haltungsprotokoll AWU",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        vm.PrintAwuHaltungsprotokollCommand.Execute(record);
+    }
+
+    private void OpenOriginalPdfMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+        var record = GetContextMenuRecord(sender);
+        if (record is null)
+        {
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "PDF",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        vm.OpenOriginalPdfCommand.Execute(record);
+    }
+
     private void RestoreCostsMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)
@@ -2119,6 +2173,79 @@ public partial class DataPage : System.Windows.Controls.UserControl
         }
 
         vm.OpenVideoAiPipelineCommand.Execute(record);
+    }
+
+    private void HydraulikMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+        var record = GetContextMenuRecord(sender) ?? vm.Selected;
+        vm.OpenHydraulikCommand.Execute(record);
+    }
+
+    private void HydraulikPrint_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+        var record = GetContextMenuRecord(sender) ?? vm.Selected;
+        vm.PrintHydraulikCommand.Execute(record);
+    }
+
+    private void DossierPrint_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+        var record = GetContextMenuRecord(sender) ?? vm.Selected;
+        vm.PrintDossierCommand.Execute(record);
+    }
+
+    private void MoveToPositionBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+            return;
+        MoveToPosition_Click(sender, e);
+    }
+
+    private void MoveToPosition_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+        if (!int.TryParse(MoveToPositionBox.Text.Trim(), out var pos))
+        {
+            MessageBox.Show("Bitte eine gueltige Zahl eingeben.", "Position",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        if (!vm.MoveToPosition(pos))
+            MessageBox.Show("Verschieben nicht moeglich. Bitte Zeile auswaehlen.", "Position",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void GoToRowBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+            return;
+        GoToRow_Click(sender, e);
+    }
+
+    private void GoToRow_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+        if (!int.TryParse(GoToRowBox.Text.Trim(), out var row) || row < 1)
+        {
+            MessageBox.Show("Bitte eine gueltige Zeilennummer eingeben.", "Gehe zu Zeile",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        var idx = row - 1;
+        if (idx >= vm.Records.Count)
+            idx = vm.Records.Count - 1;
+        if (idx >= 0)
+        {
+            vm.Selected = vm.Records[idx];
+            Grid.ScrollIntoView(vm.Selected);
+        }
     }
 
     private static HaltungRecord? GetContextMenuRecord(object sender)

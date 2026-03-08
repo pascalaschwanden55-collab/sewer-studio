@@ -1,7 +1,9 @@
 using System.Text.Json.Nodes;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using ImportRunContext = AuswertungPro.Next.Application.Import.ImportRunContext;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.Infrastructure;
@@ -29,7 +31,7 @@ public sealed class LegacyPdfImportService
 
     private readonly PdfParser _parser = new();
 
-    public ImportStats ImportPdf(string pdfPath, Project project, string? explicitPdfToTextPath = null)
+    public ImportStats ImportPdf(string pdfPath, Project project, string? explicitPdfToTextPath = null, bool fillMissingOnly = false, ImportRunContext? ctx = null)
     {
         var stats = new ImportStats();
 
@@ -161,15 +163,12 @@ public sealed class LegacyPdfImportService
                     // Falls Anschlussmenge nicht direkt im PDF steht, aus Schadenscodierung ableiten.
                     if (string.IsNullOrWhiteSpace(source.GetFieldValue("Anschluesse_verpressen")))
                     {
-                        var estimatedConnections = ConnectionCountEstimator.EstimateFromRecord(source);
-                        if (estimatedConnections is > 0)
-                        {
-                            source.SetFieldValue(
-                                "Anschluesse_verpressen",
-                                estimatedConnections.Value.ToString(CultureInfo.InvariantCulture),
-                                FieldSource.Pdf,
-                                userEdited: false);
-                        }
+                        var estimatedConnections = ConnectionCountEstimator.EstimateFromRecord(source) ?? 0;
+                        source.SetFieldValue(
+                            "Anschluesse_verpressen",
+                            estimatedConnections.ToString(CultureInfo.InvariantCulture),
+                            FieldSource.Pdf,
+                            userEdited: false);
                     }
 
                     var target = FindByHaltungsname(project, key);
@@ -192,7 +191,26 @@ public sealed class LegacyPdfImportService
                             target.SetFieldValue("Haltungsname", key, FieldSource.Pdf, userEdited: false);
                     }
 
-                    var mergeStats = MergeEngine.MergeRecord(target, source, FieldSource.Pdf);
+                    var mergeStats = MergeEngine.MergeRecord(target, source, FieldSource.Pdf, fillMissingOnly, ctx);
+
+                    // Original-PDF verknuepfen
+                    var existingPdfPath = target.GetFieldValue("PDF_Path")?.Trim();
+                    if (string.IsNullOrWhiteSpace(existingPdfPath))
+                    {
+                        target.SetFieldValue("PDF_Path", pdfPath, FieldSource.Pdf, userEdited: false);
+                    }
+                    else if (!string.Equals(existingPdfPath, pdfPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var allRaw = target.GetFieldValue("PDF_All")?.Trim();
+                        var allSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        if (!string.IsNullOrWhiteSpace(allRaw))
+                            foreach (var p in allRaw.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                                allSet.Add(p.Trim());
+                        allSet.Add(existingPdfPath);
+                        allSet.Add(pdfPath);
+                        target.SetFieldValue("PDF_All", string.Join(";", allSet), FieldSource.Pdf, userEdited: false);
+                    }
+
                     if (mergeStats.Updated > 0)
                     {
                         stats.UpdatedRecords += created ? 0 : 1;
@@ -237,7 +255,7 @@ public sealed class LegacyPdfImportService
             }
 
             if (importedChunks == 0)
-                TryImportFallbackHoldingFromWholeText(fullText, pdfPath, project, stats);
+                TryImportFallbackHoldingFromWholeText(fullText, pdfPath, project, stats, fillMissingOnly, ctx);
 
             project.ModifiedAtUtc = DateTime.UtcNow;
             project.Dirty = true;
@@ -281,7 +299,7 @@ public sealed class LegacyPdfImportService
         return stats;
     }
 
-    private static void TryImportFallbackHoldingFromWholeText(string fullText, string pdfPath, Project project, ImportStats stats)
+    private static void TryImportFallbackHoldingFromWholeText(string fullText, string pdfPath, Project project, ImportStats stats, bool fillMissingOnly = false, ImportRunContext? ctx = null)
     {
         var parsed = HoldingFolderDistributor.ParsePdfPage(fullText, pdfPath);
         var fallbackHolding = IsLikelyHoldingId(parsed.Haltung)
@@ -305,6 +323,7 @@ public sealed class LegacyPdfImportService
         source.SetFieldValue("Haltungsname", key, FieldSource.Pdf, userEdited: false);
         if (fallbackDate is not null)
             source.SetFieldValue("Datum_Jahr", fallbackDate.Value.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture), FieldSource.Pdf, userEdited: false);
+        source.SetFieldValue("Anschluesse_verpressen", "0", FieldSource.Pdf, userEdited: false);
 
         var target = FindByHaltungsname(project, key);
         var created = false;
@@ -317,7 +336,26 @@ public sealed class LegacyPdfImportService
             created = true;
         }
 
-        var mergeStats = MergeEngine.MergeRecord(target, source, FieldSource.Pdf);
+        var mergeStats = MergeEngine.MergeRecord(target, source, FieldSource.Pdf, fillMissingOnly, ctx);
+
+        // Original-PDF verknuepfen
+        var existingPdfPath = target.GetFieldValue("PDF_Path")?.Trim();
+        if (string.IsNullOrWhiteSpace(existingPdfPath))
+        {
+            target.SetFieldValue("PDF_Path", pdfPath, FieldSource.Pdf, userEdited: false);
+        }
+        else if (!string.Equals(existingPdfPath, pdfPath, StringComparison.OrdinalIgnoreCase))
+        {
+            var allRaw = target.GetFieldValue("PDF_All")?.Trim();
+            var allSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (!string.IsNullOrWhiteSpace(allRaw))
+                foreach (var p in allRaw.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                    allSet.Add(p.Trim());
+            allSet.Add(existingPdfPath);
+            allSet.Add(pdfPath);
+            target.SetFieldValue("PDF_All", string.Join(";", allSet), FieldSource.Pdf, userEdited: false);
+        }
+
         stats.UpdatedFields += mergeStats.Updated;
         if (!created && mergeStats.Updated > 0)
             stats.UpdatedRecords++;
@@ -513,6 +551,44 @@ public sealed class LegacyPdfImportService
         if (!string.IsNullOrWhiteSpace(parsed.Status))
             SetSchachtField(target, "Status offen/abgeschlossen", parsed.Status);
 
+        // PDF-Pfad speichern fuer spaeteres Oeffnen per Rechtsklick
+        target.SetFieldValue("PDF_Path", pdfPath);
+
+        // Strukturiertes Protokoll aus Bauteil-Schaeden erstellen
+        var damageEntries = ParseSchachtDamageEntries(fullText);
+        if (damageEntries.Count > 0)
+        {
+            var protocolEntries = damageEntries.Select(d => new ProtocolEntry
+            {
+                Code = d.Component,
+                Beschreibung = d.Damage,
+                Source = ProtocolEntrySource.Imported
+            }).ToList();
+
+            var originalRevision = new ProtocolRevision
+            {
+                Comment = $"Import aus PDF: {Path.GetFileName(pdfPath)}",
+                Entries = protocolEntries
+            };
+            var currentRevision = new ProtocolRevision
+            {
+                Comment = "Arbeitskopie",
+                Entries = protocolEntries.Select(e => new ProtocolEntry
+                {
+                    Code = e.Code,
+                    Beschreibung = e.Beschreibung,
+                    Source = e.Source
+                }).ToList()
+            };
+
+            target.Protocol = new ProtocolDocument
+            {
+                HaltungId = key,
+                Original = originalRevision,
+                Current = currentRevision
+            };
+        }
+
         project.ModifiedAtUtc = DateTime.UtcNow;
         project.Dirty = true;
 
@@ -525,6 +601,7 @@ public sealed class LegacyPdfImportService
         if (!string.IsNullOrWhiteSpace(parsed.Funktion)) imported.Add("Funktion");
         if (!string.IsNullOrWhiteSpace(parsed.PrimaereSchaeden)) imported.Add("Primaere Schaeden");
         if (!string.IsNullOrWhiteSpace(parsed.Bemerkungen)) imported.Add("Bemerkungen");
+        if (damageEntries.Count > 0) imported.Add($"Protokoll ({damageEntries.Count} Beobachtungen)");
 
         stats.Messages.Add(new ImportMessage
         {
@@ -623,10 +700,13 @@ public sealed class LegacyPdfImportService
         return null;
     }
 
-    private static string? ParsePrimaryDamagesFromConditionSection(string text)
+    /// <summary>
+    /// Parst die strukturierten Bauteil-Schaeden aus dem Zustandsabschnitt des Schachtprotokolls.
+    /// </summary>
+    internal static IReadOnlyList<(string Component, string Damage)> ParseSchachtDamageEntries(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
-            return null;
+            return Array.Empty<(string, string)>();
 
         var normalized = NormalizeCheckboxGlyphs(text);
         var lines = normalized.Split('\n');
@@ -652,17 +732,25 @@ public sealed class LegacyPdfImportService
         }
 
         if (entries.Count == 0)
-            return null;
+            return Array.Empty<(string, string)>();
 
-        var deduped = entries
+        return entries
             .GroupBy(x => $"{x.Component}|{x.Damage}", StringComparer.OrdinalIgnoreCase)
             .Select(g => g.First())
             .OrderBy(x => GetComponentOrderIndex(x.Component))
             .ThenBy(x => GetDamageOrderIndex(x.Component, x.Damage))
             .ThenBy(x => x.EncounterIndex)
+            .Select(x => (x.Component, x.Damage))
             .ToList();
+    }
 
-        return string.Join("\n", deduped.Select(x => $"{x.Component}: {x.Damage}"));
+    private static string? ParsePrimaryDamagesFromConditionSection(string text)
+    {
+        var entries = ParseSchachtDamageEntries(text);
+        if (entries.Count == 0)
+            return null;
+
+        return string.Join("\n", entries.Select(x => $"{x.Component}: {x.Damage}"));
     }
 
     private static string NormalizeCheckboxGlyphs(string text)

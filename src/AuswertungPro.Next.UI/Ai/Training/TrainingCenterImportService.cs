@@ -8,7 +8,7 @@ namespace AuswertungPro.Next.UI.Ai.Training;
 
 public sealed class TrainingCenterImportService
 {
-    private static readonly string[] VideoExts = [".mp4", ".mov", ".mkv", ".avi", ".mpg", ".mpeg", ".wmv", ".ts", ".m4v"];
+    private static readonly string[] VideoExts = [..AuswertungPro.Next.Infrastructure.Media.MediaFileTypes.VideoExtensions, ".ts", ".m4v"];
     private static readonly string[] ProtocolExts = [".json", ".xml", ".pdf"];
 
     public Task<List<TrainingCase>> ScanAsync(string rootFolder)
@@ -75,10 +75,11 @@ public sealed class TrainingCenterImportService
 
     private static string PickBestProtocol(List<string> protos)
     {
-        // prefer json > xml > pdf
+        // TrainingSampleGenerator unterstützt derzeit JSON und PDF.
+        // Daher PDF vor XML priorisieren, um unnötige "ProtocolUnreadable"-Fälle zu vermeiden.
         string? pick = protos.FirstOrDefault(p => Path.GetExtension(p).Equals(".json", StringComparison.OrdinalIgnoreCase))
-            ?? protos.FirstOrDefault(p => Path.GetExtension(p).Equals(".xml", StringComparison.OrdinalIgnoreCase))
             ?? protos.FirstOrDefault(p => Path.GetExtension(p).Equals(".pdf", StringComparison.OrdinalIgnoreCase))
+            ?? protos.FirstOrDefault(p => Path.GetExtension(p).Equals(".xml", StringComparison.OrdinalIgnoreCase))
             ?? protos.First();
 
         return pick!;

@@ -1,0 +1,316 @@
+{
+  "version": "1.0",
+  "mappings": [
+    {
+      "id": "LEIT_ERSATZ_DN200",
+      "schadensCode": "BAB",
+      "minZustandsklasse": 3,
+      "maxZustandsklasse": 4,
+      "minDN": 100,
+      "maxDN": 200,
+      "massnahme": "Leitungsersatz",
+      "massnahmenBeschreibung": "Leitungsersatz offene Bauweise bis DN 200",
+      "baumeisterPositionen": [
+        {
+          "hauptposition": 2,
+          "unterposition": 200,
+          "einzelposition": 1,
+          "bezeichnung": "Leitungen bis DN 160 mm abbrechen",
+          "einheit": "m",
+          "referenzpreis": 10,
+          "mengenFormel": "Haltungslaenge"
+        },
+        {
+          "hauptposition": 3,
+          "unterposition": 100,
+          "einzelposition": 1,
+          "bezeichnung": "Grabenbau inkl. Abschlussarbeiten",
+          "einheit": "m1",
+          "referenzpreis": 170,
+          "mengenFormel": "Haltungslaenge"
+        },
+        {
+          "hauptposition": 4,
+          "unterposition": 100,
+          "einzelposition": 1,
+          "bezeichnung": "Abtransport Aushubmaterial lose, inkl. Gebuehren",
+          "einheit": "m3",
+          "referenzpreis": 50,
+          "mengenFormel": "Haltungslaenge * Grabentiefe * 0.6"
+        }
+      ],
+      "rohrleitungsbauPositionen": [
+        {
+          "hauptposition": 413,
+          "unterposition": 122,
+          "einzelposition": 0,
+          "bezeichnung": "PE 100 Rohre mit Schutzmantel, mm 160",
+          "einheit": "m1",
+          "referenzpreis": 35,
+          "mengenFormel": "Haltungslaenge"
+        }
+      ],
+      "prioritaet": 100
+    },
+    {
+      "id": "LEIT_ERSATZ_DN400",
+      "schadensCode": "BAB",
+      "minZustandsklasse": 3,
+      "maxZustandsklasse": 4,
+      "minDN": 201,
+      "maxDN": 400,
+      "massnahme": "Leitungsersatz",
+      "massnahmenBeschreibung": "Leitungsersatz offene Bauweise DN 200-400",
+      "baumeisterPositionen": [
+        {
+          "hauptposition": 2,
+          "unterposition": 200,
+          "einzelposition": 2,
+          "bezeichnung": "Leitungen DN 200-400 mm abbrechen",
+          "einheit": "m",
+          "referenzpreis": 15,
+          "mengenFormel": "Haltungslaenge"
+        },
+        {
+          "hauptposition": 3,
+          "unterposition": 100,
+          "einzelposition": 2,
+          "bezeichnung": "Grabenbau inkl. Abschlussarbeiten (gross)",
+          "einheit": "m1",
+          "referenzpreis": 250,
+          "mengenFormel": "Haltungslaenge"
+        },
+        {
+          "hauptposition": 4,
+          "unterposition": 100,
+          "einzelposition": 2,
+          "bezeichnung": "Abtransport Aushubmaterial lose, inkl. Gebuehren",
+          "einheit": "m3",
+          "referenzpreis": 50,
+          "mengenFormel": "Haltungslaenge * Grabentiefe * 0.8"
+        }
+      ],
+      "rohrleitungsbauPositionen": [
+        {
+          "hauptposition": 413,
+          "unterposition": 222,
+          "einzelposition": 0,
+          "bezeichnung": "PE 100 Rohre mit Schutzmantel, mm 250",
+          "einheit": "m1",
+          "referenzpreis": 55,
+          "mengenFormel": "Haltungslaenge"
+        }
+      ],
+      "prioritaet": 100
+    },
+    {
+      "id": "RELINING_BAB",
+      "schadensCode": "BAB",
+      "minZustandsklasse": 2,
+      "maxZustandsklasse": 3,
+      "minDN": 100,
+      "maxDN": 300,
+      "massnahme": "Relining",
+      "massnahmenBeschreibung": "Schlauchlining bei mittlerem Schadensbild",
+      "baumeisterPositionen": [],
+      "rohrleitungsbauPositionen": [
+        {
+          "hauptposition": 500,
+          "unterposition": 100,
+          "einzelposition": 1,
+          "bezeichnung": "Schlauchlining UV-Haertung",
+          "einheit": "m1",
+          "referenzpreis": 120,
+          "mengenFormel": "Haltungslaenge"
+        }
+      ],
+      "prioritaet": 80
+    },
+    {
+      "id": "RISS_LAENGS_BAA",
+      "schadensCode": "BAA",
+      "minZustandsklasse": 2,
+      "maxZustandsklasse": 4,
+      "massnahme": "Kurzliner",
+      "massnahmenBeschreibung": "Kurzliner bei Laengsrissen",
+      "baumeisterPositionen": [],
+      "rohrleitungsbauPositionen": [
+        {
+          "hauptposition": 500,
+          "unterposition": 200,
+          "einzelposition": 1,
+          "bezeichnung": "Kurzliner-Reparatur",
+          "einheit": "St",
+          "referenzpreis": 800,
+          "mengenFormel": "1"
+        }
+      ],
+      "prioritaet": 90
+    },
+    {
+      "id": "SCHACHT_ERSATZ",
+      "schadensCode": "BAH",
+      "minZustandsklasse": 3,
+      "maxZustandsklasse": 4,
+      "massnahme": "SchachtErsatz",
+      "massnahmenBeschreibung": "Schacht komplett ersetzen",
+      "baumeisterPositionen": [
+        {
+          "hauptposition": 2,
+          "unterposition": 300,
+          "einzelposition": 1,
+          "bezeichnung": "Schaechte bis DN 800mm, H 1000 mm abbrechen",
+          "einheit": "St",
+          "referenzpreis": 100,
+          "mengenFormel": "1"
+        },
+        {
+          "hauptposition": 6,
+          "unterposition": 600,
+          "einzelposition": 1,
+          "bezeichnung": "Kontrollschacht D 800/600, bis 1.00m Hoehe",
+          "einheit": "St",
+          "referenzpreis": 2000,
+          "mengenFormel": "1"
+        }
+      ],
+      "rohrleitungsbauPositionen": [],
+      "prioritaet": 90
+    },
+    {
+      "id": "WURZEL_BAJ",
+      "schadensCode": "BAJ",
+      "minZustandsklasse": 2,
+      "maxZustandsklasse": 4,
+      "massnahme": "Robotersanierung",
+      "massnahmenBeschreibung": "Fraesroboter bei Wurzeleinwuchs",
+      "baumeisterPositionen": [],
+      "rohrleitungsbauPositionen": [
+        {
+          "hauptposition": 500,
+          "unterposition": 300,
+          "einzelposition": 1,
+          "bezeichnung": "Robotersanierung Wurzelschnitt",
+          "einheit": "St",
+          "referenzpreis": 500,
+          "mengenFormel": "1"
+        }
+      ],
+      "prioritaet": 85
+    },
+    {
+      "id": "DEFORMATION_BAF",
+      "schadensCode": "BAF",
+      "minZustandsklasse": 3,
+      "maxZustandsklasse": 4,
+      "massnahme": "Leitungsersatz",
+      "massnahmenBeschreibung": "Leitungsersatz bei starker Deformation",
+      "baumeisterPositionen": [
+        {
+          "hauptposition": 3,
+          "unterposition": 100,
+          "einzelposition": 1,
+          "bezeichnung": "Grabenbau inkl. Abschlussarbeiten",
+          "einheit": "m1",
+          "referenzpreis": 170,
+          "mengenFormel": "Haltungslaenge"
+        }
+      ],
+      "rohrleitungsbauPositionen": [
+        {
+          "hauptposition": 413,
+          "unterposition": 122,
+          "einzelposition": 0,
+          "bezeichnung": "PE 100 Rohre mit Schutzmantel",
+          "einheit": "m1",
+          "referenzpreis": 35,
+          "mengenFormel": "Haltungslaenge"
+        }
+      ],
+      "prioritaet": 95
+    },
+    {
+      "id": "KORROSION_BAC",
+      "schadensCode": "BAC",
+      "minZustandsklasse": 3,
+      "maxZustandsklasse": 4,
+      "massnahme": "Relining",
+      "massnahmenBeschreibung": "Schlauchlining bei Korrosionsschaeden",
+      "baumeisterPositionen": [],
+      "rohrleitungsbauPositionen": [
+        {
+          "hauptposition": 500,
+          "unterposition": 100,
+          "einzelposition": 2,
+          "bezeichnung": "Schlauchlining bei Korrosion",
+          "einheit": "m1",
+          "referenzpreis": 130,
+          "mengenFormel": "Haltungslaenge"
+        }
+      ],
+      "prioritaet": 85
+    },
+    {
+      "id": "VERSATZ_BAD",
+      "schadensCode": "BAD",
+      "minZustandsklasse": 3,
+      "maxZustandsklasse": 4,
+      "massnahme": "Teilersatz",
+      "massnahmenBeschreibung": "Teilersatz bei Rohrversatz",
+      "baumeisterPositionen": [
+        {
+          "hauptposition": 3,
+          "unterposition": 200,
+          "einzelposition": 1,
+          "bezeichnung": "Teilgrabenbau fuer Rohrreparatur",
+          "einheit": "m1",
+          "referenzpreis": 200,
+          "mengenFormel": "3"
+        }
+      ],
+      "rohrleitungsbauPositionen": [
+        {
+          "hauptposition": 413,
+          "unterposition": 150,
+          "einzelposition": 0,
+          "bezeichnung": "Rohrteilstueck ersetzen",
+          "einheit": "St",
+          "referenzpreis": 450,
+          "mengenFormel": "1"
+        }
+      ],
+      "prioritaet": 90
+    },
+    {
+      "id": "ANSCHLUSS_BAG",
+      "schadensCode": "BAG",
+      "minZustandsklasse": 3,
+      "maxZustandsklasse": 4,
+      "massnahme": "AnschlussErsatz",
+      "massnahmenBeschreibung": "Defekten Anschluss erneuern",
+      "baumeisterPositionen": [
+        {
+          "hauptposition": 3,
+          "unterposition": 300,
+          "einzelposition": 1,
+          "bezeichnung": "Grabenbau Anschlussleitung",
+          "einheit": "m1",
+          "referenzpreis": 150,
+          "mengenFormel": "5"
+        }
+      ],
+      "rohrleitungsbauPositionen": [
+        {
+          "hauptposition": 413,
+          "unterposition": 300,
+          "einzelposition": 0,
+          "bezeichnung": "Anschluss DN 150 erneuern",
+          "einheit": "St",
+          "referenzpreis": 350,
+          "mengenFormel": "1"
+        }
+      ],
+      "prioritaet": 85
+    }
+  ]
+}

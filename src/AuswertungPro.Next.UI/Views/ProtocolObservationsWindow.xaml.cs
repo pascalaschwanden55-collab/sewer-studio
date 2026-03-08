@@ -10,8 +10,9 @@ using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.ViewModels.Protocol;
-using AuswertungPro.Next.UI.Views.Windows;
 using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.UI.Views.Windows;
+using AuswertungPro.Next.Infrastructure.Import.Xtf;
 
 namespace AuswertungPro.Next.UI.Views;
 
@@ -26,6 +27,7 @@ public partial class ProtocolObservationsWindow : Window
     private readonly Action _markDirty;
     private readonly ObservableCollection<ProtocolEntry> _entries = new();
     private bool _isOpeningDialog;
+    private bool _isRefreshingEntries;
 
     public ProtocolObservationsWindow(
         HaltungRecord record,
@@ -36,6 +38,7 @@ public partial class ProtocolObservationsWindow : Window
         Action markDirty)
     {
         InitializeComponent();
+        WindowStateManager.Track(this);
 
         _record = record;
         _project = project;
@@ -93,9 +96,7 @@ public partial class ProtocolObservationsWindow : Window
 
     private void LoadEntries()
     {
-        _entries.Clear();
-        foreach (var e in _doc.Current.Entries.Where(e => !e.IsDeleted))
-            _entries.Add(e);
+        ResortActiveEntries();
     }
 
     private void RefreshRevisionHeader()
@@ -120,7 +121,7 @@ public partial class ProtocolObservationsWindow : Window
             EntryId = entry.EntryId,
             After = SerializeEntry(entry)
         });
-        _entries.Add(entry);
+        ResortActiveEntries(entry);
         MarkDirty();
         RefreshRevisionHeader();
     }
@@ -149,7 +150,7 @@ public partial class ProtocolObservationsWindow : Window
             EntryId = copy.EntryId,
             After = SerializeEntry(copy)
         });
-        _entries.Add(copy);
+        ResortActiveEntries(copy);
         MarkDirty();
         RefreshRevisionHeader();
     }
@@ -181,7 +182,7 @@ public partial class ProtocolObservationsWindow : Window
 
     private void EntriesGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
-        if (_isOpeningDialog)
+        if (_isOpeningDialog || _isRefreshingEntries)
             return;
 
         var entry = SelectedEntry;
@@ -199,7 +200,7 @@ public partial class ProtocolObservationsWindow : Window
             Before = before,
             After = SerializeEntry(entry)
         });
-        EntriesGrid.Items.Refresh();
+        ResortActiveEntries(entry);
         MarkDirty();
         RefreshRevisionHeader();
     }
@@ -215,7 +216,13 @@ public partial class ProtocolObservationsWindow : Window
         _isOpeningDialog = true;
         try
         {
-            var vm = new ObservationCatalogViewModel(_sp.CodeCatalog, entry);
+            var vm = new ObservationCatalogViewModel(
+                _sp.CodeCatalog,
+                entry,
+                _sp.ProtocolAi,
+                _record.GetFieldValue("Haltungsname"),
+                _videoPath,
+                _projectFolder);
             var dlg = new ObservationCatalogWindow(vm)
             {
                 Owner = this
@@ -398,7 +405,7 @@ public partial class ProtocolObservationsWindow : Window
     private void SyncPrimaryDamagesFromCurrentEntries()
     {
         var lines = BuildPrimaryDamageLinesFromCurrentEntries();
-        var primaryDamages = string.Join("\n", lines);
+        var primaryDamages = XtfPrimaryDamageFormatter.DeduplicateText(string.Join("\n", lines));
         var current = _record.GetFieldValue("Primaere_Schaeden");
 
         if (string.Equals(current, primaryDamages, StringComparison.Ordinal))
@@ -409,6 +416,7 @@ public partial class ProtocolObservationsWindow : Window
 
     private IReadOnlyList<string> BuildPrimaryDamageLinesFromCurrentEntries()
     {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var lines = new List<string>();
         foreach (var entry in _doc.Current.Entries.Where(e => !e.IsDeleted))
         {
@@ -416,8 +424,14 @@ public partial class ProtocolObservationsWindow : Window
             if (string.IsNullOrWhiteSpace(code))
                 continue;
 
-            var line = code;
+            // Deduplicate by code + meter position
             var meter = entry.MeterStart ?? entry.MeterEnd;
+            var meterKey = meter.HasValue ? meter.Value.ToString("F2") : "";
+            var key = $"{code.ToUpperInvariant()}|{meterKey}";
+            if (!seen.Add(key))
+                continue;
+
+            var line = code;
             if (meter.HasValue)
                 line += $" @{meter.Value.ToString("0.###", CultureInfo.InvariantCulture)}m";
 
@@ -454,7 +468,84 @@ public partial class ProtocolObservationsWindow : Window
     private static string SerializeEntry(ProtocolEntry entry)
         => JsonSerializer.Serialize(entry);
 
-    private static IReadOnlyList<ProtocolEntry> BuildImportedEntries(HaltungRecord record)
+    private void ResortActiveEntries(ProtocolEntry? selectedEntry = null)
+    {
+        var active = _doc.Current.Entries
+            .Where(e => !e.IsDeleted)
+            .Select((entry, index) => new
+            {
+                Entry = entry,
+                Index = index,
+                MeterStart = TryGetPrimaryOrderingMeter(entry),
+                MeterEnd = TryGetSecondaryOrderingMeter(entry)
+            })
+            .OrderBy(x => x.MeterStart.HasValue ? 0 : 1)
+            .ThenBy(x => x.MeterStart ?? double.MaxValue)
+            .ThenBy(x => x.MeterEnd.HasValue ? 0 : 1)
+            .ThenBy(x => x.MeterEnd ?? double.MaxValue)
+            .ThenBy(x => x.Entry.Code ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Index)
+            .Select(x => x.Entry)
+            .ToList();
+
+        var deleted = _doc.Current.Entries.Where(e => e.IsDeleted).ToList();
+        _doc.Current.Entries.Clear();
+        foreach (var entry in active)
+            _doc.Current.Entries.Add(entry);
+        foreach (var entry in deleted)
+            _doc.Current.Entries.Add(entry);
+
+        _isRefreshingEntries = true;
+        try
+        {
+            _entries.Clear();
+            foreach (var entry in active)
+                _entries.Add(entry);
+
+            var target = selectedEntry ?? SelectedEntry;
+            if (target is not null && active.Contains(target))
+                EntriesGrid.SelectedItem = target;
+        }
+        finally
+        {
+            _isRefreshingEntries = false;
+        }
+
+        EntriesGrid.Items.Refresh();
+    }
+
+    private static double? TryGetPrimaryOrderingMeter(ProtocolEntry entry)
+    {
+        var direct = entry.MeterStart ?? entry.MeterEnd;
+        if (direct.HasValue)
+            return direct;
+
+        if (entry.CodeMeta?.Parameters is null)
+            return null;
+
+        var keys = new[] { "vsa.distanz", "Distance" };
+        foreach (var key in keys)
+        {
+            if (!entry.CodeMeta.Parameters.TryGetValue(key, out var raw) || string.IsNullOrWhiteSpace(raw))
+                continue;
+            var normalized = raw.Trim().Replace(',', '.');
+            if (double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
+                return parsed;
+        }
+
+        return null;
+    }
+
+    private static double? TryGetSecondaryOrderingMeter(ProtocolEntry entry)
+    {
+        var direct = entry.MeterEnd ?? entry.MeterStart;
+        if (direct.HasValue && !double.IsNaN(direct.Value) && !double.IsInfinity(direct.Value))
+            return direct.Value;
+
+        return TryGetPrimaryOrderingMeter(entry);
+    }
+
+    private IReadOnlyList<ProtocolEntry> BuildImportedEntries(HaltungRecord record)
     {
         var list = new List<ProtocolEntry>();
         foreach (var f in record.VsaFindings)
@@ -475,10 +566,21 @@ public partial class ProtocolObservationsWindow : Window
                     f.MPEG = rawTime;
             }
 
+            var beschreibung = f.Raw?.Trim() ?? string.Empty;
+            var code = f.KanalSchadencode?.Trim() ?? string.Empty;
+            // Beschreibung aus dem VSA-Katalog auflösen, wenn Raw leer oder nur Kuerzel
+            if ((string.IsNullOrWhiteSpace(beschreibung) || beschreibung.Length <= 3) &&
+                !string.IsNullOrWhiteSpace(code) &&
+                _sp.CodeCatalog.TryGet(code, out var codeDef) &&
+                !string.IsNullOrWhiteSpace(codeDef.Title))
+            {
+                beschreibung = codeDef.Title;
+            }
+
             var entry = new ProtocolEntry
             {
-                Code = f.KanalSchadencode?.Trim() ?? string.Empty,
-                Beschreibung = f.Raw?.Trim() ?? string.Empty,
+                Code = code,
+                Beschreibung = beschreibung,
                 MeterStart = mStart,
                 MeterEnd = mEnd,
                 IsStreckenschaden = mStart.HasValue && mEnd.HasValue && mEnd >= mStart,
@@ -487,18 +589,41 @@ public partial class ProtocolObservationsWindow : Window
                 Source = ProtocolEntrySource.Imported
             };
 
-            if (!string.IsNullOrWhiteSpace(f.Quantifizierung1) || !string.IsNullOrWhiteSpace(f.Quantifizierung2))
             {
-                entry.CodeMeta = new ProtocolEntryCodeMeta
+                var importParams = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                if (!string.IsNullOrWhiteSpace(f.Quantifizierung1))
                 {
-                    Code = entry.Code,
-                    Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    importParams["vsa.q1"] = f.Quantifizierung1.Trim();
+                    importParams["Quantifizierung1"] = f.Quantifizierung1.Trim();
+                }
+                if (!string.IsNullOrWhiteSpace(f.Quantifizierung2))
+                {
+                    importParams["vsa.q2"] = f.Quantifizierung2.Trim();
+                    importParams["Quantifizierung2"] = f.Quantifizierung2.Trim();
+                }
+                if (!string.IsNullOrWhiteSpace(f.SchadenlageAnfang?.ToString()) || !string.IsNullOrWhiteSpace(f.SchadenlageEnde?.ToString()))
+                {
+                    if (f.SchadenlageAnfang.HasValue)
+                        importParams["vsa.uhr.von"] = f.SchadenlageAnfang.Value.ToString("0", CultureInfo.InvariantCulture);
+                    if (f.SchadenlageEnde.HasValue)
+                        importParams["vsa.uhr.bis"] = f.SchadenlageEnde.Value.ToString("0", CultureInfo.InvariantCulture);
+                }
+                if (mStart.HasValue)
+                    importParams["vsa.distanz"] = mStart.Value.ToString("0.00", CultureInfo.InvariantCulture);
+                if (time.HasValue)
+                    importParams["vsa.video"] = time.Value.TotalHours >= 1
+                        ? time.Value.ToString(@"hh\:mm\:ss")
+                        : time.Value.ToString(@"mm\:ss");
+
+                if (importParams.Count > 0)
+                {
+                    entry.CodeMeta = new ProtocolEntryCodeMeta
                     {
-                        ["Quantifizierung1"] = f.Quantifizierung1 ?? string.Empty,
-                        ["Quantifizierung2"] = f.Quantifizierung2 ?? string.Empty
-                    },
-                    UpdatedAt = DateTimeOffset.UtcNow
-                };
+                        Code = entry.Code,
+                        Parameters = importParams,
+                        UpdatedAt = DateTimeOffset.UtcNow
+                    };
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(f.FotoPath))

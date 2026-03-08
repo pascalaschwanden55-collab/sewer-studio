@@ -30,11 +30,12 @@ public sealed class AiDocumentationPdfBuilder
 
         var enableSteps = new List<string>
         {
-            "AUSWERTUNGPRO_AI_ENABLED=1",
-            "Ollama laeuft (AUSWERTUNGPRO_OLLAMA_URL, Default http://localhost:11434)",
-            "Modelle: AUSWERTUNGPRO_AI_VISION_MODEL (qwen2.5vl:7b)",
-            "Modelle: AUSWERTUNGPRO_AI_TEXT_MODEL (gpt-oss:20b)",
-            "FFmpeg verfuegbar (AUSWERTUNGPRO_FFMPEG oder PATH)",
+            "SEWERSTUDIO_AI_ENABLED=1",
+            "Ollama laeuft (SEWERSTUDIO_OLLAMA_URL, Default http://localhost:11434)",
+            "Modelle: SEWERSTUDIO_AI_VISION_MODEL (qwen3.5:27b)",
+            "Modelle: SEWERSTUDIO_AI_TEXT_MODEL (qwen3.5:27b)",
+            "Embeddings: SEWERSTUDIO_AI_EMBED_MODEL (nomic-embed-text)",
+            "FFmpeg verfuegbar (SEWERSTUDIO_FFMPEG oder PATH)",
             "VSA Code-Katalog vorhanden (XML/JSON)"
         };
 
@@ -63,7 +64,7 @@ public sealed class AiDocumentationPdfBuilder
 
                 page.Header().Column(col =>
                 {
-                    col.Item().Text("AuswertungPro - KI Uebersicht").FontSize(18).Bold();
+                    col.Item().Text("Sewer Studio - KI Uebersicht").FontSize(18).Bold();
                     col.Item().Text($"Stand: {createdText}").FontSize(9).FontColor(Colors.Grey.Darken2);
                 });
 
@@ -90,7 +91,7 @@ public sealed class AiDocumentationPdfBuilder
                                    "Training erfolgt beim Speichern; Status ueber \"KI-Status\".").FontSize(9);
                 });
 
-                page.Footer().AlignRight().Text("AuswertungPro – KI").FontSize(8).FontColor(Colors.Grey.Darken1);
+                page.Footer().AlignRight().Text("Sewer Studio – KI").FontSize(8).FontColor(Colors.Grey.Darken1);
             });
         }).GeneratePdf();
     }

@@ -18,15 +18,22 @@ namespace AuswertungPro.Next.Domain.Models
 
         public VsaRuleProvider(string jsonPath)
         {
-            var json = File.ReadAllText(jsonPath);
-            var rules = JsonSerializer.Deserialize<List<VsaRule>>(json);
             _rules = new Dictionary<string, VsaRule>();
-            if (rules != null)
+            try
             {
-                foreach (var rule in rules)
+                var json = File.ReadAllText(jsonPath);
+                var rules = JsonSerializer.Deserialize<List<VsaRule>>(json);
+                if (rules != null)
                 {
-                    _rules[rule.Schadencode] = rule;
+                    foreach (var rule in rules)
+                    {
+                        _rules[rule.Schadencode] = rule;
+                    }
                 }
+            }
+            catch (Exception)
+            {
+                // Korrupte oder fehlende JSON-Datei: leeres Regelwerk verwenden
             }
         }
 

@@ -13,6 +13,7 @@ using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.UI.Dialogs;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -25,10 +26,14 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     private readonly string? _projectPath;
     private readonly Dictionary<string, CostCatalogItem> _catalogItems;
     private readonly Dictionary<string, MeasureTemplate> _templateItems;
+    private readonly Dictionary<string, int> _measureOrderById = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _ownerByHolding = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _selectedMeasureIds = new(StringComparer.OrdinalIgnoreCase);
     private ProjectCostStore _store = new();
     private readonly decimal _vatRate;
+    private readonly CostConsistencyCheckService _consistencyChecker = new();
+    private readonly HashSet<string> _suppressedWarnings = new(StringComparer.OrdinalIgnoreCase);
+    private System.Windows.Threading.DispatcherTimer? _checkDebounceTimer;
 
     public string Holding { get; }
     public DateTime? Date { get; }
@@ -42,6 +47,13 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     [ObservableProperty] private decimal _mwstAmount;
     [ObservableProperty] private decimal _totalInclMwst;
     [ObservableProperty] private string _catalogSearchText = "";
+
+    // Consistency checking
+    [ObservableProperty] private ObservableCollection<ConsistencyWarning> _consistencyWarnings = new();
+    [ObservableProperty] private int _errorCount;
+    [ObservableProperty] private int _warningCount;
+    [ObservableProperty] private int _infoCount;
+    [ObservableProperty] private bool _hasWarnings;
     public string MwstLabel => $"MWST {_vatRate * 100:0.0}%:";
 
     /// <summary>All active catalog items for the drag-source panel.</summary>
@@ -55,6 +67,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     public IRelayCommand<MeasureBlockVm> RemoveMeasureCommand { get; }
     public IRelayCommand<MeasureBlockVm> MoveMeasureUpCommand { get; }
     public IRelayCommand<MeasureBlockVm> MoveMeasureDownCommand { get; }
+    public IRelayCommand SortMeasuresCommand { get; }
     public IRelayCommand<MeasureBlockVm> SaveTemplateCommand { get; }
     public IAsyncRelayCommand<Window?> ExportPdfCommand { get; }
 
@@ -80,6 +93,13 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
         var templates = _templateStore.LoadMerged(projectPath);
         _templateItems = templates.Measures.ToDictionary(x => x.Id, StringComparer.OrdinalIgnoreCase);
+        _measureOrderById.Clear();
+        for (var i = 0; i < templates.Measures.Count; i++)
+        {
+            var id = templates.Measures[i].Id?.Trim();
+            if (!string.IsNullOrWhiteSpace(id) && !_measureOrderById.ContainsKey(id))
+                _measureOrderById[id] = i;
+        }
         Measures = new ObservableCollection<MeasureTemplateListItem>(
             templates.Measures.Select(t => new MeasureTemplateListItem(t)));
 
@@ -134,9 +154,22 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         RemoveMeasureCommand = new RelayCommand<MeasureBlockVm>(RemoveMeasure);
         MoveMeasureUpCommand = new RelayCommand<MeasureBlockVm>(MoveMeasureUp);
         MoveMeasureDownCommand = new RelayCommand<MeasureBlockVm>(MoveMeasureDown);
+        SortMeasuresCommand = new RelayCommand(SortMeasures);
         SaveTemplateCommand = new RelayCommand<MeasureBlockVm>(SaveTemplate);
         ExportPdfCommand = new AsyncRelayCommand<Window?>(ExportPdfAsync);
+
+        _checkDebounceTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(300)
+        };
+        _checkDebounceTimer.Tick += (_, _) =>
+        {
+            _checkDebounceTimer.Stop();
+            RunConsistencyCheck();
+        };
+
         UpdateTotal();
+        RunConsistencyCheck();
     }
 
     public void SetSelectedMeasures(IEnumerable<MeasureTemplateListItem> measures)
@@ -440,7 +473,53 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         Total = SelectedMeasures.Sum(m => m.Total);
         MwstAmount = Math.Round(Total * _vatRate, 2);
         TotalInclMwst = Math.Round(Total + MwstAmount, 2);
+
+        // Debounce consistency check (300ms after last edit)
+        _checkDebounceTimer?.Stop();
+        _checkDebounceTimer?.Start();
     }
+
+    private void RunConsistencyCheck()
+    {
+        var allResults = _consistencyChecker.CheckAll(
+            SelectedMeasures.ToList(),
+            _catalogItems,
+            _templateItems,
+            _store,
+            Holding);
+
+        // Filter out suppressed warnings
+        var results = allResults
+            .Where(w => !_suppressedWarnings.Contains(GetWarningKey(w)))
+            .ToList();
+
+        ConsistencyWarnings = new ObservableCollection<ConsistencyWarning>(results);
+        ErrorCount = results.Count(w => w.Severity == ConsistencyWarningSeverity.Error);
+        WarningCount = results.Count(w => w.Severity == ConsistencyWarningSeverity.Warning);
+        InfoCount = results.Count(w => w.Severity == ConsistencyWarningSeverity.Info);
+        HasWarnings = results.Count > 0;
+    }
+
+    /// <summary>
+    /// Marks a warning as "acknowledged / in order" so it no longer appears.
+    /// </summary>
+    public void SuppressWarning(ConsistencyWarning warning)
+    {
+        _suppressedWarnings.Add(GetWarningKey(warning));
+        RunConsistencyCheck();
+    }
+
+    /// <summary>
+    /// Resets all suppressions so every warning is shown again.
+    /// </summary>
+    public void ResetSuppressedWarnings()
+    {
+        _suppressedWarnings.Clear();
+        RunConsistencyCheck();
+    }
+
+    private static string GetWarningKey(ConsistencyWarning w)
+        => $"{w.RuleId}|{w.MeasureId ?? ""}|{w.ItemKey ?? ""}";
 
     partial void OnCatalogSearchTextChanged(string value)
     {
@@ -514,6 +593,54 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             return;
 
         SelectedMeasures.Move(idx, idx + 1);
+    }
+
+    private void SortMeasures()
+    {
+        if (SelectedMeasures.Count == 0)
+            return;
+
+        foreach (var measure in SelectedMeasures)
+            measure.SortLines();
+
+        var ordered = SelectedMeasures
+            .Select((measure, index) => new
+            {
+                Measure = measure,
+                Index = index,
+                Order = GetMeasureOrder(measure)
+            })
+            .OrderBy(x => x.Order)
+            .ThenBy(x => x.Measure.MeasureName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Index)
+            .Select(x => x.Measure)
+            .ToList();
+
+        ReorderCollection(SelectedMeasures, ordered);
+    }
+
+    private int GetMeasureOrder(MeasureBlockVm? measure)
+    {
+        if (measure is null || string.IsNullOrWhiteSpace(measure.MeasureId))
+            return int.MaxValue;
+
+        return _measureOrderById.TryGetValue(measure.MeasureId.Trim(), out var order)
+            ? order
+            : int.MaxValue;
+    }
+
+    private static void ReorderCollection<T>(ObservableCollection<T> collection, IReadOnlyList<T> ordered)
+    {
+        for (var targetIndex = 0; targetIndex < ordered.Count; targetIndex++)
+        {
+            var desired = ordered[targetIndex];
+            if (ReferenceEquals(collection[targetIndex], desired))
+                continue;
+
+            var currentIndex = collection.IndexOf(desired);
+            if (currentIndex >= 0 && currentIndex != targetIndex)
+                collection.Move(currentIndex, targetIndex);
+        }
     }
 
     private void SaveTemplate(MeasureBlockVm? measure)
@@ -713,16 +840,14 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         }
 
         // Set connection count from explicit field (PDF/manual) or derive from damage coding.
-        var connections = ConnectionCountEstimator.EstimateFromRecord(haltungRecord);
-        if (connections is not null)
+        // "No detected connections" is treated as explicit 0 so connection lines are disabled consistently.
+        var connections = ConnectionCountEstimator.EstimateFromRecord(haltungRecord) ?? 0;
+        var connectionText = connections.ToString(CultureInfo.InvariantCulture);
+        foreach (var measure in SelectedMeasures)
         {
-            var connectionText = connections.Value.ToString(CultureInfo.InvariantCulture);
-            foreach (var measure in SelectedMeasures)
-            {
-                measure.SetConnectionsFromImport(connectionText);
-            }
-            DefaultConnections = connectionText;
+            measure.SetConnectionsFromImport(connectionText);
         }
+        DefaultConnections = connectionText;
     }
 
     // Store defaults for new measures added later
@@ -742,9 +867,14 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     {
         var templates = _templateStore.LoadMerged(_projectPath);
         _templateItems.Clear();
+        _measureOrderById.Clear();
+        var order = 0;
         foreach (var template in templates.Measures)
         {
             _templateItems[template.Id] = template;
+            if (!_measureOrderById.ContainsKey(template.Id))
+                _measureOrderById[template.Id] = order;
+            order++;
         }
 
         Measures.Clear();
@@ -816,6 +946,9 @@ public sealed record CatalogItemOption(string Key, string Group, string DisplayN
 
 public sealed partial class MeasureBlockVm : ObservableObject
 {
+    private const string InstallUvAnlageKey = "INSTALL_UV_ANLAGE";
+    private const string InstallHlAnlageKey = "INSTALL_HL_ANLAGE";
+
     private static readonly string[] GroupOrder =
     {
         "Installation",
@@ -826,10 +959,12 @@ public sealed partial class MeasureBlockVm : ObservableObject
         "Sonstiges"
     };
     private IReadOnlyDictionary<string, CostCatalogItem> _catalog;
+    private readonly Dictionary<string, int> _templateLineOrderByItemKey = new(StringComparer.OrdinalIgnoreCase);
     private bool _suppressDnUpdate;
     private bool _suppressLengthUpdate;
     private bool _suppressConnectionsUpdate;
     private bool _applyingPrices;
+    private bool _enforcingInstallationRule;
 
     public string MeasureId { get; }
     public string MeasureName { get; }
@@ -850,6 +985,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
     public IRelayCommand<CostLineVm> RemoveLineCommand { get; }
     public IRelayCommand<CostLineVm> MoveLineUpCommand { get; }
     public IRelayCommand<CostLineVm> MoveLineDownCommand { get; }
+    public IRelayCommand SortLinesCommand { get; }
 
     public event Action? BlockChanged;
 
@@ -865,9 +1001,17 @@ public sealed partial class MeasureBlockVm : ObservableObject
         RemoveLineCommand = new RelayCommand<CostLineVm>(RemoveLine);
         MoveLineUpCommand = new RelayCommand<CostLineVm>(MoveLineUp);
         MoveLineDownCommand = new RelayCommand<CostLineVm>(MoveLineDown);
+        SortLinesCommand = new RelayCommand(SortLines);
 
         if (template is not null)
         {
+            for (var i = 0; i < template.Lines.Count; i++)
+            {
+                var itemKey = template.Lines[i].ItemKey?.Trim();
+                if (!string.IsNullOrWhiteSpace(itemKey) && !_templateLineOrderByItemKey.ContainsKey(itemKey))
+                    _templateLineOrderByItemKey[itemKey] = i;
+            }
+
             var ordered = template.Lines
                 .Select((line, index) => new
                 {
@@ -885,6 +1029,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
         }
 
         AttachLines();
+        EnforceInstallationRule();
         UpdateTotal();
     }
 
@@ -923,6 +1068,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
 
         TryInitializeConnectionsFromLines();
         AttachLines();
+        EnforceInstallationRule();
         UpdateTotal();
     }
 
@@ -1061,6 +1207,19 @@ public sealed partial class MeasureBlockVm : ObservableObject
         if (!_catalog.TryGetValue(key, out var item))
             return false;
 
+        if (IsInstallationItemKey(item.Key))
+        {
+            var existingInstallationLines = Lines
+                .Where(IsInstallationLine)
+                .ToList();
+
+            foreach (var existingLine in existingInstallationLines)
+            {
+                existingLine.LineChanged -= OnLineChanged;
+                Lines.Remove(existingLine);
+            }
+        }
+
         var vm = new CostLineVm
         {
             Group = CostCalculatorViewModel.DeriveGroupFromKey(item.Key),
@@ -1102,6 +1261,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
 
         vm.LineChanged += OnLineChanged;
         Lines.Add(vm);
+        EnforceInstallationRule();
         UpdateTotal();
         return true;
     }
@@ -1132,12 +1292,63 @@ public sealed partial class MeasureBlockVm : ObservableObject
         Lines.Move(idx, idx + 1);
     }
 
+    public void SortLines()
+    {
+        if (Lines.Count <= 1)
+            return;
+
+        var ordered = Lines
+            .Select((line, index) => new
+            {
+                Line = line,
+                Index = index,
+                GroupOrder = GetGroupOrder(line.Group),
+                TemplateOrder = GetTemplateLineOrder(line.ItemKey),
+                Text = line.Text ?? string.Empty,
+                ItemKey = line.ItemKey ?? string.Empty
+            })
+            .OrderBy(x => x.GroupOrder)
+            .ThenBy(x => x.TemplateOrder)
+            .ThenBy(x => x.Text, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.ItemKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Index)
+            .Select(x => x.Line)
+            .ToList();
+
+        ReorderCollection(Lines, ordered);
+    }
+
+    private int GetTemplateLineOrder(string? itemKey)
+    {
+        if (string.IsNullOrWhiteSpace(itemKey))
+            return int.MaxValue;
+
+        return _templateLineOrderByItemKey.TryGetValue(itemKey.Trim(), out var order)
+            ? order
+            : int.MaxValue;
+    }
+
+    private static void ReorderCollection<T>(ObservableCollection<T> collection, IReadOnlyList<T> ordered)
+    {
+        for (var targetIndex = 0; targetIndex < ordered.Count; targetIndex++)
+        {
+            var desired = ordered[targetIndex];
+            if (ReferenceEquals(collection[targetIndex], desired))
+                continue;
+
+            var currentIndex = collection.IndexOf(desired);
+            if (currentIndex >= 0 && currentIndex != targetIndex)
+                collection.Move(currentIndex, targetIndex);
+        }
+    }
+
     private void OnLineChanged()
     {
-        if (_applyingPrices)
+        if (_applyingPrices || _enforcingInstallationRule)
             return;
 
         ApplyCatalogPricesInternal(onlyQtyBased: true);
+        EnforceInstallationRule();
     }
 
     private void UpdateTotal()
@@ -1429,6 +1640,106 @@ public sealed partial class MeasureBlockVm : ObservableObject
         }
 
         return false;
+    }
+
+    private void EnforceInstallationRule()
+    {
+        if (_enforcingInstallationRule)
+            return;
+
+        var requiredInstallKey = GetRequiredInstallationItemKey();
+        if (string.IsNullOrWhiteSpace(requiredInstallKey))
+            return;
+        if (!_catalog.ContainsKey(requiredInstallKey))
+            return;
+
+        var changed = false;
+        _enforcingInstallationRule = true;
+        try
+        {
+            var installationLines = Lines
+                .Where(IsInstallationLine)
+                .ToList();
+
+            if (!installationLines.Any(l => IsItemKey(l, requiredInstallKey)))
+            {
+                AddLineFromCatalogKey(requiredInstallKey);
+                changed = true;
+                installationLines = Lines.Where(IsInstallationLine).ToList();
+            }
+
+            foreach (var line in installationLines)
+            {
+                if (IsItemKey(line, requiredInstallKey))
+                {
+                    if (!line.Selected)
+                    {
+                        line.Selected = true;
+                        changed = true;
+                    }
+                    if (line.Qty <= 0m)
+                    {
+                        line.SetSuggestedQty(1m);
+                        changed = true;
+                    }
+                    continue;
+                }
+
+                line.LineChanged -= OnLineChanged;
+                Lines.Remove(line);
+                changed = true;
+            }
+        }
+        finally
+        {
+            _enforcingInstallationRule = false;
+        }
+
+        if (changed)
+            UpdateTotal();
+    }
+
+    private string? GetRequiredInstallationItemKey()
+    {
+        var descriptor = $"{MeasureId} {MeasureName}";
+        if (descriptor.Contains("GFK", StringComparison.OrdinalIgnoreCase))
+            return InstallUvAnlageKey;
+        if (descriptor.Contains("NADELFILZ", StringComparison.OrdinalIgnoreCase))
+            return InstallHlAnlageKey;
+
+        return null;
+    }
+
+    private static bool IsInstallationLine(CostLineVm? line)
+    {
+        if (line is null)
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(line.Group) &&
+            line.Group.Trim().Equals("Installation", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return IsInstallationItemKey(line.ItemKey);
+    }
+
+    private static bool IsItemKey(CostLineVm? line, string key)
+    {
+        if (line is null || string.IsNullOrWhiteSpace(line.ItemKey))
+            return false;
+
+        return line.ItemKey.Trim().Equals(key, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsInstallationItemKey(string? itemKey)
+    {
+        if (string.IsNullOrWhiteSpace(itemKey))
+            return false;
+
+        var key = itemKey.Trim();
+        return key.StartsWith("INSTALL_", StringComparison.OrdinalIgnoreCase)
+               || key.StartsWith("HL_INSTALL_", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryParseDecimal(string raw, out decimal value)

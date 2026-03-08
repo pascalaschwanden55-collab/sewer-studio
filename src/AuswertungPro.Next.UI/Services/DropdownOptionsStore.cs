@@ -92,10 +92,8 @@ public static class DropdownOptionsStore
                 return new List<string>(defaults);
 
             var json = File.ReadAllText(path);
-            var list = JsonSerializer.Deserialize<List<string>>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var list = JsonSerializer.Deserialize<List<string>>(json,
+                Application.Common.JsonDefaults.CaseInsensitive);
 
             if (list is null || list.Count == 0)
                 return new List<string>(defaults);
@@ -116,7 +114,7 @@ public static class DropdownOptionsStore
     {
         Directory.CreateDirectory(OptionsDir);
         var path = Path.Combine(OptionsDir, $"{key}.json");
-        var json = JsonSerializer.Serialize(options, new JsonSerializerOptions { WriteIndented = true });
+        var json = JsonSerializer.Serialize(options, Application.Common.JsonDefaults.Indented);
         File.WriteAllText(path, json);
     }
 
@@ -155,10 +153,8 @@ public static class DropdownOptionsStore
             try
             {
                 var json = File.ReadAllText(LegacyOptionsPath);
-                var model = JsonSerializer.Deserialize<DropdownOptionsModel>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                var model = JsonSerializer.Deserialize<DropdownOptionsModel>(json,
+                    Application.Common.JsonDefaults.CaseInsensitive);
 
                 if (model is null)
                     return;

@@ -1,4 +1,5 @@
 using System.Windows;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.UI.Views.Windows;
@@ -10,6 +11,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        WindowStateManager.Track(this);
         DataContext = new ShellViewModel();
     }
 
@@ -64,4 +66,5 @@ public partial class MainWindow : Window
         var window = new TrainingCenterWindow { Owner = this };
         window.Show();
     }
+
 }

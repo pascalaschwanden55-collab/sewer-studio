@@ -10,6 +10,7 @@ using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Media;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Kins;
 
@@ -32,7 +33,7 @@ public sealed class KinsImportService : IKinsImportService
         _ibakImport = ibakImport ?? throw new ArgumentNullException(nameof(ibakImport));
     }
 
-    public Result<ImportStats> ImportKinsExport(string exportRoot, Project project)
+    public Result<ImportStats> ImportKinsExport(string exportRoot, Project project, ImportRunContext? ctx = null)
     {
         if (project is null)
             return Result<ImportStats>.Fail("KINS_PROJECT_NULL", "Projekt ist null.");
@@ -40,11 +41,8 @@ public sealed class KinsImportService : IKinsImportService
         if (string.IsNullOrWhiteSpace(exportRoot) || !Directory.Exists(exportRoot))
             return Result<ImportStats>.Fail("KINS_ROOT_MISSING", "KINS Export-Ordner nicht gefunden.");
 
-        var hasDb3 = HasAnyFile(exportRoot, "*.db3");
-        var hasMdb = HasAnyFile(exportRoot, "*.mdb");
-        var hasFdb = HasAnyFile(exportRoot, "*.fdb");
-        var hasDatenTxt = HasFileNamed(exportRoot, "Daten.txt");
-        var hasKiDvDataTxt = HasFileNamed(exportRoot, "kiDVDaten.txt");
+        // Single recursive scan for format detection instead of 5 separate scans
+        var (hasDb3, hasMdb, hasFdb, hasDatenTxt, hasKiDvDataTxt) = DetectFormats(exportRoot);
 
         // Heuristik:
         // - KINS-TXT: kiDVDaten.txt vorhanden.
@@ -88,14 +86,14 @@ public sealed class KinsImportService : IKinsImportService
         if (runWinCan)
         {
             executed++;
-            MergeResult("WinCan", _winCanImport.ImportWinCanExport(exportRoot, project), messages,
+            MergeResult("WinCan", _winCanImport.ImportWinCanExport(exportRoot, project, ctx), messages,
                 ref found, ref created, ref updated, ref errors, ref uncertain, ref successCount);
         }
 
         if (runIbak)
         {
             executed++;
-            MergeResult("IBAK", _ibakImport.ImportIbakExport(exportRoot, project), messages,
+            MergeResult("IBAK", _ibakImport.ImportIbakExport(exportRoot, project, ctx), messages,
                 ref found, ref created, ref updated, ref errors, ref uncertain, ref successCount);
         }
 
@@ -272,6 +270,29 @@ public sealed class KinsImportService : IKinsImportService
             messages.Add($"{source}: {m}");
     }
 
+    private static (bool HasDb3, bool HasMdb, bool HasFdb, bool HasDatenTxt, bool HasKiDvDataTxt) DetectFormats(string root)
+    {
+        bool hasDb3 = false, hasMdb = false, hasFdb = false, hasDatenTxt = false, hasKiDvDataTxt = false;
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
+            {
+                var ext = Path.GetExtension(file);
+                var name = Path.GetFileName(file);
+
+                if (!hasDb3 && string.Equals(ext, ".db3", StringComparison.OrdinalIgnoreCase)) hasDb3 = true;
+                else if (!hasMdb && string.Equals(ext, ".mdb", StringComparison.OrdinalIgnoreCase)) hasMdb = true;
+                else if (!hasFdb && string.Equals(ext, ".fdb", StringComparison.OrdinalIgnoreCase)) hasFdb = true;
+                else if (!hasDatenTxt && string.Equals(name, "Daten.txt", StringComparison.OrdinalIgnoreCase)) hasDatenTxt = true;
+                else if (!hasKiDvDataTxt && string.Equals(name, "kiDVDaten.txt", StringComparison.OrdinalIgnoreCase)) hasKiDvDataTxt = true;
+
+                if (hasDb3 && hasMdb && hasFdb && hasDatenTxt && hasKiDvDataTxt) break;
+            }
+        }
+        catch { /* ignore access errors */ }
+        return (hasDb3, hasMdb, hasFdb, hasDatenTxt, hasKiDvDataTxt);
+    }
+
     private static bool HasAnyFile(string root, string pattern)
     {
         try
@@ -329,11 +350,11 @@ public sealed class KinsImportService : IKinsImportService
 
         try
         {
-            return File.ReadAllLines(path, Encoding.GetEncoding(1252)).ToList();
+            return File.ReadLines(path, Encoding.GetEncoding(1252)).ToList();
         }
         catch
         {
-            return File.ReadAllLines(path, Encoding.UTF8).ToList();
+            return File.ReadLines(path, Encoding.UTF8).ToList();
         }
     }
 
@@ -443,10 +464,7 @@ public sealed class KinsImportService : IKinsImportService
     private static Dictionary<string, List<string>> BuildVideoIndex(string root)
     {
         var index = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-        var extensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ".mpg", ".mpeg", ".mp4", ".avi", ".mov"
-        };
+        var extensions = new HashSet<string>(MediaFileTypes.VideoExtensions, StringComparer.OrdinalIgnoreCase);
 
         IEnumerable<string> files;
         try

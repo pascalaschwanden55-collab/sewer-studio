@@ -9,11 +9,11 @@ public sealed class XtfImportServiceAdapter : IXtfImportService
 {
     private readonly LegacyXtfImportService _svc = new();
 
-    public Result<AuswertungPro.Next.Application.Import.ImportStats> ImportXtfFiles(IEnumerable<string> xtfPaths, Project project)
+    public Result<AuswertungPro.Next.Application.Import.ImportStats> ImportXtfFiles(IEnumerable<string> xtfPaths, Project project, AuswertungPro.Next.Application.Import.ImportRunContext? ctx = null)
     {
         try
         {
-            var stats = _svc.ImportXtfFiles(xtfPaths, project);
+            var stats = _svc.ImportXtfFiles(xtfPaths, project, ctx);
 
             var msg = stats.Messages.Select(m => $"{m.Level}: {m.Message} {m.Context}".Trim()).ToList();
             var mapped = new AuswertungPro.Next.Application.Import.ImportStats(

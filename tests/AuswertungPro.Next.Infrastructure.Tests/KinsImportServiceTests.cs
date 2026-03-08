@@ -123,7 +123,7 @@ public sealed class KinsImportServiceTests
 
         public FakeWinCanImport(Result<ImportStats> result) => _result = result;
 
-        public Result<ImportStats> ImportWinCanExport(string exportRoot, Project project)
+        public Result<ImportStats> ImportWinCanExport(string exportRoot, Project project, ImportRunContext? ctx = null)
         {
             CallCount++;
             return _result;
@@ -137,7 +137,7 @@ public sealed class KinsImportServiceTests
 
         public FakeIbakImport(Result<ImportStats> result) => _result = result;
 
-        public Result<ImportStats> ImportIbakExport(string exportRoot, Project project)
+        public Result<ImportStats> ImportIbakExport(string exportRoot, Project project, ImportRunContext? ctx = null)
         {
             CallCount++;
             return _result;

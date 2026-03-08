@@ -1,0 +1,590 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.SanierungsmassnahmenWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
+        xmlns:domain="clr-namespace:AuswertungPro.Next.Domain.Models;assembly=AuswertungPro.Next.Domain"
+        Title="{Binding WindowTitle}"
+        Width="1600" Height="900"
+        MinWidth="1000" MinHeight="600"
+        WindowStartupLocation="CenterOwner"
+        AllowDrop="True"
+        PreviewDragOver="Window_PreviewDragOver"
+        PreviewDrop="Window_PreviewDrop">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <controls:IntToVisibilityConverter x:Key="IntToVis"/>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Main content: Left advisory + Right cost calc -->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320" MinWidth="260"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*" MinWidth="500"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ═══ LEFT PANEL: Advisory cards (scrollable) ═══ -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="10,10,0,10">
+                <StackPanel>
+
+                    <!-- CARD 1: Haltungskontext -->
+                    <Border Margin="0,0,0,10" Padding="12,10"
+                            BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
+                            Background="{StaticResource CardBrush}" CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock Text="HALTUNGSKONTEXT"
+                                       FontSize="11" FontWeight="Bold"
+                                       Foreground="{StaticResource NeonCyanBrush}"
+                                       Margin="0,0,0,8"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="DN:"
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Dn}"
+                                           Foreground="{StaticResource TextBrush}" Margin="0,0,0,4"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Material:"
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Material}"
+                                           Foreground="{StaticResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Laenge:"
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Laenge}"
+                                           Foreground="{StaticResource TextBrush}" Margin="0,0,0,4"/>
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Zustandsklasse:"
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,0"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Zustandsklasse}"
+                                           Foreground="{StaticResource TextBrush}" FontWeight="SemiBold"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- CARD 2: Regelbasierte Empfehlung -->
+                    <Border Margin="0,0,0,10" Padding="12,10"
+                            BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
+                            Background="{StaticResource CardBrush}" CornerRadius="4"
+                            Visibility="{Binding HasAi, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Text="REGELBASIERTE EMPFEHLUNG"
+                                       FontSize="11" FontWeight="Bold"
+                                       Foreground="{StaticResource NeonCyanBrush}"
+                                       Margin="0,0,0,8"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Massnahmen:"
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding OptimizationVm.RuleMeasures}"
+                                           Foreground="{StaticResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Gesch. Kosten:"
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,0"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding OptimizationVm.RuleEstimatedCost}"
+                                           Foreground="{StaticResource TextBrush}"/>
+                            </Grid>
+                            <Button Content="In Kalkulation >>"
+                                    Command="{Binding ApplyRuleToCalcCommand}"
+                                    Height="28" Margin="0,8,0,0"
+                                    HorizontalAlignment="Left" Padding="12,2"
+                                    ToolTip="Regelbasierte Massnahmen in den Kostenrechner uebernehmen"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- CARD 3: KI-Optimierung -->
+                    <Border Margin="0,0,0,10" Padding="12,10"
+                            BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
+                            Background="{StaticResource CardBrush}" CornerRadius="4"
+                            Visibility="{Binding HasAi, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,8">
+                                <TextBlock DockPanel.Dock="Left"
+                                           Text="KI-OPTIMIERUNG"
+                                           FontSize="11" FontWeight="Bold"
+                                           Foreground="{StaticResource NeonCyanBrush}"
+                                           VerticalAlignment="Center"/>
+                                <Button DockPanel.Dock="Right"
+                                        Content="Optimieren"
+                                        Command="{Binding OptimizationVm.OptimizeCommand}"
+                                        Style="{StaticResource PrimaryButton}"
+                                        Width="100" Height="28"
+                                        ToolTip="KI-Analyse starten - ermittelt optimale Sanierungsmassnahme und Kostenschaetzung"/>
+                            </DockPanel>
+
+                            <TextBlock Text="{Binding OptimizationVm.StatusText}"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       FontSize="9" Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+                            <!-- AI Result (visible when HasResult) -->
+                            <Grid>
+                                <Grid.Style>
+                                    <Style TargetType="Grid">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding OptimizationVm.HasResult}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Grid.Style>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Empfehlung:"
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,6"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding OptimizationVm.AiMeasure}"
+                                           Foreground="{StaticResource TextBrush}" FontWeight="SemiBold"
+                                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Konfidenz:"
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,6"
+                                           VerticalAlignment="Center"/>
+                                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,6">
+                                    <ProgressBar Value="{Binding OptimizationVm.AiConfidence, Mode=OneWay}"
+                                                 Minimum="0" Maximum="1"
+                                                 Width="120" Height="12"
+                                                 VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{Binding OptimizationVm.AiConfidence, StringFormat=P0}"
+                                               Foreground="{StaticResource TextBrush}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Kosten:"
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,6"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,0,0,6"
+                                           Foreground="{StaticResource TextBrush}" TextWrapping="Wrap" FontSize="11">
+                                    <Run Text="Min "/>
+                                    <Run Text="{Binding OptimizationVm.CostMin, Mode=OneWay}" FontWeight="SemiBold"/>
+                                    <Run Text=" | Erw. "/>
+                                    <Run Text="{Binding OptimizationVm.CostExpected, Mode=OneWay}" FontWeight="Bold"
+                                         Foreground="{StaticResource NeonCyanBrush}"/>
+                                    <Run Text=" | Max "/>
+                                    <Run Text="{Binding OptimizationVm.CostMax, Mode=OneWay}" FontWeight="SemiBold"/>
+                                    <Run Text=" CHF"/>
+                                </TextBlock>
+
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Begruendung:"
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"
+                                           VerticalAlignment="Top"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding OptimizationVm.AiReasoning}"
+                                           Foreground="{StaticResource TextBrush}"
+                                           TextWrapping="Wrap" FontSize="9" Margin="0,0,0,6"/>
+
+                                <Button Grid.Row="4" Grid.ColumnSpan="2"
+                                        Content="KI uebernehmen >>"
+                                        Command="{Binding ApplyAiToCalcCommand}"
+                                        Height="28" HorizontalAlignment="Left" Padding="12,2"
+                                        ToolTip="KI-Vorschlag als Massnahmen in den Kostenrechner uebernehmen"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- CARD 4: Risiken (conditional) -->
+                    <Border Padding="12,10"
+                            BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
+                            Background="{StaticResource CardBrush}" CornerRadius="4">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding OptimizationVm.HasResult}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel>
+                            <TextBlock Text="RISIKEN &amp; EINSCHRAENKUNGEN"
+                                       FontSize="11" FontWeight="Bold"
+                                       Foreground="{StaticResource NeonCyanBrush}"
+                                       Margin="0,0,0,8"/>
+                            <TextBlock Text="{Binding OptimizationVm.RiskText}"
+                                       TextWrapping="Wrap" FontSize="9">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding OptimizationVm.RiskText}" Value="">
+                                                <Setter Property="Text" Value="Keine Risiken oder Verletzungen erkannt."/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding OptimizationVm.RiskText}" Value="{x:Null}">
+                                                <Setter Property="Text" Value="Keine Risiken oder Verletzungen erkannt."/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <Border Visibility="{Binding OptimizationVm.IsFallback, Converter={StaticResource BoolToVis}}"
+                                    Background="#7F2F00" Margin="0,8,0,0" Padding="8,4" CornerRadius="3">
+                                <TextBlock Text="FALLBACK AKTIV - KI-Vorschlag wurde durch Regelpruefung verworfen"
+                                           Foreground="#FF8C00" FontSize="9" FontWeight="Bold"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- CARD 5: Konsistenz-Kontrolle -->
+                    <Border Margin="0,10,0,0" Padding="12,10"
+                            BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
+                            Background="{StaticResource CardBrush}" CornerRadius="4"
+                            Visibility="{Binding HasWarnings, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,8">
+                                <TextBlock DockPanel.Dock="Left"
+                                           Text="KONSISTENZ-KONTROLLE"
+                                           FontSize="11" FontWeight="Bold"
+                                           Foreground="{StaticResource NeonCyanBrush}"
+                                           VerticalAlignment="Center"/>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <!-- Error badge -->
+                                    <Border CornerRadius="8" Padding="6,2" Margin="0,0,4,0"
+                                            Background="{StaticResource DangerBrush}"
+                                            Visibility="{Binding ErrorCount, Converter={StaticResource IntToVis}}">
+                                        <TextBlock Foreground="White" FontSize="10" FontWeight="Bold">
+                                            <Run Text="{Binding ErrorCount, Mode=OneWay}"/>
+                                            <Run Text="Fehler"/>
+                                        </TextBlock>
+                                    </Border>
+                                    <!-- Warning badge -->
+                                    <Border CornerRadius="8" Padding="6,2"
+                                            Background="#FF8C00"
+                                            Visibility="{Binding WarningCount, Converter={StaticResource IntToVis}}">
+                                        <TextBlock Foreground="White" FontSize="10" FontWeight="Bold">
+                                            <Run Text="{Binding WarningCount, Mode=OneWay}"/>
+                                            <Run Text="Warnungen"/>
+                                        </TextBlock>
+                                    </Border>
+                                </StackPanel>
+                            </DockPanel>
+
+                            <ItemsControl ItemsSource="{Binding ConsistencyWarnings}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type domain:ConsistencyWarning}">
+                                        <Button Click="WarningItem_Click"
+                                                Cursor="Hand"
+                                                ToolTip="Links: zur Position springen | Rechts: als korrekt markieren"
+                                                Focusable="False">
+                                            <Button.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Alles in Ordnung — Warnung unterdruecken"
+                                                              Click="SuppressWarning_Click"/>
+                                                </ContextMenu>
+                                            </Button.ContextMenu>
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border x:Name="Bd" Margin="0,0,0,4" Padding="6,4"
+                                                            CornerRadius="3" Background="#1A3B82F6">
+                                                        <ContentPresenter/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <DataTrigger Binding="{Binding Severity}" Value="Error">
+                                                            <Setter TargetName="Bd" Property="Background" Value="#33FF4444"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                                                            <Setter TargetName="Bd" Property="Background" Value="#33FF8C00"/>
+                                                        </DataTrigger>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Bd" Property="Opacity" Value="0.7"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Left" VerticalAlignment="Top" Margin="0,0,6,0"
+                                                           FontSize="9" FontWeight="Bold" Width="32">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{StaticResource NeonCyanBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Severity}" Value="Error">
+                                                                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                                                                    <Setter Property="Foreground" Value="#FF8C00"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                    <Run Text="{Binding RuleId, Mode=OneWay}"/>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="10"
+                                                           Foreground="{StaticResource TextBrush}"/>
+                                            </DockPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Margin="0,4,0,0" HorizontalAlignment="Right"
+                                       FontSize="9" Cursor="Hand"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       MouseLeftButtonUp="ResetSuppressedWarnings_Click"
+                                       ToolTip="Alle unterdrueckten Warnungen wieder anzeigen">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="TextDecorations" Value="Underline"/>
+                                                <Setter Property="Foreground" Value="{StaticResource NeonCyanBrush}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                                <Run Text="Unterdrueckungen zuruecksetzen"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Splitter -->
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                          Background="Transparent" Cursor="SizeWE"/>
+
+            <!-- ═══ RIGHT PANEL: Cost calculator (from CostCalculatorWindow) ═══ -->
+            <Grid Grid.Column="2" Margin="0,10,10,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="280" MinWidth="200"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*" MinWidth="300"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="280" MinWidth="160"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: Massnahmen list -->
+                <GroupBox Header="Massnahmen" ToolTip="Verfuegbare Sanierungsmassnahmen - Doppelklick oder Auswahl zum Hinzufuegen">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <ListBox x:Name="MeasuresList"
+                                 Grid.Row="0"
+                                 ItemsSource="{Binding CostCalcVm.Measures}"
+                                 SelectionMode="Extended"
+                                 DisplayMemberPath="DisplayName"
+                                 SelectionChanged="MeasuresList_SelectionChanged"
+                                 MouseDoubleClick="MeasuresList_MouseDoubleClick"
+                                 ToolTip="Massnahmen auswaehlen und Doppelklick zum Hinzufuegen zur Kalkulation"/>
+                        <StackPanel Grid.Row="1">
+                            <Button Height="32" Margin="0,5,0,0"
+                                    Content="Positionen verwalten..."
+                                    Command="{Binding CostCalcVm.EditPositionTemplatesCommand}"
+                                    ToolTip="Massnahmen-Vorlagen und Positionen bearbeiten"/>
+                        </StackPanel>
+                    </Grid>
+                </GroupBox>
+
+                <!-- Splitter -->
+                <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                              Background="Transparent" Cursor="SizeWE"/>
+
+                <!-- Center: Kalkulation -->
+                <GroupBox Grid.Column="2" Header="{Binding CostCalcVm.Header}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                            <Button DockPanel.Dock="Right"
+                                    Content="Alle sortieren"
+                                    Height="28"
+                                    Padding="10,2"
+                                    Command="{Binding CostCalcVm.SortMeasuresCommand}"
+                                    ToolTip="Sortiert Massnahmen und Positionen in eine feste Reihenfolge"/>
+                        </DockPanel>
+                        <ScrollViewer x:Name="CalcScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="CalcItemsControl" ItemsSource="{Binding CostCalcVm.SelectedMeasures}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,12" Padding="8" BorderThickness="1"
+                                                BorderBrush="{StaticResource BorderBrush}" Background="Transparent">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <Button DockPanel.Dock="Right" Content="X" Width="28" Height="28"
+                                                            Foreground="Red" FontWeight="Bold" Style="{x:Null}"
+                                                            Command="{Binding DataContext.CostCalcVm.RemoveMeasureCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip="Massnahme entfernen" Margin="8,0,0,0"/>
+                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0">
+                                                        <Button Content="^" Width="28" Height="28" Style="{x:Null}"
+                                                                Command="{Binding DataContext.CostCalcVm.MoveMeasureUpCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}" ToolTip="Nach oben"/>
+                                                        <Button Content="v" Width="28" Height="28" Margin="6,0,0,0" Style="{x:Null}"
+                                                                Command="{Binding DataContext.CostCalcVm.MoveMeasureDownCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}" ToolTip="Nach unten"/>
+                                                    </StackPanel>
+                                                    <Button DockPanel.Dock="Right" Content="Vorlage speichern" Height="28"
+                                                            Padding="8,2" Margin="8,0,0,0"
+                                                            Command="{Binding DataContext.CostCalcVm.SaveTemplateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip="Speichert die aktuelle Positionen-Vorlage dauerhaft"/>
+                                                    <TextBlock Text="{Binding MeasureName}" FontSize="16" FontWeight="SemiBold"
+                                                               VerticalAlignment="Center"/>
+                                                </DockPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,6,0,8">
+                                                    <TextBlock Text="DN:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                    <TextBox Width="100" Text="{Binding DnText, UpdateSourceTrigger=PropertyChanged}"/>
+                                                    <TextBlock Text="Linerlaenge (m):" VerticalAlignment="Center" Margin="14,0,6,0"/>
+                                                    <TextBox Width="120" Text="{Binding LengthText, UpdateSourceTrigger=PropertyChanged}"/>
+                                                    <TextBlock Text="Anschluesse (Stk):" VerticalAlignment="Center" Margin="14,0,6,0"/>
+                                                    <TextBox Width="90" Text="{Binding ConnectionsText, UpdateSourceTrigger=PropertyChanged}"/>
+                                                    <TextBlock Text="{Binding PriceHint}" Foreground="{StaticResource NeonPinkBrush}"
+                                                               Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                                <DataGrid ItemsSource="{Binding Lines}" AutoGenerateColumns="False"
+                                                          CanUserAddRows="False"
+                                                          ToolTip="Rechtsklick markiert Position fuer den Uebertrag (gruene Markierung)."
+                                                          PreviewMouseRightButtonDown="LinesGrid_PreviewMouseRightButtonDown">
+                                                    <DataGrid.RowStyle>
+                                                        <Style TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding TransferMarked}" Value="True">
+                                                                    <Setter Property="Background" Value="#D7F5DD"/>
+                                                                    <Setter Property="Foreground" Value="#0F3D1F"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </DataGrid.RowStyle>
+                                                    <DataGrid.Columns>
+                                                        <DataGridCheckBoxColumn Header="%" Binding="{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="40"/>
+                                                        <DataGridTextColumn Header="Gruppe" Binding="{Binding Group}" IsReadOnly="True" Width="130"/>
+                                                        <DataGridTextColumn Header="Position" Binding="{Binding Text}" IsReadOnly="True" Width="*"/>
+                                                        <DataGridTextColumn Header="Einheit" Binding="{Binding Unit}" IsReadOnly="True" Width="60"/>
+                                                        <DataGridTextColumn Header="Menge" Binding="{Binding Qty, Mode=TwoWay, StringFormat=N2, UpdateSourceTrigger=PropertyChanged}" Width="75"/>
+                                                        <DataGridTextColumn Header="Preis" Binding="{Binding UnitPrice, Mode=TwoWay, StringFormat=N2, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+                                                        <DataGridTextColumn Header="Kosten" Binding="{Binding LineTotal, StringFormat=N2}" IsReadOnly="True" Width="90"/>
+                                                        <DataGridTemplateColumn Header="" Width="86">
+                                                            <DataGridTemplateColumn.CellTemplate>
+                                                                <DataTemplate>
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <Button Content="^" Width="22" Height="22" Padding="0" Margin="0,0,2,0"
+                                                                                Style="{x:Null}"
+                                                                                Command="{Binding DataContext.MoveLineUpCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                                                CommandParameter="{Binding}" ToolTip="Nach oben"/>
+                                                                        <Button Content="v" Width="22" Height="22" Padding="0" Margin="0,0,2,0"
+                                                                                Style="{x:Null}"
+                                                                                Command="{Binding DataContext.MoveLineDownCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                                                CommandParameter="{Binding}" ToolTip="Nach unten"/>
+                                                                        <Button Content="X" Width="22" Height="22" Padding="0"
+                                                                                Style="{x:Null}" Foreground="Red" FontWeight="Bold"
+                                                                                Command="{Binding DataContext.RemoveLineCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                                                CommandParameter="{Binding}" ToolTip="Position entfernen"/>
+                                                                    </StackPanel>
+                                                                </DataTemplate>
+                                                            </DataGridTemplateColumn.CellTemplate>
+                                                        </DataGridTemplateColumn>
+                                                    </DataGrid.Columns>
+                                                </DataGrid>
+                                                <TextBlock Text="{Binding Total, StringFormat=Total: {0:N2}}" Margin="0,6,0,0"
+                                                           FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </GroupBox>
+
+                <!-- Splitter -->
+                <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                              Background="Transparent" Cursor="SizeWE"/>
+
+                <!-- Right: Katalogpositionen (Drag source) -->
+                <GroupBox Grid.Column="4" Header="Katalogpositionen"
+                          ToolTip="Katalogpositionen per Drag-and-Drop in eine Massnahme ziehen">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBox Grid.Row="0" Margin="0,0,0,4"
+                                 Text="{Binding CostCalcVm.CatalogSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 Tag="Suche..."/>
+                        <ListBox x:Name="CatalogList" Grid.Row="1"
+                                 ItemsSource="{Binding CostCalcVm.FilteredCatalogItems}"
+                                 DisplayMemberPath="DisplayName"
+                                 PreviewMouseLeftButtonDown="CatalogList_PreviewMouseLeftButtonDown"
+                                 PreviewMouseMove="CatalogList_PreviewMouseMove"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="ToolTip" Value="{Binding DisplayName}"/>
+                                    <Setter Property="Padding" Value="4,2"/>
+                                    <Setter Property="Cursor" Value="Hand"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                        </ListBox>
+                    </Grid>
+                </GroupBox>
+            </Grid>
+        </Grid>
+
+        <!-- ═══ FOOTER ═══ -->
+        <Border Grid.Row="1" Padding="10,8"
+                BorderThickness="0,1,0,0" BorderBrush="{StaticResource BorderBrush}"
+                Background="{StaticResource CardBrush}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Netto:" FontSize="14" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Total, StringFormat=N2}" FontSize="14" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="CHF" FontSize="14" Margin="4,0,16,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding MwstLabel}" FontSize="14" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding MwstAmount, StringFormat=N2}" FontSize="14" Margin="6,0,16,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Total inkl. MWST:" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalInclMwst, StringFormat=N2}" FontSize="18" FontWeight="SemiBold"
+                               Margin="8,0,0,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="CHF" FontSize="18" FontWeight="SemiBold" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
+                    <Button Content="Kosten &amp; Massnahmen uebernehmen" Width="260" Height="38" Margin="12,0,0,0"
+                            Command="{Binding CostCalcVm.ApplyTotalCommand}"
+                            ToolTip="Berechnete Kosten und gewaehlte Massnahmen in die Haltungsdaten schreiben"/>
+                    <Button Content="PDF" Width="80" Height="38" Margin="8,0,0,0"
+                            Command="{Binding CostCalcVm.ExportPdfCommand}"
+                            CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
+                            ToolTip="Kostenzusammenstellung als PDF exportieren"/>
+                    <Button Content="Speichern" Width="140" Height="38" Margin="8,0,0,0"
+                            Command="{Binding CostCalcVm.SaveCommand}"
+                            ToolTip="Aktuelle Kalkulation im Projekt speichern"/>
+                </WrapPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

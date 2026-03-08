@@ -11,28 +11,35 @@ using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Import.Xtf;
+using AuswertungPro.Next.Infrastructure.Media;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Ibak;
 
 public sealed class IbakExportImportService : IIbakImportService
 {
-    private static readonly HashSet<string> MediaExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".mpg", ".mpeg", ".mp4", ".avi", ".mov",
-        ".jpg", ".jpeg", ".png", ".bmp",
-        ".pdf", ".txt"
-    };
+    private static readonly HashSet<string> MediaExtensions = new(
+        MediaFileTypes.VideoExtensions
+            .Concat(new[] { ".jpg", ".jpeg", ".png", ".bmp", ".pdf", ".txt" }),
+        StringComparer.OrdinalIgnoreCase);
 
     private static readonly Regex ObservationRegex = new(
         @"^\s*(\d{2}:\d{2}:\d{2})\s+([\d.,]+)\s*m\s+([A-Z0-9]+)\s+(.*)$",
         RegexOptions.Compiled);
 
+    // Zeilen ohne Zeitstempel (Header-Einträge wie AEC, AED, AEF)
+    private static readonly Regex HeaderLineRegex = new(
+        @"^\s+([\d.,]+)\s*m\s+([A-Z0-9]+)\s+(.*)$",
+        RegexOptions.Compiled);
+
     private static readonly Regex RangeIndexRegex = new(@"\((\d+)\)", RegexOptions.Compiled);
 
-    public Result<ImportStats> ImportIbakExport(string exportRoot, Project project)
+    public Result<ImportStats> ImportIbakExport(string exportRoot, Project project, ImportRunContext? ctx = null)
     {
         if (string.IsNullOrWhiteSpace(exportRoot) || !Directory.Exists(exportRoot))
             return Result<ImportStats>.Fail("IBAK_ROOT_MISSING", "IBAK Export-Ordner nicht gefunden.");
+
+        ctx?.Log.AddEntry("IBAK", "Start", ImportLogStatus.Info, sourceFile: exportRoot);
 
         var dataPath = FindDatenTxt(exportRoot);
         if (string.IsNullOrWhiteSpace(dataPath))
@@ -47,19 +54,30 @@ public sealed class IbakExportImportService : IIbakImportService
         var fileIndex = BuildFileIndex(exportRoot);
         var photoMap = LoadPhotoMap(exportRoot, fileIndex, messages);
         var protocolService = new ProtocolService();
+        var created = 0;
 
         try
         {
             var parsed = ParseDatenTxt(dataPath, messages);
+            var holdingIndex = 0;
             foreach (var holding in parsed)
             {
+                ctx?.CancellationToken.ThrowIfCancellationRequested();
+                holdingIndex++;
+                ctx?.Progress?.Report(new ImportProgress(
+                    "Haltungen importieren", holdingIndex, parsed.Count,
+                    $"IBAK {holdingIndex}/{parsed.Count}", holding.Holding));
                 var key = NormalizeHoldingKey(holding.Holding);
                 var record = FindRecord(project, key);
                 if (record is null)
                 {
-                    uncertain++;
-                    messages.Add($"Haltung nicht gefunden im Projekt: {holding.Holding}");
-                    continue;
+                    // Auto-Create: Neue Haltung aus IBAK-Daten anlegen
+                    record = new HaltungRecord();
+                    record.SetFieldValue("Haltungsname", holding.Holding, FieldSource.Legacy, userEdited: false);
+                    ApplyHeaderFields(record, holding.Entries);
+                    project.Data.Add(record);
+                    created++;
+                    messages.Add($"Haltung neu erstellt aus IBAK: {holding.Holding}");
                 }
 
                 found++;
@@ -71,8 +89,12 @@ public sealed class IbakExportImportService : IIbakImportService
                     continue;
                 }
 
+                // Stammdaten (DN, Material, Haltungslänge) auch für bestehende Records aktualisieren
+                ApplyHeaderFields(record, holding.Entries);
+
                 ApplyPhotosToEntries(holding.Holding, holding.Entries, fileIndex, photoMap, messages);
                 ApplyProtocol(record, holding.Entries, protocolService);
+                BuildPrimaryDamagesText(record, holding.Entries);
                 UpdateFindings(record, holding.Entries);
                 LinkVideo(record, holding.Holding, fileIndex);
                 LinkHoldingPdf(record, holding.Holding, fileIndex);
@@ -89,7 +111,7 @@ public sealed class IbakExportImportService : IIbakImportService
         project.ModifiedAtUtc = DateTime.UtcNow;
         project.Dirty = true;
 
-        var stats = new ImportStats(found, 0, updated, errors, uncertain, messages);
+        var stats = new ImportStats(found, created, updated, errors, uncertain, messages);
         return Result<ImportStats>.Success(stats);
     }
 
@@ -109,6 +131,18 @@ public sealed class IbakExportImportService : IIbakImportService
             if (v.Contains(key, StringComparison.OrdinalIgnoreCase) || key.Contains(v, StringComparison.OrdinalIgnoreCase))
                 return r;
         }
+
+        // Fallback 2: Knoten-Prefix-tolerant (z.B. 10.1064892 == 1064892, 07.1028055 == 1028055)
+        var keyStripped = StripNodePrefixes(key);
+        foreach (var r in project.Data)
+        {
+            var v = NormalizeHoldingKey(r.GetFieldValue("Haltungsname"));
+            if (string.IsNullOrWhiteSpace(v))
+                continue;
+            if (string.Equals(StripNodePrefixes(v), keyStripped, StringComparison.OrdinalIgnoreCase))
+                return r;
+        }
+
         return null;
     }
 
@@ -167,13 +201,13 @@ public sealed class IbakExportImportService : IIbakImportService
 
     private static void LinkVideo(HaltungRecord record, string holdingKey, Dictionary<string, List<string>> index)
     {
-        var target = $"L_{holdingKey}".Trim();
+        // IBAK-Exporte nutzen L_, L__ oder H__ als Video-Prefix
+        var prefixes = new[] { $"L__{holdingKey}", $"L_{holdingKey}", $"H__{holdingKey}" };
+        var videoExtensions = new[] { ".mpg", ".mpeg", ".mp4", ".avi", ".mov" };
+
         var matches = index.Keys
-            .Where(k => k.StartsWith(target, StringComparison.OrdinalIgnoreCase))
-            .Where(k => k.EndsWith(".mpg", StringComparison.OrdinalIgnoreCase)
-                        || k.EndsWith(".mpeg", StringComparison.OrdinalIgnoreCase)
-                        || k.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase)
-                        || k.EndsWith(".avi", StringComparison.OrdinalIgnoreCase))
+            .Where(k => prefixes.Any(p => k.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+            .Where(k => videoExtensions.Any(ext => k.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
             .Select(k => ResolveFile(index, k))
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .ToList();
@@ -208,15 +242,14 @@ public sealed class IbakExportImportService : IIbakImportService
         var current = (IbakHolding?)null;
 
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        var lines = File.ReadAllLines(dataPath, Encoding.GetEncoding(1252));
-
-        foreach (var raw in lines)
+        foreach (var raw in File.ReadLines(dataPath, Encoding.GetEncoding(1252)))
         {
             var line = raw?.TrimEnd() ?? "";
             if (string.IsNullOrWhiteSpace(line))
                 continue;
 
-            if (line.Length > 0 && !char.IsWhiteSpace(line[0]) && !ObservationRegex.IsMatch(line))
+            if (line.Length > 0 && !char.IsWhiteSpace(line[0])
+                && !ObservationRegex.IsMatch(line) && !HeaderLineRegex.IsMatch(line))
             {
                 current = new IbakHolding(line.Trim());
                 holdings.Add(current);
@@ -229,21 +262,37 @@ public sealed class IbakExportImportService : IIbakImportService
                 continue;
             }
 
-            var m = ObservationRegex.Match(line);
-            if (!m.Success)
-            {
-                messages.Add($"IBAK: Zeile nicht erkannt: {line}");
-                continue;
-            }
+            string timeText;
+            string meterText;
+            string code;
+            string descRaw;
 
-            var timeText = m.Groups[1].Value.Trim();
-            var meterText = m.Groups[2].Value.Trim();
-            var code = m.Groups[3].Value.Trim();
-            var descRaw = m.Groups[4].Value.Trim();
+            var m = ObservationRegex.Match(line);
+            if (m.Success)
+            {
+                timeText = m.Groups[1].Value.Trim();
+                meterText = m.Groups[2].Value.Trim();
+                code = m.Groups[3].Value.Trim();
+                descRaw = m.Groups[4].Value.Trim();
+            }
+            else
+            {
+                // Header-Zeile ohne Zeitstempel (AEC, AED, AEF etc.)
+                var mh = HeaderLineRegex.Match(line);
+                if (!mh.Success)
+                {
+                    messages.Add($"IBAK: Zeile nicht erkannt: {line}");
+                    continue;
+                }
+                timeText = "";
+                meterText = mh.Groups[1].Value.Trim();
+                code = mh.Groups[2].Value.Trim();
+                descRaw = mh.Groups[3].Value.Trim();
+            }
 
             var desc = StripIbakMeta(descRaw);
             var meter = ParseMeter(meterText);
-            var time = ParseTime(timeText);
+            var time = string.IsNullOrWhiteSpace(timeText) ? (TimeSpan?)null : ParseTime(timeText);
 
             var (isStart, isEnd, index) = ExtractRange(desc);
             var rangeKey = $"{code}|{index}";
@@ -273,7 +322,7 @@ public sealed class IbakExportImportService : IIbakImportService
                 continue;
             }
 
-            current.Entries.Add(BuildEntry(code, desc, meter, timeText, time));
+            current.Entries.Add(BuildEntry(code, desc, meter, string.IsNullOrWhiteSpace(timeText) ? null : timeText, time));
         }
 
         return holdings;
@@ -306,7 +355,8 @@ public sealed class IbakExportImportService : IIbakImportService
     private static Dictionary<string, List<string>> BuildPhotoMapFromFiles(Dictionary<string, List<string>> index)
     {
         var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-        var rx = new Regex(@"^L_(.+?)_(\d+)\.(jpg|jpeg|png|bmp)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        // Unterstützt L_, L__ und H__ Prefix (verschiedene IBAK-Versionen)
+        var rx = new Regex(@"^(?:L__|L_|H__)(.+?)_(\d+)\.(jpg|jpeg|png|bmp)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         foreach (var fileName in index.Keys)
         {
@@ -409,8 +459,8 @@ public sealed class IbakExportImportService : IIbakImportService
             var cs = new FbConnectionStringBuilder
             {
                 Database = fdbPath,
-                UserID = "SYSDBA",
-                Password = "masterkey",
+                UserID = Environment.GetEnvironmentVariable("IBAK_FDB_USER") ?? "SYSDBA",
+                Password = Environment.GetEnvironmentVariable("IBAK_FDB_PASSWORD") ?? "masterkey",
                 Charset = "WIN1252",
                 Dialect = 3,
                 Pooling = false
@@ -448,9 +498,12 @@ public sealed class IbakExportImportService : IIbakImportService
                 return result;
             }
 
+            // Identifier quoten und validieren (Schutz gegen SQL-Injection via Schema)
+            static string QuoteId(string id) => "\"" + id.Replace("\"", "\"\"") + "\"";
+
             var sql = holdingCol is null
-                ? $"SELECT {fileCol} FROM {photoTable}"
-                : $"SELECT {holdingCol}, {fileCol} FROM {photoTable}";
+                ? $"SELECT {QuoteId(fileCol)} FROM {QuoteId(photoTable)}"
+                : $"SELECT {QuoteId(holdingCol)}, {QuoteId(fileCol)} FROM {QuoteId(photoTable)}";
 
             using var cmd = conn.CreateCommand();
             cmd.CommandText = sql;
@@ -495,7 +548,7 @@ public sealed class IbakExportImportService : IIbakImportService
 
     private static string ExtractHoldingFromPhoto(string fileName)
     {
-        var m = Regex.Match(fileName, @"^L_(.+?)_(\d+)\.(jpg|jpeg|png|bmp)$", RegexOptions.IgnoreCase);
+        var m = Regex.Match(fileName, @"^(?:L__|L_|H__)(.+?)_(\d+)\.(jpg|jpeg|png|bmp)$", RegexOptions.IgnoreCase);
         if (m.Success)
             return NormalizeHoldingKey(m.Groups[1].Value);
         return "";
@@ -719,9 +772,188 @@ public sealed class IbakExportImportService : IIbakImportService
         v = v.Replace('/', '-');
         v = v.Replace('–', '-');
         v = v.Replace('—', '-');
-        if (v.StartsWith("L_", StringComparison.OrdinalIgnoreCase))
+        if (v.StartsWith("L__", StringComparison.OrdinalIgnoreCase))
+            v = v[3..];
+        else if (v.StartsWith("L_", StringComparison.OrdinalIgnoreCase))
             v = v[2..];
+        else if (v.StartsWith("H__", StringComparison.OrdinalIgnoreCase))
+            v = v[3..];
         return v;
+    }
+
+    /// <summary>
+    /// Entfernt Knoten-Prefixe (z.B. "07.", "10.", "06.") aus beiden Teilen
+    /// eines Haltungsnamens, damit z.B. "07.1028055-10.1064892" zu "1028055-1064892" wird.
+    /// </summary>
+    private static readonly Regex NodePrefixRegex = new(@"^\d{1,2}\.", RegexOptions.Compiled);
+
+    private static string StripNodePrefixes(string holdingKey)
+    {
+        var dashIdx = holdingKey.IndexOf('-');
+        if (dashIdx < 0)
+            return NodePrefixRegex.Replace(holdingKey, "");
+
+        var left = holdingKey[..dashIdx];
+        var right = holdingKey[(dashIdx + 1)..];
+        left = NodePrefixRegex.Replace(left, "");
+        right = NodePrefixRegex.Replace(right, "");
+        return $"{left}-{right}";
+    }
+
+    /// <summary>
+    /// Extrahiert Stammdaten aus IBAK-Header-Einträgen (AEC, AED, AEF)
+    /// und setzt die entsprechenden Felder auf dem Record.
+    /// Haltungslänge = Inspektionslänge (BCE Rohrende); AEF Baulänge nur als Fallback.
+    /// </summary>
+    private static void ApplyHeaderFields(HaltungRecord record, List<ProtocolEntry> entries)
+    {
+        double? aefFallbackM = null;
+
+        foreach (var entry in entries)
+        {
+            var code = entry.Code?.ToUpperInvariant() ?? "";
+            var desc = entry.Beschreibung ?? "";
+
+            switch (code)
+            {
+                case "AEC":
+                {
+                    // Rohrprofilwechsel: Kreisprofil, Höhe = 160mm
+                    var m = Regex.Match(desc, @"(?:Höhe|Hoehe|H[oö]he|DN)\s*=?\s*(\d+)\s*mm", RegexOptions.IgnoreCase);
+                    if (m.Success)
+                        record.SetFieldValue("DN_mm", m.Groups[1].Value, FieldSource.Legacy, userEdited: false);
+                    break;
+                }
+                case "AED":
+                {
+                    // Rohrmaterialwechsel: Polypropylen
+                    var material = desc.Replace("Rohrmaterialwechsel:", "").Replace("Rohrmaterialwechsel", "").Trim();
+                    if (!string.IsNullOrWhiteSpace(material))
+                    {
+                        var mapped = MapMaterial(material);
+                        record.SetFieldValue("Rohrmaterial", mapped, FieldSource.Legacy, userEdited: false);
+                    }
+                    break;
+                }
+                case "AEF":
+                {
+                    // AEF Baulänge nur als Fallback merken
+                    var m = Regex.Match(desc, @"(?:Länge|Laenge|L[aä]nge)\s*=?\s*(\d+)\s*mm", RegexOptions.IgnoreCase);
+                    if (m.Success && int.TryParse(m.Groups[1].Value, out var mm))
+                        aefFallbackM = mm / 1000.0;
+                    break;
+                }
+            }
+        }
+
+        // Haltungslänge = Inspektionslänge (BCE Rohrende), AEF nur Fallback
+        var bceMeter = entries
+            .Where(e => string.Equals(e.Code, "BCE", StringComparison.OrdinalIgnoreCase))
+            .Select(e => e.MeterStart ?? 0)
+            .DefaultIfEmpty(0)
+            .Max();
+
+        var lengthM = bceMeter > 0
+            ? bceMeter
+            : (aefFallbackM ?? 0);
+
+        if (lengthM > 0)
+            record.SetFieldValue("Haltungslaenge_m", lengthM.ToString("F1", CultureInfo.InvariantCulture), FieldSource.Legacy, userEdited: false);
+    }
+
+    // Streckenschaden-Marker: A01, A02, B01, B02, ... (DIN EN 13508-2 Anfang/Ende Streckenschaden)
+    private static readonly Regex ContinuousDefectMarkerRegex = new(@"^[AB]\d{2}$", RegexOptions.Compiled);
+    private static readonly Regex EmbeddedVsaCodeRegex = new(@"^([A-Z]{3,5})\b", RegexOptions.Compiled);
+
+    private static string ResolveEffectiveCode(string code, string? description, out string? resolvedDescription)
+    {
+        resolvedDescription = description;
+        if (!ContinuousDefectMarkerRegex.IsMatch(code) || string.IsNullOrWhiteSpace(description))
+            return code;
+
+        var match = EmbeddedVsaCodeRegex.Match(description.Trim());
+        if (match.Success)
+        {
+            var vsaCode = match.Groups[1].Value;
+            var rest = description.Trim().Substring(vsaCode.Length).TrimStart(' ', '(');
+            if (rest.EndsWith(")"))
+                rest = rest.Substring(0, rest.Length - 1);
+            resolvedDescription = rest.Trim();
+            if (string.IsNullOrWhiteSpace(resolvedDescription))
+                resolvedDescription = description;
+            return vsaCode;
+        }
+
+        return code;
+    }
+
+    /// <summary>
+    /// Erzeugt den "Primaere_Schaeden" Text aus den Protokoll-Eintraegen (analog WinCan).
+    /// Format: "0.00m CODE Beschreibung\n..."
+    /// Header-Codes (AEC/AED/AEF) und Streckenschaden-Marker (A01/B02) werden aufgeloest.
+    /// </summary>
+    private static void BuildPrimaryDamagesText(HaltungRecord record, List<ProtocolEntry> entries)
+    {
+        if (entries.Count == 0)
+            return;
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var lines = new List<string>();
+        foreach (var entry in entries)
+        {
+            var rawCode = entry.Code?.Trim() ?? "";
+            // IBAK-Header-Codes (Stammdaten) nicht als Schäden aufnehmen
+            if (rawCode.StartsWith("AE", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var desc = entry.Beschreibung?.Trim();
+            if (string.IsNullOrWhiteSpace(desc) && string.IsNullOrWhiteSpace(rawCode))
+                continue;
+
+            // Streckenschaden-Marker zum echten VSA-Code aufloesen
+            var code = ResolveEffectiveCode(rawCode.ToUpperInvariant(), desc, out var resolvedDesc);
+
+            // Deduplicate by effective code + meter position
+            if (code.Length > 0)
+            {
+                var meterKey = entry.MeterStart.HasValue ? entry.MeterStart.Value.ToString("F2") : "";
+                var key = $"{code}|{meterKey}";
+                if (!seen.Add(key))
+                    continue;
+            }
+
+            var line = "";
+            if (entry.MeterStart.HasValue)
+                line = $"{entry.MeterStart.Value:0.00}m ";
+
+            if (!string.IsNullOrWhiteSpace(code) && !string.IsNullOrWhiteSpace(resolvedDesc))
+                line += $"{code} {resolvedDesc}";
+            else if (!string.IsNullOrWhiteSpace(code))
+                line += code;
+            else
+                line += resolvedDesc;
+
+            lines.Add(line.TrimEnd());
+        }
+
+        if (lines.Count == 0)
+            return;
+
+        var text = XtfPrimaryDamageFormatter.DeduplicateText(string.Join("\n", lines));
+        record.SetFieldValue("Primaere_Schaeden", text, FieldSource.Legacy, userEdited: false);
+    }
+
+    private static string MapMaterial(string ibakMaterial)
+    {
+        var lower = ibakMaterial.ToLowerInvariant();
+        if (lower.Contains("polypropylen")) return "PP";
+        if (lower.Contains("polyvinylchlorid") || lower.Contains("pvc")) return "PVC";
+        if (lower.Contains("polyethylen") || lower.Contains("pe")) return "PE";
+        if (lower.Contains("beton") || lower.Contains("normalbeton")) return "Beton";
+        if (lower.Contains("steinzeug")) return "Steinzeug";
+        if (lower.Contains("guss")) return "Guss";
+        if (lower.Contains("gfk") || lower.Contains("glasfaser")) return "GFK";
+        return ibakMaterial; // Originalwert beibehalten
     }
 
     private sealed record IbakHolding(string Holding)

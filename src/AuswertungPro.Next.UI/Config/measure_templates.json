@@ -6,7 +6,7 @@
       "name": "Schlauchliner (Nadelfilz)",
       "disabled": false,
       "lines": [
-        { "group": "Installation", "itemKey": "INSTALL_UV_ANLAGE", "enabled": true, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "INSTALL_HL_ANLAGE", "enabled": true, "defaultQty": 1 },
         { "group": "Vorarbeiten", "itemKey": "VORARBEIT_FRAESEN", "enabled": true, "defaultQty": 3 },
         { "group": "Vorarbeiten", "itemKey": "VORARBEIT_EINMESSUNG", "enabled": true, "defaultQty": 1 },
         { "group": "Vorarbeiten", "itemKey": "VORARBEIT_REINIGUNG", "enabled": true, "defaultQty": 1 },
@@ -24,7 +24,7 @@
       "name": "Schlauchliner (Nadelfilz) Open-End",
       "disabled": false,
       "lines": [
-        { "group": "Installation", "itemKey": "INSTALL_UV_ANLAGE", "enabled": true, "defaultQty": 1 },
+        { "group": "Installation", "itemKey": "INSTALL_HL_ANLAGE", "enabled": true, "defaultQty": 1 },
         { "group": "Vorarbeiten", "itemKey": "VORARBEIT_FRAESEN", "enabled": true, "defaultQty": 3 },
         { "group": "Vorarbeiten", "itemKey": "VORARBEIT_EINMESSUNG", "enabled": true, "defaultQty": 1 },
         { "group": "Vorarbeiten", "itemKey": "VORARBEIT_REINIGUNG", "enabled": true, "defaultQty": 1 },

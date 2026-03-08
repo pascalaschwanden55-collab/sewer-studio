@@ -110,10 +110,13 @@ public partial class ClockPickerControl : UserControl
             h = ActualHeight;
         }
 
+        if (w < 40 || h < 40)
+            return;
+
         var size = Math.Min(w, h);
         var centerX = w / 2.0;
         var centerY = h / 2.0;
-        var radius = size / 2.0 - 6;
+        var radius = Math.Max(20, size / 2.0 - 6);
         var numberRadius = radius - 16;
         var buttonRadius = radius - 12;
 

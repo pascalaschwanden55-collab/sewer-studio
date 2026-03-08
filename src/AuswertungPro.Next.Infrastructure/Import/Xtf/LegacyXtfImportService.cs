@@ -2,7 +2,13 @@ using System.Text;
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
 using System.Text.Json.Nodes;
+using System.Globalization;
+using ImportRunContext = AuswertungPro.Next.Application.Import.ImportRunContext;
+using ImportLogStatus = AuswertungPro.Next.Application.Import.ImportLogStatus;
+using ImportProgress = AuswertungPro.Next.Application.Import.ImportProgress;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 
 
@@ -11,15 +17,26 @@ namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
 public sealed class LegacyXtfImportService
 {
-    public ImportStats ImportXtfFiles(IEnumerable<string> xtfPaths, Project project)
+    public ImportStats ImportXtfFiles(IEnumerable<string> xtfPaths, Project project, ImportRunContext? ctx = null)
     {
         var stats = new ImportStats();
 
-        var xtfTargetDir = Path.Combine("Rohdaten", "xtf_imports");
+        var xtfTargetDir = Path.Combine(AppContext.BaseDirectory, "Rohdaten", "xtf_imports");
         Directory.CreateDirectory(xtfTargetDir);
 
-        foreach (var path in xtfPaths.Where(p => !string.IsNullOrWhiteSpace(p)))
+        var pathList = xtfPaths.Where(p => !string.IsNullOrWhiteSpace(p)).ToList();
+        var fileIndex = 0;
+
+        foreach (var path in pathList)
         {
+            ctx?.CancellationToken.ThrowIfCancellationRequested();
+            fileIndex++;
+            ctx?.Progress?.Report(new ImportProgress(
+                "Dateien lesen", fileIndex, pathList.Count,
+                $"XTF {fileIndex}/{pathList.Count}", Path.GetFileName(path)));
+            ctx?.Log.AddEntry("XTF", "StartFile", ImportLogStatus.Info,
+                sourceFile: path, detail: Path.GetFileName(path));
+
             try
             {
                 if (!File.Exists(path))
@@ -34,13 +51,13 @@ public sealed class LegacyXtfImportService
 
                 if (ext == ".mdb")
                 {
-                    ImportMdb(path, project, stats);
+                    ImportMdb(path, project, stats, ctx);
                     continue;
                 }
 
                 if (ext is ".m150" or ".xml")
                 {
-                    ImportM150(path, project, stats);
+                    ImportM150(path, project, stats, ctx);
                     continue;
                 }
 
@@ -55,7 +72,7 @@ public sealed class LegacyXtfImportService
                     continue;
                 }
 
-                ImportXtf(path, project, stats);
+                ImportXtf(path, project, stats, ctx);
             }
             catch (Exception ex)
             {
@@ -70,13 +87,19 @@ public sealed class LegacyXtfImportService
         return stats;
     }
 
-    private static void ImportXtf(string path, Project project, ImportStats stats)
+    private static void ImportXtf(string path, Project project, ImportStats stats, ImportRunContext? ctx = null)
     {
-        var xmlText = File.ReadAllText(path, Encoding.UTF8);
-        var isSia405 = xmlText.Contains("SIA405", StringComparison.OrdinalIgnoreCase);
-        var isVsa = xmlText.Contains("VSA_KEK", StringComparison.OrdinalIgnoreCase);
-
-        var doc = XDocument.Parse(xmlText, LoadOptions.PreserveWhitespace);
+        // Format-Erkennung via kleinem Puffer statt ganzer Datei in den Speicher
+        bool isSia405 = false, isVsa = false;
+        using (var sr = new StreamReader(path, Encoding.UTF8))
+        {
+            var buf = new char[4096];
+            var read = sr.Read(buf, 0, buf.Length);
+            var header = new string(buf, 0, read);
+            isSia405 = header.Contains("SIA405", StringComparison.OrdinalIgnoreCase);
+            isVsa = header.Contains("VSA_KEK", StringComparison.OrdinalIgnoreCase);
+        }
+        var doc = XDocument.Load(path, LoadOptions.PreserveWhitespace);
 
         if (isSia405)
         {
@@ -84,7 +107,7 @@ public sealed class LegacyXtfImportService
             stats.Found += records.Count;
 
             foreach (var rec in records)
-                MergeRecordIntoProject(project, rec, FieldSource.Xtf405, stats);
+                MergeRecordIntoProject(project, rec, FieldSource.Xtf405, stats, ctx);
 
             project.ImportHistory.Add(new JsonObject
             {
@@ -99,11 +122,11 @@ public sealed class LegacyXtfImportService
 
         if (isVsa)
         {
-            var records = ParseVsaKek(doc, out _);
+            var records = ParseVsaKek(doc, path, out _);
             stats.Found += records.Count;
 
             foreach (var rec in records)
-                MergeRecordIntoProject(project, rec, FieldSource.Xtf, stats);
+                MergeRecordIntoProject(project, rec, FieldSource.Xtf, stats, ctx);
 
             project.ImportHistory.Add(new JsonObject
             {
@@ -122,7 +145,7 @@ public sealed class LegacyXtfImportService
         }
     }
 
-    private static void ImportM150(string path, Project project, ImportStats stats)
+    private static void ImportM150(string path, Project project, ImportStats stats, ImportRunContext? ctx = null)
     {
         var (hgCount, hiCount) = M150MdbImportHelper.GetM150XmlNodeCounts(path);
         var createdBefore = stats.CreatedRecords;
@@ -132,7 +155,7 @@ public sealed class LegacyXtfImportService
         stats.Found += records.Count;
 
         foreach (var rec in records)
-            MergeRecordIntoProject(project, rec, FieldSource.Xtf, stats);
+            MergeRecordIntoProject(project, rec, FieldSource.Xtf, stats, ctx);
 
         var createdDelta = stats.CreatedRecords - createdBefore;
         var updatedDelta = stats.UpdatedRecords - updatedBefore;
@@ -170,14 +193,14 @@ public sealed class LegacyXtfImportService
         });
     }
 
-    private static void ImportMdb(string path, Project project, ImportStats stats)
+    private static void ImportMdb(string path, Project project, ImportStats stats, ImportRunContext? ctx = null)
     {
         if (!M150MdbImportHelper.TryParseMdbFile(path, out var records, out var error, out var warnings))
             throw new InvalidOperationException(error ?? $"MDB Import fehlgeschlagen: {Path.GetFileName(path)}");
 
         stats.Found += records.Count;
         foreach (var rec in records)
-            MergeRecordIntoProject(project, rec, FieldSource.Xtf, stats);
+            MergeRecordIntoProject(project, rec, FieldSource.Xtf, stats, ctx);
 
         foreach (var warning in warnings)
         {
@@ -205,7 +228,7 @@ public sealed class LegacyXtfImportService
         });
     }
 
-    private static void MergeRecordIntoProject(Project project, HaltungRecord source, FieldSource importSource, ImportStats stats)
+    private static void MergeRecordIntoProject(Project project, HaltungRecord source, FieldSource importSource, ImportStats stats, ImportRunContext? ctx = null)
     {
         var key = NormalizeHoldingKey(source.GetFieldValue("Haltungsname"));
         if (string.IsNullOrWhiteSpace(key))
@@ -227,14 +250,17 @@ public sealed class LegacyXtfImportService
             stats.CreatedRecords++;
         }
 
-        var merge = MergeEngine.MergeRecord(target, source, importSource);
+        var merge = MergeEngine.MergeRecord(target, source, importSource, ctx: ctx);
         stats.UpdatedFields += merge.Updated;
         if (!created && merge.Updated > 0) stats.UpdatedRecords++;
         stats.Conflicts += merge.Conflicts;
         stats.Errors += merge.Errors;
 
         if (source.VsaFindings is not null && source.VsaFindings.Count > 0)
+        {
             target.VsaFindings = new List<VsaFinding>(source.VsaFindings);
+            SyncProtocolFromFindings(target, target.VsaFindings);
+        }
 
         foreach (var c in merge.ConflictDetails)
         {
@@ -527,6 +553,7 @@ public sealed class LegacyXtfImportService
 
     private sealed class Schaden
     {
+        public string ObjId { get; set; } = "";
         public string Schadencode { get; set; } = "";
         public string Distanz { get; set; } = "";
         public string Anmerkung { get; set; } = "";
@@ -539,10 +566,11 @@ public sealed class LegacyXtfImportService
         public double LL { get; set; }
     }
 
-    private static List<HaltungRecord> ParseVsaKek(XDocument doc, out Dictionary<string, List<VsaFinding>> findingsPerHaltung)
+    private static List<HaltungRecord> ParseVsaKek(XDocument doc, string sourcePath, out Dictionary<string, List<VsaFinding>> findingsPerHaltung)
     {
         var untersuchungen = new Dictionary<string, Untersuchung>(StringComparer.Ordinal);
         findingsPerHaltung = new Dictionary<string, List<VsaFinding>>(StringComparer.OrdinalIgnoreCase);
+        var findingsByObjId = new Dictionary<string, VsaFinding>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var node in doc.Descendants().Where(e => e.Name.LocalName.Contains("Untersuchung", StringComparison.OrdinalIgnoreCase)))
         {
@@ -587,12 +615,17 @@ public sealed class LegacyXtfImportService
             {
                 switch (child.Name.LocalName)
                 {
+                    case "OBJ_ID":
+                        s.ObjId = child.Value;
+                        break;
                     case "KanalSchadencode":
                         s.Schadencode = child.Value;
                         finding.KanalSchadencode = child.Value;
                         break;
                     case "Distanz":
                         s.Distanz = child.Value;
+                        if (TryParseDouble(child.Value, out var meter))
+                            finding.MeterStart = meter;
                         break;
                     case "Anmerkung":
                         s.Anmerkung = child.Value;
@@ -647,6 +680,8 @@ public sealed class LegacyXtfImportService
             finding.LL = ll;
 
             u.Schaeden.Add(s);
+            if (!string.IsNullOrWhiteSpace(s.ObjId))
+                findingsByObjId[s.ObjId] = finding;
             // Add finding to findingsPerHaltung (by Bezeichnung)
             if (!string.IsNullOrWhiteSpace(refTid) && untersuchungen.TryGetValue(refTid, out var untersuchung))
             {
@@ -663,6 +698,51 @@ public sealed class LegacyXtfImportService
             }
         }
 
+        foreach (var node in doc.Descendants().Where(e => e.Name.LocalName.Contains("Datei", StringComparison.OrdinalIgnoreCase)))
+        {
+            string art = "";
+            string klasse = "";
+            string objekt = "";
+            string bezeichnung = "";
+            string relativpfad = "";
+
+            foreach (var child in node.Elements())
+            {
+                switch (child.Name.LocalName)
+                {
+                    case "Art":
+                        art = child.Value;
+                        break;
+                    case "Klasse":
+                        klasse = child.Value;
+                        break;
+                    case "Objekt":
+                        objekt = child.Value;
+                        break;
+                    case "Bezeichnung":
+                        bezeichnung = child.Value;
+                        break;
+                    case "Relativpfad":
+                        relativpfad = child.Value;
+                        break;
+                }
+            }
+
+            if (!art.Contains("Foto", StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (!klasse.Contains("Kanalschaden", StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (string.IsNullOrWhiteSpace(objekt) || !findingsByObjId.TryGetValue(objekt, out var finding))
+                continue;
+
+            var fotoPath = ResolveVsaPhotoPath(sourcePath, relativpfad, bezeichnung);
+            if (string.IsNullOrWhiteSpace(fotoPath))
+                continue;
+
+            if (string.IsNullOrWhiteSpace(finding.FotoPath))
+                finding.FotoPath = fotoPath;
+        }
+
         var records = new List<HaltungRecord>();
 
         foreach (var u in untersuchungen.Values)
@@ -676,17 +756,18 @@ public sealed class LegacyXtfImportService
 
             if (findingsPerHaltung.TryGetValue(u.Bezeichnung, out var findings))
             {
+                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var f in findings)
                 {
-                    if (!string.IsNullOrWhiteSpace(f.KanalSchadencode))
-                    {
-                        var detail = f.KanalSchadencode.Trim();
-                        if (f.SchadenlageAnfang.HasValue)
-                            detail += $" @{f.SchadenlageAnfang.Value}m";
-                        if (!string.IsNullOrWhiteSpace(f.Raw))
-                            detail += $" ({f.Raw})";
+                    var code = (f.KanalSchadencode ?? "").Trim().ToUpperInvariant();
+                    if (code.Length == 0) continue;
+                    var meter = f.MeterStart ?? f.SchadenlageAnfang;
+                    var key = $"{code}|{(meter.HasValue ? meter.Value.ToString("F2") : "")}";
+                    if (!seen.Add(key)) continue;
+
+                    var detail = XtfPrimaryDamageFormatter.FormatLine(f);
+                    if (!string.IsNullOrWhiteSpace(detail))
                         primaere.Add(detail);
-                    }
                 }
             }
 
@@ -699,7 +780,7 @@ public sealed class LegacyXtfImportService
 
             if (primaere.Count > 0)
             {
-                var val = string.Join("\n", primaere);
+                var val = XtfPrimaryDamageFormatter.DeduplicateText(string.Join("\n", primaere));
                 rec.SetFieldValue("Primaere_Schaeden", val, FieldSource.Xtf, userEdited: false);
             }
 
@@ -731,13 +812,254 @@ public sealed class LegacyXtfImportService
         return records;
     }
 
+    private static string ResolveVsaPhotoPath(string xtfPath, string? relativeFolder, string? fileName)
+    {
+        fileName = (fileName ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(fileName))
+            return string.Empty;
+
+        if (Path.IsPathRooted(fileName))
+            return fileName;
+
+        var baseDir = Path.GetDirectoryName(xtfPath) ?? "";
+        var rel = (relativeFolder ?? "").Trim().Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+        var candidates = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(rel))
+            candidates.Add(Path.GetFullPath(Path.Combine(baseDir, rel, fileName)));
+        candidates.Add(Path.GetFullPath(Path.Combine(baseDir, fileName)));
+        candidates.Add(Path.GetFullPath(Path.Combine(baseDir, "Foto", fileName)));
+        candidates.Add(Path.GetFullPath(Path.Combine(baseDir, "Fotos", fileName)));
+        candidates.Add(Path.GetFullPath(Path.Combine(baseDir, "Picture", fileName)));
+        candidates.Add(Path.GetFullPath(Path.Combine(baseDir, "Pictures", fileName)));
+
+        foreach (var c in candidates)
+        {
+            if (File.Exists(c))
+                return c;
+        }
+
+        return candidates[0];
+    }
+
+    private static void SyncProtocolFromFindings(HaltungRecord record, IReadOnlyList<VsaFinding> findings)
+    {
+        if (findings.Count == 0)
+            return;
+
+        var hasProtocol = record.Protocol is not null;
+        var hasEntries = hasProtocol
+                         && (((record.Protocol?.Current?.Entries.Count ?? 0) > 0)
+                             || ((record.Protocol?.Original?.Entries.Count ?? 0) > 0));
+
+        if (!hasEntries)
+        {
+            var entries = BuildImportedProtocolEntries(findings);
+            if (entries.Count > 0)
+                record.Protocol = new ProtocolService().EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
+            return;
+        }
+
+        if (record.Protocol is null)
+            return;
+
+        SyncRevisionImportedEntries(record.Protocol.Original, findings);
+        SyncRevisionImportedEntries(record.Protocol.Current, findings);
+        foreach (var rev in record.Protocol.History)
+            SyncRevisionImportedEntries(rev, findings);
+    }
+
+    private static List<ProtocolEntry> BuildImportedProtocolEntries(IReadOnlyList<VsaFinding> findings)
+    {
+        var list = new List<ProtocolEntry>(findings.Count);
+        foreach (var f in findings)
+        {
+            if (string.IsNullOrWhiteSpace(f.KanalSchadencode))
+                continue;
+
+            var mStart = GetFindingMeterStart(f);
+            var mEnd = GetFindingMeterEnd(f);
+
+            var entry = new ProtocolEntry
+            {
+                Code = f.KanalSchadencode.Trim(),
+                Beschreibung = f.Raw?.Trim() ?? string.Empty,
+                MeterStart = mStart,
+                MeterEnd = mEnd,
+                IsStreckenschaden = mStart.HasValue && mEnd.HasValue && mEnd >= mStart,
+                Mpeg = f.MPEG,
+                Zeit = ParseMpegTime(f.MPEG) ?? (f.Timestamp?.TimeOfDay),
+                Source = ProtocolEntrySource.Imported
+            };
+
+            if (!string.IsNullOrWhiteSpace(f.Quantifizierung1) || !string.IsNullOrWhiteSpace(f.Quantifizierung2))
+            {
+                entry.CodeMeta = new ProtocolEntryCodeMeta
+                {
+                    Code = entry.Code,
+                    Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["Quantifizierung1"] = f.Quantifizierung1 ?? string.Empty,
+                        ["Quantifizierung2"] = f.Quantifizierung2 ?? string.Empty
+                    },
+                    UpdatedAt = DateTimeOffset.UtcNow
+                };
+            }
+
+            if (!string.IsNullOrWhiteSpace(f.FotoPath))
+                entry.FotoPaths.Add(f.FotoPath);
+
+            list.Add(entry);
+        }
+
+        return list;
+    }
+
+    private static void SyncRevisionImportedEntries(ProtocolRevision revision, IReadOnlyList<VsaFinding> findings)
+    {
+        if (revision?.Entries is null || revision.Entries.Count == 0)
+            return;
+
+        foreach (var entry in revision.Entries)
+        {
+            if (entry.IsDeleted || entry.Source != ProtocolEntrySource.Imported)
+                continue;
+
+            var match = FindBestFindingForEntry(entry, findings);
+            if (match is null)
+                continue;
+
+            if (!entry.MeterStart.HasValue)
+                entry.MeterStart = GetFindingMeterStart(match);
+            if (!entry.MeterEnd.HasValue)
+                entry.MeterEnd = GetFindingMeterEnd(match);
+            if (string.IsNullOrWhiteSpace(entry.Beschreibung) && !string.IsNullOrWhiteSpace(match.Raw))
+                entry.Beschreibung = match.Raw.Trim();
+            if (string.IsNullOrWhiteSpace(entry.Mpeg) && !string.IsNullOrWhiteSpace(match.MPEG))
+                entry.Mpeg = match.MPEG;
+            if (!entry.Zeit.HasValue)
+                entry.Zeit = ParseMpegTime(match.MPEG) ?? (match.Timestamp?.TimeOfDay);
+
+            if (string.IsNullOrWhiteSpace(match.FotoPath))
+                continue;
+
+            entry.FotoPaths ??= new List<string>();
+            if (!entry.FotoPaths.Any(p => string.Equals(p, match.FotoPath, StringComparison.OrdinalIgnoreCase)))
+                entry.FotoPaths.Add(match.FotoPath);
+        }
+    }
+
+    private static VsaFinding? FindBestFindingForEntry(ProtocolEntry entry, IReadOnlyList<VsaFinding> findings)
+    {
+        if (findings.Count == 0)
+            return null;
+
+        var entryMeter = entry.MeterStart ?? entry.MeterEnd;
+        var entryCode = NormalizeCode(entry.Code);
+        var scored = new List<(VsaFinding Finding, double Delta, int CodeRank, bool HasPhoto)>(findings.Count);
+
+        foreach (var finding in findings)
+        {
+            var findingMeter = GetFindingMeterStart(finding) ?? GetFindingMeterEnd(finding);
+            var delta = (entryMeter.HasValue && findingMeter.HasValue)
+                ? Math.Abs(findingMeter.Value - entryMeter.Value)
+                : double.MaxValue;
+            var codeRank = GetCodeSimilarityRank(entryCode, NormalizeCode(finding.KanalSchadencode));
+            var hasPhoto = !string.IsNullOrWhiteSpace(finding.FotoPath);
+            scored.Add((finding, delta, codeRank, hasPhoto));
+        }
+
+        if (entryMeter.HasValue && scored.Count > 0)
+        {
+            // Primär nach Distanz matchen; Codes dienen als Tiebreaker.
+            var byMeter = scored
+                .Where(s => s.Delta <= 0.15)
+                .OrderBy(s => s.Delta)
+                .ThenBy(s => s.CodeRank)
+                .ThenByDescending(s => s.HasPhoto)
+                .ToList();
+            if (byMeter.Count > 0)
+                return byMeter[0].Finding;
+
+            var byMeterLoose = scored
+                .Where(s => s.Delta <= 0.50 && s.CodeRank <= 1)
+                .OrderBy(s => s.Delta)
+                .ThenBy(s => s.CodeRank)
+                .ThenByDescending(s => s.HasPhoto)
+                .ToList();
+            if (byMeterLoose.Count > 0)
+                return byMeterLoose[0].Finding;
+        }
+
+        var byCode = scored
+            .Where(s => s.CodeRank == 0 || s.CodeRank == 1)
+            .OrderBy(s => s.CodeRank)
+            .ThenByDescending(s => s.HasPhoto)
+            .ThenBy(s => s.Delta)
+            .ToList();
+        if (byCode.Count > 0)
+            return byCode[0].Finding;
+
+        return scored
+            .OrderByDescending(s => s.HasPhoto)
+            .ThenBy(s => s.Delta)
+            .Select(s => s.Finding)
+            .FirstOrDefault();
+    }
+
+    private static string NormalizeCode(string? code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            return string.Empty;
+        return Regex.Replace(code.Trim().ToUpperInvariant(), @"[^A-Z0-9]", string.Empty);
+    }
+
+    private static int GetCodeSimilarityRank(string left, string right)
+    {
+        if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
+            return 2;
+        if (string.Equals(left, right, StringComparison.OrdinalIgnoreCase))
+            return 0;
+        if (left.StartsWith(right, StringComparison.OrdinalIgnoreCase)
+            || right.StartsWith(left, StringComparison.OrdinalIgnoreCase))
+            return 1;
+        return 2;
+    }
+
+    private static double? GetFindingMeterStart(VsaFinding finding)
+        => finding.MeterStart ?? finding.SchadenlageAnfang;
+
+    private static double? GetFindingMeterEnd(VsaFinding finding)
+        => finding.MeterEnd ?? finding.SchadenlageEnde;
+
+    private static TimeSpan? ParseMpegTime(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        var text = raw.Trim();
+        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss", @"hh\:mm\:ss\.fff", @"mm\:ss\.fff" };
+        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out var parsed))
+            return parsed;
+
+        return TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out parsed) ? parsed : null;
+    }
+
     private static bool TryParseDouble(string? s, out double value)
     {
         value = 0.0;
         if (string.IsNullOrWhiteSpace(s))
             return false;
         s = s.Trim().Replace(",", ".");
-        return double.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out value);
+        if (double.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out value))
+            return true;
+
+        var match = Regex.Match(s, @"-?\d+(?:[.,]\d+)?");
+        if (!match.Success)
+            return false;
+
+        var number = match.Value.Replace(",", ".");
+        return double.TryParse(number, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out value);
     }
 
     private static string NormalizeDate_yyyymmdd(string? yyyymmdd)

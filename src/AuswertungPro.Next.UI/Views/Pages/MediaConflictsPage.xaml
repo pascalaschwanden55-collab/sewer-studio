@@ -1,0 +1,343 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.MediaConflictsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="MetricCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource HeaderBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Margin" Value="0,0,8,8"/>
+        </Style>
+
+        <Style x:Key="DetailLabelStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,0,0,2"/>
+        </Style>
+
+        <Style x:Key="DetailValueStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Background="{StaticResource CardGlassBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="14"
+                Padding="18"
+                Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel>
+                    <TextBlock Text="Medienkonflikte" FontSize="24" FontWeight="SemiBold"/>
+                    <TextBlock Text="Fehlende oder mehrdeutige Videozuordnungen zentral pruefen, oeffnen und direkt aufloesen."
+                               Margin="0,4,0,0"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding SummaryText}"
+                               Margin="0,10,0,0"
+                               Foreground="{StaticResource MutedBrush}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <WrapPanel Grid.Column="1"
+                           Margin="20,0,0,0"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center">
+                    <Border Style="{StaticResource MetricCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Offen" Style="{StaticResource DetailLabelStyle}"/>
+                            <TextBlock Text="{Binding OpenConflictCount}" FontSize="22" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource MetricCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Fehlend" Style="{StaticResource DetailLabelStyle}"/>
+                            <TextBlock Text="{Binding MissingConflictCount}" FontSize="22" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource MetricCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Mehrdeutig" Style="{StaticResource DetailLabelStyle}"/>
+                            <TextBlock Text="{Binding AmbiguousConflictCount}" FontSize="22" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource MetricCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Gelernt" Style="{StaticResource DetailLabelStyle}"/>
+                            <TextBlock Text="{Binding LearnedMappingCount}" FontSize="22" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                </WrapPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1"
+                Background="{StaticResource CardBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
+                Padding="8"
+                CornerRadius="10"
+                Margin="0,0,0,8">
+            <WrapPanel>
+                <Button Command="{Binding RefreshCommand}" Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,4">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Aktualisieren" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Command="{Binding ResolveFromCandidateCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Kandidat zuordnen" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Command="{Binding ResolveManualCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Video waehlen" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Command="{Binding ResolveSuggestedCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Gelernte Quelle zuordnen" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Command="{Binding AutoResolveLearnedCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Auto-Resolve (gelernt)" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Command="{Binding ClearLearnedMappingsCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Mappings loeschen" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </WrapPanel>
+        </Border>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2.15*"/>
+                <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0"
+                    Background="{StaticResource CardBrush}"
+                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="12">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                        <TextBlock Text="Offene Faelle" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Text="Links siehst du alle Konflikte. Rechts kannst du Quellen oeffnen, Videos pruefen und die Zuordnung direkt speichern."
+                                   Margin="0,4,0,0"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <DataGrid ItemsSource="{Binding Conflicts}"
+                              SelectedItem="{Binding SelectedConflict}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              HeadersVisibility="Column"
+                              SelectionMode="Single"
+                              CanUserAddRows="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Konflikt" Binding="{Binding TypeText}" Width="120"/>
+                            <DataGridTextColumn Header="Datum" Binding="{Binding DateText}" Width="110"/>
+                            <DataGridTextColumn Header="Haltung" Binding="{Binding HoldingText}" Width="*"/>
+                            <DataGridTextColumn Header="Film aus PDF" Binding="{Binding ExpectedVideoText}" Width="*"/>
+                            <DataGridTextColumn Header="Kandidaten" Binding="{Binding CandidateCount}" Width="95"/>
+                            <DataGridTextColumn Header="Status" Binding="{Binding ResolutionState}" Width="110"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Border>
+
+            <Border Grid.Column="1"
+                    Margin="8,0,0,0"
+                    Background="{StaticResource CardBrush}"
+                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="12">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="Konfliktdetails" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Path=SelectedConflict.TypeHint, TargetNullValue='Waehle links einen Konflikt aus, um Details und Aktionen zu sehen.'}"
+                                   Margin="0,4,0,12"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"/>
+
+                        <TextBlock Text="Konflikttyp" Style="{StaticResource DetailLabelStyle}"/>
+                        <TextBlock Text="{Binding SelectedConflict.TypeText, TargetNullValue=-}" Style="{StaticResource DetailValueStyle}"/>
+
+                        <TextBlock Text="Datum" Style="{StaticResource DetailLabelStyle}"/>
+                        <TextBlock Text="{Binding SelectedConflict.DateText, TargetNullValue=-}" Style="{StaticResource DetailValueStyle}"/>
+
+                        <TextBlock Text="Haltung" Style="{StaticResource DetailLabelStyle}"/>
+                        <TextBlock Text="{Binding SelectedConflict.HoldingText, TargetNullValue=-}" Style="{StaticResource DetailValueStyle}"/>
+
+                        <TextBlock Text="Film aus PDF" Style="{StaticResource DetailLabelStyle}"/>
+                        <TextBlock Text="{Binding SelectedConflict.ExpectedVideoText, TargetNullValue=-}" Style="{StaticResource DetailValueStyle}"/>
+
+                        <TextBlock Text="PDF-Protokoll" Style="{StaticResource DetailLabelStyle}"/>
+                        <TextBlock Text="{Binding SelectedConflict.SourcePdfText, TargetNullValue=-}" Style="{StaticResource DetailValueStyle}"/>
+
+                        <Border Background="{StaticResource HeaderBrush}"
+                                BorderBrush="{StaticResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                Padding="12"
+                                Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="Gelernte Quelle" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding SelectedConflict.SuggestedSourceFileName, TargetNullValue=Keine Auswahl}"
+                                           Margin="0,6,0,2"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding SelectedConflict.SuggestedSourcePathText, TargetNullValue=-}"
+                                           Foreground="{StaticResource MutedBrush}"
+                                           FontSize="11"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="Kandidaten" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SelectedConflict.CandidateSummaryText, TargetNullValue=Keine Auswahl}"
+                                   Margin="0,4,0,8"
+                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+
+                        <ListBox ItemsSource="{Binding SelectedConflict.Candidates}"
+                                 SelectedItem="{Binding SelectedConflict.SelectedCandidate, Mode=TwoWay}"
+                                 MinHeight="180"
+                                 Margin="0,0,0,12">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="10,8">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding DirectoryName}"
+                                                       Margin="0,2,0,0"
+                                                       FontSize="11"
+                                                       Foreground="{StaticResource MutedBrush}"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <TextBlock Text="Aktionen" FontSize="14" FontWeight="SemiBold"/>
+                        <WrapPanel Margin="0,8,0,0">
+                            <Button Command="{Binding PlaySelectedCandidateCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Kandidat abspielen"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding ResolveFromCandidateCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Kandidat uebernehmen"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding ResolveManualCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Video manuell waehlen"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding PlaySuggestedSourceCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Gelernte Quelle abspielen"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding ResolveSuggestedCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Gelernte Quelle uebernehmen"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding OpenPdfCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                    <TextBlock Text="PDF oeffnen"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding OpenSelectedCandidateCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Kandidat im Explorer"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding OpenSuggestedSourceCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Gelernte Quelle im Explorer"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding OpenInfoCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Info-Datei"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding OpenHoldingFolderCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Haltungsordner"/>
+                                </StackPanel>
+                            </Button>
+                        </WrapPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <TextBox Grid.Row="3"
+                 Margin="0,8,0,0"
+                 MinHeight="70"
+                 Text="{Binding LastResult}"
+                 AcceptsReturn="True"
+                 TextWrapping="Wrap"
+                 IsReadOnly="True"
+                 VerticalScrollBarVisibility="Auto"
+                 Foreground="{StaticResource MutedBrush}"/>
+    </Grid>
+</UserControl>

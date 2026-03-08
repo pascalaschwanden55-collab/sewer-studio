@@ -8,11 +8,15 @@ public sealed class PdfImportServiceAdapter : IPdfImportService
 {
     private readonly LegacyPdfImportService _svc = new();
 
-    public Result<ImportStats> ImportPdf(string pdfPath, Project project, string? pdfToTextPath)
+    public Result<ImportStats> ImportPdf(string pdfPath, Project project, string? pdfToTextPath, bool fillMissingOnly = false, ImportRunContext? ctx = null)
     {
         try
         {
-            var stats = _svc.ImportPdf(pdfPath, project, pdfToTextPath);
+            ctx?.CancellationToken.ThrowIfCancellationRequested();
+            ctx?.Log.AddEntry("PDF", "StartFile", ImportLogStatus.Info,
+                sourceFile: pdfPath, detail: Path.GetFileName(pdfPath));
+
+            var stats = _svc.ImportPdf(pdfPath, project, pdfToTextPath, fillMissingOnly, ctx);
 
             // Legacy ImportStats -> new ImportStats
             var msg = stats.Messages.Select(m => $"{m.Level}: {m.Message} {m.Context}".Trim()).ToList();

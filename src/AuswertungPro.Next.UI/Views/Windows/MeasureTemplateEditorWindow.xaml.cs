@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Input;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -12,6 +13,7 @@ public partial class MeasureTemplateEditorWindow : Window
     public MeasureTemplateEditorWindow()
     {
         InitializeComponent();
+        WindowStateManager.Track(this);
     }
 
     private void PriceItem_DoubleClick(object sender, MouseButtonEventArgs e)

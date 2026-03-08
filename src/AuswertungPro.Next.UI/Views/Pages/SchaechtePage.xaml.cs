@@ -1058,13 +1058,13 @@ public partial class SchaechtePage : UserControl
         if (DataContext is not SchaechtePageViewModel vm)
             return;
 
-        const double step = 2d;
+        const double step = 0.05d;
         var delta = e.Delta > 0 ? step : -step;
-        var next = Math.Clamp(vm.GridMinRowHeight + delta, 24d, 120d);
-        if (Math.Abs(next - vm.GridMinRowHeight) < 0.001d)
+        var next = Math.Clamp(vm.GridZoom + delta, 0.5d, 2.0d);
+        if (Math.Abs(next - vm.GridZoom) < 0.001d)
             return;
 
-        vm.GridMinRowHeight = next;
+        vm.GridZoom = next;
         e.Handled = true;
     }
 
@@ -1329,11 +1329,19 @@ public partial class SchaechtePage : UserControl
 
         if (cell.Column?.GetValue(FrameworkElement.TagProperty) is not string fieldName)
             return;
-        if (!IsPrimaryDamagesColumn(fieldName))
-            return;
 
         var row = FindAncestor<DataGridRow>(cell);
         if (row?.Item is not SchachtRecord record)
+            return;
+
+        if (IsDetailsNameColumn(fieldName))
+        {
+            ShowRecordDetails(record);
+            e.Handled = true;
+            return;
+        }
+
+        if (!IsPrimaryDamagesColumn(fieldName))
             return;
 
         var content = record.GetFieldValue(fieldName);
@@ -1376,6 +1384,14 @@ public partial class SchaechtePage : UserControl
     {
         var n = Normalize(header);
         return n.Contains("primaere", StringComparison.Ordinal) && n.Contains("schaeden", StringComparison.Ordinal);
+    }
+
+    private static bool IsDetailsNameColumn(string header)
+    {
+        var normalized = Normalize(header);
+        return normalized.Contains("schacht", StringComparison.Ordinal)
+               && (normalized.Contains("name", StringComparison.Ordinal)
+                   || normalized.Contains("nummer", StringComparison.Ordinal));
     }
 
     private static string GetSchachtNumber(SchachtRecord record)
@@ -1424,6 +1440,204 @@ public partial class SchaechtePage : UserControl
         win.Show();
     }
 
+    private void ShowRecordDetails(SchachtRecord record)
+    {
+        var schacht = GetSchachtNumber(record);
+        var header = string.IsNullOrWhiteSpace(schacht)
+            ? "Schachtdetails"
+            : $"Schacht {schacht}";
+
+        var subtitle = "Komplette Zeile in Spaltenreihenfolge der Schacht-Ansicht.";
+        var groups = BuildRecordDetails(record);
+        var window = new RecordDetailsWindow(
+            title: string.IsNullOrWhiteSpace(schacht) ? "Schachtdetails" : $"Schachtdetails - {schacht}",
+            header: header,
+            subHeader: subtitle,
+            groups: groups)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        window.Show();
+    }
+
+    private List<RecordDetailGroup> BuildRecordDetails(SchachtRecord record)
+    {
+        var groups = new List<RecordDetailGroup>();
+        var added = new HashSet<string>(StringComparer.Ordinal);
+        var buckets = new Dictionary<string, List<RecordDetailItem>>(StringComparer.Ordinal)
+        {
+            ["Stammdaten"] = new(),
+            ["Zustand und Inspektion"] = new(),
+            ["Sanierung und Kosten"] = new(),
+            ["Dokumente und Medien"] = new(),
+            ["Weitere Angaben"] = new()
+        };
+
+        if (_vm is not null)
+        {
+            foreach (var column in _vm.Columns.Where(x => added.Add(x)))
+            {
+                var groupName = ResolveSchachtDetailGroup(column);
+                buckets[groupName].Add(CreateSchachtDetailItem(column, record));
+            }
+        }
+
+        foreach (var extraField in record.Fields.Keys
+                     .Where(x => !added.Contains(x))
+                     .OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+        {
+            buckets["Weitere Angaben"].Add(CreateSchachtDetailItem(extraField, record));
+        }
+
+        AddSchachtGroup(groups, buckets, "Stammdaten", "Identifikation und Lage des Schachts.");
+        AddSchachtGroup(groups, buckets, "Zustand und Inspektion", "Bewertung, Schaeden und Pruefresultate.");
+        AddSchachtGroup(groups, buckets, "Sanierung und Kosten", "Massnahmen, Kosten und Mengenangaben.");
+        AddSchachtGroup(groups, buckets, "Dokumente und Medien", "Verknuepfte Dateien, PDFs und Links.");
+        AddSchachtGroup(groups, buckets, "Weitere Angaben", "Felder ohne klare Zuordnung.");
+
+        return groups;
+    }
+
+    private RecordDetailItem CreateSchachtDetailItem(string fieldName, SchachtRecord record)
+    {
+        var label = GetDisplayHeader(fieldName);
+        var value = record.GetFieldValue(fieldName);
+
+        if (_vm is not null && TryResolveDropdownColumnSpec(fieldName, out var spec))
+        {
+            var options = ResolveOptions(spec.ItemsSourcePath);
+            return new RecordDetailItem(
+                label,
+                value,
+                commitValue: next => CommitSchachtDetailField(record, fieldName, next),
+                isCombo: true,
+                allowFreeText: spec.AllowFreeText,
+                options: options,
+                editOptionsCommand: spec.Managed ? ResolveViewModelCommand(spec.EditCommand) : null,
+                previewOptionsCommand: spec.Managed ? ResolveViewModelCommand(spec.PreviewCommand) : null,
+                resetOptionsCommand: spec.Managed ? ResolveViewModelCommand(spec.ResetCommand) : null,
+                addOptionCommand: spec.Managed ? ResolveViewModelCommand(spec.AddCommand) : null,
+                removeOptionCommand: spec.Managed ? ResolveViewModelCommand(spec.RemoveCommand) : null);
+        }
+
+        var normalized = Normalize(fieldName);
+        var isMultiline = IsPrimaryDamagesColumn(fieldName)
+                          || normalized.Contains("bemerk", StringComparison.Ordinal);
+        var digitsOnly = IsZustandsklasseColumn(fieldName);
+
+        return new RecordDetailItem(
+            label,
+            value,
+            commitValue: next => CommitSchachtDetailField(record, fieldName, next),
+            isMultiline: isMultiline,
+            digitsOnly: digitsOnly);
+    }
+
+    private IEnumerable<string> ResolveOptions(string itemsSourcePath)
+    {
+        if (_vm is null)
+            return Array.Empty<string>();
+
+        return itemsSourcePath switch
+        {
+            "SanierenOptions" => _vm.SanierenOptions,
+            "EigentuemerOptions" => _vm.EigentuemerOptions,
+            "PruefungsresultatOptions" => _vm.PruefungsresultatOptions,
+            "ReferenzpruefungOptions" => _vm.ReferenzpruefungOptions,
+            "AusgefuehrtDurchOptions" => _vm.AusgefuehrtDurchOptions,
+            _ => Array.Empty<string>()
+        };
+    }
+
+    private ICommand? ResolveViewModelCommand(string propertyName)
+    {
+        if (_vm is null || string.IsNullOrWhiteSpace(propertyName))
+            return null;
+
+        return _vm.GetType().GetProperty(propertyName)?.GetValue(_vm) as ICommand;
+    }
+
+    private void CommitSchachtDetailField(SchachtRecord record, string recordField, string? value)
+    {
+        var next = value ?? string.Empty;
+        string? oldShaftNumber = null;
+        if (string.Equals(recordField, "Schachtnummer", StringComparison.Ordinal))
+            oldShaftNumber = record.GetFieldValue("Schachtnummer");
+
+        record.SetFieldValue(recordField, next);
+
+        if (string.Equals(recordField, "Schachtnummer", StringComparison.Ordinal))
+            PdfCorrectionMetadata.RegisterShaftRename(GetCurrentProject(), oldShaftNumber, next);
+
+        if (_vm is not null)
+        {
+            var optionField = ResolveOptionField(recordField);
+            if (!string.IsNullOrWhiteSpace(optionField))
+                _vm.EnsureOptionForField(optionField, next);
+        }
+
+        MarkProjectDirty();
+        ApplySearchFilter();
+    }
+
+    private static void AddSchachtGroup(
+        ICollection<RecordDetailGroup> groups,
+        IReadOnlyDictionary<string, List<RecordDetailItem>> buckets,
+        string title,
+        string description)
+    {
+        if (!buckets.TryGetValue(title, out var items) || items.Count == 0)
+            return;
+
+        groups.Add(new RecordDetailGroup(title, description, items));
+    }
+
+    private static string ResolveSchachtDetailGroup(string columnName)
+    {
+        var normalized = Normalize(columnName);
+
+        if (normalized.Contains("kosten", StringComparison.Ordinal) ||
+            normalized.Contains("sanier", StringComparison.Ordinal) ||
+            normalized.Contains("renovierung", StringComparison.Ordinal) ||
+            normalized.Contains("reparatur", StringComparison.Ordinal) ||
+            normalized.Contains("erneuerung", StringComparison.Ordinal) ||
+            normalized.Contains("anschluss", StringComparison.Ordinal))
+            return "Sanierung und Kosten";
+
+        if (normalized.Contains("pdf", StringComparison.Ordinal) ||
+            normalized.Contains("link", StringComparison.Ordinal) ||
+            normalized.Contains("video", StringComparison.Ordinal) ||
+            normalized.Contains("film", StringComparison.Ordinal) ||
+            normalized.Contains("datei", StringComparison.Ordinal))
+            return "Dokumente und Medien";
+
+        if (normalized.Contains("zustand", StringComparison.Ordinal) ||
+            normalized.Contains("schaden", StringComparison.Ordinal) ||
+            normalized.Contains("pruefung", StringComparison.Ordinal) ||
+            normalized.Contains("dicht", StringComparison.Ordinal) ||
+            normalized.Contains("referenz", StringComparison.Ordinal) ||
+            normalized.Contains("gewaesser", StringComparison.Ordinal) ||
+            normalized.Contains("grundwasser", StringComparison.Ordinal))
+            return "Zustand und Inspektion";
+
+        if (normalized.Contains("schacht", StringComparison.Ordinal) ||
+            normalized.Contains("nummer", StringComparison.Ordinal) ||
+            normalized.Contains("name", StringComparison.Ordinal) ||
+            normalized.Contains("nr", StringComparison.Ordinal) ||
+            normalized.Contains("funktion", StringComparison.Ordinal) ||
+            normalized.Contains("strasse", StringComparison.Ordinal) ||
+            normalized.Contains("lage", StringComparison.Ordinal) ||
+            normalized.Contains("ort", StringComparison.Ordinal) ||
+            normalized.Contains("material", StringComparison.Ordinal) ||
+            normalized.Contains("dn", StringComparison.Ordinal) ||
+            normalized.Contains("durchmesser", StringComparison.Ordinal) ||
+            normalized.Contains("eigentuem", StringComparison.Ordinal) ||
+            normalized.Contains("eigentum", StringComparison.Ordinal))
+            return "Stammdaten";
+
+        return "Weitere Angaben";
+    }
+
     private static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject
     {
         while (current is not null)
@@ -1452,5 +1666,155 @@ public partial class SchaechtePage : UserControl
 
         value = string.Empty;
         return false;
+    }
+
+    private void Grid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (ClearColumnModeButton.IsChecked == true)
+        {
+            var header = FindAncestor<DataGridColumnHeader>((DependencyObject)e.OriginalSource);
+            if (header?.Column is not null)
+            {
+                var fieldName = header.Column.GetValue(FrameworkElement.TagProperty) as string;
+                if (!string.IsNullOrWhiteSpace(fieldName))
+                {
+                    var displayName = header.Column.Header?.ToString() ?? fieldName;
+                    ClearColumn(fieldName, displayName);
+                    e.Handled = true;
+                    return;
+                }
+            }
+        }
+
+        var row = FindAncestor<DataGridRow>((DependencyObject)e.OriginalSource);
+        if (row is not null)
+            Grid.SelectedItem = row.Item;
+    }
+
+    private void ClearColumn(string fieldName, string displayName)
+    {
+        if (_vm is null)
+            return;
+
+        var result = MessageBox.Show(
+            $"Alle Werte in Spalte \"{displayName}\" loeschen?",
+            "Spalte leeren",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+        if (result != MessageBoxResult.Yes)
+            return;
+
+        foreach (var record in _vm.Records)
+            record.SetFieldValue(fieldName, string.Empty);
+
+        MarkProjectDirty();
+    }
+
+    private void ProtokollMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm is null)
+            return;
+
+        var record = _vm.Selected;
+        if (record is null)
+        {
+            MessageBox.Show("Keine Zeile ausgewaehlt. Bitte direkt auf eine Zeile rechtsklicken.", "Protokoll",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var pdfPath = ResolvePdfPath(record);
+        if (string.IsNullOrWhiteSpace(pdfPath))
+        {
+            var schacht = GetSchachtNumber(record);
+            MessageBox.Show(
+                string.IsNullOrWhiteSpace(schacht)
+                    ? "Kein Schachtprotokoll-PDF verknuepft."
+                    : $"Kein Schachtprotokoll-PDF verknuepft fuer Schacht {schacht}.",
+                "Protokoll", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = pdfPath,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"PDF konnte nicht geoeffnet werden:\n{ex.Message}", "Protokoll",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void DetailsMenu_Click(object sender, RoutedEventArgs e)
+    {
+        _ = sender;
+
+        if (_vm is null)
+            return;
+
+        var record = _vm.Selected;
+        if (record is null)
+        {
+            MessageBox.Show("Keine Zeile ausgewaehlt. Bitte direkt auf eine Zeile rechtsklicken.", "Details",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        ShowRecordDetails(record);
+    }
+
+    private static string? ResolvePdfPath(SchachtRecord record)
+    {
+        var pdfField = record.GetFieldValue("PDF_Path");
+        if (!string.IsNullOrWhiteSpace(pdfField))
+        {
+            if (System.IO.File.Exists(pdfField))
+                return pdfField;
+
+            var sp = App.Services as ServiceProvider;
+            var resolved = TryResolveRelativePath(pdfField, sp?.Settings.LastProjectPath);
+            if (!string.IsNullOrWhiteSpace(resolved))
+                return resolved;
+        }
+
+        var link = record.GetFieldValue("Link");
+        if (!string.IsNullOrWhiteSpace(link) &&
+            link.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            if (System.IO.File.Exists(link))
+                return link;
+
+            var sp = App.Services as ServiceProvider;
+            var resolved = TryResolveRelativePath(link, sp?.Settings.LastProjectPath);
+            if (!string.IsNullOrWhiteSpace(resolved))
+                return resolved;
+        }
+
+        return null;
+    }
+
+    private static string? TryResolveRelativePath(string? raw, string? lastProjectPath)
+    {
+        var path = raw?.Trim();
+        if (string.IsNullOrWhiteSpace(path))
+            return null;
+        if (System.IO.File.Exists(path))
+            return path;
+        if (!System.IO.Path.IsPathRooted(path) && !string.IsNullOrWhiteSpace(lastProjectPath))
+        {
+            var baseDir = System.IO.Path.GetDirectoryName(lastProjectPath);
+            if (!string.IsNullOrWhiteSpace(baseDir))
+            {
+                var combined = System.IO.Path.GetFullPath(System.IO.Path.Combine(baseDir, path));
+                if (System.IO.File.Exists(combined))
+                    return combined;
+            }
+        }
+        return null;
     }
 }

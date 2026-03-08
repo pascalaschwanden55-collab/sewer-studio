@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using System.IO;
 using System.Linq;
+using System.Windows.Data;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels;
@@ -14,6 +15,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
     [ObservableProperty] private string _title = "SewerStudio";
     [ObservableProperty] private string _subtitle = "Bereit";
+
+    /// <summary>System resource monitor (CPU, RAM, GPU) — polls every 2s.</summary>
+    public SystemMonitorService Monitor { get; } = new();
 
     public Project Project => _project;
     private Project _project = new();
@@ -37,6 +41,8 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private bool _isProjectReady;
     [ObservableProperty] private bool _isGuideVisible = true;
     [ObservableProperty] private bool _isFocusMode;
+    [ObservableProperty] private bool _isAiWorking;
+    [ObservableProperty] private string _aiStatusLabel = "";
     [ObservableProperty] private int _guideStepIndex;
     [ObservableProperty] private string _guideStepTitle = "Ratten-Assistent";
     [ObservableProperty] private string _guideMessage = "Willkommen in SewerStudio.";
@@ -45,9 +51,13 @@ public sealed partial class ShellViewModel : ObservableObject
     public bool HasGuidePrevious => GuideStepIndex > 0;
     public bool HasGuideNext => GuideStepIndex < _guideSteps.Count - 1;
 
+    // Lock-Objekt fuer thread-sichere ObservableCollection-Zugriffe
+    private readonly object _collectionLock = new();
+
     public ShellViewModel()
     {
         _guideSteps = BuildGuideSteps();
+        EnableCollectionSync(_project);
 
         NavItems = new List<NavItem>
         {
@@ -58,8 +68,10 @@ public sealed partial class ShellViewModel : ObservableObject
             // Segoe MDL2: Import = Download, Export = Upload
             new("\uE896", "Import", () => new Pages.ImportPageViewModel(this, _sp)),
             new("\uE898", "Export", () => new Pages.ExportPageViewModel(this, _sp)),
+            new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(this, _sp)),
             new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(this)),
             new("\uE128", "VSA", () => new Pages.VsaPageViewModel(this, _sp)),
+            new("\uE8A1", "Eigendevis", () => new Pages.EigendevisPageViewModel(this, _sp)),
             new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(_sp)),
             new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(_sp))
         };
@@ -80,6 +92,13 @@ public sealed partial class ShellViewModel : ObservableObject
         SelectedNavItem = NavItems[0];
         CurrentPage = SelectedNavItem.CreatePage();
         ApplyGuideStep();
+        Monitor.Start();
+
+        AiActivityTracker.ActiveChanged += (active, label) =>
+        {
+            IsAiWorking = active;
+            AiStatusLabel = active ? label : "";
+        };
 
         PropertyChanged += (_, e) =>
         {
@@ -150,7 +169,7 @@ public sealed partial class ShellViewModel : ObservableObject
         return new List<GuideStep>
         {
             new("Willkommen", "Ich bin die Ratte und fuehre dich durch SewerStudio. Mit Weiter/Zurueck gehst du Schritt fuer Schritt.", "Uebersicht"),
-            new("Projekt anlegen", "Gehe auf 'Projekt' und lege ein Projekt an. Danach unter Datei -> Speichern speichern.", "Projekt"),
+            new("Projekt anlegen", "Waehle 'Neues Projekt' und bestimme einen Projektordner. Das Projekt wird sofort dort gespeichert.", "Projekt"),
             new("Daten pruefen", "Auf 'Haltungen' findest du die Haltungen und kannst Videos pro Haltung oeffnen.", "Haltungen", RequiresProject: true),
             new("Import", "Auf 'Import' importierst du PDF/XTF und verteilst Dateien in die Haltungsstruktur.", "Import", RequiresProject: true),
             new("Massnahmen", "Nutze in 'Haltungen' den Knopf 'Vorschlag aus Schadenscodes'. Das lernt aus bewerteten Haltungen."),
@@ -164,8 +183,19 @@ public sealed partial class ShellViewModel : ObservableObject
     public void ReplaceProject(Project p)
     {
         _project = p;
+        EnableCollectionSync(p);
         OnPropertyChanged(nameof(Project));
         SetStatus($"Projekt: {p.Name}");
+    }
+
+    /// <summary>
+    /// Aktiviert thread-sichere Zugriffe auf die ObservableCollections des Projekts,
+    /// damit Import-Services aus Task.Run heraus Haltungen/Schaechte hinzufuegen koennen.
+    /// </summary>
+    private void EnableCollectionSync(Project p)
+    {
+        BindingOperations.EnableCollectionSynchronization(p.Data, _collectionLock);
+        BindingOperations.EnableCollectionSynchronization(p.SchaechteData, _collectionLock);
     }
 
     public void NavigateTo(string title)
@@ -177,13 +207,37 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public void NewProject()
     {
+        var folder = _sp.Dialogs.SelectFolder("Projektordner waehlen");
+        if (string.IsNullOrWhiteSpace(folder))
+            return;
+
         var p = new Project();
-        ReplaceProject(p);
-        _sp.Settings.LastProjectPath = null;
+        var projectPath = Path.Combine(folder, "projekt.json");
+
+        EnsureProjectDirectory(projectPath);
+        var res = _sp.Projects.Save(p, projectPath);
+        if (!res.Ok)
+        {
+            SetStatus($"Fehler: {res.ErrorMessage}");
+            return;
+        }
+
+        _sp.Settings.LastProjectPath = projectPath;
         _sp.Settings.Save();
-        ResetProjectReady();
-        SetStatus("Neues Projekt");
+
+        ReplaceProject(p);
+        MarkProjectReady();
+        SetStatus($"Neues Projekt: {Path.GetFileName(folder)}");
+
+        NavigateTo("Import");
     }
+
+    /// <summary>
+    /// Gibt den Projektordner zurueck (Verzeichnis der projekt.json).
+    /// </summary>
+    public string? GetProjectFolder()
+        => string.IsNullOrWhiteSpace(_sp.Settings.LastProjectPath)
+           ? null : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
 
     public bool TryOpenProject(string path)
     {
@@ -348,4 +402,3 @@ public sealed partial class ShellViewModel : ObservableObject
     public sealed record NavItem(string Icon, string Title, Func<object> CreatePage);
     private sealed record GuideStep(string Title, string Message, string? NavTitle = null, bool RequiresProject = false);
 }
-

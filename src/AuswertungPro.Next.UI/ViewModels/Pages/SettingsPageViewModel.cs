@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using AuswertungPro.Next.UI.Services;
 
@@ -29,6 +30,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty] private string _dataFolderPath = string.Empty;
     [ObservableProperty] private string _logsFolderPath = string.Empty;
     [ObservableProperty] private string _restorePointsFolderPath = string.Empty;
+    [ObservableProperty] private string _backupStatusText = string.Empty;
 
     public IReadOnlyList<AutoSaveModeOption> AutoSaveModeOptions { get; } =
     [
@@ -70,6 +72,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     public IRelayCommand OpenLogsFolderCommand { get; }
     public IRelayCommand OpenRestorePointsFolderCommand { get; }
     public IRelayCommand SaveCommand { get; }
+    public IAsyncRelayCommand ExportBackupCommand { get; }
+    public IAsyncRelayCommand ImportBackupCommand { get; }
 
     public SettingsPageViewModel(ServiceProvider sp)
     {
@@ -99,6 +103,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         OpenLogsFolderCommand = new RelayCommand(OpenLogsFolder);
         OpenRestorePointsFolderCommand = new RelayCommand(OpenRestorePointsFolder);
         SaveCommand = new RelayCommand(Save);
+        ExportBackupCommand = new AsyncRelayCommand(ExportBackupAsync);
+        ImportBackupCommand = new AsyncRelayCommand(ImportBackupAsync);
     }
 
     private void OpenDataFolder() => OpenFolder(DataFolderPath);
@@ -203,6 +209,87 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         return normalized is "direct3d11" or "direct3d9" or "any"
             ? normalized
             : "direct3d11";
+    }
+
+    private async Task ExportBackupAsync()
+    {
+        var defaultName = $"SewerStudio_KI_Backup_{DateTime.Now:yyyy-MM-dd}";
+        var path = _sp.Dialogs.SaveFile(
+            "KI-Wissen exportieren",
+            "ZIP-Archiv (*.zip)|*.zip",
+            ".zip",
+            defaultName);
+        if (path is null) return;
+
+        BackupStatusText = "Exportiere...";
+        try
+        {
+            var result = await KnowledgeBackupService.ExportAsync(
+                path, new Progress<string>(msg => BackupStatusText = msg));
+
+            if (result.Success)
+            {
+                var sizeMb = result.SizeBytes / (1024.0 * 1024.0);
+                BackupStatusText = $"Export OK: {result.FileCount} Dateien, {sizeMb:F1} MB";
+                MessageBox.Show(
+                    $"KI-Wissen erfolgreich exportiert.\n\n" +
+                    $"Dateien: {result.FileCount}\n" +
+                    $"Groesse: {sizeMb:F1} MB\n" +
+                    $"Pfad: {path}",
+                    "SewerStudio", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                BackupStatusText = $"Fehler: {result.Error}";
+                MessageBox.Show($"Export fehlgeschlagen:\n{result.Error}",
+                    "SewerStudio", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            BackupStatusText = $"Fehler: {ex.Message}";
+        }
+    }
+
+    private async Task ImportBackupAsync()
+    {
+        var path = _sp.Dialogs.OpenFile(
+            "KI-Wissen importieren",
+            "ZIP-Archiv (*.zip)|*.zip");
+        if (path is null) return;
+
+        var confirm = MessageBox.Show(
+            "Vorhandene KI-Daten und Einstellungen werden ueberschrieben.\n\n" +
+            "Nach dem Import muss die Anwendung neu gestartet werden.\n\n" +
+            "Fortfahren?",
+            "SewerStudio", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes) return;
+
+        BackupStatusText = "Importiere...";
+        try
+        {
+            var result = await KnowledgeBackupService.ImportAsync(
+                path, new Progress<string>(msg => BackupStatusText = msg));
+
+            if (result.Success)
+            {
+                BackupStatusText = $"Import OK: {result.FileCount} Dateien";
+                MessageBox.Show(
+                    $"KI-Wissen erfolgreich importiert ({result.FileCount} Dateien).\n\n" +
+                    "Bitte starten Sie die Anwendung neu.",
+                    "SewerStudio", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                BackupStatusText = $"Fehler: {result.Error}";
+                MessageBox.Show($"Import fehlgeschlagen:\n{result.Error}",
+                    "SewerStudio", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            BackupStatusText = $"Fehler: {ex.Message}";
+        }
     }
 
     public sealed record AutoSaveModeOption(AutoSaveMode Value, string Label);

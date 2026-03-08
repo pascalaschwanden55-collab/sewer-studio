@@ -31,12 +31,12 @@ public static class PdfFieldMapping
         }, multiline: false, maxLines: 1),
         ["Strasse"] = new PdfFieldRule(new[]
         {
-            @"(?im)^\s*Stra(?:ß|ss)e\s*/\s*Standort\s+(?<value>.+)$",
-            @"(?im)^\s*Strasse\s*[:\-]?\s*(?<value>.+)$"
+            @"(?im)^\s*Stra(?:ß|ss)e\s*/\s*Standort\s+(?<value>.+?)(?:\s{2,}|$)",
+            @"(?im)^\s*Strasse\s*[:\-]?\s*(?<value>.+?)(?:\s{2,}|$)"
         }, multiline: false, maxLines: 1),
         ["Rohrmaterial"] = new PdfFieldRule(new[]
         {
-            @"(?im)^\s*Material\s+(?<value>.+)$"
+            @"(?im)^\s*Material\s+(?<value>.+?)(?:\s{2,}|$)"
         }, multiline: false, maxLines: 1),
         ["DN_mm"] = new PdfFieldRule(new[]
         {
@@ -44,8 +44,9 @@ public static class PdfFieldMapping
         }, multiline: false, maxLines: 1),
         ["Nutzungsart"] = new PdfFieldRule(new[]
         {
-            @"(?im)^\s*Nutzungsart\s+(?<value>.+)$",
-            @"(?im)^\s*Kanalart\s+(?<value>.+)$"
+            @"(?im)^\s*Nutzungsart\s+(?<value>.+?)(?:\s{2,}|$)",
+            @"(?im)^\s*Kanalart\s+(?<value>.+?)(?:\s{2,}|$)",
+            @"(?i)\b(?<value>Schmutzabwasser|Schmutzwasser|Regenabwasser|Regenwasser|Mischabwasser)\b"
         }, multiline: false, maxLines: 1),
         ["Haltungslaenge_m"] = new PdfFieldRule(new[]
         {
@@ -103,7 +104,8 @@ public static class PdfPostProcessors
             "Nutzungsart" => NormalizeNutzungsart(value),
             "Inspektionsrichtung" => NormalizeInspektionsrichtung(value),
             "DN_mm" => NormalizeDn(value),
-            "Anschluesse_verpressen" => NormalizeInt(value),
+            "Anschluesse_verpressen" => NormalizeNonNegativeInt(value),
+            "Strasse" => TrimAtDoubleSpace(value),
             _ => value
         };
     }
@@ -134,6 +136,23 @@ public static class PdfPostProcessors
         return rounded.ToString(CultureInfo.InvariantCulture);
     }
 
+    private static string NormalizeNonNegativeInt(string v)
+    {
+        var match = Regex.Match(v ?? "", @"-?\d+(?:[.,]\d+)?");
+        if (!match.Success)
+            return "";
+
+        var normalized = match.Value.Replace(',', '.');
+        if (!decimal.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
+            return "";
+
+        if (parsed < 0)
+            return "";
+
+        var rounded = (int)Math.Round(parsed, 0, MidpointRounding.AwayFromZero);
+        return rounded.ToString(CultureInfo.InvariantCulture);
+    }
+
     private static string NormalizeJaNein(string v)
     {
         if (Regex.IsMatch(v, "(?i)ja|yes")) return "Ja";
@@ -150,21 +169,25 @@ public static class PdfPostProcessors
 
     private static string NormalizeMaterial(string v)
     {
-        if (Regex.IsMatch(v, "(?i)Normalbeton|\bBeton\b")) return "Beton";
-        if (Regex.IsMatch(v, "(?i)Polypropylen|\bPP\b")) return "PP";
-        if (Regex.IsMatch(v, "(?i)Polyethylen|\bPE\b")) return "PE";
-        if (Regex.IsMatch(v, "(?i)Polyvinylchlorid|\bPVC\b")) return "PVC";
-        if (Regex.IsMatch(v, "(?i)Steinzeug")) return "Steinzeug";
-        if (Regex.IsMatch(v, "(?i)GFK|Glasfaser")) return "GFK";
-        return v.Trim();
+        // Take only the first line – WinCan DB sometimes appends cleaning info
+        // like "Zement\nGereinigt    Ja" into the material field.
+        var firstLine = v.Split('\n')[0].Trim();
+        // Strip trailing non-material tokens (e.g. "Gereinigt", "Ja", "Nein")
+        firstLine = Regex.Replace(firstLine, @"(?i)\s*(gereinigt|nicht\s*gereinigt|verschmutzt)\s*(ja|nein)?\s*$", "").Trim();
+
+        return firstLine;
     }
 
     private static string NormalizeNutzungsart(string v)
     {
+        // "-" oder "n/a" als leer behandeln
+        var trimmed = v.Trim();
+        if (trimmed is "-" or "--" or "n/a" or "N/A" or "k.A." or "")
+            return "";
         if (Regex.IsMatch(v, "(?i)Schmutzabwasser|Schmutzwasser")) return "Schmutzwasser";
         if (Regex.IsMatch(v, "(?i)Regenabwasser|Regenwasser")) return "Regenwasser";
-        if (Regex.IsMatch(v, "(?i)Mischabwasser")) return "Mischabwasser";
-        return v.Trim();
+        if (Regex.IsMatch(v, "(?i)Mischabwasser|Mischwasser")) return "Mischabwasser";
+        return trimmed;
     }
 
     private static string NormalizeDn(string v)
@@ -181,5 +204,17 @@ public static class PdfPostProcessors
         if (Regex.IsMatch(v, "(?i)gegen\\s*flie(?:ss|ß)richtung")) return "Gegen Fliessrichtung";
         if (Regex.IsMatch(v, "(?i)in\\s*flie(?:ss|ß)richtung")) return "In Fliessrichtung";
         return v.Trim();
+    }
+
+    /// <summary>
+    /// Schneidet den Wert am ersten Doppel-Leerzeichen ab.
+    /// PDF-Tabellen trennen Spalten durch 2+ Leerzeichen.
+    /// </summary>
+    private static string TrimAtDoubleSpace(string v)
+    {
+        if (string.IsNullOrWhiteSpace(v))
+            return v;
+        var m = Regex.Match(v, @"^(?<t>.+?)(?:\s{2,}|$)");
+        return m.Success ? m.Groups["t"].Value.Trim() : v.Trim();
     }
 }

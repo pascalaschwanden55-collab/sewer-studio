@@ -1,0 +1,73 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.ImportPreviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Import-Vorschau" Width="900" Height="620"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BackgroundBrush}">
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,12">
+            <StackPanel>
+                <TextBlock x:Name="HeaderText" FontSize="15" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextBrush}"/>
+                <TextBlock x:Name="SubHeaderText" FontSize="12"
+                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Changes DataGrid -->
+        <DataGrid Grid.Row="1" x:Name="ChangesGrid"
+                  AutoGenerateColumns="False" IsReadOnly="True"
+                  CanUserSortColumns="True" CanUserReorderColumns="False"
+                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                  BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
+                  Background="{StaticResource CardBrush}"
+                  RowBackground="{StaticResource CardBrush}"
+                  AlternatingRowBackground="{StaticResource BackgroundBrush}"
+                  Foreground="{StaticResource TextBrush}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Haltung" Binding="{Binding RecordKey}" Width="180"/>
+                <DataGridTextColumn Header="Aktion" Binding="{Binding Action}" Width="80"/>
+                <DataGridTextColumn Header="Feld" Binding="{Binding Field}" Width="160"/>
+                <DataGridTextColumn Header="Detail" Binding="{Binding Detail}" Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Conflicts Expander -->
+        <Expander Grid.Row="2" Header="Konflikte" Margin="0,8,0,0" x:Name="ConflictsExpander">
+            <DataGrid x:Name="ConflictsGrid"
+                      AutoGenerateColumns="False" IsReadOnly="True"
+                      MaxHeight="200"
+                      CanUserSortColumns="True" CanUserReorderColumns="False"
+                      HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                      BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
+                      Background="{StaticResource CardBrush}"
+                      RowBackground="{StaticResource CardBrush}"
+                      AlternatingRowBackground="{StaticResource BackgroundBrush}"
+                      Foreground="{StaticResource TextBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Haltung" Binding="{Binding RecordKey}" Width="180"/>
+                    <DataGridTextColumn Header="Feld" Binding="{Binding Field}" Width="160"/>
+                    <DataGridTextColumn Header="Detail" Binding="{Binding Detail}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Expander>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="Schliessen" Click="CloseButton_Click" Padding="16,6" Margin="0,0,8,0"
+                    Style="{StaticResource ToolbarButton}"/>
+            <Button Content="Import ausfuehren" Click="ExecuteButton_Click" Padding="16,6"
+                    Style="{StaticResource ToolbarButtonAccent}"/>
+        </StackPanel>
+    </Grid>
+</Window>

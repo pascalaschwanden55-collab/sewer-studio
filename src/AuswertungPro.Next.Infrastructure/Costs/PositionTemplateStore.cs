@@ -40,11 +40,7 @@ public sealed class PositionTemplateStore
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
 
-            var json = JsonSerializer.Serialize(catalog, new JsonSerializerOptions 
-            { 
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
+            var json = JsonSerializer.Serialize(catalog, Application.Common.JsonDefaults.IndentedCamel);
             
             File.WriteAllText(userPath, json);
             return true;

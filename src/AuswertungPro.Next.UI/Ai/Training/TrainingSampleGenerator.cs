@@ -21,6 +21,21 @@ namespace AuswertungPro.Next.UI.Ai.Training;
 /// - OSD Mismatch: Δm > threshold → HasOsdMismatch = true
 /// - Dedup: Signature Code + gerundete MeterRange → skip duplicates
 /// </summary>
+public enum TrainingSampleGenerationOutcome
+{
+    Success,
+    ProtocolFileMissing,
+    ProtocolUnreadable,
+    NoProtocolEntries,
+    OnlyDuplicates
+}
+
+public sealed record TrainingSampleGenerationResult(
+    List<TrainingSample> Samples,
+    int ParsedEntries,
+    int DuplicateSkipped,
+    TrainingSampleGenerationOutcome Outcome);
+
 public sealed class TrainingSampleGenerator
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
@@ -28,6 +43,7 @@ public sealed class TrainingSampleGenerator
     private readonly AiRuntimeConfig _cfg;
     private readonly MeterTimelineService _meterTimeline;
     private readonly TrainingCenterSettings _settings;
+    private string? _pdfFramesDir;
 
     public TrainingSampleGenerator(
         AiRuntimeConfig cfg,
@@ -45,34 +61,70 @@ public sealed class TrainingSampleGenerator
         string? framesDir = null,
         CancellationToken ct = default)
     {
+        var report = await GenerateWithDiagnosticsAsync(tc, existingSignatures, framesDir, ct)
+            .ConfigureAwait(false);
+        return report.Samples;
+    }
+
+    public async Task<TrainingSampleGenerationResult> GenerateWithDiagnosticsAsync(
+        TrainingCase tc,
+        IReadOnlyCollection<string>? existingSignatures = null,
+        string? framesDir = null,
+        CancellationToken ct = default)
+    {
         var result = new List<TrainingSample>();
+        var duplicateSkipped = 0;
 
-        if (!File.Exists(tc.VideoPath) || !File.Exists(tc.ProtocolPath))
-            return result;
+        // Protokoll ist Pflicht
+        if (!File.Exists(tc.ProtocolPath))
+            return new TrainingSampleGenerationResult(
+                result, 0, 0, TrainingSampleGenerationOutcome.ProtocolFileMissing);
 
-        var doc = LoadProtocol(tc.ProtocolPath);
-        if (doc is null) return result;
+        // Frames-Ordner für PDF-Bildbericht-Fotos
+        _pdfFramesDir = framesDir ?? FrameStore.GetFramesDir(null);
+
+        var doc = await LoadProtocolAsync(tc.ProtocolPath);
+        if (doc is null)
+        {
+            return new TrainingSampleGenerationResult(
+                result, 0, 0, TrainingSampleGenerationOutcome.ProtocolUnreadable);
+        }
 
         var entries = doc.Current.Entries
             .Where(e => !e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code))
             .ToList();
 
-        if (entries.Count == 0) return result;
+        if (entries.Count == 0)
+        {
+            return new TrainingSampleGenerationResult(
+                result, 0, 0, TrainingSampleGenerationOutcome.NoProtocolEntries);
+        }
 
-        var (duration, _) = await GetDurationAsync(_cfg.FfmpegPath ?? "ffmpeg", tc.VideoPath, ct)
-            .ConfigureAwait(false);
-        if (duration <= 0) return result;
+        // Video + ffmpeg optional: wenn verfügbar → Frames + OSD, sonst protocol-only
+        var hasVideo = File.Exists(tc.VideoPath);
+        var duration = 0.0;
+        if (hasVideo)
+        {
+            var (dur, _) = await GetDurationAsync(_cfg.FfmpegPath ?? "ffmpeg", tc.VideoPath, ct)
+                .ConfigureAwait(false);
+            duration = dur;
+            hasVideo = duration > 0; // ffmpeg nicht verfügbar → protocol-only
+        }
 
-        // OSD-Zeitreihe aufbauen (optional, nur wenn AI enabled)
-        var timeline = await _meterTimeline.BuildTimelineAsync(
-            tc.VideoPath, duration, stepSeconds: 5.0, ct).ConfigureAwait(false);
+        // OSD-Zeitreihe nur mit Video + AI
+        IReadOnlyList<(double TimeSeconds, double Meter)> timeline = [];
+        if (hasVideo)
+        {
+            timeline = await _meterTimeline.BuildTimelineAsync(
+                tc.VideoPath, duration, stepSeconds: 5.0, ct).ConfigureAwait(false);
+        }
 
         // Maximaler Meterstand als Referenz für Zeitschätzung
         var maxMeter = entries
             .Select(e => e.MeterEnd ?? e.MeterStart ?? 0)
             .DefaultIfEmpty(0)
             .Max();
-        if (maxMeter <= 0) maxMeter = duration;
+        if (maxMeter <= 0) maxMeter = Math.Max(duration, 1);
 
         var seen = new HashSet<string>(
             existingSignatures ?? Array.Empty<string>(),
@@ -84,26 +136,45 @@ public sealed class TrainingSampleGenerator
 
             var meterStart = entry.MeterStart ?? 0;
             var meterEnd = entry.MeterEnd ?? meterStart;
-            var samplePoints = GetSamplePoints(entry, meterStart, meterEnd, duration, maxMeter);
+
+            // Protocol-only: ein Sample pro Eintrag am MeterStart
+            var samplePoints = hasVideo
+                ? GetSamplePoints(entry, meterStart, meterEnd, duration, maxMeter)
+                : [(meterStart, 0.0, 0)];
 
             foreach (var (meter, t, frameIndex) in samplePoints)
             {
                 ct.ThrowIfCancellationRequested();
 
                 var sig = BuildSignature(entry.Code, meter, meterEnd);
-                if (seen.Contains(sig)) continue;
+                if (seen.Contains(sig))
+                {
+                    duplicateSkipped++;
+                    continue;
+                }
                 seen.Add(sig);
 
                 var safeCase = Regex.Replace(tc.CaseId, @"[^\w\-]", "_");
                 var sampleId = $"{safeCase}_{entry.Code}_{meter:F2}_{Guid.NewGuid():N}";
 
-                var framePath = await FrameStore.ExtractAndStoreAsync(
-                    _cfg.FfmpegPath ?? "ffmpeg",
-                    tc.VideoPath, t, sampleId, framesDir, ct).ConfigureAwait(false);
+                // Frame-Extraktion: Video > PDF-Bildbericht-Foto > kein Frame
+                string? framePath = null;
+                if (hasVideo)
+                {
+                    framePath = await FrameStore.ExtractAndStoreAsync(
+                        _cfg.FfmpegPath ?? "ffmpeg",
+                        tc.VideoPath, t, sampleId, framesDir, ct).ConfigureAwait(false);
+                }
+                // Fallback: Foto aus PDF-Bildbericht
+                if (string.IsNullOrEmpty(framePath) && entry.FotoPaths.Count > 0
+                    && File.Exists(entry.FotoPaths[0]))
+                {
+                    framePath = entry.FotoPaths[0];
+                }
 
-                // OSD Mismatch prüfen
+                // OSD Mismatch prüfen (nur mit Video-Timeline)
                 double? detectedMeter = null;
-                var meterSource = "linear";
+                var meterSource = hasVideo ? "linear" : "protocol";
                 var hasOsdMismatch = false;
                 double? odsDelta = null;
 
@@ -141,7 +212,17 @@ public sealed class TrainingSampleGenerator
             }
         }
 
-        return result;
+        var outcome = result.Count > 0
+            ? TrainingSampleGenerationOutcome.Success
+            : duplicateSkipped > 0
+                ? TrainingSampleGenerationOutcome.OnlyDuplicates
+                : TrainingSampleGenerationOutcome.NoProtocolEntries;
+
+        return new TrainingSampleGenerationResult(
+            result,
+            entries.Count,
+            duplicateSkipped,
+            outcome);
     }
 
     // ── Hilfsmethoden ──────────────────────────────────────────────────────
@@ -196,7 +277,7 @@ public sealed class TrainingSampleGenerator
         return $"{code}|{rc:F1}|{re:F1}";
     }
 
-    private static ProtocolDocument? LoadProtocol(string path)
+    private async Task<ProtocolDocument?> LoadProtocolAsync(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             return null;
@@ -213,7 +294,10 @@ public sealed class TrainingSampleGenerator
                 if (doc?.Current?.Entries?.Count > 0)
                     return doc;
             }
-            catch { /* weiter zum PDF-Fallback */ }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TrainingSampleGenerator] JSON-Parse fehlgeschlagen für {path}: {ex.Message}");
+            }
         }
 
         // PDF (und JSON-Fallback falls ProtocolDocument-Deserialisierung fehlschlägt):
@@ -223,7 +307,7 @@ public sealed class TrainingSampleGenerator
             try
             {
                 var extractor = new PdfProtocolExtractor();
-                var entries   = extractor.ExtractAsync(path).GetAwaiter().GetResult();
+                var entries   = await extractor.ExtractAsync(path, _pdfFramesDir).ConfigureAwait(false);
                 if (entries.Count == 0) return null;
 
                 var protocolEntries = entries
@@ -235,7 +319,10 @@ public sealed class TrainingSampleGenerator
                         MeterEnd         = e.MeterEnd,
                         IsStreckenschaden = e.IsStreckenschaden,
                         Zeit             = e.Zeit,
-                        Source           = ProtocolEntrySource.Imported
+                        Source           = ProtocolEntrySource.Imported,
+                        FotoPaths        = e.ExtractedFramePath is not null
+                            ? new List<string> { e.ExtractedFramePath }
+                            : new List<string>()
                     })
                     .ToList();
 
@@ -244,7 +331,10 @@ public sealed class TrainingSampleGenerator
                     Current = new ProtocolRevision { Entries = protocolEntries }
                 };
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TrainingSampleGenerator] PDF-Extraktion fehlgeschlagen für {path}: {ex.Message}");
+            }
         }
 
         return null;
@@ -265,12 +355,18 @@ public sealed class TrainingSampleGenerator
             var psi = new ProcessStartInfo
             {
                 FileName = ffprobe,
-                Arguments = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{videoPath}\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+            psi.ArgumentList.Add("-v");
+            psi.ArgumentList.Add("error");
+            psi.ArgumentList.Add("-show_entries");
+            psi.ArgumentList.Add("format=duration");
+            psi.ArgumentList.Add("-of");
+            psi.ArgumentList.Add("default=noprint_wrappers=1:nokey=1");
+            psi.ArgumentList.Add(videoPath);
             using var p = Process.Start(psi);
             if (p is not null)
             {
@@ -282,7 +378,10 @@ public sealed class TrainingSampleGenerator
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch { /* ffprobe nicht verfügbar, weiter */ }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TrainingSampleGenerator] ffprobe fehlgeschlagen: {ex.Message}");
+        }
 
         // ffmpeg fallback: Duration aus stderr parsen
         try
@@ -290,11 +389,12 @@ public sealed class TrainingSampleGenerator
             var psi2 = new ProcessStartInfo
             {
                 FileName = ffmpegPath,
-                Arguments = $"-i \"{videoPath}\"",
                 UseShellExecute = false,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+            psi2.ArgumentList.Add("-i");
+            psi2.ArgumentList.Add(videoPath);
             using var p2 = Process.Start(psi2);
             if (p2 is not null)
             {
@@ -312,7 +412,10 @@ public sealed class TrainingSampleGenerator
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch { /* ignore */ }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TrainingSampleGenerator] ffmpeg Duration-Parse fehlgeschlagen: {ex.Message}");
+        }
 
         return (0, "Videodauer konnte nicht ermittelt werden.");
     }

@@ -11,7 +11,7 @@ namespace AuswertungPro.Next.UI.Ai.Shared;
 public static class FfmpegLocator
 {
     /// <summary>Name der Umgebungsvariable für den ffmpeg-Pfad.</summary>
-    public const string EnvKey = "AUSWERTUNGPRO_FFMPEG";
+    public const string EnvKey = "SEWERSTUDIO_FFMPEG";
     private const string EnvFfmpeg = EnvKey;
 
     /// <summary>

@@ -1,20 +1,106 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.ExportPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-            <Button Content="Export Haltungen.xlsx" Command="{Binding ExportCommand}"/>
-            <Button Content="Export Schaechte.xlsx"
-                    Command="{Binding ExportSchaechteCommand}"
-                    Margin="8,0,0,0"
-                    Style="{StaticResource SecondaryButton}"/>
-        </StackPanel>
+        <!-- Export Toolbar Card -->
+        <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                Padding="6,4" CornerRadius="8" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal">
+                <Button Command="{Binding ExportCommand}"
+                        Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE78C;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="Export Haltungen.xlsx" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding ExportSchaechteCommand}"
+                        Style="{StaticResource ToolbarButton}" Margin="0,0,4,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE78C;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="Export Schächte.xlsx" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
 
-        <TextBlock Grid.Row="1" Text="{Binding LastResult}" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}"/>
+        <!-- Verteilungs-Card -->
+        <Border Grid.Row="1" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                Padding="6,4" CornerRadius="8" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal">
+                <Button Click="DropdownButton_Click"
+                        Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
+                        ToolTip="Haltungen und Schächte in Ordner verteilen">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE72D;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="Verteilen" VerticalAlignment="Center"/>
+                        <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{StaticResource MutedBrush}"/>
+                    </StackPanel>
+                    <Button.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Command="{Binding DistributeHoldingsCommand}">
+                                <MenuItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Haltungen verteilen" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </MenuItem.Header>
+                            </MenuItem>
+                            <MenuItem Command="{Binding DistributeShaftsCommand}">
+                                <MenuItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Schächte verteilen" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </MenuItem.Header>
+                            </MenuItem>
+                            <Separator/>
+                            <MenuItem Command="{Binding DistributeDichtheitCommand}">
+                                <MenuItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE9CE;" FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Dichtheitsprüfung verteilen" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </MenuItem.Header>
+                            </MenuItem>
+                        </ContextMenu>
+                    </Button.ContextMenu>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- Fortschrittsanzeige -->
+        <Border Grid.Row="2" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                Padding="10" Margin="0,0,0,8" CornerRadius="8"
+                Visibility="{Binding IsDistributionInProgress, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding DistributionProgress}" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Text="{Binding DistributionPercent, StringFormat=Fortschritt: {0:0}%}"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Margin="0,0,0,4"/>
+                <ProgressBar Height="6" Margin="0,2,0,0"
+                             Minimum="0" Maximum="100"
+                             Value="{Binding DistributionPercent}"
+                             IsIndeterminate="{Binding IsDistributionIndeterminate}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Ergebnis -->
+        <TextBox Grid.Row="3" Text="{Binding LastResult}" AcceptsReturn="True" TextWrapping="Wrap"
+                 IsReadOnly="True" VerticalScrollBarVisibility="Auto"
+                 Foreground="{StaticResource MutedBrush}"/>
     </Grid>
 </UserControl>

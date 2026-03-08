@@ -126,6 +126,11 @@
                                             <DataTrigger Binding="{Binding HasAllowedValues}" Value="True">
                                                 <Setter Property="Visibility" Value="Visible"/>
                                             </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsValid}" Value="False">
+                                                <Setter Property="BorderBrush" Value="OrangeRed"/>
+                                                <Setter Property="BorderThickness" Value="2"/>
+                                                <Setter Property="ToolTip" Value="{Binding ErrorMessage}"/>
+                                            </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </ComboBox.Style>
@@ -138,6 +143,11 @@
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding HasAllowedValues}" Value="True">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsValid}" Value="False">
+                                                <Setter Property="BorderBrush" Value="OrangeRed"/>
+                                                <Setter Property="BorderThickness" Value="2"/>
+                                                <Setter Property="ToolTip" Value="{Binding ErrorMessage}"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -171,17 +181,22 @@
 
                 <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,12,8">
                     <TextBlock Text="Distanz (m)" TextWrapping="Wrap"/>
-                    <TextBox Text="{Binding VsaDistanz, UpdateSourceTrigger=PropertyChanged}" Background="#FFF6A8"/>
+                    <TextBox x:Name="VsaDistanzTextBox"
+                             Text="{Binding VsaDistanz, UpdateSourceTrigger=PropertyChanged}"
+                             Background="#FFF6A8"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
                     <TextBlock Text="Uhrzeit (Video)" TextWrapping="Wrap"/>
-                    <TextBox Text="{Binding VsaVideo, UpdateSourceTrigger=PropertyChanged}" Background="#FFF6A8"/>
+                    <TextBox x:Name="VsaVideoTextBox"
+                             Text="{Binding VsaVideo, UpdateSourceTrigger=PropertyChanged}"
+                             Background="#FFF6A8"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,8">
                     <TextBlock Text="Uhrzeit von" TextWrapping="Wrap"/>
-                    <ComboBox ItemsSource="{StaticResource ClockPositions}"
+                    <ComboBox x:Name="VsaUhrVonComboBox"
+                              ItemsSource="{StaticResource ClockPositions}"
                               IsEditable="True"
                               Text="{Binding VsaUhrVon, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,4"/>
                     <Border Background="#FFF6A8" BorderBrush="#B6A400" BorderThickness="1" Padding="4">
@@ -193,7 +208,8 @@
 
                 <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,8">
                     <TextBlock Text="Uhrzeit bis" TextWrapping="Wrap"/>
-                    <ComboBox ItemsSource="{StaticResource ClockPositions}"
+                    <ComboBox x:Name="VsaUhrBisComboBox"
+                              ItemsSource="{StaticResource ClockPositions}"
                               IsEditable="True"
                               Text="{Binding VsaUhrBis, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,4"/>
                     <Border Background="#FFF6A8" BorderBrush="#B6A400" BorderThickness="1" Padding="4">
@@ -205,37 +221,49 @@
 
                 <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,12,8">
                     <TextBlock Text="Quantifizierung 1" TextWrapping="Wrap"/>
-                    <TextBox Text="{Binding VsaQ1, UpdateSourceTrigger=PropertyChanged}" Background="#FFF6A8"/>
+                    <TextBox x:Name="VsaQ1TextBox"
+                             Text="{Binding VsaQ1, UpdateSourceTrigger=PropertyChanged}"
+                             Background="#FFF6A8"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,8">
                     <TextBlock Text="Quantifizierung 2" TextWrapping="Wrap"/>
-                    <TextBox Text="{Binding VsaQ2, UpdateSourceTrigger=PropertyChanged}" Background="#FFF6A8"/>
+                    <TextBox x:Name="VsaQ2TextBox"
+                             Text="{Binding VsaQ2, UpdateSourceTrigger=PropertyChanged}"
+                             Background="#FFF6A8"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,0,12,8">
                     <TextBlock Text="Strecke" TextWrapping="Wrap"/>
-                    <TextBox Text="{Binding VsaStrecke, UpdateSourceTrigger=PropertyChanged}" Background="#FFF6A8"/>
+                    <TextBox x:Name="VsaStreckeTextBox"
+                             Text="{Binding VsaStrecke, UpdateSourceTrigger=PropertyChanged}"
+                             Background="#FFF6A8"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,0,0,8">
                     <TextBlock Text="Verbindung" TextWrapping="Wrap"/>
-                    <CheckBox IsChecked="{Binding VsaVerbindung}" Margin="0,2,0,0"/>
+                    <CheckBox x:Name="VsaVerbindungCheckBox"
+                              IsChecked="{Binding VsaVerbindung}"
+                              Margin="0,2,0,0"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="4" Grid.Column="0" Margin="0,0,12,8">
                     <TextBlock Text="Ansicht" TextWrapping="Wrap"/>
-                    <TextBox Text="{Binding VsaAnsicht, UpdateSourceTrigger=PropertyChanged}" Background="#FFF6A8"/>
+                    <TextBox x:Name="VsaAnsichtTextBox"
+                             Text="{Binding VsaAnsicht, UpdateSourceTrigger=PropertyChanged}"
+                             Background="#FFF6A8"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="4" Grid.Column="1" Margin="0,0,0,8">
                     <TextBlock Text="EZ / Bereich" TextWrapping="Wrap"/>
                     <StackPanel Orientation="Horizontal">
-                        <ComboBox Width="70"
+                        <ComboBox x:Name="VsaEzComboBox"
+                                  Width="70"
                                   ItemsSource="{StaticResource EzOptions}"
                                   IsEditable="True"
                                   Text="{Binding VsaEz, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0"/>
-                        <TextBox Width="90"
+                        <TextBox x:Name="VsaSchachtbereichTextBox"
+                                 Width="90"
                                  Text="{Binding VsaSchachtbereich, UpdateSourceTrigger=PropertyChanged}"
                                  Background="#FFF6A8"/>
                     </StackPanel>
@@ -243,7 +271,9 @@
 
                 <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2">
                     <TextBlock Text="Diverses" TextWrapping="Wrap"/>
-                    <TextBox Text="{Binding VsaAnmerkung, UpdateSourceTrigger=PropertyChanged}" Background="#FFF6A8"/>
+                    <TextBox x:Name="VsaAnmerkungTextBox"
+                             Text="{Binding VsaAnmerkung, UpdateSourceTrigger=PropertyChanged}"
+                             Background="#FFF6A8"/>
                 </StackPanel>
             </Grid>
         </GroupBox>
