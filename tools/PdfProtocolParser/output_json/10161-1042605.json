@@ -1,0 +1,50 @@
+{
+  "haltung": "10161-1042605",
+  "datum": "05.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 160 / 160mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Regenabwasser",
+  "inspektionsrichtung": "Gegen Fließrichtung",
+  "schacht_oben": "10161",
+  "schacht_unten": "1042605",
+  "inspektionslaenge_m": "27.10",
+  "rohrlaenge_m": null,
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 0.0,
+      "en_code": "BCCAY",
+      "beschreibung": "Bogen nach rechts, Winkel = ° Entf. gegen Fließr. 1,70 m Position Bogen nach links, Winkel = ° Entf. gegen Fließr. 4,10 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:00:59",
+      "foto_datei": null,
+      "foto_nr": 6
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BDA",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel Entf. gegen Fließr. 8,70 m Position Allgemeinzustand, Fotobeispiel Entf. gegen Fließr. 18,20 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:02:27",
+      "foto_datei": null,
+      "foto_nr": 8
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCCAY",
+      "beschreibung": "Bogen nach links, Winkel = ° Entf. gegen Fließr. 24,40 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:03:09",
+      "foto_datei": null,
+      "foto_nr": 9
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "haltung": "1042599-10290",
+  "datum": "11.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 300 / 300mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Mischabwasser",
+  "inspektionsrichtung": "In Fließrichtung",
+  "schacht_oben": "1042599",
+  "schacht_unten": "10290",
+  "inspektionslaenge_m": "21.70",
+  "rohrlaenge_m": "5.00",
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 1.4,
+      "en_code": "BCCAB",
+      "beschreibung": "Bogen nach links oben, Winkel = 5° Pos: 8; Bogen nach links unten, Winkel = 5°",
+      "uhr_von": "8",
+      "uhr_bis": "8",
+      "stufe": null,
+      "timestamp_video": "00:01:25",
+      "foto_datei": null,
+      "foto_nr": 276
+    },
+    {
+      "meter": 8.1,
+      "en_code": "BDA",
+      "beschreibung": "Pos: 4 - 6; Andersartiger Oberflächenschaden, Ursache nicht eindeutig feststellbar, an Verbindung Verbindung Allgemeinzustand, Fotobeispiel Position",
+      "uhr_von": "4",
+      "uhr_bis": "4",
+      "stufe": null,
+      "timestamp_video": "00:03:45",
+      "foto_datei": null,
+      "foto_nr": 278
+    },
+    {
+      "meter": 15.3,
+      "en_code": "BDA",
+      "beschreibung": "Anschluss mit Formstück, Höhe = 0mm, Breite = 0mm Pos: 2; Allgemeinzustand, Fotobeispiel, Foto 2 zu Station BCA.A.A",
+      "uhr_von": "2",
+      "uhr_bis": "2",
+      "stufe": null,
+      "timestamp_video": "00:04:42",
+      "foto_datei": null,
+      "foto_nr": 280
+    }
+  ]
+}

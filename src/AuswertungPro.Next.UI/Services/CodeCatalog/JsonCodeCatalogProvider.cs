@@ -55,14 +55,8 @@ public class JsonCodeCatalogProvider : ILocalCodeCatalogProvider
 
         var json = File.ReadAllText(_catalogPath);
 
-        var opts = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-            ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true
-        };
-
-        _catalog = JsonSerializer.Deserialize<CodeCatalog>(json, opts) ?? new CodeCatalog();
+        _catalog = JsonSerializer.Deserialize<CodeCatalog>(json,
+            Application.Common.JsonDefaults.Lenient) ?? new CodeCatalog();
 
         // Index
         _byCode.Clear();

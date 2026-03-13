@@ -1,0 +1,497 @@
+{
+  "version": 2,
+  "items": [
+    {
+      "key": "installation_hi_anlage",
+      "name": "Installation HI-Anlage",
+      "category": "Installation",
+      "unit": "pl",
+      "unitPriceCHF": 1165.3,
+      "dnMin": null,
+      "dnMax": null,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "einrichtung",
+        "hausliner",
+        "ka-te",
+        "installation hi",
+        "01.00.0010.004"
+      ],
+      "active": true,
+      "source": "offer"
+    },
+    {
+      "key": "installation_manuelle_gruppe",
+      "name": "Installation Manuelle Gruppe",
+      "category": "Installation",
+      "unit": "pl",
+      "unitPriceCHF": 426.7,
+      "dnMin": null,
+      "dnMax": null,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "manuelle gruppe",
+        "installation manuell"
+      ],
+      "active": true,
+      "source": "seed"
+    },
+    {
+      "key": "installation_kanalreinigungsfahrzeug",
+      "name": "Installation Kanalreinigungsfahrzeug",
+      "category": "Installation",
+      "unit": "pl",
+      "unitPriceCHF": 243.85,
+      "dnMin": null,
+      "dnMax": null,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "kanalreinigungsfahrzeug",
+        "reinigungsfahrzeug"
+      ],
+      "active": true,
+      "source": "seed"
+    },
+    {
+      "key": "tv_vorkontrolle",
+      "name": "TV Vorkontrolle",
+      "category": "Vorarbeiten",
+      "unit": "pl",
+      "unitPriceCHF": 216.4,
+      "dnMin": 100,
+      "dnMax": 300,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "zustandserfassung",
+        "tv vorkontrolle",
+        "200.220.101",
+        "01.08.0821.116"
+      ],
+      "active": true,
+      "source": "offerte"
+    },
+    {
+      "key": "fraesen_dn0_200",
+      "name": "Fraesen",
+      "category": "Vorarbeiten",
+      "unit": "pl",
+      "unitPriceCHF": 252.85,
+      "dnMin": 0,
+      "dnMax": 200,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "fraesen",
+        "fraesroboter",
+        "300.310.111",
+        "01.03.0311.112"
+      ],
+      "active": true,
+      "source": "offerte"
+    },
+    {
+      "key": "fraesen_dn201_999",
+      "name": "Fraesen",
+      "category": "Vorarbeiten",
+      "unit": "pl",
+      "unitPriceCHF": 297.7,
+      "dnMin": 201,
+      "dnMax": 999,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "fraesen",
+        "fraesroboter",
+        "300.310.111",
+        "01.03.0311.112"
+      ],
+      "active": true,
+      "source": "rechnung"
+    },
+    {
+      "key": "haltung_einmessen",
+      "name": "Haltung Einmessen",
+      "category": "Vorarbeiten",
+      "unit": "pl",
+      "unitPriceCHF": 84.5,
+      "dnMin": null,
+      "dnMax": null,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "abmessungen",
+        "einmessen",
+        "300.350.101"
+      ],
+      "active": true,
+      "source": "offerte"
+    },
+    {
+      "key": "nadelfilz_schlauchliner_generic",
+      "name": "Nadelfilz Schlauchliner (liefern/impraegnieren/einbauen)",
+      "category": "Liner",
+      "unit": "m",
+      "unitPriceCHF": 245.53,
+      "dnMin": null,
+      "dnMax": null,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "schlauchliner liefern und einbauen",
+        "600.612.000",
+        "01.06.0612.100"
+      ],
+      "active": true,
+      "source": "median"
+    },
+    {
+      "key": "nadelfilz_schlauchliner_dn125",
+      "name": "Nadelfilz Schlauchliner (liefern/impraegnieren/einbauen)",
+      "category": "Liner",
+      "unit": "m",
+      "unitPriceCHF": 259.9,
+      "dnMin": 125,
+      "dnMax": 125,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "600.612.102",
+        "dn 125"
+      ],
+      "active": true,
+      "source": "offerte"
+    },
+    {
+      "key": "nadelfilz_schlauchliner_dn150",
+      "name": "Nadelfilz Schlauchliner (liefern/impraegnieren/einbauen)",
+      "category": "Liner",
+      "unit": "m",
+      "unitPriceCHF": 222.33,
+      "dnMin": 150,
+      "dnMax": 150,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "600.612.103",
+        "01.06.0612.102",
+        "dn 150"
+      ],
+      "active": true,
+      "source": "median"
+    },
+    {
+      "key": "nadelfilz_schlauchliner_dn300",
+      "name": "Nadelfilz Schlauchliner (liefern/impraegnieren/einbauen)",
+      "category": "Liner",
+      "unit": "m",
+      "unitPriceCHF": 232.6,
+      "dnMin": 300,
+      "dnMax": 300,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "600.612.104",
+        "600.614.104",
+        "01.06.0612.104",
+        "dn 300"
+      ],
+      "active": true,
+      "source": "median"
+    },
+    {
+      "key": "stuetzschlauch_open_end_dn150",
+      "name": "Stuetzschlauch liefern und einbauen (Open-End)",
+      "category": "Liner",
+      "unit": "m",
+      "unitPriceCHF": 19.35,
+      "dnMin": 150,
+      "dnMax": 150,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "600.611.112",
+        "stuetzschlauch",
+        "open-end"
+      ],
+      "active": true,
+      "source": "offerte"
+    },
+    {
+      "key": "liner_enden_anpassen_dn100_200",
+      "name": "Liner-Enden anpassen",
+      "category": "Anpassung",
+      "unit": "St",
+      "unitPriceCHF": 145.7,
+      "dnMin": 100,
+      "dnMax": 200,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "600.621.100",
+        "linerenden"
+      ],
+      "active": true,
+      "source": "offerte"
+    },
+    {
+      "key": "liner_enden_anpassen_dn250",
+      "name": "Liner-Enden anpassen",
+      "category": "Anpassung",
+      "unit": "St",
+      "unitPriceCHF": 490.0,
+      "dnMin": 250,
+      "dnMax": 250,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "600.621.100",
+        "linerendmanschette"
+      ],
+      "active": true,
+      "source": "offerte"
+    },
+    {
+      "key": "liner_enden_anpassen_dn300",
+      "name": "Liner-Enden anpassen",
+      "category": "Anpassung",
+      "unit": "St",
+      "unitPriceCHF": 494.5,
+      "dnMin": 300,
+      "dnMax": 300,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "01.06.0621.122",
+        "liner-endmanschette"
+      ],
+      "active": true,
+      "source": "rechnung"
+    },
+    {
+      "key": "liner_enden_anpassen_dn150_moertel",
+      "name": "Liner-Enden anpassen",
+      "category": "Anpassung",
+      "unit": "St",
+      "unitPriceCHF": 88.8,
+      "dnMin": 150,
+      "dnMax": 150,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "01.06.0621.121",
+        "moertel"
+      ],
+      "active": true,
+      "source": "rechnung"
+    },
+    {
+      "key": "tv_abnahme",
+      "name": "TV Abnahme",
+      "category": "Qualitaet",
+      "unit": "h",
+      "unitPriceCHF": 245.0,
+      "dnMin": 150,
+      "dnMax": 350,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "01.08.0821.116",
+        "tv-kontrolle"
+      ],
+      "active": true,
+      "source": "rechnung"
+    },
+    {
+      "key": "dichtheitspruefung",
+      "name": "Dichtheitspruefung",
+      "category": "Qualitaet",
+      "unit": "St",
+      "unitPriceCHF": 265.6,
+      "dnMin": 150,
+      "dnMax": 300,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "01.08.0852.101",
+        "dichtheitspruefungen"
+      ],
+      "active": true,
+      "source": "rechnung"
+    },
+    {
+      "key": "dokumentation_datentraeger",
+      "name": "Dokumentation/Datentraeger",
+      "category": "Qualitaet",
+      "unit": "St",
+      "unitPriceCHF": 450.0,
+      "dnMin": null,
+      "dnMax": null,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "01.08.0821.415",
+        "untersuchungsberichte",
+        "datentraeger"
+      ],
+      "active": true,
+      "source": "rechnung"
+    },
+    {
+      "key": "manschette_dn200",
+      "name": "Manschette liefern/einbauen",
+      "category": "Reparatur",
+      "unit": "St",
+      "unitPriceCHF": 572.1,
+      "dnMin": 200,
+      "dnMax": 200,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "01.05.0522.101",
+        "manschette",
+        "dn 200"
+      ],
+      "active": true,
+      "source": "rechnung"
+    },
+    {
+      "key": "manschette_dn250",
+      "name": "Manschette liefern/einbauen",
+      "category": "Reparatur",
+      "unit": "St",
+      "unitPriceCHF": 605.3,
+      "dnMin": 250,
+      "dnMax": 250,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "01.05.0522.102",
+        "manschette",
+        "dn 250"
+      ],
+      "active": true,
+      "source": "rechnung"
+    },
+    {
+      "key": "manschette_dn300",
+      "name": "Manschette liefern/einbauen",
+      "category": "Reparatur",
+      "unit": "St",
+      "unitPriceCHF": 627.8,
+      "dnMin": 300,
+      "dnMax": 300,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "01.05.0522.103",
+        "manschette",
+        "dn 300"
+      ],
+      "active": true,
+      "source": "rechnung"
+    },
+    {
+      "key": "manschette_dn350",
+      "name": "Manschette liefern/einbauen",
+      "category": "Reparatur",
+      "unit": "St",
+      "unitPriceCHF": 659.4,
+      "dnMin": 350,
+      "dnMax": 350,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "01.05.0522.104",
+        "manschette",
+        "dn 350"
+      ],
+      "active": true,
+      "source": "rechnung"
+    },
+    {
+      "key": "kurzliner_dn150",
+      "name": "Kurzliner liefern/einbauen",
+      "category": "Reparatur",
+      "unit": "St",
+      "unitPriceCHF": 698.15,
+      "dnMin": 150,
+      "dnMax": 150,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "500.520.103",
+        "partliner",
+        "pointliner",
+        "dn 150"
+      ],
+      "active": true,
+      "source": "offerte"
+    },
+    {
+      "key": "kurzliner_dn200",
+      "name": "Kurzliner liefern/einbauen",
+      "category": "Reparatur",
+      "unit": "St",
+      "unitPriceCHF": 704.65,
+      "dnMin": 200,
+      "dnMax": 200,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "500.520.104",
+        "partliner",
+        "pointliner",
+        "dn 200"
+      ],
+      "active": true,
+      "source": "offerte"
+    },
+    {
+      "key": "anschluss_einbinden",
+      "name": "Anschluss verpressen/einbinden",
+      "category": "Reparatur",
+      "unit": "St",
+      "unitPriceCHF": 855.0,
+      "dnMin": null,
+      "dnMax": null,
+      "minCHF": 0.0,
+      "roundToCHF": 0.0,
+      "measures": [],
+      "aliases": [
+        "einlauf manuell einbinden",
+        "anschluss einbinden"
+      ],
+      "active": true,
+      "source": "an-00747"
+    }
+  ]
+}

@@ -1,0 +1,931 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.CodingModeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
+        xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls"
+        Title="Codier-Modus"
+        Width="1600"
+        Height="920"
+        MinWidth="1200"
+        MinHeight="750"
+        Background="{DynamicResource BgBrush}"
+        WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <Style x:Key="CodingCard" TargetType="Border" BasedOn="{StaticResource Card}">
+            <Setter Property="Background" Value="{DynamicResource CardGlassBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="Padding" Value="12"/>
+        </Style>
+
+        <Style x:Key="ToolButton" TargetType="ToggleButton">
+            <Setter Property="MinWidth" Value="54"/>
+            <Setter Property="Height" Value="54"/>
+            <Setter Property="Margin" Value="3"/>
+            <Setter Property="Background" Value="#DD1E293B"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#55FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10"
+                                Padding="6,4"
+                                ToolTip="{TemplateBinding ToolTip}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#EE2D3A4F"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Scan-Modus Toggle-Button -->
+        <Style x:Key="ScanModeBtn" TargetType="RadioButton">
+            <Setter Property="MinWidth" Value="72"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Defekt-Aktionsbutton -->
+        <Style x:Key="DefectActionBtn" TargetType="Button">
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CodingBtn" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <Style x:Key="CodingBtnAccent" TargetType="Button" BasedOn="{StaticResource ToolbarButtonAccent}">
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <Style x:Key="MeterText" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Consolas, Cascadia Mono"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        </Style>
+
+        <!-- Sidebar Section-Label -->
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
+
+        <!-- Statistik-Kachel -->
+        <Style x:Key="StatTile" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="8,6"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>    <!-- Header -->
+            <RowDefinition Height="*"/>       <!-- Hauptbereich -->
+            <RowDefinition Height="Auto"/>    <!-- Meter-Leiste -->
+            <RowDefinition Height="Auto"/>    <!-- KI-Statusleiste -->
+            <RowDefinition Height="Auto"/>    <!-- Steuerung -->
+        </Grid.RowDefinitions>
+
+        <!-- ═══════ HEADER mit Scan-Modus ═══════ -->
+        <Border Grid.Row="0" Style="{StaticResource CodingCard}" Margin="0,0,0,8">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Left"
+                           Text="CODIER-MODUS"
+                           FontSize="15" FontWeight="Bold"
+                           Foreground="{DynamicResource AccentBrush}"
+                           VerticalAlignment="Center"/>
+
+                <TextBlock DockPanel.Dock="Left" Margin="20,0,0,0"
+                           x:Name="TxtHaltungInfo"
+                           Text="Keine Haltung geladen"
+                           FontSize="13"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+
+                <!-- Scan-Modus Toggle (Mitte) -->
+                <Border DockPanel.Dock="Left" Margin="24,0,0,0"
+                        Background="{DynamicResource HeaderBrush}"
+                        CornerRadius="10" Padding="3"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="RbScanAssist" Style="{StaticResource ScanModeBtn}"
+                                     IsChecked="True" GroupName="ScanMode"
+                                     Checked="ScanMode_Checked" Tag="Assist">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#x1F441;" Margin="0,0,4,0"/>
+                                <TextBlock Text="Assist"/>
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton x:Name="RbScanFast" Style="{StaticResource ScanModeBtn}"
+                                     GroupName="ScanMode"
+                                     Checked="ScanMode_Checked" Tag="Fast">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#x26A1;" Margin="0,0,4,0"/>
+                                <TextBlock Text="Fast"/>
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton x:Name="RbScanFull" Style="{StaticResource ScanModeBtn}"
+                                     GroupName="ScanMode"
+                                     Checked="ScanMode_Checked" Tag="Full">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#x1F4CA;" Margin="0,0,4,0"/>
+                                <TextBlock Text="Full"/>
+                            </StackPanel>
+                        </RadioButton>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock x:Name="TxtStatus"
+                               Text="Bereit"
+                               FontSize="12"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <TextBlock x:Name="TxtEventCount"
+                               Text="0 Ereignisse"
+                               FontSize="12" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ═══════ HAUPTBEREICH: Video + Seitenpanel ═══════ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>          <!-- Video -->
+                <ColumnDefinition Width="8"/>           <!-- Spacer -->
+                <ColumnDefinition Width="320"/>         <!-- Seitenpanel (breiter fuer KI-Training) -->
+            </Grid.ColumnDefinitions>
+
+            <!-- ── VIDEO + OVERLAY ── -->
+            <Border Grid.Column="0" Style="{StaticResource CodingCard}">
+                <vlc:VideoView x:Name="VideoView" Background="Black">
+                    <Grid>
+                        <!-- Overlay-Canvas (transparent, ueber dem Video) -->
+                        <Canvas x:Name="OverlayCanvas"
+                                Background="Transparent"
+                                ClipToBounds="True"
+                                MouseLeftButtonDown="OverlayCanvas_MouseLeftButtonDown"
+                                MouseMove="OverlayCanvas_MouseMove"
+                                MouseLeftButtonUp="OverlayCanvas_MouseLeftButtonUp"
+                                Cursor="Cross"/>
+
+                        <!-- Kalibrierungs-Hinweis (oben mitte) -->
+                        <Border x:Name="CalibrationHint"
+                                HorizontalAlignment="Center" VerticalAlignment="Top"
+                                Margin="0,8,0,0"
+                                Background="#DD000000" CornerRadius="8"
+                                Padding="16,8" Visibility="Collapsed">
+                            <StackPanel>
+                                <TextBlock Text="KALIBRIERUNG" FontSize="12" FontWeight="Bold"
+                                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="TxtCalibrationHint" FontSize="12" Foreground="White"
+                                           Text="Linie ueber den sichtbaren Rohrdurchmesser zeichnen"
+                                           TextWrapping="Wrap" MaxWidth="300"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Mess-Anzeige (unten mitte im Video) -->
+                        <Border x:Name="MeasurementPanel"
+                                HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                Margin="0,0,0,8"
+                                Background="#CC000000" CornerRadius="8"
+                                Padding="12,6" Visibility="Collapsed">
+                            <TextBlock x:Name="TxtMeasurement"
+                                       Foreground="White" FontSize="13"
+                                       FontFamily="Consolas, Cascadia Mono"
+                                       HorizontalAlignment="Center"/>
+                        </Border>
+
+                        <!-- OSD-Meter-Anzeige (oben links im Video) -->
+                        <Border HorizontalAlignment="Left" VerticalAlignment="Top"
+                                Margin="8,8,0,0"
+                                Background="#CC000000" CornerRadius="6"
+                                Padding="8,4">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="TxtVideoMeter"
+                                           Text="0.00m"
+                                           Foreground="#22C55E"
+                                           FontFamily="Consolas, Cascadia Mono"
+                                           FontSize="14" FontWeight="Bold"/>
+                                <TextBlock x:Name="TxtVideoTime"
+                                           Text="00:00"
+                                           Foreground="#94A3B8"
+                                           FontFamily="Consolas, Cascadia Mono"
+                                           FontSize="12" Margin="12,1,0,0"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- KI-Pipeline Status (oben rechts im Video) -->
+                        <Border HorizontalAlignment="Right" VerticalAlignment="Top"
+                                Margin="0,8,8,0"
+                                Background="#CC000000" CornerRadius="6"
+                                Padding="8,4">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse x:Name="DotYolo" Width="6" Height="6" Fill="#94A3B8"
+                                         VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                <TextBlock Text="YOLO" FontSize="9" Foreground="#94A3B8"
+                                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <Ellipse x:Name="DotQwen" Width="6" Height="6" Fill="#94A3B8"
+                                         VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                <TextBlock Text="Qwen" FontSize="9" Foreground="#94A3B8"
+                                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <Ellipse x:Name="DotTracker" Width="6" Height="6" Fill="#94A3B8"
+                                         VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                <TextBlock Text="Tracker" FontSize="9" Foreground="#94A3B8"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </vlc:VideoView>
+            </Border>
+
+            <!-- ══ SEITENPANEL (KI-Training Mockup) ══ -->
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+
+                    <!-- ── QualityGate Zonen-Legende ── -->
+                    <Border Style="{StaticResource CodingCard}" Margin="0,0,0,8">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="&#x2699;" FontSize="13" Margin="0,0,6,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock Text="QUALITYGATE ZONEN" Style="{StaticResource SectionLabel}"
+                                           Margin="0"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,0,0">
+                                <StackPanel Orientation="Horizontal" Margin="0,2">
+                                    <Border Width="12" Height="12" CornerRadius="3"
+                                            Background="#22C55E" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Green (>=85%): Auto-Accept" FontSize="11"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,2">
+                                    <Border Width="12" Height="12" CornerRadius="3"
+                                            Background="#F59E0B" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Yellow (60-85%): Review empfohlen" FontSize="11"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,2">
+                                    <Border Width="12" Height="12" CornerRadius="3"
+                                            Background="#EF4444" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Red (&lt;60%): Manuell erforderlich" FontSize="11"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ── Erkannte Defekte (KI-Ereignisliste) ── -->
+                    <Border Style="{StaticResource CodingCard}" Margin="0,0,0,8">
+                        <DockPanel>
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                <TextBlock Style="{StaticResource SectionLabel}" Margin="0">
+                                    <Run Text="ERKANNTE DEFEKTE ("/>
+                                    <Run x:Name="RunDefectCount" Text="0"/>
+                                    <Run Text=")"/>
+                                </TextBlock>
+                                <TextBlock DockPanel.Dock="Right" HorizontalAlignment="Right"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextSecondaryBrush}">
+                                    <Run x:Name="RunOpenCount" Text="0"/>
+                                    <Run Text=" offen"/>
+                                </TextBlock>
+                            </DockPanel>
+                            <ListBox x:Name="LstEvents"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     FontSize="12"
+                                     Foreground="{DynamicResource TextBrush}"
+                                     MaxHeight="260"
+                                     MouseDoubleClick="LstEvents_MouseDoubleClick"
+                                     SelectionChanged="LstEvents_SelectionChanged">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
+                                        <Setter Property="Margin" Value="0,2"/>
+                                        <Setter Property="Padding" Value="6,4"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="Bd"
+                                                            Background="{TemplateBinding Background}"
+                                                            CornerRadius="8"
+                                                            Padding="{TemplateBinding Padding}"
+                                                            Cursor="Hand">
+                                                        <ContentPresenter/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="Bd" Property="Background" Value="#334155"/>
+                                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                            <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Bd" Property="Background" Value="#334155"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <!-- Zeile 1: Zone-Dot + Code + Beschreibung + Status -->
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Ellipse x:Name="ZoneDot" Grid.Column="0"
+                                                         Width="8" Height="8"
+                                                         Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Entry.Code}"
+                                                           FontFamily="Consolas"
+                                                           FontWeight="Bold" FontSize="12"
+                                                           VerticalAlignment="Center"
+                                                           Margin="0,0,6,0"/>
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding Entry.Beschreibung}"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="3" x:Name="TxtStatusIcon"
+                                                           FontSize="12" Margin="4,0,0,0"
+                                                           VerticalAlignment="Center"/>
+                                            </Grid>
+                                            <!-- Zeile 2: Distanz + Uhr + Konfidenz -->
+                                            <Grid Margin="14,2,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" FontSize="10"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           Margin="0,0,12,0">
+                                                    <Run Text="&#x1F4CD;"/>
+                                                    <Run Text="{Binding MeterAtCapture, StringFormat='{}{0:F2}m', Mode=OneWay}"/>
+                                                </TextBlock>
+                                                <TextBlock Grid.Column="1" FontSize="10"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           Margin="0,0,12,0">
+                                                    <Run Text="{Binding PhotoIndicator, Mode=OneWay}"/>
+                                                </TextBlock>
+                                                <TextBlock Grid.Column="2" x:Name="TxtConfidence"
+                                                           FontSize="10" FontWeight="SemiBold"
+                                                           HorizontalAlignment="Right"/>
+                                            </Grid>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- ── Defekt-Details (bei Auswahl) ── -->
+                    <Border x:Name="DefectDetailPanel" Style="{StaticResource CodingCard}"
+                            Margin="0,0,0,8" Visibility="Collapsed">
+                        <Border.BorderBrush>
+                            <SolidColorBrush x:Name="DefectDetailBorderBrush" Color="#3B82F6"/>
+                        </Border.BorderBrush>
+                        <Border.BorderThickness>
+                            <Thickness Left="4" Top="0" Right="0" Bottom="0"/>
+                        </Border.BorderThickness>
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <TextBlock Text="&#x25B6;" FontSize="11" Margin="0,0,6,0"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="DEFEKT DETAILS" Style="{StaticResource SectionLabel}" Margin="0"/>
+                            </StackPanel>
+
+                            <!-- Code + Schweregrad -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Style="{StaticResource StatTile}">
+                                    <StackPanel>
+                                        <TextBlock Text="EN 13508-2 Code" FontSize="10"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="TxtDetailCode"
+                                                   FontFamily="Consolas" FontSize="18" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="2" Style="{StaticResource StatTile}">
+                                    <StackPanel>
+                                        <TextBlock Text="Schweregrad" FontSize="10"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="TxtDetailSeverity"
+                                                   FontSize="18" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <!-- Beschreibung -->
+                            <Border Style="{StaticResource StatTile}" Margin="0,0,0,6">
+                                <StackPanel>
+                                    <TextBlock Text="Beschreibung" FontSize="10"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    <TextBlock x:Name="TxtDetailDescription"
+                                               FontSize="12" TextWrapping="Wrap"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Distanz + Position + Konfidenz -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="4"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="4"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Style="{StaticResource StatTile}">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="Distanz" FontSize="9"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="TxtDetailDistance"
+                                                   FontFamily="Consolas" FontSize="12"
+                                                   Foreground="{DynamicResource TextBrush}"
+                                                   HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="2" Style="{StaticResource StatTile}">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="Position" FontSize="9"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="TxtDetailClock"
+                                                   FontFamily="Consolas" FontSize="12"
+                                                   Foreground="{DynamicResource TextBrush}"
+                                                   HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="4" Style="{StaticResource StatTile}">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="Konfidenz" FontSize="9"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="TxtDetailConfidence"
+                                                   FontFamily="Consolas" FontSize="12" FontWeight="Bold"
+                                                   HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <!-- Status-Anzeige -->
+                            <TextBlock x:Name="TxtDetailStatus" FontSize="11"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Margin="0,0,0,6"/>
+
+                            <!-- Aktionsbuttons: Akzeptieren / Bearbeiten / Ablehnen -->
+                            <Grid x:Name="DefectActionGrid" Margin="0,2,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" x:Name="BtnAcceptDefect"
+                                        Style="{StaticResource DefectActionBtn}"
+                                        Background="#16A34A"
+                                        Click="BtnAcceptDefect_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#x2713;" Margin="0,0,4,0"/>
+                                        <TextBlock Text="Akzeptieren"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="2" x:Name="BtnEditDefect"
+                                        Style="{StaticResource DefectActionBtn}"
+                                        Background="#D97706"
+                                        Click="BtnEditDefect_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#x2699;" Margin="0,0,4,0"/>
+                                        <TextBlock Text="Bearbeiten"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="4" x:Name="BtnRejectDefect"
+                                        Style="{StaticResource DefectActionBtn}"
+                                        Background="#DC2626"
+                                        MinWidth="40"
+                                        Click="BtnRejectDefect_Click">
+                                    <TextBlock Text="&#x2717;" FontSize="14"/>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ── Kalibrierung + Messung (kompakt) ── -->
+                    <Border Style="{StaticResource CodingCard}" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="KALIBRIERUNG" Style="{StaticResource SectionLabel}"/>
+                            <TextBlock x:Name="TxtCalibrationDn" FontSize="12"
+                                       Foreground="{DynamicResource TextBrush}" Text="DN: –"/>
+                            <TextBlock x:Name="TxtCalibrationStatus" FontSize="12"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Text="Nicht kalibriert" Margin="0,0,0,6"/>
+
+                            <TextBlock Text="MESSUNG" Style="{StaticResource SectionLabel}"/>
+                            <TextBlock x:Name="TxtOverlayQ1" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Q1: –"/>
+                            <TextBlock x:Name="TxtOverlayQ2" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Q2: –"/>
+                            <TextBlock x:Name="TxtOverlayClock" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Uhr: –"/>
+                            <TextBlock x:Name="TxtOverlayArc" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Bogen: –"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ── Codieren (manuell) ── -->
+                    <Border Style="{StaticResource CodingCard}" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="CODIEREN" Style="{StaticResource SectionLabel}"/>
+
+                            <Button x:Name="BtnSelectCode"
+                                    Style="{StaticResource CodingBtn}"
+                                    Content="Code waehlen..." Margin="0,0,0,6"
+                                    Click="BtnSelectCode_Click"/>
+
+                            <TextBlock x:Name="TxtSelectedCode"
+                                       FontSize="13" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       Margin="0,0,0,6"/>
+
+                            <Button x:Name="BtnCreateEvent"
+                                    Style="{StaticResource CodingBtnAccent}"
+                                    Content="Ereignis protokollieren"
+                                    Click="BtnCreateEvent_Click"
+                                    IsEnabled="False"/>
+
+                            <!-- Fotos -->
+                            <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,8"/>
+                            <TextBlock Text="FOTOS" Style="{StaticResource SectionLabel}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="BtnFoto1" Grid.Column="0"
+                                        Style="{StaticResource CodingBtn}"
+                                        Content="Foto 1"
+                                        Click="BtnFoto1_Click"
+                                        IsEnabled="False"/>
+                                <Button x:Name="BtnFoto2" Grid.Column="2"
+                                        Style="{StaticResource CodingBtn}"
+                                        Content="Foto 2"
+                                        Click="BtnFoto2_Click"
+                                        IsEnabled="False"/>
+                            </Grid>
+                            <TextBlock x:Name="TxtFotoStatus" FontSize="10"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ── Session-Statistik ── -->
+                    <Border Style="{StaticResource CodingCard}" Margin="0,0,0,0">
+                        <StackPanel>
+                            <TextBlock Text="SESSION STATISTIK" Style="{StaticResource SectionLabel}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="6"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource StatTile}">
+                                    <StackPanel>
+                                        <TextBlock Text="Auto-Akzeptiert" FontSize="10"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="TxtStatAutoAccepted"
+                                                   Text="0" FontSize="20" FontWeight="Bold"
+                                                   Foreground="#22C55E"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource StatTile}">
+                                    <StackPanel>
+                                        <TextBlock Text="Pending Review" FontSize="10"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="TxtStatPending"
+                                                   Text="0" FontSize="20" FontWeight="Bold"
+                                                   Foreground="#F59E0B"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource StatTile}">
+                                    <StackPanel>
+                                        <TextBlock Text="Manuell erforderlich" FontSize="10"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="TxtStatReviewRequired"
+                                                   Text="0" FontSize="20" FontWeight="Bold"
+                                                   Foreground="#EF4444"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource StatTile}">
+                                    <StackPanel>
+                                        <TextBlock Text="Avg. Konfidenz" FontSize="10"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="TxtStatAvgConfidence"
+                                                   Text="–" FontSize="20" FontWeight="Bold"
+                                                   Foreground="{DynamicResource AccentBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- ═══════ PIPE GRAPH TIMELINE ═══════ -->
+        <ctrl:PipeGraphTimeline Grid.Row="2" x:Name="PipeTimeline" Margin="0,8,0,0"
+                                TotalLength="{Binding EndMeter}"
+                                CurrentMeter="{Binding CurrentMeter}"/>
+
+        <!-- ═══════ KI-STATUS + WERKZEUGE ═══════ -->
+        <Border Grid.Row="3" x:Name="AiOverlayPanel" Style="{StaticResource CodingCard}" Margin="0,8,0,0">
+            <StackPanel>
+                <!-- Zeile 1: KI-Status + Analyse + Findings -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- KI-Ampel + Status -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
+                        <Ellipse x:Name="AiStatusDot" Width="10" Height="10"
+                                 Fill="#94A3B8" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="KI" FontSize="11" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock x:Name="TxtAiStatus" FontSize="11"
+                                   Foreground="{DynamicResource TextBrush}"
+                                   Text="Bereit" VerticalAlignment="Center"
+                                   Margin="0,0,8,0"/>
+                        <TextBlock x:Name="TxtAiModel" FontSize="10"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Analyse-Button -->
+                    <Button Grid.Column="1" x:Name="BtnAnalyzeFrame"
+                            Padding="12,5" Margin="0,0,16,0"
+                            VerticalAlignment="Center"
+                            Background="{DynamicResource AccentBrush}"
+                            Foreground="White" FontSize="11" FontWeight="SemiBold"
+                            Cursor="Hand" Click="BtnAnalyzeFrame_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                        CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter HorizontalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter TargetName="Bd" Property="Opacity" Value="0.5"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#x26A1;" Margin="0,0,5,0"/>
+                            <TextBlock x:Name="TxtAnalyzeButton" Text="Frame analysieren"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Live-Findings -->
+                    <ItemsControl Grid.Column="2" x:Name="AiFindingsList" VerticalAlignment="Center">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource HeaderBrush}" CornerRadius="8"
+                                        Padding="10,4" Margin="0,0,6,0" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="8" Height="8" Fill="{Binding SeverityBrush}"
+                                                 VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextBrush}"
+                                                   VerticalAlignment="Center">
+                                            <Run Text="{Binding Label, Mode=OneWay}"/>
+                                            <Run Text="{Binding VsaCode, StringFormat='[{0}]', Mode=OneWay}"
+                                                 Foreground="{DynamicResource AccentBrush}"/>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding DetailText}" FontSize="10"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                        <TextBlock Text="{Binding SeverityText}" FontSize="13" FontWeight="Bold"
+                                                   Foreground="{Binding SeverityBrush}"
+                                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+
+                <!-- Trennlinie -->
+                <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,6"/>
+
+                <!-- Zeile 2: Overlay-Werkzeuge -->
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="WERKZEUGE" FontSize="10" FontWeight="Bold"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <ToggleButton x:Name="BtnCalibrate" Style="{StaticResource ToolButton}"
+                                  ToolTip="Kalibrieren: Linie ueber Rohrdurchmesser zeichnen"
+                                  Checked="BtnCalibrate_Checked" Unchecked="BtnCalibrate_Unchecked">
+                        <StackPanel>
+                            <TextBlock Text="&#x2295;" FontSize="18" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Kalib." FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
+                        </StackPanel>
+                    </ToggleButton>
+                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,6"/>
+                    <ToggleButton x:Name="BtnToolLine" Style="{StaticResource ToolButton}"
+                                  ToolTip="Linie (Riss messen)"
+                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
+                        <StackPanel>
+                            <TextBlock Text="&#x2501;" FontSize="18" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Linie" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton x:Name="BtnToolArc" Style="{StaticResource ToolButton}"
+                                  ToolTip="Bogen (Umfang bestimmen)"
+                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
+                        <StackPanel>
+                            <TextBlock Text="&#x2312;" FontSize="18" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Bogen" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton x:Name="BtnToolRect" Style="{StaticResource ToolButton}"
+                                  ToolTip="Rechteck (Flaeche markieren)"
+                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
+                        <StackPanel>
+                            <TextBlock Text="&#x25A2;" FontSize="18" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Flaeche" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton x:Name="BtnToolPoint" Style="{StaticResource ToolButton}"
+                                  ToolTip="Punkt (Einzelschaden)"
+                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
+                        <StackPanel>
+                            <TextBlock Text="&#x25CF;" FontSize="16" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Punkt" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton x:Name="BtnToolStretch" Style="{StaticResource ToolButton}"
+                                  ToolTip="Strecke (Streckenschaden)"
+                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
+                        <StackPanel>
+                            <TextBlock Text="&#x2194;" FontSize="18" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Strecke" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
+                        </StackPanel>
+                    </ToggleButton>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ═══════ STEUERUNG ═══════ -->
+        <Border Grid.Row="4" Style="{StaticResource CodingCard}" Margin="0,8,0,0">
+            <DockPanel>
+                <!-- Links: Navigation -->
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                    <Button x:Name="BtnPrevious" Style="{StaticResource CodingBtn}"
+                            Content="&#x25C0;Zurueck" Click="BtnPrevious_Click"/>
+                    <TextBlock x:Name="TxtCurrentMeter" Style="{StaticResource MeterText}"
+                               Margin="12,0" VerticalAlignment="Center"
+                               Text="0.00m"/>
+                    <TextBlock x:Name="TxtStepSize"
+                               Text="0.50m" FontSize="11"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <Button x:Name="BtnNext" Style="{StaticResource CodingBtn}"
+                            Content="Weiter &#x25B6;" Click="BtnNext_Click"/>
+                </StackPanel>
+
+                <!-- Rechts: Session-Steuerung -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="BtnPause" Style="{StaticResource CodingBtn}"
+                            Content="Fortsetzen" Click="BtnPause_Click"/>
+                    <Button x:Name="BtnComplete" Style="{StaticResource CodingBtnAccent}"
+                            Content="Abschliessen" Click="BtnComplete_Click" Margin="6,0,0,0"/>
+                    <Button x:Name="BtnAbort" Style="{StaticResource CodingBtn}"
+                            Content="Abbrechen" Click="BtnAbort_Click" Margin="6,0,0,0"
+                            Foreground="{DynamicResource DangerBrush}"/>
+                </StackPanel>
+
+                <!-- Mitte: Fortschritt -->
+                <TextBlock x:Name="TxtProgress" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}"/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

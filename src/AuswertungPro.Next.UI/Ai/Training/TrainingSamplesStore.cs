@@ -40,8 +40,7 @@ namespace AuswertungPro.Next.UI.Ai.Training
         {
             var path = GetStorePath();
             using var stream = File.Create(path);
-            var opts = new JsonSerializerOptions { WriteIndented = true };
-            await JsonSerializer.SerializeAsync(stream, samples, opts);
+            await JsonSerializer.SerializeAsync(stream, samples, Application.Common.JsonDefaults.Indented);
         }
     }
 }

@@ -1,11 +1,10 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- ═══════════════════════════════════════════════════════
-         CYBERPUNK CONTROLS — Neon-infused frosted widgets
-         ═══════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════
+         MODERN ENGINEERING CONTROLS — Clean, functional
+         ═══════════════════════════════════════════════════════════ -->
 
-    <!-- Pulsing glow animation keyframes -->
     <Storyboard x:Key="GlowAnimation">
         <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="Opacity">
             <EasingDoubleKeyFrame KeyTime="0:0:0" Value="0.2"/>
@@ -16,8 +15,8 @@
 
     <!-- ═══ COMBOBOX ═══ -->
     <Style TargetType="{x:Type ComboBox}">
-        <Setter Property="MinHeight" Value="40"/>
-        <Setter Property="Padding" Value="14,8"/>
+        <Setter Property="MinHeight" Value="36"/>
+        <Setter Property="Padding" Value="10,8"/>
         <Setter Property="Background" Value="{StaticResource CardBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
@@ -30,7 +29,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="10"
+                                CornerRadius="5"
                                 SnapsToDevicePixels="True"/>
                         <ToggleButton x:Name="ToggleButton"
                                     Background="Transparent"
@@ -41,12 +40,12 @@
                             <ToggleButton.Template>
                                 <ControlTemplate TargetType="ToggleButton">
                                     <Grid Background="{TemplateBinding Background}">
-                                        <Border CornerRadius="10" Background="Transparent"/>
+                                        <Border CornerRadius="5" Background="Transparent"/>
                                         <Path x:Name="Arrow"
                                             Data="M0,0 L4,4 L8,0 Z"
-                                            Fill="{StaticResource NeonCyanBrush}"
+                                            Fill="{StaticResource MutedBrush}"
                                             HorizontalAlignment="Right"
-                                            Margin="0,0,14,0"
+                                            Margin="0,0,12,0"
                                             VerticalAlignment="Center"/>
                                     </Grid>
                                 </ControlTemplate>
@@ -81,15 +80,15 @@
                             <Grid MinWidth="{TemplateBinding ActualWidth}"
                                 MaxHeight="{TemplateBinding MaxDropDownHeight}">
                                 <Border Background="{StaticResource CardBrush}"
-                                      BorderBrush="{StaticResource NeonCyanBrush}"
+                                      BorderBrush="{StaticResource BorderBrush}"
                                       BorderThickness="1"
-                                      CornerRadius="10"
+                                      CornerRadius="6"
                                       Margin="0,4,0,0">
                                     <Border.Effect>
-                                        <DropShadowEffect Color="{StaticResource ColorNeonCyan}"
-                                                          BlurRadius="18"
-                                                          ShadowDepth="0"
-                                                          Opacity="0.35"/>
+                                        <DropShadowEffect Color="#14000000"
+                                                          BlurRadius="16"
+                                                          ShadowDepth="4"
+                                                          Direction="270"/>
                                     </Border.Effect>
                                     <ScrollViewer>
                                         <StackPanel IsItemsHost="True"/>
@@ -104,11 +103,15 @@
                             <Setter TargetName="ContentSite" Property="Visibility" Value="Hidden"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="BorderElement" Property="BorderBrush" Value="{StaticResource NeonCyanBrush}"/>
+                            <Setter TargetName="BorderElement" Property="BorderBrush">
+                                <Setter.Value>
+                                    <SolidColorBrush Color="#FF94A3B8"/>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                         <Trigger Property="IsFocused" Value="True">
-                            <Setter TargetName="BorderElement" Property="BorderBrush" Value="{StaticResource NeonCyanBrush}"/>
-                            <Setter TargetName="BorderElement" Property="BorderThickness" Value="1.5"/>
+                            <Setter TargetName="BorderElement" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            <Setter TargetName="BorderElement" Property="BorderThickness" Value="2"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -116,24 +119,22 @@
         </Setter>
     </Style>
 
-    <!-- ComboBoxItem with hover glow -->
     <Style TargetType="{x:Type ComboBoxItem}">
         <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
-        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="Padding" Value="10,8"/>
         <Setter Property="Background" Value="Transparent"/>
         <Style.Triggers>
             <Trigger Property="IsHighlighted" Value="True">
                 <Setter Property="Background">
                     <Setter.Value>
-                        <SolidColorBrush Color="{StaticResource ColorNeonCyan}" Opacity="0.12"/>
+                        <SolidColorBrush Color="#FFE8EDF5"/>
                     </Setter.Value>
                 </Setter>
-                <Setter Property="Foreground" Value="{StaticResource NeonCyanBrush}"/>
             </Trigger>
         </Style.Triggers>
     </Style>
 
-    <!-- ═══ CHECKBOX — Neon check indicator ═══ -->
+    <!-- ═══ CHECKBOX ═══ -->
     <Style TargetType="{x:Type CheckBox}">
         <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
         <Setter Property="Template">
@@ -141,15 +142,15 @@
                 <ControlTemplate TargetType="CheckBox">
                     <StackPanel Orientation="Horizontal">
                         <Border x:Name="CheckBorder"
-                                Width="20" Height="20"
+                                Width="18" Height="18"
                                 Background="{StaticResource CardBrush}"
                                 BorderBrush="{StaticResource BorderBrush}"
-                                BorderThickness="2"
-                                CornerRadius="5"
+                                BorderThickness="1.5"
+                                CornerRadius="4"
                                 Margin="0,0,8,0">
                             <Path x:Name="CheckMark"
                                 Data="M2,6 L6,10 L14,2"
-                                Stroke="{StaticResource NeonCyanBrush}"
+                                Stroke="White"
                                 StrokeThickness="2"
                                 Visibility="Collapsed"/>
                         </Border>
@@ -158,15 +159,15 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
-                            <Setter TargetName="CheckBorder" Property="Background">
-                                <Setter.Value>
-                                    <SolidColorBrush Color="{StaticResource ColorNeonCyan}" Opacity="0.15"/>
-                                </Setter.Value>
-                            </Setter>
-                            <Setter TargetName="CheckBorder" Property="BorderBrush" Value="{StaticResource NeonCyanBrush}"/>
+                            <Setter TargetName="CheckBorder" Property="Background" Value="{StaticResource AccentBrush}"/>
+                            <Setter TargetName="CheckBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="CheckBorder" Property="BorderBrush" Value="{StaticResource NeonCyanBrush}"/>
+                            <Setter TargetName="CheckBorder" Property="BorderBrush">
+                                <Setter.Value>
+                                    <SolidColorBrush Color="#FF94A3B8"/>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -174,31 +175,26 @@
         </Setter>
     </Style>
 
-    <!-- ═══ PROGRESSBAR — Neon gradient fill with glow ═══ -->
+    <!-- ═══ PROGRESSBAR ═══ -->
     <Style TargetType="{x:Type ProgressBar}">
-        <Setter Property="Height" Value="8"/>
-        <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+        <Setter Property="Height" Value="6"/>
+        <Setter Property="Background">
+            <Setter.Value>
+                <SolidColorBrush Color="#FFDAE1ED"/>
+            </Setter.Value>
+        </Setter>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ProgressBar">
                     <Border Background="{TemplateBinding Background}"
-                            CornerRadius="4"
+                            CornerRadius="3"
                             SnapsToDevicePixels="True">
-                        <Border x:Name="PART_Track"
-                                CornerRadius="4"
-                                Background="{StaticResource CardGlassBrush}">
+                        <Border x:Name="PART_Track" CornerRadius="3">
                             <Border x:Name="PART_Indicator"
-                                    Background="{StaticResource NeonGradient}"
-                                    CornerRadius="4"
-                                    HorizontalAlignment="Left">
-                                <Border.Effect>
-                                    <DropShadowEffect Color="{StaticResource ColorNeonCyan}"
-                                                    BlurRadius="14"
-                                                    ShadowDepth="0"
-                                                    Opacity="0.7"/>
-                                </Border.Effect>
-                            </Border>
+                                    Background="{StaticResource AccentBrush}"
+                                    CornerRadius="3"
+                                    HorizontalAlignment="Left"/>
                         </Border>
                     </Border>
                 </ControlTemplate>
@@ -206,7 +202,7 @@
         </Setter>
     </Style>
 
-    <!-- ═══ TABCONTROL — Glass panel with neon tab indicators ═══ -->
+    <!-- ═══ TABCONTROL ═══ -->
     <Style TargetType="{x:Type TabControl}">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
@@ -218,21 +214,19 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <TabPanel x:Name="HeaderPanel"
-                                Grid.Row="0"
-                                IsItemsHost="True"
-                                Background="Transparent"/>
-                        <Border x:Name="ContentPanel"
-                                Grid.Row="1"
-                                Background="{StaticResource CardGlassBrush}"
-                                BorderBrush="{StaticResource BorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="0,10,10,10"
+                        <Border Grid.Row="0" BorderBrush="{StaticResource BorderBrush}"
+                                BorderThickness="0,0,0,1">
+                            <TabPanel x:Name="HeaderPanel"
+                                    IsItemsHost="True"
+                                    Background="Transparent"/>
+                        </Border>
+                        <Border x:Name="ContentPanel" Grid.Row="1"
+                                Background="{StaticResource CardBrush}"
                                 Margin="0,0,0,0">
                             <ContentPresenter x:Name="PART_SelectedContentHost"
                                             Content="{TemplateBinding SelectedContent}"
                                             ContentTemplate="{TemplateBinding SelectedContentTemplate}"
-                                            Margin="20"/>
+                                            Margin="16"/>
                         </Border>
                     </Grid>
                 </ControlTemplate>
@@ -240,20 +234,18 @@
         </Setter>
     </Style>
 
-    <!-- TabItem — Neon underline when active -->
     <Style TargetType="{x:Type TabItem}">
-        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
         <Setter Property="FontWeight" Value="Medium"/>
-        <Setter Property="Padding" Value="18,10"/>
+        <Setter Property="Padding" Value="16,10"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
                     <Border x:Name="Border"
                             Background="Transparent"
-                            BorderThickness="0,0,0,3"
+                            BorderThickness="0,0,0,2"
                             BorderBrush="Transparent"
-                            CornerRadius="10,10,0,0"
-                            Margin="0,0,4,0">
+                            Margin="0,0,2,0">
                         <ContentPresenter x:Name="ContentSite"
                                         Content="{TemplateBinding Header}"
                                         Margin="{TemplateBinding Padding}"
@@ -262,22 +254,17 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Border" Property="Background">
-                                <Setter.Value>
-                                    <SolidColorBrush Color="{StaticResource ColorNeonCyan}" Opacity="0.08"/>
-                                </Setter.Value>
-                            </Setter>
-                            <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource NeonCyanBrush}"/>
-                            <Setter Property="Foreground" Value="{StaticResource NeonCyanBrush}"/>
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
                             <Setter Property="FontWeight" Value="SemiBold"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Border" Property="Background">
                                 <Setter.Value>
-                                    <SolidColorBrush Color="{StaticResource ColorNeonCyan}" Opacity="0.04"/>
+                                    <SolidColorBrush Color="#FFF8FAFC"/>
                                 </Setter.Value>
                             </Setter>
-                            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -285,10 +272,10 @@
         </Setter>
     </Style>
 
-    <!-- ═══ SLIDER — Neon thumb with glow ═══ -->
+    <!-- ═══ SLIDER ═══ -->
     <Style TargetType="{x:Type Slider}">
         <Setter Property="Height" Value="24"/>
-        <Setter Property="Background" Value="{StaticResource CardGlassBrush}"/>
+        <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -296,9 +283,12 @@
                     <Grid>
                         <Border x:Name="TrackBackground"
                                 Height="4"
-                                Background="{StaticResource BorderBrush}"
                                 CornerRadius="2"
-                                VerticalAlignment="Center"/>
+                                VerticalAlignment="Center">
+                            <Border.Background>
+                                <SolidColorBrush Color="#FFDAE1ED"/>
+                            </Border.Background>
+                        </Border>
                         <Track x:Name="PART_Track">
                             <Track.DecreaseRepeatButton>
                                 <RepeatButton Command="Slider.DecreaseLarge"
@@ -332,7 +322,6 @@
         </Setter>
     </Style>
 
-    <!-- Slider thumb — Glowing neon orb -->
     <Style x:Key="SliderThumbStyle" TargetType="Thumb">
         <Setter Property="SnapsToDevicePixels" Value="True"/>
         <Setter Property="OverridesDefaultStyle" Value="True"/>
@@ -340,21 +329,21 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
                     <Ellipse x:Name="Ellipse"
-                           Width="18" Height="18"
-                           Fill="{StaticResource NeonCyanBrush}"
-                           Stroke="{StaticResource NeonCyanBrush}"
-                           StrokeThickness="1">
+                           Width="16" Height="16"
+                           Fill="{StaticResource AccentBrush}"
+                           Stroke="White"
+                           StrokeThickness="2">
                         <Ellipse.Effect>
-                            <DropShadowEffect Color="{StaticResource ColorNeonCyan}"
-                                            BlurRadius="12"
-                                            ShadowDepth="0"
-                                            Opacity="0.7"/>
+                            <DropShadowEffect Color="#20000000" BlurRadius="4" ShadowDepth="1" Direction="270"/>
                         </Ellipse.Effect>
                     </Ellipse>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Ellipse" Property="Fill" Value="{StaticResource NeonPinkBrush}"/>
-                            <Setter TargetName="Ellipse" Property="Stroke" Value="{StaticResource NeonPinkBrush}"/>
+                            <Setter TargetName="Ellipse" Property="Fill">
+                                <Setter.Value>
+                                    <SolidColorBrush Color="#FF1D4ED8"/>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -362,13 +351,14 @@
         </Setter>
     </Style>
 
-    <!-- ═══ TOOLTIP — Dark glass with neon border ═══ -->
+    <!-- ═══ TOOLTIP ═══ -->
     <Style TargetType="{x:Type ToolTip}">
         <Setter Property="Background" Value="{StaticResource CardBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource NeonCyanBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="FontSize" Value="12"/>
     </Style>
 
 </ResourceDictionary>

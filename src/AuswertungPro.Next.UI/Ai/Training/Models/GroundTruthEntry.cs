@@ -40,4 +40,11 @@ public sealed record GroundTruthEntry
     /// Wird bevorzugt gegenüber linearer Zeitinterpolation.
     /// </summary>
     public TimeSpan? Zeit { get; init; }
+
+    /// <summary>
+    /// Pfad zum extrahierten Foto aus dem PDF-Bildbericht.
+    /// Null wenn kein eingebettetes Bild gefunden wurde.
+    /// Wird als Frame verwendet wenn kein Video vorhanden ist.
+    /// </summary>
+    public string? ExtractedFramePath { get; init; }
 }

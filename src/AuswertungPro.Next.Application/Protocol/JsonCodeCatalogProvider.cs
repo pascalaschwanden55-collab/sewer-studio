@@ -50,6 +50,9 @@ public sealed class CodeParameter
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
+    [JsonPropertyName("dataKey")]
+    public string? DataKey { get; set; }
+
     [JsonPropertyName("type")]
     public string Type { get; set; } = "string";
 
@@ -267,6 +270,7 @@ public sealed class JsonCodeCatalogProvider : ICodeCatalogProvider
         return new CodeParameter
         {
             Name = source.Name ?? string.Empty,
+            DataKey = string.IsNullOrWhiteSpace(source.DataKey) ? null : source.DataKey.Trim(),
             Type = string.IsNullOrWhiteSpace(source.Type) ? "string" : source.Type.Trim(),
             AllowedValues = source.AllowedValues?.ToList(),
             Unit = string.IsNullOrWhiteSpace(source.Unit) ? null : source.Unit.Trim(),

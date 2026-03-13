@@ -1,9 +1,11 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 
+using AuswertungPro.Next.Application.Devis;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Import;
@@ -13,6 +15,7 @@ using AuswertungPro.Next.Application.Protocol;
 // using AuswertungPro.Next.Application.Reports; // entfernt, da bereits oben vorhanden
 using AuswertungPro.Next.Application.Vsa;
 
+using AuswertungPro.Next.Infrastructure.Devis;
 using AuswertungPro.Next.Infrastructure.Export;
 using AuswertungPro.Next.Infrastructure.Export.Excel;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
@@ -26,6 +29,13 @@ using AuswertungPro.Next.Infrastructure.Vsa;
 // AI/CodeCatalog services are currently defined in this UI namespace:
 using AuswertungPro.Next.UI.ViewModels.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.KnowledgeBase;
+using AuswertungPro.Next.UI.Ai.Ollama;
+using AuswertungPro.Next.UI.Ai.Pipeline;
+using AuswertungPro.Next.UI.Ai.Sanierung;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.KnowledgeBase;
+using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.Application.Reports;
 
 namespace AuswertungPro.Next.UI
@@ -64,6 +74,14 @@ namespace AuswertungPro.Next.UI
 
         public IDialogService Dialogs { get; } = new DialogService();
         public IPlaywrightInstallService PlaywrightInstaller { get; }
+        public PipelineConfig PipelineCfg { get; }
+
+        public IMeasureRecommendationService MeasureRecommendation { get; }
+        public IRetrievalService? Retrieval { get; }
+
+        // Eigendevis
+        public IDevisGenerator DevisGenerator { get; }
+        public DevisExcelExporter DevisExcelExporter { get; }
 
         public ServiceProvider(AppSettings settings, DiagnosticsOptions diagnostics, ILogger logger, ILoggerFactory loggerFactory)
                 // Removed misplaced property initialization
@@ -90,8 +108,12 @@ namespace AuswertungPro.Next.UI
 
 
 
+            // Einheitliche KI-Konfiguration (1x laden, 3x projizieren)
+            var aiPlatform = AiPlatformConfig.Load(settings);
+            PipelineCfg = aiPlatform.ToPipelineConfig();
+
             // AI/CodeCatalog Init (AiLocalPack)
-            var cfg = AiRuntimeConfig.Load();
+            var cfg = aiPlatform.ToRuntimeConfig();
             var codeCatalogPath = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_codes.json");
             EnsureEmbeddedCatalogFile(codeCatalogPath);
             var nodCatalogPath = ResolveVsaCatalogNodPath(settings);
@@ -101,8 +123,32 @@ namespace AuswertungPro.Next.UI
             CodeCatalog = !string.IsNullOrWhiteSpace(xmlCatalogPath)
                 ? new AuswertungPro.Next.Application.Protocol.XmlCodeCatalogProvider(xmlCatalogPath, codeCatalogPath, fallbackTextXmlPath)
                 : new AuswertungPro.Next.Application.Protocol.JsonCodeCatalogProvider(codeCatalogPath);
+            RetrievalService? retrieval = null;
+            try
+            {
+                var ollamaConfig = aiPlatform.ToOllamaConfig();
+                var kbHttp = new HttpClient { Timeout = ollamaConfig.RequestTimeout };
+                var kbCtx = new KnowledgeBaseContext();
+                var embedder = new EmbeddingService(kbHttp, ollamaConfig);
+                retrieval = new RetrievalService(kbCtx, embedder);
+                retrieval.CheckModelConsistency();
+                if (retrieval.HasModelMismatch)
+                    Logger.LogWarning(
+                        "KB-Embedding-Modell '{StoredModel}' stimmt nicht mit aktuellem Modell '{CurrentModel}' überein. KB-Rebuild empfohlen.",
+                        retrieval.StoredEmbedModel, ollamaConfig.EmbedModel);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "KnowledgeBase-Retrieval konnte nicht initialisiert werden. KI läuft ohne KB-Kontext.");
+            }
+
+            Retrieval = retrieval;
+
+            var allowedCodeSet = new HashSet<string>(CodeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
+            IAiSuggestionPlausibilityService plausibility = new RuleBasedAiSuggestionPlausibilityService(allowedCodeSet);
+
             ProtocolAi = cfg.Enabled
-                ? new OllamaProtocolAiService(cfg)
+                ? new OllamaProtocolAiService(cfg, retrieval, plausibility)
                 : new NoopProtocolAiService();
 
             LogCodeCatalogWarnings(CodeCatalog, xmlCatalogPath ?? codeCatalogPath);
@@ -110,6 +156,31 @@ namespace AuswertungPro.Next.UI
             var channelsTable = Path.Combine(AppContext.BaseDirectory, "Data", "classification_channels.json");
             var manholesTable = Path.Combine(AppContext.BaseDirectory, "Data", "classification_manholes.json");
             Vsa = new VsaEvaluationService(channelsTable, manholesTable);
+
+            MeasureRecommendation = new Infrastructure.Ai.MeasureRecommendationService(
+                Path.Combine(AppSettings.AppDataDir, "data", "measures_learning.json"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "measures-model.zip"));
+
+            // Eigendevis
+            var devisMappingPath = Path.Combine(AppContext.BaseDirectory, "Config", "devis_mappings.json");
+            var devisMappingService = new DevisMappingService(devisMappingPath);
+            DevisGenerator = new Infrastructure.Devis.DevisGenerator(devisMappingService);
+            DevisExcelExporter = new DevisExcelExporter();
+        }
+
+        public IVideoAnalysisPipelineService CreateVideoAnalysisPipeline(
+            AiRuntimeConfig cfg,
+            IAiSuggestionPlausibilityService plausibility,
+            HttpClient http)
+        {
+            return new VideoAnalysisPipelineService(cfg, plausibility, http);
+        }
+
+        public IAiSanierungOptimizationService CreateSanierungOptimization(
+            AiRuntimeConfig cfg,
+            HttpClient? http = null)
+        {
+            return new AiSanierungOptimizationService(cfg, http);
         }
 
         private static string? ResolveVsaCatalogPath(AppSettings settings)
@@ -344,6 +415,28 @@ namespace AuswertungPro.Next.UI
             }
         }
 
-        public object? GetService(Type serviceType) => null; // not used
+        public object? GetService(Type serviceType)
+        {
+            if (serviceType == typeof(IProjectRepository)) return Projects;
+            if (serviceType == typeof(IPdfImportService)) return PdfImport;
+            if (serviceType == typeof(IXtfImportService)) return XtfImport;
+            if (serviceType == typeof(IWinCanDbImportService)) return WinCanImport;
+            if (serviceType == typeof(IIbakImportService)) return IbakImport;
+            if (serviceType == typeof(IKinsImportService)) return KinsImport;
+            if (serviceType == typeof(IExcelExportService)) return ExcelExport;
+            if (serviceType == typeof(IVsaEvaluationService)) return Vsa;
+            if (serviceType == typeof(IProtocolService)) return Protocols;
+            if (serviceType == typeof(IPhotoImportService)) return PhotoImport;
+            if (serviceType == typeof(IProtocolAiService)) return ProtocolAi;
+            if (serviceType == typeof(ICodeCatalogProvider)) return CodeCatalog;
+            if (serviceType == typeof(IDialogService)) return Dialogs;
+            if (serviceType == typeof(IPlaywrightInstallService)) return PlaywrightInstaller;
+            if (serviceType == typeof(IMeasureRecommendationService)) return MeasureRecommendation;
+            if (serviceType == typeof(IRetrievalService)) return Retrieval;
+            if (serviceType == typeof(IDevisGenerator)) return DevisGenerator;
+            if (serviceType == typeof(ILogger)) return Logger;
+            if (serviceType == typeof(ILoggerFactory)) return LoggerFactory;
+            return null;
+        }
     }
 }

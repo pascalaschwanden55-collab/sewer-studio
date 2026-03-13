@@ -1,0 +1,39 @@
+{
+  "haltung": "07.1026777-10.1064902",
+  "datum": "10.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 100 / 100mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Regenabwasser",
+  "inspektionsrichtung": "In Fließrichtung",
+  "schacht_oben": "07.1026777",
+  "schacht_unten": "10.1064902",
+  "inspektionslaenge_m": "0.00",
+  "rohrlaenge_m": "5.00",
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 0.0,
+      "en_code": "BDA",
+      "beschreibung": "Allgemeine Anmerkung, Keine Inspektion möglich,DW kann nicht demontiert werden Position Allgemeinzustand, Fotobeispiel Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": null,
+      "foto_datei": null,
+      "foto_nr": 90
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BDA",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel, Leitung kann nur mit Sat gefilmt werden. Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": null,
+      "foto_datei": null,
+      "foto_nr": 91
+    }
+  ]
+}

@@ -4,6 +4,10 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Dictionary<string, string> Fields { get; set; } = new(StringComparer.Ordinal);
+
+    // Protokolldokument (Beobachtungen pro Bauteil).
+    public AuswertungPro.Next.Domain.Protocol.ProtocolDocument? Protocol { get; set; }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime ModifiedAtUtc { get; set; } = DateTime.UtcNow;
 

@@ -1,15 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.UI.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Ai;
 
 /// <summary>
 /// Verbesserte Vision-Analyse mit vollständiger Schadensklassenliste nach
-/// DIN EN 13508-2 und VSA-DSS (analog zu Pallons 300+ Klassen).
+/// DIN EN 13508-2 und VSA-DSS (umfangreiche Schadensklassifikation).
 ///
 /// Unterschiede zum bestehenden OllamaVisionFindingsService:
 /// - Detailliertere Schadensklassen (Typ + Untertyp + Lage)
@@ -29,7 +31,7 @@ public sealed class EnhancedVisionAnalysisService
         "time_in_video": { "type": ["number", "null"], "description": "Zeitstempel im Video in Sekunden" },
         "pipe_material": {
           "type": "string",
-          "enum": ["beton", "steinzeug", "pvc", "pe", "gfk", "stahl", "unbekannt"]
+          "enum": ["beton", "steinzeug", "pvc", "pe", "gfk", "stahl", "mauerwerk", "faserzement", "unbekannt"]
         },
         "pipe_diameter_mm": { "type": ["integer", "null"] },
         "findings": {
@@ -43,6 +45,11 @@ public sealed class EnhancedVisionAnalysisService
               "severity": { "type": "integer", "minimum": 1, "maximum": 5 },
               "position_clock": { "type": ["string", "null"], "description": "Uhrzeitlage z.B. 12:00, 6:00, 3:00" },
               "extent_percent": { "type": ["integer", "null"], "description": "Ausdehnung in % des Umfangs" },
+              "height_mm": { "type": ["integer", "null"], "description": "Schadenshöhe in mm" },
+              "width_mm": { "type": ["integer", "null"], "description": "Schadensbreite in mm" },
+              "intrusion_percent": { "type": ["integer", "null"], "description": "Einragungsgrad in %" },
+              "cross_section_reduction_percent": { "type": ["integer", "null"], "description": "Querschnittsverringerung in %" },
+              "diameter_reduction_mm": { "type": ["integer", "null"], "description": "Durchmesserverringerung in mm" },
               "notes": { "type": ["string", "null"] }
             },
             "required": ["label", "severity"]
@@ -128,6 +135,7 @@ SONSTIGES:
                 formatSchema: EnhancedVisionSchema,
                 ct: ct).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return EnhancedFrameAnalysis.Empty(ex.Message);
@@ -136,7 +144,9 @@ SONSTIGES:
         return MapToAnalysis(dto);
     }
 
-    private static string BuildPrompt() => $"""
+    private string BuildPrompt()
+    {
+        return $"""
 Du analysierst einen Frame aus einem Kanalinspektion-Video (TV-Inspektion Abwasserkanal).
 
 AUFGABEN:
@@ -145,6 +155,7 @@ AUFGABEN:
 3. Erkenne ALLE sichtbaren Schäden/Anomalien mit Schweregrad 1-5 (1=kaum, 5=sehr schwer).
 4. Gib für jeden Schaden die Uhrzeitlage an (z.B. "12:00" = Scheitel, "6:00" = Sohle).
 5. Beurteile die Bildqualität.
+6. Schätze, wenn erkennbar, Schadensmaße: Höhe (mm), Breite (mm), Einragungsgrad (%), Querschnittsverringerung (%), Durchmesserverringerung (mm).
 
 {DamageClassesPrompt}
 
@@ -154,10 +165,10 @@ SCHWEREGRAD-SKALA (entspricht VSA Zustandsklasse):
 3 = Mittlerer Schaden, Sanierung mittelfristig
 4 = Schwerer Schaden, Sanierung kurzfristig
 5 = Kritischer Schaden, Sofortmassnahme
-
 Antworte AUSSCHLIESSLICH mit gültigem JSON gemäß Schema.
 Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
 """;
+    }
 
     private static EnhancedFrameAnalysis MapToAnalysis(EnhancedVisionDto dto)
     {
@@ -169,6 +180,11 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
                 Severity: Math.Clamp(f.Severity, 1, 5),
                 PositionClock: f.PositionClock?.Trim(),
                 ExtentPercent: f.ExtentPercent,
+                HeightMm: f.HeightMm,
+                WidthMm: f.WidthMm,
+                IntrusionPercent: f.IntrusionPercent,
+                CrossSectionReductionPercent: f.CrossSectionReductionPercent,
+                DiameterReductionMm: f.DiameterReductionMm,
                 Notes: f.Notes?.Trim()))
             .ToList();
 
@@ -180,6 +196,82 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
             ImageQuality: dto.ImageQuality ?? "mittel",
             IsEmptyFrame: dto.IsEmptyFrame,
             Error: null);
+    }
+
+    /// <summary>
+    /// Enhanced analysis that takes DINO/SAM context to improve VSA code assignment.
+    /// The LLM receives bounding-box coordinates and quantification values as context.
+    /// </summary>
+    public async Task<EnhancedFrameAnalysis> AnalyzeWithContextAsync(
+        string framePngBase64,
+        MultiModelFrameResult multiModelContext,
+        int pipeDiameterMm = 300,
+        CancellationToken ct = default)
+    {
+        var contextPrompt = BuildContextPrompt(multiModelContext, pipeDiameterMm);
+        var prompt = contextPrompt + "\n\n" + BuildPrompt();
+
+        EnhancedVisionDto dto;
+        try
+        {
+            dto = await _client.ChatStructuredAsync<EnhancedVisionDto>(
+                model: _model,
+                messages:
+                [
+                    new OllamaClient.ChatMessage(
+                        Role: "user",
+                        Content: prompt,
+                        ImagesBase64: [framePngBase64])
+                ],
+                formatSchema: EnhancedVisionSchema,
+                ct: ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            return EnhancedFrameAnalysis.Empty(ex.Message);
+        }
+
+        return MapToAnalysis(dto);
+    }
+
+    private static string BuildContextPrompt(MultiModelFrameResult ctx, int pipeDiameterMm)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("KONTEXT AUS VORHERIGER ANALYSE (Computer Vision Modelle):");
+        sb.AppendLine($"- Bild: {ctx.ImageWidth}x{ctx.ImageHeight} px");
+        sb.AppendLine($"- Rohrdurchmesser: DN{pipeDiameterMm}");
+        sb.AppendLine();
+
+        if (ctx.DinoDetections.Count > 0)
+        {
+            sb.AppendLine("ERKANNTE OBJEKTE (Grounding DINO):");
+            foreach (var det in ctx.DinoDetections)
+            {
+                sb.AppendLine($"  - {det.Label} (Confidence={det.Confidence:F2}) @ [{det.X1:F0},{det.Y1:F0},{det.X2:F0},{det.Y2:F0}]");
+            }
+            sb.AppendLine();
+        }
+
+        if (ctx.SamMasks.Count > 0)
+        {
+            var quantified = MaskQuantificationService.QuantifyAll(
+                new SamResponse(ctx.SamMasks, ctx.ImageWidth, ctx.ImageHeight, 0),
+                pipeDiameterMm);
+
+            sb.AppendLine("SEGMENTIERUNGSERGEBNISSE (SAM – pixelgenaue Masken):");
+            foreach (var q in quantified)
+            {
+                sb.AppendLine($"  - {q.Label}: Höhe={q.HeightMm}mm, Breite={q.WidthMm}mm, " +
+                    $"Ausdehnung={q.ExtentPercent}%, Querschnitt={q.CrossSectionReductionPercent}%, " +
+                    $"Uhrlage={q.ClockPosition ?? "?"}");
+            }
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("Bitte nutze diese Voranalyse als Kontext. Die Quantifizierungswerte aus SAM sind pixelgenau berechnet – übernimm sie bevorzugt.");
+        sb.AppendLine("Deine Aufgabe: VSA-Code-Zuweisung und Validierung der Klassifizierung.");
+        return sb.ToString();
     }
 
     // ── DTOs (für JSON-Deserialisierung) ──────────────────────────────────────
@@ -199,6 +291,11 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         int Severity,
         string? PositionClock,
         int? ExtentPercent,
+        int? HeightMm,
+        int? WidthMm,
+        int? IntrusionPercent,
+        int? CrossSectionReductionPercent,
+        int? DiameterReductionMm,
         string? Notes);
 }
 
@@ -226,5 +323,10 @@ public sealed record EnhancedFinding(
     int Severity,         // 1-5
     string? PositionClock,
     int? ExtentPercent,
+    int? HeightMm,
+    int? WidthMm,
+    int? IntrusionPercent,
+    int? CrossSectionReductionPercent,
+    int? DiameterReductionMm,
     string? Notes
 );

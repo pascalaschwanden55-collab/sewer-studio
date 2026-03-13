@@ -1,0 +1,72 @@
+{
+  "haltung": "07.1027620-1042598",
+  "datum": "10.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 150 / 150mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Mischabwasser",
+  "inspektionsrichtung": "Gegen Fließrichtung",
+  "schacht_oben": "07.1027620",
+  "schacht_unten": "1042598",
+  "inspektionslaenge_m": "4.20",
+  "rohrlaenge_m": "5.00",
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 0.0,
+      "en_code": "BCCYA",
+      "beschreibung": "Rohrprofilwechsel: Kreisprofil, Höhe = 100mm, Breite = 100mm, Durchmesser nicht messbar Entf. gegen Fließr. 0,20 m Position Pos: 12; Bogen nach oben, Winkel = 45° Entf. gegen Fließr. 0,40 m",
+      "uhr_von": "12",
+      "uhr_bis": "12",
+      "stufe": null,
+      "timestamp_video": "00:00:28",
+      "foto_datei": null,
+      "foto_nr": 60
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCCYB",
+      "beschreibung": "Bogen nach unten, Winkel = 30° Entf. gegen Fließr. 1,40 m Pos: 6; Bogen nach unten, Winkel = 30° Entf. gegen Fließr. 1,50 m",
+      "uhr_von": "6",
+      "uhr_bis": "6",
+      "stufe": null,
+      "timestamp_video": "00:01:19",
+      "foto_datei": null,
+      "foto_nr": 62
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BDA",
+      "beschreibung": "Rohrmaterialwechsel: Polyethylen Entf. gegen Fließr. 1,70 m Position Allgemeinzustand, Fotobeispiel Entf. gegen Fließr. 2,70 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:01:55",
+      "foto_datei": null,
+      "foto_nr": 64
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCCAA",
+      "beschreibung": "Bogen nach links oben, Winkel = 45° Entf. gegen Fließr. 3,90 m Pos: 11; Bogen nach links oben, Winkel = 45° Entf. gegen Fließr. 4,10 m",
+      "uhr_von": "11",
+      "uhr_bis": "11",
+      "stufe": null,
+      "timestamp_video": "00:02:27",
+      "foto_datei": null,
+      "foto_nr": 66
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BDB",
+      "beschreibung": "Anderer Grund für Abbruch der Inspektion, Kamera kommt nicht weiter. Bogen Entf. gegen Fließr. 4,20 m Position Auftraggeber verzichtet auf weitere Untersuchung Entf. gegen Fließr. 4,20 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:02:39",
+      "foto_datei": null,
+      "foto_nr": 68
+    }
+  ]
+}

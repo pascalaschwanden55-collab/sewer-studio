@@ -1,0 +1,247 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.RecordDetailsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
+        Title="Details"
+        Width="1360"
+        Height="860"
+        MinWidth="980"
+        MinHeight="680"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="SingleBorderWindow"
+        AllowsTransparency="False"
+        ResizeMode="CanResize">
+    <Window.Resources>
+        <ContextMenu x:Key="ManagedOptionsContextMenu"
+                     x:Shared="False"
+                     DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+            <MenuItem Header="Liste bearbeiten..."
+                      Command="{Binding EditOptionsCommand}">
+                <MenuItem.Style>
+                    <Style TargetType="MenuItem">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding EditOptionsCommand}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </MenuItem.Style>
+            </MenuItem>
+            <MenuItem Header="Vorschau"
+                      Command="{Binding PreviewOptionsCommand}">
+                <MenuItem.Style>
+                    <Style TargetType="MenuItem">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding PreviewOptionsCommand}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </MenuItem.Style>
+            </MenuItem>
+            <MenuItem Header="Zuruecksetzen auf Standard"
+                      Command="{Binding ResetOptionsCommand}">
+                <MenuItem.Style>
+                    <Style TargetType="MenuItem">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ResetOptionsCommand}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </MenuItem.Style>
+            </MenuItem>
+            <MenuItem Header="Wert hinzufuegen"
+                      Command="{Binding AddOptionCommand}"
+                      CommandParameter="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                <MenuItem.Style>
+                    <Style TargetType="MenuItem">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding AddOptionCommand}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </MenuItem.Style>
+            </MenuItem>
+            <MenuItem Header="Wert entfernen"
+                      Command="{Binding RemoveOptionCommand}"
+                      CommandParameter="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                <MenuItem.Style>
+                    <Style TargetType="MenuItem">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding RemoveOptionCommand}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </MenuItem.Style>
+            </MenuItem>
+        </ContextMenu>
+
+        <Style x:Key="DetailComboStyle" TargetType="ComboBox">
+            <Setter Property="ContextMenu" Value="{StaticResource ManagedOptionsContextMenu}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasManagedOptions}" Value="False">
+                    <Setter Property="ContextMenu" Value="{x:Null}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <DataTemplate x:Key="TextEditorTemplate" DataType="{x:Type local:RecordDetailItem}">
+            <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                     IsReadOnly="{Binding IsReadOnly}"
+                     PreviewTextInput="NumericTextBox_PreviewTextInput"
+                     DataObject.Pasting="NumericTextBox_Pasting"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="MultilineEditorTemplate" DataType="{x:Type local:RecordDetailItem}">
+            <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                     IsReadOnly="{Binding IsReadOnly}"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto"
+                     MinHeight="108"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="EditableComboEditorTemplate" DataType="{x:Type local:RecordDetailItem}">
+            <ComboBox Style="{StaticResource DetailComboStyle}"
+                      ItemsSource="{Binding Options}"
+                      IsEditable="True"
+                      StaysOpenOnEdit="True"
+                      IsTextSearchEnabled="False"
+                      Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                      IsEnabled="{Binding CanEdit}"
+                      LostKeyboardFocus="EditorComboBox_LostKeyboardFocus"
+                      SelectionChanged="EditorComboBox_SelectionChanged"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="FixedComboEditorTemplate" DataType="{x:Type local:RecordDetailItem}">
+            <ComboBox Style="{StaticResource DetailComboStyle}"
+                      ItemsSource="{Binding Options}"
+                      IsEditable="False"
+                      SelectedItem="{Binding SelectedOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                      IsEnabled="{Binding CanEdit}"
+                      LostKeyboardFocus="EditorComboBox_LostKeyboardFocus"
+                      SelectionChanged="EditorComboBox_SelectionChanged"/>
+        </DataTemplate>
+
+        <local:RecordDetailEditorTemplateSelector x:Key="EditorTemplateSelector"
+                                                  TextTemplate="{StaticResource TextEditorTemplate}"
+                                                  MultilineTemplate="{StaticResource MultilineEditorTemplate}"
+                                                  EditableComboTemplate="{StaticResource EditableComboEditorTemplate}"
+                                                  FixedComboTemplate="{StaticResource FixedComboEditorTemplate}"/>
+    </Window.Resources>
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Margin="0,0,0,14"
+                Padding="18,16"
+                Background="{StaticResource HeaderBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12">
+            <StackPanel>
+                <TextBlock Text="{Binding Header}"
+                           FontSize="26"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource TextBrush}"/>
+                <TextBlock Text="{Binding SubHeader}"
+                           Margin="0,6,0,0"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      CanContentScroll="False">
+            <ItemsControl ItemsSource="{Binding Groups}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,0,0,16"
+                                Padding="16"
+                                Background="{StaticResource CardBrush}"
+                                BorderBrush="{StaticResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                VerticalAlignment="Top">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}"
+                                           FontSize="18"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextBrush}"/>
+                                <TextBlock Text="{Binding Description}"
+                                           Margin="0,4,0,12"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           TextWrapping="Wrap"/>
+                                <ItemsControl ItemsSource="{Binding Items}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Width="390"
+                                                    Margin="0,0,14,14"
+                                                    Padding="14"
+                                                    Background="{StaticResource HeaderBrush}"
+                                                    BorderBrush="{StaticResource BorderBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="10"
+                                                    VerticalAlignment="Top">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Label}"
+                                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                                               FontSize="12"
+                                                               FontWeight="SemiBold"
+                                                               TextWrapping="Wrap"/>
+                                                    <ContentControl Content="{Binding}"
+                                                                    Margin="0,8,0,0"
+                                                                    ContentTemplateSelector="{StaticResource EditorTemplateSelector}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <DockPanel Grid.Row="2" Margin="0,14,0,0" LastChildFill="False">
+            <TextBlock DockPanel.Dock="Left"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       Text="Doppelklick oder Kontextmenue auf der Zeile oeffnet diese Detailansicht."/>
+            <Button DockPanel.Dock="Right"
+                    Width="120"
+                    Command="{Binding CloseCommand}"
+                    Style="{StaticResource SecondaryButton}">
+                Schliessen
+            </Button>
+            <Button DockPanel.Dock="Right"
+                    Margin="0,0,10,0"
+                    Padding="14,6"
+                    Command="{Binding SuggestMeasuresCommand}"
+                    Visibility="{Binding SuggestMeasuresVisibility}"
+                    Style="{StaticResource PrimaryButton}">
+                Empfohlene Massnahmen
+            </Button>
+        </DockPanel>
+    </Grid>
+</Window>

@@ -3,9 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
         Title="Protokolleintrag bearbeiten"
-        Width="720"
-        Height="560"
-        WindowStartupLocation="CenterOwner">
+        Width="1100"
+        Height="720"
+        MinWidth="900"
+        MinHeight="600"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResizeWithGrip">
         <Window.Resources>
             <x:Array x:Key="ClockPositions" Type="{x:Type sys:String}"
                      xmlns:sys="clr-namespace:System;assembly=mscorlib">
@@ -33,237 +36,322 @@
             </x:Array>
         </Window.Resources>
 
-        <Grid Margin="14">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="130" />
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="Auto" />
-        </Grid.ColumnDefinitions>
+        <!-- Haupt-Layout: 2 Spalten nebeneinander -->
+        <Grid Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="420"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="360" MinWidth="280"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Code" />
-        <TextBox x:Name="CodeTextBox"
-                 Grid.Row="0"
-                 Grid.Column="1"
-                 Margin="0,0,8,8"
-                 VerticalAlignment="Center" />
-        <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,8">
-            <Button x:Name="CatalogButton"
-                    Content="Code auswaehlen..."
-                    Padding="12,4" />
-            <Button x:Name="KiSuggestButton"
-                    Content="KI-Vorschlag"
-                    Margin="0,6,0,0"
-                    Padding="12,4" />
-        </StackPanel>
+            <!-- ═══ LINKE SPALTE: Code-Editor ═══ -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Padding="4,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-        <TextBlock x:Name="AiStatusText"
-                   Grid.Row="1"
-                   Grid.Column="1"
-                   Grid.ColumnSpan="2"
-                   Margin="0,0,0,8"
-                   Foreground="DarkCyan"
-                   TextWrapping="Wrap" />
+                    <!-- Code -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Code" FontWeight="SemiBold"/>
+                    <TextBox x:Name="CodeTextBox"
+                             Grid.Row="0" Grid.Column="1"
+                             Margin="0,0,8,8" FontSize="14" FontWeight="Bold"
+                             VerticalAlignment="Center" />
+                    <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,8">
+                        <Button x:Name="CatalogButton" Content="Code auswaehlen..." Padding="12,4" />
+                        <Button x:Name="KiSuggestButton" Content="KI-Vorschlag" Margin="0,4,0,0" Padding="12,4" />
+                    </StackPanel>
 
-        <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="MeterStart" />
-        <TextBox x:Name="MeterStartTextBox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,8" />
+                    <!-- KI Status -->
+                    <TextBlock x:Name="AiStatusText"
+                               Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                               Margin="0,0,0,6" Foreground="DarkCyan" TextWrapping="Wrap" />
 
-        <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Text="MeterEnd" />
-        <TextBox x:Name="MeterEndTextBox" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,8" />
+                    <!-- MeterStart -->
+                    <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="MeterStart" />
+                    <TextBox x:Name="MeterStartTextBox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,6" />
 
-        <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Text="Zeit" />
-        <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,8">
-            <TextBox x:Name="ZeitTextBox" Width="140" Margin="0,0,8,0" />
-            <Button x:Name="ZeitFromVideoButton" Content="Zeit aus Video" Padding="10,2" Margin="0,0,8,0" />
-            <Button x:Name="SeekToZeitButton" Content="Zum Zeitpunkt" Padding="10,2" />
-        </StackPanel>
+                    <!-- MeterEnd -->
+                    <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Text="MeterEnd" />
+                    <TextBox x:Name="MeterEndTextBox" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,6" />
 
-        <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Text="MPEG" />
-        <TextBox x:Name="MpegTextBox" Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,8" />
+                    <!-- Zeit -->
+                    <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Text="Zeit" />
+                    <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBox x:Name="ZeitTextBox" Width="140" Margin="0,0,8,0" />
+                        <Button x:Name="ZeitFromVideoButton" Content="Zeit aus Video" Padding="10,2" Margin="0,0,8,0" />
+                        <Button x:Name="SeekToZeitButton" Content="Zum Zeitpunkt" Padding="10,2" />
+                    </StackPanel>
 
-        <TextBlock Grid.Row="6" Grid.Column="0" VerticalAlignment="Center" Text="Streckenschaden" />
-        <CheckBox x:Name="StreckenschadenCheckBox"
-                  Grid.Row="6"
-                  Grid.Column="1"
-                  Grid.ColumnSpan="2"
-                  Margin="0,0,0,8"
-                  Content="Ja (MeterStart und MeterEnde sind Pflicht)" />
+                    <!-- MPEG -->
+                    <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Text="MPEG" />
+                    <TextBox x:Name="MpegTextBox" Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,6" />
 
-        <TextBlock Grid.Row="7" Grid.Column="0" VerticalAlignment="Top" Text="Parameter" />
-        <ScrollViewer Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2" Height="120" Margin="0,0,0,8">
-            <ItemsControl x:Name="ParametersItems">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Grid Margin="0,2,0,2">
+                    <!-- Streckenschaden -->
+                    <TextBlock Grid.Row="6" Grid.Column="0" VerticalAlignment="Center" Text="Strecke" />
+                    <CheckBox x:Name="StreckenschadenCheckBox"
+                              Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2"
+                              Margin="0,0,0,6"
+                              Content="Ja (MeterStart und MeterEnde sind Pflicht)" />
+
+                    <!-- Parameter -->
+                    <TextBlock Grid.Row="7" Grid.Column="0" VerticalAlignment="Top" Text="Parameter" />
+                    <ScrollViewer Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2" MaxHeight="100" Margin="0,0,0,6">
+                        <ItemsControl x:Name="ParametersItems">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,2,0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="160" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding DisplayName}" VerticalAlignment="Center" />
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding AllowedValues}"
+                                                  Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                  IsEditable="True">
+                                            <ComboBox.Style>
+                                                <Style TargetType="ComboBox">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasAllowedValues}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsValid}" Value="False">
+                                                            <Setter Property="BorderBrush" Value="OrangeRed"/>
+                                                            <Setter Property="BorderThickness" Value="2"/>
+                                                            <Setter Property="ToolTip" Value="{Binding ErrorMessage}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ComboBox.Style>
+                                        </ComboBox>
+                                        <TextBox Grid.Column="1"
+                                                 Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}">
+                                            <TextBox.Style>
+                                                <Style TargetType="TextBox">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasAllowedValues}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsValid}" Value="False">
+                                                            <Setter Property="BorderBrush" Value="OrangeRed"/>
+                                                            <Setter Property="BorderThickness" Value="2"/>
+                                                            <Setter Property="ToolTip" Value="{Binding ErrorMessage}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBox.Style>
+                                        </TextBox>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding UnitSuffix}" Margin="8,0,0,0"
+                                                   VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <!-- VSA-KEK -->
+                    <GroupBox Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="3" Header="VSA-KEK (Kanalschaden)" Margin="0,0,0,6">
+                        <Grid Margin="6,4,6,4">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="180" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0"
-                                       Text="{Binding DisplayName}"
-                                       VerticalAlignment="Center" />
-                            <ComboBox Grid.Column="1"
-                                      ItemsSource="{Binding AllowedValues}"
-                                      Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
-                                      IsEditable="True">
-                                <ComboBox.Style>
-                                    <Style TargetType="ComboBox">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasAllowedValues}" Value="True">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ComboBox.Style>
-                            </ComboBox>
-                            <TextBox Grid.Column="1"
-                                     Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}">
-                                <TextBox.Style>
-                                    <Style TargetType="TextBox">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasAllowedValues}" Value="True">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBox.Style>
-                            </TextBox>
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding UnitSuffix}"
-                                       Margin="8,0,0,0"
-                                       VerticalAlignment="Center"
-                                       Foreground="{StaticResource MutedBrush}" />
-                        </Grid>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
-        <GroupBox Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="3" Header="VSA-KEK (Kanalschaden)">
-            <Grid Margin="8,6,8,8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,4">
+                                <TextBlock Text="Distanz (m)"/>
+                                <TextBox x:Name="VsaDistanzTextBox"
+                                         Text="{Binding VsaDistanz, UpdateSourceTrigger=PropertyChanged}"
+                                         Background="#FFF6A8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,4">
+                                <TextBlock Text="Uhrzeit (Video)"/>
+                                <TextBox x:Name="VsaVideoTextBox"
+                                         Text="{Binding VsaVideo, UpdateSourceTrigger=PropertyChanged}"
+                                         Background="#FFF6A8"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,8,4">
+                                <TextBlock Text="Uhrzeit von"/>
+                                <ComboBox x:Name="VsaUhrVonComboBox"
+                                          ItemsSource="{StaticResource ClockPositions}"
+                                          IsEditable="True"
+                                          Text="{Binding VsaUhrVon, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,2"/>
+                                <Border Background="#FFF6A8" BorderBrush="#B6A400" BorderThickness="1" Padding="2">
+                                    <controls:ClockPickerControl Width="90" Height="90"
+                                                                 Value="{Binding VsaUhrVon, UpdateSourceTrigger=PropertyChanged}"/>
+                                </Border>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,4">
+                                <TextBlock Text="Uhrzeit bis"/>
+                                <ComboBox x:Name="VsaUhrBisComboBox"
+                                          ItemsSource="{StaticResource ClockPositions}"
+                                          IsEditable="True"
+                                          Text="{Binding VsaUhrBis, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,2"/>
+                                <Border Background="#FFF6A8" BorderBrush="#B6A400" BorderThickness="1" Padding="2">
+                                    <controls:ClockPickerControl Width="90" Height="90"
+                                                                 Value="{Binding VsaUhrBis, UpdateSourceTrigger=PropertyChanged}"/>
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,8,4">
+                                <TextBlock Text="Quantifizierung 1"/>
+                                <TextBox x:Name="VsaQ1TextBox"
+                                         Text="{Binding VsaQ1, UpdateSourceTrigger=PropertyChanged}"
+                                         Background="#FFF6A8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,4">
+                                <TextBlock Text="Quantifizierung 2"/>
+                                <TextBox x:Name="VsaQ2TextBox"
+                                         Text="{Binding VsaQ2, UpdateSourceTrigger=PropertyChanged}"
+                                         Background="#FFF6A8"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,0,8,4">
+                                <TextBlock Text="Strecke"/>
+                                <TextBox x:Name="VsaStreckeTextBox"
+                                         Text="{Binding VsaStrecke, UpdateSourceTrigger=PropertyChanged}"
+                                         Background="#FFF6A8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,0,0,4">
+                                <TextBlock Text="Verbindung"/>
+                                <CheckBox x:Name="VsaVerbindungCheckBox"
+                                          IsChecked="{Binding VsaVerbindung}" Margin="0,2,0,0"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="4" Grid.Column="0" Margin="0,0,8,4">
+                                <TextBlock Text="Ansicht"/>
+                                <TextBox x:Name="VsaAnsichtTextBox"
+                                         Text="{Binding VsaAnsicht, UpdateSourceTrigger=PropertyChanged}"
+                                         Background="#FFF6A8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="4" Grid.Column="1" Margin="0,0,0,4">
+                                <TextBlock Text="EZ / Bereich"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <ComboBox x:Name="VsaEzComboBox" Width="70"
+                                              ItemsSource="{StaticResource EzOptions}" IsEditable="True"
+                                              Text="{Binding VsaEz, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0"/>
+                                    <TextBox x:Name="VsaSchachtbereichTextBox" Width="90"
+                                             Text="{Binding VsaSchachtbereich, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="#FFF6A8"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2">
+                                <TextBlock Text="Diverses"/>
+                                <TextBox x:Name="VsaAnmerkungTextBox"
+                                         Text="{Binding VsaAnmerkung, UpdateSourceTrigger=PropertyChanged}"
+                                         Background="#FFF6A8"/>
+                            </StackPanel>
+                        </Grid>
+                    </GroupBox>
+
+                    <!-- Beschreibung -->
+                    <TextBlock Grid.Row="9" Grid.Column="0" VerticalAlignment="Top" Text="Beschreibung" />
+                    <TextBox x:Name="BeschreibungTextBox"
+                             Grid.Row="9" Grid.Column="1" Grid.ColumnSpan="2"
+                             Height="80" TextWrapping="Wrap" AcceptsReturn="True"
+                             VerticalScrollBarVisibility="Auto" Margin="0,0,0,6"/>
+                </Grid>
+            </ScrollViewer>
+
+            <!-- Splitter -->
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center"
+                          VerticalAlignment="Stretch" Background="Transparent"
+                          Cursor="SizeWE"/>
+
+            <!-- ═══ RECHTE SPALTE: Fotos + Video-Frame ═══ -->
+            <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,12,8">
-                    <TextBlock Text="Distanz (m)" TextWrapping="Wrap"/>
-                    <TextBox Text="{Binding VsaDistanz, UpdateSourceTrigger=PropertyChanged}" Background="#FFF6A8"/>
-                </StackPanel>
+                <!-- Foto 1 -->
+                <TextBlock Grid.Row="0" Text="Foto 1" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <Border Grid.Row="1" BorderBrush="#888" BorderThickness="1"
+                        Background="#111" Margin="0,0,0,8" MinHeight="120">
+                    <Grid>
+                        <Image x:Name="Foto1Image" Stretch="Uniform"
+                               RenderOptions.BitmapScalingMode="HighQuality"/>
+                        <TextBlock x:Name="Foto1Placeholder" Text="Kein Foto"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Foreground="#666" FontSize="12"/>
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                    Margin="4">
+                            <Button x:Name="Foto1FromVideoButton" Content="Aus Video"
+                                    Padding="8,3" FontSize="10" Margin="0,0,4,0"/>
+                            <Button x:Name="Foto1BrowseButton" Content="..."
+                                    Padding="8,3" FontSize="10"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
 
-                <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
-                    <TextBlock Text="Uhrzeit (Video)" TextWrapping="Wrap"/>
-                    <TextBox Text="{Binding VsaVideo, UpdateSourceTrigger=PropertyChanged}" Background="#FFF6A8"/>
-                </StackPanel>
-
-                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,8">
-                    <TextBlock Text="Uhrzeit von" TextWrapping="Wrap"/>
-                    <ComboBox ItemsSource="{StaticResource ClockPositions}"
-                              IsEditable="True"
-                              Text="{Binding VsaUhrVon, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,4"/>
-                    <Border Background="#FFF6A8" BorderBrush="#B6A400" BorderThickness="1" Padding="4">
-                        <controls:ClockPickerControl Width="110"
-                                                     Height="110"
-                                                     Value="{Binding VsaUhrVon, UpdateSourceTrigger=PropertyChanged}"/>
-                    </Border>
-                </StackPanel>
-
-                <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,8">
-                    <TextBlock Text="Uhrzeit bis" TextWrapping="Wrap"/>
-                    <ComboBox ItemsSource="{StaticResource ClockPositions}"
-                              IsEditable="True"
-                              Text="{Binding VsaUhrBis, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,4"/>
-                    <Border Background="#FFF6A8" BorderBrush="#B6A400" BorderThickness="1" Padding="4">
-                        <controls:ClockPickerControl Width="110"
-                                                     Height="110"
-                                                     Value="{Binding VsaUhrBis, UpdateSourceTrigger=PropertyChanged}"/>
-                    </Border>
-                </StackPanel>
-
-                <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,12,8">
-                    <TextBlock Text="Quantifizierung 1" TextWrapping="Wrap"/>
-                    <TextBox Text="{Binding VsaQ1, UpdateSourceTrigger=PropertyChanged}" Background="#FFF6A8"/>
-                </StackPanel>
-
-                <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,8">
-                    <TextBlock Text="Quantifizierung 2" TextWrapping="Wrap"/>
-                    <TextBox Text="{Binding VsaQ2, UpdateSourceTrigger=PropertyChanged}" Background="#FFF6A8"/>
-                </StackPanel>
-
-                <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,0,12,8">
-                    <TextBlock Text="Strecke" TextWrapping="Wrap"/>
-                    <TextBox Text="{Binding VsaStrecke, UpdateSourceTrigger=PropertyChanged}" Background="#FFF6A8"/>
-                </StackPanel>
-
-                <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,0,0,8">
-                    <TextBlock Text="Verbindung" TextWrapping="Wrap"/>
-                    <CheckBox IsChecked="{Binding VsaVerbindung}" Margin="0,2,0,0"/>
-                </StackPanel>
-
-                <StackPanel Grid.Row="4" Grid.Column="0" Margin="0,0,12,8">
-                    <TextBlock Text="Ansicht" TextWrapping="Wrap"/>
-                    <TextBox Text="{Binding VsaAnsicht, UpdateSourceTrigger=PropertyChanged}" Background="#FFF6A8"/>
-                </StackPanel>
-
-                <StackPanel Grid.Row="4" Grid.Column="1" Margin="0,0,0,8">
-                    <TextBlock Text="EZ / Bereich" TextWrapping="Wrap"/>
-                    <StackPanel Orientation="Horizontal">
-                        <ComboBox Width="70"
-                                  ItemsSource="{StaticResource EzOptions}"
-                                  IsEditable="True"
-                                  Text="{Binding VsaEz, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0"/>
-                        <TextBox Width="90"
-                                 Text="{Binding VsaSchachtbereich, UpdateSourceTrigger=PropertyChanged}"
-                                 Background="#FFF6A8"/>
-                    </StackPanel>
-                </StackPanel>
-
-                <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2">
-                    <TextBlock Text="Diverses" TextWrapping="Wrap"/>
-                    <TextBox Text="{Binding VsaAnmerkung, UpdateSourceTrigger=PropertyChanged}" Background="#FFF6A8"/>
-                </StackPanel>
+                <!-- Foto 2 -->
+                <TextBlock Grid.Row="2" Text="Foto 2" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <Border Grid.Row="3" BorderBrush="#888" BorderThickness="1"
+                        Background="#111" MinHeight="120">
+                    <Grid>
+                        <Image x:Name="Foto2Image" Stretch="Uniform"
+                               RenderOptions.BitmapScalingMode="HighQuality"/>
+                        <TextBlock x:Name="Foto2Placeholder" Text="Kein Foto"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Foreground="#666" FontSize="12"/>
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                    Margin="4">
+                            <Button x:Name="Foto2FromVideoButton" Content="Aus Video"
+                                    Padding="8,3" FontSize="10" Margin="0,0,4,0"/>
+                            <Button x:Name="Foto2BrowseButton" Content="..."
+                                    Padding="8,3" FontSize="10"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
             </Grid>
-        </GroupBox>
 
-        <TextBlock Grid.Row="9" Grid.Column="0" VerticalAlignment="Top" Text="Beschreibung" />
-        <TextBox x:Name="BeschreibungTextBox"
-                 Grid.Row="9"
-                 Grid.Column="1"
-                 Grid.ColumnSpan="2"
-                 Height="220"
-                 TextWrapping="Wrap"
-                 AcceptsReturn="True"
-                 VerticalScrollBarVisibility="Auto" />
-
-        <StackPanel Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Vertical" Margin="0,10,0,0">
-            <TextBlock x:Name="ValidationStatus" Margin="0,0,0,8" Foreground="OrangeRed" TextWrapping="Wrap" />
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="OkButton" Content="Uebernehmen" Width="120" Margin="0,0,8,0" />
-                <Button x:Name="CancelButton" Content="Abbrechen" Width="120" IsCancel="True" />
+            <!-- ═══ UNTERE ZEILE: Validierung + Buttons ═══ -->
+            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                        Orientation="Vertical" Margin="0,8,0,0">
+                <TextBlock x:Name="ValidationStatus" Margin="0,0,0,6"
+                           Foreground="OrangeRed" TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="OkButton" Content="Uebernehmen" Width="120" Margin="0,0,8,0" />
+                    <Button x:Name="CancelButton" Content="Abbrechen" Width="120" IsCancel="True" />
+                </StackPanel>
             </StackPanel>
-        </StackPanel>
-    </Grid>
+        </Grid>
 </Window>

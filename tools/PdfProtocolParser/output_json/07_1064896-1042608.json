@@ -1,0 +1,28 @@
+{
+  "haltung": "07.1064896-1042608",
+  "datum": "05.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 200 / 200mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Regenabwasser",
+  "inspektionsrichtung": "Gegen Fließrichtung",
+  "schacht_oben": "07.1064896",
+  "schacht_unten": "1042608",
+  "inspektionslaenge_m": "5.30",
+  "rohrlaenge_m": null,
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 0.0,
+      "en_code": "BCE",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel Entf. gegen Fließr. 3,20 m Position Rohrende, Blindende Entf. gegen Fließr. 5,30 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:01:04",
+      "foto_datei": null,
+      "foto_nr": 65
+    }
+  ]
+}

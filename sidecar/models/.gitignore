@@ -1,0 +1,9 @@
+# Model weights – do not commit to git
+*.pt
+*.pth
+*.bin
+*.onnx
+*.safetensors
+!.gitignore
+!.gitkeep
+!*/.gitkeep

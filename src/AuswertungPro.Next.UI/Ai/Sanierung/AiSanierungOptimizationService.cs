@@ -1,11 +1,11 @@
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
-using AuswertungPro.Next.UI.Ai.Sanierung.Dto;
+using AuswertungPro.Next.Application.Ai.Sanierung;
 
 namespace AuswertungPro.Next.UI.Ai.Sanierung;
 
-public sealed class AiSanierungOptimizationService
+public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationService
 {
     private readonly AiRuntimeConfig _cfg;
     private readonly OllamaClient _client;
@@ -30,19 +30,33 @@ public sealed class AiSanierungOptimizationService
     public AiSanierungOptimizationService(AiRuntimeConfig cfg, HttpClient? http = null)
     {
         _cfg    = cfg;
-        _client = new OllamaClient(cfg.OllamaBaseUri, http);
+        _client = cfg.CreateOllamaClient(http);
     }
 
     public async Task<SanierungOptimizationResult> OptimizeAsync(
         SanierungOptimizationRequest req,
         CancellationToken ct)
     {
-        // 1. Extract constraints (§8)
-        var zustandsklasse = "";  // populated by caller via Findings.SeverityClass if available
-        if (req.Findings.Count > 0)
-            zustandsklasse = req.Findings.FirstOrDefault(f => f.SeverityClass != null)?.SeverityClass ?? "";
+        // 0. Input validation
+        if (req.Findings.Count == 0)
+        {
+            var emptyConstraints = _validation.ExtractConstraints(
+                req.Findings, "",
+                req.Pipe.Groundwater ?? false,
+                req.Pipe.DiameterMm);
+            return BuildFallbackResult(req, emptyConstraints,
+                "Keine Schadensbefunde vorhanden – regelbasierter Fallback aktiv");
+        }
 
-        var constraints = _validation.ExtractConstraints(req.Findings, zustandsklasse);
+        // 1. Extract constraints (§8)
+        var zustandsklasse = req.Findings
+            .Select(f => f.SeverityClass)
+            .FirstOrDefault(s => !string.IsNullOrWhiteSpace(s)) ?? "";
+
+        var constraints = _validation.ExtractConstraints(
+            req.Findings, zustandsklasse,
+            req.Pipe.Groundwater ?? false,
+            req.Pipe.DiameterMm);
 
         // 2. Rule recommendation summary
         var ruleSummary = BuildRuleSummary(req.Rule);
@@ -54,6 +68,7 @@ public sealed class AiSanierungOptimizationService
 
         // 4. Call Ollama with retry
         SanierungAiDto? aiDto = null;
+        string? firstError = null;
         try
         {
             aiDto = await _client.ChatStructuredAsync<SanierungAiDto>(
@@ -65,8 +80,15 @@ public sealed class AiSanierungOptimizationService
                 AiSchema,
                 ct).ConfigureAwait(false);
         }
-        catch
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex1)
         {
+            firstError = ex1.Message;
+            System.Diagnostics.Debug.WriteLine($"[Sanierung-KI] Erster Versuch fehlgeschlagen: {ex1.Message}");
+
+            // Kurze Pause vor Retry (Backoff)
+            await Task.Delay(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
+
             // Retry once with repair hint
             try
             {
@@ -80,10 +102,12 @@ public sealed class AiSanierungOptimizationService
                     AiSchema,
                     ct).ConfigureAwait(false);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex2)
             {
-                // Fallback to rule recommendation
-                return BuildFallbackResult(req, constraints, "KI nicht erreichbar: " + ex2.Message);
+                System.Diagnostics.Debug.WriteLine($"[Sanierung-KI] Zweiter Versuch fehlgeschlagen: {ex2.Message}");
+                return BuildFallbackResult(req, constraints,
+                    $"KI nicht erreichbar (1: {firstError} | 2: {ex2.Message})");
             }
         }
 
@@ -104,10 +128,20 @@ public sealed class AiSanierungOptimizationService
             riskFlags.Insert(0, "KI-Vorschlag wurde wegen §8-Verletzung verworfen und durch Regelempfehlung ersetzt");
         }
 
+        // Prüfe ob die Maßnahme in der erlaubten Menge ist
+        if (!isFallback && !allowedMeasures.Any(m =>
+            recommendedMeasure.Contains(m, StringComparison.OrdinalIgnoreCase) ||
+            m.Contains(recommendedMeasure, StringComparison.OrdinalIgnoreCase)))
+        {
+            recommendedMeasure = req.Rule?.Measures.FirstOrDefault() ?? recommendedMeasure;
+            isFallback = true;
+            riskFlags.Insert(0, $"KI schlug '{aiDto.recommended_measure}' vor, nicht in erlaubten Maßnahmen – Regelempfehlung verwendet");
+        }
+
         if (aiDto.risk_flag && !string.IsNullOrWhiteSpace(aiDto.risk_message))
             riskFlags.Add(aiDto.risk_message);
 
-        // 6. Cost calculation
+        // 6. Cost calculation (with Groundwater + Inflation)
         var costBand = _costEngine.Calculate(new CostCalcInput
         {
             Measure           = recommendedMeasure,
@@ -116,7 +150,9 @@ public sealed class AiSanierungOptimizationService
             DepthM            = req.Pipe.DepthM,
             Access            = req.Pipe.Access,
             Material          = req.Pipe.Material,
+            Groundwater       = req.Pipe.Groundwater ?? false,
             RegionFactor      = req.Cost.RegionFactor,
+            InflationFactor   = req.Cost.InflationFactor,
             AiCorrectionFactor = Math.Clamp(aiDto.cost_adjustment_factor, 0.5, 2.0)
         });
 
@@ -136,11 +172,40 @@ public sealed class AiSanierungOptimizationService
         };
     }
 
-    private static string BuildSystemPrompt() =>
-        "Du bist ein Experte für Kanalsanierung nach VSA-Standard (Schweiz). " +
-        "Analysiere die Schadensbefunde und empfehle die optimale Sanierungsmassnahme. " +
-        "Berücksichtige die Rohrkennwerte, Einschränkungen und Regelempfehlungen. " +
-        "Antworte AUSSCHLIESSLICH im angegebenen JSON-Format.";
+    private string BuildSystemPrompt()
+    {
+        return """
+            Du bist ein Experte für Kanalsanierung nach VSA-Standard (Schweiz).
+            Analysiere die Schadensbefunde und empfehle die optimale Sanierungsmassnahme.
+            Berücksichtige die Rohrkennwerte, Einschränkungen und Regelempfehlungen.
+
+            Wichtige Regeln:
+            - Wähle IMMER aus den zulässigen Massnahmen, ausser du hast einen sehr guten Grund für eine Alternative
+            - Bei Zustandsklasse 4-5 darf Erneuerung empfohlen werden, bei 1-3 nur Reparatur/Renovation
+            - Liner-Verfahren sind bei Einsturz (BBB-Codes) nicht zulässig
+            - confidence: 0.0 = unsicher, 1.0 = sehr sicher
+            - cost_adjustment_factor: 1.0 = Standardkosten, >1.0 = teurer als üblich, <1.0 = günstiger
+
+            Antworte AUSSCHLIESSLICH im angegebenen JSON-Format.
+            """;
+    }
+
+    private static string AccessToGerman(AccessDifficulty access) => access switch
+    {
+        AccessDifficulty.Easy => "Leicht",
+        AccessDifficulty.Hard => "Schwer",
+        _ => "Mittel"
+    };
+
+    private static string ConstraintToGerman(MeasureConstraint c) => c switch
+    {
+        MeasureConstraint.NoLinerAllowed => "Kein Liner-Verfahren zulässig (Einsturz erkannt)",
+        MeasureConstraint.NoFullReplacement => "Keine Vollerneuerung nötig (Zustandsklasse < 4)",
+        MeasureConstraint.RequiresStructuralCheck => "Struktureller Schaden – statische Prüfung erforderlich",
+        MeasureConstraint.RequiresDewatering => "Grundwasser vorhanden – Wasserhaltung einplanen",
+        MeasureConstraint.NoBerstlining => "Berstlining nicht geeignet (DN > 500)",
+        _ => c.ToString()
+    };
 
     private static string BuildUserPrompt(
         SanierungOptimizationRequest req,
@@ -167,8 +232,24 @@ public sealed class AiSanierungOptimizationService
         sb.AppendLine($"  DN: {req.Pipe.DiameterMm?.ToString() ?? "unbekannt"} mm");
         sb.AppendLine($"  Material: {req.Pipe.Material ?? "unbekannt"}");
         sb.AppendLine($"  Länge: {req.Pipe.LengthMeter?.ToString("F1") ?? "unbekannt"} m");
-        sb.AppendLine($"  Tiefe: {req.Pipe.DepthM?.ToString("F1") ?? "unbekannt"} m");
-        sb.AppendLine($"  Zugang: {req.Pipe.Access}");
+        if (req.Pipe.DepthM.HasValue)
+            sb.AppendLine($"  Tiefe: {req.Pipe.DepthM.Value:F1} m");
+        sb.AppendLine($"  Zugang: {AccessToGerman(req.Pipe.Access)}");
+        sb.AppendLine($"  Grundwasser: {(req.Pipe.Groundwater switch { true => "JA (Wasserhaltung erforderlich)", false => "Nein", _ => "nicht erfasst" })}");
+
+        // Historical similar cases for cost calibration
+        if (req.SimilarCases is { Count: > 0 })
+        {
+            sb.AppendLine();
+            sb.AppendLine("### Historische Vergleichsfälle (tatsächliche Kosten):");
+            foreach (var sc in req.SimilarCases.Take(5))
+            {
+                var dn = sc.PipeDn.HasValue ? $" DN{sc.PipeDn}" : "";
+                var len = sc.LengthM.HasValue ? $" {sc.LengthM:F1}m" : "";
+                sb.AppendLine($"  - {sc.Code}{dn}{len}: {sc.Measure} → {sc.ActualCost:0} CHF");
+            }
+            sb.AppendLine("Berücksichtige diese Erfahrungswerte bei deiner Kostenschätzung (cost_adjustment_factor).");
+        }
 
         if (!string.IsNullOrWhiteSpace(ruleSummary))
         {
@@ -190,7 +271,7 @@ public sealed class AiSanierungOptimizationService
             sb.AppendLine();
             sb.AppendLine("### Harte Einschränkungen (§8 – dürfen NICHT verletzt werden):");
             foreach (var c in constraints)
-                sb.AppendLine($"  - {c}");
+                sb.AppendLine($"  - {ConstraintToGerman(c)}");
         }
 
         sb.AppendLine();
@@ -218,14 +299,13 @@ public sealed class AiSanierungOptimizationService
         var allowed = rule.Measures.ToList();
 
         if (constraints.Contains(MeasureConstraint.NoLinerAllowed))
-            allowed.RemoveAll(m =>
-                m.Contains("Liner",   StringComparison.OrdinalIgnoreCase) ||
-                m.Contains("Inliner", StringComparison.OrdinalIgnoreCase));
+            allowed.RemoveAll(SanierungValidationService.IsLinerMeasure);
 
         if (constraints.Contains(MeasureConstraint.NoFullReplacement))
-            allowed.RemoveAll(m =>
-                m.Contains("Erneuerung", StringComparison.OrdinalIgnoreCase) ||
-                m.Contains("Neubau",     StringComparison.OrdinalIgnoreCase));
+            allowed.RemoveAll(SanierungValidationService.IsReplacementMeasure);
+
+        if (constraints.Contains(MeasureConstraint.NoBerstlining))
+            allowed.RemoveAll(SanierungValidationService.IsBerstliningMeasure);
 
         return allowed.Count > 0 ? allowed : rule.Measures;
     }
@@ -240,13 +320,15 @@ public sealed class AiSanierungOptimizationService
         var validation = _validation.Validate(fallbackMeasure, constraints);
         var costBand   = _costEngine.Calculate(new CostCalcInput
         {
-            Measure     = fallbackMeasure,
-            DiameterMm  = req.Pipe.DiameterMm,
-            LengthMeter = req.Pipe.LengthMeter,
-            DepthM      = req.Pipe.DepthM,
-            Access      = req.Pipe.Access,
-            Material    = req.Pipe.Material,
-            RegionFactor = req.Cost.RegionFactor
+            Measure         = fallbackMeasure,
+            DiameterMm      = req.Pipe.DiameterMm,
+            LengthMeter     = req.Pipe.LengthMeter,
+            DepthM          = req.Pipe.DepthM,
+            Access          = req.Pipe.Access,
+            Material        = req.Pipe.Material,
+            Groundwater     = req.Pipe.Groundwater ?? false,
+            RegionFactor    = req.Cost.RegionFactor,
+            InflationFactor = req.Cost.InflationFactor
         });
 
         return new SanierungOptimizationResult

@@ -17,11 +17,17 @@ public sealed class VsaClassificationTable
 
     public static VsaClassificationTable LoadFromFile(string path)
     {
-        var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<VsaClassificationTable>(json, new JsonSerializerOptions
+        try
         {
-            PropertyNameCaseInsensitive = true
-        }) ?? new VsaClassificationTable();
+            var json = File.ReadAllText(path);
+            return JsonSerializer.Deserialize<VsaClassificationTable>(json,
+                Application.Common.JsonDefaults.CaseInsensitive) ?? new VsaClassificationTable();
+        }
+        catch (Exception)
+        {
+            // Korrupte oder fehlende JSON-Datei: leere Tabelle verwenden
+            return new VsaClassificationTable();
+        }
     }
 
     public VsaRule? Find(string code)

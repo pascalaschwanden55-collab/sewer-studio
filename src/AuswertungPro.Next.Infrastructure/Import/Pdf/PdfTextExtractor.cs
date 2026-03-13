@@ -85,12 +85,16 @@ public static class PdfTextExtractor
             var psi = new ProcessStartInfo
             {
                 FileName = pdftotext,
-                Arguments = $"-enc UTF-8 -layout \"{pdfPath}\" \"{tempOut}\"",
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardError = true,
                 RedirectStandardOutput = true
             };
+            psi.ArgumentList.Add("-enc");
+            psi.ArgumentList.Add("UTF-8");
+            psi.ArgumentList.Add("-layout");
+            psi.ArgumentList.Add(pdfPath);
+            psi.ArgumentList.Add(tempOut);
 
             using var proc = Process.Start(psi);
             if (proc is null)

@@ -1,41 +1,47 @@
 {
+  "_comment": "VSA Richtlinie 2023 - Anhang C: Klassifizierungstabellen für Kanäle. Konservative Defaults (EZ 2) bei quantifizierungsabhängigen Codes.",
   "defaultMinLength_m": 3.0,
   "rules": [
-    {
-      "code": "BAF",
-      "ezd": 3,
-      "ezs": 4,
-      "ezb": 3
-    },
-    {
-      "code": "BAH",
-      "ezd": 2,
-      "ezs": 2,
-      "ezb": 2
-    },
-    {
-      "code": "BAJ",
-      "ezd": 3,
-      "ezs": 4,
-      "ezb": 3
-    },
-    {
-      "code": "BBB",
-      "ezd": 3,
-      "ezs": 3,
-      "ezb": 3
-    },
-    {
-      "code": "BAB",
-      "ezd": 2,
-      "ezs": 4,
-      "ezb": 2
-    },
-    {
-      "code": "BAG",
-      "ezd": 4,
-      "ezs": 4,
-      "ezb": 0
-    }
+    { "code": "BAA", "ezd": null, "ezs": 2,    "ezb": 2    },
+    { "code": "BAB", "ezd": 2,    "ezs": 2,    "ezb": null },
+    { "code": "BAC", "ezd": 2,    "ezs": 2,    "ezb": 1    },
+    { "code": "BAD", "ezd": 2,    "ezs": 2,    "ezb": 2    },
+    { "code": "BAE", "ezd": 2,    "ezs": null, "ezb": null },
+    { "code": "BAF", "ezd": null, "ezs": 3,    "ezb": 4    },
+    { "code": "BAG", "ezd": null, "ezs": 2,    "ezb": 2    },
+    { "code": "BAH", "ezd": 2,    "ezs": null, "ezb": null },
+    { "code": "BAI", "ezd": 2,    "ezs": 3,    "ezb": 2    },
+    { "code": "BAJ", "ezd": 2,    "ezs": 2,    "ezb": null },
+    { "code": "BAK", "ezd": null, "ezs": 2,    "ezb": 2    },
+    { "code": "BAL", "ezd": 2,    "ezs": null, "ezb": null },
+    { "code": "BAM", "ezd": null, "ezs": 2,    "ezb": 2    },
+    { "code": "BAN", "ezd": 2,    "ezs": 2,    "ezb": null },
+    { "code": "BAO", "ezd": 2,    "ezs": 2,    "ezb": null },
+    { "code": "BAP", "ezd": 2,    "ezs": 2,    "ezb": 1    },
+    { "code": "BBA", "ezd": 2,    "ezs": null, "ezb": 2    },
+    { "code": "BBB", "ezd": 2,    "ezs": null, "ezb": 2    },
+    { "code": "BBC", "ezd": null, "ezs": null, "ezb": 2    },
+    { "code": "BBD", "ezd": 2,    "ezs": 1,    "ezb": 2    },
+    { "code": "BBE", "ezd": 2,    "ezs": null, "ezb": 2    },
+    { "code": "BBF", "ezd": 2,    "ezs": 3,    "ezb": 4    },
+    { "code": "BBG", "ezd": 2,    "ezs": null, "ezb": 3    },
+    { "code": "BBH", "ezd": null, "ezs": null, "ezb": 4    },
+
+    { "_comment": "BC: Anschlüsse, Verbindungen, Rohrmarkierungen (EN 13508-2)" },
+    { "code": "BCA", "ezd": null, "ezs": null, "ezb": null },
+    { "code": "BCB", "ezd": null, "ezs": null, "ezb": null },
+    { "code": "BCC", "ezd": null, "ezs": null, "ezb": null },
+    { "code": "BCD", "ezd": null, "ezs": null, "ezb": null },
+    { "code": "BCE", "ezd": null, "ezs": null, "ezb": null },
+    { "code": "BCF", "ezd": null, "ezs": null, "ezb": null },
+    { "code": "BCG", "ezd": null, "ezs": null, "ezb": null },
+
+    { "_comment": "BD: Allgemeine Beobachtungen (Foto, Anmerkung, Wasserstand)" },
+    { "code": "BDA", "ezd": null, "ezs": null, "ezb": null },
+    { "code": "BDB", "ezd": null, "ezs": null, "ezb": null },
+    { "code": "BDC", "ezd": null, "ezs": null, "ezb": null },
+    { "code": "BDD", "ezd": null, "ezs": null, "ezb": 2    },
+    { "code": "BDE", "ezd": null, "ezs": 2,    "ezb": 2    },
+    { "code": "BDF", "ezd": null, "ezs": null, "ezb": null }
   ]
 }

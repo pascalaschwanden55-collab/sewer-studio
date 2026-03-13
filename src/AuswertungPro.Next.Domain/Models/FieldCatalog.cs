@@ -35,10 +35,16 @@ public static class FieldCatalog
         "Renovierung_Inliner_m",
         "Anschluesse_verpressen",
         "Reparatur_Manschette",
+        "Linerendmanschette_LEM",
         "Reparatur_Kurzliner",
         "Erneuerung_Neubau_m",
         "Offen_abgeschlossen",
-        "Datum_Jahr"
+        "Datum_Jahr",
+        "VSA_Zustandsnote_S",
+        "VSA_Zustandsnote_B",
+        "Gewaesserschutz",
+        "Grundwasserspiegel",
+        "FunktionHierarchisch"
     });
 
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> ComboItems =
@@ -46,7 +52,8 @@ public static class FieldCatalog
         {
             ["Rohrmaterial"] = new ReadOnlyCollection<string>(new List<string>
             {
-                "", "PVC", "PE", "PP", "GFK", "Beton", "Steinzeug", "Guss", "Hartpolyethylen"
+                "", "PVC", "PE", "PP", "GFK", "Beton", "Steinzeug", "Guss", "Hartpolyethylen",
+                "Zement", "Polyvinylchlorid", "Polyethylen", "Polypropylen", "Normalbeton", "Glasfaser"
             }),
             ["Nutzungsart"] = new ReadOnlyCollection<string>(new List<string>
             {
@@ -75,6 +82,20 @@ public static class FieldCatalog
             ["Offen_abgeschlossen"] = new ReadOnlyCollection<string>(new List<string>
             {
                 "", "offen", "abgeschlossen"
+            }),
+            ["Gewaesserschutz"] = new ReadOnlyCollection<string>(new List<string>
+            {
+                "", "S", "Au", "Zu", "Ao"
+            }),
+            ["Grundwasserspiegel"] = new ReadOnlyCollection<string>(new List<string>
+            {
+                "", "unterhalb", "oberhalb", "unbekannt"
+            }),
+            ["FunktionHierarchisch"] = new ReadOnlyCollection<string>(new List<string>
+            {
+                "", "PAA.Sammelkanal", "PAA.Hauptsammelkanal", "PAA.Hauptsammelkanal_regional",
+                "PAA.Liegenschaftsentwaesserung", "PAA.Sanierungsleitung",
+                "PAA.Strassenentwaesserung", "PAA.Gewaesser"
             })
         });
 
@@ -105,10 +126,16 @@ public static class FieldCatalog
             ["Renovierung_Inliner_m"] = new("Renovierung_Inliner_m", "Renovierung Inliner m", FieldType.Decimal),
             ["Anschluesse_verpressen"] = new("Anschluesse_verpressen", "Anschlüsse verpressen", FieldType.Int),
             ["Reparatur_Manschette"] = new("Reparatur_Manschette", "Reparatur Manschette", FieldType.Int),
+            ["Linerendmanschette_LEM"] = new("Linerendmanschette_LEM", "Linerendmanschette LEM", FieldType.Int),
             ["Reparatur_Kurzliner"] = new("Reparatur_Kurzliner", "Reparatur Kurzliner", FieldType.Int),
             ["Erneuerung_Neubau_m"] = new("Erneuerung_Neubau_m", "Erneuerung Neubau m", FieldType.Decimal),
             ["Offen_abgeschlossen"] = new("Offen_abgeschlossen", "offen/abgeschlossen", FieldType.Combo, ComboItems["Offen_abgeschlossen"]),
-            ["Datum_Jahr"] = new("Datum_Jahr", "Datum/Jahr", FieldType.Text)
+            ["Datum_Jahr"] = new("Datum_Jahr", "Datum/Jahr", FieldType.Text),
+            ["VSA_Zustandsnote_S"] = new("VSA_Zustandsnote_S", "VSA-Zustandsnote S", FieldType.Decimal),
+            ["VSA_Zustandsnote_B"] = new("VSA_Zustandsnote_B", "VSA-Zustandsnote B", FieldType.Decimal),
+            ["Gewaesserschutz"] = new("Gewaesserschutz", "Gewässerschutz", FieldType.Combo, ComboItems["Gewaesserschutz"]),
+            ["Grundwasserspiegel"] = new("Grundwasserspiegel", "Grundwasserspiegel", FieldType.Combo, ComboItems["Grundwasserspiegel"]),
+            ["FunktionHierarchisch"] = new("FunktionHierarchisch", "Funktionale Hierarchie", FieldType.Combo, ComboItems["FunktionHierarchisch"])
         });
 
     public static FieldDefinition Get(string fieldName)

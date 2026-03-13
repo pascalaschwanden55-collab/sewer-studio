@@ -11,7 +11,7 @@ using AuswertungPro.Next.UI.Ai.Ollama;
 namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
 
 /// <summary>
-/// Erzeugt Text-Embeddings via Ollama <c>mxbai-embed-large</c>.
+/// Erzeugt Text-Embeddings via Ollama <c>nomic-embed-text</c>.
 /// POST /api/embed → float[] Vektor.
 /// </summary>
 public sealed class EmbeddingService(HttpClient http, OllamaConfig config)

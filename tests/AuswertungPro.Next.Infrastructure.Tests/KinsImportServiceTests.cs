@@ -62,7 +62,7 @@ public sealed class KinsImportServiceTests
     }
 
     [Fact]
-    public void ImportKinsExport_FallbacksToBoth_WhenNoHintsExist()
+    public void ImportKinsExport_FallbacksToWinCan_WhenNoHintsExist()
     {
         using var dir = new TempDir();
         File.WriteAllText(Path.Combine(dir.Path, "readme.txt"), "dummy");
@@ -75,9 +75,9 @@ public sealed class KinsImportServiceTests
 
         Assert.True(res.Ok, res.ErrorMessage);
         Assert.Equal(1, winCan.CallCount);
-        Assert.Equal(1, ibak.CallCount);
+        Assert.Equal(0, ibak.CallCount); // Nur WinCan als Fallback, um Duplikate zu vermeiden
         Assert.NotNull(res.Value);
-        Assert.Equal(3, res.Value!.Found);
+        Assert.Equal(1, res.Value!.Found);
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public sealed class KinsImportServiceTests
 
         public FakeWinCanImport(Result<ImportStats> result) => _result = result;
 
-        public Result<ImportStats> ImportWinCanExport(string exportRoot, Project project)
+        public Result<ImportStats> ImportWinCanExport(string exportRoot, Project project, ImportRunContext? ctx = null)
         {
             CallCount++;
             return _result;
@@ -137,7 +137,7 @@ public sealed class KinsImportServiceTests
 
         public FakeIbakImport(Result<ImportStats> result) => _result = result;
 
-        public Result<ImportStats> ImportIbakExport(string exportRoot, Project project)
+        public Result<ImportStats> ImportIbakExport(string exportRoot, Project project, ImportRunContext? ctx = null)
         {
             CallCount++;
             return _result;

@@ -80,6 +80,37 @@ public sealed class KnowledgeBaseContext : IDisposable
             CREATE INDEX IF NOT EXISTS idx_samples_code
                 ON Samples(VsaCode);
             """);
+
+        // QualityGate: Per-category adaptive weights
+        ExecuteNonQuery("""
+            CREATE TABLE IF NOT EXISTS CategoryWeights (
+                Category        TEXT PRIMARY KEY,
+                WeightsJson     TEXT NOT NULL DEFAULT '{}',
+                ValidationCount INTEGER NOT NULL DEFAULT 0,
+                UpdatedUtc      TEXT NOT NULL
+            );
+            """);
+
+        // QualityGate: Validation log for self-improving loop
+        ExecuteNonQuery("""
+            CREATE TABLE IF NOT EXISTS ValidationLog (
+                LogId         TEXT PRIMARY KEY,
+                VsaCode       TEXT NOT NULL DEFAULT '',
+                SuggestedCode TEXT NOT NULL DEFAULT '',
+                FinalCode     TEXT NOT NULL DEFAULT '',
+                WasCorrect    INTEGER NOT NULL DEFAULT 0,
+                EvidenceJson  TEXT NOT NULL DEFAULT '{}',
+                CreatedUtc    TEXT NOT NULL
+            );
+            """);
+        ExecuteNonQuery("""
+            CREATE INDEX IF NOT EXISTS idx_validation_code
+                ON ValidationLog(VsaCode);
+            """);
+        ExecuteNonQuery("""
+            CREATE INDEX IF NOT EXISTS idx_validation_created
+                ON ValidationLog(CreatedUtc);
+            """);
     }
 
     private void ExecuteNonQuery(string sql)

@@ -94,7 +94,8 @@ public sealed class ProtocolService : IProtocolService
     private static ProtocolRevision CloneRevision(ProtocolRevision rev, string? user, string? comment)
     {
         var json = JsonSerializer.Serialize(rev);
-        var clone = JsonSerializer.Deserialize<ProtocolRevision>(json)!;
+        var clone = JsonSerializer.Deserialize<ProtocolRevision>(json)
+            ?? throw new InvalidOperationException("ProtocolRevision-Deserialisierung ergab null.");
         clone.RevisionId = Guid.NewGuid();
         clone.CreatedAt = DateTimeOffset.UtcNow;
         clone.CreatedBy = user;

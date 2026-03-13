@@ -8,7 +8,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 
 public sealed class XtfImportTests
 {
-    [Fact]
+    [Fact(Skip = "Requires local XTF file not checked into repository")]
     public void Sia405Import_FillsExpectedFields()
     {
         var root = TestPaths.FindSolutionRoot();

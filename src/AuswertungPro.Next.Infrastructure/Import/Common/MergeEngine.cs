@@ -1,5 +1,8 @@
 using System.Text.Json.Nodes;
+using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Import.Xtf;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Common;
 
@@ -20,9 +23,14 @@ public sealed class MergeResult
 /// </summary>
 public static class MergeEngine
 {
-    public static MergeResult MergeRecord(HaltungRecord target, HaltungRecord source, FieldSource importSource)
+    // Felder die Dateipfade enthalten - werden bei Reimport immer aktualisiert
+    private static readonly HashSet<string> PathFields = new(StringComparer.Ordinal)
+        { "Link", "PDF_Path", "PDF_All" };
+
+    public static MergeResult MergeRecord(HaltungRecord target, HaltungRecord source, FieldSource importSource, bool fillMissingOnly = false, ImportRunContext? ctx = null)
     {
         var res = new MergeResult();
+        var recordKey = (target.GetFieldValue("Haltungsname") ?? "").Trim();
 
         try
         {
@@ -39,20 +47,36 @@ public static class MergeEngine
                 if (string.IsNullOrWhiteSpace(incoming))
                     continue; // leere Importwerte niemals übernehmen
 
+                // Primaere_Schaeden: Duplikate im Text entfernen (Streckenschaden-Marker etc.)
+                if (string.Equals(field, "Primaere_Schaeden", StringComparison.Ordinal))
+                    incoming = XtfPrimaryDamageFormatter.DeduplicateText(incoming);
+
                 var existing = (target.GetFieldValue(field) ?? "").Trim();
+
+                // Wenn Ziel leer -> übernehmen (immer, auch bei fillMissingOnly)
+                if (string.IsNullOrWhiteSpace(existing))
+                {
+                    ApplyFieldChange(target, field, incoming, importSource, ctx);
+                    ctx?.Log.AddEntry("Merge", "SetField", ImportLogStatus.Updated,
+                        recordKey: recordKey, field: field, detail: $"leer -> {incoming}");
+                    res.Updated++;
+                    continue;
+                }
+
+                // "Nur ergaenzen"-Modus: vorhandene Werte nie antasten
+                // Ausnahme: Pfad-Felder (Link, PDF_Path, PDF_All) werden immer aktualisiert,
+                // weil der Import die authoritative Quelle fuer Medienpfade ist.
+                if (fillMissingOnly && !PathFields.Contains(field))
+                {
+                    ctx?.Log.AddEntry("Merge", "SkipFillMissing", ImportLogStatus.Skipped,
+                        recordKey: recordKey, field: field, detail: $"vorhanden: {existing}");
+                    continue;
+                }
 
                 // Meta holen
                 target.FieldMeta.TryGetValue(field, out var meta);
                 var userEdited = meta?.UserEdited == true;
                 var existingSource = meta?.Source ?? FieldSource.Manual;
-
-                // Wenn Ziel leer -> übernehmen
-                if (string.IsNullOrWhiteSpace(existing))
-                {
-                    target.SetFieldValue(field, incoming, importSource, userEdited: false);
-                    res.Updated++;
-                    continue;
-                }
 
                 // Wenn gleich -> nichts tun
                 if (string.Equals(existing, incoming, StringComparison.Ordinal))
@@ -62,13 +86,18 @@ public static class MergeEngine
                 if (userEdited)
                 {
                     AddConflict(res, target, field, existing, existingSource, incoming, importSource, reason: "UserEdited");
+                    ctx?.Log.AddEntry("Merge", "Conflict", ImportLogStatus.Conflict,
+                        recordKey: recordKey, field: field,
+                        detail: $"UserEdited '{existing}' ({existingSource}) vs '{incoming}' ({importSource})");
                     continue;
                 }
 
                 // Wenn Ziel "Manual" war (nicht user-edited) -> Import darf überschreiben
                 if (existingSource == FieldSource.Manual)
                 {
-                    target.SetFieldValue(field, incoming, importSource, userEdited: false);
+                    ApplyFieldChange(target, field, incoming, importSource, ctx);
+                    ctx?.Log.AddEntry("Merge", "OverwriteManual", ImportLogStatus.Updated,
+                        recordKey: recordKey, field: field, detail: $"'{existing}' -> '{incoming}'");
                     res.Updated++;
                     continue;
                 }
@@ -76,7 +105,9 @@ public static class MergeEngine
                 // Wenn gleiche Quelle erneut importiert -> überschreiben (typisch Re-Import)
                 if (existingSource == importSource)
                 {
-                    target.SetFieldValue(field, incoming, importSource, userEdited: false);
+                    ApplyFieldChange(target, field, incoming, importSource, ctx);
+                    ctx?.Log.AddEntry("Merge", "ReImport", ImportLogStatus.Updated,
+                        recordKey: recordKey, field: field, detail: $"'{existing}' -> '{incoming}'");
                     res.Updated++;
                     continue;
                 }
@@ -84,7 +115,10 @@ public static class MergeEngine
                 // Wenn Import-Priorität höher als bestehend -> überschreiben
                 if (GetPriority(importSource) > GetPriority(existingSource))
                 {
-                    target.SetFieldValue(field, incoming, importSource, userEdited: false);
+                    ApplyFieldChange(target, field, incoming, importSource, ctx);
+                    ctx?.Log.AddEntry("Merge", "HigherPriority", ImportLogStatus.Updated,
+                        recordKey: recordKey, field: field,
+                        detail: $"'{existing}' ({existingSource}) -> '{incoming}' ({importSource})");
                     res.Updated++;
                     continue;
                 }
@@ -92,15 +126,26 @@ public static class MergeEngine
 
                 // Sonst: Konflikt, nicht überschreiben
                 AddConflict(res, target, field, existing, existingSource, incoming, importSource, reason: "DifferentSource");
+                ctx?.Log.AddEntry("Merge", "Conflict", ImportLogStatus.Conflict,
+                    recordKey: recordKey, field: field,
+                    detail: $"DifferentSource '{existing}' ({existingSource}) vs '{incoming}' ({importSource})");
             }
         }
         catch (Exception)
         {
             res.Errors++;
+            ctx?.Log.AddEntry("Merge", "Exception", ImportLogStatus.Error,
+                recordKey: recordKey, detail: "Unerwarteter Fehler bei Merge");
             // bewusst nicht werfen: Import soll weiterlaufen und Stats zeigen
         }
 
         return res;
+    }
+
+    private static void ApplyFieldChange(HaltungRecord target, string field, string value, FieldSource source, ImportRunContext? ctx)
+    {
+        if (ctx?.DryRun != true)
+            target.SetFieldValue(field, value, source, userEdited: false);
     }
 
     private static int GetPriority(FieldSource source) => source switch

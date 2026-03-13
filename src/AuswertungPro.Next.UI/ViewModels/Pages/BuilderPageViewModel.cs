@@ -19,7 +19,7 @@ using AuswertungPro.Next.Infrastructure.Output.Offers;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
-public sealed partial class BuilderPageViewModel : ObservableObject
+public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 {
     private const string AllFilterLabel = "Alle";
     private const string UnknownOwnerLabel = "Unbekannt";
@@ -41,6 +41,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject
     private ProjectCostStore _costStore = new();
     private decimal _vatRate = 0.081m;
     private ObservableCollection<HaltungRecord>? _attachedData;
+    private bool _suspendFilterRefresh;
+    private string _lastExportProjectPath = "";
 
     public ObservableCollection<DruckcenterRowVm> Rows { get; } = new();
     public ObservableCollection<SpecialPositionStatVm> SpecialPositionStats { get; } = new();
@@ -87,15 +89,32 @@ public sealed partial class BuilderPageViewModel : ObservableObject
     [ObservableProperty] private string _rehabilitationShareHint = "";
     [ObservableProperty] private string _costByExecutorHint = "";
     [ObservableProperty] private string _lastResult = "";
-    [ObservableProperty] private bool _isPdfExportInProgress;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ExportStateText))]
+    [NotifyCanExecuteChangedFor(nameof(OpenLastExportedPdfCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PrintPdfCommand))]
+    private bool _isPdfExportInProgress;
     [ObservableProperty] private string _pdfExportProgress = "";
-    [ObservableProperty] private string _lastExportedPdfPath = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ExportStateText))]
+    [NotifyCanExecuteChangedFor(nameof(OpenLastExportedPdfCommand))]
+    private string _lastExportedPdfPath = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ExportStateText))]
+    private bool _isLastExportCurrent;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ExportStateText))]
+    private string _lastExportScopeSummary = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ExportStateText))]
+    private DateTimeOffset? _lastExportedAt;
 
     public string NetTotalText => $"{NetTotal:N2} CHF";
     public string StatsInlinerGfkText => $"{StatsInlinerGfk:0.00} m";
     public string StatsInlinerNadelfilzText => $"{StatsInlinerNadelfilz:0.00} m";
     public string StatsManschettenText => $"{StatsManschetten:0.##} stk";
     public string StatsLemText => $"{StatsLem:0.##} stk";
+    public string ExportStateText => BuildExportStateText();
 
     public BuilderPageViewModel(ShellViewModel shell)
     {
@@ -118,15 +137,24 @@ public sealed partial class BuilderPageViewModel : ObservableObject
     [RelayCommand]
     private void ResetFilters()
     {
-        SelectedOwnerFilter = AllFilterLabel;
-        SelectedExecutedByFilter = AllFilterLabel;
-        SelectedSanierenFilter = AllFilterLabel;
-        SelectedMaterialFilter = AllFilterLabel;
-        SelectedStatusFilter = AllFilterLabel;
-        SelectedYearFilter = AllFilterLabel;
-        SearchText = "";
-        OnlyWithCost = false;
-        OnlyWithMeasures = false;
+        _suspendFilterRefresh = true;
+        try
+        {
+            SelectedOwnerFilter = AllFilterLabel;
+            SelectedExecutedByFilter = AllFilterLabel;
+            SelectedSanierenFilter = AllFilterLabel;
+            SelectedMaterialFilter = AllFilterLabel;
+            SelectedStatusFilter = AllFilterLabel;
+            SelectedYearFilter = AllFilterLabel;
+            SearchText = "";
+            OnlyWithCost = false;
+            OnlyWithMeasures = false;
+        }
+        finally
+        {
+            _suspendFilterRefresh = false;
+        }
+
         ApplyFilters();
     }
 
@@ -208,7 +236,11 @@ public sealed partial class BuilderPageViewModel : ObservableObject
             await renderer.RenderAsync(model, templatePath, output, logoPath);
 
             LastExportedPdfPath = output;
-            LastResult = $"PDF erstellt: {output}";
+            LastExportedAt = DateTimeOffset.Now;
+            LastExportScopeSummary = BuildExportScopeSummary(filteredRows);
+            IsLastExportCurrent = true;
+            _lastExportProjectPath = _sp.Settings.LastProjectPath ?? "";
+            LastResult = $"PDF erstellt: {Path.GetFileName(output)}";
             _shell.SetStatus("Druckcenter PDF erstellt");
             PdfExportProgress = "PDF fertig.";
             MessageBox.Show(
@@ -233,15 +265,34 @@ public sealed partial class BuilderPageViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanPrintPdf))]
     private void PrintPdf()
     {
         string? pdfPath = null;
 
-        if (!string.IsNullOrWhiteSpace(LastExportedPdfPath) && File.Exists(LastExportedPdfPath))
-            pdfPath = LastExportedPdfPath;
-        else
-            pdfPath = _sp.Dialogs.OpenFile("PDF zum Drucken waehlen", "PDF (*.pdf)|*.pdf");
+        if (HasLastExportedPdf())
+        {
+            if (IsLastExportCurrent)
+            {
+                pdfPath = LastExportedPdfPath;
+            }
+            else
+            {
+                var decision = MessageBox.Show(
+                    "Der Druckstand hat sich seit dem letzten Export geaendert.\n\nJa = letztes PDF drucken\nNein = anderes PDF auswaehlen\nAbbrechen = nichts tun",
+                    "Druckcenter",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Question);
+
+                if (decision == MessageBoxResult.Cancel)
+                    return;
+
+                if (decision == MessageBoxResult.Yes)
+                    pdfPath = LastExportedPdfPath;
+            }
+        }
+
+        pdfPath ??= _sp.Dialogs.OpenFile("PDF zum Drucken waehlen", "PDF (*.pdf)|*.pdf");
 
         if (string.IsNullOrWhiteSpace(pdfPath))
             return;
@@ -269,15 +320,52 @@ public sealed partial class BuilderPageViewModel : ObservableObject
         }
     }
 
-    partial void OnSelectedOwnerFilterChanged(string value) => ApplyFilters();
-    partial void OnSelectedExecutedByFilterChanged(string value) => ApplyFilters();
-    partial void OnSelectedSanierenFilterChanged(string value) => ApplyFilters();
-    partial void OnSelectedMaterialFilterChanged(string value) => ApplyFilters();
-    partial void OnSelectedStatusFilterChanged(string value) => ApplyFilters();
-    partial void OnSelectedYearFilterChanged(string value) => ApplyFilters();
-    partial void OnSearchTextChanged(string value) => ApplyFilters();
-    partial void OnOnlyWithCostChanged(bool value) => ApplyFilters();
-    partial void OnOnlyWithMeasuresChanged(bool value) => ApplyFilters();
+    [RelayCommand(CanExecute = nameof(CanOpenLastExportedPdf))]
+    private void OpenLastExportedPdf()
+    {
+        if (!HasLastExportedPdf())
+        {
+            ClearLastExport("Die zuletzt exportierte PDF-Datei wurde nicht gefunden.");
+            MessageBox.Show(
+                "Die zuletzt exportierte PDF-Datei wurde nicht gefunden.",
+                "Druckcenter",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = LastExportedPdfPath,
+                UseShellExecute = true
+            });
+            LastResult = $"PDF geoeffnet: {Path.GetFileName(LastExportedPdfPath)}";
+        }
+        catch (Exception ex)
+        {
+            LastResult = $"Fehler beim Oeffnen: {ex.Message}";
+            MessageBox.Show(
+                $"PDF konnte nicht geoeffnet werden:\n{ex.Message}",
+                "Druckcenter",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    partial void OnSelectedOwnerFilterChanged(string value) => ApplyFiltersIfReady();
+    partial void OnSelectedExecutedByFilterChanged(string value) => ApplyFiltersIfReady();
+    partial void OnSelectedSanierenFilterChanged(string value) => ApplyFiltersIfReady();
+    partial void OnSelectedMaterialFilterChanged(string value) => ApplyFiltersIfReady();
+    partial void OnSelectedStatusFilterChanged(string value) => ApplyFiltersIfReady();
+    partial void OnSelectedYearFilterChanged(string value) => ApplyFiltersIfReady();
+    partial void OnSearchTextChanged(string value) => ApplyFiltersIfReady();
+    partial void OnOnlyWithCostChanged(bool value) => ApplyFiltersIfReady();
+    partial void OnOnlyWithMeasuresChanged(bool value) => ApplyFiltersIfReady();
+    partial void OnIncludeDataSectionChanged(bool value) => MarkExportAsStale();
+    partial void OnIncludeOwnerSummarySectionChanged(bool value) => MarkExportAsStale();
+    partial void OnIncludePositionSummarySectionChanged(bool value) => MarkExportAsStale();
 
     partial void OnNetTotalChanged(decimal value) => OnPropertyChanged(nameof(NetTotalText));
     partial void OnStatsInlinerGfkChanged(decimal value) => OnPropertyChanged(nameof(StatsInlinerGfkText));
@@ -342,6 +430,22 @@ public sealed partial class BuilderPageViewModel : ObservableObject
             record.PropertyChanged -= RecordPropertyChanged;
     }
 
+    private bool _disposed;
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _shell.PropertyChanged -= ShellPropertyChanged;
+        _refreshDebounceTimer.Stop();
+        _refreshDebounceTimer.Tick -= RefreshDebounceTimerTick;
+        if (_attachedData is not null)
+        {
+            _attachedData.CollectionChanged -= ProjectDataCollectionChanged;
+            DetachRecordHandlers(_attachedData);
+        }
+    }
+
     private void RecordPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(e.PropertyName))
@@ -389,14 +493,26 @@ public sealed partial class BuilderPageViewModel : ObservableObject
 
     private void RefreshData()
     {
-        var projectPath = _sp.Settings.LastProjectPath;
+        var projectPath = _sp.Settings.LastProjectPath ?? "";
+        if (!string.Equals(_lastExportProjectPath, projectPath, StringComparison.OrdinalIgnoreCase))
+            ClearLastExport();
+
         _costStore = _costRepo.Load(projectPath);
 
         var catalog = _catalogStore.LoadMerged(projectPath);
         _vatRate = catalog.VatRate > 0m ? catalog.VatRate : 0.081m;
 
-        _allRows = BuildRows();
-        RebuildFilterOptions();
+        _suspendFilterRefresh = true;
+        try
+        {
+            _allRows = BuildRows();
+            RebuildFilterOptions();
+        }
+        finally
+        {
+            _suspendFilterRefresh = false;
+        }
+
         ApplyFilters();
     }
 
@@ -602,6 +718,15 @@ public sealed partial class BuilderPageViewModel : ObservableObject
 
         UpdateStatistics(filtered);
         ActiveFilterText = BuildFilterSummaryText();
+        MarkExportAsStale();
+    }
+
+    private void ApplyFiltersIfReady()
+    {
+        if (_suspendFilterRefresh)
+            return;
+
+        ApplyFilters();
     }
 
     private static IEnumerable<DruckcenterRowVm> ApplyComboFilter(
@@ -890,6 +1015,66 @@ public sealed partial class BuilderPageViewModel : ObservableObject
         parts.Add($"Treffer={FilteredRowsCount}/{TotalRows}");
         return string.Join(" | ", parts);
     }
+
+    private string BuildExportStateText()
+    {
+        if (!HasAnyExportPath())
+            return "Noch kein Druckcenter-PDF exportiert.";
+
+        if (!HasLastExportedPdf())
+            return "Letztes Export-PDF wurde nicht gefunden.";
+
+        var fileName = Path.GetFileName(LastExportedPdfPath);
+        var timestamp = LastExportedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm", Ch) ?? "unbekannt";
+        var summary = string.IsNullOrWhiteSpace(LastExportScopeSummary)
+            ? fileName
+            : $"{fileName} | {LastExportScopeSummary}";
+
+        return IsLastExportCurrent
+            ? $"Aktueller Export: {summary} | {timestamp}"
+            : $"Letzter Export veraltet: {summary} | {timestamp}";
+    }
+
+    private string BuildExportScopeSummary(IReadOnlyList<DruckcenterRowVm> filteredRows)
+        => $"{filteredRows.Count} Haltungen | Netto {Money(filteredRows.Sum(r => r.NetCost))}";
+
+    private void MarkExportAsStale()
+    {
+        if (IsPdfExportInProgress || !HasAnyExportPath())
+            return;
+
+        if (!HasLastExportedPdf())
+        {
+            ClearLastExport("Die zuletzt exportierte PDF-Datei wurde nicht gefunden.");
+            return;
+        }
+
+        IsLastExportCurrent = false;
+    }
+
+    private void ClearLastExport(string? resultText = null)
+    {
+        LastExportedPdfPath = "";
+        LastExportScopeSummary = "";
+        LastExportedAt = null;
+        IsLastExportCurrent = false;
+        _lastExportProjectPath = "";
+
+        if (!string.IsNullOrWhiteSpace(resultText))
+            LastResult = resultText;
+    }
+
+    private bool HasAnyExportPath()
+        => !string.IsNullOrWhiteSpace(LastExportedPdfPath);
+
+    private bool HasLastExportedPdf()
+        => HasAnyExportPath() && File.Exists(LastExportedPdfPath);
+
+    private bool CanOpenLastExportedPdf()
+        => !IsPdfExportInProgress && HasLastExportedPdf();
+
+    private bool CanPrintPdf()
+        => !IsPdfExportInProgress;
 
     private static void AddFilterPart(List<string> parts, string label, string value)
     {

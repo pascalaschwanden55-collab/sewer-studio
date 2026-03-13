@@ -1,0 +1,61 @@
+{
+  "haltung": "9899-1042599",
+  "datum": "10.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 200 / 200mm",
+  "material": "Kunststoff",
+  "nutzungsart": "Mischabwasser",
+  "inspektionsrichtung": "In Fließrichtung",
+  "schacht_oben": "9899",
+  "schacht_unten": "1042599",
+  "inspektionslaenge_m": "12.00",
+  "rohrlaenge_m": "5.00",
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 7.3,
+      "en_code": "BCCAA",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel Position Pos: 3; Bogen nach links oben, Winkel = 45°",
+      "uhr_von": "3",
+      "uhr_bis": "3",
+      "stufe": null,
+      "timestamp_video": "00:02:29",
+      "foto_datei": null,
+      "foto_nr": 93
+    },
+    {
+      "meter": 10.4,
+      "en_code": "BCCAY",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel Position Pos: 9; Bogen nach links, Winkel = 45°",
+      "uhr_von": "9",
+      "uhr_bis": "9",
+      "stufe": null,
+      "timestamp_video": "00:03:19",
+      "foto_datei": null,
+      "foto_nr": 95
+    },
+    {
+      "meter": 10.8,
+      "en_code": "AEDXP",
+      "beschreibung": "Bogen nach links oben, Winkel = 45° Rohrmaterialwechsel: Polypropylen Position",
+      "uhr_von": "3",
+      "uhr_bis": "3",
+      "stufe": null,
+      "timestamp_video": "00:03:31",
+      "foto_datei": null,
+      "foto_nr": 97
+    },
+    {
+      "meter": 11.6,
+      "en_code": "BCCAA",
+      "beschreibung": "Bogen nach links unten, Winkel = 45° Pos: 3; Bogen nach links oben, Winkel = 45°",
+      "uhr_von": "3",
+      "uhr_bis": "3",
+      "stufe": null,
+      "timestamp_video": "00:03:58",
+      "foto_datei": null,
+      "foto_nr": 99
+    }
+  ]
+}

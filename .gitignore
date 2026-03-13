@@ -29,3 +29,16 @@ artifacts/
 *.log
 buildlog.txt
 *.tmp
+
+# Python Sidecar
+sidecar/.venv/
+sidecar/__pycache__/
+sidecar/**/__pycache__/
+sidecar/**/*.pyc
+sidecar/models/**/*.pt
+sidecar/models/**/*.pth
+sidecar/models/**/*.bin
+sidecar/models/**/*.onnx
+sidecar/models/**/*.safetensors
+sidecar/test_export_tmp/
+sidecar/training_export/

@@ -1,0 +1,39 @@
+{
+  "haltung": "10286-1042598",
+  "datum": "11.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 300 / 300mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Mischabwasser",
+  "inspektionsrichtung": "In Fließrichtung",
+  "schacht_oben": "10286",
+  "schacht_unten": "1042598",
+  "inspektionslaenge_m": "16.80",
+  "rohrlaenge_m": "5.00",
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 4.4,
+      "en_code": "BDA",
+      "beschreibung": "Anschluss mit Formstück, Höhe = 0mm, Breite = 0mm Pos: 2; Allgemeinzustand, Fotobeispiel, Foto 2 zu Station BCA.A.A",
+      "uhr_von": "2",
+      "uhr_bis": "2",
+      "stufe": null,
+      "timestamp_video": "00:01:14",
+      "foto_datei": null,
+      "foto_nr": 271
+    },
+    {
+      "meter": 10.3,
+      "en_code": "BDA",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:02:25",
+      "foto_datei": null,
+      "foto_nr": 272
+    }
+  ]
+}

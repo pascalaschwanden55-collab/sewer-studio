@@ -1,6 +1,8 @@
 // AuswertungPro – KI Videoanalyse Modul
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai.Training;
@@ -53,31 +55,59 @@ public sealed class KnowledgeBaseManager(
     /// <summary>
     /// Löscht die gesamte Wissensdatenbank und indiziert alle übergebenen Samples neu.
     /// Gibt die Anzahl erfolgreich indizierter Samples zurück.
+    /// Phase 1: Embeddings parallel erzeugen (GPU-bound).
+    /// Phase 2: SQLite-Writes sequentiell (SQLite ist nicht thread-safe für Writes).
     /// </summary>
     public async Task<int> RebuildAsync(
         IReadOnlyList<TrainingSample> samples,
         IProgress<int>? progress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        int concurrency = 1)
     {
-        // Alles löschen
-        ExecuteNonQuery("DELETE FROM Embeddings");
-        ExecuteNonQuery("DELETE FROM Samples");
-        ExecuteNonQuery("DELETE FROM Versions");
+        // Phase 1: Embeddings parallel erzeugen (VOR dem Löschen, damit bei Fehler Daten erhalten bleiben)
+        var embeddings = new ConcurrentDictionary<int, float[]>();
+        var done = 0;
 
+        await Parallel.ForEachAsync(
+            Enumerable.Range(0, samples.Count),
+            new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, concurrency), CancellationToken = ct },
+            async (i, token) =>
+            {
+                var vec = await embedder.EmbedAsync(samples[i].Beschreibung, token).ConfigureAwait(false);
+                if (vec is not null)
+                    embeddings[i] = vec;
+                var n = Interlocked.Increment(ref done);
+                progress?.Report(n);
+            });
+
+        // Phase 2: Löschen + Neuaufbau in einer Transaktion
         _currentVersionId = null;
-
-        var indexed = 0;
-        for (var i = 0; i < samples.Count; i++)
+        using var tx = db.Connection.BeginTransaction();
+        try
         {
-            ct.ThrowIfCancellationRequested();
-            var ok = await IndexSampleAsync(samples[i], ct).ConfigureAwait(false);
-            if (ok) indexed++;
-            progress?.Report(i + 1);
-        }
+            ExecuteNonQuery("DELETE FROM Embeddings");
+            ExecuteNonQuery("DELETE FROM Samples");
+            ExecuteNonQuery("DELETE FROM Versions");
 
-        // Versions-Eintrag abschließen
-        FinalizeCurrentVersion(indexed);
-        return indexed;
+            var versionId = GetOrCreateCurrentVersionId();
+            var indexed = 0;
+            for (var i = 0; i < samples.Count; i++)
+            {
+                if (!embeddings.TryGetValue(i, out var vec)) continue;
+                UpsertSample(samples[i], versionId);
+                UpsertEmbedding(samples[i].SampleId, vec);
+                indexed++;
+            }
+
+            FinalizeCurrentVersion(indexed);
+            tx.Commit();
+            return indexed;
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
     }
 
     /// <summary>
@@ -119,29 +149,36 @@ public sealed class KnowledgeBaseManager(
     // ── Intern ───────────────────────────────────────────────────────────
 
     private string? _currentVersionId;
+    private readonly object _versionLock = new();
 
     private string GetOrCreateCurrentVersionId()
     {
-        if (_currentVersionId is not null)
+        lock (_versionLock)
+        {
+            if (_currentVersionId is not null)
+                return _currentVersionId;
+
+            _currentVersionId = Guid.NewGuid().ToString("N");
+            ExecuteNonQuery(
+                "INSERT OR IGNORE INTO Versions(VersionId, CreatedAt, SampleCount, Notes) VALUES($v, $t, 0, '')",
+                ("$v", _currentVersionId),
+                ("$t", DateTime.UtcNow.ToString("O")));
+
             return _currentVersionId;
-
-        _currentVersionId = Guid.NewGuid().ToString("N");
-        ExecuteNonQuery(
-            "INSERT OR IGNORE INTO Versions(VersionId, CreatedAt, SampleCount, Notes) VALUES($v, $t, 0, '')",
-            ("$v", _currentVersionId),
-            ("$t", DateTime.UtcNow.ToString("O")));
-
-        return _currentVersionId;
+        }
     }
 
     private void FinalizeCurrentVersion(int count)
     {
-        if (_currentVersionId is null) return;
-        ExecuteNonQuery(
-            "UPDATE Versions SET SampleCount = $c WHERE VersionId = $v",
-            ("$c", count),
-            ("$v", _currentVersionId));
-        _currentVersionId = null;
+        lock (_versionLock)
+        {
+            if (_currentVersionId is null) return;
+            ExecuteNonQuery(
+                "UPDATE Versions SET SampleCount = $c WHERE VersionId = $v",
+                ("$c", count),
+                ("$v", _currentVersionId));
+            _currentVersionId = null;
+        }
     }
 
     private void UpsertSample(TrainingSample s, string versionId)

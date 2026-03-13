@@ -1,4 +1,5 @@
 using System.Windows;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.UI.Views.Windows;
@@ -10,35 +11,39 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        WindowStateManager.Track(this);
         DataContext = new ShellViewModel();
     }
 
     private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
     {
-        if (DataContext is not ShellViewModel vm)
-            return;
-
-        if (!vm.Project.Dirty)
-            return;
-
-        var result = MessageBox.Show(
-            "Es gibt ungespeicherte Aenderungen. Jetzt speichern?",
-            "Projekt speichern",
-            MessageBoxButton.YesNoCancel,
-            MessageBoxImage.Warning);
-
-        if (result == MessageBoxResult.Cancel)
+        if (DataContext is ShellViewModel vm && vm.Project.Dirty)
         {
-            e.Cancel = true;
-            return;
-        }
+            var result = MessageBox.Show(
+                "Es gibt ungespeicherte Aenderungen. Jetzt speichern?",
+                "Projekt speichern",
+                MessageBoxButton.YesNoCancel,
+                MessageBoxImage.Warning);
 
-        if (result == MessageBoxResult.Yes)
-        {
-            vm.TrySaveProject();
-            if (vm.Project.Dirty)
+            if (result == MessageBoxResult.Cancel)
+            {
                 e.Cancel = true;
+                return;
+            }
+
+            if (result == MessageBoxResult.Yes)
+            {
+                vm.TrySaveProject();
+                if (vm.Project.Dirty)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+            }
         }
+
+        // App explizit beenden (ShutdownMode = OnExplicitShutdown)
+        System.Windows.Application.Current.Shutdown();
     }
 
     private void Exit_Click(object sender, RoutedEventArgs e)
@@ -64,4 +69,5 @@ public partial class MainWindow : Window
         var window = new TrainingCenterWindow { Owner = this };
         window.Show();
     }
+
 }

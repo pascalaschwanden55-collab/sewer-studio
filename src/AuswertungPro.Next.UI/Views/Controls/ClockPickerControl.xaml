@@ -5,19 +5,28 @@
              Height="160">
     <Grid>
         <Canvas x:Name="FaceCanvas" Background="Transparent">
-            <Ellipse x:Name="Face"
-                     Stroke="#333"
+            <!-- Rohrleitungsquerschnitt: Rohrwand (aeusserer Ring) -->
+            <Ellipse x:Name="PipeWall"
+                     Stroke="#9EAEC4"
+                     StrokeThickness="10"
+                     Fill="Transparent"/>
+            <!-- Rohrleitungsquerschnitt: Innenraum -->
+            <Ellipse x:Name="PipeInterior"
+                     Stroke="#CDD6E4"
                      StrokeThickness="1"
-                     Fill="White"/>
-            <Line x:Name="Hand"
-                  Stroke="#D98200"
-                  StrokeThickness="3"
-                  StrokeStartLineCap="Round"
-                  StrokeEndLineCap="Round"/>
+                     Fill="#F0F3F8"/>
+            <!-- Markierungspunkt (gewaehlte Stunde) -->
+            <Ellipse x:Name="PointMarker"
+                     Width="12"
+                     Height="12"
+                     Fill="#16A34A"
+                     Opacity="0.7"
+                     Visibility="Collapsed"/>
+            <!-- Mittelpunkt -->
             <Ellipse x:Name="CenterDot"
                      Width="6"
                      Height="6"
-                     Fill="#333"/>
+                     Fill="#1C2536"/>
         </Canvas>
     </Grid>
 </UserControl>

@@ -154,6 +154,12 @@ public sealed class PdfParser
         if (oben.Success && unten.Success)
             return $"{oben.Groups["v"].Value.Trim()}-{unten.Groups["v"].Value.Trim()}";
 
+        // Alternatives Bezeichnungsformat: "Oberer Punkt" / "Unterer Punkt"
+        var oberPunkt = Regex.Match(text, @"(?im)\bOberer\s+Punkt\s*:\s*(?<v>\d[\d\.]*)\b");
+        var unterPunkt = Regex.Match(text, @"(?im)\bUnterer\s+Punkt\s*:\s*(?<v>\d[\d\.]*)\b");
+        if (oberPunkt.Success && unterPunkt.Success)
+            return $"{oberPunkt.Groups["v"].Value.Trim()}-{unterPunkt.Groups["v"].Value.Trim()}";
+
         return null;
     }
 
@@ -168,6 +174,8 @@ public sealed class PdfParser
         var normalized = value.Trim();
         normalized = Regex.Replace(normalized, @"\s+", "");
         normalized = normalized.Replace("/", "-");
+        normalized = normalized.Replace("\u2013", "-"); // En-Dash
+        normalized = normalized.Replace("\u2014", "-"); // Em-Dash
         return normalized;
     }
 

@@ -1,0 +1,72 @@
+{
+  "haltung": "89514-1042610",
+  "datum": "10.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 200 / 200mm",
+  "material": "Polyethylen",
+  "nutzungsart": "Regenabwasser",
+  "inspektionsrichtung": "In Fließrichtung",
+  "schacht_oben": "89514",
+  "schacht_unten": "1042610",
+  "inspektionslaenge_m": "5.40",
+  "rohrlaenge_m": "5.00",
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 2.3,
+      "en_code": "BCCAY",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel Position Pos: 9; Bogen nach links, Winkel = 45°",
+      "uhr_von": "9",
+      "uhr_bis": "9",
+      "stufe": null,
+      "timestamp_video": "00:00:42",
+      "foto_datei": null,
+      "foto_nr": 101
+    },
+    {
+      "meter": 2.9,
+      "en_code": "BDA",
+      "beschreibung": "Anschluss mit Formstück, Höhe = 0mm, Breite = 0mm Pos: 2; Allgemeinzustand, Fotobeispiel, Foto 2 zu Station BCA.A.A",
+      "uhr_von": "2",
+      "uhr_bis": "2",
+      "stufe": null,
+      "timestamp_video": "00:00:56",
+      "foto_datei": null,
+      "foto_nr": 103
+    },
+    {
+      "meter": 3.3,
+      "en_code": "BCCYB",
+      "beschreibung": "Rohrmaterialwechsel: Polypropylen Position Pos: 6; Bogen nach unten, Winkel = 45°",
+      "uhr_von": "6",
+      "uhr_bis": "6",
+      "stufe": null,
+      "timestamp_video": "00:01:25",
+      "foto_datei": null,
+      "foto_nr": 105
+    },
+    {
+      "meter": 4.8,
+      "en_code": "BCCAY",
+      "beschreibung": "Bogen nach unten, Winkel = 45° Pos: 9; Bogen nach links, Winkel = 30°",
+      "uhr_von": "9",
+      "uhr_bis": "9",
+      "stufe": null,
+      "timestamp_video": "00:02:07",
+      "foto_datei": null,
+      "foto_nr": 107
+    },
+    {
+      "meter": 5.0,
+      "en_code": "BCCAY",
+      "beschreibung": "Bogen nach links, Winkel = 30°",
+      "uhr_von": "9",
+      "uhr_bis": "9",
+      "stufe": null,
+      "timestamp_video": "00:02:14",
+      "foto_datei": null,
+      "foto_nr": 108
+    }
+  ]
+}

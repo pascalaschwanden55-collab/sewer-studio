@@ -1,0 +1,83 @@
+{
+  "haltung": "07.1048859-1042601",
+  "datum": "10.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 125 / 125mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Mischabwasser",
+  "inspektionsrichtung": "Gegen Fließrichtung",
+  "schacht_oben": "07.1048859",
+  "schacht_unten": "1042601",
+  "inspektionslaenge_m": "15.00",
+  "rohrlaenge_m": "5.00",
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 0.0,
+      "en_code": "BCCAA",
+      "beschreibung": "Bogen nach links oben, Winkel = 45° Entf. gegen Fließr. 0,20 m Pos: 3; Bogen nach links oben, Winkel = 45° Entf. gegen Fließr. 0,50 m",
+      "uhr_von": "3",
+      "uhr_bis": "3",
+      "stufe": null,
+      "timestamp_video": "00:00:41",
+      "foto_datei": null,
+      "foto_nr": 181
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BDA",
+      "beschreibung": "Bogen nach links, Winkel = 45° Entf. gegen Fließr. 0,90 m Allgemeinzustand, Fotobeispiel Entf. gegen Fließr. 2,30 m Position",
+      "uhr_von": "9",
+      "uhr_bis": "9",
+      "stufe": null,
+      "timestamp_video": "00:01:14",
+      "foto_datei": null,
+      "foto_nr": 183
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCCAY",
+      "beschreibung": "Pos: 7 - 2; Einragendes Dichtungsmaterial, Querschnittsreduzierung = 2%, an Verbindung, Mörtel Entf. gegen Fließr. 7,20 m Verbindung Pos: 9; Bogen nach links, Winkel = 20° Entf. gegen Fließr. 7,30 m",
+      "uhr_von": "9",
+      "uhr_bis": "9",
+      "stufe": null,
+      "timestamp_video": "00:02:28",
+      "foto_datei": null,
+      "foto_nr": 185
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCCAY",
+      "beschreibung": "Bogen nach links, Winkel = 60° Entf. gegen Fließr. 10,30 m Pos: 9; Bogen nach links, Winkel = 45° Entf. gegen Fließr. 12,20 m",
+      "uhr_von": "9",
+      "uhr_bis": "9",
+      "stufe": null,
+      "timestamp_video": "00:03:21",
+      "foto_datei": null,
+      "foto_nr": 187
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCCAY",
+      "beschreibung": "Bogen nach links oben, Winkel = 45° Entf. gegen Fließr. 13,60 m Pos: 9; Bogen nach links, Winkel = 45° Entf. gegen Fließr. 13,90 m",
+      "uhr_von": "9",
+      "uhr_bis": "9",
+      "stufe": null,
+      "timestamp_video": "00:03:52",
+      "foto_datei": null,
+      "foto_nr": 189
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCE",
+      "beschreibung": "Rohrende, Blindende in ca. 0.6m Entf. gegen Fließr. 15,00 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:04:30",
+      "foto_datei": null,
+      "foto_nr": 190
+    }
+  ]
+}

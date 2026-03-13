@@ -1,0 +1,39 @@
+{
+  "haltung": "1048858-1042601",
+  "datum": "10.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 125 / 125mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Mischabwasser",
+  "inspektionsrichtung": "Gegen Fließrichtung",
+  "schacht_oben": "1048858",
+  "schacht_unten": "1042601",
+  "inspektionslaenge_m": "5.00",
+  "rohrlaenge_m": "5.00",
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 0.0,
+      "en_code": "BDA",
+      "beschreibung": "Wasserspiegel, Abwasser klar, Höhe = 5% Entf. gegen Fließr. 1,80 m Position Allgemeinzustand, Fotobeispiel Entf. gegen Fließr. 3,70 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:01:15",
+      "foto_datei": null,
+      "foto_nr": 177
+    },
+    {
+      "meter": 0.0,
+      "en_code": "AECXC",
+      "beschreibung": "Rohrmaterialwechsel: Polyethylen Entf. gegen Fließr. 4,40 m Position Rohrprofilwechsel: Kreisprofil, Höhe = 60mm, Breite = 60mm, Durchmesser nicht messbar Entf. gegen Fließr. 5,00 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:01:42",
+      "foto_datei": null,
+      "foto_nr": 179
+    }
+  ]
+}

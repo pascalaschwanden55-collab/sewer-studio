@@ -31,8 +31,7 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject
                 return;
             }
 
-            var lines = File.ReadAllLines(logPath);
-            LogTail = string.Join(Environment.NewLine, lines.TakeLast(200));
+            LogTail = string.Join(Environment.NewLine, File.ReadLines(logPath).TakeLast(200));
         }
         catch (Exception ex)
         {

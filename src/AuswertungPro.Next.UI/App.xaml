@@ -1,7 +1,6 @@
 <Application x:Class="AuswertungPro.Next.UI.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             StartupUri="MainWindow.xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
         <ResourceDictionary xmlns:vm="clr-namespace:AuswertungPro.Next.UI.ViewModels.Pages"
                     xmlns:views="clr-namespace:AuswertungPro.Next.UI.Views.Pages">
@@ -29,8 +28,14 @@
             <DataTemplate DataType="{x:Type vm:ExportPageViewModel}">
                 <views:ExportPage/>
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:MediaConflictsPageViewModel}">
+                <views:MediaConflictsPage/>
+            </DataTemplate>
             <DataTemplate DataType="{x:Type vm:VsaPageViewModel}">
                 <views:VsaPage/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:EigendevisPageViewModel}">
+                <views:EigendevisPage/>
             </DataTemplate>
             <DataTemplate DataType="{x:Type vm:DiagnosticsPageViewModel}">
                 <views:DiagnosticsPage/>

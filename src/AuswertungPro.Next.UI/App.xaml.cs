@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media.Animation;
+using System.Windows.Input;
 using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Diagnostics;
@@ -21,6 +23,7 @@ using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.Reports;
+using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI
 {
@@ -29,14 +32,24 @@ namespace AuswertungPro.Next.UI
 
         private static ServiceProvider? _services;
         private static int _handlingException;
+
         public static IServiceProvider Services
             => _services ?? throw new InvalidOperationException("Services are not initialized.");
 
-        protected override void OnStartup(StartupEventArgs e)
+        protected override async void OnStartup(StartupEventArgs e)
         {
             string? logPath = null;
+            StartupSplashWindow? splash = null;
             try
             {
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+                splash = new StartupSplashWindow();
+                splash.Show();
+                splash.Activate();
+                await Dispatcher.Yield(DispatcherPriority.Background);
+                var splashStart = DateTime.UtcNow;
+
                 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
                 // Settings
@@ -94,9 +107,40 @@ namespace AuswertungPro.Next.UI
 #endif
                 // Call base last so anything that touches DI (App.Services) is ready.
                 base.OnStartup(e);
+
+                var mainWindow = new MainWindow
+                {
+                    Opacity = 0
+                };
+                MainWindow = mainWindow;
+                mainWindow.Show();
+
+                var minSplashDuration = TimeSpan.FromMilliseconds(5000);
+                var elapsed = DateTime.UtcNow - splashStart;
+                if (elapsed < minSplashDuration)
+                    await splash.WaitAsync(minSplashDuration - elapsed);
+
+                await Task.WhenAll(
+                    AnimateOpacityAsync(mainWindow, to: 1, duration: TimeSpan.FromMilliseconds(500), EasingMode.EaseOut),
+                    splash.FadeOutAndCloseAsync(TimeSpan.FromMilliseconds(500)));
+
+                // OnExplicitShutdown: Nur MainWindow_Closing darf die App beenden.
+                // Verhindert, dass das Schliessen von PlayerWindow/Coding-Fenstern
+                // versehentlich die gesamte Anwendung beendet.
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
             }
             catch (Exception ex)
             {
+                try
+                {
+                    splash?.Close();
+                }
+                catch
+                {
+                    // ignore splash close errors during crash reporting
+                }
+
                 var fallbackLog = logPath;
                 try
                 {
@@ -129,6 +173,41 @@ namespace AuswertungPro.Next.UI
 
                 Shutdown(-1);
             }
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            try
+            {
+                AppSettings.FlushPendingSave();
+            }
+            catch
+            {
+                // best effort flush during shutdown
+            }
+
+            base.OnExit(e);
+        }
+
+        private static Task AnimateOpacityAsync(UIElement element, double to, TimeSpan duration, EasingMode easingMode)
+        {
+            if (duration <= TimeSpan.Zero)
+            {
+                element.Opacity = to;
+                return Task.CompletedTask;
+            }
+
+            var tcs = new TaskCompletionSource<object?>();
+            var anim = new DoubleAnimation
+            {
+                To = to,
+                Duration = duration,
+                EasingFunction = new CubicEase { EasingMode = easingMode }
+            };
+
+            anim.Completed += (_, _) => tcs.TrySetResult(null);
+            element.BeginAnimation(UIElement.OpacityProperty, anim);
+            return tcs.Task;
         }
 
         private void HandleException(Exception ex, string context)

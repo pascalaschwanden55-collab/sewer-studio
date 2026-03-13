@@ -2,28 +2,94 @@
 using System;
 using System.IO;
 
+
 namespace AuswertungPro.Next.UI.Ai.Shared;
 
 /// <summary>
 /// Lokalisiert ffmpeg und ffprobe – entweder über absoluten Pfad (Env-Variable),
-/// nebeneinander im selben Verzeichnis, oder über den System-PATH.
+/// bekannte Installationsverzeichnisse (WinGet, Chocolatey, Scoop), oder System-PATH.
 /// </summary>
 public static class FfmpegLocator
 {
     /// <summary>Name der Umgebungsvariable für den ffmpeg-Pfad.</summary>
-    public const string EnvKey = "AUSWERTUNGPRO_FFMPEG";
+    public const string EnvKey = "SEWERSTUDIO_FFMPEG";
     private const string EnvFfmpeg = EnvKey;
+
+    // Cache damit nicht bei jedem Aufruf gesucht wird
+    private static string? _cachedFfmpegPath;
 
     /// <summary>
     /// Gibt den aufzulösenden ffmpeg-Pfad zurück.
-    /// Reihenfolge: ENV → absoluter Pfad → "ffmpeg" (PATH).
+    /// Reihenfolge: ENV → bekannte Installationspfade → "ffmpeg" (PATH).
     /// </summary>
     public static string ResolveFfmpeg()
     {
         var env = Environment.GetEnvironmentVariable(EnvFfmpeg)?.Trim();
         if (!string.IsNullOrEmpty(env))
             return env;
-        return "ffmpeg";
+
+        if (_cachedFfmpegPath is not null)
+            return _cachedFfmpegPath;
+
+        var found = FindFfmpegInKnownLocations();
+        _cachedFfmpegPath = found ?? "ffmpeg";
+        return _cachedFfmpegPath;
+    }
+
+    /// <summary>
+    /// Durchsucht bekannte Installationsverzeichnisse (WinGet, Chocolatey, Scoop).
+    /// </summary>
+    private static string? FindFfmpegInKnownLocations()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+        // WinGet: %LOCALAPPDATA%\Microsoft\WinGet\Packages\Gyan.FFmpeg*\*\bin\ffmpeg.exe
+        var wingetDir = Path.Combine(localAppData, "Microsoft", "WinGet", "Packages");
+        if (Directory.Exists(wingetDir))
+        {
+            try
+            {
+                var ffmpegDirs = Directory.GetDirectories(wingetDir, "Gyan.FFmpeg*");
+                foreach (var dir in ffmpegDirs)
+                {
+                    // Suche rekursiv nach ffmpeg.exe im bin-Verzeichnis
+                    var binDirs = Directory.GetDirectories(dir, "bin", SearchOption.AllDirectories);
+                    foreach (var bin in binDirs)
+                    {
+                        var candidate = Path.Combine(bin, "ffmpeg.exe");
+                        if (File.Exists(candidate))
+                            return candidate;
+                    }
+                }
+            }
+            catch { /* Zugriffsfehler ignorieren */ }
+        }
+
+        // Chocolatey: C:\ProgramData\chocolatey\bin\ffmpeg.exe
+        var chocoPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "chocolatey", "bin", "ffmpeg.exe");
+        if (File.Exists(chocoPath))
+            return chocoPath;
+
+        // Scoop: %USERPROFILE%\scoop\shims\ffmpeg.exe
+        var scoopPath = Path.Combine(userProfile, "scoop", "shims", "ffmpeg.exe");
+        if (File.Exists(scoopPath))
+            return scoopPath;
+
+        // Manuell: C:\ffmpeg\bin\ffmpeg.exe (haeufige manuelle Installation)
+        var manualPath = @"C:\ffmpeg\bin\ffmpeg.exe";
+        if (File.Exists(manualPath))
+            return manualPath;
+
+        // Program Files
+        var pfPath = Path.Combine(programFiles, "ffmpeg", "bin", "ffmpeg.exe");
+        if (File.Exists(pfPath))
+            return pfPath;
+
+        return null;
     }
 
     /// <summary>

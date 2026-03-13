@@ -118,8 +118,7 @@ public sealed class CostCalculationService
     public void SaveCatalog(PriceCatalog catalog)
     {
         EnsureUserDataDirectory();
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        var json = JsonSerializer.Serialize(catalog, options);
+        var json = JsonSerializer.Serialize(catalog, Application.Common.JsonDefaults.Indented);
         File.WriteAllText(_userCatalogPath, json);
     }
 
@@ -165,8 +164,7 @@ public sealed class CostCalculationService
     public void SaveTemplates(MeasureTemplates templates)
     {
         EnsureUserDataDirectory();
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        var json = JsonSerializer.Serialize(templates, options);
+        var json = JsonSerializer.Serialize(templates, Application.Common.JsonDefaults.Indented);
         File.WriteAllText(_userTemplatesPath, json);
     }
 
@@ -192,7 +190,7 @@ public sealed class CostCalculationService
         var noDn = candidates.Where(i => !i.DnMin.HasValue || !i.DnMax.HasValue).ToList();
         if (noDn.Count > 0) return noDn.First();
 
-        return candidates.First();
+        return candidates.FirstOrDefault();
     }
 
     public decimal ResolveQty(JsonElement qtySpec, Dictionary<string, object> inputs)
@@ -204,8 +202,16 @@ public sealed class CostCalculationService
         {
             var key = qtySpec.GetString() ?? "";
             if (inputs.TryGetValue(key, out var value))
-                return Convert.ToDecimal(value);
-            throw new Exception($"Unbekannte qty-Variable: '{key}'");
+            {
+                if (value is decimal d) return d;
+                if (value is double dbl) return (decimal)dbl;
+                if (value is int i) return i;
+                if (value is long l) return l;
+                if (decimal.TryParse(value?.ToString() ?? "", NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed))
+                    return parsed;
+                throw new InvalidOperationException($"qty-Variable '{key}' kann nicht in Dezimal konvertiert werden: {value}");
+            }
+            throw new InvalidOperationException($"Unbekannte qty-Variable: '{key}'");
         }
 
         throw new Exception($"Ungültiger qty-Typ: {qtySpec.ValueKind}");

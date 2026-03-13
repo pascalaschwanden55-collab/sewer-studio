@@ -43,10 +43,7 @@ public sealed class CostCatalogStore
             if (!string.IsNullOrWhiteSpace(dir))
                 Directory.CreateDirectory(dir);
 
-            var json = JsonSerializer.Serialize(catalog, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
+            var json = JsonSerializer.Serialize(catalog, Application.Common.JsonDefaults.Indented);
             File.WriteAllText(path, json);
             return true;
         }

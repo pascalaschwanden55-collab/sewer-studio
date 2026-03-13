@@ -5,7 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
@@ -27,6 +29,62 @@ public static class HoldingFolderDistributor
     private static readonly Regex KinsTxtDateRegex = new(
         @"(?<d>\d{2}\.\d{2}\.\d{2,4})",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly object XtfCacheSync = new();
+    private static readonly Dictionary<string, string[]> XtfFilesCache =
+        new(StringComparer.OrdinalIgnoreCase);
+    private static readonly string VideoExtensionPattern =
+        string.Join("|", MediaFileTypes.VideoExtensions.Select(ext => Regex.Escape(ext.TrimStart('.'))));
+    private static readonly Regex PdfHeaderRegex = new(
+        @"Haltungs(?:\s*inspektion|bilder)\s*[-–—]\s*(\d{2}\.\d{2}\.\d{2,4}|\d{4}-\d{2}-\d{2})\s*[-–—]\s*((?:\d{2,}\.\d{2,}|\d{4,})\s*[-/]\s*(?:\d{2,}\.\d{2,}|\d{4,}))",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex FilmNameRegex = new(
+        $@"Film(?:name|datei)?\s*[:\-]?\s*([A-Za-z0-9_\-\. ]+?\.(?:{VideoExtensionPattern}))",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex PdfFilenamePairRegex = new(
+        @"(?:\d{2,}\.\d{2,}|\d{4,})\s*[-_]\s*(?:\d{2,}\.\d{2,}|\d{4,})",
+        RegexOptions.Compiled);
+
+    // Hotpath-Regex: TryExtractDichtheitShafts
+    private static readonly Regex DichtheitUpperRx = new(
+        @"oberer\s*Schacht\s*[:\-]?\s*(?<v>\d{2,}\.\d{2,}|\d{4,})",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex DichtheitLowerRx = new(
+        @"unterer\s*Schacht\s*[:\-]?\s*(?<v>\d{2,}\.\d{2,}|\d{4,})",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex SchachtObenRx = new(
+        @"Schacht\s*oben\s*[:\-]?\s*(?<v>\d{2,}\.\d{2,}|\d{4,})",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex SchachtUntenRx = new(
+        @"Schacht\s*unten\s*[:\-]?\s*(?<v>\d{2,}\.\d{2,}|\d{4,})",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    // Hotpath-Regex: TryFindInspectionDate / TryFindSchachtDate / TryExtractDateFromFormEntries
+    private static readonly Regex InspectionDateRx = new(
+        @"(\d{2}\.\d{2}\.\d{2,4}|\d{4}-\d{2}-\d{2})",
+        RegexOptions.Compiled);
+    private static readonly Regex FormEntryDateRx = new(
+        @"\b(?<d>\d{2}[./-]\d{2}[./-]\d{2,4}|\d{4}[./-]\d{2}[./-]\d{2})\b",
+        RegexOptions.Compiled);
+    private static readonly Regex LabeledDateRx = new(
+        @"Datum\s*[:\-]?\s*(?<date>\d{2}[./-]\d{2}[./-]\d{2,4})",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex GenericDateRx = new(
+        @"\b(?<date>\d{2}[./-]\d{2}[./-]\d{2,4})\b",
+        RegexOptions.Compiled);
+
+    // Hotpath-Regex: TryFindHaltungId
+    private static readonly Regex HaltungIdRx = new(
+        @"(?im)^.*Haltung.*[:\-\s]+(?<id>[\d\.\- ]{5,})",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex GeneralPairRx = new(
+        @"((?:\d{2,}\.\d{2,}|\d{4,})\s*[-]\s*(?:\d{2,}\.\d{2,}|\d{4,}))(?=[^\d]|$)",
+        RegexOptions.Compiled);
+    private static readonly Regex GluedDatePairRx = new(
+        @"((?:\d{2,}\.\d{2,}|\d{4,})\s*-\s*(?:\d{2,}\.\d{2,}|\d{4,}?))(?=\d{2}\.\d{2}\.\d{2,4}|\d{4}-\d{2}-\d{2})",
+        RegexOptions.Compiled);
+    private static readonly Regex ConcatenatedIdRx = new(
+        @"(?:Haltungsname|Schacht\s*oben|Schacht\s*unten|Oberer\s*Punkt|Unterer\s*Punkt).{0,300}?(?<id>\d{10})(?!\d)",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
     public sealed record DistributionResult(
         bool Success,
@@ -179,10 +237,7 @@ public static class HoldingFolderDistributor
             };
         }
 
-        var txtFiles = Directory.EnumerateFiles(txtSourceFolder, "*.txt", SearchOption.AllDirectories)
-            .Where(p =>
-                string.Equals(Path.GetFileName(p), "kiDVDaten.txt", StringComparison.OrdinalIgnoreCase)
-                || !string.Equals(Path.GetFileName(p), "kiDVinfo.txt", StringComparison.OrdinalIgnoreCase))
+        var txtFiles = Directory.EnumerateFiles(txtSourceFolder, "kiDVDaten*.txt", SearchOption.AllDirectories)
             .ToList();
 
         if (txtFiles.Count == 0)
@@ -309,10 +364,18 @@ public static class HoldingFolderDistributor
 
                 if (videoFind.Status == VideoMatchStatus.Matched && videoFind.VideoPath is not null)
                 {
-                    var videoExt = Path.GetExtension(videoFind.VideoPath);
-                    var destVideoName = $"{dateStamp}_{haltung}{videoExt}";
-                    destVideoPath = EnsureUniquePath(Path.Combine(holdingFolder, destVideoName), overwrite);
-                    MoveOrCopy(videoFind.VideoPath, destVideoPath, moveInsteadOfCopy);
+                    var existingVid = FindExistingVideo(holdingFolder, videoFind.VideoPath);
+                    if (existingVid is not null)
+                    {
+                        destVideoPath = existingVid;
+                    }
+                    else
+                    {
+                        var videoExt = Path.GetExtension(videoFind.VideoPath);
+                        var destVideoName = $"{dateStamp}_{haltung}{videoExt}";
+                        destVideoPath = EnsureUniquePath(Path.Combine(holdingFolder, destVideoName), overwrite);
+                        MoveOrCopy(videoFind.VideoPath, destVideoPath, moveInsteadOfCopy);
+                    }
 
                     if (project != null && !string.IsNullOrWhiteSpace(destVideoPath))
                     {
@@ -414,6 +477,11 @@ public static class HoldingFolderDistributor
         var sidecarHoldingsByVideoLink = BuildSidecarHoldingByVideoIndex(sidecarVideoLinksByHolding);
         var cdIndexVideoLinksByPhoto = BuildCdIndexVideoLinkIndex(xtfSourceFolder, pdfFiles);
 
+        // Index: Haltung (normalisiert) -> Zielordner-Pfad
+        // Wird beim Verteilen gefuellt, damit nicht-parsbare PDFs per Dateiname zugeordnet werden koennen.
+        var distributedHoldings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var unmatchedPdfs = new List<string>();
+
         var processed = 0;
         foreach (var pdfPath in pdfFiles)
         {
@@ -427,17 +495,25 @@ public static class HoldingFolderDistributor
                     var parsed = ParsePdfWithOcrFallback(pages);
                     if (!parsed.Success)
                     {
-                        results.Add(new DistributionResult(false, $"Parse failed: {parsed.Message}", pdfPath, null, null, null, null, null, VideoMatchStatus.NotChecked));
+                        // PDF konnte nicht geparst werden (z.B. Dichtheitspruefungsprotokoll).
+                        // Spaeter per Dateiname-Muster dem passenden Haltungsordner zuordnen.
+                        unmatchedPdfs.Add(pdfPath);
                         continue;
                     }
 
-                    results.Add(HandleParsedDistribution(parsed, pdfPath, pdfPath, videoSourceFolder, destGemeindeFolder, moveInsteadOfCopy, overwrite, recursiveVideoSearch, unmatchedFolderName, null, project, videoFilesCache, sidecarVideoLinksByHolding, sidecarHoldingsByVideoLink, cdIndexVideoLinksByPhoto));
+                    var result = HandleParsedDistribution(parsed, pdfPath, pdfPath, videoSourceFolder, destGemeindeFolder, moveInsteadOfCopy, overwrite, recursiveVideoSearch, unmatchedFolderName, null, project, videoFilesCache, sidecarVideoLinksByHolding, sidecarHoldingsByVideoLink, cdIndexVideoLinksByPhoto);
+                    results.Add(result);
+                    if (result.Success && result.HoldingFolder is not null && parsed.Haltung is not null)
+                        distributedHoldings[NormalizeHaltungId(parsed.Haltung)] = result.HoldingFolder;
                     continue;
                 }
 
                 if (chunks.Count == 1 && pages.Count == chunks[0].Pages.Count)
                 {
-                    results.Add(HandleParsedDistribution(chunks[0].Parsed, pdfPath, pdfPath, videoSourceFolder, destGemeindeFolder, moveInsteadOfCopy, overwrite, recursiveVideoSearch, unmatchedFolderName, null, project, videoFilesCache, sidecarVideoLinksByHolding, sidecarHoldingsByVideoLink, cdIndexVideoLinksByPhoto));
+                    var result = HandleParsedDistribution(chunks[0].Parsed, pdfPath, pdfPath, videoSourceFolder, destGemeindeFolder, moveInsteadOfCopy, overwrite, recursiveVideoSearch, unmatchedFolderName, null, project, videoFilesCache, sidecarVideoLinksByHolding, sidecarHoldingsByVideoLink, cdIndexVideoLinksByPhoto);
+                    results.Add(result);
+                    if (result.Success && result.HoldingFolder is not null && chunks[0].Parsed.Haltung is not null)
+                        distributedHoldings[NormalizeHaltungId(chunks[0].Parsed.Haltung)] = result.HoldingFolder;
                     continue;
                 }
 
@@ -454,7 +530,10 @@ public static class HoldingFolderDistributor
                     try
                     {
                         WritePdfPages(pdfPath, chunk.Pages, tempPdfPath);
-                        results.Add(HandleParsedDistribution(chunk.Parsed, pdfPath, tempPdfPath, videoSourceFolder, destGemeindeFolder, moveInsteadOfCopy: false, overwrite, recursiveVideoSearch, unmatchedFolderName, pageRange, project, videoFilesCache, sidecarVideoLinksByHolding, sidecarHoldingsByVideoLink, cdIndexVideoLinksByPhoto));
+                        var result = HandleParsedDistribution(chunk.Parsed, pdfPath, tempPdfPath, videoSourceFolder, destGemeindeFolder, moveInsteadOfCopy: false, overwrite, recursiveVideoSearch, unmatchedFolderName, pageRange, project, videoFilesCache, sidecarVideoLinksByHolding, sidecarHoldingsByVideoLink, cdIndexVideoLinksByPhoto);
+                        results.Add(result);
+                        if (result.Success && result.HoldingFolder is not null && chunk.Parsed.Haltung is not null)
+                            distributedHoldings[NormalizeHaltungId(chunk.Parsed.Haltung)] = result.HoldingFolder;
                     }
                     finally
                     {
@@ -470,6 +549,31 @@ public static class HoldingFolderDistributor
             {
                 processed++;
                 progress?.Report(new DistributionProgress(processed, pdfFiles.Count, pdfPath));
+            }
+        }
+
+        // Nicht-parsbare PDFs (z.B. Dichtheitspruefungsprotokolle) per Dateiname-Muster
+        // dem passenden Haltungsordner zuordnen und mit Originalnamen kopieren.
+        foreach (var pdfPath in unmatchedPdfs)
+        {
+            var holdingFolder = TryMatchPdfToHolding(pdfPath, distributedHoldings);
+            if (holdingFolder is not null)
+            {
+                try
+                {
+                    var destPath = EnsureUniquePath(
+                        Path.Combine(holdingFolder, Path.GetFileName(pdfPath)), overwrite);
+                    MoveOrCopy(pdfPath, destPath, moveInsteadOfCopy);
+                    results.Add(new DistributionResult(true, "OK (Begleit-PDF)", pdfPath, null, destPath, null, null, holdingFolder, VideoMatchStatus.NotChecked));
+                }
+                catch (Exception ex)
+                {
+                    results.Add(new DistributionResult(false, $"Begleit-PDF Fehler: {ex.Message}", pdfPath, null, null, null, null, null, VideoMatchStatus.NotChecked));
+                }
+            }
+            else
+            {
+                results.Add(new DistributionResult(false, "Parse failed, kein passender Haltungsordner gefunden", pdfPath, null, null, null, null, null, VideoMatchStatus.NotChecked));
             }
         }
 
@@ -673,7 +777,7 @@ public static class HoldingFolderDistributor
 
         var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
         return Directory.EnumerateFiles(root, "*.*", searchOption)
-            .Where(f => HasVideoExtension(Path.GetFileName(f)))
+            .Where(MediaFileTypes.HasVideoExtension)
             .ToList();
     }
 
@@ -1488,15 +1592,228 @@ public static class HoldingFolderDistributor
         return expanded.ToList();
     }
 
+    // --- Dichtheitspruefungsprotokoll Distribution ---
+
+    /// <summary>
+    /// Verteilt Dichtheitspruefungsprotokolle (DP) aus einem Quellordner in die
+    /// Haltungsordner-Struktur. Liest "oberer Schacht" / "unterer Schacht" aus dem PDF
+    /// um die Haltung zu ermitteln.
+    /// </summary>
+    public static IReadOnlyList<DistributionResult> DistributeDichtheit(
+        string pdfSourceFolder,
+        string destGemeindeFolder,
+        bool moveInsteadOfCopy = false,
+        bool overwrite = false,
+        Project? project = null,
+        IProgress<DistributionProgress>? progress = null)
+    {
+        if (!Directory.Exists(pdfSourceFolder))
+            return new[] { new DistributionResult(false, $"PDF folder not found: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) };
+
+        var pdfFiles = Directory.EnumerateFiles(pdfSourceFolder, "*.pdf", SearchOption.AllDirectories)
+            .Where(p => !Path.GetFileName(p).StartsWith("split_", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (pdfFiles.Count == 0)
+            return new[] { new DistributionResult(false, $"No PDF files found in: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) };
+
+        return DistributeDichtheitCore(pdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress);
+    }
+
+    /// <summary>
+    /// Verteilt ausgewaehlte Dichtheitspruefungsprotokolle (DP) in die
+    /// Haltungsordner-Struktur.
+    /// </summary>
+    public static IReadOnlyList<DistributionResult> DistributeDichtheitFiles(
+        IEnumerable<string> pdfFiles,
+        string destGemeindeFolder,
+        bool moveInsteadOfCopy = false,
+        bool overwrite = false,
+        Project? project = null,
+        IProgress<DistributionProgress>? progress = null)
+    {
+        var validPdfFiles = pdfFiles
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Select(p => p.Trim())
+            .Where(File.Exists)
+            .Where(p => string.Equals(Path.GetExtension(p), ".pdf", StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (validPdfFiles.Count == 0)
+            return new[] { new DistributionResult(false, "No valid PDF files selected.", "", null, null, null, null, null, VideoMatchStatus.NotChecked) };
+
+        return DistributeDichtheitCore(validPdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress);
+    }
+
+    private static IReadOnlyList<DistributionResult> DistributeDichtheitCore(
+        IReadOnlyList<string> pdfFiles,
+        string destGemeindeFolder,
+        bool moveInsteadOfCopy,
+        bool overwrite,
+        Project? project,
+        IProgress<DistributionProgress>? progress)
+    {
+        var results = new List<DistributionResult>();
+        var processed = 0;
+
+        foreach (var pdfPath in pdfFiles)
+        {
+            try
+            {
+                var pages = ReadPdfPages(pdfPath);
+                var pdfText = string.Join("\n\n", pages.Select(p => p.Text));
+
+                string? haltungId = null;
+
+                // Versuche Schachtnummern aus oberer/unterer Schacht zu extrahieren
+                var (shaftA, shaftB) = TryExtractDichtheitShafts(pdfText);
+                if (!string.IsNullOrWhiteSpace(shaftA) && !string.IsNullOrWhiteSpace(shaftB))
+                {
+                    // Reihenfolge gegen Projekt/Ordner abgleichen (kann vertauscht sein)
+                    haltungId = ResolveDichtheitHaltungOrder(shaftA, shaftB, project, destGemeindeFolder);
+                }
+
+                // Fallback: Standard Haltungsinspektion Parser
+                if (string.IsNullOrWhiteSpace(haltungId))
+                {
+                    var parsed = ParsePdfWithOcrFallback(pages);
+                    if (parsed.Success && !string.IsNullOrWhiteSpace(parsed.Haltung))
+                        haltungId = parsed.Haltung;
+                }
+
+                // Fallback: TryExtractFromShafts (allgemeine Schacht-Extraktion)
+                if (string.IsNullOrWhiteSpace(haltungId))
+                    haltungId = TryExtractFromShafts(pdfText);
+
+                if (string.IsNullOrWhiteSpace(haltungId))
+                {
+                    results.Add(new DistributionResult(false, "Haltung nicht erkannt (oberer/unterer Schacht nicht gefunden)", pdfPath, null, null, null, null, null, VideoMatchStatus.NotChecked));
+                    continue;
+                }
+
+                // Datum aus PDF extrahieren (gleiche Logik wie Haltungsverteilung)
+                var date = TryFindInspectionDate(pdfText);
+                var dateStamp = date?.ToString("yyyyMMdd", CultureInfo.InvariantCulture) ?? "00000000";
+
+                var haltung = SanitizePathSegment(NormalizeHaltungId(haltungId));
+                var holdingFolder = Path.Combine(destGemeindeFolder, haltung);
+                Directory.CreateDirectory(holdingFolder);
+
+                // Dateiname: {datum}_{haltung}_DP.pdf (gleiche Logik wie Haltung, mit _DP Suffix)
+                var destPdfName = $"{dateStamp}_{haltung}_DP.pdf";
+                var destPath = EnsureUniquePath(
+                    Path.Combine(holdingFolder, destPdfName), overwrite);
+                MoveOrCopy(pdfPath, destPath, moveInsteadOfCopy);
+
+                results.Add(new DistributionResult(true, $"OK -> {haltung}", pdfPath, null, destPath, null, null, holdingFolder, VideoMatchStatus.NotChecked));
+            }
+            catch (Exception ex)
+            {
+                results.Add(new DistributionResult(false, ex.Message, pdfPath, null, null, null, null, null, VideoMatchStatus.NotChecked));
+            }
+            finally
+            {
+                processed++;
+                progress?.Report(new DistributionProgress(processed, pdfFiles.Count, pdfPath));
+            }
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Extrahiert die beiden Schachtnummern aus einem Dichtheitspruefungsprotokoll-PDF.
+    /// Gibt (schachtA, schachtB) zurueck – die Reihenfolge kann vertauscht sein.
+    /// </summary>
+    private static (string? A, string? B) TryExtractDichtheitShafts(string text)
+    {
+        // "oberer Schacht: XXXXX" / "unterer Schacht: XXXXX"
+        var upperM = DichtheitUpperRx.Match(text);
+        var lowerM = DichtheitLowerRx.Match(text);
+        if (upperM.Success && lowerM.Success)
+        {
+            var up = upperM.Groups["v"].Value;
+            var low = lowerM.Groups["v"].Value;
+            if (!string.Equals(up, low, StringComparison.OrdinalIgnoreCase))
+                return (up, low);
+        }
+
+        // Fallback: "Schacht oben" / "Schacht unten"
+        var upperS = SchachtObenRx.Match(text);
+        var lowerS = SchachtUntenRx.Match(text);
+        if (upperS.Success && lowerS.Success)
+        {
+            var up = upperS.Groups["v"].Value;
+            var low = lowerS.Groups["v"].Value;
+            if (!string.Equals(up, low, StringComparison.OrdinalIgnoreCase))
+                return (up, low);
+        }
+
+        return (null, null);
+    }
+
+    /// <summary>
+    /// Ermittelt die korrekte Haltungs-ID-Reihenfolge fuer zwei Schachtnummern.
+    /// Prueft A-B und B-A gegen Projekt-Daten und vorhandene Ordner im Zielverzeichnis.
+    /// </summary>
+    private static string ResolveDichtheitHaltungOrder(
+        string a, string b, Project? project, string destGemeindeFolder)
+    {
+        var ab = $"{a}-{b}";
+        var ba = $"{b}-{a}";
+
+        // 1) Gegen Projekt-Haltungsnamen pruefen
+        if (project is not null)
+        {
+            foreach (var rec in project.Data)
+            {
+                var name = rec.GetFieldValue("Haltungsname")?.Trim() ?? "";
+                if (string.IsNullOrWhiteSpace(name)) continue;
+                var normalized = NormalizeHaltungId(name);
+                var stripped = StripNodePrefixes(SanitizePathSegment(normalized));
+
+                if (string.Equals(normalized, ab, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(stripped, StripNodePrefixes(SanitizePathSegment(ab)), StringComparison.OrdinalIgnoreCase))
+                    return ab;
+                if (string.Equals(normalized, ba, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(stripped, StripNodePrefixes(SanitizePathSegment(ba)), StringComparison.OrdinalIgnoreCase))
+                    return ba;
+            }
+        }
+
+        // 2) Gegen vorhandene Ordner im Ziel pruefen
+        if (Directory.Exists(destGemeindeFolder))
+        {
+            var abSanitized = SanitizePathSegment(NormalizeHaltungId(ab));
+            var baSanitized = SanitizePathSegment(NormalizeHaltungId(ba));
+            var abStripped = StripNodePrefixes(abSanitized);
+            var baStripped = StripNodePrefixes(baSanitized);
+
+            foreach (var dir in Directory.EnumerateDirectories(destGemeindeFolder))
+            {
+                var dirName = Path.GetFileName(dir) ?? "";
+                var dirStripped = StripNodePrefixes(dirName);
+
+                if (string.Equals(dirName, abSanitized, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(dirStripped, abStripped, StringComparison.OrdinalIgnoreCase))
+                    return ab;
+                if (string.Equals(dirName, baSanitized, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(dirStripped, baStripped, StringComparison.OrdinalIgnoreCase))
+                    return ba;
+            }
+        }
+
+        // 3) Kein Treffer – PDF-Reihenfolge beibehalten (A-B)
+        return ab;
+    }
+
     // Temporarily public for diagnostic purposes
     public static ParsedPdf ParsePdf(string text)
     {
         text = NormalizeText(text);
         // Match both "Haltungsinspektion" and "Haltungsbilder" headers (Fretz PDF page 1 vs page 2)
-        var headerRx = new Regex(@"Haltungs(?:\s*inspektion|bilder)\s*[-–—]\s*(\d{2}\.\d{2}\.\d{2,4}|\d{4}-\d{2}-\d{2})\s*[-–—]\s*((?:\d{2,}\.\d{2,}|\d{4,})\s*[-/]\s*(?:\d{2,}\.\d{2,}|\d{4,}))", RegexOptions.IgnoreCase);
-        var filmRx = new Regex(@"Film(?:name|datei)?\s*[:\-]?\s*([A-Za-z0-9_\-\. ]+?\.(?:mp2|mpg|mpeg|mp4|avi|mov|wmv|mkv))", RegexOptions.IgnoreCase);
-
-        var headerMatch = headerRx.Match(text);
+        var headerMatch = PdfHeaderRegex.Match(text);
         if (!headerMatch.Success)
             return ParsePdfPage(text, null);
 
@@ -1507,7 +1824,7 @@ public static class HoldingFolderDistributor
         if (!IsValidHaltungId(haltung))
             return ParsePdfPage(text);
 
-        var videoFile = TryFindFilmName(text, filmRx);
+        var videoFile = TryFindFilmName(text, FilmNameRegex);
         return new ParsedPdf(true, videoFile is null ? "Film name not found" : null, date, haltung, videoFile);
     }
 
@@ -1527,8 +1844,7 @@ public static class HoldingFolderDistributor
         if (headerHaltung is not null)
         {
             var headerDate = TryFindInspectionDate(text);
-            var filmRxH = new Regex(@"Film(?:name|datei)?\s*[:\-]?\s*([A-Za-z0-9_\-\. ]+?\.(?:mp2|mpg|mpeg|mp4|avi|mov|wmv|mkv))", RegexOptions.IgnoreCase);
-            var videoFileH = TryFindFilmName(text, filmRxH);
+            var videoFileH = TryFindFilmName(text, FilmNameRegex);
             var baseMessageH = videoFileH is null ? "Film name not found" : null;
             return new ParsedPdf(true, baseMessageH, headerDate, headerHaltung, videoFileH);
         }
@@ -1540,8 +1856,7 @@ public static class HoldingFolderDistributor
         // Immer Haltungsnummer aus Schacht/Punkt-Feldern zusammensetzen
         var shaftHaltung = TryExtractFromShafts(text);
         var date = TryFindInspectionDate(text);
-        var filmRx = new Regex(@"Film(?:name|datei)?\s*[:\-]?\s*([A-Za-z0-9_\-\. ]+?\.(?:mp2|mpg|mpeg|mp4|avi|mov|wmv|mkv))", RegexOptions.IgnoreCase);
-        var videoFile = TryFindFilmName(text, filmRx);
+        var videoFile = TryFindFilmName(text, FilmNameRegex);
         var baseMessage = videoFile is null ? "Film name not found" : null;
 
         // Extrahiere explizites Haltung-Feld (falls vorhanden)
@@ -1624,7 +1939,15 @@ public static class HoldingFolderDistributor
             var dir = Path.GetDirectoryName(pdfPath);
             if (!string.IsNullOrWhiteSpace(dir) && Directory.Exists(dir))
             {
-                var xtfFiles = Directory.GetFiles(dir, "*.xtf", SearchOption.AllDirectories);
+                string[] xtfFiles;
+                lock (XtfCacheSync)
+                {
+                    if (!XtfFilesCache.TryGetValue(dir, out xtfFiles!))
+                    {
+                        xtfFiles = Directory.GetFiles(dir, "*.xtf", SearchOption.AllDirectories);
+                        XtfFilesCache[dir] = xtfFiles;
+                    }
+                }
                 var xtfPath = XtfHelper.FindMatchingXtf(pdfPath, xtfFiles);
                 if (!string.IsNullOrWhiteSpace(xtfPath))
                 {
@@ -1677,8 +2000,7 @@ public static class HoldingFolderDistributor
         if (string.IsNullOrWhiteSpace(fileName))
             return null;
 
-        var pairRx = new Regex(@"(?:\d{2,}\.\d{2,}|\d{4,})\s*[-_]\s*(?:\d{2,}\.\d{2,}|\d{4,})");
-        var match = pairRx.Match(fileName);
+        var match = PdfFilenamePairRegex.Match(fileName);
         if (!match.Success)
             return null;
 
@@ -1690,6 +2012,9 @@ public static class HoldingFolderDistributor
     {
         var chunks = new List<PdfPageChunk>();
         if (pages.Count == 0) return chunks;
+
+        // Pre-warm XTF cache for the PDF directory to avoid AllDirectories scan per page
+        PreWarmXtfCache(pages);
 
         List<int>? currentPages = null;
         ParsedPdf? currentParsed = null;
@@ -1727,6 +2052,25 @@ public static class HoldingFolderDistributor
             chunks.Add(new PdfPageChunk(currentPages, currentParsed));
 
         return chunks;
+    }
+
+    private static void PreWarmXtfCache(IReadOnlyList<PageInfo> pages)
+    {
+        var sourcePath = pages.FirstOrDefault(p => !string.IsNullOrWhiteSpace(p.SourcePath))?.SourcePath;
+        if (string.IsNullOrWhiteSpace(sourcePath))
+            return;
+
+        var dir = Path.GetDirectoryName(sourcePath);
+        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
+            return;
+
+        lock (XtfCacheSync)
+        {
+            if (!XtfFilesCache.ContainsKey(dir))
+            {
+                XtfFilesCache[dir] = Directory.GetFiles(dir, "*.xtf", SearchOption.AllDirectories);
+            }
+        }
     }
 
     private static ParsedPdf ParsePdfWithOcrFallback(IReadOnlyList<PageInfo> pages)
@@ -1961,7 +2305,7 @@ public static class HoldingFolderDistributor
 
     private static DateTime? TryExtractDateFromFormEntries(IReadOnlyList<PdfFormFieldEntry> entries)
     {
-        var dateRx = new Regex(@"\b(?<d>\d{2}[./-]\d{2}[./-]\d{2,4}|\d{4}[./-]\d{2}[./-]\d{2})\b");
+        var dateRx = FormEntryDateRx;
 
         // Prefer labeled date fields.
         foreach (var entry in entries)
@@ -2191,7 +2535,7 @@ public static class HoldingFolderDistributor
     {
         if (pages.Count == 0) return "";
         var sorted = pages.Distinct().OrderBy(p => p).ToList();
-        return sorted.Count == 1 ? $"{sorted[0]}" : $"{sorted.First()}-{sorted.Last()}";
+        return sorted.Count == 1 ? $"{sorted[0]}" : $"{sorted[0]}-{sorted[^1]}";
     }
 
     private static bool IsContentsPage(string text)
@@ -2199,7 +2543,7 @@ public static class HoldingFolderDistributor
 
     private static DateTime? TryFindInspectionDate(string text)
     {
-        var dateRx = new Regex(@"(\d{2}\.\d{2}\.\d{2,4}|\d{4}-\d{2}-\d{2})");
+        var dateRx = InspectionDateRx;
         var lines = text.Replace("\r\n", "\n").Split('\n');
 
         // Priority 1: Find date in header line
@@ -2261,7 +2605,7 @@ public static class HoldingFolderDistributor
     private static DateTime? TryFindSchachtDate(string text)
     {
         var lines = text.Replace("\r\n", "\n").Split('\n');
-        var labeledDateRx = new Regex(@"Datum\s*[:\-]?\s*(?<date>\d{2}[./-]\d{2}[./-]\d{2,4})", RegexOptions.IgnoreCase);
+        var labeledDateRx = LabeledDateRx;
         foreach (var line in lines)
         {
             var m = labeledDateRx.Match(line);
@@ -2272,7 +2616,7 @@ public static class HoldingFolderDistributor
                 return d;
         }
 
-        var genericDateRx = new Regex(@"\b(?<date>\d{2}[./-]\d{2}[./-]\d{2,4})\b");
+        var genericDateRx = GenericDateRx;
         foreach (var line in lines)
         {
             if (line.Contains("Foto", StringComparison.OrdinalIgnoreCase))
@@ -2307,9 +2651,9 @@ public static class HoldingFolderDistributor
 
     private static string? TryFindHaltungId(string text)
     {
-        var idRx = new Regex(@"(?im)^.*Haltung.*[:\-\s]+(?<id>[\d\.\- ]{5,})", RegexOptions.IgnoreCase);
-        var generalPairRx = new Regex(@"((?:\d{2,}\.\d{2,}|\d{4,})\s*[-]\s*(?:\d{2,}\.\d{2,}|\d{4,}))(?=[^\d]|$)");
-        var gluedDatePairRx = new Regex(@"((?:\d{2,}\.\d{2,}|\d{4,})\s*-\s*(?:\d{2,}\.\d{2,}|\d{4,}?))(?=\d{2}\.\d{2}\.\d{2,4}|\d{4}-\d{2}-\d{2})");
+        var idRx = HaltungIdRx;
+        var generalPairRx = GeneralPairRx;
+        var gluedDatePairRx = GluedDatePairRx;
         
         // Priority 1: Try extracting from Schacht oben/unten pattern first (most reliable)
         var shaftPattern = TryExtractFromShafts(text);
@@ -2340,10 +2684,7 @@ public static class HoldingFolderDistributor
         }
 
         // Priority 1c: concatenated numeric pair without dash (e.g. 2302221598 -> 23022-21598)
-        var concatenatedRx = new Regex(
-            @"(?:Haltungsname|Schacht\s*oben|Schacht\s*unten|Oberer\s*Punkt|Unterer\s*Punkt).{0,300}?(?<id>\d{10})(?!\d)",
-            RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        var concatenated = concatenatedRx.Match(text);
+        var concatenated = ConcatenatedIdRx.Match(text);
         if (concatenated.Success)
         {
             var raw = concatenated.Groups["id"].Value;
@@ -2650,8 +2991,8 @@ public static class HoldingFolderDistributor
         if (pairAfterLowerPoint.Success)
             return pairAfterLowerPoint.Groups["pair"].Value;
 
-        var upperPointInline = Regex.Match(text, @"Oberer\s*Punkt\s*(?<v>\d{2,}\.\d{3,}|\d{5,})", RegexOptions.IgnoreCase);
-        var lowerPointInline = Regex.Match(text, @"Unterer\s*Punkt\s*(?<v>\d{2,}\.\d{3,}|\d{5,})", RegexOptions.IgnoreCase);
+        var upperPointInline = Regex.Match(text, @"Oberer\s*Punkt\s*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
+        var lowerPointInline = Regex.Match(text, @"Unterer\s*Punkt\s*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
         if (upperPointInline.Success && lowerPointInline.Success)
         {
             var up = upperPointInline.Groups["v"].Value;
@@ -2660,8 +3001,8 @@ public static class HoldingFolderDistributor
                 return $"{up}-{low}";
         }
 
-        var upperSchachtInline = Regex.Match(text, @"Schacht\s*oben\s*[:\-]?\s*(?<v>\d{2,}\.\d{3,}|\d{5,})", RegexOptions.IgnoreCase);
-        var lowerSchachtInline = Regex.Match(text, @"Schacht\s*unten\s*[:\-]?\s*(?<v>\d{2,}\.\d{3,}|\d{5,})", RegexOptions.IgnoreCase);
+        var upperSchachtInline = Regex.Match(text, @"Schacht\s*oben\s*[:\-]?\s*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
+        var lowerSchachtInline = Regex.Match(text, @"Schacht\s*unten\s*[:\-]?\s*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
         if (upperSchachtInline.Success && lowerSchachtInline.Success)
         {
             var up = upperSchachtInline.Groups["v"].Value;
@@ -2670,10 +3011,21 @@ public static class HoldingFolderDistributor
                 return $"{up}-{low}";
         }
 
+        // Dichtheitspruefung Format: "oberer Schacht: XXXXX" / "unterer Schacht: XXXXX"
+        var upperObererSchacht = Regex.Match(text, @"oberer\s*Schacht\s*[:\-]?\s*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
+        var lowerUntererSchacht = Regex.Match(text, @"unterer\s*Schacht\s*[:\-]?\s*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
+        if (upperObererSchacht.Success && lowerUntererSchacht.Success)
+        {
+            var up = upperObererSchacht.Groups["v"].Value;
+            var low = lowerUntererSchacht.Groups["v"].Value;
+            if (!string.Equals(up, low, StringComparison.OrdinalIgnoreCase))
+                return $"{up}-{low}";
+        }
+
         string? oben = null;
         string? unten = null;
         
-        var pointRx = new Regex(@"\b(\d{2,}\.\d{3,}|\d{5,})\b");
+        var pointRx = new Regex(@"\b(\d{2,}\.\d{2,}|\d{4,})\b");
         
         for (var i = 0; i < lines.Length; i++)
         {
@@ -3271,13 +3623,22 @@ public static class HoldingFolderDistributor
             string? infoPath = null;
             var videoPaths = new List<string>();
 
-            // Standard-Video kopieren
+            // Standard-Video kopieren (Duplikat-Check: gleiche Dateigroesse = bereits vorhanden)
             if (videoFind.Status == VideoMatchStatus.Matched && videoFind.VideoPath is not null)
             {
                 var videoExt = Path.GetExtension(videoFind.VideoPath);
                 var destVideoName = $"{dateStamp}_{haltung}{videoExt}";
-                destVideoPath = EnsureUniquePath(Path.Combine(holdingFolder, destVideoName), overwrite);
-                MoveOrCopy(videoFind.VideoPath, destVideoPath, moveInsteadOfCopy);
+                destVideoPath = Path.Combine(holdingFolder, destVideoName);
+                var existingVideo = FindExistingVideo(holdingFolder, videoFind.VideoPath);
+                if (existingVideo is not null)
+                {
+                    destVideoPath = existingVideo;
+                }
+                else
+                {
+                    destVideoPath = EnsureUniquePath(destVideoPath, overwrite);
+                    MoveOrCopy(videoFind.VideoPath, destVideoPath, moveInsteadOfCopy);
+                }
                 videoPaths.Add(destVideoPath);
 
                 // Automatisch Link im HaltungRecord setzen, falls Project übergeben
@@ -3300,10 +3661,18 @@ public static class HoldingFolderDistributor
             // Gegeninspektions-Video kopieren (falls vorhanden und nicht identisch zum Standard-Video)
             if (videoFindG.Status == VideoMatchStatus.Matched && videoFindG.VideoPath is not null && !string.Equals(videoFindG.VideoPath, videoFind.VideoPath, StringComparison.OrdinalIgnoreCase))
             {
-                var videoExtG = Path.GetExtension(videoFindG.VideoPath);
-                var destVideoNameG = $"{dateStamp}_{haltung}-g{videoExtG}";
-                destVideoPathG = EnsureUniquePath(Path.Combine(holdingFolder, destVideoNameG), overwrite);
-                MoveOrCopy(videoFindG.VideoPath, destVideoPathG, moveInsteadOfCopy);
+                var existingVideoG = FindExistingVideo(holdingFolder, videoFindG.VideoPath);
+                if (existingVideoG is not null)
+                {
+                    destVideoPathG = existingVideoG;
+                }
+                else
+                {
+                    var videoExtG = Path.GetExtension(videoFindG.VideoPath);
+                    var destVideoNameG = $"{dateStamp}_{haltung}-g{videoExtG}";
+                    destVideoPathG = EnsureUniquePath(Path.Combine(holdingFolder, destVideoNameG), overwrite);
+                    MoveOrCopy(videoFindG.VideoPath, destVideoPathG, moveInsteadOfCopy);
+                }
                 videoPaths.Add(destVideoPathG);
             }
 
@@ -3406,11 +3775,46 @@ public static class HoldingFolderDistributor
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        return project.Data.FirstOrDefault(x =>
+        // 1) Exakte Suche (normalisiert)
+        var exact = project.Data.FirstOrDefault(x =>
         {
             var recKey = SanitizePathSegment(NormalizeHaltungId(x.GetFieldValue("Haltungsname")?.Trim() ?? ""));
             return keys.Contains(recKey, StringComparer.OrdinalIgnoreCase);
         });
+        if (exact is not null)
+            return exact;
+
+        // 2) Knoten-Prefix-tolerant (z.B. 07.7695-07.7078 == 7695-7078)
+        var strippedKeys = keys
+            .Select(StripNodePrefixes)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return project.Data.FirstOrDefault(x =>
+        {
+            var recKey = SanitizePathSegment(NormalizeHaltungId(x.GetFieldValue("Haltungsname")?.Trim() ?? ""));
+            var recStripped = StripNodePrefixes(recKey);
+            return strippedKeys.Contains(recStripped, StringComparer.OrdinalIgnoreCase);
+        });
+    }
+
+    private static readonly Regex NodePrefixRegex = new(@"^\d{1,2}\.", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Entfernt XX. Praefixe (1-2 Ziffern + Punkt) von beiden Seiten eines Haltungsnamens.
+    /// Z.B. "07.7695-07.7078" → "7695-7078"
+    /// </summary>
+    private static string StripNodePrefixes(string holdingKey)
+    {
+        var dashIdx = holdingKey.IndexOf('-');
+        if (dashIdx < 0)
+            return NodePrefixRegex.Replace(holdingKey, "");
+
+        var left = holdingKey[..dashIdx];
+        var right = holdingKey[(dashIdx + 1)..];
+        left = NodePrefixRegex.Replace(left, "");
+        right = NodePrefixRegex.Replace(right, "");
+        return $"{left}-{right}";
     }
 
     private static IEnumerable<string> EnumerateHoldingLookupKeys(string haltung)
@@ -3452,10 +3856,13 @@ public static class HoldingFolderDistributor
         if (record.FieldMeta.TryGetValue("Link", out var linkMeta))
         {
             var src = linkMeta.Source;
-            var isXtfLink = src == AuswertungPro.Next.Domain.Models.FieldSource.Xtf
-                            || src == AuswertungPro.Next.Domain.Models.FieldSource.Xtf405;
-            if (!isXtfLink)
-                return new VideoFindResult(VideoMatchStatus.NotFound, null, Array.Empty<string>(), "Link source is not XTF/M150/MDB");
+            // M150/MDB-Importe verwenden FieldSource.Xtf, INTERLIS FieldSource.Ili.
+            // Alle strukturierten Import-Quellen sind vertrauenswuerdig fuer Video-Links.
+            var isStructuredImport = src == AuswertungPro.Next.Domain.Models.FieldSource.Xtf
+                                     || src == AuswertungPro.Next.Domain.Models.FieldSource.Xtf405
+                                     || src == AuswertungPro.Next.Domain.Models.FieldSource.Ili;
+            if (!isStructuredImport)
+                return new VideoFindResult(VideoMatchStatus.NotFound, null, Array.Empty<string>(), "Link source is not XTF/M150/MDB/ILI");
         }
 
         var link = (record.GetFieldValue("Link") ?? "").Trim();
@@ -3606,7 +4013,7 @@ public static class HoldingFolderDistributor
             return NormalizeVideoFileName(filmMatch.Groups[1].Value);
 
         // Fallback: any token with common video extension
-        var extRx = new Regex(@"\b([A-Za-z0-9_\-\.]+?\.(?:mp2|mpg|mpeg|mp4|avi|mov|wmv|mkv))\b", RegexOptions.IgnoreCase);
+        var extRx = new Regex($@"\b([A-Za-z0-9_\-\.]+?\.(?:{VideoExtensionPattern}))\b", RegexOptions.IgnoreCase);
         var extMatch = extRx.Match(text);
         if (extMatch.Success)
             return NormalizeVideoFileName(extMatch.Groups[1].Value);
@@ -3765,27 +4172,13 @@ public static class HoldingFolderDistributor
     private static bool HasVideoExtension(string token)
     {
         var normalized = NormalizeVideoFileName(token);
-        if (string.IsNullOrWhiteSpace(normalized))
-            return false;
-
-        var ext = Path.GetExtension(normalized);
-        if (string.IsNullOrWhiteSpace(ext)) return false;
-        var e = ext.ToLowerInvariant();
-        return e is ".mp2" or ".mpg" or ".mpeg" or ".mp4" or ".avi" or ".mov" or ".wmv" or ".mkv";
+        return MediaFileTypes.HasVideoExtension(normalized);
     }
 
     private static bool HasImageExtension(string token)
     {
         var normalized = NormalizeVideoFileName(token);
-        if (string.IsNullOrWhiteSpace(normalized))
-            return false;
-
-        var ext = Path.GetExtension(normalized);
-        if (string.IsNullOrWhiteSpace(ext))
-            return false;
-
-        var e = ext.ToLowerInvariant();
-        return e is ".jpg" or ".jpeg" or ".png" or ".bmp" or ".tif" or ".tiff";
+        return MediaFileTypes.HasImageExtension(normalized);
     }
 
     private static string? NormalizeVideoFileName(string? value)
@@ -3807,19 +4200,7 @@ public static class HoldingFolderDistributor
     }
 
     private static string SanitizePathSegment(string value)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        var sb = new StringBuilder(value.Length);
-        foreach (var ch in value)
-        {
-            if (invalid.Contains(ch))
-                sb.Append('_');
-            else
-                sb.Append(ch);
-        }
-        var cleaned = sb.ToString().Trim();
-        return string.IsNullOrWhiteSpace(cleaned) ? "UNKNOWN" : cleaned;
-    }
+        => ProjectPathResolver.SanitizePathSegment(value);
 
     private static string NormalizeHaltungId(string? value)
     {
@@ -3877,6 +4258,88 @@ public static class HoldingFolderDistributor
         return true;
     }
 
+    /// <summary>
+    /// Prueft ob im Haltungsordner bereits ein Video mit gleicher Dateigroesse existiert.
+    /// Gibt den Pfad zurueck wenn ja, sonst null.
+    /// Verhindert Duplikate beim erneuten Verteilen.
+    /// </summary>
+    private static string? FindExistingVideo(string holdingFolder, string sourceVideoPath)
+    {
+        if (!Directory.Exists(holdingFolder) || !File.Exists(sourceVideoPath))
+            return null;
+
+        var srcInfo = new FileInfo(sourceVideoPath);
+        var srcName = Path.GetFileName(sourceVideoPath);
+
+        try
+        {
+            foreach (var existing in Directory.EnumerateFiles(holdingFolder))
+            {
+                if (!MediaFileTypes.HasVideoExtension(existing))
+                    continue;
+
+                // Exakter Dateiname-Match
+                if (string.Equals(Path.GetFileName(existing), srcName, StringComparison.OrdinalIgnoreCase))
+                    return existing;
+
+                // Gleiche Dateigroesse = selbes Video (anderer Name)
+                var existInfo = new FileInfo(existing);
+                if (existInfo.Length == srcInfo.Length && existInfo.Length > 0)
+                    return existing;
+            }
+        }
+        catch
+        {
+            // Ordner nicht lesbar
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Versucht, ein nicht-parsbares PDF (z.B. Dichtheitspruefungsprotokoll) anhand
+    /// seines Dateinamens einem bereits verteilten Haltungsordner zuzuordnen.
+    /// Sucht nach Haltungsnummern im Dateinamen und vergleicht mit dem Index.
+    /// </summary>
+    private static string? TryMatchPdfToHolding(
+        string pdfPath,
+        IReadOnlyDictionary<string, string> distributedHoldings)
+    {
+        if (distributedHoldings.Count == 0)
+            return null;
+
+        var fileName = Path.GetFileNameWithoutExtension(pdfPath) ?? "";
+
+        // 1) Versuche Haltungsnummer aus dem Dateinamen zu extrahieren
+        var pairRx = new Regex(@"((?:\d{2,}\.\d{2,}|\d{4,})\s*[-]\s*(?:\d{2,}\.\d{2,}|\d{4,}))");
+        var match = pairRx.Match(fileName);
+        if (match.Success)
+        {
+            var extracted = NormalizeHaltungId(match.Groups[1].Value);
+            if (distributedHoldings.TryGetValue(extracted, out var folder))
+                return folder;
+
+            // Prefix-tolerant: z.B. Dateiname hat 7695-7078, Index hat 07.7695-07.7078
+            var stripped = StripNodePrefixes(extracted);
+            foreach (var kvp in distributedHoldings)
+            {
+                if (string.Equals(StripNodePrefixes(kvp.Key), stripped, StringComparison.OrdinalIgnoreCase))
+                    return kvp.Value;
+            }
+        }
+
+        // 2) Fallback: Pruefe ob der Dateiname den Ordnernamen einer verteilten Haltung enthaelt
+        foreach (var kvp in distributedHoldings)
+        {
+            var holdingDirName = Path.GetFileName(kvp.Value) ?? "";
+            if (!string.IsNullOrWhiteSpace(holdingDirName)
+                && fileName.Contains(holdingDirName, StringComparison.OrdinalIgnoreCase))
+                return kvp.Value;
+        }
+
+        return null;
+    }
+
     private static string EnsureUniquePath(string path, bool overwrite)
     {
         if (overwrite || !File.Exists(path))
@@ -3917,4 +4380,3 @@ public static class HoldingFolderDistributor
     }
 #endif
 }
-

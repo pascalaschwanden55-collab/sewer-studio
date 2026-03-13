@@ -11,26 +11,27 @@ using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
+using AuswertungPro.Next.Infrastructure.Media;
 
 namespace AuswertungPro.Next.Infrastructure.Import.WinCan;
 
 public sealed class WinCanDbImportService : IWinCanDbImportService
 {
-    private static readonly HashSet<string> MediaExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".mpg", ".mpeg", ".mp4", ".avi", ".mov",
-        ".jpg", ".jpeg", ".png", ".bmp",
-        ".pdf"
-    };
+    private static readonly HashSet<string> MediaExtensions = new(
+        MediaFileTypes.VideoExtensions
+            .Concat(new[] { ".jpg", ".jpeg", ".png", ".bmp", ".pdf" }),
+        StringComparer.OrdinalIgnoreCase);
 
-    public Result<ImportStats> ImportWinCanExport(string exportRoot, Project project)
+    public Result<ImportStats> ImportWinCanExport(string exportRoot, Project project, ImportRunContext? ctx = null)
     {
         if (string.IsNullOrWhiteSpace(exportRoot) || !Directory.Exists(exportRoot))
             return Result<ImportStats>.Fail("WINCAN_ROOT_MISSING", "Export-Ordner nicht gefunden.");
 
+        ctx?.Log.AddEntry("WinCan", "Start", ImportLogStatus.Info, sourceFile: exportRoot);
+
         var dbPath = FindDb3(exportRoot);
         if (string.IsNullOrWhiteSpace(dbPath))
-            return ImportWithoutDb3(exportRoot, project, "WinCan DB3 nicht gefunden. Fallback auf MDB.");
+            return ImportWithoutDb3(exportRoot, project, "WinCan DB3 nicht gefunden. Fallback auf MDB.", ctx: ctx);
 
         var messages = new List<string>();
         messages.Add($"Importquelle: WinCan DB3 ({Path.GetFileName(dbPath)})");
@@ -55,8 +56,14 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             var mediaByObs = LoadObservationMedia(conn);
             var nodes = LoadNodes(conn);
 
+            var sectionIndex = 0;
             foreach (var section in sections)
             {
+                ctx?.CancellationToken.ThrowIfCancellationRequested();
+                sectionIndex++;
+                ctx?.Progress?.Report(new ImportProgress(
+                    "Haltungen importieren", sectionIndex, sections.Count,
+                    $"WinCan {sectionIndex}/{sections.Count}", section.Key));
                 if (string.IsNullOrWhiteSpace(section.Key))
                     continue;
 
@@ -151,6 +158,7 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
                 ApplyProtocol(record, entries, protocolService);
                 UpdateFindings(record, entries);
                 LinkSectionPdf(record, section.Key, fileIndex);
+                BuildPrimaryDamagesText(record, entries);
 
                 updated++;
             }
@@ -170,7 +178,7 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
                 ? "WinCan DB3 Import fehlgeschlagen. Versuche MDB-Fallback."
                 : "WinCan DB3 ohne auswertbare Haltungsdaten. Versuche MDB-Fallback.";
 
-            var fallback = ImportWithoutDb3(exportRoot, project, fallbackReason, failWhenNoMdb: false);
+            var fallback = ImportWithoutDb3(exportRoot, project, fallbackReason, failWhenNoMdb: false, ctx: ctx);
             if (fallback.Ok && fallback.Value is not null && fallback.Value.Found > 0)
             {
                 found += fallback.Value.Found;
@@ -201,7 +209,8 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         string exportRoot,
         Project project,
         string reasonMessage,
-        bool failWhenNoMdb = true)
+        bool failWhenNoMdb = true,
+        ImportRunContext? ctx = null)
     {
         var mdbPaths = FindMdbCandidates(exportRoot);
         if (mdbPaths.Count == 0)
@@ -229,6 +238,7 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         var parsedFiles = 0;
         foreach (var mdbPath in mdbPaths)
         {
+            ctx?.CancellationToken.ThrowIfCancellationRequested();
             if (!M150MdbImportHelper.TryParseMdbFile(mdbPath, out var records, out var parseError, out var warnings))
             {
                 errors++;
@@ -267,6 +277,7 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
 
         foreach (var imported in importedByHolding.Values)
         {
+            ctx?.CancellationToken.ThrowIfCancellationRequested();
             var key = NormalizeHoldingKey(imported.GetFieldValue("Haltungsname"));
             var target = project.Data.FirstOrDefault(r =>
                 string.Equals(NormalizeHoldingKey(r.GetFieldValue("Haltungsname")), key, StringComparison.OrdinalIgnoreCase));
@@ -285,9 +296,12 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             changed |= ApplyImportedField(target, "Datum_Jahr", imported.GetFieldValue("Datum_Jahr"));
             changed |= ApplyImportedField(target, "Haltungslaenge_m", imported.GetFieldValue("Haltungslaenge_m"));
             changed |= ApplyImportedField(target, "DN_mm", imported.GetFieldValue("DN_mm"));
-            changed |= ApplyImportedField(target, "Rohrmaterial", imported.GetFieldValue("Rohrmaterial"));
+            changed |= ApplyImportedField(target, "Rohrmaterial", NormalizeMaterial(imported.GetFieldValue("Rohrmaterial")));
             changed |= ApplyImportedField(target, "Inspektionsrichtung", imported.GetFieldValue("Inspektionsrichtung"));
             changed |= ApplyImportedField(target, "Bemerkungen", imported.GetFieldValue("Bemerkungen"));
+            changed |= ApplyImportedField(target, "Nutzungsart", NormalizeUsage(imported.GetFieldValue("Nutzungsart")));
+            changed |= ApplyImportedField(target, "Primaere_Schaeden",
+                XtfPrimaryDamageFormatter.DeduplicateText(imported.GetFieldValue("Primaere_Schaeden")));
 
             var rawLink = imported.GetFieldValue("Link");
             if (!string.IsNullOrWhiteSpace(rawLink))
@@ -298,6 +312,13 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             else
             {
                 uncertain++;
+            }
+
+            // Transfer protocol from MDB import (SO_T observations)
+            if (imported.Protocol is not null && target.Protocol is null)
+            {
+                target.Protocol = imported.Protocol;
+                changed = true;
             }
 
             if (!isNew && changed)
@@ -397,32 +418,43 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
 
     private static void UpdateFindings(HaltungRecord record, List<ProtocolEntry> entries)
     {
-        record.VsaFindings ??= new List<VsaFinding>();
+        var findings = new List<VsaFinding>(entries.Count);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var entry in entries)
         {
-            var existing = record.VsaFindings.FirstOrDefault(f =>
-                string.Equals(f.KanalSchadencode, entry.Code, StringComparison.OrdinalIgnoreCase)
-                && f.MeterStart.HasValue && entry.MeterStart.HasValue
-                && Math.Abs(f.MeterStart.Value - entry.MeterStart.Value) <= 0.01);
+            var rawCode = (entry.Code ?? "").Trim().ToUpperInvariant();
+            // Streckenschaden-Marker zum echten VSA-Code aufloesen
+            var effectiveCode = ResolveEffectiveCode(rawCode, entry.Beschreibung, out _);
 
-            if (existing is null)
+            var meterStart = entry.MeterStart;
+            var meterEnd = entry.MeterEnd;
+            var meterKey = meterStart.HasValue
+                ? meterStart.Value.ToString("F2", CultureInfo.InvariantCulture)
+                : meterEnd.HasValue
+                    ? meterEnd.Value.ToString("F2", CultureInfo.InvariantCulture)
+                    : string.Empty;
+            var dedupeKey = $"{effectiveCode}|{meterKey}";
+            if (!seen.Add(dedupeKey))
+                continue;
+
+            var finding = new VsaFinding
             {
-                existing = new VsaFinding
-                {
-                    KanalSchadencode = entry.Code
-                };
-                record.VsaFindings.Add(existing);
-            }
+                KanalSchadencode = effectiveCode,
+                Raw = entry.Beschreibung,
+                MeterStart = meterStart,
+                MeterEnd = meterEnd,
+                SchadenlageAnfang = meterStart,
+                SchadenlageEnde = meterEnd,
+                MPEG = entry.Mpeg,
+                FotoPath = entry.FotoPaths.Count > 0 ? entry.FotoPaths[0] : null
+            };
 
-            if (string.IsNullOrWhiteSpace(existing.Raw))
-                existing.Raw = entry.Beschreibung;
-            existing.MeterStart = entry.MeterStart;
-            existing.MeterEnd = entry.MeterEnd;
-            existing.MPEG = entry.Mpeg;
-            if (entry.FotoPaths.Count > 0)
-                existing.FotoPath = entry.FotoPaths[0];
+            findings.Add(finding);
         }
+
+        // DB3 gilt als Quelle der Wahrheit: vorhandene VsaFindings durch den aktuellen Importstand ersetzen.
+        record.VsaFindings = findings;
     }
 
     private static void LinkSectionPdf(HaltungRecord record, string sectionKey, Dictionary<string, List<string>> index)
@@ -632,7 +664,7 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         return candidates
             .Select(p => new FileInfo(p))
             .OrderByDescending(fi => fi.Length)
-            .First().FullName;
+            .FirstOrDefault()?.FullName;
     }
 
     private static IReadOnlyList<string> FindMdbCandidates(string exportRoot)
@@ -735,8 +767,8 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
                 InspectionFk: r.GetString(1),
                 OpCode: r.IsDBNull(2) ? "" : r.GetString(2),
                 Observation: r.IsDBNull(3) ? "" : r.GetString(3),
-                Distance: r.IsDBNull(4) ? null : (double?)Convert.ToDouble(r[4], CultureInfo.InvariantCulture),
-                ContDefectLength: r.IsDBNull(5) ? null : (double?)Convert.ToDouble(r[5], CultureInfo.InvariantCulture),
+                Distance: SafeReadDouble(r, 4),
+                ContDefectLength: SafeReadDouble(r, 5),
                 TimeCtr: r.IsDBNull(6) ? null : r.GetString(6),
                 Q1: r.IsDBNull(7) ? null : r.GetString(7),
                 Q2: r.IsDBNull(8) ? null : r.GetString(8),
@@ -843,6 +875,11 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         if (m.Success && long.TryParse(m.Groups[1].Value, out var ms))
             return DateTimeOffset.FromUnixTimeMilliseconds(ms).DateTime;
 
+        // Try explicit European date formats first to avoid DD/MM swap
+        var formats = new[] { "dd.MM.yyyy", "dd/MM/yyyy", "dd-MM-yyyy", "yyyy-MM-dd", "dd.MM.yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss" };
+        if (DateTime.TryParseExact(text, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dtExact))
+            return dtExact;
+
         if (DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dt))
             return dt;
 
@@ -927,6 +964,91 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         "Schacht ID",
         "Schacht-ID"
     };
+
+    // Streckenschaden-Marker: A01, A02, B01, B02, ... (DIN EN 13508-2 Anfang/Ende Streckenschaden)
+    private static readonly Regex ContinuousDefectMarkerRegex = new(@"^[AB]\d{2}$", RegexOptions.Compiled);
+
+    // VSA-Code am Anfang der Beschreibung extrahieren (z.B. "BBCC (Harte Ablagerungen...)")
+    private static readonly Regex EmbeddedVsaCodeRegex = new(@"^([A-Z]{3,5})\b", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Prueft ob der Code ein Streckenschaden-Marker (A01, B02 etc.) ist.
+    /// Falls ja, wird der echte VSA-Code aus der Beschreibung extrahiert.
+    /// </summary>
+    private static string ResolveEffectiveCode(string code, string? description, out string? resolvedDescription)
+    {
+        resolvedDescription = description;
+        if (!ContinuousDefectMarkerRegex.IsMatch(code) || string.IsNullOrWhiteSpace(description))
+            return code;
+
+        var match = EmbeddedVsaCodeRegex.Match(description.Trim());
+        if (match.Success)
+        {
+            var vsaCode = match.Groups[1].Value;
+            // Beschreibung bereinigen: VSA-Code am Anfang entfernen
+            var rest = description.Trim().Substring(vsaCode.Length).TrimStart(' ', '(');
+            if (rest.EndsWith(")"))
+                rest = rest.Substring(0, rest.Length - 1);
+            resolvedDescription = rest.Trim();
+            if (string.IsNullOrWhiteSpace(resolvedDescription))
+                resolvedDescription = description;
+            return vsaCode;
+        }
+
+        return code;
+    }
+
+    /// <summary>
+    /// Erzeugt den "Primaere_Schaeden" Text aus den Protokoll-Eintraegen.
+    /// Format: "0.00m CODE Beschreibung\n..."
+    /// Streckenschaden-Marker (A01, B02) werden zum echten VSA-Code aufgeloest.
+    /// </summary>
+    private static void BuildPrimaryDamagesText(HaltungRecord record, List<ProtocolEntry> entries)
+    {
+        if (entries.Count == 0)
+            return;
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var lines = new List<string>();
+        foreach (var entry in entries)
+        {
+            var rawCode = (entry.Code ?? "").Trim().ToUpperInvariant();
+            var desc = entry.Beschreibung?.Trim();
+            if (string.IsNullOrWhiteSpace(desc) && string.IsNullOrWhiteSpace(rawCode))
+                continue;
+
+            // Streckenschaden-Marker zum echten VSA-Code aufloesen
+            var code = ResolveEffectiveCode(rawCode, desc, out var resolvedDesc);
+
+            // Deduplicate by effective code + meter position
+            if (code.Length > 0)
+            {
+                var meterKey = entry.MeterStart.HasValue ? entry.MeterStart.Value.ToString("F2") : "";
+                var key = $"{code}|{meterKey}";
+                if (!seen.Add(key))
+                    continue;
+            }
+
+            var line = "";
+            if (entry.MeterStart.HasValue)
+                line = $"{entry.MeterStart.Value:0.00}m ";
+
+            if (!string.IsNullOrWhiteSpace(code) && !string.IsNullOrWhiteSpace(resolvedDesc))
+                line += $"{code} {resolvedDesc}";
+            else if (!string.IsNullOrWhiteSpace(code))
+                line += code;
+            else
+                line += resolvedDesc;
+
+            lines.Add(line.TrimEnd());
+        }
+
+        if (lines.Count == 0)
+            return;
+
+        var text = XtfPrimaryDamageFormatter.DeduplicateText(string.Join("\n", lines));
+        record.SetFieldValue("Primaere_Schaeden", text, FieldSource.Legacy, userEdited: false);
+    }
 
     private static void ApplyField(HaltungRecord record, string field, string? value)
     {
@@ -1019,24 +1141,13 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         if (string.IsNullOrWhiteSpace(raw))
             return null;
 
-        var t = raw.Trim();
-        var lower = t.ToLowerInvariant();
-        if (lower.Contains("polyvinylchlorid") || lower.Contains("pvc"))
-            return "PVC";
-        if (lower.Contains("polyethylen") || lower.Contains("pe"))
-            return "PE";
-        if (lower.Contains("pp"))
-            return "PP";
-        if (lower.Contains("gfk") || lower.Contains("glasfaser"))
-            return "GFK";
-        if (lower.Contains("beton"))
-            return "Beton";
-        if (lower.Contains("steinzeug"))
-            return "Steinzeug";
-        if (lower.Contains("guss"))
-            return "Guss";
+        // Take only the first line – WinCan DB sometimes appends cleaning info
+        // like "Zement\nGereinigt    Ja" into the material field.
+        var t = raw.Split('\n')[0].Trim();
+        // Strip trailing non-material tokens (e.g. "Gereinigt Ja")
+        t = Regex.Replace(t, @"(?i)\s*(gereinigt|nicht\s*gereinigt|verschmutzt)\s*(ja|nein)?\s*$", "").Trim();
 
-        return t;
+        return string.IsNullOrWhiteSpace(t) ? null : t;
     }
 
     private static string? NormalizeUsage(string? raw)
@@ -1046,12 +1157,32 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
 
         var t = raw.Trim();
         var lower = t.ToLowerInvariant();
+
+        // Filter out non-usage values that sometimes end up in the Usage field
+        // (e.g. cleaning status, material info, yes/no flags)
+        if (lower is "gereinigt" or "nicht gereinigt" or "verschmutzt"
+            or "ja" or "nein" or "yes" or "no"
+            or "-" or "--" or "n/a" or "k.a.")
+            return null;
+
+        // Full-text matches (e.g. "Schmutzabwasser", "Regenwasser", "Mischabwasser")
         if (lower.Contains("regen"))
             return "Regenwasser";
         if (lower.Contains("schmutz"))
             return "Schmutzwasser";
         if (lower.Contains("misch"))
             return "Mischabwasser";
+
+        // DWA-M150 / ISYBAU / VSA codes
+        if (lower is "s" or "ks" or "sw") return "Schmutzwasser";
+        if (lower is "r" or "kr" or "rw") return "Regenwasser";
+        if (lower is "m" or "km" or "mw") return "Mischabwasser";
+
+        // Schweizer VSA-Codes (E=Entwaesserung, H=Hausentwaesserung,
+        // F=Fremdwasser, Z=Zufluss) und andere unbekannte Kurzformen
+        // sind keine Standard-Nutzungsarten - nicht uebernehmen.
+        if (t.Length <= 2)
+            return null;
 
         return t;
     }
@@ -1082,5 +1213,15 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             return "abgeschlossen";
 
         return raw.Trim();
+    }
+
+    private static double? SafeReadDouble(SqliteDataReader r, int col)
+    {
+        if (r.IsDBNull(col)) return null;
+        var val = r.GetValue(col);
+        if (val is double d) return d;
+        if (val is decimal dec) return (double)dec;
+        if (val is float f) return f;
+        return double.TryParse(val?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var p) ? p : null;
     }
 }

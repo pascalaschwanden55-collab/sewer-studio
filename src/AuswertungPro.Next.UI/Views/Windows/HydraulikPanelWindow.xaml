@@ -1,0 +1,485 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.HydraulikPanelWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
+        Title="SewerStudio — Hydraulik-Panel"
+        Width="920" Height="780"
+        MinWidth="800" MinHeight="650"
+        WindowStartupLocation="CenterOwner"
+        Background="#FFF5F7FA">
+
+    <Window.Resources>
+        <!-- Brushes (helles Layout) -->
+        <SolidColorBrush x:Key="HBg" Color="#FFF5F7FA"/>
+        <SolidColorBrush x:Key="HCard" Color="#FFFFFFFF"/>
+        <SolidColorBrush x:Key="HBorder" Color="#FFD0D7DE"/>
+        <SolidColorBrush x:Key="HInputBg" Color="#FFFFFFFF"/>
+        <SolidColorBrush x:Key="HInputBorder" Color="#FFB0B8C1"/>
+        <SolidColorBrush x:Key="HAccent" Color="#FF0969DA"/>
+        <SolidColorBrush x:Key="HTextPrimary" Color="#FF1F2328"/>
+        <SolidColorBrush x:Key="HTextSecondary" Color="#FF57606A"/>
+        <SolidColorBrush x:Key="HTextDim" Color="#FF8C959F"/>
+        <SolidColorBrush x:Key="HGreen" Color="#FF1A7F37"/>
+        <SolidColorBrush x:Key="HRed" Color="#FFCF222E"/>
+        <SolidColorBrush x:Key="HYellow" Color="#FF9A6700"/>
+
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <local:InvertBoolConverter x:Key="InvertBool"/>
+        <local:InvertBoolToVisibilityConverter x:Key="InvertBoolToVis"/>
+        <local:DotCommaDoubleConverter x:Key="DotCommaDouble"/>
+
+        <!-- ComboBox light theme -->
+        <Style x:Key="HComboBox" TargetType="ComboBox">
+            <Setter Property="Background" Value="{StaticResource HInputBg}"/>
+            <Setter Property="Foreground" Value="{StaticResource HTextPrimary}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource HInputBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Background" Value="#FFFFFFFF"/>
+                        <Setter Property="Foreground" Value="#FF1F2328"/>
+                        <Setter Property="Padding" Value="8,5"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter Property="Background" Value="#FFDDF4FF"/>
+                                <Setter Property="Foreground" Value="#FF0969DA"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Section header style -->
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource HAccent}"/>
+            <Setter Property="Margin" Value="12,10,12,6"/>
+        </Style>
+
+        <!-- Result row template -->
+        <Style x:Key="ResultLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource HTextSecondary}"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="ResultValue" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource HTextPrimary}"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+        </Style>
+        <Style x:Key="ResultUnit" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource HTextDim}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
+        </Style>
+
+        <!-- Input label -->
+        <Style x:Key="InputLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource HTextSecondary}"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Width" Value="110"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Input TextBox -->
+        <Style x:Key="HInput" TargetType="TextBox">
+            <Setter Property="Background" Value="{StaticResource HInputBg}"/>
+            <Setter Property="Foreground" Value="{StaticResource HTextPrimary}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource HInputBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="CaretBrush" Value="{StaticResource HAccent}"/>
+        </Style>
+
+        <!-- Toggle button -->
+        <Style x:Key="HToggle" TargetType="ToggleButton">
+            <Setter Property="Background" Value="{StaticResource HInputBg}"/>
+            <Setter Property="Foreground" Value="{StaticResource HTextSecondary}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource HInputBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FFDDF4FF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource HAccent}"/>
+                                <Setter Property="Foreground" Value="{StaticResource HAccent}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource HAccent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- ═══ HEADER ═══ -->
+        <Border Grid.Row="0" Margin="0,0,0,16" Padding="0,0,0,14"
+                BorderThickness="0,0,0,1" BorderBrush="{StaticResource HBorder}">
+            <StackPanel Orientation="Horizontal">
+                <Border Width="38" Height="38" CornerRadius="8" Margin="0,0,14,0">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#FF0969DA" Offset="0"/>
+                            <GradientStop Color="#FF54AEFF" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <TextBlock Text="&#x1F4A7;" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="SewerStudio — Hydraulik-Panel"
+                               FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource HTextPrimary}"/>
+                    <TextBlock Text="DWA-A 110 · Kreisquerschnitt · Normalabfluss bei Teilfüllung"
+                               FontSize="12" Foreground="{StaticResource HTextDim}"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ═══ MAIN CONTENT ═══ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ═══ LEFT: INPUTS ═══ -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <!-- Haltungsdaten Card -->
+                    <Border Background="{StaticResource HCard}" BorderBrush="{StaticResource HBorder}"
+                            BorderThickness="1" CornerRadius="10" Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionHeader}" Text="HALTUNGSDATEN"/>
+
+                            <StackPanel Margin="12,4,12,10">
+                                <!-- DN -->
+                                <DockPanel Margin="0,4">
+                                    <TextBlock Style="{StaticResource InputLabel}" Text="Nennweite DN"/>
+                                    <TextBlock Foreground="{StaticResource HTextDim}" FontSize="11"
+                                               DockPanel.Dock="Right" VerticalAlignment="Center" Width="40"
+                                               TextAlignment="Right" Text="mm"/>
+                                    <TextBox Style="{StaticResource HInput}"
+                                             Text="{Binding Dn, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource DotCommaDouble}}"/>
+                                </DockPanel>
+
+                                <!-- Material -->
+                                <DockPanel Margin="0,4">
+                                    <TextBlock Style="{StaticResource InputLabel}" Text="Material"/>
+                                    <ComboBox ItemsSource="{Binding Materialien}"
+                                              SelectedItem="{Binding SelectedMaterial}"
+                                              DisplayMemberPath="Label"
+                                              Style="{StaticResource HComboBox}"/>
+                                </DockPanel>
+
+                                <!-- Zustand -->
+                                <DockPanel Margin="0,4">
+                                    <TextBlock Style="{StaticResource InputLabel}" Text="Zustand"/>
+                                    <UniformGrid Columns="2" Rows="1">
+                                        <ToggleButton Style="{StaticResource HToggle}" Content="Neuzustand"
+                                                      IsChecked="{Binding IsNeuzustand}" Margin="0,0,3,0"/>
+                                        <ToggleButton Style="{StaticResource HToggle}" Content="Betriebszustand"
+                                                      IsChecked="{Binding IsNeuzustand, Converter={StaticResource InvertBool}}"
+                                                      Margin="3,0,0,0"/>
+                                    </UniformGrid>
+                                </DockPanel>
+
+                                <!-- Gefälle -->
+                                <DockPanel Margin="0,4">
+                                    <TextBlock Style="{StaticResource InputLabel}" Text="Gefälle"/>
+                                    <TextBlock Foreground="{StaticResource HTextDim}" FontSize="11"
+                                               DockPanel.Dock="Right" VerticalAlignment="Center" Width="40"
+                                               TextAlignment="Right" Text="{Binding GefaelleUnitLabel}"/>
+                                    <TextBox Style="{StaticResource HInput}"
+                                             Text="{Binding Gefaelle, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource DotCommaDouble}}"/>
+                                </DockPanel>
+                                <!-- Gefälle-Einheit Umschalter -->
+                                <DockPanel Margin="0,4">
+                                    <TextBlock Style="{StaticResource InputLabel}" Text="Einheit"/>
+                                    <UniformGrid Columns="2" Rows="1">
+                                        <ToggleButton Style="{StaticResource HToggle}" Content="‰ Promille"
+                                                      IsChecked="{Binding IsGefaellePercent, Converter={StaticResource InvertBool}}"
+                                                      Margin="0,0,3,0"/>
+                                        <ToggleButton Style="{StaticResource HToggle}" Content="% Prozent"
+                                                      IsChecked="{Binding IsGefaellePercent}"
+                                                      Margin="3,0,0,0"/>
+                                    </UniformGrid>
+                                </DockPanel>
+
+                                <!-- Wasserstand -->
+                                <DockPanel Margin="0,4">
+                                    <TextBlock Style="{StaticResource InputLabel}" Text="Wasserstand"/>
+                                    <TextBlock Foreground="{StaticResource HTextDim}" FontSize="11"
+                                               DockPanel.Dock="Right" VerticalAlignment="Center" Width="40"
+                                               TextAlignment="Right" Text="mm"/>
+                                    <TextBox Style="{StaticResource HInput}"
+                                             Text="{Binding Wasserstand, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource DotCommaDouble}}"/>
+                                </DockPanel>
+
+                                <!-- Entwässerung -->
+                                <DockPanel Margin="0,4">
+                                    <TextBlock Style="{StaticResource InputLabel}" Text="Entwässerung"/>
+                                    <UniformGrid Columns="2" Rows="1">
+                                        <ToggleButton Style="{StaticResource HToggle}" Content="Misch-/Regen"
+                                                      IsChecked="{Binding IsMischRegen}" Margin="0,0,3,0"/>
+                                        <ToggleButton Style="{StaticResource HToggle}" Content="Schmutzwasser"
+                                                      IsChecked="{Binding IsMischRegen, Converter={StaticResource InvertBool}}"
+                                                      Margin="3,0,0,0"/>
+                                    </UniformGrid>
+                                </DockPanel>
+
+                                <!-- Temperatur -->
+                                <DockPanel Margin="0,4">
+                                    <TextBlock Style="{StaticResource InputLabel}" Text="Temperatur"/>
+                                    <TextBlock Foreground="{StaticResource HTextDim}" FontSize="11"
+                                               DockPanel.Dock="Right" VerticalAlignment="Center" Width="40"
+                                               TextAlignment="Right" Text="°C"/>
+                                    <TextBox Style="{StaticResource HInput}"
+                                             Text="{Binding Temperatur, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource DotCommaDouble}}"/>
+                                </DockPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Querschnitt-Grafik -->
+                    <Border Background="{StaticResource HCard}" BorderBrush="{StaticResource HBorder}"
+                            BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,14">
+                        <StackPanel HorizontalAlignment="Center">
+                            <Canvas x:Name="PipeCrossSection" Width="180" Height="180"
+                                    ClipToBounds="True"/>
+                            <TextBlock HorizontalAlignment="Center" Margin="0,6,0,0"
+                                       FontSize="11" Foreground="{StaticResource HTextDim}">
+                                <Run Text="Auslastung: "/>
+                                <Run x:Name="AuslastungRun" Text="{Binding AuslastungDisplay}"
+                                     FontWeight="SemiBold"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Info-Hinweis -->
+                    <Border Background="#FFE8F4FD" BorderBrush="#FFB6D6F2"
+                            BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,8">
+                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource HAccent}"
+                                   LineHeight="17">
+                            <Run FontWeight="Bold" Text="Integration:"/>
+                            <Run Text=" DN, Material und Wasserstand können direkt aus dem WinCan/IBAK-Protokoll geladen werden. Gefälle aus GEP-Kataster oder Sohlhöhen (Δh / L)."/>
+                        </TextBlock>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ═══ RIGHT: RESULTS ═══ -->
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+                <!-- No results placeholder -->
+                <StackPanel>
+                    <Border Background="{StaticResource HCard}" BorderBrush="{StaticResource HBorder}"
+                            BorderThickness="1" CornerRadius="10" Padding="40"
+                            Visibility="{Binding HasResult, Converter={StaticResource InvertBoolToVis}}">
+                        <TextBlock Text="Bitte alle Eingabewerte ausfüllen"
+                                   Foreground="{StaticResource HTextDim}" FontSize="13"
+                                   HorizontalAlignment="Center"/>
+                    </Border>
+
+                    <StackPanel Visibility="{Binding HasResult, Converter={StaticResource BoolToVis}}">
+
+                        <!-- ── Teilfüllung ── -->
+                        <Border Background="{StaticResource HCard}" BorderBrush="{StaticResource HBorder}"
+                                BorderThickness="1" CornerRadius="10" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionHeader}" Text="TEILFÜLLUNG (IST-ZUSTAND)"/>
+                                <StackPanel Margin="0,0,0,6">
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Fliessgeschwindigkeit v_T"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding VTeilDisplay}" x:Name="VTeilBlock"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="m/s"/>
+                                    </Grid>
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Durchfluss Q_T"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding QTeilDisplay}"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="l/s"/>
+                                    </Grid>
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Durchflossene Fläche A_T"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding ATeilDisplay}"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="cm²"/>
+                                    </Grid>
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Benetzter Umfang l_u"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding LuTeilDisplay}"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="mm"/>
+                                    </Grid>
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Hydraulischer Radius r_hy"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding RhyTeilDisplay}"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="mm"/>
+                                    </Grid>
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Wasserspiegelbreite b_sp"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding BspDisplay}"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="mm"/>
+                                    </Grid>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ── Vollfüllung ── -->
+                        <Border Background="{StaticResource HCard}" BorderBrush="{StaticResource HBorder}"
+                                BorderThickness="1" CornerRadius="10" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionHeader}" Text="VOLLFÜLLUNG (REFERENZ)"/>
+                                <StackPanel Margin="0,0,0,6">
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Fliessgeschwindigkeit v_V"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding VVollDisplay}"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="m/s"/>
+                                    </Grid>
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Durchfluss Q_V"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding QVollDisplay}"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="l/s"/>
+                                    </Grid>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ── Kennzahlen ── -->
+                        <Border Background="{StaticResource HCard}" BorderBrush="{StaticResource HBorder}"
+                                BorderThickness="1" CornerRadius="10" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionHeader}" Text="HYDRAULISCHE KENNZAHLEN"/>
+                                <StackPanel Margin="0,0,0,6">
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Reynolds-Zahl Re"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding ReDisplay}"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="" Width="40"/>
+                                    </Grid>
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Froude-Zahl Fr"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding FrDisplay}" x:Name="FrBlock"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="" Width="40"/>
+                                    </Grid>
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Widerstandsbeiwert λ"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding LambdaDisplay}"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="" Width="40"/>
+                                    </Grid>
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Betriebsrauheit k_b"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding KbDisplay}"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="mm"/>
+                                    </Grid>
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Kinem. Viskosität ν"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding NyDisplay}"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="×10⁻⁶ m²/s"/>
+                                    </Grid>
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Sohlschubspannung τ"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding TauDisplay}" x:Name="TauBlock"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="N/m²"/>
+                                    </Grid>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ── Ablagerungsverhalten ── -->
+                        <Border Background="{StaticResource HCard}" CornerRadius="10" Margin="0,0,0,12"
+                                x:Name="AblagerungBorder" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionHeader}">
+                                    <Run x:Name="AblagerungIcon" Text="ABLAGERUNGSVERHALTEN"/>
+                                </TextBlock>
+                                <StackPanel Margin="0,0,0,2">
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Krit. Geschwindigkeit v_c"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding VcDisplay}"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="m/s"/>
+                                    </Grid>
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Krit. Gefälle I_c"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding IcDisplay}"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="‰"/>
+                                    </Grid>
+                                    <Grid Margin="12,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource ResultLabel}" Text="Krit. Schubspannung τ_c"/>
+                                        <TextBlock Grid.Column="1" Style="{StaticResource ResultValue}" Text="{Binding TaucDisplay}"/>
+                                        <TextBlock Grid.Column="2" Style="{StaticResource ResultUnit}" Text="N/m²"/>
+                                    </Grid>
+                                </StackPanel>
+                                <!-- Ablagerung verdict -->
+                                <Border x:Name="AblagerungVerdict" Padding="10,8" CornerRadius="0,0,10,10">
+                                    <TextBlock x:Name="AblagerungVerdictText" Text="{Binding AblagerungText}"
+                                               FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ── VSA-Bewertung ── -->
+                        <Border Background="{StaticResource HCard}" BorderBrush="{StaticResource HBorder}"
+                                BorderThickness="1" CornerRadius="10" Padding="14,12">
+                            <StackPanel>
+                                <TextBlock Text="Hydraulische Bewertung (VSA)" FontSize="13"
+                                           FontWeight="SemiBold" Foreground="{StaticResource HTextPrimary}"
+                                           Margin="0,0,0,10"/>
+                                <UniformGrid Columns="2" Rows="2">
+                                    <StackPanel Orientation="Horizontal" Margin="0,4">
+                                        <Ellipse x:Name="IndV" Width="12" Height="12" Margin="0,0,6,0"/>
+                                        <TextBlock Text="v ≥ 0.5 m/s (Selbstreinigung)"
+                                                   FontSize="12" Foreground="{StaticResource HTextSecondary}"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4">
+                                        <Ellipse x:Name="IndTau" Width="12" Height="12" Margin="0,0,6,0"/>
+                                        <TextBlock Text="τ ≥ 2.5 N/m² (Mindest-Schub)"
+                                                   FontSize="12" Foreground="{StaticResource HTextSecondary}"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4">
+                                        <Ellipse x:Name="IndAbl" Width="12" Height="12" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Ablagerungsfrei nach DWA-A 110"
+                                                   FontSize="12" Foreground="{StaticResource HTextSecondary}"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4">
+                                        <Ellipse x:Name="IndFr" Width="12" Height="12" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Fr ≤ 1 (strömend, kein Schiessen)"
+                                                   FontSize="12" Foreground="{StaticResource HTextSecondary}"/>
+                                    </StackPanel>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Window>

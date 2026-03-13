@@ -26,6 +26,7 @@ public class ProtocolEntryEditorViewModel : INotifyPropertyChanged
     public List<CodeParameterViewModel> Parameters { get; } = new();
     public IReadOnlyList<string> AllowedCodes => _catalog.AllowedCodes();
     public string ValidationStatus { get; private set; } = string.Empty;
+    public IReadOnlyList<string> ValidationMessages { get; private set; } = Array.Empty<string>();
     public bool IsValid { get; private set; }
 
     private readonly AppProtocol.ICodeCatalogProvider _catalog;
@@ -53,9 +54,34 @@ public class ProtocolEntryEditorViewModel : INotifyPropertyChanged
 
     public void Validate()
     {
-        IsValid = Definition != null && Parameters.All(p => p.IsValid);
-        ValidationStatus = IsValid ? "Code gueltig." : "Code nicht im Katalog oder Parameter ungueltig.";
+        var messages = new List<string>();
+
+        if (Definition is null)
+        {
+            messages.Add("Code nicht im Katalog.");
+        }
+        else
+        {
+            foreach (var parameter in Parameters)
+            {
+                parameter.Validate();
+                if (parameter.IsValid)
+                    continue;
+
+                var detail = string.IsNullOrWhiteSpace(parameter.ErrorMessage)
+                    ? "ungueltig"
+                    : parameter.ErrorMessage;
+                messages.Add($"{parameter.DisplayName}: {detail}");
+            }
+        }
+
+        IsValid = messages.Count == 0;
+        ValidationMessages = messages;
+        ValidationStatus = IsValid
+            ? "Code gueltig."
+            : string.Join(Environment.NewLine, ValidationMessages.Take(8));
         OnPropertyChanged(nameof(IsValid));
+        OnPropertyChanged(nameof(ValidationMessages));
         OnPropertyChanged(nameof(ValidationStatus));
     }
 
@@ -123,6 +149,7 @@ public class CodeParameterViewModel : INotifyPropertyChanged
     }
 
     public bool IsValid { get; private set; }
+    public string ErrorMessage { get; private set; } = string.Empty;
 
     public CodeParameterViewModel(AppProtocol.CodeParameter param)
     {
@@ -139,16 +166,36 @@ public class CodeParameterViewModel : INotifyPropertyChanged
         if (Required && string.IsNullOrWhiteSpace(Value))
         {
             IsValid = false;
+            ErrorMessage = "Pflichtfeld.";
         }
         else if (string.Equals(Type, "enum", StringComparison.OrdinalIgnoreCase) && AllowedValues.Count > 0)
         {
             IsValid = string.IsNullOrWhiteSpace(Value) || AllowedValues.Contains(Value, StringComparer.OrdinalIgnoreCase);
+            ErrorMessage = IsValid
+                ? string.Empty
+                : $"Nur erlaubt: {string.Join(", ", AllowedValues)}";
+        }
+        else if (string.Equals(Type, "number", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(Value))
+            {
+                IsValid = !Required;
+                ErrorMessage = IsValid ? string.Empty : "Pflichtfeld.";
+            }
+            else
+            {
+                var normalized = Value.Trim().Replace(',', '.');
+                IsValid = double.TryParse(normalized, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _);
+                ErrorMessage = IsValid ? string.Empty : "Numerischer Wert erwartet.";
+            }
         }
         else
         {
             IsValid = true;
+            ErrorMessage = string.Empty;
         }
 
         OnPropertyChanged(nameof(IsValid));
+        OnPropertyChanged(nameof(ErrorMessage));
     }
 }

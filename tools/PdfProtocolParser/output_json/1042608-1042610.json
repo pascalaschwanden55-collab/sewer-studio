@@ -1,0 +1,105 @@
+{
+  "haltung": "1042608-1042610",
+  "datum": "11.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 300 / 300mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Regenabwasser",
+  "inspektionsrichtung": "In Fließrichtung",
+  "schacht_oben": "1042608",
+  "schacht_unten": "1042610",
+  "inspektionslaenge_m": "39.30",
+  "rohrlaenge_m": "5.00",
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 2.7,
+      "en_code": "BDA",
+      "beschreibung": "Anschluss mit Formstück, Höhe = 0mm, Breite = 0mm Pos: 1; Allgemeinzustand, Fotobeispiel, Foto 2 zu Station BCA.A.A",
+      "uhr_von": "1",
+      "uhr_bis": "1",
+      "stufe": null,
+      "timestamp_video": "00:01:01",
+      "foto_datei": null,
+      "foto_nr": 292
+    },
+    {
+      "meter": 9.5,
+      "en_code": "BDA",
+      "beschreibung": "Anschluss mit Formstück, Höhe = 0mm, Breite = 0mm Pos: 11; Allgemeinzustand, Fotobeispiel, Foto 2 zu Station BCA.A.A",
+      "uhr_von": "11",
+      "uhr_bis": "11",
+      "stufe": null,
+      "timestamp_video": "00:02:27",
+      "foto_datei": null,
+      "foto_nr": 294
+    },
+    {
+      "meter": 10.0,
+      "en_code": "BDA",
+      "beschreibung": "Anschluss mit Formstück, Höhe = 0mm, Breite = 0mm Pos: 1; Allgemeinzustand, Fotobeispiel, Foto 2 zu Station BCA.A.A",
+      "uhr_von": "1",
+      "uhr_bis": "1",
+      "stufe": null,
+      "timestamp_video": "00:02:59",
+      "foto_datei": null,
+      "foto_nr": 296
+    },
+    {
+      "meter": 13.7,
+      "en_code": "BDA",
+      "beschreibung": "Anschluss mit Formstück, Höhe = 0mm, Breite = 0mm Pos: 12; Allgemeinzustand, Fotobeispiel, Foto 2 zu Station BCA.A.A",
+      "uhr_von": "12",
+      "uhr_bis": "12",
+      "stufe": null,
+      "timestamp_video": "00:04:03",
+      "foto_datei": null,
+      "foto_nr": 298
+    },
+    {
+      "meter": 14.4,
+      "en_code": "BDA",
+      "beschreibung": "Anschluss mit Formstück, Höhe = 0mm, Breite = 0mm Pos: 1; Allgemeinzustand, Fotobeispiel, Foto 2 zu Station BCA.A.A",
+      "uhr_von": "1",
+      "uhr_bis": "1",
+      "stufe": null,
+      "timestamp_video": "00:04:30",
+      "foto_datei": null,
+      "foto_nr": 300
+    },
+    {
+      "meter": 21.2,
+      "en_code": "BDA",
+      "beschreibung": "Anschluss mit Formstück, Höhe = 0mm, Breite = 0mm Pos: 1; Allgemeinzustand, Fotobeispiel, Foto 2 zu Station BCA.A.A",
+      "uhr_von": "1",
+      "uhr_bis": "1",
+      "stufe": null,
+      "timestamp_video": "00:05:38",
+      "foto_datei": null,
+      "foto_nr": 302
+    },
+    {
+      "meter": 28.0,
+      "en_code": "BCAAA",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel Position Pos: 11; Anschluss mit Formstück, Höhe = 0mm, Breite = 0mm",
+      "uhr_von": "11",
+      "uhr_bis": "11",
+      "stufe": null,
+      "timestamp_video": "00:06:53",
+      "foto_datei": null,
+      "foto_nr": 304
+    },
+    {
+      "meter": 28.3,
+      "en_code": "BCCAB",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel, Foto 2 zu Station BCA.A.A Pos: 8; Bogen nach links unten, Winkel = 30°",
+      "uhr_von": "8",
+      "uhr_bis": "8",
+      "stufe": null,
+      "timestamp_video": "00:07:24",
+      "foto_datei": null,
+      "foto_nr": 306
+    }
+  ]
+}

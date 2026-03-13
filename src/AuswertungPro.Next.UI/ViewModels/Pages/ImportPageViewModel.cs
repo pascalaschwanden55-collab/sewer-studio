@@ -1,11 +1,14 @@
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
-using AuswertungPro.Next.Infrastructure;
+using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
@@ -23,41 +26,591 @@ public sealed partial class ImportPageViewModel : ObservableObject
     [ObservableProperty] private string _summaryText = "";
     [ObservableProperty] private string _detailsText = "";
     [ObservableProperty] private string _importProgress = "";
+    [ObservableProperty] private double _importProgressPercent;
+    [ObservableProperty] private string _importPhase = "";
     [ObservableProperty] private bool _isImportInProgress;
-    [ObservableProperty] private string _distributionProgress = "";
-    [ObservableProperty] private bool _isDistributionInProgress;
-    [ObservableProperty] private bool _isDistributionIndeterminate;
-    [ObservableProperty] private double _distributionPercent;
+    [ObservableProperty] private bool _canCancel;
+    [ObservableProperty] private bool _showPreviewFirst;
     [ObservableProperty] private string _catalogStatus = "";
     [ObservableProperty] private bool _isCatalogOk;
+    [ObservableProperty] private bool _fillMissingOnly;
 
-    public IRelayCommand ImportPdfCommand { get; }
-    public IRelayCommand ImportXtfCommand { get; }
-    public IRelayCommand ImportWinCanCommand { get; }
-    public IRelayCommand ImportIbakCommand { get; }
-    public IRelayCommand ImportKinsCommand { get; }
-    public IRelayCommand DistributeHoldingsCommand { get; }
-    public IRelayCommand DistributeShaftsCommand { get; }
+    private CancellationTokenSource? _importCts;
+    private string? _lastReportPath;
+
+    public IAsyncRelayCommand ImportPdfCommand { get; }
+    public IAsyncRelayCommand ImportXtfCommand { get; }
+    public IAsyncRelayCommand ImportWinCanCommand { get; }
+    public IAsyncRelayCommand ImportIbakCommand { get; }
+    public IAsyncRelayCommand ImportKinsCommand { get; }
     public IRelayCommand ExportImportSummaryCommand { get; }
     public IRelayCommand ReloadCatalogCommand { get; }
+    public IRelayCommand CancelImportCommand { get; }
+    public IRelayCommand OpenLastReportCommand { get; }
+    public IRelayCommand OpenReportFolderCommand { get; }
 
     public ImportPageViewModel(ShellViewModel shell, ServiceProvider sp)
     {
         _shell = shell;
         _sp = sp;
 
-        ImportPdfCommand = new RelayCommand(ImportPdf);
-        ImportXtfCommand = new RelayCommand(ImportXtf);
-        ImportWinCanCommand = new RelayCommand(ImportWinCan);
-        ImportIbakCommand = new RelayCommand(ImportIbak);
-        ImportKinsCommand = new RelayCommand(ImportKins);
-        DistributeHoldingsCommand = new RelayCommand(DistributeHoldings);
-        DistributeShaftsCommand = new RelayCommand(DistributeShafts);
+        ImportPdfCommand = new AsyncRelayCommand(ImportPdfAsync, CanStartImport);
+        ImportXtfCommand = new AsyncRelayCommand(ImportXtfAsync, CanStartImport);
+        ImportWinCanCommand = new AsyncRelayCommand(ImportWinCanAsync, CanStartImport);
+        ImportIbakCommand = new AsyncRelayCommand(ImportIbakAsync, CanStartImport);
+        ImportKinsCommand = new AsyncRelayCommand(ImportKinsAsync, CanStartImport);
         ExportImportSummaryCommand = new RelayCommand(ExportImportSummary);
         ReloadCatalogCommand = new RelayCommand(ReloadCatalog);
+        CancelImportCommand = new RelayCommand(CancelImport, () => CanCancel);
+        OpenLastReportCommand = new RelayCommand(OpenLastReport);
+        OpenReportFolderCommand = new RelayCommand(OpenReportFolder);
 
         UpdateCatalogStatus();
     }
+
+    private bool CanStartImport()
+        => !IsImportInProgress;
+
+    partial void OnIsImportInProgressChanged(bool value)
+    {
+        _ = value;
+        ImportPdfCommand.NotifyCanExecuteChanged();
+        ImportXtfCommand.NotifyCanExecuteChanged();
+        ImportWinCanCommand.NotifyCanExecuteChanged();
+        ImportIbakCommand.NotifyCanExecuteChanged();
+        ImportKinsCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnCanCancelChanged(bool value)
+    {
+        _ = value;
+        (CancelImportCommand as RelayCommand)?.NotifyCanExecuteChanged();
+    }
+
+    // ──── Cancel ────
+
+    private void CancelImport()
+    {
+        _importCts?.Cancel();
+        CanCancel = false;
+        ImportPhase = "Abbruch angefordert...";
+    }
+
+    // ──── Report Buttons ────
+
+    private void OpenLastReport()
+    {
+        if (!string.IsNullOrWhiteSpace(_lastReportPath) && File.Exists(_lastReportPath))
+        {
+            try { Process.Start(new ProcessStartInfo(_lastReportPath) { UseShellExecute = true }); }
+            catch { /* ignore */ }
+        }
+        else
+        {
+            OpenReportFolder();
+        }
+    }
+
+    private void OpenReportFolder()
+    {
+        var dir = GetReportDir();
+        if (dir != null && Directory.Exists(dir))
+        {
+            try { Process.Start(new ProcessStartInfo(dir) { UseShellExecute = true }); }
+            catch { /* ignore */ }
+        }
+        else
+        {
+            MessageBox.Show("Bericht-Ordner nicht vorhanden.\nBitte zuerst einen Import durchfuehren.",
+                "Import-Berichte", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private string? GetReportDir()
+    {
+        var projectPath = _sp.Settings.LastProjectPath;
+        var projectDir = string.IsNullOrWhiteSpace(projectPath) ? null : Path.GetDirectoryName(projectPath);
+        return string.IsNullOrWhiteSpace(projectDir) ? null : Path.Combine(projectDir, "__IMPORT_REPORTS");
+    }
+
+    // ──── Generic Orchestrator ────
+
+    private async Task RunImportAsync<TArg>(
+        string label,
+        TArg source,
+        Func<TArg, Project, ImportRunContext, Result<ImportStats>> importFunc,
+        bool dryRun = false,
+        Func<TArg, ImportRunContext, Task>? postImportAsync = null,
+        bool saveProjectAfterCommit = false)
+    {
+        _importCts?.Dispose();
+        _importCts = new CancellationTokenSource();
+        CanCancel = true;
+        IsImportInProgress = true;
+        ImportProgressPercent = 0;
+        ImportPhase = dryRun ? $"{label}: Vorschau wird berechnet..." : $"{label}: Import laeuft...";
+        ImportProgress = "";
+        SummaryText = $"{label}: gestartet{(dryRun ? " (Vorschau)" : "")}";
+        DetailsText = "";
+
+        var runLog = new ImportRunLog { ImportType = label, WasDryRun = dryRun };
+        if (source is string s)
+            runLog.SourcePath = s;
+        else if (source is string[] arr && arr.Length > 0)
+            runLog.SourcePath = arr[0];
+
+        var progress = new Progress<Application.Import.ImportProgress>(p =>
+        {
+            ImportPhase = p.Phase;
+            ImportProgress = p.StatusText;
+            if (p.Total > 0)
+                ImportProgressPercent = (double)p.Current / p.Total * 100.0;
+            if (!string.IsNullOrWhiteSpace(p.CurrentFile))
+                _shell.SetStatus($"{label}: {p.CurrentFile}");
+        });
+
+        var ctx = new ImportRunContext(_importCts.Token, progress, runLog, dryRun);
+
+        try
+        {
+            var result = await Task.Run(() =>
+            {
+                try
+                {
+                    return importFunc(source, _shell.Project, ctx);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    return Result<ImportStats>.Fail($"{label}_EXCEPTION", ex.Message);
+                }
+            });
+
+            if (!result.Ok || result.Value is null)
+            {
+                SummaryText = $"{label} Import fehlgeschlagen: {result.ErrorMessage}";
+                _shell.SetStatus($"{label} Import fehlgeschlagen");
+                return;
+            }
+
+            var stats = result.Value;
+            SummaryText = $"{label} Import{(dryRun ? " (Vorschau)" : "")}:\n" +
+                          $"  Haltungen: {stats.Found} gefunden, {stats.Created} neu, {stats.Updated} aktualisiert\n" +
+                          $"  Fehler: {stats.Errors}, Unklar: {stats.Uncertain}";
+            DetailsText = string.Join("\n", stats.Messages.Take(80));
+
+            if (dryRun)
+            {
+                var preview = ImportPreviewResult.FromLog(runLog);
+                var doImport = ShowPreviewWindow(preview, label);
+                if (doImport)
+                {
+                    await RunImportAsync(
+                        label,
+                        source,
+                        importFunc,
+                        dryRun: false,
+                        postImportAsync: postImportAsync,
+                        saveProjectAfterCommit: saveProjectAfterCommit);
+                }
+                return;
+            }
+
+            if (postImportAsync is not null)
+            {
+                try
+                {
+                    await postImportAsync(source, ctx);
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex)
+                {
+                    runLog.AddEntry(label, "PostImport", ImportLogStatus.Error,
+                        detail: $"PostImport-Fehler: {ex.Message}");
+                }
+            }
+
+            DeduplicateAllPrimaryDamages();
+            await RunVsaAfterImport(label);
+
+            if (saveProjectAfterCommit)
+                _shell.TrySaveProject();
+
+            _shell.SetStatus($"{label} importiert");
+            ImportProgressPercent = 100;
+        }
+        catch (OperationCanceledException)
+        {
+            runLog.WasCancelled = true;
+            SummaryText = $"{label} Import abgebrochen.";
+            _shell.SetStatus($"{label} Import abgebrochen");
+        }
+        catch (Exception ex)
+        {
+            SummaryText = $"{label} Import fehlgeschlagen: {ex.Message}";
+            DetailsText = ex.ToString();
+            _shell.SetStatus($"{label} Import fehlgeschlagen");
+        }
+        finally
+        {
+            runLog.Complete();
+            CanCancel = false;
+            IsImportInProgress = false;
+            ImportPhase = "";
+
+            var reportDir = GetReportDir();
+            if (reportDir != null)
+            {
+                try
+                {
+                    _lastReportPath = ImportRunReportExporter.Export(runLog, reportDir);
+                }
+                catch { /* ignore report errors */ }
+            }
+        }
+    }
+
+    private bool ShowPreviewWindow(ImportPreviewResult preview, string label)
+    {
+        var win = new Views.Windows.ImportPreviewWindow(preview, label)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+        return win.ShowDialog() == true;
+    }
+
+    // ──── Import Methods ────
+
+    private async Task ImportPdfAsync()
+    {
+        var paths = _sp.Dialogs.OpenFiles("PDF importieren", "PDF (*.pdf)|*.pdf");
+        if (paths.Length == 0) return;
+
+        if (ShowPreviewFirst)
+        {
+            await RunImportAsync("PDF", paths, ImportPdfCore, dryRun: true, postImportAsync: PostImportPdfAsync);
+        }
+        else
+        {
+            await RunImportAsync("PDF", paths, ImportPdfCore, postImportAsync: PostImportPdfAsync);
+        }
+    }
+
+    private Result<ImportStats> ImportPdfCore(string[] paths, Project project, ImportRunContext ctx)
+    {
+        var totalFound = 0;
+        var totalCreated = 0;
+        var totalUpdated = 0;
+        var totalUncertain = 0;
+        var totalErrors = 0;
+        var messages = new List<string>();
+
+        for (var i = 0; i < paths.Length; i++)
+        {
+            ctx.CancellationToken.ThrowIfCancellationRequested();
+            var path = paths[i];
+            ctx.Progress?.Report(new Application.Import.ImportProgress(
+                "PDF lesen", i + 1, paths.Length,
+                $"PDF {i + 1}/{paths.Length}: {Path.GetFileName(path)}", Path.GetFileName(path)));
+
+            var res = _sp.PdfImport.ImportPdf(path, project, _sp.Diagnostics.ExplicitPdfToTextPath, FillMissingOnly, ctx);
+            if (!res.Ok || res.Value is null)
+            {
+                totalErrors++;
+                messages.Add($"Error: {Path.GetFileName(path)}: {res.ErrorMessage}");
+                continue;
+            }
+
+            totalFound += res.Value.Found;
+            totalCreated += res.Value.Created;
+            totalUpdated += res.Value.Updated;
+            totalUncertain += res.Value.Uncertain;
+            totalErrors += res.Value.Errors;
+            foreach (var msg in res.Value.Messages)
+                messages.Add($"{Path.GetFileName(path)}: {msg}");
+        }
+
+        return Result<ImportStats>.Success(new ImportStats(totalFound, totalCreated, totalUpdated, totalErrors, totalUncertain, messages));
+    }
+
+    private Task PostImportPdfAsync(string[] paths, ImportRunContext ctx)
+    {
+        if (!ctx.DryRun)
+        {
+            StorePdfFiles(paths);
+            if (paths.Length > 0)
+                TrackImportSource(Path.GetDirectoryName(paths[0]) ?? paths[0], "PDF");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task ImportXtfAsync()
+    {
+        var paths = _sp.Dialogs.OpenFiles(
+            "Daten importieren (XTF/M150/MDB)",
+            "Daten (*.xtf;*.m150;*.mdb;*.xml)|*.xtf;*.m150;*.mdb;*.xml|XTF (*.xtf)|*.xtf|M150/XML (*.m150;*.xml)|*.m150;*.xml|MDB (*.mdb)|*.mdb|Alle Dateien|*.*");
+        if (paths.Length == 0) return;
+
+        if (ShowPreviewFirst)
+        {
+            await RunImportAsync("XTF", paths, ImportXtfCore, dryRun: true, postImportAsync: PostImportXtfAsync);
+        }
+        else
+        {
+            await RunImportAsync("XTF", paths, ImportXtfCore, postImportAsync: PostImportXtfAsync);
+        }
+    }
+
+    private Result<ImportStats> ImportXtfCore(string[] paths, Project project, ImportRunContext ctx)
+    {
+        return _sp.XtfImport.ImportXtfFiles(paths, project, ctx);
+    }
+
+    private Task PostImportXtfAsync(string[] paths, ImportRunContext ctx)
+    {
+        if (!ctx.DryRun)
+        {
+            StoreXtfFiles(paths);
+            if (paths.Length > 0)
+                TrackImportSource(Path.GetDirectoryName(paths[0]) ?? paths[0], "XTF");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task ImportWinCanAsync()
+    {
+        var folder = _sp.Dialogs.SelectFolder("WinCan-Projektordner waehlen");
+        if (string.IsNullOrWhiteSpace(folder)) return;
+
+        if (ShowPreviewFirst)
+        {
+            await RunImportAsync(
+                "WinCan",
+                folder,
+                ImportFolderCore(_sp.WinCanImport.ImportWinCanExport),
+                dryRun: true,
+                postImportAsync: PostImportFolderAsync,
+                saveProjectAfterCommit: true);
+        }
+        else
+        {
+            await RunImportAsync(
+                "WinCan",
+                folder,
+                ImportFolderCore(_sp.WinCanImport.ImportWinCanExport),
+                postImportAsync: PostImportFolderAsync,
+                saveProjectAfterCommit: true);
+        }
+    }
+
+    private async Task ImportIbakAsync()
+    {
+        var folder = _sp.Dialogs.SelectFolder("IBAK-Projektordner waehlen");
+        if (string.IsNullOrWhiteSpace(folder)) return;
+
+        if (ShowPreviewFirst)
+        {
+            await RunImportAsync(
+                "IBAK",
+                folder,
+                ImportFolderCore(_sp.IbakImport.ImportIbakExport),
+                dryRun: true,
+                postImportAsync: PostImportFolderAsync,
+                saveProjectAfterCommit: true);
+        }
+        else
+        {
+            await RunImportAsync(
+                "IBAK",
+                folder,
+                ImportFolderCore(_sp.IbakImport.ImportIbakExport),
+                postImportAsync: PostImportFolderAsync,
+                saveProjectAfterCommit: true);
+        }
+    }
+
+    private async Task ImportKinsAsync()
+    {
+        var folder = _sp.Dialogs.SelectFolder("KINS-Projektordner waehlen");
+        if (string.IsNullOrWhiteSpace(folder)) return;
+
+        if (ShowPreviewFirst)
+        {
+            await RunImportAsync(
+                "KINS",
+                folder,
+                ImportFolderCore(_sp.KinsImport.ImportKinsExport),
+                dryRun: true,
+                postImportAsync: PostImportFolderAsync,
+                saveProjectAfterCommit: true);
+        }
+        else
+        {
+            await RunImportAsync(
+                "KINS",
+                folder,
+                ImportFolderCore(_sp.KinsImport.ImportKinsExport),
+                postImportAsync: PostImportFolderAsync,
+                saveProjectAfterCommit: true);
+        }
+    }
+
+    private static Func<string, Project, ImportRunContext, Result<ImportStats>> ImportFolderCore(
+        Func<string, Project, ImportRunContext?, Result<ImportStats>> svcImport)
+    {
+        return (folder, project, ctx) => svcImport(folder, project, ctx);
+    }
+
+    private async Task PostImportFolderAsync(string folder, ImportRunContext ctx)
+    {
+        if (ctx.DryRun) return;
+
+        // Import-Quelle im Projekt speichern (fuer Rueckverfolgbarkeit)
+        TrackImportSource(folder, ctx.Log.ImportType);
+
+        // PDFs im Quellordner lesen
+        await ImportPdfsFromSourceFolder(folder, ctx.Log.ImportType, ctx);
+
+        // Medien in Projektordner kopieren
+        await DistributeMediaToProjectFolder(ctx.Log.ImportType, ctx);
+    }
+
+    private void TrackImportSource(string sourcePath, string importType)
+    {
+        var project = _shell.Project;
+        var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        var entry = $"{timestamp} | {importType} | {sourcePath}";
+
+        // Letzte Import-Quelle speichern
+        project.Metadata["ImportQuelle"] = sourcePath;
+        project.Metadata["ImportQuellTyp"] = importType;
+
+        // Import-Historie anfuegen (max. 20 Eintraege)
+        var historyKey = "ImportQuellenHistorie";
+        var existing = project.Metadata.TryGetValue(historyKey, out var h) ? h : "";
+        var lines = existing.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
+        lines.Add(entry);
+        if (lines.Count > 20)
+            lines = lines.Skip(lines.Count - 20).ToList();
+        project.Metadata[historyKey] = string.Join("\n", lines);
+    }
+
+    // ──── Post-Import Helpers ────
+
+    private async Task ImportPdfsFromSourceFolder(string sourceFolder, string sourceLabel, ImportRunContext? ctx = null)
+    {
+        ImportProgress = $"{sourceLabel}: PDF-Protokolle werden gelesen...";
+
+        var pdfResult = await Task.Run(() =>
+        {
+            var pdfFiles = EnumerateProjectFiles(sourceFolder, new[] { ".pdf" },
+                includeRoot: true,
+                includeDirs: new[] { "Report", "Reports", "PDF", "Dokumente" })
+                .ToArray();
+
+            if (pdfFiles.Length == 0)
+                return (0, 0, 0, "Keine PDF-Dateien im Quellordner gefunden.");
+
+            var found = 0;
+            var updated = 0;
+            var errors = 0;
+
+            for (var i = 0; i < pdfFiles.Length; i++)
+            {
+                ctx?.CancellationToken.ThrowIfCancellationRequested();
+                var path = pdfFiles[i];
+                ctx?.Progress?.Report(new Application.Import.ImportProgress(
+                    "PDF-Scan", i + 1, pdfFiles.Length,
+                    $"PDF {i + 1}/{pdfFiles.Length}", Path.GetFileName(path)));
+                try
+                {
+                    var res = _sp.PdfImport.ImportPdf(path, _shell.Project, _sp.Diagnostics.ExplicitPdfToTextPath, FillMissingOnly, ctx);
+                    if (res.Ok && res.Value is not null)
+                    {
+                        found += res.Value.Found;
+                        updated += res.Value.Updated;
+                    }
+                    else
+                    {
+                        errors++;
+                    }
+                }
+                catch (OperationCanceledException) { throw; }
+                catch
+                {
+                    errors++;
+                }
+            }
+
+            var msg = $"PDF-Scan: {pdfFiles.Length} Dateien, {found} Haltungen zugeordnet, {updated} aktualisiert, {errors} Fehler";
+            return (pdfFiles.Length, found, updated, msg);
+        });
+
+        SummaryText += $"\n{pdfResult.Item4}";
+        if (pdfResult.Item1 > 0)
+            DetailsText += $"\n\n{pdfResult.Item4}";
+    }
+
+    private async Task DistributeMediaToProjectFolder(string sourceLabel, ImportRunContext? ctx = null)
+    {
+        var projectFolder = _shell.GetProjectFolder();
+        if (string.IsNullOrWhiteSpace(projectFolder))
+        {
+            DetailsText += "\nHinweis: Projekt bitte speichern, um Medien im Projektordner abzulegen.";
+            return;
+        }
+
+        var haltungCount = _shell.Project.Data.Count;
+        if (haltungCount == 0)
+        {
+            DetailsText += $"\n{sourceLabel}: Keine Haltungen im Projekt - Medienverteilung uebersprungen.";
+            return;
+        }
+
+        ImportProgress = $"{sourceLabel}: Medien von {haltungCount} Haltungen werden in Projektordner kopiert...";
+        var distService = new MediaDistributionService();
+        var distProgress = new Progress<MediaDistributionService.CopyProgress>(p =>
+        {
+            ImportProgress = $"Kopiere: {p.Processed}/{p.Total} ({p.CurrentFile})";
+            if (p.Total > 0)
+                ImportProgressPercent = (double)p.Processed / p.Total * 100.0;
+        });
+
+        var ct = ctx?.CancellationToken ?? CancellationToken.None;
+        var dryRun = ctx?.DryRun ?? false;
+        var distResult = await Task.Run(() =>
+            distService.DistributeImportedMedia(projectFolder, _shell.Project, distProgress, ct, dryRun));
+
+        var distSummary = $"\nMedien-Verteilung ({haltungCount} Haltungen):\n  {distResult.FilesCopied} Dateien kopiert\n  {distResult.FilesSkipped} uebersprungen\n  {distResult.Errors} Fehler";
+        SummaryText += distSummary;
+        if (distResult.Messages.Count > 0)
+            DetailsText += "\n\nMedien-Details:\n" + string.Join("\n", distResult.Messages.Take(50));
+
+        _shell.SetStatus($"{sourceLabel}-Projekt importiert und verteilt");
+    }
+
+    private async Task RunVsaAfterImport(string sourceLabel)
+    {
+        ImportProgress = $"{sourceLabel}: VSA-Zustandsbewertung wird berechnet...";
+
+        var vsaResult = await Task.Run(() => _sp.Vsa.Evaluate(_shell.Project));
+
+        if (vsaResult.Ok)
+        {
+            SummaryText += $"\nVSA-Bewertung: {_shell.Project.Data.Count} Haltungen bewertet";
+        }
+        else
+        {
+            SummaryText += $"\nVSA-Bewertung fehlgeschlagen: {vsaResult.ErrorMessage}";
+        }
+    }
+
+    // ──── Catalog ────
 
     private void UpdateCatalogStatus()
     {
@@ -116,182 +669,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         }
     }
 
-    private async void ImportWinCan()
-    {
-        var folder = _sp.Dialogs.SelectFolder("WinCan-Projektordner waehlen");
-        if (string.IsNullOrWhiteSpace(folder))
-            return;
-
-        IsImportInProgress = true;
-        ImportProgress = "WinCan-Projekt wird importiert...";
-        SummaryText = $"WinCan: gestartet\nOrdner: {folder}";
-        DetailsText = "Laufe: Scan XTF/PDF und WinCan-DB...";
-        try
-        {
-            var result = await Task.Run(() =>
-            {
-                try
-                {
-                    var sidecar = ImportProjectSidecars(folder);
-                    var res = _sp.WinCanImport.ImportWinCanExport(folder, _shell.Project);
-                    return (sidecar, res, (string?)null);
-                }
-                catch (Exception ex)
-                {
-                    return (new ImportSummary(), Result<ImportStats>.Fail("WINCAN_IMPORT_EXCEPTION", ex.Message), ex.ToString());
-                }
-            });
-
-            var sidecar = result.Item1;
-            var res = result.Item2;
-            var error = result.Item3;
-            if (!string.IsNullOrWhiteSpace(error))
-                DetailsText = error;
-            if (!res.Ok || res.Value is null)
-            {
-                LastResult = $"WinCan Import fehlgeschlagen: {res.ErrorMessage}";
-                _shell.SetStatus("WinCan Import fehlgeschlagen");
-                return;
-            }
-
-            var s = res.Value;
-            SummaryText = BuildImportSummaryText(
-                sourceLabel: "WinCan",
-                source: s,
-                sidecar: sidecar);
-            DetailsText = BuildImportDetailsText(sidecar, s);
-            _shell.SetStatus("WinCan-Projekt importiert");
-        }
-        catch (Exception ex)
-        {
-            LastResult = $"WinCan Import fehlgeschlagen: {ex.Message}";
-            DetailsText = ex.ToString();
-            _shell.SetStatus("WinCan Import fehlgeschlagen");
-        }
-        finally
-        {
-            IsImportInProgress = false;
-            ImportProgress = "";
-        }
-    }
-
-    private async void ImportIbak()
-    {
-        var folder = _sp.Dialogs.SelectFolder("IBAK-Projektordner waehlen");
-        if (string.IsNullOrWhiteSpace(folder))
-            return;
-
-        IsImportInProgress = true;
-        ImportProgress = "IBAK-Projekt wird importiert...";
-        SummaryText = $"IBAK: gestartet\nOrdner: {folder}";
-        DetailsText = "Laufe: Scan XTF/PDF und IBAK-Daten...";
-        try
-        {
-            var result = await Task.Run(() =>
-            {
-                try
-                {
-                    var sidecar = ImportProjectSidecars(folder);
-                    var res = _sp.IbakImport.ImportIbakExport(folder, _shell.Project);
-                    return (sidecar, res, (string?)null);
-                }
-                catch (Exception ex)
-                {
-                    return (new ImportSummary(), Result<ImportStats>.Fail("IBAK_IMPORT_EXCEPTION", ex.Message), ex.ToString());
-                }
-            });
-
-            var sidecar = result.Item1;
-            var res = result.Item2;
-            var error = result.Item3;
-            if (!string.IsNullOrWhiteSpace(error))
-                DetailsText = error;
-            if (!res.Ok || res.Value is null)
-            {
-                LastResult = $"IBAK Import fehlgeschlagen: {res.ErrorMessage}";
-                _shell.SetStatus("IBAK Import fehlgeschlagen");
-                return;
-            }
-
-            var s = res.Value;
-            SummaryText = BuildImportSummaryText(
-                sourceLabel: "IBAK",
-                source: s,
-                sidecar: sidecar);
-            DetailsText = BuildImportDetailsText(sidecar, s);
-            _shell.SetStatus("IBAK-Projekt importiert");
-        }
-        catch (Exception ex)
-        {
-            LastResult = $"IBAK Import fehlgeschlagen: {ex.Message}";
-            DetailsText = ex.ToString();
-            _shell.SetStatus("IBAK Import fehlgeschlagen");
-        }
-        finally
-        {
-            IsImportInProgress = false;
-            ImportProgress = "";
-        }
-    }
-
-    private async void ImportKins()
-    {
-        var folder = _sp.Dialogs.SelectFolder("KINS-Projektordner waehlen");
-        if (string.IsNullOrWhiteSpace(folder))
-            return;
-
-        IsImportInProgress = true;
-        ImportProgress = "KINS-Projekt wird importiert...";
-        SummaryText = $"KINS: gestartet\nOrdner: {folder}";
-        DetailsText = "Laufe: Scan XTF/PDF und KINS-Daten...";
-        try
-        {
-            var result = await Task.Run(() =>
-            {
-                try
-                {
-                    var sidecar = ImportProjectSidecars(folder);
-                    var res = _sp.KinsImport.ImportKinsExport(folder, _shell.Project);
-                    return (sidecar, res, (string?)null);
-                }
-                catch (Exception ex)
-                {
-                    return (new ImportSummary(), Result<ImportStats>.Fail("KINS_IMPORT_EXCEPTION", ex.Message), ex.ToString());
-                }
-            });
-
-            var sidecar = result.Item1;
-            var res = result.Item2;
-            var error = result.Item3;
-            if (!string.IsNullOrWhiteSpace(error))
-                DetailsText = error;
-            if (!res.Ok || res.Value is null)
-            {
-                LastResult = $"KINS Import fehlgeschlagen: {res.ErrorMessage}";
-                _shell.SetStatus("KINS Import fehlgeschlagen");
-                return;
-            }
-
-            var s = res.Value;
-            SummaryText = BuildImportSummaryText(
-                sourceLabel: "KINS",
-                source: s,
-                sidecar: sidecar);
-            DetailsText = BuildImportDetailsText(sidecar, s);
-            _shell.SetStatus("KINS-Projekt importiert");
-        }
-        catch (Exception ex)
-        {
-            LastResult = $"KINS Import fehlgeschlagen: {ex.Message}";
-            DetailsText = ex.ToString();
-            _shell.SetStatus("KINS Import fehlgeschlagen");
-        }
-        finally
-        {
-            IsImportInProgress = false;
-            ImportProgress = "";
-        }
-    }
+    // ──── Sidecar import (legacy, used internally) ────
 
     private ImportSummary ImportProjectSidecars(string folder)
     {
@@ -352,7 +730,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         {
             foreach (var path in pdfFiles)
             {
-                var res = _sp.PdfImport.ImportPdf(path, _shell.Project, _sp.Diagnostics.ExplicitPdfToTextPath);
+                var res = _sp.PdfImport.ImportPdf(path, _shell.Project, _sp.Diagnostics.ExplicitPdfToTextPath, FillMissingOnly);
                 if (!res.Ok || res.Value is null)
                 {
                     summary.PdfErrors++;
@@ -376,6 +754,8 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
         return summary;
     }
+
+    // ──── Utilities ────
 
     private static IEnumerable<string> EnumerateProjectFiles(
         string root,
@@ -496,487 +876,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         return v;
     }
 
-    private void ImportPdf()
-    {
-        var paths = _sp.Dialogs.OpenFiles("PDF importieren", "PDF (*.pdf)|*.pdf");
-        if (paths.Length == 0) return;
-
-        IsImportInProgress = true;
-        ImportProgress = $"PDF Import gestartet ({paths.Length} Datei(en))";
-        var totalFound = 0;
-        var totalCreated = 0;
-        var totalUpdated = 0;
-        var totalUncertain = 0;
-        var totalErrors = 0;
-        var failedFiles = 0;
-        var messages = new List<string>();
-
-        try
-        {
-            for (var i = 0; i < paths.Length; i++)
-            {
-                var path = paths[i];
-                SetImportProgress($"PDF {i + 1}/{paths.Length}: {Path.GetFileName(path)}");
-
-                var res = _sp.PdfImport.ImportPdf(path, _shell.Project, _sp.Diagnostics.ExplicitPdfToTextPath);
-                if (!res.Ok || res.Value is null)
-                {
-                    failedFiles++;
-                    messages.Add($"Error: {Path.GetFileName(path)}: {res.ErrorMessage}");
-                    continue;
-                }
-
-                totalFound += res.Value.Found;
-                totalCreated += res.Value.Created;
-                totalUpdated += res.Value.Updated;
-                totalUncertain += res.Value.Uncertain;
-                totalErrors += res.Value.Errors;
-
-                var fileName = Path.GetFileName(path);
-                foreach (var msg in res.Value.Messages)
-                    messages.Add($"{fileName}: {msg}");
-            }
-
-            LastResult = $"Dateien: {paths.Length}, Fehler: {failedFiles}, Gefunden: {totalFound}, Neu: {totalCreated}, Updates: {totalUpdated}, Unklar: {totalUncertain}, Fehler total: {totalErrors}\n"
-                         + string.Join("\n", messages.Take(50));
-
-            StorePdfFiles(paths);
-
-            _shell.SetStatus(failedFiles > 0 ? "PDF Import teilw. fehlgeschlagen" : "PDF importiert");
-        }
-        finally
-        {
-            IsImportInProgress = false;
-            ImportProgress = "";
-        }
-    }
-
-    private void ImportXtf()
-    {
-        var paths = _sp.Dialogs.OpenFiles(
-            "Daten importieren (XTF/M150/MDB)",
-            "Daten (*.xtf;*.m150;*.mdb;*.xml)|*.xtf;*.m150;*.mdb;*.xml|XTF (*.xtf)|*.xtf|M150/XML (*.m150;*.xml)|*.m150;*.xml|MDB (*.mdb)|*.mdb|Alle Dateien|*.*");
-        if (paths.Length == 0) return;
-
-        IsImportInProgress = true;
-        ImportProgress = $"Datenimport gestartet ({paths.Length} Datei(en))";
-        try
-        {
-            var totalFound = 0;
-            var totalCreated = 0;
-            var totalUpdated = 0;
-            var totalUncertain = 0;
-            var totalErrors = 0;
-            var failedFiles = 0;
-            var messages = new List<string>();
-
-            for (var i = 0; i < paths.Length; i++)
-            {
-                var path = paths[i];
-                SetImportProgress($"Daten {i + 1}/{paths.Length}: {Path.GetFileName(path)}");
-
-                var res = _sp.XtfImport.ImportXtfFiles(new[] { path }, _shell.Project);
-                if (!res.Ok || res.Value is null)
-                {
-                    failedFiles++;
-                    messages.Add($"Error: {Path.GetFileName(path)}: {res.ErrorMessage}");
-                    continue;
-                }
-
-                totalFound += res.Value.Found;
-                totalCreated += res.Value.Created;
-                totalUpdated += res.Value.Updated;
-                totalUncertain += res.Value.Uncertain;
-                totalErrors += res.Value.Errors;
-
-                var fileName = Path.GetFileName(path);
-                foreach (var msg in res.Value.Messages)
-                    messages.Add($"{fileName}: {msg}");
-            }
-
-            LastResult = $"Dateien: {paths.Length}, Fehler: {failedFiles}, Gefunden: {totalFound}, Neu: {totalCreated}, Updates: {totalUpdated}, Unklar: {totalUncertain}, Fehler total: {totalErrors}\n"
-                         + string.Join("\n", messages.Take(50));
-
-            StoreXtfFiles(paths);
-
-            _shell.SetStatus(failedFiles > 0 ? "Datenimport teilw. fehlgeschlagen" : "Daten importiert");
-        }
-        finally
-        {
-            IsImportInProgress = false;
-            ImportProgress = "";
-        }
-    }
-
-    private void SetImportProgress(string text)
-    {
-        ImportProgress = text;
-        _shell.SetStatus(text);
-        global::System.Windows.Application.Current?.Dispatcher.Invoke(() => { }, DispatcherPriority.Background);
-    }
-
-    private async void DistributeHoldings()
-    {
-        var sourceMode = MessageBox.Show(
-            "Quelle:\nJa = PDF-Import verteilen\nNein = TXT-Import verteilen (z.B. kiDVDaten.txt)",
-            "Haltungen verteilen",
-            MessageBoxButton.YesNoCancel,
-            MessageBoxImage.Question);
-        if (sourceMode == MessageBoxResult.Cancel)
-            return;
-
-        var useTxtImport = sourceMode == MessageBoxResult.No;
-
-        string? pdfFolder = null;
-        string[] selectedPdfFiles = Array.Empty<string>();
-        string? txtFolder = null;
-        string[] selectedTxtFiles = Array.Empty<string>();
-
-        if (!useTxtImport)
-        {
-            var mode = MessageBox.Show(
-                "PDF-Auswahl:\nJa = einzelne PDF-Protokolle auswaehlen\nNein = ganzen PDF-Ordner verwenden",
-                "Haltungen verteilen (PDF)",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Question);
-            if (mode == MessageBoxResult.Cancel)
-                return;
-
-            if (mode == MessageBoxResult.Yes)
-            {
-                selectedPdfFiles = _sp.Dialogs.OpenFiles("PDF-Protokolle auswaehlen", "PDF (*.pdf)|*.pdf");
-                if (selectedPdfFiles.Length == 0)
-                    return;
-            }
-            else
-            {
-                pdfFolder = _sp.Dialogs.SelectFolder("PDF-Ordner mit Protokollen waehlen");
-                if (string.IsNullOrWhiteSpace(pdfFolder))
-                    return;
-            }
-        }
-        else
-        {
-            var mode = MessageBox.Show(
-                "TXT-Auswahl:\nJa = einzelne TXT-Dateien auswaehlen\nNein = ganzen TXT-Ordner verwenden",
-                "Haltungen verteilen (TXT)",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Question);
-            if (mode == MessageBoxResult.Cancel)
-                return;
-
-            if (mode == MessageBoxResult.Yes)
-            {
-                selectedTxtFiles = _sp.Dialogs.OpenFiles("TXT-Dateien auswaehlen", "TXT (*.txt)|*.txt");
-                if (selectedTxtFiles.Length == 0)
-                    return;
-            }
-            else
-            {
-                txtFolder = _sp.Dialogs.SelectFolder("TXT-Ordner waehlen (z.B. mit kiDVDaten.txt)");
-                if (string.IsNullOrWhiteSpace(txtFolder))
-                    return;
-            }
-        }
-
-        var videoFolder = _sp.Dialogs.SelectFolder("Video-Ordner mit Rohvideos waehlen");
-        if (string.IsNullOrWhiteSpace(videoFolder)) return;
-
-        var destFolder = _sp.Dialogs.SelectFolder("Zielordner (Gemeinde) waehlen");
-        if (string.IsNullOrWhiteSpace(destFolder)) return;
-
-        try
-        {
-            IsDistributionInProgress = true;
-            IsDistributionIndeterminate = true;
-            DistributionPercent = 0;
-            DistributionProgress = "Verteilung gestartet...";
-            _shell.SetStatus(DistributionProgress);
-
-            var progress = new Progress<HoldingFolderDistributor.DistributionProgress>(p =>
-            {
-                IsDistributionIndeterminate = p.Total <= 0;
-                DistributionPercent = p.Total > 0 ? (p.Processed * 100.0 / p.Total) : 0;
-                var name = string.IsNullOrWhiteSpace(p.CurrentFile) ? "" : $" ({Path.GetFileName(p.CurrentFile)})";
-                DistributionProgress = $"Verteilung: {p.Processed}/{p.Total}{name}";
-                _shell.SetStatus(DistributionProgress);
-            });
-
-            IReadOnlyList<HoldingFolderDistributor.DistributionResult> results;
-            if (!useTxtImport && selectedPdfFiles.Length > 0)
-            {
-                results = await Task.Run(() => HoldingFolderDistributor.DistributeFiles(
-                    pdfFiles: selectedPdfFiles,
-                    videoSourceFolder: videoFolder,
-                    destGemeindeFolder: destFolder,
-                    moveInsteadOfCopy: false,
-                    overwrite: false,
-                    recursiveVideoSearch: true,
-                    unmatchedFolderName: "__UNMATCHED",
-                    project: _shell.Project,
-                    progress: progress));
-            }
-            else if (!useTxtImport)
-            {
-                results = await Task.Run(() => HoldingFolderDistributor.Distribute(
-                    pdfSourceFolder: pdfFolder!,
-                    videoSourceFolder: videoFolder,
-                    destGemeindeFolder: destFolder,
-                    moveInsteadOfCopy: false,
-                    overwrite: false,
-                    recursiveVideoSearch: true,
-                    unmatchedFolderName: "__UNMATCHED",
-                    project: _shell.Project,
-                    progress: progress));
-            }
-            else if (selectedTxtFiles.Length > 0)
-            {
-                results = await Task.Run(() => HoldingFolderDistributor.DistributeTxtFiles(
-                    txtFiles: selectedTxtFiles,
-                    videoSourceFolder: videoFolder,
-                    destGemeindeFolder: destFolder,
-                    moveInsteadOfCopy: false,
-                    overwrite: false,
-                    recursiveVideoSearch: true,
-                    unmatchedFolderName: "__UNMATCHED",
-                    project: _shell.Project,
-                    progress: progress));
-            }
-            else
-            {
-                results = await Task.Run(() => HoldingFolderDistributor.DistributeTxt(
-                    txtSourceFolder: txtFolder!,
-                    videoSourceFolder: videoFolder,
-                    destGemeindeFolder: destFolder,
-                    moveInsteadOfCopy: false,
-                    overwrite: false,
-                    recursiveVideoSearch: true,
-                    unmatchedFolderName: "__UNMATCHED",
-                    project: _shell.Project,
-                    progress: progress));
-            }
-
-            static bool IsDataSidecar(string path)
-            {
-                var ext = Path.GetExtension(path);
-                return ext.Equals(".xtf", StringComparison.OrdinalIgnoreCase)
-                       || ext.Equals(".m150", StringComparison.OrdinalIgnoreCase)
-                       || ext.Equals(".mdb", StringComparison.OrdinalIgnoreCase)
-                       || ext.Equals(".xml", StringComparison.OrdinalIgnoreCase);
-            }
-
-            var sidecarResults = useTxtImport
-                ? new List<HoldingFolderDistributor.DistributionResult>()
-                : results.Where(r => IsDataSidecar(r.SourcePdfPath)).ToList();
-            var importResults = useTxtImport
-                ? results.ToList()
-                : results.Where(r => !IsDataSidecar(r.SourcePdfPath)).ToList();
-
-            var ok = importResults.Count(r => r.Success);
-            var failed = importResults.Count - ok;
-            var matched = importResults.Count(r => r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.Matched);
-            var missing = importResults.Count(r => r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.NotFound);
-            var ambiguous = importResults.Count(r => r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.Ambiguous);
-
-            var sb = new StringBuilder();
-            sb.AppendLine($"Modus: {(useTxtImport ? "TXT-Import" : "PDF-Import")}");
-            sb.AppendLine($"Verarbeitet: {importResults.Count} | OK: {ok} | Fehler: {failed}");
-            sb.AppendLine($"Video: Matched {matched}, Missing {missing}, Ambiguous {ambiguous}");
-            if (sidecarResults.Count > 0)
-            {
-                var sidecarOk = sidecarResults.Count(r => r.Success);
-                sb.AppendLine($"XTF/M150/MDB/XML: {sidecarOk}/{sidecarResults.Count} kopiert");
-            }
-
-            static int PreviewRank(HoldingFolderDistributor.DistributionResult r)
-            {
-                if (r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.Matched) return 0;
-                if (r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.Ambiguous) return 1;
-                if (r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.NotFound) return 2;
-                return 3;
-            }
-
-            sb.AppendLine("Matched (Top 20):");
-            foreach (var r in importResults
-                         .Where(r => r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.Matched)
-                         .OrderByDescending(r => r.Success)
-                         .Take(20))
-                sb.AppendLine($"{(r.Success ? "OK" : "FAIL")} - {r.Message} - {r.SourcePdfPath}");
-
-            sb.AppendLine("Missing (Top 20):");
-            foreach (var r in importResults
-                         .Where(r => r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.NotFound)
-                         .OrderByDescending(r => r.Success)
-                         .Take(20))
-                sb.AppendLine($"{(r.Success ? "OK" : "FAIL")} - {r.Message} - {r.SourcePdfPath}");
-
-            sb.AppendLine("Preview (Top 50):");
-            foreach (var r in importResults
-                         .OrderBy(PreviewRank)
-                         .ThenByDescending(r => r.Success)
-                         .Take(50))
-                sb.AppendLine($"{(r.Success ? "OK" : "FAIL")} - {r.Message} - {r.SourcePdfPath}");
-            foreach (var r in sidecarResults)
-                sb.AppendLine($"{(r.Success ? "OK" : "FAIL")} - {r.Message}");
-
-            LastResult = sb.ToString();
-            _shell.SetStatus(useTxtImport ? "Haltungsdaten (TXT) verteilt" : "Haltungsdaten verteilt");
-
-            // Hinweis: Video-Links werden jetzt direkt beim Verteilen gesetzt.
-
-            if (!useTxtImport && selectedPdfFiles.Length > 0)
-                StorePdfFiles(selectedPdfFiles);
-            if (useTxtImport && selectedTxtFiles.Length > 0)
-                StoreTxtFiles(selectedTxtFiles);
-
-            _sp.Settings.LastVideoSourceFolder = videoFolder;
-            _sp.Settings.LastDistributionTargetFolder = destFolder;
-            _sp.Settings.LastVideoFolder = videoFolder; // legacy compatibility
-            _sp.Settings.Save();
-        }
-        finally
-        {
-            IsDistributionInProgress = false;
-            IsDistributionIndeterminate = false;
-            DistributionProgress = "";
-            DistributionPercent = 0;
-        }
-    }
-
-    private async void DistributeShafts()
-    {
-        var mode = MessageBox.Show(
-            "PDF-Auswahl:\nJa = einzelne Schacht-PDFs auswaehlen\nNein = ganzen PDF-Ordner verwenden",
-            "Schaechte verteilen",
-            MessageBoxButton.YesNoCancel,
-            MessageBoxImage.Question);
-        if (mode == MessageBoxResult.Cancel)
-            return;
-
-        string? pdfFolder = null;
-        string[] selectedPdfFiles = Array.Empty<string>();
-        if (mode == MessageBoxResult.Yes)
-        {
-            selectedPdfFiles = _sp.Dialogs.OpenFiles("Schacht-PDFs auswaehlen", "PDF (*.pdf)|*.pdf");
-            if (selectedPdfFiles.Length == 0)
-                return;
-        }
-        else
-        {
-            pdfFolder = _sp.Dialogs.SelectFolder("PDF-Ordner mit Schachtprotokollen waehlen");
-            if (string.IsNullOrWhiteSpace(pdfFolder))
-                return;
-        }
-
-        var destFolder = _sp.Dialogs.SelectFolder("Zielordner (Gemeinde) waehlen");
-        if (string.IsNullOrWhiteSpace(destFolder)) return;
-
-        try
-        {
-            IsDistributionInProgress = true;
-            IsDistributionIndeterminate = true;
-            DistributionPercent = 0;
-            DistributionProgress = "Schacht-Verteilung gestartet...";
-            _shell.SetStatus(DistributionProgress);
-
-            var progress = new Progress<HoldingFolderDistributor.DistributionProgress>(p =>
-            {
-                IsDistributionIndeterminate = p.Total <= 0;
-                DistributionPercent = p.Total > 0 ? (p.Processed * 100.0 / p.Total) : 0;
-                var name = string.IsNullOrWhiteSpace(p.CurrentFile) ? "" : $" ({Path.GetFileName(p.CurrentFile)})";
-                DistributionProgress = $"Verteilung: {p.Processed}/{p.Total}{name}";
-                _shell.SetStatus(DistributionProgress);
-            });
-
-            IReadOnlyList<HoldingFolderDistributor.DistributionResult> results;
-            if (selectedPdfFiles.Length > 0)
-            {
-                results = await Task.Run(() => HoldingFolderDistributor.DistributeShaftFiles(
-                    pdfFiles: selectedPdfFiles,
-                    destGemeindeFolder: destFolder,
-                    moveInsteadOfCopy: false,
-                    overwrite: false,
-                    project: _shell.Project,
-                    progress: progress));
-            }
-            else
-            {
-                results = await Task.Run(() => HoldingFolderDistributor.DistributeShafts(
-                    pdfSourceFolder: pdfFolder!,
-                    destGemeindeFolder: destFolder,
-                    moveInsteadOfCopy: false,
-                    overwrite: false,
-                    project: _shell.Project,
-                    progress: progress));
-            }
-
-            var ok = results.Count(r => r.Success);
-            var failed = results.Count - ok;
-
-            var sb = new StringBuilder();
-            sb.AppendLine($"Schachtprotokolle: {results.Count} | OK: {ok} | Fehler: {failed}");
-            foreach (var r in results.Take(50))
-                sb.AppendLine($"{(r.Success ? "OK" : "FAIL")} - {r.Message} - {r.SourcePdfPath}");
-
-            LastResult = sb.ToString();
-            _shell.SetStatus("Schachtprotokolle verteilt");
-
-            if (selectedPdfFiles.Length > 0)
-                StorePdfFiles(selectedPdfFiles);
-        }
-        finally
-        {
-            IsDistributionInProgress = false;
-            IsDistributionIndeterminate = false;
-            DistributionProgress = "";
-            DistributionPercent = 0;
-        }
-    }
-
-    private int ApplyVideoPathsToRecords(IReadOnlyList<HoldingFolderDistributor.DistributionResult> results)
-    {
-        var updated = 0;
-        foreach (var r in results)
-        {
-            if (string.IsNullOrWhiteSpace(r.DestVideoPath) || string.IsNullOrWhiteSpace(r.HoldingFolder))
-                continue;
-
-            var folderName = Path.GetFileName(r.HoldingFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-            if (string.IsNullOrWhiteSpace(folderName))
-                continue;
-
-            var record = _shell.Project.Data.FirstOrDefault(x =>
-                string.Equals(SanitizePathSegment(x.GetFieldValue("Haltungsname")?.Trim() ?? ""), folderName, StringComparison.OrdinalIgnoreCase));
-            if (record is null)
-                continue;
-
-            record.SetFieldValue("Link", r.DestVideoPath, FieldSource.Unknown, userEdited: false);
-            updated++;
-        }
-
-        if (updated > 0)
-        {
-            _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-            _shell.Project.Dirty = true;
-        }
-
-        return updated;
-    }
-
-    private static string SanitizePathSegment(string value)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        var sb = new StringBuilder(value.Length);
-        foreach (var ch in value)
-        {
-            if (invalid.Contains(ch))
-                sb.Append('_');
-            else
-                sb.Append(ch);
-        }
-        var cleaned = sb.ToString().Trim();
-        return string.IsNullOrWhiteSpace(cleaned) ? "UNKNOWN" : cleaned;
-    }
+    // ──── File Storage ────
 
     private void StoreXtfFiles(string[] paths)
     {
@@ -1024,9 +924,9 @@ public sealed partial class ImportPageViewModel : ObservableObject
         if (stored.Count == 0) return;
 
         var existing = LoadStoredXtfFiles(projectDir);
-        foreach (var s in stored)
-            if (!existing.Contains(s, StringComparer.OrdinalIgnoreCase))
-                existing.Add(s);
+        foreach (var sItem in stored)
+            if (!existing.Contains(sItem, StringComparer.OrdinalIgnoreCase))
+                existing.Add(sItem);
 
         _shell.Project.Metadata["XTF_StoredFiles"] = JsonSerializer.Serialize(existing);
     }
@@ -1077,9 +977,9 @@ public sealed partial class ImportPageViewModel : ObservableObject
         if (stored.Count == 0) return;
 
         var existing = LoadStoredPdfFiles(projectDir);
-        foreach (var s in stored)
-            if (!existing.Contains(s, StringComparer.OrdinalIgnoreCase))
-                existing.Add(s);
+        foreach (var sItem in stored)
+            if (!existing.Contains(sItem, StringComparer.OrdinalIgnoreCase))
+                existing.Add(sItem);
 
         _shell.Project.Metadata["PDF_StoredFiles"] = JsonSerializer.Serialize(existing);
     }
@@ -1130,9 +1030,9 @@ public sealed partial class ImportPageViewModel : ObservableObject
         if (stored.Count == 0) return;
 
         var existing = LoadStoredTxtFiles(projectDir);
-        foreach (var s in stored)
-            if (!existing.Contains(s, StringComparer.OrdinalIgnoreCase))
-                existing.Add(s);
+        foreach (var sItem in stored)
+            if (!existing.Contains(sItem, StringComparer.OrdinalIgnoreCase))
+                existing.Add(sItem);
 
         _shell.Project.Metadata["TXT_StoredFiles"] = JsonSerializer.Serialize(existing);
     }
@@ -1145,7 +1045,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         try
         {
             var list = JsonSerializer.Deserialize<List<string>>(raw);
-            return list?.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).ToList() ?? new List<string>();
+            return list?.Where(si => !string.IsNullOrWhiteSpace(si)).Select(si => si.Trim()).ToList() ?? new List<string>();
         }
         catch
         {
@@ -1162,7 +1062,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         try
         {
             var list = JsonSerializer.Deserialize<List<string>>(raw);
-            return list?.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).ToList() ?? new List<string>();
+            return list?.Where(si => !string.IsNullOrWhiteSpace(si)).Select(si => si.Trim()).ToList() ?? new List<string>();
         }
         catch
         {
@@ -1179,7 +1079,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         try
         {
             var list = JsonSerializer.Deserialize<List<string>>(raw);
-            return list?.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).ToList() ?? new List<string>();
+            return list?.Where(si => !string.IsNullOrWhiteSpace(si)).Select(si => si.Trim()).ToList() ?? new List<string>();
         }
         catch
         {
@@ -1205,6 +1105,35 @@ public sealed partial class ImportPageViewModel : ObservableObject
     private static string BuildImportDetailsText(ImportSummary sidecar, ImportStats source)
     {
         return string.Join("\n", sidecar.Messages.Concat(source.Messages).Take(200));
+    }
+
+    /// <summary>
+    /// Nach jedem Import: Primaere_Schaeden aller Records deduplizieren.
+    /// Entfernt doppelte Zeilen (gleicher Code + Meter) aus dem fertigen Text.
+    /// </summary>
+    private void DeduplicateAllPrimaryDamages()
+    {
+        try
+        {
+            foreach (var rec in _shell.Project.Data)
+            {
+                var raw = rec.GetFieldValue("Primaere_Schaeden");
+                if (string.IsNullOrWhiteSpace(raw))
+                    continue;
+
+                var clean = XtfPrimaryDamageFormatter.DeduplicateText(raw);
+                if (!string.Equals(raw, clean, StringComparison.Ordinal))
+                {
+                    rec.FieldMeta.TryGetValue("Primaere_Schaeden", out var meta);
+                    var source = meta?.Source ?? FieldSource.Manual;
+                    rec.SetFieldValue("Primaere_Schaeden", clean, source, userEdited: false);
+                }
+            }
+        }
+        catch
+        {
+            // Dedup-Fehler sollen Import nicht brechen
+        }
     }
 
     partial void OnLastResultChanged(string value)

@@ -18,11 +18,21 @@ public static class ProtocolTrainingStore
     public static void AddSample(ProtocolEntry entry, string? haltungId)
     {
         var data = Load();
+
+        // Duplikat-Pruefung: Code + Haltung + gerundeter Meter
+        var code = entry.Code ?? "";
+        var hid = haltungId ?? "";
+        var mStart = Math.Round(entry.MeterStart ?? 0, 1);
+        var sig = $"{hid}|{code}|{mStart:F1}";
+        if (data.Samples.Any(s =>
+            $"{s.HaltungId}|{s.Code}|{Math.Round(s.MeterStart ?? 0, 1):F1}" == sig))
+            return;
+
         data.Samples.Add(new ProtocolTrainingSample
         {
             AtUtc = DateTime.UtcNow,
-            HaltungId = haltungId ?? "",
-            Code = entry.Code ?? "",
+            HaltungId = hid,
+            Code = code,
             Beschreibung = entry.Beschreibung ?? "",
             MeterStart = entry.MeterStart,
             MeterEnd = entry.MeterEnd,

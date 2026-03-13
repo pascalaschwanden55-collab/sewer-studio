@@ -1,0 +1,60 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.FloatingGridWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Haltungen"
+        Height="700" Width="1200"
+        MinWidth="600" MinHeight="350"
+        Background="{DynamicResource CardBrush}"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header / Toolbar -->
+        <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" Padding="8,6"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="&#xE80A;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                               Foreground="{DynamicResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock x:Name="TitleText" Text="Haltungen (abgedockt)"
+                               FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="DockBackButton" Click="DockBack_Click"
+                            Style="{DynamicResource ToolbarButton}" Margin="0,0,4,0"
+                            ToolTip="Zurueck ins Hauptfenster andocken">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE89F;" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                                       Foreground="{DynamicResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Andocken" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Grid-Host: hier wird das DataGrid zur Laufzeit eingesetzt -->
+        <Border x:Name="GridHost" Grid.Row="1" Margin="0"/>
+
+        <!-- Statusleiste -->
+        <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" Padding="8,4"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Left" x:Name="RecordCountText"
+                           FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+                <TextBlock DockPanel.Dock="Right" x:Name="SelectedInfoText"
+                           FontSize="11" Foreground="{DynamicResource NeonCyanBrush}"
+                           VerticalAlignment="Center" HorizontalAlignment="Right"/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

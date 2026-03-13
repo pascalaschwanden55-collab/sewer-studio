@@ -1,0 +1,94 @@
+{
+  "haltung": "07.1064899-1042598",
+  "datum": "10.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 150 / 150mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Mischabwasser",
+  "inspektionsrichtung": "Gegen Fließrichtung",
+  "schacht_oben": "07.1064899",
+  "schacht_unten": "1042598",
+  "inspektionslaenge_m": "13.80",
+  "rohrlaenge_m": "5.00",
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 0.0,
+      "en_code": "AECXC",
+      "beschreibung": "Bogen nach oben, Winkel = 30° Entf. gegen Fließr. 0,20 m Rohrprofilwechsel: Kreisprofil, Höhe = 100mm, Breite = 100mm, Durchmesser nicht messbar Entf. gegen Fließr. 2,10 m Position",
+      "uhr_von": "12",
+      "uhr_bis": "12",
+      "stufe": null,
+      "timestamp_video": "00:00:47",
+      "foto_datei": null,
+      "foto_nr": 47
+    },
+    {
+      "meter": 0.0,
+      "en_code": "AEDXR",
+      "beschreibung": "Bogen nach links unten, Winkel = 45°, In die Horizontale Entf. gegen Fließr. 2,70 m Rohrmaterialwechsel: Kunststoff unbekannt Entf. gegen Fließr. 2,90 m Position",
+      "uhr_von": "7",
+      "uhr_bis": "7",
+      "stufe": null,
+      "timestamp_video": "00:01:00",
+      "foto_datei": null,
+      "foto_nr": 49
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCAAA",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel Entf. gegen Fließr. 5,20 m Position Pos: 9; Anschluss mit Formstück, Höhe = 0mm, Breite = 0mm Entf. gegen Fließr. 9,20 m",
+      "uhr_von": "9",
+      "uhr_bis": "9",
+      "stufe": null,
+      "timestamp_video": "00:01:51",
+      "foto_datei": null,
+      "foto_nr": 51
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCAAA",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel, Foto 2 zu Station BCA.A.A Entf. gegen Fließr. 9,20 m Pos: 3; Anschluss mit Formstück, Höhe = 0mm, Breite = 0mm Entf. gegen Fließr. 11,50 m",
+      "uhr_von": "3",
+      "uhr_bis": "3",
+      "stufe": null,
+      "timestamp_video": "00:02:17",
+      "foto_datei": null,
+      "foto_nr": 53
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCCYA",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel, Foto 2 zu Station BCA.A.A Entf. gegen Fließr. 11,50 m Pos: 12; Bogen nach oben, Winkel = 45° Entf. gegen Fließr. 12,80 m",
+      "uhr_von": "12",
+      "uhr_bis": "12",
+      "stufe": null,
+      "timestamp_video": "00:02:42",
+      "foto_datei": null,
+      "foto_nr": 55
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCCYB",
+      "beschreibung": "Bogen nach oben, Winkel = 45° Entf. gegen Fließr. 13,00 m Pos: 6; Bogen nach unten, Winkel = 45°, In die Horizontale Entf. gegen Fließr. 13,10 m",
+      "uhr_von": "6",
+      "uhr_bis": "6",
+      "stufe": null,
+      "timestamp_video": "00:03:04",
+      "foto_datei": null,
+      "foto_nr": 57
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCCYA",
+      "beschreibung": "Bogen nach oben, Winkel = 45° Entf. gegen Fließr. 13,70 m",
+      "uhr_von": "12",
+      "uhr_bis": "12",
+      "stufe": null,
+      "timestamp_video": "00:03:30",
+      "foto_datei": null,
+      "foto_nr": 58
+    }
+  ]
+}

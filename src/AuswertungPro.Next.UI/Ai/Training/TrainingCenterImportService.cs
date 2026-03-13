@@ -8,7 +8,7 @@ namespace AuswertungPro.Next.UI.Ai.Training;
 
 public sealed class TrainingCenterImportService
 {
-    private static readonly string[] VideoExts = [".mp4", ".mov", ".mkv", ".avi", ".mpg", ".mpeg", ".wmv", ".ts", ".m4v"];
+    private static readonly string[] VideoExts = [..AuswertungPro.Next.Infrastructure.Media.MediaFileTypes.VideoExtensions, ".ts", ".m4v"];
     private static readonly string[] ProtocolExts = [".json", ".xml", ".pdf"];
 
     public Task<List<TrainingCase>> ScanAsync(string rootFolder)
@@ -65,6 +65,50 @@ public sealed class TrainingCenterImportService
         return Task.FromResult(cases);
     }
 
+    /// <summary>
+    /// Scannt nur nach Protokollen (PDF/JSON), Video ist nicht erforderlich.
+    /// Fuer den reinen Protokoll-Import ohne Videoanalyse.
+    /// </summary>
+    public Task<List<TrainingCase>> ScanProtocolOnlyAsync(string rootFolder)
+    {
+        if (string.IsNullOrWhiteSpace(rootFolder) || !Directory.Exists(rootFolder))
+            return Task.FromResult(new List<TrainingCase>());
+
+        var folders = EnumerateFolders(rootFolder);
+        var cases = new List<TrainingCase>();
+
+        foreach (var folder in folders)
+        {
+            try
+            {
+                var files = Directory.EnumerateFiles(folder, "*.*", SearchOption.TopDirectoryOnly).ToList();
+                if (files.Count == 0) continue;
+
+                var protos = files.Where(f => ProtocolExts.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
+                if (protos.Count == 0) continue;
+
+                var videos = files.Where(f => VideoExts.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
+                var bestVideo = videos.Count > 0
+                    ? videos.Select(p => new FileInfo(p)).OrderByDescending(fi => fi.Length).First().FullName
+                    : "";
+
+                cases.Add(new TrainingCase
+                {
+                    CaseId = SafeRelativeId(rootFolder, folder),
+                    FolderPath = folder,
+                    VideoPath = bestVideo,
+                    ProtocolPath = PickBestProtocol(protos),
+                    Status = TrainingCaseStatus.New,
+                    CreatedUtc = DateTime.UtcNow
+                });
+            }
+            catch { }
+        }
+
+        cases = cases.OrderBy(c => c.CaseId, StringComparer.OrdinalIgnoreCase).ToList();
+        return Task.FromResult(cases);
+    }
+
     private static IEnumerable<string> EnumerateFolders(string rootFolder)
     {
         yield return rootFolder;
@@ -75,10 +119,11 @@ public sealed class TrainingCenterImportService
 
     private static string PickBestProtocol(List<string> protos)
     {
-        // prefer json > xml > pdf
+        // TrainingSampleGenerator unterstützt derzeit JSON und PDF.
+        // Daher PDF vor XML priorisieren, um unnötige "ProtocolUnreadable"-Fälle zu vermeiden.
         string? pick = protos.FirstOrDefault(p => Path.GetExtension(p).Equals(".json", StringComparison.OrdinalIgnoreCase))
-            ?? protos.FirstOrDefault(p => Path.GetExtension(p).Equals(".xml", StringComparison.OrdinalIgnoreCase))
             ?? protos.FirstOrDefault(p => Path.GetExtension(p).Equals(".pdf", StringComparison.OrdinalIgnoreCase))
+            ?? protos.FirstOrDefault(p => Path.GetExtension(p).Equals(".xml", StringComparison.OrdinalIgnoreCase))
             ?? protos.First();
 
         return pick!;

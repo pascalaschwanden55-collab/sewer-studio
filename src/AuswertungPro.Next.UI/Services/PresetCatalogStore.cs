@@ -38,10 +38,8 @@ public static class PresetCatalogStore
                 return DefaultCatalog();
 
             var json = File.ReadAllText(PresetPath);
-            var model = JsonSerializer.Deserialize<PresetCatalog>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var model = JsonSerializer.Deserialize<PresetCatalog>(json,
+                Application.Common.JsonDefaults.CaseInsensitive);
 
             return Normalize(model ?? DefaultCatalog());
         }
@@ -57,7 +55,7 @@ public static class PresetCatalogStore
         if (!string.IsNullOrWhiteSpace(dir))
             Directory.CreateDirectory(dir);
 
-        var json = JsonSerializer.Serialize(catalog, new JsonSerializerOptions { WriteIndented = true });
+        var json = JsonSerializer.Serialize(catalog, Application.Common.JsonDefaults.Indented);
         File.WriteAllText(PresetPath, json);
     }
 

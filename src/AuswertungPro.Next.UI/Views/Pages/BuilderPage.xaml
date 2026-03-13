@@ -1,8 +1,6 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.BuilderPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <ScrollViewer VerticalScrollBarVisibility="Auto"
-                  HorizontalScrollBarVisibility="Disabled">
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -440,10 +438,31 @@
                                      Height="8"
                                      IsIndeterminate="True"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding LastResult}"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               VerticalAlignment="Center"
-                               Margin="0,0,12,0"/>
+                    <StackPanel Margin="0,0,12,0"
+                                MaxWidth="360"
+                                VerticalAlignment="Center">
+                        <TextBlock Text="{Binding ExportStateText}"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   ToolTip="{Binding LastExportedPdfPath}"/>
+                        <TextBlock Text="{Binding LastResult}"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip="{Binding LastResult}"/>
+                    </StackPanel>
+                    <Button Content="PDF oeffnen"
+                            Command="{Binding OpenLastExportedPdfCommand}"
+                            Margin="0,0,8,0">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsPdfExportInProgress}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                     <Button Content="PDF ausdrucken"
                             Command="{Binding PrintPdfCommand}"
                             Margin="0,0,8,0">
@@ -474,6 +493,5 @@
             </DockPanel>
         </Border>
     </Grid>
-    </ScrollViewer>
 </UserControl>
 

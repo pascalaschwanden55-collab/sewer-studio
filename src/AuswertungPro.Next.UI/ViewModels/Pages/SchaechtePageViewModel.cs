@@ -32,6 +32,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _searchResultInfo = string.Empty;
     [ObservableProperty] private double _gridMinRowHeight = 38d;
+    [ObservableProperty] private double _gridZoom = 1.0d;
     [ObservableProperty] private bool _isColumnReorderEnabled;
 
     public IRelayCommand AddCommand { get; }
@@ -70,9 +71,12 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         _shell = shell;
 
         var uiLayout = _sp.Settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
-        GridMinRowHeight = uiLayout.GridMinRowHeight is >= 24d and <= 120d
+        GridMinRowHeight = uiLayout.GridMinRowHeight is >= 24d and <= 240d
             ? uiLayout.GridMinRowHeight
             : 38d;
+        GridZoom = uiLayout.GridZoom is >= 0.5d and <= 2.0d
+            ? uiLayout.GridZoom
+            : 1.0d;
         IsColumnReorderEnabled = uiLayout.IsColumnReorderEnabled;
 
         SanierenOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadSanierenOptions());
@@ -129,10 +133,22 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
 
     partial void OnGridMinRowHeightChanged(double value)
     {
-        var clamped = Math.Clamp(value, 24d, 120d);
+        var clamped = Math.Clamp(value, 24d, 240d);
         if (Math.Abs(clamped - value) > 0.001d)
         {
             GridMinRowHeight = clamped;
+            return;
+        }
+
+        PersistSchaechtePageBasicUiSettings();
+    }
+
+    partial void OnGridZoomChanged(double value)
+    {
+        var clamped = Math.Clamp(value, 0.5d, 2.0d);
+        if (Math.Abs(clamped - value) > 0.001d)
+        {
+            GridZoom = clamped;
             return;
         }
 
@@ -629,6 +645,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         var layout = _sp.Settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
         layout.GridMinRowHeight = GridMinRowHeight;
+        layout.GridZoom = GridZoom;
         layout.IsColumnReorderEnabled = IsColumnReorderEnabled;
         _sp.Settings.SchaechtePageLayout = layout;
         _sp.Settings.Save();

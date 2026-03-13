@@ -12,6 +12,11 @@ using VsaFinding = AuswertungPro.Next.Domain.Models.VsaFinding;
 
 namespace AuswertungPro.Next.Infrastructure.Vsa;
 
+/// <summary>
+/// VSA Zustandsbeurteilung gemäss VSA Richtlinie 2023.
+/// Berechnet Zustandsnote (ZN), Abminderung (A) und Dringlichkeitszahl (DZ)
+/// pro Anforderung (Dichtheit, Standsicherheit, Betriebssicherheit).
+/// </summary>
 public sealed class VsaEvaluationService : IVsaEvaluationService
 {
     private static readonly Regex LeadingTokenRegex = new(@"^[A-Za-z0-9]+", RegexOptions.Compiled);
@@ -50,9 +55,13 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             var classified = ClassifyFindings(findings, table, out var unknownForRecord);
             unknownCodeCount += unknownForRecord;
 
-            var d = ComputeForRequirement(VsaRequirement.Dichtheit, classified);
-            var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified);
-            var b = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified);
+            var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+            const double minLength = 3.0; // Kanäle; Schächte: 0.5
+            var rb = ComputeRandbedingungen(record);
+
+            var d = ComputeForRequirement(VsaRequirement.Dichtheit, classified, assessmentLength, minLength, rb);
+            var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
+            var b = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
 
             ApplyRecordFields(record, d, s, b);
 
@@ -65,6 +74,38 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             $"Records={project.Data.Count}; UnknownCodes={unknownCodeCount}; Table={tableResult.Value.SourceName}";
 
         return Result<IReadOnlyList<VsaConditionResult>>.Success(results);
+    }
+
+    public Result<bool> EvaluateRecord(HaltungRecord record)
+    {
+        if (record is null)
+            return Result<bool>.Fail("VSA_RECORD_NULL", "Record is null.");
+
+        var tableResult = LoadClassificationTable();
+        if (!tableResult.Ok || tableResult.Value is null)
+            return Result<bool>.Fail(
+                tableResult.ErrorCode ?? "VSA_TABLE_LOAD_FAILED",
+                tableResult.ErrorMessage ?? "Classification table could not be loaded.");
+
+        var table = tableResult.Value.Table;
+        var knownCodes = new HashSet<string>(
+            table.Rules.Select(r => NormalizeCode(r.Code)).Where(c => c.Length > 0),
+            StringComparer.OrdinalIgnoreCase);
+
+        var findings = ResolveFindings(record, knownCodes);
+        var classified = ClassifyFindings(findings, table, out _);
+
+        var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+        const double minLength = 3.0;
+        var rb = ComputeRandbedingungen(record);
+
+        var d = ComputeForRequirement(VsaRequirement.Dichtheit, classified, assessmentLength, minLength, rb);
+        var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
+        var b = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
+
+        ApplyRecordFields(record, d, s, b);
+
+        return Result<bool>.Success(true);
     }
 
     public Result<string> Explain(Project project, HaltungRecord record)
@@ -87,21 +128,43 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
         var findings = ResolveFindings(record, knownCodes);
         var classified = ClassifyFindings(findings, table, out var unknownForRecord);
-        var d = ComputeForRequirement(VsaRequirement.Dichtheit, classified);
-        var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified);
-        var b = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified);
+
+        var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+        const double minLength = 3.0;
+        var rb = ComputeRandbedingungen(record);
+
+        var d = ComputeForRequirement(VsaRequirement.Dichtheit, classified, assessmentLength, minLength, rb);
+        var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
+        var bResult = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
 
         var sb = new StringBuilder();
-        sb.AppendLine("VSA Zustandsklasse - Rechnungsweg");
+        sb.AppendLine("VSA Zustandsbeurteilung - Rechnungsweg (VSA Richtlinie 2023)");
         sb.AppendLine($"Haltung: {SafeField(record.GetFieldValue("Haltungsname"))}");
         sb.AppendLine($"Klassifikationstabelle: {tableResult.Value.SourceName}");
+        sb.AppendLine($"Haltungslänge: {assessmentLength:F1} m");
         sb.AppendLine($"Anzahl Feststellungen: {findings.Count}");
         sb.AppendLine($"Unbekannte Codes: {unknownForRecord}");
+        sb.AppendLine($"Randbedingungen: B1×B2×B3×B4 = {rb:F4}");
         sb.AppendLine();
 
         AppendRequirementSection(sb, d);
         AppendRequirementSection(sb, s);
-        AppendRequirementSection(sb, b);
+        AppendRequirementSection(sb, bResult);
+
+        // Gesamt-Zustandsnote (schlechteste über D/S/B)
+        var allZn = new[] { d.Zustandsnote, s.Zustandsnote, bResult.Zustandsnote }
+            .Where(v => v is not null).Select(v => v!.Value).ToList();
+        if (allZn.Count > 0)
+        {
+            var worstZn = allZn.Min();
+            var allDz = new[] { d.Dringlichkeitszahl, s.Dringlichkeitszahl, bResult.Dringlichkeitszahl }
+                .Where(v => v is not null).Select(v => v!.Value).ToList();
+            var worstDz = allDz.Count > 0 ? (double?)allDz.Min() : null;
+            sb.AppendLine();
+            sb.AppendLine($"Gesamt-Zustandsnote (min D/S/B): {FmtNote(worstZn)}");
+            sb.AppendLine($"Gesamt-Dringlichkeitszahl: {FmtNote(worstDz)}");
+            sb.AppendLine($"Dringlichkeit: {MapDringlichkeit(worstDz)}");
+        }
 
         if (classified.Count > 0)
         {
@@ -118,6 +181,8 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
         return Result<string>.Success(sb.ToString());
     }
+
+    // ── Tabelle laden ────────────────────────────────────────────────────
 
     private Result<LoadedTable> LoadClassificationTable()
     {
@@ -142,6 +207,8 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             "VSA_TABLE_MISSING",
             $"Classification table not found. Expected '{_channelsTablePath}' or '{_manholesTablePath}'.");
     }
+
+    // ── Feststellungen auflösen / klassifizieren ─────────────────────────
 
     private static List<VsaFinding> ResolveFindings(HaltungRecord record, IReadOnlySet<string> knownCodes)
     {
@@ -187,34 +254,120 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         return list;
     }
 
-    private static VsaConditionResult ComputeForRequirement(VsaRequirement requirement, IReadOnlyList<ClassifiedFinding> classified)
-    {
-        var values = requirement switch
-        {
-            VsaRequirement.Dichtheit => classified.Select(c => c.Classification.EZD).Where(v => v is not null).Select(v => v!.Value).ToList(),
-            VsaRequirement.Standsicherheit => classified.Select(c => c.Classification.EZS).Where(v => v is not null).Select(v => v!.Value).ToList(),
-            _ => classified.Select(c => c.Classification.EZB).Where(v => v is not null).Select(v => v!.Value).ToList()
-        };
+    // ── Kernberechnung: Zustandsnote + Dringlichkeitszahl ────────────────
 
-        var worst = values.Count == 0 ? (int?)null : values.Max();
-        var note = worst is null ? (double?)null : worst.Value;
-        var dz = worst is null ? (double?)null : Math.Round(worst.Value * 25.0, 2, MidpointRounding.AwayFromZero);
+    /// <summary>
+    /// Berechnet ZN und DZ für eine Anforderung gemäss VSA Richtlinie 2023.
+    /// ZN = EZ_min + 0.4 - A  (Kap. 5.2, Formel 1)
+    /// DZ = ZN × 100 × B1 × B2 × B3 × B4  (Kap. 5.3, Formel 2)
+    /// </summary>
+    private static VsaConditionResult ComputeForRequirement(
+        VsaRequirement requirement,
+        IReadOnlyList<ClassifiedFinding> classified,
+        double assessmentLength,
+        double minLength,
+        double randbedingungen)
+    {
+        // EZ-Werte mit Längenfaktoren sammeln
+        var entries = new List<(int EZ, double LF)>();
+        foreach (var c in classified)
+        {
+            int? ez = requirement switch
+            {
+                VsaRequirement.Dichtheit => c.Classification.EZD,
+                VsaRequirement.Standsicherheit => c.Classification.EZS,
+                _ => c.Classification.EZB
+            };
+            if (ez is null) continue;
+            entries.Add((ez.Value, ComputeLengthFactor(c.Finding, minLength)));
+        }
+
+        if (entries.Count == 0)
+        {
+            // Unterscheide: keine Findings vs. nur unbekannte Codes
+            var hasUnknown = classified.Any(c => c.IsUnknown);
+            if (hasUnknown)
+            {
+                // Unbekannte Codes vorhanden, aber keine klassifizierbaren EZ-Werte
+                // → Bewertung nicht möglich (n/a), NICHT "Leitung i.O."
+                var na = new VsaConditionResult
+                {
+                    Requirement = requirement,
+                    Zustandsnote = null,
+                    WorstEinzelzustand = null,
+                    Abminderung = null,
+                    Dringlichkeitszahl = null
+                };
+                na.Notes.Add("Nur unbekannte Schadenscodes – Bewertung nicht möglich.");
+                return na;
+            }
+
+            // Tatsächlich keine Schadenscodes für diese Anforderung → Leitung i.O. (ZN = 4.0)
+            var dzOk = Math.Round(4.0 * 100.0 * randbedingungen, 2, MidpointRounding.AwayFromZero);
+            var ok = new VsaConditionResult
+            {
+                Requirement = requirement,
+                Zustandsnote = 4.00,
+                WorstEinzelzustand = 4,
+                Abminderung = 0,
+                Dringlichkeitszahl = dzOk
+            };
+            ok.Notes.Add("Keine Schadenscodes vorhanden – Leitung i.O.");
+            return ok;
+        }
+
+        // EZ_min = schlechtester Einzelzustand (0 = schlecht, 4 = gut)
+        var ezMin = entries.Min(e => e.EZ);
+
+        double zn;
+        double abminderung = 0;
+
+        if (ezMin == 4)
+        {
+            // Bestmöglicher Zustand – keine Abminderung
+            zn = 4.00;
+        }
+        else
+        {
+            // ZN_start = EZ_min + 0.4
+            var znStart = ezMin + 0.4;
+
+            // Abminderung A = 0.4 × Σ((4 - EZ_i) × LF_i) / ((4 - EZ_min) × LA)
+            if (assessmentLength > 0)
+            {
+                var sumNumerator = entries.Sum(e => (4.0 - e.EZ) * e.LF);
+                var denominator = (4.0 - ezMin) * assessmentLength;
+                if (denominator > 0)
+                {
+                    abminderung = 0.4 * sumNumerator / denominator;
+                    abminderung = Math.Min(abminderung, 0.8); // A ≤ 0.8
+                }
+            }
+
+            zn = Math.Max(znStart - abminderung, 0); // ZN ≥ 0
+        }
+
+        zn = Math.Round(zn, 2, MidpointRounding.AwayFromZero);
+        zn = Math.Min(zn, 4.00); // sicherheitshalber kappen
+        abminderung = Math.Round(abminderung, 2, MidpointRounding.AwayFromZero);
+
+        // DZ = ZN × 100 × Π(B_j)
+        var dz = Math.Round(zn * 100.0 * randbedingungen, 2, MidpointRounding.AwayFromZero);
 
         var result = new VsaConditionResult
         {
             Requirement = requirement,
-            Zustandsnote = note,
-            WorstEinzelzustand = worst,
-            Abminderung = null,
+            Zustandsnote = zn,
+            WorstEinzelzustand = ezMin,
+            Abminderung = abminderung,
             Dringlichkeitszahl = dz
         };
 
-        result.Notes.Add($"Contributions={values.Count}");
-        if (values.Count == 0)
-            result.Notes.Add("Keine klassifizierbaren Codes vorhanden.");
-
+        result.Notes.Add($"Beiträge={entries.Count}; A={abminderung:F2}; RB={randbedingungen:F4}");
         return result;
     }
+
+    // ── Record-Felder setzen ─────────────────────────────────────────────
 
     private static void ApplyRecordFields(
         HaltungRecord record,
@@ -222,34 +375,135 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         VsaConditionResult sResult,
         VsaConditionResult bResult)
     {
-        var dNote = dResult.Zustandsnote;
-        record.SetFieldValue("VSA_Zustandsnote_D", FmtNote(dNote), FieldSource.Legacy, userEdited: false);
+        record.SetFieldValue("VSA_Zustandsnote_D", FmtNote(dResult.Zustandsnote), FieldSource.Legacy, userEdited: false);
         record.SetFieldValue("VSA_Zustandsnote_S", FmtNote(sResult.Zustandsnote), FieldSource.Legacy, userEdited: false);
         record.SetFieldValue("VSA_Zustandsnote_B", FmtNote(bResult.Zustandsnote), FieldSource.Legacy, userEdited: false);
-        record.SetFieldValue("Zustandsklasse", MapZustandsklasse(dNote), FieldSource.Legacy, userEdited: false);
-        record.SetFieldValue("Pruefungsresultat", BuildPruefungsresultat(dNote), FieldSource.Legacy, userEdited: false);
+
+        // Gesamt: schlechteste (=niedrigste) ZN über D/S/B
+        var allZn = new[] { dResult.Zustandsnote, sResult.Zustandsnote, bResult.Zustandsnote }
+            .Where(v => v is not null).Select(v => v!.Value).ToList();
+        var worstZn = allZn.Count > 0 ? (double?)allZn.Min() : null;
+
+        record.SetFieldValue("Zustandsklasse", MapZustandsklasse(worstZn), FieldSource.Legacy, userEdited: false);
+        record.SetFieldValue("Pruefungsresultat", BuildPruefungsresultat(worstZn), FieldSource.Legacy, userEdited: false);
     }
 
     private static void AppendRequirementSection(StringBuilder sb, VsaConditionResult result)
     {
         sb.AppendLine($"Anforderung {result.Requirement}:");
         sb.AppendLine($"  EZmin: {FmtEz(result.WorstEinzelzustand)}");
+        sb.AppendLine($"  Abminderung A: {FmtNote(result.Abminderung)}");
         sb.AppendLine($"  Zustandsnote: {FmtNote(result.Zustandsnote)}");
         sb.AppendLine($"  Dringlichkeitszahl: {FmtNote(result.Dringlichkeitszahl)}");
+        sb.AppendLine($"  Dringlichkeit: {MapDringlichkeit(result.Dringlichkeitszahl)}");
         if (result.Notes.Count > 0)
             sb.AppendLine($"  Hinweise: {string.Join("; ", result.Notes)}");
     }
 
+    // ── Randbedingungen (VSA Richtlinie 2023, Kap. 5.3, Tabellen 3-6) ──
+
+    /// <summary>Berechnet Π(B_j) = B1 × B2 × B3 × B4.</summary>
+    private static double ComputeRandbedingungen(HaltungRecord record)
+    {
+        var b1 = ComputeB1(record.GetFieldValue("Gewaesserschutz"));
+        var b2 = ComputeB2(record.GetFieldValue("Nutzungsart"));
+        var b3 = ComputeB3(record.GetFieldValue("Grundwasserspiegel"));
+        var b4 = ComputeB4(record.GetFieldValue("FunktionHierarchisch"));
+        return b1 * b2 * b3 * b4;
+    }
+
+    // Tabelle 3: Gewässer-/Grundwasserschutz
+    private static double ComputeB1(string? value) => value?.Trim().ToUpperInvariant() switch
+    {
+        "S"  => 0.90,
+        "AU" => 0.95,
+        "ZU" => 0.95,
+        "AO" => 0.95,
+        _    => 1.00
+    };
+
+    // Tabelle 4: Nutzungsart
+    private static double ComputeB2(string? value) => value?.Trim() switch
+    {
+        "Bachwasser"        => 1.10,
+        "Industrieabwasser" => 0.90,
+        "Schmutzwasser" or "Schmutzabwasser" => 0.95,
+        "Mischabwasser"     => 1.00,
+        "Regenwasser" or "Meteorwasser"      => 1.05,
+        _                   => 1.00
+    };
+
+    // Tabelle 5: Grundwasserspiegel
+    // GW oberhalb → Infiltrationsrisiko hoeher → DZ soll sinken (dringender) → Faktor < 1.0
+    // GW unterhalb → geringeres Risiko → DZ soll steigen (weniger dringend) → Faktor > 1.0
+    private static double ComputeB3(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "oberhalb"  => 0.90,
+        "unterhalb" => 1.10,
+        _           => 1.00 // unbekannt
+    };
+
+    // Tabelle 6: Funktionale Hierarchie (PAA gemäss VSA-DSS)
+    private static double ComputeB4(string? value) => value?.Trim() switch
+    {
+        "PAA.Hauptsammelkanal"          => 0.95,
+        "PAA.Hauptsammelkanal_regional" => 0.90,
+        "PAA.Liegenschaftsentwaesserung" or "PAA.Liegenschaftsentwässerung" => 1.10,
+        "PAA.Sammelkanal"               => 1.00,
+        "PAA.Sanierungsleitung"         => 1.00,
+        "PAA.Strassenentwaesserung" or "PAA.Strassenentwässerung" => 1.00,
+        "PAA.Gewaesser" or "PAA.Gewässer" => 1.00,
+        _                               => 1.00
+    };
+
+    // ── Längenfaktor ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// LF_i: Längenfaktor pro Feststellung.
+    /// Punktfeststellungen: minLength (3.0m Kanäle, 0.5m Schächte).
+    /// Streckenfeststellungen: tatsächliche Länge wenn > minLength.
+    /// </summary>
+    private static double ComputeLengthFactor(VsaFinding finding, double minLength)
+    {
+        double? actualLength = null;
+        if (finding.SchadenlageAnfang.HasValue && finding.SchadenlageEnde.HasValue)
+            actualLength = Math.Abs(finding.SchadenlageEnde.Value - finding.SchadenlageAnfang.Value);
+        else if (finding.MeterStart.HasValue && finding.MeterEnd.HasValue)
+            actualLength = Math.Abs(finding.MeterEnd.Value - finding.MeterStart.Value);
+
+        return actualLength.HasValue && actualLength.Value > minLength
+            ? actualLength.Value
+            : minLength;
+    }
+
+    // ── Mappings ─────────────────────────────────────────────────────────
+
+    /// <summary>ZN (0=schlecht, 4=gut) → Prüfungsresultat.</summary>
     private static string BuildPruefungsresultat(double? note)
     {
         if (note is null)
             return "n/a";
 
-        if (note.Value <= 1.0)
+        // ZN 0 = schlechtester Zustand, ZN 4 = bester Zustand
+        if (note.Value >= 3.0)
             return "i.O.";
-        if (note.Value <= 2.0)
+        if (note.Value >= 1.5)
             return "beobachten";
         return "Sanierungsbedarf";
+    }
+
+    /// <summary>DZ → Dringlichkeitsstufe (VSA Richtlinie, Tabelle 7).</summary>
+    private static string MapDringlichkeit(double? dz)
+    {
+        if (dz is null) return "n/a";
+        return dz.Value switch
+        {
+            < 50  => "Sofort",
+            < 150 => "Kurzfristig (3J)",
+            < 250 => "Mittelfristig (8J)",
+            < 350 => "Langfristig",
+            _     => "Keine"
+        };
     }
 
     private static string MapZustandsklasse(double? note)
@@ -260,9 +514,11 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         var value = (int)Math.Clamp(
             Math.Round(note.Value, MidpointRounding.AwayFromZero),
             min: 0,
-            max: 5);
+            max: 4);
         return value.ToString(CultureInfo.InvariantCulture);
     }
+
+    // ── Parse-Hilfen ─────────────────────────────────────────────────────
 
     private static List<VsaFinding> ParseFindingsFromPrimaryDamage(string? raw, IReadOnlySet<string> knownCodes)
     {
@@ -298,6 +554,12 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         return findings;
     }
 
+    private static double ParseDouble(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return 0;
+        return double.TryParse(s.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0;
+    }
+
     private static string FmtEz(int? ez)
         => ez is null ? "n/a" : ez.Value.ToString(CultureInfo.InvariantCulture);
 
@@ -321,6 +583,8 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         s = Regex.Replace(s, @"[^A-Za-z0-9]+", string.Empty);
         return s.ToUpperInvariant();
     }
+
+    // ── Interne Records ──────────────────────────────────────────────────
 
     private sealed record ClassifiedFinding(
         VsaFinding Finding,

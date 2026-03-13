@@ -1,0 +1,28 @@
+{
+  "haltung": "10807-10261",
+  "datum": "05.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 300 / 300mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Schmutzabwasser",
+  "inspektionsrichtung": "Gegen Fließrichtung",
+  "schacht_oben": "10807",
+  "schacht_unten": "10261",
+  "inspektionslaenge_m": "10.50",
+  "rohrlaenge_m": null,
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 0.0,
+      "en_code": "BDA",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel Entf. gegen Fließr. 4,30 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:00:45",
+      "foto_datei": null,
+      "foto_nr": 85
+    }
+  ]
+}

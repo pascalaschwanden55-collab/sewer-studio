@@ -1,0 +1,418 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.VsaCodeExplorerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
+        Title="VSA Schadencodierung — Leitungen"
+        Width="1100"
+        Height="720"
+        MinWidth="900"
+        MinHeight="600"
+        WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </Window.Resources>
+
+    <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             HEADER: Titel + Breadcrumb + Fortschritt
+             ═══════════════════════════════════════════════════════════ -->
+        <Border Grid.Row="0" Padding="16,12,16,8"
+                BorderThickness="0,0,0,1" BorderBrush="{StaticResource BorderBrush}">
+            <Border.Background>
+                <SolidColorBrush Color="{StaticResource ColorHeader}"/>
+            </Border.Background>
+            <StackPanel>
+                <!-- Titel -->
+                <DockPanel Margin="0,0,0,6">
+                    <TextBlock Text="VSA Schadencodierung — Leitungen"
+                               FontSize="15" FontWeight="Bold"
+                               Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
+                    <TextBlock Text="EN 13508-2 · VSA-KEK 2018"
+                               FontSize="10" Foreground="{StaticResource MutedBrush}"
+                               VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    <Button x:Name="ResetButton" Content="Reset" HorizontalAlignment="Right"
+                            Style="{StaticResource ToolbarButton}" MinWidth="50" Padding="8,3"/>
+                </DockPanel>
+
+                <!-- Breadcrumb -->
+                <ItemsControl x:Name="BreadcrumbPanel" Margin="0,0,0,8">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+
+                <!-- Fortschrittsbalken (4 Segmente) -->
+                <UniformGrid Columns="4" Margin="0,0,0,2">
+                    <StackPanel Margin="0,0,4,0">
+                        <Border x:Name="ProgressBar0" Height="3" CornerRadius="1"/>
+                        <TextBlock x:Name="ProgressLabel0" Text="Gruppe" FontSize="9"
+                                   Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <StackPanel Margin="0,0,4,0">
+                        <Border x:Name="ProgressBar1" Height="3" CornerRadius="1"/>
+                        <TextBlock x:Name="ProgressLabel1" Text="Hauptcode" FontSize="9"
+                                   Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <StackPanel Margin="0,0,4,0">
+                        <Border x:Name="ProgressBar2" Height="3" CornerRadius="1"/>
+                        <TextBlock x:Name="ProgressLabel2" Text="Char 1" FontSize="9"
+                                   Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <Border x:Name="ProgressBar3" Height="3" CornerRadius="1"/>
+                        <TextBlock x:Name="ProgressLabel3" Text="Char 2" FontSize="9"
+                                   Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </UniformGrid>
+            </StackPanel>
+        </Border>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             CONTENT: Tiles (links) + Rechtes Panel (immer sichtbar)
+             ═══════════════════════════════════════════════════════════ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="380"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Tile-Grid (links) -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled" Padding="16,8">
+                <ItemsControl x:Name="TileList">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Rechtes Panel (IMMER sichtbar) -->
+            <Border Grid.Column="1"
+                    BorderThickness="1,0,0,0" BorderBrush="{StaticResource BorderBrush}"
+                    Background="{StaticResource CardBrush}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16,12">
+                    <StackPanel>
+                        <!-- ── Code-Ergebnis (nur wenn Code komplett) ── -->
+                        <StackPanel x:Name="ResultPanel" Visibility="Collapsed">
+                            <!-- Endcode-Anzeige -->
+                            <Border Background="{StaticResource BgLightBrush}" CornerRadius="8"
+                                    Padding="14" Margin="0,0,0,12"
+                                    BorderBrush="{StaticResource AccentBrush}" BorderThickness="0,0,0,2">
+                                <StackPanel>
+                                    <TextBlock x:Name="TxtFinalCode" FontFamily="Consolas" FontSize="24"
+                                               FontWeight="Bold" Foreground="{StaticResource AccentBrush}"/>
+                                    <TextBlock x:Name="TxtFinalLabel" FontSize="12"
+                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock x:Name="TxtWarn" FontSize="10" Foreground="{StaticResource DangerBrush}"
+                                               Margin="0,4,0,0" Visibility="Collapsed"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Quantifizierung -->
+                            <Border x:Name="QuantPanel" CornerRadius="6" Padding="12"
+                                    Margin="0,0,0,8" BorderThickness="1"
+                                    BorderBrush="{StaticResource BorderBrush}"
+                                    Background="{StaticResource CardBrush}">
+                                <StackPanel>
+                                    <TextBlock Text="QUANTIFIZIERUNG" FontSize="9" FontWeight="Bold"
+                                               Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
+
+                                    <!-- Q1 -->
+                                    <StackPanel x:Name="Q1Panel" Margin="0,0,0,8">
+                                        <DockPanel Margin="0,0,0,3">
+                                            <TextBlock x:Name="TxtQ1Label" FontSize="11" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource TextBrush}"/>
+                                            <Border x:Name="BadgeQ1Pflicht" CornerRadius="2" Padding="4,1"
+                                                    Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
+                                                <TextBlock FontSize="8" FontWeight="Bold"/>
+                                            </Border>
+                                        </DockPanel>
+                                        <DockPanel>
+                                            <TextBox x:Name="TxtQ1Value" Width="100" DockPanel.Dock="Left"/>
+                                            <TextBlock x:Name="TxtQ1Unit" FontSize="12" FontWeight="Bold"
+                                                       Foreground="{StaticResource AccentBrush}" Margin="8,0,0,0"
+                                                       VerticalAlignment="Center" FontFamily="Consolas"/>
+                                            <TextBlock x:Name="TxtQ1Range" FontSize="9"
+                                                       Foreground="{StaticResource MutedBrush}" Margin="8,0,0,0"
+                                                       VerticalAlignment="Center"/>
+                                        </DockPanel>
+                                        <TextBlock x:Name="TxtQ1Error" FontSize="9" Foreground="{StaticResource DangerBrush}"
+                                                   Margin="0,2,0,0" Visibility="Collapsed"/>
+                                    </StackPanel>
+
+                                    <!-- Q2 -->
+                                    <StackPanel x:Name="Q2Panel" Margin="0,0,0,0" Visibility="Collapsed">
+                                        <DockPanel Margin="0,0,0,3">
+                                            <TextBlock x:Name="TxtQ2Label" FontSize="11" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource TextBrush}"/>
+                                            <Border CornerRadius="2" Padding="4,1" Margin="6,0,0,0"
+                                                    VerticalAlignment="Center">
+                                                <Border.Background>
+                                                    <SolidColorBrush Color="{StaticResource ColorWarning}" Opacity="0.15"/>
+                                                </Border.Background>
+                                                <TextBlock Text="OPTIONAL" FontSize="8" FontWeight="Bold"
+                                                           Foreground="{StaticResource WarningBrush}"/>
+                                            </Border>
+                                        </DockPanel>
+                                        <DockPanel>
+                                            <TextBox x:Name="TxtQ2Value" Width="100" DockPanel.Dock="Left"/>
+                                            <TextBlock x:Name="TxtQ2Unit" FontSize="12" FontWeight="Bold"
+                                                       Foreground="{StaticResource AccentBrush}" Margin="8,0,0,0"
+                                                       VerticalAlignment="Center" FontFamily="Consolas"/>
+                                        </DockPanel>
+                                        <TextBlock x:Name="TxtQ2Error" FontSize="9" Foreground="{StaticResource DangerBrush}"
+                                                   Margin="0,2,0,0" Visibility="Collapsed"/>
+                                    </StackPanel>
+
+                                    <!-- Keine Quantifizierung -->
+                                    <TextBlock x:Name="TxtNoQuant" Text="Keine Quantifizierung" FontSize="10"
+                                               Foreground="{StaticResource MutedBrush}" Visibility="Collapsed"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Uhrposition -->
+                            <Border x:Name="ClockPanel" CornerRadius="6" Padding="12"
+                                    Margin="0,0,0,8" BorderThickness="1"
+                                    BorderBrush="{StaticResource BorderBrush}"
+                                    Background="{StaticResource CardBrush}">
+                                <StackPanel>
+                                    <TextBlock x:Name="TxtClockTitle" FontSize="9" FontWeight="Bold"
+                                               Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
+                                    <TextBlock x:Name="TxtClockHint" FontSize="9"
+                                               Foreground="{StaticResource SuccessBrush}" Margin="0,0,0,6"
+                                               Visibility="Collapsed"/>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="12"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Uhr (links) -->
+                                        <StackPanel Grid.Column="0">
+                                            <!-- Single Clock -->
+                                            <StackPanel x:Name="ClockSinglePanel" Visibility="Collapsed">
+                                                <controls:ClockPickerControl x:Name="ClockSingle"
+                                                    Width="140" Height="140" HorizontalAlignment="Left"/>
+                                            </StackPanel>
+                                            <!-- Range Clock -->
+                                            <StackPanel x:Name="ClockRangePanel" Visibility="Collapsed">
+                                                <controls:ClockRangePickerControl x:Name="ClockRange"
+                                                    Width="140" Height="140" HorizontalAlignment="Left"/>
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <!-- Schnellwahl + Von/Bis (rechts) -->
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="SCHNELLWAHL" FontSize="8" FontWeight="Bold"
+                                                       Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
+                                            <WrapPanel Orientation="Horizontal">
+                                                <Button x:Name="BtnClockScheitel" Content="12 00 Scheitel"
+                                                        Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
+                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="12,00"/>
+                                                <Button x:Name="BtnClockSohle" Content="06 00 Sohle"
+                                                        Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
+                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="06,00"/>
+                                                <Button x:Name="BtnClockRechts" Content="09 03 Rechts"
+                                                        Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
+                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="09,03"/>
+                                                <Button x:Name="BtnClockGesamt" Content="12 12 Gesamt"
+                                                        Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
+                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="12,12"/>
+                                                <Button x:Name="BtnClockKeine" Content="00 00 Keine"
+                                                        Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
+                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="00,00"/>
+                                            </WrapPanel>
+
+                                            <!-- Von/Bis Anzeige -->
+                                            <Grid Margin="0,8,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="16"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="VON" FontSize="8" Foreground="{StaticResource MutedBrush}"/>
+                                                    <TextBox x:Name="TxtClockVon" Width="45" FontFamily="Consolas"
+                                                             FontSize="14" FontWeight="Bold" Padding="3,3"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="1" Text="&#x2192;" FontSize="14"
+                                                           Foreground="{StaticResource MutedBrush}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                                           Margin="0,0,0,4"/>
+                                                <StackPanel Grid.Column="2">
+                                                    <TextBlock Text="BIS" FontSize="8" Foreground="{StaticResource MutedBrush}"/>
+                                                    <TextBox x:Name="TxtClockBis" Width="45" FontFamily="Consolas"
+                                                             FontSize="14" FontWeight="Bold" Padding="3,3"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="3" x:Name="TxtClockTransfer"
+                                                           FontSize="9" Foreground="{StaticResource MutedBrush}"
+                                                           VerticalAlignment="Bottom" Margin="8,0,0,4"
+                                                           FontFamily="Consolas"/>
+                                            </Grid>
+
+                                            <!-- Bedienhinweis -->
+                                            <TextBlock x:Name="TxtClockUsageHint" FontSize="8"
+                                                       Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- ── Hinweis wenn noch kein Code gewaehlt ── -->
+                        <Border x:Name="CodeHintPanel" CornerRadius="6" Padding="12" Margin="0,0,0,8"
+                                BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
+                                Background="{StaticResource BgLightBrush}">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="&#x2190; Code links waehlen" FontSize="13"
+                                           Foreground="{StaticResource MutedBrush}"
+                                           HorizontalAlignment="Center" Margin="0,4,0,4"/>
+                                <TextBlock Text="Gruppe &#x2192; Hauptcode &#x2192; Charakterisierung"
+                                           FontSize="10" Foreground="{StaticResource MutedBrush}"
+                                           HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ── Position (IMMER sichtbar) ── -->
+                        <Border CornerRadius="6" Padding="12" Margin="0,0,0,8"
+                                BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
+                                Background="{StaticResource CardBrush}">
+                            <StackPanel>
+                                <TextBlock Text="POSITION" FontSize="9" FontWeight="Bold"
+                                           Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Meter Start (m)" FontSize="11" FontWeight="SemiBold"
+                                                   Margin="0,0,0,3"/>
+                                        <TextBox x:Name="TxtMeterStart"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Meter Ende (m)" FontSize="11" FontWeight="SemiBold"
+                                                   Margin="0,0,0,3"/>
+                                        <TextBox x:Name="TxtMeterEnd"/>
+                                    </StackPanel>
+                                </Grid>
+                                <CheckBox x:Name="ChkStrecke" Content="Streckenschaden"
+                                          Margin="0,8,0,0"/>
+                                <StackPanel Margin="0,8,0,0">
+                                    <TextBlock Text="Videozeit (mm:ss)" FontSize="11" FontWeight="SemiBold"
+                                               Margin="0,0,0,3"/>
+                                    <TextBox x:Name="TxtZeit" Width="120" HorizontalAlignment="Left"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ── Foto 1 + Foto 2 (IMMER sichtbar) ── -->
+                        <Border CornerRadius="6" Padding="12" Margin="0,0,0,8"
+                                BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
+                                Background="{StaticResource CardBrush}">
+                            <StackPanel>
+                                <TextBlock Text="FOTOS" FontSize="9" FontWeight="Bold"
+                                           Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Foto 1 -->
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Foto 1" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,3"/>
+                                        <Border Height="90" CornerRadius="4" BorderThickness="1"
+                                                BorderBrush="{StaticResource BorderBrush}"
+                                                Background="{StaticResource BgLightBrush}">
+                                            <Grid>
+                                                <Image x:Name="Foto1Image" Stretch="Uniform"
+                                                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                <TextBlock x:Name="Foto1Placeholder" Text="Kein Foto"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           Foreground="{StaticResource MutedBrush}" FontSize="10"/>
+                                            </Grid>
+                                        </Border>
+                                        <Button x:Name="BtnCaptureFoto1" Content="Aus Video"
+                                                Style="{StaticResource ToolbarButton}"
+                                                HorizontalAlignment="Stretch" Padding="4,3" Margin="0,3,0,0"
+                                                FontSize="10"/>
+                                    </StackPanel>
+
+                                    <!-- Foto 2 -->
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Foto 2" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,3"/>
+                                        <Border Height="90" CornerRadius="4" BorderThickness="1"
+                                                BorderBrush="{StaticResource BorderBrush}"
+                                                Background="{StaticResource BgLightBrush}">
+                                            <Grid>
+                                                <Image x:Name="Foto2Image" Stretch="Uniform"
+                                                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                <TextBlock x:Name="Foto2Placeholder" Text="Kein Foto"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           Foreground="{StaticResource MutedBrush}" FontSize="10"/>
+                                            </Grid>
+                                        </Border>
+                                        <Button x:Name="BtnCaptureFoto2" Content="Aus Video"
+                                                Style="{StaticResource ToolbarButton}"
+                                                HorizontalAlignment="Stretch" Padding="4,3" Margin="0,3,0,0"
+                                                FontSize="10"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- ═══════════════════════════════════════════════════════════
+             FOOTER: Code-Vorschau + Buttons
+             ═══════════════════════════════════════════════════════════ -->
+        <Border Grid.Row="2" Padding="16,10"
+                BorderThickness="0,1,0,0" BorderBrush="{StaticResource BorderBrush}">
+            <Border.Background>
+                <SolidColorBrush Color="{StaticResource ColorHeader}"/>
+            </Border.Background>
+            <DockPanel>
+                <!-- Code-Vorschau links -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Code:" FontSize="12" Foreground="{StaticResource MutedBrush}"
+                               VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBlock x:Name="TxtCodePreview" FontFamily="Consolas" FontSize="16"
+                               FontWeight="Bold" Foreground="{StaticResource AccentBrush}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Buttons rechts -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                    <TextBlock x:Name="TxtValidation" FontSize="10"
+                               Foreground="{StaticResource DangerBrush}"
+                               VerticalAlignment="Center" Margin="0,0,12,0"
+                               MaxWidth="300" TextWrapping="Wrap"/>
+                    <Button x:Name="BtnApply" Content="Uebernehmen" Width="130"
+                            Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"
+                            IsEnabled="False"/>
+                    <Button x:Name="BtnCancel" Content="Abbrechen" Width="100" IsCancel="True"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

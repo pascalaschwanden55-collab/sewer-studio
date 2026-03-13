@@ -11,5 +11,6 @@ namespace AuswertungPro.Next.Application.Vsa;
 public interface IVsaEvaluationService
 {
     Result<IReadOnlyList<VsaConditionResult>> Evaluate(Project project);
+    Result<bool> EvaluateRecord(HaltungRecord record);
     Result<string> Explain(Project project, HaltungRecord record);
 }

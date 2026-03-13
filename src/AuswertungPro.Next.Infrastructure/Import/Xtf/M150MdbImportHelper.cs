@@ -5,6 +5,8 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Media;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
@@ -13,6 +15,7 @@ internal static class M150MdbImportHelper
     private static readonly Regex HoldingRx = new(@"(?<!\d)((?:\d{3,}|\d{1,3}(?:\.\d+)+)\s*[-/]\s*(?:\d{3,}|\d{1,3}(?:\.\d+)+))(?!\d)", RegexOptions.Compiled);
     private static readonly Regex PointRx = new(@"^[A-Za-z0-9][A-Za-z0-9._-]*$", RegexOptions.Compiled);
     private static readonly Regex DateRx = new(@"(\d{2}[./-]\d{2}[./-]\d{2,4}|\d{4}-\d{2}-\d{2})", RegexOptions.Compiled);
+    private static readonly Regex GuidFragmentRx = new(@"\{?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-", RegexOptions.Compiled);
 
     private static readonly string[] HoldingKeyHints =
     [
@@ -69,13 +72,23 @@ internal static class M150MdbImportHelper
     public static List<HaltungRecord> ParseM150File(string path, out List<string> warnings)
     {
         warnings = new List<string>();
-        var text = File.ReadAllText(path, Encoding.UTF8);
         var entries = new List<ImportEntry>();
+        XDocument? winCanDoc = null;
 
         try
         {
             var doc = XDocument.Load(path, LoadOptions.PreserveWhitespace);
-            entries.AddRange(ExtractEntriesFromXml(doc));
+
+            // WinCan Viewer XML: Root=NewDataSet with S_T children → parse as WinCan, not M150
+            if (IsWinCanViewerXml(doc))
+            {
+                entries.AddRange(ExtractEntriesFromWinCanXml(doc, warnings));
+                winCanDoc = doc;
+            }
+            else
+            {
+                entries.AddRange(ExtractEntriesFromXml(doc));
+            }
         }
         catch (Exception ex)
         {
@@ -83,8 +96,18 @@ internal static class M150MdbImportHelper
         }
 
         if (entries.Count == 0)
+        {
+            var text = File.ReadAllText(path, Encoding.UTF8);
             entries.AddRange(ExtractEntriesFromRawText(text));
-        return BuildRecords(entries);
+        }
+
+        var records = BuildRecords(entries);
+
+        // Attach SO_T observations as ProtocolEntries for WinCan Viewer XML
+        if (winCanDoc is not null)
+            AttachWinCanObservationsFromXml(winCanDoc, records, warnings);
+
+        return records;
     }
 
     public static (int HgCount, int HiCount) GetM150XmlNodeCounts(string path)
@@ -112,10 +135,12 @@ internal static class M150MdbImportHelper
             return false;
 
         var entries = new List<ImportEntry>();
+        var isWinCanViewer = false;
         var winCanViewerEntries = ExtractEntriesFromWinCanViewerRows(rows, warnings);
         if (winCanViewerEntries.Count > 0)
         {
             entries.AddRange(winCanViewerEntries);
+            isWinCanViewer = true;
         }
         else
         {
@@ -135,6 +160,11 @@ internal static class M150MdbImportHelper
         }
 
         records = BuildRecords(entries);
+
+        // Parse SO_T observations and attach as ProtocolEntries when WinCan Viewer format detected
+        if (isWinCanViewer)
+            AttachWinCanObservationsFromRows(rows, records, warnings);
+
         return true;
     }
 
@@ -159,7 +189,8 @@ internal static class M150MdbImportHelper
                 Length: GetRowValue(row, "S_Sectionlength"),
                 Material: GetRowValue(row, "S_PipeMaterial"),
                 Direction: GetRowValue(row, "S_SectionFlow"),
-                Date: GetRowValue(row, "S_CreationDate"));
+                Date: GetRowValue(row, "S_CreationDate"),
+                PipeWidth: Coalesce(GetRowValue(row, "S_PipeWidth"), GetRowValue(row, "S_PipeHeight")));
         }
 
         if (sections.Count == 0)
@@ -197,11 +228,13 @@ internal static class M150MdbImportHelper
             var link = PickWinCanVideoLink(row);
             var direction = NormalizeWinCanDirection(dirRaw);
 
+            var dn = NormalizeNumberText(section.PipeWidth);
+
             entries.Add(new ImportEntry(
                 NormalizeHolding(holding),
                 date,
                 NormalizeNumberText(section.Length),
-                null,
+                string.IsNullOrWhiteSpace(dn) ? null : dn,
                 NullIfWhite(section.Material),
                 NullIfWhite(direction),
                 null,
@@ -218,11 +251,13 @@ internal static class M150MdbImportHelper
                 if (!IsHoldingId(holding))
                     continue;
 
+                var dnFallback = NormalizeNumberText(section.PipeWidth);
+
                 entries.Add(new ImportEntry(
                     NormalizeHolding(holding),
                     TryNormalizeDate(section.Date),
                     NormalizeNumberText(section.Length),
-                    null,
+                    string.IsNullOrWhiteSpace(dnFallback) ? null : dnFallback,
                     NullIfWhite(section.Material),
                     NullIfWhite(NormalizeWinCanDirection(section.Direction)),
                     null,
@@ -235,6 +270,98 @@ internal static class M150MdbImportHelper
             warnings.Add($"WinCan Viewer MDB erkannt: {entries.Count} Haltungen aus S_T/SI_T.");
 
         return entries;
+    }
+
+    private static bool IsWinCanViewerXml(XDocument doc)
+    {
+        var root = doc.Root;
+        if (root is null)
+            return false;
+        if (!root.Name.LocalName.Equals("NewDataSet", StringComparison.OrdinalIgnoreCase))
+            return false;
+        return root.Elements().Any(e => e.Name.LocalName.Equals("S_T", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static List<ImportEntry> ExtractEntriesFromWinCanXml(XDocument doc, List<string> warnings)
+    {
+        var root = doc.Root!;
+        var sections = new Dictionary<string, WinCanSection>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var sNode in root.Elements().Where(e => e.Name.LocalName.Equals("S_T", StringComparison.OrdinalIgnoreCase)))
+        {
+            var sectionId = XVal(sNode, "S_ID");
+            if (string.IsNullOrWhiteSpace(sectionId))
+                continue;
+
+            sections[sectionId] = new WinCanSection(
+                SectionId: sectionId,
+                StartNode: XVal(sNode, "S_StartNode"),
+                EndNode: XVal(sNode, "S_EndNode"),
+                Length: XVal(sNode, "S_Sectionlength"),
+                Material: XVal(sNode, "S_PipeMaterial"),
+                Direction: XVal(sNode, "S_SectionFlow"),
+                Date: XVal(sNode, "S_CreationDate"),
+                PipeWidth: XVal(sNode, "S_PipeWidth"));
+        }
+
+        if (sections.Count == 0)
+            return new List<ImportEntry>();
+
+        // Map inspection → section
+        var inspToSection = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var inspDates = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        var entries = new List<ImportEntry>();
+        foreach (var siNode in root.Elements().Where(e => e.Name.LocalName.Equals("SI_T", StringComparison.OrdinalIgnoreCase)))
+        {
+            var inspId = XVal(siNode, "SI_ID");
+            var sectionId = XVal(siNode, "SI_Section_ID");
+            if (string.IsNullOrWhiteSpace(sectionId) || !sections.TryGetValue(sectionId, out var section))
+                continue;
+
+            if (!string.IsNullOrWhiteSpace(inspId))
+            {
+                inspToSection[inspId] = sectionId;
+                var idate = Coalesce(XVal(siNode, "SI_InspDate"), XVal(siNode, "SI_InspectionDate"), section.Date);
+                if (!string.IsNullOrWhiteSpace(idate))
+                    inspDates[inspId] = idate;
+            }
+
+            var dirRaw = Coalesce(XVal(siNode, "SI_InspectionDir"), section.Direction);
+            var holding = BuildHoldingFromWinCanSection(section.StartNode, section.EndNode, dirRaw);
+            if (!IsHoldingId(holding))
+                continue;
+
+            var date = TryNormalizeDate(Coalesce(
+                XVal(siNode, "SI_InspDate"),
+                XVal(siNode, "SI_InspectionDate"),
+                section.Date));
+
+            var direction = NormalizeWinCanDirection(dirRaw);
+            var dn = NormalizeNumberText(section.PipeWidth);
+
+            entries.Add(new ImportEntry(
+                NormalizeHolding(holding),
+                date,
+                NormalizeNumberText(section.Length),
+                string.IsNullOrWhiteSpace(dn) ? null : dn,
+                NullIfWhite(section.Material),
+                NullIfWhite(direction),
+                null,
+                null,
+                Array.Empty<VsaFinding>()));
+        }
+
+        if (entries.Count > 0)
+            warnings.Add($"WinCan Viewer XML erkannt: {entries.Count} Haltungen aus S_T/SI_T.");
+
+        return entries;
+    }
+
+    private static string XVal(XElement parent, string childName)
+    {
+        var child = parent.Elements().FirstOrDefault(e => e.Name.LocalName.Equals(childName, StringComparison.OrdinalIgnoreCase));
+        return (child?.Value ?? "").Trim();
     }
 
     private static bool IsWinCanViewerTable(string? tableName)
@@ -454,6 +581,7 @@ internal static class M150MdbImportHelper
         if (!IsHoldingId(holding))
         {
             holding = map.Values
+                .Where(v => !GuidFragmentRx.IsMatch(v))
                 .Select(TryExtractHoldingId)
                 .FirstOrDefault(IsHoldingId) ?? string.Empty;
         }
@@ -502,7 +630,7 @@ internal static class M150MdbImportHelper
             if (!string.IsNullOrWhiteSpace(merged.Dn))
                 rec.SetFieldValue("DN_mm", merged.Dn, FieldSource.Xtf, userEdited: false);
             if (!string.IsNullOrWhiteSpace(merged.Material))
-                rec.SetFieldValue("Rohrmaterial", merged.Material, FieldSource.Xtf, userEdited: false);
+                rec.SetFieldValue("Rohrmaterial", NormalizeMaterialValue(merged.Material), FieldSource.Xtf, userEdited: false);
             if (!string.IsNullOrWhiteSpace(merged.Direction))
                 rec.SetFieldValue("Inspektionsrichtung", merged.Direction, FieldSource.Xtf, userEdited: false);
             if (!string.IsNullOrWhiteSpace(merged.Remarks))
@@ -595,10 +723,26 @@ internal static class M150MdbImportHelper
         if (string.IsNullOrWhiteSpace(v))
             return string.Empty;
 
-        if (v.Contains("oben", StringComparison.OrdinalIgnoreCase) || v.Contains("von", StringComparison.OrdinalIgnoreCase))
-            return "oben -> unten";
-        if (v.Contains("unten", StringComparison.OrdinalIgnoreCase) || v.Contains("nach", StringComparison.OrdinalIgnoreCase))
+        var lower = v.ToLowerInvariant();
+
+        // Spezifische Muster zuerst pruefen (z.B. "von unten nach oben")
+        if (lower.Contains("unten") && lower.Contains("oben") && lower.IndexOf("unten") < lower.IndexOf("oben"))
             return "unten -> oben";
+        if (lower.Contains("oben") && lower.Contains("unten") && lower.IndexOf("oben") < lower.IndexOf("unten"))
+            return "oben -> unten";
+
+        // DWA-M 150 Codes
+        if (lower is "d" or "down" or "1")
+            return "oben -> unten";
+        if (lower is "u" or "up" or "2")
+            return "unten -> oben";
+
+        // Einfache Schluesselwoerter
+        if (lower.Contains("oben") || lower.StartsWith("von"))
+            return "oben -> unten";
+        if (lower.Contains("unten") || lower.StartsWith("nach"))
+            return "unten -> oben";
+
         return v;
     }
 
@@ -609,7 +753,7 @@ internal static class M150MdbImportHelper
 
         var v = value.Trim().Trim('"', '\'');
         var ext = Path.GetExtension(v).ToLowerInvariant();
-        if (ext is ".mp2" or ".mpg" or ".mpeg" or ".mp4" or ".avi" or ".mov" or ".wmv" or ".mkv")
+        if (MediaFileTypes.HasVideoExtension(ext))
             return true;
 
         // Some exports omit extension but keep the classic time-stamped token pattern.
@@ -628,6 +772,20 @@ internal static class M150MdbImportHelper
 
     private static string? NullIfWhite(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string NormalizeMaterialValue(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return raw;
+
+        // Take only the first line – WinCan DB sometimes appends cleaning info
+        // like "Zement\nGereinigt    Ja" into the material field.
+        var t = raw.Split('\n')[0].Trim();
+        // Strip trailing non-material tokens (e.g. "Gereinigt Ja")
+        t = Regex.Replace(t, @"(?i)\s*(gereinigt|nicht\s*gereinigt|verschmutzt)\s*(ja|nein)?\s*$", "").Trim();
+
+        return string.IsNullOrWhiteSpace(t) ? raw.Trim() : t;
+    }
 
     private static List<VsaFinding> ExtractFindingsFromHgNode(XElement hgNode)
     {
@@ -666,21 +824,7 @@ internal static class M150MdbImportHelper
 
     private static string FormatPrimaryDamages(IReadOnlyList<VsaFinding> findings)
     {
-        var lines = new List<string>();
-        foreach (var f in findings.Where(x => !string.IsNullOrWhiteSpace(x.KanalSchadencode)))
-        {
-            var line = f.KanalSchadencode.Trim();
-            if (f.SchadenlageAnfang.HasValue)
-                line += $" @{f.SchadenlageAnfang.Value.ToString(CultureInfo.InvariantCulture)}m";
-            if (!string.IsNullOrWhiteSpace(f.Raw))
-                line += $" ({f.Raw})";
-            lines.Add(line);
-        }
-
-        if (lines.Count == 0)
-            return string.Empty;
-
-        return string.Join("\n", lines);
+        return XtfPrimaryDamageFormatter.FormatLines(findings);
     }
 
     private static string PickValue(Dictionary<string, string> map, IEnumerable<string> keyHints, Func<string, bool> validator)
@@ -794,12 +938,20 @@ finally {
             var psi = new ProcessStartInfo
             {
                 FileName = "powershell",
-                Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{tempScript}\" -MdbPath \"{mdbPath}\" -OutPath \"{tempJson}\"",
                 RedirectStandardError = true,
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+            psi.ArgumentList.Add("-NoProfile");
+            psi.ArgumentList.Add("-ExecutionPolicy");
+            psi.ArgumentList.Add("Bypass");
+            psi.ArgumentList.Add("-File");
+            psi.ArgumentList.Add(tempScript);
+            psi.ArgumentList.Add("-MdbPath");
+            psi.ArgumentList.Add(mdbPath);
+            psi.ArgumentList.Add("-OutPath");
+            psi.ArgumentList.Add(tempJson);
 
             using var process = Process.Start(psi);
             if (process is null)
@@ -808,14 +960,17 @@ finally {
                 return false;
             }
 
-            var stdout = process.StandardOutput.ReadToEnd();
-            var stderr = process.StandardError.ReadToEnd();
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
             if (!process.WaitForExit(120000))
             {
                 try { process.Kill(entireProcessTree: true); } catch { }
                 error = "MDB-Import timeout nach 120 Sekunden.";
                 return false;
             }
+
+            var stdout = stdoutTask.GetAwaiter().GetResult();
+            var stderr = stderrTask.GetAwaiter().GetResult();
 
             if (process.ExitCode != 0)
             {
@@ -870,6 +1025,263 @@ finally {
         string? Link,
         IReadOnlyList<VsaFinding> Findings);
 
+    private sealed record WinCanObs(
+        string InspectionId,
+        string OpCode,
+        string Observation,
+        double? Distance,
+        int Counter);
+
+    /// <summary>
+    /// Parses SO_T rows from WinCan Viewer MDB and attaches them as ProtocolEntries to matching HaltungRecords.
+    /// Uses SI_T → S_T mapping to determine which holding each observation belongs to.
+    /// </summary>
+    private static void AttachWinCanObservationsFromRows(
+        IReadOnlyList<Dictionary<string, string>> rows,
+        List<HaltungRecord> records,
+        List<string> warnings)
+    {
+        // Build section lookup: S_ID → (StartNode, EndNode, Direction)
+        var sections = new Dictionary<string, WinCanSection>(StringComparer.OrdinalIgnoreCase);
+        foreach (var row in rows)
+        {
+            if (!GetTableName(row).Equals("S_T", StringComparison.OrdinalIgnoreCase))
+                continue;
+            var sid = GetRowValue(row, "S_ID");
+            if (string.IsNullOrWhiteSpace(sid))
+                continue;
+            sections[sid] = new WinCanSection(sid,
+                GetRowValue(row, "S_StartNode"), GetRowValue(row, "S_EndNode"),
+                GetRowValue(row, "S_Sectionlength"), GetRowValue(row, "S_PipeMaterial"),
+                GetRowValue(row, "S_SectionFlow"), GetRowValue(row, "S_CreationDate"),
+                Coalesce(GetRowValue(row, "S_PipeWidth"), GetRowValue(row, "S_PipeHeight")));
+        }
+
+        // Build inspection → holding mapping
+        var inspToHolding = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var row in rows)
+        {
+            if (!GetTableName(row).Equals("SI_T", StringComparison.OrdinalIgnoreCase))
+                continue;
+            var inspId = GetRowValue(row, "SI_ID");
+            var sectionId = GetRowValue(row, "SI_Section_ID");
+            if (string.IsNullOrWhiteSpace(inspId) || string.IsNullOrWhiteSpace(sectionId))
+                continue;
+            if (!sections.TryGetValue(sectionId, out var section))
+                continue;
+            var dirRaw = Coalesce(GetRowValue(row, "SI_InspectionDir"), section.Direction);
+            var holding = BuildHoldingFromWinCanSection(section.StartNode, section.EndNode, dirRaw);
+            if (IsHoldingId(holding))
+                inspToHolding[inspId] = NormalizeHolding(holding);
+        }
+
+        // Parse SO_T observations
+        var obsByHolding = new Dictionary<string, List<WinCanObs>>(StringComparer.OrdinalIgnoreCase);
+        var unmatchedCount = 0;
+
+        foreach (var row in rows)
+        {
+            if (!GetTableName(row).Equals("SO_T", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var inspId = GetRowValue(row, "SO_Inspection_ID");
+            var opCode = GetRowValue(row, "SO_OpCode");
+            var remark = GetRowValue(row, "SO_Remark");
+            var distStr = GetRowValue(row, "SO_Distance");
+            int.TryParse(GetRowValue(row, "SO_Counter"), out var counter);
+            double? dist = null;
+            if (!string.IsNullOrWhiteSpace(distStr) &&
+                double.TryParse(distStr.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out var d))
+                dist = d;
+
+            if (string.IsNullOrWhiteSpace(opCode) && string.IsNullOrWhiteSpace(remark))
+                continue;
+
+            // Try to link via inspection ID
+            string? holdingKey = null;
+            if (!string.IsNullOrWhiteSpace(inspId) && inspToHolding.TryGetValue(inspId, out var h))
+                holdingKey = h;
+
+            if (holdingKey is null)
+            {
+                unmatchedCount++;
+                continue;
+            }
+
+            if (!obsByHolding.TryGetValue(holdingKey, out var list))
+            {
+                list = new List<WinCanObs>();
+                obsByHolding[holdingKey] = list;
+            }
+            list.Add(new WinCanObs(inspId, opCode, remark, dist, counter));
+        }
+
+        if (unmatchedCount > 0)
+            warnings.Add($"SO_T: {unmatchedCount} Beobachtungen ohne Inspektions-Zuordnung uebersprungen.");
+
+        // Attach protocol entries to matching records
+        var attached = 0;
+        foreach (var rec in records)
+        {
+            var key = NormalizeHolding(rec.GetFieldValue("Haltungsname") ?? "");
+            if (!obsByHolding.TryGetValue(key, out var obsList) || obsList.Count == 0)
+                continue;
+
+            var entries = obsList.OrderBy(o => o.Counter).Select(o => new ProtocolEntry
+            {
+                Code = o.OpCode,
+                Beschreibung = o.Observation,
+                MeterStart = o.Distance,
+                Source = ProtocolEntrySource.Imported
+            }).ToList();
+
+            rec.Protocol = new ProtocolDocument
+            {
+                HaltungId = key,
+                Original = new ProtocolRevision
+                {
+                    Comment = "Import (WinCan Viewer MDB)",
+                    Entries = entries
+                }
+            };
+            rec.Protocol.Current = new ProtocolRevision
+            {
+                Comment = "Arbeitskopie",
+                Entries = entries.Select(e => new ProtocolEntry
+                {
+                    Code = e.Code,
+                    Beschreibung = e.Beschreibung,
+                    MeterStart = e.MeterStart,
+                    Source = e.Source
+                }).ToList()
+            };
+            attached++;
+        }
+
+        if (attached > 0)
+            warnings.Add($"WinCan Viewer: {attached} Haltungen mit Protokolleintraegen aus SO_T.");
+    }
+
+    /// <summary>
+    /// Attaches SO_T observations from WinCan XML to records. Same logic as MDB variant but using XElements.
+    /// </summary>
+    private static void AttachWinCanObservationsFromXml(
+        XDocument doc,
+        List<HaltungRecord> records,
+        List<string> warnings)
+    {
+        var root = doc.Root;
+        if (root is null) return;
+
+        // Build section lookup
+        var sections = new Dictionary<string, WinCanSection>(StringComparer.OrdinalIgnoreCase);
+        foreach (var sNode in root.Elements().Where(e => e.Name.LocalName.Equals("S_T", StringComparison.OrdinalIgnoreCase)))
+        {
+            var sid = XVal(sNode, "S_ID");
+            if (string.IsNullOrWhiteSpace(sid)) continue;
+            sections[sid] = new WinCanSection(sid,
+                XVal(sNode, "S_StartNode"), XVal(sNode, "S_EndNode"),
+                XVal(sNode, "S_Sectionlength"), XVal(sNode, "S_PipeMaterial"),
+                XVal(sNode, "S_SectionFlow"), XVal(sNode, "S_CreationDate"),
+                XVal(sNode, "S_PipeWidth"));
+        }
+
+        // Build inspection → holding mapping
+        var inspToHolding = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var siNode in root.Elements().Where(e => e.Name.LocalName.Equals("SI_T", StringComparison.OrdinalIgnoreCase)))
+        {
+            var inspId = XVal(siNode, "SI_ID");
+            var sectionId = XVal(siNode, "SI_Section_ID");
+            if (string.IsNullOrWhiteSpace(inspId) || string.IsNullOrWhiteSpace(sectionId)) continue;
+            if (!sections.TryGetValue(sectionId, out var section)) continue;
+            var dirRaw = Coalesce(XVal(siNode, "SI_InspectionDir"), section.Direction);
+            var holding = BuildHoldingFromWinCanSection(section.StartNode, section.EndNode, dirRaw);
+            if (IsHoldingId(holding))
+                inspToHolding[inspId] = NormalizeHolding(holding);
+        }
+
+        // Parse SO_T observations
+        var obsByHolding = new Dictionary<string, List<WinCanObs>>(StringComparer.OrdinalIgnoreCase);
+        var unmatchedCount = 0;
+
+        foreach (var soNode in root.Elements().Where(e => e.Name.LocalName.Equals("SO_T", StringComparison.OrdinalIgnoreCase)))
+        {
+            var inspId = XVal(soNode, "SO_Inspection_ID");
+            var opCode = XVal(soNode, "SO_OpCode");
+            var remark = XVal(soNode, "SO_Remark");
+            var distStr = XVal(soNode, "SO_Distance");
+            int.TryParse(XVal(soNode, "SO_Counter"), out var counter);
+            double? dist = null;
+            if (!string.IsNullOrWhiteSpace(distStr) &&
+                double.TryParse(distStr.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out var d))
+                dist = d;
+
+            if (string.IsNullOrWhiteSpace(opCode) && string.IsNullOrWhiteSpace(remark))
+                continue;
+
+            string? holdingKey = null;
+            if (!string.IsNullOrWhiteSpace(inspId) && inspToHolding.TryGetValue(inspId, out var h))
+                holdingKey = h;
+
+            if (holdingKey is null)
+            {
+                unmatchedCount++;
+                continue;
+            }
+
+            if (!obsByHolding.TryGetValue(holdingKey, out var list))
+            {
+                list = new List<WinCanObs>();
+                obsByHolding[holdingKey] = list;
+            }
+            list.Add(new WinCanObs(inspId, opCode, remark, dist, counter));
+        }
+
+        if (unmatchedCount > 0)
+            warnings.Add($"SO_T: {unmatchedCount} Beobachtungen ohne Inspektions-Zuordnung uebersprungen.");
+
+        var attached = 0;
+        foreach (var rec in records)
+        {
+            var key = NormalizeHolding(rec.GetFieldValue("Haltungsname") ?? "");
+            if (!obsByHolding.TryGetValue(key, out var obsList) || obsList.Count == 0)
+                continue;
+
+            var entries = obsList.OrderBy(o => o.Counter).Select(o => new ProtocolEntry
+            {
+                Code = o.OpCode,
+                Beschreibung = o.Observation,
+                MeterStart = o.Distance,
+                Source = ProtocolEntrySource.Imported
+            }).ToList();
+
+            rec.Protocol = new ProtocolDocument
+            {
+                HaltungId = key,
+                Original = new ProtocolRevision
+                {
+                    Comment = "Import (WinCan Viewer XML)",
+                    Entries = entries
+                }
+            };
+            rec.Protocol.Current = new ProtocolRevision
+            {
+                Comment = "Arbeitskopie",
+                Entries = entries.Select(e => new ProtocolEntry
+                {
+                    Code = e.Code,
+                    Beschreibung = e.Beschreibung,
+                    MeterStart = e.MeterStart,
+                    Source = e.Source
+                }).ToList()
+            };
+            attached++;
+        }
+
+        if (attached > 0)
+            warnings.Add($"WinCan Viewer XML: {attached} Haltungen mit Protokolleintraegen aus SO_T.");
+    }
+
     private sealed record WinCanSection(
         string SectionId,
         string StartNode,
@@ -877,7 +1289,8 @@ finally {
         string Length,
         string Material,
         string Direction,
-        string Date);
+        string Date,
+        string PipeWidth = "");
 
     private static void TryAppendJsonRow(JsonElement item, List<Dictionary<string, string>> rows)
     {

@@ -1,0 +1,50 @@
+{
+  "haltung": "07.1028050-1042608",
+  "datum": "05.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 110 / 110mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Regenabwasser",
+  "inspektionsrichtung": "Gegen Fließrichtung",
+  "schacht_oben": "07.1028050",
+  "schacht_unten": "1042608",
+  "inspektionslaenge_m": "5.80",
+  "rohrlaenge_m": null,
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 0.0,
+      "en_code": "BCCYB",
+      "beschreibung": "Bogen nach oben, Winkel = ° Entf. gegen Fließr. 0,30 m Position Bogen nach unten, Winkel = °, in die Horizontale. Entf. gegen Fließr. 1,00 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:00:50",
+      "foto_datei": null,
+      "foto_nr": 76
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCCYA",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel Entf. gegen Fließr. 2,80 m Position Bogen nach oben, Winkel = ° Entf. gegen Fließr. 5,40 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:01:52",
+      "foto_datei": null,
+      "foto_nr": 78
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCE",
+      "beschreibung": "Rohrende, DW Fallstrang erreicht Entf. gegen Fließr. 5,80 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:02:08",
+      "foto_datei": null,
+      "foto_nr": 79
+    }
+  ]
+}

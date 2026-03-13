@@ -43,17 +43,55 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,12">
-            <StackPanel Orientation="Horizontal">
-                <Button Content="+ Record" Command="{Binding AddCommand}"/>
-                <Button Content="- Loeschen" Command="{Binding RemoveCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"/>
-                <Button Content="Nach oben" Command="{Binding MoveUpCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"/>
-                <Button Content="Nach unten" Command="{Binding MoveDownCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"/>
-                <Button Content="Speichern" Command="{Binding SaveCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"/>
-                <ToggleButton Content="Spalten anordnen"
-                              Margin="8,0,0,0"
-                              Style="{StaticResource SecondaryToggleButton}"
-                              IsChecked="{Binding IsColumnReorderEnabled}"/>
-            </StackPanel>
+            <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                    Padding="4,3" CornerRadius="8">
+                <StackPanel Orientation="Horizontal">
+                    <Button Command="{Binding SaveCommand}" Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,2,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Speichern" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding AddCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource NeonGreenBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Neu" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding RemoveCommand}" Style="{StaticResource ToolbarButtonDanger}" Margin="0,0,2,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Löschen" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Border Width="1" Background="{StaticResource BorderBrush}" Margin="6,4"/>
+
+                    <Button Command="{Binding MoveUpCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74A;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Hoch" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding MoveDownCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74B;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Runter" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Border Width="1" Background="{StaticResource BorderBrush}" Margin="6,4"/>
+
+                    <ToggleButton Content="Spalten anordnen"
+                                  Margin="0,0,2,0"
+                                  Style="{StaticResource SecondaryToggleButton}"
+                                  IsChecked="{Binding IsColumnReorderEnabled}"/>
+                    <ToggleButton x:Name="ClearColumnModeButton" Content="Spalte leeren"
+                                  Margin="0,0,2,0"
+                                  Style="{StaticResource SecondaryToggleButton}"
+                                  ToolTip="Aktivieren, dann auf Spaltentitel klicken um Spalte zu leeren"/>
+                </StackPanel>
+            </Border>
 
             <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                     Padding="6" Margin="0,8,0,0" CornerRadius="6">
@@ -65,28 +103,42 @@
                                  VerticalAlignment="Center"
                                  Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                  TextChanged="SearchBox_TextChanged"/>
-                        <Button Content="X"
-                                Margin="4,0,0,0"
-                                Padding="6,2"
-                                Style="{StaticResource SecondaryButton}"
-                                Command="{Binding ClearSearchCommand}"
-                                ToolTip="Suche zuruecksetzen"/>
+                        <Button Margin="4,0,0,0" Style="{StaticResource IconButton}"
+                                Command="{Binding ClearSearchCommand}" ToolTip="Suche zurücksetzen">
+                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                        </Button>
 
                         <TextBlock Text="{Binding SearchResultInfo}" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
 
                         <TextBlock Text="Zeilenhoehe:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="16,0,8,0"/>
-                        <Slider Width="180"
+                        <Slider Width="100"
                                 Minimum="24"
-                                Maximum="120"
+                                Maximum="240"
                                 Value="{Binding GridMinRowHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                SmallChange="1"
-                                LargeChange="6"
+                                SmallChange="2"
+                                LargeChange="10"
                                 IsSnapToTickEnabled="False"
                                 VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding GridMinRowHeight, StringFormat={}{0:0.#}}"
+                        <TextBlock Text="{Binding GridMinRowHeight, StringFormat={}{0:0}px}"
                                    Foreground="{StaticResource TextBrush}"
                                    VerticalAlignment="Center"
-                                   Margin="8,0,0,0"/>
+                                   Margin="4,0,0,0"
+                                   MinWidth="32"/>
+
+                        <TextBlock Text="Zoom:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="12,0,8,0"/>
+                        <Slider Width="100"
+                                Minimum="0.5"
+                                Maximum="2.0"
+                                Value="{Binding GridZoom, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                SmallChange="0.05"
+                                LargeChange="0.1"
+                                IsSnapToTickEnabled="False"
+                                VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding GridZoom, StringFormat={}{0:0%}}"
+                                   Foreground="{StaticResource TextBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="4,0,0,0"
+                                   MinWidth="32"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,6,0,0">
@@ -176,11 +228,27 @@
                   VirtualizingPanel.ScrollUnit="Pixel"
                   ScrollViewer.CanContentScroll="True"
                   CanUserSortColumns="False"
+                  UseLayoutRounding="True"
+                  SnapsToDevicePixels="True"
+                  TextOptions.TextFormattingMode="Display"
+                  TextOptions.TextRenderingMode="Grayscale"
                   CellEditEnding="Grid_CellEditEnding"
                   SelectedCellsChanged="Grid_SelectedCellsChanged"
                   CurrentCellChanged="Grid_CurrentCellChanged"
                   PreviewMouseWheel="Grid_PreviewMouseWheel"
-                  PreviewMouseDoubleClick="Grid_PreviewMouseDoubleClick"/>
+                  PreviewMouseDoubleClick="Grid_PreviewMouseDoubleClick"
+                  PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown">
+            <DataGrid.LayoutTransform>
+                <ScaleTransform ScaleX="{Binding GridZoom}" ScaleY="{Binding GridZoom}"/>
+            </DataGrid.LayoutTransform>
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Details anzeigen..." Click="DetailsMenu_Click" />
+                    <Separator/>
+                    <MenuItem Header="Protokoll (PDF)..." Click="ProtokollMenu_Click" />
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+        </DataGrid>
 
         <TextBlock Grid.Row="2"
                    Text="{Binding LastResult}"

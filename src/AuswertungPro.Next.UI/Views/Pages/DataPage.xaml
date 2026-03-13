@@ -172,7 +172,7 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="KI-Funktionen: Protokoll, Status, Videoanalyse">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="KI-Tools" VerticalAlignment="Center"/>
                             <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{StaticResource MutedBrush}"/>
                         </StackPanel>
@@ -207,7 +207,7 @@
                                     <MenuItem.Header>
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="KI Sanierung optimieren" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Sanierungsmassnahmen (KI)" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </MenuItem.Header>
                                 </MenuItem>
@@ -219,15 +219,13 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Sanierungsmassnahmen und Kostenvorschlaege">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource NeonPurpleBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Massnahmen" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Sanierungsmassnahmen" VerticalAlignment="Center"/>
                             <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{StaticResource MutedBrush}"/>
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
-                                <MenuItem Header="Empfohlene Massnahmen" Click="CostsMenu_Click"/>
-                                <MenuItem Header="Wiederherstellen" Click="RestoreCostsMenu_Click"
-                                          ToolTip="Kosten/Massnahmen aus costs.json wiederherstellen"/>
+                                <MenuItem Header="Sanierungsmassnahmen" Click="CostsMenu_Click"/>
                                 <MenuItem Header="Vorschlag aus Schadenscodes" Click="SuggestMeasuresMenu_Click"/>
                                 <Separator/>
                                 <MenuItem Header="Alle Massnahmen vorschlagen" Click="SuggestAllMeasuresMenu_Click"
@@ -240,8 +238,35 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Videos und PDFs automatisch suchen und mit Haltungen verlinken">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource NeonGreenBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Medien suchen" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="HydraulikButton" Click="HydraulikMenu_Click"
+                            Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
+                            ToolTip="Hydraulik-Berechnung nach DWA-A 110 (Kreisquerschnitt)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#x1F4A7;" FontFamily="Segoe UI Emoji" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Hydraulik" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="HydraulikPrintButton" Click="HydraulikPrint_Click"
+                            Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
+                            ToolTip="Hydraulik-Bericht als PDF drucken">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE749;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Hydraulik PDF" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="DossierPrintButton" Click="DossierPrint_Click"
+                            Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
+                            ToolTip="Haltungsdossier als PDF drucken (Sektionen auswaehlbar)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Dossier" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
 
@@ -251,7 +276,7 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="DataGrid in separatem Fenster oeffnen (Multi-Monitor)">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Abdocken" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -309,6 +334,29 @@
                             <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
                         </Button>
                         <TextBlock Text="{Binding SearchResultInfo}" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+
+                        <TextBlock Text="Verschieben auf Pos.:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="20,0,6,0"/>
+                        <TextBox x:Name="MoveToPositionBox" Width="60" VerticalAlignment="Center"
+                                 VerticalContentAlignment="Center" Padding="4,2"
+                                 ToolTip="Zielposition eingeben (1-basiert) und Enter druecken"
+                                 KeyDown="MoveToPositionBox_KeyDown"/>
+                        <Button Content="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                Style="{StaticResource IconButton}" Margin="4,0,0,0"
+                                ToolTip="Selektierte Zeile an Position verschieben"
+                                Click="MoveToPosition_Click"/>
+
+                        <Border Width="1" Background="{StaticResource BorderBrush}" Margin="8,4"/>
+
+                        <TextBlock Text="Gehe zu Zeile:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBox x:Name="GoToRowBox" Width="60" VerticalAlignment="Center"
+                                 VerticalContentAlignment="Center" Padding="4,2"
+                                 ToolTip="Zeilennummer eingeben und Enter druecken"
+                                 KeyDown="GoToRowBox_KeyDown"/>
+                        <Button Content="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                Style="{StaticResource IconButton}" Margin="4,0,0,0"
+                                ToolTip="Zu Zeile springen"
+                                Click="GoToRow_Click"/>
+
                         <TextBlock Text="Zeilenhoehe:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="16,0,8,0"/>
                         <Slider Width="100"
                                 Minimum="24"
@@ -457,8 +505,14 @@
                       VirtualizingPanel.VirtualizationMode="Recycling"
                       VirtualizingPanel.ScrollUnit="Pixel"
                       ScrollViewer.CanContentScroll="True"
+                      SelectionUnit="CellOrRowHeader"
                       CanUserSortColumns="False"
+                      UseLayoutRounding="True"
+                      SnapsToDevicePixels="True"
+                      TextOptions.TextFormattingMode="Display"
+                      TextOptions.TextRenderingMode="Grayscale"
                       CellEditEnding="Grid_CellEditEnding"
+                      PreparingCellForEdit="Grid_PreparingCellForEdit"
                       PreviewMouseLeftButtonDown="Grid_PreviewMouseLeftButtonDown"
                       PreviewMouseRightButtonDown="Grid_PreviewMouseRightButtonDown"
                       PreviewMouseMove="Grid_PreviewMouseMove"
@@ -480,14 +534,9 @@
                         <MenuItem Header="Beobachtungen..." Click="BeobachtungenMenu_Click" />
                         <Separator/>
                         <MenuItem Header="Play" Click="PlayMenu_Click" />
-                        <MenuItem Header="Protokoll/KI anzeigen..." Click="ProtocolMenu_Click" />
-                            <MenuItem Header="Videoanalyse (KI Pipeline)..." Click="VideoAiPipelineMenu_Click" />
-                        <MenuItem Header="Video neu verlinken..." Click="RelinkMenu_Click" />
-                        <MenuItem Header="Empfohlene Massnahmen..." Click="CostsMenu_Click" />
-                        <MenuItem Header="Kosten/Massnahmen wiederherstellen..." Click="RestoreCostsMenu_Click" />
-                        <MenuItem Header="Vorschlag aus Schadenscodes..." Click="SuggestMeasuresMenu_Click" />
-                        <MenuItem Header="Alle Massnahmen vorschlagen..." Click="SuggestAllMeasuresMenu_Click" />
-                        <MenuItem Header="KI Sanierung optimieren..." Click="SanierungKiMenu_Click" />
+                        <MenuItem Header="Haltungsprotokoll AWU drucken..." Click="PrintAwuHaltungsprotokollMenu_Click" />
+                        <MenuItem Header="Haltungsprotokoll Original (PDF) oeffnen..." Click="OpenOriginalPdfMenu_Click" />
+                        <MenuItem Header="Sanierungsmassnahmen..." Click="CostsMenu_Click" />
                     </ContextMenu>
                 </DataGrid.ContextMenu>
             </DataGrid>

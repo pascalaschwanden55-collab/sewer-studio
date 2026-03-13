@@ -1,7 +1,11 @@
+using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.Ai;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -66,7 +70,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
         {
             foreach (var pdf in pdfFiles)
             {
-                var resPdf = _sp.PdfImport.ImportPdf(pdf, _shell.Project, _sp.Diagnostics.ExplicitPdfToTextPath);
+                var resPdf = _sp.PdfImport.ImportPdf(pdf, _shell.Project, _sp.Diagnostics.ExplicitPdfToTextPath, fillMissingOnly: true);
                 if (!resPdf.Ok || resPdf.Value is null)
                 {
                     Summary = $"Fehler: {resPdf.ErrorMessage}";
@@ -101,12 +105,19 @@ public sealed partial class VsaPageViewModel : ObservableObject
             .Select(r => double.TryParse(r.GetFieldValue("VSA_Zustandsnote_D").Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : (double?)null)
             .Where(d => d is not null).Select(d => d!.Value).DefaultIfEmpty(4.0).Average();
 
+        // Nach VSA-Bewertung: automatisch Sanierungsmassnahmen fuer betroffene Haltungen vorschlagen
+        var measureResult = SuggestMeasuresForAll();
+
         var diag = _shell.Project.Metadata.TryGetValue("VSA_Diag", out var d) ? d : "";
+        var measureInfo = measureResult.Filled > 0
+            ? $"\nSanierungsmassnahmen: {measureResult.Filled} Haltungen befuellt, {measureResult.Skipped} uebersprungen."
+            : "";
         Summary = importSb.ToString() +
                   $"\nBerechnet für {count} Records. Ø Zustandsnote D: {avgD:0.00}.\n" +
                   (string.IsNullOrWhiteSpace(diag) ? "" : (diag + "\n")) +
-                  "Hinweis: Klassifizierungstabellen sind im Skeleton nur beispielhaft.";
-        _shell.SetStatus("VSA berechnet");
+                  measureInfo +
+                  "\nHinweis: Klassifizierungstabellen sind im Skeleton nur beispielhaft.";
+        _shell.SetStatus("VSA berechnet" + (measureResult.Filled > 0 ? $" + {measureResult.Filled} Massnahmen" : ""));
     }
 
     private List<string> LoadStoredXtfFiles(string? projectPath)
@@ -165,6 +176,77 @@ public sealed partial class VsaPageViewModel : ObservableObject
                 resolved.Add(full);
         }
         return resolved;
+    }
+
+    private record struct MeasureBatchResult(int Filled, int Skipped, int NoSuggestion);
+
+    private MeasureBatchResult SuggestMeasuresForAll()
+    {
+        var service = _sp.MeasureRecommendation;
+        var filled = 0;
+        var skipped = 0;
+        var noSuggestion = 0;
+
+        foreach (var record in _shell.Project.Data)
+        {
+            var pruefung = (record.GetFieldValue("Pruefungsresultat") ?? "").Trim();
+            var existing = (record.GetFieldValue("Empfohlene_Sanierungsmassnahmen") ?? "").Trim();
+            var hasDamage = record.VsaFindings is not null && record.VsaFindings.Count > 0
+                || !string.IsNullOrWhiteSpace(record.GetFieldValue("Primaere_Schaeden"));
+
+            // Manuell bearbeitete Massnahmen nicht ueberschreiben
+            if (!string.IsNullOrWhiteSpace(existing))
+            {
+                var meta = record.FieldMeta.GetValueOrDefault("Empfohlene_Sanierungsmassnahmen");
+                if (meta is not null && meta.UserEdited)
+                {
+                    skipped++;
+                    continue;
+                }
+            }
+
+            // Nur Records mit Sanierungsbedarf/beobachten oder Schadenscodes
+            if (!string.Equals(pruefung, "Sanierungsbedarf", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(pruefung, "beobachten", StringComparison.OrdinalIgnoreCase)
+                && !hasDamage)
+            {
+                skipped++;
+                continue;
+            }
+
+            var rec = service.Recommend(record, maxSuggestions: 5);
+            if (rec.Measures.Count == 0)
+            {
+                noSuggestion++;
+                continue;
+            }
+
+            var value = string.Join(Environment.NewLine, rec.Measures);
+            record.SetFieldValue("Empfohlene_Sanierungsmassnahmen", value, FieldSource.Unknown, userEdited: false);
+
+            if (rec.EstimatedTotalCost is not null)
+                record.SetFieldValue("Kosten", rec.EstimatedTotalCost.Value.ToString("0.00", CultureInfo.InvariantCulture), FieldSource.Unknown, userEdited: false);
+            if (rec.RenovierungInlinerM is not null)
+                record.SetFieldValue("Renovierung_Inliner_m", rec.RenovierungInlinerM.Value.ToString("0.00", CultureInfo.InvariantCulture), FieldSource.Unknown, userEdited: false);
+            if (rec.RenovierungInlinerStk is not null)
+                record.SetFieldValue("Renovierung_Inliner_Stk", rec.RenovierungInlinerStk.Value.ToString(CultureInfo.InvariantCulture), FieldSource.Unknown, userEdited: false);
+            if (rec.AnschluesseVerpressen is not null)
+                record.SetFieldValue("Anschluesse_verpressen", rec.AnschluesseVerpressen.Value.ToString(CultureInfo.InvariantCulture), FieldSource.Unknown, userEdited: false);
+            if (rec.ReparaturManschette is not null)
+                record.SetFieldValue("Reparatur_Manschette", rec.ReparaturManschette.Value.ToString(CultureInfo.InvariantCulture), FieldSource.Unknown, userEdited: false);
+            if (rec.ReparaturKurzliner is not null)
+                record.SetFieldValue("Reparatur_Kurzliner", rec.ReparaturKurzliner.Value.ToString(CultureInfo.InvariantCulture), FieldSource.Unknown, userEdited: false);
+
+            filled++;
+        }
+
+        if (filled > 0)
+        {
+            _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
+            _shell.Project.Dirty = true;
+        }
+
+        return new MeasureBatchResult(filled, skipped, noSuggestion);
     }
 }
 

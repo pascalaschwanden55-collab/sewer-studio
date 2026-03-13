@@ -3,16 +3,16 @@ using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Sanierung;
-using AuswertungPro.Next.UI.Ai.Sanierung.Dto;
+using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.Application.Ai.Sanierung;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 public sealed partial class SanierungOptimizationViewModel : ObservableObject
 {
     private readonly HaltungRecord _record;
-    private readonly AiSanierungOptimizationService _aiService;
+    private readonly IAiSanierungOptimizationService _aiService;
     private readonly SanierungOptimizationRequest _request;
 
     // ── Observable properties ─────────────────────────────────────────────
@@ -49,7 +49,7 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject
 
     public SanierungOptimizationViewModel(
         HaltungRecord record,
-        AiSanierungOptimizationService aiService,
+        IAiSanierungOptimizationService aiService,
         RuleRecommendationDto? ruleRecommendation)
     {
         _record    = record;
@@ -84,10 +84,11 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject
         HasResult  = false;
         StatusText = "KI-Optimierung läuft…";
 
+        using var _aiToken = AiActivityTracker.Begin("Sanierungs-Optimierung");
         try
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3));
-            var result = await _aiService.OptimizeAsync(_request, cts.Token).ConfigureAwait(false);
+            var result = await _aiService.OptimizeAsync(_request, cts.Token);
 
             Result        = result;
             AiMeasure     = result.RecommendedMeasure;
@@ -126,7 +127,7 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject
         if (Result is null) return;
 
         var session = BuildSession(UserDecision.Accepted);
-        await AiOptimizationSessionStore.SaveAsync(session).ConfigureAwait(false);
+        await AiOptimizationSessionStore.SaveAsync(session);
 
         AppliedToSecondary?.Invoke(Result, session);
         StatusText = "KI-Vorschlag als Sekundärdaten gespeichert.";
@@ -142,7 +143,7 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject
         // Write session with Accepted decision
         var session = BuildSession(UserDecision.Accepted);
         session.FinalAppliedMeasure = Result.RecommendedMeasure;
-        await AiOptimizationSessionStore.SaveAsync(session).ConfigureAwait(false);
+        await AiOptimizationSessionStore.SaveAsync(session);
 
         // Apply to HaltungRecord fields
         _record.SetFieldValue("Empfohlene_Sanierungsmassnahmen",
@@ -172,13 +173,12 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject
 
     private AiOptimizationSession BuildSession(UserDecision decision)
     {
-        var jsonOpts = new JsonSerializerOptions { WriteIndented = false };
         return new AiOptimizationSession
         {
             HaltungId        = HaltungName,
-            InputSnapshot    = JsonSerializer.Serialize(_request, jsonOpts),
-            RuleSnapshot     = JsonSerializer.Serialize(_request.Rule, jsonOpts),
-            AiResultSnapshot = Result is not null ? JsonSerializer.Serialize(Result, jsonOpts) : "",
+            InputSnapshot    = JsonSerializer.Serialize(_request),
+            RuleSnapshot     = JsonSerializer.Serialize(_request.Rule),
+            AiResultSnapshot = Result is not null ? JsonSerializer.Serialize(Result) : "",
             Decision         = decision,
             FinalAppliedMeasure = Result?.RecommendedMeasure
         };
@@ -227,20 +227,31 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject
         double.TryParse(lengthRaw?.Replace(',', '.'), NumberStyles.Float,
             CultureInfo.InvariantCulture, out var lengthM);
 
+        // Grundwasser aus Grundwasserspiegel-Feld: "oberhalb" = Grundwasser vorhanden
+        var gwRaw = record.GetFieldValue("Grundwasserspiegel");
+        bool? groundwater = gwRaw?.Trim().ToLowerInvariant() switch
+        {
+            "oberhalb" => true,
+            "unterhalb" => false,
+            _ => null
+        };
+
         var pipe = new PipeContextDto
         {
             DiameterMm  = dn > 0 ? dn : null,
             Material    = record.GetFieldValue("Rohrmaterial"),
             LengthMeter = lengthM > 0 ? lengthM : null,
+            Groundwater = groundwater,
             Region      = record.GetFieldValue("Strasse"),
             ProjectYear = DateTime.UtcNow.Year
         };
 
-        // Attach zustandsklasse to first finding's SeverityClass for validation
+        // Zustandsklasse auf ALLE Findings verteilen (nicht nur erstes)
         var zk = record.GetFieldValue("Zustandsklasse");
-        if (!string.IsNullOrWhiteSpace(zk) && findings.Count > 0)
+        if (!string.IsNullOrWhiteSpace(zk))
         {
-            findings[0] = findings[0] with { SeverityClass = zk };
+            for (int i = 0; i < findings.Count; i++)
+                findings[i] = findings[i] with { SeverityClass = findings[i].SeverityClass ?? zk };
         }
 
         // Build a rule DTO from MeasureRecommendationResult

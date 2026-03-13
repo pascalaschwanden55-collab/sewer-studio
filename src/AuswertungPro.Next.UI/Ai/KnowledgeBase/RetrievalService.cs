@@ -1,8 +1,11 @@
 // AuswertungPro – KI Videoanalyse Modul
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
 
@@ -12,8 +15,16 @@ namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
 /// </summary>
 public sealed class RetrievalService(
     KnowledgeBaseContext db,
-    EmbeddingService embedder)
+    EmbeddingService embedder) : IRetrievalService
 {
+    private static int _dimensionMismatchWarned;
+
+    /// <summary>Aktuelles Embedding-Modell in der DB (null = leer / unbekannt).</summary>
+    public string? StoredEmbedModel { get; private set; }
+
+    /// <summary>True wenn die DB-Embeddings von einem anderen Modell stammen als dem aktuellen.</summary>
+    public bool HasModelMismatch { get; private set; }
+
     /// <summary>
     /// Gibt die Top-K ähnlichsten Samples für einen Query-Text zurück.
     /// </summary>
@@ -28,11 +39,24 @@ public sealed class RetrievalService(
 
         var candidates = LoadAllEmbeddings();
         var scored = new List<(string SampleId, double Score)>(candidates.Count);
+        var mismatchCount = 0;
 
         foreach (var (sampleId, vector) in candidates)
         {
+            if (vector.Length != queryVec.Length)
+            {
+                mismatchCount++;
+                continue; // skip incompatible vectors
+            }
             var score = CosineSimilarity(queryVec, vector);
             scored.Add((sampleId, score));
+        }
+
+        if (mismatchCount > 0 && Interlocked.CompareExchange(ref _dimensionMismatchWarned, 1, 0) == 0)
+        {
+            Debug.WriteLine(
+                $"[RetrievalService] WARNUNG: {mismatchCount} Embeddings mit falscher Dimension " +
+                $"(erwartet {queryVec.Length}, DB enthält andere). KB-Rebuild empfohlen!");
         }
 
         scored.Sort((a, b) => b.Score.CompareTo(a.Score));
@@ -47,6 +71,52 @@ public sealed class RetrievalService(
         }
 
         return results;
+    }
+
+    /// <summary>
+    /// Prüft ob die gespeicherten Embeddings zum aktuellen Modell passen.
+    /// Setzt StoredEmbedModel und HasModelMismatch.
+    /// </summary>
+    public bool CheckModelConsistency()
+    {
+        try
+        {
+            using var cmd = db.Connection.CreateCommand();
+            cmd.CommandText = "SELECT DISTINCT Model FROM Embeddings WHERE Model IS NOT NULL AND TRIM(Model) <> ''";
+            using var reader = cmd.ExecuteReader();
+            var models = new List<string>();
+            while (reader.Read())
+            {
+                var m = reader.IsDBNull(0) ? null : reader.GetString(0);
+                if (!string.IsNullOrWhiteSpace(m))
+                    models.Add(m!);
+            }
+
+            var distinctModels = models
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            StoredEmbedModel = distinctModels.Count > 0
+                ? string.Join(", ", distinctModels)
+                : null;
+            HasModelMismatch = distinctModels.Any(m =>
+                !string.Equals(m, embedder.ModelName, StringComparison.OrdinalIgnoreCase));
+
+            if (HasModelMismatch)
+            {
+                Debug.WriteLine(
+                    $"[RetrievalService] MODELL-MISMATCH: KB enthält '{StoredEmbedModel}', " +
+                    $"aktuell konfiguriert: '{embedder.ModelName}'. KB-Rebuild empfohlen!");
+            }
+
+            return !HasModelMismatch;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[RetrievalService] Modell-Check fehlgeschlagen: {ex.Message}");
+            return true;
+        }
     }
 
     // ── Intern ────────────────────────────────────────────────────────────
@@ -96,19 +166,3 @@ public sealed class RetrievalService(
     }
 }
 
-/// <param name="SampleId">Eindeutige ID des Samples.</param>
-/// <param name="CaseId">Herkunft (TrainingCase).</param>
-/// <param name="VsaCode">Zugehöriger VSA-Code.</param>
-/// <param name="Beschreibung">Protokolltext.</param>
-/// <param name="MeterStart">Meterposition Beginn.</param>
-/// <param name="MeterEnd">Meterposition Ende.</param>
-public sealed record SampleRecord(
-    string SampleId,
-    string CaseId,
-    string VsaCode,
-    string Beschreibung,
-    double MeterStart,
-    double MeterEnd);
-
-/// <summary>Ein Retrieval-Ergebnis mit Ähnlichkeitswert.</summary>
-public sealed record RetrievalResult(SampleRecord Sample, double Score);

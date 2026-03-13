@@ -18,15 +18,19 @@ using AuswertungPro.Next.UI.Views.Windows;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.Infrastructure.Costs;
+using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using System.Net.Http;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Sanierung;
-using AuswertungPro.Next.UI.Ai.Sanierung.Dto;
+using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Sanierung;
+using AuswertungPro.Next.UI.Hydraulik;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
-public sealed partial class DataPageViewModel : ObservableObject
+public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 {
     private const int MinimumSamplesForModelTraining = 25;
     private const int StrongModelThreshold = 100;
@@ -46,7 +50,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     private readonly ShellViewModel _shell;
     private readonly DispatcherTimer _saveBannerTimer;
     private readonly DispatcherTimer _autoSaveTimer;
-    private readonly MeasureRecommendationService _measureRecommendationService;
+    private readonly IMeasureRecommendationService _measureRecommendationService;
 
     public IRelayCommand AddCommand { get; }
     public IRelayCommand RemoveCommand { get; }
@@ -82,6 +86,8 @@ public sealed partial class DataPageViewModel : ObservableObject
     public IRelayCommand<HaltungRecord?> OpenProtocolCommand { get; }
     public IRelayCommand<HaltungRecord?> OpenVideoAiPipelineCommand { get; }
     public IRelayCommand<HaltungRecord?> RelinkVideoCommand { get; }
+    public IRelayCommand<HaltungRecord?> OpenOriginalPdfCommand { get; }
+    public IRelayCommand<HaltungRecord?> PrintAwuHaltungsprotokollCommand { get; }
     public IRelayCommand<HaltungRecord?> OpenCostsCommand { get; }
     public IRelayCommand<HaltungRecord?> RestoreCostsCommand { get; }
     public IRelayCommand<HaltungRecord?> SuggestMeasuresCommand { get; }
@@ -89,6 +95,9 @@ public sealed partial class DataPageViewModel : ObservableObject
     public IRelayCommand<HaltungRecord?> OptimizeSanierungKiCommand { get; }
     public IRelayCommand ShowModelStatusCommand { get; }
     public IRelayCommand SearchAndLinkMediaCommand { get; }
+    public IRelayCommand<HaltungRecord?> OpenHydraulikCommand { get; }
+    public IRelayCommand<HaltungRecord?> PrintHydraulikCommand { get; }
+    public IRelayCommand<HaltungRecord?> PrintDossierCommand { get; }
 
     public IReadOnlyList<string> Columns => FieldCatalog.ColumnOrder;
     public ObservableCollection<HaltungRecord> Records => _shell.Project.Data;
@@ -127,29 +136,12 @@ public sealed partial class DataPageViewModel : ObservableObject
     public DataPageViewModel(ShellViewModel shell)
     {
         _shell = shell;
-        _measureRecommendationService = new MeasureRecommendationService();
+        _measureRecommendationService = _sp.MeasureRecommendation;
         _saveBannerTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-        _saveBannerTimer.Tick += (_, __) =>
-        {
-            _saveBannerTimer.Stop();
-            IsSaveStatusVisible = false;
-        };
+        _saveBannerTimer.Tick += SaveBannerTimer_Tick;
         _autoSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(5) };
-        _autoSaveTimer.Tick += (_, __) => AutoSaveOnTimerTick();
-        _shell.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(ShellViewModel.IsProjectReady))
-            {
-                OnPropertyChanged(nameof(IsProjectReady));
-                OnPropertyChanged(nameof(IsDataGridReadOnly));
-            }
-            else if (e.PropertyName == nameof(ShellViewModel.Project))
-            {
-                OnPropertyChanged(nameof(Project));
-                OnPropertyChanged(nameof(Records));
-                UpdateSearchResultInfo(Records.Count);
-            }
-        };
+        _autoSaveTimer.Tick += AutoSaveTimer_Tick;
+        _shell.PropertyChanged += Shell_PropertyChanged;
 
         var uiLayout = _sp.Settings.DataPageLayout ?? new DataPageLayoutSettings();
         GridMinRowHeight = uiLayout.GridMinRowHeight is >= 24d and <= 240d
@@ -205,6 +197,8 @@ public sealed partial class DataPageViewModel : ObservableObject
         OpenProtocolCommand = new RelayCommand<HaltungRecord?>(OpenProtocol);
         OpenVideoAiPipelineCommand = new RelayCommand<HaltungRecord?>(OpenVideoAiPipeline);
         RelinkVideoCommand = new RelayCommand<HaltungRecord?>(RelinkVideo);
+        OpenOriginalPdfCommand = new RelayCommand<HaltungRecord?>(OpenOriginalPdf);
+        PrintAwuHaltungsprotokollCommand = new RelayCommand<HaltungRecord?>(PrintAwuHaltungsprotokollPdf);
         OpenCostsCommand = new RelayCommand<HaltungRecord?>(OpenCosts, CanOpenCosts);
         RestoreCostsCommand = new RelayCommand<HaltungRecord?>(RestoreCosts, CanRestoreCosts);
         SuggestMeasuresCommand = new RelayCommand<HaltungRecord?>(SuggestMeasures, CanSuggestMeasures);
@@ -212,11 +206,51 @@ public sealed partial class DataPageViewModel : ObservableObject
         OptimizeSanierungKiCommand = new RelayCommand<HaltungRecord?>(OpenSanierungOptimizationWindow, CanOpenCosts);
         ShowModelStatusCommand = new RelayCommand(ShowModelStatus);
         SearchAndLinkMediaCommand = new RelayCommand(OpenMediaSearchWindow);
+        OpenHydraulikCommand = new RelayCommand<HaltungRecord?>(OpenHydraulikPanel);
+        PrintHydraulikCommand = new RelayCommand<HaltungRecord?>(PrintHydraulikPdf);
+        PrintDossierCommand = new RelayCommand<HaltungRecord?>(PrintDossierPdf);
         ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
 
         PropertyChanged += DataPageViewModel_PropertyChanged;
         UpdateLearningInfo();
         _ = LoadTrainedHaltungenAsync();
+    }
+
+    private void SaveBannerTimer_Tick(object? sender, EventArgs e)
+    {
+        _saveBannerTimer.Stop();
+        IsSaveStatusVisible = false;
+    }
+
+    private void AutoSaveTimer_Tick(object? sender, EventArgs e) => AutoSaveOnTimerTick();
+
+    private void Shell_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ShellViewModel.IsProjectReady))
+        {
+            OnPropertyChanged(nameof(IsProjectReady));
+            OnPropertyChanged(nameof(IsDataGridReadOnly));
+        }
+        else if (e.PropertyName == nameof(ShellViewModel.Project))
+        {
+            OnPropertyChanged(nameof(Project));
+            OnPropertyChanged(nameof(Records));
+            UpdateSearchResultInfo(Records.Count);
+        }
+    }
+
+    private bool _disposed;
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _saveBannerTimer.Stop();
+        _saveBannerTimer.Tick -= SaveBannerTimer_Tick;
+        _autoSaveTimer.Stop();
+        _autoSaveTimer.Tick -= AutoSaveTimer_Tick;
+        _shell.PropertyChanged -= Shell_PropertyChanged;
+        PropertyChanged -= DataPageViewModel_PropertyChanged;
     }
 
     partial void OnGridMinRowHeightChanged(double value)
@@ -309,11 +343,60 @@ public sealed partial class DataPageViewModel : ObservableObject
         if (list is null || list.Count == 0)
             return;
 
-        foreach (var entry in list.Where(e => !e.IsDeleted))
+        // Sortierung nach Meter (aufsteigend), dann Einfügereihenfolge
+        var sorted = list
+            .Where(e => !e.IsDeleted)
+            .Select((entry, index) => new
+            {
+                Entry = entry,
+                Index = index,
+                Meter = GetOrderingMeter(entry)
+            })
+            .OrderBy(x => x.Meter.HasValue ? 0 : 1)
+            .ThenBy(x => x.Meter ?? double.MaxValue)
+            .ThenBy(x => x.Index)
+            .Select(x => x.Entry);
+
+        foreach (var entry in sorted)
+        {
+            // Beschreibung aus dem VSA-Katalog auflösen, wenn sie leer ist
+            if (string.IsNullOrWhiteSpace(entry.Beschreibung) || entry.Beschreibung.Length <= 3)
+            {
+                if (!string.IsNullOrWhiteSpace(entry.Code) &&
+                    _sp.CodeCatalog.TryGet(entry.Code, out var def) &&
+                    !string.IsNullOrWhiteSpace(def.Title))
+                {
+                    entry.Beschreibung = def.Title;
+                }
+            }
+
             SelectedProtocolEntries.Add(entry);
+        }
     }
 
-    private static IReadOnlyList<ProtocolEntry> BuildEntriesFromFindings(IEnumerable<VsaFinding> findings)
+    private static double? GetOrderingMeter(ProtocolEntry entry)
+    {
+        var direct = entry.MeterStart ?? entry.MeterEnd;
+        if (direct.HasValue)
+            return direct;
+
+        if (entry.CodeMeta?.Parameters is null)
+            return null;
+
+        var keys = new[] { "vsa.distanz", "Distance" };
+        foreach (var key in keys)
+        {
+            if (!entry.CodeMeta.Parameters.TryGetValue(key, out var raw) || string.IsNullOrWhiteSpace(raw))
+                continue;
+            var normalized = raw.Trim().Replace(',', '.');
+            if (double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
+                return parsed;
+        }
+
+        return null;
+    }
+
+    private IReadOnlyList<ProtocolEntry> BuildEntriesFromFindings(IEnumerable<VsaFinding> findings)
     {
         var list = new List<ProtocolEntry>();
         foreach (var f in findings)
@@ -322,10 +405,21 @@ public sealed partial class DataPageViewModel : ObservableObject
             var mEnd = f.MeterEnd ?? f.SchadenlageEnde;
             var time = ParseMpegTime(f.MPEG) ?? (f.Timestamp?.TimeOfDay);
 
+            var beschreibung = f.Raw?.Trim() ?? string.Empty;
+            // Beschreibung aus dem VSA-Katalog auflösen, wenn Raw leer oder nur Kuerzel
+            var code = f.KanalSchadencode?.Trim() ?? string.Empty;
+            if ((string.IsNullOrWhiteSpace(beschreibung) || beschreibung.Length <= 3) &&
+                !string.IsNullOrWhiteSpace(code) &&
+                _sp.CodeCatalog.TryGet(code, out var codeDef) &&
+                !string.IsNullOrWhiteSpace(codeDef.Title))
+            {
+                beschreibung = codeDef.Title;
+            }
+
             var entry = new ProtocolEntry
             {
-                Code = f.KanalSchadencode?.Trim() ?? string.Empty,
-                Beschreibung = f.Raw?.Trim() ?? string.Empty,
+                Code = code,
+                Beschreibung = beschreibung,
                 MeterStart = mStart,
                 MeterEnd = mEnd,
                 IsStreckenschaden = mStart.HasValue && mEnd.HasValue && mEnd >= mStart,
@@ -375,6 +469,8 @@ public sealed partial class DataPageViewModel : ObservableObject
 
     private static readonly Regex MeterRegex = new(@"@?\s*(\d+(?:[.,]\d+)?)\s*m(?!m)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex TimeRegex = new(@"\b(\d{1,2}:\d{2}(?::\d{2})?)\b", RegexOptions.Compiled);
+    private static readonly Regex ContinuousDefectMarkerRegex = new(@"^[AB]\d{2}$", RegexOptions.Compiled);
+    private static readonly Regex EmbeddedVsaCodeRegex = new(@"^([A-Z]{3,5})\b", RegexOptions.Compiled);
 
     private void NormalizeSelectedFindings(HaltungRecord record)
     {
@@ -416,6 +512,37 @@ public sealed partial class DataPageViewModel : ObservableObject
                     changed = true;
                 }
             }
+        }
+
+        var deduped = new List<VsaFinding>(record.VsaFindings.Count);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var finding in record.VsaFindings)
+        {
+            var effectiveCode = ResolveFindingEffectiveCode(finding.KanalSchadencode, finding.Raw);
+            if (!string.Equals(finding.KanalSchadencode, effectiveCode, StringComparison.OrdinalIgnoreCase))
+            {
+                finding.KanalSchadencode = effectiveCode;
+                changed = true;
+            }
+
+            var meter = finding.MeterStart ?? finding.SchadenlageAnfang;
+            var meterKey = meter.HasValue
+                ? meter.Value.ToString("F2", CultureInfo.InvariantCulture)
+                : string.Empty;
+            var key = $"{effectiveCode}|{meterKey}";
+            if (!seen.Add(key))
+            {
+                changed = true;
+                continue;
+            }
+
+            deduped.Add(finding);
+        }
+
+        if (deduped.Count != record.VsaFindings.Count)
+        {
+            record.VsaFindings = deduped;
+            changed = true;
         }
 
         if (!changed)
@@ -460,6 +587,52 @@ public sealed partial class DataPageViewModel : ObservableObject
             return null;
 
         return match.Groups[1].Value;
+    }
+
+    private static double? TryParseDnMm(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        var text = raw.Trim()
+            .Replace(" ", string.Empty, StringComparison.Ordinal)
+            .Replace("'", string.Empty, StringComparison.Ordinal);
+
+        if (double.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var value)
+            && value > 0)
+        {
+            return value;
+        }
+
+        if (double.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out value)
+            && value > 0)
+        {
+            return value;
+        }
+
+        if (text.Contains(',') && text.Contains('.'))
+        {
+            var commaAsDecimal = text.Replace(".", string.Empty, StringComparison.Ordinal).Replace(',', '.');
+            if (double.TryParse(commaAsDecimal, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value > 0)
+                return value;
+
+            var dotAsDecimal = text.Replace(",", string.Empty, StringComparison.Ordinal);
+            if (double.TryParse(dotAsDecimal, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value > 0)
+                return value;
+        }
+        else if (text.Contains(','))
+        {
+            var normalized = text.Replace(',', '.');
+            if (double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value > 0)
+                return value;
+        }
+
+        var digitsOnly = text.Replace(".", string.Empty, StringComparison.Ordinal)
+            .Replace(",", string.Empty, StringComparison.Ordinal);
+        if (double.TryParse(digitsOnly, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value >= 50)
+            return value;
+
+        return null;
     }
 
     private bool CanMoveUp()
@@ -532,6 +705,31 @@ public sealed partial class DataPageViewModel : ObservableObject
         _shell.Project.Dirty = true;
         RecordsOrderChanged?.Invoke();
         ScheduleAutoSave();
+    }
+
+    /// <summary>
+    /// Verschiebt die aktuell selektierte Haltung an die angegebene 1-basierte Position.
+    /// Alle Zeilen ab dieser Position rutschen um eins nach unten.
+    /// </summary>
+    public bool MoveToPosition(int targetPosition)
+    {
+        if (Selected is null) return false;
+        var idx = Records.IndexOf(Selected);
+        if (idx < 0) return false;
+
+        // 1-basiert -> 0-basiert
+        int targetIdx = targetPosition - 1;
+        if (targetIdx < 0) targetIdx = 0;
+        if (targetIdx >= Records.Count) targetIdx = Records.Count - 1;
+        if (targetIdx == idx) return false;
+
+        Records.Move(idx, targetIdx);
+        UpdateNr();
+        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
+        _shell.Project.Dirty = true;
+        RecordsOrderChanged?.Invoke();
+        ScheduleAutoSave();
+        return true;
     }
 
     private void Save()
@@ -640,7 +838,50 @@ public sealed partial class DataPageViewModel : ObservableObject
                 CodecThreads: _sp.Settings.VideoCodecThreads,
                 VideoOutput: _sp.Settings.VideoOutput);
 
-            var window = new PlayerWindow(path, options)
+            // Build damage overlay markers from protocol entries
+            PlayerDamageOverlayData? damageOverlay = null;
+            var lengthStr = record.GetFieldValue("Haltungslaenge_m");
+            if (double.TryParse(lengthStr?.Replace(',', '.'),
+                    NumberStyles.Float, CultureInfo.InvariantCulture, out var pipeLength)
+                && pipeLength > 0)
+            {
+                var markers = new System.Collections.Generic.List<DamageMarkerInfo>();
+
+                if (record.Protocol?.Current?.Entries is { Count: > 0 } entries)
+                {
+                    foreach (var e in entries.Where(e => !e.IsDeleted && e.MeterStart.HasValue))
+                    {
+                        markers.Add(new DamageMarkerInfo(
+                            e.Code ?? "",
+                            e.Beschreibung,
+                            e.MeterStart!.Value,
+                            e.MeterEnd,
+                            e.IsStreckenschaden));
+                    }
+                }
+                else if (record.VsaFindings is { Count: > 0 } findings)
+                {
+                    foreach (var f in findings)
+                    {
+                        var mStart = f.MeterStart ?? f.SchadenlageAnfang;
+                        if (mStart is null) continue;
+                        var mEnd = f.MeterEnd ?? f.SchadenlageEnde;
+                        markers.Add(new DamageMarkerInfo(
+                            f.KanalSchadencode?.Trim() ?? "",
+                            f.Raw,
+                            mStart.Value,
+                            mEnd,
+                            mEnd.HasValue && mEnd.Value > mStart.Value));
+                    }
+                }
+
+                if (markers.Count > 0)
+                    damageOverlay = new PlayerDamageOverlayData(pipeLength, markers);
+            }
+
+            var window = new PlayerWindow(path, options, damageOverlay: damageOverlay,
+                serviceProvider: _sp, haltungId: record.Id.ToString(),
+                haltungRecord: record)
             {
                 Owner = System.Windows.Application.Current?.MainWindow
             };
@@ -705,7 +946,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         var changed = false;
 
         var primaryLines = BuildPrimaryDamageLinesFromProtocolEntries(entries);
-        var primaryText = string.Join("\n", primaryLines);
+        var primaryText = XtfPrimaryDamageFormatter.DeduplicateText(string.Join("\n", primaryLines));
         var currentPrimary = record.GetFieldValue("Primaere_Schaeden") ?? string.Empty;
         if (!string.Equals(currentPrimary, primaryText, StringComparison.Ordinal))
         {
@@ -737,6 +978,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
     private static List<string> BuildPrimaryDamageLinesFromProtocolEntries(IEnumerable<ProtocolEntry> entries)
     {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var lines = new List<string>();
         foreach (var entry in entries)
         {
@@ -744,8 +986,14 @@ public sealed partial class DataPageViewModel : ObservableObject
             if (string.IsNullOrWhiteSpace(code))
                 continue;
 
-            var parts = new List<string>();
+            // Deduplicate by code + meter position
             var meter = entry.MeterStart ?? entry.MeterEnd;
+            var meterKey = meter.HasValue ? meter.Value.ToString("F2") : "";
+            var key = $"{code.ToUpperInvariant()}|{meterKey}";
+            if (!seen.Add(key))
+                continue;
+
+            var parts = new List<string>();
             if (meter.HasValue)
                 parts.Add($"{meter.Value:0.00}m");
 
@@ -861,6 +1109,20 @@ public sealed partial class DataPageViewModel : ObservableObject
         return Regex.Replace(upper, "[^A-Z0-9]", string.Empty);
     }
 
+    private static string ResolveFindingEffectiveCode(string? code, string? rawDescription)
+    {
+        var normalizedCode = NormalizeCodeToken(code);
+        if (!ContinuousDefectMarkerRegex.IsMatch(normalizedCode) || string.IsNullOrWhiteSpace(rawDescription))
+            return normalizedCode;
+
+        var text = rawDescription.Trim();
+        if (text.StartsWith("("))
+            text = text.Substring(1).TrimStart();
+
+        var match = EmbeddedVsaCodeRegex.Match(text);
+        return match.Success ? NormalizeCodeToken(match.Groups[1].Value) : normalizedCode;
+    }
+
     private static bool AreCodesCompatible(string? left, string? right)
     {
         var a = NormalizeCodeToken(left);
@@ -928,7 +1190,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         var cfg = AiRuntimeConfig.Load();
         if (!cfg.Enabled)
         {
-            MessageBox.Show("KI ist deaktiviert (AUSWERTUNGPRO_AI_ENABLED=0).", "Videoanalyse KI",
+            MessageBox.Show("KI ist deaktiviert (SEWERSTUDIO_AI_ENABLED=0).", "Videoanalyse KI",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -939,10 +1201,15 @@ public sealed partial class DataPageViewModel : ObservableObject
         using var http = new HttpClient { Timeout = timeout };
         var allowedSet = new HashSet<string>(allowedCodes, StringComparer.OrdinalIgnoreCase);
         var plausibility = new RuleBasedAiSuggestionPlausibilityService(allowedSet);
-        var pipeline = new VideoAnalysisPipelineService(cfg, plausibility, http);
+        var pipeline = _sp.CreateVideoAnalysisPipeline(cfg, plausibility, http);
 
         var haltungId = record.GetFieldValue("Haltungsname") ?? record.Id.ToString();
-        var request = new PipelineRequest(haltungId, videoPath, allowedCodes);
+        double haltungslaenge = 0;
+        if (record.Fields.TryGetValue("Haltungslaenge_m", out var lenStr)
+            && double.TryParse(lenStr, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var lenVal))
+            haltungslaenge = lenVal;
+        var request = new PipelineRequest(haltungId, videoPath, allowedCodes, HaltungslaengeM: haltungslaenge);
 
         var win = new VideoAnalysisPipelineWindow(request, pipeline)
         {
@@ -954,6 +1221,16 @@ public sealed partial class DataPageViewModel : ObservableObject
         if (ok && win.Result?.IsSuccess == true && win.Result.Document is not null)
         {
             record.Protocol = win.Result.Document;
+
+            // Fotos fuer Rohranfang/Rohrende extrahieren
+            var holdingDir = record.GetFieldValue("Link");
+            if (!string.IsNullOrWhiteSpace(holdingDir) && Directory.Exists(holdingDir))
+            {
+                var boundaries = ProtocolBoundaryService.EnsureBoundaries(
+                    record.Protocol.Current.Entries, haltungslaenge);
+                _ = BoundaryPhotoService.GenerateBoundaryPhotosAsync(
+                    boundaries, videoPath, holdingDir);
+            }
 
             _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
             _shell.Project.Dirty = true;
@@ -1189,15 +1466,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     }
 
     private static string SanitizePathSegment(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return "UNKNOWN";
-
-        var invalid = Path.GetInvalidFileNameChars();
-        var chars = value.Trim().Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray();
-        var cleaned = new string(chars).Trim();
-        return string.IsNullOrWhiteSpace(cleaned) ? "UNKNOWN" : cleaned;
-    }
+        => AuswertungPro.Next.Application.Common.ProjectPathResolver.SanitizePathSegment(value);
 
     private static IReadOnlyList<string> ParseStoredPathList(string raw)
     {
@@ -1288,7 +1557,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         var path = _sp.Dialogs.OpenFile(
             "Video auswaehlen",
-            "Video (*.mpg;*.mpeg;*.mp4;*.avi;*.mov;*.wmv;*.mkv)|*.mpg;*.mpeg;*.mp4;*.avi;*.mov;*.wmv;*.mkv|Alle Dateien|*.*",
+            MediaFileTypes.VideoDialogFilter,
             initial);
         if (string.IsNullOrWhiteSpace(path))
             return;
@@ -1363,32 +1632,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
     private void OpenCosts(HaltungRecord? record)
     {
-        record ??= Selected;
-        if (record is null)
-            return;
-
-        var holding = (record.GetFieldValue("Haltungsname") ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(holding))
-        {
-            MessageBox.Show("Haltungsname fehlt in der Zeile.", "Massnahmen",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        var recommended = ParseRecommendedTemplates(record.GetFieldValue("Empfohlene_Sanierungsmassnahmen"));
-        var vm = new CostCalculatorViewModel(
-            holding,
-            null,
-            recommended,
-            _sp.Settings.LastProjectPath,
-            cost => ApplyCostsToRecord(record, cost),
-            haltungRecord: record,
-            projectRecords: Records);
-        var win = new CostCalculatorWindow(vm)
-        {
-            Owner = System.Windows.Application.Current?.MainWindow
-        };
-        win.ShowDialog();
+        OpenSanierungsmassnahmenWindow(record, InitialFocusMode.CostCalculator);
     }
 
     private void SuggestMeasures(HaltungRecord? record)
@@ -1433,6 +1677,16 @@ public sealed partial class DataPageViewModel : ObservableObject
             ? $"Massnahmenvorschlag aus Schadenscodes gesetzt ({sourceText})"
             : $"Massnahmenvorschlag mit Kostenschaetzung gesetzt ({recommendation.EstimatedTotalCost.Value:0.00}, {sourceText})");
         UpdateLearningInfo(recommendation.SimilarCasesCount, recommendation.EstimatedTotalCost);
+
+        // Show result dialog so user sees the suggested measures
+        var summary = string.Join("\n", recommendation.Measures);
+        if (recommendation.EstimatedTotalCost is not null)
+            summary += $"\n\nGeschaetzte Kosten: {recommendation.EstimatedTotalCost.Value:N2}";
+        summary += $"\n\nQuelle: {sourceText}";
+        if (recommendation.SimilarCasesCount > 0)
+            summary += $" ({recommendation.SimilarCasesCount} aehnliche Faelle)";
+        MessageBox.Show(summary, "Empfohlene Sanierungsmassnahmen",
+            MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     /// <summary>
@@ -1520,53 +1774,65 @@ public sealed partial class DataPageViewModel : ObservableObject
 
     private void OpenSanierungOptimizationWindow(HaltungRecord? record)
     {
+        OpenSanierungsmassnahmenWindow(record, InitialFocusMode.AiOptimization);
+    }
+
+    private void OpenSanierungsmassnahmenWindow(HaltungRecord? record, InitialFocusMode focus)
+    {
         record ??= Selected;
         if (record is null) return;
 
         var holding = (record.GetFieldValue("Haltungsname") ?? "").Trim();
         if (string.IsNullOrWhiteSpace(holding))
         {
-            MessageBox.Show("Haltungsname fehlt in der Zeile.", "KI Sanierung",
+            MessageBox.Show("Haltungsname fehlt in der Zeile.", "Sanierungsmassnahmen",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        var cfg = AiRuntimeConfig.Load();
-        if (!cfg.Enabled)
-        {
-            MessageBox.Show(
-                "KI ist deaktiviert (AUSWERTUNGPRO_AI_ENABLED=0).\n" +
-                "Bitte Umgebungsvariable setzen und App neu starten.",
-                "KI Sanierung", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
+        // Build CostCalculatorViewModel
+        var recommended = ParseRecommendedTemplates(record.GetFieldValue("Empfohlene_Sanierungsmassnahmen"));
+        var costCalcVm = new CostCalculatorViewModel(
+            holding,
+            null,
+            recommended,
+            _sp.Settings.LastProjectPath,
+            cost => ApplyCostsToRecord(record, cost),
+            haltungRecord: record,
+            projectRecords: Records);
 
-        // Rule recommendation as starting point
-        var ruleResult = _measureRecommendationService.Recommend(record, maxSuggestions: 5);
-        RuleRecommendationDto? ruleDto = null;
-        if (ruleResult.Measures.Count > 0)
+        // Build SanierungOptimizationViewModel (nullable when AI disabled)
+        SanierungOptimizationViewModel? optimizationVm = null;
+        var cfg = AiRuntimeConfig.Load();
+        if (cfg.Enabled)
         {
-            ruleDto = new RuleRecommendationDto
+            var ruleResult = _measureRecommendationService.Recommend(record, maxSuggestions: 5);
+            RuleRecommendationDto? ruleDto = null;
+            if (ruleResult.Measures.Count > 0)
             {
-                Measures         = ruleResult.Measures,
-                EstimatedCost    = ruleResult.EstimatedTotalCost,
-                UsedTrainedModel = ruleResult.UsedTrainedModel
+                ruleDto = new RuleRecommendationDto
+                {
+                    Measures         = ruleResult.Measures,
+                    EstimatedCost    = ruleResult.EstimatedTotalCost,
+                    UsedTrainedModel = ruleResult.UsedTrainedModel
+                };
+            }
+
+            var aiService = _sp.CreateSanierungOptimization(cfg);
+            optimizationVm = new SanierungOptimizationViewModel(record, aiService, ruleDto);
+
+            optimizationVm.TransferredToPrimary += _ =>
+            {
+                _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
+                _shell.Project.Dirty         = true;
+                RefreshRecordInGrid(record);
+                ScheduleAutoSave();
+                _shell.SetStatus($"KI-Sanierungsvorschlag uebertragen: {holding}");
             };
         }
 
-        var aiService = new AiSanierungOptimizationService(cfg);
-        var vm  = new AuswertungPro.Next.UI.ViewModels.Windows.SanierungOptimizationViewModel(record, aiService, ruleDto);
-
-        vm.TransferredToPrimary += _ =>
-        {
-            _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-            _shell.Project.Dirty         = true;
-            RefreshRecordInGrid(record);
-            ScheduleAutoSave();
-            _shell.SetStatus($"KI-Sanierungsvorschlag übertragen: {holding}");
-        };
-
-        var win = new AuswertungPro.Next.UI.Views.Windows.SanierungOptimizationWindow(vm)
+        var vm = new SanierungsmassnahmenViewModel(costCalcVm, optimizationVm, record, focus);
+        var win = new SanierungsmassnahmenWindow(vm)
         {
             Owner = System.Windows.Application.Current?.MainWindow
         };
@@ -1637,7 +1903,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         var manual = _sp.Dialogs.OpenFile(
             "Video auswaehlen",
-            "Video (*.mpg;*.mpeg;*.mp4;*.avi;*.mov;*.wmv;*.mkv)|*.mpg;*.mpeg;*.mp4;*.avi;*.mov;*.wmv;*.mkv|Alle Dateien|*.*",
+            MediaFileTypes.VideoDialogFilter,
             folder);
         if (string.IsNullOrWhiteSpace(manual))
             return null;
@@ -1668,15 +1934,568 @@ public sealed partial class DataPageViewModel : ObservableObject
                 : null;
 
         var win = new MediaSearchWindow(Records.ToList(), initial);
-        win.Owner = System.Windows.Application.Current.MainWindow;
+        win.Owner = System.Windows.Application.Current?.MainWindow;
 
         if (win.ShowDialog() == true && win.Applied)
         {
             _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
             _shell.Project.Dirty = true;
             OnPropertyChanged(nameof(Records));
-            _shell.SetStatus($"Medien verlinkt: {win.AppliedVideoCount} Videos, {win.AppliedPdfCount} PDFs");
+            _shell.SetStatus($"Medien verlinkt: {win.AppliedVideoCount} Videos, {win.AppliedPdfCount} PDFs, {win.AppliedFotoCount} Fotos");
         }
+    }
+
+    private void OpenHydraulikPanel(HaltungRecord? record)
+    {
+        var vm = new HydraulikPanelViewModel();
+
+        if (record is not null)
+        {
+            var dn = TryParseDnMm(record.GetFieldValue("DN_mm"));
+            var material = record.GetFieldValue("Rohrmaterial");
+            vm.LoadFromRecord(dn, material, null);
+        }
+
+        var win = new HydraulikPanelWindow(vm);
+        win.Owner = System.Windows.Application.Current?.MainWindow;
+        win.ShowDialog();
+    }
+
+    private void PrintAwuHaltungsprotokollPdf(HaltungRecord? record)
+    {
+        if (record is null)
+        {
+            MessageBox.Show("Bitte zuerst eine Haltung auswaehlen.", "Haltungsprotokoll AWU", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var doc = EnsureProtocolDocumentForPdf(record);
+        var holding = record.GetFieldValue("Haltungsname");
+        var defaultName = $"Haltungsprotokoll_AWU_{SanitizeFilenamePart(holding)}_{DateTime.Now:yyyyMMdd}.pdf";
+        var output = _sp.Dialogs.SaveFile(
+            "Haltungsprotokoll AWU als PDF speichern",
+            "PDF (*.pdf)|*.pdf",
+            defaultExt: "pdf",
+            defaultFileName: defaultName);
+        if (string.IsNullOrWhiteSpace(output))
+            return;
+
+        try
+        {
+            var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+            var options = new Application.Reports.HaltungsprotokollPdfOptions
+            {
+                LogoPathAbs = File.Exists(logoPath) ? logoPath : null
+            };
+
+            var projectFolder = _shell.GetProjectFolder() ?? string.Empty;
+            var pdf = _sp.ProtocolPdfExporter.BuildHaltungsprotokollPdf(
+                _shell.Project,
+                record,
+                doc,
+                projectFolder,
+                options);
+
+            File.WriteAllBytes(output, pdf);
+            MessageBox.Show($"AWU-Haltungsprotokoll wurde erstellt:\n{output}", "Haltungsprotokoll AWU", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"AWU-Haltungsprotokoll konnte nicht erstellt werden:\n{ex.Message}", "Haltungsprotokoll AWU", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private ProtocolDocument EnsureProtocolDocumentForPdf(HaltungRecord record)
+    {
+        if (record.Protocol is not null)
+        {
+            record.Protocol.Current ??= new ProtocolRevision
+            {
+                Comment = "Arbeitskopie",
+                Entries = new List<ProtocolEntry>()
+            };
+
+            if ((record.Protocol.Original.Entries.Count == 0)
+                && (record.Protocol.Current.Entries.Count == 0)
+                && record.VsaFindings is { Count: > 0 })
+            {
+                var imported = BuildEntriesFromFindings(record.VsaFindings);
+                record.Protocol = _sp.Protocols.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", imported, null);
+            }
+
+            return record.Protocol;
+        }
+
+        var entries = record.VsaFindings is { Count: > 0 }
+            ? BuildEntriesFromFindings(record.VsaFindings)
+            : Array.Empty<ProtocolEntry>();
+        return _sp.Protocols.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
+    }
+
+    private void PrintHydraulikPdf(HaltungRecord? record)
+    {
+        if (record is null)
+        {
+            MessageBox.Show("Bitte zuerst eine Haltung auswaehlen.", "Hydraulik PDF", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        // Build input from record
+        var dn = TryParseDnMm(record.GetFieldValue("DN_mm")) ?? 300;
+        var materialRaw = record.GetFieldValue("Rohrmaterial") ?? "";
+        var vm = new HydraulikPanelViewModel();
+        vm.LoadFromRecord(dn, materialRaw, null);
+
+        var mat = vm.SelectedMaterial;
+        double kb = vm.IsNeuzustand ? mat.KbNeu : mat.KbAlt;
+        double wasserstand = dn / 2; // default half-fill
+
+        var input = new HydraulikInput(
+            DN_mm: dn,
+            Wasserstand_mm: wasserstand,
+            Gefaelle_Promille: vm.Gefaelle,
+            Kb: kb,
+            AbwasserTyp: "MR",
+            Temperatur_C: vm.Temperatur);
+
+        var result = HydraulikEngine.Berechne(input);
+        if (result is null)
+        {
+            MessageBox.Show("Hydraulik-Berechnung konnte nicht durchgefuehrt werden.\nBitte DN und Gefaelle pruefen.", "Hydraulik PDF", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        // Show print options dialog
+        var dialog = new HydraulikPrintDialog();
+        dialog.Owner = System.Windows.Application.Current?.MainWindow;
+        if (dialog.ShowDialog() != true || dialog.SelectedOptions is null)
+            return;
+
+        // SaveFile dialog
+        var holding = record.GetFieldValue("Haltungsname") ?? "Haltung";
+        var defaultName = $"Hydraulik_{SanitizeFilenamePart(holding)}_{DateTime.Now:yyyyMMdd}.pdf";
+        var output = _sp.Dialogs.SaveFile(
+            "Hydraulik-Bericht als PDF speichern",
+            "PDF (*.pdf)|*.pdf",
+            defaultExt: "pdf",
+            defaultFileName: defaultName);
+        if (string.IsNullOrWhiteSpace(output))
+            return;
+
+        try
+        {
+            var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+            var options = dialog.SelectedOptions with
+            {
+                LogoPathAbs = File.Exists(logoPath) ? logoPath : null
+            };
+
+            var calc = new Application.Reports.HydraulikCalcResult
+            {
+                DN_mm = input.DN_mm,
+                Wasserstand_mm = input.Wasserstand_mm,
+                Gefaelle_Promille = input.Gefaelle_Promille,
+                Kb = input.Kb,
+                AbwasserTyp = input.AbwasserTyp,
+                Temperatur_C = input.Temperatur_C,
+                Material = mat.Label,
+                V_T = result.V_T,
+                Q_T = result.Q_T,
+                A_T = result.A_T,
+                Lu_T = result.Lu_T,
+                Rhy_T = result.Rhy_T,
+                Bsp = result.Bsp,
+                V_V = result.V_V,
+                Q_V = result.Q_V,
+                Re = result.Re,
+                Fr = result.Fr,
+                Lambda = result.Lambda,
+                Tau = result.Tau,
+                Ny = result.Ny,
+                Vc = result.Abl.Vc,
+                Ic = result.Abl.Ic,
+                TauC = result.Abl.TauC,
+                Auslastung = result.Auslastung,
+                VelocityOk = result.VelocityOk,
+                ShearOk = result.ShearOk,
+                FroudeOk = result.Fr <= 1,
+                AblagerungOk = result.AblagerungOk,
+            };
+
+            var pdf = Application.Reports.HydraulikPdfBuilder.Build(record, calc, options);
+            File.WriteAllBytes(output, pdf);
+            MessageBox.Show($"PDF wurde erstellt:\n{output}", "Hydraulik PDF", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"PDF konnte nicht erstellt werden:\n{ex.Message}", "Hydraulik PDF", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void PrintDossierPdf(HaltungRecord? record)
+    {
+        if (record is null)
+        {
+            MessageBox.Show("Bitte zuerst eine Haltung auswaehlen.", "Dossier", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var holdingLabel = record.GetFieldValue("Haltungsname") ?? "";
+        var (vonNr, bisNr) = Application.Reports.ProtocolPdfExporter.SplitHoldingNodes(holdingLabel);
+
+        var schachtVon = FindSchachtByNummer(vonNr);
+        var schachtBis = FindSchachtByNummer(bisNr);
+
+        // Hydraulik pruefen
+        var dn = TryParseDnMm(record.GetFieldValue("DN_mm"));
+        var gefaelleRaw = record.GetFieldValue("Gefaelle_Promille");
+        double? gefaelle = null;
+        if (!string.IsNullOrWhiteSpace(gefaelleRaw))
+        {
+            var gText = gefaelleRaw.Trim().Replace(',', '.');
+            if (double.TryParse(gText, NumberStyles.Float, CultureInfo.InvariantCulture, out var gVal))
+                gefaelle = gVal;
+        }
+        var hydraulikAvailable = dn.HasValue && dn.Value > 0 && gefaelle.HasValue && gefaelle.Value > 0;
+
+        // Kosten pruefen
+        var projectFolder = _shell.GetProjectFolder() ?? "";
+        var costRepo = new Infrastructure.Costs.ProjectCostStoreRepository();
+        var costStore = costRepo.Load(_sp.Settings.LastProjectPath);
+        Domain.Models.HoldingCost? holdingCost = null;
+        if (costStore.ByHolding.TryGetValue(holdingLabel.Trim(), out var hc))
+            holdingCost = hc;
+        var kostenField = record.GetFieldValue("Kosten");
+        var kostenAvailable = holdingCost?.Measures is { Count: > 0 }
+            || !string.IsNullOrWhiteSpace(kostenField)
+            || !string.IsNullOrWhiteSpace(record.GetFieldValue("Empfohlene_Sanierungsmassnahmen"));
+
+        // Original-PDFs pruefen (Haltung + Schaechte)
+        var originalPdfPaths = ResolveOriginalPdfPaths(record, projectFolder);
+        if (schachtVon != null)
+            ResolveSchachtPdfPaths(schachtVon, projectFolder, originalPdfPaths);
+        if (schachtBis != null)
+            ResolveSchachtPdfPaths(schachtBis, projectFolder, originalPdfPaths);
+
+        // Dialog oeffnen
+        var dialog = new DossierPrintDialog();
+        dialog.Owner = System.Windows.Application.Current?.MainWindow;
+        dialog.SetAvailability(
+            schachtVon != null, vonNr,
+            schachtBis != null, bisNr,
+            hydraulikAvailable,
+            kostenAvailable,
+            originalPdfPaths.Count);
+
+        if (dialog.ShowDialog() != true || dialog.SelectedOptions is null)
+            return;
+
+        // SaveFileDialog
+        var defaultName = $"Dossier_{SanitizeFilenamePart(holdingLabel)}_{DateTime.Now:yyyyMMdd}.pdf";
+        var output = _sp.Dialogs.SaveFile(
+            "Haltungsdossier als PDF speichern",
+            "PDF (*.pdf)|*.pdf",
+            defaultExt: "pdf",
+            defaultFileName: defaultName);
+        if (string.IsNullOrWhiteSpace(output))
+            return;
+
+        try
+        {
+            // Hydraulik berechnen falls gewuenscht
+            Application.Reports.HydraulikCalcResult? calcResult = null;
+            if (dialog.SelectedOptions.IncludeHydraulik && hydraulikAvailable)
+            {
+                var materialRaw = record.GetFieldValue("Rohrmaterial") ?? "";
+                var vm = new HydraulikPanelViewModel();
+                vm.LoadFromRecord(dn!.Value, materialRaw, gefaelle);
+
+                var mat = vm.SelectedMaterial;
+                double kb = vm.IsNeuzustand ? mat.KbNeu : mat.KbAlt;
+                double wasserstand = dn.Value / 2;
+
+                var input = new HydraulikInput(
+                    DN_mm: dn.Value,
+                    Wasserstand_mm: wasserstand,
+                    Gefaelle_Promille: vm.Gefaelle,
+                    Kb: kb,
+                    AbwasserTyp: "MR",
+                    Temperatur_C: vm.Temperatur);
+
+                var result = HydraulikEngine.Berechne(input);
+                if (result != null)
+                {
+                    calcResult = new Application.Reports.HydraulikCalcResult
+                    {
+                        DN_mm = input.DN_mm,
+                        Wasserstand_mm = input.Wasserstand_mm,
+                        Gefaelle_Promille = input.Gefaelle_Promille,
+                        Kb = input.Kb,
+                        AbwasserTyp = input.AbwasserTyp,
+                        Temperatur_C = input.Temperatur_C,
+                        Material = mat.Label,
+                        V_T = result.V_T, Q_T = result.Q_T, A_T = result.A_T,
+                        Lu_T = result.Lu_T, Rhy_T = result.Rhy_T, Bsp = result.Bsp,
+                        V_V = result.V_V, Q_V = result.Q_V,
+                        Re = result.Re, Fr = result.Fr, Lambda = result.Lambda,
+                        Tau = result.Tau, Ny = result.Ny,
+                        Vc = result.Abl.Vc, Ic = result.Abl.Ic, TauC = result.Abl.TauC,
+                        Auslastung = result.Auslastung,
+                        VelocityOk = result.VelocityOk, ShearOk = result.ShearOk,
+                        FroudeOk = result.Fr <= 1, AblagerungOk = result.AblagerungOk,
+                    };
+                }
+            }
+
+            var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+            var options = dialog.SelectedOptions with
+            {
+                LogoPathAbs = File.Exists(logoPath) ? logoPath : null,
+                HoldingCost = dialog.SelectedOptions.IncludeKostenschaetzung ? holdingCost : null,
+                OriginalPdfPaths = dialog.SelectedOptions.IncludeOriginalProtokolle ? originalPdfPaths : null,
+            };
+
+            var hasDossierBaseSection =
+                options.IncludeDeckblatt
+                || options.IncludeHaltungsprotokoll
+                || (options.IncludeFotos && HasPrintableDossierPhotos(record, projectFolder))
+                || (options.IncludeSchachtVon && schachtVon != null)
+                || (options.IncludeSchachtBis && schachtBis != null)
+                || (options.IncludeHydraulik && calcResult != null)
+                || (options.IncludeKostenschaetzung && kostenAvailable);
+
+            var originalsAlreadyMerged = false;
+            byte[] pdf;
+            if (hasDossierBaseSection)
+            {
+                pdf = Application.Reports.HaltungsDossierPdfBuilder.Build(
+                    _shell.Project, record, schachtVon, schachtBis, calcResult, projectFolder, options);
+            }
+            else if (options.IncludeOriginalProtokolle && originalPdfPaths.Count > 0)
+            {
+                pdf = Infrastructure.Media.PdfMergeHelper.MergeOriginals(originalPdfPaths);
+                if (pdf.Length == 0)
+                    throw new InvalidOperationException("Die Original-Protokolle konnten nicht zusammengefuehrt werden.");
+                originalsAlreadyMerged = true;
+            }
+            else
+            {
+                MessageBox.Show(
+                    "Die ausgewaehlte Kombination enthaelt keine druckbaren Inhalte.",
+                    "Dossier",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            // Original-PDFs anhaengen
+            if (!originalsAlreadyMerged && options.IncludeOriginalProtokolle && originalPdfPaths.Count > 0)
+                pdf = Infrastructure.Media.PdfMergeHelper.MergeWithOriginals(pdf, originalPdfPaths);
+
+            File.WriteAllBytes(output, pdf);
+            MessageBox.Show($"Dossier wurde erstellt:\n{output}", "Dossier", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Dossier konnte nicht erstellt werden:\n{ex.Message}", "Dossier", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void OpenOriginalPdf(HaltungRecord? record)
+    {
+        if (record is null)
+            return;
+
+        var projectFolder = _shell.GetProjectFolder() ?? "";
+        var paths = ResolveOriginalPdfPaths(record, projectFolder);
+
+        if (paths.Count == 0)
+        {
+            var name = record.GetFieldValue("Haltungsname") ?? "(unbekannt)";
+            MessageBox.Show(
+                $"Kein PDF gefunden fuer Haltung '{name}'.\n\nPruefen Sie, ob das Original-PDF im Projektordner liegt.",
+                "Haltungsprotokoll (PDF)",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(paths[0]) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"PDF konnte nicht geoeffnet werden:\n{ex.Message}",
+                "Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private List<string> ResolveOriginalPdfPaths(HaltungRecord record, string projectFolder)
+    {
+        var paths = new List<string>();
+
+        // PDF_Path
+        var pdfPath = record.GetFieldValue("PDF_Path")?.Trim();
+        AddResolvedPdf(paths, pdfPath, projectFolder);
+
+        // PDF_All (semikolon-getrennt)
+        var pdfAll = record.GetFieldValue("PDF_All")?.Trim();
+        if (!string.IsNullOrWhiteSpace(pdfAll))
+        {
+            foreach (var part in pdfAll.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                AddResolvedPdf(paths, part.Trim(), projectFolder);
+        }
+
+        return paths;
+    }
+
+    private static bool HasPrintableDossierPhotos(HaltungRecord record, string projectFolder)
+    {
+        var entries = record.Protocol?.Current?.Entries;
+        if (entries is null || entries.Count == 0)
+            return false;
+
+        foreach (var entry in entries)
+        {
+            if (entry.IsDeleted || entry.FotoPaths is null || entry.FotoPaths.Count == 0)
+                continue;
+
+            foreach (var raw in entry.FotoPaths)
+            {
+                var resolved = ResolveDossierPhotoPath(raw, projectFolder);
+                if (!string.IsNullOrWhiteSpace(resolved) && File.Exists(resolved))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string? ResolveDossierPhotoPath(string? raw, string projectFolder)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        var normalized = raw.Replace('/', Path.DirectorySeparatorChar);
+        if (Path.IsPathRooted(normalized))
+            return normalized;
+
+        if (string.IsNullOrWhiteSpace(projectFolder))
+            return null;
+
+        return Path.GetFullPath(Path.Combine(projectFolder, normalized));
+    }
+
+    private static void ResolveSchachtPdfPaths(SchachtRecord schacht, string projectFolder, List<string> paths)
+    {
+        var pdfPath = schacht.GetFieldValue("PDF_Path")?.Trim();
+        AddResolvedPdf(paths, pdfPath, projectFolder);
+
+        var link = schacht.GetFieldValue("Link")?.Trim();
+        if (!string.IsNullOrWhiteSpace(link) && link.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            AddResolvedPdf(paths, link, projectFolder);
+    }
+
+    private static void AddResolvedPdf(List<string> paths, string? raw, string projectFolder)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return;
+
+        var normalized = raw.Replace('/', Path.DirectorySeparatorChar);
+
+        // Absoluter Pfad
+        if (Path.IsPathRooted(normalized))
+        {
+            if (File.Exists(normalized))
+            {
+                if (!paths.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+                    paths.Add(normalized);
+                return;
+            }
+
+            // Fallback: absoluter Pfad existiert nicht (Laufwerk nicht gemountet) → Dateinamen im Projektordner suchen
+            if (!string.IsNullOrWhiteSpace(projectFolder))
+            {
+                var fallback = TryFindPdfInProject(Path.GetFileName(normalized), projectFolder);
+                if (fallback != null && !paths.Contains(fallback, StringComparer.OrdinalIgnoreCase))
+                    paths.Add(fallback);
+            }
+            return;
+        }
+
+        // Relativer Pfad
+        if (!string.IsNullOrWhiteSpace(projectFolder))
+        {
+            var combined = Path.GetFullPath(Path.Combine(projectFolder, normalized));
+            if (File.Exists(combined))
+            {
+                if (!paths.Contains(combined, StringComparer.OrdinalIgnoreCase))
+                    paths.Add(combined);
+                return;
+            }
+
+            // Fallback: relativer Pfad nicht aufloesbar → Dateinamen im Projektordner suchen
+            var fallback = TryFindPdfInProject(Path.GetFileName(normalized), projectFolder);
+            if (fallback != null && !paths.Contains(fallback, StringComparer.OrdinalIgnoreCase))
+                paths.Add(fallback);
+        }
+    }
+
+    private static string? TryFindPdfInProject(string fileName, string projectFolder)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+            return null;
+
+        // 1. Direkt im Projektordner
+        var direct = Path.Combine(projectFolder, fileName);
+        if (File.Exists(direct))
+            return direct;
+
+        // 2. In Haltungen/<ID>/ Unterordnern
+        var haltungenDir = Path.Combine(projectFolder, "Haltungen");
+        if (Directory.Exists(haltungenDir))
+        {
+            try
+            {
+                var found = Directory.GetFiles(haltungenDir, fileName, SearchOption.AllDirectories);
+                if (found.Length > 0)
+                    return found[0];
+            }
+            catch { /* Zugriffsfehler ignorieren */ }
+        }
+
+        // 3. In typischen Unterordnern (Misc, Docu, PDF, Protokolle)
+        foreach (var sub in new[] { "Misc", "Docu", "PDF", "Protokolle", "Dokumente" })
+        {
+            var subDir = Path.Combine(projectFolder, sub);
+            if (!Directory.Exists(subDir))
+                continue;
+            try
+            {
+                var found = Directory.GetFiles(subDir, fileName, SearchOption.AllDirectories);
+                if (found.Length > 0)
+                    return found[0];
+            }
+            catch { /* Zugriffsfehler ignorieren */ }
+        }
+
+        return null;
+    }
+
+    private SchachtRecord? FindSchachtByNummer(string? nummer)
+    {
+        if (string.IsNullOrWhiteSpace(nummer))
+            return null;
+        return _shell.Project.SchaechteData.FirstOrDefault(s =>
+            string.Equals(s.GetFieldValue("Schachtnummer"), nummer, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string SanitizeFilenamePart(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "unknown";
+        foreach (var c in Path.GetInvalidFileNameChars())
+            text = text.Replace(c, '_');
+        return text.Trim();
     }
 
     private string? ResolveExistingPath(string? raw)
@@ -2172,12 +2991,14 @@ public sealed partial class DataPageViewModel : ObservableObject
             SumSelectedQty(cost, "ANSCHLUSS_AUFFRAESEN"));
         // LEM is not a repair manschette and must not fill Reparatur_Manschette.
         var manschette = SumSelectedQty(cost, "MANSCHETTE_PER_ST", "MANSCHETTE_EDELSTAHL");
+        var lem = SumSelectedQty(cost, "LINERENDMANSCHETTE_LEM");
         var kurzliner = SumSelectedQty(cost, "KURZLINER_PER_ST", "QUICKLOCK_PER_ST", "KURZLINER_PARTLINER");
 
         record.SetFieldValue("Renovierung_Inliner_m", FormatDecimal(inlinerMeters), FieldSource.Manual, userEdited: true);
         record.SetFieldValue("Renovierung_Inliner_Stk", FormatInt(inlinerStk), FieldSource.Manual, userEdited: true);
-        record.SetFieldValue("Anschluesse_verpressen", FormatInt(anschluesse), FieldSource.Manual, userEdited: true);
+        record.SetFieldValue("Anschluesse_verpressen", FormatNonNegativeInt(anschluesse), FieldSource.Manual, userEdited: true);
         record.SetFieldValue("Reparatur_Manschette", FormatInt(manschette), FieldSource.Manual, userEdited: true);
+        record.SetFieldValue("Linerendmanschette_LEM", FormatInt(lem), FieldSource.Manual, userEdited: true);
         record.SetFieldValue("Reparatur_Kurzliner", FormatInt(kurzliner), FieldSource.Manual, userEdited: true);
 
         // Force a replace notification on the collection so dictionary-backed
@@ -2226,7 +3047,16 @@ public sealed partial class DataPageViewModel : ObservableObject
 
     private static string BuildMeasuresText(HoldingCost cost)
     {
-        // Prefer transfer-marked rows for "Empfohlene Massnahmen".
+        // Automatically include selected rows that should always be written to recommendations.
+        var autoIncludedPositions = cost.Measures
+            .SelectMany(m => m.Lines)
+            .Where(l => l.Selected && IsAutoIncludedRecommendationLine(l))
+            .Select(l => FormatRecommendationBullet(l.Text))
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        // Additionally include any transfer-marked rows (legacy/manual behavior).
         var markedPositions = cost.Measures
             .SelectMany(m => m.Lines)
             .Where(l => l.Selected && l.TransferMarked)
@@ -2235,10 +3065,64 @@ public sealed partial class DataPageViewModel : ObservableObject
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        if (markedPositions.Count > 0)
-            return string.Join(Environment.NewLine, markedPositions);
+        var combined = autoIncludedPositions
+            .Concat(markedPositions)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (combined.Count > 0)
+            return string.Join(Environment.NewLine, combined);
 
         return "";
+    }
+
+    private static bool IsAutoIncludedRecommendationLine(CostLine line)
+    {
+        if (line is null)
+            return false;
+
+        return IsHauptarbeitLine(line) || IsVerkehrsdienstLine(line);
+    }
+
+    private static bool IsHauptarbeitLine(CostLine line)
+    {
+        if (line is null)
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(line.Group) &&
+            line.Group.Contains("hauptarbeit", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return IsHauptarbeitIdentifier(line.ItemKey)
+            || IsHauptarbeitIdentifier(line.Text);
+    }
+
+    private static bool IsHauptarbeitIdentifier(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        return MatchesIdentifier(value, "SCHLAUCHLINER")
+            || MatchesIdentifier(value, "LINERENDMANSCHETTE")
+            || MatchesIdentifier(value, "KURZLINER")
+            || MatchesIdentifier(value, "MANSCHETTE")
+            || MatchesIdentifier(value, "ANSCHLUSS_AUFFRAESEN")
+            || MatchesIdentifier(value, "ANSCHLUSS_EINBINDEN")
+            || MatchesIdentifier(value, "HAUPTARBEIT");
+    }
+
+    private static bool IsVerkehrsdienstLine(CostLine line)
+    {
+        if (line is null)
+            return false;
+
+        if (MatchesIdentifier(line.ItemKey, "VORARBEIT_VD"))
+            return true;
+
+        var text = line.Text ?? "";
+        return text.Contains("verkehrsdienst", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FormatRecommendationBullet(string? value)
@@ -2398,6 +3282,9 @@ public sealed partial class DataPageViewModel : ObservableObject
 
     private static string FormatInt(int value)
         => value <= 0 ? "" : value.ToString(CultureInfo.InvariantCulture);
+
+    private static string FormatNonNegativeInt(int value)
+        => Math.Max(0, value).ToString(CultureInfo.InvariantCulture);
 
     private void PersistDataPageBasicUiSettings()
     {
