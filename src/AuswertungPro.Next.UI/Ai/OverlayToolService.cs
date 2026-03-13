@@ -104,6 +104,7 @@ public sealed class OverlayToolService : IOverlayToolService
                 OverlayToolType.Arc => BuildArcGeometry(_drawStart, _drawCurrent),
                 OverlayToolType.Rectangle => BuildRectangleGeometry(_drawStart, _drawCurrent),
                 OverlayToolType.Point => BuildPointGeometry(_drawStart),
+                OverlayToolType.Stretch => BuildStretchGeometry(_drawStart, _drawCurrent),
                 _ => null
             };
         }

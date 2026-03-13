@@ -2204,22 +2204,25 @@ public partial class PlayerWindow : Window
                     CodingOverlayCanvas.Children.Add(dot);
                     break;
                 case OverlayToolType.Arc:
-                    // Bogen-Vorschau: ArcSegment zwischen Start- und Endpunkt
-                    var arcCenter = new Point(CodingOverlayCanvas.ActualWidth / 2, CodingOverlayCanvas.ActualHeight / 2);
+                    // Bogen-Vorschau: ArcSegment um Rohrmitte (kalibriert oder Canvas-Mitte)
+                    var pipeCenterNorm = _codingOverlayService.Calibration?.PipeCenter
+                        ?? new NormalizedPoint(0.5, 0.5);
+                    var arcCenter = CodingNormToPixel(pipeCenterNorm);
                     double arcRadius = Math.Sqrt(Math.Pow(sp.X - arcCenter.X, 2) + Math.Pow(sp.Y - arcCenter.Y, 2));
                     if (arcRadius > 5)
                     {
-                        // Winkel berechnen
-                        double startAngle = Math.Atan2(sp.Y - arcCenter.Y, sp.X - arcCenter.X);
-                        double endAngle = Math.Atan2(ep.Y - arcCenter.Y, ep.X - arcCenter.X);
-                        // Endpunkt auf dem Bogen projizieren
+                        // Winkel berechnen (konsistent mit OverlayToolService.PointToClockHour)
+                        double startAngle = Math.Atan2(sp.X - arcCenter.X, -(sp.Y - arcCenter.Y));
+                        double endAngle = Math.Atan2(ep.X - arcCenter.X, -(ep.Y - arcCenter.Y));
+                        // Endpunkt auf dem Bogen projizieren (gleicher Radius wie Startpunkt)
+                        // Zurueck von mathematischem Winkel zu Pixel: x = sin(a), y = -cos(a)
                         var arcEnd = new Point(
-                            arcCenter.X + arcRadius * Math.Cos(endAngle),
-                            arcCenter.Y + arcRadius * Math.Sin(endAngle));
-                        bool isLargeArc = false;
+                            arcCenter.X + arcRadius * Math.Sin(endAngle),
+                            arcCenter.Y - arcRadius * Math.Cos(endAngle));
+                        // Bogenrichtung: im Uhrzeigersinn (wie Clock-Positionen)
                         double angleDiff = endAngle - startAngle;
                         if (angleDiff < 0) angleDiff += 2 * Math.PI;
-                        if (angleDiff > Math.PI) isLargeArc = true;
+                        bool isLargeArc = angleDiff > Math.PI;
 
                         var pathFig = new System.Windows.Media.PathFigure { StartPoint = sp, IsClosed = false };
                         pathFig.Segments.Add(new System.Windows.Media.ArcSegment(
