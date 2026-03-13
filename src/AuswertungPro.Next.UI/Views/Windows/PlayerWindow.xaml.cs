@@ -15,6 +15,7 @@ using Rectangle = System.Windows.Shapes.Rectangle;
 using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 using LibVLCSharp.Shared;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.QualityGate;
 using AuswertungPro.Next.UI.Ai.Shared;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Domain.Models;
@@ -1689,6 +1690,14 @@ public partial class PlayerWindow : Window
     private CancellationTokenSource? _codingAnalysisCts;
     private bool _codingIsAnalyzing;
 
+    // Live-KI Timer (automatische Analyse alle 5s)
+    private DispatcherTimer? _codingLiveAiTimer;
+    private QualityGateService? _codingQualityGate;
+
+    // Bestaetigungs-Panel: aktuell wartendes Event
+    private CodingEvent? _codingPendingConfirmEvent;
+    private QualityGateResult? _codingPendingGateResult;
+
     // OSD-Meter Timer (liest Meterstand kontinuierlich)
     private DispatcherTimer? _codingOsdTimer;
     private bool _codingOsdReading;
@@ -1842,12 +1851,19 @@ public partial class PlayerWindow : Window
         if (!_isCodingMode) return;
         _isCodingMode = false;
 
-        // OSD-Timer stoppen
+        // Timer stoppen
         StopCodingOsdTimer();
+        _codingLiveAiTimer?.Stop();
+        _codingLiveAiTimer = null;
 
         _codingAnalysisCts?.Cancel();
         _codingAnalysisCts?.Dispose();
         _codingAnalysisCts = null;
+
+        // Bestaetigungs-Panel schliessen
+        CodingConfirmationPanel.Visibility = Visibility.Collapsed;
+        _codingPendingConfirmEvent = null;
+        _codingPendingGateResult = null;
 
         // UI ausblenden
         CodingOverlayCanvas.Visibility = Visibility.Collapsed;
@@ -1868,6 +1884,7 @@ public partial class PlayerWindow : Window
         BtnCodingRect.IsChecked = false;
         BtnCodingPoint.IsChecked = false;
         BtnCodingStretch.IsChecked = false;
+        BtnCodingLiveAi.IsChecked = false;
 
         // Protokoll uebernehmen wenn Events vorhanden
         if (_codingVm != null && _codingVm.Events.Count > 0 && _haltungRecord != null)
@@ -2186,6 +2203,39 @@ public partial class PlayerWindow : Window
                     Canvas.SetTop(dot, sp.Y - 6);
                     CodingOverlayCanvas.Children.Add(dot);
                     break;
+                case OverlayToolType.Arc:
+                    // Bogen-Vorschau: ArcSegment zwischen Start- und Endpunkt
+                    var arcCenter = new Point(CodingOverlayCanvas.ActualWidth / 2, CodingOverlayCanvas.ActualHeight / 2);
+                    double arcRadius = Math.Sqrt(Math.Pow(sp.X - arcCenter.X, 2) + Math.Pow(sp.Y - arcCenter.Y, 2));
+                    if (arcRadius > 5)
+                    {
+                        // Winkel berechnen
+                        double startAngle = Math.Atan2(sp.Y - arcCenter.Y, sp.X - arcCenter.X);
+                        double endAngle = Math.Atan2(ep.Y - arcCenter.Y, ep.X - arcCenter.X);
+                        // Endpunkt auf dem Bogen projizieren
+                        var arcEnd = new Point(
+                            arcCenter.X + arcRadius * Math.Cos(endAngle),
+                            arcCenter.Y + arcRadius * Math.Sin(endAngle));
+                        bool isLargeArc = false;
+                        double angleDiff = endAngle - startAngle;
+                        if (angleDiff < 0) angleDiff += 2 * Math.PI;
+                        if (angleDiff > Math.PI) isLargeArc = true;
+
+                        var pathFig = new System.Windows.Media.PathFigure { StartPoint = sp, IsClosed = false };
+                        pathFig.Segments.Add(new System.Windows.Media.ArcSegment(
+                            arcEnd, new Size(arcRadius, arcRadius), 0,
+                            isLargeArc, System.Windows.Media.SweepDirection.Clockwise, true));
+                        var pathGeo = new System.Windows.Media.PathGeometry();
+                        pathGeo.Figures.Add(pathFig);
+                        var arcPath = new System.Windows.Shapes.Path
+                        {
+                            Data = pathGeo,
+                            Stroke = Brushes.Orange, StrokeThickness = 2.5,
+                            StrokeDashArray = new DoubleCollection { 4, 2 }
+                        };
+                        CodingOverlayCanvas.Children.Add(arcPath);
+                    }
+                    break;
             }
         }
     }
@@ -2212,6 +2262,12 @@ public partial class PlayerWindow : Window
             CodingOverlayCanvas.Children.Clear();
             UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
             BtnCodingCreateEvent.IsEnabled = true;
+
+            // Wenn Live-KI aktiv: Overlay-Zeichnung → KI analysiert markierte Stelle
+            if (BtnCodingLiveAi.IsChecked == true)
+            {
+                _ = AnalyzeWithOverlayHintAsync(_codingVm.CurrentOverlay);
+            }
         }
     }
 
@@ -3088,6 +3144,7 @@ public partial class PlayerWindow : Window
 
             var client = config.CreateOllamaClient();
             _codingLiveDetection = new LiveDetectionService(client, config.VisionModel);
+            _codingQualityGate = new QualityGateService();
             CodingAiDot.Fill = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
             TxtCodingAiStatus.Text = "KI Bereit";
         }
@@ -3112,28 +3169,7 @@ public partial class PlayerWindow : Window
             TxtCodingAiStatus.Text = "Analysiere...";
             CodingAiDot.Fill = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
 
-            // Snapshot via VLC
-            var tmpDir = Path.GetTempPath();
-            var snapFile = Path.Combine(tmpDir, $"sewerstudio_snap_{Guid.NewGuid():N}.png");
-            byte[]? pngBytes = null;
-
-            try
-            {
-                _player.TakeSnapshot(0, snapFile, 0, 0);
-                for (int i = 0; i < 20; i++)
-                {
-                    await Task.Delay(50);
-                    if (File.Exists(snapFile) && new FileInfo(snapFile).Length > 100)
-                        break;
-                }
-                if (File.Exists(snapFile))
-                    pngBytes = await File.ReadAllBytesAsync(snapFile);
-            }
-            finally
-            {
-                try { if (File.Exists(snapFile)) File.Delete(snapFile); } catch { }
-            }
-
+            var pngBytes = await CaptureSnapshotAsync();
             if (pngBytes == null || pngBytes.Length == 0)
             {
                 TxtCodingAiStatus.Text = "Frame nicht extrahierbar";
@@ -3200,9 +3236,8 @@ public partial class PlayerWindow : Window
     }
 
     /// <summary>
-    /// KI-Befunde automatisch als CodingEvents mit AiContext eintragen.
-    /// Severity wird auf Konfidenz gemappt: 5→0.95, 4→0.85, 3→0.70, 2→0.55, 1→0.40
-    /// Duplikate (gleicher Code bei aehnlichem Meter) werden uebersprungen.
+    /// KI-Befunde als CodingEvents eintragen — mit QualityGate-Ampelsystem.
+    /// Gruen: auto-akzeptiert. Gelb/Rot: Video pausieren, Bestaetigung verlangen.
     /// </summary>
     private void AddAiFindingsAsEvents(LiveDetection result)
     {
@@ -3212,26 +3247,29 @@ public partial class PlayerWindow : Window
         double meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
         var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
         bool anyAdded = false;
+        CodingEvent? firstUnsure = null;
+        QualityGateResult? firstUnsureGate = null;
 
         foreach (var finding in result.Findings)
         {
             string code = finding.VsaCodeHint ?? "???";
 
-            // Duplikat-Check: gleicher Code innerhalb ±0.3m bereits vorhanden?
+            // Duplikat-Check: gleicher Code innerhalb +/-0.3m bereits vorhanden?
             bool isDuplicate = _codingVm.Events.Any(e =>
                 string.Equals(e.Entry.Code, code, StringComparison.OrdinalIgnoreCase) &&
                 Math.Abs(e.MeterAtCapture - meter) < 0.3);
             if (isDuplicate) continue;
 
-            // Severity (1-5) → synthetische Konfidenz
-            double confidence = finding.Severity switch
-            {
-                >= 5 => 0.95,
-                4    => 0.85,
-                3    => 0.70,
-                2    => 0.55,
-                _    => 0.40
-            };
+            // QualityGate: Severity → EvidenceVector → Ampel
+            var evidence = new EvidenceVector(
+                QwenVisionConf: finding.Severity / 5.0,
+                PlausibilityScore: !string.IsNullOrWhiteSpace(finding.VsaCodeHint) ? 0.8 : 0.3
+            );
+            var gateResult = _codingQualityGate?.Evaluate(evidence)
+                ?? new QualityGateResult(
+                    finding.Severity / 5.0,
+                    finding.Severity >= 4 ? TrafficLight.Green : TrafficLight.Yellow,
+                    new Dictionary<string, double>(), "Fallback");
 
             var entry = new ProtocolEntry
             {
@@ -3241,35 +3279,367 @@ public partial class PlayerWindow : Window
                 Zeit = videoTime
             };
 
-            // Uhrposition uebernehmen
             if (!string.IsNullOrWhiteSpace(finding.PositionClock))
                 entry.CodeMeta.Parameters["vsa.uhr.von"] = finding.PositionClock!;
 
-            _codingSessionService.AddEvent(entry, null);
+            // Overlay aus BBox generieren (wenn DINO/SAM-Daten vorhanden)
+            var overlay = AiOverlayGeometryBuilder.BuildFromFinding(
+                finding, _codingOverlayService?.Calibration);
+
+            _codingSessionService.AddEvent(entry, overlay);
 
             var codingEvent = new CodingEvent
             {
                 Entry = entry,
+                Overlay = overlay,
                 MeterAtCapture = meter,
                 VideoTimestamp = videoTime,
                 AiContext = new CodingEventAiContext
                 {
                     SuggestedCode = code,
-                    Confidence = confidence,
+                    Confidence = gateResult.CompositeConfidence,
                     Reason = finding.Label,
-                    Decision = confidence >= 0.85
-                        ? CodingUserDecision.Accepted   // Green Zone: Auto-Accept
-                        : CodingUserDecision.Ignored     // Yellow/Red: Warten auf Review
+                    Decision = gateResult.IsGreen
+                        ? CodingUserDecision.Accepted
+                        : CodingUserDecision.Ignored
                 }
             };
 
             _codingVm.Events.Add(codingEvent);
             anyAdded = true;
+
+            // Erstes unsicheres Finding merken (fuer Pause + Bestaetigung)
+            if (!gateResult.IsGreen && firstUnsure == null)
+            {
+                firstUnsure = codingEvent;
+                firstUnsureGate = gateResult;
+            }
         }
 
         if (anyAdded)
         {
             RefreshCodingEventsList();
+            RenderAiOverlays();
+        }
+
+        // Bei Gelb/Rot: Video pausieren + Bestaetigungs-Panel zeigen
+        if (firstUnsure != null && firstUnsureGate != null)
+        {
+            PauseAndAskConfirmation(firstUnsure, firstUnsureGate);
+        }
+    }
+
+    // --- Live-KI Timer ---
+
+    private void CodingLiveAi_Click(object sender, RoutedEventArgs e)
+    {
+        if (BtnCodingLiveAi.IsChecked == true)
+        {
+            _codingLiveAiTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            _codingLiveAiTimer.Tick += CodingLiveAiTimer_Tick;
+            _codingLiveAiTimer.Start();
+            TxtCodingAiStatus.Text = "Live-KI aktiv";
+        }
+        else
+        {
+            _codingLiveAiTimer?.Stop();
+            _codingLiveAiTimer = null;
+            TxtCodingAiStatus.Text = "KI Bereit";
+        }
+    }
+
+    private async void CodingLiveAiTimer_Tick(object? sender, EventArgs e)
+    {
+        // Nicht analysieren wenn: bereits analysierend, Video pausiert, WaitingForUserInput
+        if (_codingIsAnalyzing) return;
+        if (_codingLiveDetection == null) return;
+        if (_codingSessionService?.ActiveSession?.State == CodingSessionState.WaitingForUserInput) return;
+
+        // Nur analysieren wenn Video tatsaechlich laeuft
+        if (_player == null || !_player.IsPlaying) return;
+
+        // Frame capturen und analysieren (wie manueller Button)
+        _codingIsAnalyzing = true;
+        _codingAnalysisCts?.Cancel();
+        _codingAnalysisCts = new CancellationTokenSource();
+
+        try
+        {
+            CodingAiDot.Fill = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
+            TxtCodingAiStatus.Text = "Live: Analysiere...";
+
+            var pngBytes = await CaptureSnapshotAsync();
+            if (pngBytes == null || pngBytes.Length == 0) return;
+
+            var result = await _codingLiveDetection.AnalyzeFrameAsync(
+                pngBytes, _player.Time / 1000.0, _codingAnalysisCts.Token);
+
+            ShowCodingAiResults(result);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            TxtCodingAiStatus.Text = $"Live-Fehler: {ex.Message}";
+        }
+        finally
+        {
+            _codingIsAnalyzing = false;
+        }
+    }
+
+    /// <summary>VLC-Snapshot als PNG-Bytes extrahieren.</summary>
+    private async Task<byte[]?> CaptureSnapshotAsync()
+    {
+        var tmpDir = Path.GetTempPath();
+        var snapFile = Path.Combine(tmpDir, $"sewerstudio_snap_{Guid.NewGuid():N}.png");
+        try
+        {
+            _player.TakeSnapshot(0, snapFile, 0, 0);
+            for (int i = 0; i < 20; i++)
+            {
+                await Task.Delay(50);
+                if (File.Exists(snapFile) && new FileInfo(snapFile).Length > 100)
+                    break;
+            }
+            if (File.Exists(snapFile))
+                return await File.ReadAllBytesAsync(snapFile);
+            return null;
+        }
+        finally
+        {
+            try { if (File.Exists(snapFile)) File.Delete(snapFile); } catch { }
+        }
+    }
+
+    // --- Ampel: Pause + Bestaetigungs-Panel ---
+
+    private void PauseAndAskConfirmation(CodingEvent codingEvent, QualityGateResult gateResult)
+    {
+        // Video pausieren
+        _player.SetPause(true);
+        _codingSessionService?.SetWaitingForInput();
+
+        _codingPendingConfirmEvent = codingEvent;
+        _codingPendingGateResult = gateResult;
+
+        // Ampel-Farbe setzen
+        var ampelColor = gateResult.IsYellow
+            ? Color.FromRgb(0xF5, 0x9E, 0x0B)   // Gelb
+            : Color.FromRgb(0xEF, 0x44, 0x44);   // Rot
+        ConfirmAmpel.Fill = new SolidColorBrush(ampelColor);
+
+        // Globale Ampel aktualisieren
+        CodingAiDot.Fill = new SolidColorBrush(ampelColor);
+
+        // Panel befuellen
+        TxtConfirmCode.Text = codingEvent.Entry.Code ?? "???";
+        TxtConfirmConfidence.Text = $"({gateResult.CompositeConfidence:P0})";
+        TxtConfirmDescription.Text = codingEvent.Entry.Beschreibung ?? codingEvent.AiContext?.Reason ?? "";
+        TxtConfirmDetail.Text = gateResult.IsYellow
+            ? "KI ist unsicher — bitte pruefen."
+            : "KI hat geringe Sicherheit — bitte Code korrigieren oder verwerfen.";
+
+        CodingConfirmationPanel.Visibility = Visibility.Visible;
+    }
+
+    private void ConfirmAccept_Click(object sender, RoutedEventArgs e)
+    {
+        if (_codingPendingConfirmEvent?.AiContext != null)
+            _codingPendingConfirmEvent.AiContext.Decision = CodingUserDecision.Accepted;
+
+        CloseConfirmationAndResume();
+    }
+
+    private void ConfirmEdit_Click(object sender, RoutedEventArgs e)
+    {
+        // VSA-Code-Explorer oeffnen → User waehlt korrekten Code
+        CloseConfirmationPanel();
+
+        if (_codingPendingConfirmEvent != null)
+        {
+            _codingPendingConfirmEvent.AiContext!.Decision = CodingUserDecision.AcceptedWithEdit;
+            // Defect-Detail-Panel oeffnen fuer manuelle Bearbeitung
+            LstCodingEvents.SelectedItem = _codingPendingConfirmEvent;
+        }
+
+        ResumeAfterConfirmation();
+    }
+
+    private void ConfirmReject_Click(object sender, RoutedEventArgs e)
+    {
+        if (_codingPendingConfirmEvent != null)
+        {
+            _codingPendingConfirmEvent.AiContext!.Decision = CodingUserDecision.Rejected;
+            // Event entfernen
+            _codingSessionService?.RemoveEvent(_codingPendingConfirmEvent.EventId);
+            _codingVm?.Events.Remove(_codingPendingConfirmEvent);
+            RefreshCodingEventsList();
+        }
+
+        CloseConfirmationAndResume();
+    }
+
+    private void CloseConfirmationAndResume()
+    {
+        CloseConfirmationPanel();
+        ResumeAfterConfirmation();
+    }
+
+    private void CloseConfirmationPanel()
+    {
+        CodingConfirmationPanel.Visibility = Visibility.Collapsed;
+        _codingPendingConfirmEvent = null;
+        _codingPendingGateResult = null;
+    }
+
+    private void ResumeAfterConfirmation()
+    {
+        // Session wieder auf Running
+        if (_codingSessionService?.ActiveSession?.State == CodingSessionState.WaitingForUserInput)
+            _codingSessionService.ResumeSession();
+
+        // Video weiterlaufen lassen (wenn Live-KI aktiv)
+        if (BtnCodingLiveAi.IsChecked == true)
+            _player.SetPause(false);
+
+        // Globale Ampel zuruecksetzen
+        CodingAiDot.Fill = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
+        TxtCodingAiStatus.Text = BtnCodingLiveAi.IsChecked == true ? "Live-KI aktiv" : "KI Bereit";
+    }
+
+    // --- KI-Overlays rendern (orange, gestrichelt) ---
+
+    private void RenderAiOverlays()
+    {
+        if (_codingVm == null) return;
+
+        // Bestehende KI-Overlays entfernen (Tags beginnen mit "ai_")
+        var toRemove = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
+            .Where(e => e.Tag is string s && s.StartsWith("ai_")).ToList();
+        foreach (var el in toRemove)
+            CodingOverlayCanvas.Children.Remove(el);
+
+        var amber = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
+        var amberFill = new SolidColorBrush(Color.FromArgb(30, 0xF5, 0x9E, 0x0B));
+        double w = CodingOverlayCanvas.ActualWidth, h = CodingOverlayCanvas.ActualHeight;
+        if (w <= 0 || h <= 0) return;
+
+        foreach (var ev in _codingVm.Events)
+        {
+            if (ev.Overlay == null) continue;
+            var geo = ev.Overlay;
+
+            // Farbe nach Entscheidung
+            Brush stroke = ev.AiContext?.Decision switch
+            {
+                CodingUserDecision.Accepted or CodingUserDecision.AcceptedWithEdit
+                    => new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)), // Gruen
+                CodingUserDecision.Rejected
+                    => new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44)), // Rot
+                _ => amber // Orange = Vorschlag
+            };
+
+            switch (geo.ToolType)
+            {
+                case OverlayToolType.Line:
+                case OverlayToolType.Stretch:
+                    if (geo.Points.Count >= 2)
+                    {
+                        var line = new System.Windows.Shapes.Line
+                        {
+                            X1 = geo.Points[0].X * w, Y1 = geo.Points[0].Y * h,
+                            X2 = geo.Points[1].X * w, Y2 = geo.Points[1].Y * h,
+                            Stroke = stroke, StrokeThickness = 2,
+                            StrokeDashArray = new DoubleCollection { 5, 3 },
+                            Tag = "ai_overlay"
+                        };
+                        CodingOverlayCanvas.Children.Add(line);
+                    }
+                    break;
+
+                case OverlayToolType.Rectangle:
+                    if (geo.Points.Count >= 4)
+                    {
+                        double rx = geo.Points[0].X * w, ry = geo.Points[0].Y * h;
+                        double rw = (geo.Points[2].X - geo.Points[0].X) * w;
+                        double rh = (geo.Points[2].Y - geo.Points[0].Y) * h;
+                        var rect = new Rectangle
+                        {
+                            Width = Math.Abs(rw), Height = Math.Abs(rh),
+                            Stroke = stroke, StrokeThickness = 2,
+                            StrokeDashArray = new DoubleCollection { 5, 3 },
+                            Fill = amberFill,
+                            Tag = "ai_overlay"
+                        };
+                        Canvas.SetLeft(rect, Math.Min(rx, rx + rw));
+                        Canvas.SetTop(rect, Math.Min(ry, ry + rh));
+                        CodingOverlayCanvas.Children.Add(rect);
+
+                        // Label
+                        var label = new TextBlock
+                        {
+                            Text = ev.Entry.Code ?? "?",
+                            FontSize = 10, Foreground = stroke,
+                            Background = new SolidColorBrush(Color.FromArgb(180, 17, 19, 24)),
+                            Padding = new Thickness(3, 1, 3, 1),
+                            Tag = "ai_overlay"
+                        };
+                        Canvas.SetLeft(label, Math.Min(rx, rx + rw));
+                        Canvas.SetTop(label, Math.Min(ry, ry + rh) - 16);
+                        CodingOverlayCanvas.Children.Add(label);
+                    }
+                    break;
+
+                case OverlayToolType.Point:
+                    if (geo.Points.Count >= 1)
+                    {
+                        double px = geo.Points[0].X * w, py = geo.Points[0].Y * h;
+                        var dot = new System.Windows.Shapes.Ellipse
+                        {
+                            Width = 14, Height = 14,
+                            Fill = stroke, Opacity = 0.7,
+                            Tag = "ai_overlay"
+                        };
+                        Canvas.SetLeft(dot, px - 7);
+                        Canvas.SetTop(dot, py - 7);
+                        CodingOverlayCanvas.Children.Add(dot);
+                    }
+                    break;
+            }
+        }
+    }
+
+    // --- Overlay-Zeichnung → KI-Analyse ---
+
+    private async Task AnalyzeWithOverlayHintAsync(OverlayGeometry overlay)
+    {
+        if (_codingLiveDetection == null || _codingIsAnalyzing) return;
+
+        _codingIsAnalyzing = true;
+        _codingAnalysisCts?.Cancel();
+        _codingAnalysisCts = new CancellationTokenSource();
+
+        try
+        {
+            CodingAiDot.Fill = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
+            TxtCodingAiStatus.Text = "Analyse: markierte Stelle...";
+
+            var pngBytes = await CaptureSnapshotAsync();
+            if (pngBytes == null || pngBytes.Length == 0) return;
+
+            var result = await _codingLiveDetection.AnalyzeFrameAsync(
+                pngBytes, _player.Time / 1000.0, _codingAnalysisCts.Token);
+
+            ShowCodingAiResults(result);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            TxtCodingAiStatus.Text = $"Fehler: {ex.Message}";
+        }
+        finally
+        {
+            _codingIsAnalyzing = false;
         }
     }
 

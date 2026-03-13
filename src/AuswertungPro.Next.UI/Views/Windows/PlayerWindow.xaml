@@ -271,6 +271,40 @@
                     </StackPanel>
                 </Border>
 
+                <!-- KI-Bestaetigungs-Panel (bei Gelb/Rot: Video angehalten, User entscheidet) -->
+                <Border x:Name="CodingConfirmationPanel" Visibility="Collapsed"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="#EE111318" CornerRadius="12" Padding="20,16"
+                        BorderBrush="{DynamicResource NeonCyanBrush}" BorderThickness="1">
+                    <StackPanel MaxWidth="420">
+                        <!-- Ampel-Farbe + KI-Vorschlag -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Ellipse x:Name="ConfirmAmpel" Width="16" Height="16" Margin="0,0,8,0"
+                                     VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtConfirmCode" FontSize="16" FontWeight="Bold"
+                                       Foreground="{DynamicResource NeonCyanBrush}" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtConfirmConfidence" FontSize="12" Margin="8,0,0,0"
+                                       Foreground="#94A3B8" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock x:Name="TxtConfirmDescription" Foreground="White" FontSize="13"
+                                   TextWrapping="Wrap" Margin="0,0,0,4"/>
+                        <TextBlock x:Name="TxtConfirmDetail" Foreground="#94A3B8" FontSize="11"
+                                   TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                        <!-- Aktionen -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Button Content="&#x2713; Uebernehmen" Click="ConfirmAccept_Click"
+                                    Style="{StaticResource PlayerPrimaryButton}" Padding="12,6" Margin="0,0,6,0"/>
+                            <Button Content="&#x270E; Code aendern" Click="ConfirmEdit_Click"
+                                    Style="{StaticResource PlayerButton}" Padding="12,6" Margin="0,0,6,0"
+                                    Foreground="{DynamicResource NeonCyanBrush}"/>
+                            <Button Content="&#x2717; Verwerfen" Click="ConfirmReject_Click"
+                                    Style="{StaticResource PlayerButton}" Padding="12,6"
+                                    Foreground="#EF4444"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <!-- Mess-Anzeige -->
                 <Border x:Name="CodingMeasurementPanel"
                         HorizontalAlignment="Center" VerticalAlignment="Bottom"
@@ -779,6 +813,11 @@
                     <TextBlock x:Name="TxtCodingAiStatus" FontSize="11"
                                Foreground="{DynamicResource TextBrush}"
                                Text="KI Bereit" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ToggleButton x:Name="BtnCodingLiveAi" Style="{StaticResource SpeedToggleButton}"
+                                  IsChecked="False" Margin="0,0,6,0"
+                                  ToolTip="KI Live-Analyse an/aus (automatisch alle 5s)" Click="CodingLiveAi_Click">
+                        <TextBlock Text="⚡ Live-KI" FontSize="11"/>
+                    </ToggleButton>
                     <Button x:Name="BtnCodingAnalyze"
                             Style="{StaticResource PlayerPrimaryButton}"
                             Padding="10,5" FontSize="11"

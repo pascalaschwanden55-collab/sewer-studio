@@ -79,6 +79,20 @@ public sealed class CodingSessionService : ICodingSessionService
         StateChanged?.Invoke(this, _session.State);
     }
 
+    /// <summary>
+    /// Session in WaitingForUserInput versetzen — KI hat unsicheren Fund,
+    /// Video wird pausiert bis User bestaetigt/korrigiert/verwirft.
+    /// </summary>
+    public void SetWaitingForInput()
+    {
+        EnsureSession();
+        if (_session!.State != CodingSessionState.Running
+            && _session.State != CodingSessionState.Paused)
+            return; // Nur aus Running/Paused moeglich
+        _session.State = CodingSessionState.WaitingForUserInput;
+        StateChanged?.Invoke(this, _session.State);
+    }
+
     public void AbortSession(string reason)
     {
         EnsureSession();

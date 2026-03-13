@@ -24,6 +24,9 @@ public interface ICodingSessionService
     /// <summary>Pausierte Session fortsetzen.</summary>
     void ResumeSession();
 
+    /// <summary>KI-Unsicherheit: Session in WaitingForUserInput versetzen.</summary>
+    void SetWaitingForInput();
+
     /// <summary>Session abbrechen (mit Begruendung).</summary>
     void AbortSession(string reason);
 

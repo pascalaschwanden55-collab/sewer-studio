@@ -328,5 +328,12 @@ public sealed record EnhancedFinding(
     int? IntrusionPercent,
     int? CrossSectionReductionPercent,
     int? DiameterReductionMm,
-    string? Notes
+    string? Notes,
+    // BBox normiert (0.0–1.0) — aus DINO/SAM Pipeline
+    double? BboxX1Norm = null,
+    double? BboxY1Norm = null,
+    double? BboxX2Norm = null,
+    double? BboxY2Norm = null,
+    double? CentroidXNorm = null,
+    double? CentroidYNorm = null
 );

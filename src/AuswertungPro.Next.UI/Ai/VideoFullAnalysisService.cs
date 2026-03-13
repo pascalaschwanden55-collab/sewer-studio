@@ -588,7 +588,19 @@ public sealed record LiveFrameFinding(
     int? WidthMm = null,
     int? IntrusionPercent = null,
     int? CrossSectionReductionPercent = null,
-    int? DiameterReductionMm = null);
+    int? DiameterReductionMm = null,
+    // BBox normiert (0.0–1.0 relativ zur Bildgroesse) — aus DINO/SAM Pipeline
+    double? BboxX1Norm = null,
+    double? BboxY1Norm = null,
+    double? BboxX2Norm = null,
+    double? BboxY2Norm = null,
+    double? CentroidXNorm = null,
+    double? CentroidYNorm = null)
+{
+    /// <summary>Hat normalisierte BBox-Koordinaten (aus DINO/SAM Pipeline)?</summary>
+    public bool HasBbox => BboxX1Norm.HasValue && BboxY1Norm.HasValue
+                        && BboxX2Norm.HasValue && BboxY2Norm.HasValue;
+}
 
 public sealed record RawVideoDetection(
     string FindingLabel,
