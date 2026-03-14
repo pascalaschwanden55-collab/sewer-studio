@@ -8,6 +8,7 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <local:NotNullToBoolConverter x:Key="NotNullToBool"/>
+        <local:InverseBoolConverter x:Key="InverseBool"/>
     </Window.Resources>
     <Grid Margin="12">
         <Grid.RowDefinitions>
@@ -31,9 +32,6 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="Ordner:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <TextBox Grid.Column="1" Text="{Binding RootFolder}" IsReadOnly="True"
@@ -50,61 +48,19 @@
                         ToolTip="Durchsucht alle gewählten Ordner nach Video- und Protokolldateien. Zeigt auf dem Fälle-Tab an, welche Haltungen gefunden wurden und ob Video/Protokoll vorhanden ist. Es werden noch keine Samples erzeugt."/>
                 <Button Grid.Column="5" Content="Speichern" Command="{Binding SaveCommand}" Margin="0,0,8,0"
                         ToolTip="Speichert alle aktuellen Trainings-Samples (inkl. Approve/Reject-Status) dauerhaft auf die Festplatte. Wichtig nach manuellem Approve/Reject von Samples."/>
-                <Button Grid.Column="6" Content="&#x25B6; Batch-Import + KB" Command="{Binding BatchImportAndIndexCommand}"
-                        ToolTip="Startet den vollständigen Trainingslauf mit KI-Videoanalyse: (1) Alle Ordner scannen, (2) Protokolle lesen und Schadenscodes extrahieren, (3) Video-Frames an den Schadensstellen extrahieren via Qwen Vision, (4) OSD-Meterzähler aus dem Video ablesen, (5) Trainings-Samples erzeugen und automatisch als 'Approved' markieren, (6) Alle Samples in die Wissensdatenbank (KB) indexieren mit Embeddings. Dauer: ca. 5-7 Minuten pro Haltung. Benötigt Video + Qwen."
-                        FontWeight="SemiBold" Margin="0,0,4,0"/>
-                <Button Grid.Column="7" Content="Nur Protokolle + Fotos" Command="{Binding LearnProtocolOnlyCommand}"
-                        ToolTip="Schnellster Lernmodus ohne KI: Liest alle PDF-Protokolle in den gewählten Ordnern und extrahiert Schadenscodes, Meterstände und Fotos direkt aus den PDFs. Kein Video und kein Qwen nötig — ideal um schnell eine grosse Wissensbasis aus allen bestehenden Inspektionsberichten aufzubauen. Verarbeitet auch Ordner ohne Video. Falls Video vorhanden ist und Timecodes im Protokoll stehen, wird zusätzlich der passende Video-Frame extrahiert. Ergebnis: Approved Samples + Wissensdatenbank + Few-Shot-Beispiele. Dauer: ca. 1-2 Sekunden pro Haltung."
-                        Margin="0,0,8,0"/>
-                <Button Grid.Column="8" Content="KB prüfen" Command="{Binding CheckKnowledgeBaseCommand}"
-                        ToolTip="Zeigt den aktuellen Stand der Wissensdatenbank (Knowledge Base): Wie viele Samples sind gespeichert, welche VSA-Codes sind abgedeckt, wann wurde zuletzt aktualisiert. Hilft zu prüfen ob die KB genügend Trainingsdaten hat."
-                        Margin="0,0,8,0"/>
-                <Button Grid.Column="9" Content="Abbrechen" Command="{Binding CancelBatchCommand}"
-                        ToolTip="Bricht den aktuell laufenden Vorgang (Batch-Import, Lernen aus Protokoll) sofort ab. Bereits erzeugte Samples bleiben erhalten."
+                <Button Grid.Column="6" Content="Abbrechen" Command="{Binding CancelBatchCommand}"
+                        ToolTip="Bricht den aktuell laufenden Vorgang sofort ab. Bereits erzeugte Samples bleiben erhalten."
                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
             </Grid>
         </Border>
 
-        <!-- Row 1: Trainingsstand -->
+        <!-- Row 1: Trainingsstand (vereinfacht) -->
         <Border Grid.Row="1" Background="#1E293B" CornerRadius="6" Padding="12,8" Margin="0,0,0,4">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Ampel-Kreis + Label -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,16,0">
-                    <Border Width="14" Height="14" CornerRadius="7"
-                            VerticalAlignment="Center" Margin="0,0,8,0"
-                            Background="{Binding KbReadinessBrush}"/>
-                    <TextBlock Text="{Binding KbReadinessLabel}" Foreground="#E2E8F0" FontWeight="SemiBold"/>
-                </StackPanel>
-
-                <!-- Zaehler -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,16,0">
-                    <TextBlock Foreground="#94A3B8" Text="Samples: "/>
-                    <TextBlock Foreground="#E2E8F0" Text="{Binding KbSampleCount}" FontWeight="Bold"/>
-                    <TextBlock Foreground="#94A3B8" Text="  |  Codes: "/>
-                    <TextBlock Foreground="#E2E8F0" Text="{Binding KbCodesCovered}" FontWeight="Bold"/>
-                </StackPanel>
-
-                <!-- Top-Codes Tooltip -->
-                <TextBlock Grid.Column="2" Text="Code-Verteilung" Foreground="#64748B" Cursor="Help">
-                    <TextBlock.ToolTip>
-                        <TextBlock Text="{Binding KbTopCodesText}" FontFamily="Consolas"/>
-                    </TextBlock.ToolTip>
-                </TextBlock>
-
-                <!-- Letztes Update -->
-                <TextBlock Grid.Column="4" Foreground="#64748B">
-                    <Run Text="Letzte KB-Aktualisierung: "/>
-                    <Run Text="{Binding KbLastUpdate, Mode=OneWay}" Foreground="#94A3B8"/>
-                </TextBlock>
-            </Grid>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Foreground="#94A3B8" Text="Samples: "/>
+                <TextBlock Foreground="#E2E8F0" Text="{Binding SampleCountDisplay}" FontWeight="Bold"/>
+                <TextBlock Foreground="#94A3B8" Text="  |  PDF-basiertes Training" Margin="16,0,0,0"/>
+            </StackPanel>
         </Border>
 
         <!-- Tab Content -->
@@ -125,10 +81,9 @@
                               CanUserAddRows="False"
                               IsReadOnly="True">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="CaseId" Binding="{Binding CaseId}" Width="1.2*"/>
+                            <DataGridTextColumn Header="CaseId" Binding="{Binding CaseId}" Width="1.5*"/>
                             <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="0.6*"/>
-                            <DataGridTextColumn Header="Video" Binding="{Binding VideoPath}" Width="2*"/>
-                            <DataGridTextColumn Header="Protokoll" Binding="{Binding ProtocolPath}" Width="2*"/>
+                            <DataGridTextColumn Header="Protokoll (PDF)" Binding="{Binding ProtocolPath}" Width="3*"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -147,8 +102,7 @@
                             <TextBlock Text="Ausgewählter Fall" FontWeight="SemiBold" FontSize="14"/>
                             <TextBlock Grid.Row="1" Text="{Binding SelectedCase.CaseId}" Margin="0,8,0,0" TextWrapping="Wrap"/>
                             <TextBlock Grid.Row="2" Text="{Binding SelectedCase.FolderPath}" Margin="0,6,0,0" TextWrapping="Wrap"/>
-                            <TextBlock Grid.Row="3" Text="{Binding SelectedCase.VideoPath}" Margin="0,6,0,0" TextWrapping="Wrap"/>
-                            <TextBlock Grid.Row="4" Text="{Binding SelectedCase.ProtocolPath}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                            <TextBlock Grid.Row="3" Text="{Binding SelectedCase.ProtocolPath}" Margin="0,6,0,0" TextWrapping="Wrap"/>
                             <StackPanel Grid.Row="5" Orientation="Vertical" Margin="0,12,0,0">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,6">
                                     <Button Content="Approve" Command="{Binding ApproveCommand}" Margin="0,0,8,0"/>
@@ -261,79 +215,24 @@
                 </Grid>
             </TabItem>
 
-            <!-- Tab 3: Log + Live-Vorschau -->
-            <TabItem Header="Log / Live">
-                <Grid Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="3*"/>
-                        <ColumnDefinition Width="2*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- Log-TextBox -->
-                    <TextBox Grid.Column="0"
-                             Text="{Binding LogText, Mode=OneWay}"
-                             IsReadOnly="True"
-                             VerticalScrollBarVisibility="Auto"
-                             HorizontalScrollBarVisibility="Auto"
-                             FontFamily="Consolas"
-                             FontSize="12"
-                             TextWrapping="NoWrap"
-                             AcceptsReturn="True"
-                             x:Name="LogTextBox"/>
-
-                    <!-- Live-Vorschau -->
-                    <Border Grid.Column="1" Margin="12,0,0,0" Padding="10" CornerRadius="6"
-                            BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
-                            BorderThickness="1">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-
-                            <TextBlock Text="Live-Vorschau" FontWeight="SemiBold" FontSize="14"
-                                       Foreground="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
-
-                            <StackPanel Grid.Row="1" Margin="0,8,0,0">
-                                <TextBlock>
-                                    <Run Text="Fall: " FontWeight="SemiBold"/>
-                                    <Run Text="{Binding LiveCaseInfo, Mode=OneWay}"/>
-                                </TextBlock>
-                                <TextBlock Margin="0,4,0,0">
-                                    <Run Text="Code: " FontWeight="SemiBold"/>
-                                    <Run Text="{Binding LiveCodeInfo, Mode=OneWay}"/>
-                                </TextBlock>
-                                <TextBlock Margin="0,4,0,0">
-                                    <Run Text="Meter: " FontWeight="SemiBold"/>
-                                    <Run Text="{Binding LiveMeterInfo, Mode=OneWay}"/>
-                                </TextBlock>
-                            </StackPanel>
-
-                            <!-- Progress-Info -->
-                            <TextBlock Grid.Row="2" Margin="0,6,0,0"
-                                       FontSize="11" Foreground="Gray">
-                                <Run Text="{Binding ProgressValue, Mode=OneWay}"/>
-                                <Run Text=" / "/>
-                                <Run Text="{Binding ProgressMax, Mode=OneWay}"/>
-                                <Run Text=" Fälle verarbeitet"/>
-                            </TextBlock>
-
-                            <Border Grid.Row="3" Margin="0,8,0,0"
-                                    Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
-                                    CornerRadius="4">
-                                <Image Stretch="Uniform" StretchDirection="DownOnly"
-                                       Source="{Binding LiveFramePath, Mode=OneWay, TargetNullValue={x:Null}}"
-                                       Margin="4"/>
-                            </Border>
+            <!-- Tab: Selbsttraining (autonomes KI-Training) -->
+            <TabItem x:Name="SelfTrainingTab">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <Grid Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center">
+                            <Ellipse x:Name="SelfTrainPulseRing" Width="10" Height="10"
+                                     Stroke="#F59E0B" StrokeThickness="2" Fill="Transparent"
+                                     Opacity="0" RenderTransformOrigin="0.5,0.5">
+                                <Ellipse.RenderTransform>
+                                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
+                            <Ellipse x:Name="SelfTrainDot" Width="10" Height="10" Fill="#94A3B8"/>
                         </Grid>
-                    </Border>
-                </Grid>
-            </TabItem>
+                        <TextBlock Text="Selbsttraining"/>
+                    </StackPanel>
+                </TabItem.Header>
 
-            <!-- Review Queue Tab (Self-Improving Loop) -->
-            <TabItem Header="Review Queue">
                 <Grid Margin="8">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -341,45 +240,174 @@
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="8"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Header -->
-                    <StackPanel Grid.Row="0" Orientation="Horizontal">
-                        <TextBlock Text="Zur Prüfung:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="{Binding ReviewQueueCount}" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                        <TextBlock Text="{Binding ReviewStatusText}" Foreground="Gray" VerticalAlignment="Center"/>
-                    </StackPanel>
+                    <!-- Steuerleiste -->
+                    <Border Grid.Row="0" Background="#1E293B" CornerRadius="6" Padding="10,6">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Fälle:" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <ListBox x:Name="SelfTrainCaseList" Width="360" Height="60"
+                                     ItemsSource="{Binding SelfTrainingCases}"
+                                     DisplayMemberPath="CaseId"
+                                     SelectionMode="Extended"
+                                     SelectionChanged="SelfTrainCaseList_SelectionChanged"
+                                     Background="#0F172A" Foreground="#E2E8F0"
+                                     BorderBrush="#334155" BorderThickness="1"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     Margin="0,0,8,0"/>
+                            <StackPanel Orientation="Vertical" VerticalAlignment="Center" Margin="0,0,16,0">
+                                <Button Content="Alle" Click="SelfTrainSelectAll_Click"
+                                        Padding="8,2" FontSize="11" Margin="0,0,0,2"/>
+                                <Button Content="Keine" Click="SelfTrainSelectNone_Click"
+                                        Padding="8,2" FontSize="11"/>
+                            </StackPanel>
+                            <Button Content="&#x1F4DA; Bibliothek" Command="{Binding BuildFewShotLibraryCommand}"
+                                    IsEnabled="{Binding IsBuildingFewShot, Converter={StaticResource InverseBool}}"
+                                    ToolTip="Few-Shot Beispiel-Bibliothek aus PDFs aufbauen (verbessert KI-Erkennung)"
+                                    Padding="12,4" Margin="0,0,4,0"/>
+                            <Button Content="&#x25B6; Start" Command="{Binding StartSelfTrainingCommand}"
+                                    IsEnabled="{Binding IsSelfTrainingRunning, Converter={StaticResource InverseBool}}"
+                                    FontWeight="SemiBold" Padding="12,4" Margin="0,0,4,0"/>
+                            <Button Content="&#x23F8; Pause" Command="{Binding PauseSelfTrainingCommand}"
+                                    Visibility="{Binding IsSelfTrainingRunning, Converter={StaticResource BoolToVis}}"
+                                    Padding="12,4" Margin="0,0,4,0"/>
+                            <Button Content="&#x23F9; Stop" Command="{Binding StopSelfTrainingCommand}"
+                                    Visibility="{Binding IsSelfTrainingRunning, Converter={StaticResource BoolToVis}}"
+                                    Padding="12,4"/>
+                            <TextBlock Text="{Binding FewShotStatus}" Foreground="#22C55E"
+                                       FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0"
+                                       TextTrimming="CharacterEllipsis" MaxWidth="300"/>
+                            <TextBlock Text="{Binding SelfTrainingStageName}" Foreground="#F59E0B"
+                                       FontWeight="SemiBold" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        </StackPanel>
+                    </Border>
 
-                    <!-- Queue List -->
-                    <DataGrid Grid.Row="2"
-                              ItemsSource="{Binding ReviewQueue}"
-                              SelectedItem="{Binding SelectedReviewItem}"
-                              AutoGenerateColumns="False"
-                              IsReadOnly="True"
-                              SelectionMode="Single"
-                              CanUserSortColumns="True"
-                              HeadersVisibility="Column">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Priorität" Binding="{Binding PriorityLabel}" Width="80"/>
-                            <DataGridTextColumn Header="Befund" Binding="{Binding Label}" Width="*"/>
-                            <DataGridTextColumn Header="Vorgeschlagen" Binding="{Binding SuggestedCode}" Width="100"/>
-                            <DataGridTextColumn Header="Konfidenz" Binding="{Binding Confidence, StringFormat=P0}" Width="80"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                    <!-- Hauptbereich: Frame + Vergleich -->
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
-                    <!-- Actions -->
-                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="Akzeptieren" x:Name="ReviewApproveBtn"
-                                Click="ReviewApprove_Click"
-                                Padding="12,4" Margin="0,0,8,0"
-                                IsEnabled="{Binding SelectedReviewItem, Converter={StaticResource NotNullToBool}, FallbackValue=False}"/>
-                        <Button Content="Ablehnen + Korrektur" x:Name="ReviewRejectBtn"
-                                Click="ReviewReject_Click"
-                                Padding="12,4"
-                                IsEnabled="{Binding SelectedReviewItem, Converter={StaticResource NotNullToBool}, FallbackValue=False}"/>
-                    </StackPanel>
+                        <!-- Frame-Vorschau mit Scan-Overlay -->
+                        <Border Grid.Column="0" Background="#0F172A" CornerRadius="6">
+                            <Grid>
+                                <Image x:Name="SelfTrainFrame" Stretch="Uniform" StretchDirection="DownOnly"
+                                       Source="{Binding SelfTrainingFramePath, TargetNullValue={x:Null}}"
+                                       Margin="4"/>
+                                <!-- Scan-Overlay -->
+                                <Border x:Name="SelfTrainScanOverlay" Visibility="Collapsed"
+                                        BorderBrush="#F59E0B" BorderThickness="2" CornerRadius="4"
+                                        IsHitTestVisible="False" Opacity="0.6">
+                                    <Grid>
+                                        <Border x:Name="SelfTrainScanLine" Height="2" Background="#F59E0B"
+                                                VerticalAlignment="Top" Opacity="0.8"/>
+                                        <Border Background="#111827" CornerRadius="3" Padding="6,3"
+                                                HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,8,0,0">
+                                            <TextBlock x:Name="SelfTrainScanLabel" Text="KI scannt..."
+                                                       Foreground="#F59E0B" FontSize="11" FontWeight="SemiBold"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                                <!-- Flash-Overlay -->
+                                <Border x:Name="SelfTrainFlashOverlay" Opacity="0" IsHitTestVisible="False"
+                                        CornerRadius="6"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Vergleich + Technik Details -->
+                        <Border Grid.Column="2" Background="#1E293B" CornerRadius="6" Padding="12">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="12"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="20"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="VERGLEICH" FontWeight="Bold" FontSize="14" Foreground="#E2E8F0"/>
+
+                                <StackPanel Grid.Row="2">
+                                    <TextBlock Foreground="#94A3B8">
+                                        <Run Text="Protokoll: " FontWeight="SemiBold"/>
+                                        <Run Text="{Binding SelfTrainingCurrentCode, Mode=OneWay}"/>
+                                        <Run Text=" @ "/>
+                                        <Run Text="{Binding SelfTrainingCurrentMeter, StringFormat=F1, Mode=OneWay}"/>
+                                        <Run Text="m"/>
+                                    </TextBlock>
+                                </StackPanel>
+
+                                <TextBlock Grid.Row="3" Text="{Binding SelfTrainingComparisonText}"
+                                           Foreground="#E2E8F0" TextWrapping="Wrap" Margin="0,8,0,0"
+                                           FontFamily="Consolas" FontSize="12"/>
+
+                                <TextBlock Grid.Row="5" Text="AUFNAHMETECHNIK" FontWeight="Bold" FontSize="14"
+                                           Foreground="#E2E8F0"/>
+                                <TextBlock Grid.Row="6" Text="{Binding SelfTrainingTechniqueText}"
+                                           Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,8,0,0"
+                                           FontFamily="Consolas" FontSize="12"/>
+
+                                <!-- Zaehler -->
+                                <Border Grid.Row="8" Background="#0F172A" CornerRadius="4" Padding="8,6">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Foreground="#4ADE80" Margin="0,0,12,0">
+                                            <Run Text="Treffer: "/><Run Text="{Binding SelfTrainingExactCount, Mode=OneWay}"/>
+                                        </TextBlock>
+                                        <TextBlock Foreground="#FACC15" Margin="0,0,12,0">
+                                            <Run Text="Teil: "/><Run Text="{Binding SelfTrainingPartialCount, Mode=OneWay}"/>
+                                        </TextBlock>
+                                        <TextBlock Foreground="#F87171" Margin="0,0,12,0">
+                                            <Run Text="Abw: "/><Run Text="{Binding SelfTrainingMismatchCount, Mode=OneWay}"/>
+                                        </TextBlock>
+                                        <TextBlock Foreground="#64748B">
+                                            <Run Text="Leer: "/><Run Text="{Binding SelfTrainingNoFindingsCount, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <!-- Progress -->
+                    <Grid Grid.Row="4" Visibility="{Binding IsSelfTrainingRunning, Converter={StaticResource BoolToVis}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <!-- Fall-Fortschritt -->
+                        <TextBlock Grid.Row="0" FontSize="11" Foreground="#F59E0B" Margin="0,0,0,2">
+                            <Run Text="Fall "/>
+                            <Run Text="{Binding SelfTrainingCaseIndex, Mode=OneWay}"/>
+                            <Run Text=" / "/>
+                            <Run Text="{Binding SelfTrainingCaseTotal, Mode=OneWay}"/>
+                        </TextBlock>
+                        <Grid Grid.Row="1">
+                            <ProgressBar Height="18" Minimum="0"
+                                         Maximum="{Binding SelfTrainingTotal}"
+                                         Value="{Binding SelfTrainingProgress}"
+                                         Foreground="#F59E0B"/>
+                            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11" Foreground="White">
+                                <Run Text="{Binding SelfTrainingProgress, Mode=OneWay}"/>
+                                <Run Text="/"/>
+                                <Run Text="{Binding SelfTrainingTotal, Mode=OneWay}"/>
+                                <Run Text=" Einträge"/>
+                            </TextBlock>
+                        </Grid>
+                    </Grid>
+
+                    <!-- Status -->
+                    <TextBlock Grid.Row="5" Text="{Binding SelfTrainingStatus}"
+                               Foreground="#94A3B8" Margin="0,4,0,0" TextWrapping="Wrap"/>
                 </Grid>
             </TabItem>
+
         </TabControl>
 
         <!-- Progress Bar (sichtbar wenn Busy) -->

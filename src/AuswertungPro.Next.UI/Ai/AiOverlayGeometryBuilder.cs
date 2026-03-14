@@ -7,6 +7,7 @@ namespace AuswertungPro.Next.UI.Ai;
 /// <summary>
 /// Erzeugt OverlayGeometry aus KI-Findings (BBox → Zeichnung).
 /// Wird verwendet wenn die Multi-Model-Pipeline (DINO/SAM) BBox-Daten liefert.
+/// Unterstuetzt auch Winkelmesser (Bogen/Knick) und DN-Kreis (Anschluss).
 /// </summary>
 public static class AiOverlayGeometryBuilder
 {
@@ -26,6 +27,8 @@ public static class AiOverlayGeometryBuilder
             OverlayToolType.Rectangle => BuildRect(finding, calibration),
             OverlayToolType.Arc => BuildArc(finding, calibration),
             OverlayToolType.Point => BuildPoint(finding, calibration),
+            OverlayToolType.Protractor => BuildProtractor(finding, calibration),
+            OverlayToolType.DnCircle => BuildDnCircle(finding, calibration),
             _ => BuildRect(finding, calibration) // Fallback: BBox als Rechteck
         };
     }
@@ -37,6 +40,18 @@ public static class AiOverlayGeometryBuilder
     {
         var code = (finding.VsaCodeHint ?? "").ToUpperInvariant();
         var label = (finding.Label ?? "").ToLowerInvariant();
+
+        // Bogen/Knick → Winkelmesser (3-Punkt)
+        if (code.StartsWith("BBA") || code.StartsWith("BBB") ||
+            label.Contains("knick") || label.Contains("bogen") || label.Contains("bend") ||
+            label.Contains("abwinkelung") || label.Contains("richtungsaenderung"))
+            return OverlayToolType.Protractor;
+
+        // Anschluesse → DN-Kreis
+        if (code.StartsWith("BAH") || code.StartsWith("BCA") || code.StartsWith("BCB") ||
+            label.Contains("anschluss") || label.Contains("connection") || label.Contains("lateral") ||
+            label.Contains("stutzen") || label.Contains("abzweig"))
+            return OverlayToolType.DnCircle;
 
         // Risse → Linie (Laenge/Breite)
         if (code.StartsWith("BAA") || code.StartsWith("BAB") || code.StartsWith("BAC") ||
@@ -148,6 +163,71 @@ public static class AiOverlayGeometryBuilder
         };
 
         geo.ClockFrom = PointToClockHour(point, cal);
+        return geo;
+    }
+
+    /// <summary>
+    /// Winkelmesser aus BBox: Vertex = BBox-Mitte, P1 = Links-Mitte, P3 = Rechts-Mitte.
+    /// Die KI kann spaeter praezisere Punkte via Contour-Analyse liefern.
+    /// </summary>
+    private static OverlayGeometry BuildProtractor(LiveFrameFinding f, PipeCalibration? cal)
+    {
+        double cx = f.CentroidXNorm ?? (f.BboxX1Norm!.Value + f.BboxX2Norm!.Value) / 2.0;
+        double cy = f.CentroidYNorm ?? (f.BboxY1Norm!.Value + f.BboxY2Norm!.Value) / 2.0;
+        var vertex = new NormalizedPoint(cx, cy);
+
+        // P1 und P3 an den BBox-Seiten (horizontale Achse)
+        var p1 = new NormalizedPoint(f.BboxX1Norm!.Value, cy);
+        var p3 = new NormalizedPoint(f.BboxX2Norm!.Value, cy);
+
+        // Winkel berechnen (aus BBox erstmal 180° — wird vom User korrigiert)
+        double dx1 = p1.X - vertex.X, dy1 = p1.Y - vertex.Y;
+        double dx2 = p3.X - vertex.X, dy2 = p3.Y - vertex.Y;
+        double angle1 = Math.Atan2(dy1, dx1);
+        double angle2 = Math.Atan2(dy2, dx2);
+        double angleDiff = Math.Abs(angle2 - angle1) * 180.0 / Math.PI;
+        if (angleDiff > 180) angleDiff = 360 - angleDiff;
+
+        var geo = new OverlayGeometry
+        {
+            ToolType = OverlayToolType.Protractor,
+            Points = new List<NormalizedPoint> { p1, vertex, p3 },
+            ArcDegrees = angleDiff,
+            ClockFrom = PointToClockHour(vertex, cal)
+        };
+
+        return geo;
+    }
+
+    /// <summary>
+    /// DN-Kreis aus BBox: Mitte = BBox-Zentroid, Radius = halbe kleinere BBox-Dimension.
+    /// </summary>
+    private static OverlayGeometry BuildDnCircle(LiveFrameFinding f, PipeCalibration? cal)
+    {
+        double cx = f.CentroidXNorm ?? (f.BboxX1Norm!.Value + f.BboxX2Norm!.Value) / 2.0;
+        double cy = f.CentroidYNorm ?? (f.BboxY1Norm!.Value + f.BboxY2Norm!.Value) / 2.0;
+        var center = new NormalizedPoint(cx, cy);
+
+        // Radius = halbe kleinere BBox-Dimension (Anschluss ist eher rund)
+        double bboxW = Math.Abs(f.BboxX2Norm!.Value - f.BboxX1Norm!.Value);
+        double bboxH = Math.Abs(f.BboxY2Norm!.Value - f.BboxY1Norm!.Value);
+        double radiusNorm = Math.Min(bboxW, bboxH) / 2.0;
+        var edge = new NormalizedPoint(cx + radiusNorm, cy);
+
+        double diameterMm = cal != null ? cal.NormToMm(radiusNorm * 2) : radiusNorm * 1000;
+        double? ratio = cal?.NominalDiameterMm > 0
+            ? (diameterMm / cal.NominalDiameterMm) * 100.0
+            : null;
+
+        var geo = new OverlayGeometry
+        {
+            ToolType = OverlayToolType.DnCircle,
+            Points = new List<NormalizedPoint> { center, edge },
+            Q1Mm = diameterMm,
+            DnRatioPercent = ratio,
+            ClockFrom = PointToClockHour(center, cal)
+        };
+
         return geo;
     }
 

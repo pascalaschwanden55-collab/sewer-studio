@@ -74,8 +74,12 @@ public partial class CodingModeWindow : Window
         // Events-Liste binden
         LstEvents.ItemsSource = _vm.Events;
 
-        // Event-Items nach Laden einfaerben (Zone-Dot, Konfidenz, Status)
-        _vm.Events.CollectionChanged += (_, _) => Dispatcher.InvokeAsync(ColorizeEventListItems);
+        // Event-Items nach Laden einfaerben (Zone-Dot, Konfidenz, Status) + Zaehlung aktualisieren
+        _vm.Events.CollectionChanged += (_, _) => Dispatcher.InvokeAsync(() =>
+        {
+            ColorizeEventListItems();
+            UpdateStatistics();
+        });
 
         Loaded += OnLoaded;
         Closing += OnClosing;

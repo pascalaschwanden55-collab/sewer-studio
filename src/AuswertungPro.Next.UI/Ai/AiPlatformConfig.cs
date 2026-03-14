@@ -91,15 +91,41 @@ public sealed record AiPlatformConfig(
                 Env("SEWERSTUDIO_OLLAMA_URL"))
             ?? "http://localhost:11434";
 
-        var vision = FirstNonEmpty(
+        var visionRaw = FirstNonEmpty(
                 settings?.AiVisionModel,
                 Env("SEWERSTUDIO_AI_VISION_MODEL"))
             ?? OllamaConfig.DefaultVisionModel;
 
-        var text = FirstNonEmpty(
+        var textRaw = FirstNonEmpty(
                 settings?.AiTextModel,
                 Env("SEWERSTUDIO_AI_TEXT_MODEL"))
             ?? OllamaConfig.DefaultTextModel;
+
+        // Auto-Modus: GPU-VRAM erkennen und passendes Modell waehlen
+        var vision = visionRaw;
+        var text = textRaw;
+        int? autoNumCtx = null;
+        if (GpuModelSelector.IsAutoMode(visionRaw) || GpuModelSelector.IsAutoMode(textRaw))
+        {
+            var profile = GpuModelSelector.DetectAndSelect();
+            if (profile is not null)
+            {
+                if (GpuModelSelector.IsAutoMode(visionRaw))
+                    vision = profile.ResolvedModel;
+                if (GpuModelSelector.IsAutoMode(textRaw))
+                    text = profile.ResolvedModel;
+                autoNumCtx = profile.ResolvedNumCtx;
+            }
+            else
+            {
+                // Fallback wenn GPU-Erkennung fehlschlaegt
+                if (GpuModelSelector.IsAutoMode(visionRaw))
+                    vision = GpuModelSelector.SmallModel;
+                if (GpuModelSelector.IsAutoMode(textRaw))
+                    text = GpuModelSelector.SmallModel;
+                autoNumCtx = GpuModelSelector.SmallModelNumCtx;
+            }
+        }
 
         var embed = FirstNonEmpty(
                 settings?.AiEmbedModel,
@@ -117,6 +143,7 @@ public sealed record AiPlatformConfig(
 
         var numCtx = settings?.AiOllamaNumCtx
             ?? ParseInt(Env("SEWERSTUDIO_OLLAMA_NUM_CTX"))
+            ?? autoNumCtx
             ?? OllamaConfig.DefaultNumCtx;
 
         // ── Pipeline ──

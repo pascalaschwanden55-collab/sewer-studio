@@ -1,4 +1,4 @@
-<Window x:Class="AuswertungPro.Next.UI.Views.Windows.PlayerWindow"
+﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.PlayerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
@@ -315,6 +315,35 @@
                                FontFamily="Consolas, Cascadia Mono" HorizontalAlignment="Center"/>
                 </Border>
 
+                <!-- KI-Scan-Overlay: wandernde Linie + Rahmen waehrend Analyse -->
+                <Border x:Name="CodingScanOverlay" Visibility="Collapsed"
+                        IsHitTestVisible="False"
+                        BorderBrush="#F59E0B" BorderThickness="2"
+                        CornerRadius="0" Opacity="0.6">
+                    <Grid>
+                        <!-- Wandernde Scan-Linie -->
+                        <Rectangle x:Name="CodingScanLine" Width="2" Height="Auto"
+                                   Fill="#F59E0B" HorizontalAlignment="Left"
+                                   VerticalAlignment="Stretch" Opacity="0.8"/>
+                        <!-- Analyse-Badge oben rechts -->
+                        <Border HorizontalAlignment="Right" VerticalAlignment="Top"
+                                Margin="8" Padding="8,4" CornerRadius="6"
+                                Background="#DD111318">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="6" Height="6" Fill="#F59E0B" Margin="0,0,5,0"
+                                         VerticalAlignment="Center"/>
+                                <TextBlock x:Name="TxtScanStatus" Text="KI scannt..."
+                                           Foreground="#F59E0B" FontSize="10" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- Flash-Effekt bei Fund (kurzes gruenes/gelbes Aufblitzen) -->
+                <Border x:Name="CodingFlashOverlay" Visibility="Collapsed"
+                        IsHitTestVisible="False"
+                        Background="#22C55E" Opacity="0"/>
+
                 <!-- OSD-Meter Anzeige (KI-gelesener Meterstand, immer sichtbar im Codier-Modus) -->
                 <Border x:Name="OsdMeterBadge"
                         HorizontalAlignment="Left" VerticalAlignment="Top"
@@ -328,7 +357,7 @@
                 </Border>
             </Grid>
 
-            <!-- ── CODING SEITENPANEL (Mockup-Design) ── -->
+            <!-- â”€â”€ CODING SEITENPANEL (Mockup-Design) â”€â”€ -->
             <Border x:Name="CodingSidePanel" Grid.Column="1"
                     Visibility="Collapsed"
                     Margin="8,0,0,0"
@@ -340,7 +369,7 @@
                               HorizontalScrollBarVisibility="Disabled">
                     <StackPanel>
 
-                        <!-- ── 1. QualityGate Zonen-Legende ── -->
+                        <!-- â”€â”€ 1. QualityGate Zonen-Legende â”€â”€ -->
                         <Border Style="{StaticResource PlayerCard}" Margin="0,0,0,8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
@@ -373,7 +402,7 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- ── 2. Erkannte Defekte (erweiterte Ereignisliste) ── -->
+                        <!-- â”€â”€ 2. Erkannte Defekte (erweiterte Ereignisliste) â”€â”€ -->
                         <Border Style="{StaticResource PlayerCard}" Margin="0,0,0,8">
                             <DockPanel>
                                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
@@ -504,7 +533,7 @@
                             </DockPanel>
                         </Border>
 
-                        <!-- ── 3. Defekt-Details (bei Auswahl) ── -->
+                        <!-- â”€â”€ 3. Defekt-Details (bei Auswahl) â”€â”€ -->
                         <Border x:Name="CodingDefectDetailPanel" Style="{StaticResource PlayerCard}"
                                 Margin="0,0,0,8" Visibility="Collapsed">
                             <Border.BorderBrush>
@@ -645,25 +674,25 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- ── 4. Kalibrierung + Messung ── -->
+                        <!-- â”€â”€ 4. Kalibrierung + Messung â”€â”€ -->
                         <Border Style="{StaticResource PlayerCard}" Margin="0,0,0,8">
                             <StackPanel>
                                 <TextBlock Text="KALIBRIERUNG" Style="{StaticResource SectionLabel}"/>
                                 <TextBlock x:Name="TxtCodingCalibDn" FontSize="12"
-                                           Foreground="{DynamicResource TextBrush}" Text="DN: –"/>
+                                           Foreground="{DynamicResource TextBrush}" Text="DN: â€“"/>
                                 <TextBlock x:Name="TxtCodingCalibStatus" FontSize="12"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            Text="Nicht kalibriert" Margin="0,0,0,6"/>
 
                                 <TextBlock Text="MESSUNG" Style="{StaticResource SectionLabel}"/>
-                                <TextBlock x:Name="TxtCodingQ1" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Q1: –"/>
-                                <TextBlock x:Name="TxtCodingQ2" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Q2: –"/>
-                                <TextBlock x:Name="TxtCodingClock" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Uhr: –"/>
-                                <TextBlock x:Name="TxtCodingArc" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Bogen: –"/>
+                                <TextBlock x:Name="TxtCodingQ1" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Q1: â€“"/>
+                                <TextBlock x:Name="TxtCodingQ2" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Q2: â€“"/>
+                                <TextBlock x:Name="TxtCodingClock" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Uhr: â€“"/>
+                                <TextBlock x:Name="TxtCodingArc" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Bogen: â€“"/>
                             </StackPanel>
                         </Border>
 
-                        <!-- ── 5. Codieren (manuell) ── -->
+                        <!-- â”€â”€ 5. Codieren (manuell) â”€â”€ -->
                         <Border Style="{StaticResource PlayerCard}" Margin="0,0,0,8">
                             <StackPanel>
                                 <TextBlock Text="CODIEREN" Style="{StaticResource SectionLabel}"/>
@@ -685,7 +714,7 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- ── 6. Session-Statistik ── -->
+                        <!-- â”€â”€ 6. Session-Statistik â”€â”€ -->
                         <Border Style="{StaticResource PlayerCard}" Margin="0">
                             <StackPanel>
                                 <TextBlock Text="SESSION STATISTIK" Style="{StaticResource SectionLabel}"/>
@@ -733,7 +762,7 @@
                                             <TextBlock Text="Avg. Konfidenz" FontSize="10"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatAvgConfidence"
-                                                       Text="–" FontSize="20" FontWeight="Bold"
+                                                       Text="â€“" FontSize="20" FontWeight="Bold"
                                                        Foreground="{DynamicResource AccentBrush}"/>
                                         </StackPanel>
                                     </Border>
@@ -746,7 +775,7 @@
             </Border>
         </Grid>
 
-        <!-- ═══════ CODING-WERKZEUGE (nur im Codier-Modus sichtbar) ═══════ -->
+        <!-- â•â•â•â•â•â•â• CODING-WERKZEUGE (nur im Codier-Modus sichtbar) â•â•â•â•â•â•â• -->
         <Border x:Name="CodingToolbar" Grid.Row="2"
                 Visibility="Collapsed"
                 Style="{StaticResource PlayerCard}"
@@ -762,14 +791,14 @@
 
                 <!-- Meter-Navigation -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-                    <Button Style="{StaticResource PlayerButton}" Content="◀" Padding="8,6"
+                    <Button Style="{StaticResource PlayerButton}" Content="â—€" Padding="8,6"
                             Click="CodingPrevious_Click" ToolTip="Zurueck (Step)"/>
                     <TextBlock x:Name="TxtCodingMeter"
                                FontFamily="Consolas, Cascadia Mono" FontSize="15" FontWeight="Bold"
                                Foreground="{DynamicResource TextBrush}"
                                VerticalAlignment="Center" Margin="8,0"
                                Text="0.00m"/>
-                    <Button Style="{StaticResource PlayerButton}" Content="▶" Padding="8,6"
+                    <Button Style="{StaticResource PlayerButton}" Content="â–¶" Padding="8,6"
                             Click="CodingNext_Click" ToolTip="Weiter (Step)"/>
                     <TextBlock x:Name="TxtCodingRange"
                                FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
@@ -781,49 +810,79 @@
                     <Border Width="1" Height="28" Background="{DynamicResource BorderBrush}" Margin="0,0,8,0"/>
                     <ToggleButton x:Name="BtnCodingCalibrate" Style="{StaticResource SpeedToggleButton}"
                                   ToolTip="Kalibrieren" Click="CodingCalibrate_Click">
-                        <TextBlock Text="⊕ Kalib." FontSize="11"/>
+                        <TextBlock Text="Kalib." FontSize="11"/>
                     </ToggleButton>
                     <ToggleButton x:Name="BtnCodingLine" Style="{StaticResource SpeedToggleButton}"
                                   ToolTip="Linie messen" Click="CodingToolLine_Click">
-                        <TextBlock Text="━ Linie" FontSize="11"/>
+                        <TextBlock Text="Linie" FontSize="11"/>
                     </ToggleButton>
                     <ToggleButton x:Name="BtnCodingArc" Style="{StaticResource SpeedToggleButton}"
                                   ToolTip="Bogen (Umfang)" Click="CodingToolArc_Click">
-                        <TextBlock Text="⌒ Bogen" FontSize="11"/>
+                        <TextBlock Text="Bogen" FontSize="11"/>
                     </ToggleButton>
                     <ToggleButton x:Name="BtnCodingRect" Style="{StaticResource SpeedToggleButton}"
                                   ToolTip="Flaeche" Click="CodingToolRect_Click">
-                        <TextBlock Text="▢ Fläche" FontSize="11"/>
+                        <TextBlock Text="Flaeche" FontSize="11"/>
                     </ToggleButton>
                     <ToggleButton x:Name="BtnCodingPoint" Style="{StaticResource SpeedToggleButton}"
                                   ToolTip="Punkt" Click="CodingToolPoint_Click">
-                        <TextBlock Text="● Punkt" FontSize="11"/>
+                        <TextBlock Text="Punkt" FontSize="11"/>
                     </ToggleButton>
                     <ToggleButton x:Name="BtnCodingStretch" Style="{StaticResource SpeedToggleButton}"
                                   ToolTip="Strecke" Click="CodingToolStretch_Click">
-                        <TextBlock Text="↔ Strecke" FontSize="11"/>
+                        <TextBlock Text="Strecke" FontSize="11"/>
+                    </ToggleButton>
+                    <!-- Separator: Neue Vermessungswerkzeuge -->
+                    <Border Width="1" Height="28" Background="{DynamicResource BorderBrush}" Margin="4,0,8,0"/>
+                    <ToggleButton x:Name="BtnCodingProtractor" Style="{StaticResource SpeedToggleButton}"
+                                  ToolTip="Winkelmesser (3 Klicks: P1, Scheitel, P3)" Click="CodingToolProtractor_Click">
+                        <TextBlock Text="Winkel" FontSize="11"/>
+                    </ToggleButton>
+                    <ToggleButton x:Name="BtnCodingDnCircle" Style="{StaticResource SpeedToggleButton}"
+                                  ToolTip="DN-Kreis (Anschluss messen)" Click="CodingToolDnCircle_Click">
+                        <TextBlock Text="DN-Kreis" FontSize="11"/>
+                    </ToggleButton>
+                    <ToggleButton x:Name="BtnCodingRuler" Style="{StaticResource SpeedToggleButton}"
+                                  ToolTip="Lineal mit Teilung" Click="CodingToolRuler_Click">
+                        <TextBlock Text="Lineal" FontSize="11"/>
+                    </ToggleButton>
+                    <ToggleButton x:Name="BtnCodingRefDn" Style="{StaticResource SpeedToggleButton}"
+                                  ToolTip="Referenz-DN ein/aus (kalibrierter Rohrdurchmesser)" Click="CodingRefDn_Click">
+                        <TextBlock Text="Ref.DN" FontSize="11"/>
                     </ToggleButton>
                 </StackPanel>
 
                 <!-- KI-Status + Analyse -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
                     <Border Width="1" Height="28" Background="{DynamicResource BorderBrush}" Margin="0,0,8,0"/>
-                    <Ellipse x:Name="CodingAiDot" Width="10" Height="10"
-                             Fill="#94A3B8" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                    <Grid Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center">
+                        <!-- Puls-Ring (sichtbar waehrend Analyse) -->
+                        <Ellipse x:Name="CodingAiPulseRing" Width="10" Height="10"
+                                 Stroke="#F59E0B" StrokeThickness="2" Fill="Transparent"
+                                 Opacity="0" RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform>
+                                <ScaleTransform ScaleX="1" ScaleY="1"/>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                        <Ellipse x:Name="CodingAiDot" Width="10" Height="10" Fill="#94A3B8"/>
+                    </Grid>
                     <TextBlock x:Name="TxtCodingAiStatus" FontSize="11"
                                Foreground="{DynamicResource TextBrush}"
-                               Text="KI Bereit" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                               Text="KI Bereit" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <TextBlock x:Name="TxtCodingAiStage" FontSize="9"
+                               Foreground="#94A3B8"
+                               Text="" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <ToggleButton x:Name="BtnCodingLiveAi" Style="{StaticResource SpeedToggleButton}"
                                   IsChecked="False" Margin="0,0,6,0"
                                   ToolTip="KI Live-Analyse an/aus (automatisch alle 5s)" Click="CodingLiveAi_Click">
-                        <TextBlock Text="⚡ Live-KI" FontSize="11"/>
+                        <TextBlock Text="âš¡ Live-KI" FontSize="11"/>
                     </ToggleButton>
                     <Button x:Name="BtnCodingAnalyze"
                             Style="{StaticResource PlayerPrimaryButton}"
                             Padding="10,5" FontSize="11"
                             Click="CodingAnalyzeFrame_Click"
                             ToolTip="Aktuellen Frame per KI analysieren">
-                        <TextBlock Text="⚡ Analysieren"/>
+                        <TextBlock Text="âš¡ Analysieren"/>
                     </Button>
                 </StackPanel>
 
@@ -878,13 +937,13 @@
                             Foreground="#EF4444" Margin="6,0,0,0"
                             Click="CodingModeExit_Click"
                             ToolTip="Codier-Modus beenden ohne Uebernahme">
-                        <TextBlock Text="✕" FontSize="11"/>
+                        <TextBlock Text="âœ•" FontSize="11"/>
                     </Button>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- ═══════ PIPE GRAPH TIMELINE (nur im Codier-Modus sichtbar) ═══════ -->
+        <!-- â•â•â•â•â•â•â• PIPE GRAPH TIMELINE (nur im Codier-Modus sichtbar) â•â•â•â•â•â•â• -->
         <ctrl:PipeGraphTimeline Grid.Row="3" x:Name="PipeTimeline"
                                 Margin="0,0,0,8"
                                 Visibility="Collapsed"/>
@@ -908,7 +967,7 @@
                            Text="00:00"/>
 
                 <Grid Grid.Column="1">
-                    <!-- Quick-Scan heatmap overlay — below slider -->
+                    <!-- Quick-Scan heatmap overlay â€” below slider -->
                     <Canvas x:Name="HeatmapCanvas"
                             IsHitTestVisible="True"
                             VerticalAlignment="Center"
@@ -922,7 +981,7 @@
                             IsMoveToPointEnabled="True"
                             ValueChanged="PositionSlider_ValueChanged"
                             ToolTip="Videoposition - ziehen fuer Live-Vorschau, klicken zum Springen"/>
-                    <!-- Damage code marker overlay — positioned dynamically to match slider track -->
+                    <!-- Damage code marker overlay â€” positioned dynamically to match slider track -->
                     <Canvas x:Name="DamageMarkerCanvas"
                             IsHitTestVisible="True"
                             VerticalAlignment="Center"

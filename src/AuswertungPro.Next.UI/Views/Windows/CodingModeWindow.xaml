@@ -237,87 +237,92 @@
             </Grid.ColumnDefinitions>
 
             <!-- ── VIDEO + OVERLAY ── -->
+            <!-- WICHTIG: Canvas AUSSERHALB von VideoView (VLC HwndHost Airspace-Problem:
+                 WPF-Elemente innerhalb von VideoView empfangen keine Mausevents) -->
             <Border Grid.Column="0" Style="{StaticResource CodingCard}">
-                <vlc:VideoView x:Name="VideoView" Background="Black">
-                    <Grid>
-                        <!-- Overlay-Canvas (transparent, ueber dem Video) -->
-                        <Canvas x:Name="OverlayCanvas"
-                                Background="Transparent"
-                                ClipToBounds="True"
-                                MouseLeftButtonDown="OverlayCanvas_MouseLeftButtonDown"
-                                MouseMove="OverlayCanvas_MouseMove"
-                                MouseLeftButtonUp="OverlayCanvas_MouseLeftButtonUp"
-                                Cursor="Cross"/>
+                <Grid>
+                    <!-- Video-Layer (unten) -->
+                    <vlc:VideoView x:Name="VideoView" Background="Black"/>
 
-                        <!-- Kalibrierungs-Hinweis (oben mitte) -->
-                        <Border x:Name="CalibrationHint"
-                                HorizontalAlignment="Center" VerticalAlignment="Top"
-                                Margin="0,8,0,0"
-                                Background="#DD000000" CornerRadius="8"
-                                Padding="16,8" Visibility="Collapsed">
-                            <StackPanel>
-                                <TextBlock Text="KALIBRIERUNG" FontSize="12" FontWeight="Bold"
-                                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
-                                <TextBlock x:Name="TxtCalibrationHint" FontSize="12" Foreground="White"
-                                           Text="Linie ueber den sichtbaren Rohrdurchmesser zeichnen"
-                                           TextWrapping="Wrap" MaxWidth="300"/>
-                            </StackPanel>
-                        </Border>
+                    <!-- Overlay-Canvas (transparent, ueber dem Video, empfaengt Maus) -->
+                    <Canvas x:Name="OverlayCanvas"
+                            Background="Transparent"
+                            ClipToBounds="True"
+                            MouseLeftButtonDown="OverlayCanvas_MouseLeftButtonDown"
+                            MouseMove="OverlayCanvas_MouseMove"
+                            MouseLeftButtonUp="OverlayCanvas_MouseLeftButtonUp"
+                            Cursor="Cross"/>
 
-                        <!-- Mess-Anzeige (unten mitte im Video) -->
-                        <Border x:Name="MeasurementPanel"
-                                HorizontalAlignment="Center" VerticalAlignment="Bottom"
-                                Margin="0,0,0,8"
-                                Background="#CC000000" CornerRadius="8"
-                                Padding="12,6" Visibility="Collapsed">
-                            <TextBlock x:Name="TxtMeasurement"
-                                       Foreground="White" FontSize="13"
+                    <!-- Kalibrierungs-Hinweis (oben mitte) -->
+                    <Border x:Name="CalibrationHint"
+                            HorizontalAlignment="Center" VerticalAlignment="Top"
+                            Margin="0,8,0,0"
+                            Background="#DD000000" CornerRadius="8"
+                            Padding="16,8" Visibility="Collapsed"
+                            IsHitTestVisible="False">
+                        <StackPanel>
+                            <TextBlock Text="KALIBRIERUNG" FontSize="12" FontWeight="Bold"
+                                       Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
+                            <TextBlock x:Name="TxtCalibrationHint" FontSize="12" Foreground="White"
+                                       Text="Linie ueber den sichtbaren Rohrdurchmesser zeichnen"
+                                       TextWrapping="Wrap" MaxWidth="300"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Mess-Anzeige (unten mitte im Video) -->
+                    <Border x:Name="MeasurementPanel"
+                            HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                            Margin="0,0,0,8"
+                            Background="#CC000000" CornerRadius="8"
+                            Padding="12,6" Visibility="Collapsed"
+                            IsHitTestVisible="False">
+                        <TextBlock x:Name="TxtMeasurement"
+                                   Foreground="White" FontSize="13"
+                                   FontFamily="Consolas, Cascadia Mono"
+                                   HorizontalAlignment="Center"/>
+                    </Border>
+
+                    <!-- OSD-Meter-Anzeige (oben links im Video) -->
+                    <Border HorizontalAlignment="Left" VerticalAlignment="Top"
+                            Margin="8,8,0,0"
+                            Background="#CC000000" CornerRadius="6"
+                            Padding="8,4" IsHitTestVisible="False">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="TxtVideoMeter"
+                                       Text="0.00m"
+                                       Foreground="#22C55E"
                                        FontFamily="Consolas, Cascadia Mono"
-                                       HorizontalAlignment="Center"/>
-                        </Border>
+                                       FontSize="14" FontWeight="Bold"/>
+                            <TextBlock x:Name="TxtVideoTime"
+                                       Text="00:00"
+                                       Foreground="#94A3B8"
+                                       FontFamily="Consolas, Cascadia Mono"
+                                       FontSize="12" Margin="12,1,0,0"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
 
-                        <!-- OSD-Meter-Anzeige (oben links im Video) -->
-                        <Border HorizontalAlignment="Left" VerticalAlignment="Top"
-                                Margin="8,8,0,0"
-                                Background="#CC000000" CornerRadius="6"
-                                Padding="8,4">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock x:Name="TxtVideoMeter"
-                                           Text="0.00m"
-                                           Foreground="#22C55E"
-                                           FontFamily="Consolas, Cascadia Mono"
-                                           FontSize="14" FontWeight="Bold"/>
-                                <TextBlock x:Name="TxtVideoTime"
-                                           Text="00:00"
-                                           Foreground="#94A3B8"
-                                           FontFamily="Consolas, Cascadia Mono"
-                                           FontSize="12" Margin="12,1,0,0"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- KI-Pipeline Status (oben rechts im Video) -->
-                        <Border HorizontalAlignment="Right" VerticalAlignment="Top"
-                                Margin="0,8,8,0"
-                                Background="#CC000000" CornerRadius="6"
-                                Padding="8,4">
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse x:Name="DotYolo" Width="6" Height="6" Fill="#94A3B8"
-                                         VerticalAlignment="Center" Margin="0,0,3,0"/>
-                                <TextBlock Text="YOLO" FontSize="9" Foreground="#94A3B8"
-                                           VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <Ellipse x:Name="DotQwen" Width="6" Height="6" Fill="#94A3B8"
-                                         VerticalAlignment="Center" Margin="0,0,3,0"/>
-                                <TextBlock Text="Qwen" FontSize="9" Foreground="#94A3B8"
-                                           VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <Ellipse x:Name="DotTracker" Width="6" Height="6" Fill="#94A3B8"
-                                         VerticalAlignment="Center" Margin="0,0,3,0"/>
-                                <TextBlock Text="Tracker" FontSize="9" Foreground="#94A3B8"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-                </vlc:VideoView>
+                    <!-- KI-Pipeline Status (oben rechts im Video) -->
+                    <Border HorizontalAlignment="Right" VerticalAlignment="Top"
+                            Margin="0,8,8,0"
+                            Background="#CC000000" CornerRadius="6"
+                            Padding="8,4" IsHitTestVisible="False">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse x:Name="DotYolo" Width="6" Height="6" Fill="#94A3B8"
+                                     VerticalAlignment="Center" Margin="0,0,3,0"/>
+                            <TextBlock Text="YOLO" FontSize="9" Foreground="#94A3B8"
+                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <Ellipse x:Name="DotQwen" Width="6" Height="6" Fill="#94A3B8"
+                                     VerticalAlignment="Center" Margin="0,0,3,0"/>
+                            <TextBlock Text="Qwen" FontSize="9" Foreground="#94A3B8"
+                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <Ellipse x:Name="DotTracker" Width="6" Height="6" Fill="#94A3B8"
+                                     VerticalAlignment="Center" Margin="0,0,3,0"/>
+                            <TextBlock Text="Tracker" FontSize="9" Foreground="#94A3B8"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </Border>
 
             <!-- ══ SEITENPANEL (KI-Training Mockup) ══ -->
@@ -358,12 +363,12 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- ── Erkannte Defekte (KI-Ereignisliste) ── -->
+                    <!-- ── Beobachtungen (Protokoll + neue Codierungen) ── -->
                     <Border Style="{StaticResource CodingCard}" Margin="0,0,0,8">
                         <DockPanel>
                             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                 <TextBlock Style="{StaticResource SectionLabel}" Margin="0">
-                                    <Run Text="ERKANNTE DEFEKTE ("/>
+                                    <Run Text="BEOBACHTUNGEN ("/>
                                     <Run x:Name="RunDefectCount" Text="0"/>
                                     <Run Text=")"/>
                                 </TextBlock>

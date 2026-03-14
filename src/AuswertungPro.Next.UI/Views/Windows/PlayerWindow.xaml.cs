@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -95,12 +95,12 @@ public partial class PlayerWindow : Window
     private readonly PlayerDamageOverlayData? _damageOverlay;
     private readonly List<(DamageMarkerInfo Info, FrameworkElement Container, FrameworkElement TickOrRange, TextBlock Label)> _damageMarkers = new();
 
-    // â"€â"€ Quick-Scan state â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    // Ã¢"â‚¬Ã¢"â‚¬ Quick-Scan state Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
     private CancellationTokenSource? _quickScanCts;
     private bool _isQuickScanning;
     private readonly List<(QuickScanSegment Seg, Rectangle Rect)> _heatmapRects = new();
 
-    // â"€â"€ Live Detection state â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    // Ã¢"â‚¬Ã¢"â‚¬ Live Detection state Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
     private OllamaClient? _liveDetectionClient;
     private LiveDetectionService? _liveDetectionService;
     private DispatcherTimer? _detectionTimer;
@@ -111,7 +111,7 @@ public partial class PlayerWindow : Window
     private double _lastDetectionTimestamp;
     private readonly List<LiveFrameFinding> _currentFindings = new();
 
-    // â"€â"€ Protocol integration (optional, passed by caller) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    // Ã¢"â‚¬Ã¢"â‚¬ Protocol integration (optional, passed by caller) Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
     private readonly ServiceProvider? _serviceProvider;
     private readonly string? _haltungId;
     private readonly Action<ProtocolEntry>? _onEntryCreated;
@@ -706,7 +706,7 @@ public partial class PlayerWindow : Window
         button.IsChecked = Math.Abs(currentRate - targetRate) < 0.01f;
     }
 
-    // â"€â"€ Damage marker overlay â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    // Ã¢"â‚¬Ã¢"â‚¬ Damage marker overlay Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
 
     private void BuildDamageMarkers()
     {
@@ -905,7 +905,7 @@ public partial class PlayerWindow : Window
         if (Top + Height > area.Bottom) Top = area.Bottom - Height;
     }
 
-    // â"€â"€ Quick-Scan â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    // Ã¢"â‚¬Ã¢"â‚¬ Quick-Scan Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
 
     private async void QuickScan_Click(object sender, RoutedEventArgs e)
     {
@@ -1098,7 +1098,7 @@ public partial class PlayerWindow : Window
         };
     }
 
-    // â"€â"€ Live Detection â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    // Ã¢"â‚¬Ã¢"â‚¬ Live Detection Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
 
     private async void LiveDetection_Click(object sender, RoutedEventArgs e)
     {
@@ -1343,7 +1343,7 @@ public partial class PlayerWindow : Window
         }
     }
 
-    // â"€â"€ Detection Overlay Rendering (ring-sector pattern from LiveFrameWindow) â"€â"€
+    // Ã¢"â‚¬Ã¢"â‚¬ Detection Overlay Rendering (ring-sector pattern from LiveFrameWindow) Ã¢"â‚¬Ã¢"â‚¬
 
     private void RenderDetectionOverlay(IReadOnlyList<LiveFrameFinding> findings, double timestampSec)
     {
@@ -1545,7 +1545,7 @@ public partial class PlayerWindow : Window
 
     private static double DegToRad(double deg) => deg * Math.PI / 180.0;
 
-    // â"€â"€ Manual Marking â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+    // Ã¢"â‚¬Ã¢"â‚¬ Manual Marking Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
 
     private void ManualMark_Click(object sender, RoutedEventArgs e)
     {
@@ -1669,9 +1669,9 @@ public partial class PlayerWindow : Window
         }
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
     // CODIER-MODUS (integriert im PlayerWindow)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
 
     private bool _isCodingMode;
     private CodingSessionViewModel? _codingVm;
@@ -1684,6 +1684,9 @@ public partial class PlayerWindow : Window
 
     // Overlay-Vorschau
     private System.Windows.Shapes.Line? _codingPreviewLine;
+
+    // Referenz-DN Toggle
+    private bool _showReferenceDn;
 
     // KI Live-Analyse
     private LiveDetectionService? _codingLiveDetection;
@@ -1744,6 +1747,9 @@ public partial class PlayerWindow : Window
         TxtCodingCalibStatus.Text = _codingOverlayService.IsCalibrated
             ? "Kalibriert" : "Nicht kalibriert";
 
+        // Fallback: Haltungslaenge pruefen, ggf. manuell abfragen
+        EnsureHaltungslaenge(_haltungRecord);
+
         // Session starten
         try
         {
@@ -1752,6 +1758,14 @@ public partial class PlayerWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "Codier-Modus", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ExitCodingMode();
+            return;
+        }
+
+        // Pruefen ob Session tatsaechlich gestartet wurde
+        // (StartSessionCommand faengt Fehler intern ab, z.B. fehlende Haltungslaenge)
+        if (_codingSessionService.ActiveSession == null)
+        {
             ExitCodingMode();
             return;
         }
@@ -1946,11 +1960,85 @@ public partial class PlayerWindow : Window
         ShowOverlay($"{_codingVm.Events.Count} Ereignisse in Primaere Schaeden uebernommen", TimeSpan.FromSeconds(4));
     }
 
+    /// <summary>
+    /// Stellt sicher, dass Haltungslaenge_m gesetzt ist.
+    /// Fallback-Kette: Haltungslaenge_m → Laenge_m → DamageOverlay → Protokoll BCE → manuelle Eingabe.
+    /// </summary>
+    private void EnsureHaltungslaenge(HaltungRecord record)
+    {
+        // Bereits vorhanden?
+        if (HasValidLength(record, "Haltungslaenge_m"))
+            return;
+
+        // Fallback 1: Laenge_m
+        if (HasValidLength(record, "Laenge_m"))
+        {
+            record.SetFieldValue("Haltungslaenge_m",
+                record.GetFieldValue("Laenge_m"),
+                Domain.Models.FieldSource.Legacy, userEdited: false);
+            return;
+        }
+
+        // Fallback 2: DamageOverlay (wurde beim Oeffnen aus dem Protokoll berechnet)
+        if (_damageOverlay != null && _damageOverlay.PipeLengthMeters > 0)
+        {
+            record.SetFieldValue("Haltungslaenge_m",
+                _damageOverlay.PipeLengthMeters.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+                Domain.Models.FieldSource.Legacy, userEdited: false);
+            return;
+        }
+
+        // Fallback 3: Protokoll BCE-Eintrag (Rohrende) → hoechster Meter
+        if (record.Protocol?.Current?.Entries is { Count: > 0 } entries)
+        {
+            var maxMeter = entries
+                .Where(e => e.MeterStart.HasValue && e.MeterStart.Value > 0)
+                .Select(e => e.MeterStart!.Value)
+                .DefaultIfEmpty(0)
+                .Max();
+
+            if (maxMeter > 0)
+            {
+                record.SetFieldValue("Haltungslaenge_m",
+                    maxMeter.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+                    Domain.Models.FieldSource.Legacy, userEdited: false);
+                return;
+            }
+        }
+
+        // Fallback 4: Benutzer manuell fragen
+        var input = Microsoft.VisualBasic.Interaction.InputBox(
+            "Haltungslaenge konnte nicht ermittelt werden.\n" +
+            "Bitte Haltungslaenge in Meter eingeben (z.B. 45.3):",
+            "Haltungslaenge eingeben", "");
+
+        if (!string.IsNullOrWhiteSpace(input))
+        {
+            var normalized = input.Trim().Replace(',', '.');
+            if (double.TryParse(normalized, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var val) && val > 0)
+            {
+                record.SetFieldValue("Haltungslaenge_m",
+                    val.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+                    Domain.Models.FieldSource.Manual, userEdited: true);
+            }
+        }
+    }
+
+    private static bool HasValidLength(HaltungRecord record, string fieldName)
+    {
+        var raw = record.GetFieldValue(fieldName);
+        if (string.IsNullOrWhiteSpace(raw)) return false;
+        var normalized = raw.Replace(',', '.');
+        return double.TryParse(normalized, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var v) && v > 0;
+    }
+
     private void CodingModeExit_Click(object sender, RoutedEventArgs e) => ExitCodingMode();
 
     // --- Coding UI-Update ---
 
-    // Flag: wird true wenn Meter-Navigation (Next/Previous) auslÃ¶st
+    // Flag: wird true wenn Meter-Navigation (Next/Previous) auslÃƒÂ¶st
     private bool _codingNavPending;
 
     private void UpdateCodingUi(string? propertyName)
@@ -2008,7 +2096,7 @@ public partial class PlayerWindow : Window
             currentMeter = _codingVm.CurrentMeter;
         }
 
-        // Naechsten Code innerhalb Â±0.5m finden
+        // Naechsten Code innerhalb Ã‚Â±0.5m finden
         var nearestEvent = _codingVm.Events
             .Where(ev => Math.Abs(ev.MeterAtCapture - currentMeter) < 0.5)
             .OrderBy(ev => Math.Abs(ev.MeterAtCapture - currentMeter))
@@ -2016,7 +2104,7 @@ public partial class PlayerWindow : Window
 
         if (nearestEvent != null)
         {
-            TxtCodingCurrentCode.Text = $"â-¶ {nearestEvent.MeterAtCapture:F2}m {nearestEvent.Entry.Code} {nearestEvent.Entry.Beschreibung}";
+            TxtCodingCurrentCode.Text = $"Ã¢-Â¶ {nearestEvent.MeterAtCapture:F2}m {nearestEvent.Entry.Code} {nearestEvent.Entry.Beschreibung}";
             CodingCurrentCodeBadge.Visibility = Visibility.Visible;
         }
         else
@@ -2030,7 +2118,7 @@ public partial class PlayerWindow : Window
             if (nextEvent != null)
             {
                 var distM = nextEvent.MeterAtCapture - currentMeter;
-                TxtCodingCurrentCode.Text = $"â†' in {distM:F1}m: {nextEvent.Entry.Code}";
+                TxtCodingCurrentCode.Text = $"Ã¢â€ ' in {distM:F1}m: {nextEvent.Entry.Code}";
                 CodingCurrentCodeBadge.Visibility = Visibility.Visible;
             }
             else
@@ -2085,37 +2173,59 @@ public partial class PlayerWindow : Window
         => SetCodingTool(BtnCodingPoint, OverlayToolType.Point);
     private void CodingToolStretch_Click(object sender, RoutedEventArgs e)
         => SetCodingTool(BtnCodingStretch, OverlayToolType.Stretch);
+    private void CodingToolProtractor_Click(object sender, RoutedEventArgs e)
+        => SetCodingTool(BtnCodingProtractor, OverlayToolType.Protractor);
+    private void CodingToolDnCircle_Click(object sender, RoutedEventArgs e)
+        => SetCodingTool(BtnCodingDnCircle, OverlayToolType.DnCircle);
+    private void CodingToolRuler_Click(object sender, RoutedEventArgs e)
+        => SetCodingTool(BtnCodingRuler, OverlayToolType.Ruler);
+
+    private void CodingRefDn_Click(object sender, RoutedEventArgs e)
+    {
+        _showReferenceDn = BtnCodingRefDn.IsChecked == true;
+        RedrawCodingCanvas(includeManualOverlay: _codingVm?.CurrentOverlay != null);
+    }
 
     private void SetCodingTool(ToggleButton activeBtn, OverlayToolType tool)
     {
-        if (_codingOverlayService == null) return;
+        if (_codingOverlayService == null || _codingVm == null) return;
         _codingIsCalibrating = false;
+        _codingCalibStart = null;
         BtnCodingCalibrate.IsChecked = false;
 
         // Andere Tool-Buttons unchecken
-        foreach (var btn in new[] { BtnCodingLine, BtnCodingArc, BtnCodingRect, BtnCodingPoint, BtnCodingStretch })
+        foreach (var btn in new[] { BtnCodingLine, BtnCodingArc, BtnCodingRect, BtnCodingPoint, BtnCodingStretch, BtnCodingProtractor, BtnCodingDnCircle, BtnCodingRuler })
         {
             if (btn != activeBtn) btn.IsChecked = false;
         }
 
         _codingOverlayService.ActiveTool = activeBtn.IsChecked == true ? tool : OverlayToolType.None;
-        CodingOverlayCanvas.Children.Clear();
+
+        // Offene Zeichnung verwerfen, damit das naechste Tool sauber startet.
+        _codingVm.CurrentOverlay = null;
+        BtnCodingCreateEvent.IsEnabled = false;
+        UpdateCodingOverlayInfo(null);
+        RedrawCodingCanvas(includeManualOverlay: false);
     }
 
     private void CodingCalibrate_Click(object sender, RoutedEventArgs e)
     {
-        if (_codingOverlayService == null) return;
+        if (_codingOverlayService == null || _codingVm == null) return;
         _codingIsCalibrating = BtnCodingCalibrate.IsChecked == true;
         _codingCalibStart = null;
         _codingOverlayService.ActiveTool = OverlayToolType.None;
 
         // Andere Tool-Buttons unchecken
-        foreach (var btn in new[] { BtnCodingLine, BtnCodingArc, BtnCodingRect, BtnCodingPoint, BtnCodingStretch })
+        foreach (var btn in new[] { BtnCodingLine, BtnCodingArc, BtnCodingRect, BtnCodingPoint, BtnCodingStretch, BtnCodingProtractor, BtnCodingDnCircle, BtnCodingRuler })
             btn.IsChecked = false;
+
+        _codingVm.CurrentOverlay = null;
+        BtnCodingCreateEvent.IsEnabled = false;
+        UpdateCodingOverlayInfo(null);
 
         CodingCalibrationHint.Visibility = _codingIsCalibrating ? Visibility.Visible : Visibility.Collapsed;
         TxtCodingCalibHint.Text = "Linie ueber den sichtbaren Rohrdurchmesser zeichnen";
-        CodingOverlayCanvas.Children.Clear();
+        RedrawCodingCanvas(includeManualOverlay: false);
     }
 
     // --- Coding Canvas-Events ---
@@ -2130,14 +2240,55 @@ public partial class PlayerWindow : Window
         {
             _codingCalibStart = norm;
             CodingOverlayCanvas.CaptureMouse();
-            CodingOverlayCanvas.Children.Clear();
+            ClearTransientCodingCanvas(clearManualOverlay: true);
+            RenderAiOverlays();
+            RenderReferenceDn();
             return;
         }
 
         if (_codingOverlayService.ActiveTool == OverlayToolType.None) return;
+
+        // Multi-Punkt-Werkzeug (Winkelmesser: 3 Klicks)
+        if (_codingOverlayService.IsMultiPointTool)
+        {
+            // Beim ersten Klick Reset
+            if (_codingOverlayService.DrawPointCount == 0)
+            {
+                _codingVm.CurrentOverlay = null;
+                BtnCodingCreateEvent.IsEnabled = false;
+                UpdateCodingOverlayInfo(null);
+            }
+
+            bool complete = _codingVm.OnCanvasMultiPointClick(norm);
+            ClearTransientCodingCanvas(clearManualOverlay: true);
+            RenderAiOverlays();
+            RenderReferenceDn();
+            UpdateToolBadge();
+
+            if (_codingVm.CurrentOverlay != null)
+                RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: !complete);
+
+            if (complete)
+            {
+                UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
+                BtnCodingCreateEvent.IsEnabled = true;
+                if (BtnCodingLiveAi.IsChecked == true && _codingVm.CurrentOverlay != null)
+                    _ = AnalyzeWithOverlayHintAsync(_codingVm.CurrentOverlay);
+            }
+            return; // Kein CaptureMouse bei Multi-Punkt
+        }
+
+        // Standard 2-Punkt-Werkzeug (Klick+Drag)
+        _codingVm.CurrentOverlay = null;
+        BtnCodingCreateEvent.IsEnabled = false;
+        UpdateCodingOverlayInfo(null);
+
         _codingVm.OnCanvasMouseDown(norm);
         CodingOverlayCanvas.CaptureMouse();
-        CodingOverlayCanvas.Children.Clear();
+        ClearTransientCodingCanvas(clearManualOverlay: true);
+        RenderAiOverlays();
+        RenderReferenceDn();
+        UpdateToolBadge();
     }
 
     private void CodingCanvas_MouseMove(object sender, MouseEventArgs e)
@@ -2148,14 +2299,22 @@ public partial class PlayerWindow : Window
 
         if (_codingIsCalibrating && _codingCalibStart != null)
         {
-            CodingOverlayCanvas.Children.Clear();
+            ClearTransientCodingCanvas(clearManualOverlay: true);
+            RenderAiOverlays();
+            RenderReferenceDn();
+
             var p1 = CodingNormToPixel(_codingCalibStart);
             var p2 = CodingNormToPixel(norm);
             _codingPreviewLine = new System.Windows.Shapes.Line
             {
-                X1 = p1.X, Y1 = p1.Y, X2 = p2.X, Y2 = p2.Y,
-                Stroke = Brushes.Magenta, StrokeThickness = 2.5,
-                StrokeDashArray = new DoubleCollection { 6, 3 }
+                X1 = p1.X,
+                Y1 = p1.Y,
+                X2 = p2.X,
+                Y2 = p2.Y,
+                Stroke = Brushes.Magenta,
+                StrokeThickness = 2.5,
+                StrokeDashArray = new DoubleCollection { 6, 3 },
+                Tag = "overlay_preview"
             };
             CodingOverlayCanvas.Children.Add(_codingPreviewLine);
             double pxLen = Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
@@ -2163,84 +2322,28 @@ public partial class PlayerWindow : Window
             return;
         }
 
+        // Multi-Punkt-Vorschau (Winkelmesser: Mausbewegung zwischen Klicks)
+        if (_codingOverlayService.IsMultiPointTool && _codingOverlayService.DrawPointCount > 0)
+        {
+            _codingVm.OnCanvasMultiPointMove(norm);
+            ClearTransientCodingCanvas(clearManualOverlay: true);
+            RenderAiOverlays();
+            RenderReferenceDn();
+            UpdateToolBadge();
+            if (_codingVm.CurrentOverlay != null)
+                RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: true, labelAnchor: norm);
+            return;
+        }
+
         if (!_codingOverlayService.IsDrawing) return;
         _codingVm.OnCanvasMouseMove(norm);
+        if (_codingVm.CurrentOverlay == null) return;
 
-        // Vorschau zeichnen
-        CodingOverlayCanvas.Children.Clear();
-        var start = _codingOverlayService.DrawStartPoint;
-        if (start != null)
-        {
-            var sp = CodingNormToPixel(start);
-            var ep = CodingNormToPixel(norm);
-            switch (_codingOverlayService.ActiveTool)
-            {
-                case OverlayToolType.Line:
-                case OverlayToolType.Stretch:
-                    CodingOverlayCanvas.Children.Add(new System.Windows.Shapes.Line
-                    {
-                        X1 = sp.X, Y1 = sp.Y, X2 = ep.X, Y2 = ep.Y,
-                        Stroke = Brushes.Lime, StrokeThickness = 2,
-                        StrokeDashArray = new DoubleCollection { 4, 2 }
-                    });
-                    break;
-                case OverlayToolType.Rectangle:
-                    var r = new Rectangle
-                    {
-                        Width = Math.Abs(ep.X - sp.X), Height = Math.Abs(ep.Y - sp.Y),
-                        Stroke = Brushes.Cyan, StrokeThickness = 2,
-                        StrokeDashArray = new DoubleCollection { 4, 2 },
-                        Fill = new SolidColorBrush(Color.FromArgb(40, 0, 255, 255))
-                    };
-                    Canvas.SetLeft(r, Math.Min(sp.X, ep.X));
-                    Canvas.SetTop(r, Math.Min(sp.Y, ep.Y));
-                    CodingOverlayCanvas.Children.Add(r);
-                    break;
-                case OverlayToolType.Point:
-                    var dot = new System.Windows.Shapes.Ellipse
-                    { Width = 12, Height = 12, Fill = Brushes.Red, Stroke = Brushes.White, StrokeThickness = 2 };
-                    Canvas.SetLeft(dot, sp.X - 6);
-                    Canvas.SetTop(dot, sp.Y - 6);
-                    CodingOverlayCanvas.Children.Add(dot);
-                    break;
-                case OverlayToolType.Arc:
-                    // Bogen-Vorschau: ArcSegment um Rohrmitte (kalibriert oder Canvas-Mitte)
-                    var pipeCenterNorm = _codingOverlayService.Calibration?.PipeCenter
-                        ?? new NormalizedPoint(0.5, 0.5);
-                    var arcCenter = CodingNormToPixel(pipeCenterNorm);
-                    double arcRadius = Math.Sqrt(Math.Pow(sp.X - arcCenter.X, 2) + Math.Pow(sp.Y - arcCenter.Y, 2));
-                    if (arcRadius > 5)
-                    {
-                        // Winkel berechnen (konsistent mit OverlayToolService.PointToClockHour)
-                        double startAngle = Math.Atan2(sp.X - arcCenter.X, -(sp.Y - arcCenter.Y));
-                        double endAngle = Math.Atan2(ep.X - arcCenter.X, -(ep.Y - arcCenter.Y));
-                        // Endpunkt auf dem Bogen projizieren (gleicher Radius wie Startpunkt)
-                        // Zurueck von mathematischem Winkel zu Pixel: x = sin(a), y = -cos(a)
-                        var arcEnd = new Point(
-                            arcCenter.X + arcRadius * Math.Sin(endAngle),
-                            arcCenter.Y - arcRadius * Math.Cos(endAngle));
-                        // Bogenrichtung: im Uhrzeigersinn (wie Clock-Positionen)
-                        double angleDiff = endAngle - startAngle;
-                        if (angleDiff < 0) angleDiff += 2 * Math.PI;
-                        bool isLargeArc = angleDiff > Math.PI;
-
-                        var pathFig = new System.Windows.Media.PathFigure { StartPoint = sp, IsClosed = false };
-                        pathFig.Segments.Add(new System.Windows.Media.ArcSegment(
-                            arcEnd, new Size(arcRadius, arcRadius), 0,
-                            isLargeArc, System.Windows.Media.SweepDirection.Clockwise, true));
-                        var pathGeo = new System.Windows.Media.PathGeometry();
-                        pathGeo.Figures.Add(pathFig);
-                        var arcPath = new System.Windows.Shapes.Path
-                        {
-                            Data = pathGeo,
-                            Stroke = Brushes.Orange, StrokeThickness = 2.5,
-                            StrokeDashArray = new DoubleCollection { 4, 2 }
-                        };
-                        CodingOverlayCanvas.Children.Add(arcPath);
-                    }
-                    break;
-            }
-        }
+        ClearTransientCodingCanvas(clearManualOverlay: true);
+        RenderAiOverlays();
+        RenderReferenceDn();
+        UpdateToolBadge();
+        RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: true, labelAnchor: norm);
     }
 
     private void CodingCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -2260,17 +2363,25 @@ public partial class PlayerWindow : Window
         _codingVm.OnCanvasMouseUp(norm);
         CodingOverlayCanvas.ReleaseMouseCapture();
 
+        ClearTransientCodingCanvas(clearManualOverlay: true);
+        RenderAiOverlays();
+        RenderReferenceDn();
+        UpdateToolBadge();
+
         if (_codingVm.CurrentOverlay != null)
         {
-            CodingOverlayCanvas.Children.Clear();
+            RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: false);
             UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
             BtnCodingCreateEvent.IsEnabled = true;
 
-            // Wenn Live-KI aktiv: Overlay-Zeichnung → KI analysiert markierte Stelle
+            // Wenn Live-KI aktiv: Overlay-Zeichnung -> KI analysiert markierte Stelle
             if (BtnCodingLiveAi.IsChecked == true)
-            {
                 _ = AnalyzeWithOverlayHintAsync(_codingVm.CurrentOverlay);
-            }
+        }
+        else
+        {
+            UpdateCodingOverlayInfo(null);
+            BtnCodingCreateEvent.IsEnabled = false;
         }
     }
 
@@ -2321,6 +2432,621 @@ public partial class PlayerWindow : Window
     private Point CodingNormToPixel(NormalizedPoint norm)
         => new(norm.X * CodingOverlayCanvas.ActualWidth, norm.Y * CodingOverlayCanvas.ActualHeight);
 
+    private void ClearTransientCodingCanvas(bool clearManualOverlay)
+    {
+        var remove = CodingOverlayCanvas.Children
+            .OfType<FrameworkElement>()
+            .Where(el => el.Tag is string tag &&
+                         (tag == "tool_badge" ||
+                          tag == "overlay_preview" ||
+                          tag == "overlay_measure" ||
+                          (clearManualOverlay && tag == "overlay_manual")))
+            .ToList();
+
+        foreach (var el in remove)
+            CodingOverlayCanvas.Children.Remove(el);
+    }
+
+    private void RedrawCodingCanvas(bool includeManualOverlay)
+    {
+        ClearTransientCodingCanvas(clearManualOverlay: true);
+        RenderAiOverlays();
+        RenderReferenceDn();
+
+        if (includeManualOverlay && _codingVm?.CurrentOverlay != null)
+            RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: false);
+
+        UpdateToolBadge();
+    }
+
+    private void RenderOverlayGeometry(OverlayGeometry overlay, bool isPreview, NormalizedPoint? labelAnchor = null)
+    {
+        double w = CodingOverlayCanvas.ActualWidth;
+        double h = CodingOverlayCanvas.ActualHeight;
+        if (w <= 0 || h <= 0) return;
+
+        string tag = isPreview ? "overlay_preview" : "overlay_manual";
+        var stroke = isPreview
+            ? Brushes.Lime
+            : new SolidColorBrush(Color.FromRgb(0x00, 0xE5, 0xFF));
+        var fill = isPreview
+            ? new SolidColorBrush(Color.FromArgb(50, 0x00, 0xFF, 0xFF))
+            : new SolidColorBrush(Color.FromArgb(35, 0x00, 0xE5, 0xFF));
+        var glowEffect = new System.Windows.Media.Effects.DropShadowEffect
+        {
+            Color = Colors.Black,
+            BlurRadius = 6,
+            ShadowDepth = 0,
+            Opacity = 0.9
+        };
+
+        switch (overlay.ToolType)
+        {
+            case OverlayToolType.Line:
+            case OverlayToolType.Stretch:
+                if (overlay.Points.Count >= 2)
+                {
+                    var p1 = CodingNormToPixel(overlay.Points[0]);
+                    var p2 = CodingNormToPixel(overlay.Points[1]);
+                    var line = new System.Windows.Shapes.Line
+                    {
+                        X1 = p1.X,
+                        Y1 = p1.Y,
+                        X2 = p2.X,
+                        Y2 = p2.Y,
+                        Stroke = stroke,
+                        StrokeThickness = 3,
+                        Effect = glowEffect,
+                        Tag = tag
+                    };
+                    if (isPreview)
+                        line.StrokeDashArray = new DoubleCollection { 4, 2 };
+                    CodingOverlayCanvas.Children.Add(line);
+                }
+                break;
+
+            case OverlayToolType.Rectangle:
+                if (overlay.Points.Count >= 4)
+                {
+                    var xs = overlay.Points.Select(p => p.X * w).ToList();
+                    var ys = overlay.Points.Select(p => p.Y * h).ToList();
+                    double minX = xs.Min();
+                    double maxX = xs.Max();
+                    double minY = ys.Min();
+                    double maxY = ys.Max();
+
+                    var rect = new Rectangle
+                    {
+                        Width = Math.Max(1, maxX - minX),
+                        Height = Math.Max(1, maxY - minY),
+                        Stroke = stroke,
+                        StrokeThickness = 3,
+                        Fill = fill,
+                        Effect = glowEffect,
+                        Tag = tag
+                    };
+                    if (isPreview)
+                        rect.StrokeDashArray = new DoubleCollection { 4, 2 };
+
+                    Canvas.SetLeft(rect, minX);
+                    Canvas.SetTop(rect, minY);
+                    CodingOverlayCanvas.Children.Add(rect);
+                }
+                break;
+
+            case OverlayToolType.Point:
+                if (overlay.Points.Count >= 1)
+                {
+                    var p = CodingNormToPixel(overlay.Points[0]);
+                    var dot = new System.Windows.Shapes.Ellipse
+                    {
+                        Width = 16,
+                        Height = 16,
+                        Fill = stroke,
+                        Stroke = Brushes.White,
+                        StrokeThickness = 2,
+                        Effect = glowEffect,
+                        Tag = tag
+                    };
+                    Canvas.SetLeft(dot, p.X - 8);
+                    Canvas.SetTop(dot, p.Y - 8);
+                    CodingOverlayCanvas.Children.Add(dot);
+                }
+                break;
+
+            case OverlayToolType.Arc:
+                if (overlay.Points.Count >= 2)
+                {
+                    var arc = CreateArcPath(overlay.Points[0], overlay.Points[1], stroke, glowEffect, tag, isPreview);
+                    if (arc != null)
+                        CodingOverlayCanvas.Children.Add(arc);
+                }
+                break;
+
+            case OverlayToolType.Protractor:
+                RenderProtractorOverlay(overlay, isPreview, stroke, glowEffect, tag, labelAnchor);
+                return; // Eigenes Label-Rendering
+
+            case OverlayToolType.DnCircle:
+                RenderDnCircleOverlay(overlay, isPreview, stroke, glowEffect, tag, labelAnchor);
+                return; // Eigenes Label-Rendering
+
+            case OverlayToolType.Ruler:
+                RenderRulerOverlay(overlay, isPreview, stroke, glowEffect, tag, labelAnchor);
+                return; // Eigenes Label-Rendering
+        }
+
+        var text = BuildOverlayMeasurementText(overlay);
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            var anchorNorm = labelAnchor ?? overlay.Points.LastOrDefault() ?? new NormalizedPoint(0.5, 0.5);
+            var anchor = CodingNormToPixel(anchorNorm);
+
+            var label = new TextBlock
+            {
+                Text = text,
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = Brushes.White,
+                Background = new SolidColorBrush(Color.FromArgb(200, 17, 19, 24)),
+                Padding = new Thickness(5, 2, 5, 2),
+                Effect = glowEffect,
+                Tag = isPreview ? "overlay_measure" : "overlay_manual"
+            };
+            Canvas.SetLeft(label, anchor.X + 12);
+            Canvas.SetTop(label, anchor.Y - 20);
+            CodingOverlayCanvas.Children.Add(label);
+        }
+    }
+
+    private System.Windows.Shapes.Path? CreateArcPath(
+        NormalizedPoint start,
+        NormalizedPoint end,
+        Brush stroke,
+        System.Windows.Media.Effects.DropShadowEffect effect,
+        string tag,
+        bool dashed)
+    {
+        var centerNorm = _codingOverlayService?.Calibration?.PipeCenter ?? new NormalizedPoint(0.5, 0.5);
+        var center = CodingNormToPixel(centerNorm);
+        var sp = CodingNormToPixel(start);
+        var ep = CodingNormToPixel(end);
+
+        double radius = Math.Sqrt(Math.Pow(sp.X - center.X, 2) + Math.Pow(sp.Y - center.Y, 2));
+        if (radius < 3)
+            return null;
+
+        double startAngle = Math.Atan2(sp.X - center.X, -(sp.Y - center.Y));
+        double endAngle = Math.Atan2(ep.X - center.X, -(ep.Y - center.Y));
+        double angleDiff = endAngle - startAngle;
+        if (angleDiff < 0) angleDiff += 2 * Math.PI;
+
+        var arcEnd = new Point(
+            center.X + radius * Math.Sin(endAngle),
+            center.Y - radius * Math.Cos(endAngle));
+
+        var figure = new System.Windows.Media.PathFigure { StartPoint = sp, IsClosed = false };
+        figure.Segments.Add(new System.Windows.Media.ArcSegment(
+            arcEnd,
+            new Size(radius, radius),
+            0,
+            angleDiff > Math.PI,
+            System.Windows.Media.SweepDirection.Clockwise,
+            true));
+
+        var geometry = new System.Windows.Media.PathGeometry();
+        geometry.Figures.Add(figure);
+
+        var path = new System.Windows.Shapes.Path
+        {
+            Data = geometry,
+            Stroke = stroke,
+            StrokeThickness = 3,
+            Effect = effect,
+            Tag = tag
+        };
+        if (dashed)
+            path.StrokeDashArray = new DoubleCollection { 4, 2 };
+
+        return path;
+    }
+
+    // --- Winkelmesser (Protractor): 2 Linien + Winkelbogen + Grad-Label ---
+
+    private void RenderProtractorOverlay(
+        OverlayGeometry overlay, bool isPreview, Brush defaultStroke,
+        System.Windows.Media.Effects.DropShadowEffect glowEffect, string tag,
+        NormalizedPoint? labelAnchor)
+    {
+        // Farbe: Gold fuer Vorschau, Orange-Gold finalisiert
+        var stroke = isPreview
+            ? new SolidColorBrush(Color.FromRgb(0xFF, 0xB8, 0x00))
+            : new SolidColorBrush(Color.FromRgb(0xFF, 0xA5, 0x00));
+
+        if (overlay.Points.Count == 2)
+        {
+            // Teilvorschau: nur Linie P1 → P2
+            var a = CodingNormToPixel(overlay.Points[0]);
+            var b = CodingNormToPixel(overlay.Points[1]);
+            var line = new System.Windows.Shapes.Line
+            {
+                X1 = a.X, Y1 = a.Y, X2 = b.X, Y2 = b.Y,
+                Stroke = stroke, StrokeThickness = 2.5,
+                StrokeDashArray = new DoubleCollection { 4, 2 },
+                Effect = glowEffect, Tag = tag
+            };
+            CodingOverlayCanvas.Children.Add(line);
+
+            // Punkt-Markierungen
+            AddDotMarker(a, 6, stroke, tag, glowEffect);
+            AddDotMarker(b, 6, stroke, tag, glowEffect);
+            return;
+        }
+
+        if (overlay.Points.Count < 3) return;
+
+        var p1 = CodingNormToPixel(overlay.Points[0]);
+        var vertex = CodingNormToPixel(overlay.Points[1]);
+        var p3 = CodingNormToPixel(overlay.Points[2]);
+
+        // Linie 1: P1 → Vertex
+        var line1 = new System.Windows.Shapes.Line
+        {
+            X1 = p1.X, Y1 = p1.Y, X2 = vertex.X, Y2 = vertex.Y,
+            Stroke = stroke, StrokeThickness = 3, Effect = glowEffect, Tag = tag
+        };
+        if (isPreview) line1.StrokeDashArray = new DoubleCollection { 4, 2 };
+        CodingOverlayCanvas.Children.Add(line1);
+
+        // Linie 2: Vertex → P3
+        var line2 = new System.Windows.Shapes.Line
+        {
+            X1 = vertex.X, Y1 = vertex.Y, X2 = p3.X, Y2 = p3.Y,
+            Stroke = stroke, StrokeThickness = 3, Effect = glowEffect, Tag = tag
+        };
+        if (isPreview) line2.StrokeDashArray = new DoubleCollection { 4, 2 };
+        CodingOverlayCanvas.Children.Add(line2);
+
+        // Punkt-Markierungen an allen 3 Punkten
+        AddDotMarker(p1, 6, stroke, tag, glowEffect);
+        AddDotMarker(vertex, 8, stroke, tag, glowEffect);
+        AddDotMarker(p3, 6, stroke, tag, glowEffect);
+
+        // Winkelbogen am Vertex (kleiner Bogen, Radius ~30px)
+        double arcRadius = 30;
+        double angle1 = Math.Atan2(p1.Y - vertex.Y, p1.X - vertex.X);
+        double angle2 = Math.Atan2(p3.Y - vertex.Y, p3.X - vertex.X);
+
+        // Bogen von angle1 nach angle2 (kuerzerer Weg)
+        double angleDiff = angle2 - angle1;
+        if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+        if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+
+        var arcStart = new Point(
+            vertex.X + arcRadius * Math.Cos(angle1),
+            vertex.Y + arcRadius * Math.Sin(angle1));
+        var arcEnd = new Point(
+            vertex.X + arcRadius * Math.Cos(angle2),
+            vertex.Y + arcRadius * Math.Sin(angle2));
+
+        var arcFigure = new System.Windows.Media.PathFigure { StartPoint = arcStart, IsClosed = false };
+        arcFigure.Segments.Add(new System.Windows.Media.ArcSegment(
+            arcEnd,
+            new Size(arcRadius, arcRadius),
+            0,
+            Math.Abs(angleDiff) > Math.PI,
+            angleDiff > 0 ? System.Windows.Media.SweepDirection.Clockwise : System.Windows.Media.SweepDirection.Counterclockwise,
+            true));
+
+        var arcGeo = new System.Windows.Media.PathGeometry();
+        arcGeo.Figures.Add(arcFigure);
+        var arcPath = new System.Windows.Shapes.Path
+        {
+            Data = arcGeo, Stroke = stroke, StrokeThickness = 2,
+            Effect = glowEffect, Tag = tag
+        };
+        CodingOverlayCanvas.Children.Add(arcPath);
+
+        // Grad-Label am Vertex
+        string angleText = overlay.ArcDegrees.HasValue
+            ? $"{overlay.ArcDegrees.Value:F1}\u00B0"
+            : "";
+        if (!string.IsNullOrEmpty(angleText))
+        {
+            var lbl = new TextBlock
+            {
+                Text = angleText,
+                FontSize = 14, FontWeight = FontWeights.Bold,
+                Foreground = stroke,
+                Background = new SolidColorBrush(Color.FromArgb(200, 17, 19, 24)),
+                Padding = new Thickness(6, 3, 6, 3),
+                Effect = glowEffect,
+                Tag = isPreview ? "overlay_measure" : "overlay_manual"
+            };
+            Canvas.SetLeft(lbl, vertex.X + 14);
+            Canvas.SetTop(lbl, vertex.Y - 24);
+            CodingOverlayCanvas.Children.Add(lbl);
+        }
+    }
+
+    // --- DN-Kreis: Kreis + DN-Label ---
+
+    private void RenderDnCircleOverlay(
+        OverlayGeometry overlay, bool isPreview, Brush defaultStroke,
+        System.Windows.Media.Effects.DropShadowEffect glowEffect, string tag,
+        NormalizedPoint? labelAnchor)
+    {
+        if (overlay.Points.Count < 2) return;
+
+        // Farbe: Hot Pink Vorschau, Magenta finalisiert
+        var stroke = isPreview
+            ? new SolidColorBrush(Color.FromRgb(0xFF, 0x69, 0xB4))
+            : new SolidColorBrush(Color.FromRgb(0xFF, 0x00, 0xFF));
+        var fill = new SolidColorBrush(Color.FromArgb(30, 0xFF, 0x00, 0xFF));
+
+        var center = CodingNormToPixel(overlay.Points[0]);
+        var edge = CodingNormToPixel(overlay.Points[1]);
+        double radius = Math.Sqrt(Math.Pow(edge.X - center.X, 2) + Math.Pow(edge.Y - center.Y, 2));
+
+        if (radius < 3) return;
+
+        var circle = new System.Windows.Shapes.Ellipse
+        {
+            Width = radius * 2, Height = radius * 2,
+            Stroke = stroke, StrokeThickness = 2.5,
+            Fill = fill, Effect = glowEffect, Tag = tag
+        };
+        if (isPreview) circle.StrokeDashArray = new DoubleCollection { 4, 2 };
+        Canvas.SetLeft(circle, center.X - radius);
+        Canvas.SetTop(circle, center.Y - radius);
+        CodingOverlayCanvas.Children.Add(circle);
+
+        // Mittelpunkt-Markierung
+        AddDotMarker(center, 5, stroke, tag, glowEffect);
+
+        // Radius-Linie
+        var radLine = new System.Windows.Shapes.Line
+        {
+            X1 = center.X, Y1 = center.Y, X2 = edge.X, Y2 = edge.Y,
+            Stroke = stroke, StrokeThickness = 1.5,
+            StrokeDashArray = new DoubleCollection { 3, 2 },
+            Effect = glowEffect, Tag = tag
+        };
+        CodingOverlayCanvas.Children.Add(radLine);
+
+        // DN-Label
+        var parts = new List<string>();
+        if (overlay.Q1Mm.HasValue)
+            parts.Add($"DN {overlay.Q1Mm.Value:F0}");
+        if (overlay.DnRatioPercent.HasValue)
+            parts.Add($"({overlay.DnRatioPercent.Value:F0}% v. Haupt-DN)");
+
+        if (parts.Count > 0)
+        {
+            var lbl = new TextBlock
+            {
+                Text = string.Join(" ", parts),
+                FontSize = 13, FontWeight = FontWeights.SemiBold,
+                Foreground = stroke,
+                Background = new SolidColorBrush(Color.FromArgb(200, 17, 19, 24)),
+                Padding = new Thickness(6, 3, 6, 3),
+                Effect = glowEffect,
+                Tag = isPreview ? "overlay_measure" : "overlay_manual"
+            };
+            Canvas.SetLeft(lbl, center.X + radius + 8);
+            Canvas.SetTop(lbl, center.Y - 12);
+            CodingOverlayCanvas.Children.Add(lbl);
+        }
+    }
+
+    // --- Lineal: Linie + senkrechte Tick-Marks + mm-Werte ---
+
+    private void RenderRulerOverlay(
+        OverlayGeometry overlay, bool isPreview, Brush defaultStroke,
+        System.Windows.Media.Effects.DropShadowEffect glowEffect, string tag,
+        NormalizedPoint? labelAnchor)
+    {
+        if (overlay.Points.Count < 2) return;
+
+        var stroke = Brushes.White;
+        var p1 = CodingNormToPixel(overlay.Points[0]);
+        var p2 = CodingNormToPixel(overlay.Points[1]);
+
+        // Hauptlinie
+        var mainLine = new System.Windows.Shapes.Line
+        {
+            X1 = p1.X, Y1 = p1.Y, X2 = p2.X, Y2 = p2.Y,
+            Stroke = stroke, StrokeThickness = 2.5,
+            Effect = glowEffect, Tag = tag
+        };
+        if (isPreview) mainLine.StrokeDashArray = new DoubleCollection { 4, 2 };
+        CodingOverlayCanvas.Children.Add(mainLine);
+
+        // Tick-Marks berechnen
+        double totalMm = overlay.Q1Mm ?? 0;
+        if (totalMm <= 0) return;
+
+        double dx = p2.X - p1.X, dy = p2.Y - p1.Y;
+        double lineLen = Math.Sqrt(dx * dx + dy * dy);
+        if (lineLen < 10) return;
+
+        // Senkrechte Richtung
+        double normX = -dy / lineLen, normY = dx / lineLen;
+
+        // Adaptive Tick-Teilung
+        double tickInterval;
+        if (totalMm > 500) tickInterval = 100;
+        else if (totalMm > 200) tickInterval = 50;
+        else if (totalMm > 50) tickInterval = 10;
+        else tickInterval = 5;
+
+        int tickCount = (int)(totalMm / tickInterval);
+        for (int i = 0; i <= tickCount; i++)
+        {
+            double t = (i * tickInterval) / totalMm;
+            if (t > 1.0) break;
+            double tx = p1.X + dx * t;
+            double ty = p1.Y + dy * t;
+
+            // Grosse Ticks alle 5 Intervalle, sonst kleine
+            bool isMajor = (i % 5 == 0);
+            double tickLen = isMajor ? 10 : 5;
+
+            var tick = new System.Windows.Shapes.Line
+            {
+                X1 = tx - normX * tickLen,
+                Y1 = ty - normY * tickLen,
+                X2 = tx + normX * tickLen,
+                Y2 = ty + normY * tickLen,
+                Stroke = stroke, StrokeThickness = isMajor ? 1.5 : 1,
+                Effect = glowEffect, Tag = tag
+            };
+            CodingOverlayCanvas.Children.Add(tick);
+
+            // Beschriftung bei grossen Ticks
+            if (isMajor && i > 0)
+            {
+                var tickLbl = new TextBlock
+                {
+                    Text = $"{(int)(i * tickInterval)}",
+                    FontSize = 9, Foreground = stroke,
+                    Tag = tag
+                };
+                Canvas.SetLeft(tickLbl, tx + normX * 14 - 8);
+                Canvas.SetTop(tickLbl, ty + normY * 14 - 6);
+                CodingOverlayCanvas.Children.Add(tickLbl);
+            }
+        }
+
+        // End-Ticks an Start und Ende
+        foreach (var pt in new[] { p1, p2 })
+        {
+            var endTick = new System.Windows.Shapes.Line
+            {
+                X1 = pt.X - normX * 12, Y1 = pt.Y - normY * 12,
+                X2 = pt.X + normX * 12, Y2 = pt.Y + normY * 12,
+                Stroke = stroke, StrokeThickness = 2,
+                Effect = glowEffect, Tag = tag
+            };
+            CodingOverlayCanvas.Children.Add(endTick);
+        }
+
+        // Gesamtlaenge-Label
+        var anchorPt = labelAnchor != null ? CodingNormToPixel(labelAnchor) : new Point((p1.X + p2.X) / 2, (p1.Y + p2.Y) / 2);
+        var totalLbl = new TextBlock
+        {
+            Text = $"{totalMm:F1} mm",
+            FontSize = 13, FontWeight = FontWeights.SemiBold,
+            Foreground = stroke,
+            Background = new SolidColorBrush(Color.FromArgb(200, 17, 19, 24)),
+            Padding = new Thickness(6, 3, 6, 3),
+            Effect = glowEffect,
+            Tag = isPreview ? "overlay_measure" : "overlay_manual"
+        };
+        Canvas.SetLeft(totalLbl, anchorPt.X + 12);
+        Canvas.SetTop(totalLbl, anchorPt.Y - 20);
+        CodingOverlayCanvas.Children.Add(totalLbl);
+    }
+
+    // --- Referenz-DN: Gestrichelter Kreis am kalibrierten Rohrdurchmesser ---
+
+    private void RenderReferenceDn()
+    {
+        // Bestehende Referenz-DN-Elemente entfernen
+        var old = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
+            .Where(e => e.Tag is string s && s == "ref_dn")
+            .ToList();
+        foreach (var el in old) CodingOverlayCanvas.Children.Remove(el);
+
+        if (!_showReferenceDn || _codingOverlayService?.Calibration == null) return;
+        var cal = _codingOverlayService.Calibration;
+        if (!cal.IsCalibrated || cal.NormalizedDiameter <= 0) return;
+
+        double w = CodingOverlayCanvas.ActualWidth, h = CodingOverlayCanvas.ActualHeight;
+        if (w <= 0 || h <= 0) return;
+
+        var center = CodingNormToPixel(cal.PipeCenter);
+        // Radius: halber normierter Durchmesser, skaliert auf Canvas-Breite
+        double radiusPxX = (cal.NormalizedDiameter / 2.0) * w;
+        double radiusPxY = (cal.NormalizedDiameter / 2.0) * h;
+
+        var circle = new System.Windows.Shapes.Ellipse
+        {
+            Width = radiusPxX * 2, Height = radiusPxY * 2,
+            Stroke = new SolidColorBrush(Color.FromArgb(102, 255, 255, 255)),
+            StrokeThickness = 1.5,
+            StrokeDashArray = new DoubleCollection { 6, 3 },
+            Tag = "ref_dn"
+        };
+        Canvas.SetLeft(circle, center.X - radiusPxX);
+        Canvas.SetTop(circle, center.Y - radiusPxY);
+        CodingOverlayCanvas.Children.Add(circle);
+
+        // Label
+        var lbl = new TextBlock
+        {
+            Text = $"Ref: DN {cal.NominalDiameterMm}",
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Color.FromArgb(128, 255, 255, 255)),
+            Tag = "ref_dn"
+        };
+        Canvas.SetLeft(lbl, center.X + radiusPxX + 4);
+        Canvas.SetTop(lbl, center.Y - 8);
+        CodingOverlayCanvas.Children.Add(lbl);
+    }
+
+    // --- Hilfsmethode: Punkt-Markierung ---
+
+    private void AddDotMarker(Point pos, double radius, Brush fill, string tag,
+        System.Windows.Media.Effects.DropShadowEffect effect)
+    {
+        var dot = new System.Windows.Shapes.Ellipse
+        {
+            Width = radius * 2, Height = radius * 2,
+            Fill = fill, Stroke = Brushes.White, StrokeThickness = 1.5,
+            Effect = effect, Tag = tag
+        };
+        Canvas.SetLeft(dot, pos.X - radius);
+        Canvas.SetTop(dot, pos.Y - radius);
+        CodingOverlayCanvas.Children.Add(dot);
+    }
+
+    private static string BuildOverlayMeasurementText(OverlayGeometry overlay)
+    {
+        // Werkzeug-spezifische Texte
+        if (overlay.ToolType == OverlayToolType.Protractor && overlay.ArcDegrees.HasValue)
+            return $"Winkel: {overlay.ArcDegrees.Value:F1}\u00B0";
+
+        if (overlay.ToolType == OverlayToolType.DnCircle)
+        {
+            var dnParts = new List<string>();
+            if (overlay.Q1Mm.HasValue) dnParts.Add($"DN {overlay.Q1Mm.Value:F0}");
+            if (overlay.DnRatioPercent.HasValue) dnParts.Add($"({overlay.DnRatioPercent.Value:F0}% v. Haupt-DN)");
+            return string.Join(" ", dnParts);
+        }
+
+        if (overlay.ToolType == OverlayToolType.Ruler && overlay.Q1Mm.HasValue)
+            return $"Laenge: {overlay.Q1Mm.Value:F1} mm";
+
+        // Standard-Text fuer bestehende Werkzeuge
+        var parts = new List<string>();
+
+        if (overlay.Q1Mm.HasValue)
+            parts.Add($"Q1:{overlay.Q1Mm.Value:F0}mm");
+        if (overlay.Q2Mm.HasValue)
+            parts.Add($"Q2:{overlay.Q2Mm.Value:F0}mm");
+        if (overlay.ClockFrom.HasValue)
+        {
+            parts.Add(overlay.ClockTo.HasValue
+                ? $"Uhr:{overlay.ClockFrom.Value:F1}->{overlay.ClockTo.Value:F1}"
+                : $"Uhr:{overlay.ClockFrom.Value:F1}");
+        }
+        if (overlay.ArcDegrees.HasValue)
+            parts.Add($"Bogen:{overlay.ArcDegrees.Value:F0}deg");
+
+        return string.Join("  ", parts);
+    }
+
     private void UpdateCodingOverlayInfo(OverlayGeometry? overlay)
     {
         if (overlay == null)
@@ -2334,15 +3060,39 @@ public partial class PlayerWindow : Window
         TxtCodingQ1.Text = overlay.Q1Mm.HasValue ? $"Q1: {overlay.Q1Mm:F1} mm" : "Q1: -";
         TxtCodingQ2.Text = overlay.Q2Mm.HasValue ? $"Q2: {overlay.Q2Mm:F1} mm" : "Q2: -";
         TxtCodingClock.Text = overlay.ClockFrom.HasValue
-            ? $"Uhr: {overlay.ClockFrom:F1}" + (overlay.ClockTo.HasValue ? $" â†' {overlay.ClockTo:F1}" : "")
+            ? $"Uhr: {overlay.ClockFrom:F1}" + (overlay.ClockTo.HasValue ? $" -> {overlay.ClockTo:F1}" : "")
             : "Uhr: -";
-        TxtCodingArc.Text = overlay.ArcDegrees.HasValue ? $"Bogen: {overlay.ArcDegrees:F0}°" : "Bogen: -";
+        TxtCodingArc.Text = overlay.ArcDegrees.HasValue
+            ? (overlay.ToolType == OverlayToolType.Protractor
+                ? $"Winkel: {overlay.ArcDegrees:F1}\u00B0"
+                : $"Bogen: {overlay.ArcDegrees:F0} deg")
+            : "Bogen: -";
 
         CodingMeasurementPanel.Visibility = Visibility.Visible;
         var parts = new List<string>();
-        if (overlay.Q1Mm.HasValue) parts.Add($"Q1:{overlay.Q1Mm:F1}mm");
-        if (overlay.ClockFrom.HasValue) parts.Add($"Uhr:{overlay.ClockFrom:F1}");
-        if (overlay.ArcDegrees.HasValue) parts.Add($"{overlay.ArcDegrees:F0}°");
+
+        // Werkzeug-spezifische Anzeige
+        if (overlay.ToolType == OverlayToolType.Protractor)
+        {
+            if (overlay.ArcDegrees.HasValue) parts.Add($"Winkel:{overlay.ArcDegrees:F1}\u00B0");
+            if (overlay.ClockFrom.HasValue) parts.Add($"Uhr:{overlay.ClockFrom:F1}");
+        }
+        else if (overlay.ToolType == OverlayToolType.DnCircle)
+        {
+            if (overlay.Q1Mm.HasValue) parts.Add($"DN:{overlay.Q1Mm:F0}mm");
+            if (overlay.DnRatioPercent.HasValue) parts.Add($"{overlay.DnRatioPercent:F0}%");
+            if (overlay.ClockFrom.HasValue) parts.Add($"Uhr:{overlay.ClockFrom:F1}");
+        }
+        else if (overlay.ToolType == OverlayToolType.Ruler)
+        {
+            if (overlay.Q1Mm.HasValue) parts.Add($"Laenge:{overlay.Q1Mm:F1}mm");
+        }
+        else
+        {
+            if (overlay.Q1Mm.HasValue) parts.Add($"Q1:{overlay.Q1Mm:F1}mm");
+            if (overlay.ClockFrom.HasValue) parts.Add($"Uhr:{overlay.ClockFrom:F1}");
+            if (overlay.ArcDegrees.HasValue) parts.Add($"{overlay.ArcDegrees:F0}deg");
+        }
         TxtCodingMeasurement.Text = string.Join("  |  ", parts);
     }
 
@@ -2427,7 +3177,7 @@ public partial class PlayerWindow : Window
 
             // Reset
             _codingVm.CurrentOverlay = null;
-            CodingOverlayCanvas.Children.Clear();
+            RedrawCodingCanvas(includeManualOverlay: false);
             TxtCodingSelectedCode.Text = "";
             BtnCodingCreateEvent.IsEnabled = false;
             UpdateCodingOverlayInfo(null);
@@ -2476,7 +3226,7 @@ public partial class PlayerWindow : Window
         _codingVm.CurrentOverlay = null;
         _codingVm.SelectedCode = "";
         _codingVm.SelectedCodeDescription = "";
-        CodingOverlayCanvas.Children.Clear();
+        RedrawCodingCanvas(includeManualOverlay: false);
         TxtCodingSelectedCode.Text = "";
         BtnCodingCreateEvent.IsEnabled = false;
         UpdateCodingOverlayInfo(null);
@@ -2531,7 +3281,7 @@ public partial class PlayerWindow : Window
 
         var result = MessageBox.Show(
             $"Codier-Session abgeschlossen ({doc.Current.Entries.Count} Ereignisse).\n\n" +
-            "MÃ¶chten Sie jetzt ein PDF-Protokoll mit Grafik und Fotos erstellen?",
+            "MÃƒÂ¶chten Sie jetzt ein PDF-Protokoll mit Grafik und Fotos erstellen?",
             "PDF-Protokoll erstellen",
             MessageBoxButton.YesNo, MessageBoxImage.Question);
 
@@ -2760,9 +3510,9 @@ public partial class PlayerWindow : Window
         UpdateCodingStatistics();
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // Defekt-Detail-Panel, Aktionsbuttons, Statistik
-    // ═══════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     private void CodingEvents_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -3239,7 +3989,7 @@ public partial class PlayerWindow : Window
     }
 
     /// <summary>
-    /// KI-Befunde als CodingEvents eintragen — mit QualityGate-Ampelsystem.
+    /// KI-Befunde als CodingEvents eintragen â€” mit QualityGate-Ampelsystem.
     /// Gruen: auto-akzeptiert. Gelb/Rot: Video pausieren, Bestaetigung verlangen.
     /// </summary>
     private void AddAiFindingsAsEvents(LiveDetection result)
@@ -3263,7 +4013,7 @@ public partial class PlayerWindow : Window
                 Math.Abs(e.MeterAtCapture - meter) < 0.3);
             if (isDuplicate) continue;
 
-            // QualityGate: Severity → EvidenceVector → Ampel
+            // QualityGate: Severity -> EvidenceVector -> Ampel
             var evidence = new EvidenceVector(
                 QwenVisionConf: finding.Severity / 5.0,
                 PlausibilityScore: !string.IsNullOrWhiteSpace(finding.VsaCodeHint) ? 0.8 : 0.3
@@ -3276,6 +4026,7 @@ public partial class PlayerWindow : Window
 
             var entry = new ProtocolEntry
             {
+                Source = ProtocolEntrySource.Ai,
                 Code = code,
                 Beschreibung = finding.Label,
                 MeterStart = meter,
@@ -3283,35 +4034,27 @@ public partial class PlayerWindow : Window
             };
 
             if (!string.IsNullOrWhiteSpace(finding.PositionClock))
+            {
+                entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
                 entry.CodeMeta.Parameters["vsa.uhr.von"] = finding.PositionClock!;
+            }
 
-            // Overlay aus BBox generieren (wenn DINO/SAM-Daten vorhanden)
             var overlay = AiOverlayGeometryBuilder.BuildFromFinding(
                 finding, _codingOverlayService?.Calibration);
 
-            _codingSessionService.AddEvent(entry, overlay);
-
-            var codingEvent = new CodingEvent
+            var codingEvent = _codingSessionService.AddEvent(entry, overlay);
+            codingEvent.AiContext = new CodingEventAiContext
             {
-                Entry = entry,
-                Overlay = overlay,
-                MeterAtCapture = meter,
-                VideoTimestamp = videoTime,
-                AiContext = new CodingEventAiContext
-                {
-                    SuggestedCode = code,
-                    Confidence = gateResult.CompositeConfidence,
-                    Reason = finding.Label,
-                    Decision = gateResult.IsGreen
-                        ? CodingUserDecision.Accepted
-                        : CodingUserDecision.Ignored
-                }
+                SuggestedCode = code,
+                Confidence = gateResult.CompositeConfidence,
+                Reason = finding.Label,
+                Decision = gateResult.IsGreen
+                    ? CodingUserDecision.Accepted
+                    : CodingUserDecision.Ignored
             };
 
-            _codingVm.Events.Add(codingEvent);
             anyAdded = true;
 
-            // Erstes unsicheres Finding merken (fuer Pause + Bestaetigung)
             if (!gateResult.IsGreen && firstUnsure == null)
             {
                 firstUnsure = codingEvent;
@@ -3323,16 +4066,14 @@ public partial class PlayerWindow : Window
         {
             RefreshCodingEventsList();
             RenderAiOverlays();
+            if (_codingVm.CurrentOverlay != null)
+                RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: false);
+            UpdateToolBadge();
         }
 
-        // Bei Gelb/Rot: Video pausieren + Bestaetigungs-Panel zeigen
         if (firstUnsure != null && firstUnsureGate != null)
-        {
             PauseAndAskConfirmation(firstUnsure, firstUnsureGate);
-        }
     }
-
-    // --- Live-KI Timer ---
 
     private void CodingLiveAi_Click(object sender, RoutedEventArgs e)
     {
@@ -3439,8 +4180,8 @@ public partial class PlayerWindow : Window
         TxtConfirmConfidence.Text = $"({gateResult.CompositeConfidence:P0})";
         TxtConfirmDescription.Text = codingEvent.Entry.Beschreibung ?? codingEvent.AiContext?.Reason ?? "";
         TxtConfirmDetail.Text = gateResult.IsYellow
-            ? "KI ist unsicher — bitte pruefen."
-            : "KI hat geringe Sicherheit — bitte Code korrigieren oder verwerfen.";
+            ? "KI ist unsicher â€” bitte pruefen."
+            : "KI hat geringe Sicherheit â€” bitte Code korrigieren oder verwerfen.";
 
         CodingConfirmationPanel.Visibility = Visibility.Visible;
     }
@@ -3455,7 +4196,7 @@ public partial class PlayerWindow : Window
 
     private void ConfirmEdit_Click(object sender, RoutedEventArgs e)
     {
-        // VSA-Code-Explorer oeffnen → User waehlt korrekten Code
+        // VSA-Code-Explorer oeffnen â†’ User waehlt korrekten Code
         CloseConfirmationPanel();
 
         if (_codingPendingConfirmEvent != null)
@@ -3509,6 +4250,51 @@ public partial class PlayerWindow : Window
         CodingAiDot.Fill = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
         TxtCodingAiStatus.Text = BtnCodingLiveAi.IsChecked == true ? "Live-KI aktiv" : "KI Bereit";
     }
+    /// <summary>Werkzeug-Badge oben links auf Canvas anzeigen.</summary>
+    private void UpdateToolBadge()
+    {
+        var old = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
+            .Where(e => e.Tag is string s && s == "tool_badge")
+            .ToList();
+        foreach (var el in old)
+            CodingOverlayCanvas.Children.Remove(el);
+
+        if (_codingOverlayService == null) return;
+
+        string? toolText = _codingOverlayService.ActiveTool switch
+        {
+            OverlayToolType.Line => "Linie",
+            OverlayToolType.Arc => "Bogen",
+            OverlayToolType.Rectangle => "Flaeche",
+            OverlayToolType.Point => "Punkt",
+            OverlayToolType.Stretch => "Strecke",
+            OverlayToolType.Protractor => "Winkel",
+            OverlayToolType.DnCircle => "DN-Kreis",
+            OverlayToolType.Ruler => "Lineal",
+            _ => null
+        };
+
+        if (toolText == null) return;
+
+        var badge = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(200, 17, 19, 24)),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(8, 4, 8, 4),
+            Tag = "tool_badge",
+            Child = new TextBlock
+            {
+                Text = toolText,
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x00, 0xE5, 0xFF))
+            }
+        };
+
+        Canvas.SetLeft(badge, 10);
+        Canvas.SetTop(badge, 10);
+        CodingOverlayCanvas.Children.Add(badge);
+    }
 
     // --- KI-Overlays rendern (orange, gestrichelt) ---
 
@@ -3518,28 +4304,37 @@ public partial class PlayerWindow : Window
 
         // Bestehende KI-Overlays entfernen (Tags beginnen mit "ai_")
         var toRemove = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
-            .Where(e => e.Tag is string s && s.StartsWith("ai_")).ToList();
+            .Where(e => e.Tag is string s && s.StartsWith("ai_"))
+            .ToList();
         foreach (var el in toRemove)
             CodingOverlayCanvas.Children.Remove(el);
 
         var amber = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
         var amberFill = new SolidColorBrush(Color.FromArgb(30, 0xF5, 0x9E, 0x0B));
-        double w = CodingOverlayCanvas.ActualWidth, h = CodingOverlayCanvas.ActualHeight;
+        var aiGlow = new System.Windows.Media.Effects.DropShadowEffect
+        {
+            Color = Colors.Black,
+            BlurRadius = 6,
+            ShadowDepth = 0,
+            Opacity = 0.9
+        };
+
+        double w = CodingOverlayCanvas.ActualWidth;
+        double h = CodingOverlayCanvas.ActualHeight;
         if (w <= 0 || h <= 0) return;
 
         foreach (var ev in _codingVm.Events)
         {
-            if (ev.Overlay == null) continue;
+            if (ev.Overlay == null || ev.AiContext == null) continue;
             var geo = ev.Overlay;
 
-            // Farbe nach Entscheidung
-            Brush stroke = ev.AiContext?.Decision switch
+            Brush stroke = ev.AiContext.Decision switch
             {
                 CodingUserDecision.Accepted or CodingUserDecision.AcceptedWithEdit
-                    => new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)), // Gruen
+                    => new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)),
                 CodingUserDecision.Rejected
-                    => new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44)), // Rot
-                _ => amber // Orange = Vorschlag
+                    => new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44)),
+                _ => amber
             };
 
             switch (geo.ToolType)
@@ -3550,11 +4345,15 @@ public partial class PlayerWindow : Window
                     {
                         var line = new System.Windows.Shapes.Line
                         {
-                            X1 = geo.Points[0].X * w, Y1 = geo.Points[0].Y * h,
-                            X2 = geo.Points[1].X * w, Y2 = geo.Points[1].Y * h,
-                            Stroke = stroke, StrokeThickness = 2,
+                            X1 = geo.Points[0].X * w,
+                            Y1 = geo.Points[0].Y * h,
+                            X2 = geo.Points[1].X * w,
+                            Y2 = geo.Points[1].Y * h,
+                            Stroke = stroke,
+                            StrokeThickness = 2.5,
                             StrokeDashArray = new DoubleCollection { 5, 3 },
-                            Tag = "ai_overlay"
+                            Tag = "ai_overlay",
+                            Effect = aiGlow
                         };
                         CodingOverlayCanvas.Children.Add(line);
                     }
@@ -3563,29 +4362,34 @@ public partial class PlayerWindow : Window
                 case OverlayToolType.Rectangle:
                     if (geo.Points.Count >= 4)
                     {
-                        double rx = geo.Points[0].X * w, ry = geo.Points[0].Y * h;
+                        double rx = geo.Points[0].X * w;
+                        double ry = geo.Points[0].Y * h;
                         double rw = (geo.Points[2].X - geo.Points[0].X) * w;
                         double rh = (geo.Points[2].Y - geo.Points[0].Y) * h;
                         var rect = new Rectangle
                         {
-                            Width = Math.Abs(rw), Height = Math.Abs(rh),
-                            Stroke = stroke, StrokeThickness = 2,
+                            Width = Math.Abs(rw),
+                            Height = Math.Abs(rh),
+                            Stroke = stroke,
+                            StrokeThickness = 2.5,
                             StrokeDashArray = new DoubleCollection { 5, 3 },
                             Fill = amberFill,
-                            Tag = "ai_overlay"
+                            Tag = "ai_overlay",
+                            Effect = aiGlow
                         };
                         Canvas.SetLeft(rect, Math.Min(rx, rx + rw));
                         Canvas.SetTop(rect, Math.Min(ry, ry + rh));
                         CodingOverlayCanvas.Children.Add(rect);
 
-                        // Label
                         var label = new TextBlock
                         {
-                            Text = ev.Entry.Code ?? "?",
-                            FontSize = 10, Foreground = stroke,
+                            Text = string.IsNullOrWhiteSpace(ev.Entry.Code) ? "?" : ev.Entry.Code,
+                            FontSize = 10,
+                            Foreground = stroke,
                             Background = new SolidColorBrush(Color.FromArgb(180, 17, 19, 24)),
                             Padding = new Thickness(3, 1, 3, 1),
-                            Tag = "ai_overlay"
+                            Tag = "ai_overlay",
+                            Effect = aiGlow
                         };
                         Canvas.SetLeft(label, Math.Min(rx, rx + rw));
                         Canvas.SetTop(label, Math.Min(ry, ry + rh) - 16);
@@ -3596,23 +4400,48 @@ public partial class PlayerWindow : Window
                 case OverlayToolType.Point:
                     if (geo.Points.Count >= 1)
                     {
-                        double px = geo.Points[0].X * w, py = geo.Points[0].Y * h;
+                        double px = geo.Points[0].X * w;
+                        double py = geo.Points[0].Y * h;
                         var dot = new System.Windows.Shapes.Ellipse
                         {
-                            Width = 14, Height = 14,
-                            Fill = stroke, Opacity = 0.7,
-                            Tag = "ai_overlay"
+                            Width = 14,
+                            Height = 14,
+                            Fill = stroke,
+                            Opacity = 0.8,
+                            Stroke = Brushes.White,
+                            StrokeThickness = 1.5,
+                            Tag = "ai_overlay",
+                            Effect = aiGlow
                         };
                         Canvas.SetLeft(dot, px - 7);
                         Canvas.SetTop(dot, py - 7);
                         CodingOverlayCanvas.Children.Add(dot);
                     }
                     break;
+
+                case OverlayToolType.Arc:
+                    if (geo.Points.Count >= 2)
+                    {
+                        var arc = CreateArcPath(geo.Points[0], geo.Points[1], stroke, aiGlow, "ai_overlay", dashed: true);
+                        if (arc != null)
+                            CodingOverlayCanvas.Children.Add(arc);
+                    }
+                    break;
+
+                case OverlayToolType.Protractor:
+                    RenderProtractorOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
+                    break;
+
+                case OverlayToolType.DnCircle:
+                    RenderDnCircleOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
+                    break;
+
+                case OverlayToolType.Ruler:
+                    RenderRulerOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
+                    break;
             }
         }
     }
-
-    // --- Overlay-Zeichnung → KI-Analyse ---
 
     private async Task AnalyzeWithOverlayHintAsync(OverlayGeometry overlay)
     {
@@ -3736,3 +4565,16 @@ public partial class PlayerWindow : Window
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+

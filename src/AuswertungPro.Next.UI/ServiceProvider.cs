@@ -106,7 +106,8 @@ namespace AuswertungPro.Next.UI
 
             PlaywrightInstaller = new PlaywrightInstallService(loggerFactory.CreateLogger<PlaywrightInstallService>());
 
-
+            // Portabler Wissensspeicher initialisieren (vor KI-Config, da KB-Pfade davon abhaengen)
+            Ai.KnowledgeRoot.GetRoot(settings.KnowledgeRootPath);
 
             // Einheitliche KI-Konfiguration (1x laden, 3x projizieren)
             var aiPlatform = AiPlatformConfig.Load(settings);
@@ -158,8 +159,8 @@ namespace AuswertungPro.Next.UI
             Vsa = new VsaEvaluationService(channelsTable, manholesTable);
 
             MeasureRecommendation = new Infrastructure.Ai.MeasureRecommendationService(
-                Path.Combine(AppSettings.AppDataDir, "data", "measures_learning.json"),
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "measures-model.zip"));
+                Ai.KnowledgeRoot.GetMeasuresLearningPath(),
+                Ai.KnowledgeRoot.GetMeasuresModelPath());
 
             // Eigendevis
             var devisMappingPath = Path.Combine(AppContext.BaseDirectory, "Config", "devis_mappings.json");

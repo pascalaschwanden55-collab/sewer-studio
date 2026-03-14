@@ -75,6 +75,9 @@ public sealed class AppSettings
     public int? AiOllamaNumCtx { get; set; }
     public string? AiFfmpegPath { get; set; }
 
+    // Portabler Wissensspeicher (alle KI-Daten in einem Ordner)
+    public string? KnowledgeRootPath { get; set; }
+
     // Hydraulik-Panel letzte Eingaben
     public HydraulikPanelSettings HydraulikPanel { get; set; } = new();
 

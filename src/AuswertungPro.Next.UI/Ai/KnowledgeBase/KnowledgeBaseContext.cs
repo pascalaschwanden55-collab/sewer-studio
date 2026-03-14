@@ -16,10 +16,7 @@ namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
 /// </summary>
 public sealed class KnowledgeBaseContext : IDisposable
 {
-    public static string DefaultDbPath =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "AuswertungPro", "KiVideoanalyse", "KnowledgeBase.db");
+    public static string DefaultDbPath => KnowledgeRoot.GetKnowledgeDbPath();
 
     private readonly SqliteConnection _connection;
 

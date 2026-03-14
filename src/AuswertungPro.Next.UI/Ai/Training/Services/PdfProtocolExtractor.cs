@@ -322,8 +322,9 @@ public sealed class PdfProtocolExtractor
     // ── Bild-Extraktion aus PDF ─────────────────────────────────────────────
 
     /// <summary>
-    /// Extrahiert Fotos aus dem PDF-Bildbericht und ordnet sie den Einträgen zu.
-    /// Filtert kleine Bilder (Logos) und ordnet Fotos den Entries nach Position.
+    /// Extrahiert echte Inspektionsfotos aus dem PDF-Bildbericht und ordnet sie den Einträgen zu.
+    /// Unterstuetzt JPEG-kodierte Bilder (haeufig in IKAS/WinCan PDFs) und PNG.
+    /// Filtert Logos, Icons, Header-Banner und Querschnitt-Zeichnungen heraus.
     /// </summary>
     private static IReadOnlyList<GroundTruthEntry> ExtractAndAssignPdfImages(
         UglyToad.PdfPig.PdfDocument doc,
@@ -336,17 +337,63 @@ public sealed class PdfProtocolExtractor
             Directory.CreateDirectory(framesDir);
             var safeName = Regex.Replace(Path.GetFileNameWithoutExtension(pdfPath), @"[^\w\-]", "_");
 
-            // Alle sinnvollen Bilder aus dem PDF sammeln (min. 100x100 px)
-            var images = new List<byte[]>();
+            // Filter-Kriterien fuer echte Inspektionsfotos:
+            //   - Min. 300x200 Pixel (echte Fotos sind mindestens SD-Aufloesung)
+            //   - Seitenverhaeltnis 1.0–2.5 (Landscape-Fotos, keine Banner/Streifen)
+            //   - Min. 20 KB Bilddaten (Zeichnungen/Schemata sind kleiner)
+            const int MinWidth = 300;
+            const int MinHeight = 200;
+            const int MinBytesForPhoto = 20_000; // 20 KB — echte Fotos typisch 50KB+ (JPEG) oder 200KB+ (PNG)
+
+            var images = new List<(byte[] data, string ext)>();
             foreach (var page in doc.GetPages())
             {
                 foreach (var img in page.GetImages())
                 {
-                    if (img.WidthInSamples < 100 || img.HeightInSamples < 100)
-                        continue; // Logos, Icons etc. überspringen
+                    // Groessenfilter: Logos, Icons und kleine Grafiken raus
+                    if (img.WidthInSamples < MinWidth || img.HeightInSamples < MinHeight)
+                        continue;
 
-                    if (img.TryGetPng(out var pngBytes))
-                        images.Add(pngBytes);
+                    // Seitenverhaeltnis: Banner (z.B. 748x250 = 3.0) und schmale Streifen raus
+                    // Echte Inspektionsfotos sind typisch 4:3 (1.33) oder 16:9 (1.78)
+                    var aspect = (double)img.WidthInSamples / img.HeightInSamples;
+                    if (aspect < 1.0 || aspect > 2.5)
+                        continue;
+
+                    // Strategie 1: PNG-Konvertierung (funktioniert fuer nicht-JPEG-Bilder)
+                    if (img.TryGetPng(out var pngBytes) && pngBytes.Length >= MinBytesForPhoto)
+                    {
+                        images.Add((pngBytes, ".png"));
+                        continue;
+                    }
+
+                    // Strategie 2: JPEG-RawBytes direkt verwenden
+                    // Die meisten Inspektionsfotos in IKAS/WinCan-PDFs sind JPEG-kodiert.
+                    // TryGetPng() scheitert bei diesen, aber RawBytes enthaelt das JPEG direkt.
+                    // ACHTUNG: Manche PDFs haben invertierte Decode-Arrays ([1,0,1,0,1,0]),
+                    // wodurch die Raw-JPEG-Daten wie ein Farbnegativ aussehen.
+                    try
+                    {
+                        var raw = img.RawBytes;
+                        if (raw.Count >= MinBytesForPhoto
+                            && raw.Count >= 3
+                            && raw[0] == 0xFF && raw[1] == 0xD8 && raw[2] == 0xFF) // JPEG SOI Marker
+                        {
+                            var jpegBytes = raw.ToArray();
+
+                            // Pruefen ob das PDF einen invertierten Decode-Array hat
+                            if (IsInvertedImage(img))
+                            {
+                                jpegBytes = InvertJpegColors(jpegBytes);
+                            }
+
+                            images.Add((jpegBytes, ".jpg"));
+                        }
+                    }
+                    catch
+                    {
+                        // RawBytes-Zugriff kann bei manchen PDFs fehlschlagen
+                    }
                 }
             }
 
@@ -362,11 +409,12 @@ public sealed class PdfProtocolExtractor
 
                 if (i < images.Count)
                 {
-                    var fileName = $"{safeName}_{entry.VsaCode}_{entry.MeterStart:F1}m_{i}.png";
+                    var (data, ext) = images[i];
+                    var fileName = $"{safeName}_{entry.VsaCode}_{entry.MeterStart:F1}m_{i}{ext}";
                     framePath = Path.Combine(framesDir, fileName);
                     try
                     {
-                        File.WriteAllBytes(framePath, images[i]);
+                        File.WriteAllBytes(framePath, data);
                     }
                     catch
                     {
@@ -674,4 +722,183 @@ public sealed class PdfProtocolExtractor
 
     private static string Sig(GroundTruthEntry e)
         => $"{e.VsaCode}|{e.MeterStart:F2}|{e.MeterEnd:F2}";
+
+    // ── Farbnegativ-Korrektur fuer PDF-JPEG-Bilder ──────────────────────────
+
+    /// <summary>
+    /// Prueft ob ein PDF-Bild einen invertierten Decode-Array hat.
+    /// Manche PDF-Generatoren (WinCan, aeltere IKAS) speichern JPEG-Bilder
+    /// mit Decode [1,0,1,0,1,0] statt [0,1,0,1,0,1], was die Farben invertiert.
+    /// PdfPig exponiert den Decode-Array nicht direkt, daher pruefen wir
+    /// per Reflection oder anhand einer Heuristik (mittlere Helligkeit).
+    /// </summary>
+    private static bool IsInvertedImage(UglyToad.PdfPig.Content.IPdfImage img)
+    {
+        try
+        {
+            // Versuch 1: Decode-Array per Reflection holen
+            // PdfPig speichert intern ein Dictionary mit dem "Decode" Key
+            var dictProp = img.GetType().GetProperty("ImageDictionary",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            if (dictProp != null)
+            {
+                var dict = dictProp.GetValue(img);
+                if (dict != null)
+                {
+                    // DictionaryToken hat TryGet<T>(NameToken, out T)
+                    var tryGetMethod = dict.GetType().GetMethod("TryGet",
+                        new[] { typeof(UglyToad.PdfPig.Tokens.NameToken),
+                                typeof(UglyToad.PdfPig.Tokens.ArrayToken).MakeByRefType() });
+
+                    if (tryGetMethod == null)
+                    {
+                        // Generische TryGet<T> Methode suchen
+                        var methods = dict.GetType().GetMethods()
+                            .Where(m => m.Name == "TryGet" && m.IsGenericMethod);
+                        foreach (var method in methods)
+                        {
+                            try
+                            {
+                                var generic = method.MakeGenericMethod(typeof(UglyToad.PdfPig.Tokens.ArrayToken));
+                                var args = new object?[] {
+                                    UglyToad.PdfPig.Tokens.NameToken.Create("Decode"),
+                                    null };
+                                var found = (bool)generic.Invoke(dict, args)!;
+                                if (found && args[1] is UglyToad.PdfPig.Tokens.ArrayToken arr)
+                                {
+                                    // Decode [1,0,...] = invertiert, [0,1,...] = normal
+                                    if (arr.Data.Count >= 2
+                                        && arr.Data[0] is UglyToad.PdfPig.Tokens.NumericToken first
+                                        && first.Double > 0.5)
+                                    {
+                                        return true;
+                                    }
+                                    return false;
+                                }
+                                break;
+                            }
+                            catch { }
+                        }
+                    }
+                }
+            }
+
+            // Versuch 2: Heuristik — JPEG laden und mittlere Helligkeit pruefen
+            // Invertierte Bilder haben typischerweise eine sehr hohe mittlere Helligkeit
+            // (dunkles Rohr wird hell, heller Hintergrund wird dunkel)
+            return IsLikelyInvertedByBrightness(img.RawBytes.ToArray());
+        }
+        catch
+        {
+            // Im Zweifel: Heuristik auf RawBytes anwenden
+            try { return IsLikelyInvertedByBrightness(img.RawBytes.ToArray()); }
+            catch { return false; }
+        }
+    }
+
+    /// <summary>
+    /// Heuristik: Prueft ob ein JPEG-Bild wahrscheinlich invertiert ist.
+    /// Kanalbilder sind typischerweise dunkel (Rohrinneres). Wenn die mittlere
+    /// Helligkeit sehr hoch ist (>180), sind die Farben wahrscheinlich invertiert.
+    /// </summary>
+    private static bool IsLikelyInvertedByBrightness(byte[] jpegBytes)
+    {
+        try
+        {
+            using var ms = new MemoryStream(jpegBytes);
+            var bi = new System.Windows.Media.Imaging.BitmapImage();
+            bi.BeginInit();
+            bi.StreamSource = ms;
+            bi.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+            bi.DecodePixelWidth = 100; // Klein laden fuer Geschwindigkeit
+            bi.EndInit();
+            bi.Freeze();
+
+            // In Pixel-Array konvertieren
+            var wb = new System.Windows.Media.Imaging.WriteableBitmap(bi);
+            int stride = wb.PixelWidth * 4;
+            byte[] pixels = new byte[stride * wb.PixelHeight];
+            wb.CopyPixels(pixels, stride, 0);
+
+            // Mittlere Helligkeit berechnen (nur Luminanz)
+            long totalLum = 0;
+            int count = 0;
+            for (int i = 0; i < pixels.Length - 3; i += 4)
+            {
+                // BGRA Format
+                int b = pixels[i], g = pixels[i + 1], r = pixels[i + 2];
+                totalLum += (r * 299 + g * 587 + b * 114) / 1000; // ITU-R BT.601
+                count++;
+            }
+
+            if (count == 0) return false;
+            double avgLum = (double)totalLum / count;
+
+            // Kanalbilder sind typischerweise dunkel (avgLum < 100)
+            // Invertierte Bilder haben avgLum > 170
+            return avgLum > 170;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Invertiert die Farben eines JPEG-Bildes.
+    /// Decodiert JPEG → invertiert Pixeldaten → re-encodiert als JPEG.
+    /// </summary>
+    private static byte[] InvertJpegColors(byte[] jpegBytes)
+    {
+        try
+        {
+            // JPEG decodieren
+            using var inputMs = new MemoryStream(jpegBytes);
+            var decoder = new System.Windows.Media.Imaging.JpegBitmapDecoder(
+                inputMs,
+                System.Windows.Media.Imaging.BitmapCreateOptions.PreservePixelFormat,
+                System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+
+            var frame = decoder.Frames[0];
+
+            // In WriteableBitmap konvertieren
+            var wb = new System.Windows.Media.Imaging.WriteableBitmap(frame);
+            int stride = wb.PixelWidth * (wb.Format.BitsPerPixel / 8);
+            byte[] pixels = new byte[stride * wb.PixelHeight];
+            wb.CopyPixels(pixels, stride, 0);
+
+            // Alle Farbkanaele invertieren (nicht Alpha)
+            int bytesPerPixel = wb.Format.BitsPerPixel / 8;
+            int alphaOffset = bytesPerPixel == 4 ? 3 : -1; // BGRA: Alpha ist Byte 3
+
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                // Alpha-Kanal nicht invertieren
+                if (alphaOffset >= 0 && (i % bytesPerPixel) == alphaOffset)
+                    continue;
+                pixels[i] = (byte)(255 - pixels[i]);
+            }
+
+            // Zurueckschreiben
+            wb.WritePixels(
+                new System.Windows.Int32Rect(0, 0, wb.PixelWidth, wb.PixelHeight),
+                pixels, stride, 0);
+
+            // Als JPEG re-encodieren
+            var encoder = new System.Windows.Media.Imaging.JpegBitmapEncoder
+            {
+                QualityLevel = 92
+            };
+            encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(wb));
+
+            using var outputMs = new MemoryStream();
+            encoder.Save(outputMs);
+            return outputMs.ToArray();
+        }
+        catch
+        {
+            // Falls Inversion fehlschlaegt: Original zurueckgeben
+            return jpegBytes;
+        }
+    }
 }

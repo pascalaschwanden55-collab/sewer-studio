@@ -19,6 +19,8 @@ public partial class TrainingCase : ObservableObject
     [ObservableProperty] private string _protocolPath = "";
     [ObservableProperty] private TrainingCaseStatus _status = TrainingCaseStatus.New;
     [ObservableProperty] private DateTime _createdUtc = DateTime.UtcNow;
+
+    public override string ToString() => CaseId;
 }
 
 public sealed class TrainingCenterState

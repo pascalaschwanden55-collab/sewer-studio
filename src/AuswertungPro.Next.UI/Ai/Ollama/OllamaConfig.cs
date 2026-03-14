@@ -16,8 +16,9 @@ public sealed record OllamaConfig(
     int NumCtx = OllamaConfig.DefaultNumCtx)
 {
     // ── Modell-Konstanten (Single Source of Truth) ──────────────────────
-    public const string DefaultVisionModel = "qwen2.5vl:32b";
-    public const string DefaultTextModel   = "qwen2.5vl:32b";
+    /// <summary>"auto" = GpuModelSelector waehlt anhand VRAM (32b oder 7b).</summary>
+    public const string DefaultVisionModel = "auto";
+    public const string DefaultTextModel   = "auto";
     public const string DefaultEmbedModel  = "nomic-embed-text";
     public const string DefaultKeepAlive   = "24h";
     public const int    DefaultNumCtx      = 8192;

@@ -14,32 +14,32 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
         <!-- Engineering Light — harmonisiert mit Hauptfenster-Theme -->
-        <SolidColorBrush x:Key="BgMain"       Color="#F0F3F8"/>
-        <SolidColorBrush x:Key="BgCard"       Color="#FCFDFF"/>
-        <SolidColorBrush x:Key="BgCardHover"  Color="#E8EDF5"/>
-        <SolidColorBrush x:Key="Border1"      Color="#CDD6E4"/>
-        <SolidColorBrush x:Key="TextPrimary"  Color="#0A0F1A"/>
-        <SolidColorBrush x:Key="TextMuted"    Color="#3D4D63"/>
-        <SolidColorBrush x:Key="TextSub"      Color="#1C2536"/>
-        <SolidColorBrush x:Key="Accent"       Color="#2563EB"/>
-        <SolidColorBrush x:Key="AccentLight"  Color="#3B82F6"/>
-        <SolidColorBrush x:Key="Green"        Color="#16A34A"/>
-        <SolidColorBrush x:Key="Amber"        Color="#F59E0B"/>
-        <SolidColorBrush x:Key="Red"          Color="#DC2626"/>
+        <SolidColorBrush x:Key="BgMain"       Color="{StaticResource ColorBgLight}"/>
+        <SolidColorBrush x:Key="BgCard"       Color="{StaticResource ColorCard}"/>
+        <SolidColorBrush x:Key="BgCardHover"  Color="{StaticResource ColorHeader}"/>
+        <SolidColorBrush x:Key="Border1"      Color="{StaticResource ColorBorderLight}"/>
+        <SolidColorBrush x:Key="TextPrimary"  Color="{StaticResource ColorTextPrimary}"/>
+        <SolidColorBrush x:Key="TextMuted"    Color="{StaticResource ColorTextMuted}"/>
+        <SolidColorBrush x:Key="TextSub"      Color="{StaticResource ColorTextSecondary}"/>
+        <SolidColorBrush x:Key="Accent"       Color="{StaticResource ColorAccent}"/>
+        <SolidColorBrush x:Key="AccentLight"  Color="{StaticResource ColorAccentLight}"/>
+        <SolidColorBrush x:Key="Green"        Color="{StaticResource ColorSuccess}"/>
+        <SolidColorBrush x:Key="Amber"        Color="{StaticResource ColorWarning}"/>
+        <SolidColorBrush x:Key="Red"          Color="{StaticResource ColorDanger}"/>
 
         <!-- Gemeinsame Styles -->
         <Style x:Key="CardBorder" TargetType="Border">
-            <Setter Property="Background"       Value="#FCFDFF"/>
-            <Setter Property="BorderBrush"      Value="#CDD6E4"/>
+            <Setter Property="Background"       Value="{StaticResource BgCard}"/>
+            <Setter Property="BorderBrush"      Value="{StaticResource Border1}"/>
             <Setter Property="BorderThickness"  Value="1"/>
-            <Setter Property="CornerRadius"     Value="8"/>
+            <Setter Property="CornerRadius"     Value="12"/>
             <Setter Property="Padding"          Value="14"/>
         </Style>
 
         <Style x:Key="LabelSmall" TargetType="TextBlock">
             <Setter Property="FontSize"         Value="10"/>
             <Setter Property="FontWeight"       Value="Bold"/>
-            <Setter Property="Foreground"       Value="#3D4D63"/>
+            <Setter Property="Foreground"       Value="{StaticResource TextMuted}"/>
             <Setter Property="FontFamily"       Value="Consolas"/>
             <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
         </Style>
@@ -48,15 +48,15 @@
             <Setter Property="FontSize"   Value="24"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontFamily" Value="Consolas"/>
-            <Setter Property="Foreground" Value="#0A0F1A"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
         </Style>
 
         <!-- Phase-Button -->
         <Style x:Key="PhaseCard" TargetType="Border">
-            <Setter Property="Background"      Value="#FCFDFF"/>
-            <Setter Property="BorderBrush"     Value="#CDD6E4"/>
+            <Setter Property="Background"      Value="{StaticResource BgCard}"/>
+            <Setter Property="BorderBrush"     Value="{StaticResource Border1}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius"    Value="8"/>
+            <Setter Property="CornerRadius"    Value="12"/>
             <Setter Property="Padding"         Value="14,10"/>
         </Style>
 

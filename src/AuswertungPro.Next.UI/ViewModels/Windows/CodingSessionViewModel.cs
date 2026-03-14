@@ -85,6 +85,9 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         OnPropertyChanged(nameof(IsRectangleTool));
         OnPropertyChanged(nameof(IsPointTool));
         OnPropertyChanged(nameof(IsStretchTool));
+        OnPropertyChanged(nameof(IsProtractorTool));
+        OnPropertyChanged(nameof(IsDnCircleTool));
+        OnPropertyChanged(nameof(IsRulerTool));
     }
 
     public void Dispose()
@@ -132,6 +135,9 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     public bool IsRectangleTool => ActiveTool == OverlayToolType.Rectangle;
     public bool IsPointTool => ActiveTool == OverlayToolType.Point;
     public bool IsStretchTool => ActiveTool == OverlayToolType.Stretch;
+    public bool IsProtractorTool => ActiveTool == OverlayToolType.Protractor;
+    public bool IsDnCircleTool => ActiveTool == OverlayToolType.DnCircle;
+    public bool IsRulerTool => ActiveTool == OverlayToolType.Ruler;
 
     // --- Events ---
 
@@ -226,6 +232,15 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     private void SelectStretchTool() => _overlayService.ActiveTool = OverlayToolType.Stretch;
 
     [RelayCommand]
+    private void SelectProtractorTool() => _overlayService.ActiveTool = OverlayToolType.Protractor;
+
+    [RelayCommand]
+    private void SelectDnCircleTool() => _overlayService.ActiveTool = OverlayToolType.DnCircle;
+
+    [RelayCommand]
+    private void SelectRulerTool() => _overlayService.ActiveTool = OverlayToolType.Ruler;
+
+    [RelayCommand]
     private void CancelTool() => _overlayService.ActiveTool = OverlayToolType.None;
 
     // --- Overlay-Interaktion (vom Canvas aufgerufen) ---
@@ -249,6 +264,35 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         _overlayService.UpdateDraw(point);
         var geometry = _overlayService.EndDraw();
         CurrentOverlay = geometry;
+    }
+
+    /// <summary>
+    /// Multi-Punkt-Klick (Winkelmesser): Punkt hinzufuegen.
+    /// Gibt true zurueck wenn die Zeichnung abgeschlossen ist.
+    /// </summary>
+    public bool OnCanvasMultiPointClick(NormalizedPoint point)
+    {
+        if (!_overlayService.IsMultiPointTool) return false;
+        bool complete = _overlayService.AddDrawPoint(point);
+        if (complete)
+        {
+            var geometry = _overlayService.EndDraw();
+            CurrentOverlay = geometry;
+            return true;
+        }
+        // Noch nicht genug Punkte — Vorschau aktualisieren
+        CurrentOverlay = _overlayService.PreviewGeometry;
+        return false;
+    }
+
+    /// <summary>
+    /// Multi-Punkt-Vorschau aktualisieren (Mausbewegung waehrend Klick-Sequenz).
+    /// </summary>
+    public void OnCanvasMultiPointMove(NormalizedPoint mousePos)
+    {
+        if (!_overlayService.IsMultiPointTool || _overlayService.DrawPointCount == 0) return;
+        _overlayService.UpdateDraw(mousePos);
+        CurrentOverlay = _overlayService.PreviewGeometry;
     }
 
     // --- Event erstellen (Code + Overlay → ProtocolEntry) ---
@@ -282,6 +326,14 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
                 entry.CodeMeta.Parameters["vsa.uhr.von"] = CurrentOverlay.ClockFrom.Value.ToString("F1");
             if (CurrentOverlay.ClockTo.HasValue)
                 entry.CodeMeta.Parameters["vsa.uhr.bis"] = CurrentOverlay.ClockTo.Value.ToString("F1");
+
+            // Winkelmesser: Bogenwinkel uebertragen
+            if (CurrentOverlay.ArcDegrees.HasValue && CurrentOverlay.ToolType == OverlayToolType.Protractor)
+                entry.CodeMeta.Parameters["vsa.winkel"] = CurrentOverlay.ArcDegrees.Value.ToString("F1");
+
+            // DN-Kreis: Verhaeltnis zum Haupt-DN uebertragen
+            if (CurrentOverlay.DnRatioPercent.HasValue)
+                entry.CodeMeta.Parameters["vsa.dn.ratio"] = CurrentOverlay.DnRatioPercent.Value.ToString("F1");
 
             // Streckenschaden?
             if (CurrentOverlay.ToolType == OverlayToolType.Stretch)

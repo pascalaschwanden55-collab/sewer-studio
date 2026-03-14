@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.Ai;
@@ -45,6 +46,23 @@ public interface IOverlayToolService
 
     /// <summary>Wird gerade gezeichnet?</summary>
     bool IsDrawing { get; }
+
+    // --- Multi-Punkt-Werkzeuge (z.B. Winkelmesser mit 3 Klicks) ---
+
+    /// <summary>Ist das aktive Werkzeug ein Multi-Punkt-Werkzeug?</summary>
+    bool IsMultiPointTool { get; }
+
+    /// <summary>Anzahl benoetigter Punkte fuer das aktive Multi-Punkt-Werkzeug.</summary>
+    int RequiredPointCount { get; }
+
+    /// <summary>Anzahl bereits gesetzter Punkte.</summary>
+    int DrawPointCount { get; }
+
+    /// <summary>Punkt hinzufuegen (Multi-Punkt-Werkzeug). Gibt true zurueck wenn genug Punkte gesammelt.</summary>
+    bool AddDrawPoint(NormalizedPoint point);
+
+    /// <summary>Alle bisher gesetzten Multi-Punkt-Punkte (fuer Vorschau-Rendering).</summary>
+    IReadOnlyList<NormalizedPoint> DrawPoints { get; }
 
     // --- Berechnungen ---
 

@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai.Pipeline;
+using AuswertungPro.Next.UI.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -107,6 +108,8 @@ SONSTIGES:
 
     private readonly OllamaClient _client;
     private readonly string _model;
+    private FewShotExampleStore? _fewShotStore;
+    private IReadOnlyList<(FewShotExample Example, string Base64)>? _cachedFewShot;
 
     public EnhancedVisionAnalysisService(OllamaClient client, string model)
     {
@@ -114,34 +117,171 @@ SONSTIGES:
         _model = model;
     }
 
+    /// <summary>
+    /// Aktiviert Few-Shot Learning: Beispielbilder werden in den Prompt injiziert.
+    /// Sollte einmal beim Start aufgerufen werden.
+    /// </summary>
+    public async Task EnableFewShotAsync(FewShotExampleStore store, CancellationToken ct = default)
+    {
+        _fewShotStore = store;
+        await store.LoadAsync(ct);
+
+        // Maximal 3 Beispiele fuer 7B (Context-Limit), 5 fuer 32B
+        int maxExamples = _model.Contains("7b", StringComparison.OrdinalIgnoreCase) ? 2 : 4;
+        var examples = await store.GetBestExamplesAsync(maxExamples, ct: ct);
+
+        // Bilder vorladen und als Base64 cachen (einmal laden, bei jeder Analyse verwenden)
+        var loaded = new List<(FewShotExample, string)>();
+        foreach (var ex in examples)
+        {
+            var imgBytes = await store.LoadImageAsync(ex, ct);
+            if (imgBytes != null)
+                loaded.Add((ex, Convert.ToBase64String(imgBytes)));
+        }
+
+        _cachedFewShot = loaded;
+
+        System.Diagnostics.Debug.WriteLine(
+            $"[EnhancedVision] Few-Shot aktiviert: {loaded.Count} Beispiele geladen " +
+            $"({string.Join(", ", loaded.Select(l => l.Item1.VsaCode))})");
+    }
+
     public async Task<EnhancedFrameAnalysis> AnalyzeAsync(
         string framePngBase64,
         CancellationToken ct = default)
     {
-        var prompt = BuildPrompt();
+        var messages = BuildMessages(framePngBase64);
 
         EnhancedVisionDto dto;
         try
         {
             dto = await _client.ChatStructuredAsync<EnhancedVisionDto>(
                 model: _model,
-                messages:
-                [
-                    new OllamaClient.ChatMessage(
-                        Role: "user",
-                        Content: prompt,
-                        ImagesBase64: [framePngBase64])
-                ],
+                messages: messages,
                 formatSchema: EnhancedVisionSchema,
                 ct: ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"[EnhancedVision] KI-Fehler ({_model}): {ex.GetType().Name}: {ex.Message}");
             return EnhancedFrameAnalysis.Empty(ex.Message);
         }
 
         return MapToAnalysis(dto);
+    }
+
+    /// <summary>
+    /// Baut die Chat-Messages auf, mit Few-Shot Beispielen falls vorhanden.
+    /// </summary>
+    private IReadOnlyList<OllamaClient.ChatMessage> BuildMessages(string framePngBase64)
+    {
+        var messages = new List<OllamaClient.ChatMessage>();
+
+        // Few-Shot Beispiele als User/Assistant-Paare injizieren
+        if (_cachedFewShot is { Count: > 0 })
+        {
+            foreach (var (example, b64) in _cachedFewShot)
+            {
+                // User zeigt Beispielbild mit Kontext
+                var exPrompt = $"Analysiere dieses Kanalbild. " +
+                    $"Hinweis: Dieses Bild zeigt {example.Description}" +
+                    (example.ClockPosition != null ? $" bei {example.ClockPosition}" : "") +
+                    $" (VSA-Code: {example.VsaCode}).";
+
+                messages.Add(new OllamaClient.ChatMessage(
+                    Role: "user",
+                    Content: exPrompt,
+                    ImagesBase64: [b64]));
+
+                // Assistant antwortet mit korrekter Klassifizierung
+                var exResponse = BuildFewShotResponse(example);
+                messages.Add(new OllamaClient.ChatMessage(
+                    Role: "assistant",
+                    Content: exResponse));
+            }
+        }
+
+        // Eigentliche Analyse-Anfrage
+        messages.Add(new OllamaClient.ChatMessage(
+            Role: "user",
+            Content: BuildPrompt(),
+            ImagesBase64: [framePngBase64]));
+
+        return messages;
+    }
+
+    /// <summary>Baut eine synthetische "korrekte" Assistant-Antwort fuer ein Few-Shot Beispiel.</summary>
+    private static string BuildFewShotResponse(FewShotExample example)
+    {
+        var finding = new Dictionary<string, object?>
+        {
+            ["label"] = example.Description.Length > 60
+                ? example.Description[..60]
+                : example.Description,
+            ["vsa_code_hint"] = example.VsaCode,
+            ["severity"] = EstimateSeverity(example.VsaCode),
+            ["position_clock"] = FormatClock(example.ClockPosition),
+            ["extent_percent"] = (object?)null,
+            ["height_mm"] = (object?)null,
+            ["width_mm"] = (object?)null,
+            ["intrusion_percent"] = (object?)null,
+            ["cross_section_reduction_percent"] = (object?)null,
+            ["diameter_reduction_mm"] = (object?)null,
+            ["notes"] = (object?)null
+        };
+
+        var response = new Dictionary<string, object?>
+        {
+            ["meter"] = example.MeterPosition,
+            ["time_in_video"] = (object?)null,
+            ["pipe_material"] = GuessMaterial(example.Material),
+            ["pipe_diameter_mm"] = (object?)null,
+            ["findings"] = new[] { finding },
+            ["image_quality"] = "gut",
+            ["is_empty_frame"] = false
+        };
+
+        return JsonSerializer.Serialize(response);
+    }
+
+    /// <summary>Schaetzt Schweregrad anhand VSA-Code Praefix.</summary>
+    private static int EstimateSeverity(string code)
+    {
+        if (code.Length < 2) return 2;
+        return code[..2].ToUpperInvariant() switch
+        {
+            "BA" => code.Length >= 3 && code[2] == 'C' ? 4 : 3, // Bruch=4, sonst Riss=3
+            "BB" => 2,  // Betrieblich
+            "BC" => 2,  // Anschluss
+            "BD" => 1,  // Allgemein
+            _ => 2
+        };
+    }
+
+    /// <summary>Konvertiert Material-String in Schema-Enum.</summary>
+    private static string GuessMaterial(string? material)
+    {
+        if (string.IsNullOrEmpty(material)) return "unbekannt";
+        var m = material.ToLowerInvariant();
+        if (m.Contains("beton")) return "beton";
+        if (m.Contains("steinzeug")) return "steinzeug";
+        if (m.Contains("pvc") || m.Contains("kunststoff") || m.Contains("polypropylen") || m.Contains("pe"))
+            return "pvc";
+        if (m.Contains("gfk")) return "gfk";
+        if (m.Contains("stahl")) return "stahl";
+        if (m.Contains("faser")) return "faserzement";
+        return "unbekannt";
+    }
+
+    /// <summary>Formatiert Uhrzeitlage fuer JSON-Antwort.</summary>
+    private static string? FormatClock(string? clock)
+    {
+        if (string.IsNullOrEmpty(clock)) return null;
+        // "12 Uhr" → "12:00", "6 Uhr bis 9 Uhr" → "6:00"
+        var match = System.Text.RegularExpressions.Regex.Match(clock, @"(\d{1,2})");
+        return match.Success ? $"{int.Parse(match.Groups[1].Value)}:00" : null;
     }
 
     private string BuildPrompt()

@@ -8,13 +8,7 @@ namespace AuswertungPro.Next.UI.Ai.Training
 {
     public static class TrainingSamplesStore
     {
-        private static string GetStorePath()
-        {
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var dir = Path.Combine(appData, "AuswertungPro");
-            Directory.CreateDirectory(dir);
-            return Path.Combine(dir, "training_center_samples.json");
-        }
+        private static string GetStorePath() => KnowledgeRoot.GetTrainingSamplesPath();
 
         public static async Task<List<TrainingSample>> LoadAsync()
         {
