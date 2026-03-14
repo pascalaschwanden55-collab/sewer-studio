@@ -76,8 +76,34 @@ public partial class VsaCodeExplorerWindow : Window
         TxtMeterStart.TextChanged += (_, _) => _vm.MeterStart = TxtMeterStart.Text;
         TxtMeterEnd.TextChanged += (_, _) => _vm.MeterEnd = TxtMeterEnd.Text;
         TxtZeit.TextChanged += (_, _) => _vm.Zeit = TxtZeit.Text;
-        ChkStrecke.Checked += (_, _) => _vm.IsStreckenschaden = true;
-        ChkStrecke.Unchecked += (_, _) => _vm.IsStreckenschaden = false;
+        ChkStrecke.Checked += (_, _) =>
+        {
+            _vm.IsStreckenschaden = true;
+            StreckeTypPanel.Visibility = Visibility.Visible;
+            if (string.IsNullOrWhiteSpace(_vm.StreckenschadenTyp))
+            {
+                LstStreckeTyp.SelectedIndex = 0; // Default: Anfang
+                _vm.StreckenschadenTyp = "Anfang";
+            }
+        };
+        ChkStrecke.Unchecked += (_, _) =>
+        {
+            _vm.IsStreckenschaden = false;
+            StreckeTypPanel.Visibility = Visibility.Collapsed;
+            _vm.StreckenschadenTyp = "";
+        };
+        LstStreckeTyp.SelectionChanged += (_, _) =>
+        {
+            if (LstStreckeTyp.SelectedItem is ListBoxItem item)
+                _vm.StreckenschadenTyp = item.Content?.ToString() ?? "";
+        };
+
+        // Rohrverbindung
+        ChkRohrverbindung.Checked += (_, _) => _vm.AnRohrverbindung = true;
+        ChkRohrverbindung.Unchecked += (_, _) => _vm.AnRohrverbindung = false;
+
+        // Bemerkungen
+        TxtBemerkungen.TextChanged += (_, _) => _vm.Bemerkungen = TxtBemerkungen.Text;
 
         // Clock Controls -> Textboxen (via DependencyPropertyDescriptor)
         var singleValueDesc = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(
@@ -121,6 +147,16 @@ public partial class VsaCodeExplorerWindow : Window
         TxtMeterEnd.Text = _vm.MeterEnd;
         TxtZeit.Text = _vm.Zeit;
         ChkStrecke.IsChecked = _vm.IsStreckenschaden;
+        if (_vm.IsStreckenschaden)
+        {
+            StreckeTypPanel.Visibility = Visibility.Visible;
+            if (_vm.StreckenschadenTyp == "Ende")
+                LstStreckeTyp.SelectedIndex = 1;
+            else
+                LstStreckeTyp.SelectedIndex = 0;
+        }
+        ChkRohrverbindung.IsChecked = _vm.AnRohrverbindung;
+        TxtBemerkungen.Text = _vm.Bemerkungen;
         TxtQ1Value.Text = _vm.Q1Value;
         TxtQ2Value.Text = _vm.Q2Value;
         TxtClockVon.Text = _vm.ClockVon;

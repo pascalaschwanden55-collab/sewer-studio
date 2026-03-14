@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -16,21 +16,21 @@ namespace AuswertungPro.Next.UI.ViewModels.Windows;
 /// </summary>
 public sealed partial class VsaCodeExplorerViewModel : ObservableObject
 {
-    // â”€â”€ Navigation â”€â”€
+    // -- Navigation --
     [ObservableProperty] private int _currentLevel;
     [ObservableProperty] private string? _selectedGroupKey;
     [ObservableProperty] private string? _selectedCodeKey;
     [ObservableProperty] private string? _selectedChar1Key;
     [ObservableProperty] private string? _selectedChar2Key;
 
-    // â”€â”€ Result Panel â”€â”€
+    // -- Result Panel --
     [ObservableProperty] private string _finalCode = "";
     [ObservableProperty] private string _finalLabel = "";
     [ObservableProperty] private string? _finalSublabel;
     [ObservableProperty] private string? _warnMessage;
     [ObservableProperty] private bool _showResultPanel;
 
-    // â”€â”€ Quantifizierung â”€â”€
+    // -- Quantifizierung --
     [ObservableProperty] private string _q1Value = "";
     [ObservableProperty] private string _q2Value = "";
     [ObservableProperty] private QuantField? _q1Rule;
@@ -38,38 +38,43 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
     [ObservableProperty] private string? _q1Error;
     [ObservableProperty] private string? _q2Error;
 
-    // â”€â”€ Uhrposition â”€â”€
+    // -- Uhrposition --
     [ObservableProperty] private string _clockMode = "range";
     [ObservableProperty] private string? _clockHint;
     [ObservableProperty] private string _clockVon = "";
     [ObservableProperty] private string _clockBis = "";
 
-    // â”€â”€ Meter / Zeit â”€â”€
+    // -- Meter / Zeit --
     [ObservableProperty] private string _meterStart = "";
     [ObservableProperty] private string _meterEnd = "";
     [ObservableProperty] private bool _isStreckenschaden;
+    [ObservableProperty] private string _streckenschadenTyp = "";
     [ObservableProperty] private string _zeit = "";
 
-    // â”€â”€ Foto â”€â”€
+    // -- Zusatzfelder (WinCan-kompatibel) --
+    [ObservableProperty] private bool _anRohrverbindung;
+    [ObservableProperty] private string _bemerkungen = "";
+
+    // -- Foto --
     public ObservableCollection<string> FotoPaths { get; } = new();
 
-    // â”€â”€ Validation â”€â”€
+    // -- Validation --
     [ObservableProperty] private string _validationMessage = "";
     [ObservableProperty] private bool _canConfirm;
 
-    // â”€â”€ Breadcrumb â”€â”€
+    // -- Breadcrumb --
     public ObservableCollection<BreadcrumbItem> BreadcrumbItems { get; } = new();
 
-    // â”€â”€ Tiles (Legacy, Kompatibilitaet) â”€â”€
+    // -- Tiles (Legacy, Kompatibilitaet) --
     public ObservableCollection<TileItem> CurrentTiles { get; } = new();
 
-    // â”€â”€ Multi-Column Tiles (WinCan-Stil) â”€â”€
+    // -- Multi-Column Tiles (WinCan-Stil) --
     public ObservableCollection<TileItem> GroupTiles { get; } = new();
     public ObservableCollection<TileItem> CodeTiles { get; } = new();
     public ObservableCollection<TileItem> Char1Tiles { get; } = new();
     public ObservableCollection<TileItem> Char2Tiles { get; } = new();
 
-    // â”€â”€ Progress â”€â”€
+    // -- Progress --
     [ObservableProperty] private string? _currentGroupColor;
 
     // Vorherige Auswahl (fuer Edit-Modus)
@@ -112,6 +117,9 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
                 if (p.TryGetValue("vsa.q2", out var q2)) Q2Value = q2;
                 if (p.TryGetValue("vsa.uhr.von", out var uv)) ClockVon = uv;
                 if (p.TryGetValue("vsa.uhr.bis", out var ub)) ClockBis = ub;
+                if (p.TryGetValue("vsa.rohrverbindung", out var rv)) AnRohrverbindung = rv == "1";
+                if (p.TryGetValue("vsa.strecke.typ", out var st)) StreckenschadenTyp = st;
+                if (p.TryGetValue("vsa.bemerkungen", out var bem)) Bemerkungen = bem;
             }
         }
 
@@ -119,9 +127,9 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
             NavigateToLevel(0);
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // =================================================================
     // Navigation
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // =================================================================
 
     [RelayCommand]
     public void SelectTile(TileItem tile)
@@ -190,6 +198,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         ShowResultPanel = false;
         NavigateToLevel(level);
     }
+
     [RelayCommand]
     public void ResetToMainCodes()
     {
@@ -255,6 +264,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
 
         return true;
     }
+
     private void NavigateToLevel(int level)
     {
         CurrentLevel = level;
@@ -271,9 +281,9 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         Validate();
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // =================================================================
     // Tiles laden
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // =================================================================
 
     private void LoadTilesForCurrentLevel()
     {
@@ -383,9 +393,9 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         }
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // =================================================================
     // Final Result
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // =================================================================
 
     private void ShowFinalResult(string code, string? c1Key, string? c2Key)
     {
@@ -400,7 +410,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
             {
                 var c2Options = VsaCodeTree.GetChar2Options(cd, c1Key);
                 if (c2Options is not null && c2Options.TryGetValue(c2Key, out var c2Label))
-                    FinalSublabel = $"{c1Def.Label} â€” {c2Label}";
+                    FinalSublabel = $"{c1Def.Label} - {c2Label}";
             }
         }
         else
@@ -424,9 +434,9 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         Validate();
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // =================================================================
     // Breadcrumb
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // =================================================================
 
     private void UpdateBreadcrumb()
     {
@@ -445,9 +455,9 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         }
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // =================================================================
     // Validierung
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // =================================================================
 
     partial void OnQ1ValueChanged(string value) => Validate();
     partial void OnQ2ValueChanged(string value) => Validate();
@@ -557,9 +567,9 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         return v.ToString("00", CultureInfo.InvariantCulture);
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // =================================================================
     // ProtocolEntry bauen
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // =================================================================
 
     private static bool TryResolveCodePath(
         string? rawCode,
@@ -678,6 +688,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
             ? $"{codeKey}{prefix}{c1Key}"
             : $"{codeKey}{prefix}{c1Key}{c2Key}";
     }
+
     public ProtocolEntry BuildProtocolEntry()
     {
         var entry = _existingEntry ?? new ProtocolEntry();
@@ -719,13 +730,18 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         }
         else if (ClockMode == "range")
         {
-            // Bereich: Bis leer = Punktschaden → automatisch "00"
+            // Bereich: Bis leer = Punktschaden, automatisch "00"
             if (!string.IsNullOrWhiteSpace(clockVon) && string.IsNullOrWhiteSpace(clockBis))
                 clockBis = "00";
         }
 
         SetOrRemove(p, "vsa.uhr.von", clockVon);
         SetOrRemove(p, "vsa.uhr.bis", clockBis);
+
+        // Zusatzfelder
+        SetOrRemove(p, "vsa.rohrverbindung", AnRohrverbindung ? "1" : null);
+        SetOrRemove(p, "vsa.strecke.typ", string.IsNullOrWhiteSpace(StreckenschadenTyp) ? null : StreckenschadenTyp);
+        SetOrRemove(p, "vsa.bemerkungen", string.IsNullOrWhiteSpace(Bemerkungen) ? null : Bemerkungen);
 
         // Fotos
         entry.FotoPaths.Clear();
@@ -740,7 +756,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         var parts = new List<string>();
         if (!string.IsNullOrEmpty(FinalLabel)) parts.Add(FinalLabel);
         if (!string.IsNullOrEmpty(FinalSublabel)) parts.Add(FinalSublabel);
-        return string.Join(" â€” ", parts);
+        return string.Join(" - ", parts);
     }
 
     private static void SetOrRemove(Dictionary<string, string> dict, string key, string? value)
@@ -751,13 +767,9 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
             dict[key] = value.Trim();
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Helpers
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-    // ═══════════════════════════════════════════════════════════════
+    // =================================================================
     // Multi-Column Navigation (WinCan-Stil)
-    // ═══════════════════════════════════════════════════════════════
+    // =================================================================
 
     /// <summary>Befuellt alle 4 Spalten-Collections basierend auf aktuellem Zustand.</summary>
     public void PopulateAllColumns()
@@ -952,6 +964,10 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         ShowFinalResult($"{SelectedCodeKey}{prefix}{SelectedChar1Key}{key}", SelectedChar1Key, key);
         UpdateBreadcrumb();
     }
+
+    // =================================================================
+    // Helpers
+    // =================================================================
 
     private VsaCodeDef? GetCurrentVsaCodeDef()
     {

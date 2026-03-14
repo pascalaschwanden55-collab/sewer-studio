@@ -362,13 +362,41 @@
                                         <TextBox x:Name="TxtMeterEnd"/>
                                     </StackPanel>
                                 </Grid>
+                                <!-- Streckenschaden mit Anfang/Ende -->
                                 <CheckBox x:Name="ChkStrecke" Content="Streckenschaden"
                                           Margin="0,8,0,0"/>
+                                <StackPanel x:Name="StreckeTypPanel" Margin="20,4,0,0" Visibility="Collapsed">
+                                    <ListBox x:Name="LstStreckeTyp" BorderThickness="1"
+                                             BorderBrush="{StaticResource BorderBrush}"
+                                             Background="{StaticResource CardBrush}"
+                                             MaxHeight="52" Padding="0">
+                                        <ListBoxItem Content="Anfang" Padding="6,3"/>
+                                        <ListBoxItem Content="Ende" Padding="6,3"/>
+                                    </ListBox>
+                                </StackPanel>
+
+                                <!-- An einer Rohrverbindung -->
+                                <CheckBox x:Name="ChkRohrverbindung" Content="An einer Rohrverbindung"
+                                          Margin="0,8,0,0"/>
+
                                 <StackPanel Margin="0,8,0,0">
                                     <TextBlock Text="Videozeit (mm:ss)" FontSize="11" FontWeight="SemiBold"
                                                Margin="0,0,0,3"/>
                                     <TextBox x:Name="TxtZeit" Width="120" HorizontalAlignment="Left"/>
                                 </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ── Bemerkungen ── -->
+                        <Border CornerRadius="6" Padding="12" Margin="0,0,0,8"
+                                BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
+                                Background="{StaticResource CardBrush}">
+                            <StackPanel>
+                                <TextBlock Text="BEMERKUNGEN" FontSize="9" FontWeight="Bold"
+                                           Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
+                                <TextBox x:Name="TxtBemerkungen" AcceptsReturn="True"
+                                         TextWrapping="Wrap" MinHeight="40" MaxHeight="80"
+                                         VerticalScrollBarVisibility="Auto"/>
                             </StackPanel>
                         </Border>
 
