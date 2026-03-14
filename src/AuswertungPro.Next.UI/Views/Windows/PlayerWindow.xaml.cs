@@ -1779,8 +1779,9 @@ public partial class PlayerWindow : Window
         TxtCodingRange.Text = $"/ {_codingVm.EndMeter:F2}m";
         TxtCodingMeter.Text = "0.00m";
 
-        // Existierende Protokoll-Eintraege laden (aus DataGrid/Import)
-        LoadExistingProtocolEntries();
+        // Bestehende Beobachtungen werden jetzt direkt vom CodingSessionService
+        // via LoadExistingObservations geladen und vom ViewModel uebernommen
+        // (Protocol.Entries + Primaere_Schaeden Fallback fuer PDF-Import)
 
         // Events-Liste binden
         LstCodingEvents.ItemsSource = _codingVm.Events;

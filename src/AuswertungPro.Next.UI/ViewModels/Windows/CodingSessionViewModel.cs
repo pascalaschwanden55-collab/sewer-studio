@@ -167,6 +167,11 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
             HaltungName = session.HaltungName;
             CurrentMeter = 0;
             Events.Clear();
+
+            // Bestehende Beobachtungen aus der Session uebernehmen
+            // (vom Service via LoadExistingObservations geladen: Protocol.Entries oder Primaere_Schaeden)
+            foreach (var ev in session.Events)
+                Events.Add(ev);
         }
         catch (Exception ex)
         {
