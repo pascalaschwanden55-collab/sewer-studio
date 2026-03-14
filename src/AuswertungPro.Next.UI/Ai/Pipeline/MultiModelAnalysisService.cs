@@ -29,12 +29,6 @@ public sealed class MultiModelAnalysisService
     public int DedupWindowFrames { get; set; } = 3;
     public TimeSpan QwenFrameTimeout { get; set; } = TimeSpan.FromSeconds(300);
 
-    /// <summary>
-    /// Haltungslaenge in Metern fuer Meter-Estimation.
-    /// Wenn 0: Fallback auf 100m (alte Heuristik).
-    /// </summary>
-    public double HaltungslaengeM { get; set; }
-
     public MultiModelAnalysisService(
         VisionPipelineClient client,
         PipelineConfig config,
@@ -209,47 +203,22 @@ public sealed class MultiModelAnalysisService
             var maxDinoConf = dinoResult.Detections.Count > 0
                 ? dinoResult.Detections.Max(d => d.Confidence) : 0.0;
 
-            // Build findings from quantified masks — BBox normiert aus SAM-Masken durchreichen
-            var imgW = (double)samResult.ImageWidth;
-            var imgH = (double)samResult.ImageHeight;
+            // Build findings from quantified masks
             var findings = quantified
-                .Select((q, idx) => (Quantified: q, MaskIndex: idx))
-                .Where(x => !string.IsNullOrWhiteSpace(x.Quantified.Label))
-                .Select(x =>
-                {
-                    var q = x.Quantified;
-                    double? bx1 = null, by1 = null, bx2 = null, by2 = null;
-                    double? cxN = null, cyN = null;
-                    if (x.MaskIndex < samResult.Masks.Count && imgW > 0 && imgH > 0)
-                    {
-                        var mask = samResult.Masks[x.MaskIndex];
-                        if (mask.Bbox.Count >= 4)
-                        {
-                            bx1 = mask.Bbox[0] / imgW;
-                            by1 = mask.Bbox[1] / imgH;
-                            bx2 = mask.Bbox[2] / imgW;
-                            by2 = mask.Bbox[3] / imgH;
-                        }
-                        cxN = mask.CentroidX / imgW;
-                        cyN = mask.CentroidY / imgH;
-                    }
-                    return new EnhancedFinding(
-                        Label: q.Label,
-                        VsaCodeHint: null,
-                        Severity: EstimateSeverity(q),
-                        PositionClock: q.ClockPosition,
-                        ExtentPercent: q.ExtentPercent,
-                        HeightMm: q.HeightMm,
-                        WidthMm: q.WidthMm,
-                        IntrusionPercent: q.IntrusionPercent,
-                        CrossSectionReductionPercent: q.CrossSectionReductionPercent,
-                        DiameterReductionMm: null,
-                        Notes: $"DINO conf={q.Confidence:F2}",
-                        BboxX1Norm: bx1, BboxY1Norm: by1,
-                        BboxX2Norm: bx2, BboxY2Norm: by2,
-                        CentroidXNorm: cxN, CentroidYNorm: cyN
-                    );
-                })
+                .Where(q => !string.IsNullOrWhiteSpace(q.Label))
+                .Select(q => new EnhancedFinding(
+                    Label: q.Label,
+                    VsaCodeHint: null,
+                    Severity: EstimateSeverity(q),
+                    PositionClock: q.ClockPosition,
+                    ExtentPercent: q.ExtentPercent,
+                    HeightMm: q.HeightMm,
+                    WidthMm: q.WidthMm,
+                    IntrusionPercent: q.IntrusionPercent,
+                    CrossSectionReductionPercent: q.CrossSectionReductionPercent,
+                    DiameterReductionMm: null,
+                    Notes: $"DINO conf={q.Confidence:F2}"
+                ))
                 .ToList();
 
             // Build per-frame EvidenceVector with pipeline signals
@@ -342,10 +311,7 @@ public sealed class MultiModelAnalysisService
                 WidthMm: f.WidthMm,
                 IntrusionPercent: f.IntrusionPercent,
                 CrossSectionReductionPercent: f.CrossSectionReductionPercent,
-                DiameterReductionMm: f.DiameterReductionMm,
-                BboxX1Norm: f.BboxX1Norm, BboxY1Norm: f.BboxY1Norm,
-                BboxX2Norm: f.BboxX2Norm, BboxY2Norm: f.BboxY2Norm,
-                CentroidXNorm: f.CentroidXNorm, CentroidYNorm: f.CentroidYNorm
+                DiameterReductionMm: f.DiameterReductionMm
             )).ToList();
 
             // Update active findings (dedup)
@@ -441,11 +407,10 @@ public sealed class MultiModelAnalysisService
         return 1;
     }
 
-    private double EstimateMeter(double t, double duration, ref double lastMeter)
+    private static double EstimateMeter(double t, double duration, ref double lastMeter)
     {
-        // Haltungslaenge aus Property verwenden, Fallback auf 100m
-        var maxMeter = HaltungslaengeM > 0 ? HaltungslaengeM : 100.0;
-        var estimated = t / Math.Max(duration, 1.0) * maxMeter;
+        // Simple linear estimation (to be improved with OSD reading from Qwen)
+        var estimated = t / Math.Max(duration, 1.0) * 100.0; // assume ~100m max
         lastMeter = Math.Max(lastMeter, estimated);
         return Math.Round(lastMeter, 2);
     }
@@ -546,12 +511,8 @@ public sealed class MultiModelAnalysisService
         {
             using var p = Process.Start(psi);
             if (p is null) return 0;
-            // stdout und stderr parallel lesen um Deadlock zu vermeiden
-            var stdoutTask = p.StandardOutput.ReadToEndAsync(ct);
-            var stderrTask = p.StandardError.ReadToEndAsync(ct);
-            await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+            var stdout = await p.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
             await p.WaitForExitAsync(ct).ConfigureAwait(false);
-            var stdout = stdoutTask.Result;
             if (double.TryParse(stdout.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var dur))
                 return dur;
         }

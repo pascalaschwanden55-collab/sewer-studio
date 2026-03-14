@@ -524,14 +524,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         _ = sender;
         _ = e;
         if (Grid.SelectedCells.Count > 0)
-        {
             _activeColumn = Grid.SelectedCells[0].Column;
-
-            // Bei SelectionUnit="CellOrRowHeader" wird SelectedItem nur beim RowHeader-Klick gesetzt.
-            // Hier synchronisieren wir Selected auch bei Zellen-Klick, damit Toolbar-Aktionen funktionieren.
-            if (Grid.SelectedCells[0].Item is HaltungRecord rec && DataContext is DataPageViewModel vm && vm.Selected != rec)
-                vm.Selected = rec;
-        }
         UpdateAlignmentButtonsForCurrentColumn();
     }
 
@@ -1324,18 +1317,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private string BuildPrimaryDamagePreviewContent(HaltungRecord record)
     {
         var sp = App.Services as ServiceProvider;
+        var lines = BuildPrimaryDamageLinesFromFindings(record, sp);
+        if (lines.Count == 0)
+            lines = BuildPrimaryDamageLinesFromRaw(record.GetFieldValue("Primaere_Schaeden"), sp);
 
-        // Primaerer Weg: Feldinhalt direkt verwenden (ist die Wahrheit aus Import/Codierung)
-        var rawText = record.GetFieldValue("Primaere_Schaeden");
-        if (!string.IsNullOrWhiteSpace(rawText))
-        {
-            var lines = BuildPrimaryDamageLinesFromRaw(rawText, sp);
-            return lines.Count > 0 ? string.Join("\n", lines) : rawText;
-        }
+        if (lines.Count == 0)
+            return record.GetFieldValue("Primaere_Schaeden");
 
-        // Fallback: Aus VsaFindings aufbauen wenn kein Feldinhalt vorhanden
-        var findingLines = BuildPrimaryDamageLinesFromFindings(record, sp);
-        return findingLines.Count > 0 ? string.Join("\n", findingLines) : string.Empty;
+        return string.Join("\n", lines);
     }
 
     private static List<string> BuildPrimaryDamageLinesFromFindings(HaltungRecord record, ServiceProvider? sp)
@@ -1345,11 +1334,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (record.VsaFindings is null || record.VsaFindings.Count == 0)
             return lines;
 
-        // Haltungslaenge ermitteln fuer Plausibilitaetspruefung
-        double maxMeter = 500; // Default-Limit
-        if (double.TryParse(record.GetFieldValue("Laenge"), NumberStyles.Any, CultureInfo.InvariantCulture, out var len) && len > 0)
-            maxMeter = len * 1.1; // 10% Toleranz
-
         foreach (var finding in record.VsaFindings.Where(f => !string.IsNullOrWhiteSpace(f.KanalSchadencode)))
         {
             var code = NormalizePrimaryCode(finding.KanalSchadencode);
@@ -1357,11 +1341,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
                 continue;
 
             var meter = finding.MeterStart ?? finding.SchadenlageAnfang ?? TryExtractMeter(finding.Raw);
-
-            // Unrealistische Meterwerte verwerfen (z.B. Knotennummern als Meter interpretiert)
-            if (meter.HasValue && (meter.Value < 0 || meter.Value > maxMeter))
-                meter = null;
-
             var dedupeKey = meter.HasValue
                 ? $"{code}|{meter.Value.ToString("F2", CultureInfo.InvariantCulture)}"
                 : $"{code}|";
@@ -2058,10 +2037,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender) ?? vm.Selected;
+        var record = GetContextMenuRecord(sender);
         if (record is null)
         {
-            MessageBox.Show("Bitte zuerst eine Haltung auswaehlen.", "Protokoll",
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "Protokoll",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -2170,10 +2149,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender) ?? vm.Selected;
+        var record = GetContextMenuRecord(sender);
         if (record is null)
         {
-            MessageBox.Show("Bitte zuerst eine Haltung auswaehlen.", "KI Sanierung",
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "KI Sanierung",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -2185,10 +2164,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        var record = GetContextMenuRecord(sender) ?? vm.Selected;
+        var record = GetContextMenuRecord(sender);
         if (record is null)
         {
-            MessageBox.Show("Bitte zuerst eine Haltung auswaehlen.", "Videoanalyse KI",
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "Videoanalyse KI",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }

@@ -5,13 +5,11 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Services;
 
 /// <summary>
 /// Export/Import aller KI-Lerndaten und Einstellungen als ZIP-Archiv.
-/// Exportiert aus dem portablen Knowledge-Ordner.
 /// </summary>
 public static class KnowledgeBackupService
 {
@@ -128,6 +126,9 @@ public static class KnowledgeBackupService
 
     // ── Path helpers ─────────────────────────────────────────────────
 
+    private static readonly string RoamingAp = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "AuswertungPro");
+
     private static readonly string RoamingSs = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppIdentity.ProductName);
 
@@ -135,29 +136,26 @@ public static class KnowledgeBackupService
 
     private static IEnumerable<(string Source, string Entry)> EnumerateBackupFiles()
     {
-        var kr = KnowledgeRoot.GetRoot();
+        // KnowledgeBase DB + WAL/SHM
+        var kbDir = Path.Combine(RoamingAp, "KiVideoanalyse");
+        yield return (Path.Combine(kbDir, "KnowledgeBase.db"), "roaming_auswertungpro/KiVideoanalyse/KnowledgeBase.db");
+        yield return (Path.Combine(kbDir, "KnowledgeBase.db-wal"), "roaming_auswertungpro/KiVideoanalyse/KnowledgeBase.db-wal");
+        yield return (Path.Combine(kbDir, "KnowledgeBase.db-shm"), "roaming_auswertungpro/KiVideoanalyse/KnowledgeBase.db-shm");
 
-        // KnowledgeBase DB + WAL/SHM (aus Knowledge-Ordner)
-        var dbPath = KnowledgeRoot.GetKnowledgeDbPath();
-        yield return (dbPath, "knowledge/KnowledgeBase.db");
-        yield return (dbPath + "-wal", "knowledge/KnowledgeBase.db-wal");
-        yield return (dbPath + "-shm", "knowledge/KnowledgeBase.db-shm");
+        // Training data
+        yield return (Path.Combine(RoamingAp, "training_center_samples.json"), "roaming_auswertungpro/training_center_samples.json");
+        yield return (Path.Combine(RoamingAp, "training_center_settings.json"), "roaming_auswertungpro/training_center_settings.json");
+        yield return (Path.Combine(RoamingAp, "training_center.json"), "roaming_auswertungpro/training_center.json");
 
-        // Training data (aus Knowledge-Ordner)
-        yield return (KnowledgeRoot.GetTrainingSamplesPath(), "knowledge/training_samples.json");
-        yield return (KnowledgeRoot.GetTrainingSettingsPath(), "knowledge/training_settings.json");
-        yield return (KnowledgeRoot.GetMeasuresLearningPath(), "knowledge/measures_learning.json");
-        yield return (KnowledgeRoot.GetMeasuresModelPath(), "knowledge/measures-model.zip");
-
-        // Frames (aus Knowledge-Ordner)
-        var framesDir = KnowledgeRoot.GetFramesDir();
+        // Frames
+        var framesDir = Path.Combine(RoamingAp, "frames");
         if (Directory.Exists(framesDir))
         {
             foreach (var png in Directory.EnumerateFiles(framesDir, "*.png"))
-                yield return (png, "knowledge/frames/" + Path.GetFileName(png));
+                yield return (png, "roaming_auswertungpro/frames/" + Path.GetFileName(png));
         }
 
-        // SewerStudio dropdowns + presets (bleiben in AppData)
+        // SewerStudio dropdowns + presets
         var dropdownsDir = Path.Combine(RoamingSs, "dropdowns");
         if (Directory.Exists(dropdownsDir))
         {
@@ -172,23 +170,12 @@ public static class KnowledgeBackupService
 
     private static string? MapEntryToLocalPath(string entryName)
     {
-        const string prefixKnowledge = "knowledge/";
+        const string prefixAp = "roaming_auswertungpro/";
         const string prefixSs = "roaming_sewerstudio/";
         const string prefixLocal = "local_sewerstudio/";
-        // Legacy-Prefix fuer aeltere Backups
-        const string prefixAp = "roaming_auswertungpro/";
 
-        if (entryName.StartsWith(prefixKnowledge))
-            return Path.Combine(KnowledgeRoot.GetRoot(), entryName[prefixKnowledge.Length..].Replace('/', Path.DirectorySeparatorChar));
         if (entryName.StartsWith(prefixAp))
-        {
-            // Alte Backups → in Knowledge-Ordner importieren
-            var relative = entryName[prefixAp.Length..].Replace('/', Path.DirectorySeparatorChar);
-            // KiVideoanalyse/KnowledgeBase.db → KnowledgeBase.db
-            if (relative.StartsWith("KiVideoanalyse" + Path.DirectorySeparatorChar))
-                relative = relative[("KiVideoanalyse" + Path.DirectorySeparatorChar).Length..];
-            return Path.Combine(KnowledgeRoot.GetRoot(), relative);
-        }
+            return Path.Combine(RoamingAp, entryName[prefixAp.Length..].Replace('/', Path.DirectorySeparatorChar));
         if (entryName.StartsWith(prefixSs))
             return Path.Combine(RoamingSs, entryName[prefixSs.Length..].Replace('/', Path.DirectorySeparatorChar));
         if (entryName.StartsWith(prefixLocal))

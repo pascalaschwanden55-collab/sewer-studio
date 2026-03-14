@@ -5,53 +5,43 @@
              Height="240">
     <Grid>
         <Canvas x:Name="FaceCanvas" Background="Transparent">
-            <!-- Rohrleitungsquerschnitt: Rohrwand (aeusserer Ring) -->
-            <Ellipse x:Name="PipeWall"
-                     Stroke="#9EAEC4"
-                     StrokeThickness="10"
-                     Fill="Transparent"/>
-            <!-- Rohrleitungsquerschnitt: Innenraum -->
-            <Ellipse x:Name="PipeInterior"
-                     Stroke="#CDD6E4"
-                     StrokeThickness="1"
-                     Fill="#F0F3F8"/>
-            <!-- Bereichs-Bogen (Von bis Bis, im Uhrzeigersinn) -->
+            <!-- Zifferblatt -->
+            <Ellipse x:Name="Face"
+                     Stroke="#333"
+                     StrokeThickness="1.5"
+                     Fill="White"/>
+            <!-- Bereichs-Sektor (Von bis Bis, im Uhrzeigersinn) -->
             <Path x:Name="RangeArc"
-                  Fill="Transparent"
-                  Stroke="#16A34A"
-                  StrokeThickness="8"
+                  Fill="#44FF8C00"
+                  Stroke="#FF8C00"
+                  StrokeThickness="1.5"
+                  Visibility="Collapsed"/>
+            <!-- Zeiger Von -->
+            <Line x:Name="HandVon"
+                  Stroke="#FF8C00"
+                  StrokeThickness="3"
                   StrokeStartLineCap="Round"
                   StrokeEndLineCap="Round"
-                  Opacity="0.5"
                   Visibility="Collapsed"/>
-            <!-- Markierungspunkt Von -->
-            <Ellipse x:Name="PointVon"
-                     Width="10"
-                     Height="10"
-                     Fill="#16A34A"
-                     Opacity="0.7"
-                     Visibility="Collapsed"/>
-            <!-- Markierungspunkt Bis -->
-            <Ellipse x:Name="PointBis"
-                     Width="10"
-                     Height="10"
-                     Fill="#2563EB"
-                     Opacity="0.7"
-                     Visibility="Collapsed"/>
+            <!-- Zeiger Bis -->
+            <Line x:Name="HandBis"
+                  Stroke="#1F4E9E"
+                  StrokeThickness="3"
+                  StrokeStartLineCap="Round"
+                  StrokeEndLineCap="Round"
+                  Visibility="Collapsed"/>
             <!-- Mittelpunkt -->
             <Ellipse x:Name="CenterDot"
                      Width="8"
                      Height="8"
-                     Fill="#1C2536"/>
+                     Fill="#333"/>
         </Canvas>
-        <!-- Status-Anzeige (IsHitTestVisible=False: 6-Uhr-Button nicht blockieren) -->
+        <!-- Status-Anzeige -->
         <TextBlock x:Name="StatusText"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Bottom"
                    FontSize="11"
-                   FontFamily="Consolas"
-                   Foreground="#3D4D63"
-                   Margin="0,0,0,2"
-                   IsHitTestVisible="False"/>
+                   Foreground="#666"
+                   Margin="0,0,0,2"/>
     </Grid>
 </UserControl>

@@ -344,20 +344,12 @@ public partial class ObservationCatalogWindow : Window
                 errors.Add("VSA: Uhr von ist erforderlich.");
             }
 
-            // Quantifizierung via DataKey (Q1/Q2) oder bekannte Parameternamen erkennen
             var hasQuant1 = _vm.SelectedCode.Parameters.Any(p =>
-                string.Equals(p.DataKey, "Q1", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(p.Name, "Quantifizierung", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(p.Name, "Schadenausmass", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(p.Name, "Beeintraechtigung", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(p.Name, "Bedeckungsgrad", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(p.Name, "Fuellungsgrad", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(p.Name, "Kruemmungswinkel", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(p.Name, "Verschiebung", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(p.Name, "Hoehe", StringComparison.OrdinalIgnoreCase));
+                string.Equals(p.Name, "Quant1", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(p.Name, "Quantifizierung 1", StringComparison.OrdinalIgnoreCase));
             var hasQuant2 = _vm.SelectedCode.Parameters.Any(p =>
-                string.Equals(p.DataKey, "Q2", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(p.Name, "Breite", StringComparison.OrdinalIgnoreCase));
+                string.Equals(p.Name, "Quant2", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(p.Name, "Quantifizierung 2", StringComparison.OrdinalIgnoreCase));
 
             if (!hasQuant1 && !string.IsNullOrWhiteSpace(VsaQ1TextBox.Text))
             {

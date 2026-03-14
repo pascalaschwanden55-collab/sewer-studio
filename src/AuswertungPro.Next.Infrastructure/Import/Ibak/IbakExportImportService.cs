@@ -67,54 +67,45 @@ public sealed class IbakExportImportService : IIbakImportService
                 ctx?.Progress?.Report(new ImportProgress(
                     "Haltungen importieren", holdingIndex, parsed.Count,
                     $"IBAK {holdingIndex}/{parsed.Count}", holding.Holding));
-
-                try
+                var key = NormalizeHoldingKey(holding.Holding);
+                var record = FindRecord(project, key);
+                if (record is null)
                 {
-                    var key = NormalizeHoldingKey(holding.Holding);
-                    var record = FindRecord(project, key);
-                    if (record is null)
-                    {
-                        // Auto-Create: Neue Haltung aus IBAK-Daten anlegen
-                        record = new HaltungRecord();
-                        record.SetFieldValue("Haltungsname", holding.Holding, FieldSource.Legacy, userEdited: false);
-                        ApplyHeaderFields(record, holding.Entries);
-                        project.Data.Add(record);
-                        created++;
-                        messages.Add($"Haltung neu erstellt aus IBAK: {holding.Holding}");
-                    }
-
-                    found++;
-
-                    if (holding.Entries.Count == 0)
-                    {
-                        uncertain++;
-                        messages.Add($"Keine Beobachtungen in Daten.txt fuer Haltung {holding.Holding}");
-                        continue;
-                    }
-
-                    // Stammdaten (DN, Material, Haltungslänge) auch für bestehende Records aktualisieren
+                    // Auto-Create: Neue Haltung aus IBAK-Daten anlegen
+                    record = new HaltungRecord();
+                    record.SetFieldValue("Haltungsname", holding.Holding, FieldSource.Legacy, userEdited: false);
                     ApplyHeaderFields(record, holding.Entries);
-
-                    ApplyPhotosToEntries(holding.Holding, holding.Entries, fileIndex, photoMap, messages);
-                    ApplyProtocol(record, holding.Entries, protocolService);
-                    BuildPrimaryDamagesText(record, holding.Entries);
-                    UpdateFindings(record, holding.Entries);
-                    LinkVideo(record, holding.Holding, fileIndex);
-                    LinkHoldingPdf(record, holding.Holding, fileIndex);
-
-                    updated++;
+                    project.Data.Add(record);
+                    created++;
+                    messages.Add($"Haltung neu erstellt aus IBAK: {holding.Holding}");
                 }
-                catch (Exception ex)
+
+                found++;
+
+                if (holding.Entries.Count == 0)
                 {
-                    errors++;
-                    messages.Add($"Fehler bei Haltung {holding.Holding}: {ex.Message}");
+                    uncertain++;
+                    messages.Add($"Keine Beobachtungen in Daten.txt fuer Haltung {holding.Holding}");
+                    continue;
                 }
+
+                // Stammdaten (DN, Material, Haltungslänge) auch für bestehende Records aktualisieren
+                ApplyHeaderFields(record, holding.Entries);
+
+                ApplyPhotosToEntries(holding.Holding, holding.Entries, fileIndex, photoMap, messages);
+                ApplyProtocol(record, holding.Entries, protocolService);
+                BuildPrimaryDamagesText(record, holding.Entries);
+                UpdateFindings(record, holding.Entries);
+                LinkVideo(record, holding.Holding, fileIndex);
+                LinkHoldingPdf(record, holding.Holding, fileIndex);
+
+                updated++;
             }
         }
         catch (Exception ex)
         {
             errors++;
-            messages.Add($"Kritischer Fehler beim IBAK Parse: {ex.Message}");
+            messages.Add($"Fehler beim IBAK Import: {ex.Message}");
         }
 
         project.ModifiedAtUtc = DateTime.UtcNow;
@@ -245,18 +236,12 @@ public sealed class IbakExportImportService : IIbakImportService
             record.SetFieldValue("PDF_All", string.Join(";", matches), FieldSource.Legacy, userEdited: false);
     }
 
-    private static bool _encodingRegistered;
-
     private static List<IbakHolding> ParseDatenTxt(string dataPath, List<string> messages)
     {
         var holdings = new List<IbakHolding>();
         var current = (IbakHolding?)null;
 
-        if (!_encodingRegistered)
-        {
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            _encodingRegistered = true;
-        }
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         foreach (var raw in File.ReadLines(dataPath, Encoding.GetEncoding(1252)))
         {
             var line = raw?.TrimEnd() ?? "";
@@ -890,12 +875,9 @@ public sealed class IbakExportImportService : IIbakImportService
         if (match.Success)
         {
             var vsaCode = match.Groups[1].Value;
-            var trimmed = description.Trim();
-            var rest = trimmed.Length > vsaCode.Length
-                ? trimmed[vsaCode.Length..].TrimStart(' ', '(')
-                : "";
-            if (rest.Length > 0 && rest.EndsWith(")"))
-                rest = rest[..^1];
+            var rest = description.Trim().Substring(vsaCode.Length).TrimStart(' ', '(');
+            if (rest.EndsWith(")"))
+                rest = rest.Substring(0, rest.Length - 1);
             resolvedDescription = rest.Trim();
             if (string.IsNullOrWhiteSpace(resolvedDescription))
                 resolvedDescription = description;

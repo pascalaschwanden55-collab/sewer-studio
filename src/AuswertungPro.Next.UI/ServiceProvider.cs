@@ -106,8 +106,7 @@ namespace AuswertungPro.Next.UI
 
             PlaywrightInstaller = new PlaywrightInstallService(loggerFactory.CreateLogger<PlaywrightInstallService>());
 
-            // Portabler Wissensspeicher initialisieren (vor KI-Config, da KB-Pfade davon abhaengen)
-            Ai.KnowledgeRoot.GetRoot(settings.KnowledgeRootPath);
+
 
             // Einheitliche KI-Konfiguration (1x laden, 3x projizieren)
             var aiPlatform = AiPlatformConfig.Load(settings);
@@ -159,8 +158,8 @@ namespace AuswertungPro.Next.UI
             Vsa = new VsaEvaluationService(channelsTable, manholesTable);
 
             MeasureRecommendation = new Infrastructure.Ai.MeasureRecommendationService(
-                Ai.KnowledgeRoot.GetMeasuresLearningPath(),
-                Ai.KnowledgeRoot.GetMeasuresModelPath());
+                Path.Combine(AppSettings.AppDataDir, "data", "measures_learning.json"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "measures-model.zip"));
 
             // Eigendevis
             var devisMappingPath = Path.Combine(AppContext.BaseDirectory, "Config", "devis_mappings.json");
@@ -236,6 +235,28 @@ namespace AuswertungPro.Next.UI
                     "Catalogs"));
                 if (!string.IsNullOrWhiteSpace(fromProject))
                     return fromProject;
+            }
+
+            // WinCan catalog directory (user-configured via Katalog-Auswahl)
+            if (!string.IsNullOrWhiteSpace(settings.WinCanCatalogDirectory))
+            {
+                var fromWinCan = FindCatalogInRoot(settings.WinCanCatalogDirectory);
+                if (!string.IsNullOrWhiteSpace(fromWinCan))
+                    return fromWinCan;
+            }
+
+            // Auto-detect common WinCanVX installation paths
+            var commonPaths = new[]
+            {
+                @"C:\CDLAB\WinCanVX\WinCanMerger\App_Data\Catalogs",
+                @"C:\Program Files\CDLAB\WinCanVX\WinCanMerger\App_Data\Catalogs",
+                @"C:\Program Files (x86)\CDLAB\WinCanVX\WinCanMerger\App_Data\Catalogs"
+            };
+            foreach (var commonPath in commonPaths)
+            {
+                var fromCommon = FindCatalogInRoot(commonPath);
+                if (!string.IsNullOrWhiteSpace(fromCommon))
+                    return fromCommon;
             }
 
             return null;
@@ -427,14 +448,6 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IExcelExportService)) return ExcelExport;
             if (serviceType == typeof(IVsaEvaluationService)) return Vsa;
             if (serviceType == typeof(IProtocolService)) return Protocols;
-            if (serviceType == typeof(IPhotoImportService)) return PhotoImport;
-            if (serviceType == typeof(IProtocolAiService)) return ProtocolAi;
-            if (serviceType == typeof(ICodeCatalogProvider)) return CodeCatalog;
-            if (serviceType == typeof(IDialogService)) return Dialogs;
-            if (serviceType == typeof(IPlaywrightInstallService)) return PlaywrightInstaller;
-            if (serviceType == typeof(IMeasureRecommendationService)) return MeasureRecommendation;
-            if (serviceType == typeof(IRetrievalService)) return Retrieval;
-            if (serviceType == typeof(IDevisGenerator)) return DevisGenerator;
             if (serviceType == typeof(ILogger)) return Logger;
             if (serviceType == typeof(ILoggerFactory)) return LoggerFactory;
             return null;

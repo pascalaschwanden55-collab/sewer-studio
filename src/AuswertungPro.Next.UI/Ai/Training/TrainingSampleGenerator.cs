@@ -111,29 +111,12 @@ public sealed class TrainingSampleGenerator
             hasVideo = duration > 0; // ffmpeg nicht verfügbar → protocol-only
         }
 
-        // OSD-Zeitreihe: Protokoll-gesteuert (schnell) oder Full-Scan (langsam)
+        // OSD-Zeitreihe nur mit Video + AI
         IReadOnlyList<(double TimeSeconds, double Meter)> timeline = [];
         if (hasVideo)
         {
-            // Wenn Protokoll-Eintraege Timecodes haben → nur ±20s um jede Stelle scannen
-            var protocolTimes = entries
-                .Where(e => e.Zeit.HasValue)
-                .Select(e => e.Zeit!.Value.TotalSeconds)
-                .Distinct()
-                .ToList();
-
-            if (protocolTimes.Count > 0)
-            {
-                timeline = await _meterTimeline.BuildTargetedTimelineAsync(
-                    tc.VideoPath, duration, protocolTimes,
-                    windowSeconds: 20.0, stepSeconds: 5.0, ct).ConfigureAwait(false);
-            }
-            else
-            {
-                // Kein Timecode im Protokoll → Full-Scan (Fallback)
-                timeline = await _meterTimeline.BuildTimelineAsync(
-                    tc.VideoPath, duration, stepSeconds: 5.0, ct).ConfigureAwait(false);
-            }
+            timeline = await _meterTimeline.BuildTimelineAsync(
+                tc.VideoPath, duration, stepSeconds: 5.0, ct).ConfigureAwait(false);
         }
 
         // Maximaler Meterstand als Referenz für Zeitschätzung
@@ -163,7 +146,7 @@ public sealed class TrainingSampleGenerator
             {
                 ct.ThrowIfCancellationRequested();
 
-                var sig = BuildSignature(tc.CaseId, entry.Code, meter, meterEnd);
+                var sig = BuildSignature(entry.Code, meter, meterEnd);
                 if (seen.Contains(sig))
                 {
                     duplicateSkipped++;
@@ -172,11 +155,7 @@ public sealed class TrainingSampleGenerator
                 seen.Add(sig);
 
                 var safeCase = Regex.Replace(tc.CaseId, @"[^\w\-]", "_");
-                // Deterministischer Frame-Name aus Signatur → verhindert doppelte Frames
-                var sigHash = Convert.ToHexString(
-                    System.Security.Cryptography.SHA256.HashData(
-                        System.Text.Encoding.UTF8.GetBytes(sig)))[..16].ToLowerInvariant();
-                var sampleId = $"{safeCase}_{entry.Code}_{meter:F2}_{sigHash}";
+                var sampleId = $"{safeCase}_{entry.Code}_{meter:F2}_{Guid.NewGuid():N}";
 
                 // Frame-Extraktion: Video > PDF-Bildbericht-Foto > kein Frame
                 string? framePath = null;
@@ -291,15 +270,11 @@ public sealed class TrainingSampleGenerator
         return Math.Clamp(meter / maxMeter * duration, 0, duration - 0.1);
     }
 
-    /// <summary>
-    /// Signatur fuer Duplikat-Erkennung. Enthaelt CaseId damit gleiche
-    /// Schaeden in verschiedenen Haltungen nicht faelschlich verworfen werden.
-    /// </summary>
-    private static string BuildSignature(string caseId, string code, double meterCenter, double meterEnd)
+    private static string BuildSignature(string code, double meterCenter, double meterEnd)
     {
         var rc = Math.Round(meterCenter, 1);
         var re = Math.Round(meterEnd, 1);
-        return $"{caseId}|{code}|{rc:F1}|{re:F1}";
+        return $"{code}|{rc:F1}|{re:F1}";
     }
 
     private async Task<ProtocolDocument?> LoadProtocolAsync(string path)

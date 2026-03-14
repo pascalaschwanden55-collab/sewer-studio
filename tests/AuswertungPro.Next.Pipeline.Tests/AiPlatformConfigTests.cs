@@ -34,9 +34,7 @@ public sealed class AiPlatformConfigTests
         Assert.Equal(0.25, config.DinoTextThreshold);
         Assert.Equal(300, config.SidecarTimeoutSec);
         Assert.Null(config.PipeDiameterMmOverride);
-        // FfmpegLocator.ResolveFfmpeg() findet ggf. einen installierten Pfad;
-        // wir pruefen nur, dass ein nicht-leerer Wert zurueckkommt.
-        Assert.False(string.IsNullOrWhiteSpace(config.FfmpegPath));
+        Assert.Equal("ffmpeg", config.FfmpegPath);
     }
 
     [Fact]

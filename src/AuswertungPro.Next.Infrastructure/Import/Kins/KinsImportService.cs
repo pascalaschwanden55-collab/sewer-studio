@@ -55,8 +55,9 @@ public sealed class KinsImportService : IKinsImportService
 
         if (!runKinsTxt && !runWinCan && !runIbak)
         {
-            // Unbekannte Struktur -> WinCan als primaerer Fallback (nicht beide, um Duplikate zu vermeiden).
+            // Unbekannte/uneindeutige Struktur -> beide als Fallback versuchen.
             runWinCan = true;
+            runIbak = true;
         }
 
         var messages = new List<string>
@@ -288,8 +289,7 @@ public sealed class KinsImportService : IKinsImportService
                 if (hasDb3 && hasMdb && hasFdb && hasDatenTxt && hasKiDvDataTxt) break;
             }
         }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
+        catch { /* ignore access errors */ }
         return (hasDb3, hasMdb, hasFdb, hasDatenTxt, hasKiDvDataTxt);
     }
 
@@ -299,8 +299,10 @@ public sealed class KinsImportService : IKinsImportService
         {
             return Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories).Any();
         }
-        catch (IOException) { return false; }
-        catch (UnauthorizedAccessException) { return false; }
+        catch
+        {
+            return false;
+        }
     }
 
     private static bool HasFileNamed(string root, string fileName)
@@ -309,8 +311,10 @@ public sealed class KinsImportService : IKinsImportService
         {
             return Directory.EnumerateFiles(root, fileName, SearchOption.AllDirectories).Any();
         }
-        catch (IOException) { return false; }
-        catch (UnauthorizedAccessException) { return false; }
+        catch
+        {
+            return false;
+        }
     }
 
     private static IReadOnlyList<string> Deduplicate(IEnumerable<string> messages)

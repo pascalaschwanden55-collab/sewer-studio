@@ -124,10 +124,7 @@ namespace AuswertungPro.Next.UI
                     AnimateOpacityAsync(mainWindow, to: 1, duration: TimeSpan.FromMilliseconds(500), EasingMode.EaseOut),
                     splash.FadeOutAndCloseAsync(TimeSpan.FromMilliseconds(500)));
 
-                // OnExplicitShutdown: Nur MainWindow_Closing darf die App beenden.
-                // Verhindert, dass das Schliessen von PlayerWindow/Coding-Fenstern
-                // versehentlich die gesamte Anwendung beendet.
-                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                ShutdownMode = ShutdownMode.OnMainWindowClose;
 
             }
             catch (Exception ex)

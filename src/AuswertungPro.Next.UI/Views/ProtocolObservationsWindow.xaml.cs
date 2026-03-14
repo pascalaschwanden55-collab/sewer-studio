@@ -216,30 +216,18 @@ public partial class ProtocolObservationsWindow : Window
         _isOpeningDialog = true;
         try
         {
-            var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+            var vm = new ObservationCatalogViewModel(
+                _sp.CodeCatalog,
                 entry,
-                entry.MeterStart,
-                entry.Zeit);
-
-            var dlg = new Windows.VsaCodeExplorerWindow(explorerVm, _videoPath)
+                _sp.ProtocolAi,
+                _record.GetFieldValue("Haltungsname"),
+                _videoPath,
+                _projectFolder);
+            var dlg = new ObservationCatalogWindow(vm)
             {
                 Owner = this
             };
-
-            if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
-            {
-                var result = dlg.SelectedEntry;
-                entry.Code = result.Code;
-                entry.Beschreibung = result.Beschreibung;
-                entry.CodeMeta = result.CodeMeta;
-                entry.MeterStart = result.MeterStart;
-                entry.MeterEnd = result.MeterEnd;
-                entry.Zeit = result.Zeit;
-                entry.IsStreckenschaden = result.IsStreckenschaden;
-                entry.FotoPaths = result.FotoPaths;
-                return true;
-            }
-            return false;
+            return dlg.ShowDialog() == true;
         }
         finally
         {

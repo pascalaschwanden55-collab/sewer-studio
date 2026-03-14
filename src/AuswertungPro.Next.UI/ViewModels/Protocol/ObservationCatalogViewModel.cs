@@ -24,7 +24,6 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
     private readonly CategoryNode _root = new("Root", "Root");
     private readonly Dictionary<string, AppProtocol.CodeDefinition> _codeIndex;
     private readonly List<AppProtocol.CodeDefinition> _allCodes;
-    private bool _isNavigating;
 
     public ObservableCollection<AppProtocol.CodeDefinition> FilteredCodes { get; } = new();
     public ObservableCollection<CatalogColumnViewModel> Columns { get; } = new();
@@ -239,40 +238,30 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
 
     public void SelectColumnItem(int columnIndex, CatalogItem item)
     {
-        if (_isNavigating)
-            return;
         if (columnIndex < 0 || columnIndex >= Columns.Count)
             return;
 
-        _isNavigating = true;
-        try
+        Columns[columnIndex].SelectedItem = item;
+        while (Columns.Count > columnIndex + 1)
+            Columns.RemoveAt(Columns.Count - 1);
+
+        if (item.Node is not null)
         {
-            Columns[columnIndex].SelectedItem = item;
-            while (Columns.Count > columnIndex + 1)
-                Columns.RemoveAt(Columns.Count - 1);
-
-            if (item.Node is not null)
+            if (item.Node.Children.Count > 0)
             {
-                if (item.Node.Children.Count > 0)
-                {
-                    Columns.Add(new CatalogColumnViewModel(columnIndex + 1, item.Node.Children.Values.Select(CatalogItem.FromNode)));
-                    return;
-                }
-
-                if (item.Node.Codes.Count > 0)
-                {
-                    Columns.Add(new CatalogColumnViewModel(columnIndex + 1, item.Node.Codes.Select(CatalogItem.FromCode)));
-                    return;
-                }
+                Columns.Add(new CatalogColumnViewModel(columnIndex + 1, item.Node.Children.Values.Select(CatalogItem.FromNode)));
+                return;
             }
 
-            if (item.Code is not null)
-                SelectCode(item.Code, syncColumns: false);
+            if (item.Node.Codes.Count > 0)
+            {
+                Columns.Add(new CatalogColumnViewModel(columnIndex + 1, item.Node.Codes.Select(CatalogItem.FromCode)));
+                return;
+            }
         }
-        finally
-        {
-            _isNavigating = false;
-        }
+
+        if (item.Code is not null)
+            SelectCode(item.Code, syncColumns: false);
     }
 
     public void SelectCode(AppProtocol.CodeDefinition code, bool syncColumns)
@@ -470,10 +459,14 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
     private static readonly Dictionary<string, string> MainCategoryLabels = new(StringComparer.OrdinalIgnoreCase)
     {
         ["AE"] = "Aenderungen der Grundlagen",
-        ["BA"] = "Baulicher Zustand Leitung",
-        ["BB"] = "Betrieblicher Zustand Leitung",
-        ["BC"] = "Bestandsaufnahme Leitung",
-        ["BD"] = "Weitere Codes Leitung",
+        ["BA"] = "Struktur der Rohrleitungen",
+        ["BB"] = "Betrieb der Rohrleitungen",
+        ["BC"] = "Bestandsaufnahme der Rohrleitungen",
+        ["BD"] = "Sonstiges Rohrleitungen",
+        ["DA"] = "Struktur Schacht",
+        ["DB"] = "Betrieb Schacht",
+        ["DC"] = "Bestandsaufnahme Schacht",
+        ["DD"] = "Sonstiges Schacht",
     };
 
     private void BuildTree()
@@ -555,55 +548,30 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
     private static string ExtractSubGroupName(string prefix, AppProtocol.CodeDefinition firstCode)
     {
         // SN EN 13508-2 Unterkategorie-Labels
-        // VSA-Richtlinie 2018, SN EN 13508-2 konforme Unterkategorie-Labels
         var subLabels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            // BA - Baulicher Zustand Leitung
-            ["BAA"] = "Verformung",
-            ["BAB"] = "Risse",
-            ["BAC"] = "Leitungsbruch / Einsturz",
-            ["BAD"] = "Defektes Mauerwerk",
-            ["BAE"] = "Fehlender Moertel",
-            ["BAF"] = "Oberflaechenschaden",
-            ["BAG"] = "Einragender Anschluss",
-            ["BAH"] = "Schadhafter Anschluss",
-            ["BAI"] = "Einragendes Dichtungsmaterial",
-            ["BAJ"] = "Verschobene Rohrverbindung",
-            ["BAK"] = "Feststellung Innenauskleidung",
-            ["BAL"] = "Schadhafte Reparatur",
-            ["BAM"] = "Schadhafte Schweissnaht",
-            ["BAN"] = "Poroese Leitung",
-            ["BAO"] = "Boden sichtbar",
-            ["BAP"] = "Hohlraum sichtbar",
-            // BB - Betrieblicher Zustand Leitung
-            ["BBA"] = "Wurzeln",
-            ["BBB"] = "Anhaftende Stoffe",
-            ["BBC"] = "Ablagerungen",
-            ["BBD"] = "Eindringen von Bodenmaterial",
-            ["BBE"] = "Andere Hindernisse",
-            ["BBF"] = "Infiltration",
-            ["BBG"] = "Exfiltration",
-            ["BBH"] = "Ungeziefer",
-            // BC - Bestandsaufnahme Leitung
-            ["BCA"] = "Seitlicher Anschluss",
-            ["BCB"] = "Punktuelle Reparatur",
-            ["BCC"] = "Bogen in der Leitung",
-            ["BCD"] = "Anfangsknoten",
-            ["BCE"] = "Endknoten",
-            ["BCF"] = "Rohrmaterial Anschlussleitung",
-            ["BCG"] = "Anschlussleitung",
-            // BD - Weitere Codes Leitung
-            ["BDA"] = "Allgemeines Foto",
-            ["BDB"] = "Allgemeine Anmerkung",
+            // BA - Struktur
+            ["BAA"] = "Verformung", ["BAB"] = "Bruch/Einsturz", ["BAC"] = "Rissbildung",
+            ["BAD"] = "Oberflaeche schadhaft", ["BAE"] = "Verbindung schadhaft",
+            ["BAF"] = "Oberflaechenschaden", ["BAG"] = "Inliner schadhaft",
+            ["BAH"] = "Korrosion", ["BAI"] = "Verschiebung / Lageabweichung",
+            ["BAJ"] = "Schweissnaht/Verbindung", ["BAK"] = "Wanddicke",
+            // BB - Betrieb
+            ["BBA"] = "Wurzeln", ["BBB"] = "Anhaftende Stoffe", ["BBC"] = "Ablagerungen",
+            ["BBD"] = "Eindringen von Bodenmaterial", ["BBE"] = "Andere Hindernisse",
+            ["BBF"] = "Infiltration", ["BBG"] = "Exfiltration", ["BBH"] = "Ungeziefer",
+            // BC - Bestandsaufnahme
+            ["BCA"] = "Anschluss", ["BCB"] = "Punktuelle Reparatur", ["BCC"] = "Krümmung der Leitung",
+            ["BCD"] = "Anfangspunkte", ["BCE"] = "Endpunkte",
+            // BD - Sonstiges
+            ["BDA"] = "Allgemeine Fotografie", ["BDB"] = "Allgemeine Anmerkung",
             ["BDC"] = "Abbruch der Inspektion",
-            ["BDD"] = "Wasserspiegel",
-            ["BDE"] = "Abwasserzufluss / Fehlanschluss",
-            ["BDF"] = "Gefaehrliche Atmosphaere",
-            ["BDG"] = "Keine Sicht",
-            // AE - Aenderungen der Grundlageninformationen
-            ["AEC"] = "Profilwechsel",
-            ["AED"] = "Materialwechsel",
-            ["AEF"] = "Neue Baulaenge",
+            // AE - Aenderungen
+            ["AEC"] = "Profilwechsel", ["AED"] = "Materialwechsel",
+            // D - Schacht
+            ["DAA"] = "Verformung Schacht", ["DBA"] = "Wurzeln Schacht",
+            ["DCA"] = "Anschluss Schacht", ["DDA"] = "Allgemein Schacht",
+            ["DDB"] = "Allgemeine Anmerkung Schacht",
         };
 
         if (subLabels.TryGetValue(prefix, out var label))

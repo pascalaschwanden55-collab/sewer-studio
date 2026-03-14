@@ -52,51 +52,11 @@ public partial class VideoAnalysisPipelineWindow : Window
         PipeRadarCanvas.SizeChanged += (_, _) => RenderPipeRadar();
         LiveFrameOverlayCanvas.SizeChanged += (_, _) => RenderLiveFrameOverlay();
 
-        // PipeGraphTimeline einrichten
-        SetupPipeTimeline();
-
         Closed += (_, __) =>
         {
             _cts.Cancel();
             Vm.Detections.CollectionChanged -= OnDetectionsChanged;
             CloseLiveFrameWindow();
-        };
-    }
-
-    /// <summary>PipeGraphTimeline mit Accessoren fuer DetectionItems einrichten.</summary>
-    private void SetupPipeTimeline()
-    {
-        PipeTimeline.TotalLength = _request.HaltungslaengeM;
-        PipeTimeline.MeterAccessor = obj => obj is DetectionItem d ? d.MeterStart : 0;
-        PipeTimeline.CodeAccessor = obj => obj is DetectionItem d ? d.Code : "?";
-        PipeTimeline.ConfidenceAccessor = obj => obj is DetectionItem d ? d.Confidence : -1;
-        PipeTimeline.IsRejectedAccessor = _ => false;
-        PipeTimeline.Markers = Vm.Detections;
-
-        // CurrentMeter aus Vm.CurrentMeter-String aktualisieren
-        Vm.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(VideoAnalysisPipelineViewModel.CurrentMeter))
-            {
-                // CurrentMeter ist z.B. "12.5 m" oder "12.5m" — Zahl extrahieren
-                var text = Vm.CurrentMeter?.Replace("m", "").Trim() ?? "";
-                if (double.TryParse(text, System.Globalization.NumberStyles.Any,
-                        System.Globalization.CultureInfo.InvariantCulture, out var meter))
-                {
-                    PipeTimeline.CurrentMeter = meter;
-                }
-            }
-            // TotalLength aktualisieren wenn Haltungslaenge erst spaeter bekannt
-            if (e.PropertyName == nameof(VideoAnalysisPipelineViewModel.MeterRange)
-                && PipeTimeline.TotalLength <= 0)
-            {
-                var rangeText = Vm.MeterRange?.Replace("m", "").Trim() ?? "";
-                if (double.TryParse(rangeText, System.Globalization.NumberStyles.Any,
-                        System.Globalization.CultureInfo.InvariantCulture, out var total) && total > 0)
-                {
-                    PipeTimeline.TotalLength = total;
-                }
-            }
         };
     }
 

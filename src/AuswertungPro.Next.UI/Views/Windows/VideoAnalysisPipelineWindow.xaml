@@ -2,44 +2,43 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
-        xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls"
         Title="Sewer Studio — Pipeline Analysis" Height="860" Width="1320"
         WindowStartupLocation="CenterOwner"
         WindowState="Normal"
-        Background="{StaticResource BgLightBrush}"
+        Background="#0C1019"
         ResizeMode="CanResize"
         MinWidth="900" MinHeight="600">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
-        <!-- Engineering Light — harmonisiert mit Hauptfenster-Theme -->
-        <SolidColorBrush x:Key="BgMain"       Color="{StaticResource ColorBgLight}"/>
-        <SolidColorBrush x:Key="BgCard"       Color="{StaticResource ColorCard}"/>
-        <SolidColorBrush x:Key="BgCardHover"  Color="{StaticResource ColorHeader}"/>
-        <SolidColorBrush x:Key="Border1"      Color="{StaticResource ColorBorderLight}"/>
-        <SolidColorBrush x:Key="TextPrimary"  Color="{StaticResource ColorTextPrimary}"/>
-        <SolidColorBrush x:Key="TextMuted"    Color="{StaticResource ColorTextMuted}"/>
-        <SolidColorBrush x:Key="TextSub"      Color="{StaticResource ColorTextSecondary}"/>
-        <SolidColorBrush x:Key="Accent"       Color="{StaticResource ColorAccent}"/>
-        <SolidColorBrush x:Key="AccentLight"  Color="{StaticResource ColorAccentLight}"/>
-        <SolidColorBrush x:Key="Green"        Color="{StaticResource ColorSuccess}"/>
-        <SolidColorBrush x:Key="Amber"        Color="{StaticResource ColorWarning}"/>
-        <SolidColorBrush x:Key="Red"          Color="{StaticResource ColorDanger}"/>
+        <!-- Sci-Fi Engineering Dark — Blue-steel palette -->
+        <SolidColorBrush x:Key="BgMain"       Color="#0C1019"/>
+        <SolidColorBrush x:Key="BgCard"       Color="#131825"/>
+        <SolidColorBrush x:Key="BgCardHover"  Color="#1A2030"/>
+        <SolidColorBrush x:Key="Border1"      Color="#243049"/>
+        <SolidColorBrush x:Key="TextPrimary"  Color="#F0F4FA"/>
+        <SolidColorBrush x:Key="TextMuted"    Color="#7B8DA6"/>
+        <SolidColorBrush x:Key="TextSub"      Color="#94A3B8"/>
+        <SolidColorBrush x:Key="Accent"       Color="#2563EB"/>
+        <SolidColorBrush x:Key="AccentLight"  Color="#60A5FA"/>
+        <SolidColorBrush x:Key="Green"        Color="#16A34A"/>
+        <SolidColorBrush x:Key="Amber"        Color="#F59E0B"/>
+        <SolidColorBrush x:Key="Red"          Color="#DC2626"/>
 
         <!-- Gemeinsame Styles -->
         <Style x:Key="CardBorder" TargetType="Border">
-            <Setter Property="Background"       Value="{StaticResource BgCard}"/>
-            <Setter Property="BorderBrush"      Value="{StaticResource Border1}"/>
+            <Setter Property="Background"       Value="#131825"/>
+            <Setter Property="BorderBrush"      Value="#243049"/>
             <Setter Property="BorderThickness"  Value="1"/>
-            <Setter Property="CornerRadius"     Value="12"/>
+            <Setter Property="CornerRadius"     Value="8"/>
             <Setter Property="Padding"          Value="14"/>
         </Style>
 
         <Style x:Key="LabelSmall" TargetType="TextBlock">
             <Setter Property="FontSize"         Value="10"/>
             <Setter Property="FontWeight"       Value="Bold"/>
-            <Setter Property="Foreground"       Value="{StaticResource TextMuted}"/>
+            <Setter Property="Foreground"       Value="#94A3B8"/>
             <Setter Property="FontFamily"       Value="Consolas"/>
             <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
         </Style>
@@ -48,15 +47,15 @@
             <Setter Property="FontSize"   Value="24"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontFamily" Value="Consolas"/>
-            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="Foreground" Value="#F0F4FA"/>
         </Style>
 
         <!-- Phase-Button -->
         <Style x:Key="PhaseCard" TargetType="Border">
-            <Setter Property="Background"      Value="{StaticResource BgCard}"/>
-            <Setter Property="BorderBrush"     Value="{StaticResource Border1}"/>
+            <Setter Property="Background"      Value="#131825"/>
+            <Setter Property="BorderBrush"     Value="#243049"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius"    Value="12"/>
+            <Setter Property="CornerRadius"    Value="8"/>
             <Setter Property="Padding"         Value="14,10"/>
         </Style>
 
@@ -87,11 +86,11 @@
 
         <!-- Abbrechen-Button -->
         <Style x:Key="BtnCancel" TargetType="Button">
-            <Setter Property="Background"   Value="#E8EDF5"/>
-            <Setter Property="Foreground"   Value="#1C2536"/>
+            <Setter Property="Background"   Value="#1A2030"/>
+            <Setter Property="Foreground"   Value="#94A3B8"/>
             <Setter Property="FontSize"     Value="13"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush"  Value="#9EAEC4"/>
+            <Setter Property="BorderBrush"  Value="#2A3A55"/>
             <Setter Property="Padding"      Value="20,9"/>
             <Setter Property="Cursor"       Value="Hand"/>
             <Setter Property="Template">
@@ -126,7 +125,7 @@
         <!-- ProgressBar -->
         <Style x:Key="ThinProgress" TargetType="ProgressBar">
             <Setter Property="Height"          Value="3"/>
-            <Setter Property="Background"      Value="#CDD6E4"/>
+            <Setter Property="Background"      Value="#1A2538"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -157,8 +156,8 @@
         </Grid.RowDefinitions>
 
         <!-- ── Header ── -->
-        <Border Grid.Row="0" Background="#E8EDF5"
-                BorderBrush="#CDD6E4" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Background="#0C1019"
+                BorderBrush="#243049" BorderThickness="0,0,0,1">
             <Grid Margin="20,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -174,9 +173,9 @@
                             Background="#2563EB"/>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="S E W E R  S T U D I O" FontWeight="Bold" FontSize="11"
-                                   FontFamily="Consolas" Foreground="#2563EB" Margin="0,0,0,1"/>
+                                   FontFamily="Consolas" Foreground="#60A5FA" Margin="0,0,0,1"/>
                         <TextBlock Text="PIPELINE ANALYSIS" FontSize="8" FontWeight="SemiBold"
-                                   FontFamily="Consolas" Foreground="#3D4D63"/>
+                                   FontFamily="Consolas" Foreground="#4A5F7A"/>
                     </StackPanel>
                 </StackPanel>
 
@@ -185,10 +184,10 @@
                             VerticalAlignment="Center" HorizontalAlignment="Center">
                     <TextBlock Text="{Binding PhaseLabel}"
                                FontSize="13" FontWeight="SemiBold"
-                               FontFamily="Consolas" Foreground="#1C2536"/>
-                    <TextBlock Text="  //  " Foreground="#9EAEC4" FontSize="13" FontFamily="Consolas"/>
+                               FontFamily="Consolas" Foreground="#94A3B8"/>
+                    <TextBlock Text="  //  " Foreground="#2A3A55" FontSize="13" FontFamily="Consolas"/>
                     <TextBlock Text="{Binding StatusText}"
-                               FontSize="12" Foreground="#3D4D63" FontFamily="Consolas"
+                               FontSize="12" Foreground="#7B8DA6" FontFamily="Consolas"
                                MaxWidth="400" TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center"/>
                 </StackPanel>
@@ -206,7 +205,7 @@
                                        FontWeight="Bold" Foreground="#16A34A"
                                        VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock FontFamily="Consolas" FontSize="10"
-                                       Foreground="#3D4D63" VerticalAlignment="Center">
+                                       Foreground="#7B8DA6" VerticalAlignment="Center">
                                 <Run Text="Skip "/>
                                 <Run Text="{Binding YoloSkippedFrames}" FontWeight="Bold"
                                      Foreground="#F59E0B"/>
@@ -215,14 +214,14 @@
                     </Border>
                     <!-- Meter Badge -->
                     <Border CornerRadius="4" Padding="10,4"
-                            Background="#FCFDFF" BorderBrush="#CDD6E4" BorderThickness="1">
+                            Background="#131825" BorderBrush="#243049" BorderThickness="1">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="● " Foreground="#2563EB" FontSize="8"
                                        VerticalAlignment="Center"
                                        Visibility="{Binding VideoPhaseActive,
                                            Converter={StaticResource BoolToVis}}"/>
                             <TextBlock FontFamily="Consolas" FontSize="12"
-                                       Foreground="#2563EB">
+                                       Foreground="#60A5FA">
                                 <Run Text="Meter "/>
                                 <Run Text="{Binding CurrentMeter}" FontWeight="Bold"/>
                             </TextBlock>
@@ -246,8 +245,6 @@
                     <RowDefinition Height="Auto"/>  <!-- Phase-Karten -->
                     <RowDefinition Height="8"/>
                     <RowDefinition Height="Auto"/>  <!-- Stats-Leiste kompakt -->
-                    <RowDefinition Height="8"/>
-                    <RowDefinition Height="Auto"/>  <!-- Pipe Graph Timeline -->
                     <RowDefinition Height="8"/>
                     <RowDefinition Height="*" MinHeight="200"/>   <!-- Live-Frame (groß) -->
                     <RowDefinition Height="Auto"/>  <!-- Warnungen -->
@@ -287,15 +284,15 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <TextBlock Grid.Row="0" Style="{StaticResource LabelSmall}" Text="ERKENNEN"/>
-                                    <TextBlock Grid.Row="2" FontSize="9" Foreground="#3D4D63" Text="Detection"/>
+                                    <TextBlock Grid.Row="2" FontSize="9" Foreground="#4A5F7A" Text="Detection"/>
                                     <TextBlock Grid.Row="4" Style="{StaticResource ValueLarge}"
                                                Text="{Binding PillarDetectionCount}"
-                                               Foreground="#2563EB"/>
+                                               Foreground="#60A5FA"/>
                                     <ProgressBar Grid.Row="6"
                                                  Style="{StaticResource ThinProgress}"
                                                  Value="{Binding VideoProgressPct}"
                                                  Maximum="100"/>
-                                    <TextBlock Grid.Row="8" FontSize="10" Foreground="#3D4D63">
+                                    <TextBlock Grid.Row="8" FontSize="10" Foreground="#94A3B8">
                                         <Run Text="{Binding PillarDetectionCount}"/>
                                         <Run Text=" Schäden"/>
                                     </TextBlock>
@@ -322,7 +319,7 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <TextBlock Grid.Row="0" Style="{StaticResource LabelSmall}" Text="QUANTIFIZIERUNG"/>
-                                    <TextBlock Grid.Row="2" FontSize="9" Foreground="#3D4D63" Text="Messung"/>
+                                    <TextBlock Grid.Row="2" FontSize="9" Foreground="#4A5F7A" Text="Messung"/>
                                     <TextBlock Grid.Row="4" Style="{StaticResource ValueLarge}"
                                                Text="{Binding PillarQuantCount}"
                                                Foreground="#16A34A"/>
@@ -330,7 +327,7 @@
                                                  Style="{StaticResource ThinProgress}"
                                                  Value="{Binding MappingProgressPct}"
                                                  Maximum="100"/>
-                                    <TextBlock Grid.Row="8" FontSize="10" Foreground="#3D4D63">
+                                    <TextBlock Grid.Row="8" FontSize="10" Foreground="#94A3B8">
                                         <Run Text="{Binding PillarQuantCount}"/>
                                         <Run Text=" quantifiziert"/>
                                     </TextBlock>
@@ -357,7 +354,7 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <TextBlock Grid.Row="0" Style="{StaticResource LabelSmall}" Text="LOKALISIERUNG"/>
-                                    <TextBlock Grid.Row="2" FontSize="9" Foreground="#3D4D63" Text="Position"/>
+                                    <TextBlock Grid.Row="2" FontSize="9" Foreground="#4A5F7A" Text="Position"/>
                                     <TextBlock Grid.Row="4" Style="{StaticResource ValueLarge}"
                                                Text="{Binding PillarLocalCount}"
                                                Foreground="#F59E0B"/>
@@ -371,7 +368,7 @@
                                             </Binding>
                                         </ProgressBar.Value>
                                     </ProgressBar>
-                                    <TextBlock Grid.Row="8" FontSize="10" Foreground="#3D4D63">
+                                    <TextBlock Grid.Row="8" FontSize="10" Foreground="#94A3B8">
                                         <Run Text="{Binding PillarLocalCount}"/>
                                         <Run Text=" lokalisiert"/>
                                     </TextBlock>
@@ -385,27 +382,27 @@
 
                     <!-- Compact Phase Strip -->
                     <Border Grid.Row="2" CornerRadius="6" Padding="10,5"
-                            Background="#E8EDF5" BorderBrush="#CDD6E4" BorderThickness="1">
+                            Background="#0E1320" BorderBrush="#243049" BorderThickness="1">
                         <DockPanel LastChildFill="True">
                             <!-- Speed Selector (rechts) -->
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
                                         VerticalAlignment="Center" Margin="12,0,0,0">
-                                <TextBlock Text="Tempo" FontSize="9" Foreground="#3D4D63"
+                                <TextBlock Text="Tempo" FontSize="9" Foreground="#7B8DA6"
                                            VerticalAlignment="Center" Margin="0,0,6,0"/>
                                 <ComboBox x:Name="SpeedModeCombo"
                                           Width="58" Height="22"
                                           SelectedIndex="0"
-                                          Background="#FCFDFF"
-                                          Foreground="#2563EB"
-                                          BorderBrush="#CDD6E4"
+                                          Background="#131825"
+                                          Foreground="#60A5FA"
+                                          BorderBrush="#243049"
                                           BorderThickness="1"
                                           FontSize="11"
                                           FontWeight="SemiBold"
                                           FontFamily="Consolas">
-                                    <ComboBoxItem Content="x1" Tag="1" Foreground="#0A0F1A"/>
-                                    <ComboBoxItem Content="x2" Tag="2" Foreground="#0A0F1A"/>
-                                    <ComboBoxItem Content="x4" Tag="4" Foreground="#0A0F1A"/>
-                                    <ComboBoxItem Content="x6" Tag="6" Foreground="#0A0F1A"/>
+                                    <ComboBoxItem Content="x1" Tag="1" Foreground="#E0E8F0"/>
+                                    <ComboBoxItem Content="x2" Tag="2" Foreground="#E0E8F0"/>
+                                    <ComboBoxItem Content="x4" Tag="4" Foreground="#E0E8F0"/>
+                                    <ComboBoxItem Content="x6" Tag="6" Foreground="#E0E8F0"/>
                                 </ComboBox>
                                 <Button x:Name="StartButton"
                                         Content="▶ Start"
@@ -446,12 +443,12 @@
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
-                                <TextBlock Text="Video" FontSize="10" Foreground="#3D4D63" VerticalAlignment="Center"/>
-                                <TextBlock FontSize="10" Foreground="#3D4D63" VerticalAlignment="Center" Margin="4,0,0,0">
+                                <TextBlock Text="Video" FontSize="10" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                <TextBlock FontSize="10" Foreground="#7B8DA6" VerticalAlignment="Center" Margin="4,0,0,0">
                                     <Run Text="{Binding FramesAnalyzed}"/>/<Run Text="{Binding TotalFrames}"/>
                                 </TextBlock>
                             </StackPanel>
-                            <TextBlock Text="→" Foreground="#3D4D63" FontSize="10"
+                            <TextBlock Text="→" Foreground="#4A5F7A" FontSize="10"
                                        VerticalAlignment="Center" Margin="0,0,16,0"/>
                             <!-- Code-Mapping -->
                             <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
@@ -459,7 +456,7 @@
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Text" Value="○"/>
-                                            <Setter Property="Foreground" Value="#CDD6E4"/>
+                                            <Setter Property="Foreground" Value="#334155"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding MappingPhaseDone}" Value="True">
                                                     <Setter Property="Text" Value="✓"/>
@@ -473,12 +470,12 @@
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
-                                <TextBlock Text="Mapping" FontSize="10" Foreground="#3D4D63" VerticalAlignment="Center"/>
-                                <TextBlock FontSize="10" Foreground="#3D4D63" VerticalAlignment="Center" Margin="4,0,0,0">
+                                <TextBlock Text="Mapping" FontSize="10" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                <TextBlock FontSize="10" Foreground="#7B8DA6" VerticalAlignment="Center" Margin="4,0,0,0">
                                     <Run Text="{Binding DetectionCount}"/>
                                 </TextBlock>
                             </StackPanel>
-                            <TextBlock Text="→" Foreground="#3D4D63" FontSize="10"
+                            <TextBlock Text="→" Foreground="#4A5F7A" FontSize="10"
                                        VerticalAlignment="Center" Margin="0,0,16,0"/>
                             <!-- Protokoll -->
                             <StackPanel Orientation="Horizontal">
@@ -486,7 +483,7 @@
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Text" Value="○"/>
-                                            <Setter Property="Foreground" Value="#CDD6E4"/>
+                                            <Setter Property="Foreground" Value="#334155"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsDone}" Value="True">
                                                     <Setter Property="Text" Value="✓"/>
@@ -496,8 +493,8 @@
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
-                                <TextBlock Text="Protokoll" FontSize="10" Foreground="#3D4D63" VerticalAlignment="Center"/>
-                                <TextBlock FontSize="10" Foreground="#3D4D63" VerticalAlignment="Center" Margin="4,0,0,0">
+                                <TextBlock Text="Protokoll" FontSize="10" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                <TextBlock FontSize="10" Foreground="#7B8DA6" VerticalAlignment="Center" Margin="4,0,0,0">
                                     <Run Text="{Binding HighConfidenceCount}"/>
                                     <Run Text=" HC"/>
                                 </TextBlock>
@@ -509,7 +506,7 @@
 
                 <!-- Kompakte Stats-Leiste -->
                 <Border Grid.Row="2" CornerRadius="8" Padding="12,7"
-                        Background="#FCFDFF" BorderBrush="#CDD6E4" BorderThickness="1">
+                        Background="#131825" BorderBrush="#243049" BorderThickness="1">
                     <DockPanel>
                         <!-- Status rechts -->
                         <TextBlock DockPanel.Dock="Right" FontSize="12" FontWeight="SemiBold"
@@ -533,24 +530,21 @@
                         </TextBlock>
                         <!-- Stats inline -->
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock FontSize="11" Foreground="#3D4D63" Margin="0,0,4,0" Text="Frames"/>
-                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="#0A0F1A"
+                            <TextBlock FontSize="11" Foreground="#7B8DA6" Margin="0,0,4,0" Text="Frames"/>
+                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="#F0F4FA"
                                        Margin="0,0,16,0" Text="{Binding FramesAnalyzed}"/>
-                            <TextBlock FontSize="11" Foreground="#3D4D63" Margin="0,0,4,0" Text="Schäden"/>
-                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="#2563EB"
+                            <TextBlock FontSize="11" Foreground="#7B8DA6" Margin="0,0,4,0" Text="Schäden"/>
+                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="#60A5FA"
                                        Margin="0,0,16,0" Text="{Binding DetectionCount}"/>
-                            <TextBlock FontSize="11" Foreground="#3D4D63" Margin="0,0,4,0" Text="Hohe Konf."/>
+                            <TextBlock FontSize="11" Foreground="#7B8DA6" Margin="0,0,4,0" Text="Hohe Konf."/>
                             <TextBlock FontSize="13" FontWeight="Bold" Foreground="#16A34A"
                                        Text="{Binding HighConfidenceCount}"/>
                         </StackPanel>
                     </DockPanel>
                 </Border>
 
-                <!-- Pipe Graph Timeline -->
-                <ctrl:PipeGraphTimeline Grid.Row="4" x:Name="PipeTimeline"/>
-
                 <!-- Live-Frame Vorschau (groß) -->
-                <Border Grid.Row="6" Style="{StaticResource CardBorder}" Padding="10">
+                <Border Grid.Row="4" Style="{StaticResource CardBorder}" Padding="10">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -569,9 +563,9 @@
                                     x:Name="UndockButton"
                                     Content="⬜ Abdocken"
                                     FontSize="10"
-                                    Foreground="#3D4D63"
-                                    Background="#E8EDF5"
-                                    BorderBrush="#CDD6E4"
+                                    Foreground="#94A3B8"
+                                    Background="#1A2030"
+                                    BorderBrush="#243049"
                                     BorderThickness="1"
                                     Padding="8,2"
                                     Cursor="Hand"
@@ -593,8 +587,8 @@
 
                         <Border Grid.Row="2"
                                 CornerRadius="8"
-                                Background="#E6EBF3"
-                                BorderBrush="#CDD6E4"
+                                Background="#080C14"
+                                BorderBrush="#243049"
                                 BorderThickness="1"
                                 ClipToBounds="True">
                             <Grid>
@@ -605,7 +599,7 @@
                                         Background="Transparent"
                                         IsHitTestVisible="False"/>
                                 <TextBlock Text="Noch kein Frame verfügbar"
-                                           Foreground="#3D4D63"
+                                           Foreground="#7B8DA6"
                                            FontSize="12"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center">
@@ -626,15 +620,15 @@
                         <StackPanel Grid.Row="4">
                             <TextBlock Text="{Binding LiveFrameStatus}"
                                        FontSize="11"
-                                       Foreground="#2563EB"
+                                       Foreground="#60A5FA"
                                        TextWrapping="Wrap"/>
                             <TextBlock Text="{Binding LiveFrameInfo}"
                                        FontSize="10"
-                                       Foreground="#3D4D63"
+                                       Foreground="#94A3B8"
                                        Margin="0,2,0,0"/>
                             <TextBlock Text="{Binding LiveFrameQuantSummary}"
                                        FontSize="10"
-                                       Foreground="#3D4D63"
+                                       Foreground="#8B95A8"
                                        Margin="0,2,0,0"
                                        TextWrapping="Wrap"/>
                         </StackPanel>
@@ -642,7 +636,7 @@
                 </Border>
 
                 <!-- Fehlermeldung -->
-                <Border Grid.Row="7" CornerRadius="8" Padding="12,8" Margin="0,4,0,0"
+                <Border Grid.Row="5" CornerRadius="8" Padding="12,8" Margin="0,4,0,0"
                         Background="#DC262610" BorderBrush="#DC262630" BorderThickness="1"
                         Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
                     <TextBlock Foreground="#F87171" FontSize="12"
@@ -673,18 +667,18 @@
                                       Margin="0,0,6,0"
                                       SelectionChanged="OverlayModeCombo_SelectionChanged"
                                       SelectedIndex="1"
-                                      Background="#FCFDFF"
-                                      Foreground="#1C2536"
-                                      BorderBrush="#CDD6E4"
+                                      Background="#0E1620"
+                                      Foreground="#C0D4E8"
+                                      BorderBrush="#243049"
                                       BorderThickness="1"
                                       FontSize="11">
-                                <ComboBoxItem Content="Kompakt" Foreground="#0A0F1A"/>
-                                <ComboBoxItem Content="Detail" Foreground="#0A0F1A"/>
+                                <ComboBoxItem Content="Kompakt" Foreground="#E0E8F0"/>
+                                <ComboBoxItem Content="Detail" Foreground="#E0E8F0"/>
                             </ComboBox>
 
                             <Border CornerRadius="10" Padding="6,1"
-                                    Background="#2563EB18">
-                                <TextBlock FontSize="11" FontWeight="Bold" Foreground="#2563EB"
+                                    Background="#2563EB15">
+                                <TextBlock FontSize="11" FontWeight="Bold" Foreground="#60A5FA"
                                            Text="{Binding DetectionCount}"/>
                             </Border>
                         </StackPanel>
@@ -692,8 +686,8 @@
 
                     <Border Grid.Row="2"
                             CornerRadius="8"
-                            Background="#E6EBF3"
-                            BorderBrush="#CDD6E4"
+                            Background="#0A1928"
+                            BorderBrush="#243049"
                             BorderThickness="1"
                             Padding="6">
                         <Grid>
@@ -704,7 +698,7 @@
                             <TextBlock x:Name="PipeRadarEmptyText"
                                        VerticalAlignment="Center"
                                        HorizontalAlignment="Center"
-                                       Foreground="#3D4D63"
+                                       Foreground="#7B8DA6"
                                        FontSize="11"
                                        Text="Noch keine Erkennungen"
                                        Visibility="Collapsed"
@@ -722,7 +716,7 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border Margin="0,0,0,5" CornerRadius="7" Padding="10,8"
-                                        Background="#FCFDFF"
+                                        Background="#151C2A"
                                         BorderThickness="1">
                                     <Border.BorderBrush>
                                         <SolidColorBrush Color="{Binding SeverityColor}" Opacity="0.2"/>
@@ -750,28 +744,28 @@
                                             </Ellipse>
                                             <TextBlock Text="{Binding Label}"
                                                        FontSize="12" FontWeight="SemiBold"
-                                                       Foreground="#0A0F1A"
+                                                       Foreground="#D0D9E8"
                                                        TextTrimming="CharacterEllipsis"
                                                        MaxWidth="160"/>
                                             <!-- Code-Badge -->
                                             <Border HorizontalAlignment="Right"
                                                     CornerRadius="4" Padding="5,1"
-                                                    Background="#2563EB18">
+                                                    Background="#2563EB15">
                                                 <TextBlock Text="{Binding Code}"
                                                            FontFamily="Consolas" FontSize="10"
-                                                           FontWeight="Bold" Foreground="#2563EB"/>
+                                                           FontWeight="Bold" Foreground="#60A5FA"/>
                                             </Border>
                                         </DockPanel>
 
                                         <TextBlock Grid.Row="2"
                                                    FontSize="10"
-                                                   Foreground="#3D4D63"
+                                                   Foreground="#94A3B8"
                                                    Text="{Binding PositionSummary}"/>
 
                                         <!-- Quantifizierung (nur wenn vorhanden) -->
                                         <TextBlock Grid.Row="4"
                                                    FontSize="9"
-                                                   Foreground="#3D4D63"
+                                                   Foreground="#8B95A8"
                                                    Text="{Binding QuantSummary}"
                                                    Visibility="{Binding HasQuantification,
                                                        Converter={StaticResource BoolToVis}}"/>
@@ -785,13 +779,13 @@
 
                                             <TextBlock Grid.Column="0"
                                                        FontFamily="Consolas" FontSize="10"
-                                                       Foreground="#3D4D63"
+                                                       Foreground="#7B8DA6"
                                                        Text="{Binding MeterRange}"/>
 
                                             <!-- Konfidenz-Bar -->
                                             <StackPanel Grid.Column="1" Orientation="Horizontal">
                                                 <ProgressBar Width="44" Height="3"
-                                                             Background="#CDD6E4"
+                                                             Background="#1A2538"
                                                              BorderThickness="0"
                                                              Maximum="1"
                                                              Value="{Binding Confidence}">
@@ -819,12 +813,12 @@
         </Grid>
 
         <!-- ── Footer ── -->
-        <Border Grid.Row="2" Background="#E8EDF5"
-                BorderBrush="#CDD6E4" BorderThickness="0,1,0,0">
+        <Border Grid.Row="2" Background="#0C1019"
+                BorderBrush="#243049" BorderThickness="0,1,0,0">
             <Grid Margin="16,0">
                 <!-- Stats links -->
                 <TextBlock VerticalAlignment="Center" FontSize="11"
-                           Foreground="#3D4D63" FontFamily="Consolas"
+                           Foreground="#4A5F7A" FontFamily="Consolas"
                            Text="{Binding StatsText}"/>
 
                 <!-- Buttons rechts -->

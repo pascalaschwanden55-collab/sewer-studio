@@ -7,7 +7,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.Shared;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -276,15 +275,7 @@ public sealed class VideoFullAnalysisService
             catch { /* ffprobe nicht gefunden oder Fehler → ffmpeg-Fallback */ }
         }
 
-        // ffmpeg-Fallback: zuerst uebergebenen Pfad, dann FfmpegLocator
-        var ffmpegResolved = _ffmpegPath;
-        if (!Path.IsPathRooted(ffmpegResolved) || !File.Exists(ffmpegResolved))
-        {
-            var located = FfmpegLocator.ResolveFfmpeg();
-            if (Path.IsPathRooted(located) && File.Exists(located))
-                ffmpegResolved = located;
-        }
-        var fallback = await TryWithFfmpegAsync(ffmpegResolved, videoPath, ct);
+        var fallback = await TryWithFfmpegAsync(_ffmpegPath, videoPath, ct);
         return (fallback ?? 0, fallback == null
             ? $"Videodauer konnte nicht ermittelt werden. Bitte ffmpeg/ffprobe im PATH oder per Env SEWERSTUDIO_FFMPEG konfigurieren."
             : "");
@@ -351,11 +342,6 @@ public sealed class VideoFullAnalysisService
                 if (File.Exists(candidate)) return candidate;
             }
         }
-
-        // FfmpegLocator: WinGet/Choco/Scoop/manuell durchsuchen
-        var locatorProbe = FfmpegLocator.ResolveFfprobe();
-        if (Path.IsPathRooted(locatorProbe) && File.Exists(locatorProbe))
-            return locatorProbe;
 
         // PATH-basierter Name (z.B. "ffprobe" oder "ffmpeg") → als Fallback direkt verwenden
         if (!string.IsNullOrWhiteSpace(ffprobePath))
@@ -588,19 +574,7 @@ public sealed record LiveFrameFinding(
     int? WidthMm = null,
     int? IntrusionPercent = null,
     int? CrossSectionReductionPercent = null,
-    int? DiameterReductionMm = null,
-    // BBox normiert (0.0–1.0 relativ zur Bildgroesse) — aus DINO/SAM Pipeline
-    double? BboxX1Norm = null,
-    double? BboxY1Norm = null,
-    double? BboxX2Norm = null,
-    double? BboxY2Norm = null,
-    double? CentroidXNorm = null,
-    double? CentroidYNorm = null)
-{
-    /// <summary>Hat normalisierte BBox-Koordinaten (aus DINO/SAM Pipeline)?</summary>
-    public bool HasBbox => BboxX1Norm.HasValue && BboxY1Norm.HasValue
-                        && BboxX2Norm.HasValue && BboxY2Norm.HasValue;
-}
+    int? DiameterReductionMm = null);
 
 public sealed record RawVideoDetection(
     string FindingLabel,
@@ -618,29 +592,16 @@ public sealed record RawVideoDetection(
     QualityGate.EvidenceVector? Evidence = null
 )
 {
-    // Fuer UI-Bindings / Mapping
+    // Für UI-Bindings / Mapping
     public string Code => VsaCodeHint ?? "";
     public string Label => FindingLabel;
 
-    /// <summary>
-    /// Erkennungs-Konfidenz (0.0-1.0). Wird aus Evidence-FrameCount oder eigenem FrameCount abgeleitet,
-    /// NICHT aus Severity. Severity beschreibt die Schadensschwere, nicht die Erkennungssicherheit.
-    /// </summary>
-    public double Confidence
+    // Simple Heuristik (Severity kommt i.d.R. als "high/mid/low")
+    public double Confidence => Severity?.ToLowerInvariant() switch
     {
-        get
-        {
-            var frames = Evidence?.FrameCount ?? FrameCount;
-            return frames switch
-            {
-                >= 3 => 0.90,
-                2    => 0.75,
-                1    => 0.55,
-                _    => 0.50
-            };
-        }
-    }
-
-    /// <summary>Anzahl Frames in denen dieser Schaden erkannt wurde (Temporal Voting).</summary>
-    public int FrameCount { get; init; } = 1;
+        "high" => 0.90,
+        "mid"  => 0.70,
+        "low"  => 0.50,
+        _      => 0.60
+    };
 }

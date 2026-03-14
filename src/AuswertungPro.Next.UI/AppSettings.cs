@@ -55,6 +55,9 @@ public sealed class AppSettings
     public string? VsaCatalogSecXmlPath { get; set; }
     public string? VsaCatalogNodXmlPath { get; set; }
 
+    // WinCan catalog directory for browsing and auto-discovery
+    public string? WinCanCatalogDirectory { get; set; }
+
     // Multi-Model Pipeline Thresholds (overrides env vars if set)
     public bool? PipelineMultiModelEnabled { get; set; }
     public string? PipelineSidecarUrl { get; set; }
@@ -74,9 +77,6 @@ public sealed class AppSettings
     public string? AiOllamaKeepAlive { get; set; }
     public int? AiOllamaNumCtx { get; set; }
     public string? AiFfmpegPath { get; set; }
-
-    // Portabler Wissensspeicher (alle KI-Daten in einem Ordner)
-    public string? KnowledgeRootPath { get; set; }
 
     // Hydraulik-Panel letzte Eingaben
     public HydraulikPanelSettings HydraulikPanel { get; set; } = new();

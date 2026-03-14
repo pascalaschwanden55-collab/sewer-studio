@@ -32,8 +32,8 @@ public sealed class AiDocumentationPdfBuilder
         {
             "SEWERSTUDIO_AI_ENABLED=1",
             "Ollama laeuft (SEWERSTUDIO_OLLAMA_URL, Default http://localhost:11434)",
-            "Modelle: SEWERSTUDIO_AI_VISION_MODEL (qwen2.5vl:32b)",
-            "Modelle: SEWERSTUDIO_AI_TEXT_MODEL (qwen2.5vl:32b)",
+            "Modelle: SEWERSTUDIO_AI_VISION_MODEL (qwen3.5:27b)",
+            "Modelle: SEWERSTUDIO_AI_TEXT_MODEL (qwen3.5:27b)",
             "Embeddings: SEWERSTUDIO_AI_EMBED_MODEL (nomic-embed-text)",
             "FFmpeg verfuegbar (SEWERSTUDIO_FFMPEG oder PATH)",
             "VSA Code-Katalog vorhanden (XML/JSON)"

@@ -210,9 +210,7 @@ public static class ConnectionCountEstimator
             return ConnectionCodeRole.Main;
 
         // VSA-Zusatzcodes fuer Anschluss-Zustand
-        // BAF = Einragender Anschluss (Oberflaechenschaden am Anschluss)
-        if (code.StartsWith("BAF", StringComparison.OrdinalIgnoreCase) ||
-            code.StartsWith("BAG", StringComparison.OrdinalIgnoreCase) ||
+        if (code.StartsWith("BAG", StringComparison.OrdinalIgnoreCase) ||
             code.StartsWith("BAH", StringComparison.OrdinalIgnoreCase))
         {
             return ConnectionCodeRole.Supplemental;
@@ -264,11 +262,7 @@ public static class ConnectionCountEstimator
         if (parsed < 0)
             return null;
 
-        var rounded = (int)Math.Round(parsed, 0, MidpointRounding.AwayFromZero);
-        if (rounded > 999)
-            return null;
-
-        return rounded;
+        return (int)Math.Round(parsed, 0, MidpointRounding.AwayFromZero);
     }
 
     private static double? TryExtractDistance(string? text)

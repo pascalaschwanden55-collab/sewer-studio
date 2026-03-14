@@ -237,18 +237,17 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             if (code.Length == 0)
                 continue;
 
-            var rule = table.Find(code);
-            if (rule is null)
+            // Classify() berücksichtigt Q1/Q2-Quantifizierung für dynamische EZ-Werte.
+            // Fällt automatisch auf statische Defaults zurück wenn Q1/Q2 fehlen.
+            var classification = table.Classify(code, finding.Quantifizierung1, finding.Quantifizierung2);
+            if (classification is null)
             {
                 unknownCodeCount++;
                 list.Add(new ClassifiedFinding(finding, new VsaClassificationResult(null, null, null), true));
                 continue;
             }
 
-            list.Add(new ClassifiedFinding(
-                finding,
-                new VsaClassificationResult(rule.EZD, rule.EZS, rule.EZB),
-                false));
+            list.Add(new ClassifiedFinding(finding, classification, false));
         }
 
         return list;
@@ -434,12 +433,10 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
     };
 
     // Tabelle 5: Grundwasserspiegel
-    // GW oberhalb → Infiltrationsrisiko hoeher → DZ soll sinken (dringender) → Faktor < 1.0
-    // GW unterhalb → geringeres Risiko → DZ soll steigen (weniger dringend) → Faktor > 1.0
     private static double ComputeB3(string? value) => value?.Trim().ToLowerInvariant() switch
     {
-        "oberhalb"  => 0.90,
-        "unterhalb" => 1.10,
+        "unterhalb" => 0.90,
+        "oberhalb"  => 1.10,
         _           => 1.00 // unbekannt
     };
 

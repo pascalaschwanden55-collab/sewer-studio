@@ -23,14 +23,13 @@ using System.Net.Http;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Sanierung;
-using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.UI.Hydraulik;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
-public sealed partial class DataPageViewModel : ObservableObject, IDisposable
+public sealed partial class DataPageViewModel : ObservableObject
 {
     private const int MinimumSamplesForModelTraining = 25;
     private const int StrongModelThreshold = 100;
@@ -138,10 +137,27 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _shell = shell;
         _measureRecommendationService = _sp.MeasureRecommendation;
         _saveBannerTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-        _saveBannerTimer.Tick += SaveBannerTimer_Tick;
+        _saveBannerTimer.Tick += (_, __) =>
+        {
+            _saveBannerTimer.Stop();
+            IsSaveStatusVisible = false;
+        };
         _autoSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(5) };
-        _autoSaveTimer.Tick += AutoSaveTimer_Tick;
-        _shell.PropertyChanged += Shell_PropertyChanged;
+        _autoSaveTimer.Tick += (_, __) => AutoSaveOnTimerTick();
+        _shell.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ShellViewModel.IsProjectReady))
+            {
+                OnPropertyChanged(nameof(IsProjectReady));
+                OnPropertyChanged(nameof(IsDataGridReadOnly));
+            }
+            else if (e.PropertyName == nameof(ShellViewModel.Project))
+            {
+                OnPropertyChanged(nameof(Project));
+                OnPropertyChanged(nameof(Records));
+                UpdateSearchResultInfo(Records.Count);
+            }
+        };
 
         var uiLayout = _sp.Settings.DataPageLayout ?? new DataPageLayoutSettings();
         GridMinRowHeight = uiLayout.GridMinRowHeight is >= 24d and <= 240d
@@ -214,43 +230,6 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         PropertyChanged += DataPageViewModel_PropertyChanged;
         UpdateLearningInfo();
         _ = LoadTrainedHaltungenAsync();
-    }
-
-    private void SaveBannerTimer_Tick(object? sender, EventArgs e)
-    {
-        _saveBannerTimer.Stop();
-        IsSaveStatusVisible = false;
-    }
-
-    private void AutoSaveTimer_Tick(object? sender, EventArgs e) => AutoSaveOnTimerTick();
-
-    private void Shell_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(ShellViewModel.IsProjectReady))
-        {
-            OnPropertyChanged(nameof(IsProjectReady));
-            OnPropertyChanged(nameof(IsDataGridReadOnly));
-        }
-        else if (e.PropertyName == nameof(ShellViewModel.Project))
-        {
-            OnPropertyChanged(nameof(Project));
-            OnPropertyChanged(nameof(Records));
-            UpdateSearchResultInfo(Records.Count);
-        }
-    }
-
-    private bool _disposed;
-
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-        _saveBannerTimer.Stop();
-        _saveBannerTimer.Tick -= SaveBannerTimer_Tick;
-        _autoSaveTimer.Stop();
-        _autoSaveTimer.Tick -= AutoSaveTimer_Tick;
-        _shell.PropertyChanged -= Shell_PropertyChanged;
-        PropertyChanged -= DataPageViewModel_PropertyChanged;
     }
 
     partial void OnGridMinRowHeightChanged(double value)
@@ -343,21 +322,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         if (list is null || list.Count == 0)
             return;
 
-        // Sortierung nach Meter (aufsteigend), dann Einfügereihenfolge
-        var sorted = list
-            .Where(e => !e.IsDeleted)
-            .Select((entry, index) => new
-            {
-                Entry = entry,
-                Index = index,
-                Meter = GetOrderingMeter(entry)
-            })
-            .OrderBy(x => x.Meter.HasValue ? 0 : 1)
-            .ThenBy(x => x.Meter ?? double.MaxValue)
-            .ThenBy(x => x.Index)
-            .Select(x => x.Entry);
-
-        foreach (var entry in sorted)
+        foreach (var entry in list.Where(e => !e.IsDeleted))
         {
             // Beschreibung aus dem VSA-Katalog auflösen, wenn sie leer ist
             if (string.IsNullOrWhiteSpace(entry.Beschreibung) || entry.Beschreibung.Length <= 3)
@@ -372,28 +337,6 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
             SelectedProtocolEntries.Add(entry);
         }
-    }
-
-    private static double? GetOrderingMeter(ProtocolEntry entry)
-    {
-        var direct = entry.MeterStart ?? entry.MeterEnd;
-        if (direct.HasValue)
-            return direct;
-
-        if (entry.CodeMeta?.Parameters is null)
-            return null;
-
-        var keys = new[] { "vsa.distanz", "Distance" };
-        foreach (var key in keys)
-        {
-            if (!entry.CodeMeta.Parameters.TryGetValue(key, out var raw) || string.IsNullOrWhiteSpace(raw))
-                continue;
-            var normalized = raw.Trim().Replace(',', '.');
-            if (double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
-                return parsed;
-        }
-
-        return null;
     }
 
     private IReadOnlyList<ProtocolEntry> BuildEntriesFromFindings(IEnumerable<VsaFinding> findings)
@@ -879,9 +822,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
                     damageOverlay = new PlayerDamageOverlayData(pipeLength, markers);
             }
 
-            var window = new PlayerWindow(path, options, damageOverlay: damageOverlay,
-                serviceProvider: _sp, haltungId: record.Id.ToString(),
-                haltungRecord: record)
+            var window = new PlayerWindow(path, options, damageOverlay: damageOverlay)
             {
                 Owner = System.Windows.Application.Current?.MainWindow
             };
@@ -1204,12 +1145,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         var pipeline = _sp.CreateVideoAnalysisPipeline(cfg, plausibility, http);
 
         var haltungId = record.GetFieldValue("Haltungsname") ?? record.Id.ToString();
-        double haltungslaenge = 0;
-        if (record.Fields.TryGetValue("Haltungslaenge_m", out var lenStr)
-            && double.TryParse(lenStr, System.Globalization.NumberStyles.Any,
-                System.Globalization.CultureInfo.InvariantCulture, out var lenVal))
-            haltungslaenge = lenVal;
-        var request = new PipelineRequest(haltungId, videoPath, allowedCodes, HaltungslaengeM: haltungslaenge);
+        var request = new PipelineRequest(haltungId, videoPath, allowedCodes);
 
         var win = new VideoAnalysisPipelineWindow(request, pipeline)
         {
@@ -1221,16 +1157,6 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         if (ok && win.Result?.IsSuccess == true && win.Result.Document is not null)
         {
             record.Protocol = win.Result.Document;
-
-            // Fotos fuer Rohranfang/Rohrende extrahieren
-            var holdingDir = record.GetFieldValue("Link");
-            if (!string.IsNullOrWhiteSpace(holdingDir) && Directory.Exists(holdingDir))
-            {
-                var boundaries = ProtocolBoundaryService.EnsureBoundaries(
-                    record.Protocol.Current.Entries, haltungslaenge);
-                _ = BoundaryPhotoService.GenerateBoundaryPhotosAsync(
-                    boundaries, videoPath, holdingDir);
-            }
 
             _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
             _shell.Project.Dirty = true;

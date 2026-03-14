@@ -43,7 +43,6 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private bool _isFocusMode;
     [ObservableProperty] private bool _isAiWorking;
     [ObservableProperty] private string _aiStatusLabel = "";
-    [ObservableProperty] private string _aiModelInfo = "";
     [ObservableProperty] private int _guideStepIndex;
     [ObservableProperty] private string _guideStepTitle = "Ratten-Assistent";
     [ObservableProperty] private string _guideMessage = "Willkommen in SewerStudio.";
@@ -99,7 +98,6 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             IsAiWorking = active;
             AiStatusLabel = active ? label : "";
-            AiModelInfo = active ? ResolveModelInfo(label) : "";
         };
 
         PropertyChanged += (_, e) =>
@@ -400,20 +398,6 @@ public sealed partial class ShellViewModel : ObservableObject
         };
         window.ShowDialog();
     }
-
-    /// <summary>
-    /// Gibt an welche KI-Modelle fuer die aktuelle Aktivitaet genutzt werden.
-    /// </summary>
-    private static string ResolveModelInfo(string label) => label switch
-    {
-        "Training Center"         => "Qwen-Vision + nomic-embed",
-        "Nur Protokolle + Fotos"  => "nomic-embed (kein Qwen)",
-        "Lernen aus Protokoll"    => "nomic-embed + ffmpeg",
-        "Videoanalyse-Pipeline"   => "Qwen-Vision + YOLO",
-        "KI-Codevorschlag"        => "Qwen-Text + nomic-embed",
-        "Sanierungs-Optimierung"  => "Qwen-Text",
-        _                         => ""
-    };
 
     public sealed record NavItem(string Icon, string Title, Func<object> CreatePage);
     private sealed record GuideStep(string Title, string Message, string? NavTitle = null, bool RequiresProject = false);

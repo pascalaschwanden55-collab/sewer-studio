@@ -77,7 +77,6 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 qwenVision: qwenVision);
             multiModel.FrameStepSeconds = request.FrameStepSeconds;
             multiModel.DedupWindowFrames = request.DedupWindowFrames;
-            multiModel.HaltungslaengeM = request.HaltungslaengeM;
 
             videoResult = await multiModel.AnalyzeAsync(
                 request.VideoPath, analysisProgress, ct).ConfigureAwait(false);
@@ -125,8 +124,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             VideoPath: request.VideoPath,
             AllowedCodes: request.AllowedCodes,
             ProjectFolderAbs: request.ProjectFolderAbs,
-            RequestedBy: request.RequestedBy,
-            HaltungslaengeM: request.HaltungslaengeM);
+            RequestedBy: request.RequestedBy);
 
         // BUG 1.3 FIX: Detections direkt übergeben
         var genResult = await generator.GenerateFromDetectionsAsync(
@@ -210,8 +208,7 @@ public sealed record PipelineRequest(
     string? ProjectFolderAbs = null,
     string? RequestedBy = null,
     double FrameStepSeconds = 3.0,
-    int DedupWindowFrames = 3,
-    double HaltungslaengeM = 0
+    int DedupWindowFrames = 3
 );
 
 public sealed record PipelineResult(

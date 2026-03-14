@@ -15,7 +15,7 @@ public enum InitialFocusMode
     AiOptimization
 }
 
-public sealed partial class SanierungsmassnahmenViewModel : ObservableObject, IDisposable
+public sealed partial class SanierungsmassnahmenViewModel : ObservableObject
 {
     public CostCalculatorViewModel CostCalcVm { get; }
     public SanierungOptimizationViewModel? OptimizationVm { get; }
@@ -186,18 +186,9 @@ public sealed partial class SanierungsmassnahmenViewModel : ObservableObject, ID
     [RelayCommand]
     private void Close()
     {
-        Dispose();
-        CloseRequested?.Invoke();
-    }
-
-    private bool _disposed;
-
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
         CostCalcVm.PropertyChanged -= CostCalcVm_PropertyChanged;
         if (OptimizationVm is not null)
             OptimizationVm.PropertyChanged -= OptimizationVm_PropertyChanged;
+        CloseRequested?.Invoke();
     }
 }

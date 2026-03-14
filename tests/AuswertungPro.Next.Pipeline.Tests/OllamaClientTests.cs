@@ -27,9 +27,7 @@ public sealed class OllamaClientTests
 
         _ = new OllamaClient(uri, http, TimeSpan.FromMinutes(42));
 
-        // BaseAddress wird bei bereitgestelltem HttpClient NICHT gesetzt
-        // (nur bei owned clients), daher bleibt der Originalwert erhalten.
-        Assert.Null(http.BaseAddress);
+        Assert.Equal(uri, http.BaseAddress);
         Assert.Equal(TimeSpan.FromMinutes(3), http.Timeout);
     }
 

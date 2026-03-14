@@ -20,16 +20,13 @@ public sealed class LiveDetectionService
     private static readonly string Prompt = """
         Du siehst einen Frame aus einer Kanalinspektion (TV-Inspektion Abwasserkanal).
         Analysiere kurz:
-        1. Lies den METERSTAND: Das ist die Zahl UNTEN RECHTS im Bild (z.B. "0.00", "12.50", "7.90").
-           NICHT die Knotennummern, Schachtnummern oder andere Zahlen im Headertext oben.
-           Der Meterstand zeigt die gefahrene Distanz in Metern (typisch 0-500m).
-           Werte ueber 500 sind KEINE Meterstaende sondern Knotennummern — ignoriere diese.
-        2. Erkenne sichtbare Schaeden im Kanalrohr.
+        1. Lies den Meterstand aus dem OSD (On-Screen Display), falls sichtbar.
+        2. Erkenne sichtbare Schaeden.
 
         Antworte NUR mit gueltigem JSON in diesem Format:
         {"meter": 12.5, "findings": [{"label": "Riss", "severity": 3, "position_clock": "3", "vsa_code_hint": "BAB", "extent_percent": 20}]}
 
-        Falls kein Schaden: {"meter": 0.0, "findings": []}
+        Falls kein Schaden: {"meter": null, "findings": []}
         severity: 1=kaum, 2=leicht, 3=mittel, 4=schwer, 5=kritisch
         position_clock: Uhrzeitlage (12=Scheitel, 6=Sohle, 3=rechts, 9=links)
         """;
@@ -95,13 +92,7 @@ public sealed class LiveDetectionService
 
             double? meter = null;
             if (root.TryGetProperty("meter", out var mEl) && mEl.ValueKind == JsonValueKind.Number)
-            {
-                var raw_meter = mEl.GetDouble();
-                // Plausibilitaet: Meterstand muss zwischen 0 und 500 liegen
-                // Werte > 500 sind Knotennummern die faelschlich als Meter gelesen wurden
-                if (raw_meter >= 0 && raw_meter <= 500)
-                    meter = raw_meter;
-            }
+                meter = mEl.GetDouble();
 
             var findings = new List<LiveFrameFinding>();
             if (root.TryGetProperty("findings", out var fArr) && fArr.ValueKind == JsonValueKind.Array)

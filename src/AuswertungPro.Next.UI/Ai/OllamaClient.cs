@@ -17,26 +17,20 @@ public sealed class OllamaClient : IDisposable
 {
     private readonly HttpClient _http;
     private readonly bool _ownsHttp;
-    private readonly Uri _baseUri;
     private readonly string _keepAlive;
     private readonly int _numCtx;
 
     public OllamaClient(Uri baseUri, HttpClient? http = null, TimeSpan? ownedTimeout = null, string keepAlive = "24h", int numCtx = 0)
     {
         _ownsHttp = http is null;
-        _baseUri = baseUri;
         _http = http ?? new HttpClient();
-        // BaseAddress nur setzen wenn wir den HttpClient selbst erstellt haben,
-        // da ein bereits benutzter HttpClient keine Property-Aenderungen erlaubt.
+        _http.BaseAddress = baseUri;
+        _keepAlive = keepAlive;
+        _numCtx = numCtx;
         if (_ownsHttp)
-        {
-            _http.BaseAddress = baseUri;
             _http.Timeout = ownedTimeout is { } timeout && timeout > TimeSpan.Zero
                 ? timeout
                 : TimeSpan.FromMinutes(5);
-        }
-        _keepAlive = keepAlive;
-        _numCtx = numCtx;
     }
 
     public void Dispose()
@@ -52,7 +46,7 @@ public sealed class OllamaClient : IDisposable
     {
         try
         {
-            using var resp = await _http.GetAsync(ResolveUri("/api/tags"), ct).ConfigureAwait(false);
+            using var resp = await _http.GetAsync("/api/tags", ct).ConfigureAwait(false);
             resp.EnsureSuccessStatusCode();
             var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             using var doc = JsonDocument.Parse(body);
@@ -97,7 +91,7 @@ public sealed class OllamaClient : IDisposable
         ApplyNumCtx(payload);
 
         var json = JsonSerializer.Serialize(payload);
-        using var req = new HttpRequestMessage(HttpMethod.Post, ResolveUri("/api/generate"))
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/api/generate")
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
@@ -154,7 +148,7 @@ public sealed class OllamaClient : IDisposable
         ApplyNumCtx(payload);
 
         var json = JsonSerializer.Serialize(payload);
-        using var req = new HttpRequestMessage(HttpMethod.Post, ResolveUri("/api/chat"))
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/api/chat")
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
@@ -229,7 +223,7 @@ public sealed class OllamaClient : IDisposable
         ApplyNumCtx(payload);
 
         var json = JsonSerializer.Serialize(payload);
-        using var req = new HttpRequestMessage(HttpMethod.Post, ResolveUri("/api/chat"))
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/api/chat")
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
@@ -270,9 +264,6 @@ public sealed class OllamaClient : IDisposable
             throw new InvalidOperationException("Structured JSON konnte nicht geparst werden: " + ex.Message + "\nRaw:\n" + content);
         }
     }
-
-    /// <summary>Erstellt die vollstaendige URI fuer einen API-Pfad.</summary>
-    private Uri ResolveUri(string path) => new(_baseUri, path);
 
     private void ApplyNumCtx(Dictionary<string, object?> payload)
     {

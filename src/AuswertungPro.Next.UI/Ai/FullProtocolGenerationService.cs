@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.Ollama;
@@ -375,7 +374,7 @@ public sealed class FullProtocolGenerationService : IDisposable
             MeterStart = det.MeterStart,
             MeterEnd = det.MeterEnd > det.MeterStart ? det.MeterEnd : det.MeterStart,
             IsStreckenschaden = det.MeterEnd - det.MeterStart > 0.05,
-            Source = ProtocolEntrySource.Ai,
+            Source = ProtocolEntrySource.Manual,
             Ai = new ProtocolEntryAiMeta
             {
                 SuggestedCode = mapped.SuggestedCode,
@@ -406,11 +405,6 @@ public sealed class FullProtocolGenerationService : IDisposable
             Comment = "Automatisch generiert aus Video-Analyse",
             Entries = entries
         };
-
-        // Rohranfang (BCD) bei 0.00m und Rohrende (BCE) sicherstellen
-        if (request.HaltungslaengeM > 0)
-            ProtocolBoundaryService.EnsureBoundaries(revision.Entries, request.HaltungslaengeM);
-
         return new ProtocolDocument
         {
             HaltungId = request.HaltungId,
@@ -445,8 +439,7 @@ public sealed record FullProtocolGenerationRequest(
     string VideoPath,
     IReadOnlyList<string> AllowedCodes,
     string? ProjectFolderAbs = null,
-    string? RequestedBy = null,
-    double HaltungslaengeM = 0
+    string? RequestedBy = null
 );
 
 public sealed record FullProtocolGenerationResult(

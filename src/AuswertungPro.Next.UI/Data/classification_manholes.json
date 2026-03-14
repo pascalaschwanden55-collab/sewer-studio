@@ -1,5 +1,5 @@
 {
-  "_comment": "VSA Richtlinie 2023 - Anhang D: Klassifizierungstabellen für Schächte. Konservative Defaults bei quantifizierungsabhängigen Codes.",
+  "_comment": "VSA Richtlinie 2023 - Anhang D: Klassifizierungstabellen für Schächte. Konservative Defaults bei quantifizierungsabhängigen Codes. Erweitert um DC*/DD*-Gruppen.",
   "defaultMinLength_m": 0.5,
   "rules": [
     { "code": "DAA", "ezd": null, "ezs": 2,    "ezb": 2    },
@@ -28,7 +28,20 @@
     { "code": "DBF", "ezd": 2,    "ezs": 2,    "ezb": 4    },
     { "code": "DBG", "ezd": 2,    "ezs": null, "ezb": 3    },
     { "code": "DBH", "ezd": null, "ezs": null, "ezb": 4    },
+    { "code": "DCA", "ezd": null, "ezs": null, "ezb": 2    },
+    { "code": "DCB", "ezd": null, "ezs": null, "ezb": 2    },
+    { "code": "DCF", "ezd": null, "ezs": null, "ezb": null },
+    { "code": "DCG", "ezd": null, "ezs": null, "ezb": 2    },
     { "code": "DCH", "ezd": null, "ezs": null, "ezb": 3    },
-    { "code": "DCI", "ezd": null, "ezs": null, "ezb": 3    }
+    { "code": "DCI", "ezd": null, "ezs": null, "ezb": 3    },
+    { "code": "DCL", "ezd": null, "ezs": null, "ezb": 2    },
+    { "code": "DCM", "ezd": null, "ezs": null, "ezb": 2    },
+    { "code": "DDA", "ezd": null, "ezs": 2,    "ezb": 2    },
+    { "code": "DDB", "ezd": null, "ezs": 2,    "ezb": 2    },
+    { "code": "DDC", "ezd": null, "ezs": 2,    "ezb": 2    },
+    { "code": "DDD", "ezd": null, "ezs": 2,    "ezb": null },
+    { "code": "DDE", "ezd": 2,    "ezs": 2,    "ezb": 2    },
+    { "code": "DDF", "ezd": null, "ezs": 2,    "ezb": 2    },
+    { "code": "DDG", "ezd": null, "ezs": 2,    "ezb": 2    }
   ]
 }

@@ -1,7 +1,6 @@
 using System;
 using System.Globalization;
 using AuswertungPro.Next.UI.Ai.Ollama;
-using AuswertungPro.Next.UI.Ai.Shared;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -91,41 +90,15 @@ public sealed record AiPlatformConfig(
                 Env("SEWERSTUDIO_OLLAMA_URL"))
             ?? "http://localhost:11434";
 
-        var visionRaw = FirstNonEmpty(
+        var vision = FirstNonEmpty(
                 settings?.AiVisionModel,
                 Env("SEWERSTUDIO_AI_VISION_MODEL"))
             ?? OllamaConfig.DefaultVisionModel;
 
-        var textRaw = FirstNonEmpty(
+        var text = FirstNonEmpty(
                 settings?.AiTextModel,
                 Env("SEWERSTUDIO_AI_TEXT_MODEL"))
             ?? OllamaConfig.DefaultTextModel;
-
-        // Auto-Modus: GPU-VRAM erkennen und passendes Modell waehlen
-        var vision = visionRaw;
-        var text = textRaw;
-        int? autoNumCtx = null;
-        if (GpuModelSelector.IsAutoMode(visionRaw) || GpuModelSelector.IsAutoMode(textRaw))
-        {
-            var profile = GpuModelSelector.DetectAndSelect();
-            if (profile is not null)
-            {
-                if (GpuModelSelector.IsAutoMode(visionRaw))
-                    vision = profile.ResolvedModel;
-                if (GpuModelSelector.IsAutoMode(textRaw))
-                    text = profile.ResolvedModel;
-                autoNumCtx = profile.ResolvedNumCtx;
-            }
-            else
-            {
-                // Fallback wenn GPU-Erkennung fehlschlaegt
-                if (GpuModelSelector.IsAutoMode(visionRaw))
-                    vision = GpuModelSelector.SmallModel;
-                if (GpuModelSelector.IsAutoMode(textRaw))
-                    text = GpuModelSelector.SmallModel;
-                autoNumCtx = GpuModelSelector.SmallModelNumCtx;
-            }
-        }
 
         var embed = FirstNonEmpty(
                 settings?.AiEmbedModel,
@@ -143,7 +116,6 @@ public sealed record AiPlatformConfig(
 
         var numCtx = settings?.AiOllamaNumCtx
             ?? ParseInt(Env("SEWERSTUDIO_OLLAMA_NUM_CTX"))
-            ?? autoNumCtx
             ?? OllamaConfig.DefaultNumCtx;
 
         // ── Pipeline ──
@@ -184,11 +156,10 @@ public sealed record AiPlatformConfig(
             ?? ParseInt(Env("SEWERSTUDIO_PIPE_DIAMETER_MM"));
 
         // ── Tools ──
-        // FfmpegLocator prueft: Settings → ENV → WinGet/Choco/Scoop → PATH
         var ffmpeg = FirstNonEmpty(
                 settings?.AiFfmpegPath,
                 Env("SEWERSTUDIO_FFMPEG"))
-            ?? FfmpegLocator.ResolveFfmpeg();
+            ?? "ffmpeg";
 
         return new AiPlatformConfig(
             Enabled:                enabled,

@@ -211,55 +211,6 @@ public sealed class VideoFrameStream : IAsyncDisposable
         return -1;
     }
 
-    /// <summary>
-    /// Extrahiert einen einzelnen Frame an einer bestimmten Zeitposition via ffmpeg -ss seek.
-    /// Schneller als Stream fuer gezielte Einzelframes (Protokoll-gesteuert).
-    /// </summary>
-    public static async Task<FrameData?> ExtractSingleFrameAsync(
-        string ffmpegPath, string videoPath, double timeSeconds,
-        CancellationToken ct, int scaleWidth = 1280)
-    {
-        var ts = timeSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        var psi = new ProcessStartInfo
-        {
-            FileName = ffmpegPath,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
-        psi.ArgumentList.Add("-hide_banner");
-        psi.ArgumentList.Add("-loglevel");
-        psi.ArgumentList.Add("error");
-        psi.ArgumentList.Add("-ss");
-        psi.ArgumentList.Add(ts);
-        psi.ArgumentList.Add("-i");
-        psi.ArgumentList.Add(videoPath);
-        psi.ArgumentList.Add("-frames:v");
-        psi.ArgumentList.Add("1");
-        psi.ArgumentList.Add("-vf");
-        psi.ArgumentList.Add($"scale='min({scaleWidth},iw)':-2");
-        psi.ArgumentList.Add("-f");
-        psi.ArgumentList.Add("image2pipe");
-        psi.ArgumentList.Add("-vcodec");
-        psi.ArgumentList.Add("png");
-        psi.ArgumentList.Add("pipe:1");
-
-        using var process = Process.Start(psi);
-        if (process is null) return null;
-
-        _ = process.StandardError.ReadToEndAsync(ct)
-            .ContinueWith(static _ => { }, TaskContinuationOptions.OnlyOnFaulted);
-
-        using var ms = new MemoryStream();
-        await process.StandardOutput.BaseStream.CopyToAsync(ms, ct).ConfigureAwait(false);
-        await process.WaitForExitAsync(ct).ConfigureAwait(false);
-
-        return ms.Length > 0
-            ? new FrameData(timeSeconds, ms.ToArray())
-            : null;
-    }
-
     public async ValueTask DisposeAsync()
     {
         try

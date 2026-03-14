@@ -25,11 +25,6 @@ public partial class SanierungsmassnahmenWindow : Window
 
         vm.CostCalcVm.Saved += () => Close();
         vm.CloseRequested += () => Close();
-        Closed += (_, _) =>
-        {
-            vm.Dispose();
-            vm.CostCalcVm.Dispose();
-        };
         Loaded += (_, _) =>
         {
             EnsureVisibleOnScreen();

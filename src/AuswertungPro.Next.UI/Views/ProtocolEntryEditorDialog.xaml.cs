@@ -48,9 +48,6 @@ public partial class ProtocolEntryEditorDialog : Window
 
         _paramVm = _sp?.CodeCatalog is null ? null : new ProtocolEntryEditorViewModel(_sp.CodeCatalog);
 
-        // DataContext fuer VSA-Bindings (VsaDistanz, VsaVideo, VsaUhrVon etc.)
-        DataContext = _entryVm;
-
         LoadFromEntry();
 
         CatalogButton.Click += (_, _) => OpenCodePicker();
@@ -58,11 +55,6 @@ public partial class ProtocolEntryEditorDialog : Window
         ZeitFromVideoButton.Click += (_, _) => SetZeitFromVideo();
         SeekToZeitButton.Click += (_, _) => SeekToZeit();
         OkButton.Click += (_, _) => ApplyAndClose();
-        Foto1FromVideoButton.Click += (_, _) => CapturePhotoFromVideo(0);
-        Foto2FromVideoButton.Click += (_, _) => CapturePhotoFromVideo(1);
-        Foto1BrowseButton.Click += (_, _) => BrowsePhoto(0);
-        Foto2BrowseButton.Click += (_, _) => BrowsePhoto(1);
-        LoadPhotoThumbnails();
         CatalogButton.ToolTip = "Shortcut: Ctrl+K";
         KiSuggestButton.ToolTip = "Shortcut: Ctrl+L";
         ZeitFromVideoButton.ToolTip = "Shortcut: F6";
@@ -86,11 +78,7 @@ public partial class ProtocolEntryEditorDialog : Window
         HookVsaValidationEvents();
         PreviewKeyDown += OnDialogPreviewKeyDown;
         _entryVm.PropertyChanged += EntryVm_PropertyChanged;
-        Closed += (_, _) =>
-        {
-            _entryVm.PropertyChanged -= EntryVm_PropertyChanged;
-            PreviewKeyDown -= OnDialogPreviewKeyDown;
-        };
+        Closed += (_, _) => _entryVm.PropertyChanged -= EntryVm_PropertyChanged;
 
         HookParameterValidationEvents();
         ApplyLiveValidation();
@@ -114,13 +102,6 @@ public partial class ProtocolEntryEditorDialog : Window
             ? string.Empty
             : $"Vorheriger KI-Vorschlag: {_entryVm.AiSuggestedCode} ({_entryVm.AiConfidence:P0})";
         ValidationStatus.Text = string.Empty;
-
-        // VSA-Felder automatisch aus MeterStart/Zeit befuellen wenn leer
-        if (string.IsNullOrWhiteSpace(_entryVm.VsaDistanz) && _entryVm.MeterStart.HasValue)
-            _entryVm.VsaDistanz = _entryVm.MeterStart.Value.ToString("0.00", CultureInfo.InvariantCulture);
-
-        if (string.IsNullOrWhiteSpace(_entryVm.VsaVideo) && _entryVm.Zeit.HasValue)
-            _entryVm.VsaVideo = FormatTime(_entryVm.Zeit.Value);
 
         if (_paramVm is not null)
         {
@@ -196,10 +177,6 @@ public partial class ProtocolEntryEditorDialog : Window
             ApplyLiveValidation();
     }
 
-    // Kein Cleanup noetig: Alle Inline-Lambdas abonnieren nur lokale Controls
-    // (TextBox, ComboBox, CheckBox), die zusammen mit dem Window GC'd werden.
-    // Einzige externe Subscription (_entryVm.PropertyChanged) wird im Closed-Handler abgemeldet (Zeile 89).
-    // _paramVm wird im Konstruktor erzeugt und lebt nicht laenger als dieses Fenster.
     private void HookVsaValidationEvents()
     {
         VsaDistanzTextBox.TextChanged += (_, _) => ApplyLiveValidation();
@@ -733,31 +710,15 @@ public partial class ProtocolEntryEditorDialog : Window
             return;
         }
 
-        var entry = _entryVm.Model;
-        var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
-            entry,
-            entry.MeterStart,
-            entry.Zeit);
-
-        var dlg = new VsaCodeExplorerWindow(explorerVm, _videoPath)
+        var vm = new ProtocolCodePickerViewModel(_sp.CodeCatalog, _entryVm);
+        var picker = new ProtocolCodePickerDialog
         {
-            Owner = this
+            Owner = this,
+            DataContext = vm
         };
 
-        if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
+        if (picker.ShowDialog() == true)
         {
-            var result = dlg.SelectedEntry;
-            _entryVm.Code = result.Code;
-            _entryVm.Beschreibung = result.Beschreibung;
-            _entryVm.MeterStart = result.MeterStart;
-            _entryVm.MeterEnd = result.MeterEnd;
-            _entryVm.Zeit = result.Zeit;
-            entry.IsStreckenschaden = result.IsStreckenschaden;
-
-            // CodeMeta uebernehmen
-            entry.CodeMeta = result.CodeMeta;
-            entry.FotoPaths = result.FotoPaths;
-
             LoadFromEntry();
             ValidationStatus.Text = "Code uebernommen.";
         }
@@ -1192,110 +1153,5 @@ public partial class ProtocolEntryEditorDialog : Window
             ValidationStatus.Text = "Video ist nicht aktiv.";
         else
             ValidationStatus.Text = "Video zu Zeitposition gesetzt.";
-    }
-
-    // ── Foto-Verwaltung ─────────────────────────────────────────────
-
-    private void LoadPhotoThumbnails()
-    {
-        var paths = _entryVm.Model.FotoPaths;
-        if (paths.Count > 0) LoadImageInto(Foto1Image, Foto1Placeholder, paths[0]);
-        if (paths.Count > 1) LoadImageInto(Foto2Image, Foto2Placeholder, paths[1]);
-    }
-
-    private void LoadImageInto(Image imageControl, TextBlock placeholder, string? path)
-    {
-        var resolved = ResolveExistingPath(path);
-        if (string.IsNullOrWhiteSpace(resolved))
-        {
-            imageControl.Source = null;
-            placeholder.Visibility = Visibility.Visible;
-            return;
-        }
-
-        try
-        {
-            var bi = new System.Windows.Media.Imaging.BitmapImage();
-            bi.BeginInit();
-            bi.UriSource = new Uri(resolved, UriKind.Absolute);
-            bi.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-            bi.DecodePixelWidth = 480; // Thumbnail-Groesse, skaliert auch FullHD
-            bi.EndInit();
-            bi.Freeze();
-            imageControl.Source = bi;
-            placeholder.Visibility = Visibility.Collapsed;
-        }
-        catch
-        {
-            imageControl.Source = null;
-            placeholder.Visibility = Visibility.Visible;
-        }
-    }
-
-    private void CapturePhotoFromVideo(int index)
-    {
-        if (!PlayerWindow.TryTakeSnapshot(out var snapshotPath))
-        {
-            ValidationStatus.Text = "Kein Video aktiv. Snapshot nicht moeglich.";
-            return;
-        }
-
-        // Foto in Projektordner kopieren
-        var projectFolder = ResolveProjectFolder();
-        var photosDir = Path.Combine(projectFolder, "Fotos");
-        Directory.CreateDirectory(photosDir);
-
-        var haltung = _haltungId ?? "unknown";
-        var timestamp = DateTime.Now.ToString("HHmmss");
-        var destName = $"{haltung}_Foto{index + 1}_{timestamp}.png";
-        var destPath = Path.Combine(photosDir, destName);
-
-        try
-        {
-            File.Copy(snapshotPath, destPath, overwrite: true);
-        }
-        catch (Exception ex)
-        {
-            ValidationStatus.Text = $"Foto-Kopie fehlgeschlagen: {ex.Message}";
-            return;
-        }
-
-        // Relativen Pfad speichern
-        var relativePath = Path.GetRelativePath(projectFolder, destPath);
-        EnsureFotoSlot(index);
-        _entryVm.Model.FotoPaths[index] = relativePath;
-
-        // Bild aktualisieren
-        var img = index == 0 ? Foto1Image : Foto2Image;
-        var ph = index == 0 ? Foto1Placeholder : Foto2Placeholder;
-        LoadImageInto(img, ph, destPath);
-
-        ValidationStatus.Text = $"Foto {index + 1} aus Video gespeichert.";
-    }
-
-    private void BrowsePhoto(int index)
-    {
-        var dlg = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = $"Foto {index + 1} auswaehlen",
-            Filter = "Bilder|*.png;*.jpg;*.jpeg;*.bmp;*.tiff|Alle Dateien|*.*"
-        };
-
-        if (dlg.ShowDialog() != true) return;
-
-        var projectFolder = ResolveProjectFolder();
-        var relativePath = Path.GetRelativePath(projectFolder, dlg.FileName);
-        EnsureFotoSlot(index);
-        _entryVm.Model.FotoPaths[index] = relativePath;
-
-        var img = index == 0 ? Foto1Image : Foto2Image;
-        var ph = index == 0 ? Foto1Placeholder : Foto2Placeholder;
-        LoadImageInto(img, ph, dlg.FileName);
-    }
-
-    private void EnsureFotoSlot(int index)
-    {
-        while (_entryVm.Model.FotoPaths.Count <= index)
-            _entryVm.Model.FotoPaths.Add("");
     }
 }

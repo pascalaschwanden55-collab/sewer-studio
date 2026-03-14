@@ -17,7 +17,7 @@ using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
-public sealed partial class CostCalculatorViewModel : ObservableObject, IDisposable
+public sealed partial class CostCalculatorViewModel : ObservableObject
 {
     private readonly CostCatalogStore _catalogStore = new();
     private readonly MeasureTemplateStore _templateStore = new();
@@ -162,29 +162,14 @@ public sealed partial class CostCalculatorViewModel : ObservableObject, IDisposa
         {
             Interval = TimeSpan.FromMilliseconds(300)
         };
-        _checkDebounceTimer.Tick += CheckDebounceTimer_Tick;
+        _checkDebounceTimer.Tick += (_, _) =>
+        {
+            _checkDebounceTimer.Stop();
+            RunConsistencyCheck();
+        };
 
         UpdateTotal();
         RunConsistencyCheck();
-    }
-
-    private void CheckDebounceTimer_Tick(object? sender, EventArgs e)
-    {
-        _checkDebounceTimer?.Stop();
-        RunConsistencyCheck();
-    }
-
-    private bool _disposed;
-
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-        if (_checkDebounceTimer is not null)
-        {
-            _checkDebounceTimer.Stop();
-            _checkDebounceTimer.Tick -= CheckDebounceTimer_Tick;
-        }
     }
 
     public void SetSelectedMeasures(IEnumerable<MeasureTemplateListItem> measures)

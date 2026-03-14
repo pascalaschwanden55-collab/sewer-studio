@@ -9,10 +9,6 @@ using System.Windows.Shapes;
 
 namespace AuswertungPro.Next.UI.Views.Controls;
 
-/// <summary>
-/// Uhrzeiger-Bereichsauswahl (Von–Bis). Zeigt Rohrleitungsquerschnitt
-/// mit Bogenmarkierung fuer den gewaehlten Bereich.
-/// </summary>
 public partial class ClockRangePickerControl : UserControl
 {
     public static readonly DependencyProperty ValueFromProperty = DependencyProperty.Register(
@@ -34,25 +30,16 @@ public partial class ClockRangePickerControl : UserControl
             OnValueChanged));
 
     private readonly List<ClockItem> _items = new();
-    private readonly List<Line> _ticks = new();
     private bool _isInitialized;
     private int? _vonHour;
     private int? _bisHour;
     private bool _nextClickSetsBis;
 
-    // Farben (konsistent mit Theme)
-    private static readonly SolidColorBrush VonBrush = new(Color.FromRgb(0x16, 0xA3, 0x4A));
-    private static readonly SolidColorBrush BisBrush = new(Color.FromRgb(0x25, 0x63, 0xEB));
-    private static readonly SolidColorBrush InRangeBrush = new(Color.FromRgb(0x4A, 0xB8, 0x6A));
-    private static readonly SolidColorBrush DefaultBrush = new(Color.FromRgb(0x3D, 0x4D, 0x63));
-    private static readonly SolidColorBrush TickDefaultBrush = new(Color.FromRgb(0xCD, 0xD6, 0xE4));
-    private static readonly SolidColorBrush TickActiveBrush = new(Color.FromRgb(0x16, 0xA3, 0x4A));
-
     public ClockRangePickerControl()
     {
         InitializeComponent();
         Loaded += (_, _) => EnsureItems();
-        SizeChanged += (_, _) => RefreshLayout();
+        SizeChanged += (_, _) => UpdateLayout();
     }
 
     public string ValueFrom
@@ -81,55 +68,31 @@ public partial class ClockRangePickerControl : UserControl
         UpdateVisuals();
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // Initialisierung
-    // ═══════════════════════════════════════════════════════════════
-
     private void EnsureItems()
     {
         if (_isInitialized)
             return;
 
         _isInitialized = true;
-
         for (var hour = 1; hour <= 12; hour++)
         {
-            // Tick-Markierung
-            var tick = new Line
-            {
-                Stroke = TickDefaultBrush,
-                StrokeThickness = 1.5,
-                StrokeStartLineCap = PenLineCap.Round,
-                StrokeEndLineCap = PenLineCap.Round
-            };
-            FaceCanvas.Children.Add(tick);
-            _ticks.Add(tick);
-
-            // Stundenzahl
             var text = new TextBlock
             {
                 Text = hour.ToString(CultureInfo.InvariantCulture),
-                Foreground = DefaultBrush,
+                Foreground = Brushes.Black,
                 FontWeight = FontWeights.SemiBold,
-                FontFamily = new FontFamily("Consolas"),
-                FontSize = 11,
+                FontSize = 13,
                 IsHitTestVisible = false
             };
 
-            // Unsichtbarer Klick-Button (22x22: bei 140px-Groesse ueberlappen
-            // sich 28x28-Buttons, was Fehlklicks auf Nachbarstunden verursacht)
-            // MinWidth/MinHeight=0: Theme-Style setzt MinWidth=100, MinHeight=36!
             var button = new Button
             {
                 Tag = hour,
-                Width = 22,
-                Height = 22,
-                MinWidth = 0,
-                MinHeight = 0,
+                Width = 30,
+                Height = 30,
                 Background = Brushes.Transparent,
                 BorderBrush = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
-                Padding = new Thickness(0),
                 Cursor = Cursors.Hand,
                 Opacity = 0.01
             };
@@ -137,231 +100,188 @@ public partial class ClockRangePickerControl : UserControl
 
             FaceCanvas.Children.Add(text);
             FaceCanvas.Children.Add(button);
+
             _items.Add(new ClockItem(hour, text, button));
         }
 
-        RefreshLayout();
+        UpdateLayout();
         ApplyValues();
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // Layout
-    // ═══════════════════════════════════════════════════════════════
-
-    private void RefreshLayout()
+    private new void UpdateLayout()
     {
         if (!_isInitialized)
             return;
 
-        var w = FaceCanvas.ActualWidth > 0 ? FaceCanvas.ActualWidth : ActualWidth;
-        var h = FaceCanvas.ActualHeight > 0 ? FaceCanvas.ActualHeight : ActualHeight;
+        var w = FaceCanvas.ActualWidth;
+        var h = FaceCanvas.ActualHeight;
+        if (w <= 0 || h <= 0)
+        {
+            w = ActualWidth;
+            h = ActualHeight;
+        }
+
         if (w < 40 || h < 40)
             return;
 
-        var s = Math.Min(w, h);
-        var cx = w / 2.0;
-        var cy = h / 2.0;
+        var size = Math.Min(w, h);
+        var centerX = w / 2.0;
+        var centerY = h / 2.0;
+        var radius = Math.Max(20, size / 2.0 - 8);
+        var numberRadius = radius - 18;
+        var buttonRadius = radius - 14;
 
-        // Proportionen (konsistent mit ClockPickerControl)
-        var rNum = s * 0.371;
-        var rWall = s * 0.314;
-        var wStroke = Math.Max(4, s * 0.071);
-        var rInner = s * 0.271;
+        Canvas.SetLeft(Face, centerX - radius);
+        Canvas.SetTop(Face, centerY - radius);
+        Face.Width = radius * 2;
+        Face.Height = radius * 2;
 
-        // Rohrwand
-        PipeWall.Width = rWall * 2;
-        PipeWall.Height = rWall * 2;
-        PipeWall.StrokeThickness = wStroke;
-        Canvas.SetLeft(PipeWall, cx - rWall);
-        Canvas.SetTop(PipeWall, cy - rWall);
+        Canvas.SetLeft(CenterDot, centerX - CenterDot.Width / 2);
+        Canvas.SetTop(CenterDot, centerY - CenterDot.Height / 2);
 
-        // Innenraum
-        PipeInterior.Width = rInner * 2;
-        PipeInterior.Height = rInner * 2;
-        Canvas.SetLeft(PipeInterior, cx - rInner);
-        Canvas.SetTop(PipeInterior, cy - rInner);
-
-        // Mittelpunkt
-        Canvas.SetLeft(CenterDot, cx - CenterDot.Width / 2);
-        Canvas.SetTop(CenterDot, cy - CenterDot.Height / 2);
-
-        // Tick-Markierungen und Stunden positionieren
-        for (int i = 0; i < 12; i++)
+        foreach (var item in _items)
         {
-            var angle = GetAngle(i + 1);
-            var cos = Math.Cos(angle);
-            var sin = Math.Sin(angle);
+            var angle = GetAngle(item.Hour);
+            var nx = centerX + Math.Cos(angle) * numberRadius;
+            var ny = centerY + Math.Sin(angle) * numberRadius;
+            Canvas.SetLeft(item.Text, nx - 7);
+            Canvas.SetTop(item.Text, ny - 9);
 
-            // Tick (innerhalb der Rohrwand)
-            _ticks[i].X1 = cx + cos * (rInner + 2);
-            _ticks[i].Y1 = cy + sin * (rInner + 2);
-            _ticks[i].X2 = cx + cos * (rInner + wStroke - 1);
-            _ticks[i].Y2 = cy + sin * (rInner + wStroke - 1);
-
-            // Zahl (aussen)
-            Canvas.SetLeft(_items[i].Text, cx + cos * rNum - 7);
-            Canvas.SetTop(_items[i].Text, cy + sin * rNum - 8);
-
-            // Klick-Button (auf der Rohrwand, zentriert)
-            Canvas.SetLeft(_items[i].Button, cx + cos * rWall - 11);
-            Canvas.SetTop(_items[i].Button, cy + sin * rWall - 11);
+            var bx = centerX + Math.Cos(angle) * buttonRadius;
+            var by = centerY + Math.Sin(angle) * buttonRadius;
+            Canvas.SetLeft(item.Button, bx - item.Button.Width / 2);
+            Canvas.SetTop(item.Button, by - item.Button.Height / 2);
         }
 
         UpdateVisuals();
     }
-
-    // ═══════════════════════════════════════════════════════════════
-    // Visuelle Aktualisierung
-    // ═══════════════════════════════════════════════════════════════
 
     private void UpdateVisuals()
     {
         if (!_isInitialized)
             return;
 
-        var w = FaceCanvas.ActualWidth > 0 ? FaceCanvas.ActualWidth : ActualWidth;
-        var h = FaceCanvas.ActualHeight > 0 ? FaceCanvas.ActualHeight : ActualHeight;
+        var w = FaceCanvas.ActualWidth;
+        var h = FaceCanvas.ActualHeight;
+        if (w <= 0 || h <= 0)
+        {
+            w = ActualWidth;
+            h = ActualHeight;
+        }
+
         if (w < 40 || h < 40)
             return;
 
-        var s = Math.Min(w, h);
-        var cx = w / 2.0;
-        var cy = h / 2.0;
-        var rInner = s * 0.271;
-        var rMarker = s * 0.20;
+        var centerX = w / 2.0;
+        var centerY = h / 2.0;
+        var size = Math.Min(w, h);
+        var radius = Math.Max(20, size / 2.0 - 8);
+        var handRadius = radius - 30;
 
-        UpdateArc(cx, cy, rInner);
-        UpdateMarkers(cx, cy, rMarker);
-        UpdateHighlights();
+        UpdateHand(HandVon, _vonHour, centerX, centerY, handRadius);
+        UpdateHand(HandBis, _bisHour, centerX, centerY, handRadius);
+        UpdateArc(centerX, centerY, radius - 4);
+        UpdateNumberHighlights();
         UpdateStatusText();
     }
 
-    /// <summary>Bereichs-Bogen als Strich (nicht gefuellt) zeichnen.</summary>
-    private void UpdateArc(double cx, double cy, double rArc)
+    private static void UpdateHand(Line hand, int? hour, double cx, double cy, double radius)
     {
-        if (_vonHour is null || _bisHour is null)
+        hand.X1 = cx;
+        hand.Y1 = cy;
+
+        if (hour is null)
+        {
+            hand.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        hand.Visibility = Visibility.Visible;
+        var angle = GetAngle(hour.Value);
+        hand.X2 = cx + Math.Cos(angle) * radius;
+        hand.Y2 = cy + Math.Sin(angle) * radius;
+    }
+
+    private void UpdateArc(double cx, double cy, double radius)
+    {
+        if (_vonHour is null || _bisHour is null || _vonHour == _bisHour)
         {
             RangeArc.Visibility = Visibility.Collapsed;
             return;
         }
 
-        // Gesamtumfang: Von=12, Bis=12 → voller Kreis
-        if (_vonHour.Value == 12 && _bisHour.Value == 12)
-        {
-            RangeArc.Data = new EllipseGeometry(new Point(cx, cy), rArc, rArc);
-            RangeArc.Visibility = Visibility.Visible;
-            return;
-        }
+        var vonAngle = GetAngle(_vonHour.Value);
+        var bisAngle = GetAngle(_bisHour.Value);
 
-        // Gleiche Stunde → kein Bogen
-        if (_vonHour == _bisHour)
-        {
-            RangeArc.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        var a1 = GetAngle(_vonHour.Value);
-        var a2 = GetAngle(_bisHour.Value);
-        var p1 = new Point(cx + Math.Cos(a1) * rArc, cy + Math.Sin(a1) * rArc);
-        var p2 = new Point(cx + Math.Cos(a2) * rArc, cy + Math.Sin(a2) * rArc);
+        var vonPoint = new Point(cx + Math.Cos(vonAngle) * radius, cy + Math.Sin(vonAngle) * radius);
+        var bisPoint = new Point(cx + Math.Cos(bisAngle) * radius, cy + Math.Sin(bisAngle) * radius);
 
         // Winkelspanne im Uhrzeigersinn (Von → Bis)
-        var sweep = a2 - a1;
-        if (sweep <= 0)
+        var sweep = bisAngle - vonAngle;
+        if (sweep < 0)
             sweep += 2 * Math.PI;
+        if (sweep == 0)
+            sweep = 2 * Math.PI;
 
-        var figure = new PathFigure { StartPoint = p1, IsClosed = false, IsFilled = false };
+        var isLargeArc = sweep > Math.PI;
+
+        var figure = new PathFigure
+        {
+            StartPoint = new Point(cx, cy),
+            IsClosed = true,
+            IsFilled = true
+        };
+        figure.Segments.Add(new LineSegment(vonPoint, true));
         figure.Segments.Add(new ArcSegment(
-            p2,
-            new Size(rArc, rArc),
+            bisPoint,
+            new Size(radius, radius),
             0,
-            sweep > Math.PI,
+            isLargeArc,
             SweepDirection.Clockwise,
             true));
 
         var geometry = new PathGeometry();
         geometry.Figures.Add(figure);
+
         RangeArc.Data = geometry;
         RangeArc.Visibility = Visibility.Visible;
     }
 
-    /// <summary>Von/Bis-Markierungspunkte im Innenraum positionieren.</summary>
-    private void UpdateMarkers(double cx, double cy, double rMarker)
+    private void UpdateNumberHighlights()
     {
-        if (_vonHour is not null)
+        foreach (var item in _items)
         {
-            PointVon.Visibility = Visibility.Visible;
-            var a = GetAngle(_vonHour.Value);
-            Canvas.SetLeft(PointVon, cx + Math.Cos(a) * rMarker - PointVon.Width / 2);
-            Canvas.SetTop(PointVon, cy + Math.Sin(a) * rMarker - PointVon.Height / 2);
-        }
-        else
-        {
-            PointVon.Visibility = Visibility.Collapsed;
-        }
-
-        if (_bisHour is not null)
-        {
-            PointBis.Visibility = Visibility.Visible;
-            var a = GetAngle(_bisHour.Value);
-            Canvas.SetLeft(PointBis, cx + Math.Cos(a) * rMarker - PointBis.Width / 2);
-            Canvas.SetTop(PointBis, cy + Math.Sin(a) * rMarker - PointBis.Height / 2);
-        }
-        else
-        {
-            PointBis.Visibility = Visibility.Collapsed;
-        }
-    }
-
-    /// <summary>Zahlen und Ticks je nach Selektion/Bereich hervorheben.</summary>
-    private void UpdateHighlights()
-    {
-        for (int i = 0; i < _items.Count; i++)
-        {
-            var item = _items[i];
             var isVon = _vonHour.HasValue && item.Hour == _vonHour.Value;
             var isBis = _bisHour.HasValue && item.Hour == _bisHour.Value;
             var inRange = IsInRange(item.Hour);
 
-            SolidColorBrush textBrush;
-            FontWeight weight;
-            double fontSize;
-
             if (isVon)
             {
-                textBrush = VonBrush;
-                weight = FontWeights.ExtraBold;
-                fontSize = 13;
+                item.Text.Foreground = new SolidColorBrush(Color.FromRgb(255, 140, 0));
+                item.Text.FontWeight = FontWeights.ExtraBold;
+                item.Text.FontSize = 15;
             }
             else if (isBis)
             {
-                textBrush = BisBrush;
-                weight = FontWeights.ExtraBold;
-                fontSize = 13;
+                item.Text.Foreground = new SolidColorBrush(Color.FromRgb(31, 78, 158));
+                item.Text.FontWeight = FontWeights.ExtraBold;
+                item.Text.FontSize = 15;
             }
             else if (inRange)
             {
-                textBrush = InRangeBrush;
-                weight = FontWeights.Bold;
-                fontSize = 11;
+                item.Text.Foreground = new SolidColorBrush(Color.FromRgb(180, 100, 0));
+                item.Text.FontWeight = FontWeights.Bold;
+                item.Text.FontSize = 13;
             }
             else
             {
-                textBrush = DefaultBrush;
-                weight = FontWeights.SemiBold;
-                fontSize = 11;
+                item.Text.Foreground = Brushes.Black;
+                item.Text.FontWeight = FontWeights.SemiBold;
+                item.Text.FontSize = 13;
             }
-
-            item.Text.Foreground = textBrush;
-            item.Text.FontWeight = weight;
-            item.Text.FontSize = fontSize;
-
-            _ticks[i].Stroke = (inRange || isVon || isBis) ? TickActiveBrush : TickDefaultBrush;
-            _ticks[i].StrokeThickness = (inRange || isVon || isBis) ? 2.5 : 1.5;
         }
     }
 
-    /// <summary>Prueft ob eine Stunde im gewaehlten Bereich liegt.</summary>
     private bool IsInRange(int hour)
     {
         if (_vonHour is null || _bisHour is null)
@@ -370,35 +290,18 @@ public partial class ClockRangePickerControl : UserControl
         var von = _vonHour.Value;
         var bis = _bisHour.Value;
 
-        // Gesamtumfang (12→12)
-        if (von == 12 && bis == 12)
-            return true;
-
         if (von == bis)
             return hour == von;
 
-        // Normalisierung fuer Wrap-Around-Vergleich
-        var v = von % 12;
-        var b = bis % 12;
-        var h = hour % 12;
+        if (von < bis)
+            return hour >= von && hour <= bis;
 
-        return v <= b
-            ? (h >= v && h <= b)
-            : (h >= v || h <= b);
+        // Ueber 12 hinaus (z.B. von 10 bis 2)
+        return hour >= von || hour <= bis;
     }
 
     private void UpdateStatusText()
     {
-        // Bei kleinen Groessen (z.B. 140x140 in VsaCodeExplorer) StatusText
-        // ausblenden — ueberlappt sonst mit der 6-Uhr-Zahl
-        var h = ActualHeight > 0 ? ActualHeight : Height;
-        if (h < 200)
-        {
-            StatusText.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        StatusText.Visibility = Visibility.Visible;
         if (_vonHour.HasValue && _bisHour.HasValue)
             StatusText.Text = $"{_vonHour} Uhr \u2192 {_bisHour} Uhr";
         else if (_vonHour.HasValue)
@@ -406,10 +309,6 @@ public partial class ClockRangePickerControl : UserControl
         else
             StatusText.Text = "Von: klicken...";
     }
-
-    // ═══════════════════════════════════════════════════════════════
-    // Klick-Verarbeitung
-    // ═══════════════════════════════════════════════════════════════
 
     private void Hour_Click(object? sender, RoutedEventArgs e)
     {
@@ -434,7 +333,7 @@ public partial class ClockRangePickerControl : UserControl
             return;
         }
 
-        // Beide gesetzt: naechstliegenden Wert aktualisieren
+        // Beide gesetzt: aktualisiere den naechsten (Von oder Bis, je nach Naehe)
         var distVon = ClockDistance(hour, _vonHour.Value);
         var distBis = ClockDistance(hour, _bisHour!.Value);
 
@@ -450,10 +349,6 @@ public partial class ClockRangePickerControl : UserControl
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // Hilfsfunktionen
-    // ═══════════════════════════════════════════════════════════════
-
     private static int ClockDistance(int a, int b)
     {
         var diff = Math.Abs(a - b);
@@ -464,9 +359,11 @@ public partial class ClockRangePickerControl : UserControl
     {
         if (string.IsNullOrWhiteSpace(value))
             return null;
-        return int.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var hour)
-            ? NormalizeHour(hour)
-            : null;
+
+        if (int.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var hour))
+            return NormalizeHour(hour);
+
+        return null;
     }
 
     private static int NormalizeHour(int hour)

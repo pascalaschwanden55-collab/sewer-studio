@@ -24,10 +24,8 @@ public sealed class VisionPipelineClient
     public VisionPipelineClient(Uri baseUri, HttpClient? httpClient = null)
     {
         _baseUri = baseUri;
-        var ownClient = httpClient is null;
         _http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
-        if (ownClient)
-            _http.BaseAddress = baseUri;
+        _http.BaseAddress = baseUri;
     }
 
     /// <summary>
