@@ -87,6 +87,8 @@ public sealed record TileItem
     public bool IsSteuer { get; init; }
     public string? GroupColor { get; init; }
     public string? Icon { get; init; }
+    /// <summary>Markiert das aktuell gewaehlte Element in der Multi-Column Ansicht.</summary>
+    public bool IsSelected { get; init; }
 }
 
 // ═══════════════════════════════════════════════════════════════

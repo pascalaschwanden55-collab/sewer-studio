@@ -60,8 +60,14 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
     // â”€â”€ Breadcrumb â”€â”€
     public ObservableCollection<BreadcrumbItem> BreadcrumbItems { get; } = new();
 
-    // â”€â”€ Tiles â”€â”€
+    // â”€â”€ Tiles (Legacy, Kompatibilitaet) â”€â”€
     public ObservableCollection<TileItem> CurrentTiles { get; } = new();
+
+    // â”€â”€ Multi-Column Tiles (WinCan-Stil) â”€â”€
+    public ObservableCollection<TileItem> GroupTiles { get; } = new();
+    public ObservableCollection<TileItem> CodeTiles { get; } = new();
+    public ObservableCollection<TileItem> Char1Tiles { get; } = new();
+    public ObservableCollection<TileItem> Char2Tiles { get; } = new();
 
     // â”€â”€ Progress â”€â”€
     [ObservableProperty] private string? _currentGroupColor;
@@ -748,6 +754,204 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // Helpers
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+    // ═══════════════════════════════════════════════════════════════
+    // Multi-Column Navigation (WinCan-Stil)
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>Befuellt alle 4 Spalten-Collections basierend auf aktuellem Zustand.</summary>
+    public void PopulateAllColumns()
+    {
+        PopulateGroupColumn();
+        PopulateCodeColumn();
+        PopulateChar1Column();
+        PopulateChar2Column();
+    }
+
+    private void PopulateGroupColumn()
+    {
+        GroupTiles.Clear();
+        foreach (var (key, grp) in VsaCodeTree.Groups)
+        {
+            GroupTiles.Add(new TileItem
+            {
+                Key = key, Label = key, Description = grp.Label,
+                GroupColor = grp.Color, Icon = grp.Icon,
+                IsSelected = string.Equals(key, SelectedGroupKey, StringComparison.Ordinal)
+            });
+        }
+    }
+
+    private void PopulateCodeColumn()
+    {
+        CodeTiles.Clear();
+        if (SelectedGroupKey is null || !VsaCodeTree.Groups.TryGetValue(SelectedGroupKey, out var group))
+            return;
+
+        foreach (var (key, cd) in group.Codes)
+        {
+            var (q1, _) = VsaCodeTree.GetQuantRule(key, null);
+            var badge = q1 is not null ? q1.Einheit ?? "Q" : null;
+            var badgeColor = q1 is { Pflicht: "P" } ? "#DC2626" : q1 is not null ? "#F59E0B" : null;
+
+            CodeTiles.Add(new TileItem
+            {
+                Key = key, Label = key, Description = cd.Label,
+                IsFinal = cd.FinalCode is not null,
+                IsSteuer = cd.IsSteuer,
+                BadgeText = badge, BadgeColor = badgeColor,
+                GroupColor = group.Color,
+                IsSelected = string.Equals(key, SelectedCodeKey, StringComparison.Ordinal)
+            });
+        }
+    }
+
+    private void PopulateChar1Column()
+    {
+        Char1Tiles.Clear();
+        var cd = GetCurrentVsaCodeDef();
+        if (cd?.Char1 is null) return;
+
+        foreach (var (key, charDef) in cd.Char1)
+        {
+            var hasC2 = VsaCodeTree.GetChar2Options(cd, key) is not null;
+            var prefix = cd.XPrefix ? "X" : "";
+            var fullCode = $"{SelectedCodeKey}{prefix}{key}";
+            var (q1, _) = VsaCodeTree.GetQuantRule(SelectedCodeKey!, key);
+
+            Char1Tiles.Add(new TileItem
+            {
+                Key = key, Label = fullCode, Description = charDef.Label,
+                IsFinal = !hasC2,
+                BadgeText = q1?.Einheit,
+                BadgeColor = q1 is { Pflicht: "P" } ? "#DC2626" : q1 is not null ? "#F59E0B" : null,
+                GroupColor = CurrentGroupColor,
+                IsSelected = string.Equals(key, SelectedChar1Key, StringComparison.Ordinal)
+            });
+        }
+    }
+
+    private void PopulateChar2Column()
+    {
+        Char2Tiles.Clear();
+        var cd = GetCurrentVsaCodeDef();
+        if (cd is null || SelectedChar1Key is null) return;
+
+        var c2Options = VsaCodeTree.GetChar2Options(cd, SelectedChar1Key);
+        if (c2Options is null) return;
+
+        var prefix = cd.XPrefix ? "X" : "";
+        foreach (var (key, label) in c2Options)
+        {
+            var invalid = VsaCodeTree.IsInvalidCombo(cd, SelectedChar1Key, key);
+            var fullCode = $"{SelectedCodeKey}{prefix}{SelectedChar1Key}{key}";
+            Char2Tiles.Add(new TileItem
+            {
+                Key = key, Label = fullCode, Description = label,
+                IsFinal = true, IsInvalid = invalid,
+                GroupColor = CurrentGroupColor,
+                IsSelected = string.Equals(key, SelectedChar2Key, StringComparison.Ordinal)
+            });
+        }
+    }
+
+    /// <summary>Gruppe waehlen (Multi-Column Modus).</summary>
+    public void SelectGroup(string key)
+    {
+        if (string.Equals(SelectedGroupKey, key, StringComparison.Ordinal))
+            return;
+
+        SelectedGroupKey = key;
+        var grp = VsaCodeTree.Groups[key];
+        CurrentGroupColor = grp.Color;
+
+        SelectedCodeKey = null;
+        SelectedChar1Key = null;
+        SelectedChar2Key = null;
+        ShowResultPanel = false;
+        FinalCode = "";
+
+        PopulateGroupColumn();
+        PopulateCodeColumn();
+        Char1Tiles.Clear();
+        Char2Tiles.Clear();
+        UpdateBreadcrumb();
+        Validate();
+    }
+
+    /// <summary>Hauptcode waehlen (Multi-Column Modus).</summary>
+    public void SelectCode(string key)
+    {
+        if (string.Equals(SelectedCodeKey, key, StringComparison.Ordinal))
+            return;
+
+        SelectedCodeKey = key;
+        SelectedChar1Key = null;
+        SelectedChar2Key = null;
+
+        PopulateCodeColumn();
+
+        var cd = GetCurrentVsaCodeDef();
+        if (cd?.FinalCode is not null || cd?.Char1 is null)
+        {
+            Char1Tiles.Clear();
+            Char2Tiles.Clear();
+            ShowFinalResult(cd?.FinalCode ?? key, null, null);
+        }
+        else
+        {
+            ShowResultPanel = false;
+            FinalCode = "";
+            PopulateChar1Column();
+            Char2Tiles.Clear();
+        }
+
+        UpdateBreadcrumb();
+        Validate();
+    }
+
+    /// <summary>Char1 waehlen (Multi-Column Modus).</summary>
+    public void SelectChar1(string key)
+    {
+        if (string.Equals(SelectedChar1Key, key, StringComparison.Ordinal))
+            return;
+
+        SelectedChar1Key = key;
+        SelectedChar2Key = null;
+
+        PopulateChar1Column();
+
+        var cd = GetCurrentVsaCodeDef();
+        var hasC2 = cd is not null && VsaCodeTree.GetChar2Options(cd, key) is not null;
+
+        if (!hasC2)
+        {
+            var prefix = cd?.XPrefix == true ? "X" : "";
+            Char2Tiles.Clear();
+            ShowFinalResult($"{SelectedCodeKey}{prefix}{key}", key, null);
+        }
+        else
+        {
+            ShowResultPanel = false;
+            FinalCode = "";
+            PopulateChar2Column();
+        }
+
+        UpdateBreadcrumb();
+        Validate();
+    }
+
+    /// <summary>Char2 waehlen (Multi-Column Modus).</summary>
+    public void SelectChar2(string key)
+    {
+        SelectedChar2Key = key;
+        PopulateChar2Column();
+
+        var cd = GetCurrentVsaCodeDef();
+        var prefix = cd?.XPrefix == true ? "X" : "";
+        ShowFinalResult($"{SelectedCodeKey}{prefix}{SelectedChar1Key}{key}", SelectedChar1Key, key);
+        UpdateBreadcrumb();
+    }
 
     private VsaCodeDef? GetCurrentVsaCodeDef()
     {

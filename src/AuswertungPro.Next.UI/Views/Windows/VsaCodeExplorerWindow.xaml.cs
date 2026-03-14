@@ -144,8 +144,16 @@ public partial class VsaCodeExplorerWindow : Window
         // Fotos initialisieren
         UpdateFotoImages();
 
+        // Multi-Column Collections binden
+        _vm.GroupTiles.CollectionChanged += (_, _) => Dispatcher.Invoke(() => RenderColumnTiles(GroupList, _vm.GroupTiles, tile => _vm.SelectGroup(tile.Key)));
+        _vm.CodeTiles.CollectionChanged += (_, _) => Dispatcher.Invoke(() => RenderColumnTiles(CodeList, _vm.CodeTiles, tile => _vm.SelectCode(tile.Key)));
+        _vm.Char1Tiles.CollectionChanged += (_, _) => Dispatcher.Invoke(() => RenderColumnTiles(Char1List, _vm.Char1Tiles, tile => _vm.SelectChar1(tile.Key)));
+        _vm.Char2Tiles.CollectionChanged += (_, _) => Dispatcher.Invoke(() => RenderColumnTiles(Char2List, _vm.Char2Tiles, tile => _vm.SelectChar2(tile.Key)));
+
+        // Initiale Multi-Column Befuellung
+        _vm.PopulateAllColumns();
+
         // Initiale UI
-        RenderTiles();
         UpdateProgress();
         UpdateResultPanel();
         UpdateBreadcrumb();
@@ -177,7 +185,6 @@ public partial class VsaCodeExplorerWindow : Window
             switch (e.PropertyName)
             {
                 case nameof(VsaCodeExplorerViewModel.CurrentLevel):
-                    RenderTiles();
                     UpdateBreadcrumb();
                     UpdateProgress();
                     break;
@@ -188,7 +195,6 @@ public partial class VsaCodeExplorerWindow : Window
 
                 case nameof(VsaCodeExplorerViewModel.ShowResultPanel):
                     UpdateResultPanel();
-                    RenderTiles();
                     UpdateProgress();
                     break;
 
@@ -245,21 +251,109 @@ public partial class VsaCodeExplorerWindow : Window
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // Tiles rendern
+    // Multi-Column Tiles rendern (WinCan-Stil)
     // ═══════════════════════════════════════════════════════════════
 
+    private void RenderColumnTiles(ItemsControl list, System.Collections.ObjectModel.ObservableCollection<TileItem> tiles, Action<TileItem> onSelect)
+    {
+        list.Items.Clear();
+        foreach (var tile in tiles)
+        {
+            var btn = CreateColumnTileButton(tile, onSelect);
+            list.Items.Add(btn);
+        }
+
+        // Char2-Spalte ausblenden wenn leer
+        Char2Column.Width = _vm.Char2Tiles.Count > 0 ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+    }
+
+    /// <summary>Kompakter Button fuer die Multi-Column Ansicht.</summary>
+    private Button CreateColumnTileButton(TileItem tile, Action<TileItem> onSelect)
+    {
+        _actionCardButtonStyle ??= (Style)FindResource("ActionCardButton");
+
+        var sp = new StackPanel { Orientation = Orientation.Horizontal };
+
+        var groupBrush = tile.GroupColor is not null
+            ? (Brush)GetGroupColorBrush(tile.GroupColor)
+            : _accentBrush!;
+
+        // Code-Label
+        var codeTb = new TextBlock
+        {
+            Text = tile.Label,
+            FontFamily = ConsolasFont,
+            FontSize = 11,
+            FontWeight = FontWeights.Bold,
+            Foreground = tile.IsInvalid ? InvalidBrush
+                : tile.IsSelected ? _accentBrush
+                : groupBrush,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 6, 0)
+        };
+        sp.Children.Add(codeTb);
+
+        // Beschreibung
+        var descTb = new TextBlock
+        {
+            Text = tile.Description ?? "",
+            FontSize = 10,
+            Foreground = tile.IsInvalid ? InvalidBrush
+                : tile.IsSelected ? _textBrush
+                : _textSecondaryBrush,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            MaxWidth = 200
+        };
+        sp.Children.Add(descTb);
+
+        // Badges
+        if (tile.BadgeText is not null)
+        {
+            sp.Children.Add(CreateBadge(tile.BadgeText, tile.BadgeColor ?? "#2563EB"));
+        }
+        if (tile.IsFinal && !tile.IsSelected)
+        {
+            sp.Children.Add(CreateBadge("End", "#16A34A"));
+        }
+
+        var btn = new Button
+        {
+            Content = sp,
+            HorizontalContentAlignment = HorizontalAlignment.Left,
+            Padding = new Thickness(8, 6, 8, 6),
+            Margin = new Thickness(2, 1, 2, 1),
+            IsEnabled = !tile.IsInvalid,
+            Tag = tile,
+            Style = _actionCardButtonStyle
+        };
+
+        // Hervorhebung fuer ausgewaehltes Element
+        if (tile.IsSelected)
+        {
+            btn.BorderThickness = new Thickness(2);
+            btn.BorderBrush = _accentBrush;
+            btn.Background = new SolidColorBrush(_colorAccent) { Opacity = 0.08 };
+        }
+        else if (tile.GroupColor is not null)
+        {
+            btn.BorderThickness = new Thickness(2, 0, 0, 0);
+            btn.BorderBrush = GetGroupColorBrush(tile.GroupColor);
+        }
+
+        if (tile.IsInvalid)
+        {
+            btn.Opacity = 0.4;
+            codeTb.TextDecorations = TextDecorations.Strikethrough;
+        }
+
+        btn.Click += (_, _) => onSelect(tile);
+        return btn;
+    }
+
+    // Legacy: wird nicht mehr verwendet aber fuer Kompatibilitaet beibehalten
     private void RenderTiles()
     {
-        TileList.Items.Clear();
-
-        if (_vm.ShowResultPanel)
-            return;
-
-        foreach (var tile in _vm.CurrentTiles)
-        {
-            var btn = CreateTileButton(tile);
-            TileList.Items.Add(btn);
-        }
     }
 
     // Gecachte Styles und Consolas-Font

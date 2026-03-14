@@ -3,10 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
         Title="VSA Schadencodierung — Leitungen"
-        Width="1100"
-        Height="720"
-        MinWidth="900"
-        MinHeight="600"
+        Width="1400"
+        Height="780"
+        MinWidth="1100"
+        MinHeight="650"
         WindowStartupLocation="CenterOwner">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
@@ -84,17 +84,67 @@
                 <ColumnDefinition Width="380"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Tile-Grid (links) -->
-            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled" Padding="16,8">
-                <ItemsControl x:Name="TileList">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
-            </ScrollViewer>
+            <!-- Multi-Column Code-Auswahl (WinCan-Stil) -->
+            <Grid Grid.Column="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition x:Name="Char2Column" Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Spalte 0: Gruppen -->
+                <DockPanel Grid.Column="0" Margin="2,0">
+                    <TextBlock DockPanel.Dock="Top" Text="Gruppe" FontSize="9" FontWeight="Bold"
+                               Foreground="{StaticResource MutedBrush}" Margin="8,6,0,4"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl x:Name="GroupList">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+
+                <!-- Spalte 1: Hauptcodes -->
+                <DockPanel Grid.Column="1" Margin="2,0">
+                    <TextBlock DockPanel.Dock="Top" Text="Hauptcode" FontSize="9" FontWeight="Bold"
+                               Foreground="{StaticResource MutedBrush}" Margin="8,6,0,4"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl x:Name="CodeList">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+
+                <!-- Spalte 2: Char 1 -->
+                <DockPanel Grid.Column="2" Margin="2,0">
+                    <TextBlock DockPanel.Dock="Top" Text="Char 1" FontSize="9" FontWeight="Bold"
+                               Foreground="{StaticResource MutedBrush}" Margin="8,6,0,4"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl x:Name="Char1List">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+
+                <!-- Spalte 3: Char 2 -->
+                <DockPanel Grid.Column="3" Margin="2,0">
+                    <TextBlock DockPanel.Dock="Top" Text="Char 2" FontSize="9" FontWeight="Bold"
+                               Foreground="{StaticResource MutedBrush}" Margin="8,6,0,4"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl x:Name="Char2List">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Grid>
 
             <!-- Rechtes Panel (IMMER sichtbar) -->
             <Border Grid.Column="1"
