@@ -90,10 +90,34 @@ public sealed record AiPlatformConfig(
                 Env("SEWERSTUDIO_OLLAMA_URL"))
             ?? "http://localhost:11434";
 
-        var vision = FirstNonEmpty(
+        // GPU-Auto-Erkennung: wenn kein VisionModel konfiguriert ist,
+        // VRAM pruefen und passendes Modell waehlen (Workstation vs Laptop)
+        var configuredVision = FirstNonEmpty(
                 settings?.AiVisionModel,
-                Env("SEWERSTUDIO_AI_VISION_MODEL"))
-            ?? OllamaConfig.DefaultVisionModel;
+                Env("SEWERSTUDIO_AI_VISION_MODEL"));
+
+        string vision;
+        int numCtxDefault = OllamaConfig.DefaultNumCtx;
+
+        if (GpuModelSelector.IsAutoMode(configuredVision))
+        {
+            var gpuProfile = GpuModelSelector.DetectAndSelect();
+            if (gpuProfile != null)
+            {
+                vision = gpuProfile.ResolvedModel;
+                numCtxDefault = gpuProfile.ResolvedNumCtx;
+                System.Diagnostics.Debug.WriteLine(
+                    $"[AiPlatformConfig] GPU Auto-Select: {gpuProfile.Reason}");
+            }
+            else
+            {
+                vision = OllamaConfig.DefaultVisionModel;
+            }
+        }
+        else
+        {
+            vision = configuredVision!;
+        }
 
         var text = FirstNonEmpty(
                 settings?.AiTextModel,
@@ -116,7 +140,7 @@ public sealed record AiPlatformConfig(
 
         var numCtx = settings?.AiOllamaNumCtx
             ?? ParseInt(Env("SEWERSTUDIO_OLLAMA_NUM_CTX"))
-            ?? OllamaConfig.DefaultNumCtx;
+            ?? numCtxDefault;
 
         // ── Pipeline ──
         var multiModelEnabled = settings?.PipelineMultiModelEnabled

@@ -822,7 +822,11 @@ public sealed partial class DataPageViewModel : ObservableObject
                     damageOverlay = new PlayerDamageOverlayData(pipeLength, markers);
             }
 
-            var window = new PlayerWindow(path, options, damageOverlay: damageOverlay)
+            var window = new PlayerWindow(path, options,
+                damageOverlay: damageOverlay,
+                serviceProvider: _sp,
+                haltungId: record.Id.ToString(),
+                haltungRecord: record)
             {
                 Owner = System.Windows.Application.Current?.MainWindow
             };

@@ -75,9 +75,9 @@ public sealed class KinsImportServiceTests
 
         Assert.True(res.Ok, res.ErrorMessage);
         Assert.Equal(1, winCan.CallCount);
-        Assert.Equal(0, ibak.CallCount); // Nur WinCan als Fallback, um Duplikate zu vermeiden
+        Assert.Equal(1, ibak.CallCount); // Beide Importer als Fallback bei unbekannter Struktur
         Assert.NotNull(res.Value);
-        Assert.Equal(1, res.Value!.Found);
+        Assert.Equal(3, res.Value!.Found); // WinCan(1) + IBAK(2) = 3
     }
 
     [Fact]

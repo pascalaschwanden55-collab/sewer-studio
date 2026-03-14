@@ -357,7 +357,7 @@
                 </Border>
             </Grid>
 
-            <!-- â”€â”€ CODING SEITENPANEL (Mockup-Design) â”€â”€ -->
+            <!-- â"€â"€ CODING SEITENPANEL (Mockup-Design) â"€â"€ -->
             <Border x:Name="CodingSidePanel" Grid.Column="1"
                     Visibility="Collapsed"
                     Margin="8,0,0,0"
@@ -369,7 +369,7 @@
                               HorizontalScrollBarVisibility="Disabled">
                     <StackPanel>
 
-                        <!-- â”€â”€ 1. QualityGate Zonen-Legende â”€â”€ -->
+                        <!-- â"€â"€ 1. QualityGate Zonen-Legende â"€â"€ -->
                         <Border Style="{StaticResource PlayerCard}" Margin="0,0,0,8">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
@@ -402,12 +402,12 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- â”€â”€ 2. Erkannte Defekte (erweiterte Ereignisliste) â”€â”€ -->
+                        <!-- â"€â"€ 2. Erkannte Defekte (erweiterte Ereignisliste) â"€â"€ -->
                         <Border Style="{StaticResource PlayerCard}" Margin="0,0,0,8">
                             <DockPanel>
                                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                     <TextBlock Style="{StaticResource SectionLabel}" Margin="0">
-                                        <Run Text="ERKANNTE DEFEKTE ("/>
+                                        <Run Text="BEOBACHTUNGEN ("/>
                                         <Run x:Name="RunCodingDefectCount" Text="0"/>
                                         <Run Text=")"/>
                                     </TextBlock>
@@ -533,7 +533,7 @@
                             </DockPanel>
                         </Border>
 
-                        <!-- â”€â”€ 3. Defekt-Details (bei Auswahl) â”€â”€ -->
+                        <!-- â"€â"€ 3. Defekt-Details (bei Auswahl) â"€â"€ -->
                         <Border x:Name="CodingDefectDetailPanel" Style="{StaticResource PlayerCard}"
                                 Margin="0,0,0,8" Visibility="Collapsed">
                             <Border.BorderBrush>
@@ -674,25 +674,25 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- â”€â”€ 4. Kalibrierung + Messung â”€â”€ -->
+                        <!-- â"€â"€ 4. Kalibrierung + Messung â"€â"€ -->
                         <Border Style="{StaticResource PlayerCard}" Margin="0,0,0,8">
                             <StackPanel>
                                 <TextBlock Text="KALIBRIERUNG" Style="{StaticResource SectionLabel}"/>
                                 <TextBlock x:Name="TxtCodingCalibDn" FontSize="12"
-                                           Foreground="{DynamicResource TextBrush}" Text="DN: â€“"/>
+                                           Foreground="{DynamicResource TextBrush}" Text="DN: &#x2014;" />
                                 <TextBlock x:Name="TxtCodingCalibStatus" FontSize="12"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            Text="Nicht kalibriert" Margin="0,0,0,6"/>
 
                                 <TextBlock Text="MESSUNG" Style="{StaticResource SectionLabel}"/>
-                                <TextBlock x:Name="TxtCodingQ1" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Q1: â€“"/>
-                                <TextBlock x:Name="TxtCodingQ2" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Q2: â€“"/>
-                                <TextBlock x:Name="TxtCodingClock" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Uhr: â€“"/>
-                                <TextBlock x:Name="TxtCodingArc" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Bogen: â€“"/>
+                                <TextBlock x:Name="TxtCodingQ1" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Q1: &#x2014;"/>
+                                <TextBlock x:Name="TxtCodingQ2" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Q2: &#x2014;"/>
+                                <TextBlock x:Name="TxtCodingClock" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Uhr: &#x2014;"/>
+                                <TextBlock x:Name="TxtCodingArc" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Bogen: &#x2014;"/>
                             </StackPanel>
                         </Border>
 
-                        <!-- â”€â”€ 5. Codieren (manuell) â”€â”€ -->
+                        <!-- â"€â"€ 5. Codieren (manuell) â"€â"€ -->
                         <Border Style="{StaticResource PlayerCard}" Margin="0,0,0,8">
                             <StackPanel>
                                 <TextBlock Text="CODIEREN" Style="{StaticResource SectionLabel}"/>
@@ -714,7 +714,7 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- â”€â”€ 6. Session-Statistik â”€â”€ -->
+                        <!-- â"€â"€ 6. Session-Statistik â"€â"€ -->
                         <Border Style="{StaticResource PlayerCard}" Margin="0">
                             <StackPanel>
                                 <TextBlock Text="SESSION STATISTIK" Style="{StaticResource SectionLabel}"/>
@@ -762,7 +762,7 @@
                                             <TextBlock Text="Avg. Konfidenz" FontSize="10"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatAvgConfidence"
-                                                       Text="â€“" FontSize="20" FontWeight="Bold"
+                                                       Text="&#x2014;" FontSize="20" FontWeight="Bold"
                                                        Foreground="{DynamicResource AccentBrush}"/>
                                         </StackPanel>
                                     </Border>
@@ -791,14 +791,14 @@
 
                 <!-- Meter-Navigation -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-                    <Button Style="{StaticResource PlayerButton}" Content="â—€" Padding="8,6"
+                    <Button Style="{StaticResource PlayerButton}" Content="&#x25C0;" Padding="8,6"
                             Click="CodingPrevious_Click" ToolTip="Zurueck (Step)"/>
                     <TextBlock x:Name="TxtCodingMeter"
                                FontFamily="Consolas, Cascadia Mono" FontSize="15" FontWeight="Bold"
                                Foreground="{DynamicResource TextBrush}"
                                VerticalAlignment="Center" Margin="8,0"
                                Text="0.00m"/>
-                    <Button Style="{StaticResource PlayerButton}" Content="â–¶" Padding="8,6"
+                    <Button Style="{StaticResource PlayerButton}" Content="&#x25B6;" Padding="8,6"
                             Click="CodingNext_Click" ToolTip="Weiter (Step)"/>
                     <TextBlock x:Name="TxtCodingRange"
                                FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
@@ -875,14 +875,14 @@
                     <ToggleButton x:Name="BtnCodingLiveAi" Style="{StaticResource SpeedToggleButton}"
                                   IsChecked="False" Margin="0,0,6,0"
                                   ToolTip="KI Live-Analyse an/aus (automatisch alle 5s)" Click="CodingLiveAi_Click">
-                        <TextBlock Text="âš¡ Live-KI" FontSize="11"/>
+                        <TextBlock Text="&#x26A1; Live-KI" FontSize="11"/>
                     </ToggleButton>
                     <Button x:Name="BtnCodingAnalyze"
                             Style="{StaticResource PlayerPrimaryButton}"
                             Padding="10,5" FontSize="11"
                             Click="CodingAnalyzeFrame_Click"
                             ToolTip="Aktuellen Frame per KI analysieren">
-                        <TextBlock Text="âš¡ Analysieren"/>
+                        <TextBlock Text="&#x26A1; Analysieren"/>
                     </Button>
                 </StackPanel>
 
@@ -937,7 +937,7 @@
                             Foreground="#EF4444" Margin="6,0,0,0"
                             Click="CodingModeExit_Click"
                             ToolTip="Codier-Modus beenden ohne Uebernahme">
-                        <TextBlock Text="âœ•" FontSize="11"/>
+                        <TextBlock Text="&#x2715;" FontSize="11"/>
                     </Button>
                 </StackPanel>
             </Grid>
@@ -967,7 +967,7 @@
                            Text="00:00"/>
 
                 <Grid Grid.Column="1">
-                    <!-- Quick-Scan heatmap overlay â€” below slider -->
+                    <!-- Quick-Scan heatmap overlay, below slider -->
                     <Canvas x:Name="HeatmapCanvas"
                             IsHitTestVisible="True"
                             VerticalAlignment="Center"
@@ -981,7 +981,7 @@
                             IsMoveToPointEnabled="True"
                             ValueChanged="PositionSlider_ValueChanged"
                             ToolTip="Videoposition - ziehen fuer Live-Vorschau, klicken zum Springen"/>
-                    <!-- Damage code marker overlay â€” positioned dynamically to match slider track -->
+                    <!-- Damage code marker overlay, positioned dynamically to match slider track -->
                     <Canvas x:Name="DamageMarkerCanvas"
                             IsHitTestVisible="True"
                             VerticalAlignment="Center"

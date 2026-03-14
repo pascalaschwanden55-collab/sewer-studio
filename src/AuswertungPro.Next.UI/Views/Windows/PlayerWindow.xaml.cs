@@ -398,6 +398,9 @@ public partial class PlayerWindow : Window
         args.Add("--clock-jitter=0");
         args.Add("--clock-synchro=0");
 
+        // Snapshot-Pfad nicht als OSD anzeigen (stoert bei KI-Frame-Captures)
+        args.Add("--no-snapshot-preview");
+
         try
         {
             return new LibVLC(args.ToArray());
@@ -2118,7 +2121,7 @@ public partial class PlayerWindow : Window
             if (nextEvent != null)
             {
                 var distM = nextEvent.MeterAtCapture - currentMeter;
-                TxtCodingCurrentCode.Text = $"Ã¢â€ ' in {distM:F1}m: {nextEvent.Entry.Code}";
+                TxtCodingCurrentCode.Text = $"→ in {distM:F1}m: {nextEvent.Entry.Code}";
                 CodingCurrentCodeBadge.Visibility = Visibility.Visible;
             }
             else
@@ -3989,7 +3992,7 @@ public partial class PlayerWindow : Window
     }
 
     /// <summary>
-    /// KI-Befunde als CodingEvents eintragen â€” mit QualityGate-Ampelsystem.
+    /// KI-Befunde als CodingEvents eintragen â€" mit QualityGate-Ampelsystem.
     /// Gruen: auto-akzeptiert. Gelb/Rot: Video pausieren, Bestaetigung verlangen.
     /// </summary>
     private void AddAiFindingsAsEvents(LiveDetection result)
@@ -4177,8 +4180,8 @@ public partial class PlayerWindow : Window
         TxtConfirmConfidence.Text = $"({gateResult.CompositeConfidence:P0})";
         TxtConfirmDescription.Text = codingEvent.Entry.Beschreibung ?? codingEvent.AiContext?.Reason ?? "";
         TxtConfirmDetail.Text = gateResult.IsYellow
-            ? "KI ist unsicher â€” bitte pruefen."
-            : "KI hat geringe Sicherheit â€” bitte Code korrigieren oder verwerfen.";
+            ? "KI ist unsicher \u2014 bitte pruefen."
+            : "KI hat geringe Sicherheit \u2014 bitte Code korrigieren oder verwerfen.";
 
         CodingConfirmationPanel.Visibility = Visibility.Visible;
     }
@@ -4193,7 +4196,7 @@ public partial class PlayerWindow : Window
 
     private void ConfirmEdit_Click(object sender, RoutedEventArgs e)
     {
-        // VSA-Code-Explorer oeffnen â†’ User waehlt korrekten Code
+        // VSA-Code-Explorer oeffnen \u2192 User waehlt korrekten Code
         CloseConfirmationPanel();
 
         if (_codingPendingConfirmEvent != null)

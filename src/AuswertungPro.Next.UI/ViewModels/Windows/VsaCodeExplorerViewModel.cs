@@ -12,7 +12,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 /// <summary>
 /// ViewModel fuer den hierarchischen VSA-Code-Explorer.
-/// Navigation: Gruppe (0) â†’ Hauptcode (1) â†’ Char1 (2) â†’ Char2 (3)
+/// Navigation: Gruppe (0) -> Hauptcode (1) -> Char1 (2) -> Char2 (3)
 /// </summary>
 public sealed partial class VsaCodeExplorerViewModel : ObservableObject
 {
