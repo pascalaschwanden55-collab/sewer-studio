@@ -17,7 +17,9 @@ using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using CommunityToolkit.Mvvm.Input;
+using System.Windows.Threading;
 using LibVLCSharp.Shared;
+using AuswertungPro.Next.UI.Ai.Pipeline;
 using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -54,6 +56,15 @@ public partial class CodingModeWindow : Window
     private OllamaClient? _ollamaClient;
     private CancellationTokenSource? _analysisCts;
     private bool _isAnalyzing;
+
+    // Live-YOLO-Overlay (kontinuierlich waehrend Wiedergabe)
+    private DispatcherTimer? _liveYoloTimer;
+    private VisionPipelineClient? _yoloClient;
+    private bool _isLiveYoloAnalyzing;
+    private bool _liveYoloAvailable;
+
+    // Teaching-Export (User-Zeichnungen → Training-Pipeline)
+    private TeachingExportService? _teachingExport;
 
     public CodingModeWindow(HaltungRecord haltung, string? videoPath)
     {
@@ -95,7 +106,13 @@ public partial class CodingModeWindow : Window
                 // Core.Initialize muss mindestens einmal aufgerufen werden
                 Core.Initialize();
 
-                _libVlc = new LibVLC("--no-audio", "--no-video-title-show");
+                _libVlc = new LibVLC(
+                    "--no-audio",
+                    "--no-video-title-show",
+                    "--vout=direct3d11",
+                    "--avcodec-hw=dxva2",
+                    "--avcodec-threads=4",
+                    "--no-snapshot-preview");
                 _player = new MediaPlayer(_libVlc);
                 VideoView.MediaPlayer = _player;
 
@@ -202,6 +219,7 @@ public partial class CodingModeWindow : Window
 
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        StopLiveYolo();
         _analysisCts?.Cancel();
         _analysisCts?.Dispose();
         _ollamaClient?.Dispose();
@@ -347,6 +365,22 @@ public partial class CodingModeWindow : Window
 
         if (_overlayService.ActiveTool == OverlayToolType.None) return;
 
+        // Multi-Point-Werkzeuge: Klick sammelt Punkte
+        if (_overlayService.IsMultiPointTool)
+        {
+            bool complete = _vm.OnCanvasMultiPointClick(normalized);
+            if (complete)
+            {
+                ClearPreviewShapes();
+                if (_vm.CurrentOverlay != null)
+                {
+                    RenderOverlayGeometry(_vm.CurrentOverlay);
+                    UpdateOverlayInfo(_vm.CurrentOverlay);
+                }
+            }
+            return;
+        }
+
         _vm.OnCanvasMouseDown(normalized);
         OverlayCanvas.CaptureMouse();
         ClearPreviewShapes();
@@ -379,6 +413,14 @@ public partial class CodingModeWindow : Window
             return;
         }
 
+        // Multi-Point-Vorschau
+        if (_overlayService.IsMultiPointTool && _overlayService.DrawPointCount > 0)
+        {
+            _vm.OnCanvasMultiPointMove(normalized);
+            RenderMultiPointPreview(_overlayService.DrawPoints, normalized);
+            return;
+        }
+
         if (!_overlayService.IsDrawing) return;
 
         _vm.OnCanvasMouseMove(normalized);
@@ -399,6 +441,9 @@ public partial class CodingModeWindow : Window
             ApplyCalibration(_calibStart, normalized);
             return;
         }
+
+        // Multi-Point-Tools behandeln MouseUp nicht (nur Klicks)
+        if (_overlayService.IsMultiPointTool) return;
 
         if (!_overlayService.IsDrawing) return;
 
@@ -608,6 +653,104 @@ public partial class CodingModeWindow : Window
                 Canvas.SetTop(_previewPoint, p1.Y - 6);
                 OverlayCanvas.Children.Add(_previewPoint);
                 break;
+
+            case OverlayToolType.Ruler:
+                // Lineal mit Endstrichen
+                var rulerLine = new Line
+                {
+                    X1 = p1.X, Y1 = p1.Y, X2 = p2.X, Y2 = p2.Y,
+                    Stroke = Brushes.White, StrokeThickness = 2,
+                    StrokeDashArray = new DoubleCollection { 4, 2 }
+                };
+                OverlayCanvas.Children.Add(rulerLine);
+                // Endstriche senkrecht zur Linie
+                double rdx = p2.X - p1.X, rdy = p2.Y - p1.Y;
+                double rLen = Math.Sqrt(rdx * rdx + rdy * rdy);
+                if (rLen > 2)
+                {
+                    double rnx = -rdy / rLen * 6, rny = rdx / rLen * 6;
+                    OverlayCanvas.Children.Add(new Line { X1 = p1.X - rnx, Y1 = p1.Y - rny, X2 = p1.X + rnx, Y2 = p1.Y + rny, Stroke = Brushes.White, StrokeThickness = 2 });
+                    OverlayCanvas.Children.Add(new Line { X1 = p2.X - rnx, Y1 = p2.Y - rny, X2 = p2.X + rnx, Y2 = p2.Y + rny, Stroke = Brushes.White, StrokeThickness = 2 });
+                }
+                break;
+
+            case OverlayToolType.Level:
+            {
+                // Horizontale Linie + halbtransparente Fuellung
+                var levelColor = _overlayService.ActiveLevelMode switch
+                {
+                    LevelMode.Water => Color.FromRgb(65, 105, 225),
+                    LevelMode.Obstacle => Color.FromRgb(220, 20, 60),
+                    _ => Color.FromRgb(210, 105, 30)
+                };
+                var levelBrush = new SolidColorBrush(levelColor);
+                OverlayCanvas.Children.Add(new Line
+                {
+                    X1 = p1.X, Y1 = p2.Y, X2 = p2.X, Y2 = p2.Y,
+                    Stroke = levelBrush, StrokeThickness = 2.5,
+                    StrokeDashArray = new DoubleCollection { 6, 3 }
+                });
+                double fTop = _overlayService.ActiveLevelMode == LevelMode.Obstacle ? 0 : p2.Y;
+                double fBot = _overlayService.ActiveLevelMode == LevelMode.Obstacle ? p2.Y : OverlayCanvas.ActualHeight;
+                var levelFill = new Rectangle
+                {
+                    Width = Math.Abs(p2.X - p1.X), Height = Math.Abs(fBot - fTop),
+                    Fill = new SolidColorBrush(Color.FromArgb(40, levelColor.R, levelColor.G, levelColor.B))
+                };
+                Canvas.SetLeft(levelFill, Math.Min(p1.X, p2.X));
+                Canvas.SetTop(levelFill, fTop);
+                OverlayCanvas.Children.Add(levelFill);
+                break;
+            }
+        }
+    }
+
+    /// <summary>Vorschau fuer Multi-Point-Werkzeuge (PipeBend, LateralCircle).</summary>
+    private void RenderMultiPointPreview(IReadOnlyList<NormalizedPoint> points, NormalizedPoint cursor)
+    {
+        ClearPreviewShapes();
+
+        // Gesammelte Punkte als Dots zeichnen
+        foreach (var pt in points)
+        {
+            var pp = NormalizedToPixel(pt);
+            var dot = new Ellipse { Width = 10, Height = 10, Fill = Brushes.Yellow, Stroke = Brushes.White, StrokeThickness = 1.5 };
+            Canvas.SetLeft(dot, pp.X - 5);
+            Canvas.SetTop(dot, pp.Y - 5);
+            OverlayCanvas.Children.Add(dot);
+        }
+
+        var pc = NormalizedToPixel(cursor);
+        var cursorDot = new Ellipse { Width = 10, Height = 10, Fill = Brushes.Orange, Stroke = Brushes.White, StrokeThickness = 1.5 };
+        Canvas.SetLeft(cursorDot, pc.X - 5);
+        Canvas.SetTop(cursorDot, pc.Y - 5);
+        OverlayCanvas.Children.Add(cursorDot);
+
+        if (_overlayService.ActiveTool == OverlayToolType.PipeBend)
+        {
+            // Achsen-Linien zeichnen
+            if (points.Count >= 1)
+            {
+                var a = NormalizedToPixel(points[0]);
+                var b = points.Count >= 2 ? NormalizedToPixel(points[1]) : pc;
+                OverlayCanvas.Children.Add(new Line { X1 = a.X, Y1 = a.Y, X2 = b.X, Y2 = b.Y, Stroke = Brushes.Lime, StrokeThickness = 2 });
+            }
+            if (points.Count >= 3)
+            {
+                var c = NormalizedToPixel(points[2]);
+                var d = points.Count >= 4 ? NormalizedToPixel(points[3]) : pc;
+                OverlayCanvas.Children.Add(new Line { X1 = c.X, Y1 = c.Y, X2 = d.X, Y2 = d.Y, Stroke = Brushes.Magenta, StrokeThickness = 2 });
+            }
+        }
+        else if (_overlayService.ActiveTool == OverlayToolType.LateralCircle)
+        {
+            // Verbindungslinien zwischen den Punkten
+            for (int i = 0; i < points.Count; i++)
+            {
+                var a = NormalizedToPixel(points[i]);
+                var b = i + 1 < points.Count ? NormalizedToPixel(points[i + 1]) : pc;
+                OverlayCanvas.Children.Add(new Line { X1 = a.X, Y1 = a.Y, X2 = b.X, Y2 = b.Y, Stroke = Brushes.Cyan, StrokeThickness = 1.5, StrokeDashArray = new DoubleCollection { 3, 2 } });
+            }
         }
     }
 
@@ -740,6 +883,208 @@ public partial class CodingModeWindow : Window
                 Canvas.SetLeft(rect, Math.Min(p1.X, p3.X));
                 Canvas.SetTop(rect, Math.Min(p1.Y, p3.Y));
                 OverlayCanvas.Children.Add(rect);
+
+                // Dimensions-Label
+                if (geometry.Q1Mm.HasValue && geometry.Q2Mm.HasValue)
+                {
+                    var rlabel = new TextBlock
+                    {
+                        Text = $"{geometry.Q1Mm:F1} × {geometry.Q2Mm:F1}mm",
+                        Foreground = Brushes.Cyan, FontSize = 12, FontWeight = FontWeights.Bold,
+                        Background = new SolidColorBrush(Color.FromArgb(180, 0, 0, 0)),
+                        Padding = new Thickness(4, 2, 4, 2)
+                    };
+                    Canvas.SetLeft(rlabel, Math.Min(p1.X, p3.X));
+                    Canvas.SetTop(rlabel, Math.Max(p1.Y, p3.Y) + 2);
+                    OverlayCanvas.Children.Add(rlabel);
+                }
+                break;
+            }
+
+            case OverlayToolType.Ruler:
+            {
+                if (geometry.Points.Count < 2) return;
+                var p1 = NormalizedToPixel(geometry.Points[0]);
+                var p2 = NormalizedToPixel(geometry.Points[1]);
+
+                // Linie
+                OverlayCanvas.Children.Add(new Line
+                {
+                    X1 = p1.X, Y1 = p1.Y, X2 = p2.X, Y2 = p2.Y,
+                    Stroke = Brushes.White, StrokeThickness = 2.5
+                });
+
+                // Endstriche senkrecht zur Linie
+                double rdx = p2.X - p1.X, rdy = p2.Y - p1.Y;
+                double rLen = Math.Sqrt(rdx * rdx + rdy * rdy);
+                if (rLen > 2)
+                {
+                    double rnx = -rdy / rLen * 8, rny = rdx / rLen * 8;
+                    OverlayCanvas.Children.Add(new Line { X1 = p1.X - rnx, Y1 = p1.Y - rny, X2 = p1.X + rnx, Y2 = p1.Y + rny, Stroke = Brushes.White, StrokeThickness = 2.5 });
+                    OverlayCanvas.Children.Add(new Line { X1 = p2.X - rnx, Y1 = p2.Y - rny, X2 = p2.X + rnx, Y2 = p2.Y + rny, Stroke = Brushes.White, StrokeThickness = 2.5 });
+                }
+
+                if (geometry.Q1Mm.HasValue)
+                {
+                    var label = new TextBlock
+                    {
+                        Text = $"{geometry.Q1Mm:F1}mm",
+                        Foreground = Brushes.White, FontSize = 13, FontWeight = FontWeights.Bold,
+                        Background = new SolidColorBrush(Color.FromArgb(180, 0, 0, 0)),
+                        Padding = new Thickness(5, 2, 5, 2)
+                    };
+                    Canvas.SetLeft(label, (p1.X + p2.X) / 2 + 4);
+                    Canvas.SetTop(label, (p1.Y + p2.Y) / 2 - 12);
+                    OverlayCanvas.Children.Add(label);
+                }
+                break;
+            }
+
+            case OverlayToolType.Level:
+            {
+                if (geometry.Points.Count < 2) return;
+                var p1 = NormalizedToPixel(geometry.Points[0]);
+                var p2 = NormalizedToPixel(geometry.Points[1]);
+                double levelY = (p1.Y + p2.Y) / 2.0;
+
+                var levelColor = geometry.LevelSubMode switch
+                {
+                    LevelMode.Water => Color.FromRgb(65, 105, 225),
+                    LevelMode.Obstacle => Color.FromRgb(220, 20, 60),
+                    _ => Color.FromRgb(210, 105, 30)
+                };
+                var levelBrush = new SolidColorBrush(levelColor);
+
+                // Horizontale Linie
+                OverlayCanvas.Children.Add(new Line
+                {
+                    X1 = p1.X, Y1 = levelY, X2 = p2.X, Y2 = levelY,
+                    Stroke = levelBrush, StrokeThickness = 3
+                });
+
+                // Fuellflaeche
+                double fTop = geometry.LevelSubMode == LevelMode.Obstacle ? 0 : levelY;
+                double fBot = geometry.LevelSubMode == LevelMode.Obstacle ? levelY : OverlayCanvas.ActualHeight;
+                var fill = new Rectangle
+                {
+                    Width = Math.Abs(p2.X - p1.X), Height = Math.Abs(fBot - fTop),
+                    Fill = new SolidColorBrush(Color.FromArgb(50, levelColor.R, levelColor.G, levelColor.B))
+                };
+                Canvas.SetLeft(fill, Math.Min(p1.X, p2.X));
+                Canvas.SetTop(fill, fTop);
+                OverlayCanvas.Children.Add(fill);
+
+                // Prozent-Label
+                var modeText = geometry.LevelSubMode switch
+                {
+                    LevelMode.Water => "Wasser",
+                    LevelMode.Obstacle => "Hindernis",
+                    _ => "Ablagerung"
+                };
+                var pctText = geometry.FillPercent.HasValue ? $"{geometry.FillPercent:F1}%" : "?%";
+                var label = new TextBlock
+                {
+                    Text = $"{modeText}: {pctText}",
+                    Foreground = levelBrush, FontSize = 13, FontWeight = FontWeights.Bold,
+                    Background = new SolidColorBrush(Color.FromArgb(200, 0, 0, 0)),
+                    Padding = new Thickness(5, 2, 5, 2)
+                };
+                Canvas.SetLeft(label, (p1.X + p2.X) / 2 - 40);
+                Canvas.SetTop(label, levelY - 24);
+                OverlayCanvas.Children.Add(label);
+                break;
+            }
+
+            case OverlayToolType.PipeBend:
+            {
+                if (geometry.Points.Count < 4) return;
+                var a1 = NormalizedToPixel(geometry.Points[0]);
+                var a2 = NormalizedToPixel(geometry.Points[1]);
+                var b1 = NormalizedToPixel(geometry.Points[2]);
+                var b2 = NormalizedToPixel(geometry.Points[3]);
+
+                // Zwei Achsen
+                OverlayCanvas.Children.Add(new Line { X1 = a1.X, Y1 = a1.Y, X2 = a2.X, Y2 = a2.Y, Stroke = Brushes.Lime, StrokeThickness = 2.5 });
+                OverlayCanvas.Children.Add(new Line { X1 = b1.X, Y1 = b1.Y, X2 = b2.X, Y2 = b2.Y, Stroke = Brushes.Magenta, StrokeThickness = 2.5 });
+
+                // Winkel-Label am Schnittpunkt-Bereich
+                if (geometry.ArcDegrees.HasValue)
+                {
+                    var midX = (a2.X + b1.X) / 2;
+                    var midY = (a2.Y + b1.Y) / 2;
+                    var label = new TextBlock
+                    {
+                        Text = $"{geometry.ArcDegrees:F1}°",
+                        Foreground = Brushes.White, FontSize = 14, FontWeight = FontWeights.Bold,
+                        Background = new SolidColorBrush(Color.FromArgb(200, 0, 0, 0)),
+                        Padding = new Thickness(6, 3, 6, 3)
+                    };
+                    Canvas.SetLeft(label, midX + 6);
+                    Canvas.SetTop(label, midY - 12);
+                    OverlayCanvas.Children.Add(label);
+                }
+                break;
+            }
+
+            case OverlayToolType.LateralCircle:
+            {
+                if (geometry.Points.Count < 3) return;
+                // Umkreis aus 3 Punkten berechnen (gleiche Formel wie OverlayToolService)
+                var pa = geometry.Points[0];
+                var pb = geometry.Points[1];
+                var pc = geometry.Points[2];
+                double D = 2 * (pa.X * (pb.Y - pc.Y) + pb.X * (pc.Y - pa.Y) + pc.X * (pa.Y - pb.Y));
+                if (Math.Abs(D) < 1e-10) return;
+                double ux = ((pa.X * pa.X + pa.Y * pa.Y) * (pb.Y - pc.Y) +
+                             (pb.X * pb.X + pb.Y * pb.Y) * (pc.Y - pa.Y) +
+                             (pc.X * pc.X + pc.Y * pc.Y) * (pa.Y - pb.Y)) / D;
+                double uy = ((pa.X * pa.X + pa.Y * pa.Y) * (pb.X - pc.X) +
+                             (pb.X * pb.X + pb.Y * pb.Y) * (pc.X - pa.X) +
+                             (pc.X * pc.X + pc.Y * pc.Y) * (pa.X - pb.X)) / -D;
+                double radius = Math.Sqrt((pa.X - ux) * (pa.X - ux) + (pa.Y - uy) * (pa.Y - uy));
+
+                var center = NormalizedToPixel(new NormalizedPoint(ux, uy));
+                double radiusPx = radius * OverlayCanvas.ActualWidth; // Naeherung
+
+                // Kreis zeichnen
+                var circle = new Ellipse
+                {
+                    Width = radiusPx * 2, Height = radiusPx * 2,
+                    Stroke = Brushes.Cyan, StrokeThickness = 2.5,
+                    StrokeDashArray = new DoubleCollection { 4, 2 },
+                    Fill = new SolidColorBrush(Color.FromArgb(25, 0, 255, 255))
+                };
+                Canvas.SetLeft(circle, center.X - radiusPx);
+                Canvas.SetTop(circle, center.Y - radiusPx);
+                OverlayCanvas.Children.Add(circle);
+
+                // 3 Punkte markieren
+                foreach (var pt in geometry.Points)
+                {
+                    var pp = NormalizedToPixel(pt);
+                    var dot = new Ellipse { Width = 8, Height = 8, Fill = Brushes.Cyan, Stroke = Brushes.White, StrokeThickness = 1 };
+                    Canvas.SetLeft(dot, pp.X - 4);
+                    Canvas.SetTop(dot, pp.Y - 4);
+                    OverlayCanvas.Children.Add(dot);
+                }
+
+                // DN-Label
+                var dnText = geometry.Q1Mm.HasValue ? $"Ø{geometry.Q1Mm:F0}mm" : "";
+                if (geometry.DnRatioPercent.HasValue)
+                    dnText += $" ({geometry.DnRatioPercent:F0}% DN)";
+                if (!string.IsNullOrEmpty(dnText))
+                {
+                    var label = new TextBlock
+                    {
+                        Text = dnText,
+                        Foreground = Brushes.Cyan, FontSize = 13, FontWeight = FontWeights.Bold,
+                        Background = new SolidColorBrush(Color.FromArgb(200, 0, 0, 0)),
+                        Padding = new Thickness(5, 2, 5, 2)
+                    };
+                    Canvas.SetLeft(label, center.X + radiusPx + 4);
+                    Canvas.SetTop(label, center.Y - 10);
+                    OverlayCanvas.Children.Add(label);
+                }
                 break;
             }
         }
@@ -829,6 +1174,7 @@ public partial class CodingModeWindow : Window
         {
             _videoPlaying = false;
             _player?.SetPause(true);
+            StopLiveYolo();
             if (_vm.IsRunning)
                 _vm.PauseSessionCommand.Execute(null);
             BtnPause.Content = "Fortsetzen";
@@ -848,6 +1194,7 @@ public partial class CodingModeWindow : Window
             _videoPlaying = true;
             _player?.SetPause(false);
             BtnPause.Content = "Pause";
+            StartLiveYolo();
         }
         else if (_vm.IsRunning)
         {
@@ -856,6 +1203,7 @@ public partial class CodingModeWindow : Window
             _videoPlaying = false;
             _player?.SetPause(true);
             BtnPause.Content = "Fortsetzen";
+            StopLiveYolo();
         }
     }
 
@@ -928,6 +1276,26 @@ public partial class CodingModeWindow : Window
                 VideoTimestamp = entry.Zeit ?? _vm.CurrentVideoTime ?? TimeSpan.Zero
             };
             _vm.Events.Add(newEvent);
+
+            // Teaching-Mode: Zeichnung in Training-Pipeline einspeisen
+            if (_teachingExport != null && newEvent.Overlay != null
+                && !string.IsNullOrWhiteSpace(newEvent.Entry.Code))
+            {
+                var framePng = await CaptureCurrentFrameAsync();
+                if (framePng != null)
+                {
+                    var haltungId = _haltung?.Fields.GetValueOrDefault("NR") ?? "";
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _teachingExport.ExportAllAsync(
+                                framePng, newEvent, haltungId, CancellationToken.None);
+                        }
+                        catch { /* Teaching-Export ist nicht kritisch */ }
+                    });
+                }
+            }
 
             // Nach Meter sortiert anzeigen
             ResortEventsByMeter();
@@ -1138,11 +1506,31 @@ public partial class CodingModeWindow : Window
         {
             _vm.SelectedDefect = ev;
             UpdateDefectDetailPanel(ev);
+
+            // Video zur Beobachtung navigieren
+            if (ev.MeterAtCapture > 0 && _videoReady)
+            {
+                PauseVideoForNavigation();
+                _sessionService.MoveToMeter(ev.MeterAtCapture);
+                _lastSyncedMeter = -1;
+                SyncVideoToMeter();
+            }
+            else if (ev.VideoTimestamp > TimeSpan.Zero && _player != null && _videoReady)
+            {
+                PauseVideoForNavigation();
+                _player.Time = (long)ev.VideoTimestamp.TotalMilliseconds;
+            }
+
+            // Overlay des Events anzeigen
+            ClearPreviewShapes();
+            if (ev.Overlay != null)
+                RenderOverlayGeometry(ev.Overlay);
         }
         else
         {
             _vm.SelectedDefect = null;
             DefectDetailPanel.Visibility = Visibility.Collapsed;
+            ClearPreviewShapes();
         }
     }
 
@@ -1427,6 +1815,9 @@ public partial class CodingModeWindow : Window
 
             TxtAiModel.Text = _aiConfig.VisionModel;
             SetAiStatus("Bereit", "#22C55E");
+
+            // Live-YOLO-Overlay parallel initialisieren
+            InitLiveYoloOverlay();
         }
         catch (Exception ex)
         {
@@ -1442,6 +1833,105 @@ public partial class CodingModeWindow : Window
         AiStatusDot.Fill = new SolidColorBrush(color);
     }
 
+    /// <summary>Live-YOLO-Overlay initialisieren (Sidecar-Verbindung + Timer).</summary>
+    private async void InitLiveYoloOverlay()
+    {
+        try
+        {
+            var config = AiPlatformConfig.Load();
+            if (!config.Enabled || !config.MultiModelEnabled)
+            {
+                // Auch ohne Sidecar: Qwen Few-Shot Pfad aktivieren
+                _teachingExport = new TeachingExportService(null, null);
+                return;
+            }
+
+            _yoloClient = new VisionPipelineClient(config.SidecarUrl);
+            var health = await _yoloClient.HealthCheckAsync();
+            if (health == null)
+            {
+                _liveYoloAvailable = false;
+                _teachingExport = new TeachingExportService(null, null);
+                return;
+            }
+
+            _liveYoloAvailable = true;
+            _teachingExport = new TeachingExportService(_yoloClient, null);
+            _liveYoloTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(500)
+            };
+            _liveYoloTimer.Tick += async (_, _) => await AnalyzeLiveYoloAsync();
+        }
+        catch
+        {
+            _liveYoloAvailable = false;
+        }
+    }
+
+    private void StartLiveYolo()
+    {
+        if (_liveYoloAvailable && _liveYoloTimer != null)
+            _liveYoloTimer.Start();
+    }
+
+    private void StopLiveYolo()
+    {
+        _liveYoloTimer?.Stop();
+    }
+
+    /// <summary>Einzelnen YOLO-Frame analysieren und Overlays rendern.</summary>
+    private async Task AnalyzeLiveYoloAsync()
+    {
+        if (_yoloClient == null || _player == null || _isLiveYoloAnalyzing || !_videoPlaying) return;
+        _isLiveYoloAnalyzing = true;
+
+        try
+        {
+            var pngBytes = await CaptureCurrentFrameAsync();
+            if (pngBytes == null || pngBytes.Length < 100) return;
+
+            var b64 = Convert.ToBase64String(pngBytes);
+            var config = _aiConfig ?? AiRuntimeConfig.Load();
+            var response = await _yoloClient.DetectYoloAsync(
+                new YoloRequest(b64, 0.25), CancellationToken.None);
+
+            if (!response.IsRelevant || response.Detections.Count == 0)
+            {
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    AiOverlayCanvas.Children.Clear();
+                    SetAiStatus($"YOLO: kein Befund ({response.InferenceTimeMs:F0}ms)", "#22C55E");
+                });
+                return;
+            }
+
+            // Bilddimensionen aus PNG-Header lesen (Bytes 16-19 = Width, 20-23 = Height)
+            int imgW = 1920, imgH = 1080;
+            if (pngBytes.Length > 24 && pngBytes[0] == 0x89 && pngBytes[1] == 0x50)
+            {
+                imgW = (pngBytes[16] << 24) | (pngBytes[17] << 16) | (pngBytes[18] << 8) | pngBytes[19];
+                imgH = (pngBytes[20] << 24) | (pngBytes[21] << 16) | (pngBytes[22] << 8) | pngBytes[23];
+            }
+
+            var overlays = AiOverlayConverter.FromYoloDetections(response.Detections, imgW, imgH);
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                RenderAiOverlays(overlays);
+                SetAiStatus($"YOLO: {response.Detections.Count} Befund(e) ({response.InferenceTimeMs:F0}ms)", "#F59E0B");
+            });
+        }
+        catch
+        {
+            // Fehler leise ignorieren – naechster Timer-Tick versucht erneut
+        }
+        finally
+        {
+            _isLiveYoloAnalyzing = false;
+        }
+    }
+
     private async void BtnAnalyzeFrame_Click(object sender, RoutedEventArgs e)
     {
         if (_liveDetection == null || _player == null || _isAnalyzing) return;
@@ -1450,7 +1940,7 @@ public partial class CodingModeWindow : Window
 
     private async Task AnalyzeCurrentFrameAsync()
     {
-        if (_liveDetection == null || _player == null) return;
+        if (_player == null) return;
         if (_isAnalyzing) return;
         _isAnalyzing = true;
 
@@ -1472,10 +1962,64 @@ public partial class CodingModeWindow : Window
             }
 
             var timestampSec = _player.Time / 1000.0;
-            var result = await _liveDetection.AnalyzeFrameAsync(
-                pngBytes, timestampSec, _analysisCts.Token);
+            var allOverlays = new List<AiOverlay>();
 
-            await Dispatcher.InvokeAsync(() => ShowAiResults(result));
+            // 1. YOLO-Detektionen (schnell, ~100ms) – parallel starten
+            Task<List<AiOverlay>>? yoloTask = null;
+            if (_yoloClient != null && _liveYoloAvailable)
+            {
+                yoloTask = Task.Run(async () =>
+                {
+                    var b64 = Convert.ToBase64String(pngBytes);
+                    var resp = await _yoloClient.DetectYoloAsync(
+                        new YoloRequest(b64, 0.25), _analysisCts!.Token);
+                    if (!resp.IsRelevant || resp.Detections.Count == 0)
+                        return new List<AiOverlay>();
+
+                    int imgW = 1920, imgH = 1080;
+                    if (pngBytes.Length > 24 && pngBytes[0] == 0x89 && pngBytes[1] == 0x50)
+                    {
+                        imgW = (pngBytes[16] << 24) | (pngBytes[17] << 16) | (pngBytes[18] << 8) | pngBytes[19];
+                        imgH = (pngBytes[20] << 24) | (pngBytes[21] << 16) | (pngBytes[22] << 8) | pngBytes[23];
+                    }
+                    return AiOverlayConverter.FromYoloDetections(resp.Detections, imgW, imgH);
+                });
+            }
+
+            // 2. Qwen Vision-Analyse (langsamer, ~2-5s)
+            Task<LiveDetection?>? qwenTask = null;
+            if (_liveDetection != null)
+            {
+                qwenTask = _liveDetection.AnalyzeFrameAsync(
+                    pngBytes, timestampSec, _analysisCts.Token);
+            }
+
+            // Ergebnisse zusammenfuehren
+            if (yoloTask != null)
+            {
+                var yoloOverlays = await yoloTask;
+                allOverlays.AddRange(yoloOverlays);
+            }
+
+            LiveDetection? qwenResult = null;
+            if (qwenTask != null)
+            {
+                qwenResult = await qwenTask;
+            }
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                // Qwen-Findings auch als Overlays
+                if (qwenResult != null)
+                    ShowAiResults(qwenResult, allOverlays);
+                else if (allOverlays.Count > 0)
+                {
+                    RenderAiOverlays(allOverlays);
+                    SetAiStatus($"YOLO: {allOverlays.Count} Befund(e)", "#F59E0B");
+                }
+                else
+                    SetAiStatus("Kein Befund erkannt", "#22C55E");
+            });
         }
         catch (OperationCanceledException)
         {
@@ -1496,7 +2040,7 @@ public partial class CodingModeWindow : Window
         }
     }
 
-    private void ShowAiResults(LiveDetection result)
+    private void ShowAiResults(LiveDetection result, List<AiOverlay>? additionalOverlays = null)
     {
         if (result.Error != null)
         {
@@ -1505,7 +2049,7 @@ public partial class CodingModeWindow : Window
             return;
         }
 
-        if (result.Findings.Count == 0)
+        if (result.Findings.Count == 0 && (additionalOverlays == null || additionalOverlays.Count == 0))
         {
             SetAiStatus("Kein Schaden erkannt", "#22C55E");
             AiFindingsList.ItemsSource = null;
@@ -1522,9 +2066,11 @@ public partial class CodingModeWindow : Window
         var items = result.Findings.Select(f => new AiFindingDisplayItem(f)).ToList();
         AiFindingsList.ItemsSource = items;
 
-        // KI-Overlays auf dem Video rendern
+        // KI-Overlays auf dem Video rendern (YOLO + Qwen kombiniert)
         var calibration = _overlayService?.Calibration;
         var overlays = AiOverlayConverter.FromFindings(result.Findings, calibration);
+        if (additionalOverlays != null)
+            overlays.AddRange(additionalOverlays);
         RenderAiOverlays(overlays);
 
         // Ring-Sektor Visualisierung
