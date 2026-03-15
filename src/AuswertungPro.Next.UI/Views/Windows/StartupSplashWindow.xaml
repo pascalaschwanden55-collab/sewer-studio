@@ -10,74 +10,99 @@
         WindowStartupLocation="Manual"
         Topmost="True"
         Opacity="0">
-    <Grid Background="#0B1020">
+
+    <Window.Resources>
+        <Storyboard x:Key="StartAnimation">
+            <!-- 1. Orange Header slide-in (0-1s) -->
+            <DoubleAnimation Storyboard.TargetName="HeaderBorder"
+                             Storyboard.TargetProperty="Height"
+                             From="0" To="80" Duration="0:0:1" />
+
+            <!-- 2. Logo-Text fade + scale (0.8s - 2.3s) -->
+            <DoubleAnimation Storyboard.TargetName="LogoText"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" BeginTime="0:0:0.8" Duration="0:0:1.5" />
+            <DoubleAnimation Storyboard.TargetName="LogoScale"
+                             Storyboard.TargetProperty="ScaleX"
+                             From="0.7" To="1" BeginTime="0:0:0.8" Duration="0:0:1.5" />
+            <DoubleAnimation Storyboard.TargetName="LogoScale"
+                             Storyboard.TargetProperty="ScaleY"
+                             From="0.7" To="1" BeginTime="0:0:0.8" Duration="0:0:1.5" />
+
+            <!-- 3. Subtitle fade-in (2s - 3.5s) -->
+            <DoubleAnimation Storyboard.TargetName="SubtitleText"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" BeginTime="0:0:2" Duration="0:0:1.5" />
+
+            <!-- 4. KI-Pipeline-Animation (2.5s - 5s) -->
+            <DoubleAnimation Storyboard.TargetName="PipeProgress"
+                             Storyboard.TargetProperty="Width"
+                             From="0" To="420" BeginTime="0:0:2.5" Duration="0:0:2.5" />
+
+            <!-- 5. Version-Tag fade-in (4s) -->
+            <DoubleAnimation Storyboard.TargetName="VersionText"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" BeginTime="0:0:4" Duration="0:0:1" />
+        </Storyboard>
+    </Window.Resources>
+
+    <Grid Background="#001F3F">
         <!-- Centered animation content -->
-        <Grid Width="900" Height="500" HorizontalAlignment="Center" VerticalAlignment="Center">
-            <Border CornerRadius="18" Background="#0B1020">
+        <Grid Width="800" Height="500" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border CornerRadius="18" Background="#001F3F">
                 <Border.Effect>
-                    <DropShadowEffect BlurRadius="40" ShadowDepth="0" Color="#00E5FF" Opacity="0.25"/>
+                    <DropShadowEffect BlurRadius="40" ShadowDepth="0" Color="#FF9500" Opacity="0.15"/>
                 </Border.Effect>
             </Border>
 
-            <Canvas Opacity="0.12">
-                <Rectangle Width="900" Height="500" Fill="#0B1020"/>
-                <Path Stroke="#5AC8FF" StrokeThickness="1" Data="M0,60 H900 M0,120 H900 M0,180 H900 M0,240 H900 M0,300 H900 M0,360 H900 M0,420 H900"/>
-                <Path Stroke="#5AC8FF" StrokeThickness="1" Data="M90,0 V500 M180,0 V500 M270,0 V500 M360,0 V500 M450,0 V500 M540,0 V500 M630,0 V500 M720,0 V500 M810,0 V500"/>
-            </Canvas>
-
             <Grid>
-                <Ellipse x:Name="GlowRing"
-                         Width="260"
-                         Height="260"
-                         HorizontalAlignment="Left"
-                         Margin="110,0,0,0"
-                         Stroke="#00E5FF"
-                         StrokeThickness="10"
-                         Opacity="0.9">
-                    <Ellipse.Effect>
-                        <DropShadowEffect BlurRadius="45" ShadowDepth="0" Color="#00E5FF" Opacity="0.9"/>
-                    </Ellipse.Effect>
-                    <Ellipse.RenderTransform>
-                        <ScaleTransform x:Name="RingScale" ScaleX="0.2" ScaleY="0.2" CenterX="130" CenterY="130"/>
-                    </Ellipse.RenderTransform>
-                </Ellipse>
+                <!-- Orangener Header -->
+                <Border x:Name="HeaderBorder" Height="0" VerticalAlignment="Top"
+                        Background="#FF9500" CornerRadius="18,18,12,12">
+                    <TextBlock Text="SewerStudio" FontSize="42" FontWeight="Bold"
+                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
 
-                <Canvas x:Name="DataCanvas" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    <Rectangle x:Name="B1" Width="14" Height="10" Fill="#FF3B5C" Opacity="0" RadiusX="2" RadiusY="2"/>
-                    <Rectangle x:Name="B2" Width="10" Height="10" Fill="#FF3B5C" Opacity="0" RadiusX="2" RadiusY="2"/>
-                    <Rectangle x:Name="B3" Width="18" Height="12" Fill="#FF3B5C" Opacity="0" RadiusX="2" RadiusY="2"/>
-                    <Rectangle x:Name="B4" Width="12" Height="8" Fill="#FF3B5C" Opacity="0" RadiusX="2" RadiusY="2"/>
-                </Canvas>
+                <!-- Logo-Text (mit ScaleTransform) -->
+                <TextBlock x:Name="LogoText"
+                           Text="KI-gestützte Kanalinspektion"
+                           FontSize="28" FontWeight="SemiBold" Foreground="#E0F0FF"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="0,80,0,0"
+                           Opacity="0"
+                           RenderTransformOrigin="0.5,0.5">
+                    <TextBlock.RenderTransform>
+                        <ScaleTransform x:Name="LogoScale" />
+                    </TextBlock.RenderTransform>
+                </TextBlock>
 
-                <StackPanel HorizontalAlignment="Left" Margin="430,0,0,0" VerticalAlignment="Center">
-                    <TextBlock x:Name="TitleText"
-                               Text="SEWER STUDIO"
-                               Foreground="White"
-                               FontSize="54"
-                               FontWeight="Bold"
-                               FontFamily="Consolas"
-                               Margin="0"
-                               Opacity="0"
-                               RenderTransformOrigin="0.5,0.5">
-                        <TextBlock.RenderTransform>
-                            <ScaleTransform x:Name="TitleScale" ScaleX="1.12" ScaleY="1.12"/>
-                        </TextBlock.RenderTransform>
-                    </TextBlock>
+                <!-- Subtitle -->
+                <TextBlock x:Name="SubtitleText"
+                           Text="Vollständige Projektdokumentation • Abwasser Uri"
+                           FontSize="16" Foreground="#A0C0E0"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="0,160,0,0" Opacity="0" />
 
-                    <TextBlock x:Name="SubText"
-                               Text="AI-Powered Infrastructure Analytics"
-                               Foreground="#C9D3E6"
-                               FontSize="20"
-                               Margin="0,10,0,0"
-                               Opacity="0"/>
+                <!-- Version -->
+                <TextBlock x:Name="VersionText"
+                           Text="Version 2026-03"
+                           FontSize="14" Foreground="#FF9500"
+                           HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                           Margin="0,0,0,40" Opacity="0" />
 
-                    <TextBlock x:Name="StatusText"
-                               Text="Initialisiere Anwendung..."
-                               Foreground="#8EA1BF"
-                               FontSize="13"
-                               Margin="0,18,0,0"
-                               Opacity="0"/>
-                </StackPanel>
+                <!-- KI-Pipeline Animation -->
+                <Border Width="440" Height="12" Background="#334455"
+                        HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,120"
+                        CornerRadius="6">
+                    <Border x:Name="PipeProgress"
+                            Width="0" Height="12" Background="#FF9500"
+                            HorizontalAlignment="Left" CornerRadius="6" />
+                </Border>
+
+                <!-- Kleiner Hinweis unten -->
+                <TextBlock Text="Lokal • Datenschutzkonform • Open Source"
+                           FontSize="11" Foreground="#6688AA"
+                           HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,20"/>
             </Grid>
         </Grid>
     </Grid>
