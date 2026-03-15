@@ -2177,10 +2177,10 @@ public partial class PlayerWindow : Window
         => SetCodingTool(BtnCodingPoint, OverlayToolType.Point);
     private void CodingToolStretch_Click(object sender, RoutedEventArgs e)
         => SetCodingTool(BtnCodingStretch, OverlayToolType.Stretch);
-    private void CodingToolProtractor_Click(object sender, RoutedEventArgs e)
-        => SetCodingTool(BtnCodingProtractor, OverlayToolType.Protractor);
-    private void CodingToolDnCircle_Click(object sender, RoutedEventArgs e)
-        => SetCodingTool(BtnCodingDnCircle, OverlayToolType.DnCircle);
+    private void CodingToolPipeBend_Click(object sender, RoutedEventArgs e)
+        => SetCodingTool(BtnCodingPipeBend, OverlayToolType.PipeBend);
+    private void CodingToolLateralCircle_Click(object sender, RoutedEventArgs e)
+        => SetCodingTool(BtnCodingLateralCircle, OverlayToolType.LateralCircle);
     private void CodingToolRuler_Click(object sender, RoutedEventArgs e)
         => SetCodingTool(BtnCodingRuler, OverlayToolType.Ruler);
 
@@ -2198,7 +2198,7 @@ public partial class PlayerWindow : Window
         BtnCodingCalibrate.IsChecked = false;
 
         // Andere Tool-Buttons unchecken
-        foreach (var btn in new[] { BtnCodingLine, BtnCodingArc, BtnCodingRect, BtnCodingPoint, BtnCodingStretch, BtnCodingProtractor, BtnCodingDnCircle, BtnCodingRuler })
+        foreach (var btn in new[] { BtnCodingLine, BtnCodingArc, BtnCodingRect, BtnCodingPoint, BtnCodingStretch, BtnCodingPipeBend, BtnCodingLateralCircle, BtnCodingRuler })
         {
             if (btn != activeBtn) btn.IsChecked = false;
         }
@@ -2220,7 +2220,7 @@ public partial class PlayerWindow : Window
         _codingOverlayService.ActiveTool = OverlayToolType.None;
 
         // Andere Tool-Buttons unchecken
-        foreach (var btn in new[] { BtnCodingLine, BtnCodingArc, BtnCodingRect, BtnCodingPoint, BtnCodingStretch, BtnCodingProtractor, BtnCodingDnCircle, BtnCodingRuler })
+        foreach (var btn in new[] { BtnCodingLine, BtnCodingArc, BtnCodingRect, BtnCodingPoint, BtnCodingStretch, BtnCodingPipeBend, BtnCodingLateralCircle, BtnCodingRuler })
             btn.IsChecked = false;
 
         _codingVm.CurrentOverlay = null;
@@ -2567,12 +2567,12 @@ public partial class PlayerWindow : Window
                 }
                 break;
 
-            case OverlayToolType.Protractor:
-                RenderProtractorOverlay(overlay, isPreview, stroke, glowEffect, tag, labelAnchor);
+            case OverlayToolType.PipeBend:
+                RenderPipeBendOverlay(overlay, isPreview, stroke, glowEffect, tag, labelAnchor);
                 return; // Eigenes Label-Rendering
 
-            case OverlayToolType.DnCircle:
-                RenderDnCircleOverlay(overlay, isPreview, stroke, glowEffect, tag, labelAnchor);
+            case OverlayToolType.LateralCircle:
+                RenderLateralCircleOverlay(overlay, isPreview, stroke, glowEffect, tag, labelAnchor);
                 return; // Eigenes Label-Rendering
 
             case OverlayToolType.Ruler:
@@ -2657,7 +2657,7 @@ public partial class PlayerWindow : Window
 
     // --- Winkelmesser (Protractor): 2 Linien + Winkelbogen + Grad-Label ---
 
-    private void RenderProtractorOverlay(
+    private void RenderPipeBendOverlay(
         OverlayGeometry overlay, bool isPreview, Brush defaultStroke,
         System.Windows.Media.Effects.DropShadowEffect glowEffect, string tag,
         NormalizedPoint? labelAnchor)
@@ -2775,7 +2775,7 @@ public partial class PlayerWindow : Window
 
     // --- DN-Kreis: Kreis + DN-Label ---
 
-    private void RenderDnCircleOverlay(
+    private void RenderLateralCircleOverlay(
         OverlayGeometry overlay, bool isPreview, Brush defaultStroke,
         System.Windows.Media.Effects.DropShadowEffect glowEffect, string tag,
         NormalizedPoint? labelAnchor)
@@ -3018,10 +3018,10 @@ public partial class PlayerWindow : Window
     private static string BuildOverlayMeasurementText(OverlayGeometry overlay)
     {
         // Werkzeug-spezifische Texte
-        if (overlay.ToolType == OverlayToolType.Protractor && overlay.ArcDegrees.HasValue)
+        if (overlay.ToolType == OverlayToolType.PipeBend && overlay.ArcDegrees.HasValue)
             return $"Winkel: {overlay.ArcDegrees.Value:F1}\u00B0";
 
-        if (overlay.ToolType == OverlayToolType.DnCircle)
+        if (overlay.ToolType == OverlayToolType.LateralCircle)
         {
             var dnParts = new List<string>();
             if (overlay.Q1Mm.HasValue) dnParts.Add($"DN {overlay.Q1Mm.Value:F0}");
@@ -3067,7 +3067,7 @@ public partial class PlayerWindow : Window
             ? $"Uhr: {overlay.ClockFrom:F1}" + (overlay.ClockTo.HasValue ? $" -> {overlay.ClockTo:F1}" : "")
             : "Uhr: -";
         TxtCodingArc.Text = overlay.ArcDegrees.HasValue
-            ? (overlay.ToolType == OverlayToolType.Protractor
+            ? (overlay.ToolType == OverlayToolType.PipeBend
                 ? $"Winkel: {overlay.ArcDegrees:F1}\u00B0"
                 : $"Bogen: {overlay.ArcDegrees:F0} deg")
             : "Bogen: -";
@@ -3076,12 +3076,12 @@ public partial class PlayerWindow : Window
         var parts = new List<string>();
 
         // Werkzeug-spezifische Anzeige
-        if (overlay.ToolType == OverlayToolType.Protractor)
+        if (overlay.ToolType == OverlayToolType.PipeBend)
         {
             if (overlay.ArcDegrees.HasValue) parts.Add($"Winkel:{overlay.ArcDegrees:F1}\u00B0");
             if (overlay.ClockFrom.HasValue) parts.Add($"Uhr:{overlay.ClockFrom:F1}");
         }
-        else if (overlay.ToolType == OverlayToolType.DnCircle)
+        else if (overlay.ToolType == OverlayToolType.LateralCircle)
         {
             if (overlay.Q1Mm.HasValue) parts.Add($"DN:{overlay.Q1Mm:F0}mm");
             if (overlay.DnRatioPercent.HasValue) parts.Add($"{overlay.DnRatioPercent:F0}%");
@@ -4269,8 +4269,9 @@ public partial class PlayerWindow : Window
             OverlayToolType.Rectangle => "Flaeche",
             OverlayToolType.Point => "Punkt",
             OverlayToolType.Stretch => "Strecke",
-            OverlayToolType.Protractor => "Winkel",
-            OverlayToolType.DnCircle => "DN-Kreis",
+            OverlayToolType.PipeBend => "Bogen",
+            OverlayToolType.LateralCircle => "Anschluss",
+            OverlayToolType.Level => "Level",
             OverlayToolType.Ruler => "Lineal",
             _ => null
         };
@@ -4429,12 +4430,12 @@ public partial class PlayerWindow : Window
                     }
                     break;
 
-                case OverlayToolType.Protractor:
-                    RenderProtractorOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
+                case OverlayToolType.PipeBend:
+                    RenderPipeBendOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
                     break;
 
-                case OverlayToolType.DnCircle:
-                    RenderDnCircleOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
+                case OverlayToolType.LateralCircle:
+                    RenderLateralCircleOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
                     break;
 
                 case OverlayToolType.Ruler:

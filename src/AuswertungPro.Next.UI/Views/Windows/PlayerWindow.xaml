@@ -834,13 +834,13 @@
                     </ToggleButton>
                     <!-- Separator: Neue Vermessungswerkzeuge -->
                     <Border Width="1" Height="28" Background="{DynamicResource BorderBrush}" Margin="4,0,8,0"/>
-                    <ToggleButton x:Name="BtnCodingProtractor" Style="{StaticResource SpeedToggleButton}"
-                                  ToolTip="Winkelmesser (3 Klicks: P1, Scheitel, P3)" Click="CodingToolProtractor_Click">
-                        <TextBlock Text="Winkel" FontSize="11"/>
+                    <ToggleButton x:Name="BtnCodingPipeBend" Style="{StaticResource SpeedToggleButton}"
+                                  ToolTip="Bogen-Winkel (4 Klicks: Achse1, Achse2)" Click="CodingToolPipeBend_Click">
+                        <TextBlock Text="Bogen" FontSize="11"/>
                     </ToggleButton>
-                    <ToggleButton x:Name="BtnCodingDnCircle" Style="{StaticResource SpeedToggleButton}"
-                                  ToolTip="DN-Kreis (Anschluss messen)" Click="CodingToolDnCircle_Click">
-                        <TextBlock Text="DN-Kreis" FontSize="11"/>
+                    <ToggleButton x:Name="BtnCodingLateralCircle" Style="{StaticResource SpeedToggleButton}"
+                                  ToolTip="Anschluss (3 Punkte am Rand)" Click="CodingToolLateralCircle_Click">
+                        <TextBlock Text="Anschluss" FontSize="11"/>
                     </ToggleButton>
                     <ToggleButton x:Name="BtnCodingRuler" Style="{StaticResource SpeedToggleButton}"
                                   ToolTip="Lineal mit Teilung" Click="CodingToolRuler_Click">

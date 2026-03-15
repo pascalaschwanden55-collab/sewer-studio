@@ -244,6 +244,18 @@
                     <!-- Video-Layer (unten) -->
                     <vlc:VideoView x:Name="VideoView" Background="Black"/>
 
+                    <!-- KI-Overlay-Canvas (KI-generierte Overlays, unter dem manuellen Canvas) -->
+                    <Canvas x:Name="AiOverlayCanvas"
+                            Background="Transparent"
+                            ClipToBounds="True"
+                            IsHitTestVisible="False"/>
+
+                    <!-- Ring-Sektor Detection-Canvas -->
+                    <Canvas x:Name="DetectionCanvas"
+                            Background="Transparent"
+                            ClipToBounds="True"
+                            IsHitTestVisible="False"/>
+
                     <!-- Overlay-Canvas (transparent, ueber dem Video, empfaengt Maus) -->
                     <Canvas x:Name="OverlayCanvas"
                             Background="Transparent"
@@ -892,6 +904,48 @@
                         <StackPanel>
                             <TextBlock Text="&#x2194;" FontSize="18" HorizontalAlignment="Center"/>
                             <TextBlock Text="Strecke" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
+                        </StackPanel>
+                    </ToggleButton>
+                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,6"/>
+                    <ToggleButton x:Name="BtnToolPipeBend" Style="{StaticResource ToolButton}"
+                                  ToolTip="Bogen-Winkel (4 Klicks: Achse1 + Achse2)"
+                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
+                        <StackPanel>
+                            <TextBlock Text="&#x2220;" FontSize="18" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Bogen" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton x:Name="BtnToolLateralCircle" Style="{StaticResource ToolButton}"
+                                  ToolTip="Anschluss messen (3 Punkte am Rand)"
+                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
+                        <StackPanel>
+                            <TextBlock Text="&#x25EF;" FontSize="18" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Anschluss" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
+                        </StackPanel>
+                    </ToggleButton>
+                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,6"/>
+                    <ToggleButton x:Name="BtnToolLevelDeposit" Style="{StaticResource ToolButton}"
+                                  ToolTip="Ablagerung messen (horizontale Linie)"
+                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
+                        <StackPanel>
+                            <TextBlock Text="&#x2582;" FontSize="18" HorizontalAlignment="Center" Foreground="#D2691E"/>
+                            <TextBlock Text="Ablager." FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton x:Name="BtnToolLevelWater" Style="{StaticResource ToolButton}"
+                                  ToolTip="Wasserstand messen (horizontale Linie)"
+                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
+                        <StackPanel>
+                            <TextBlock Text="&#x2582;" FontSize="18" HorizontalAlignment="Center" Foreground="#4169E1"/>
+                            <TextBlock Text="Wasser" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton x:Name="BtnToolLevelObstacle" Style="{StaticResource ToolButton}"
+                                  ToolTip="Hindernis messen (von Scheitel nach unten)"
+                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
+                        <StackPanel>
+                            <TextBlock Text="&#x2587;" FontSize="18" HorizontalAlignment="Center" Foreground="#DC143C"/>
+                            <TextBlock Text="Hindern." FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
                         </StackPanel>
                     </ToggleButton>
                 </StackPanel>

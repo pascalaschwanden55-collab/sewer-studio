@@ -8,7 +8,7 @@ namespace AuswertungPro.Next.UI.Ai;
 /// <summary>
 /// Overlay-Zeichenwerkzeuge: Wandelt Pixel-Interaktion in VSA-Quantifizierung um.
 /// Arbeitet mit normierten Koordinaten (0.0–1.0).
-/// Unterstuetzt 2-Punkt-Werkzeuge (Klick+Drag) und Multi-Punkt-Werkzeuge (Winkelmesser: 3 Klicks).
+/// Unterstuetzt 2-Punkt-Werkzeuge (Klick+Drag) und Multi-Punkt-Werkzeuge.
 /// </summary>
 public sealed class OverlayToolService : IOverlayToolService
 {
@@ -17,8 +17,9 @@ public sealed class OverlayToolService : IOverlayToolService
     private NormalizedPoint? _drawStart;
     private NormalizedPoint? _drawCurrent;
     private bool _isDrawing;
+    private LevelMode _activeLevelMode = LevelMode.Deposit;
 
-    // Multi-Punkt-Zustand (fuer Winkelmesser)
+    // Multi-Punkt-Zustand
     private readonly List<NormalizedPoint> _multiPoints = new();
 
     // --- Werkzeug-Auswahl ---
@@ -32,6 +33,13 @@ public sealed class OverlayToolService : IOverlayToolService
             _activeTool = value;
             ToolChanged?.Invoke(this, value);
         }
+    }
+
+    /// <summary>Sub-Modus fuer das Level-Werkzeug.</summary>
+    public LevelMode ActiveLevelMode
+    {
+        get => _activeLevelMode;
+        set => _activeLevelMode = value;
     }
 
     public event EventHandler<OverlayToolType>? ToolChanged;
@@ -69,8 +77,11 @@ public sealed class OverlayToolService : IOverlayToolService
         {
             var geometry = _activeTool switch
             {
-                OverlayToolType.Protractor when _multiPoints.Count >= 3
-                    => BuildProtractorGeometry(_multiPoints[0], _multiPoints[1], _multiPoints[2]),
+                OverlayToolType.PipeBend when _multiPoints.Count >= 4
+                    => BuildPipeBendGeometry(_multiPoints[0], _multiPoints[1],
+                                             _multiPoints[2], _multiPoints[3]),
+                OverlayToolType.LateralCircle when _multiPoints.Count >= 3
+                    => BuildLateralCircleGeometry(_multiPoints[0], _multiPoints[1], _multiPoints[2]),
                 _ => null
             };
 
@@ -95,7 +106,7 @@ public sealed class OverlayToolService : IOverlayToolService
             OverlayToolType.Rectangle => BuildRectangleGeometry(_drawStart, _drawCurrent),
             OverlayToolType.Point => BuildPointGeometry(_drawStart),
             OverlayToolType.Stretch => BuildStretchGeometry(_drawStart, _drawCurrent),
-            OverlayToolType.DnCircle => BuildDnCircleGeometry(_drawStart, _drawCurrent),
+            OverlayToolType.Level => BuildLevelGeometry(_drawStart, _drawCurrent),
             OverlayToolType.Ruler => BuildRulerGeometry(_drawStart, _drawCurrent),
             _ => null
         };
@@ -136,7 +147,7 @@ public sealed class OverlayToolService : IOverlayToolService
                 OverlayToolType.Rectangle => BuildRectangleGeometry(_drawStart, _drawCurrent),
                 OverlayToolType.Point => BuildPointGeometry(_drawStart),
                 OverlayToolType.Stretch => BuildStretchGeometry(_drawStart, _drawCurrent),
-                OverlayToolType.DnCircle => BuildDnCircleGeometry(_drawStart, _drawCurrent),
+                OverlayToolType.Level => BuildLevelGeometry(_drawStart, _drawCurrent),
                 OverlayToolType.Ruler => BuildRulerGeometry(_drawStart, _drawCurrent),
                 _ => null
             };
@@ -145,11 +156,13 @@ public sealed class OverlayToolService : IOverlayToolService
 
     // --- Multi-Punkt-Werkzeuge ---
 
-    public bool IsMultiPointTool => _activeTool == OverlayToolType.Protractor;
+    public bool IsMultiPointTool => _activeTool is OverlayToolType.PipeBend
+                                                 or OverlayToolType.LateralCircle;
 
     public int RequiredPointCount => _activeTool switch
     {
-        OverlayToolType.Protractor => 3,
+        OverlayToolType.PipeBend => 4,
+        OverlayToolType.LateralCircle => 3,
         _ => 2
     };
 
@@ -172,26 +185,67 @@ public sealed class OverlayToolService : IOverlayToolService
     /// </summary>
     private OverlayGeometry? BuildMultiPointPreview()
     {
-        if (_activeTool != OverlayToolType.Protractor || _drawCurrent == null)
-            return null;
+        if (_drawCurrent == null) return null;
 
+        if (_activeTool == OverlayToolType.PipeBend)
+            return BuildPipeBendPreview();
+
+        if (_activeTool == OverlayToolType.LateralCircle)
+            return BuildLateralCirclePreview();
+
+        return null;
+    }
+
+    /// <summary>PipeBend: 4-Schritt Preview (Achse1 aufbauen → Achse2 aufbauen → Winkelbogen).</summary>
+    private OverlayGeometry? BuildPipeBendPreview()
+    {
         if (_multiPoints.Count == 1)
         {
-            // 1 Punkt gesetzt: Linie P1 → Cursor
+            // Achse 1: Linie P1→Cursor
             return new OverlayGeometry
             {
-                ToolType = OverlayToolType.Protractor,
-                Points = new List<NormalizedPoint> { _multiPoints[0], _drawCurrent }
+                ToolType = OverlayToolType.PipeBend,
+                Points = new List<NormalizedPoint> { _multiPoints[0], _drawCurrent! }
+            };
+        }
+
+        if (_multiPoints.Count == 2)
+        {
+            // Achse 1 fertig, warte auf Achse 2 Startpunkt
+            return new OverlayGeometry
+            {
+                ToolType = OverlayToolType.PipeBend,
+                Points = new List<NormalizedPoint> { _multiPoints[0], _multiPoints[1], _drawCurrent! }
+            };
+        }
+
+        if (_multiPoints.Count >= 3)
+        {
+            // Achse 1 + Achse 2 Preview → Winkel berechnen
+            return BuildPipeBendGeometry(
+                _multiPoints[0], _multiPoints[1], _multiPoints[2], _drawCurrent!);
+        }
+
+        return null;
+    }
+
+    /// <summary>LateralCircle: 3-Schritt Preview (Punkte aufbauen → Umkreis).</summary>
+    private OverlayGeometry? BuildLateralCirclePreview()
+    {
+        if (_multiPoints.Count == 1)
+        {
+            // Zwei Punkte: Linie P1→Cursor
+            return new OverlayGeometry
+            {
+                ToolType = OverlayToolType.LateralCircle,
+                Points = new List<NormalizedPoint> { _multiPoints[0], _drawCurrent! }
             };
         }
 
         if (_multiPoints.Count >= 2)
         {
-            // 2 Punkte gesetzt: Zwei Linien + dynamischer Winkel
-            var p1 = _multiPoints[0];
-            var vertex = _multiPoints[1];
-            var p3 = _drawCurrent;
-            return BuildProtractorGeometry(p1, vertex, p3);
+            // Drei Punkte: Umkreis berechnen
+            return BuildLateralCircleGeometry(_multiPoints[0], _multiPoints[1], _drawCurrent!);
         }
 
         return null;
@@ -232,8 +286,6 @@ public sealed class OverlayToolService : IOverlayToolService
 
         geo.ClockFrom = PointToClockHour(start);
         geo.ClockTo = PointToClockHour(end);
-
-        // Q1 = Laenge in mm (kalibriert) oder Pixel-Anteil als Fallback
         geo.Q1Mm = NormLengthToMm(lengthNorm);
 
         return geo;
@@ -293,7 +345,6 @@ public sealed class OverlayToolService : IOverlayToolService
         geo.Q1Mm = NormLengthToMm(heightNorm);  // Hoehe
         geo.Q2Mm = NormLengthToMm(widthNorm);   // Breite
 
-        // Uhrposition am Mittelpunkt
         var center = new NormalizedPoint((start.X + end.X) / 2, (start.Y + end.Y) / 2);
         geo.ClockFrom = PointToClockHour(center);
 
@@ -314,70 +365,14 @@ public sealed class OverlayToolService : IOverlayToolService
 
     private OverlayGeometry BuildStretchGeometry(NormalizedPoint start, NormalizedPoint end)
     {
-        // Strecke: horizontale Linie → Meter-Bereich
         var geo = new OverlayGeometry
         {
             ToolType = OverlayToolType.Stretch,
             Points = new List<NormalizedPoint> { start, end }
         };
 
-        // Uhrposition am Startpunkt
         geo.ClockFrom = PointToClockHour(start);
         geo.ClockTo = PointToClockHour(end);
-
-        return geo;
-    }
-
-    // --- Neue Werkzeuge ---
-
-    /// <summary>
-    /// Winkelmesser: Berechnet den Winkel am Scheitelpunkt (vertex) zwischen den Armen P1→vertex und vertex→P3.
-    /// </summary>
-    private OverlayGeometry BuildProtractorGeometry(NormalizedPoint p1, NormalizedPoint vertex, NormalizedPoint p3)
-    {
-        // Vektoren vom Scheitelpunkt zu den Endpunkten
-        double dx1 = p1.X - vertex.X, dy1 = p1.Y - vertex.Y;
-        double dx2 = p3.X - vertex.X, dy2 = p3.Y - vertex.Y;
-
-        // Winkel via atan2
-        double angle1 = Math.Atan2(dy1, dx1);
-        double angle2 = Math.Atan2(dy2, dx2);
-        double angleDiff = Math.Abs(angle2 - angle1) * 180.0 / Math.PI;
-        if (angleDiff > 180) angleDiff = 360 - angleDiff;
-
-        var geo = new OverlayGeometry
-        {
-            ToolType = OverlayToolType.Protractor,
-            Points = new List<NormalizedPoint> { p1, vertex, p3 },
-            ArcDegrees = angleDiff,
-            ClockFrom = PointToClockHour(vertex)
-        };
-
-        return geo;
-    }
-
-    /// <summary>
-    /// DN-Kreis: Misst den Durchmesser eines Anschlusses.
-    /// center = Mitte der Anschlussoeffnung, edge = Rand der Oeffnung.
-    /// </summary>
-    private OverlayGeometry BuildDnCircleGeometry(NormalizedPoint center, NormalizedPoint edge)
-    {
-        double dx = edge.X - center.X, dy = edge.Y - center.Y;
-        double radiusNorm = Math.Sqrt(dx * dx + dy * dy);
-        double diameterMm = NormLengthToMm(radiusNorm * 2);
-
-        double? dnRatio = null;
-        if (_calibration?.NominalDiameterMm > 0)
-            dnRatio = (diameterMm / _calibration.NominalDiameterMm) * 100.0;
-
-        var geo = new OverlayGeometry
-        {
-            ToolType = OverlayToolType.DnCircle,
-            Points = new List<NormalizedPoint> { center, edge },
-            Q1Mm = diameterMm,
-            DnRatioPercent = dnRatio,
-            ClockFrom = PointToClockHour(center)
-        };
 
         return geo;
     }
@@ -397,6 +392,164 @@ public sealed class OverlayToolService : IOverlayToolService
             Q1Mm = NormLengthToMm(lengthNorm),
             ClockFrom = PointToClockHour(start),
             ClockTo = PointToClockHour(end)
+        };
+
+        return geo;
+    }
+
+    // --- Neue Werkzeuge ---
+
+    /// <summary>
+    /// Level-Werkzeug: Horizontale Linie → Kreissegment-Prozentsatz.
+    /// User zieht Linie auf Hoehe der Ablagerung/Wasseroberflaeche.
+    /// </summary>
+    private OverlayGeometry BuildLevelGeometry(NormalizedPoint start, NormalizedPoint end)
+    {
+        // Horizontale Linie: Y = Mittelwert der beiden Punkte
+        double levelY = (start.Y + end.Y) / 2.0;
+
+        // Rohr-Geometrie aus Kalibrierung oder Fallback
+        double pipeRadius = (_calibration?.NormalizedDiameter ?? 0.7) / 2.0;
+        double pipeCenterY = _calibration?.PipeCenter.Y ?? 0.5;
+        double sohle = pipeCenterY + pipeRadius;   // 6 Uhr (unten)
+        double scheitel = pipeCenterY - pipeRadius; // 12 Uhr (oben)
+
+        double hRatio;
+        if (_activeLevelMode == LevelMode.Obstacle)
+        {
+            // Hindernis: von Scheitel (oben) nach unten messen
+            double h = levelY - scheitel;
+            hRatio = Math.Clamp(h / (pipeRadius * 2.0), 0, 1);
+        }
+        else
+        {
+            // Ablagerung/Wasser: von Sohle (unten) nach oben messen
+            double h = sohle - levelY;
+            hRatio = Math.Clamp(h / (pipeRadius * 2.0), 0, 1);
+        }
+
+        double fillPercent = CircleSegmentPercent(hRatio);
+
+        var geo = new OverlayGeometry
+        {
+            ToolType = OverlayToolType.Level,
+            Points = new List<NormalizedPoint>
+            {
+                new(Math.Min(start.X, end.X), levelY),
+                new(Math.Max(start.X, end.X), levelY)
+            },
+            FillPercent = Math.Round(fillPercent, 1),
+            LevelSubMode = _activeLevelMode,
+            ClockFrom = PointToClockHour(new NormalizedPoint(0.5, levelY))
+        };
+
+        return geo;
+    }
+
+    /// <summary>
+    /// Berechnet den Querschnitts-Prozentsatz eines Kreissegments.
+    /// hRatio: Fuellhoehe relativ zum Durchmesser (0.0 = leer, 1.0 = voll).
+    /// </summary>
+    public static double CircleSegmentPercent(double hRatio)
+    {
+        hRatio = Math.Clamp(hRatio, 0, 1);
+        if (hRatio <= 0) return 0;
+        if (hRatio >= 1) return 100;
+
+        // Kreissegment-Formel mit R=0.5, h=hRatio*2R = hRatio
+        double R = 0.5;
+        double h = hRatio; // 0..1 entspricht 0..2R
+        double cosArg = Math.Clamp((R - h) / R, -1, 1);
+        double area = R * R * Math.Acos(cosArg) - (R - h) * Math.Sqrt(Math.Max(0, 2 * R * h - h * h));
+        double fullArea = Math.PI * R * R;
+        return area / fullArea * 100.0;
+    }
+
+    /// <summary>
+    /// PipeBend: 4 Punkte → Biegewinkel zwischen zwei Rohrachsen.
+    /// a1→a2 = Achse vor dem Bogen, b1→b2 = Achse nach dem Bogen.
+    /// </summary>
+    private OverlayGeometry BuildPipeBendGeometry(
+        NormalizedPoint a1, NormalizedPoint a2,
+        NormalizedPoint b1, NormalizedPoint b2)
+    {
+        // Richtungsvektoren
+        double vx1 = a2.X - a1.X, vy1 = a2.Y - a1.Y;
+        double vx2 = b2.X - b1.X, vy2 = b2.Y - b1.Y;
+
+        // Laengen
+        double len1 = Math.Sqrt(vx1 * vx1 + vy1 * vy1);
+        double len2 = Math.Sqrt(vx2 * vx2 + vy2 * vy2);
+
+        double angleDeg = 0;
+        if (len1 > 1e-8 && len2 > 1e-8)
+        {
+            double dot = vx1 * vx2 + vy1 * vy2;
+            double cosAngle = Math.Clamp(dot / (len1 * len2), -1, 1);
+            angleDeg = Math.Acos(cosAngle) * 180.0 / Math.PI;
+        }
+
+        var geo = new OverlayGeometry
+        {
+            ToolType = OverlayToolType.PipeBend,
+            Points = new List<NormalizedPoint> { a1, a2, b1, b2 },
+            ArcDegrees = Math.Round(angleDeg, 1)
+        };
+
+        return geo;
+    }
+
+    /// <summary>
+    /// LateralCircle: 3 Punkte am Rand → Umkreis (circumscribed circle).
+    /// Berechnet Mittelpunkt + Radius → Durchmesser in mm → DnRatioPercent.
+    /// </summary>
+    private OverlayGeometry BuildLateralCircleGeometry(
+        NormalizedPoint p1, NormalizedPoint p2, NormalizedPoint p3)
+    {
+        // Umkreis aus 3 Punkten
+        double ax = p1.X, ay = p1.Y;
+        double bx = p2.X, by = p2.Y;
+        double cx = p3.X, cy = p3.Y;
+
+        double D = 2.0 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by));
+
+        NormalizedPoint center;
+        double radiusNorm;
+
+        if (Math.Abs(D) < 1e-10)
+        {
+            // Punkte sind kollinear — Fallback: Mittelpunkt der aeussersten Punkte
+            center = new NormalizedPoint((ax + bx + cx) / 3.0, (ay + by + cy) / 3.0);
+            double d1 = Math.Sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay));
+            double d2 = Math.Sqrt((cx - bx) * (cx - bx) + (cy - by) * (cy - by));
+            double d3 = Math.Sqrt((ax - cx) * (ax - cx) + (ay - cy) * (ay - cy));
+            radiusNorm = Math.Max(d1, Math.Max(d2, d3)) / 2.0;
+        }
+        else
+        {
+            double ux = ((ax * ax + ay * ay) * (by - cy) +
+                         (bx * bx + by * by) * (cy - ay) +
+                         (cx * cx + cy * cy) * (ay - by)) / D;
+            double uy = ((ax * ax + ay * ay) * (cx - bx) +
+                         (bx * bx + by * by) * (ax - cx) +
+                         (cx * cx + cy * cy) * (bx - ax)) / D;
+            center = new NormalizedPoint(ux, uy);
+            radiusNorm = Math.Sqrt((ax - ux) * (ax - ux) + (ay - uy) * (ay - uy));
+        }
+
+        double diameterMm = NormLengthToMm(radiusNorm * 2);
+
+        double? dnRatio = null;
+        if (_calibration?.NominalDiameterMm > 0)
+            dnRatio = Math.Round((diameterMm / _calibration.NominalDiameterMm) * 100.0, 1);
+
+        var geo = new OverlayGeometry
+        {
+            ToolType = OverlayToolType.LateralCircle,
+            Points = new List<NormalizedPoint> { p1, p2, p3 },
+            Q1Mm = Math.Round(diameterMm, 0),
+            DnRatioPercent = dnRatio,
+            ClockFrom = PointToClockHour(center)
         };
 
         return geo;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Ai.Pipeline;
 
@@ -85,6 +86,70 @@ public static class MaskQuantificationService
             IntrusionPercent: intrusionPercent,
             ClockPosition: clockPos
         );
+    }
+
+    /// <summary>
+    /// Quantify mit optionaler PipeCalibration (nutzt echten NormalizedDiameter statt 0.70).
+    /// </summary>
+    public static QuantifiedMask Quantify(
+        SamMaskResult mask,
+        int imageWidth,
+        int imageHeight,
+        int pipeDiameterMm,
+        PipeCalibration? calibration)
+    {
+        if (calibration != null && calibration.IsCalibrated)
+        {
+            // Kalibrierter Pfad: NormalizedDiameter statt hartkodiertem 0.70
+            double pipeWidthRatio = calibration.NormalizedDiameter;
+            return QuantifyWithRatio(mask, imageWidth, imageHeight, pipeDiameterMm, pipeWidthRatio);
+        }
+        return Quantify(mask, imageWidth, imageHeight, pipeDiameterMm);
+    }
+
+    private static QuantifiedMask QuantifyWithRatio(
+        SamMaskResult mask,
+        int imageWidth, int imageHeight,
+        int pipeDiameterMm, double pipeWidthRatio)
+    {
+        if (imageWidth <= 0 || imageHeight <= 0 || pipeDiameterMm <= 0 || pipeWidthRatio <= 0)
+        {
+            return new QuantifiedMask(
+                mask.Label, mask.Confidence,
+                null, null, null, null, null,
+                ComputeClockPosition(mask.CentroidX, mask.CentroidY, imageWidth, imageHeight));
+        }
+
+        double pxToMm = pipeDiameterMm / (imageWidth * pipeWidthRatio);
+        int heightMm = (int)Math.Round(mask.HeightPixels * pxToMm);
+        int widthMm = (int)Math.Round(mask.WidthPixels * pxToMm);
+
+        double pipeRadiusPx = (imageWidth * pipeWidthRatio) / 2.0;
+        double pipeCircumferencePx = 2.0 * Math.PI * pipeRadiusPx;
+
+        int extentPercent = (int)Math.Round(mask.WidthPixels / pipeCircumferencePx * 100.0);
+        extentPercent = Math.Clamp(extentPercent, 0, 100);
+
+        double pipeCrossSectionPx = Math.PI * pipeRadiusPx * pipeRadiusPx;
+        int crossSectionReduction = (int)Math.Round(mask.MaskAreaPixels / pipeCrossSectionPx * 100.0);
+        crossSectionReduction = Math.Clamp(crossSectionReduction, 0, 100);
+
+        int? intrusionPercent = null;
+        var labelLower = mask.Label?.ToLowerInvariant() ?? "";
+        if (labelLower.Contains("intrusion") || labelLower.Contains("einragung") || labelLower.Contains("root"))
+        {
+            intrusionPercent = (int)Math.Round((double)heightMm / pipeDiameterMm * 100.0);
+            intrusionPercent = Math.Clamp(intrusionPercent.Value, 0, 100);
+        }
+
+        return new QuantifiedMask(
+            Label: mask.Label ?? "unknown",
+            Confidence: mask.Confidence,
+            HeightMm: heightMm, WidthMm: widthMm,
+            ExtentPercent: extentPercent,
+            CrossSectionReductionPercent: crossSectionReduction,
+            IntrusionPercent: intrusionPercent,
+            ClockPosition: ComputeClockPosition(mask.CentroidX, mask.CentroidY, imageWidth, imageHeight));
     }
 
     /// <summary>

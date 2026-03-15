@@ -24,14 +24,25 @@ public enum CodingSessionState
 public enum OverlayToolType
 {
     None,
-    Line,        // Linie fuer Risse (Laenge/Breite)
-    Arc,         // Bogen fuer Umfangsschaeden (UhrVon/UhrBis)
-    Rectangle,   // Rechteck fuer Flaechenschaeden
-    Point,       // Punkt fuer Einzelschaeden
-    Stretch,     // Strecke fuer Streckenschaeden (MeterStart/MeterEnd)
-    Protractor,  // Winkelmesser fuer Biegewinkel (3 Punkte: P1, Scheitel, P3)
-    DnCircle,    // DN-Kreis fuer Anschlussdurchmesser (Mitte + Rand)
-    Ruler        // Lineal mit Skalenteilung
+    Line,            // Linie fuer Risse (Laenge/Breite)
+    Arc,             // Bogen fuer Umfangsschaeden (UhrVon/UhrBis)
+    Rectangle,       // Rechteck fuer Flaechenschaeden
+    Point,           // Punkt fuer Einzelschaeden
+    Stretch,         // Strecke fuer Streckenschaeden (MeterStart/MeterEnd)
+    PipeBend,        // 4 Punkte: 2× Rohrachse → Biegewinkel
+    LateralCircle,   // 3 Punkte am Rand → Umkreis fuer Anschlussdurchmesser
+    Level,           // Horizontale Linie → Kreissegment-% (Ablagerung/Wasser/Hindernis)
+    Ruler            // Lineal mit Skalenteilung
+}
+
+/// <summary>
+/// Sub-Modus fuer das Level-Werkzeug.
+/// </summary>
+public enum LevelMode
+{
+    Deposit,    // Ablagerung: von Sohle nach oben
+    Water,      // Wasser: von Sohle nach oben
+    Obstacle    // Hindernis: von Scheitel nach unten
 }
 
 /// <summary>
@@ -51,8 +62,10 @@ public sealed class OverlayGeometry
     public double? Q2Mm { get; set; }        // Quantifizierung 2 in mm (z.B. Rissbreite)
     public double? ClockFrom { get; set; }   // Uhrposition Von (0.0–12.0)
     public double? ClockTo { get; set; }     // Uhrposition Bis (0.0–12.0)
-    public double? ArcDegrees { get; set; }  // Bogenwinkel in Grad (auch Protractor-Winkel)
-    public double? DnRatioPercent { get; set; }  // Verhaeltnis zum Haupt-DN in Prozent (DnCircle)
+    public double? ArcDegrees { get; set; }  // Bogenwinkel in Grad (PipeBend / Arc)
+    public double? DnRatioPercent { get; set; }  // Verhaeltnis zum Haupt-DN in Prozent (LateralCircle)
+    public double? FillPercent { get; set; }    // Kreissegment-% fuer Level-Tool (0-100)
+    public LevelMode? LevelSubMode { get; set; } // Sub-Modus fuer Level-Tool
 
     // Referenz zum Snapshot-Bild (PNG mit Overlay eingebrannt)
     public string? SnapshotPath { get; set; }
