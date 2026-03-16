@@ -59,6 +59,166 @@ public partial class TrainingCenterViewModel : ObservableObject
     [ObservableProperty] private int _reviewQueueCount;
     [ObservableProperty] private string _reviewStatusText = "";
 
+    // ── Selbsttraining-Visualisierungen ──
+    public ObservableCollection<SelfTrainingEntryResult> SelfTrainingResults { get; } = new();
+    public ObservableCollection<CodeDistributionEntry> CodeDistribution { get; } = new();
+    public ObservableCollection<string> SelfTrainingLogEntries { get; } = new();
+
+    [ObservableProperty] private int _pipelineActiveStep; // 0-5 (BuildingTimeline..Completed)
+    [ObservableProperty] private string _currentEntryCode = "";
+    [ObservableProperty] private double _currentEntryMeter;
+    [ObservableProperty] private string _currentComparisonText = "";
+    [ObservableProperty] private string _currentTechniqueGrade = "";
+    [ObservableProperty] private string _currentTechniqueDetails = "";
+
+    // Match-Rate Prozentsaetze
+    [ObservableProperty] private double _exactPercent;
+    [ObservableProperty] private double _partialPercent;
+    [ObservableProperty] private double _mismatchPercent;
+    [ObservableProperty] private double _noFindingsPercent;
+    private int _totalExact, _totalPartial, _totalMismatch, _totalNoFindings;
+
+    private void RefreshMatchRatePercents()
+    {
+        var total = _totalExact + _totalPartial + _totalMismatch + _totalNoFindings;
+        if (total == 0) { ExactPercent = PartialPercent = MismatchPercent = NoFindingsPercent = 0; return; }
+        ExactPercent = (double)_totalExact / total;
+        PartialPercent = (double)_totalPartial / total;
+        MismatchPercent = (double)_totalMismatch / total;
+        NoFindingsPercent = (double)_totalNoFindings / total;
+    }
+
+    private void AddSelfTrainingLog(string message)
+    {
+        var line = $"[{DateTime.Now:HH:mm:ss}] {message}";
+        void Apply() => SelfTrainingLogEntries.Add(line);
+        if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
+            d.Invoke(Apply);
+        else
+            Apply();
+    }
+
+    private void UpdateCodeDistribution(string code, MatchLevel level)
+    {
+        void Apply()
+        {
+            var entry = CodeDistribution.FirstOrDefault(e => e.Code == code);
+            if (entry is null)
+            {
+                entry = new CodeDistributionEntry { Code = code };
+                CodeDistribution.Add(entry);
+            }
+            entry.Total++;
+            switch (level)
+            {
+                case MatchLevel.ExactMatch: entry.Exact++; break;
+                case MatchLevel.PartialMatch: entry.Partial++; break;
+                case MatchLevel.Mismatch: entry.Mismatch++; break;
+                case MatchLevel.NoFindings: entry.NoFindings++; break;
+            }
+        }
+        if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
+            d.Invoke(Apply);
+        else
+            Apply();
+    }
+
+    /// <summary>Wird vom SelfTrainingOrchestrator bei jedem Schritt aufgerufen.</summary>
+    public void OnSelfTrainingStep(SelfTrainingStep step)
+    {
+        void Apply()
+        {
+            PipelineActiveStep = (int)step.Stage;
+            CurrentEntryCode = step.VsaCode;
+            CurrentEntryMeter = step.MeterPosition;
+            ProgressValue = step.EntryIndex + 1;
+            ProgressMax = step.TotalEntries;
+
+            // Stage-spezifisches Logging
+            switch (step.Stage)
+            {
+                case SelfTrainingStage.ExtractingFrame:
+                    AddSelfTrainingLog($"Frame extrahieren: {step.VsaCode} @ {step.MeterPosition:F1}m");
+                    if (step.FramePath is not null) LiveFramePath = step.FramePath;
+                    break;
+                case SelfTrainingStage.Analyzing:
+                    AddSelfTrainingLog($"KI-Analyse: {step.VsaCode}");
+                    break;
+                case SelfTrainingStage.Comparing:
+                    AddSelfTrainingLog($"Vergleich: {step.VsaCode}");
+                    break;
+                case SelfTrainingStage.AssessingTechnique:
+                    if (step.Technique is { } tech)
+                    {
+                        CurrentTechniqueGrade = tech.OverallGrade;
+                        CurrentTechniqueDetails = $"Licht: {tech.LightingQuality} | Schaerfe: {tech.SharpnessQuality}";
+                        AddSelfTrainingLog($"Technik: {tech.OverallGrade} (Licht={tech.LightingQuality}, Schaerfe={tech.SharpnessQuality})");
+                    }
+                    break;
+                case SelfTrainingStage.Completed:
+                    if (step.Comparison is { } cmp)
+                    {
+                        CurrentComparisonText = $"{cmp.Level} ({cmp.ConfidenceScore:P0})";
+                        var levelStr = cmp.Level switch
+                        {
+                            MatchLevel.ExactMatch => "EXACT",
+                            MatchLevel.PartialMatch => "PARTIAL",
+                            MatchLevel.Mismatch => "MISMATCH",
+                            _ => "NO_FINDINGS"
+                        };
+                        AddSelfTrainingLog($"Ergebnis: {step.VsaCode} → {levelStr} ({cmp.ConfidenceScore:P0}) {cmp.Explanation}");
+
+                        // Zaehler aktualisieren
+                        switch (cmp.Level)
+                        {
+                            case MatchLevel.ExactMatch: _totalExact++; break;
+                            case MatchLevel.PartialMatch: _totalPartial++; break;
+                            case MatchLevel.Mismatch: _totalMismatch++; break;
+                            case MatchLevel.NoFindings: _totalNoFindings++; break;
+                        }
+                        RefreshMatchRatePercents();
+
+                        // Ergebnis-Eintrag hinzufuegen
+                        SelfTrainingResults.Add(new SelfTrainingEntryResult
+                        {
+                            Index = step.EntryIndex + 1,
+                            VsaCode = step.VsaCode,
+                            Meter = step.MeterPosition,
+                            Level = cmp.Level,
+                            Summary = cmp.Explanation
+                        });
+
+                        UpdateCodeDistribution(step.VsaCode, cmp.Level);
+                    }
+                    break;
+            }
+
+            if (step.ErrorMessage is not null)
+                AddSelfTrainingLog($"FEHLER: {step.ErrorMessage}");
+        }
+
+        if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
+            d.Invoke(Apply);
+        else
+            Apply();
+    }
+
+    /// <summary>Setzt alle Selbsttraining-Visualisierungen zurueck.</summary>
+    private void ResetSelfTrainingVisuals()
+    {
+        SelfTrainingResults.Clear();
+        CodeDistribution.Clear();
+        SelfTrainingLogEntries.Clear();
+        PipelineActiveStep = 0;
+        CurrentEntryCode = "";
+        CurrentEntryMeter = 0;
+        CurrentComparisonText = "";
+        CurrentTechniqueGrade = "";
+        CurrentTechniqueDetails = "";
+        _totalExact = _totalPartial = _totalMismatch = _totalNoFindings = 0;
+        RefreshMatchRatePercents();
+    }
+
     private readonly List<string> _rootFolders = new();
     private CancellationTokenSource? _genCts;
 

@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
-        Title="Training Center" Height="800" Width="1200"
+        Title="Training Center" Height="900" Width="1400"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgBrush}"
         Foreground="{DynamicResource TextBrush}">
@@ -252,79 +252,324 @@
                 </Grid>
             </TabItem>
 
-            <!-- Tab 3: Log + Live-Vorschau -->
-            <TabItem Header="Log / Live">
-                <Grid Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="3*"/>
-                        <ColumnDefinition Width="2*"/>
-                    </Grid.ColumnDefinitions>
+            <!-- Tab 3: Selbsttraining – Echtzeit-Visualisierungen -->
+            <TabItem Header="Selbsttraining" x:Name="SelfTrainingTab">
+                <Grid Margin="0,4,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>  <!-- Pipeline-Leiste -->
+                        <RowDefinition Height="4"/>
+                        <RowDefinition Height="Auto"/>  <!-- Service-Indikatoren -->
+                        <RowDefinition Height="6"/>
+                        <RowDefinition Height="*"/>     <!-- Hauptbereich: 3 Spalten -->
+                        <RowDefinition Height="4"/>
+                        <RowDefinition Height="Auto"/>  <!-- Log (klappbar) -->
+                    </Grid.RowDefinitions>
 
-                    <!-- Log-TextBox -->
-                    <TextBox Grid.Column="0"
-                             Text="{Binding LogText, Mode=OneWay}"
-                             IsReadOnly="True"
-                             VerticalScrollBarVisibility="Auto"
-                             HorizontalScrollBarVisibility="Auto"
-                             FontFamily="Consolas"
-                             FontSize="12"
-                             TextWrapping="NoWrap"
-                             AcceptsReturn="True"
-                             x:Name="LogTextBox"/>
+                    <!-- ═══ Row 0: Pipeline-Stage-Leiste ═══ -->
+                    <Border Grid.Row="0" Background="#1E293B" CornerRadius="6" Padding="12,8">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <!-- Stage 0: Timeline -->
+                            <StackPanel Orientation="Horizontal" x:Name="Stage0">
+                                <Ellipse Width="12" Height="12" x:Name="Dot0" Fill="#475569"/>
+                                <TextBlock Text="OSD-Scan" Foreground="#94A3B8" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
+                            </StackPanel>
+                            <TextBlock Text=" → " Foreground="#475569" VerticalAlignment="Center" FontSize="11"/>
+                            <!-- Stage 1: Frame -->
+                            <StackPanel Orientation="Horizontal" x:Name="Stage1">
+                                <Ellipse Width="12" Height="12" x:Name="Dot1" Fill="#475569"/>
+                                <TextBlock Text="Frame" Foreground="#94A3B8" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
+                            </StackPanel>
+                            <TextBlock Text=" → " Foreground="#475569" VerticalAlignment="Center" FontSize="11"/>
+                            <!-- Stage 2: KI -->
+                            <StackPanel Orientation="Horizontal" x:Name="Stage2">
+                                <Ellipse Width="12" Height="12" x:Name="Dot2" Fill="#475569"/>
+                                <TextBlock Text="KI-Analyse" Foreground="#94A3B8" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
+                            </StackPanel>
+                            <TextBlock Text=" → " Foreground="#475569" VerticalAlignment="Center" FontSize="11"/>
+                            <!-- Stage 3: Vergleich -->
+                            <StackPanel Orientation="Horizontal" x:Name="Stage3">
+                                <Ellipse Width="12" Height="12" x:Name="Dot3" Fill="#475569"/>
+                                <TextBlock Text="Vergleich" Foreground="#94A3B8" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
+                            </StackPanel>
+                            <TextBlock Text=" → " Foreground="#475569" VerticalAlignment="Center" FontSize="11"/>
+                            <!-- Stage 4: Technik -->
+                            <StackPanel Orientation="Horizontal" x:Name="Stage4">
+                                <Ellipse Width="12" Height="12" x:Name="Dot4" Fill="#475569"/>
+                                <TextBlock Text="Technik" Foreground="#94A3B8" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
+                            </StackPanel>
+                            <TextBlock Text=" → " Foreground="#475569" VerticalAlignment="Center" FontSize="11"/>
+                            <!-- Stage 5: Fertig -->
+                            <StackPanel Orientation="Horizontal" x:Name="Stage5">
+                                <Ellipse Width="12" Height="12" x:Name="Dot5" Fill="#475569"/>
+                                <TextBlock Text="Fertig" Foreground="#94A3B8" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
 
-                    <!-- Live-Vorschau -->
-                    <Border Grid.Column="1" Margin="12,0,0,0" Padding="10" CornerRadius="6"
-                            Background="{DynamicResource CardBrush}"
-                            BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1">
+                    <!-- ═══ Row 2: Service-Indikatoren + aktueller Eintrag ═══ -->
+                    <Border Grid.Row="2" Background="#1E293B" CornerRadius="6" Padding="10,6">
                         <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                            <TextBlock Text="Live-Vorschau" FontWeight="SemiBold" FontSize="14"
-                                       Foreground="{DynamicResource AccentBrush}"/>
+                            <!-- 5 Service-Dots -->
+                            <StackPanel Orientation="Horizontal" Grid.Column="0">
+                                <Border Width="10" Height="10" CornerRadius="5" Background="#475569" x:Name="SvcOsd"
+                                        ToolTip="OSD-Meter-Erkennung" Margin="0,0,6,0"/>
+                                <Border Width="10" Height="10" CornerRadius="5" Background="#475569" x:Name="SvcFrame"
+                                        ToolTip="Frame-Extraktion" Margin="0,0,6,0"/>
+                                <Border Width="10" Height="10" CornerRadius="5" Background="#475569" x:Name="SvcQwen"
+                                        ToolTip="Qwen VL KI-Analyse" Margin="0,0,6,0"/>
+                                <Border Width="10" Height="10" CornerRadius="5" Background="#475569" x:Name="SvcCompare"
+                                        ToolTip="Deterministischer Vergleich" Margin="0,0,6,0"/>
+                                <Border Width="10" Height="10" CornerRadius="5" Background="#475569" x:Name="SvcTech"
+                                        ToolTip="Technik-Bewertung" Margin="0,0,6,0"/>
+                                <TextBlock Text="Services" Foreground="#64748B" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                            </StackPanel>
 
-                            <StackPanel Grid.Row="1" Margin="0,8,0,0">
-                                <TextBlock>
-                                    <Run Text="Fall: " FontWeight="SemiBold"/>
-                                    <Run Text="{Binding LiveCaseInfo, Mode=OneWay}"/>
-                                </TextBlock>
-                                <TextBlock Margin="0,4,0,0">
-                                    <Run Text="Code: " FontWeight="SemiBold"/>
-                                    <Run Text="{Binding LiveCodeInfo, Mode=OneWay}"/>
-                                </TextBlock>
-                                <TextBlock Margin="0,4,0,0">
-                                    <Run Text="Meter: " FontWeight="SemiBold"/>
-                                    <Run Text="{Binding LiveMeterInfo, Mode=OneWay}"/>
+                            <!-- Aktueller Eintrag -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Foreground="#94A3B8" FontSize="12">
+                                    <Run Text="Code: "/><Run Text="{Binding CurrentEntryCode, Mode=OneWay}" Foreground="#F1F5F9" FontWeight="Bold"/>
+                                    <Run Text="  |  Meter: "/><Run Text="{Binding CurrentEntryMeter, Mode=OneWay, StringFormat=F1}" Foreground="#F1F5F9"/>
+                                    <Run Text=" m"/>
                                 </TextBlock>
                             </StackPanel>
 
-                            <!-- Progress-Info -->
-                            <TextBlock Grid.Row="2" Margin="0,6,0,0"
-                                       FontSize="11" Foreground="{DynamicResource MutedBrush}">
-                                <Run Text="{Binding ProgressValue, Mode=OneWay}"/>
-                                <Run Text=" / "/>
-                                <Run Text="{Binding ProgressMax, Mode=OneWay}"/>
-                                <Run Text=" Fälle verarbeitet"/>
-                            </TextBlock>
-
-                            <Border Grid.Row="3" Margin="0,8,0,0"
-                                    Background="{DynamicResource SurfaceSubtleBrush}"
-                                    CornerRadius="4">
-                                <Image Stretch="Uniform" StretchDirection="DownOnly"
-                                       Source="{Binding LiveFramePath, Mode=OneWay, TargetNullValue={x:Null}}"
-                                       Margin="4"/>
-                            </Border>
+                            <!-- Technik-Note -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                <TextBlock Text="Technik: " Foreground="#64748B" FontSize="11" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding CurrentTechniqueGrade, Mode=OneWay}" Foreground="#FBBF24"
+                                           FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
+                            </StackPanel>
                         </Grid>
                     </Border>
+
+                    <!-- ═══ Row 4: Hauptbereich – 3 Spalten ═══ -->
+                    <Grid Grid.Row="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="250"/>  <!-- Frame-Vorschau -->
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>    <!-- Vergleich + Match-Rate -->
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="280"/>  <!-- Ergebnis-Verlauf + Code-Verteilung -->
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Spalte 1: Live-Frame -->
+                        <Border Grid.Column="0" Background="#0F172A" CornerRadius="6" Padding="6">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="Live-Frame" Foreground="#64748B" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <Border Grid.Row="1" Background="#1E293B" CornerRadius="4">
+                                    <Image Stretch="Uniform" StretchDirection="DownOnly"
+                                           Source="{Binding LiveFramePath, Mode=OneWay, TargetNullValue={x:Null}}" Margin="2"/>
+                                </Border>
+                                <TextBlock Grid.Row="2" Foreground="#64748B" FontSize="10" Margin="0,4,0,0"
+                                           Text="{Binding CurrentComparisonText, Mode=OneWay}"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Spalte 2: Vergleich + Match-Rate-Balken -->
+                        <Grid Grid.Column="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>  <!-- Match-Rate Balken -->
+                                <RowDefinition Height="6"/>
+                                <RowDefinition Height="*"/>     <!-- Log / Vergleich Details -->
+                            </Grid.RowDefinitions>
+
+                            <!-- Match-Rate-Balken (gestapelt) -->
+                            <Border Grid.Row="0" Background="#0F172A" CornerRadius="6" Padding="8">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="6"/>
+                                        <RowDefinition Height="24"/>
+                                        <RowDefinition Height="4"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="Match-Rate" Foreground="#64748B" FontSize="10" FontWeight="SemiBold"/>
+                                    <!-- Gestapelter Balken -->
+                                    <Grid Grid.Row="2" x:Name="MatchRateBar">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="0" x:Name="ExactCol"/>
+                                            <ColumnDefinition Width="0" x:Name="PartialCol"/>
+                                            <ColumnDefinition Width="0" x:Name="MismatchCol"/>
+                                            <ColumnDefinition Width="0" x:Name="NoFindingsCol"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Background="#4ADE80" CornerRadius="3,0,0,3"
+                                                ToolTip="ExactMatch"/>
+                                        <Border Grid.Column="1" Background="#FBBF24"
+                                                ToolTip="PartialMatch"/>
+                                        <Border Grid.Column="2" Background="#F87171"
+                                                ToolTip="Mismatch"/>
+                                        <Border Grid.Column="3" Background="#64748B" CornerRadius="0,3,3,0"
+                                                ToolTip="NoFindings"/>
+                                        <Border Grid.Column="4" Background="#1E293B" CornerRadius="0,3,3,0"/>
+                                    </Grid>
+                                    <!-- Legende -->
+                                    <StackPanel Grid.Row="4" Orientation="Horizontal">
+                                        <Border Width="8" Height="8" Background="#4ADE80" CornerRadius="2" Margin="0,0,3,0"/>
+                                        <TextBlock Text="{Binding ExactPercent, Mode=OneWay, StringFormat=P0}" Foreground="#94A3B8" FontSize="10" Margin="0,0,10,0"/>
+                                        <Border Width="8" Height="8" Background="#FBBF24" CornerRadius="2" Margin="0,0,3,0"/>
+                                        <TextBlock Text="{Binding PartialPercent, Mode=OneWay, StringFormat=P0}" Foreground="#94A3B8" FontSize="10" Margin="0,0,10,0"/>
+                                        <Border Width="8" Height="8" Background="#F87171" CornerRadius="2" Margin="0,0,3,0"/>
+                                        <TextBlock Text="{Binding MismatchPercent, Mode=OneWay, StringFormat=P0}" Foreground="#94A3B8" FontSize="10" Margin="0,0,10,0"/>
+                                        <Border Width="8" Height="8" Background="#64748B" CornerRadius="2" Margin="0,0,3,0"/>
+                                        <TextBlock Text="{Binding NoFindingsPercent, Mode=OneWay, StringFormat=P0}" Foreground="#94A3B8" FontSize="10"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Log / Batch-Import Bereich -->
+                            <Border Grid.Row="2" Background="#0F172A" CornerRadius="6" Padding="6">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="Live-Log" Foreground="#64748B" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBox Grid.Row="1"
+                                             Text="{Binding LogText, Mode=OneWay}"
+                                             IsReadOnly="True"
+                                             VerticalScrollBarVisibility="Auto"
+                                             HorizontalScrollBarVisibility="Auto"
+                                             FontFamily="Consolas" FontSize="11"
+                                             TextWrapping="NoWrap" AcceptsReturn="True"
+                                             Background="#0F172A" Foreground="#CBD5E1"
+                                             BorderThickness="0" x:Name="LogTextBox"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- Spalte 3: Ergebnis-Verlauf + Code-Verteilung -->
+                        <Grid Grid.Column="4">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>    <!-- Ergebnis-Verlauf -->
+                                <RowDefinition Height="6"/>
+                                <RowDefinition Height="Auto"/> <!-- Code-Verteilung -->
+                            </Grid.RowDefinitions>
+
+                            <!-- Ergebnis-Verlauf (scrollbare Liste) -->
+                            <Border Grid.Row="0" Background="#0F172A" CornerRadius="6" Padding="6">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="Ergebnis-Verlauf" Foreground="#64748B" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <ListBox Grid.Row="1" x:Name="ResultsListBox"
+                                             ItemsSource="{Binding SelfTrainingResults}"
+                                             Background="Transparent" BorderThickness="0"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Padding="4,2" Margin="0,1" CornerRadius="3"
+                                                        Background="#1E293B">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="24"/>
+                                                            <ColumnDefinition Width="60"/>
+                                                            <ColumnDefinition Width="50"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding Index}" Foreground="#475569" FontSize="10" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding VsaCode}" Foreground="#F1F5F9"
+                                                                   FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="2" Text="{Binding Meter, StringFormat=F1}" Foreground="#94A3B8"
+                                                                   FontSize="10" VerticalAlignment="Center"/>
+                                                        <!-- Farbiger Level-Indikator -->
+                                                        <Border Grid.Column="3" HorizontalAlignment="Right" Padding="4,1" CornerRadius="3"
+                                                                x:Name="LevelBorder">
+                                                            <TextBlock Text="{Binding Level}" FontSize="9" Foreground="#0F172A" FontWeight="Bold"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+                                                <DataTemplate.Triggers>
+                                                    <DataTrigger Binding="{Binding Level}" Value="ExactMatch">
+                                                        <Setter TargetName="LevelBorder" Property="Background" Value="#4ADE80"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Level}" Value="PartialMatch">
+                                                        <Setter TargetName="LevelBorder" Property="Background" Value="#FBBF24"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Level}" Value="Mismatch">
+                                                        <Setter TargetName="LevelBorder" Property="Background" Value="#F87171"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Level}" Value="NoFindings">
+                                                        <Setter TargetName="LevelBorder" Property="Background" Value="#64748B"/>
+                                                    </DataTrigger>
+                                                </DataTemplate.Triggers>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Grid>
+                            </Border>
+
+                            <!-- Code-Verteilung (Balken pro Code) -->
+                            <Border Grid.Row="2" Background="#0F172A" CornerRadius="6" Padding="6"
+                                    MaxHeight="200">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="Code-Verteilung" Foreground="#64748B" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <ItemsControl Grid.Row="1" ItemsSource="{Binding CodeDistribution}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,1">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="55"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="30"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Code}" Foreground="#E2E8F0" FontSize="10"
+                                                               FontFamily="Consolas" VerticalAlignment="Center"/>
+                                                    <!-- Gestapelter Mini-Balken -->
+                                                    <Grid Grid.Column="1" Height="10" Margin="4,0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="{Binding Exact, FallbackValue=0}"/>
+                                                            <ColumnDefinition Width="{Binding Partial, FallbackValue=0}"/>
+                                                            <ColumnDefinition Width="{Binding Mismatch, FallbackValue=0}"/>
+                                                            <ColumnDefinition Width="{Binding NoFindings, FallbackValue=0}"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Background="#4ADE80" CornerRadius="2,0,0,2"/>
+                                                        <Border Grid.Column="1" Background="#FBBF24"/>
+                                                        <Border Grid.Column="2" Background="#F87171"/>
+                                                        <Border Grid.Column="3" Background="#64748B" CornerRadius="0,2,2,0"/>
+                                                    </Grid>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Total}" Foreground="#94A3B8"
+                                                               FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Grid>
+
+                    <!-- ═══ Row 6: Klappbares Echtzeit-Log ═══ -->
+                    <Expander Grid.Row="6" Header="Echtzeit-Log" IsExpanded="False"
+                              Foreground="#94A3B8" FontSize="11">
+                        <ListBox ItemsSource="{Binding SelfTrainingLogEntries}"
+                                 x:Name="SelfTrainingLogList"
+                                 MaxHeight="150" Background="#0F172A" BorderThickness="0"
+                                 FontFamily="Consolas" FontSize="10" Foreground="#94A3B8"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Auto"/>
+                    </Expander>
                 </Grid>
             </TabItem>
 
-            <!-- Review Queue Tab (Self-Improving Loop) -->
+            <!-- Tab 4: Review Queue (Self-Improving Loop) -->
             <TabItem Header="Review Queue">
                 <Grid Margin="8">
                     <Grid.RowDefinitions>
@@ -335,14 +580,12 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Header -->
                     <StackPanel Grid.Row="0" Orientation="Horizontal">
                         <TextBlock Text="Zur Prüfung:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Text="{Binding ReviewQueueCount}" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0"/>
                         <TextBlock Text="{Binding ReviewStatusText}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
 
-                    <!-- Queue List -->
                     <DataGrid Grid.Row="2"
                               ItemsSource="{Binding ReviewQueue}"
                               SelectedItem="{Binding SelectedReviewItem}"
@@ -359,7 +602,6 @@
                         </DataGrid.Columns>
                     </DataGrid>
 
-                    <!-- Actions -->
                     <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Content="Akzeptieren" x:Name="ReviewApproveBtn"
                                 Click="ReviewApprove_Click"
