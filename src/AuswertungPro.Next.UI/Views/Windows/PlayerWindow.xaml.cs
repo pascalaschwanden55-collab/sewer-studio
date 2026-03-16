@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -10,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Rectangle = System.Windows.Shapes.Rectangle;
 using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
@@ -110,6 +111,7 @@ public partial class PlayerWindow : Window
     private bool _isManualMarkMode;
     private double _lastDetectionTimestamp;
     private readonly List<LiveFrameFinding> _currentFindings = new();
+    private string _liveDetectionModelName = string.Empty;
 
     // Ã¢"â‚¬Ã¢"â‚¬ Protocol integration (optional, passed by caller) Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
     private readonly ServiceProvider? _serviceProvider;
@@ -217,6 +219,8 @@ public partial class PlayerWindow : Window
         Loaded += (_, __) =>
         {
             Play(_videoPath);
+            UpdateCodingOverlayViewport();
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(UpdateCodingOverlayViewport));
             if (!string.IsNullOrWhiteSpace(_initialOverlayText))
                 ShowOverlay(_initialOverlayText!, TimeSpan.FromSeconds(6));
 
@@ -234,6 +238,9 @@ public partial class PlayerWindow : Window
         DamageMarkerCanvas.SizeChanged += (_, __) => RepositionDamageMarkers();
         HeatmapCanvas.SizeChanged += (_, __) => RepositionHeatmap();
         DetectionCanvas.MouseLeftButtonDown += DetectionCanvas_MouseLeftButtonDown;
+        VideoView.SizeChanged += (_, __) => UpdateCodingOverlayViewport();
+        SizeChanged += (_, __) => UpdateCodingOverlayViewport();
+        LocationChanged += (_, __) => UpdateCodingOverlayViewport();
 
         Closed += (_, __) =>
         {
@@ -248,6 +255,7 @@ public partial class PlayerWindow : Window
             _codingAnalysisCts?.Dispose();
             _codingAnalysisCts = null;
             _codingLiveDetection = null;
+            StopCodingAiPulse();
 
             _quickScanCts?.Cancel();
             StopLiveDetection();
@@ -308,12 +316,30 @@ public partial class PlayerWindow : Window
             snapshotPath = Path.Combine(tempDir, $"snap_{DateTime.Now:yyyyMMdd_HHmmss}.png");
 
             // VLC Snapshot: 0 = original Aufloesung (FullHD etc.)
-            return _lastOpened._player.TakeSnapshot(0, snapshotPath, 0, 0);
+            return _lastOpened.TakeSnapshotSafe(snapshotPath);
         }
         catch
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// TakeSnapshot mit kurzem Pause-Trick, um D3D11-Deadlock zu vermeiden.
+    /// D3D11 haelt die Video-Surface exklusiv gesperrt; kurzes Pausieren gibt sie frei.
+    /// </summary>
+    private bool TakeSnapshotSafe(string filePath, uint width = 0, uint height = 0)
+    {
+        var wasPlaying = _player.IsPlaying;
+        if (wasPlaying)
+        {
+            _player.SetPause(true);
+            System.Threading.Thread.Sleep(60);
+        }
+        var success = _player.TakeSnapshot(0, filePath, width, height);
+        if (wasPlaying)
+            _player.SetPause(false);
+        return success;
     }
 
     private void ShowOverlay(string text, TimeSpan duration)
@@ -413,6 +439,23 @@ public partial class PlayerWindow : Window
 
     private void PlayerWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (e.Key == Key.Escape && _codingOverlayService != null)
+        {
+            _codingOverlayService.CancelDraw();
+            if (CodingOverlayCanvas.IsMouseCaptured)
+                CodingOverlayCanvas.ReleaseMouseCapture();
+            if (_codingVm != null)
+            {
+                _codingVm.CurrentOverlay = null;
+                BtnCodingCreateEvent.IsEnabled = false;
+                UpdateCodingOverlayInfo(null);
+            }
+            if (CodingOverlayPopup.IsOpen)
+                RedrawCodingCanvas(includeManualOverlay: false);
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.Space)
         {
             TogglePlayPause();
@@ -472,8 +515,16 @@ public partial class PlayerWindow : Window
 
         if (e.Key == Key.D)
         {
-            LiveDetectionButton.IsChecked = !(LiveDetectionButton.IsChecked == true);
-            LiveDetection_Click(LiveDetectionButton, new RoutedEventArgs());
+            if (_isCodingMode)
+            {
+                BtnCodingLiveAi.IsChecked = !(BtnCodingLiveAi.IsChecked == true);
+                CodingLiveAi_Click(BtnCodingLiveAi, new RoutedEventArgs());
+            }
+            else
+            {
+                LiveDetectionButton.IsChecked = !(LiveDetectionButton.IsChecked == true);
+                LiveDetection_Click(LiveDetectionButton, new RoutedEventArgs());
+            }
             e.Handled = true;
             return;
         }
@@ -1103,6 +1154,98 @@ public partial class PlayerWindow : Window
 
     // Ã¢"â‚¬Ã¢"â‚¬ Live Detection Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
 
+    private static string CompactModelName(string? model)
+    {
+        if (string.IsNullOrWhiteSpace(model))
+            return "?";
+
+        var trimmed = model.Trim();
+        var slashIndex = trimmed.LastIndexOf('/');
+        if (slashIndex >= 0 && slashIndex < trimmed.Length - 1)
+            trimmed = trimmed[(slashIndex + 1)..];
+        return trimmed;
+    }
+
+    private void SetLiveDetectionBadge(string status, Color dotColor, string? stage = null)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.Invoke(() => SetLiveDetectionBadge(status, dotColor, stage));
+            return;
+        }
+
+        var stageSuffix = string.IsNullOrWhiteSpace(stage) ? string.Empty : $" | {stage}";
+        AiStatusBadge.Visibility = Visibility.Visible;
+        AiStatusText.Text = $"{status}{stageSuffix}";
+        AiStatusDot.Fill = new SolidColorBrush(dotColor);
+    }
+
+    private void SetCodingAiState(string status, Color dotColor, string? stage = null, bool pulse = false)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.Invoke(() => SetCodingAiState(status, dotColor, stage, pulse));
+            return;
+        }
+
+        TxtCodingAiStatus.Text = status;
+        TxtCodingAiStage.Text = stage ?? string.Empty;
+        CodingAiDot.Fill = new SolidColorBrush(dotColor);
+        if (pulse)
+            StartCodingAiPulse();
+        else
+            StopCodingAiPulse();
+    }
+
+    private void StartCodingAiPulse()
+    {
+        if (_codingAiPulseRunning)
+            return;
+
+        _codingAiPulseRunning = true;
+        CodingAiPulseRing.Opacity = 1.0;
+        if (CodingAiPulseRing.RenderTransform is not ScaleTransform scale)
+        {
+            scale = new ScaleTransform(1, 1);
+            CodingAiPulseRing.RenderTransform = scale;
+        }
+
+        var scaleAnim = new DoubleAnimation
+        {
+            From = 1.0,
+            To = 2.2,
+            Duration = TimeSpan.FromMilliseconds(900),
+            RepeatBehavior = RepeatBehavior.Forever
+        };
+        var opacityAnim = new DoubleAnimation
+        {
+            From = 0.75,
+            To = 0.0,
+            Duration = TimeSpan.FromMilliseconds(900),
+            RepeatBehavior = RepeatBehavior.Forever
+        };
+
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnim);
+        CodingAiPulseRing.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
+    }
+
+    private void StopCodingAiPulse()
+    {
+        _codingAiPulseRunning = false;
+
+        if (CodingAiPulseRing.RenderTransform is ScaleTransform scale)
+        {
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+            scale.ScaleX = 1;
+            scale.ScaleY = 1;
+        }
+
+        CodingAiPulseRing.BeginAnimation(UIElement.OpacityProperty, null);
+        CodingAiPulseRing.Opacity = 0;
+    }
+
     private async void LiveDetection_Click(object sender, RoutedEventArgs e)
     {
         if (_isDetecting)
@@ -1163,14 +1306,14 @@ public partial class PlayerWindow : Window
 
             _liveDetectionClient = client;
             _liveDetectionService = new LiveDetectionService(client, visionModel);
+            _liveDetectionModelName = visionModel;
             _detectionCts = new CancellationTokenSource();
             _isDetecting = true;
 
             // Show overlay layer
             DetectionOverlayGrid.Visibility = Visibility.Visible;
-            AiStatusBadge.Visibility = Visibility.Visible;
-            AiStatusText.Text = $"KI aktiv ({visionModel})";
-            AiStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
+            SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
+                $"Modell: {CompactModelName(visionModel)}");
 
             LiveDetectionStatusText.Visibility = Visibility.Visible;
             LiveDetectionStatusText.Text = "Warte auf Frame...";
@@ -1202,6 +1345,7 @@ public partial class PlayerWindow : Window
         _liveDetectionService = null;
         _liveDetectionClient?.Dispose();
         _liveDetectionClient = null;
+        _liveDetectionModelName = string.Empty;
 
         // Hide overlay layer (unless manual mark mode is still active)
         if (!_isManualMarkMode)
@@ -1242,7 +1386,8 @@ public partial class PlayerWindow : Window
             return;
 
         _isDetectionInFlight = true;
-        AiStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B)); // amber = working
+        SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0xF5, 0x9E, 0x0B),
+            $"{CompactModelName(_liveDetectionModelName)} | Snapshot");
 
         try
         {
@@ -1250,10 +1395,13 @@ public partial class PlayerWindow : Window
             if (snapshot is null)
             {
                 _isDetectionInFlight = false;
-                AiStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
+                SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
+                    $"{CompactModelName(_liveDetectionModelName)} | Bereit");
                 return;
             }
 
+            SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0xF5, 0x9E, 0x0B),
+                $"{CompactModelName(_liveDetectionModelName)} | Inferenz");
             var timestampSec = _player.Time / 1000.0;
             var result = await _liveDetectionService.AnalyzeFrameAsync(
                 snapshot, timestampSec, _detectionCts.Token).ConfigureAwait(false);
@@ -1269,7 +1417,8 @@ public partial class PlayerWindow : Window
                 RenderDetectionOverlay(result.Findings, result.TimestampSeconds);
                 UpdateDetectionStatus(result);
 
-                AiStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)); // green = ready
+                SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
+                    $"{CompactModelName(_liveDetectionModelName)} | Overlay");
             });
         }
         catch (OperationCanceledException) { }
@@ -1280,7 +1429,8 @@ public partial class PlayerWindow : Window
             Dispatcher.Invoke(() =>
             {
                 LiveDetectionStatusText.Text = $"Fehler: {msg}";
-                AiStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44)); // red = error
+                SetLiveDetectionBadge("KI Fehler", Color.FromRgb(0xEF, 0x44, 0x44),
+                    CompactModelName(_liveDetectionModelName));
             });
         }
         finally
@@ -1296,7 +1446,7 @@ public partial class PlayerWindow : Window
             $"sewer_live_{Guid.NewGuid():N}.png");
         try
         {
-            var success = _player.TakeSnapshot(0, tempPath, 640, 0);
+            var success = TakeSnapshotSafe(tempPath, 640);
             if (!success)
                 return null;
 
@@ -1695,6 +1845,8 @@ public partial class PlayerWindow : Window
     private LiveDetectionService? _codingLiveDetection;
     private CancellationTokenSource? _codingAnalysisCts;
     private bool _codingIsAnalyzing;
+    private string _codingAiModelName = string.Empty;
+    private bool _codingAiPulseRunning;
 
     // Live-KI Timer (automatische Analyse alle 5s)
     private DispatcherTimer? _codingLiveAiTimer;
@@ -1707,6 +1859,8 @@ public partial class PlayerWindow : Window
     // OSD-Meter Timer (liest Meterstand kontinuierlich)
     private DispatcherTimer? _codingOsdTimer;
     private bool _codingOsdReading;
+    private int _codingOverlaySuspendDepth;
+    private bool _codingOverlayWasOpenBeforeSuspend;
 
     private void CodingMode_Click(object sender, RoutedEventArgs e)
     {
@@ -1729,6 +1883,15 @@ public partial class PlayerWindow : Window
 
         // Video pausieren
         _player.SetPause(true);
+
+        if (_isDetecting)
+        {
+            StopLiveDetection();
+            LiveDetectionButton.IsChecked = false;
+        }
+
+        LiveDetectionButton.Visibility = Visibility.Collapsed;
+        LiveDetectionStatusText.Visibility = Visibility.Collapsed;
 
         // Session-Services erstellen
         _codingSessionService = new CodingSessionService();
@@ -1787,7 +1950,11 @@ public partial class PlayerWindow : Window
         LstCodingEvents.ItemsSource = _codingVm.Events;
 
         // UI einblenden
-        CodingOverlayCanvas.Visibility = Visibility.Visible;
+        CodingOverlayPopup.IsOpen = true;
+        CodingOverlayCanvas.IsHitTestVisible = true;
+        UpdateCodingOverlayViewport();
+        UpdateCodingOverlayCursor();
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(UpdateCodingOverlayViewport));
         CodingSidePanel.Visibility = Visibility.Visible;
         CodingSidePanelColumn.Width = new GridLength(320);
         CodingToolbar.Visibility = Visibility.Visible;
@@ -1873,6 +2040,7 @@ public partial class PlayerWindow : Window
         StopCodingOsdTimer();
         _codingLiveAiTimer?.Stop();
         _codingLiveAiTimer = null;
+        StopCodingAiPulse();
 
         _codingAnalysisCts?.Cancel();
         _codingAnalysisCts?.Dispose();
@@ -1884,8 +2052,12 @@ public partial class PlayerWindow : Window
         _codingPendingGateResult = null;
 
         // UI ausblenden
-        CodingOverlayCanvas.Visibility = Visibility.Collapsed;
+        if (CodingOverlayCanvas.IsMouseCaptured)
+            CodingOverlayCanvas.ReleaseMouseCapture();
+        CodingOverlayPopup.IsOpen = false;
         CodingOverlayCanvas.Children.Clear();
+        CodingOverlayCanvas.IsHitTestVisible = false;
+        CodingOverlayCanvas.Cursor = Cursors.Arrow;
         CodingSidePanel.Visibility = Visibility.Collapsed;
         CodingSidePanelColumn.Width = new GridLength(0);
         CodingToolbar.Visibility = Visibility.Collapsed;
@@ -1894,6 +2066,8 @@ public partial class PlayerWindow : Window
         CodingCalibrationHint.Visibility = Visibility.Collapsed;
         CodingMeasurementPanel.Visibility = Visibility.Collapsed;
         OsdMeterBadge.Visibility = Visibility.Collapsed;
+        LiveDetectionButton.Visibility = Visibility.Visible;
+        LiveDetectionStatusText.Visibility = _isDetecting ? Visibility.Visible : Visibility.Collapsed;
 
         // Alle Tool-Buttons unchecken
         BtnCodingCalibrate.IsChecked = false;
@@ -1903,27 +2077,7 @@ public partial class PlayerWindow : Window
         BtnCodingPoint.IsChecked = false;
         BtnCodingStretch.IsChecked = false;
         BtnCodingLiveAi.IsChecked = false;
-
-        // Protokoll uebernehmen wenn Events vorhanden
-        if (_codingVm != null && _codingVm.Events.Count > 0 && _haltungRecord != null)
-        {
-            try
-            {
-                // Session fortsetzen damit Complete funktioniert
-                if (_codingVm.IsPaused)
-                    _codingSessionService!.ResumeSession();
-                var doc = _codingSessionService!.CompleteSession();
-                _haltungRecord.Protocol = doc;
-                _haltungRecord.ModifiedAtUtc = DateTime.UtcNow;
-
-                // Primaere Schaeden ins DataGrid uebertragen
-                SyncCodingToPrimaryDamages(doc);
-
-                // Protokoll-Vorschau oeffnen (nachtraeglich bearbeitbar)
-                ShowCodingProtocolPreview(doc);
-            }
-            catch { /* Session war evtl. schon beendet */ }
-        }
+        TxtCodingAiStage.Text = string.Empty;
 
         _codingVm = null;
         _codingSessionService = null;
@@ -1931,28 +2085,47 @@ public partial class PlayerWindow : Window
         _codingIsCalibrating = false;
         _codingCalibStart = null;
         _codingLastOsdMeter = null;
+        _codingOverlaySuspendDepth = 0;
+        _codingOverlayWasOpenBeforeSuspend = false;
     }
 
     private void CodingApply_Click(object sender, RoutedEventArgs e)
     {
         if (_codingVm == null || _haltungRecord == null) return;
 
-        if (_codingVm.Events.Count == 0)
-        {
-            ShowOverlay("Keine Ereignisse zum Uebernehmen", TimeSpan.FromSeconds(3));
-            return;
-        }
-
         // ProtocolDocument aus allen Events aufbauen
         var doc = _haltungRecord.Protocol ?? new ProtocolDocument();
         doc.Current ??= new ProtocolRevision();
+        doc.Current.Entries ??= new List<ProtocolEntry>();
 
-        // Bestehende Eintraege markieren, neue hinzufuegen
-        var existingIds = new HashSet<Guid>(doc.Current.Entries.Select(e2 => e2.EntryId));
-        foreach (var codingEvent in _codingVm.Events)
+        // 1) Aktuelle Coding-Events als "Soll-Zustand" (korrigierte Werte) aufbauen
+        var eventEntries = _codingVm.Events
+            .Select(ev => ev.Entry)
+            .Where(e => e != null && !string.IsNullOrWhiteSpace(e.Code))
+            .GroupBy(e => e.EntryId)
+            .Select(g => g.Last())
+            .ToDictionary(e => e.EntryId, e => e);
+
+        // 2) Vorhandene Protokoll-Eintraege updaten oder als geloescht markieren
+        var existingById = doc.Current.Entries.ToDictionary(e => e.EntryId, e => e);
+        foreach (var existing in doc.Current.Entries)
         {
-            if (!existingIds.Contains(codingEvent.Entry.EntryId))
-                doc.Current.Entries.Add(codingEvent.Entry);
+            if (eventEntries.TryGetValue(existing.EntryId, out var updated))
+            {
+                CopyProtocolEntryValues(updated, existing);
+                existing.IsDeleted = false;
+            }
+            else
+            {
+                existing.IsDeleted = true;
+            }
+        }
+
+        // 3) Neue Eintraege aus Coding-Events anhaengen
+        foreach (var kv in eventEntries)
+        {
+            if (!existingById.ContainsKey(kv.Key))
+                doc.Current.Entries.Add(kv.Value);
         }
 
         _haltungRecord.Protocol = doc;
@@ -1961,7 +2134,25 @@ public partial class PlayerWindow : Window
         // Primaere Schaeden ins DataGrid uebertragen
         SyncCodingToPrimaryDamages(doc);
 
-        ShowOverlay($"{_codingVm.Events.Count} Ereignisse in Primaere Schaeden uebernommen", TimeSpan.FromSeconds(4));
+        var message = _codingVm.Events.Count == 0
+            ? "Primaere Schaeden geleert"
+            : $"{_codingVm.Events.Count} Ereignisse in Primaere Schaeden uebernommen";
+        ShowOverlay(message, TimeSpan.FromSeconds(4));
+    }
+
+    private static void CopyProtocolEntryValues(ProtocolEntry source, ProtocolEntry target)
+    {
+        target.Code = source.Code;
+        target.Beschreibung = source.Beschreibung;
+        target.MeterStart = source.MeterStart;
+        target.MeterEnd = source.MeterEnd;
+        target.IsStreckenschaden = source.IsStreckenschaden;
+        target.Mpeg = source.Mpeg;
+        target.Zeit = source.Zeit;
+        target.Source = source.Source;
+        target.CodeMeta = source.CodeMeta;
+        target.Ai = source.Ai;
+        target.FotoPaths = source.FotoPaths?.ToList() ?? new List<string>();
     }
 
     /// <summary>
@@ -2141,6 +2332,24 @@ public partial class PlayerWindow : Window
         _codingVm.CurrentVideoTime = TimeSpan.FromMilliseconds(_player.Time);
     }
 
+    /// <summary>
+    /// Hält die Overlay-Zeichenfläche exakt auf VideoView-Größe.
+    /// Wichtig für Popup-Overlay über VLC (HwndHost/Airspace).
+    /// </summary>
+    private void UpdateCodingOverlayViewport()
+    {
+        double w = VideoView.ActualWidth;
+        double h = VideoView.ActualHeight;
+        if (double.IsNaN(w) || double.IsInfinity(w) || w <= 1 ||
+            double.IsNaN(h) || double.IsInfinity(h) || h <= 1)
+            return;
+
+        if (Math.Abs(CodingOverlayCanvas.Width - w) > 0.5)
+            CodingOverlayCanvas.Width = w;
+        if (Math.Abs(CodingOverlayCanvas.Height - h) > 0.5)
+            CodingOverlayCanvas.Height = h;
+    }
+
     // --- Coding Navigation ---
 
     private async void CodingNext_Click(object sender, RoutedEventArgs e)
@@ -2177,10 +2386,17 @@ public partial class PlayerWindow : Window
         => SetCodingTool(BtnCodingPoint, OverlayToolType.Point);
     private void CodingToolStretch_Click(object sender, RoutedEventArgs e)
         => SetCodingTool(BtnCodingStretch, OverlayToolType.Stretch);
-    private void CodingToolProtractor_Click(object sender, RoutedEventArgs e)
-        => SetCodingTool(BtnCodingProtractor, OverlayToolType.Protractor);
-    private void CodingToolDnCircle_Click(object sender, RoutedEventArgs e)
-        => SetCodingTool(BtnCodingDnCircle, OverlayToolType.DnCircle);
+    private void CodingToolPipeBend_Click(object sender, RoutedEventArgs e)
+        => SetCodingTool(BtnCodingPipeBend, OverlayToolType.PipeBend);
+    private void CodingPipeBendSnap_Click(object sender, RoutedEventArgs e)
+    {
+        if (_codingOverlayService == null) return;
+        _codingOverlayService.PipeBendSnapEnabled = BtnCodingPipeBendSnap.IsChecked == true;
+        if (_codingVm?.CurrentOverlay?.ToolType == OverlayToolType.PipeBend)
+            UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
+    }
+    private void CodingToolLateralCircle_Click(object sender, RoutedEventArgs e)
+        => SetCodingTool(BtnCodingLateralCircle, OverlayToolType.LateralCircle);
     private void CodingToolRuler_Click(object sender, RoutedEventArgs e)
         => SetCodingTool(BtnCodingRuler, OverlayToolType.Ruler);
 
@@ -2198,7 +2414,7 @@ public partial class PlayerWindow : Window
         BtnCodingCalibrate.IsChecked = false;
 
         // Andere Tool-Buttons unchecken
-        foreach (var btn in new[] { BtnCodingLine, BtnCodingArc, BtnCodingRect, BtnCodingPoint, BtnCodingStretch, BtnCodingProtractor, BtnCodingDnCircle, BtnCodingRuler })
+        foreach (var btn in new[] { BtnCodingLine, BtnCodingArc, BtnCodingRect, BtnCodingPoint, BtnCodingStretch, BtnCodingPipeBend, BtnCodingLateralCircle, BtnCodingRuler })
         {
             if (btn != activeBtn) btn.IsChecked = false;
         }
@@ -2209,7 +2425,58 @@ public partial class PlayerWindow : Window
         _codingVm.CurrentOverlay = null;
         BtnCodingCreateEvent.IsEnabled = false;
         UpdateCodingOverlayInfo(null);
+        UpdateCodingOverlayCursor();
         RedrawCodingCanvas(includeManualOverlay: false);
+    }
+
+    private void SuspendCodingOverlayInput()
+    {
+        _codingOverlaySuspendDepth++;
+        if (_codingOverlaySuspendDepth > 1)
+            return;
+
+        if (CodingOverlayCanvas.IsMouseCaptured)
+            CodingOverlayCanvas.ReleaseMouseCapture();
+        _codingOverlayService?.CancelDraw();
+        _codingOverlayWasOpenBeforeSuspend = CodingOverlayPopup.IsOpen;
+        CodingOverlayCanvas.IsHitTestVisible = false;
+        CodingOverlayCanvas.Cursor = Cursors.Arrow;
+        if (_codingOverlayWasOpenBeforeSuspend)
+            CodingOverlayPopup.IsOpen = false;
+    }
+
+    private void ResumeCodingOverlayInput()
+    {
+        if (_codingOverlaySuspendDepth <= 0)
+            return;
+
+        _codingOverlaySuspendDepth--;
+        if (_codingOverlaySuspendDepth > 0)
+            return;
+
+        if (_codingOverlayWasOpenBeforeSuspend)
+        {
+            CodingOverlayPopup.IsOpen = true;
+            UpdateCodingOverlayViewport();
+            RedrawCodingCanvas(includeManualOverlay: _codingVm?.CurrentOverlay != null);
+        }
+
+        CodingOverlayCanvas.IsHitTestVisible = true;
+        UpdateCodingOverlayCursor();
+        _codingOverlayWasOpenBeforeSuspend = false;
+    }
+
+    private void UpdateCodingOverlayCursor()
+    {
+        if (!CodingOverlayPopup.IsOpen)
+        {
+            CodingOverlayCanvas.Cursor = Cursors.Arrow;
+            return;
+        }
+
+        var activeTool = _codingOverlayService?.ActiveTool ?? OverlayToolType.None;
+        var isInteractive = _codingIsCalibrating || activeTool != OverlayToolType.None;
+        CodingOverlayCanvas.Cursor = isInteractive ? Cursors.Cross : Cursors.Arrow;
     }
 
     private void CodingCalibrate_Click(object sender, RoutedEventArgs e)
@@ -2220,7 +2487,7 @@ public partial class PlayerWindow : Window
         _codingOverlayService.ActiveTool = OverlayToolType.None;
 
         // Andere Tool-Buttons unchecken
-        foreach (var btn in new[] { BtnCodingLine, BtnCodingArc, BtnCodingRect, BtnCodingPoint, BtnCodingStretch, BtnCodingProtractor, BtnCodingDnCircle, BtnCodingRuler })
+        foreach (var btn in new[] { BtnCodingLine, BtnCodingArc, BtnCodingRect, BtnCodingPoint, BtnCodingStretch, BtnCodingPipeBend, BtnCodingLateralCircle, BtnCodingRuler })
             btn.IsChecked = false;
 
         _codingVm.CurrentOverlay = null;
@@ -2229,6 +2496,7 @@ public partial class PlayerWindow : Window
 
         CodingCalibrationHint.Visibility = _codingIsCalibrating ? Visibility.Visible : Visibility.Collapsed;
         TxtCodingCalibHint.Text = "Linie ueber den sichtbaren Rohrdurchmesser zeichnen";
+        UpdateCodingOverlayCursor();
         RedrawCodingCanvas(includeManualOverlay: false);
     }
 
@@ -2378,7 +2646,7 @@ public partial class PlayerWindow : Window
             UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
             BtnCodingCreateEvent.IsEnabled = true;
 
-            // Wenn Live-KI aktiv: Overlay-Zeichnung -> KI analysiert markierte Stelle
+            // Wenn Auto-KI aktiv: Overlay-Zeichnung -> KI analysiert markierte Stelle
             if (BtnCodingLiveAi.IsChecked == true)
                 _ = AnalyzeWithOverlayHintAsync(_codingVm.CurrentOverlay);
         }
@@ -2424,12 +2692,20 @@ public partial class PlayerWindow : Window
         _codingCalibStart = null;
         BtnCodingCalibrate.IsChecked = false;
         CodingCalibrationHint.Visibility = Visibility.Collapsed;
+        UpdateCodingOverlayCursor();
     }
 
     private NormalizedPoint CodingPixelToNorm(Point pixel)
     {
         double w = CodingOverlayCanvas.ActualWidth, h = CodingOverlayCanvas.ActualHeight;
-        if (w <= 0 || h <= 0) return new NormalizedPoint(0.5, 0.5);
+        if (w <= 0 || h <= 0)
+        {
+            UpdateCodingOverlayViewport();
+            w = CodingOverlayCanvas.ActualWidth;
+            h = CodingOverlayCanvas.ActualHeight;
+            if (w <= 0 || h <= 0)
+                return new NormalizedPoint(0.5, 0.5);
+        }
         return new NormalizedPoint(pixel.X / w, pixel.Y / h);
     }
 
@@ -2453,6 +2729,7 @@ public partial class PlayerWindow : Window
 
     private void RedrawCodingCanvas(bool includeManualOverlay)
     {
+        UpdateCodingOverlayViewport();
         ClearTransientCodingCanvas(clearManualOverlay: true);
         RenderAiOverlays();
         RenderReferenceDn();
@@ -2567,12 +2844,12 @@ public partial class PlayerWindow : Window
                 }
                 break;
 
-            case OverlayToolType.Protractor:
-                RenderProtractorOverlay(overlay, isPreview, stroke, glowEffect, tag, labelAnchor);
+            case OverlayToolType.PipeBend:
+                RenderPipeBendOverlay(overlay, isPreview, stroke, glowEffect, tag, labelAnchor);
                 return; // Eigenes Label-Rendering
 
-            case OverlayToolType.DnCircle:
-                RenderDnCircleOverlay(overlay, isPreview, stroke, glowEffect, tag, labelAnchor);
+            case OverlayToolType.LateralCircle:
+                RenderLateralCircleOverlay(overlay, isPreview, stroke, glowEffect, tag, labelAnchor);
                 return; // Eigenes Label-Rendering
 
             case OverlayToolType.Ruler:
@@ -2657,7 +2934,7 @@ public partial class PlayerWindow : Window
 
     // --- Winkelmesser (Protractor): 2 Linien + Winkelbogen + Grad-Label ---
 
-    private void RenderProtractorOverlay(
+    private void RenderPipeBendOverlay(
         OverlayGeometry overlay, bool isPreview, Brush defaultStroke,
         System.Windows.Media.Effects.DropShadowEffect glowEffect, string tag,
         NormalizedPoint? labelAnchor)
@@ -2775,7 +3052,7 @@ public partial class PlayerWindow : Window
 
     // --- DN-Kreis: Kreis + DN-Label ---
 
-    private void RenderDnCircleOverlay(
+    private void RenderLateralCircleOverlay(
         OverlayGeometry overlay, bool isPreview, Brush defaultStroke,
         System.Windows.Media.Effects.DropShadowEffect glowEffect, string tag,
         NormalizedPoint? labelAnchor)
@@ -3018,10 +3295,10 @@ public partial class PlayerWindow : Window
     private static string BuildOverlayMeasurementText(OverlayGeometry overlay)
     {
         // Werkzeug-spezifische Texte
-        if (overlay.ToolType == OverlayToolType.Protractor && overlay.ArcDegrees.HasValue)
+        if (overlay.ToolType == OverlayToolType.PipeBend && overlay.ArcDegrees.HasValue)
             return $"Winkel: {overlay.ArcDegrees.Value:F1}\u00B0";
 
-        if (overlay.ToolType == OverlayToolType.DnCircle)
+        if (overlay.ToolType == OverlayToolType.LateralCircle)
         {
             var dnParts = new List<string>();
             if (overlay.Q1Mm.HasValue) dnParts.Add($"DN {overlay.Q1Mm.Value:F0}");
@@ -3067,7 +3344,7 @@ public partial class PlayerWindow : Window
             ? $"Uhr: {overlay.ClockFrom:F1}" + (overlay.ClockTo.HasValue ? $" -> {overlay.ClockTo:F1}" : "")
             : "Uhr: -";
         TxtCodingArc.Text = overlay.ArcDegrees.HasValue
-            ? (overlay.ToolType == OverlayToolType.Protractor
+            ? (overlay.ToolType == OverlayToolType.PipeBend
                 ? $"Winkel: {overlay.ArcDegrees:F1}\u00B0"
                 : $"Bogen: {overlay.ArcDegrees:F0} deg")
             : "Bogen: -";
@@ -3076,12 +3353,12 @@ public partial class PlayerWindow : Window
         var parts = new List<string>();
 
         // Werkzeug-spezifische Anzeige
-        if (overlay.ToolType == OverlayToolType.Protractor)
+        if (overlay.ToolType == OverlayToolType.PipeBend)
         {
             if (overlay.ArcDegrees.HasValue) parts.Add($"Winkel:{overlay.ArcDegrees:F1}\u00B0");
             if (overlay.ClockFrom.HasValue) parts.Add($"Uhr:{overlay.ClockFrom:F1}");
         }
-        else if (overlay.ToolType == OverlayToolType.DnCircle)
+        else if (overlay.ToolType == OverlayToolType.LateralCircle)
         {
             if (overlay.Q1Mm.HasValue) parts.Add($"DN:{overlay.Q1Mm:F0}mm");
             if (overlay.DnRatioPercent.HasValue) parts.Add($"{overlay.DnRatioPercent:F0}%");
@@ -3104,87 +3381,90 @@ public partial class PlayerWindow : Window
 
     private async void CodingSelectCode_Click(object sender, RoutedEventArgs e)
     {
-        if (_codingVm == null || _serviceProvider == null) return;
+        if (_codingVm == null) return;
 
         // Video pausieren
         _player.SetPause(true);
+        SuspendCodingOverlayInput();
 
-        var videoZeit = TimeSpan.FromMilliseconds(Math.Max(0, _player.Time));
-
-        // Meterstand: OSD bevorzugen, sonst Timeline-Fallback.
-        var timelineMeter = _codingVm.CurrentMeter;
-        if (_player.Length > 0 && _codingVm.EndMeter > 0)
+        try
         {
-            timelineMeter = Math.Round((_player.Time / (double)_player.Length) * _codingVm.EndMeter, 2);
+            var videoZeit = TimeSpan.FromMilliseconds(Math.Max(0, _player.Time));
+
+            var timelineMeter = _codingVm.CurrentMeter;
+            if (_player.Length > 0 && _codingVm.EndMeter > 0)
+            {
+                timelineMeter = Math.Round((_player.Time / (double)_player.Length) * _codingVm.EndMeter, 2);
+            }
+
+            var osdMeter = await CodingReadOsdMeterAsync();
+            var meterValue = Math.Round(Math.Max(0, osdMeter ?? _codingLastOsdMeter ?? timelineMeter), 2);
+
+            var snapshotSeed = new ProtocolEntry
+            {
+                Code = "SNAP",
+                MeterStart = meterValue,
+                Zeit = videoZeit
+            };
+            var fotoPath = CodingCaptureSnapshot(snapshotSeed);
+
+            var entry = new ProtocolEntry
+            {
+                Source = ProtocolEntrySource.Manual,
+                MeterStart = meterValue,
+                MeterEnd = meterValue,
+                Zeit = videoZeit
+            };
+
+            if (fotoPath != null)
+                entry.FotoPaths.Add(fotoPath);
+
+            if (_codingVm.CurrentOverlay != null)
+            {
+                entry.CodeMeta ??= new ProtocolEntryCodeMeta();
+                if (_codingVm.CurrentOverlay.ClockFrom.HasValue)
+                    entry.CodeMeta.Parameters["vsa.uhr.von"] = _codingVm.CurrentOverlay.ClockFrom.Value.ToString("F1");
+                if (_codingVm.CurrentOverlay.ClockTo.HasValue)
+                    entry.CodeMeta.Parameters["vsa.uhr.bis"] = _codingVm.CurrentOverlay.ClockTo.Value.ToString("F1");
+                if (_codingVm.CurrentOverlay.Q1Mm.HasValue)
+                    entry.CodeMeta.Parameters["vsa.q1"] = _codingVm.CurrentOverlay.Q1Mm.Value.ToString("F1");
+            }
+
+            var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+                entry, meterValue, videoZeit);
+
+            var dlg = new VsaCodeExplorerWindow(explorerVm, _videoPath, videoZeit)
+            {
+                Owner = this
+            };
+
+            if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
+            {
+                var result = dlg.SelectedEntry;
+                entry.Code = result.Code;
+                entry.Beschreibung = result.Beschreibung;
+                entry.CodeMeta = result.CodeMeta;
+                entry.MeterStart = result.MeterStart;
+                entry.MeterEnd = result.MeterEnd;
+                entry.Zeit = result.Zeit;
+                entry.IsStreckenschaden = result.IsStreckenschaden;
+                entry.FotoPaths = result.FotoPaths;
+
+                var createdEvent = _codingSessionService!.AddEvent(entry, _codingVm.CurrentOverlay);
+
+                RefreshCodingEventsList();
+                LstCodingEvents.SelectedItem = createdEvent;
+
+                _codingVm.CurrentOverlay = null;
+                RedrawCodingCanvas(includeManualOverlay: false);
+                TxtCodingSelectedCode.Text = "";
+                BtnCodingCreateEvent.IsEnabled = false;
+                UpdateCodingOverlayInfo(null);
+            }
         }
-
-        var osdMeter = await CodingReadOsdMeterAsync();
-        var meterValue = Math.Round(Math.Max(0, osdMeter ?? _codingLastOsdMeter ?? timelineMeter), 2);
-
-        // Foto 1 automatisch vom aktuellen Frame
-        var snapshotSeed = new ProtocolEntry
+        finally
         {
-            Code = "SNAP",
-            MeterStart = meterValue,
-            Zeit = videoZeit
-        };
-        var fotoPath = CodingCaptureSnapshot(snapshotSeed);
-
-        var entry = new ProtocolEntry
-        {
-            Source = ProtocolEntrySource.Manual,
-            MeterStart = meterValue,
-            MeterEnd = meterValue,
-            Zeit = videoZeit
-        };
-
-        if (fotoPath != null)
-            entry.FotoPaths.Add(fotoPath);
-
-        if (_codingVm.CurrentOverlay != null)
-        {
-            entry.CodeMeta ??= new ProtocolEntryCodeMeta();
-            if (_codingVm.CurrentOverlay.ClockFrom.HasValue)
-                entry.CodeMeta.Parameters["vsa.uhr.von"] = _codingVm.CurrentOverlay.ClockFrom.Value.ToString("F1");
-            if (_codingVm.CurrentOverlay.ClockTo.HasValue)
-                entry.CodeMeta.Parameters["vsa.uhr.bis"] = _codingVm.CurrentOverlay.ClockTo.Value.ToString("F1");
-            if (_codingVm.CurrentOverlay.Q1Mm.HasValue)
-                entry.CodeMeta.Parameters["vsa.q1"] = _codingVm.CurrentOverlay.Q1Mm.Value.ToString("F1");
-        }
-
-        // VsaCodeExplorerWindow oeffnen (vereintes Fenster: Code + Position + Foto)
-        var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
-            entry, meterValue, videoZeit);
-
-        var dlg = new VsaCodeExplorerWindow(explorerVm, _videoPath, videoZeit)
-        {
-            Owner = this
-        };
-
-        if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
-        {
-            var result = dlg.SelectedEntry;
-            entry.Code = result.Code;
-            entry.Beschreibung = result.Beschreibung;
-            entry.CodeMeta = result.CodeMeta;
-            entry.MeterStart = result.MeterStart;
-            entry.MeterEnd = result.MeterEnd;
-            entry.Zeit = result.Zeit;
-            entry.IsStreckenschaden = result.IsStreckenschaden;
-            entry.FotoPaths = result.FotoPaths;
-
-            // Event hinzufuegen
-            _codingSessionService!.AddEvent(entry, _codingVm.CurrentOverlay);
-
-            // Nach Meter sortiert anzeigen
-            RefreshCodingEventsList();
-
-            // Reset
-            _codingVm.CurrentOverlay = null;
-            RedrawCodingCanvas(includeManualOverlay: false);
-            TxtCodingSelectedCode.Text = "";
-            BtnCodingCreateEvent.IsEnabled = false;
-            UpdateCodingOverlayInfo(null);
+            ResumeCodingOverlayInput();
         }
     }
     private void CodingCreateEvent_Click(object sender, RoutedEventArgs e)
@@ -3258,7 +3538,7 @@ public partial class PlayerWindow : Window
             var fileName = $"{entry.Code}_{entry.MeterStart:F2}m_{ts}.png";
             var filePath = Path.Combine(fotoDir, fileName);
 
-            _player.TakeSnapshot(0, filePath, 0, 0);
+            TakeSnapshotSafe(filePath);
 
             // VLC schreibt asynchron - kurz warten
             for (int i = 0; i < 20; i++)
@@ -3343,6 +3623,7 @@ public partial class PlayerWindow : Window
 
         // Video pausieren waehrend Bearbeitung
         _player.SetPause(true);
+        SuspendCodingOverlayInput();
 
         var entry = codingEvent.Entry;
         var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
@@ -3354,7 +3635,17 @@ public partial class PlayerWindow : Window
             Owner = this
         };
 
-        if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
+        bool? dialogResult;
+        try
+        {
+            dialogResult = dlg.ShowDialog();
+        }
+        finally
+        {
+            ResumeCodingOverlayInput();
+        }
+
+        if (dialogResult == true && dlg.SelectedEntry is not null)
         {
             var result = dlg.SelectedEntry;
             entry.Code = result.Code;
@@ -3367,8 +3658,9 @@ public partial class PlayerWindow : Window
             entry.FotoPaths = result.FotoPaths;
 
             // Meter aktualisieren falls geaendert
-            codingEvent.MeterAtCapture = entry.MeterStart ?? codingEvent.MeterAtCapture;
+            codingEvent.MeterAtCapture = entry.MeterStart ?? entry.MeterEnd ?? codingEvent.MeterAtCapture;
             codingEvent.VideoTimestamp = entry.Zeit ?? codingEvent.VideoTimestamp;
+            _codingSessionService?.UpdateEvent(codingEvent.EventId, entry, codingEvent.Overlay);
 
             // Events-Liste neu binden um Anzeige zu aktualisieren
             RefreshCodingEventsList();
@@ -3482,10 +3774,24 @@ public partial class PlayerWindow : Window
     private void CodingEventDelete_Click(object sender, RoutedEventArgs e)
     {
         if (LstCodingEvents.SelectedItem is not CodingEvent codingEvent) return;
-        if (MessageBox.Show($"Ereignis '{codingEvent.Entry.Code}' loeschen?", "Loeschen",
-                MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        SuspendCodingOverlayInput();
+        MessageBoxResult confirm;
+        try
+        {
+            confirm = MessageBox.Show($"Ereignis '{codingEvent.Entry.Code}' loeschen?", "Loeschen",
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
+        }
+        finally
+        {
+            ResumeCodingOverlayInput();
+        }
+        if (confirm != MessageBoxResult.Yes) return;
 
+        _codingSessionService?.RemoveEvent(codingEvent.EventId);
         _codingVm?.Events.Remove(codingEvent);
+        if (_codingVm != null && ReferenceEquals(_codingVm.SelectedDefect, codingEvent))
+            _codingVm.SelectedDefect = null;
+        CodingDefectDetailPanel.Visibility = Visibility.Collapsed;
         RefreshCodingEventsList();
     }
 
@@ -3532,6 +3838,19 @@ public partial class PlayerWindow : Window
         }
     }
 
+    private void CodingEvents_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        var dep = e.OriginalSource as DependencyObject;
+        while (dep != null && dep is not ListBoxItem)
+            dep = VisualTreeHelper.GetParent(dep);
+
+        if (dep is ListBoxItem item)
+        {
+            item.IsSelected = true;
+            item.Focus();
+        }
+    }
+
     private void CodingAcceptDefect_Click(object sender, RoutedEventArgs e)
     {
         _codingVm?.AcceptDefectCommand.Execute(null);
@@ -3544,33 +3863,44 @@ public partial class PlayerWindow : Window
 
     private void CodingEditDefect_Click(object sender, RoutedEventArgs e)
     {
-        if (_codingVm?.SelectedDefect == null) return;
+        if (_codingVm == null) return;
+        var ev = _codingVm.SelectedDefect ?? LstCodingEvents.SelectedItem as CodingEvent;
+        if (ev == null) return;
+        _codingVm.SelectedDefect = ev;
+        _player.SetPause(true);
+        SuspendCodingOverlayInput();
 
-        var ev = _codingVm.SelectedDefect;
-        var sp = App.Services as ServiceProvider;
-        if (sp == null) return;
-
-        var entry = ev.Entry;
-        var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
-            entry, entry.MeterStart, entry.Zeit);
-
-        var dlg = new VsaCodeExplorerWindow(explorerVm, _codingVm.VideoPath, _codingVm.CurrentVideoTime) { Owner = this };
-        if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
+        try
         {
-            var result = dlg.SelectedEntry;
-            entry.Code = result.Code;
-            entry.Beschreibung = result.Beschreibung;
-            entry.CodeMeta = result.CodeMeta;
-            entry.MeterStart = result.MeterStart;
-            entry.MeterEnd = result.MeterEnd;
-            entry.Zeit = result.Zeit;
-            entry.IsStreckenschaden = result.IsStreckenschaden;
-            entry.FotoPaths = result.FotoPaths;
-            _codingSessionService?.UpdateEvent(ev.EventId, entry, ev.Overlay);
+            var entry = ev.Entry;
+            var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+                entry, entry.MeterStart, entry.Zeit);
 
-            _codingVm.EditDefectCommand.Execute(null);
-            RefreshCodingEventsList();
-            UpdateCodingDefectDetailPanel(ev);
+            var dlg = new VsaCodeExplorerWindow(explorerVm, _codingVm.VideoPath, _codingVm.CurrentVideoTime) { Owner = this };
+            if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
+            {
+                var result = dlg.SelectedEntry;
+                entry.Code = result.Code;
+                entry.Beschreibung = result.Beschreibung;
+                entry.CodeMeta = result.CodeMeta;
+                entry.MeterStart = result.MeterStart;
+                entry.MeterEnd = result.MeterEnd;
+                entry.Zeit = result.Zeit;
+                entry.IsStreckenschaden = result.IsStreckenschaden;
+                entry.FotoPaths = result.FotoPaths;
+                _codingSessionService?.UpdateEvent(ev.EventId, entry, ev.Overlay);
+                ev.MeterAtCapture = entry.MeterStart ?? entry.MeterEnd ?? ev.MeterAtCapture;
+                ev.VideoTimestamp = entry.Zeit ?? ev.VideoTimestamp;
+
+                if (ev.AiContext != null)
+                    _codingVm.EditDefectCommand.Execute(null);
+                RefreshCodingEventsList();
+                UpdateCodingDefectDetailPanel(ev);
+            }
+        }
+        finally
+        {
+            ResumeCodingOverlayInput();
         }
     }
 
@@ -3624,11 +3954,13 @@ public partial class PlayerWindow : Window
         var status = CodingSessionViewModel.GetDefectStatus(ev);
         TxtCodingDetailStatus.Text = $"Status: {CodingStatusToDisplayText(status)}";
 
-        // Aktionsbuttons nur bei offenen KI-Events
-        CodingDefectActionGrid.Visibility = ev.AiContext != null &&
-            status is DefectStatus.Pending or DefectStatus.ReviewRequired
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        // Bearbeiten ist immer moeglich; KI-Aktionen nur bei offenen KI-Events.
+        var showAiActions = ev.AiContext != null
+            && status is DefectStatus.Pending or DefectStatus.ReviewRequired;
+        CodingDefectActionGrid.Visibility = Visibility.Visible;
+        BtnCodingEditDefect.Visibility = Visibility.Visible;
+        BtnCodingAcceptDefect.Visibility = showAiActions ? Visibility.Visible : Visibility.Collapsed;
+        BtnCodingRejectDefect.Visibility = showAiActions ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private static string CodingStatusToDisplayText(DefectStatus status) => status switch
@@ -3782,7 +4114,12 @@ public partial class PlayerWindow : Window
         var entries = doc.Current?.Entries?
             .Where(e => !e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code))
             .ToList();
-        if (entries == null || entries.Count == 0) return;
+        if (entries == null || entries.Count == 0)
+        {
+            _haltungRecord.SetFieldValue("Primaere_Schaeden", "", FieldSource.Manual, userEdited: true);
+            _haltungRecord.ModifiedAtUtc = DateTime.UtcNow;
+            return;
+        }
 
         // Zeilen fuer Primaere_Schaeden aufbauen
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -3892,9 +4229,10 @@ public partial class PlayerWindow : Window
         try
         {
             var config = AiRuntimeConfig.Load();
+            _codingAiModelName = config.VisionModel;
             if (!config.Enabled)
             {
-                TxtCodingAiStatus.Text = "KI deaktiviert";
+                SetCodingAiState("KI deaktiviert", Color.FromRgb(0x94, 0xA3, 0xB8), "Modell: aus");
                 BtnCodingAnalyze.IsEnabled = false;
                 return;
             }
@@ -3902,17 +4240,23 @@ public partial class PlayerWindow : Window
             var client = config.CreateOllamaClient();
             _codingLiveDetection = new LiveDetectionService(client, config.VisionModel);
             _codingQualityGate = new QualityGateService();
-            CodingAiDot.Fill = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
-            TxtCodingAiStatus.Text = "KI Bereit";
+            SetCodingAiState("KI Bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
+                $"Modell: {CompactModelName(_codingAiModelName)}");
         }
         catch (Exception ex)
         {
-            TxtCodingAiStatus.Text = $"Fehler: {ex.Message}";
+            SetCodingAiState($"Fehler: {ex.Message}", Color.FromRgb(0xEF, 0x44, 0x44),
+                $"Modell: {CompactModelName(_codingAiModelName)}");
             BtnCodingAnalyze.IsEnabled = false;
         }
     }
 
     private async void CodingAnalyzeFrame_Click(object sender, RoutedEventArgs e)
+    {
+        await RunCodingAnalysisAsync("Analysiere...", disableAnalyzeButton: true);
+    }
+
+    private async Task RunCodingAnalysisAsync(string activityText, bool disableAnalyzeButton = false)
     {
         if (_codingLiveDetection == null || _codingIsAnalyzing) return;
 
@@ -3922,18 +4266,22 @@ public partial class PlayerWindow : Window
 
         try
         {
-            BtnCodingAnalyze.IsEnabled = false;
-            TxtCodingAiStatus.Text = "Analysiere...";
-            CodingAiDot.Fill = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
+            if (disableAnalyzeButton)
+                BtnCodingAnalyze.IsEnabled = false;
+
+            SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
+                "1/3 Snapshot", pulse: true);
 
             var pngBytes = await CaptureSnapshotAsync();
             if (pngBytes == null || pngBytes.Length == 0)
             {
-                TxtCodingAiStatus.Text = "Frame nicht extrahierbar";
-                CodingAiDot.Fill = new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44));
+                SetCodingAiState("Frame nicht extrahierbar", Color.FromRgb(0xEF, 0x44, 0x44),
+                    $"Modell: {CompactModelName(_codingAiModelName)}");
                 return;
             }
 
+            SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
+                $"2/3 Inferenz ({CompactModelName(_codingAiModelName)})", pulse: true);
             var result = await _codingLiveDetection.AnalyzeFrameAsync(
                 pngBytes, _player.Time / 1000.0, _codingAnalysisCts.Token);
 
@@ -3942,13 +4290,14 @@ public partial class PlayerWindow : Window
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            TxtCodingAiStatus.Text = $"Fehler: {ex.Message}";
-            CodingAiDot.Fill = new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44));
+            SetCodingAiState($"Fehler: {ex.Message}", Color.FromRgb(0xEF, 0x44, 0x44),
+                $"Modell: {CompactModelName(_codingAiModelName)}");
         }
         finally
         {
             _codingIsAnalyzing = false;
-            BtnCodingAnalyze.IsEnabled = true;
+            if (disableAnalyzeButton)
+                BtnCodingAnalyze.IsEnabled = true;
         }
     }
 
@@ -3956,8 +4305,8 @@ public partial class PlayerWindow : Window
     {
         if (result.Error != null)
         {
-            TxtCodingAiStatus.Text = $"Fehler: {result.Error}";
-            CodingAiDot.Fill = new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44));
+            SetCodingAiState($"Fehler: {result.Error}", Color.FromRgb(0xEF, 0x44, 0x44),
+                $"Modell: {CompactModelName(_codingAiModelName)}");
             CodingFindingsList.ItemsSource = null;
             return;
         }
@@ -3973,18 +4322,18 @@ public partial class PlayerWindow : Window
 
         if (result.Findings.Count == 0)
         {
-            TxtCodingAiStatus.Text = result.MeterReading.HasValue
+            var noDamageText = result.MeterReading.HasValue
                 ? $"OSD {result.MeterReading.Value:F2}m \u2013 Kein Schaden"
                 : "Kein Schaden";
-            CodingAiDot.Fill = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
+            SetCodingAiState(noDamageText, Color.FromRgb(0x22, 0xC5, 0x5E), "3/3 Overlay aktualisiert");
             CodingFindingsList.ItemsSource = null;
             return;
         }
 
-        TxtCodingAiStatus.Text = result.MeterReading.HasValue
+        var findingsText = result.MeterReading.HasValue
             ? $"OSD {result.MeterReading.Value:F2}m \u2013 {result.Findings.Count} Befund(e)"
             : $"{result.Findings.Count} Befund(e)";
-        CodingAiDot.Fill = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
+        SetCodingAiState(findingsText, Color.FromRgb(0x22, 0xC5, 0x5E), "3/3 Overlay + Events");
         CodingFindingsList.ItemsSource = result.Findings
             .Select(f => new AiFindingDisplayItem(f)).ToList();
 
@@ -4083,53 +4432,28 @@ public partial class PlayerWindow : Window
             _codingLiveAiTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
             _codingLiveAiTimer.Tick += CodingLiveAiTimer_Tick;
             _codingLiveAiTimer.Start();
-            TxtCodingAiStatus.Text = "Live-KI aktiv";
+            SetCodingAiState("Auto-KI aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
+                $"Tick alle 5s | {CompactModelName(_codingAiModelName)}");
         }
         else
         {
             _codingLiveAiTimer?.Stop();
             _codingLiveAiTimer = null;
-            TxtCodingAiStatus.Text = "KI Bereit";
+            SetCodingAiState("KI Bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
+                $"Modell: {CompactModelName(_codingAiModelName)}");
         }
     }
 
     private async void CodingLiveAiTimer_Tick(object? sender, EventArgs e)
     {
         // Nicht analysieren wenn: bereits analysierend, Video pausiert, WaitingForUserInput
-        if (_codingIsAnalyzing) return;
         if (_codingLiveDetection == null) return;
         if (_codingSessionService?.ActiveSession?.State == CodingSessionState.WaitingForUserInput) return;
 
         // Nur analysieren wenn Video tatsaechlich laeuft
         if (_player == null || !_player.IsPlaying) return;
 
-        // Frame capturen und analysieren (wie manueller Button)
-        _codingIsAnalyzing = true;
-        _codingAnalysisCts?.Cancel();
-        _codingAnalysisCts = new CancellationTokenSource();
-
-        try
-        {
-            CodingAiDot.Fill = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
-            TxtCodingAiStatus.Text = "Live: Analysiere...";
-
-            var pngBytes = await CaptureSnapshotAsync();
-            if (pngBytes == null || pngBytes.Length == 0) return;
-
-            var result = await _codingLiveDetection.AnalyzeFrameAsync(
-                pngBytes, _player.Time / 1000.0, _codingAnalysisCts.Token);
-
-            ShowCodingAiResults(result);
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            TxtCodingAiStatus.Text = $"Live-Fehler: {ex.Message}";
-        }
-        finally
-        {
-            _codingIsAnalyzing = false;
-        }
+        await RunCodingAnalysisAsync("Auto-KI: Analysiere...");
     }
 
     /// <summary>VLC-Snapshot als PNG-Bytes extrahieren.</summary>
@@ -4139,7 +4463,7 @@ public partial class PlayerWindow : Window
         var snapFile = Path.Combine(tmpDir, $"sewerstudio_snap_{Guid.NewGuid():N}.png");
         try
         {
-            _player.TakeSnapshot(0, snapFile, 0, 0);
+            TakeSnapshotSafe(snapFile);
             for (int i = 0; i < 20; i++)
             {
                 await Task.Delay(50);
@@ -4174,7 +4498,8 @@ public partial class PlayerWindow : Window
         ConfirmAmpel.Fill = new SolidColorBrush(ampelColor);
 
         // Globale Ampel aktualisieren
-        CodingAiDot.Fill = new SolidColorBrush(ampelColor);
+        SetCodingAiState(TxtCodingAiStatus.Text, ampelColor,
+            gateResult.IsYellow ? "QualityGate: Gelb" : "QualityGate: Rot");
 
         // Panel befuellen
         TxtConfirmCode.Text = codingEvent.Entry.Code ?? "???";
@@ -4243,13 +4568,21 @@ public partial class PlayerWindow : Window
         if (_codingSessionService?.ActiveSession?.State == CodingSessionState.WaitingForUserInput)
             _codingSessionService.ResumeSession();
 
-        // Video weiterlaufen lassen (wenn Live-KI aktiv)
+        // Video weiterlaufen lassen (wenn Auto-KI aktiv)
         if (BtnCodingLiveAi.IsChecked == true)
             _player.SetPause(false);
 
         // Globale Ampel zuruecksetzen
-        CodingAiDot.Fill = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
-        TxtCodingAiStatus.Text = BtnCodingLiveAi.IsChecked == true ? "Live-KI aktiv" : "KI Bereit";
+        if (BtnCodingLiveAi.IsChecked == true)
+        {
+            SetCodingAiState("Auto-KI aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
+                $"Tick alle 5s | {CompactModelName(_codingAiModelName)}");
+        }
+        else
+        {
+            SetCodingAiState("KI Bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
+                $"Modell: {CompactModelName(_codingAiModelName)}");
+        }
     }
     /// <summary>Werkzeug-Badge oben links auf Canvas anzeigen.</summary>
     private void UpdateToolBadge()
@@ -4269,8 +4602,9 @@ public partial class PlayerWindow : Window
             OverlayToolType.Rectangle => "Flaeche",
             OverlayToolType.Point => "Punkt",
             OverlayToolType.Stretch => "Strecke",
-            OverlayToolType.Protractor => "Winkel",
-            OverlayToolType.DnCircle => "DN-Kreis",
+            OverlayToolType.PipeBend => "Bogen",
+            OverlayToolType.LateralCircle => "Anschluss",
+            OverlayToolType.Level => "Level",
             OverlayToolType.Ruler => "Lineal",
             _ => null
         };
@@ -4429,12 +4763,12 @@ public partial class PlayerWindow : Window
                     }
                     break;
 
-                case OverlayToolType.Protractor:
-                    RenderProtractorOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
+                case OverlayToolType.PipeBend:
+                    RenderPipeBendOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
                     break;
 
-                case OverlayToolType.DnCircle:
-                    RenderDnCircleOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
+                case OverlayToolType.LateralCircle:
+                    RenderLateralCircleOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
                     break;
 
                 case OverlayToolType.Ruler:
@@ -4446,34 +4780,7 @@ public partial class PlayerWindow : Window
 
     private async Task AnalyzeWithOverlayHintAsync(OverlayGeometry overlay)
     {
-        if (_codingLiveDetection == null || _codingIsAnalyzing) return;
-
-        _codingIsAnalyzing = true;
-        _codingAnalysisCts?.Cancel();
-        _codingAnalysisCts = new CancellationTokenSource();
-
-        try
-        {
-            CodingAiDot.Fill = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
-            TxtCodingAiStatus.Text = "Analyse: markierte Stelle...";
-
-            var pngBytes = await CaptureSnapshotAsync();
-            if (pngBytes == null || pngBytes.Length == 0) return;
-
-            var result = await _codingLiveDetection.AnalyzeFrameAsync(
-                pngBytes, _player.Time / 1000.0, _codingAnalysisCts.Token);
-
-            ShowCodingAiResults(result);
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            TxtCodingAiStatus.Text = $"Fehler: {ex.Message}";
-        }
-        finally
-        {
-            _codingIsAnalyzing = false;
-        }
+        await RunCodingAnalysisAsync("Analyse: markierte Stelle...");
     }
 
     // --- OSD Meter automatisch lesen beim Navigieren ---
@@ -4507,7 +4814,7 @@ public partial class PlayerWindow : Window
 
             try
             {
-                _player.TakeSnapshot(0, snapFile, 0, 0);
+                TakeSnapshotSafe(snapFile);
                 for (int i = 0; i < 20; i++)
                 {
                     await Task.Delay(50);
@@ -4566,6 +4873,7 @@ public partial class PlayerWindow : Window
         }
     }
 }
+
 
 
 

@@ -56,6 +56,12 @@
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource ColorTextSecondary}"/>
     <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource ColorTextMuted}"/>
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource ColorAccent}"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource ColorAccentHover}"/>
+    <SolidColorBrush x:Key="AccentSubtleBrush" Color="{StaticResource ColorAccentSubtle}"/>
+    <SolidColorBrush x:Key="BorderLightBrush" Color="{StaticResource ColorBorderLight}"/>
+    <SolidColorBrush x:Key="HoverBrush" Color="#FFE8EDF5"/>
+    <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#FFDAE1ED"/>
+    <SolidColorBrush x:Key="OverlayBrush" Color="#F0F8FAFC"/>
 
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource ColorSuccess}"/>
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource ColorDanger}"/>
@@ -686,18 +692,49 @@
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
     </Style>
 
+    <Style TargetType="{x:Type ContextMenu}">
+        <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+    </Style>
+
     <Style TargetType="{x:Type MenuItem}">
         <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
         <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="1"/>
         <Style.Triggers>
             <Trigger Property="IsHighlighted" Value="True">
-                <Setter Property="Background">
-                    <Setter.Value>
-                        <SolidColorBrush Color="#FFE8EDF5"/>
-                    </Setter.Value>
-                </Setter>
+                <Setter Property="Background" Value="{StaticResource HoverBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            </Trigger>
+            <Trigger Property="IsSubmenuOpen" Value="True">
+                <Setter Property="Background" Value="{StaticResource HoverBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.45"/>
             </Trigger>
         </Style.Triggers>
+    </Style>
+
+    <Style TargetType="{x:Type Separator}">
+        <Setter Property="Margin" Value="8,4"/>
+        <Setter Property="Background" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Separator">
+                    <Border Height="1"
+                            Background="{TemplateBinding Background}"
+                            SnapsToDevicePixels="True"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- ═══════════════════════════════════════════════════════════

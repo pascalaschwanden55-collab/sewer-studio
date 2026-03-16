@@ -143,7 +143,7 @@ public static class VsaCodeTree
                 Invalid = new()
                 {
                     ["B"] = new() { "B", "C", "D" },
-                    ["H"] = new() { "A" },
+                    ["H"] = new() { "A", "Z" },  // WinCan: nur B,C,D,E gueltig (kein A, kein Z)
                     ["J"] = new() { "A" },
                     ["K"] = new() { "B", "C", "D" }
                 }
@@ -309,7 +309,15 @@ public static class VsaCodeTree
             {
                 Label = "Zufluss/Fehlanschl.",
                 Char1 = new() { ["A"] = C("klar"), ["C"] = C("trueb"), ["D"] = C("gefaerbt"), ["E"] = C("trueb+gef."), ["Y"] = C("o.Angabe") },
-                Char2 = new() { ["A"] = "SM->RW", ["B"] = "RW->SM", ["C"] = "Zufluss", ["Y"] = "o.Details" }
+                // WinCan: Char1 A,C,D,E → Char2 {A,B,C}; Char1 Y → Char2 {A,B,Y}
+                Char2PerChar1 = new()
+                {
+                    ["A"] = new() { ["A"] = "SM->RW", ["B"] = "RW->SM", ["C"] = "Zufluss" },
+                    ["C"] = new() { ["A"] = "SM->RW", ["B"] = "RW->SM", ["C"] = "Zufluss" },
+                    ["D"] = new() { ["A"] = "SM->RW", ["B"] = "RW->SM", ["C"] = "Zufluss" },
+                    ["E"] = new() { ["A"] = "SM->RW", ["B"] = "RW->SM", ["C"] = "Zufluss" },
+                    ["Y"] = new() { ["A"] = "SM->RW", ["B"] = "RW->SM", ["Y"] = "o.Details" }
+                }
             },
             ["BDF"] = new()
             {
@@ -332,7 +340,7 @@ public static class VsaCodeTree
                 Char1 = new()
                 {
                     ["A"] = C("unbek."), ["B"] = C("Ei"), ["C"] = C("Kreis"), ["D"] = C("Maul"),
-                    ["E"] = C("offen"), ["F"] = C("Rechteck"), ["G"] = C("Spezial"), ["H"] = C("unbekannt")
+                    ["E"] = C("offen"), ["F"] = C("Rechteck"), ["G"] = C("Spezial"), ["H"] = C("Trapez")
                 }
             },
             ["AED"] = new()

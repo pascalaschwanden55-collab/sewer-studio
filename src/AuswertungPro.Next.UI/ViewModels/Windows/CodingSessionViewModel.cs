@@ -85,8 +85,9 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         OnPropertyChanged(nameof(IsRectangleTool));
         OnPropertyChanged(nameof(IsPointTool));
         OnPropertyChanged(nameof(IsStretchTool));
-        OnPropertyChanged(nameof(IsProtractorTool));
-        OnPropertyChanged(nameof(IsDnCircleTool));
+        OnPropertyChanged(nameof(IsPipeBendTool));
+        OnPropertyChanged(nameof(IsLateralCircleTool));
+        OnPropertyChanged(nameof(IsLevelTool));
         OnPropertyChanged(nameof(IsRulerTool));
     }
 
@@ -135,8 +136,9 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     public bool IsRectangleTool => ActiveTool == OverlayToolType.Rectangle;
     public bool IsPointTool => ActiveTool == OverlayToolType.Point;
     public bool IsStretchTool => ActiveTool == OverlayToolType.Stretch;
-    public bool IsProtractorTool => ActiveTool == OverlayToolType.Protractor;
-    public bool IsDnCircleTool => ActiveTool == OverlayToolType.DnCircle;
+    public bool IsPipeBendTool => ActiveTool == OverlayToolType.PipeBend;
+    public bool IsLateralCircleTool => ActiveTool == OverlayToolType.LateralCircle;
+    public bool IsLevelTool => ActiveTool == OverlayToolType.Level;
     public bool IsRulerTool => ActiveTool == OverlayToolType.Ruler;
 
     // --- Events ---
@@ -237,10 +239,17 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     private void SelectStretchTool() => _overlayService.ActiveTool = OverlayToolType.Stretch;
 
     [RelayCommand]
-    private void SelectProtractorTool() => _overlayService.ActiveTool = OverlayToolType.Protractor;
+    private void SelectPipeBendTool() => _overlayService.ActiveTool = OverlayToolType.PipeBend;
 
     [RelayCommand]
-    private void SelectDnCircleTool() => _overlayService.ActiveTool = OverlayToolType.DnCircle;
+    private void SelectLateralCircleTool() => _overlayService.ActiveTool = OverlayToolType.LateralCircle;
+
+    [RelayCommand]
+    private void SelectLevelTool(LevelMode mode)
+    {
+        _overlayService.ActiveLevelMode = mode;
+        _overlayService.ActiveTool = OverlayToolType.Level;
+    }
 
     [RelayCommand]
     private void SelectRulerTool() => _overlayService.ActiveTool = OverlayToolType.Ruler;
@@ -333,7 +342,7 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
                 entry.CodeMeta.Parameters["vsa.uhr.bis"] = CurrentOverlay.ClockTo.Value.ToString("F1");
 
             // Winkelmesser: Bogenwinkel uebertragen
-            if (CurrentOverlay.ArcDegrees.HasValue && CurrentOverlay.ToolType == OverlayToolType.Protractor)
+            if (CurrentOverlay.ArcDegrees.HasValue && CurrentOverlay.ToolType == OverlayToolType.PipeBend)
                 entry.CodeMeta.Parameters["vsa.winkel"] = CurrentOverlay.ArcDegrees.Value.ToString("F1");
 
             // DN-Kreis: Verhaeltnis zum Haupt-DN uebertragen

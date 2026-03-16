@@ -134,8 +134,6 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
     [RelayCommand]
     public void SelectTile(TileItem tile)
     {
-        if (tile.IsInvalid) return;
-
         switch (CurrentLevel)
         {
             case 0: // Gruppe gewaehlt
@@ -961,7 +959,17 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
 
         var cd = GetCurrentVsaCodeDef();
         var prefix = cd?.XPrefix == true ? "X" : "";
+        var invalidCombo = cd is not null
+            && SelectedChar1Key is not null
+            && VsaCodeTree.IsInvalidCombo(cd, SelectedChar1Key, key);
         ShowFinalResult($"{SelectedCodeKey}{prefix}{SelectedChar1Key}{key}", SelectedChar1Key, key);
+        if (invalidCombo)
+        {
+            var invalidMsg = "Kombination im Katalog als ungueltig markiert - manuelle Pruefung erforderlich.";
+            WarnMessage = string.IsNullOrWhiteSpace(WarnMessage)
+                ? invalidMsg
+                : $"{WarnMessage} {invalidMsg}";
+        }
         UpdateBreadcrumb();
     }
 

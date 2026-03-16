@@ -26,11 +26,14 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty] private int _videoNetworkCachingMs;
     [ObservableProperty] private int _videoCodecThreads;
     [ObservableProperty] private string _videoOutput = "direct3d11";
+    [ObservableProperty] private string _uiTheme = ThemeManager.Light;
+    [ObservableProperty] private bool _isDarkTheme;
 
     [ObservableProperty] private string _dataFolderPath = string.Empty;
     [ObservableProperty] private string _logsFolderPath = string.Empty;
     [ObservableProperty] private string _restorePointsFolderPath = string.Empty;
     [ObservableProperty] private string _backupStatusText = string.Empty;
+    private bool _syncingThemeState;
 
     public IReadOnlyList<AutoSaveModeOption> AutoSaveModeOptions { get; } =
     [
@@ -71,6 +74,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     public IRelayCommand OpenDataFolderCommand { get; }
     public IRelayCommand OpenLogsFolderCommand { get; }
     public IRelayCommand OpenRestorePointsFolderCommand { get; }
+    public IRelayCommand ApplyThemeCommand { get; }
     public IRelayCommand SaveCommand { get; }
     public IAsyncRelayCommand ExportBackupCommand { get; }
     public IAsyncRelayCommand ImportBackupCommand { get; }
@@ -91,6 +95,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         VideoNetworkCachingMs = ClampCaching(_sp.Settings.VideoNetworkCachingMs);
         VideoCodecThreads = ClampCodecThreads(_sp.Settings.VideoCodecThreads);
         VideoOutput = NormalizeVideoOutput(_sp.Settings.VideoOutput);
+        UiTheme = ThemeManager.NormalizeTheme(_sp.Settings.UiTheme);
+        IsDarkTheme = string.Equals(UiTheme, ThemeManager.Dark, StringComparison.Ordinal);
 
         DataFolderPath = AppSettings.AppDataDir;
         LogsFolderPath = Path.Combine(AppSettings.AppDataDir, "logs");
@@ -102,9 +108,53 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         OpenDataFolderCommand = new RelayCommand(OpenDataFolder);
         OpenLogsFolderCommand = new RelayCommand(OpenLogsFolder);
         OpenRestorePointsFolderCommand = new RelayCommand(OpenRestorePointsFolder);
+        ApplyThemeCommand = new RelayCommand(ApplyTheme);
         SaveCommand = new RelayCommand(Save);
         ExportBackupCommand = new AsyncRelayCommand(ExportBackupAsync);
         ImportBackupCommand = new AsyncRelayCommand(ImportBackupAsync);
+    }
+
+    partial void OnUiThemeChanged(string value)
+    {
+        if (_syncingThemeState)
+            return;
+
+        _syncingThemeState = true;
+        try
+        {
+            var normalized = ThemeManager.NormalizeTheme(value);
+            if (!string.Equals(normalized, value, StringComparison.Ordinal))
+            {
+                UiTheme = normalized;
+                return;
+            }
+
+            var shouldBeDark = string.Equals(normalized, ThemeManager.Dark, StringComparison.Ordinal);
+            if (IsDarkTheme != shouldBeDark)
+                IsDarkTheme = shouldBeDark;
+        }
+        finally
+        {
+            _syncingThemeState = false;
+        }
+    }
+
+    partial void OnIsDarkThemeChanged(bool value)
+    {
+        if (_syncingThemeState)
+            return;
+
+        _syncingThemeState = true;
+        try
+        {
+            var targetTheme = value ? ThemeManager.Dark : ThemeManager.Light;
+            if (!string.Equals(UiTheme, targetTheme, StringComparison.Ordinal))
+                UiTheme = targetTheme;
+        }
+        finally
+        {
+            _syncingThemeState = false;
+        }
     }
 
     private void OpenDataFolder() => OpenFolder(DataFolderPath);
@@ -177,10 +227,44 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         _sp.Settings.VideoNetworkCachingMs = ClampCaching(VideoNetworkCachingMs);
         _sp.Settings.VideoCodecThreads = ClampCodecThreads(VideoCodecThreads);
         _sp.Settings.VideoOutput = NormalizeVideoOutput(VideoOutput);
+        _sp.Settings.UiTheme = ThemeManager.NormalizeTheme(UiTheme);
         _sp.Settings.Save();
 
         _sp.Diagnostics.EnableDiagnostics = EnableDiagnostics;
         _sp.Diagnostics.ExplicitPdfToTextPath = PdfToTextPath;
+    }
+
+    private void ApplyTheme()
+    {
+        _sp.Settings.UiTheme = ThemeManager.NormalizeTheme(UiTheme);
+        _sp.Settings.SaveImmediate();
+
+        var restart = MessageBox.Show(
+            "Design gespeichert.\n\nJetzt neu starten, damit das Theme vollstaendig angewendet wird?",
+            "SewerStudio",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+        if (restart != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            var exePath = Environment.ProcessPath;
+            if (!string.IsNullOrWhiteSpace(exePath))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = exePath,
+                    UseShellExecute = true
+                });
+            }
+        }
+        catch
+        {
+            // best effort restart; app is still configured even if restart launch fails
+        }
+
+        System.Windows.Application.Current.Shutdown();
     }
 
     private static string? NormalizeProjectPath(string? value)

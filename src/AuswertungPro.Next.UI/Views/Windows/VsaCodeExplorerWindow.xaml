@@ -85,19 +85,33 @@
             </Grid.ColumnDefinitions>
 
             <!-- Multi-Column Code-Auswahl (WinCan-Stil) -->
-            <Grid Grid.Column="0">
+            <Grid Grid.Column="0" Background="{StaticResource BgLightBrush}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition x:Name="Char2Sep" Width="Auto"/>
                     <ColumnDefinition x:Name="Char2Column" Width="*"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- Spalte 0: Gruppen -->
-                <DockPanel Grid.Column="0" Margin="2,0">
-                    <TextBlock DockPanel.Dock="Top" Text="Gruppe" FontSize="9" FontWeight="Bold"
-                               Foreground="{StaticResource MutedBrush}" Margin="8,6,0,4"/>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <DockPanel Grid.Column="0">
+                    <Border DockPanel.Dock="Top" Padding="10,8,10,6"
+                            BorderThickness="0,0,0,1" BorderBrush="{StaticResource BorderBrush}">
+                        <Border.Background>
+                            <SolidColorBrush Color="{StaticResource ColorHeader}"/>
+                        </Border.Background>
+                        <DockPanel>
+                            <TextBlock Text="1" FontSize="10" FontWeight="Bold" FontFamily="Consolas"
+                                       Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
+                                       Margin="0,0,6,0" Opacity="0.5"/>
+                            <TextBlock Text="GRUPPE" FontSize="10" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                    </Border>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Padding="4,4,4,4">
                         <ItemsControl x:Name="GroupList">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate>
@@ -106,11 +120,25 @@
                     </ScrollViewer>
                 </DockPanel>
 
+                <!-- Trennlinie 0|1 -->
+                <Border Grid.Column="1" Width="1" Background="{StaticResource BorderBrush}"/>
+
                 <!-- Spalte 1: Hauptcodes -->
-                <DockPanel Grid.Column="1" Margin="2,0">
-                    <TextBlock DockPanel.Dock="Top" Text="Hauptcode" FontSize="9" FontWeight="Bold"
-                               Foreground="{StaticResource MutedBrush}" Margin="8,6,0,4"/>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <DockPanel Grid.Column="2">
+                    <Border DockPanel.Dock="Top" Padding="10,8,10,6"
+                            BorderThickness="0,0,0,1" BorderBrush="{StaticResource BorderBrush}">
+                        <Border.Background>
+                            <SolidColorBrush Color="{StaticResource ColorHeader}"/>
+                        </Border.Background>
+                        <DockPanel>
+                            <TextBlock Text="2" FontSize="10" FontWeight="Bold" FontFamily="Consolas"
+                                       Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
+                                       Margin="0,0,6,0" Opacity="0.5"/>
+                            <TextBlock Text="HAUPTCODE" FontSize="10" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                    </Border>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Padding="4,4,4,4">
                         <ItemsControl x:Name="CodeList">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate>
@@ -119,11 +147,25 @@
                     </ScrollViewer>
                 </DockPanel>
 
+                <!-- Trennlinie 1|2 -->
+                <Border Grid.Column="3" Width="1" Background="{StaticResource BorderBrush}"/>
+
                 <!-- Spalte 2: Char 1 -->
-                <DockPanel Grid.Column="2" Margin="2,0">
-                    <TextBlock DockPanel.Dock="Top" Text="Char 1" FontSize="9" FontWeight="Bold"
-                               Foreground="{StaticResource MutedBrush}" Margin="8,6,0,4"/>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <DockPanel Grid.Column="4">
+                    <Border DockPanel.Dock="Top" Padding="10,8,10,6"
+                            BorderThickness="0,0,0,1" BorderBrush="{StaticResource BorderBrush}">
+                        <Border.Background>
+                            <SolidColorBrush Color="{StaticResource ColorHeader}"/>
+                        </Border.Background>
+                        <DockPanel>
+                            <TextBlock Text="3" FontSize="10" FontWeight="Bold" FontFamily="Consolas"
+                                       Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
+                                       Margin="0,0,6,0" Opacity="0.5"/>
+                            <TextBlock Text="CHARAKT. 1" FontSize="10" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                    </Border>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Padding="4,4,4,4">
                         <ItemsControl x:Name="Char1List">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate>
@@ -132,11 +174,25 @@
                     </ScrollViewer>
                 </DockPanel>
 
+                <!-- Trennlinie 2|3 -->
+                <Border x:Name="Char2SepBorder" Grid.Column="5" Width="1" Background="{StaticResource BorderBrush}"/>
+
                 <!-- Spalte 3: Char 2 -->
-                <DockPanel Grid.Column="3" Margin="2,0">
-                    <TextBlock DockPanel.Dock="Top" Text="Char 2" FontSize="9" FontWeight="Bold"
-                               Foreground="{StaticResource MutedBrush}" Margin="8,6,0,4"/>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <DockPanel Grid.Column="6">
+                    <Border DockPanel.Dock="Top" Padding="10,8,10,6"
+                            BorderThickness="0,0,0,1" BorderBrush="{StaticResource BorderBrush}">
+                        <Border.Background>
+                            <SolidColorBrush Color="{StaticResource ColorHeader}"/>
+                        </Border.Background>
+                        <DockPanel>
+                            <TextBlock Text="4" FontSize="10" FontWeight="Bold" FontFamily="Consolas"
+                                       Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
+                                       Margin="0,0,6,0" Opacity="0.5"/>
+                            <TextBlock Text="CHARAKT. 2" FontSize="10" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                    </Border>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Padding="4,4,4,4">
                         <ItemsControl x:Name="Char2List">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate>

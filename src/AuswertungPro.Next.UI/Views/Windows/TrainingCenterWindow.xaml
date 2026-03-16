@@ -3,12 +3,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
         Title="Training Center" Height="800" Width="1200"
-        WindowStartupLocation="CenterOwner">
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgBrush}"
+        Foreground="{DynamicResource TextBrush}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <local:NotNullToBoolConverter x:Key="NotNullToBool"/>
     </Window.Resources>
-    <Grid Margin="12">
+    <Grid Margin="12" Background="Transparent">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -19,7 +21,8 @@
 
         <!-- Top Bar -->
         <Border Grid.Row="0" Padding="10" CornerRadius="6"
-                BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                Background="{DynamicResource CardBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1" Margin="0,0,0,8">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -124,7 +127,8 @@
                     </DataGrid>
 
                     <Border Grid.Column="1" Margin="12,0,0,0" Padding="10" CornerRadius="6"
-                            BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                            Background="{DynamicResource CardBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1">
                         <Grid>
                             <Grid.RowDefinitions>
@@ -189,7 +193,8 @@
 
                         <!-- Sample-Vorschau -->
                         <Border Grid.Column="1" Margin="12,0,0,0" Padding="10" CornerRadius="6"
-                                BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                                Background="{DynamicResource CardBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="1">
                             <Grid>
                                 <Grid.RowDefinitions>
@@ -269,7 +274,8 @@
 
                     <!-- Live-Vorschau -->
                     <Border Grid.Column="1" Margin="12,0,0,0" Padding="10" CornerRadius="6"
-                            BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                            Background="{DynamicResource CardBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1">
                         <Grid>
                             <Grid.RowDefinitions>
@@ -280,7 +286,7 @@
                             </Grid.RowDefinitions>
 
                             <TextBlock Text="Live-Vorschau" FontWeight="SemiBold" FontSize="14"
-                                       Foreground="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
+                                       Foreground="{DynamicResource AccentBrush}"/>
 
                             <StackPanel Grid.Row="1" Margin="0,8,0,0">
                                 <TextBlock>
@@ -299,7 +305,7 @@
 
                             <!-- Progress-Info -->
                             <TextBlock Grid.Row="2" Margin="0,6,0,0"
-                                       FontSize="11" Foreground="Gray">
+                                       FontSize="11" Foreground="{DynamicResource MutedBrush}">
                                 <Run Text="{Binding ProgressValue, Mode=OneWay}"/>
                                 <Run Text=" / "/>
                                 <Run Text="{Binding ProgressMax, Mode=OneWay}"/>
@@ -307,7 +313,7 @@
                             </TextBlock>
 
                             <Border Grid.Row="3" Margin="0,8,0,0"
-                                    Background="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                                    Background="{DynamicResource SurfaceSubtleBrush}"
                                     CornerRadius="4">
                                 <Image Stretch="Uniform" StretchDirection="DownOnly"
                                        Source="{Binding LiveFramePath, Mode=OneWay, TargetNullValue={x:Null}}"
@@ -333,7 +339,7 @@
                     <StackPanel Grid.Row="0" Orientation="Horizontal">
                         <TextBlock Text="Zur Prüfung:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Text="{Binding ReviewQueueCount}" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                        <TextBlock Text="{Binding ReviewStatusText}" Foreground="Gray" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ReviewStatusText}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
 
                     <!-- Queue List -->
@@ -384,7 +390,9 @@
 
         <!-- Status Bar -->
         <Border Grid.Row="4" Padding="8" CornerRadius="6" Margin="0,4,0,0"
-                Background="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}">
+                Background="{DynamicResource HeaderBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1">
             <DockPanel>
                 <TextBlock Text="{Binding StatusText}" DockPanel.Dock="Left" TextWrapping="Wrap"/>
                 <TextBlock Text="Busy..." DockPanel.Dock="Right"

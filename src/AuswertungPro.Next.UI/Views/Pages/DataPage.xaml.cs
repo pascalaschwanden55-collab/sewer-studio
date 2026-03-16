@@ -1917,10 +1917,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender);
+        var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "Beobachtungen",
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Beobachtungen",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -1977,10 +1977,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender);
+        var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "Video",
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Video",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -2037,10 +2037,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender);
+        var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "Protokoll",
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Protokoll",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -2051,10 +2051,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender);
+        var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "Video",
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Video",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -2065,10 +2065,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender);
+        var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "Massnahmen",
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Massnahmen",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -2079,10 +2079,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender);
+        var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "Haltungsprotokoll AWU",
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Haltungsprotokoll AWU",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -2093,10 +2093,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender);
+        var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "PDF",
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "PDF",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -2107,10 +2107,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender);
+        var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "Kosten/Massnahmen",
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Kosten/Massnahmen",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -2121,10 +2121,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender);
+        var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "Massnahmen",
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Massnahmen",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -2149,10 +2149,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender);
+        var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "KI Sanierung",
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "KI Sanierung",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -2164,10 +2164,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        var record = GetContextMenuRecord(sender);
+        var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken.", "Videoanalyse KI",
+            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Videoanalyse KI",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -2272,6 +2272,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         return null;
     }
+
+    private static HaltungRecord? ResolveActionRecord(object sender, DataPageViewModel vm)
+        => GetContextMenuRecord(sender) ?? vm.Selected;
 
     private static string? GetEditedTextValue(FrameworkElement? element)
     {

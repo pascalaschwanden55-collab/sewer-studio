@@ -145,7 +145,21 @@ public partial class VsaCodeExplorerWindow : Window
         // Initiale Werte setzen (leichtgewichtig)
         TxtMeterStart.Text = _vm.MeterStart;
         TxtMeterEnd.Text = _vm.MeterEnd;
-        TxtZeit.Text = _vm.Zeit;
+
+        // Videozeit: ViewModel hat Vorrang, Fallback auf uebergebene Player-Zeit
+        if (!string.IsNullOrWhiteSpace(_vm.Zeit))
+        {
+            TxtZeit.Text = _vm.Zeit;
+        }
+        else if (_currentVideoTime.HasValue && _currentVideoTime.Value > TimeSpan.Zero)
+        {
+            var t = _currentVideoTime.Value;
+            var formatted = t.TotalHours >= 1
+                ? t.ToString(@"hh\:mm\:ss")
+                : t.ToString(@"mm\:ss");
+            TxtZeit.Text = formatted;
+            _vm.Zeit = formatted;
+        }
         ChkStrecke.IsChecked = _vm.IsStreckenschaden;
         if (_vm.IsStreckenschaden)
         {
@@ -193,6 +207,7 @@ public partial class VsaCodeExplorerWindow : Window
         UpdateProgress();
         UpdateResultPanel();
         UpdateBreadcrumb();
+        SyncValidationUi();
     }
 
     /// <summary>Ressourcen-Brushes einmalig aufloesen und cachen.</summary>
@@ -273,11 +288,11 @@ public partial class VsaCodeExplorerWindow : Window
                     break;
 
                 case nameof(VsaCodeExplorerViewModel.CanConfirm):
-                    BtnApply.IsEnabled = _vm.CanConfirm;
+                    SyncValidationUi();
                     break;
 
                 case nameof(VsaCodeExplorerViewModel.ValidationMessage):
-                    TxtValidation.Text = _vm.ValidationMessage;
+                    SyncValidationUi();
                     break;
             }
 
@@ -299,8 +314,11 @@ public partial class VsaCodeExplorerWindow : Window
             list.Items.Add(btn);
         }
 
-        // Char2-Spalte ausblenden wenn leer
-        Char2Column.Width = _vm.Char2Tiles.Count > 0 ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+        // Char2-Spalte + Trennlinie ausblenden wenn leer
+        var hasChar2 = _vm.Char2Tiles.Count > 0;
+        Char2Column.Width = hasChar2 ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+        Char2Sep.Width = hasChar2 ? GridLength.Auto : new GridLength(0);
+        Char2SepBorder.Visibility = hasChar2 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>Kompakter Button fuer die Multi-Column Ansicht.</summary>
@@ -308,79 +326,102 @@ public partial class VsaCodeExplorerWindow : Window
     {
         _actionCardButtonStyle ??= (Style)FindResource("ActionCardButton");
 
-        var sp = new StackPanel { Orientation = Orientation.Horizontal };
-
         var groupBrush = tile.GroupColor is not null
             ? (Brush)GetGroupColorBrush(tile.GroupColor)
             : _accentBrush!;
 
-        // Code-Label
+        // Aeusserer Container: farbige Markierung links + Inhalt
+        var outerDock = new DockPanel { LastChildFill = true };
+
+        // Farbige Gruppenmarkierung links (4px breit)
+        var colorBar = new Border
+        {
+            Width = 4,
+            CornerRadius = new CornerRadius(2, 0, 0, 2),
+            Background = tile.IsInvalid ? InvalidBrush
+                : tile.IsSelected ? _accentBrush
+                : groupBrush,
+            Margin = new Thickness(0, 1, 0, 1)
+        };
+        DockPanel.SetDock(colorBar, Dock.Left);
+        outerDock.Children.Add(colorBar);
+
+        // Inhalt-Panel
+        var contentPanel = new StackPanel { Margin = new Thickness(8, 2, 4, 2) };
+
+        // Obere Zeile: Code + Badges
+        var topRow = new DockPanel { LastChildFill = true };
+
         var codeTb = new TextBlock
         {
             Text = tile.Label,
             FontFamily = ConsolasFont,
-            FontSize = 11,
+            FontSize = 12,
             FontWeight = FontWeights.Bold,
             Foreground = tile.IsInvalid ? InvalidBrush
                 : tile.IsSelected ? _accentBrush
                 : groupBrush,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 6, 0)
+            VerticalAlignment = VerticalAlignment.Center
         };
-        sp.Children.Add(codeTb);
+        DockPanel.SetDock(codeTb, Dock.Left);
+        topRow.Children.Add(codeTb);
 
-        // Beschreibung
-        var descTb = new TextBlock
-        {
-            Text = tile.Description ?? "",
-            FontSize = 10,
-            Foreground = tile.IsInvalid ? InvalidBrush
-                : tile.IsSelected ? _textBrush
-                : _textSecondaryBrush,
-            VerticalAlignment = VerticalAlignment.Center,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            MaxWidth = 200
-        };
-        sp.Children.Add(descTb);
-
-        // Badges
+        // Badges rechts
+        var badgePanel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        DockPanel.SetDock(badgePanel, Dock.Right);
         if (tile.BadgeText is not null)
-        {
-            sp.Children.Add(CreateBadge(tile.BadgeText, tile.BadgeColor ?? "#2563EB"));
-        }
+            badgePanel.Children.Add(CreateBadge(tile.BadgeText, tile.BadgeColor ?? "#2563EB"));
         if (tile.IsFinal && !tile.IsSelected)
+            badgePanel.Children.Add(CreateBadge("End", "#16A34A"));
+        topRow.Children.Add(badgePanel);
+
+        // Platzhalter (damit DockPanel korrekt fuellt)
+        topRow.Children.Add(new Border());
+
+        contentPanel.Children.Add(topRow);
+
+        // Untere Zeile: Beschreibung
+        if (!string.IsNullOrEmpty(tile.Description))
         {
-            sp.Children.Add(CreateBadge("End", "#16A34A"));
+            var descTb = new TextBlock
+            {
+                Text = tile.Description,
+                FontSize = 10,
+                Foreground = tile.IsInvalid ? InvalidBrush
+                    : tile.IsSelected ? _textBrush
+                    : _textSecondaryBrush,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                Margin = new Thickness(0, 1, 0, 0)
+            };
+            contentPanel.Children.Add(descTb);
         }
+
+        outerDock.Children.Add(contentPanel);
 
         var btn = new Button
         {
-            Content = sp,
-            HorizontalContentAlignment = HorizontalAlignment.Left,
-            Padding = new Thickness(8, 6, 8, 6),
+            Content = outerDock,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            Padding = new Thickness(4, 4, 6, 4),
             Margin = new Thickness(2, 1, 2, 1),
-            IsEnabled = !tile.IsInvalid,
+            IsEnabled = true,
             Tag = tile,
             Style = _actionCardButtonStyle
         };
 
-        // Hervorhebung fuer ausgewaehltes Element
+        // Hervorhebung fuer ausgewaehltes Element (kraeftiger Rahmen + Hintergrund)
         if (tile.IsSelected)
         {
             btn.BorderThickness = new Thickness(2);
             btn.BorderBrush = _accentBrush;
-            btn.Background = new SolidColorBrush(_colorAccent) { Opacity = 0.08 };
-        }
-        else if (tile.GroupColor is not null)
-        {
-            btn.BorderThickness = new Thickness(2, 0, 0, 0);
-            btn.BorderBrush = GetGroupColorBrush(tile.GroupColor);
+            btn.Background = new SolidColorBrush(_colorAccent) { Opacity = 0.12 };
         }
 
         if (tile.IsInvalid)
         {
-            btn.Opacity = 0.4;
+            btn.Opacity = 0.7;
             codeTb.TextDecorations = TextDecorations.Strikethrough;
+            btn.ToolTip = "Als ungueltig markiert - Auswahl ist trotzdem erlaubt.";
         }
 
         btn.Click += (_, _) => onSelect(tile);
@@ -503,7 +544,7 @@ public partial class VsaCodeExplorerWindow : Window
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             Padding = new Thickness(12, 10, 12, 10),
             Margin = new Thickness(0, 0, 0, 4),
-            IsEnabled = !tile.IsInvalid,
+            IsEnabled = true,
             Tag = tile,
             Style = _actionCardButtonStyle
         };
@@ -516,8 +557,9 @@ public partial class VsaCodeExplorerWindow : Window
 
         if (tile.IsInvalid)
         {
-            btn.Opacity = 0.4;
+            btn.Opacity = 0.7;
             codeTb.TextDecorations = TextDecorations.Strikethrough;
+            btn.ToolTip = "Als ungueltig markiert - Auswahl ist trotzdem erlaubt.";
         }
 
         btn.Click += (_, _) => _vm.SelectTile(tile);
@@ -605,6 +647,21 @@ public partial class VsaCodeExplorerWindow : Window
             ResultPanel.Visibility = Visibility.Collapsed;
             CodeHintPanel.Visibility = Visibility.Visible;
         }
+
+        SyncValidationUi();
+    }
+
+    /// <summary>
+    /// Initialisiert/aktualisiert den Footer-Validierungszustand robust,
+    /// auch wenn CanConfirm bereits vor Event-Subscription gesetzt wurde.
+    /// </summary>
+    private void SyncValidationUi()
+    {
+        BtnApply.IsEnabled = _vm.CanConfirm;
+        TxtValidation.Text = _vm.ValidationMessage ?? string.Empty;
+        TxtValidation.Visibility = string.IsNullOrWhiteSpace(TxtValidation.Text)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
     }
 
     private void UpdateQuantPanel()

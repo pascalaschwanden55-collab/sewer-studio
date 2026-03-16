@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai;
@@ -43,6 +44,9 @@ public partial class CodingModeWindow : Window
     private Line? _previewLine;
     private Ellipse? _previewPoint;
     private Rectangle? _previewRect;
+    private const string OverlayTagPreview = "overlay_preview";
+    private const string OverlayTagManual = "overlay_manual";
+    private const string OverlayTagCalibration = "overlay_calibration";
 
     // Kalibrierungsmodus
     private bool _isCalibrating;
@@ -54,6 +58,11 @@ public partial class CodingModeWindow : Window
     private OllamaClient? _ollamaClient;
     private CancellationTokenSource? _analysisCts;
     private bool _isAnalyzing;
+    private List<AiOverlay>? _currentAiOverlays;
+    private double? _lastAiMeterReading;
+    private double _lastAiMeterTimestampSec = double.NaN;
+    private string _aiModelName = string.Empty;
+    private bool _aiStatusPulseRunning;
 
     public CodingModeWindow(HaltungRecord haltung, string? videoPath)
     {
@@ -204,6 +213,7 @@ public partial class CodingModeWindow : Window
     {
         _analysisCts?.Cancel();
         _analysisCts?.Dispose();
+        StopAiStatusPulse();
         _ollamaClient?.Dispose();
         _player?.Stop();
         _player?.Dispose();
@@ -260,19 +270,73 @@ public partial class CodingModeWindow : Window
             return;
         }
 
+        // Interaktive Zwischenzustaende (Multi-Punkt) klar anzeigen
+        if (overlay.ToolType == OverlayToolType.PipeBend && !overlay.ArcDegrees.HasValue)
+        {
+            TxtOverlayQ1.Text = "Q1: –";
+            TxtOverlayQ2.Text = "Q2: –";
+            TxtOverlayClock.Text = "Uhr: –";
+            TxtOverlayArc.Text = "Winkel: –";
+            MeasurementPanel.Visibility = Visibility.Visible;
+            TxtMeasurement.Text = overlay.Points.Count switch
+            {
+                <= 2 => "PipeBend: Achse 1 setzen (P1 -> P2)",
+                3 => "PipeBend: Achse 2 vervollstaendigen (P4 setzen)",
+                _ => "PipeBend: Punkte setzen"
+            };
+            return;
+        }
+
+        if (overlay.ToolType == OverlayToolType.LateralCircle && !overlay.Q1Mm.HasValue)
+        {
+            TxtOverlayQ1.Text = "Q1: –";
+            TxtOverlayQ2.Text = "Q2: –";
+            TxtOverlayClock.Text = "Uhr: –";
+            TxtOverlayArc.Text = "Bogen: –";
+            MeasurementPanel.Visibility = Visibility.Visible;
+            TxtMeasurement.Text = overlay.Points.Count switch
+            {
+                <= 2 => "Anschluss: 3 Randpunkte setzen",
+                _ => "Anschluss: Punkte setzen"
+            };
+            return;
+        }
+
         TxtOverlayQ1.Text = overlay.Q1Mm.HasValue ? $"Q1: {overlay.Q1Mm:F1} mm" : "Q1: –";
         TxtOverlayQ2.Text = overlay.Q2Mm.HasValue ? $"Q2: {overlay.Q2Mm:F1} mm" : "Q2: –";
         TxtOverlayClock.Text = overlay.ClockFrom.HasValue
             ? $"Uhr: {overlay.ClockFrom:F1}" + (overlay.ClockTo.HasValue ? $" → {overlay.ClockTo:F1}" : "")
             : "Uhr: –";
-        TxtOverlayArc.Text = overlay.ArcDegrees.HasValue ? $"Bogen: {overlay.ArcDegrees:F0}°" : "Bogen: –";
+        TxtOverlayArc.Text = overlay.ArcDegrees.HasValue
+            ? (overlay.ToolType == OverlayToolType.PipeBend
+                ? $"Winkel: {overlay.ArcDegrees:F1}°" + (_overlayService.PipeBendSnapEnabled ? " (Snap)" : "")
+                : $"Bogen: {overlay.ArcDegrees:F0}°")
+            : "Bogen: –";
 
         // Kompakte Anzeige im Video
         MeasurementPanel.Visibility = Visibility.Visible;
         var parts = new System.Collections.Generic.List<string>();
-        if (overlay.Q1Mm.HasValue) parts.Add($"Q1:{overlay.Q1Mm:F1}mm");
-        if (overlay.ClockFrom.HasValue) parts.Add($"Uhr:{overlay.ClockFrom:F1}");
-        if (overlay.ArcDegrees.HasValue) parts.Add($"{overlay.ArcDegrees:F0}°");
+        if (overlay.ToolType == OverlayToolType.Level)
+        {
+            if (overlay.FillPercent.HasValue)
+                parts.Add($"{overlay.FillPercent:F1}%");
+            if (overlay.LevelSubMode.HasValue)
+                parts.Add(overlay.LevelSubMode.Value switch
+                {
+                    LevelMode.Water => "Wasser",
+                    LevelMode.Obstacle => "Hindernis",
+                    _ => "Ablagerung"
+                });
+        }
+        else
+        {
+            if (overlay.Q1Mm.HasValue) parts.Add($"Q1:{overlay.Q1Mm:F1}mm");
+            if (overlay.ClockFrom.HasValue) parts.Add($"Uhr:{overlay.ClockFrom:F1}");
+            if (overlay.ArcDegrees.HasValue) parts.Add($"{overlay.ArcDegrees:F0}°");
+            if (overlay.DnRatioPercent.HasValue) parts.Add($"{overlay.DnRatioPercent:F0}%");
+            if (overlay.ToolType == OverlayToolType.PipeBend && _overlayService.PipeBendSnapEnabled)
+                parts.Add("Snap");
+        }
         TxtMeasurement.Text = string.Join("  |  ", parts);
     }
 
@@ -329,6 +393,50 @@ public partial class CodingModeWindow : Window
         _vm.CurrentVideoTime = TimeSpan.FromMilliseconds(_player.Time);
     }
 
+    /// <summary>Aktuellen Meter aus der Videoposition schaetzen (Zeitanteil * Haltungslaenge).</summary>
+    private double EstimateMeterFromVideoPosition()
+    {
+        if (_player != null && _videoDurationMs > 0 && _vm.EndMeter > 0)
+        {
+            double fraction = Math.Clamp(_player.Time / (double)_videoDurationMs, 0, 1);
+            return Math.Round(fraction * _vm.EndMeter, 2);
+        }
+        return Math.Round(_vm.CurrentMeter, 2);
+    }
+
+    /// <summary>
+    /// Meterquelle fuer neue Events:
+    /// 1) frische OSD-KI-Lesung (falls vorhanden), sonst
+    /// 2) Zeit-basierte Schaetzung aus aktueller Videoposition.
+    /// </summary>
+    private double ResolveCaptureMeter()
+    {
+        var estimated = EstimateMeterFromVideoPosition();
+        if (_lastAiMeterReading.HasValue && _player != null)
+        {
+            double nowSec = _player.Time / 1000.0;
+            bool aiFresh = !double.IsNaN(_lastAiMeterTimestampSec)
+                           && Math.Abs(nowSec - _lastAiMeterTimestampSec) <= 2.0;
+            bool aiInRange = _lastAiMeterReading.Value >= 0
+                             && (_vm.EndMeter <= 0 || _lastAiMeterReading.Value <= _vm.EndMeter + 0.5);
+            if (aiFresh && aiInRange)
+                return Math.Round(_lastAiMeterReading.Value, 2);
+        }
+
+        return estimated;
+    }
+
+    /// <summary>
+    /// Session-Meter vor Aktionen auf die aktuelle Video-Position synchronisieren,
+    /// damit gespeicherte Event-Distanzen mit dem sichtbaren Frame uebereinstimmen.
+    /// </summary>
+    private double SyncSessionMeterFromVideo()
+    {
+        double meter = ResolveCaptureMeter();
+        _sessionService.MoveToMeter(meter);
+        return meter;
+    }
+
     // --- Overlay-Canvas Interaktion ---
 
     private void OverlayCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -347,9 +455,39 @@ public partial class CodingModeWindow : Window
 
         if (_overlayService.ActiveTool == OverlayToolType.None) return;
 
+        // Multi-Punkt-Werkzeuge (PipeBend/LateralCircle): Punktweise klicken, kein Drag.
+        if (_overlayService.IsMultiPointTool)
+        {
+            if (_overlayService.DrawPointCount == 0)
+            {
+                _vm.CurrentOverlay = null;
+                BtnCreateEvent.IsEnabled = false;
+                UpdateOverlayInfo(null);
+            }
+
+            bool complete = _vm.OnCanvasMultiPointClick(normalized);
+            ClearAllDrawingShapes();
+
+            if (_vm.CurrentOverlay != null)
+            {
+                RenderOverlayGeometry(_vm.CurrentOverlay);
+                UpdateOverlayInfo(_vm.CurrentOverlay);
+                if (complete)
+                {
+                    BtnCreateEvent.IsEnabled = true;
+                }
+                else
+                {
+                    BtnCreateEvent.IsEnabled = false;
+                }
+            }
+
+            return;
+        }
+
         _vm.OnCanvasMouseDown(normalized);
         OverlayCanvas.CaptureMouse();
-        ClearPreviewShapes();
+        ClearAllDrawingShapes();
     }
 
     private void OverlayCanvas_MouseMove(object sender, MouseEventArgs e)
@@ -369,7 +507,8 @@ public partial class CodingModeWindow : Window
                 X2 = p2.X, Y2 = p2.Y,
                 Stroke = Brushes.Magenta,
                 StrokeThickness = 2.5,
-                StrokeDashArray = new DoubleCollection { 6, 3 }
+                StrokeDashArray = new DoubleCollection { 6, 3 },
+                Tag = OverlayTagPreview
             };
             OverlayCanvas.Children.Add(_previewLine);
 
@@ -379,12 +518,26 @@ public partial class CodingModeWindow : Window
             return;
         }
 
+        // Multi-Punkt-Vorschau zwischen den Klicks
+        if (_overlayService.IsMultiPointTool && _overlayService.DrawPointCount > 0)
+        {
+            _vm.OnCanvasMultiPointMove(normalized);
+            ClearAllDrawingShapes();
+            if (_vm.CurrentOverlay != null)
+            {
+                RenderOverlayGeometry(_vm.CurrentOverlay);
+                UpdateOverlayInfo(_vm.CurrentOverlay);
+            }
+            return;
+        }
+
         if (!_overlayService.IsDrawing) return;
 
         _vm.OnCanvasMouseMove(normalized);
 
         // Vorschau-Shape zeichnen
         RenderPreview(_overlayService.DrawStartPoint, normalized);
+        UpdateOverlayInfo(_vm.CurrentOverlay);
     }
 
     private void OverlayCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -400,6 +553,7 @@ public partial class CodingModeWindow : Window
             return;
         }
 
+        if (_overlayService.IsMultiPointTool) return;
         if (!_overlayService.IsDrawing) return;
 
         _vm.OnCanvasMouseUp(normalized);
@@ -423,6 +577,7 @@ public partial class CodingModeWindow : Window
         _calibStart = null;
         CalibrationHint.Visibility = Visibility.Visible;
         TxtCalibrationHint.Text = "Linie ueber den sichtbaren Rohrdurchmesser zeichnen";
+        ClearAllDrawingShapes(includeCalibration: true);
 
         // Andere Werkzeuge deaktivieren
         _overlayService.ActiveTool = OverlayToolType.None;
@@ -486,13 +641,15 @@ public partial class CodingModeWindow : Window
 
         // Referenzlinie dauerhaft anzeigen (duenn, magenta)
         ClearPreviewShapes();
+        ClearCalibrationReferenceShapes();
         var refLine = new Line
         {
             X1 = p1.X, Y1 = p1.Y,
             X2 = p2.X, Y2 = p2.Y,
             Stroke = Brushes.Magenta,
             StrokeThickness = 1.5,
-            Opacity = 0.6
+            Opacity = 0.6,
+            Tag = OverlayTagCalibration
         };
         OverlayCanvas.Children.Add(refLine);
 
@@ -505,7 +662,8 @@ public partial class CodingModeWindow : Window
             FontSize = 11,
             FontWeight = FontWeights.SemiBold,
             Background = new SolidColorBrush(Color.FromArgb(140, 0, 0, 0)),
-            Padding = new Thickness(4, 1, 4, 1)
+            Padding = new Thickness(4, 1, 4, 1),
+            Tag = OverlayTagCalibration
         };
         Canvas.SetLeft(label, midPx.X + 6);
         Canvas.SetTop(label, midPx.Y - 8);
@@ -547,13 +705,15 @@ public partial class CodingModeWindow : Window
         {
             case OverlayToolType.Line:
             case OverlayToolType.Stretch:
+            case OverlayToolType.Ruler:
                 _previewLine = new Line
                 {
                     X1 = p1.X, Y1 = p1.Y,
                     X2 = p2.X, Y2 = p2.Y,
                     Stroke = Brushes.Lime,
                     StrokeThickness = 2,
-                    StrokeDashArray = new DoubleCollection { 4, 2 }
+                    StrokeDashArray = new DoubleCollection { 4, 2 },
+                    Tag = OverlayTagPreview
                 };
                 OverlayCanvas.Children.Add(_previewLine);
                 break;
@@ -566,7 +726,8 @@ public partial class CodingModeWindow : Window
                     Stroke = Brushes.Cyan,
                     StrokeThickness = 2,
                     StrokeDashArray = new DoubleCollection { 4, 2 },
-                    Fill = new SolidColorBrush(Color.FromArgb(40, 0, 255, 255))
+                    Fill = new SolidColorBrush(Color.FromArgb(40, 0, 255, 255)),
+                    Tag = OverlayTagPreview
                 };
                 Canvas.SetLeft(_previewRect, Math.Min(p1.X, p2.X));
                 Canvas.SetTop(_previewRect, Math.Min(p1.Y, p2.Y));
@@ -582,7 +743,8 @@ public partial class CodingModeWindow : Window
                     X2 = p1.X, Y2 = p1.Y,
                     Stroke = Brushes.Yellow,
                     StrokeThickness = 1.5,
-                    StrokeDashArray = new DoubleCollection { 3, 2 }
+                    StrokeDashArray = new DoubleCollection { 3, 2 },
+                    Tag = OverlayTagPreview
                 };
                 var arcLine2 = new Line
                 {
@@ -590,7 +752,8 @@ public partial class CodingModeWindow : Window
                     X2 = p2.X, Y2 = p2.Y,
                     Stroke = Brushes.Yellow,
                     StrokeThickness = 1.5,
-                    StrokeDashArray = new DoubleCollection { 3, 2 }
+                    StrokeDashArray = new DoubleCollection { 3, 2 },
+                    Tag = OverlayTagPreview
                 };
                 OverlayCanvas.Children.Add(arcLine1);
                 OverlayCanvas.Children.Add(arcLine2);
@@ -602,11 +765,77 @@ public partial class CodingModeWindow : Window
                     Width = 12, Height = 12,
                     Fill = Brushes.Red,
                     Stroke = Brushes.White,
-                    StrokeThickness = 2
+                    StrokeThickness = 2,
+                    Tag = OverlayTagPreview
                 };
                 Canvas.SetLeft(_previewPoint, p1.X - 6);
                 Canvas.SetTop(_previewPoint, p1.Y - 6);
                 OverlayCanvas.Children.Add(_previewPoint);
+                break;
+
+            case OverlayToolType.Level:
+                var levelStroke = _overlayService.ActiveLevelMode switch
+                {
+                    LevelMode.Water => Brushes.RoyalBlue,
+                    LevelMode.Obstacle => Brushes.Crimson,
+                    _ => Brushes.Chocolate
+                };
+                double levelY = p2.Y;
+
+                double previewTop = _overlayService.ActiveLevelMode == LevelMode.Obstacle ? 0 : levelY;
+                double previewBottom = _overlayService.ActiveLevelMode == LevelMode.Obstacle ? levelY : OverlayCanvas.ActualHeight;
+                var previewFill = new Rectangle
+                {
+                    Width = Math.Abs(p2.X - p1.X),
+                    Height = Math.Abs(previewBottom - previewTop),
+                    Fill = new SolidColorBrush(Color.FromArgb(38,
+                        ((SolidColorBrush)levelStroke).Color.R,
+                        ((SolidColorBrush)levelStroke).Color.G,
+                        ((SolidColorBrush)levelStroke).Color.B)),
+                    Tag = OverlayTagPreview
+                };
+                Canvas.SetLeft(previewFill, Math.Min(p1.X, p2.X));
+                Canvas.SetTop(previewFill, Math.Min(previewTop, previewBottom));
+                OverlayCanvas.Children.Add(previewFill);
+
+                _previewLine = new Line
+                {
+                    X1 = p1.X,
+                    Y1 = levelY,
+                    X2 = p2.X,
+                    Y2 = levelY,
+                    Stroke = levelStroke,
+                    StrokeThickness = 2.5,
+                    StrokeDashArray = new DoubleCollection { 6, 3 },
+                    Tag = OverlayTagPreview
+                };
+                OverlayCanvas.Children.Add(_previewLine);
+
+                if (_vm.CurrentOverlay?.ToolType == OverlayToolType.Level)
+                {
+                    var mode = _overlayService.ActiveLevelMode switch
+                    {
+                        LevelMode.Water => "Wasser",
+                        LevelMode.Obstacle => "Hindernis",
+                        _ => "Ablagerung"
+                    };
+                    var text = _vm.CurrentOverlay.FillPercent.HasValue
+                        ? $"{mode}: {_vm.CurrentOverlay.FillPercent:F1}%"
+                        : $"{mode}: ...";
+                    var label = new TextBlock
+                    {
+                        Text = text,
+                        Foreground = Brushes.White,
+                        FontSize = 11,
+                        FontWeight = FontWeights.SemiBold,
+                        Background = new SolidColorBrush(Color.FromArgb(180, 0, 0, 0)),
+                        Padding = new Thickness(4, 2, 4, 2),
+                        Tag = OverlayTagPreview
+                    };
+                    Canvas.SetLeft(label, (p1.X + p2.X) / 2 + 6);
+                    Canvas.SetTop(label, levelY - 16);
+                    OverlayCanvas.Children.Add(label);
+                }
                 break;
         }
     }
@@ -619,6 +848,7 @@ public partial class CodingModeWindow : Window
         {
             case OverlayToolType.Line:
             case OverlayToolType.Stretch:
+            case OverlayToolType.Ruler:
             {
                 if (geometry.Points.Count < 2) return;
                 var p1 = NormalizedToPixel(geometry.Points[0]);
@@ -628,7 +858,8 @@ public partial class CodingModeWindow : Window
                     X1 = p1.X, Y1 = p1.Y,
                     X2 = p2.X, Y2 = p2.Y,
                     Stroke = geometry.ToolType == OverlayToolType.Stretch ? Brushes.Orange : Brushes.Lime,
-                    StrokeThickness = 2.5
+                    StrokeThickness = 2.5,
+                    Tag = OverlayTagManual
                 };
                 OverlayCanvas.Children.Add(line);
 
@@ -644,7 +875,8 @@ public partial class CodingModeWindow : Window
                         FontSize = 12,
                         FontWeight = FontWeights.Bold,
                         Background = new SolidColorBrush(Color.FromArgb(180, 0, 0, 0)),
-                        Padding = new Thickness(4, 2, 4, 2)
+                        Padding = new Thickness(4, 2, 4, 2),
+                        Tag = OverlayTagManual
                     };
                     Canvas.SetLeft(label, midX + 4);
                     Canvas.SetTop(label, midY - 10);
@@ -663,13 +895,15 @@ public partial class CodingModeWindow : Window
                 {
                     X1 = center.X, Y1 = center.Y,
                     X2 = p1.X, Y2 = p1.Y,
-                    Stroke = Brushes.Yellow, StrokeThickness = 2
+                    Stroke = Brushes.Yellow, StrokeThickness = 2,
+                    Tag = OverlayTagManual
                 };
                 var line2 = new Line
                 {
                     X1 = center.X, Y1 = center.Y,
                     X2 = p2.X, Y2 = p2.Y,
-                    Stroke = Brushes.Yellow, StrokeThickness = 2
+                    Stroke = Brushes.Yellow, StrokeThickness = 2,
+                    Tag = OverlayTagManual
                 };
                 OverlayCanvas.Children.Add(line1);
                 OverlayCanvas.Children.Add(line2);
@@ -684,7 +918,8 @@ public partial class CodingModeWindow : Window
                         FontSize = 12,
                         FontWeight = FontWeights.Bold,
                         Background = new SolidColorBrush(Color.FromArgb(180, 0, 0, 0)),
-                        Padding = new Thickness(4, 2, 4, 2)
+                        Padding = new Thickness(4, 2, 4, 2),
+                        Tag = OverlayTagManual
                     };
                     Canvas.SetLeft(label, center.X + 10);
                     Canvas.SetTop(label, center.Y - 20);
@@ -701,7 +936,8 @@ public partial class CodingModeWindow : Window
                     Width = 14, Height = 14,
                     Fill = Brushes.Red,
                     Stroke = Brushes.White,
-                    StrokeThickness = 2
+                    StrokeThickness = 2,
+                    Tag = OverlayTagManual
                 };
                 Canvas.SetLeft(dot, p.X - 7);
                 Canvas.SetTop(dot, p.Y - 7);
@@ -715,7 +951,8 @@ public partial class CodingModeWindow : Window
                         Foreground = Brushes.White,
                         FontSize = 12,
                         Background = new SolidColorBrush(Color.FromArgb(180, 0, 0, 0)),
-                        Padding = new Thickness(4, 2, 4, 2)
+                        Padding = new Thickness(4, 2, 4, 2),
+                        Tag = OverlayTagManual
                     };
                     Canvas.SetLeft(label, p.X + 10);
                     Canvas.SetTop(label, p.Y - 8);
@@ -735,56 +972,342 @@ public partial class CodingModeWindow : Window
                     Height = Math.Abs(p3.Y - p1.Y),
                     Stroke = Brushes.Cyan,
                     StrokeThickness = 2,
-                    Fill = new SolidColorBrush(Color.FromArgb(30, 0, 255, 255))
+                    Fill = new SolidColorBrush(Color.FromArgb(30, 0, 255, 255)),
+                    Tag = OverlayTagManual
                 };
                 Canvas.SetLeft(rect, Math.Min(p1.X, p3.X));
                 Canvas.SetTop(rect, Math.Min(p1.Y, p3.Y));
                 OverlayCanvas.Children.Add(rect);
                 break;
             }
+
+            case OverlayToolType.Level:
+            {
+                if (geometry.Points.Count < 2) return;
+                var p1 = NormalizedToPixel(geometry.Points[0]);
+                var p2 = NormalizedToPixel(geometry.Points[1]);
+                var y = p1.Y;
+                var stroke = geometry.LevelSubMode switch
+                {
+                    LevelMode.Water => Brushes.RoyalBlue,
+                    LevelMode.Obstacle => Brushes.Crimson,
+                    _ => Brushes.Chocolate
+                };
+
+                var line = new Line
+                {
+                    X1 = p1.X, Y1 = y,
+                    X2 = p2.X, Y2 = y,
+                    Stroke = stroke,
+                    StrokeThickness = 2.5,
+                    StrokeDashArray = new DoubleCollection { 6, 3 },
+                    Tag = OverlayTagManual
+                };
+                OverlayCanvas.Children.Add(line);
+
+                double top = geometry.LevelSubMode == LevelMode.Obstacle ? 0 : y;
+                double bottom = geometry.LevelSubMode == LevelMode.Obstacle ? y : OverlayCanvas.ActualHeight;
+                var fill = new Rectangle
+                {
+                    Width = Math.Abs(p2.X - p1.X),
+                    Height = Math.Abs(bottom - top),
+                    Fill = new SolidColorBrush(Color.FromArgb(45,
+                        ((SolidColorBrush)stroke).Color.R,
+                        ((SolidColorBrush)stroke).Color.G,
+                        ((SolidColorBrush)stroke).Color.B)),
+                    Tag = OverlayTagManual
+                };
+                Canvas.SetLeft(fill, Math.Min(p1.X, p2.X));
+                Canvas.SetTop(fill, Math.Min(top, bottom));
+                OverlayCanvas.Children.Add(fill);
+
+                if (geometry.FillPercent.HasValue)
+                {
+                    var label = new TextBlock
+                    {
+                        Text = $"{geometry.FillPercent:F1}%",
+                        Foreground = Brushes.White,
+                        FontSize = 12,
+                        FontWeight = FontWeights.Bold,
+                        Background = new SolidColorBrush(Color.FromArgb(180, 0, 0, 0)),
+                        Padding = new Thickness(4, 2, 4, 2),
+                        Tag = OverlayTagManual
+                    };
+                    Canvas.SetLeft(label, (p1.X + p2.X) / 2 + 6);
+                    Canvas.SetTop(label, y - 14);
+                    OverlayCanvas.Children.Add(label);
+                }
+                break;
+            }
+
+            case OverlayToolType.PipeBend:
+            {
+                Point? a2Point = null;
+                if (geometry.Points.Count >= 2)
+                {
+                    var a1 = NormalizedToPixel(geometry.Points[0]);
+                    var a2 = NormalizedToPixel(geometry.Points[1]);
+                    a2Point = a2;
+                    var axis1 = new Line
+                    {
+                        X1 = a1.X, Y1 = a1.Y,
+                        X2 = a2.X, Y2 = a2.Y,
+                        Stroke = Brushes.Gold,
+                        StrokeThickness = 2.5,
+                        Tag = OverlayTagManual
+                    };
+                    OverlayCanvas.Children.Add(axis1);
+                }
+
+                if (geometry.Points.Count >= 4)
+                {
+                    var b1 = NormalizedToPixel(geometry.Points[2]);
+                    var b2 = NormalizedToPixel(geometry.Points[3]);
+                    var axis2 = new Line
+                    {
+                        X1 = b1.X, Y1 = b1.Y,
+                        X2 = b2.X, Y2 = b2.Y,
+                        Stroke = Brushes.Gold,
+                        StrokeThickness = 2.5,
+                        Tag = OverlayTagManual
+                    };
+                    OverlayCanvas.Children.Add(axis2);
+
+                    if (geometry.ArcDegrees.HasValue && a2Point.HasValue)
+                    {
+                        var snapSuffix = _overlayService.PipeBendSnapEnabled ? " (Snap)" : "";
+                        var label = new TextBlock
+                        {
+                            Text = $"{geometry.ArcDegrees:F1}°{snapSuffix}",
+                            Foreground = Brushes.Gold,
+                            FontSize = 12,
+                            FontWeight = FontWeights.Bold,
+                            Background = new SolidColorBrush(Color.FromArgb(180, 0, 0, 0)),
+                            Padding = new Thickness(4, 2, 4, 2),
+                            Tag = OverlayTagManual
+                        };
+                        Canvas.SetLeft(label, (a2Point.Value.X + b1.X) / 2 + 6);
+                        Canvas.SetTop(label, (a2Point.Value.Y + b1.Y) / 2 - 12);
+                        OverlayCanvas.Children.Add(label);
+                    }
+                }
+                else if (geometry.Points.Count == 3)
+                {
+                    var p3 = NormalizedToPixel(geometry.Points[2]);
+                    var marker = new Ellipse
+                    {
+                        Width = 8,
+                        Height = 8,
+                        Fill = Brushes.Gold,
+                        Stroke = Brushes.Black,
+                        StrokeThickness = 1,
+                        Tag = OverlayTagManual
+                    };
+                    Canvas.SetLeft(marker, p3.X - 4);
+                    Canvas.SetTop(marker, p3.Y - 4);
+                    OverlayCanvas.Children.Add(marker);
+                }
+                break;
+            }
+
+            case OverlayToolType.LateralCircle:
+            {
+                if (geometry.Points.Count == 2)
+                {
+                    var p1 = NormalizedToPixel(geometry.Points[0]);
+                    var p2 = NormalizedToPixel(geometry.Points[1]);
+                    var line = new Line
+                    {
+                        X1 = p1.X, Y1 = p1.Y,
+                        X2 = p2.X, Y2 = p2.Y,
+                        Stroke = Brushes.Orange,
+                        StrokeThickness = 2,
+                        StrokeDashArray = new DoubleCollection { 4, 2 },
+                        Tag = OverlayTagManual
+                    };
+                    OverlayCanvas.Children.Add(line);
+                    break;
+                }
+
+                if (geometry.Points.Count >= 3 &&
+                    TryComputeCircumcircle(
+                        NormalizedToPixel(geometry.Points[0]),
+                        NormalizedToPixel(geometry.Points[1]),
+                        NormalizedToPixel(geometry.Points[2]),
+                        out var center,
+                        out var radius))
+                {
+                    var circle = new Ellipse
+                    {
+                        Width = radius * 2,
+                        Height = radius * 2,
+                        Stroke = Brushes.Orange,
+                        StrokeThickness = 2.5,
+                        Fill = new SolidColorBrush(Color.FromArgb(30, 255, 165, 0)),
+                        Tag = OverlayTagManual
+                    };
+                    Canvas.SetLeft(circle, center.X - radius);
+                    Canvas.SetTop(circle, center.Y - radius);
+                    OverlayCanvas.Children.Add(circle);
+
+                    if (geometry.Q1Mm.HasValue || geometry.DnRatioPercent.HasValue)
+                    {
+                        var parts = new List<string>();
+                        if (geometry.Q1Mm.HasValue) parts.Add($"DN {geometry.Q1Mm:F0}mm");
+                        if (geometry.DnRatioPercent.HasValue) parts.Add($"{geometry.DnRatioPercent:F0}%");
+
+                        var label = new TextBlock
+                        {
+                            Text = string.Join(" | ", parts),
+                            Foreground = Brushes.Orange,
+                            FontSize = 12,
+                            FontWeight = FontWeights.Bold,
+                            Background = new SolidColorBrush(Color.FromArgb(180, 0, 0, 0)),
+                            Padding = new Thickness(4, 2, 4, 2),
+                            Tag = OverlayTagManual
+                        };
+                        Canvas.SetLeft(label, center.X + radius + 6);
+                        Canvas.SetTop(label, center.Y - 8);
+                        OverlayCanvas.Children.Add(label);
+                    }
+                }
+                break;
+            }
         }
+    }
+
+    private static bool TryComputeCircumcircle(Point p1, Point p2, Point p3, out Point center, out double radius)
+    {
+        center = default;
+        radius = 0;
+
+        double d = 2 * (p1.X * (p2.Y - p3.Y) + p2.X * (p3.Y - p1.Y) + p3.X * (p1.Y - p2.Y));
+        if (Math.Abs(d) < 1e-9) return false;
+
+        double p1Sq = p1.X * p1.X + p1.Y * p1.Y;
+        double p2Sq = p2.X * p2.X + p2.Y * p2.Y;
+        double p3Sq = p3.X * p3.X + p3.Y * p3.Y;
+
+        double ux = (p1Sq * (p2.Y - p3.Y) + p2Sq * (p3.Y - p1.Y) + p3Sq * (p1.Y - p2.Y)) / d;
+        double uy = (p1Sq * (p3.X - p2.X) + p2Sq * (p1.X - p3.X) + p3Sq * (p2.X - p1.X)) / d;
+
+        center = new Point(ux, uy);
+        radius = Math.Sqrt((p1.X - ux) * (p1.X - ux) + (p1.Y - uy) * (p1.Y - uy));
+        return radius > 0;
     }
 
     private void ClearPreviewShapes()
     {
-        OverlayCanvas.Children.Clear();
+        RemoveOverlayElementsByTag(OverlayTagPreview);
         _previewLine = null;
         _previewPoint = null;
         _previewRect = null;
     }
 
+    private void ClearManualShapes()
+        => RemoveOverlayElementsByTag(OverlayTagManual);
+
+    private void ClearCalibrationReferenceShapes()
+        => RemoveOverlayElementsByTag(OverlayTagCalibration);
+
+    private void ClearAllDrawingShapes(bool includeCalibration = false)
+    {
+        ClearPreviewShapes();
+        ClearManualShapes();
+        if (includeCalibration)
+            ClearCalibrationReferenceShapes();
+    }
+
+    private void RemoveOverlayElementsByTag(params string[] tags)
+    {
+        if (tags.Length == 0) return;
+
+        var tagSet = new HashSet<string>(tags, StringComparer.Ordinal);
+        var toRemove = OverlayCanvas.Children
+            .OfType<FrameworkElement>()
+            .Where(el => el.Tag is string tag && tagSet.Contains(tag))
+            .ToList();
+
+        foreach (var element in toRemove)
+            OverlayCanvas.Children.Remove(element);
+    }
+
     // --- Werkzeug-Buttons ---
+
+    private IEnumerable<ToggleButton> ToolButtons()
+    {
+        yield return BtnToolLine;
+        yield return BtnToolArc;
+        yield return BtnToolRect;
+        yield return BtnToolPoint;
+        yield return BtnToolStretch;
+        yield return BtnToolPipeBend;
+        yield return BtnToolLateralCircle;
+        yield return BtnToolLevelDeposit;
+        yield return BtnToolLevelWater;
+        yield return BtnToolLevelObstacle;
+    }
 
     private void ToolButton_Checked(object sender, RoutedEventArgs e)
     {
-        // Alle anderen Buttons unchecken
-        foreach (var child in ((StackPanel)((ToggleButton)sender).Parent).Children)
+        // Falls Kalibrierung aktiv war: beim Werkzeugwechsel sauber beenden.
+        if (_isCalibrating || BtnCalibrate.IsChecked == true)
         {
-            if (child is ToggleButton tb && tb != sender)
+            _isCalibrating = false;
+            _calibStart = null;
+            BtnCalibrate.IsChecked = false;
+            CalibrationHint.Visibility = Visibility.Collapsed;
+        }
+
+        // Alle anderen Buttons unchecken
+        foreach (var tb in ToolButtons())
+        {
+            if (!ReferenceEquals(tb, sender))
                 tb.IsChecked = false;
         }
 
-        var tool = sender switch
+        OverlayToolType tool;
+        if (sender == BtnToolLine) tool = OverlayToolType.Line;
+        else if (sender == BtnToolArc) tool = OverlayToolType.Arc;
+        else if (sender == BtnToolRect) tool = OverlayToolType.Rectangle;
+        else if (sender == BtnToolPoint) tool = OverlayToolType.Point;
+        else if (sender == BtnToolStretch) tool = OverlayToolType.Stretch;
+        else if (sender == BtnToolPipeBend) tool = OverlayToolType.PipeBend;
+        else if (sender == BtnToolLateralCircle) tool = OverlayToolType.LateralCircle;
+        else if (sender == BtnToolLevelDeposit)
         {
-            _ when sender == BtnToolLine => OverlayToolType.Line,
-            _ when sender == BtnToolArc => OverlayToolType.Arc,
-            _ when sender == BtnToolRect => OverlayToolType.Rectangle,
-            _ when sender == BtnToolPoint => OverlayToolType.Point,
-            _ when sender == BtnToolStretch => OverlayToolType.Stretch,
-            _ => OverlayToolType.None
-        };
+            tool = OverlayToolType.Level;
+            _overlayService.ActiveLevelMode = LevelMode.Deposit;
+        }
+        else if (sender == BtnToolLevelWater)
+        {
+            tool = OverlayToolType.Level;
+            _overlayService.ActiveLevelMode = LevelMode.Water;
+        }
+        else if (sender == BtnToolLevelObstacle)
+        {
+            tool = OverlayToolType.Level;
+            _overlayService.ActiveLevelMode = LevelMode.Obstacle;
+        }
+        else tool = OverlayToolType.None;
+
         _overlayService.ActiveTool = tool;
-        ClearPreviewShapes();
+        ClearAllDrawingShapes();
     }
 
     private void ToolButton_Unchecked(object sender, RoutedEventArgs e)
     {
         // Wenn kein Button mehr gecheckt → Tool auf None
-        var parent = (StackPanel)((ToggleButton)sender).Parent;
-        bool anyChecked = parent.Children.OfType<ToggleButton>().Any(tb => tb.IsChecked == true);
+        bool anyChecked = ToolButtons().Any(tb => tb.IsChecked == true);
         if (!anyChecked)
             _overlayService.ActiveTool = OverlayToolType.None;
     }
+
+    private void BtnPipeBendSnap_Checked(object sender, RoutedEventArgs e)
+        => _overlayService.PipeBendSnapEnabled = true;
+
+    private void BtnPipeBendSnap_Unchecked(object sender, RoutedEventArgs e)
+        => _overlayService.PipeBendSnapEnabled = false;
 
     // --- Navigation ---
 
@@ -853,15 +1376,16 @@ public partial class CodingModeWindow : Window
 
     private async void BtnSelectCode_Click(object sender, RoutedEventArgs e)
     {
-        // ServiceProvider fuer CodeCatalog und AI holen
-        var sp = App.Services as AuswertungPro.Next.UI.ServiceProvider;
-        if (sp == null) return;
+        // Aktuelle Videozeit direkt vom Player holen (falls nicht via Slider-Sync gesetzt)
+        if (_player is not null)
+            _vm.CurrentVideoTime = TimeSpan.FromMilliseconds(_player.Time);
+        var captureMeter = SyncSessionMeterFromVideo();
 
         // ProtocolEntry fuer den Katalog vorbereiten
         var entry = new ProtocolEntry
         {
             Source = ProtocolEntrySource.Manual,
-            MeterStart = _vm.CurrentMeter,
+            MeterStart = captureMeter,
             Zeit = _vm.CurrentVideoTime
         };
 
@@ -881,7 +1405,7 @@ public partial class CodingModeWindow : Window
 
         var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
             entry,
-            _vm.CurrentMeter,
+            captureMeter,
             _vm.CurrentVideoTime);
 
         var dlg = new VsaCodeExplorerWindow(explorerVm, _vm.VideoPath, _vm.CurrentVideoTime) { Owner = this };
@@ -903,15 +1427,8 @@ public partial class CodingModeWindow : Window
             BtnCreateEvent.IsEnabled = true;
 
             // Entry direkt als Event uebernehmen (Code + Parameter sind gesetzt)
-            _sessionService.AddEvent(entry, _vm.CurrentOverlay);
-            var newEvent = new CodingEvent
-            {
-                Entry = entry,
-                Overlay = _vm.CurrentOverlay,
-                MeterAtCapture = entry.MeterStart ?? _vm.CurrentMeter,
-                VideoTimestamp = entry.Zeit ?? _vm.CurrentVideoTime ?? TimeSpan.Zero
-            };
-            _vm.Events.Add(newEvent);
+            // WICHTIG: Nur ueber den Service adden, damit kein Duplikat in der Liste entsteht.
+            var newEvent = _sessionService.AddEvent(entry, _vm.CurrentOverlay);
 
             // Nach Meter sortiert anzeigen
             ResortEventsByMeter();
@@ -920,7 +1437,7 @@ public partial class CodingModeWindow : Window
 
             // Reset
             _vm.CurrentOverlay = null;
-            ClearPreviewShapes();
+            ClearAllDrawingShapes();
             TxtSelectedCode.Text = "";
             BtnCreateEvent.IsEnabled = false;
             UpdateEventMarkers();
@@ -968,8 +1485,11 @@ public partial class CodingModeWindow : Window
 
     private void BtnCreateEvent_Click(object sender, RoutedEventArgs e)
     {
+        // Distanz vor Speichern auf aktuelle Videoposition ziehen.
+        SyncSessionMeterFromVideo();
         _vm.CreateEventCommand.Execute(null);
-        ClearPreviewShapes();
+        ResortEventsByMeter();
+        ClearAllDrawingShapes();
         TxtSelectedCode.Text = "";
         BtnCreateEvent.IsEnabled = false;
         UpdateFotoButtons();
@@ -1074,12 +1594,18 @@ public partial class CodingModeWindow : Window
 
     // --- Doppelklick auf Ereignis → Code korrigieren ---
 
+    private void ContextMenuEdit_Click(object sender, RoutedEventArgs e)
+    {
+        if (LstEvents.SelectedItem is CodingEvent)
+            LstEvents_MouseDoubleClick(sender, null!);
+    }
+
+    private void ContextMenuDelete_Click(object sender, RoutedEventArgs e)
+        => BtnDeleteDefect_Click(sender, e);
+
     private void LstEvents_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (LstEvents.SelectedItem is not CodingEvent ev) return;
-
-        var sp = App.Services as AuswertungPro.Next.UI.ServiceProvider;
-        if (sp == null) return;
 
         // ProtocolEntry zum Bearbeiten oeffnen (bestehende Werte vorbelegen)
         var entry = ev.Entry;
@@ -1121,6 +1647,14 @@ public partial class CodingModeWindow : Window
         if (LstEvents.SelectedItem is CodingEvent ev)
         {
             _vm.SelectedDefect = ev;
+            // Beim Auswaehlen eines Defekts direkt zur Distanz springen,
+            // damit Bild und Distanzanzeige nicht auseinanderlaufen.
+            if ((_vm.IsRunning || _vm.IsPaused) && Math.Abs(_vm.CurrentMeter - ev.MeterAtCapture) > 0.02)
+            {
+                _sessionService.MoveToMeter(ev.MeterAtCapture);
+                _lastSyncedMeter = -1;
+                SyncVideoToMeter();
+            }
             UpdateDefectDetailPanel(ev);
         }
         else
@@ -1153,12 +1687,12 @@ public partial class CodingModeWindow : Window
 
     private void BtnEditDefect_Click(object sender, RoutedEventArgs e)
     {
-        if (_vm.SelectedDefect == null) return;
+        var selected = _vm.SelectedDefect ?? LstEvents.SelectedItem as CodingEvent;
+        if (selected == null) return;
+        _vm.SelectedDefect = selected;
 
-        // Editor oeffnen fuer Code-Korrektur
-        var ev = _vm.SelectedDefect;
-        var sp = App.Services as AuswertungPro.Next.UI.ServiceProvider;
-        if (sp == null) return;
+        // Editor oeffnen fuer Code-Korrektur (fuer alle Beobachtungen)
+        var ev = selected;
 
         var entry = ev.Entry;
         var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
@@ -1178,12 +1712,38 @@ public partial class CodingModeWindow : Window
             entry.FotoPaths = result.FotoPaths;
             _sessionService.UpdateEvent(ev.EventId, entry, ev.Overlay);
 
-            // Als bearbeitet markieren
-            _vm.EditDefectCommand.Execute(null);
+            // KI-Decision als bearbeitet markieren (nur bei KI-Events)
+            if (ev.AiContext != null)
+                _vm.EditDefectCommand.Execute(null);
+
             LstEvents.Items.Refresh();
             UpdateDefectDetailPanel(ev);
             UpdateEventMarkers();
         }
+    }
+
+    private void BtnDeleteDefect_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm.SelectedDefect == null) return;
+
+        var ev = _vm.SelectedDefect;
+        var result = System.Windows.MessageBox.Show(
+            $"Beobachtung \"{ev.Entry.Code}\" bei {ev.MeterAtCapture:F2}m wirklich löschen?",
+            "Beobachtung löschen",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (result != MessageBoxResult.Yes) return;
+
+        // Event aus Session und Liste entfernen
+        _sessionService.RemoveEvent(ev.EventId);
+        _vm.Events.Remove(ev);
+        _vm.SelectedDefect = null;
+        DefectDetailPanel.Visibility = Visibility.Collapsed;
+
+        LstEvents.Items.Refresh();
+        UpdateEventMarkers();
+        TxtEventCount.Text = $"{_vm.EventCount} Ereignisse";
     }
 
     private void BtnRejectDefect_Click(object sender, RoutedEventArgs e)
@@ -1237,11 +1797,14 @@ public partial class CodingModeWindow : Window
         var status = CodingSessionViewModel.GetDefectStatus(ev);
         TxtDetailStatus.Text = $"Status: {StatusToDisplayText(status)}";
 
-        // Aktionsbuttons nur bei offenen KI-Events
-        DefectActionGrid.Visibility = ev.AiContext != null &&
+        // KI-Aktionsbuttons nur bei offenen KI-Events
+        DefectAiActionGrid.Visibility = ev.AiContext != null &&
             status is DefectStatus.Pending or DefectStatus.ReviewRequired
             ? Visibility.Visible
             : Visibility.Collapsed;
+
+        // Bearbeiten / Loeschen immer sichtbar
+        DefectEditActionGrid.Visibility = Visibility.Visible;
     }
 
     private static string StatusToDisplayText(DefectStatus status) => status switch
@@ -1399,31 +1962,115 @@ public partial class CodingModeWindow : Window
         try
         {
             _aiConfig = AiRuntimeConfig.Load();
+            _aiModelName = _aiConfig.VisionModel;
             if (!_aiConfig.Enabled)
             {
-                SetAiStatus("KI deaktiviert", "#94A3B8");
+                SetAiStatus("KI deaktiviert", "#94A3B8", "Modell: aus");
                 BtnAnalyzeFrame.IsEnabled = false;
                 return;
             }
 
             _ollamaClient = _aiConfig.CreateOllamaClient();
             _liveDetection = new LiveDetectionService(_ollamaClient, _aiConfig.VisionModel);
-
-            TxtAiModel.Text = _aiConfig.VisionModel;
-            SetAiStatus("Bereit", "#22C55E");
+            SetAiStatus("Bereit", "#22C55E",
+                $"Qwen aktiv ({CompactModelName(_aiModelName)})");
         }
         catch (Exception ex)
         {
-            SetAiStatus($"Fehler: {ex.Message}", "#EF4444");
+            SetAiStatus($"Fehler: {ex.Message}", "#EF4444",
+                $"Modell: {CompactModelName(_aiModelName)}", error: true);
             BtnAnalyzeFrame.IsEnabled = false;
         }
     }
 
-    private void SetAiStatus(string text, string dotColorHex)
+    private static string CompactModelName(string? model)
+    {
+        if (string.IsNullOrWhiteSpace(model))
+            return "?";
+
+        var trimmed = model.Trim();
+        var slashIndex = trimmed.LastIndexOf('/');
+        if (slashIndex >= 0 && slashIndex < trimmed.Length - 1)
+            trimmed = trimmed[(slashIndex + 1)..];
+        return trimmed;
+    }
+
+    private void SetPipelineDots(string? stage, bool busy, bool error)
+    {
+        var gray = Color.FromRgb(0x94, 0xA3, 0xB8);
+        var amber = Color.FromRgb(0xF5, 0x9E, 0x0B);
+        var green = Color.FromRgb(0x22, 0xC5, 0x5E);
+        var red = Color.FromRgb(0xEF, 0x44, 0x44);
+        var blue = Color.FromRgb(0x38, 0xBD, 0xF8);
+
+        Color yolo = gray;
+        Color qwen = busy ? amber : green;
+        Color tracker = gray;
+
+        if (error)
+        {
+            qwen = red;
+            tracker = red;
+        }
+        else if (!string.IsNullOrWhiteSpace(stage) &&
+                 stage.Contains("Overlay", StringComparison.OrdinalIgnoreCase))
+        {
+            tracker = busy ? amber : green;
+        }
+        else if (!string.IsNullOrWhiteSpace(stage) &&
+                 stage.Contains("Snapshot", StringComparison.OrdinalIgnoreCase))
+        {
+            tracker = blue;
+        }
+
+        DotYolo.Fill = new SolidColorBrush(yolo);
+        DotQwen.Fill = new SolidColorBrush(qwen);
+        DotTracker.Fill = new SolidColorBrush(tracker);
+    }
+
+    private void StartAiStatusPulse()
+    {
+        if (_aiStatusPulseRunning)
+            return;
+
+        _aiStatusPulseRunning = true;
+        var anim = new DoubleAnimation
+        {
+            From = 0.35,
+            To = 1.0,
+            Duration = TimeSpan.FromMilliseconds(600),
+            AutoReverse = true,
+            RepeatBehavior = RepeatBehavior.Forever
+        };
+        AiStatusDot.BeginAnimation(UIElement.OpacityProperty, anim);
+    }
+
+    private void StopAiStatusPulse()
+    {
+        _aiStatusPulseRunning = false;
+        AiStatusDot.BeginAnimation(UIElement.OpacityProperty, null);
+        AiStatusDot.Opacity = 1.0;
+    }
+
+    private void SetAiStatus(
+        string text,
+        string dotColorHex,
+        string? stage = null,
+        bool busy = false,
+        bool error = false)
     {
         TxtAiStatus.Text = text;
         var color = (Color)ColorConverter.ConvertFromString(dotColorHex);
         AiStatusDot.Fill = new SolidColorBrush(color);
+        var model = CompactModelName(_aiModelName);
+        TxtAiModel.Text = string.IsNullOrWhiteSpace(stage)
+            ? model
+            : $"{model} | {stage}";
+        SetPipelineDots(stage, busy, error);
+        if (busy)
+            StartAiStatusPulse();
+        else
+            StopAiStatusPulse();
     }
 
     private async void BtnAnalyzeFrame_Click(object sender, RoutedEventArgs e)
@@ -1445,16 +2092,19 @@ public partial class CodingModeWindow : Window
         {
             BtnAnalyzeFrame.IsEnabled = false;
             TxtAnalyzeButton.Text = "Analysiere...";
-            SetAiStatus("Frame wird analysiert...", "#F59E0B");
+            SetAiStatus("Frame wird analysiert...", "#F59E0B", "1/3 Snapshot", busy: true);
 
             // Frame aus VLC als PNG extrahieren
             var pngBytes = await CaptureCurrentFrameAsync();
             if (pngBytes == null || pngBytes.Length == 0)
             {
-                SetAiStatus("Frame konnte nicht extrahiert werden", "#EF4444");
+                SetAiStatus("Frame konnte nicht extrahiert werden", "#EF4444",
+                    $"Modell: {CompactModelName(_aiModelName)}", error: true);
                 return;
             }
 
+            SetAiStatus("Frame wird analysiert...", "#F59E0B",
+                $"2/3 Inferenz ({CompactModelName(_aiModelName)})", busy: true);
             var timestampSec = _player.Time / 1000.0;
             var result = await _liveDetection.AnalyzeFrameAsync(
                 pngBytes, timestampSec, _analysisCts.Token);
@@ -1463,11 +2113,13 @@ public partial class CodingModeWindow : Window
         }
         catch (OperationCanceledException)
         {
-            SetAiStatus("Analyse abgebrochen", "#94A3B8");
+            SetAiStatus("Analyse abgebrochen", "#94A3B8",
+                $"Modell: {CompactModelName(_aiModelName)}");
         }
         catch (Exception ex)
         {
-            SetAiStatus($"Fehler: {ex.Message}", "#EF4444");
+            SetAiStatus($"Fehler: {ex.Message}", "#EF4444",
+                $"Modell: {CompactModelName(_aiModelName)}", error: true);
         }
         finally
         {
@@ -1484,27 +2136,278 @@ public partial class CodingModeWindow : Window
     {
         if (result.Error != null)
         {
-            SetAiStatus($"Fehler: {result.Error}", "#EF4444");
+            SetAiStatus($"Fehler: {result.Error}", "#EF4444",
+                $"Modell: {CompactModelName(_aiModelName)}", error: true);
             AiFindingsList.ItemsSource = null;
+            AiOverlayCanvas.Children.Clear();
+            DetectionCanvas.Children.Clear();
             return;
         }
 
         if (result.Findings.Count == 0)
         {
-            SetAiStatus("Kein Schaden erkannt", "#22C55E");
+            SetAiStatus("Kein Schaden erkannt", "#22C55E", "3/3 Overlay aktualisiert");
             AiFindingsList.ItemsSource = null;
+            AiOverlayCanvas.Children.Clear();
+            DetectionCanvas.Children.Clear();
             return;
         }
 
-        SetAiStatus($"{result.Findings.Count} Befund(e) erkannt", "#22C55E");
+        SetAiStatus($"{result.Findings.Count} Befund(e) erkannt", "#22C55E",
+            "3/3 Overlay + Ring-Sektor");
 
         // Meterstand aus KI aktualisieren (informativ)
         if (result.MeterReading.HasValue)
+        {
+            _lastAiMeterReading = result.MeterReading.Value;
+            _lastAiMeterTimestampSec = result.TimestampSeconds;
             TxtAiStatus.Text += $"  |  Meter: {result.MeterReading:F2}m";
+        }
 
         // Findings in UI-Objekte konvertieren
         var items = result.Findings.Select(f => new AiFindingDisplayItem(f)).ToList();
         AiFindingsList.ItemsSource = items;
+
+        // KI-Overlays auf dem Video rendern
+        var calibration = _overlayService?.Calibration;
+        var overlays = AiOverlayConverter.FromFindings(result.Findings, calibration);
+        RenderAiOverlays(overlays);
+
+        // Ring-Sektor Visualisierung
+        RenderDetectionRingSector(result.Findings, result.TimestampSeconds);
+    }
+
+    private void RenderAiOverlays(List<AiOverlay> overlays)
+    {
+        AiOverlayCanvas.Children.Clear();
+        _currentAiOverlays = overlays;
+
+        var canvasWidth = AiOverlayCanvas.ActualWidth;
+        var canvasHeight = AiOverlayCanvas.ActualHeight;
+        if (canvasWidth < 10 || canvasHeight < 10) return;
+
+        foreach (var overlay in overlays)
+        {
+            if (overlay.IsRejected) continue;
+            RenderSingleAiOverlay(overlay, canvasWidth, canvasHeight);
+        }
+    }
+
+    private void RenderSingleAiOverlay(AiOverlay overlay, double canvasWidth, double canvasHeight)
+    {
+        var geo = overlay.Geometry;
+        var color = MapSeverityColor(overlay.Severity);
+        var strokeBrush = new SolidColorBrush(Color.FromArgb(220, color.R, color.G, color.B));
+        var fillBrush = new SolidColorBrush(Color.FromArgb(50, color.R, color.G, color.B));
+
+        switch (geo.ToolType)
+        {
+            case OverlayToolType.Rectangle:
+                RenderAiRectangle(geo, canvasWidth, canvasHeight, strokeBrush, fillBrush, overlay);
+                break;
+            case OverlayToolType.Level:
+                RenderAiLevel(geo, canvasWidth, canvasHeight, overlay);
+                break;
+            case OverlayToolType.Line:
+                RenderAiLine(geo, canvasWidth, canvasHeight, strokeBrush, overlay);
+                break;
+        }
+    }
+
+    private void RenderAiRectangle(OverlayGeometry geo, double w, double h,
+        Brush stroke, Brush fill, AiOverlay overlay)
+    {
+        if (geo.Points.Count < 4) return;
+        double x1 = geo.Points[0].X * w, y1 = geo.Points[0].Y * h;
+        double x2 = geo.Points[2].X * w, y2 = geo.Points[2].Y * h;
+
+        var rect = new Rectangle
+        {
+            Width = Math.Abs(x2 - x1), Height = Math.Abs(y2 - y1),
+            Stroke = stroke, StrokeThickness = 2,
+            StrokeDashArray = new DoubleCollection { 4, 2 },
+            Fill = fill, Tag = "ai_overlay"
+        };
+        Canvas.SetLeft(rect, Math.Min(x1, x2));
+        Canvas.SetTop(rect, Math.Min(y1, y2));
+        AiOverlayCanvas.Children.Add(rect);
+
+        AddAiLabel(overlay, Math.Min(x1, x2), Math.Min(y1, y2) - 20, w);
+    }
+
+    private void RenderAiLevel(OverlayGeometry geo, double w, double h, AiOverlay overlay)
+    {
+        if (geo.Points.Count < 2) return;
+        double x1 = geo.Points[0].X * w, x2 = geo.Points[1].X * w;
+        double y = geo.Points[0].Y * h;
+
+        var levelColor = geo.LevelSubMode switch
+        {
+            LevelMode.Water => Color.FromRgb(65, 105, 225),
+            LevelMode.Obstacle => Color.FromRgb(220, 20, 60),
+            _ => Color.FromRgb(210, 105, 30)
+        };
+
+        var stroke = new SolidColorBrush(Color.FromArgb(220, levelColor.R, levelColor.G, levelColor.B));
+        var fill = new SolidColorBrush(Color.FromArgb(40, levelColor.R, levelColor.G, levelColor.B));
+
+        var line = new Line
+        {
+            X1 = x1, Y1 = y, X2 = x2, Y2 = y,
+            Stroke = stroke, StrokeThickness = 2.5,
+            StrokeDashArray = new DoubleCollection { 6, 3 },
+            Tag = "ai_overlay"
+        };
+        AiOverlayCanvas.Children.Add(line);
+
+        double fillTop = geo.LevelSubMode == LevelMode.Obstacle ? 0 : y;
+        double fillBottom = geo.LevelSubMode == LevelMode.Obstacle ? y : h;
+        var fillRect = new Rectangle
+        {
+            Width = Math.Abs(x2 - x1), Height = Math.Abs(fillBottom - fillTop),
+            Fill = fill, Tag = "ai_overlay"
+        };
+        Canvas.SetLeft(fillRect, Math.Min(x1, x2));
+        Canvas.SetTop(fillRect, fillTop);
+        AiOverlayCanvas.Children.Add(fillRect);
+
+        var pctText = geo.FillPercent.HasValue ? $"{geo.FillPercent:F1}%" : "?%";
+        var modeText = geo.LevelSubMode switch
+        {
+            LevelMode.Water => "Wasser",
+            LevelMode.Obstacle => "Hindernis",
+            _ => "Ablagerung"
+        };
+        AddAiLabel(overlay, (x1 + x2) / 2 - 40, y - 24, w, $"{modeText}: {pctText}");
+    }
+
+    private void RenderAiLine(OverlayGeometry geo, double w, double h, Brush stroke, AiOverlay overlay)
+    {
+        if (geo.Points.Count < 2) return;
+        double x1 = geo.Points[0].X * w, y1 = geo.Points[0].Y * h;
+        double x2 = geo.Points[1].X * w, y2 = geo.Points[1].Y * h;
+
+        var line = new Line
+        {
+            X1 = x1, Y1 = y1, X2 = x2, Y2 = y2,
+            Stroke = stroke, StrokeThickness = 2.5,
+            StrokeDashArray = new DoubleCollection { 4, 2 },
+            Tag = "ai_overlay"
+        };
+        AiOverlayCanvas.Children.Add(line);
+
+        var mmText = geo.Q1Mm.HasValue ? $"{geo.Q1Mm:F0}mm" : "";
+        AddAiLabel(overlay, (x1 + x2) / 2 - 30, (y1 + y2) / 2 - 12, w, $"{overlay.Label} {mmText}".Trim());
+    }
+
+    private void AddAiLabel(AiOverlay overlay, double x, double y, double canvasWidth, string? customText = null)
+    {
+        var color = MapSeverityColor(overlay.Severity);
+        var text = customText ?? $"{overlay.VsaCodeHint ?? overlay.Label}";
+        if (text.Length > 30) text = text[..30] + "...";
+
+        var label = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(210, 17, 19, 24)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(200, color.R, color.G, color.B)),
+            BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(3),
+            Padding = new Thickness(4, 2, 4, 2), Tag = "ai_overlay",
+            Child = new TextBlock
+            {
+                Text = text, FontSize = 11,
+                Foreground = new SolidColorBrush(Color.FromRgb(225, 234, 245))
+            }
+        };
+
+        Canvas.SetLeft(label, Math.Clamp(x, 2, canvasWidth - 120));
+        Canvas.SetTop(label, Math.Max(2, y));
+        AiOverlayCanvas.Children.Add(label);
+    }
+
+    private static Color MapSeverityColor(int severity) => Math.Clamp(severity, 1, 5) switch
+    {
+        >= 5 => Color.FromRgb(239, 68, 68),
+        4 => Color.FromRgb(249, 115, 22),
+        3 => Color.FromRgb(245, 158, 11),
+        2 => Color.FromRgb(132, 204, 22),
+        _ => Color.FromRgb(34, 197, 94)
+    };
+
+    private void RenderDetectionRingSector(IReadOnlyList<LiveFrameFinding> findings, double timestampSec)
+    {
+        DetectionCanvas.Children.Clear();
+
+        var width = DetectionCanvas.ActualWidth;
+        var height = DetectionCanvas.ActualHeight;
+        if (width < 60 || height < 60 || findings.Count == 0) return;
+
+        var size = Math.Min(width, height) * 0.78;
+        var cx = width / 2.0;
+        var cy = height / 2.0;
+        var ringOuter = size * 0.42;
+        var ringInner = size * 0.28;
+
+        var guide = new Ellipse
+        {
+            Width = ringOuter * 2, Height = ringOuter * 2,
+            Stroke = new SolidColorBrush(Color.FromArgb(80, 197, 209, 134)),
+            StrokeDashArray = new DoubleCollection { 3, 3 },
+            StrokeThickness = 1.0, Fill = Brushes.Transparent, IsHitTestVisible = false
+        };
+        Canvas.SetLeft(guide, cx - ringOuter);
+        Canvas.SetTop(guide, cy - ringOuter);
+        DetectionCanvas.Children.Add(guide);
+
+        for (var hour = 1; hour <= 12; hour++)
+        {
+            var angleDeg = -90 + (hour % 12) * 30;
+            var rad = angleDeg * Math.PI / 180.0;
+            DetectionCanvas.Children.Add(new Line
+            {
+                X1 = cx + Math.Cos(rad) * (ringInner - 4),
+                Y1 = cy + Math.Sin(rad) * (ringInner - 4),
+                X2 = cx + Math.Cos(rad) * (ringOuter + 4),
+                Y2 = cy + Math.Sin(rad) * (ringOuter + 4),
+                Stroke = new SolidColorBrush(Color.FromArgb(50, 227, 227, 201)),
+                StrokeThickness = 0.8, IsHitTestVisible = false
+            });
+        }
+
+        for (var i = 0; i < findings.Count && i < 8; i++)
+        {
+            var f = findings[i];
+            var clockMatch = System.Text.RegularExpressions.Regex.Match(f.PositionClock ?? "", @"(\d{1,2})");
+            int parsedClock = clockMatch.Success && int.TryParse(clockMatch.Groups[1].Value, out var ch) ? ch : 0;
+            if (parsedClock == 0) parsedClock = 12;
+
+            var centerDeg = -90 + (parsedClock % 12) * 30;
+            var sweep = f.ExtentPercent is > 0
+                ? Math.Clamp(f.ExtentPercent.Value * 3.6, 14.0, 160.0) : 18.0;
+            var startDeg = centerDeg - sweep / 2.0;
+            var color = MapSeverityColor(f.Severity);
+
+            var startRad = startDeg * Math.PI / 180.0;
+            var endRad = (startDeg + sweep) * Math.PI / 180.0;
+            var large = sweep > 180;
+            var p1 = new Point(cx + Math.Cos(startRad) * ringOuter, cy + Math.Sin(startRad) * ringOuter);
+            var p2 = new Point(cx + Math.Cos(endRad) * ringOuter, cy + Math.Sin(endRad) * ringOuter);
+            var p3 = new Point(cx + Math.Cos(endRad) * ringInner, cy + Math.Sin(endRad) * ringInner);
+            var p4 = new Point(cx + Math.Cos(startRad) * ringInner, cy + Math.Sin(startRad) * ringInner);
+
+            var fig = new PathFigure { StartPoint = p1, IsClosed = true, IsFilled = true };
+            fig.Segments.Add(new ArcSegment(p2, new Size(ringOuter, ringOuter), 0, large, SweepDirection.Clockwise, true));
+            fig.Segments.Add(new LineSegment(p3, true));
+            fig.Segments.Add(new ArcSegment(p4, new Size(ringInner, ringInner), 0, large, SweepDirection.Counterclockwise, true));
+
+            var sector = new Path
+            {
+                Data = new PathGeometry(new[] { fig }),
+                Fill = new SolidColorBrush(Color.FromArgb(80, color.R, color.G, color.B)),
+                Stroke = new SolidColorBrush(Color.FromArgb(180, color.R, color.G, color.B)),
+                StrokeThickness = 1.0, IsHitTestVisible = false
+            };
+            DetectionCanvas.Children.Add(sector);
+        }
     }
 
     /// <summary>

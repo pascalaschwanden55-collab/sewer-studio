@@ -215,21 +215,37 @@
             <!-- Video + Overlays: Geschwister-Pattern (wie CodingModeWindow) -->
             <Grid Grid.Column="0">
                 <!-- Video-Layer -->
-                <vlc:VideoView x:Name="VideoView" Background="#FF000000"/>
+                <vlc:VideoView x:Name="VideoView"
+                               Background="#FF000000"
+                               IsHitTestVisible="False"
+                               Panel.ZIndex="0"/>
 
-                <!-- Coding Overlay-Canvas (Zeichenwerkzeuge, nur im Codier-Modus) -->
-                <Canvas x:Name="CodingOverlayCanvas"
-                        Background="Transparent"
-                        ClipToBounds="True"
-                        Visibility="Collapsed"
-                        Cursor="Cross"
-                        MouseLeftButtonDown="CodingCanvas_MouseLeftButtonDown"
-                        MouseMove="CodingCanvas_MouseMove"
-                        MouseLeftButtonUp="CodingCanvas_MouseLeftButtonUp"/>
+                <!-- Coding Overlay als Popup:
+                     eigenes Top-Level-Window, damit Zeichnung trotz VLC-HwndHost sichtbar bleibt -->
+                <Popup x:Name="CodingOverlayPopup"
+                       PlacementTarget="{Binding ElementName=VideoView}"
+                       Placement="Relative"
+                       HorizontalOffset="0"
+                       VerticalOffset="0"
+                       AllowsTransparency="True"
+                       StaysOpen="True"
+                       IsOpen="False">
+                    <Canvas x:Name="CodingOverlayCanvas"
+                            Width="1"
+                            Height="1"
+                            Background="#01000000"
+                            ClipToBounds="True"
+                            IsHitTestVisible="True"
+                            Cursor="Arrow"
+                            MouseLeftButtonDown="CodingCanvas_MouseLeftButtonDown"
+                            MouseMove="CodingCanvas_MouseMove"
+                            MouseLeftButtonUp="CodingCanvas_MouseLeftButtonUp"/>
+                </Popup>
 
                 <!-- Detection overlay layer (hidden by default) -->
                 <Grid x:Name="DetectionOverlayGrid"
                       Visibility="Collapsed"
+                      Panel.ZIndex="20"
                       IsHitTestVisible="False">
                     <Canvas x:Name="DetectionCanvas"
                             Background="Transparent"
@@ -432,6 +448,7 @@
                                          FontSize="12"
                                          Foreground="{DynamicResource TextBrush}"
                                          MaxHeight="240"
+                                         PreviewMouseRightButtonDown="CodingEvents_PreviewMouseRightButtonDown"
                                          MouseDoubleClick="CodingEvents_DoubleClick"
                                          SelectionChanged="CodingEvents_SelectionChanged">
                                     <ListBox.ContextMenu>
@@ -834,13 +851,18 @@
                     </ToggleButton>
                     <!-- Separator: Neue Vermessungswerkzeuge -->
                     <Border Width="1" Height="28" Background="{DynamicResource BorderBrush}" Margin="4,0,8,0"/>
-                    <ToggleButton x:Name="BtnCodingProtractor" Style="{StaticResource SpeedToggleButton}"
-                                  ToolTip="Winkelmesser (3 Klicks: P1, Scheitel, P3)" Click="CodingToolProtractor_Click">
-                        <TextBlock Text="Winkel" FontSize="11"/>
+                    <ToggleButton x:Name="BtnCodingPipeBend" Style="{StaticResource SpeedToggleButton}"
+                                  ToolTip="Bogen-Winkel (4 Klicks: Achse1, Achse2)" Click="CodingToolPipeBend_Click">
+                        <TextBlock Text="Bogen" FontSize="11"/>
                     </ToggleButton>
-                    <ToggleButton x:Name="BtnCodingDnCircle" Style="{StaticResource SpeedToggleButton}"
-                                  ToolTip="DN-Kreis (Anschluss messen)" Click="CodingToolDnCircle_Click">
-                        <TextBlock Text="DN-Kreis" FontSize="11"/>
+                    <ToggleButton x:Name="BtnCodingPipeBendSnap" Style="{StaticResource SpeedToggleButton}"
+                                  ToolTip="PipeBend Snap auf 15/30/45/90"
+                                  Click="CodingPipeBendSnap_Click">
+                        <TextBlock Text="Snap" FontSize="11"/>
+                    </ToggleButton>
+                    <ToggleButton x:Name="BtnCodingLateralCircle" Style="{StaticResource SpeedToggleButton}"
+                                  ToolTip="Anschluss (3 Punkte am Rand)" Click="CodingToolLateralCircle_Click">
+                        <TextBlock Text="Anschluss" FontSize="11"/>
                     </ToggleButton>
                     <ToggleButton x:Name="BtnCodingRuler" Style="{StaticResource SpeedToggleButton}"
                                   ToolTip="Lineal mit Teilung" Click="CodingToolRuler_Click">
@@ -874,15 +896,15 @@
                                Text="" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <ToggleButton x:Name="BtnCodingLiveAi" Style="{StaticResource SpeedToggleButton}"
                                   IsChecked="False" Margin="0,0,6,0"
-                                  ToolTip="KI Live-Analyse an/aus (automatisch alle 5s)" Click="CodingLiveAi_Click">
-                        <TextBlock Text="&#x26A1; Live-KI" FontSize="11"/>
+                                  ToolTip="Automatische KI-Analyse im Codiermodus an/aus (alle 5s)" Click="CodingLiveAi_Click">
+                        <TextBlock Text="&#x26A1; Auto-KI" FontSize="11"/>
                     </ToggleButton>
                     <Button x:Name="BtnCodingAnalyze"
                             Style="{StaticResource PlayerPrimaryButton}"
                             Padding="10,5" FontSize="11"
                             Click="CodingAnalyzeFrame_Click"
-                            ToolTip="Aktuellen Frame per KI analysieren">
-                        <TextBlock Text="&#x26A1; Analysieren"/>
+                            ToolTip="Aktuellen Frame einmalig per KI analysieren">
+                        <TextBlock Text="&#x26A1; Jetzt analysieren"/>
                     </Button>
                 </StackPanel>
 

@@ -16,6 +16,12 @@ public interface IOverlayToolService
     /// <summary>Aktives Zeichenwerkzeug.</summary>
     OverlayToolType ActiveTool { get; set; }
 
+    /// <summary>Sub-Modus fuer das Level-Werkzeug (Ablagerung/Wasser/Hindernis).</summary>
+    LevelMode ActiveLevelMode { get; set; }
+
+    /// <summary>PipeBend auf Standardwinkel (15/30/45/90) snappen.</summary>
+    bool PipeBendSnapEnabled { get; set; }
+
     /// <summary>Werkzeug gewechselt.</summary>
     event EventHandler<OverlayToolType>? ToolChanged;
 

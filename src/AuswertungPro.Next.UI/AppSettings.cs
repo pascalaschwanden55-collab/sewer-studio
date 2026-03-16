@@ -34,6 +34,7 @@ public sealed class AppSettings
     public string? LastVideoFolder { get; set; }
     public AutoSaveMode DataAutoSaveMode { get; set; } = AutoSaveMode.OnEachChange;
     public bool EnableRestorePoints { get; set; } = true;
+    public string UiTheme { get; set; } = ThemeManager.Light;
 
     // Video player tuning
     public bool VideoHwDecoding { get; set; } = true;
@@ -205,6 +206,7 @@ public sealed class AppSettings
             settings.LastVideoSourceFolder = settings.LastVideoFolder;
         if (string.IsNullOrWhiteSpace(settings.LastVideoFolder))
             settings.LastVideoFolder = settings.LastVideoSourceFolder;
+        settings.UiTheme = ThemeManager.NormalizeTheme(settings.UiTheme);
         return settings;
     }
 
