@@ -17,6 +17,7 @@ using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Training;
+using AuswertungPro.Next.UI.Ai.Training.Services;
 using AuswertungPro.Next.UI.Services;
 using AiTrack = AuswertungPro.Next.UI.Services.AiActivityTracker;
 
@@ -137,6 +138,10 @@ public partial class TrainingCenterViewModel : ObservableObject
             // Stage-spezifisches Logging
             switch (step.Stage)
             {
+                case SelfTrainingStage.BuildingTimeline:
+                    if (step.ErrorMessage is not null)
+                        AddSelfTrainingLog(step.ErrorMessage);
+                    break;
                 case SelfTrainingStage.ExtractingFrame:
                     AddSelfTrainingLog($"Frame extrahieren: {step.VsaCode} @ {step.MeterPosition:F1}m");
                     if (step.FramePath is not null) LiveFramePath = step.FramePath;
@@ -1243,5 +1248,141 @@ public partial class TrainingCenterViewModel : ObservableObject
         ReviewQueueCount = ReviewQueue.Count;
         ReviewStatusText = $"Rejected: {item.SuggestedCode} → {correctedCode} | {ReviewQueueCount} verbleibend";
         Log($"Review Rejected: {item.Label} → {item.SuggestedCode} korrigiert zu {correctedCode}");
+    }
+
+    // ── Selbsttraining (Orchestrator) ──────────────────────────────────
+
+    [ObservableProperty] private bool _isSelfTrainingRunning;
+    private CancellationTokenSource? _selfTrainingCts;
+    private ISelfTrainingOrchestrator? _selfTrainingOrchestrator;
+
+    [RelayCommand]
+    private async Task RunSelfTrainingAsync()
+    {
+        if (IsBusy || IsSelfTrainingRunning) return;
+
+        // Auto-Scan: Wenn keine Faelle geladen, Ordner automatisch scannen
+        if (Cases.Count == 0 && _rootFolders.Count > 0)
+        {
+            StatusText = "Scanne Ordner automatisch...";
+            foreach (var folder in _rootFolders)
+            {
+                if (!Directory.Exists(folder)) continue;
+                var found = await _import.ScanAsync(folder);
+                foreach (var c in found)
+                    Cases.Add(c);
+            }
+        }
+
+        // Auto-Auswahl: Wenn kein Fall gewaehlt, ersten mit Protokoll nehmen
+        if (SelectedCase is null)
+        {
+            var firstWithProtocol = Cases.FirstOrDefault(c => !string.IsNullOrEmpty(c.ProtocolPath));
+            if (firstWithProtocol is null)
+            {
+                StatusText = "Keine Faelle mit Protokoll vorhanden. Bitte zuerst Ordner waehlen und scannen.";
+                return;
+            }
+            SelectedCase = firstWithProtocol;
+        }
+        if (string.IsNullOrEmpty(SelectedCase.ProtocolPath))
+        {
+            StatusText = "Der ausgewaehlte Fall hat kein Protokoll (PDF).";
+            return;
+        }
+
+        _selfTrainingCts?.Cancel();
+        _selfTrainingCts?.Dispose();
+        _selfTrainingCts = new CancellationTokenSource();
+        var ct = _selfTrainingCts.Token;
+
+        using var _aiToken = AiTrack.Begin("Selbsttraining");
+        try
+        {
+            IsBusy = true;
+            IsSelfTrainingRunning = true;
+            ResetSelfTrainingVisuals();
+            LogText = "";
+            StatusText = $"Selbsttraining: {SelectedCase.CaseId}...";
+            Log($"--- Selbsttraining starten: {SelectedCase.CaseId} ---");
+            Log($"  Protokoll: {SelectedCase.ProtocolPath}");
+
+            // Services instanziieren (gleicher Pattern wie BatchImport)
+            var cfg = AiRuntimeConfig.Load();
+            Log($"Ollama: {cfg.OllamaBaseUri}, Modell: {cfg.VisionModel}");
+
+            var ollamaClient = cfg.CreateOllamaClient();
+            var vision = new EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel);
+            var comparison = new SelfTrainingComparisonService();
+            var technique = new TechniqueAssessmentService(ollamaClient, cfg.VisionModel);
+            var pdfExtractor = new PdfProtocolExtractor();
+
+            _selfTrainingOrchestrator = new SelfTrainingOrchestrator(
+                vision, comparison, technique, pdfExtractor);
+
+            // Progress-Callback verbindet Orchestrator → ViewModel-Visualisierungen
+            var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);
+
+            Log("Pipeline gestartet: OSD-Scan → Frame → KI-Analyse → Vergleich → Technik");
+            var result = await _selfTrainingOrchestrator.RunAsync(SelectedCase, progress, ct);
+
+            // Ergebnis loggen
+            Log($"--- Selbsttraining abgeschlossen ---");
+            Log($"  Dauer: {result.Duration:mm\\:ss}");
+            Log($"  Eintraege: {result.TotalEntries} gesamt");
+            Log($"  ExactMatch: {result.ExactMatches} | PartialMatch: {result.PartialMatches}");
+            Log($"  Mismatch: {result.Mismatches} | NoFindings: {result.NoFindings}");
+            Log($"  Samples erzeugt: {result.SamplesGenerated}");
+            if (result.OverallTechnique is { } t)
+                Log($"  Technik: {t.OverallGrade} (Licht={t.LightingQuality}, Schaerfe={t.SharpnessQuality})");
+
+            StatusText = $"Fertig! {result.ExactMatches}/{result.TotalEntries} ExactMatch, "
+                       + $"{result.SamplesGenerated} Samples in {result.Duration:mm\\:ss}";
+
+            // Samples-Liste aktualisieren
+            await LoadSamplesInternalAsync();
+            await RefreshKbStatusAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            Log("Selbsttraining abgebrochen.");
+            StatusText = "Selbsttraining abgebrochen.";
+        }
+        catch (Exception ex)
+        {
+            Log($"FEHLER: {ex.GetType().Name}: {ex.Message}");
+            StatusText = $"Fehler: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+            IsSelfTrainingRunning = false;
+            _selfTrainingOrchestrator = null;
+        }
+    }
+
+    [RelayCommand]
+    private void StopSelfTraining()
+    {
+        _selfTrainingCts?.Cancel();
+        StatusText = "Selbsttraining wird abgebrochen...";
+    }
+
+    [RelayCommand]
+    private void PauseSelfTraining()
+    {
+        if (_selfTrainingOrchestrator is null) return;
+        if (_selfTrainingOrchestrator.IsPaused)
+        {
+            _selfTrainingOrchestrator.Resume();
+            StatusText = "Selbsttraining fortgesetzt.";
+            Log("Pipeline fortgesetzt.");
+        }
+        else
+        {
+            _selfTrainingOrchestrator.Pause();
+            StatusText = "Selbsttraining pausiert.";
+            Log("Pipeline pausiert.");
+        }
     }
 }

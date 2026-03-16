@@ -69,18 +69,97 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     {
         var sw = Stopwatch.StartNew();
 
-        // 1. Protokoll-Eintraege MIT Fotos extrahieren
+        // 1. Protokoll-Eintraege extrahieren
         string framesDir = Path.Combine(tc.FolderPath, "self_training_frames");
+        Directory.CreateDirectory(framesDir);
+
+        progress.Report(new SelfTrainingStep(
+            0, 1, "", 0, SelfTrainingStage.BuildingTimeline, null, null, null,
+            "PDF-Protokoll wird gelesen..."));
+
         var allEntries = await _pdfExtractor.ExtractAsync(tc.ProtocolPath, framesDir, ct);
 
-        // Nur Eintraege mit Foto behalten — das sind unsere Trainingsbilder
+        progress.Report(new SelfTrainingStep(
+            0, allEntries.Count, "", 0, SelfTrainingStage.BuildingTimeline, null, null, null,
+            $"{allEntries.Count} Protokoll-Eintraege gefunden"));
+
+        // Eintraege mit Foto behalten
         var entries = allEntries
             .Where(e => !string.IsNullOrEmpty(e.ExtractedFramePath)
                         && File.Exists(e.ExtractedFramePath))
             .ToList();
 
+        // Fallback: Wenn keine Fotos im PDF, Frames aus Video extrahieren
+        if (entries.Count == 0 && !string.IsNullOrEmpty(tc.VideoPath) && File.Exists(tc.VideoPath))
+        {
+            progress.Report(new SelfTrainingStep(
+                0, allEntries.Count, "", 0, SelfTrainingStage.ExtractingFrame, null, null, null,
+                "Keine Fotos im PDF — extrahiere Frames aus Video..."));
+
+            var ffmpeg = FindFfmpeg();
+
+            // Videodauer ermitteln fuer Meter→Zeit-Mapping
+            var probe = new VideoProbeService(ffmpegPath: ffmpeg);
+            var probeResult = await probe.ProbeAsync(tc.VideoPath, ct);
+            double videoDuration = probeResult.Success ? probeResult.DurationSeconds : 300.0;
+
+            // Max-Meter aus Protokoll fuer lineare Interpolation
+            double maxMeter = allEntries.Max(e => Math.Max(e.MeterStart, e.MeterEnd));
+            if (maxMeter <= 0) maxMeter = 100.0;
+
+            progress.Report(new SelfTrainingStep(
+                0, allEntries.Count, "", 0, SelfTrainingStage.ExtractingFrame, null, null, null,
+                $"Video: {videoDuration:F0}s, Max-Meter: {maxMeter:F1}m — {allEntries.Count} Frames extrahieren..."));
+
+            var videoEntries = new List<GroundTruthEntry>();
+
+            for (int i = 0; i < allEntries.Count; i++)
+            {
+                ct.ThrowIfCancellationRequested();
+                var entry = allEntries[i];
+
+                // Zeitstempel: 1. Protokoll-Zeit, 2. Meter→Zeit linear interpoliert
+                double timeSec;
+                if (entry.Zeit.HasValue && entry.Zeit.Value.TotalSeconds > 0)
+                {
+                    timeSec = entry.Zeit.Value.TotalSeconds;
+                }
+                else
+                {
+                    // Meter-Position linear auf Videodauer mappen
+                    // +10s Offset um Logo/Anfang zu ueberspringen
+                    double meterCenter = (entry.MeterStart + entry.MeterEnd) / 2.0;
+                    timeSec = 10.0 + (meterCenter / maxMeter) * (videoDuration - 20.0);
+                    timeSec = Math.Clamp(timeSec, 5.0, videoDuration - 2.0);
+                }
+
+                var sampleId = $"st_{tc.CaseId}_{i:D3}";
+                var framePath = await FrameStore.ExtractAndStoreAsync(
+                    ffmpeg, tc.VideoPath, timeSec, sampleId, framesDir, ct);
+
+                if (framePath is not null)
+                {
+                    videoEntries.Add(entry with { ExtractedFramePath = framePath });
+
+                    progress.Report(new SelfTrainingStep(
+                        i, allEntries.Count, entry.VsaCode, entry.MeterStart,
+                        SelfTrainingStage.ExtractingFrame, null, null, framePath,
+                        $"Frame @ {timeSec:F1}s fuer {entry.VsaCode} @ {entry.MeterStart:F1}m"));
+                }
+            }
+
+            entries = videoEntries;
+
+            progress.Report(new SelfTrainingStep(
+                0, entries.Count, "", 0, SelfTrainingStage.ExtractingFrame, null, null, null,
+                $"{entries.Count} Frames aus Video extrahiert"));
+        }
+
         if (entries.Count == 0)
         {
+            progress.Report(new SelfTrainingStep(
+                0, allEntries.Count, "", 0, SelfTrainingStage.Completed, null, null, null,
+                "Keine Bilder verfuegbar (weder PDF-Fotos noch Video-Frames)."));
             return new SelfTrainingResult(tc.CaseId, allEntries.Count, 0, 0, 0, 0, null, sw.Elapsed, 0);
         }
 
@@ -242,5 +321,18 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             OverallTechnique: overallTechnique,
             Duration: sw.Elapsed,
             SamplesGenerated: generatedSamples.Count);
+    }
+
+    /// <summary>ffmpeg-Pfad aus AiRuntimeConfig oder Fallback.</summary>
+    private static string FindFfmpeg()
+    {
+        try
+        {
+            var cfg = AiRuntimeConfig.Load();
+            if (!string.IsNullOrEmpty(cfg.FfmpegPath) && File.Exists(cfg.FfmpegPath))
+                return cfg.FfmpegPath;
+        }
+        catch { }
+        return "ffmpeg";
     }
 }
