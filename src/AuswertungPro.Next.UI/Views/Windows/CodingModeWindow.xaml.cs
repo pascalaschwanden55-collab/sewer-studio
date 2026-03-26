@@ -651,7 +651,8 @@ public partial class CodingModeWindow : Window
             NominalDiameterMm = dn,
             PipePixelDiameter = pixelDiameter,
             NormalizedDiameter = normDiameter,
-            PipeCenter = center
+            PipeCenter = center,
+            WasManuallyCalibrated = true
         };
         _overlayService.SetCalibration(cal);
 

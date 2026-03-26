@@ -36,7 +36,8 @@ public enum OverlayToolType
     DnCircle = LateralCircle, // Legacy-Alias (Abwaertskompatibilitaet)
     Level = 9,           // Horizontale Linie → Kreissegment-% (Ablagerung/Wasser/Hindernis)
     Ellipse = 10,        // Ellipse/Kreis fuer Flaechenschaeden (Ecke-zu-Ecke Drag)
-    Freehand = 11        // Freihand-Zeichnung (Polyline aus Mauspfad)
+    Freehand = 11,       // Freihand-Zeichnung (Polyline aus Mauspfad)
+    CrossSection = 12    // Querschnittsverminderung (Polygon mit FillPercent)
 }
 
 /// <summary>
@@ -153,8 +154,11 @@ public sealed class PipeCalibration
     public double NormalizedDiameter { get; set; }  // Rohrdurchmesser als normierter Wert (0.0–1.0)
     public NormalizedPoint PipeCenter { get; set; } = new(0.5, 0.5); // Rohrmitte (normiert)
 
+    /// <summary>Manuell kalibriert (Referenzlinie wurde vom User gezogen)?</summary>
+    public bool WasManuallyCalibrated { get; set; }
+
     /// <summary>Ist kalibriert (Referenzlinie wurde gezeichnet)?</summary>
-    public bool IsCalibrated => NormalizedDiameter > 0;
+    public bool IsCalibrated => WasManuallyCalibrated && NormalizedDiameter > 0;
 
     /// <summary>mm pro normiertem Pixel.</summary>
     public double MmPerNormUnit => NormalizedDiameter > 0

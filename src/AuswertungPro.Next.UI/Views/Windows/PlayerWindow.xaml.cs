@@ -3754,7 +3754,8 @@ public partial class PlayerWindow : Window
             NominalDiameterMm = dn,
             PipePixelDiameter = pixelDiameter,
             NormalizedDiameter = normDiameter,
-            PipeCenter = center
+            PipeCenter = center,
+            WasManuallyCalibrated = true
         };
         _codingOverlayService.SetCalibration(cal);
         _codingSchemaManager.Active?.ApplyCalibration(cal);
@@ -4759,7 +4760,7 @@ public partial class PlayerWindow : Window
         if (overlay.ToolType == OverlayToolType.Ruler && overlay.Q1Mm.HasValue)
             return $"Laenge: {overlay.Q1Mm.Value:F1} mm";
 
-        if (overlay.ToolType is OverlayToolType.Ellipse or OverlayToolType.Freehand && overlay.FillPercent.HasValue)
+        if (overlay.ToolType is OverlayToolType.Ellipse or OverlayToolType.Freehand or OverlayToolType.CrossSection && overlay.FillPercent.HasValue)
             return $"Querschnitt: {overlay.FillPercent.Value:F1}%";
 
         // Standard-Text fuer bestehende Werkzeuge
@@ -6506,7 +6507,7 @@ public partial class PlayerWindow : Window
             );
             var gateResult = _codingQualityGate?.Evaluate(evidence)
                 ?? new QualityGateResult(dinoConf, TrafficLight.Yellow,
-                    new Dictionary<string, double>(), "Multi-Model");
+                    new Dictionary<string, double>(), "Multi-Model")!;
 
             var entry = new ProtocolEntry
             {
@@ -7049,7 +7050,7 @@ public partial class PlayerWindow : Window
                 ?? new QualityGateResult(
                     finding.Severity / 5.0,
                     finding.Severity >= 4 ? TrafficLight.Green : TrafficLight.Yellow,
-                    new Dictionary<string, double>(), "Fallback");
+                    new Dictionary<string, double>(), "Fallback")!;
 
             // officialLabel wurde oben bereits per LookupLabel geholt und validiert
 

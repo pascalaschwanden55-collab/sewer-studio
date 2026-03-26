@@ -282,9 +282,10 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         string framePngBase64,
         MultiModelFrameResult multiModelContext,
         int pipeDiameterMm = 300,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        (string Code, string Description, double Meter, double Confidence)? previousFinding = null)
     {
-        var contextPrompt = BuildContextPrompt(multiModelContext, pipeDiameterMm);
+        var contextPrompt = BuildContextPrompt(multiModelContext, pipeDiameterMm, previousFinding);
         var prompt = contextPrompt + "\n\n" + BuildPrompt();
 
         EnhancedVisionDto dto;
@@ -318,9 +319,20 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         return MapToAnalysis(dto);
     }
 
-    private static string BuildContextPrompt(MultiModelFrameResult ctx, int pipeDiameterMm)
+    private static string BuildContextPrompt(MultiModelFrameResult ctx, int pipeDiameterMm,
+        (string Code, string Description, double Meter, double Confidence)? previousFinding = null)
     {
         var sb = new StringBuilder();
+
+        // Vorheriger Befund fuer temporale Kohaerenz
+        if (previousFinding is var (prevCode, prevDesc, prevMeter, prevConf))
+        {
+            sb.AppendLine("VORHERIGER BEFUND (Kontext aus dem vorherigen Analyseabschnitt):");
+            sb.AppendLine($"  Bei {prevMeter:F2}m wurde '{prevCode}' ({prevDesc}) vermutet (Konfidenz: {prevConf:F0}%).");
+            sb.AppendLine("  Pruefe ob das aktuelle Bild dasselbe Objekt zeigt oder einen neuen/anderen Befund.");
+            sb.AppendLine();
+        }
+
         sb.AppendLine("KONTEXT AUS VORHERIGER ANALYSE (Computer Vision Modelle):");
         sb.AppendLine($"- Bild: {ctx.ImageWidth}x{ctx.ImageHeight} px");
         sb.AppendLine($"- Rohrdurchmesser: DN{pipeDiameterMm}");

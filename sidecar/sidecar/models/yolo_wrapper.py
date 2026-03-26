@@ -267,10 +267,12 @@ _cls_lock = threading.Lock()
 
 def _resolve_cls_model_path() -> str | None:
     """Suche best.pt aus dem YOLO-cls Trainingslauf."""
+    # Relativer Pfad vom Sidecar-Root (portabel, kein absoluter Pfad)
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
     candidates = [
         Path(settings.models_dir) / "yolo_cls_best.pt",
-        Path("C:/Sewer-StudioKI_3.1/yolo_cls_runs/grundgeruest_v2/weights/best.pt"),
-        Path("C:/Sewer-StudioKI_3.1/yolo_cls_runs/grundgeruest_v1/weights/best.pt"),
+        project_root / "yolo_cls_runs" / "grundgeruest_v2" / "weights" / "best.pt",
+        project_root / "yolo_cls_runs" / "grundgeruest_v1" / "weights" / "best.pt",
     ]
     for p in candidates:
         if p.exists():

@@ -23,8 +23,10 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
         [ObservableProperty] private string? _lastProjectPath;
         [ObservableProperty] private string _projectStatus = string.Empty;
+        [ObservableProperty] private string _filterText = string.Empty;
 
         public ObservableCollection<ProjectOverviewEntry> ProjectEntries { get; } = new();
+        private List<ProjectOverviewEntry> _allEntries = new();
 
         public IRelayCommand NewCommand { get; }
         public IRelayCommand OpenCommand { get; }
@@ -66,8 +68,26 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             };
         }
 
+    partial void OnFilterTextChanged(string value) => ApplyFilter();
+
+    private void ApplyFilter()
+    {
+        ProjectEntries.Clear();
+        var filter = FilterText?.Trim() ?? "";
+        var filtered = string.IsNullOrEmpty(filter)
+            ? _allEntries
+            : _allEntries.Where(e =>
+                e.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+                e.Description.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+                e.Path.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        foreach (var entry in filtered)
+            ProjectEntries.Add(entry);
+    }
+
     private void LoadAllProjects()
     {
+        _allEntries.Clear();
         ProjectEntries.Clear();
 
         var entries = new List<ProjectOverviewEntry>();
@@ -86,40 +106,75 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 var name = root.TryGetProperty("Name", out var n) ? n.GetString() : Path.GetFileNameWithoutExtension(file);
                 var desc = root.TryGetProperty("Description", out var d) ? d.GetString() : "";
                 var modified = TryReadModifiedAt(root) ?? File.GetLastWriteTimeUtc(file);
+
+                // Record-Anzahl aus JSON lesen
+                int recordCount = 0;
+                if (root.TryGetProperty("Data", out var dataEl) && dataEl.ValueKind == JsonValueKind.Array)
+                    recordCount = dataEl.GetArrayLength();
+
                 entries.Add(new ProjectOverviewEntry
                 {
                     Name = name ?? Path.GetFileNameWithoutExtension(file),
                     Description = desc ?? string.Empty,
                     Path = file,
                     ModifiedAtUtc = modified,
-                    IsLastProject = isLast
+                    IsLastProject = isLast,
+                    RecordCount = recordCount
                 });
             }
             catch { /* ignore invalid files */ }
         }
 
+        // 1. Letztes Projekt
         if (HasLastProject && LastProjectPath is not null)
             AddEntry(LastProjectPath, true);
 
-        var rootDirs = new[]
+        // 2. Alle RecentProjectPaths
+        foreach (var recentPath in _sp.Settings.RecentProjectPaths)
+            AddEntry(recentPath, string.Equals(recentPath, LastProjectPath, StringComparison.OrdinalIgnoreCase));
+
+        // 3. Standard-Scan-Ordner
+        var rootDirs = new List<string>
         {
             Path.Combine(Directory.GetCurrentDirectory(), "Rohdaten"),
             Path.Combine(Directory.GetCurrentDirectory(), "Rohdaten", "Section_PDF")
         };
+
+        // 4. D:\Projekt\ und D:\Haltungen\ (typische Speicherorte)
+        foreach (var drive in new[] { "D:\\", "C:\\" })
+        {
+            var projektDir = Path.Combine(drive, "Projekt");
+            if (Directory.Exists(projektDir))
+            {
+                rootDirs.Add(projektDir);
+                // Auch Unterordner scannen (z.B. D:\Projekt\Zone 1.15\)
+                try
+                {
+                    foreach (var subDir in Directory.GetDirectories(projektDir))
+                        rootDirs.Add(subDir);
+                }
+                catch { /* Zugriff verweigert */ }
+            }
+        }
+
         foreach (var dir in rootDirs)
         {
             if (!Directory.Exists(dir)) continue;
-            foreach (var file in Directory.GetFiles(dir, "*.json"))
-                AddEntry(file, false);
+            try
+            {
+                foreach (var file in Directory.GetFiles(dir, "*.json"))
+                    AddEntry(file, false);
+            }
+            catch { /* Zugriff verweigert */ }
         }
 
-        foreach (var entry in entries
-                     .OrderByDescending(e => e.IsLastProject)
-                     .ThenByDescending(e => e.ModifiedAtUtc ?? DateTime.MinValue)
-                     .ThenBy(e => e.Name))
-        {
-            ProjectEntries.Add(entry);
-        }
+        _allEntries = entries
+            .OrderByDescending(e => e.IsLastProject)
+            .ThenByDescending(e => e.ModifiedAtUtc ?? DateTime.MinValue)
+            .ThenBy(e => e.Name)
+            .ToList();
+
+        ApplyFilter();
     }
 
     private string BuildProjectStatus()
@@ -151,6 +206,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             return;
         if (!_shell.TryOpenProject(path))
             return;
+        _sp.Settings.AddRecentProject(path);
+        _sp.Settings.Save();
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
         LoadAllProjects();
@@ -241,6 +298,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         public string Path { get; set; } = string.Empty;
         public DateTime? ModifiedAtUtc { get; set; }
         public bool IsLastProject { get; set; }
+        public int RecordCount { get; set; }
         public string ModifiedAtDisplay => ModifiedAtUtc?.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.CurrentCulture) ?? "-";
+        public string FolderName => string.IsNullOrEmpty(Path) ? "" : System.IO.Path.GetDirectoryName(Path) ?? "";
+        public string StatsText => RecordCount > 0 ? $"{RecordCount} Haltungen" : "Leer";
     }
 }

@@ -24,6 +24,20 @@ public sealed class AppSettings
     public string? PdfToTextPath { get; set; }
     public string? LastProjectPath { get; set; }
 
+    // Alle jemals geoeffneten Projekte (max 20, neueste zuerst)
+    public List<string> RecentProjectPaths { get; set; } = new();
+
+    /// <summary>Projekt-Pfad in RecentProjectPaths einfuegen (Duplikate vermeiden, max 20).</summary>
+    public void AddRecentProject(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return;
+        RecentProjectPaths.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+        RecentProjectPaths.Insert(0, path);
+        if (RecentProjectPaths.Count > 20)
+            RecentProjectPaths.RemoveRange(20, RecentProjectPaths.Count - 20);
+        LastProjectPath = path;
+    }
+
     // Canonical source folder for video lookup/relink.
     public string? LastVideoSourceFolder { get; set; }
 

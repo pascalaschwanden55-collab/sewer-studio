@@ -86,7 +86,8 @@ public static class AutoCalibrationService
             NominalDiameterMm = nominalDiameterMm,
             NormalizedDiameter = normalizedDiameter,
             PipePixelDiameter = medianDiameter,
-            PipeCenter = new NormalizedPoint(normalizedCenterX, normalizedCenterY)
+            PipeCenter = new NormalizedPoint(normalizedCenterX, normalizedCenterY),
+            WasManuallyCalibrated = true
         };
     }
 

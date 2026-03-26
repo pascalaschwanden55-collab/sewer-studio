@@ -26,6 +26,7 @@ public sealed record AiPlatformConfig(
     Uri SidecarUrl,
     PipelineMode PipelineMode,
     double YoloConfidence,
+    Dictionary<string, double> YoloClassConfidence,
     double DinoBoxThreshold,
     double DinoTextThreshold,
     int SidecarTimeoutSec,
@@ -62,6 +63,7 @@ public sealed record AiPlatformConfig(
         SidecarUrl:             SidecarUrl,
         Mode:                   PipelineMode,
         YoloConfidence:         YoloConfidence,
+        YoloClassConfidence:    YoloClassConfidence,
         DinoBoxThreshold:       DinoBoxThreshold,
         DinoTextThreshold:      DinoTextThreshold,
         SidecarTimeoutSec:      SidecarTimeoutSec,
@@ -166,6 +168,21 @@ public sealed record AiPlatformConfig(
             ?? ParseDouble(Env("SEWERSTUDIO_YOLO_CONFIDENCE"))
             ?? 0.25;
 
+        // Klassenspezifische YOLO-Schwellenwerte (Forschung: unterschiedliche Sensitivitaet pro Schadenstyp)
+        var yoloClassConf = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["BAB"] = 0.15,   // Riss: schwer erkennbar, aggressiv suchen
+            ["BAA"] = 0.20,   // Verformung
+            ["BAC"] = 0.25,   // Bruch/Einsturz
+            ["BBA"] = 0.20,   // Wurzeln/Inkrustation: oft subtil
+            ["BBB"] = 0.25,   // Bewuchs
+            ["BBC"] = 0.25,   // Ablagerungen
+            ["BCA"] = 0.35,   // Anschluss: sehr markant, hohe Sicherheit
+            ["BCC"] = 0.30,   // Bogen: markant
+            ["BCD"] = 0.30,   // Rohranfang: markant
+            ["BCE"] = 0.30,   // Rohrende: markant
+        };
+
         var dinoBox = settings?.PipelineDinoBoxThreshold
             ?? ParseDouble(Env("SEWERSTUDIO_DINO_BOX_THRESHOLD"))
             ?? 0.30;
@@ -198,6 +215,7 @@ public sealed record AiPlatformConfig(
             SidecarUrl:             new Uri(sidecarUrl),
             PipelineMode:           mode,
             YoloConfidence:         yoloConf,
+            YoloClassConfidence:    yoloClassConf,
             DinoBoxThreshold:       dinoBox,
             DinoTextThreshold:      dinoText,
             SidecarTimeoutSec:      sidecarTimeout,

@@ -521,6 +521,7 @@ public partial class PhotoMeasurementWindow : Window
         _calibration.NormalizedDiameter = normLen;
         _calibration.PipeCenter = new NormalizedPoint(
             (start.X + end.X) / 2.0, (start.Y + end.Y) / 2.0);
+        _calibration.WasManuallyCalibrated = true;
 
         _overlayService.SetCalibration(_calibration);
         DrawPipeCircle();
@@ -778,11 +779,33 @@ public partial class PhotoMeasurementWindow : Window
 
     private void FinalizeDeformation()
     {
-        // Punkte: 1=Oben, 2=Unten, 3=Links, 4=Rechts
-        var top = _clickPoints[0];
-        var bottom = _clickPoints[1];
-        var left = _clickPoints[2];
-        var right = _clickPoints[3];
+        // Automatisch sortieren: nach Uhr-Position relativ zur Rohrmitte
+        // Oben = naechster Punkt an 12h, Unten = naechster an 6h, Links = 9h, Rechts = 3h
+        var sorted = _clickPoints.ToList();
+        var cx = _calibration.PipeCenter.X;
+        var cy = _calibration.PipeCenter.Y;
+
+        NormalizedPoint FindClosestToAngle(List<NormalizedPoint> pts, double targetDeg)
+        {
+            NormalizedPoint best = pts[0];
+            double bestDelta = double.MaxValue;
+            foreach (var p in pts)
+            {
+                double dx = p.X - cx, dy = p.Y - cy;
+                double deg = Math.Atan2(dx, -dy) * 180.0 / Math.PI;
+                if (deg < 0) deg += 360;
+                double delta = Math.Abs(deg - targetDeg);
+                if (delta > 180) delta = 360 - delta;
+                if (delta < bestDelta) { bestDelta = delta; best = p; }
+            }
+            pts.Remove(best);
+            return best;
+        }
+
+        var top = FindClosestToAngle(sorted, 0);       // 12 Uhr
+        var bottom = FindClosestToAngle(sorted, 180);   // 6 Uhr
+        var right = FindClosestToAngle(sorted, 90);     // 3 Uhr
+        var left = sorted[0];                            // letzter = 9 Uhr
 
         double dVertNorm = PipeCalibration.AspectCorrectedDistance(top, bottom, _imageAspect);
         double dHorizNorm = PipeCalibration.AspectCorrectedDistance(left, right, _imageAspect);
@@ -905,7 +928,7 @@ public partial class PhotoMeasurementWindow : Window
 
         _currentGeometry = new OverlayGeometry
         {
-            ToolType = OverlayToolType.Freehand,
+            ToolType = OverlayToolType.CrossSection,
             Points = _clickPoints.Select(p => new NormalizedPoint(p.X, p.Y)).ToList(),
             FillPercent = Math.Round(reductionPct, 1)
         };

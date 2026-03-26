@@ -29,6 +29,15 @@ public sealed class MultiModelAnalysisService
     public int DedupWindowFrames { get; set; } = 3;
     public TimeSpan QwenFrameTimeout { get; set; } = TimeSpan.FromSeconds(300);
 
+    /// <summary>YOLO-cls Vorfilter aktivieren/deaktivieren (Fallback: aus wenn kein Modell).</summary>
+    public bool UseClsPrefilter { get; set; } = true;
+
+    // Letzter Befund fuer Qwen-Kontext (Frame-uebergreifende Kohärenz)
+    private (string Code, string Description, double Meter, double Confidence)? _lastFinding;
+
+    // Gecachter minimaler Confidence-Schwellenwert (einmal berechnet statt pro Frame)
+    private readonly double _minClassConfidence;
+
     public MultiModelAnalysisService(
         VisionPipelineClient client,
         PipelineConfig config,
@@ -42,6 +51,9 @@ public sealed class MultiModelAnalysisService
         _logger = logger ?? NullLogger.Instance;
         _ffmpegPath = ffmpegPath;
         _ffprobePath = DeriveFfprobePath(ffmpegPath);
+        _minClassConfidence = config.YoloClassConfidence.Count > 0
+            ? config.YoloClassConfidence.Values.Min()
+            : config.YoloConfidence;
     }
 
     /// <summary>
@@ -138,14 +150,68 @@ public sealed class MultiModelAnalysisService
             }
             else
             {
+                // ── YOLO-cls Vorfilter: 90% der normalen Frames ueberspringen ──
+                if (UseClsPrefilter) try
+                {
+                    var clsResult = await _client.ClassifyYoloAsync(
+                        new YoloClassifyRequest(frameBase64, 3), ct).ConfigureAwait(false);
+                    var topPred = clsResult.Predictions.Count > 0 ? clsResult.Predictions[0] : null;
+
+                    if (topPred?.ClassName is "OTHER" or "other" or "NORMAL" or "normal"
+                        && topPred.Confidence > 0.70)
+                    {
+                        // Frame ist normal → ueberspringen (spart DINO/SAM/Qwen)
+                        skippedFrames++;
+                        _logger.LogDebug("Frame {Frame}: YOLO-cls '{Class}' ({Conf:F0}%) → skip",
+                            frameIndex, topPred.ClassName, topPred.Confidence * 100);
+                        progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                            $"Frame {frameIndex}/{totalFrames} – cls: {topPred.ClassName} ({topPred.Confidence:P0}) → skip"));
+                        telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0,
+                            frameSw.ElapsedMilliseconds, Skipped: true));
+                        AdvanceAll(active, detections, DedupWindowFrames);
+                        continue;
+                    }
+
+                    if (topPred != null)
+                        _logger.LogDebug("Frame {Frame}: YOLO-cls '{Class}' ({Conf:F0}%) → weiter zur Detektion",
+                            frameIndex, topPred.ClassName, topPred.Confidence * 100);
+                }
+                catch (Exception ex)
+                {
+                    // cls-Modell nicht verfuegbar → normal weiter (kein harter Fehler)
+                    _logger.LogDebug(ex, "Frame {Frame}: YOLO-cls nicht verfuegbar, ueberspringe Vorfilter", frameIndex);
+                }
+
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex}/{totalFrames} – YOLO Pre-Screening...",
                     FramePreviewPng: frameBytes));
 
                 try
                 {
+                    // Niedrigsten klassenspezifischen Threshold senden (mehr Kandidaten),
+                    // dann in C# pro Klasse nachfiltern
+                    double minConf = _minClassConfidence;
                     yoloResult = await _client.DetectYoloAsync(
-                        new YoloRequest(frameBase64, _config.YoloConfidence), ct).ConfigureAwait(false);
+                        new YoloRequest(frameBase64, minConf), ct).ConfigureAwait(false);
+
+                    // Klassenspezifische Filterung: Jede Klasse hat ihren eigenen Schwellenwert
+                    if (yoloResult.Detections.Count > 0 && _config.YoloClassConfidence.Count > 0)
+                    {
+                        var filtered = yoloResult.Detections
+                            .Where(d =>
+                            {
+                                // VSA-Hauptcode aus YOLO-Klassenname extrahieren (z.B. "BAB_crack" → "BAB")
+                                var baseCode = d.ClassName.Split('_')[0].ToUpperInvariant();
+                                var threshold = _config.YoloClassConfidence.GetValueOrDefault(baseCode, _config.YoloConfidence);
+                                return d.Confidence >= threshold;
+                            })
+                            .ToList();
+                        yoloResult = yoloResult with
+                        {
+                            Detections = filtered,
+                            IsRelevant = filtered.Count > 0
+                        };
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -300,8 +366,12 @@ public sealed class MultiModelAnalysisService
 
                     using var qwenCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                     qwenCts.CancelAfter(QwenFrameTimeout);
+                    // Vorherigen Befund als Kontext uebergeben (nur wenn < 1m entfernt)
+                    var prevCtx = _lastFinding is var (pc, pd, pm, pconf) && Math.Abs(meter - pm) < 1.0
+                        ? _lastFinding : null;
                     var qwenResult = await _qwenVision.AnalyzeWithContextAsync(
-                        frameBase64, multiModelContext, pipeDiameterMm, qwenCts.Token).ConfigureAwait(false);
+                        frameBase64, multiModelContext, pipeDiameterMm, qwenCts.Token,
+                        previousFinding: prevCtx).ConfigureAwait(false);
 
                     // OSD-Meterstand IMMER uebernehmen (auch ohne Findings)
                     if (qwenResult.Meter.HasValue)
@@ -335,6 +405,20 @@ public sealed class MultiModelAnalysisService
                                 // Replace with enriched finding (keep SAM quantification, add Qwen VSA code)
                                 findings[idx] = match with { VsaCodeHint = qf.VsaCodeHint };
                             }
+                        }
+
+                        // Letzten Befund merken fuer Qwen-Kontext beim naechsten Frame
+                        var topFinding = qwenResult.Findings
+                            .Where(f => !string.IsNullOrEmpty(f.VsaCodeHint))
+                            .OrderByDescending(f => f.Severity)
+                            .FirstOrDefault();
+                        if (topFinding != null)
+                        {
+                            _lastFinding = (
+                                topFinding.VsaCodeHint ?? topFinding.Label,
+                                topFinding.Label,
+                                meter,
+                                topFinding.Severity / 5.0); // Severity 1-5 → Confidence 0.2-1.0
                         }
 
                         _logger.LogDebug("Frame {Frame}: Qwen enriched {Count} findings with VSA codes",
@@ -488,10 +572,13 @@ public sealed class MultiModelAnalysisService
 
     private static double Clamp01(double value) => Math.Clamp(value, 0.0, 1.0);
 
-    private static double EstimateMeter(double t, double duration, ref double lastMeter)
+    /// <summary>Geschaetzte Haltungslaenge in Metern (wird durch OSD-Korrektur von Qwen ueberschrieben).</summary>
+    public double EstimatedReachLengthM { get; set; } = 50.0; // Typisch 15-80m, Fallback 50m
+
+    private double EstimateMeter(double t, double duration, ref double lastMeter)
     {
-        // Simple linear estimation (to be improved with OSD reading from Qwen)
-        var estimated = t / Math.Max(duration, 1.0) * 100.0; // assume ~100m max
+        // Lineare Schaetzung basierend auf geschaetzter Haltungslaenge (wird durch Qwen OSD korrigiert)
+        var estimated = t / Math.Max(duration, 1.0) * EstimatedReachLengthM;
         lastMeter = Math.Max(lastMeter, estimated);
         return Math.Round(lastMeter, 2);
     }
