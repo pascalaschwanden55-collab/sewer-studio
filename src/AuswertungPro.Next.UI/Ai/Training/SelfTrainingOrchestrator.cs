@@ -42,6 +42,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     private readonly ISelfTrainingComparisonService _comparison;
     private readonly ITechniqueAssessmentService _technique;
     private readonly PdfProtocolExtractor _pdfExtractor;
+    private readonly TrainingCenterSettings _settings;
 
     private readonly ManualResetEventSlim _pauseGate = new(true);
 
@@ -51,12 +52,14 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         EnhancedVisionAnalysisService vision,
         ISelfTrainingComparisonService comparison,
         ITechniqueAssessmentService technique,
-        PdfProtocolExtractor pdfExtractor)
+        PdfProtocolExtractor pdfExtractor,
+        TrainingCenterSettings? settings = null)
     {
         _vision = vision;
         _comparison = comparison;
         _technique = technique;
         _pdfExtractor = pdfExtractor;
+        _settings = settings ?? new TrainingCenterSettings();
     }
 
     public void Pause() => _pauseGate.Reset();
@@ -88,6 +91,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             .Where(e => !string.IsNullOrEmpty(e.ExtractedFramePath)
                         && File.Exists(e.ExtractedFramePath))
             .ToList();
+        bool usedVideoFallback = false;
 
         // Fallback: Wenn keine Fotos im PDF, Frames aus Video extrahieren
         if (entries.Count == 0 && !string.IsNullOrEmpty(tc.VideoPath) && File.Exists(tc.VideoPath))
@@ -149,6 +153,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             }
 
             entries = videoEntries;
+            usedVideoFallback = true;
 
             progress.Report(new SelfTrainingStep(
                 0, entries.Count, "", 0, SelfTrainingStage.ExtractingFrame, null, null, null,
@@ -276,14 +281,15 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             }
 
             // ── TrainingSample erzeugen ──
+            var meterCenter = (entry.MeterStart + entry.MeterEnd) / 2.0;
             var sample = new TrainingSample
             {
-                SampleId = $"{tc.CaseId}_st_{i:D3}",
+                SampleId = $"{tc.CaseId}_st_{i:D3}_{DateTime.UtcNow:HHmmss}",
                 CaseId = tc.CaseId,
                 Code = entry.VsaCode,
                 Beschreibung = entry.Text,
-                MeterStart = entry.MeterStart,
-                MeterEnd = entry.MeterEnd,
+                MeterStart = Math.Round(entry.MeterStart, 1),
+                MeterEnd = Math.Round(entry.MeterEnd, 1),
                 IsStreckenschaden = entry.IsStreckenschaden,
                 TimeSeconds = 0,
                 DetectedMeter = analysis.Meter,
@@ -292,9 +298,19 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 Status = comparison.Level == MatchLevel.ExactMatch
                     ? TrainingSampleStatus.Approved
                     : TrainingSampleStatus.New,
-                TruthMeterCenter = (entry.MeterStart + entry.MeterEnd) / 2.0,
+                KbIndexState = comparison.Level == MatchLevel.ExactMatch
+                    ? KbIndexState.Pending
+                    : KbIndexState.None,
+                TruthMeterCenter = meterCenter,
                 OdsDeltaMeters = technique?.OsdDeltaMeters,
-                HasOsdMismatch = technique?.OsdDeltaMeters > 1.0
+                HasOsdMismatch = technique?.OsdDeltaMeters > _settings.OsdMismatchThresholdMeters,
+                Signature = TrainingSample.BuildCanonicalSignature(tc.CaseId, entry.VsaCode, meterCenter, entry.MeterEnd),
+                MatchLevel = comparison.Level.ToString(),
+                KiCode = comparison.BestMatchCode,
+                SourceType = usedVideoFallback
+                    ? (entry.Zeit.HasValue ? SourceTypeNames.VideoTimestamp : SourceTypeNames.VideoLinear)
+                    : SourceTypeNames.PdfPhoto,
+                TechniqueGrade = technique?.OverallGrade
             };
             generatedSamples.Add(sample);
 
@@ -304,10 +320,10 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 SelfTrainingStage.Completed, comparison, technique, framePath));
         }
 
-        // Samples speichern
+        // Samples mergen (bestehende laden + neue hinzufuegen + Dedup via Signature)
         if (generatedSamples.Count > 0)
         {
-            await TrainingSamplesStore.SaveAsync(generatedSamples);
+            await TrainingSamplesStore.MergeAndSaveAsync(generatedSamples);
         }
 
         sw.Stop();

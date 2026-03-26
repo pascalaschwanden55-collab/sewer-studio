@@ -693,6 +693,20 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         return null;
     }
 
+    /// <summary>
+    /// Oeffentlicher Zugang zur Score-basierten Massnahmen-Aufloesung.
+    /// Wird von SanierungsmassnahmenViewModel.SelectMeasuresInCalc benutzt.
+    /// </summary>
+    public HashSet<string> ResolveMatchingMeasureIds(IReadOnlyList<string> tokens)
+    {
+        var templates = Measures
+            .Where(m => !m.Disabled)
+            .Select(m => m.Template)
+            .ToList();
+        var ids = ResolveMeasureIds(tokens, templates, _catalogItems);
+        return new HashSet<string>(ids, StringComparer.OrdinalIgnoreCase);
+    }
+
     private static List<string> ResolveMeasureIds(
         IReadOnlyList<string> tokens,
         IReadOnlyList<MeasureTemplate> templates,

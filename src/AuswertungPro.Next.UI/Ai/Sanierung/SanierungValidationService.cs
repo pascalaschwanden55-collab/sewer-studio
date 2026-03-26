@@ -6,10 +6,14 @@ namespace AuswertungPro.Next.UI.Ai.Sanierung;
 public sealed class SanierungValidationService
 {
     /// <summary>
-    /// Returns true if any finding code starts with "BBB" (Einsturz/Collapse).
+    /// Returns true if any finding indicates collapse/structural failure.
+    /// BAC = Bruch/Einsturz (VSA-KEK), BABC = Bruch laengs/quer.
+    /// BBB war falsch — das ist "Eindringender Boden", nicht Einsturz.
     /// </summary>
     public bool IsCollapseDetected(IReadOnlyList<DamageFindingDto> findings)
-        => findings.Any(f => f.Code.StartsWith("BBB", StringComparison.OrdinalIgnoreCase));
+        => findings.Any(f =>
+            f.Code.StartsWith("BAC", StringComparison.OrdinalIgnoreCase)
+            || f.Code.StartsWith("BABC", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Returns true if Zustandsklasse is Z4 or Z5 (full replacement justified).

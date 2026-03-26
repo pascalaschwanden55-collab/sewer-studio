@@ -531,6 +531,10 @@
                         <TextBlock Text="KI AKTIV" FontSize="10" FontWeight="Bold"
                             HorizontalAlignment="Center" Margin="0,2,0,0"
                             Foreground="{StaticResource AccentBrush}"/>
+                        <TextBlock Text="{Binding AiLoadedModels}" FontSize="9" FontWeight="SemiBold"
+                            HorizontalAlignment="Center" Margin="0,1,0,0"
+                            Foreground="{StaticResource AccentBrush}"
+                            TextTrimming="CharacterEllipsis" MaxWidth="150"/>
                         <TextBlock Text="{Binding AiStatusLabel}" FontSize="9"
                             HorizontalAlignment="Center" Margin="0,1,0,0"
                             Foreground="{StaticResource MutedBrush}"

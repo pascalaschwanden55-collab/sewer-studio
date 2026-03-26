@@ -54,6 +54,7 @@ public partial class CodingModeWindow : Window
 
     // KI Live-Analyse
     private LiveDetectionService? _liveDetection;
+    private EnhancedVisionAnalysisService? _enhancedVision;
     private AiRuntimeConfig? _aiConfig;
     private OllamaClient? _ollamaClient;
     private CancellationTokenSource? _analysisCts;
@@ -76,19 +77,15 @@ public partial class CodingModeWindow : Window
 
         DataContext = _vm;
 
-        // UI-Updates bei ViewModel-Aenderungen
-        _vm.PropertyChanged += (_, e) => Dispatcher.Invoke(() => UpdateUi(e.PropertyName));
+        // UI-Updates bei ViewModel-Aenderungen (benannte Handler fuer Cleanup)
+        _vm.PropertyChanged += Vm_PropertyChanged;
         _vm.SessionCompleted += OnSessionCompleted;
 
         // Events-Liste binden
         LstEvents.ItemsSource = _vm.Events;
 
         // Event-Items nach Laden einfaerben (Zone-Dot, Konfidenz, Status) + Zaehlung aktualisieren
-        _vm.Events.CollectionChanged += (_, _) => Dispatcher.InvokeAsync(() =>
-        {
-            ColorizeEventListItems();
-            UpdateStatistics();
-        });
+        _vm.Events.CollectionChanged += VmEvents_CollectionChanged;
 
         Loaded += OnLoaded;
         Closing += OnClosing;
@@ -211,6 +208,11 @@ public partial class CodingModeWindow : Window
 
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        // Event-Handler abmelden (Memory Leak verhindern)
+        _vm.PropertyChanged -= Vm_PropertyChanged;
+        _vm.Events.CollectionChanged -= VmEvents_CollectionChanged;
+        _vm.SessionCompleted -= OnSessionCompleted;
+
         _analysisCts?.Cancel();
         _analysisCts?.Dispose();
         StopAiStatusPulse();
@@ -220,6 +222,13 @@ public partial class CodingModeWindow : Window
         _libVlc?.Dispose();
         _vm.Dispose();
     }
+
+    // Benannte Event-Handler (fuer sauberes Cleanup via -=)
+    private void Vm_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        => Dispatcher.InvokeAsync(() => UpdateUi(e.PropertyName));
+
+    private void VmEvents_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        => Dispatcher.InvokeAsync(() => { ColorizeEventListItems(); UpdateStatistics(); });
 
     // --- UI-Update ---
 
@@ -462,6 +471,7 @@ public partial class CodingModeWindow : Window
             {
                 _vm.CurrentOverlay = null;
                 BtnCreateEvent.IsEnabled = false;
+                BtnSaveAsTraining.IsEnabled = false;
                 UpdateOverlayInfo(null);
             }
 
@@ -475,10 +485,12 @@ public partial class CodingModeWindow : Window
                 if (complete)
                 {
                     BtnCreateEvent.IsEnabled = true;
+                BtnSaveAsTraining.IsEnabled = true;
                 }
                 else
                 {
                     BtnCreateEvent.IsEnabled = false;
+                BtnSaveAsTraining.IsEnabled = false;
                 }
             }
 
@@ -559,13 +571,26 @@ public partial class CodingModeWindow : Window
         _vm.OnCanvasMouseUp(normalized);
         OverlayCanvas.ReleaseMouseCapture();
 
-        // Finale Geometrie rendern
+        // Finale Geometrie rendern (verschwindet nach 3s automatisch)
         if (_vm.CurrentOverlay != null)
         {
             ClearPreviewShapes();
             RenderOverlayGeometry(_vm.CurrentOverlay);
             UpdateOverlayInfo(_vm.CurrentOverlay);
             BtnCreateEvent.IsEnabled = true;
+                BtnSaveAsTraining.IsEnabled = true;
+
+            // Overlay nach 3 Sekunden automatisch ausblenden
+            var fadeTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(3)
+            };
+            fadeTimer.Tick += (_, _) =>
+            {
+                fadeTimer.Stop();
+                ClearAllDrawingShapes();
+            };
+            fadeTimer.Start();
         }
     }
 
@@ -639,7 +664,7 @@ public partial class CodingModeWindow : Window
         TxtCalibrationStatus.Text = $"Kalibriert: {mmPerNorm:F1} mm/norm";
         TxtCalibrationHint.Text = $"Kalibriert! DN {dn}mm = {pixelDiameter:F0}px";
 
-        // Referenzlinie dauerhaft anzeigen (duenn, magenta)
+        // Referenzlinie kurz anzeigen (2s), dann automatisch ausblenden
         ClearPreviewShapes();
         ClearCalibrationReferenceShapes();
         var refLine = new Line
@@ -668,6 +693,18 @@ public partial class CodingModeWindow : Window
         Canvas.SetLeft(label, midPx.X + 6);
         Canvas.SetTop(label, midPx.Y - 8);
         OverlayCanvas.Children.Add(label);
+
+        // Overlay nach 2 Sekunden automatisch ausblenden
+        var fadeTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(2)
+        };
+        fadeTimer.Tick += (_, _) =>
+        {
+            fadeTimer.Stop();
+            ClearCalibrationReferenceShapes();
+        };
+        fadeTimer.Start();
 
         // Kalibrierungsmodus beenden
         _isCalibrating = false;
@@ -835,6 +872,43 @@ public partial class CodingModeWindow : Window
                     Canvas.SetLeft(label, (p1.X + p2.X) / 2 + 6);
                     Canvas.SetTop(label, levelY - 16);
                     OverlayCanvas.Children.Add(label);
+                }
+                break;
+
+            case OverlayToolType.Ellipse:
+                var ellipsePreview = new System.Windows.Shapes.Ellipse
+                {
+                    Width = Math.Abs(p2.X - p1.X),
+                    Height = Math.Abs(p2.Y - p1.Y),
+                    Stroke = Brushes.MediumPurple,
+                    StrokeThickness = 2,
+                    StrokeDashArray = new DoubleCollection { 4, 2 },
+                    Fill = new SolidColorBrush(Color.FromArgb(30, 147, 112, 219)),
+                    Tag = OverlayTagPreview
+                };
+                Canvas.SetLeft(ellipsePreview, Math.Min(p1.X, p2.X));
+                Canvas.SetTop(ellipsePreview, Math.Min(p1.Y, p2.Y));
+                OverlayCanvas.Children.Add(ellipsePreview);
+                break;
+
+            case OverlayToolType.Freehand:
+                // Freihand-Vorschau: Polyline aus gesammelten Punkten
+                var preview = _vm.CurrentOverlay;
+                if (preview?.Points.Count >= 2)
+                {
+                    var polyline = new System.Windows.Shapes.Polyline
+                    {
+                        Stroke = Brushes.HotPink,
+                        StrokeThickness = 2,
+                        StrokeDashArray = new DoubleCollection { 3, 2 },
+                        Tag = OverlayTagPreview
+                    };
+                    foreach (var pt in preview.Points)
+                    {
+                        var px = NormalizedToPixel(pt);
+                        polyline.Points.Add(new Point(px.X, px.Y));
+                    }
+                    OverlayCanvas.Children.Add(polyline);
                 }
                 break;
         }
@@ -1173,6 +1247,93 @@ public partial class CodingModeWindow : Window
                 }
                 break;
             }
+
+            case OverlayToolType.Ellipse:
+            {
+                if (geometry.Points.Count < 2) return;
+                var p1 = NormalizedToPixel(geometry.Points[0]);
+                var p3 = NormalizedToPixel(geometry.Points[1]);
+                var ellipse = new System.Windows.Shapes.Ellipse
+                {
+                    Width = Math.Abs(p3.X - p1.X),
+                    Height = Math.Abs(p3.Y - p1.Y),
+                    Stroke = Brushes.MediumPurple,
+                    StrokeThickness = 2.5,
+                    Fill = new SolidColorBrush(Color.FromArgb(30, 147, 112, 219)),
+                    Tag = OverlayTagManual
+                };
+                Canvas.SetLeft(ellipse, Math.Min(p1.X, p3.X));
+                Canvas.SetTop(ellipse, Math.Min(p1.Y, p3.Y));
+                OverlayCanvas.Children.Add(ellipse);
+
+                // Dimensionen-Label
+                if (geometry.Q1Mm.HasValue && geometry.Q2Mm.HasValue)
+                {
+                    var label = new TextBlock
+                    {
+                        Text = $"{geometry.Q2Mm:F0}×{geometry.Q1Mm:F0}mm",
+                        Foreground = Brushes.MediumPurple,
+                        FontSize = 12,
+                        FontWeight = FontWeights.Bold,
+                        Background = new SolidColorBrush(Color.FromArgb(180, 0, 0, 0)),
+                        Padding = new Thickness(4, 2, 4, 2),
+                        Tag = OverlayTagManual
+                    };
+                    Canvas.SetLeft(label, Math.Max(p1.X, p3.X) + 6);
+                    Canvas.SetTop(label, (p1.Y + p3.Y) / 2 - 8);
+                    OverlayCanvas.Children.Add(label);
+                }
+                break;
+            }
+
+            case OverlayToolType.Freehand:
+            {
+                if (geometry.Points.Count < 3) return;
+                // Geschlossenes Polygon — umschliesst den Schadensbereich
+                var polyline = new System.Windows.Shapes.Polygon
+                {
+                    Stroke = Brushes.HotPink,
+                    StrokeThickness = 2.5,
+                    StrokeLineJoin = PenLineJoin.Round,
+                    Fill = new SolidColorBrush(Color.FromArgb(25, 255, 105, 180)),
+                    Tag = OverlayTagManual
+                };
+                foreach (var pt in geometry.Points)
+                {
+                    var px = NormalizedToPixel(pt);
+                    polyline.Points.Add(new Point(px.X, px.Y));
+                }
+                OverlayCanvas.Children.Add(polyline);
+
+                // BoundingBox-Label
+                if (geometry.Q1Mm.HasValue && geometry.Q2Mm.HasValue)
+                {
+                    double minX = double.MaxValue, minY = double.MaxValue;
+                    double maxX = double.MinValue, maxY = double.MinValue;
+                    foreach (var pt in geometry.Points)
+                    {
+                        var px = NormalizedToPixel(pt);
+                        if (px.X < minX) minX = px.X;
+                        if (px.Y < minY) minY = px.Y;
+                        if (px.X > maxX) maxX = px.X;
+                        if (px.Y > maxY) maxY = px.Y;
+                    }
+                    var label = new TextBlock
+                    {
+                        Text = $"{geometry.Q2Mm:F0}×{geometry.Q1Mm:F0}mm",
+                        Foreground = Brushes.HotPink,
+                        FontSize = 12,
+                        FontWeight = FontWeights.Bold,
+                        Background = new SolidColorBrush(Color.FromArgb(180, 0, 0, 0)),
+                        Padding = new Thickness(4, 2, 4, 2),
+                        Tag = OverlayTagManual
+                    };
+                    Canvas.SetLeft(label, maxX + 6);
+                    Canvas.SetTop(label, (minY + maxY) / 2 - 8);
+                    OverlayCanvas.Children.Add(label);
+                }
+                break;
+            }
         }
     }
 
@@ -1236,16 +1397,7 @@ public partial class CodingModeWindow : Window
 
     private IEnumerable<ToggleButton> ToolButtons()
     {
-        yield return BtnToolLine;
-        yield return BtnToolArc;
         yield return BtnToolRect;
-        yield return BtnToolPoint;
-        yield return BtnToolStretch;
-        yield return BtnToolPipeBend;
-        yield return BtnToolLateralCircle;
-        yield return BtnToolLevelDeposit;
-        yield return BtnToolLevelWater;
-        yield return BtnToolLevelObstacle;
     }
 
     private void ToolButton_Checked(object sender, RoutedEventArgs e)
@@ -1267,28 +1419,7 @@ public partial class CodingModeWindow : Window
         }
 
         OverlayToolType tool;
-        if (sender == BtnToolLine) tool = OverlayToolType.Line;
-        else if (sender == BtnToolArc) tool = OverlayToolType.Arc;
-        else if (sender == BtnToolRect) tool = OverlayToolType.Rectangle;
-        else if (sender == BtnToolPoint) tool = OverlayToolType.Point;
-        else if (sender == BtnToolStretch) tool = OverlayToolType.Stretch;
-        else if (sender == BtnToolPipeBend) tool = OverlayToolType.PipeBend;
-        else if (sender == BtnToolLateralCircle) tool = OverlayToolType.LateralCircle;
-        else if (sender == BtnToolLevelDeposit)
-        {
-            tool = OverlayToolType.Level;
-            _overlayService.ActiveLevelMode = LevelMode.Deposit;
-        }
-        else if (sender == BtnToolLevelWater)
-        {
-            tool = OverlayToolType.Level;
-            _overlayService.ActiveLevelMode = LevelMode.Water;
-        }
-        else if (sender == BtnToolLevelObstacle)
-        {
-            tool = OverlayToolType.Level;
-            _overlayService.ActiveLevelMode = LevelMode.Obstacle;
-        }
+        if (sender == BtnToolRect) tool = OverlayToolType.Rectangle;
         else tool = OverlayToolType.None;
 
         _overlayService.ActiveTool = tool;
@@ -1408,9 +1539,12 @@ public partial class CodingModeWindow : Window
             captureMeter,
             _vm.CurrentVideoTime);
 
-        var dlg = new VsaCodeExplorerWindow(explorerVm, _vm.VideoPath, _vm.CurrentVideoTime) { Owner = this };
+        var dlg = new VsaCodeExplorerWindow(explorerVm, _vm.VideoPath, _vm.CurrentVideoTime)
+        { Owner = this, PipeCalibration = _overlayService.Calibration };
         if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
         {
+            if (dlg.PipeCalibration != null)
+                _overlayService.SetCalibration(dlg.PipeCalibration);
             var result = dlg.SelectedEntry;
             entry.Code = result.Code;
             entry.Beschreibung = result.Beschreibung;
@@ -1425,6 +1559,7 @@ public partial class CodingModeWindow : Window
             _vm.SelectedCodeDescription = entry.Beschreibung;
             TxtSelectedCode.Text = $"{entry.Code} – {entry.Beschreibung}";
             BtnCreateEvent.IsEnabled = true;
+                BtnSaveAsTraining.IsEnabled = true;
 
             // Entry direkt als Event uebernehmen (Code + Parameter sind gesetzt)
             // WICHTIG: Nur ueber den Service adden, damit kein Duplikat in der Liste entsteht.
@@ -1440,6 +1575,7 @@ public partial class CodingModeWindow : Window
             ClearAllDrawingShapes();
             TxtSelectedCode.Text = "";
             BtnCreateEvent.IsEnabled = false;
+                BtnSaveAsTraining.IsEnabled = false;
             UpdateEventMarkers();
             UpdateOverlayInfo(null);
             UpdateFotoButtons();
@@ -1492,7 +1628,177 @@ public partial class CodingModeWindow : Window
         ClearAllDrawingShapes();
         TxtSelectedCode.Text = "";
         BtnCreateEvent.IsEnabled = false;
+                BtnSaveAsTraining.IsEnabled = false;
         UpdateFotoButtons();
+    }
+
+    // --- Lehrer-Annotation (als Training speichern) ---
+
+    private async void BtnSaveAsTraining_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm.CurrentOverlay == null)
+        {
+            MessageBox.Show("Bitte zuerst eine Markierung zeichnen.", "Keine Markierung",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        // Nur flaechenhafte Tools fuer YOLO-Training zulassen
+        var allowedTools = new[]
+        {
+            AuswertungPro.Next.Domain.Models.OverlayToolType.Rectangle,
+            AuswertungPro.Next.Domain.Models.OverlayToolType.Ellipse,
+            AuswertungPro.Next.Domain.Models.OverlayToolType.Freehand
+        };
+        if (!allowedTools.Contains(_vm.CurrentOverlay.ToolType))
+        {
+            MessageBox.Show(
+                $"Das Werkzeug \"{_vm.CurrentOverlay.ToolType}\" erzeugt keine Flaechenmarkierung.\n" +
+                "Fuer Lehrer-Annotationen bitte Rechteck, Ellipse oder Freihand verwenden.",
+                "Werkzeug nicht geeignet",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        // 1. VSA-Code waehlen via bestehendem Explorer-Dialog
+        var captureMeter = SyncSessionMeterFromVideo();
+        if (_player is not null)
+            _vm.CurrentVideoTime = TimeSpan.FromMilliseconds(_player.Time);
+
+        var entry = new AuswertungPro.Next.Domain.Protocol.ProtocolEntry
+        {
+            Source = AuswertungPro.Next.Domain.Protocol.ProtocolEntrySource.Manual,
+            MeterStart = captureMeter,
+            Zeit = _vm.CurrentVideoTime
+        };
+
+        var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+            entry, captureMeter, _vm.CurrentVideoTime);
+
+        var dlg = new VsaCodeExplorerWindow(explorerVm, _vm.VideoPath, _vm.CurrentVideoTime)
+        { Owner = this, PipeCalibration = _overlayService.Calibration };
+        // Kalibrierung immer zuruecklesen (auch bei Abbruch)
+        var dlgResult = dlg.ShowDialog();
+        if (dlg.PipeCalibration != null)
+            _overlayService.SetCalibration(dlg.PipeCalibration);
+        if (dlgResult != true || dlg.SelectedEntry is null) return;
+
+        var selectedEntry = dlg.SelectedEntry;
+
+        try
+        {
+            BtnSaveAsTraining.IsEnabled = false;
+            BtnSaveAsTraining.Content = "\u23F3 Speichere...";
+
+            // 2. Frame-Snapshot erstellen
+            var pngBytes = await CaptureCurrentFrameAsync();
+            if (pngBytes == null || pngBytes.Length == 0)
+            {
+                MessageBox.Show("Frame konnte nicht extrahiert werden.", "Fehler",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // AnnotationId frueh generieren (wird fuer Temp-File + Dateinamen + JSON verwendet)
+            var annotationId = Guid.NewGuid().ToString("N")[..12];
+
+            // Frame temporaer speichern (annotationId = kollisionsfrei)
+            var tempFrame = System.IO.Path.Combine(
+                Ai.Teacher.TeacherAnnotationStore.GetImagesDir(),
+                $"frame_temp_{annotationId}.png");
+            await System.IO.File.WriteAllBytesAsync(tempFrame, pngBytes);
+
+            // 3. BoundingBox berechnen + Validierung
+            var bbox = Application.Ai.NormalizedBoundingBox.FromPoints(_vm.CurrentOverlay.Points);
+            const double MinBboxDimension = 0.01; // Mindestgroesse 1% des Frames
+            if (bbox.Width < MinBboxDimension || bbox.Height < MinBboxDimension)
+            {
+                try { System.IO.File.Delete(tempFrame); } catch { }
+                MessageBox.Show(
+                    "Die Markierung ist zu klein oder hat keine Flaeche.\n" +
+                    "Fuer Lehrer-Annotationen bitte Rechteck, Ellipse oder Freihand verwenden.",
+                    "Markierung ungueltig",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var baseName = $"{selectedEntry.Code}_{captureMeter:F1}m_{annotationId}";
+
+            // Fix 1: VSA-Code → YOLO classId ueber persistiertes Mapping
+            int classId = Ai.Teacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
+
+            // 4. YOLO-Export (Crop + Annotation)
+            var exportService = new Ai.Teacher.TrainingAnnotationExportService();
+            var exportResult = await exportService.ExportAsync(
+                tempFrame, bbox, selectedEntry.Code, classId, baseName);
+
+            // Fix 2: Nur bei erfolgreichem Export persistieren
+            if (!exportResult.Success)
+            {
+                MessageBox.Show(
+                    $"Export fehlgeschlagen:\n{exportResult.Error}\n\nAnnotation wird NICHT gespeichert.",
+                    "Export-Fehler",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // 5. TeacherAnnotation erstellen und speichern (nur bei Erfolg)
+            var annotation = new Ai.Teacher.TeacherAnnotation
+            {
+                AnnotationId = annotationId,
+                VsaCode = selectedEntry.Code,
+                Beschreibung = selectedEntry.Beschreibung ?? "",
+                MeterPosition = captureMeter,
+                VideoTimestamp = _vm.CurrentVideoTime ?? TimeSpan.Zero,
+                HaltungName = _vm.HaltungName,
+                VideoPath = _vm.VideoPath,
+                ToolType = _vm.CurrentOverlay.ToolType,
+                Points = new System.Collections.Generic.List<AuswertungPro.Next.Domain.Models.NormalizedPoint>(
+                    _vm.CurrentOverlay.Points),
+                BoundingBox = bbox,
+                ClockPosition = _vm.CurrentOverlay.ClockFrom,
+                FullFramePath = exportResult.FullFramePath,
+                CroppedRegionPath = exportResult.CroppedRegionPath,
+                YoloAnnotationPath = exportResult.YoloAnnotationPath,
+                WidthMm = _vm.CurrentOverlay.Q2Mm,
+                HeightMm = _vm.CurrentOverlay.Q1Mm
+            };
+
+            await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+
+            // Temporaeres Frame aufraeumen (wurde nach teacher_images kopiert)
+            try { System.IO.File.Delete(tempFrame); } catch { }
+
+            // 6. Reset
+            _vm.CurrentOverlay = null;
+            ClearAllDrawingShapes();
+            TxtSelectedCode.Text = "";
+            BtnCreateEvent.IsEnabled = false;
+                BtnSaveAsTraining.IsEnabled = false;
+            UpdateOverlayInfo(null);
+
+            var count = await Ai.Teacher.TeacherAnnotationStore.CountAsync();
+            MessageBox.Show(
+                $"Lehrer-Annotation gespeichert:\n" +
+                $"Code: {selectedEntry.Code}\n" +
+                $"Meter: {captureMeter:F2}m\n" +
+                $"Tool: {annotation.ToolType}\n\n" +
+                $"Gesamt: {count} Annotationen\n" +
+                (exportResult.Success ? "YOLO-Export erfolgreich" : $"Export-Fehler: {exportResult.Error}"),
+                "Training gespeichert",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Fehler beim Speichern:\n{ex.Message}", "Fehler",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            BtnSaveAsTraining.Content = "\U0001F4DA Als Training speichern";
+            BtnSaveAsTraining.IsEnabled = _vm.CurrentOverlay != null;
+        }
     }
 
     // --- Foto-Erfassung (Foto 1 / Foto 2 pro Beobachtung) ---
@@ -1615,9 +1921,12 @@ public partial class CodingModeWindow : Window
             entry.MeterStart,
             entry.Zeit);
 
-        var dlg = new VsaCodeExplorerWindow(explorerVm, _vm.VideoPath, _vm.CurrentVideoTime) { Owner = this };
+        var dlg = new VsaCodeExplorerWindow(explorerVm, _vm.VideoPath, _vm.CurrentVideoTime)
+        { Owner = this, PipeCalibration = _overlayService.Calibration };
         if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
         {
+            if (dlg.PipeCalibration != null)
+                _overlayService.SetCalibration(dlg.PipeCalibration);
             var result = dlg.SelectedEntry;
             entry.Code = result.Code;
             entry.Beschreibung = result.Beschreibung;
@@ -1677,6 +1986,7 @@ public partial class CodingModeWindow : Window
     private void BtnAcceptDefect_Click(object sender, RoutedEventArgs e)
     {
         _vm.AcceptDefectCommand.Execute(null);
+        ClearAllDrawingShapes(); // Overlay entfernen nach Aktion
         if (_vm.SelectedDefect != null)
         {
             UpdateDefectDetailPanel(_vm.SelectedDefect);
@@ -1698,9 +2008,12 @@ public partial class CodingModeWindow : Window
         var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
             entry, entry.MeterStart, entry.Zeit);
 
-        var dlg = new VsaCodeExplorerWindow(explorerVm, _vm.VideoPath, _vm.CurrentVideoTime) { Owner = this };
+        var dlg = new VsaCodeExplorerWindow(explorerVm, _vm.VideoPath, _vm.CurrentVideoTime)
+        { Owner = this, PipeCalibration = _overlayService.Calibration };
         if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
         {
+            if (dlg.PipeCalibration != null)
+                _overlayService.SetCalibration(dlg.PipeCalibration);
             var result = dlg.SelectedEntry;
             entry.Code = result.Code;
             entry.Beschreibung = result.Beschreibung;
@@ -1716,9 +2029,37 @@ public partial class CodingModeWindow : Window
             if (ev.AiContext != null)
                 _vm.EditDefectCommand.Execute(null);
 
+            ClearAllDrawingShapes(); // Overlay entfernen nach Bearbeitung
             LstEvents.Items.Refresh();
             UpdateDefectDetailPanel(ev);
             UpdateEventMarkers();
+
+            // Foto-Markierung fuer KI-Training anbieten
+            if (entry.FotoPaths.Count > 0 && !string.IsNullOrEmpty(entry.FotoPaths[0])
+                && System.IO.File.Exists(entry.FotoPaths[0]))
+            {
+                var answer = MessageBox.Show(
+                    "Stelle auf dem Foto markieren fuer KI-Training?\n\n" +
+                    "Das hilft der KI, den korrigierten Code beim naechsten Mal\n" +
+                    "an der richtigen Stelle zu erkennen.",
+                    "KI-Training: Foto markieren",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                if (answer == MessageBoxResult.Yes)
+                {
+                    var photoWin = new PhotoMeasurementWindow(
+                        entry.FotoPaths[0], _overlayService.Calibration);
+                    photoWin.Owner = this;
+                    if (photoWin.ShowDialog() == true && photoWin.Result.Confirmed)
+                    {
+                        if (!string.IsNullOrEmpty(photoWin.Result.OverlayPhotoPath))
+                            entry.FotoPaths[0] = photoWin.Result.OverlayPhotoPath;
+                        if (photoWin.Result.UpdatedCalibration != null)
+                            _overlayService.SetCalibration(photoWin.Result.UpdatedCalibration);
+                        _sessionService.UpdateEvent(ev.EventId, entry, ev.Overlay);
+                    }
+                }
+            }
         }
     }
 
@@ -1740,6 +2081,7 @@ public partial class CodingModeWindow : Window
         _vm.Events.Remove(ev);
         _vm.SelectedDefect = null;
         DefectDetailPanel.Visibility = Visibility.Collapsed;
+        ClearAllDrawingShapes(); // Overlay entfernen nach Loeschung
 
         LstEvents.Items.Refresh();
         UpdateEventMarkers();
@@ -1749,6 +2091,7 @@ public partial class CodingModeWindow : Window
     private void BtnRejectDefect_Click(object sender, RoutedEventArgs e)
     {
         _vm.RejectDefectCommand.Execute(null);
+        ClearAllDrawingShapes(); // Overlay entfernen nach Aktion
         if (_vm.SelectedDefect != null)
         {
             UpdateDefectDetailPanel(_vm.SelectedDefect);
@@ -1762,49 +2105,13 @@ public partial class CodingModeWindow : Window
     {
         DefectDetailPanel.Visibility = Visibility.Visible;
 
-        TxtDetailCode.Text = ev.Entry.Code;
-        TxtDetailDescription.Text = ev.Entry.Beschreibung;
-        TxtDetailDistance.Text = $"{ev.MeterAtCapture:F2}m";
-
-        // Uhrposition
-        TxtDetailClock.Text = ev.Overlay?.ClockFrom != null
-            ? $"{ev.Overlay.ClockFrom:F0}h"
-            : "–";
-
-        // Schweregrad
-        if (ev.Entry.CodeMeta?.Parameters != null &&
-            ev.Entry.CodeMeta.Parameters.TryGetValue("vsa.schweregrad", out var sev))
-            TxtDetailSeverity.Text = sev;
-        else
-            TxtDetailSeverity.Text = "–";
-
-        // Konfidenz + Farbe
-        if (ev.AiContext != null)
-        {
-            double conf = ev.AiContext.Confidence;
-            TxtDetailConfidence.Text = $"{conf * 100:F0}%";
-            TxtDetailConfidence.Foreground = CodingSessionViewModel.GetConfidenceBrush(conf);
-            DefectDetailBorderBrush.Color = ((SolidColorBrush)CodingSessionViewModel.GetZoneBrush(conf)).Color;
-        }
-        else
-        {
-            TxtDetailConfidence.Text = "–";
-            TxtDetailConfidence.Foreground = new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8));
-            DefectDetailBorderBrush.Color = Color.FromRgb(0x3B, 0x82, 0xF6);
-        }
-
-        // Status
+        // KI-Aktionsbuttons nur bei offenen KI-Events anzeigen
         var status = CodingSessionViewModel.GetDefectStatus(ev);
-        TxtDetailStatus.Text = $"Status: {StatusToDisplayText(status)}";
+        bool showAiActions = ev.AiContext != null &&
+            status is DefectStatus.Pending or DefectStatus.ReviewRequired;
 
-        // KI-Aktionsbuttons nur bei offenen KI-Events
-        DefectAiActionGrid.Visibility = ev.AiContext != null &&
-            status is DefectStatus.Pending or DefectStatus.ReviewRequired
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-
-        // Bearbeiten / Loeschen immer sichtbar
-        DefectEditActionGrid.Visibility = Visibility.Visible;
+        BtnAcceptDefect.Visibility = showAiActions ? Visibility.Visible : Visibility.Collapsed;
+        BtnRejectDefect.Visibility = showAiActions ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private static string StatusToDisplayText(DefectStatus status) => status switch
@@ -1972,6 +2279,7 @@ public partial class CodingModeWindow : Window
 
             _ollamaClient = _aiConfig.CreateOllamaClient();
             _liveDetection = new LiveDetectionService(_ollamaClient, _aiConfig.VisionModel);
+            _enhancedVision = new EnhancedVisionAnalysisService(_ollamaClient, _aiConfig.VisionModel);
             SetAiStatus("Bereit", "#22C55E",
                 $"Qwen aktiv ({CompactModelName(_aiModelName)})");
         }
@@ -2094,6 +2402,9 @@ public partial class CodingModeWindow : Window
             TxtAnalyzeButton.Text = "Analysiere...";
             SetAiStatus("Frame wird analysiert...", "#F59E0B", "1/3 Snapshot", busy: true);
 
+            // Zeitstempel VOR dem Capture festhalten (Capture wartet bis zu 1s)
+            var timestampSec = _player.Time / 1000.0;
+
             // Frame aus VLC als PNG extrahieren
             var pngBytes = await CaptureCurrentFrameAsync();
             if (pngBytes == null || pngBytes.Length == 0)
@@ -2105,9 +2416,21 @@ public partial class CodingModeWindow : Window
 
             SetAiStatus("Frame wird analysiert...", "#F59E0B",
                 $"2/3 Inferenz ({CompactModelName(_aiModelName)})", busy: true);
-            var timestampSec = _player.Time / 1000.0;
-            var result = await _liveDetection.AnalyzeFrameAsync(
-                pngBytes, timestampSec, _analysisCts.Token);
+
+            LiveDetection result;
+
+            // Bevorzugt EnhancedVisionAnalysisService (besserer Prompt + Schema + ImageQuality-Gate)
+            if (_enhancedVision != null)
+            {
+                var b64 = Convert.ToBase64String(pngBytes);
+                var enhanced = await _enhancedVision.AnalyzeAsync(b64, null, _analysisCts.Token);
+                result = Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, timestampSec);
+            }
+            else
+            {
+                result = await _liveDetection!.AnalyzeFrameAsync(
+                    pngBytes, timestampSec, _analysisCts.Token);
+            }
 
             await Dispatcher.InvokeAsync(() => ShowAiResults(result));
         }
@@ -2128,6 +2451,11 @@ public partial class CodingModeWindow : Window
             {
                 BtnAnalyzeFrame.IsEnabled = true;
                 TxtAnalyzeButton.Text = "Frame analysieren";
+
+                // Fertig-Meldung
+                int befundCount = _vm?.Events?.Count ?? 0;
+                SetAiStatus($"Analyse beendet — {befundCount} Beobachtungen", "#22C55E",
+                    "Fertig");
             });
         }
     }
@@ -2164,17 +2492,35 @@ public partial class CodingModeWindow : Window
             TxtAiStatus.Text += $"  |  Meter: {result.MeterReading:F2}m";
         }
 
+        // Einmalige Beobachtungen filtern: BCD/BCE nur einmal pro Haltung
+        // Wenn bereits ein akzeptiertes BCD/BCE-Event existiert, neue Vorschlaege verwerfen
+        var singletonCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "BCD", "BCE" };
+        var existingCodes = _vm?.Events
+            .Where(ev => ev.AiContext == null || ev.AiContext.Decision != CodingUserDecision.Rejected)
+            .Select(ev => ev.Entry.Code?.ToUpperInvariant())
+            .Where(c => c != null)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase) ?? new HashSet<string?>();
+
+        var filteredFindings = result.Findings
+            .Where(f =>
+            {
+                var code = f.VsaCodeHint?.ToUpperInvariant() ?? "";
+                if (singletonCodes.Contains(code) && existingCodes.Contains(code))
+                    return false; // Duplikat — schon protokolliert
+                return true;
+            }).ToList();
+
         // Findings in UI-Objekte konvertieren
-        var items = result.Findings.Select(f => new AiFindingDisplayItem(f)).ToList();
+        var items = filteredFindings.Select(f => new AiFindingDisplayItem(f)).ToList();
         AiFindingsList.ItemsSource = items;
 
-        // KI-Overlays auf dem Video rendern
+        // KI-Overlays auf dem Video rendern (nur gefilterte Findings)
         var calibration = _overlayService?.Calibration;
-        var overlays = AiOverlayConverter.FromFindings(result.Findings, calibration);
+        var overlays = AiOverlayConverter.FromFindings(filteredFindings, calibration);
         RenderAiOverlays(overlays);
 
         // Ring-Sektor Visualisierung
-        RenderDetectionRingSector(result.Findings, result.TimestampSeconds);
+        RenderDetectionRingSector(filteredFindings, result.TimestampSeconds);
     }
 
     private void RenderAiOverlays(List<AiOverlay> overlays)
@@ -2186,9 +2532,21 @@ public partial class CodingModeWindow : Window
         var canvasHeight = AiOverlayCanvas.ActualHeight;
         if (canvasWidth < 10 || canvasHeight < 10) return;
 
+        // Nur das selektierte Overlay anzeigen (nicht alle gleichzeitig)
+        var selectedEvent = _vm?.SelectedDefect;
         foreach (var overlay in overlays)
         {
             if (overlay.IsRejected) continue;
+
+            // Wenn ein Event selektiert ist: nur dessen Overlay zeichnen
+            if (selectedEvent != null)
+            {
+                var overlayCode = overlay.VsaCodeHint ?? overlay.Label;
+                bool isMatch = string.Equals(overlayCode, selectedEvent.Entry.Code,
+                    StringComparison.OrdinalIgnoreCase);
+                if (!isMatch) continue;
+            }
+
             RenderSingleAiOverlay(overlay, canvasWidth, canvasHeight);
         }
     }
@@ -2376,7 +2734,8 @@ public partial class CodingModeWindow : Window
         for (var i = 0; i < findings.Count && i < 8; i++)
         {
             var f = findings[i];
-            var clockMatch = System.Text.RegularExpressions.Regex.Match(f.PositionClock ?? "", @"(\d{1,2})");
+            var normalizedClock = Ai.VsaCodeResolver.NormalizeClock(f.PositionClock);
+            var clockMatch = System.Text.RegularExpressions.Regex.Match(normalizedClock ?? "", @"(\d{1,2})");
             int parsedClock = clockMatch.Success && int.TryParse(clockMatch.Groups[1].Value, out var ch) ? ch : 0;
             if (parsedClock == 0) parsedClock = 12;
 
@@ -2459,38 +2818,78 @@ public sealed class AiFindingDisplayItem
     public AiFindingDisplayItem(LiveFrameFinding f)
     {
         Label = f.Label;
-        VsaCode = f.VsaCodeHint ?? "";
+        // Gemeinsamer Resolver: VsaCodeHint normalisieren, bei Fehlschlag Label-Heuristik
+        VsaCode = Ai.VsaCodeResolver.NormalizeFindingCode(f.VsaCodeHint)
+                   ?? Ai.VsaCodeResolver.InferCodeFromLabel(f.Label)
+                   ?? "";
         Severity = f.Severity;
         SeverityText = f.Severity.ToString();
 
-        // Detail-Text: Uhr + Umfang + Masse
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(f.PositionClock))
-            parts.Add($"Uhr {f.PositionClock}");
-        if (f.ExtentPercent.HasValue)
-            parts.Add($"Umfang {f.ExtentPercent}%");
-        if (f.HeightMm is > 0)
-            parts.Add($"H:{f.HeightMm}mm");
-        if (f.WidthMm is > 0)
-            parts.Add($"B:{f.WidthMm}mm");
-        if (f.IntrusionPercent is > 0)
-            parts.Add($"Einragung {f.IntrusionPercent}%");
-        DetailText = parts.Count > 0 ? string.Join("  |  ", parts) : "Keine Details";
+        // VSA-Klartext aus Katalog (z.B. "BCAEB" → "Seitl. Anschluss, einmuendend, Bogen")
+        Description = Ai.VsaCodeResolver.LookupLabel(VsaCode) ?? f.Label;
 
-        SeverityBrush = new SolidColorBrush(f.Severity switch
+        // Position: Meter + Uhrzeit zusammengefasst
+        var posParts = new List<string>();
+        var normalizedClock = Ai.VsaCodeResolver.NormalizeClock(f.PositionClock);
+        if (!string.IsNullOrWhiteSpace(normalizedClock))
+            posParts.Add(normalizedClock);
+        if (f.ExtentPercent.HasValue)
+            posParts.Add($"{f.ExtentPercent}%");
+        if (f.HeightMm is > 0)
+            posParts.Add($"H:{f.HeightMm}mm");
+        if (f.WidthMm is > 0)
+            posParts.Add($"B:{f.WidthMm}mm");
+        PositionText = posParts.Count > 0 ? string.Join(" · ", posParts) : "";
+
+        // Detail-Text (fuer Tooltip und DetailPanel)
+        var detailParts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(normalizedClock))
+            detailParts.Add($"Uhr {normalizedClock}");
+        if (f.ExtentPercent.HasValue)
+            detailParts.Add($"Umfang {f.ExtentPercent}%");
+        if (f.HeightMm is > 0)
+            detailParts.Add($"H:{f.HeightMm}mm");
+        if (f.WidthMm is > 0)
+            detailParts.Add($"B:{f.WidthMm}mm");
+        if (f.IntrusionPercent is > 0)
+            detailParts.Add($"Einragung {f.IntrusionPercent}%");
+        DetailText = detailParts.Count > 0 ? string.Join("  |  ", detailParts) : "Keine Details";
+
+        // Confidence
+        ConfidencePercent = f.Severity * 20; // Severity 1-5 → 20-100%
+        ConfidenceText = $"{ConfidencePercent}%";
+
+        // Tooltip: Alles zusammen
+        FullTooltip = $"{VsaCode} {Description}\n{DetailText}\nSeverity: {Severity}/5";
+
+        var severityColor = f.Severity switch
         {
             5 => Color.FromRgb(0xEF, 0x44, 0x44), // Rot (kritisch)
             4 => Color.FromRgb(0xF9, 0x73, 0x16), // Orange (schwer)
             3 => Color.FromRgb(0xF5, 0x9E, 0x0B), // Gelb (mittel)
             2 => Color.FromRgb(0x22, 0xC5, 0x5E), // Gruen (leicht)
             _ => Color.FromRgb(0x94, 0xA3, 0xB8)  // Grau (kaum)
-        });
+        };
+        SeverityBrush = new SolidColorBrush(severityColor);
+
+        // Confidence-Farbe: Gruen >=85%, Gelb 60-85%, Rot <60%
+        ConfidenceBrush = new SolidColorBrush(ConfidencePercent >= 85
+            ? Color.FromRgb(0x22, 0xC5, 0x5E)
+            : ConfidencePercent >= 60
+                ? Color.FromRgb(0xF5, 0x9E, 0x0B)
+                : Color.FromRgb(0xEF, 0x44, 0x44));
     }
 
     public string Label { get; }
     public string VsaCode { get; }
+    public string Description { get; }
     public int Severity { get; }
     public string SeverityText { get; }
     public string DetailText { get; }
+    public string PositionText { get; }
+    public int ConfidencePercent { get; }
+    public string ConfidenceText { get; }
+    public string FullTooltip { get; }
     public SolidColorBrush SeverityBrush { get; }
+    public SolidColorBrush ConfidenceBrush { get; }
 }

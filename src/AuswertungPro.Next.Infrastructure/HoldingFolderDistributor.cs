@@ -45,17 +45,19 @@ public static class HoldingFolderDistributor
         RegexOptions.Compiled);
 
     // Hotpath-Regex: TryExtractDichtheitShafts
+    // Schacht-ID-Pattern: numerisch (81150, 42.046) oder alphanumerisch (S42.123, KS-0815)
+    private const string SchachtIdPat = @"[A-Za-z]{0,3}[\-]?\d{2,}(?:[.\-]\d{2,})?";
     private static readonly Regex DichtheitUpperRx = new(
-        @"oberer\s*Schacht\s*[:\-]?\s*(?<v>\d{2,}\.\d{2,}|\d{4,})",
+        @"oberer\s*Schacht\s*[:\-]?\s*(?<v>" + SchachtIdPat + ")",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly Regex DichtheitLowerRx = new(
-        @"unterer\s*Schacht\s*[:\-]?\s*(?<v>\d{2,}\.\d{2,}|\d{4,})",
+        @"unterer\s*Schacht\s*[:\-]?\s*(?<v>" + SchachtIdPat + ")",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly Regex SchachtObenRx = new(
-        @"Schacht\s*oben\s*[:\-]?\s*(?<v>\d{2,}\.\d{2,}|\d{4,})",
+        @"Schacht\s*oben\s*[:\-]?\s*(?<v>" + SchachtIdPat + ")",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly Regex SchachtUntenRx = new(
-        @"Schacht\s*unten\s*[:\-]?\s*(?<v>\d{2,}\.\d{2,}|\d{4,})",
+        @"Schacht\s*unten\s*[:\-]?\s*(?<v>" + SchachtIdPat + ")",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     // Hotpath-Regex: TryFindInspectionDate / TryFindSchachtDate / TryExtractDateFromFormEntries
@@ -1366,16 +1368,34 @@ public static class HoldingFolderDistributor
 
     private static IReadOnlyList<PageInfo> ReadPdfPagesWithPdfPig(string pdfPath)
     {
-        var pages = new List<PageInfo>();
-        using var doc = PdfDocument.Open(pdfPath);
-        var pageNumber = 0;
-        foreach (var page in doc.GetPages())
+        // PdfTextExtractor nutzt Layout-erhaltende Extraktion (Letter-by-Letter),
+        // die Zeilen/Spalten korrekt rekonstruiert. Direkt page.Text ist unbrauchbar
+        // weil es keine Zeilenumbrueche oder Abstande erhaelt.
+        try
         {
-            pageNumber++;
-            var text = (page.Text ?? "").Replace("\r\n", "\n").Trim();
-            pages.Add(new PageInfo(pageNumber, text, pdfPath));
+            var extraction = PdfTextExtractor.ExtractPages(pdfPath);
+            var pages = new List<PageInfo>(extraction.Pages.Count);
+            for (var i = 0; i < extraction.Pages.Count; i++)
+            {
+                var text = (extraction.Pages[i] ?? "").Replace("\r\n", "\n").Trim();
+                pages.Add(new PageInfo(i + 1, text, pdfPath));
+            }
+            return pages;
         }
-        return pages;
+        catch
+        {
+            // Absoluter Fallback: page.Text (besser als nichts)
+            var pages = new List<PageInfo>();
+            using var doc = PdfDocument.Open(pdfPath);
+            var pageNumber = 0;
+            foreach (var page in doc.GetPages())
+            {
+                pageNumber++;
+                var text = (page.Text ?? "").Replace("\r\n", "\n").Trim();
+                pages.Add(new PageInfo(pageNumber, text, pdfPath));
+            }
+            return pages;
+        }
     }
 
     private static string ReadPdfText(string pdfPath)
@@ -1662,51 +1682,96 @@ public static class HoldingFolderDistributor
             try
             {
                 var pages = ReadPdfPages(pdfPath);
-                var pdfText = string.Join("\n\n", pages.Select(p => p.Text));
 
-                string? haltungId = null;
+                // Multi-Seiten-Erkennung: Jede Seite einzeln auf Haltungspaar pruefen.
+                // KIT Bauinspekt PDFs haben pro Seite eine andere Haltung/Schacht.
+                // Kontrollinformations-Seiten (Messdaten) gehoeren zur vorherigen Pruefseite.
+                var pageResults = ExtractDichtheitPerPage(pages, project, destGemeindeFolder);
 
-                // Versuche Schachtnummern aus oberer/unterer Schacht zu extrahieren
-                var (shaftA, shaftB) = TryExtractDichtheitShafts(pdfText);
-                if (!string.IsNullOrWhiteSpace(shaftA) && !string.IsNullOrWhiteSpace(shaftB))
+                // Multi-Split nur wenn VERSCHIEDENE Haltungen erkannt wurden.
+                // PDFs mit mehreren Seiten aber gleicher Haltung (z.B. Pruefbericht + Anhang)
+                // werden als Ganzes behandelt.
+                var distinctHaltungen = pageResults
+                    .Where(pr => !string.IsNullOrWhiteSpace(pr.HaltungId))
+                    .Select(pr => pr.HaltungId!)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Count();
+
+                if (distinctHaltungen > 1)
                 {
-                    // Reihenfolge gegen Projekt/Ordner abgleichen (kann vertauscht sein)
-                    haltungId = ResolveDichtheitHaltungOrder(shaftA, shaftB, project, destGemeindeFolder);
-                }
+                    // Multi-Haltungs-PDF: seitenweise splitten und verteilen
+                    foreach (var pr in pageResults)
+                    {
+                        if (string.IsNullOrWhiteSpace(pr.HaltungId))
+                        {
+                            results.Add(new DistributionResult(false,
+                                $"Seite {pr.MainPage}: Haltung nicht erkannt",
+                                pdfPath, null, null, null, null, null, VideoMatchStatus.NotChecked));
+                            continue;
+                        }
 
-                // Fallback: Standard Haltungsinspektion Parser
-                if (string.IsNullOrWhiteSpace(haltungId))
+                        var haltung = SanitizePathSegment(NormalizeHaltungId(pr.HaltungId));
+                        var holdingFolder = Path.Combine(destGemeindeFolder, haltung);
+                        Directory.CreateDirectory(holdingFolder);
+
+                        var suffix = pr.IsSchacht ? "SP" : "DP";
+                        var destPdfName = $"{pr.DateStamp}_{haltung}_{suffix}.pdf";
+                        var destPath = EnsureUniquePath(
+                            Path.Combine(holdingFolder, destPdfName), overwrite);
+
+                        // Einzelseite(n) als neues PDF schreiben
+                        WritePdfPages(pdfPath, pr.PageNumbers, destPath);
+
+                        results.Add(new DistributionResult(true,
+                            $"OK -> {haltung} (S{pr.MainPage}, {pr.PageNumbers.Count} Seite(n))",
+                            pdfPath, null, destPath, null, null, holdingFolder, VideoMatchStatus.NotChecked));
+                    }
+                }
+                else
                 {
-                    var parsed = ParsePdfWithOcrFallback(pages);
-                    if (parsed.Success && !string.IsNullOrWhiteSpace(parsed.Haltung))
-                        haltungId = parsed.Haltung;
+                    // Single-Haltung oder Fallback: gesamtes PDF einer Haltung zuordnen
+                    var pdfText = string.Join("\n\n", pages.Select(p => p.Text));
+                    string? haltungId = pageResults.Count == 1 ? pageResults[0].HaltungId : null;
+
+                    // Bestehende Fallback-Kette wenn seitenweise Extraktion nichts ergab
+                    if (string.IsNullOrWhiteSpace(haltungId))
+                    {
+                        var (shaftA, shaftB) = TryExtractDichtheitShafts(pdfText);
+                        if (!string.IsNullOrWhiteSpace(shaftA) && !string.IsNullOrWhiteSpace(shaftB))
+                            haltungId = ResolveDichtheitHaltungOrder(shaftA, shaftB, project, destGemeindeFolder);
+                    }
+                    if (string.IsNullOrWhiteSpace(haltungId))
+                    {
+                        var parsed = ParsePdfWithOcrFallback(pages);
+                        if (parsed.Success && !string.IsNullOrWhiteSpace(parsed.Haltung))
+                            haltungId = parsed.Haltung;
+                    }
+                    if (string.IsNullOrWhiteSpace(haltungId))
+                        haltungId = TryExtractFromShafts(pdfText);
+
+                    if (string.IsNullOrWhiteSpace(haltungId))
+                    {
+                        results.Add(new DistributionResult(false,
+                            "Haltung nicht erkannt (oberer/unterer Schacht nicht gefunden)",
+                            pdfPath, null, null, null, null, null, VideoMatchStatus.NotChecked));
+                        continue;
+                    }
+
+                    var date = TryFindInspectionDate(pdfText);
+                    var dateStamp = date?.ToString("yyyyMMdd", CultureInfo.InvariantCulture) ?? "00000000";
+
+                    var haltung = SanitizePathSegment(NormalizeHaltungId(haltungId));
+                    var holdingFolder = Path.Combine(destGemeindeFolder, haltung);
+                    Directory.CreateDirectory(holdingFolder);
+
+                    var destPdfName = $"{dateStamp}_{haltung}_DP.pdf";
+                    var destPath = EnsureUniquePath(
+                        Path.Combine(holdingFolder, destPdfName), overwrite);
+                    MoveOrCopy(pdfPath, destPath, moveInsteadOfCopy);
+
+                    results.Add(new DistributionResult(true, $"OK -> {haltung}",
+                        pdfPath, null, destPath, null, null, holdingFolder, VideoMatchStatus.NotChecked));
                 }
-
-                // Fallback: TryExtractFromShafts (allgemeine Schacht-Extraktion)
-                if (string.IsNullOrWhiteSpace(haltungId))
-                    haltungId = TryExtractFromShafts(pdfText);
-
-                if (string.IsNullOrWhiteSpace(haltungId))
-                {
-                    results.Add(new DistributionResult(false, "Haltung nicht erkannt (oberer/unterer Schacht nicht gefunden)", pdfPath, null, null, null, null, null, VideoMatchStatus.NotChecked));
-                    continue;
-                }
-
-                // Datum aus PDF extrahieren (gleiche Logik wie Haltungsverteilung)
-                var date = TryFindInspectionDate(pdfText);
-                var dateStamp = date?.ToString("yyyyMMdd", CultureInfo.InvariantCulture) ?? "00000000";
-
-                var haltung = SanitizePathSegment(NormalizeHaltungId(haltungId));
-                var holdingFolder = Path.Combine(destGemeindeFolder, haltung);
-                Directory.CreateDirectory(holdingFolder);
-
-                // Dateiname: {datum}_{haltung}_DP.pdf (gleiche Logik wie Haltung, mit _DP Suffix)
-                var destPdfName = $"{dateStamp}_{haltung}_DP.pdf";
-                var destPath = EnsureUniquePath(
-                    Path.Combine(holdingFolder, destPdfName), overwrite);
-                MoveOrCopy(pdfPath, destPath, moveInsteadOfCopy);
-
-                results.Add(new DistributionResult(true, $"OK -> {haltung}", pdfPath, null, destPath, null, null, holdingFolder, VideoMatchStatus.NotChecked));
             }
             catch (Exception ex)
             {
@@ -1726,6 +1791,113 @@ public static class HoldingFolderDistributor
     /// Extrahiert die beiden Schachtnummern aus einem Dichtheitspruefungsprotokoll-PDF.
     /// Gibt (schachtA, schachtB) zurueck – die Reihenfolge kann vertauscht sein.
     /// </summary>
+    // ── Multi-Seiten-Dichtheitspruefung (KIT-Format u.a.) ──────────────────
+
+    private sealed record DichtheitPageResult(
+        int MainPage,
+        IReadOnlyList<int> PageNumbers,
+        string? HaltungId,
+        string DateStamp,
+        bool IsSchacht);
+
+    /// <summary>
+    /// Extrahiert pro Seite die Haltung/Schacht-Zuordnung.
+    /// Kontrollinformations-Seiten werden der vorherigen Pruefseite zugeordnet.
+    /// Gibt eine Liste mit einem Eintrag pro Pruefbericht zurueck.
+    /// </summary>
+    private static IReadOnlyList<DichtheitPageResult> ExtractDichtheitPerPage(
+        IReadOnlyList<PageInfo> pages,
+        Project? project,
+        string destGemeindeFolder)
+    {
+        var results = new List<DichtheitPageResult>();
+
+        foreach (var page in pages)
+        {
+            var text = page.Text;
+
+            // Kontrollinformation = Folgeseite einer Pruefung → zur vorherigen anhaengen
+            if (text.Contains("Kontrollinformation"))
+            {
+                if (results.Count > 0)
+                {
+                    var prev = results[^1];
+                    var extPages = new List<int>(prev.PageNumbers) { page.PageNumber };
+                    results[^1] = prev with { PageNumbers = extPages };
+                }
+                continue;
+            }
+
+            // Datum aus Seiteninhalt (YYYY/MM/DD Format, typisch fuer KIT)
+            var dateMatch = Regex.Match(text, @"(\d{4})/(\d{2})/(\d{2})");
+            var dateStamp = dateMatch.Success
+                ? $"{dateMatch.Groups[1].Value}{dateMatch.Groups[2].Value}{dateMatch.Groups[3].Value}"
+                : TryFindInspectionDate(text)?.ToString("yyyyMMdd", CultureInfo.InvariantCulture) ?? "00000000";
+
+            // Schachtpruefung? (Label: "Prüfgegenstand / Schacht")
+            bool isSchacht = text.Contains("Prufgegenstand / Schacht", StringComparison.OrdinalIgnoreCase)
+                          || text.Contains("Pruefgegenstand / Schacht", StringComparison.OrdinalIgnoreCase)
+                          || text.Contains("Prüfgegenstand / Schacht", StringComparison.OrdinalIgnoreCase);
+
+            string? haltungId = null;
+
+            // Haltungspaar suchen: zwei 5-stellige Nummern auf einer Zeile
+            // (OCR kann ^ als diverse Zeichen rendern — deshalb robust: 2 Nummern auf gleicher Zeile)
+            foreach (var line in text.Split('\n'))
+            {
+                // Zeilen mit bekannten Nicht-Haltungs-Mustern ueberspringen
+                if (line.Contains("Ebikon", StringComparison.OrdinalIgnoreCase)
+                    || line.Contains("Altdorf", StringComparison.OrdinalIgnoreCase)
+                    || line.Contains("GPS", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                // "gepruft bei 40693,6473" — nur eine Nummer vor Komma, kein Paar
+                if (Regex.IsMatch(line, @"gepr[uü]ft\s+bei", RegexOptions.IgnoreCase))
+                    continue;
+
+                var nums = Regex.Matches(line, @"\b(\d{5})\b");
+                if (nums.Count >= 2)
+                {
+                    var a = nums[0].Groups[1].Value;
+                    var b = nums[1].Groups[1].Value;
+                    if (!string.Equals(a, b, StringComparison.Ordinal))
+                    {
+                        haltungId = ResolveDichtheitHaltungOrder(a, b, project, destGemeindeFolder)
+                                    ?? $"{a}-{b}";
+                        break;
+                    }
+                }
+            }
+
+            // Schacht: einzelne Nummer neben "Strang"
+            if (haltungId == null && isSchacht)
+            {
+                var schachtMatch = Regex.Match(text, @":\s*(\d{5})\s*:?\s*Strang", RegexOptions.IgnoreCase);
+                if (schachtMatch.Success)
+                    haltungId = $"Schacht_{schachtMatch.Groups[1].Value}";
+            }
+
+            // Standard-Fallbacks
+            if (haltungId == null)
+            {
+                var (shA, shB) = TryExtractDichtheitShafts(text);
+                if (!string.IsNullOrWhiteSpace(shA) && !string.IsNullOrWhiteSpace(shB))
+                    haltungId = ResolveDichtheitHaltungOrder(shA, shB, project, destGemeindeFolder)
+                                ?? $"{shA}-{shB}";
+            }
+            if (haltungId == null)
+                haltungId = TryExtractFromShafts(text);
+
+            results.Add(new DichtheitPageResult(
+                MainPage: page.PageNumber,
+                PageNumbers: new List<int> { page.PageNumber },
+                HaltungId: haltungId,
+                DateStamp: dateStamp,
+                IsSchacht: isSchacht && haltungId?.StartsWith("Schacht_") == true));
+        }
+
+        return results;
+    }
+
     private static (string? A, string? B) TryExtractDichtheitShafts(string text)
     {
         // "oberer Schacht: XXXXX" / "unterer Schacht: XXXXX"
@@ -1961,7 +2133,15 @@ public static class HoldingFolderDistributor
             }
         }
 
-        return new ParsedPdf(false, "Schacht-Felder und Haltung nicht gefunden", date, null, videoFile);
+        // Haltung trotzdem zurueckgeben (auch ohne Datum), damit SplitPdfIntoHoldings
+        // Stammdaten-Seiten dem richtigen Chunk zuordnen kann.
+        var bestHaltung = !string.IsNullOrWhiteSpace(shaftHaltung) ? NormalizeHaltungId(shaftHaltung)
+            : !string.IsNullOrWhiteSpace(explicitHaltung) ? NormalizeHaltungId(explicitHaltung)
+            : null;
+        if (!string.IsNullOrWhiteSpace(bestHaltung) && !IsValidHaltungId(bestHaltung))
+            bestHaltung = null;
+
+        return new ParsedPdf(false, "Schacht-Felder und Haltung nicht gefunden", date, bestHaltung, videoFile);
     }
 
     private static bool IsSuspiciousShaftPair(string shaftPair, string explicitPair)
@@ -2027,8 +2207,30 @@ public static class HoldingFolderDistributor
                 if (IsContentsPage(page.Text))
                     continue;
 
+                // Stammdaten-Seiten haben oft eine gueltige Haltung aber kein Datum.
+                // Wenn die Haltung NICHT zum aktuellen Chunk passt, nicht blind anhaengen
+                // sondern fuer den naechsten Chunk aufheben (Seite wird dann dort angehaengt).
                 if (currentPages is not null && currentParsed is not null)
+                {
+                    var failedHaltung = parsed.Haltung;
+                    if (!string.IsNullOrWhiteSpace(failedHaltung)
+                        && !string.Equals(failedHaltung, currentParsed.Haltung, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Diese Seite gehoert zur naechsten Haltung → Chunk abschliessen
+                        chunks.Add(new PdfPageChunk(currentPages, currentParsed));
+                        currentPages = new List<int> { page.PageNumber };
+                        currentParsed = null; // Warte auf die naechste erfolgreiche Seite
+                    }
+                    else
+                    {
+                        currentPages.Add(page.PageNumber);
+                    }
+                }
+                else if (currentPages is not null)
+                {
+                    // currentParsed ist null (wartend nach Stammdaten-Seite)
                     currentPages.Add(page.PageNumber);
+                }
                 continue;
             }
 
@@ -2038,6 +2240,14 @@ public static class HoldingFolderDistributor
                 && parsed.Date == currentParsed.Date)
             {
                 currentPages.Add(page.PageNumber);
+                continue;
+            }
+
+            // Stammdaten-Seite hatte Chunk abgeschlossen, jetzt kommt die passende Haltungsseite
+            if (currentPages is not null && currentParsed is null)
+            {
+                currentPages.Add(page.PageNumber);
+                currentParsed = parsed;
                 continue;
             }
 
@@ -2864,12 +3074,21 @@ public static class HoldingFolderDistributor
         return null;
     }
 
-    private static readonly Regex WinCanValueRegex = new(@"\d{2,}(?:\.\d{2,})?", RegexOptions.Compiled);
+    // Schacht-Wert: numerisch (81150, 42.046) ODER alphanumerisch (S42.123, KS-0815, A1-B2)
+    private static readonly Regex WinCanValueRegex = new(
+        @"[A-Za-z]{0,3}[\-]?\d{2,}(?:[.\-]\d{2,})?",
+        RegexOptions.Compiled);
     private static readonly Regex WinCanUpperLabelRegex = new(
-        @"\b(Schacht\s*oben|Knoten\s*oben|Oberer\s*Punkt|Startschacht|Von)\b[:\s]*",
+        @"\b(Schacht\s*oben|Knoten\s*oben|Oberer\s*(?:Punkt|Schacht)|Startschacht|Von" +
+        @"|Anfangsschacht|Start\s*Schacht|Schacht\s*(?:Nr\.?\s*)?(?:A|1|Start|Anfang)" +
+        @"|Pruefstrecke\s*von|Haltung\s*von|Leitung\s*von|Strecke\s*von" +
+        @"|Anfangspunkt|Startpunkt)\b[:\s]*",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex WinCanLowerLabelRegex = new(
-        @"\b(Schacht\s*unten|Knoten\s*unten|Unterer\s*Punkt|Endschacht|Nach)\b[:\s]*",
+        @"\b(Schacht\s*unten|Knoten\s*unten|Unterer\s*(?:Punkt|Schacht)|Endschacht|Nach" +
+        @"|Zielschacht|End\s*Schacht|Schacht\s*(?:Nr\.?\s*)?(?:B|2|End|Ziel)" +
+        @"|Pruefstrecke\s*bis|Haltung\s*bis|Leitung\s*bis|Strecke\s*bis" +
+        @"|Endpunkt|Zielpunkt)\b[:\s]*",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static string NormalizeLine(string s)
@@ -2974,7 +3193,15 @@ public static class HoldingFolderDistributor
     {
         var lines = text.Replace("\r\n", "\n").Split('\n');
 
-        // WinCAN: robust Label->Value extraction (Schacht oben/unten, Start/End, Von/Nach)
+        // Frueh-Erkennung: Volles Haltungspaar direkt nach "Oberer/Unterer Schacht" oder "Oberer/Unterer Punkt"
+        // Fretz-Stammdaten-Layout: "Oberer Schacht  42046-41412" → ganzes Paar extrahieren
+        var fullPairAfterSchacht = Regex.Match(text,
+            @"(?:Oberer|Unterer)\s*(?:Schacht|Punkt)[^\S\n]*(?<pair>(?:\d{2,}\.\d{2,}|\d{4,})\s*-\s*(?:\d{2,}\.\d{2,}|\d{4,}))",
+            RegexOptions.IgnoreCase);
+        if (fullPairAfterSchacht.Success)
+            return fullPairAfterSchacht.Groups["pair"].Value;
+
+        // WinCAN: robust Label->Value extraction (Schacht oben/unten, Start/End, Von/Nach, Oberer/Unterer Schacht)
         var upper = TryGetValueAfterLabel(lines, WinCanUpperLabelRegex, WinCanValueRegex);
         var lower = TryGetValueAfterLabel(lines, WinCanLowerLabelRegex, WinCanValueRegex);
         if (!string.IsNullOrWhiteSpace(upper) && !string.IsNullOrWhiteSpace(lower))
@@ -2984,15 +3211,16 @@ public static class HoldingFolderDistributor
         }
 
         // Inline layouts without line breaks (common in some PdfPig extracts).
+        // [^\S\n]* statt \s* um Zeilenumbrueche nicht zu ueberqueren
         var pairAfterLowerPoint = Regex.Match(
             text,
-            @"Unterer\s*Punkt\s*(?<pair>(?:\d{2,}\.\d{2,}|\d{4,})\s*-\s*(?:\d{2,}\.\d{2,}|\d{4,}))",
+            @"Unterer\s*Punkt[^\S\n]*(?<pair>(?:\d{2,}\.\d{2,}|\d{4,})\s*-\s*(?:\d{2,}\.\d{2,}|\d{4,}))",
             RegexOptions.IgnoreCase);
         if (pairAfterLowerPoint.Success)
             return pairAfterLowerPoint.Groups["pair"].Value;
 
-        var upperPointInline = Regex.Match(text, @"Oberer\s*Punkt\s*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
-        var lowerPointInline = Regex.Match(text, @"Unterer\s*Punkt\s*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
+        var upperPointInline = Regex.Match(text, @"Oberer\s*Punkt[^\S\n]+(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
+        var lowerPointInline = Regex.Match(text, @"Unterer\s*Punkt[^\S\n]+(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
         if (upperPointInline.Success && lowerPointInline.Success)
         {
             var up = upperPointInline.Groups["v"].Value;
@@ -3001,8 +3229,8 @@ public static class HoldingFolderDistributor
                 return $"{up}-{low}";
         }
 
-        var upperSchachtInline = Regex.Match(text, @"Schacht\s*oben\s*[:\-]?\s*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
-        var lowerSchachtInline = Regex.Match(text, @"Schacht\s*unten\s*[:\-]?\s*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
+        var upperSchachtInline = Regex.Match(text, @"Schacht\s*oben\s*[:\-]?[^\S\n]*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
+        var lowerSchachtInline = Regex.Match(text, @"Schacht\s*unten\s*[:\-]?[^\S\n]*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
         if (upperSchachtInline.Success && lowerSchachtInline.Success)
         {
             var up = upperSchachtInline.Groups["v"].Value;
@@ -3012,8 +3240,9 @@ public static class HoldingFolderDistributor
         }
 
         // Dichtheitspruefung Format: "oberer Schacht: XXXXX" / "unterer Schacht: XXXXX"
-        var upperObererSchacht = Regex.Match(text, @"oberer\s*Schacht\s*[:\-]?\s*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
-        var lowerUntererSchacht = Regex.Match(text, @"unterer\s*Schacht\s*[:\-]?\s*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
+        // [^\S\n]* statt \s* um Zeilenumbrueche nicht zu ueberqueren
+        var upperObererSchacht = Regex.Match(text, @"oberer\s*Schacht\s*[:\-]?[^\S\n]*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
+        var lowerUntererSchacht = Regex.Match(text, @"unterer\s*Schacht\s*[:\-]?[^\S\n]*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
         if (upperObererSchacht.Success && lowerUntererSchacht.Success)
         {
             var up = upperObererSchacht.Groups["v"].Value;
@@ -3024,16 +3253,51 @@ public static class HoldingFolderDistributor
 
         string? oben = null;
         string? unten = null;
-        
-        var pointRx = new Regex(@"\b(\d{2,}\.\d{2,}|\d{4,})\b");
-        
+
+        // Schacht-Nummer: numerisch (81150, 42.046) oder alphanumerisch (S42.123, KS-0815)
+        var pointRx = new Regex(@"\b([A-Za-z]{0,3}[\-]?\d{2,}(?:[.\-]\d{2,})?)\b");
+        // Volles Paar auf derselben Zeile — Trennzeichen: - , – , ^ , -^ , → , ->
+        // KIT-Format: "40259 ^ 40260", "41412-^40859", "40260 -^ 40261"
+        var pairRx = new Regex(@"(?<a>[A-Za-z]{0,3}[\-]?\d{2,}(?:[.\-]\d{2,})?)\s*[-–\^]+[>\s]*(?<b>[A-Za-z]{0,3}[\-]?\d{2,}(?:[.\-]\d{2,})?)");
+
         for (var i = 0; i < lines.Length; i++)
         {
             var line = lines[i];
-            
-            // IBAK/Fretz Format: "Oberer Punkt" / "Unterer Punkt"
-            if (line.Contains("Oberer", StringComparison.OrdinalIgnoreCase) && 
-                line.Contains("Punkt", StringComparison.OrdinalIgnoreCase))
+            bool isObererPunkt = line.Contains("Oberer", StringComparison.OrdinalIgnoreCase) &&
+                line.Contains("Punkt", StringComparison.OrdinalIgnoreCase);
+            bool isUntererPunkt = line.Contains("Unterer", StringComparison.OrdinalIgnoreCase) &&
+                line.Contains("Punkt", StringComparison.OrdinalIgnoreCase);
+            bool isObererSchacht = line.Contains("Oberer", StringComparison.OrdinalIgnoreCase) &&
+                line.Contains("Schacht", StringComparison.OrdinalIgnoreCase);
+            bool isUntererSchacht = line.Contains("Unterer", StringComparison.OrdinalIgnoreCase) &&
+                line.Contains("Schacht", StringComparison.OrdinalIgnoreCase);
+
+            // KIT/Dichtheitspruefung: "Prüfstrecke von", "Haltung von/bis", "Leitung"
+            if (!isObererPunkt && !isObererSchacht)
+            {
+                isObererSchacht =
+                    Regex.IsMatch(line, @"\b(?:Pruefstrecke|Haltung|Leitung|Strecke|Abschnitt)\s*von\b", RegexOptions.IgnoreCase)
+                    || Regex.IsMatch(line, @"\b(?:Anfangsschacht|Startschacht|Anfangspunkt|Startpunkt)\b", RegexOptions.IgnoreCase);
+            }
+            if (!isUntererPunkt && !isUntererSchacht)
+            {
+                isUntererSchacht =
+                    Regex.IsMatch(line, @"\b(?:Pruefstrecke|Haltung|Leitung|Strecke|Abschnitt)\s*bis\b", RegexOptions.IgnoreCase)
+                    || Regex.IsMatch(line, @"\b(?:Endschacht|Zielschacht|Endpunkt|Zielpunkt)\b", RegexOptions.IgnoreCase);
+            }
+
+            bool isOberesLabel = isObererPunkt || isObererSchacht;
+            bool isUnteresLabel = isUntererPunkt || isUntererSchacht;
+
+            if (isOberesLabel || isUnteresLabel)
+            {
+                // Pruefe zuerst ob ein volles Paar auf der Zeile steht (z.B. "42046-41412")
+                var pairMatch = pairRx.Match(line);
+                if (pairMatch.Success)
+                    return $"{pairMatch.Groups["a"].Value}-{pairMatch.Groups["b"].Value}";
+            }
+
+            if (isOberesLabel)
             {
                 var m = pointRx.Match(line);
                 if (m.Success)
@@ -3045,38 +3309,8 @@ public static class HoldingFolderDistributor
                         oben = nextM.Groups[1].Value;
                 }
             }
-            
-            if (line.Contains("Unterer", StringComparison.OrdinalIgnoreCase) && 
-                line.Contains("Punkt", StringComparison.OrdinalIgnoreCase))
-            {
-                var m = pointRx.Match(line);
-                if (m.Success)
-                    unten = m.Groups[1].Value;
-                else if (i + 1 < lines.Length)
-                {
-                    var nextM = pointRx.Match(lines[i + 1]);
-                    if (nextM.Success)
-                        unten = nextM.Groups[1].Value;
-                }
-            }
-            
-            // Alternative IBAK Format: "Oberer Schacht" / "Unterer Schacht"
-            if (line.Contains("Oberer", StringComparison.OrdinalIgnoreCase) && 
-                line.Contains("Schacht", StringComparison.OrdinalIgnoreCase))
-            {
-                var m = pointRx.Match(line);
-                if (m.Success)
-                    oben = m.Groups[1].Value;
-                else if (i + 1 < lines.Length)
-                {
-                    var nextM = pointRx.Match(lines[i + 1]);
-                    if (nextM.Success)
-                        oben = nextM.Groups[1].Value;
-                }
-            }
-            
-            if (line.Contains("Unterer", StringComparison.OrdinalIgnoreCase) && 
-                line.Contains("Schacht", StringComparison.OrdinalIgnoreCase))
+
+            if (isUnteresLabel)
             {
                 var m = pointRx.Match(line);
                 if (m.Success)
@@ -3089,7 +3323,7 @@ public static class HoldingFolderDistributor
                 }
             }
         }
-        
+
         if (!string.IsNullOrWhiteSpace(oben) && !string.IsNullOrWhiteSpace(unten))
         {
             if (!string.Equals(oben, unten, StringComparison.OrdinalIgnoreCase))

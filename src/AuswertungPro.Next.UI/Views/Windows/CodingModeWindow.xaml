@@ -501,163 +501,48 @@
                         </DockPanel>
                     </Border>
 
-                    <!-- ── Defekt-Details (bei Auswahl) ── -->
+                    <!-- ── Inline-Aktionen (bei Auswahl) ── -->
                     <Border x:Name="DefectDetailPanel" Style="{StaticResource CodingCard}"
-                            Margin="0,0,0,8" Visibility="Collapsed">
-                        <Border.BorderBrush>
-                            <SolidColorBrush x:Name="DefectDetailBorderBrush" Color="#3B82F6"/>
-                        </Border.BorderBrush>
-                        <Border.BorderThickness>
-                            <Thickness Left="4" Top="0" Right="0" Bottom="0"/>
-                        </Border.BorderThickness>
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                <TextBlock Text="&#x25B6;" FontSize="11" Margin="0,0,6,0"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                           VerticalAlignment="Center"/>
-                                <TextBlock Text="DEFEKT DETAILS" Style="{StaticResource SectionLabel}" Margin="0"/>
-                            </StackPanel>
-
-                            <!-- Code + Schweregrad -->
-                            <Grid Margin="0,0,0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="6"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Grid.Column="0" Style="{StaticResource StatTile}">
-                                    <StackPanel>
-                                        <TextBlock Text="EN 13508-2 Code" FontSize="10"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                        <TextBlock x:Name="TxtDetailCode"
-                                                   FontFamily="Consolas" FontSize="18" FontWeight="Bold"
-                                                   Foreground="{DynamicResource TextBrush}"/>
-                                    </StackPanel>
-                                </Border>
-                                <Border Grid.Column="2" Style="{StaticResource StatTile}">
-                                    <StackPanel>
-                                        <TextBlock Text="Schweregrad" FontSize="10"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                        <TextBlock x:Name="TxtDetailSeverity"
-                                                   FontSize="18" FontWeight="Bold"
-                                                   Foreground="{DynamicResource TextBrush}"/>
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
-
-                            <!-- Beschreibung -->
-                            <Border Style="{StaticResource StatTile}" Margin="0,0,0,6">
-                                <StackPanel>
-                                    <TextBlock Text="Beschreibung" FontSize="10"
-                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                    <TextBlock x:Name="TxtDetailDescription"
-                                               FontSize="12" TextWrapping="Wrap"
-                                               Foreground="{DynamicResource TextBrush}"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Distanz + Position + Konfidenz -->
-                            <Grid Margin="0,0,0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="4"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="4"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Grid.Column="0" Style="{StaticResource StatTile}">
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="Distanz" FontSize="9"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   HorizontalAlignment="Center"/>
-                                        <TextBlock x:Name="TxtDetailDistance"
-                                                   FontFamily="Consolas" FontSize="12"
-                                                   Foreground="{DynamicResource TextBrush}"
-                                                   HorizontalAlignment="Center"/>
-                                    </StackPanel>
-                                </Border>
-                                <Border Grid.Column="2" Style="{StaticResource StatTile}">
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="Position" FontSize="9"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   HorizontalAlignment="Center"/>
-                                        <TextBlock x:Name="TxtDetailClock"
-                                                   FontFamily="Consolas" FontSize="12"
-                                                   Foreground="{DynamicResource TextBrush}"
-                                                   HorizontalAlignment="Center"/>
-                                    </StackPanel>
-                                </Border>
-                                <Border Grid.Column="4" Style="{StaticResource StatTile}">
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="Konfidenz" FontSize="9"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   HorizontalAlignment="Center"/>
-                                        <TextBlock x:Name="TxtDetailConfidence"
-                                                   FontFamily="Consolas" FontSize="12" FontWeight="Bold"
-                                                   HorizontalAlignment="Center"/>
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
-
-                            <!-- Status-Anzeige -->
-                            <TextBlock x:Name="TxtDetailStatus" FontSize="11"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       Margin="0,0,0,6"/>
-
-                            <!-- KI-Aktionsbuttons: Akzeptieren / Ablehnen (nur bei offenen KI-Events) -->
-                            <Grid x:Name="DefectAiActionGrid" Margin="0,2,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="6"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Button Grid.Column="0" x:Name="BtnAcceptDefect"
-                                        Style="{StaticResource DefectActionBtn}"
-                                        Background="#16A34A"
-                                        Click="BtnAcceptDefect_Click">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#x2713;" Margin="0,0,4,0"/>
-                                        <TextBlock Text="Akzeptieren"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button Grid.Column="2" x:Name="BtnRejectDefect"
-                                        Style="{StaticResource DefectActionBtn}"
-                                        Background="#DC2626"
-                                        Click="BtnRejectDefect_Click">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#x2717;" Margin="0,0,4,0"/>
-                                        <TextBlock Text="Ablehnen"/>
-                                    </StackPanel>
-                                </Button>
-                            </Grid>
-
-                            <!-- Bearbeiten / Loeschen (immer sichtbar) -->
-                            <Grid x:Name="DefectEditActionGrid" Margin="0,4,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="6"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Button Grid.Column="0" x:Name="BtnEditDefect"
-                                        Style="{StaticResource DefectActionBtn}"
-                                        Background="#D97706"
-                                        Click="BtnEditDefect_Click">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#x2699;" Margin="0,0,4,0"/>
-                                        <TextBlock Text="Bearbeiten"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button Grid.Column="2" x:Name="BtnDeleteDefect"
-                                        Style="{StaticResource DefectActionBtn}"
-                                        Background="#DC2626"
-                                        Click="BtnDeleteDefect_Click">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#x1F5D1;" Margin="0,0,4,0"/>
-                                        <TextBlock Text="Löschen"/>
-                                    </StackPanel>
-                                </Button>
-                            </Grid>
-                        </StackPanel>
+                            Margin="0,0,0,4" Padding="6,4" Visibility="Collapsed">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <!-- Akzeptieren -->
+                            <Button Grid.Column="0" x:Name="BtnAcceptDefect"
+                                    Style="{StaticResource DefectActionBtn}"
+                                    Background="#16A34A" Padding="8,3" Margin="0,0,4,0"
+                                    Click="BtnAcceptDefect_Click">
+                                <TextBlock Text="&#x2713; Akzeptieren" FontSize="11"/>
+                            </Button>
+                            <!-- Ablehnen -->
+                            <Button Grid.Column="1" x:Name="BtnRejectDefect"
+                                    Style="{StaticResource DefectActionBtn}"
+                                    Background="#DC2626" Padding="8,3" Margin="0,0,4,0"
+                                    Click="BtnRejectDefect_Click">
+                                <TextBlock Text="&#x2717; Ablehnen" FontSize="11"/>
+                            </Button>
+                            <!-- Spacer -->
+                            <Border Grid.Column="2"/>
+                            <!-- Bearbeiten -->
+                            <Button Grid.Column="3" x:Name="BtnEditDefect"
+                                    Style="{StaticResource DefectActionBtn}"
+                                    Background="#D97706" Padding="8,3" Margin="0,0,4,0"
+                                    Click="BtnEditDefect_Click">
+                                <TextBlock Text="&#x2699; Bearbeiten" FontSize="11"/>
+                            </Button>
+                            <!-- Loeschen -->
+                            <Button Grid.Column="4" x:Name="BtnDeleteDefect"
+                                    Style="{StaticResource DefectActionBtn}"
+                                    Background="#DC2626" Padding="8,3"
+                                    Click="BtnDeleteDefect_Click">
+                                <TextBlock Text="&#x2716;" FontSize="11"/>
+                            </Button>
+                        </Grid>
                     </Border>
 
                     <!-- ── Kalibrierung + Messung (kompakt) ── -->
@@ -698,6 +583,13 @@
                                     Content="Ereignis protokollieren"
                                     Click="BtnCreateEvent_Click"
                                     IsEnabled="False"/>
+
+                            <Button x:Name="BtnSaveAsTraining"
+                                    Style="{StaticResource CodingBtn}"
+                                    Content="&#x1F4DA; Als Training speichern"
+                                    Click="BtnSaveAsTraining_Click"
+                                    IsEnabled="False"
+                                    Margin="0,4,0,0"/>
 
                             <!-- Fotos -->
                             <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,8"/>
@@ -888,6 +780,7 @@
                     <TextBlock Text="WERKZEUGE" FontSize="10" FontWeight="Bold"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <!-- Kalibrieren: DN-Referenzlinie -->
                     <ToggleButton x:Name="BtnCalibrate" Style="{StaticResource ToolButton}"
                                   ToolTip="Kalibrieren: Linie ueber Rohrdurchmesser zeichnen"
                                   Checked="BtnCalibrate_Checked" Unchecked="BtnCalibrate_Unchecked">
@@ -897,96 +790,16 @@
                         </StackPanel>
                     </ToggleButton>
                     <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,6"/>
-                    <ToggleButton x:Name="BtnToolLine" Style="{StaticResource ToolButton}"
-                                  ToolTip="Linie (Riss messen)"
-                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
-                        <StackPanel>
-                            <TextBlock Text="&#x2501;" FontSize="18" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Linie" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
-                        </StackPanel>
-                    </ToggleButton>
-                    <ToggleButton x:Name="BtnToolArc" Style="{StaticResource ToolButton}"
-                                  ToolTip="Bogen (Umfang bestimmen)"
-                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
-                        <StackPanel>
-                            <TextBlock Text="&#x2312;" FontSize="18" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Bogen" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
-                        </StackPanel>
-                    </ToggleButton>
+                    <!-- Rechteck: Bereich fuer KI markieren -->
                     <ToggleButton x:Name="BtnToolRect" Style="{StaticResource ToolButton}"
-                                  ToolTip="Rechteck (Flaeche markieren)"
+                                  ToolTip="Rechteck: Bereich markieren fuer KI-Analyse"
                                   Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
                         <StackPanel>
                             <TextBlock Text="&#x25A2;" FontSize="18" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Flaeche" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
+                            <TextBlock Text="Markieren" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
                         </StackPanel>
                     </ToggleButton>
-                    <ToggleButton x:Name="BtnToolPoint" Style="{StaticResource ToolButton}"
-                                  ToolTip="Punkt (Einzelschaden)"
-                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
-                        <StackPanel>
-                            <TextBlock Text="&#x25CF;" FontSize="16" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Punkt" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
-                        </StackPanel>
-                    </ToggleButton>
-                    <ToggleButton x:Name="BtnToolStretch" Style="{StaticResource ToolButton}"
-                                  ToolTip="Strecke (Streckenschaden)"
-                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
-                        <StackPanel>
-                            <TextBlock Text="&#x2194;" FontSize="18" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Strecke" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
-                        </StackPanel>
-                    </ToggleButton>
-                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,6"/>
-                    <ToggleButton x:Name="BtnToolPipeBend" Style="{StaticResource ToolButton}"
-                                  ToolTip="Bogen-Winkel (4 Klicks: Achse1 + Achse2)"
-                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
-                        <StackPanel>
-                            <TextBlock Text="&#x2220;" FontSize="18" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Bogen" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
-                        </StackPanel>
-                    </ToggleButton>
-                    <ToggleButton x:Name="BtnPipeBendSnap" Style="{StaticResource ToolButton}"
-                                  ToolTip="PipeBend Snap auf 15/30/45/90"
-                                  Checked="BtnPipeBendSnap_Checked" Unchecked="BtnPipeBendSnap_Unchecked">
-                        <StackPanel>
-                            <TextBlock Text="&#x1F9F2;" FontSize="15" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Snap" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
-                        </StackPanel>
-                    </ToggleButton>
-                    <ToggleButton x:Name="BtnToolLateralCircle" Style="{StaticResource ToolButton}"
-                                  ToolTip="Anschluss messen (3 Punkte am Rand)"
-                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
-                        <StackPanel>
-                            <TextBlock Text="&#x25EF;" FontSize="18" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Anschluss" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
-                        </StackPanel>
-                    </ToggleButton>
-                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,6"/>
-                    <ToggleButton x:Name="BtnToolLevelDeposit" Style="{StaticResource ToolButton}"
-                                  ToolTip="Ablagerung messen (horizontale Linie)"
-                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
-                        <StackPanel>
-                            <TextBlock Text="&#x2582;" FontSize="18" HorizontalAlignment="Center" Foreground="#D2691E"/>
-                            <TextBlock Text="Ablager." FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
-                        </StackPanel>
-                    </ToggleButton>
-                    <ToggleButton x:Name="BtnToolLevelWater" Style="{StaticResource ToolButton}"
-                                  ToolTip="Wasserstand messen (horizontale Linie)"
-                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
-                        <StackPanel>
-                            <TextBlock Text="&#x2582;" FontSize="18" HorizontalAlignment="Center" Foreground="#4169E1"/>
-                            <TextBlock Text="Wasser" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
-                        </StackPanel>
-                    </ToggleButton>
-                    <ToggleButton x:Name="BtnToolLevelObstacle" Style="{StaticResource ToolButton}"
-                                  ToolTip="Hindernis messen (von Scheitel nach unten)"
-                                  Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
-                        <StackPanel>
-                            <TextBlock Text="&#x2587;" FontSize="18" HorizontalAlignment="Center" Foreground="#DC143C"/>
-                            <TextBlock Text="Hindern." FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
-                        </StackPanel>
-                    </ToggleButton>
+                    <!-- Alle Messwerkzeuge im PhotoAssistant (Foto vermessen) -->
                 </StackPanel>
             </StackPanel>
         </Border>

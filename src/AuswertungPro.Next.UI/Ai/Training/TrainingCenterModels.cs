@@ -26,6 +26,7 @@ public partial class TrainingCase : ObservableObject
 public sealed class TrainingCenterState
 {
     public List<TrainingCase> Cases { get; set; } = new();
+    public List<string> RootFolders { get; set; } = new();
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
 }
 

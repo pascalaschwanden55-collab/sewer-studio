@@ -148,13 +148,16 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject
         // Apply to HaltungRecord fields
         _record.SetFieldValue("Empfohlene_Sanierungsmassnahmen",
             Result.RecommendedMeasure, FieldSource.Unknown, userEdited: false);
+        // KI-Kosten als Schaetzwert kennzeichnen: Suffix "(KI-Schaetzung)" im Bemerkungsfeld,
+        // damit bei spaeterem Lesen klar ist dass der Wert nicht aus dem Kalkulator stammt.
         _record.SetFieldValue("Kosten",
             Result.CostEstimate.Expected.ToString("0.00", CultureInfo.InvariantCulture),
             FieldSource.Unknown, userEdited: false);
-
-        if (!string.IsNullOrWhiteSpace(Result.Reasoning))
-            _record.SetFieldValue("Bemerkungen",
-                $"[KI-Vorschlag] {Result.Reasoning}", FieldSource.Unknown, userEdited: false);
+        // Bemerkung mit KI-Vorschlag UND Kosten-Hinweis
+        var costNote = $"Kosten {Result.CostEstimate.Expected:N0} CHF = KI-Schaetzung (nicht kalkuliert), Bandbreite {Result.CostEstimate.Min:N0}–{Result.CostEstimate.Max:N0} CHF";
+        var reasoning = !string.IsNullOrWhiteSpace(Result.Reasoning) ? Result.Reasoning : "";
+        _record.SetFieldValue("Bemerkungen",
+            $"[KI-Vorschlag] {reasoning}\n{costNote}", FieldSource.Unknown, userEdited: false);
 
         TransferredToPrimary?.Invoke(Result);
         StatusText = "KI-Vorschlag in Haltungsdaten übertragen.";

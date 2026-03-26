@@ -1,5 +1,6 @@
 // AuswertungPro – KI Videoanalyse Modul
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -48,7 +49,11 @@ public sealed class EmbeddingService(HttpClient http, OllamaConfig config)
             };
 
             using var resp = await http.SendAsync(request, ct).ConfigureAwait(false);
-            if (!resp.IsSuccessStatusCode) return null;
+            if (!resp.IsSuccessStatusCode)
+            {
+                Debug.WriteLine($"[EmbeddingService] HTTP {(int)resp.StatusCode} von Ollama fuer Text '{text[..Math.Min(50, text.Length)]}...'");
+                return null;
+            }
 
             var json = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             using var doc = JsonDocument.Parse(json);
@@ -67,7 +72,11 @@ public sealed class EmbeddingService(HttpClient http, OllamaConfig config)
             return null;
         }
         catch (OperationCanceledException) { throw; }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[EmbeddingService] Embedding-Fehler: {ex.GetType().Name}: {ex.Message}");
+            return null;
+        }
     }
 
     /// <summary>Serialisiert einen float[] Vektor in einen byte[] BLOB.</summary>

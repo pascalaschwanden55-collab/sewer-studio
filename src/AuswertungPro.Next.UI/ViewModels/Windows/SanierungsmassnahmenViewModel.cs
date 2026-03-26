@@ -128,20 +128,16 @@ public sealed partial class SanierungsmassnahmenViewModel : ObservableObject
 
     private void SelectMeasuresInCalc(string[] tokens)
     {
-        // Try to find matching measures in the CostCalcVm's Measures list and select them
+        // Delegiere an die robustere Score-basierte Aufloesung im CostCalculatorViewModel.
+        // Der alte Contains-Match war zu schwach und konnte falsche Massnahmen selektieren.
+        var resolvedIds = CostCalcVm.ResolveMatchingMeasureIds(tokens);
+
         var matched = new System.Collections.Generic.List<MeasureTemplateListItem>();
         foreach (var item in CostCalcVm.Measures)
         {
             if (item.Disabled) continue;
-            foreach (var token in tokens)
-            {
-                if (item.DisplayName.Contains(token, StringComparison.OrdinalIgnoreCase)
-                    || item.Id.Contains(token, StringComparison.OrdinalIgnoreCase))
-                {
-                    matched.Add(item);
-                    break;
-                }
-            }
+            if (resolvedIds.Contains(item.Id))
+                matched.Add(item);
         }
 
         if (matched.Count > 0)

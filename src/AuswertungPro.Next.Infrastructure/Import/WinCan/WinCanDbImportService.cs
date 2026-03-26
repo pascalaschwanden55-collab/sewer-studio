@@ -490,11 +490,43 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
                 FotoPath = entry.FotoPaths.Count > 0 ? entry.FotoPaths[0] : null
             };
 
+            // Quantifizierung1 aus Beschreibung extrahieren (WinCan liefert kein Q1-Feld)
+            // Nur fuer Codes mit QuantRules: BAA, BAB, BAC, BAF, BBA, BDD
+            if (string.IsNullOrEmpty(finding.Quantifizierung1) && !string.IsNullOrEmpty(entry.Beschreibung))
+            {
+                var normCode = effectiveCode.Length >= 3 ? effectiveCode[..3].ToUpperInvariant() : "";
+                if (normCode is "BAA" or "BAB" or "BAC" or "BAF" or "BBA" or "BDD")
+                {
+                    finding.Quantifizierung1 = ExtractQuantValue(entry.Beschreibung);
+                }
+            }
+
             findings.Add(finding);
         }
 
         // DB3 gilt als Quelle der Wahrheit: vorhandene VsaFindings durch den aktuellen Importstand ersetzen.
         record.VsaFindings = findings;
+    }
+
+    /// <summary>
+    /// Extrahiert einen numerischen Quantifizierungswert aus dem WinCan-Beschreibungstext.
+    /// Sucht nach Prozent (%), Grad (°) oder Millimeter (mm) Angaben.
+    /// </summary>
+    private static string? ExtractQuantValue(string beschreibung)
+    {
+        // Prozent: "5%", "25 %", "10.5%"
+        var m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)\s*%");
+        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
+
+        // Grad: "15°", "45 °"
+        m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)°");
+        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
+
+        // Millimeter: "2mm", "0.5 mm"
+        m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)\s*mm");
+        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
+
+        return null;
     }
 
     private static void LinkSectionPdf(HaltungRecord record, string sectionKey, Dictionary<string, List<string>> index)

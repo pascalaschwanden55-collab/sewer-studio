@@ -1,8 +1,7 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Controls.ClockPickerControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Width="160"
-             Height="160">
+             MinWidth="140" MinHeight="140">
     <Grid>
         <Canvas x:Name="FaceCanvas" Background="Transparent">
             <Ellipse x:Name="Face"

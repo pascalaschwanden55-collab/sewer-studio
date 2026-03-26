@@ -1,5 +1,6 @@
 // SewerStudio – Automatischer Aufbau der Few-Shot Beispiel-Bibliothek
-// Extrahiert Fotos + Codes aus PDF-Protokollen und speichert sie als kuratierte Beispiele.
+// Extrahiert Fotos + Codes aus PDF-Protokollen und Lehrer-Annotationen
+// und speichert sie als kuratierte Beispiele.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,6 +8,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.UI.Ai.Teacher;
 using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.UI.Ai.Training.Services;
 
@@ -148,12 +150,17 @@ public sealed class FewShotExampleBuilder
             }
         }
 
+        // Lehrer-Annotationen als Gold-Standard-Beispiele hinzufuegen
+        var (teacherAdded, teacherSkipped) = await BuildFromTeacherAnnotationsAsync(ct);
+        totalAdded += teacherAdded;
+        totalSkipped += teacherSkipped;
+
         sw.Stop();
 
         progress?.Report(new FewShotBuildProgress(
             pdfFolders.Count, pdfFolders.Count, "Fertig",
             totalAdded, totalSkipped,
-            $"Bibliothek: {_store.Examples.Count} Beispiele total"));
+            $"Bibliothek: {_store.Examples.Count} Beispiele total ({teacherAdded} Lehrer-Beispiele)"));
 
         return new FewShotBuildResult(pdfFolders.Count, totalAdded, totalSkipped, totalErrors, sw.Elapsed);
     }
@@ -259,6 +266,95 @@ public sealed class FewShotExampleBuilder
                 Directory.Delete(framesDir, recursive: true);
         }
         catch { /* best effort */ }
+
+        return (added, skipped);
+    }
+
+    /// <summary>
+    /// Importiert alle Lehrer-Annotationen als Gold-Standard Few-Shot Beispiele.
+    /// Verwendet Crop-Bilder (falls vorhanden) mit quality=1.0.
+    /// Deduplizierung via source="teacher:{annotationId}".
+    /// </summary>
+    private async Task<(int Added, int Skipped)> BuildFromTeacherAnnotationsAsync(CancellationToken ct)
+    {
+        int added = 0, skipped = 0;
+
+        List<TeacherAnnotation> annotations;
+        try
+        {
+            annotations = await TeacherAnnotationStore.LoadAsync();
+        }
+        catch
+        {
+            return (0, 0);
+        }
+
+        // Bereits importierte Teacher-Sources sammeln (schnelle Lookup)
+        var existingSources = _store.Examples
+            .Where(e => e.Source.StartsWith("teacher:", StringComparison.Ordinal))
+            .Select(e => e.Source)
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var annotation in annotations)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var source = $"teacher:{annotation.AnnotationId}";
+
+            // Bereits importiert → ueberspringen
+            if (existingSources.Contains(source))
+            {
+                skipped++;
+                continue;
+            }
+
+            // Crop-Bild bevorzugen, Fallback auf volles Frame
+            var imagePath = annotation.CroppedRegionPath;
+            if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
+                imagePath = annotation.FullFramePath;
+
+            if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
+            {
+                skipped++;
+                continue;
+            }
+
+            byte[] imageBytes;
+            try
+            {
+                imageBytes = await File.ReadAllBytesAsync(imagePath, ct);
+            }
+            catch
+            {
+                skipped++;
+                continue;
+            }
+
+            if (imageBytes.Length < 5_000)
+            {
+                skipped++;
+                continue;
+            }
+
+            var ext = Path.GetExtension(imagePath).ToLowerInvariant();
+            var clockStr = annotation.ClockPosition.HasValue
+                ? $"{annotation.ClockPosition.Value:F0} Uhr"
+                : null;
+
+            await _store.AddExampleAsync(
+                imageBytes, ext,
+                annotation.VsaCode,
+                annotation.Beschreibung,
+                clockStr,
+                annotation.MeterPosition,
+                null, null,  // Material/Profil nicht in Lehrer-Annotationen verfuegbar
+                source,
+                1.0,  // Gold-Standard: hoechste Qualitaet
+                ct);
+
+            added++;
+            existingSources.Add(source);
+        }
 
         return (added, skipped);
     }

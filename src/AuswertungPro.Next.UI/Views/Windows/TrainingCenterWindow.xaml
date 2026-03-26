@@ -9,6 +9,7 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <local:NotNullToBoolConverter x:Key="NotNullToBool"/>
+        <local:FileToImageConverter x:Key="FileToImage"/>
     </Window.Resources>
     <Grid Margin="12" Background="Transparent">
         <Grid.RowDefinitions>
@@ -46,7 +47,7 @@
                         Command="{Binding ClearRootFoldersCommand}"
                         ToolTip="Ordnerauswahl zurücksetzen"
                         Padding="6,2" Margin="0,0,8,0"/>
-                <Button Grid.Column="4" Content="Scannen" Command="{Binding ScanCommand}" Margin="0,0,8,0"/>
+                <Button Grid.Column="4" Content="Scannen" Command="{Binding ScanCommand}" Margin="0,0,4,0"/>
                 <Button Grid.Column="5" Content="Speichern" Command="{Binding SaveCommand}" Margin="0,0,8,0"/>
                 <Button Grid.Column="6" Content="&#x25B6; Batch-Import + KB" Command="{Binding BatchImportAndIndexCommand}"
                         ToolTip="Alle Ordner scannen, Samples generieren, auto-approve, Knowledge Base indizieren"
@@ -82,6 +83,10 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,16,0">
                     <TextBlock Foreground="#94A3B8" Text="Samples: "/>
                     <TextBlock Foreground="#E2E8F0" Text="{Binding KbSampleCount}" FontWeight="Bold"/>
+                    <TextBlock Foreground="#FBBF24" FontSize="11"
+                               Text="{Binding KbErrorCount, StringFormat=' ({0}⚠'}"/>
+                    <TextBlock Foreground="#64748B" FontSize="11"
+                               Text="{Binding KbNewCount, StringFormat=' {0} neu)'}"/>
                     <TextBlock Foreground="#94A3B8" Text="  |  Codes: "/>
                     <TextBlock Foreground="#E2E8F0" Text="{Binding KbCodesCovered}" FontWeight="Bold"/>
                 </StackPanel>
@@ -229,7 +234,7 @@
                                 </StackPanel>
                                 <Image Grid.Row="2" MaxHeight="200" Margin="0,8,0,0"
                                        Stretch="Uniform" StretchDirection="DownOnly"
-                                       Source="{Binding SelectedSample.FramePath}"/>
+                                       Source="{Binding SelectedSample.FramePath, Converter={StaticResource FileToImage}}"/>
                                 <StackPanel Grid.Row="5" Orientation="Horizontal"
                                             HorizontalAlignment="Right" Margin="0,12,0,0">
                                     <Button Content="Approve" Command="{Binding ApproveSampleCommand}" Margin="0,0,8,0"/>
@@ -331,6 +336,7 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
@@ -350,8 +356,19 @@
                                 <TextBlock Text="Services" Foreground="#64748B" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0"/>
                             </StackPanel>
 
+                            <!-- Aktives Modell -->
+                            <Border Grid.Column="1" CornerRadius="4" Padding="8,2" Margin="12,0,0,0"
+                                    IsEnabled="{Binding IsModelActive, Mode=OneWay}"
+                                    x:Name="ActiveModelBorder" Background="#0F172A">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="8" Height="8" x:Name="ModelPulse" Fill="#475569" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ActiveModelName, Mode=OneWay}" x:Name="ModelNameText"
+                                               Foreground="#94A3B8" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
                             <!-- Aktueller Eintrag -->
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Center">
                                 <TextBlock Foreground="#94A3B8" FontSize="12">
                                     <Run Text="Code: "/><Run Text="{Binding CurrentEntryCode, Mode=OneWay}" Foreground="#F1F5F9" FontWeight="Bold"/>
                                     <Run Text="  |  Meter: "/><Run Text="{Binding CurrentEntryMeter, Mode=OneWay, StringFormat=F1}" Foreground="#F1F5F9"/>
@@ -360,7 +377,7 @@
                             </StackPanel>
 
                             <!-- Technik-Note -->
-                            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                            <StackPanel Grid.Column="3" Orientation="Horizontal">
                                 <TextBlock Text="Technik: " Foreground="#64748B" FontSize="11" VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding CurrentTechniqueGrade, Mode=OneWay}" Foreground="#FBBF24"
                                            FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
@@ -389,7 +406,7 @@
                                 <TextBlock Text="Live-Frame" Foreground="#64748B" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,4"/>
                                 <Border Grid.Row="1" Background="#1E293B" CornerRadius="4">
                                     <Image Stretch="Uniform" StretchDirection="DownOnly"
-                                           Source="{Binding LiveFramePath, Mode=OneWay, TargetNullValue={x:Null}}" Margin="2"/>
+                                           Source="{Binding LiveFramePath, Mode=OneWay, Converter={StaticResource FileToImage}}" Margin="2"/>
                                 </Border>
                                 <TextBlock Grid.Row="2" Foreground="#64748B" FontSize="10" Margin="0,4,0,0"
                                            Text="{Binding CurrentComparisonText, Mode=OneWay}"/>
@@ -632,6 +649,175 @@
                                 Padding="12,4"
                                 IsEnabled="{Binding SelectedReviewItem, Converter={StaticResource NotNullToBool}, FallbackValue=False}"/>
                     </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- KB Qualitaet Tab -->
+            <TabItem Header="KB Qualit&#228;t">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="8">
+
+                        <!-- Coverage-Analyse -->
+                        <Border Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Text="Coverage-Analyse" Foreground="#E2E8F0" FontWeight="SemiBold" FontSize="13"/>
+                                <TextBlock Foreground="#94A3B8" FontSize="11" Margin="0,4,0,0">
+                                    <Run Text="Codes mit weniger als 3 KB-Samples: "/>
+                                    <Run Text="{Binding KbCoverageGapsCount, Mode=OneWay}" Foreground="#FBBF24" FontWeight="Bold"/>
+                                </TextBlock>
+                                <TextBlock Text="{Binding KbCoverageGapsText, Mode=OneWay}"
+                                           FontFamily="Consolas" FontSize="11" Foreground="#CBD5E1"
+                                           TextWrapping="Wrap" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Genauigkeit pro Code -->
+                        <Border Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Text="Genauigkeit pro Code (Top 8)" Foreground="#E2E8F0" FontWeight="SemiBold" FontSize="13"/>
+                                <TextBlock Foreground="#64748B" FontSize="10" Margin="0,2,0,4"
+                                           Text="F1 = Gesamtgenauigkeit, P = Precision, R = Recall"/>
+                                <TextBlock Text="{Binding KbAccuracyText, Mode=OneWay}"
+                                           FontFamily="Consolas" FontSize="11" Foreground="#CBD5E1"
+                                           TextWrapping="NoWrap" Margin="0,0,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Problematische KB-Samples -->
+                        <Border Background="#0F172A" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Problematische KB-Samples: " Foreground="#E2E8F0" FontSize="13"/>
+                                <TextBlock Text="{Binding KbStaleSampleCount, Mode=OneWay}"
+                                           Foreground="#F87171" FontWeight="Bold" FontSize="13"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Match-Rate Trend -->
+                        <Border Background="#0F172A" CornerRadius="6" Padding="10">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Match-Rate Trend (letzte Laeufe)" Foreground="#E2E8F0" FontWeight="SemiBold" FontSize="13"/>
+                                    <TextBlock Text="{Binding KbTrendDirection, Mode=OneWay}"
+                                               Foreground="#4ADE80" FontSize="16" FontWeight="Bold" Margin="8,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding KbTrendText, Mode=OneWay}"
+                                           FontFamily="Consolas" FontSize="11" Foreground="#CBD5E1"
+                                           TextWrapping="NoWrap" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ═══════ Tab 6: Lehrer-Annotationen ═══════ -->
+            <TabItem Header="Lehrer" x:Name="TeacherTab">
+                <Grid Margin="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="200"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Filter-Leiste -->
+                    <Border Grid.Row="0" Padding="8" CornerRadius="4" Margin="0,0,0,8"
+                            Background="{DynamicResource HeaderBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <DockPanel>
+                            <TextBlock Text="VSA-Filter:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <ComboBox x:Name="TeacherFilterCombo" Width="120"
+                                      SelectionChanged="TeacherFilter_Changed" Margin="0,0,16,0">
+                                <ComboBoxItem Content="Alle" IsSelected="True"/>
+                            </ComboBox>
+                            <TextBlock x:Name="TeacherCountText" VerticalAlignment="Center"
+                                       FontWeight="SemiBold" Foreground="#64748B"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
+                                <Button x:Name="BtnTeacherRefresh" Content="🔄 Aktualisieren"
+                                        Click="TeacherRefresh_Click" Margin="0,0,8,0"
+                                        Padding="8,4" FontSize="12"/>
+                                <Button x:Name="BtnTeacherAddFewShot" Content="📚 → FewShot"
+                                        Click="TeacherAddToFewShot_Click" Margin="0,0,8,0"
+                                        Padding="8,4" FontSize="12" IsEnabled="False"/>
+                                <Button x:Name="BtnTeacherDelete" Content="🗑 Loeschen"
+                                        Click="TeacherDelete_Click"
+                                        Padding="8,4" FontSize="12" IsEnabled="False"
+                                        Foreground="#EF4444"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- Thumbnail-Galerie -->
+                    <Border Grid.Row="1" CornerRadius="4"
+                            Background="{DynamicResource CardBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="TeacherGallery">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="ThumbBorder" Margin="4" Padding="4" CornerRadius="4"
+                                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                                Background="{DynamicResource HeaderBrush}"
+                                                Cursor="Hand"
+                                                MouseLeftButtonDown="TeacherThumb_Click"
+                                                Width="140">
+                                            <StackPanel>
+                                                <Image Source="{Binding CroppedRegionPath, Converter={StaticResource FileToImage}}"
+                                                       Width="120" Height="90" Stretch="Uniform"
+                                                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                <TextBlock Text="{Binding VsaCode}" FontWeight="Bold"
+                                                           FontSize="13" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                                <TextBlock FontSize="11" Foreground="#64748B"
+                                                           HorizontalAlignment="Center">
+                                                    <Run Text="{Binding MeterPosition, StringFormat={}{0:F1}m}"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+
+                    <!-- Splitter -->
+                    <GridSplitter Grid.Row="2" Height="4" HorizontalAlignment="Stretch"
+                                  Background="Transparent" Margin="0,2"/>
+
+                    <!-- Detail-Ansicht -->
+                    <Border Grid.Row="3" CornerRadius="4" Padding="8"
+                            Background="{DynamicResource CardBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <Grid x:Name="TeacherDetailPanel" Visibility="Collapsed">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="280"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Volles Frame -->
+                            <Image x:Name="TeacherDetailImage" Grid.Column="0"
+                                   Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                                   Margin="0,0,8,0"/>
+
+                            <!-- Metadaten -->
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock x:Name="TeacherDetailCode" FontSize="18" FontWeight="Bold"/>
+                                <TextBlock x:Name="TeacherDetailBeschreibung" FontSize="12"
+                                           Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,4,0,8"/>
+                                <TextBlock x:Name="TeacherDetailMeter" FontSize="13"/>
+                                <TextBlock x:Name="TeacherDetailClock" FontSize="13"/>
+                                <TextBlock x:Name="TeacherDetailTool" FontSize="13"/>
+                                <TextBlock x:Name="TeacherDetailDate" FontSize="12"
+                                           Foreground="#64748B" Margin="0,4,0,0"/>
+                                <TextBlock x:Name="TeacherDetailId" FontSize="11"
+                                           Foreground="#475569" FontFamily="Consolas" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
                 </Grid>
             </TabItem>
         </TabControl>

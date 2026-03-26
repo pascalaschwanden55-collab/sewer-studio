@@ -148,15 +148,21 @@ public sealed class PdfParser
         if (valueRow.Success)
             return NormalizeHaltungId(valueRow.Groups["id"].Value);
 
+        // Frueh-Erkennung: Volles Paar nach "Oberer/Unterer Schacht" (Fretz-Stammdaten)
+        var fullPairAfterSchacht = Regex.Match(text,
+            @"(?im)\b(?:Oberer|Unterer)\s+Schacht[^\S\n]+(?<pair>\d[\d\.]*\s*-\s*\d[\d\.]*)\b");
+        if (fullPairAfterSchacht.Success)
+            return NormalizeHaltungId(fullPairAfterSchacht.Groups["pair"].Value);
+
         // Fallback from shaft pair
-        var oben = Regex.Match(text, @"(?im)\bSchacht\s*oben\s*:\s*(?<v>\d[\d\.]*)\b");
-        var unten = Regex.Match(text, @"(?im)\bSchacht\s*unten\s*:\s*(?<v>\d[\d\.]*)\b");
+        var oben = Regex.Match(text, @"(?im)\bSchacht\s*oben\s*[:\-]?\s*(?<v>\d[\d\.]*)\b");
+        var unten = Regex.Match(text, @"(?im)\bSchacht\s*unten\s*[:\-]?\s*(?<v>\d[\d\.]*)\b");
         if (oben.Success && unten.Success)
             return $"{oben.Groups["v"].Value.Trim()}-{unten.Groups["v"].Value.Trim()}";
 
         // Alternatives Bezeichnungsformat: "Oberer Punkt" / "Unterer Punkt"
-        var oberPunkt = Regex.Match(text, @"(?im)\bOberer\s+Punkt\s*:\s*(?<v>\d[\d\.]*)\b");
-        var unterPunkt = Regex.Match(text, @"(?im)\bUnterer\s+Punkt\s*:\s*(?<v>\d[\d\.]*)\b");
+        var oberPunkt = Regex.Match(text, @"(?im)\bOberer\s+(?:Punkt|Schacht)\s*[:\-]?\s*(?<v>\d[\d\.]*)\b");
+        var unterPunkt = Regex.Match(text, @"(?im)\bUnterer\s+(?:Punkt|Schacht)\s*[:\-]?\s*(?<v>\d[\d\.]*)\b");
         if (oberPunkt.Success && unterPunkt.Success)
             return $"{oberPunkt.Groups["v"].Value.Trim()}-{unterPunkt.Groups["v"].Value.Trim()}";
 
@@ -259,13 +265,23 @@ public sealed class PdfParser
         code = "";
         desc = "";
 
+        // Standard-Format: "[meter] [code] [beschreibung]"
         var m = Regex.Match(line, @"^\s*(?<dist>\d{1,4}\.\d{2})\s+(?<c1>[A-Z0-9]{1,6})(?:\s+(?<c2>[A-Z0-9]{1,6}))?\s+(?<desc>.+)$");
+        bool hasC2Group = m.Success;
+
+        if (!m.Success)
+        {
+            // Fretz-Format: "[Foto?] [HH:MM:SS] [meter] [code] [beschreibung]"
+            // Foto-Nummer und Timestamp kommen VOR dem Meterwert
+            m = Regex.Match(line, @"^\s*(?:\d{1,5}\s+)?(?:\d{2}:\d{2}:\d{2}\s+)?(?<dist>\d{1,4}[.,]\d{1,3})\s+(?<c1>[A-Z]{2,6}(?:\.[A-Z]{1,2}(?:\.[A-Z]{1,2})?)?)\s+(?<desc>.+)$");
+            hasC2Group = false;
+        }
         if (!m.Success)
             return false;
 
-        dist = m.Groups["dist"].Value.Trim();
+        dist = m.Groups["dist"].Value.Trim().Replace(',', '.');
         var c1 = m.Groups["c1"].Value.Trim();
-        var c2 = m.Groups["c2"].Value.Trim();
+        var c2 = hasC2Group ? m.Groups["c2"].Value.Trim() : "";
         code = string.IsNullOrWhiteSpace(c2) ? c1 : $"{c1} {c2}";
 
         desc = TakeFirstColumn(m.Groups["desc"].Value);
@@ -293,7 +309,15 @@ public sealed class PdfParser
         if (Regex.IsMatch(t, @"^\d{4,}$")) return true;
         if (Regex.IsMatch(t, @"\.(jpg|jpeg|png|mpg|mpeg)\b", RegexOptions.IgnoreCase)) return true;
         if (Regex.IsMatch(t, @"^[a-f0-9]{8}-[a-f0-9]{4}-", RegexOptions.IgnoreCase)) return true;
-        if (Regex.IsMatch(t, @"^\d{2}:\d{2}:\d{2}\b")) return true;
+        // Timestamp-only-Zeilen sind Noise, aber Zeilen mit Timestamp + Meterwert + Code
+        // sind echte Beobachtungen (Fretz-Format: "00:01:31  4.60  BCC.Y.B  Beschreibung")
+        if (Regex.IsMatch(t, @"^\d{2}:\d{2}:\d{2}\b"))
+        {
+            // Pruefe ob nach dem Timestamp noch ein Meterwert + VSA-Code folgt
+            if (Regex.IsMatch(t, @"\d{2}:\d{2}:\d{2}\s+\d{1,4}[.,]\d{1,3}\s+[A-Z]{2,6}"))
+                return false; // Echte Beobachtung, kein Noise
+            return true;
+        }
         return false;
     }
 }

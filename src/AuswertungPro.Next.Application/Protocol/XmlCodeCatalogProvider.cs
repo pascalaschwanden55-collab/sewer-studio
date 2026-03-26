@@ -11,6 +11,7 @@ public sealed class XmlCodeCatalogProvider : ICodeCatalogProvider
     private readonly string? _fallbackTextXmlPath;
     private readonly List<CodeDefinition> _codes = new();
     private readonly Dictionary<string, CodeDefinition> _byCode = new(StringComparer.OrdinalIgnoreCase);
+    private bool _loaded;
     public IReadOnlyList<string> LastLoadWarnings { get; private set; } = Array.Empty<string>();
 
     public XmlCodeCatalogProvider(string xmlPath, string? fallbackJsonPath = null, string? fallbackTextXmlPath = null)
@@ -18,14 +19,24 @@ public sealed class XmlCodeCatalogProvider : ICodeCatalogProvider
         _xmlPath = xmlPath;
         _fallbackJsonPath = fallbackJsonPath;
         _fallbackTextXmlPath = fallbackTextXmlPath;
-        Load();
+        // Lazy Loading: Load() wird beim ersten Zugriff aufgerufen (nicht im Konstruktor)
+    }
+
+    /// <summary>Stellt sicher dass der Katalog geladen ist (Lazy Init).</summary>
+    private void EnsureLoaded()
+    {
+        if (!_loaded) { Load(); _loaded = true; }
     }
 
     public IReadOnlyList<CodeDefinition> GetAll()
-        => _codes.Select(CloneCode).ToList();
+    {
+        EnsureLoaded();
+        return _codes.Select(CloneCode).ToList();
+    }
 
     public bool TryGet(string code, out CodeDefinition def)
     {
+        EnsureLoaded();
         if (_byCode.TryGetValue(NormalizeCode(code), out var match))
         {
             def = CloneCode(match);

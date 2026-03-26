@@ -1121,6 +1121,39 @@ public partial class DataPage : System.Windows.Controls.UserControl
         }
     }
 
+    // ── Mehrfach-Loeschen (Delete-Taste / Kontextmenue) ────────────────
+
+    private void Grid_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Delete && Grid.SelectedItems.Count > 0)
+        {
+            DeleteSelectedRows();
+            e.Handled = true;
+        }
+    }
+
+    private void DeleteSelectedRows_Click(object sender, RoutedEventArgs e)
+        => DeleteSelectedRows();
+
+    private void DeleteSelectedRows()
+    {
+        if (DataContext is not DataPageViewModel vm) return;
+
+        var items = Grid.SelectedItems.OfType<HaltungRecord>().ToList();
+        if (items.Count == 0) return;
+
+        var result = MessageBox.Show(
+            $"{items.Count} Haltung(en) wirklich loeschen?",
+            "Loeschen", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (result != MessageBoxResult.Yes) return;
+
+        foreach (var item in items)
+            vm.Project.RemoveRecord(item.Id);
+
+        vm.Selected = vm.Records.FirstOrDefault();
+        vm.ScheduleAutoSave();
+    }
+
     // ── Haltung Record Details ──────────────────────────────────────────
 
     private void ShowHaltungRecordDetails(HaltungRecord record)

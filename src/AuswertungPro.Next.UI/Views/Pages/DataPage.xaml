@@ -487,6 +487,7 @@
         <DataGrid x:Name="Grid"
                       ItemsSource="{Binding Records}"
                       SelectedItem="{Binding Selected, Mode=TwoWay}"
+                      SelectionMode="Extended"
                       AutoGenerateColumns="False"
                       IsReadOnly="{Binding IsDataGridReadOnly}"
                       CanUserResizeRows="True"
@@ -522,6 +523,7 @@
                       CurrentCellChanged="Grid_CurrentCellChanged"
                       PreviewMouseWheel="Grid_PreviewMouseWheel"
                       PreviewMouseDoubleClick="Grid_PreviewMouseDoubleClick"
+                      PreviewKeyDown="Grid_PreviewKeyDown"
                       LoadingRow="Grid_LoadingRow">
                 <DataGrid.LayoutTransform>
                     <ScaleTransform ScaleX="{Binding GridZoom}" ScaleY="{Binding GridZoom}"/>
@@ -537,6 +539,9 @@
                         <MenuItem Header="Haltungsprotokoll AWU drucken..." Click="PrintAwuHaltungsprotokollMenu_Click" />
                         <MenuItem Header="Haltungsprotokoll Original (PDF) oeffnen..." Click="OpenOriginalPdfMenu_Click" />
                         <MenuItem Header="Sanierungsmassnahmen..." Click="CostsMenu_Click" />
+                        <Separator/>
+                        <MenuItem Header="Markierte Zeilen loeschen" Click="DeleteSelectedRows_Click"
+                                  InputGestureText="Del" Foreground="OrangeRed"/>
                     </ContextMenu>
                 </DataGrid.ContextMenu>
             </DataGrid>

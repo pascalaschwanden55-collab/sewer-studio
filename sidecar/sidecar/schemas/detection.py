@@ -61,3 +61,20 @@ class BoundingBox(BaseModel):
     y2: float
     label: str = ""
     confidence: float = 1.0
+
+
+# ── YOLO Classify ─────────────────────────────────────────────────────────
+
+class YoloClassifyRequest(BaseModel):
+    image_base64: str
+    top_k: int = Field(default=5, ge=1, le=20)
+
+
+class YoloClassifyPrediction(BaseModel):
+    class_name: str
+    confidence: float
+
+
+class YoloClassifyResponse(BaseModel):
+    predictions: list[YoloClassifyPrediction] = []
+    inference_time_ms: float = 0.0

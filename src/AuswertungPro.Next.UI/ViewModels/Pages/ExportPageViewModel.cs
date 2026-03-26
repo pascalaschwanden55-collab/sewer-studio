@@ -36,19 +36,33 @@ public sealed partial class ExportPageViewModel : ObservableObject
     {
         _shell = shell;
         _sp = sp;
-        ExportCommand = new AsyncRelayCommand(ExportAsync, CanRunExportCommands);
-        ExportSchaechteCommand = new AsyncRelayCommand(ExportSchaechteAsync, CanRunExportCommands);
-        DistributeHoldingsCommand = new AsyncRelayCommand(DistributeHoldingsAsync, CanRunExportCommands);
-        DistributeShaftsCommand = new AsyncRelayCommand(DistributeShaftsAsync, CanRunExportCommands);
-        DistributeDichtheitCommand = new AsyncRelayCommand(DistributeDichtheitAsync, CanRunExportCommands);
+        ExportCommand = new AsyncRelayCommand(ExportAsync, CanRunProjectExportCommands);
+        ExportSchaechteCommand = new AsyncRelayCommand(ExportSchaechteAsync, CanRunProjectExportCommands);
+        DistributeHoldingsCommand = new AsyncRelayCommand(DistributeHoldingsAsync, CanRunDistributeCommands);
+        DistributeShaftsCommand = new AsyncRelayCommand(DistributeShaftsAsync, CanRunDistributeCommands);
+        DistributeDichtheitCommand = new AsyncRelayCommand(DistributeDichtheitAsync, CanRunDistributeCommands);
     }
 
-    private bool CanRunExportCommands()
+    /// <summary>Excel-Export braucht geladenes Projekt.</summary>
+    private bool CanRunProjectExportCommands()
+        => !IsPageBusy && _shell.Project is not null;
+
+    /// <summary>Verteilung funktioniert auch ohne Projekt (Ordner-/PDF-basiert).</summary>
+    private bool CanRunDistributeCommands()
         => !IsPageBusy;
 
     partial void OnIsPageBusyChanged(bool value)
     {
         _ = value;
+        NotifyAllCommandsCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// Alle Commands ueber CanExecute-Aenderung informieren.
+    /// Wird bei IsPageBusy-Aenderung und nach Projekt-Laden aufgerufen.
+    /// </summary>
+    public void NotifyAllCommandsCanExecuteChanged()
+    {
         ExportCommand.NotifyCanExecuteChanged();
         ExportSchaechteCommand.NotifyCanExecuteChanged();
         DistributeHoldingsCommand.NotifyCanExecuteChanged();

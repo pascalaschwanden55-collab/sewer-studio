@@ -19,10 +19,12 @@ public sealed class AiPlatformConfigTests
         using var env = new EnvVarScope();
 
         var config = AiPlatformConfig.Load(settings: null);
+        var expectedVision = GpuModelSelector.DetectAndSelect()?.ResolvedModel
+            ?? OllamaConfig.DefaultVisionModel;
 
         Assert.False(config.Enabled);
         Assert.Equal(new Uri("http://localhost:11434"), config.OllamaBaseUri);
-        Assert.Equal(OllamaConfig.DefaultVisionModel, config.VisionModel);
+        Assert.Equal(expectedVision, config.VisionModel);
         Assert.Equal(OllamaConfig.DefaultTextModel, config.TextModel);
         Assert.Equal(OllamaConfig.DefaultEmbedModel, config.EmbedModel);
         Assert.Equal(TimeSpan.FromMinutes(5), config.OllamaRequestTimeout);

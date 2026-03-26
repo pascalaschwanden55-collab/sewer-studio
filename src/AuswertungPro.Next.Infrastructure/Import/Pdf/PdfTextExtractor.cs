@@ -131,12 +131,70 @@ public static class PdfTextExtractor
 
         foreach (var page in doc.GetPages())
         {
-            var text = (page.Text ?? "").Replace("\r\n", "\n").Trim();
+            var text = ExtractPageWithLayout(page);
             if (!string.IsNullOrWhiteSpace(text))
                 pages.Add(text);
         }
 
         var fullText = string.Join("\f", pages);
         return new PdfTextExtraction(pages, fullText);
+    }
+
+    /// <summary>
+    /// Layout-erhaltende Textextraktion aus einer PdfPig-Seite.
+    /// Rekonstruiert Zeilen anhand der Y-Koordinaten und berechnet
+    /// Leerzeichen aus den Zeichenbreiten (gleiche Logik wie PdfProtocolExtractor).
+    /// </summary>
+    private static string ExtractPageWithLayout(UglyToad.PdfPig.Content.Page page)
+    {
+        var letters = page.Letters;
+        if (letters.Count == 0)
+            return (page.Text ?? "").Replace("\r\n", "\n").Trim();
+
+        var avgW = letters
+            .Where(l => l.Width > 0 && l.Value?.Length == 1 && !char.IsWhiteSpace(l.Value[0]))
+            .Select(l => l.Width)
+            .DefaultIfEmpty(5.5)
+            .Average();
+        if (avgW < 0.5) avgW = 5.5;
+
+        var lineGroups = letters
+            .GroupBy(l => Math.Round(l.StartBaseLine.Y / 2.0) * 2.0)
+            .OrderByDescending(g => g.Key);
+
+        var sb = new StringBuilder();
+
+        foreach (var lineGroup in lineGroups)
+        {
+            var sorted = lineGroup.OrderBy(l => l.StartBaseLine.X).ToList();
+            if (sorted.Count == 0) continue;
+
+            var line = new StringBuilder();
+
+            var indent = (int)(sorted[0].StartBaseLine.X / avgW);
+            if (indent > 0)
+                line.Append(new string(' ', Math.Min(indent, 30)));
+
+            double prevEndX = sorted[0].StartBaseLine.X;
+
+            foreach (var letter in sorted)
+            {
+                var gap = letter.StartBaseLine.X - prevEndX;
+                if (gap > avgW * 0.5)
+                {
+                    var nSpaces = Math.Max(1, (int)Math.Round(gap / avgW));
+                    line.Append(new string(' ', Math.Min(nSpaces, 80)));
+                }
+                var v = letter.Value ?? string.Empty;
+                line.Append(v);
+                prevEndX = letter.StartBaseLine.X + (letter.Width > 0 ? letter.Width : avgW);
+            }
+
+            var lineStr = line.ToString().TrimEnd();
+            if (lineStr.Any(c => !char.IsWhiteSpace(c)))
+                sb.AppendLine(lineStr);
+        }
+
+        return sb.ToString().TrimEnd();
     }
 }

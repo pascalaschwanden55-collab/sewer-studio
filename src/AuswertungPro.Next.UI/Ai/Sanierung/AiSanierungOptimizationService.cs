@@ -49,9 +49,14 @@ public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationSer
         }
 
         // 1. Extract constraints (§8)
+        // Hoechste Zustandsklasse verwenden (Z5 > Z4 > ... > Z1).
+        // FirstOrDefault wuerde bei mehreren Findings den ersten nicht-leeren Wert
+        // nehmen, der oft Z1/Z2 ist — damit greifen §8-Constraints nicht korrekt.
         var zustandsklasse = req.Findings
             .Select(f => f.SeverityClass)
-            .FirstOrDefault(s => !string.IsNullOrWhiteSpace(s)) ?? "";
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .OrderByDescending(s => s, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault() ?? "";
 
         var constraints = _validation.ExtractConstraints(
             req.Findings, zustandsklasse,

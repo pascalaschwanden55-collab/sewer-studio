@@ -25,7 +25,7 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
     // Toleranzen
     private const double MeterTolerance = 1.0;      // ± 1.0m
     private const int ClockTolerance = 1;            // ± 1 Stunde
-    private const int SeverityTolerance = 1;         // ± 1 Stufe
+    // SeverityTolerance nicht als Konstante — Plausibilitaet ist kategorieabhaengig (siehe SeverityPlausible)
 
     public ComparisonResult Compare(GroundTruthEntry truth, EnhancedFrameAnalysis analysis)
     {
@@ -104,8 +104,8 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
     /// <summary>
     /// Vergleicht VSA-Codes. Beruecksichtigt:
     /// - Exakte Uebereinstimmung
-    /// - Praefix-Match (z.B. "BAB" matcht "BABA" = Laengsriss)
-    /// - Gleiche Gruppe (erste 2 Zeichen = gleiche Schadensart)
+    /// - Praefix-Match (nur Protokoll-Code als Praefix der KI-Erkennung, nicht umgekehrt)
+    /// Kein Gruppenvergleich — zu viele False Positives.
     /// </summary>
     private static bool CodesMatch(string truthCode, string? kiCode)
     {
@@ -118,12 +118,9 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
         // Exakt
         if (t == k) return true;
 
-        // Praefix: Protokoll "BAB" matcht KI "BABA"
-        if (k.StartsWith(t, StringComparison.Ordinal)) return true;
-        if (t.StartsWith(k, StringComparison.Ordinal)) return true;
-
-        // Gleiche Schadensgruppe (erste 3 Zeichen bei Haltung: B + Kategorie + Typ)
-        if (t.Length >= 3 && k.Length >= 3 && t[..3] == k[..3]) return true;
+        // Praefix: Protokoll "BAB" matcht KI "BABA" (KI spezifischer als Protokoll = ok)
+        // Umgekehrt NICHT: KI "BA" soll nicht Protokoll "BAB" matchen
+        if (k.StartsWith(t, StringComparison.Ordinal) && k.Length <= t.Length + 2) return true;
 
         return false;
     }
@@ -140,7 +137,8 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
 
     /// <summary>
     /// Prueft ob der KI-Schweregrad zum VSA-Code plausibel ist.
-    /// Vereinfachte Heuristik: Strukturschaden (BA*) → Severity 2-5, Betrieblich (BB*) → 1-4.
+    /// VSA-Kategorien: BA = baulich/strukturell (typisch 2-5),
+    /// BB = betrieblich (typisch 1-3), BC = Inventar (typisch 1-2).
     /// </summary>
     private static bool SeverityPlausible(string truthCode, int kiSeverity)
     {
@@ -149,14 +147,15 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
         string upper = truthCode.ToUpperInvariant();
         if (upper.Length < 2) return true; // Nicht genug Info
 
-        // Grundsaetzlich: Severity 1-5 ist fast immer plausibel
-        // Strenger nur bei offensichtlichen Widerspruechen
         char category = upper.Length >= 2 ? upper[1] : ' ';
         return category switch
         {
-            'A' => kiSeverity >= 1, // Baulich: alle plausibel
-            'B' => kiSeverity >= 1, // Betrieblich: alle plausibel
-            'C' => kiSeverity >= 1, // Inventar
+            // Baulich/strukturell: Risse, Deformationen, Brueche → ernst, Severity 2-5
+            'A' => kiSeverity >= 2,
+            // Betrieblich: Ablagerungen, Wurzeln, Hindernisse → leicht bis mittel, Severity 1-4
+            'B' => kiSeverity <= 4,
+            // Inventar: Anschluesse, Einbauten → niedrig, Severity 1-2
+            'C' => kiSeverity <= 2,
             _ => true
         };
     }

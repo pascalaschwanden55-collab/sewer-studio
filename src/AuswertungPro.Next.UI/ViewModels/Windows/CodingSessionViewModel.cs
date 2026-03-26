@@ -89,6 +89,8 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         OnPropertyChanged(nameof(IsLateralCircleTool));
         OnPropertyChanged(nameof(IsLevelTool));
         OnPropertyChanged(nameof(IsRulerTool));
+        OnPropertyChanged(nameof(IsEllipseTool));
+        OnPropertyChanged(nameof(IsFreehandTool));
     }
 
     public void Dispose()
@@ -140,6 +142,8 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     public bool IsLateralCircleTool => ActiveTool == OverlayToolType.LateralCircle;
     public bool IsLevelTool => ActiveTool == OverlayToolType.Level;
     public bool IsRulerTool => ActiveTool == OverlayToolType.Ruler;
+    public bool IsEllipseTool => ActiveTool == OverlayToolType.Ellipse;
+    public bool IsFreehandTool => ActiveTool == OverlayToolType.Freehand;
 
     // --- Events ---
 
@@ -348,6 +352,14 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
             // DN-Kreis: Verhaeltnis zum Haupt-DN uebertragen
             if (CurrentOverlay.DnRatioPercent.HasValue)
                 entry.CodeMeta.Parameters["vsa.dn.ratio"] = CurrentOverlay.DnRatioPercent.Value.ToString("F1");
+            if (CurrentOverlay.FillPercent.HasValue)
+            {
+                var key = CurrentOverlay.ToolType == OverlayToolType.Level
+                          && CurrentOverlay.Points.Count >= 3
+                    ? "vsa.querschnitt.prozent"
+                    : "vsa.fuellgrad.prozent";
+                entry.CodeMeta.Parameters[key] = CurrentOverlay.FillPercent.Value.ToString("F1");
+            }
 
             // Streckenschaden?
             if (CurrentOverlay.ToolType == OverlayToolType.Stretch)
@@ -486,7 +498,14 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     [RelayCommand]
     private void AcceptDefect()
     {
-        if (SelectedDefect?.AiContext == null) return;
+        if (SelectedDefect == null) return;
+        // AiContext anlegen falls noch nicht vorhanden (manuell codierte Events)
+        SelectedDefect.AiContext ??= new CodingEventAiContext
+        {
+            SuggestedCode = SelectedDefect.Entry.Code,
+            Confidence = 1.0,
+            Reason = "Manuell bestaetigt"
+        };
         SelectedDefect.AiContext.Decision = CodingUserDecision.Accepted;
         OnSelectedDefectChanged(SelectedDefect);
         RefreshStatistics();
@@ -495,7 +514,13 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     [RelayCommand]
     private void EditDefect()
     {
-        if (SelectedDefect?.AiContext == null) return;
+        if (SelectedDefect == null) return;
+        SelectedDefect.AiContext ??= new CodingEventAiContext
+        {
+            SuggestedCode = SelectedDefect.Entry.Code,
+            Confidence = 1.0,
+            Reason = "Manuell bearbeitet"
+        };
         SelectedDefect.AiContext.Decision = CodingUserDecision.AcceptedWithEdit;
         OnSelectedDefectChanged(SelectedDefect);
         RefreshStatistics();
@@ -506,7 +531,13 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     [RelayCommand]
     private void RejectDefect()
     {
-        if (SelectedDefect?.AiContext == null) return;
+        if (SelectedDefect == null) return;
+        SelectedDefect.AiContext ??= new CodingEventAiContext
+        {
+            SuggestedCode = SelectedDefect.Entry.Code,
+            Confidence = 1.0,
+            Reason = "Manuell abgelehnt"
+        };
         SelectedDefect.AiContext.Decision = CodingUserDecision.Rejected;
         OnSelectedDefectChanged(SelectedDefect);
         RefreshStatistics();
@@ -553,7 +584,7 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
 
     public static DefectStatus GetDefectStatus(CodingEvent ev)
     {
-        if (ev.AiContext == null) return DefectStatus.Accepted; // Manuell erstellt
+        if (ev.AiContext == null) return DefectStatus.Pending; // Noch nicht bestaetigt
 
         return ev.AiContext.Decision switch
         {

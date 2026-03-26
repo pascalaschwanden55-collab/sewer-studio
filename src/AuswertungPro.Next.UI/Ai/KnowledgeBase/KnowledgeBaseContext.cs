@@ -39,6 +39,9 @@ public sealed class KnowledgeBaseContext : IDisposable
 
     private void EnsureSchema()
     {
+        // WAL-Mode explizit aktivieren: bessere Concurrency + Crash-Safety
+        ExecuteNonQuery("PRAGMA journal_mode=WAL;");
+
         ExecuteNonQuery("""
             CREATE TABLE IF NOT EXISTS Samples (
                 SampleId     TEXT    PRIMARY KEY,
@@ -71,6 +74,9 @@ public sealed class KnowledgeBaseContext : IDisposable
                 Notes       TEXT NOT NULL DEFAULT ''
             );
             """);
+
+        // Migration: SourceType-Spalte hinzufuegen (bestehende DBs upgraden)
+        MigrateAddColumn("Samples", "SourceType", "TEXT NOT NULL DEFAULT ''");
 
         // Index für schnelle Code-Suche
         ExecuteNonQuery("""
@@ -108,6 +114,10 @@ public sealed class KnowledgeBaseContext : IDisposable
             CREATE INDEX IF NOT EXISTS idx_validation_created
                 ON ValidationLog(CreatedUtc);
             """);
+        ExecuteNonQuery("""
+            CREATE INDEX IF NOT EXISTS idx_validation_code_created
+                ON ValidationLog(VsaCode, CreatedUtc DESC);
+            """);
     }
 
     private void ExecuteNonQuery(string sql)
@@ -115,5 +125,21 @@ public sealed class KnowledgeBaseContext : IDisposable
         using var cmd = _connection.CreateCommand();
         cmd.CommandText = sql;
         cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Fuegt eine Spalte hinzu, falls sie noch nicht existiert.
+    /// Sicheres Schema-Upgrade fuer bestehende Datenbanken.
+    /// </summary>
+    private void MigrateAddColumn(string table, string column, string definition)
+    {
+        try
+        {
+            ExecuteNonQuery($"ALTER TABLE {table} ADD COLUMN {column} {definition}");
+        }
+        catch (SqliteException ex) when (ex.Message.Contains("duplicate column", StringComparison.OrdinalIgnoreCase))
+        {
+            // Spalte existiert bereits — Migration nicht noetig
+        }
     }
 }

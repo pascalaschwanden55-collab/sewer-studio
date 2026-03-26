@@ -5,6 +5,8 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.UI.Ai.Training;
+using AuswertungPro.Next.UI.Helpers;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -136,8 +138,85 @@ public sealed class CodingSessionService : ICodingSessionService
         doc.Original = revision;
         doc.Current = revision;
 
+        // Feedback-Loop: CodingEvents → TrainingSamples persistieren
+        // SYNCHRON WARTEN — Daten muessen gesichert sein bevor Session abgeschlossen wird
+        PersistTrainingSamplesFromEvents(_session);
+
         StateChanged?.Invoke(this, _session.State);
         return doc;
+    }
+
+    /// <summary>
+    /// Konvertiert alle CodingEvents der Session in TrainingSamples
+    /// und speichert sie via TrainingSamplesStore.
+    /// Schliesst den Feedback-Loop: KI-Vorschlag → User-Entscheidung → Trainingsdaten.
+    /// </summary>
+    private static void PersistTrainingSamplesFromEvents(CodingSession session)
+    {
+        try
+        {
+            var caseId = session.HaltungName ?? "unknown";
+            var samples = new List<TrainingSample>();
+
+            foreach (var ev in session.Events)
+            {
+                // Erstes Foto als Frame-Pfad verwenden (falls vorhanden)
+                var framePath = ev.Entry.FotoPaths.Count > 0
+                    ? ev.Entry.FotoPaths[0]
+                    : null;
+
+                var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath);
+                samples.Add(sample);
+            }
+
+            if (samples.Count > 0)
+            {
+                // SYNCHRON WARTEN: Samples muessen auf Disk sein bevor Session endet
+                // Verhindert Datenverlust bei sofortigem App-Schliessen nach Session
+                TrainingSamplesStore.MergeAndSaveAsync(samples)
+                    .GetAwaiter().GetResult();
+
+                // KB-Indexierung weiterhin fire-and-forget (optional, nicht kritisch)
+                IndexApprovedSamplesToKbAsync(samples).SafeFireAndForget("KbIndex");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Stilles Fehlschlagen — Session-Abschluss darf nie scheitern wegen Training-Persistierung
+            System.Diagnostics.Debug.WriteLine(
+                $"[CodingSession] Training-Persistierung fehlgeschlagen: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Indexiert Approved-Samples in die KB (Embedding + SQLite).
+    /// Nur wenn Ollama verfuegbar — stilles Fehlschlagen bei Offline.
+    /// </summary>
+    private static async Task IndexApprovedSamplesToKbAsync(List<Training.TrainingSample> samples)
+    {
+        try
+        {
+            var approved = samples.Where(s => s.Status == Training.TrainingSampleStatus.Approved).ToList();
+            if (approved.Count == 0) return;
+
+            var cfg = Ai.Ollama.OllamaConfig.Load();
+            var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
+            var embedder = new KnowledgeBase.EmbeddingService(http, cfg);
+
+            using var db = new KnowledgeBase.KnowledgeBaseContext();
+            var kbManager = new KnowledgeBase.KnowledgeBaseManager(db, embedder);
+
+            foreach (var sample in approved)
+            {
+                await kbManager.IndexSampleAsync(sample);
+            }
+        }
+        catch
+        {
+            // Ollama nicht verfuegbar oder anderer Fehler — KB-Update wird uebersprungen.
+            // Samples sind in TrainingSamplesStore persistiert und koennen spaeter ueber
+            // "Batch-Import + KB" im TrainingCenter nachindexiert werden.
+        }
     }
 
     // --- Navigation ---
@@ -196,8 +275,18 @@ public sealed class CodingSessionService : ICodingSessionService
     public void UpdateEvent(Guid eventId, ProtocolEntry entry, OverlayGeometry? overlay = null)
     {
         EnsureSession();
-        var ev = _session!.Events.FirstOrDefault(e => e.EventId == eventId)
-            ?? throw new InvalidOperationException($"Event {eventId} nicht gefunden.");
+        var ev = _session!.Events.FirstOrDefault(e => e.EventId == eventId);
+        if (ev == null)
+        {
+            // Event nicht in Session — z.B. aus anderem Code-Pfad erzeugt.
+            // Statt Crash: neues Event anlegen und in Session einfuegen.
+            System.Diagnostics.Debug.WriteLine(
+                $"[CodingSession] UpdateEvent: Event {eventId} nicht in Session, wird nachgetragen.");
+            ev = new CodingEvent { Entry = entry, Overlay = overlay };
+            _session.Events.Add(ev);
+            EventAdded?.Invoke(this, ev);
+            return;
+        }
 
         ev.Entry = entry;
         if (overlay != null) ev.Overlay = overlay;

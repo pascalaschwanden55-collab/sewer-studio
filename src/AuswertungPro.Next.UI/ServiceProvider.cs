@@ -158,8 +158,8 @@ namespace AuswertungPro.Next.UI
             Vsa = new VsaEvaluationService(channelsTable, manholesTable);
 
             MeasureRecommendation = new Infrastructure.Ai.MeasureRecommendationService(
-                Path.Combine(AppSettings.AppDataDir, "data", "measures_learning.json"),
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "measures-model.zip"));
+                Ai.KnowledgeRoot.GetMeasuresLearningPath(),
+                Ai.KnowledgeRoot.GetMeasuresModelPath());
 
             // Eigendevis
             var devisMappingPath = Path.Combine(AppContext.BaseDirectory, "Config", "devis_mappings.json");

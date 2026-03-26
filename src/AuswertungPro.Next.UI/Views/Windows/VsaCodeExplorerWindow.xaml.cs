@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Shared;
@@ -22,6 +23,13 @@ public partial class VsaCodeExplorerWindow : Window
     private readonly string? _videoPath;
     private readonly TimeSpan? _currentVideoTime;
 
+    /// <summary>
+    /// Optionaler Callback: Liefert einen Snapshot vom aktuellen VLC-Player-Frame.
+    /// Wenn gesetzt, wird dieser statt ffmpeg fuer "Aus Video" verwendet.
+    /// Gibt den Pfad zur gespeicherten PNG-Datei zurueck (oder null bei Fehler).
+    /// </summary>
+    public Func<string?>? LiveSnapshotProvider { get; set; }
+
     // Gecachte Brushes (aus Ressourcen, einmalig aufgeloest)
     private Brush? _accentBrush;
     private Brush? _successBrush;
@@ -36,6 +44,9 @@ public partial class VsaCodeExplorerWindow : Window
 
     /// <summary>Ergebnis-Entry nach erfolgreichem Uebernehmen.</summary>
     public ProtocolEntry? SelectedEntry { get; private set; }
+
+    /// <summary>Rohr-Kalibrierung (wird vom CodingModeWindow gesetzt und zurueckgelesen).</summary>
+    public PipeCalibration? PipeCalibration { get; set; }
 
     public VsaCodeExplorerWindow(VsaCodeExplorerViewModel vm,
                                   string? videoPath = null,
@@ -55,6 +66,12 @@ public partial class VsaCodeExplorerWindow : Window
         // Foto 1 / Foto 2 Buttons
         BtnCaptureFoto1.Click += async (_, _) => await CapturePhotoAsync(0);
         BtnCaptureFoto2.Click += async (_, _) => await CapturePhotoAsync(1);
+
+        // PhotoAssistant: Vermessen-Buttons + Doppelklick auf Thumbnails
+        BtnMeasureFoto1.Click += (_, _) => OpenPhotoAssistant(0);
+        BtnMeasureFoto2.Click += (_, _) => OpenPhotoAssistant(1);
+        Foto1Image.MouseLeftButtonDown += (_, e) => { if (e.ClickCount == 2) OpenPhotoAssistant(0); };
+        Foto2Image.MouseLeftButtonDown += (_, e) => { if (e.ClickCount == 2) OpenPhotoAssistant(1); };
 
         // Textbox-Bindings (Two-Way)
         TxtQ1Value.TextChanged += (_, _) => _vm.Q1Value = TxtQ1Value.Text;
@@ -194,11 +211,11 @@ public partial class VsaCodeExplorerWindow : Window
         // Fotos initialisieren
         UpdateFotoImages();
 
-        // Multi-Column Collections binden
-        _vm.GroupTiles.CollectionChanged += (_, _) => Dispatcher.Invoke(() => RenderColumnTiles(GroupList, _vm.GroupTiles, tile => _vm.SelectGroup(tile.Key)));
-        _vm.CodeTiles.CollectionChanged += (_, _) => Dispatcher.Invoke(() => RenderColumnTiles(CodeList, _vm.CodeTiles, tile => _vm.SelectCode(tile.Key)));
-        _vm.Char1Tiles.CollectionChanged += (_, _) => Dispatcher.Invoke(() => RenderColumnTiles(Char1List, _vm.Char1Tiles, tile => _vm.SelectChar1(tile.Key)));
-        _vm.Char2Tiles.CollectionChanged += (_, _) => Dispatcher.Invoke(() => RenderColumnTiles(Char2List, _vm.Char2Tiles, tile => _vm.SelectChar2(tile.Key)));
+        // Multi-Column Collections binden (benannte Handler fuer Cleanup)
+        _vm.GroupTiles.CollectionChanged += GroupTiles_Changed;
+        _vm.CodeTiles.CollectionChanged += CodeTiles_Changed;
+        _vm.Char1Tiles.CollectionChanged += Char1Tiles_Changed;
+        _vm.Char2Tiles.CollectionChanged += Char2Tiles_Changed;
 
         // Initiale Multi-Column Befuellung
         _vm.PopulateAllColumns();
@@ -333,7 +350,7 @@ public partial class VsaCodeExplorerWindow : Window
         // Aeusserer Container: farbige Markierung links + Inhalt
         var outerDock = new DockPanel { LastChildFill = true };
 
-        // Farbige Gruppenmarkierung links (4px breit)
+        // Farbige Gruppenmarkierung links (4px breit, volle Hoehe)
         var colorBar = new Border
         {
             Width = 4,
@@ -341,17 +358,20 @@ public partial class VsaCodeExplorerWindow : Window
             Background = tile.IsInvalid ? InvalidBrush
                 : tile.IsSelected ? _accentBrush
                 : groupBrush,
-            Margin = new Thickness(0, 1, 0, 1)
+            VerticalAlignment = VerticalAlignment.Stretch,
+            Margin = new Thickness(0)
         };
         DockPanel.SetDock(colorBar, Dock.Left);
         outerDock.Children.Add(colorBar);
 
-        // Inhalt-Panel
-        var contentPanel = new StackPanel { Margin = new Thickness(8, 2, 4, 2) };
+        // Inhalt: Grid mit Code-Zeile (feste Hoehe) + Beschreibung
+        var contentGrid = new Grid { Margin = new Thickness(8, 0, 4, 0) };
+        contentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(18) });
+        contentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        // Obere Zeile: Code + Badges
-        var topRow = new DockPanel { LastChildFill = true };
-
+        // Code-Label (links, fest ausgerichtet)
         var codeTb = new TextBlock
         {
             Text = tile.Label,
@@ -363,24 +383,27 @@ public partial class VsaCodeExplorerWindow : Window
                 : groupBrush,
             VerticalAlignment = VerticalAlignment.Center
         };
-        DockPanel.SetDock(codeTb, Dock.Left);
-        topRow.Children.Add(codeTb);
+        Grid.SetRow(codeTb, 0);
+        Grid.SetColumn(codeTb, 0);
+        contentGrid.Children.Add(codeTb);
 
-        // Badges rechts
-        var badgePanel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        DockPanel.SetDock(badgePanel, Dock.Right);
+        // Badges (rechts ausgerichtet, gleiche Zeile)
+        var badgePanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(6, 0, 0, 0)
+        };
         if (tile.BadgeText is not null)
             badgePanel.Children.Add(CreateBadge(tile.BadgeText, tile.BadgeColor ?? "#2563EB"));
         if (tile.IsFinal && !tile.IsSelected)
             badgePanel.Children.Add(CreateBadge("End", "#16A34A"));
-        topRow.Children.Add(badgePanel);
+        Grid.SetRow(badgePanel, 0);
+        Grid.SetColumn(badgePanel, 1);
+        contentGrid.Children.Add(badgePanel);
 
-        // Platzhalter (damit DockPanel korrekt fuellt)
-        topRow.Children.Add(new Border());
-
-        contentPanel.Children.Add(topRow);
-
-        // Untere Zeile: Beschreibung
+        // Beschreibung (zweite Zeile, volle Breite)
         if (!string.IsNullOrEmpty(tile.Description))
         {
             var descTb = new TextBlock
@@ -393,20 +416,30 @@ public partial class VsaCodeExplorerWindow : Window
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 Margin = new Thickness(0, 1, 0, 0)
             };
-            contentPanel.Children.Add(descTb);
+            Grid.SetRow(descTb, 1);
+            Grid.SetColumn(descTb, 0);
+            Grid.SetColumnSpan(descTb, 2);
+            contentGrid.Children.Add(descTb);
         }
 
-        outerDock.Children.Add(contentPanel);
+        outerDock.Children.Add(contentGrid);
+
+        // Eigener Style: ActionCardButton hat HorizontalAlignment=Center im Template
+        // und Padding=16,8 — beides bricht das Alignment der Farbbalken.
+        // Deshalb: Style uebernehmen, aber Padding auf 0 (Kontrolle via contentGrid.Margin).
+        _tileButtonStyle ??= BuildTileButtonStyle();
 
         var btn = new Button
         {
             Content = outerDock,
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            Padding = new Thickness(4, 4, 6, 4),
+            VerticalContentAlignment = VerticalAlignment.Stretch,
+            MinHeight = 44,
+            Padding = new Thickness(0),
             Margin = new Thickness(2, 1, 2, 1),
             IsEnabled = true,
             Tag = tile,
-            Style = _actionCardButtonStyle
+            Style = _tileButtonStyle
         };
 
         // Hervorhebung fuer ausgewaehltes Element (kraeftiger Rahmen + Hintergrund)
@@ -436,6 +469,7 @@ public partial class VsaCodeExplorerWindow : Window
     // Gecachte Styles und Consolas-Font
     private Style? _actionCardButtonStyle;
     private Style? _toolbarButtonStyle;
+    private Style? _tileButtonStyle;
     private static readonly FontFamily ConsolasFont = new("Consolas");
     private static readonly SolidColorBrush InvalidBrush = CreateFrozenBrush(0x9E, 0xAE, 0xC4);
     private static SolidColorBrush CreateFrozenBrush(byte r, byte g, byte b)
@@ -443,6 +477,66 @@ public partial class VsaCodeExplorerWindow : Window
         var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
         brush.Freeze();
         return brush;
+    }
+
+    /// <summary>
+    /// Eigener Button-Style fuer Tile-Karten: Padding=0 (wird intern gesteuert),
+    /// ContentPresenter auf Stretch (nicht Center) damit Farbbalken korrekt aligned.
+    /// </summary>
+    private Style BuildTileButtonStyle()
+    {
+        var style = new Style(typeof(Button));
+        style.Setters.Add(new Setter(MinHeightProperty, 36.0));
+        style.Setters.Add(new Setter(MinWidthProperty, 0.0));
+        style.Setters.Add(new Setter(FontSizeProperty, 13.0));
+        style.Setters.Add(new Setter(FontWeightProperty, FontWeights.Medium));
+        style.Setters.Add(new Setter(BackgroundProperty, FindResource("CardBrush")));
+        style.Setters.Add(new Setter(ForegroundProperty, FindResource("TextBrush")));
+        style.Setters.Add(new Setter(BorderThicknessProperty, new Thickness(1)));
+        style.Setters.Add(new Setter(BorderBrushProperty, FindResource("BorderBrush")));
+        style.Setters.Add(new Setter(CursorProperty, Cursors.Hand));
+        style.Setters.Add(new Setter(SnapsToDevicePixelsProperty, true));
+
+        var template = new ControlTemplate(typeof(Button));
+        var border = new FrameworkElementFactory(typeof(Border), "bd");
+        border.SetValue(Border.CornerRadiusProperty, new CornerRadius(6));
+        border.SetValue(SnapsToDevicePixelsProperty, true);
+        border.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding("Background")
+            { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
+        border.SetBinding(Border.BorderBrushProperty, new System.Windows.Data.Binding("BorderBrush")
+            { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
+        border.SetBinding(Border.BorderThicknessProperty, new System.Windows.Data.Binding("BorderThickness")
+            { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
+        border.SetBinding(Border.PaddingProperty, new System.Windows.Data.Binding("Padding")
+            { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
+
+        var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+        presenter.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Stretch);
+        presenter.SetValue(VerticalAlignmentProperty, VerticalAlignment.Stretch);
+        border.AppendChild(presenter);
+
+        template.VisualTree = border;
+
+        // Hover-Trigger
+        var hoverTrigger = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+        hoverTrigger.Setters.Add(new Setter(Border.BackgroundProperty,
+            new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F0F4FF")!), "bd"));
+        template.Triggers.Add(hoverTrigger);
+
+        // Pressed-Trigger
+        var pressTrigger = new Trigger { Property = System.Windows.Controls.Primitives.ButtonBase.IsPressedProperty, Value = true };
+        pressTrigger.Setters.Add(new Setter(Border.BackgroundProperty,
+            new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E0EAFF")!), "bd"));
+        template.Triggers.Add(pressTrigger);
+
+        // Disabled-Trigger
+        var disabledTrigger = new Trigger { Property = UIElement.IsEnabledProperty, Value = false };
+        disabledTrigger.Setters.Add(new Setter(UIElement.OpacityProperty, 0.35));
+        template.Triggers.Add(disabledTrigger);
+
+        style.Setters.Add(new Setter(TemplateProperty, template));
+        style.Seal();
+        return style;
     }
 
     // Cache fuer GroupColor-Brushes (vermeidet wiederholtes ColorConverter.ConvertFromString)
@@ -463,27 +557,17 @@ public partial class VsaCodeExplorerWindow : Window
     {
         _actionCardButtonStyle ??= (Style)FindResource("ActionCardButton");
 
-        var dp = new DockPanel { LastChildFill = true };
+        // Grid-Layout: Spalten [Code | Beschreibung | Badges]
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(70) });   // Code
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // Beschreibung
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });      // Badges/Pfeil
 
         var groupBrush = tile.GroupColor is not null
             ? (Brush)GetGroupColorBrush(tile.GroupColor)
             : _accentBrush!;
 
-        // ── Icon (nur bei Gruppen-Ebene) ──
-        if (tile.Icon is not null)
-        {
-            var iconTb = new TextBlock
-            {
-                Text = tile.Icon,
-                FontSize = 18,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 10, 0)
-            };
-            DockPanel.SetDock(iconTb, Dock.Left);
-            dp.Children.Add(iconTb);
-        }
-
-        // ── Code-Label (links) ──
+        // ── Code-Label (Spalte 0, feste Breite) ──
         var codeTb = new TextBlock
         {
             Text = tile.Label,
@@ -493,15 +577,27 @@ public partial class VsaCodeExplorerWindow : Window
             Foreground = tile.IsInvalid ? InvalidBrush
                 : tile.IsFinal ? _successBrush
                 : groupBrush,
-            MinWidth = 60,
             VerticalAlignment = VerticalAlignment.Center
         };
-        DockPanel.SetDock(codeTb, Dock.Left);
-        dp.Children.Add(codeTb);
+        Grid.SetColumn(codeTb, 0);
+        grid.Children.Add(codeTb);
 
-        // ── Rechte Seite (Badges + Pfeil) ──
+        // ── Beschreibung (Spalte 1, fuellt Rest) ──
+        var descTb = new TextBlock
+        {
+            Text = tile.Description ?? "",
+            FontSize = 12,
+            Foreground = tile.IsInvalid ? InvalidBrush : _textBrush,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            Margin = new Thickness(4, 0, 4, 0)
+        };
+        Grid.SetColumn(descTb, 1);
+        grid.Children.Add(descTb);
+
+        // ── Rechte Seite: Badges + Pfeil (Spalte 2) ──
         var rightPanel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        DockPanel.SetDock(rightPanel, Dock.Right);
+        Grid.SetColumn(rightPanel, 2);
 
         if (tile.BadgeText is not null)
             rightPanel.Children.Add(CreateBadge(tile.BadgeText, tile.BadgeColor ?? "#2563EB"));
@@ -523,24 +619,12 @@ public partial class VsaCodeExplorerWindow : Window
                 VerticalAlignment = VerticalAlignment.Center
             });
         }
-        dp.Children.Add(rightPanel);
-
-        // ── Beschreibung (Mitte, fuellt Rest) ──
-        var descTb = new TextBlock
-        {
-            Text = tile.Description ?? "",
-            FontSize = 12,
-            Foreground = tile.IsInvalid ? InvalidBrush : _textBrush,
-            VerticalAlignment = VerticalAlignment.Center,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            Margin = new Thickness(10, 0, 8, 0)
-        };
-        dp.Children.Add(descTb);
+        grid.Children.Add(rightPanel);
 
         // ── Button mit farbiger Linie links (alle Ebenen) ──
         var btn = new Button
         {
-            Content = dp,
+            Content = grid,
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             Padding = new Thickness(12, 10, 12, 10),
             Margin = new Thickness(0, 0, 0, 4),
@@ -822,48 +906,119 @@ public partial class VsaCodeExplorerWindow : Window
     }
 
     // ═══════════════════════════════════════════════════════════════
+    // PhotoAssistant
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>PhotoAssistant oeffnen fuer Foto 1 oder 2.</summary>
+    private void OpenPhotoAssistant(int photoIndex)
+    {
+        if (_vm.FotoPaths.Count <= photoIndex ||
+            string.IsNullOrEmpty(_vm.FotoPaths[photoIndex]) ||
+            !File.Exists(_vm.FotoPaths[photoIndex]))
+        {
+            MessageBox.Show(
+                "Kein Foto vorhanden. Bitte zuerst ein Foto aufnehmen.",
+                "PhotoAssistant", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var win = new PhotoMeasurementWindow(_vm.FotoPaths[photoIndex], PipeCalibration)
+        {
+            Owner = this
+        };
+
+        if (win.ShowDialog() == true && win.Result.Confirmed)
+            ApplyPhotoResult(win.Result, photoIndex);
+    }
+
+    /// <summary>PhotoAssistant-Ergebnis uebernehmen.</summary>
+    private void ApplyPhotoResult(Domain.Models.PhotoMeasurementResult result, int photoIndex)
+    {
+        // Q1-Wert uebernehmen
+        if (result.Geometry?.FillPercent != null)
+            TxtQ1Value.Text = result.Geometry.FillPercent.Value.ToString("F1");
+        else if (result.Geometry?.Q1Mm != null)
+            TxtQ1Value.Text = result.Geometry.Q1Mm.Value.ToString("F1");
+
+        // Uhr-Position uebernehmen
+        if (result.Geometry?.ClockFrom != null)
+        {
+            double clockHours = result.Geometry.ClockFrom.Value;
+            int hours = (int)clockHours;
+            int minutes = (int)((clockHours - hours) * 60);
+            TxtClockVon.Text = $"{hours:D2}";
+        }
+
+        // Bogenwinkel uebernehmen
+        if (result.Geometry?.ArcDegrees != null)
+            TxtQ1Value.Text = result.Geometry.ArcDegrees.Value.ToString("F0");
+
+        // Foto mit Overlay ersetzen
+        if (!string.IsNullOrEmpty(result.OverlayPhotoPath) && File.Exists(result.OverlayPhotoPath))
+        {
+            while (_vm.FotoPaths.Count <= photoIndex)
+                _vm.FotoPaths.Add("");
+            _vm.FotoPaths[photoIndex] = result.OverlayPhotoPath;
+            UpdateFotoImages();
+        }
+
+        // Kalibrierung zurueck uebernehmen
+        if (result.UpdatedCalibration != null)
+            PipeCalibration = result.UpdatedCalibration;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // Foto
     // ═══════════════════════════════════════════════════════════════
 
     /// <summary>Foto vom Video-Frame extrahieren und als Foto 1 oder 2 speichern.</summary>
     private async System.Threading.Tasks.Task CapturePhotoAsync(int fotoIndex)
     {
-        if (string.IsNullOrWhiteSpace(_videoPath) || !File.Exists(_videoPath))
-        {
-            MessageBox.Show("Kein Video geladen.", "Foto", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
-
-        var ffmpeg = FfmpegLocator.ResolveFfmpeg();
-
-        // Videozeit: zuerst aus Zeitfeld, dann aus uebergebenem Wert
-        var zeit = _currentVideoTime ?? TimeSpan.Zero;
-        if (!string.IsNullOrWhiteSpace(TxtZeit.Text))
-        {
-            var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss" };
-            if (TimeSpan.TryParseExact(TxtZeit.Text.Trim(), formats,
-                System.Globalization.CultureInfo.InvariantCulture, out var parsed))
-                zeit = parsed;
-        }
-
         BtnCaptureFoto1.IsEnabled = false;
         BtnCaptureFoto2.IsEnabled = false;
         try
         {
-            var bytes = await VideoFrameExtractor.TryExtractFramePngAsync(
-                ffmpeg, _videoPath, zeit, CancellationToken.None);
+            string? tempPath = null;
 
-            if (bytes is null || bytes.Length == 0)
+            // Strategie 1: Live-Snapshot vom VLC-Player (aktuelles Bild)
+            if (LiveSnapshotProvider != null)
             {
-                MessageBox.Show("Frame-Extraktion fehlgeschlagen.", "Foto", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                tempPath = LiveSnapshotProvider();
             }
 
-            // Temp-Datei speichern
-            var tempPath = System.IO.Path.Combine(
-                System.IO.Path.GetTempPath(),
-                $"vsa_foto{fotoIndex + 1}_{Guid.NewGuid():N}.png");
-            await File.WriteAllBytesAsync(tempPath, bytes);
+            // Strategie 2: Fallback auf ffmpeg (fuer den Fall dass kein Player verfuegbar)
+            if (string.IsNullOrEmpty(tempPath) || !File.Exists(tempPath))
+            {
+                if (string.IsNullOrWhiteSpace(_videoPath) || !File.Exists(_videoPath))
+                {
+                    MessageBox.Show("Kein Video geladen.", "Foto", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                var ffmpeg = FfmpegLocator.ResolveFfmpeg();
+                var zeit = _currentVideoTime ?? TimeSpan.Zero;
+                if (!string.IsNullOrWhiteSpace(TxtZeit.Text))
+                {
+                    var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss" };
+                    if (TimeSpan.TryParseExact(TxtZeit.Text.Trim(), formats,
+                        System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+                        zeit = parsed;
+                }
+
+                var bytes = await VideoFrameExtractor.TryExtractFramePngAsync(
+                    ffmpeg, _videoPath, zeit, CancellationToken.None);
+
+                if (bytes is null || bytes.Length == 0)
+                {
+                    MessageBox.Show("Frame-Extraktion fehlgeschlagen.", "Foto", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                tempPath = System.IO.Path.Combine(
+                    System.IO.Path.GetTempPath(),
+                    $"vsa_foto{fotoIndex + 1}_{Guid.NewGuid():N}.png");
+                await File.WriteAllBytesAsync(tempPath, bytes);
+            }
 
             // Foto in FotoPaths an Index 0 oder 1 setzen
             while (_vm.FotoPaths.Count <= fotoIndex)
@@ -994,6 +1149,20 @@ public partial class VsaCodeExplorerWindow : Window
     private void OnWindowClosed(object? sender, EventArgs e)
     {
         _vm.PropertyChanged -= Vm_PropertyChanged;
+        _vm.GroupTiles.CollectionChanged -= GroupTiles_Changed;
+        _vm.CodeTiles.CollectionChanged -= CodeTiles_Changed;
+        _vm.Char1Tiles.CollectionChanged -= Char1Tiles_Changed;
+        _vm.Char2Tiles.CollectionChanged -= Char2Tiles_Changed;
         PreviewKeyDown -= OnPreviewKeyDown;
     }
+
+    // Benannte CollectionChanged Handler (fuer Cleanup via -=)
+    private void GroupTiles_Changed(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        => Dispatcher.InvokeAsync(() => RenderColumnTiles(GroupList, _vm.GroupTiles, tile => _vm.SelectGroup(tile.Key)));
+    private void CodeTiles_Changed(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        => Dispatcher.InvokeAsync(() => RenderColumnTiles(CodeList, _vm.CodeTiles, tile => _vm.SelectCode(tile.Key)));
+    private void Char1Tiles_Changed(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        => Dispatcher.InvokeAsync(() => RenderColumnTiles(Char1List, _vm.Char1Tiles, tile => _vm.SelectChar1(tile.Key)));
+    private void Char2Tiles_Changed(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        => Dispatcher.InvokeAsync(() => RenderColumnTiles(Char2List, _vm.Char2Tiles, tile => _vm.SelectChar2(tile.Key)));
 }

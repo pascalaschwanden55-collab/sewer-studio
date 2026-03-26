@@ -284,8 +284,8 @@ public static class VsaCodeTree
                 Char2 = new() { ["A"] = "oben", ["B"] = "unten", ["Y"] = "ohne Hoehe" },
                 Invalid = new() { ["Y"] = new() { "Y" } }
             },
-            ["BCD"] = new() { Label = "Anfangsknoten", FinalCode = "BCD", IsSteuer = true },
-            ["BCE"] = new() { Label = "Endknoten", FinalCode = "BCE", IsSteuer = true },
+            ["BCD"] = new() { Label = "Rohranfang", FinalCode = "BCD", IsSteuer = true },
+            ["BCE"] = new() { Label = "Rohrende", FinalCode = "BCE", IsSteuer = true },
         }),
 
         ["BD"] = new("Weitere Codes", "#7C3AED", "\U0001F4CC", new()
@@ -519,5 +519,115 @@ public static class VsaCodeTree
         return cd.Invalid is not null
             && cd.Invalid.TryGetValue(c1, out var set)
             && set.Contains(c2);
+    }
+
+    /// <summary>
+    /// Baut die offizielle Bezeichnung fuer einen VSA-Code auf.
+    /// Beispiel: "BABA" → "Risse, Haarriss, laengs"
+    ///           "BCD"  → "Rohranfang"
+    ///           "???"  → null
+    /// </summary>
+    public static string? LookupLabel(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code) || code.Length < 2) return null;
+
+        var groupKey = code[..2]; // z.B. "BA", "BC", "BD"
+        if (!Groups.TryGetValue(groupKey, out var group)) return null;
+
+        // 2-Zeichen-Code = Gruppenname
+        if (code.Length == 2) return group.Label;
+
+        // Hauptcode (3 Zeichen): z.B. "BAB"
+        var mainKey = code[..3];
+        if (!group.Codes.TryGetValue(mainKey, out var mainDef)) return null;
+
+        if (code.Length == 3) return mainDef.Label;
+
+        // Char1 (4 Zeichen): z.B. "BABA" → "Risse, Haarriss"
+        var parts = new List<string> { mainDef.Label };
+        var c1Key = code[3].ToString();
+        string? c1Label = null;
+        if (mainDef.Char1 != null && mainDef.Char1.TryGetValue(c1Key, out var c1Def))
+            c1Label = c1Def.Label;
+
+        if (c1Label != null) parts.Add(c1Label);
+
+        // Char2 (5 Zeichen): z.B. "BABAA" → "Risse, Haarriss, laengs"
+        if (code.Length >= 5)
+        {
+            var c2Key = code[4].ToString();
+            string? c2Label = null;
+
+            // Char2 pro Char1 zuerst pruefen
+            if (mainDef.Char2PerChar1 != null
+                && mainDef.Char2PerChar1.TryGetValue(c1Key, out var perC1)
+                && perC1.TryGetValue(c2Key, out var label))
+                c2Label = label;
+            // Dann CharDef-eigenes Char2
+            else if (c1Label != null && mainDef.Char1 != null
+                && mainDef.Char1.TryGetValue(c1Key, out var charDef)
+                && charDef.Char2 != null
+                && charDef.Char2.TryGetValue(c2Key, out var cLabel))
+                c2Label = cLabel;
+            // Dann globales Char2
+            else if (mainDef.Char2 != null && mainDef.Char2.TryGetValue(c2Key, out var gLabel))
+                c2Label = gLabel;
+
+            if (c2Label != null) parts.Add(c2Label);
+        }
+
+        return string.Join(", ", parts);
+    }
+
+    /// <summary>
+    /// Prueft ob ein VSA-Code typischerweise ein Streckenschaden ist (requiresRange laut Katalog).
+    /// Typisch fuer: Risse laengs (BABA/BABAB), Korrosion (BAFA), Ablagerung (BBA), Infiltration (BBB),
+    /// Wasserrueckstau (BBBA), Wurzeleinwuchs (BBC), Inkrustation (BBD) etc.
+    /// </summary>
+    private static readonly HashSet<string> StreckenschadenCodes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // BA: Bauliche Schaeden — laengs-Varianten
+        "BABA",   // Risse - laengs (Haarriss)
+        "BABAB",  // Oberflächenriss radial (laengs)
+        "BABAC",  // Komplexe Rissbildung (laengs)
+        "BABB",   // Risse - Riss (laengs)
+        "BABBA",  // Risse - Riss laengs
+        "BABBB",  // Risse - Riss radial (laengs)
+        "BABBC",  // Risse - Riss, komplexe Rissbildung (laengs)
+        "BABC",   // Risse - Bruch/Einsturz (laengs)
+        "BABCA",  // Bruch/Einsturz laengs
+        "BAFA",   // Oberflaechenschaden - Rauhigkeit
+        "BAFAE",  // Oberflaechenschaden - Rauhigkeit erhoehte
+        "BAFB",   // Oberflaechenschaden - Korrosion/Erosion
+        "BAFC",   // Oberflaechenschaden - Sichtbare Bewehrung
+        "BAFD",   // Oberflaechenschaden - Fehlstelle Beschichtung
+        "BAG",    // Verformung allgemein
+        "BAGA",   // Verformung - Deformation
+        // BB: Betriebliche Schaeden
+        "BBA",    // Ablagerung (hart/weich)
+        "BBAA",   // Ablagerung - fein
+        "BBAB",   // Ablagerung - grob
+        "BBB",    // Eindringendes Wasser / Infiltration
+        "BBBA",   // Infiltration - Wasserrueckstau
+        "BBC",    // Wurzeleinwuchs
+        "BBCA",   // Wurzeleinwuchs - fein
+        "BBCB",   // Wurzeleinwuchs - einzeln
+        "BBCC",   // Wurzeleinwuchs - verwachsen
+        "BBD",    // Anhaftung / Inkrustation
+        "BBDA",   // Inkrustation - Sintertropfen
+        "BBDB",   // Inkrustation - Sinterschicht
+    };
+
+    public static bool IsStreckenschadenCode(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return false;
+        // Exakter Match
+        if (StreckenschadenCodes.Contains(code)) return true;
+        // Prefix-Match: z.B. "BABBA" matched wenn "BABB" ein Streckenschaden ist
+        for (int len = code.Length - 1; len >= 3; len--)
+        {
+            if (StreckenschadenCodes.Contains(code[..len])) return true;
+        }
+        return false;
     }
 }

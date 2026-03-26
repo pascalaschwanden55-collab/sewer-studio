@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -32,35 +33,83 @@ public sealed class TrainingCenterStore
 
             return state ?? new TrainingCenterState();
         }
-        catch (JsonException)
+        catch (Exception ex)
         {
-            // Corrupt JSON → backup and start fresh
+            Debug.WriteLine($"[TrainingCenterStore] Ladefehler: {ex.Message}");
+
+            // Backup der korrupten Datei (timestamped, nicht ueberschreiben)
             try
             {
                 var badPath = StoreFilePath + ".bad_" + DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
-                File.Move(StoreFilePath, badPath, overwrite: true);
+                File.Copy(StoreFilePath, badPath);
             }
-            catch
+            catch { /* best-effort */ }
+
+            // Fallback auf .bak (juengstes Save-Backup)
+            var bakPath = StoreFilePath + ".bak";
+            if (File.Exists(bakPath))
             {
-                // ignore
+                try
+                {
+                    await using var bakFs = File.OpenRead(bakPath);
+                    var bakState = await JsonSerializer.DeserializeAsync<TrainingCenterState>(bakFs, JsonOptions);
+                    if (bakState is not null)
+                    {
+                        Debug.WriteLine("[TrainingCenterStore] Backup .bak geladen");
+                        return bakState;
+                    }
+                }
+                catch { /* Backup auch korrupt */ }
             }
 
-            return new TrainingCenterState();
-        }
-        catch
-        {
+            Debug.WriteLine("[TrainingCenterStore] WARNUNG: Kein lesbares Backup, starte mit leerem State");
             return new TrainingCenterState();
         }
     }
 
+    /// <summary>
+    /// Atomar speichern: temp-Datei + rename, mit Backup vor dem Schreiben.
+    /// </summary>
     public async Task SaveAsync(TrainingCenterState state)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(StoreFilePath)!);
+        var dir = Path.GetDirectoryName(StoreFilePath)!;
+        Directory.CreateDirectory(dir);
 
         state.UpdatedUtc = DateTime.UtcNow;
 
-        await using var fs = File.Create(StoreFilePath);
-        await JsonSerializer.SerializeAsync(fs, state, JsonOptions);
+        // Backup vor dem Schreiben
+        if (File.Exists(StoreFilePath))
+        {
+            try { File.Copy(StoreFilePath, StoreFilePath + ".bak", overwrite: true); }
+            catch { /* best-effort */ }
+        }
+
+        // In temp-Datei schreiben, dann atomar umbenennen
+        var tempPath = StoreFilePath + ".tmp";
+        try
+        {
+            await using (var fs = File.Create(tempPath))
+            {
+                await JsonSerializer.SerializeAsync(fs, state, JsonOptions);
+                await fs.FlushAsync();
+            }
+
+            // Validierung: temp-Datei muss lesbar sein
+            await using (var checkFs = File.OpenRead(tempPath))
+            {
+                var check = await JsonSerializer.DeserializeAsync<TrainingCenterState>(checkFs, JsonOptions);
+                if (check is null)
+                    throw new InvalidOperationException("Validierung fehlgeschlagen: temp-Datei nicht deserialisierbar");
+            }
+
+            File.Move(tempPath, StoreFilePath, overwrite: true);
+        }
+        catch
+        {
+            try { if (File.Exists(tempPath)) File.Delete(tempPath); }
+            catch { /* best-effort */ }
+            throw;
+        }
     }
 
     private static string GetDefaultStorePath()

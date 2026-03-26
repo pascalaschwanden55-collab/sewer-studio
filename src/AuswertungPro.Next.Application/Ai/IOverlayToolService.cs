@@ -88,4 +88,18 @@ public interface IOverlayToolService
 
     /// <summary>Vorschau-Geometrie waehrend des Zeichnens (fuer Canvas-Rendering).</summary>
     OverlayGeometry? PreviewGeometry { get; }
+
+    // --- PhotoAssistant (Slider-basierte Messung) ---
+
+    /// <summary>
+    /// Level-Geometrie aus Slider-Wert (0–100%) berechnen.
+    /// Umkehrfunktion: Slider → hRatio → Y-Koordinate → OverlayGeometry.
+    /// </summary>
+    OverlayGeometry? BuildLevelGeometryFromSlider(double fillPercent, LevelMode mode);
+
+    /// <summary>Rohrkreis-Groesse aendern (Mausrad im PhotoAssistant).</summary>
+    void ResizePipeCircle(double deltaNormalized);
+
+    /// <summary>Rohrkreis-Position verschieben (Drag im PhotoAssistant).</summary>
+    void MovePipeCircle(NormalizedPoint newCenter);
 }

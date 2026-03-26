@@ -34,7 +34,9 @@ public enum OverlayToolType
     Ruler = 8,           // Lineal mit Skalenteilung (legacy-kompatibel)
     Protractor = PipeBend,   // Legacy-Alias (Abwaertskompatibilitaet)
     DnCircle = LateralCircle, // Legacy-Alias (Abwaertskompatibilitaet)
-    Level = 9            // Horizontale Linie → Kreissegment-% (Ablagerung/Wasser/Hindernis)
+    Level = 9,           // Horizontale Linie → Kreissegment-% (Ablagerung/Wasser/Hindernis)
+    Ellipse = 10,        // Ellipse/Kreis fuer Flaechenschaeden (Ecke-zu-Ecke Drag)
+    Freehand = 11        // Freihand-Zeichnung (Polyline aus Mauspfad)
 }
 
 /// <summary>
@@ -68,6 +70,8 @@ public sealed class OverlayGeometry
     public double? DnRatioPercent { get; set; }  // Verhaeltnis zum Haupt-DN in Prozent (LateralCircle)
     public double? FillPercent { get; set; }    // Kreissegment-% fuer Level-Tool (0-100)
     public LevelMode? LevelSubMode { get; set; } // Sub-Modus fuer Level-Tool
+    public double? EllipseRadiusXMm { get; set; }  // Horizontaler Radius in mm (Ellipse-Tool)
+    public double? EllipseRadiusYMm { get; set; }  // Vertikaler Radius in mm (Ellipse-Tool)
 
     // Referenz zum Snapshot-Bild (PNG mit Overlay eingebrannt)
     public string? SnapshotPath { get; set; }
@@ -175,6 +179,28 @@ public sealed class PipeCalibration
         return normalizedPixels * mmPerNormPixel;
     }
 
+    /// <summary>
+    /// Aspect-Ratio-korrigierte Distanz zwischen zwei normierten Punkten.
+    /// Normierte Koordinaten: X=0..1 ueber Bildbreite, Y=0..1 ueber Bildhoehe.
+    /// Bei nicht-quadratischen Bildern muss X mit Aspect (W/H) skaliert werden.
+    /// </summary>
+    /// <param name="a">Startpunkt (normiert).</param>
+    /// <param name="b">Endpunkt (normiert).</param>
+    /// <param name="imageAspect">Seitenverhaeltnis (Breite/Hoehe). 1.0 fuer quadratisch, 1.78 fuer 16:9.</param>
+    public static double AspectCorrectedDistance(NormalizedPoint a, NormalizedPoint b, double imageAspect = 1.0)
+    {
+        double dx = (b.X - a.X) * imageAspect;
+        double dy = b.Y - a.Y;
+        return Math.Sqrt(dx * dx + dy * dy);
+    }
+
+    /// <summary>Aspect-korrigierte normierte Laenge in mm umrechnen.</summary>
+    public double NormToMmAspect(NormalizedPoint a, NormalizedPoint b, double imageAspect = 1.0)
+    {
+        double dist = AspectCorrectedDistance(a, b, imageAspect);
+        return NormToMm(dist);
+    }
+
     /// <summary>Punkt auf dem Frame → Uhrposition (0.0–12.0).</summary>
     public double PointToClockHour(NormalizedPoint point)
     {
@@ -186,6 +212,18 @@ public sealed class PipeCalibration
         if (angleDeg < 0) angleDeg += 360;
         return angleDeg / 30.0; // 360° / 12 Stunden = 30° pro Stunde
     }
+}
+
+/// <summary>
+/// Ergebnis des PhotoMeasurementWindow (PhotoAssistant).
+/// Wird vom VsaCodeExplorerWindow ausgewertet.
+/// </summary>
+public sealed class PhotoMeasurementResult
+{
+    public OverlayGeometry? Geometry { get; set; }
+    public string? OverlayPhotoPath { get; set; }
+    public bool Confirmed { get; set; }
+    public PipeCalibration? UpdatedCalibration { get; set; }
 }
 
 /// <summary>

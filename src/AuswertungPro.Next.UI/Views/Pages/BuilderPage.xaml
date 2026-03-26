@@ -67,9 +67,7 @@
                                    Foreground="{StaticResource TextSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <ComboBox ItemsSource="{Binding ExecutedByFilterOptions}"
-                                  IsEditable="True"
-                                  IsTextSearchEnabled="False"
-                                  Text="{Binding SelectedExecutedByFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                  SelectedItem="{Binding SelectedExecutedByFilter, Mode=TwoWay}"/>
                     </StackPanel>
 
                     <StackPanel Width="150"

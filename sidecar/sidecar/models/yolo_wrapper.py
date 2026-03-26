@@ -164,7 +164,7 @@ def _is_frame_usable(img: Image.Image) -> tuple[bool, str]:
     std_brightness = gray.std()
 
     # Too dark (lens cap, black frame, no signal)
-    if mean_brightness < 15:
+    if mean_brightness < 10:
         return False, "too_dark"
 
     # Too bright (overexposed, white frame)
@@ -172,7 +172,7 @@ def _is_frame_usable(img: Image.Image) -> tuple[bool, str]:
         return False, "too_bright"
 
     # Too uniform (solid color, no texture = likely no pipe content)
-    if std_brightness < 8:
+    if std_brightness < 5:
         return False, "too_uniform"
 
     # Check edge density using Laplacian-like filter for blur detection
@@ -181,7 +181,7 @@ def _is_frame_usable(img: Image.Image) -> tuple[bool, str]:
     edges = laplace(gray)
     edge_var = edges.var()
 
-    if edge_var < 5:
+    if edge_var < 3:
         return False, "too_blurry"
 
     return True, "ok"
@@ -257,3 +257,71 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
         frame_class=frame_class,
         inference_time_ms=round(elapsed_ms, 1),
     )
+
+
+# ── YOLO Classify (Whole-Frame-Klassifikator) ──────────────────────────
+
+_cls_model = None
+_cls_lock = threading.Lock()
+
+
+def _resolve_cls_model_path() -> str | None:
+    """Suche best.pt aus dem YOLO-cls Trainingslauf."""
+    candidates = [
+        Path(settings.models_dir) / "yolo_cls_best.pt",
+        Path("C:/Sewer-StudioKI_3.1/yolo_cls_runs/grundgeruest_v2/weights/best.pt"),
+        Path("C:/Sewer-StudioKI_3.1/yolo_cls_runs/grundgeruest_v1/weights/best.pt"),
+    ]
+    for p in candidates:
+        if p.exists():
+            return str(p)
+    return None
+
+
+def _get_cls_model():
+    """Lazy-load des Classify-Modells (CPU, ~3 MB)."""
+    global _cls_model
+    if _cls_model is not None:
+        return _cls_model
+    with _cls_lock:
+        if _cls_model is not None:
+            return _cls_model
+        path = _resolve_cls_model_path()
+        if path is None:
+            return None
+        from ultralytics import YOLO
+        _cls_model = YOLO(path)
+        _cls_model.to("cpu")  # Leichtgewicht, CPU reicht
+        logger.info("YOLO-cls Modell geladen: %s", path)
+        return _cls_model
+
+
+def classify(image_base64: str, top_k: int = 5) -> list[tuple[str, float]]:
+    """Whole-Frame-Klassifikation: Gibt Top-K Klassen mit Konfidenz zurueck."""
+    model = _get_cls_model()
+    if model is None:
+        return []
+
+    img = decode_image(image_base64)
+
+    t0 = time.perf_counter()
+    results = model.predict(source=np.array(img), verbose=False)
+    elapsed_ms = (time.perf_counter() - t0) * 1000
+
+    if not results or len(results) == 0:
+        return []
+
+    probs = results[0].probs
+    if probs is None:
+        return []
+
+    # Top-K Indizes nach Konfidenz sortiert
+    top_indices = probs.data.topk(min(top_k, len(probs.data))).indices.cpu().tolist()
+    predictions = []
+    for idx in top_indices:
+        name = model.names.get(idx, str(idx))
+        conf = float(probs.data[idx].cpu().item())
+        if conf > 0.01:  # Nur relevante Klassen
+            predictions.append((name, conf, elapsed_ms))
+
+    return predictions

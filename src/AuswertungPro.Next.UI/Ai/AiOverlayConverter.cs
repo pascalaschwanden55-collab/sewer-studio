@@ -162,6 +162,35 @@ public static class AiOverlayConverter
 
     private static AiOverlay? FindingToOverlay(LiveFrameFinding f, PipeCalibration? cal)
     {
+        if (f.BboxX1.HasValue && f.BboxY1.HasValue && f.BboxX2.HasValue && f.BboxY2.HasValue)
+        {
+            var x1 = Math.Clamp(Math.Min(f.BboxX1.Value, f.BboxX2.Value), 0, 1);
+            var y1 = Math.Clamp(Math.Min(f.BboxY1.Value, f.BboxY2.Value), 0, 1);
+            var x2 = Math.Clamp(Math.Max(f.BboxX1.Value, f.BboxX2.Value), 0, 1);
+            var y2 = Math.Clamp(Math.Max(f.BboxY1.Value, f.BboxY2.Value), 0, 1);
+
+            return new AiOverlay
+            {
+                Geometry = new OverlayGeometry
+                {
+                    ToolType = OverlayToolType.Rectangle,
+                    Points = new List<NormalizedPoint>
+                    {
+                        new(x1, y1), new(x2, y1),
+                        new(x2, y2), new(x1, y2)
+                    },
+                    Q1Mm = f.HeightMm,
+                    Q2Mm = f.WidthMm,
+                    ClockFrom = ParseClockHour(f.PositionClock)
+                },
+                Label = f.Label,
+                Confidence = 0.0,
+                Severity = f.Severity,
+                VsaCodeHint = f.VsaCodeHint,
+                Source = AiOverlaySource.Finding
+            };
+        }
+
         // Uhrposition → normierte Position im Bild
         double pipeCenterX = cal?.PipeCenter.X ?? 0.5;
         double pipeCenterY = cal?.PipeCenter.Y ?? 0.5;
@@ -277,8 +306,9 @@ public static class AiOverlayConverter
 
     private static double ParseClockHour(string? clockStr)
     {
-        if (string.IsNullOrWhiteSpace(clockStr)) return 12.0;
-        var match = System.Text.RegularExpressions.Regex.Match(clockStr, @"(\d{1,2})");
+        var normalized = VsaCodeResolver.NormalizeClock(clockStr);
+        if (string.IsNullOrWhiteSpace(normalized)) return 12.0;
+        var match = System.Text.RegularExpressions.Regex.Match(normalized, @"(\d{1,2})");
         if (match.Success && int.TryParse(match.Groups[1].Value, out var h))
             return h == 0 ? 12.0 : Math.Clamp(h, 1, 12);
         return 12.0;

@@ -311,12 +311,12 @@
                                             <!-- Single Clock -->
                                             <StackPanel x:Name="ClockSinglePanel" Visibility="Collapsed">
                                                 <controls:ClockPickerControl x:Name="ClockSingle"
-                                                    Width="140" Height="140" HorizontalAlignment="Left"/>
+                                                    Width="170" Height="170" HorizontalAlignment="Left"/>
                                             </StackPanel>
                                             <!-- Range Clock -->
                                             <StackPanel x:Name="ClockRangePanel" Visibility="Collapsed">
                                                 <controls:ClockRangePickerControl x:Name="ClockRange"
-                                                    Width="140" Height="140" HorizontalAlignment="Left"/>
+                                                    Width="170" Height="170" HorizontalAlignment="Left"/>
                                             </StackPanel>
                                         </StackPanel>
 
@@ -488,6 +488,10 @@
                                                 Style="{StaticResource ToolbarButton}"
                                                 HorizontalAlignment="Stretch" Padding="4,3" Margin="0,3,0,0"
                                                 FontSize="10"/>
+                                        <Button x:Name="BtnMeasureFoto1" Content="&#x2316; Vermessen"
+                                                Style="{StaticResource ToolbarButton}"
+                                                HorizontalAlignment="Stretch" Padding="4,3" Margin="0,2,0,0"
+                                                FontSize="10"/>
                                     </StackPanel>
 
                                     <!-- Foto 2 -->
@@ -507,6 +511,10 @@
                                         <Button x:Name="BtnCaptureFoto2" Content="Aus Video"
                                                 Style="{StaticResource ToolbarButton}"
                                                 HorizontalAlignment="Stretch" Padding="4,3" Margin="0,3,0,0"
+                                                FontSize="10"/>
+                                        <Button x:Name="BtnMeasureFoto2" Content="&#x2316; Vermessen"
+                                                Style="{StaticResource ToolbarButton}"
+                                                HorizontalAlignment="Stretch" Padding="4,3" Margin="0,2,0,0"
                                                 FontSize="10"/>
                                     </StackPanel>
                                 </Grid>
