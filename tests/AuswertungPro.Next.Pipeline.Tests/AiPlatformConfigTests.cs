@@ -45,6 +45,7 @@ public sealed class AiPlatformConfigTests
         env.Set("SEWERSTUDIO_AI_ENABLED", "1");
         env.Set("SEWERSTUDIO_OLLAMA_URL", "http://127.0.0.1:11435");
         env.Set("SEWERSTUDIO_AI_VISION_MODEL", "vision-x");
+        env.Set("SEWERSTUDIO_AI_FALLBACK_VISION_MODEL", "fallback-x");
         env.Set("SEWERSTUDIO_AI_TEXT_MODEL", "text-x");
         env.Set("SEWERSTUDIO_AI_EMBED_MODEL", "embed-x");
         env.Set("SEWERSTUDIO_AI_TIMEOUT_MIN", "42");
@@ -63,6 +64,7 @@ public sealed class AiPlatformConfigTests
         Assert.True(config.Enabled);
         Assert.Equal(new Uri("http://127.0.0.1:11435"), config.OllamaBaseUri);
         Assert.Equal("vision-x", config.VisionModel);
+        Assert.Equal("fallback-x", config.FallbackVisionModel);
         Assert.Equal("text-x", config.TextModel);
         Assert.Equal("embed-x", config.EmbedModel);
         Assert.Equal(TimeSpan.FromMinutes(42), config.OllamaRequestTimeout);
@@ -84,6 +86,7 @@ public sealed class AiPlatformConfigTests
         env.Set("SEWERSTUDIO_AI_ENABLED", "0");
         env.Set("SEWERSTUDIO_OLLAMA_URL", "http://env-host:11434");
         env.Set("SEWERSTUDIO_AI_VISION_MODEL", "env-vision");
+        env.Set("SEWERSTUDIO_AI_FALLBACK_VISION_MODEL", "env-fallback");
         env.Set("SEWERSTUDIO_AI_TEXT_MODEL", "env-text");
         env.Set("SEWERSTUDIO_AI_EMBED_MODEL", "env-embed");
         env.Set("SEWERSTUDIO_AI_TIMEOUT_MIN", "15");
@@ -102,6 +105,7 @@ public sealed class AiPlatformConfigTests
             AiEnabled = true,
             AiOllamaUrl = "http://settings-host:11436",
             AiVisionModel = "settings-vision",
+            AiFallbackVisionModel = "settings-fallback",
             AiTextModel = "settings-text",
             AiEmbedModel = "settings-embed",
             AiOllamaTimeoutMin = 99,
@@ -120,6 +124,7 @@ public sealed class AiPlatformConfigTests
         Assert.True(config.Enabled);
         Assert.Equal(new Uri("http://settings-host:11436"), config.OllamaBaseUri);
         Assert.Equal("settings-vision", config.VisionModel);
+        Assert.Equal("settings-fallback", config.FallbackVisionModel);
         Assert.Equal("settings-text", config.TextModel);
         Assert.Equal("settings-embed", config.EmbedModel);
         Assert.Equal(TimeSpan.FromMinutes(99), config.OllamaRequestTimeout);

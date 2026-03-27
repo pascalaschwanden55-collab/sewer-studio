@@ -99,7 +99,12 @@ User akzeptiert/korrigiert Code
 
 ## Dual-Model Architektur (NEU)
 
-Das System nutzt zwei Modelle gestaffelt ueber den QualityGate-Mechanismus:
+Das System nutzt zwei Modelle gestaffelt ueber den QualityGate-Mechanismus.
+
+**WICHTIG:** Die Dual-Model-Eskalation findet nur in der **Code-Mapping-Phase**
+(FullProtocolGenerationService) statt, NICHT in der initialen Vision-Analyse (Phase 1).
+Phase 1 (VideoFullAnalysisService / MultiModelAnalysisService) nutzt immer das
+primaere VisionModel.
 
 | QualityGate | Modell | VRAM | Aktion |
 |-------------|--------|------|--------|
@@ -107,12 +112,19 @@ Das System nutzt zwei Modelle gestaffelt ueber den QualityGate-Mechanismus:
 | **YELLOW** (>= 0.45) | Qwen3-VL-32B Q4 (Fallback) | ~22 GB | MC Dropout + 32B re-analysiert |
 | **RED** (< 0.45) | Mensch | - | Review Queue (manuelle Pruefung) |
 
-### Ablauf bei Yellow Zone
+### Ablauf bei Yellow Zone (in FullProtocolGenerationService.MapDetectionAsync)
 1. QualityGate ergibt Yellow (Composite 0.45-0.75)
-2. MC Dropout: 3 Passes bei T=[0.1, 0.5, 0.9] → Uncertainty Estimation
-3. Fallback-Modell (32B) re-analysiert den gleichen Befund
+2. MC Dropout mit TextModel: 3 Passes bei T=[0.1, 0.5, 0.9] → Uncertainty Estimation
+3. Fallback-Modell (FallbackVisionModel, default 32B) re-analysiert den gleichen Befund
 4. Wenn Fallback bessere Confidence liefert → ersetzt 8B-Ergebnis
-5. QualityGate wird mit neuem Ergebnis re-evaluiert
+5. KbCodeAgreement wird fuer neuen Code neu berechnet
+6. QualityGate wird mit aktualisierter Evidence re-evaluiert
+
+### Fallback-Aktivierung
+Der Fallback-Client wird nur erstellt wenn:
+- FallbackVisionModel konfiguriert ist (nicht leer)
+- FallbackVisionModel != VisionModel (sonst sinnlos)
+- FallbackVisionModel != TextModel (sonst identisch)
 
 ### VRAM-Budget
 | Komponente | VRAM | Status |

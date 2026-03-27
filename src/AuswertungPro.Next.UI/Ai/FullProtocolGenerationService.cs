@@ -47,9 +47,11 @@ public sealed class FullProtocolGenerationService : IDisposable
         _retrieval = retrieval;
         _qualityGate = qualityGate ?? new QualityGateService();
 
-        // Dual-Model: create fallback client if a different model is configured
+        // Dual-Model: create fallback client if a different fallback model is configured
+        // Compare against TextModel (used for code-mapping) — if fallback differs, enable escalation
         if (!string.IsNullOrWhiteSpace(cfg.FallbackVisionModel)
-            && !string.Equals(cfg.FallbackVisionModel, cfg.TextModel, StringComparison.OrdinalIgnoreCase))
+            && !string.Equals(cfg.FallbackVisionModel, cfg.TextModel, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(cfg.FallbackVisionModel, cfg.VisionModel, StringComparison.OrdinalIgnoreCase))
         {
             _fallbackClient = cfg.CreateOllamaClient(httpClient);
         }
@@ -280,9 +282,13 @@ public sealed class FullProtocolGenerationService : IDisposable
                         warnings.Add($"Yellow-Zone Eskalation: Fallback-Modell {_cfg.FallbackVisionModel} verwendet.");
 
                         // Re-evaluate QualityGate with fallback result
+                        // Recalculate KB agreement since suggestedCode changed
+                        var fallbackKbAgrees = kbExamples.Count > 0
+                            && kbExamples[0].Code.Equals(suggestedCode, StringComparison.OrdinalIgnoreCase);
                         evidence = evidence with
                         {
                             LlmCodeConf = confidence,
+                            KbCodeAgreement = kbExamples.Count > 0 ? fallbackKbAgrees : null,
                             PlausibilityScore = fallbackChecked.Confidence,
                             DamageCategory = suggestedCode
                         };
