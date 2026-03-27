@@ -656,6 +656,9 @@ public partial class PhotoMeasurementWindow : Window
         double normDiam = _calibration.NormalizedDiameter;
         double pipeR = (normDiam / 2.0) * refSize;
 
+        // Guard: Kein negativer/leerer Radius (tritt auf wenn Kalibrierung fehlt oder Zoom=0)
+        if (pipeR <= 0) return;
+
         // Kamerahoehe-Korrektur
         double camRatio = (CameraHeightPercent - 50.0) / 100.0;
         double normCx = _calibration.PipeCenter.X;
