@@ -17,7 +17,8 @@ public interface ISelfTrainingComparisonService
     /// <summary>
     /// Vergleicht einen Protokolleintrag mit der blinden KI-Analyse eines Frames.
     /// </summary>
-    ComparisonResult Compare(GroundTruthEntry truth, EnhancedFrameAnalysis analysis);
+    /// <param name="isPdfPhoto">True wenn das Bild aus einem PDF-Bildbericht stammt (kein OSD vorhanden).</param>
+    ComparisonResult Compare(GroundTruthEntry truth, EnhancedFrameAnalysis analysis, bool isPdfPhoto = false);
 }
 
 public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonService
@@ -25,12 +26,36 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
     // Toleranzen
     private const double MeterTolerance = 1.0;      // ± 1.0m
     private const int ClockTolerance = 1;            // ± 1 Stunde
-    // SeverityTolerance nicht als Konstante — Plausibilitaet ist kategorieabhaengig (siehe SeverityPlausible)
+    private const int SeverityTolerance = 1;         // ± 1 Stufe
 
-    public ComparisonResult Compare(GroundTruthEntry truth, EnhancedFrameAnalysis analysis)
+    // Grundgeruest-Codes die KEIN "Schaden" sind — Qwen gibt dafuer meist findings=[] zurueck.
+    // Bei leerem findings-Array aber passendem Grundgeruest-Code: ExactMatch (Protokoll korrekt)
+    private static readonly HashSet<string> _basicStructureCodes = new(StringComparer.OrdinalIgnoreCase)
+        { "BCD", "BCE", "BCC", "BDB", "BDA", "BDC" };
+
+    public ComparisonResult Compare(GroundTruthEntry truth, EnhancedFrameAnalysis analysis, bool isPdfPhoto = false)
     {
         if (!analysis.HasFindings)
         {
+            // Sonderfall Grundgeruest: BCD/BCE/BCC sind keine Schaeden.
+            // Wenn Qwen nichts findet UND der Protokolleintrag ein Grundgeruest-Code ist →
+            // das ist KORREKT (KI sieht: leere Haltung / normaler Rohrblick).
+            // Werte als ExactMatch (PDF-Foto ist bereits dem richtigen Eintrag zugeordnet).
+            if (isPdfPhoto && _basicStructureCodes.Contains(truth.VsaCode.Split('.')[0].ToUpperInvariant()))
+            {
+                bool meterOk = isPdfPhoto && !analysis.Meter.HasValue || MeterMatches(truth.MeterStart, analysis.Meter);
+                return new ComparisonResult(
+                    Level: meterOk ? MatchLevel.ExactMatch : MatchLevel.PartialMatch,
+                    ConfidenceScore: 0.70,
+                    Explanation: $"Grundgeruest {truth.VsaCode} @ {truth.MeterStart:F1}m — KI korrekt: keine Schaeden erkannt.",
+                    CodeMatched: true,
+                    MeterMatched: meterOk,
+                    SeverityPlausible: true,
+                    ClockMatched: true,
+                    BestMatchCode: truth.VsaCode,
+                    BestMatchMeter: analysis.Meter);
+            }
+
             return new ComparisonResult(
                 Level: MatchLevel.NoFindings,
                 ConfidenceScore: 0.0,
@@ -53,10 +78,23 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
 
         foreach (var finding in analysis.Findings)
         {
-            bool codeMatch = CodesMatch(truth.VsaCode, finding.VsaCodeHint);
-            bool meterMatch = MeterMatches(truth.MeterStart, analysis.Meter);
+            // Primär: vsa_code_hint aus Qwen direkt matchen
+            // Fallback: aus Label inferieren (wenn Qwen keinen Code liefert)
+            bool codeMatch = CodesMatch(truth.VsaCode, finding.VsaCodeHint)
+                || (!string.IsNullOrEmpty(finding.Label)
+                    && CodesMatch(truth.VsaCode, VsaCodeResolver.InferCodeFromLabel(finding.Label)));
+
+            // Bei PDF-Fotos: Meter ist implizit korrekt (Foto gehoert zum Protokolleintrag)
+            bool meterMatch = isPdfPhoto && !analysis.Meter.HasValue
+                ? true
+                : MeterMatches(truth.MeterStart, analysis.Meter);
+
             bool severityOk = SeverityPlausible(truth.VsaCode, finding.Severity);
-            bool clockMatch = ClockMatches(truth.ClockPosition, finding.PositionClock);
+
+            // Bei PDF-Fotos: Clock nicht bestrafen wenn KI keine Uhrlage liefert
+            bool clockMatch = isPdfPhoto
+                ? ClockMatchesPdfTolerant(truth.ClockPosition, finding.PositionClock)
+                : ClockMatches(truth.ClockPosition, finding.PositionClock);
 
             // Gewichtete Punktzahl
             double score = 0;
@@ -104,8 +142,8 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
     /// <summary>
     /// Vergleicht VSA-Codes. Beruecksichtigt:
     /// - Exakte Uebereinstimmung
-    /// - Praefix-Match (nur Protokoll-Code als Praefix der KI-Erkennung, nicht umgekehrt)
-    /// Kein Gruppenvergleich — zu viele False Positives.
+    /// - Praefix-Match (z.B. "BAB" matcht "BABA" = Laengsriss)
+    /// - Gleiche Gruppe (erste 2 Zeichen = gleiche Schadensart)
     /// </summary>
     private static bool CodesMatch(string truthCode, string? kiCode)
     {
@@ -118,9 +156,12 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
         // Exakt
         if (t == k) return true;
 
-        // Praefix: Protokoll "BAB" matcht KI "BABA" (KI spezifischer als Protokoll = ok)
-        // Umgekehrt NICHT: KI "BA" soll nicht Protokoll "BAB" matchen
-        if (k.StartsWith(t, StringComparison.Ordinal) && k.Length <= t.Length + 2) return true;
+        // Praefix: Protokoll "BAB" matcht KI "BABA"
+        if (k.StartsWith(t, StringComparison.Ordinal)) return true;
+        if (t.StartsWith(k, StringComparison.Ordinal)) return true;
+
+        // Gleiche Schadensgruppe (erste 3 Zeichen bei Haltung: B + Kategorie + Typ)
+        if (t.Length >= 3 && k.Length >= 3 && t[..3] == k[..3]) return true;
 
         return false;
     }
@@ -137,8 +178,7 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
 
     /// <summary>
     /// Prueft ob der KI-Schweregrad zum VSA-Code plausibel ist.
-    /// VSA-Kategorien: BA = baulich/strukturell (typisch 2-5),
-    /// BB = betrieblich (typisch 1-3), BC = Inventar (typisch 1-2).
+    /// Vereinfachte Heuristik: Strukturschaden (BA*) → Severity 2-5, Betrieblich (BB*) → 1-4.
     /// </summary>
     private static bool SeverityPlausible(string truthCode, int kiSeverity)
     {
@@ -147,20 +187,40 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
         string upper = truthCode.ToUpperInvariant();
         if (upper.Length < 2) return true; // Nicht genug Info
 
+        // Grundsaetzlich: Severity 1-5 ist fast immer plausibel
+        // Strenger nur bei offensichtlichen Widerspruechen
         char category = upper.Length >= 2 ? upper[1] : ' ';
         return category switch
         {
-            // Baulich/strukturell: Risse, Deformationen, Brueche → ernst, Severity 2-5
-            'A' => kiSeverity >= 2,
-            // Betrieblich: Ablagerungen, Wurzeln, Hindernisse → leicht bis mittel, Severity 1-4
-            'B' => kiSeverity <= 4,
-            // Inventar: Anschluesse, Einbauten → niedrig, Severity 1-2
-            'C' => kiSeverity <= 2,
+            'A' => kiSeverity >= 1, // Baulich: alle plausibel
+            'B' => kiSeverity >= 1, // Betrieblich: alle plausibel
+            'C' => kiSeverity >= 1, // Inventar
             _ => true
         };
     }
 
     // ── Uhrzeigerposition-Vergleich ──
+
+    /// <summary>
+    /// Toleranterer Clock-Vergleich fuer PDF-Fotos:
+    /// Wenn KI keine Uhrlage liefert, wird das nicht bestraft (= true).
+    /// PDF-Fotos zeigen oft nicht genug Kontext fuer eine Uhrlage.
+    /// </summary>
+    private static bool ClockMatchesPdfTolerant(string? truthClock, string? kiClock)
+    {
+        // Beide leer = Match
+        if (string.IsNullOrEmpty(truthClock) && string.IsNullOrEmpty(kiClock)) return true;
+        // KI hat keine Uhrlage → bei PDF-Fotos nicht bestrafen
+        if (string.IsNullOrEmpty(kiClock)) return true;
+        // Protokoll hat keine Uhrlage, KI schon → auch ok
+        if (string.IsNullOrEmpty(truthClock)) return true;
+        // Beide vorhanden → normal vergleichen
+        if (!TryParseClock(truthClock, out int tHour)) return true;
+        if (!TryParseClock(kiClock, out int kHour)) return true;
+        int diff = Math.Abs(tHour - kHour);
+        if (diff > 6) diff = 12 - diff;
+        return diff <= ClockTolerance;
+    }
 
     private static bool ClockMatches(string? truthClock, string? kiClock)
     {

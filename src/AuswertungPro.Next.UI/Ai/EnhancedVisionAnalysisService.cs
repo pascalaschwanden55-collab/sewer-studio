@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai.Pipeline;
+using AuswertungPro.Next.UI.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -31,7 +32,7 @@ public sealed class EnhancedVisionAnalysisService
         "time_in_video": { "type": ["number", "null"], "description": "Zeitstempel im Video in Sekunden" },
         "pipe_material": {
           "type": "string",
-          "enum": ["beton", "steinzeug", "pvc", "pe", "gfk", "stahl", "unbekannt"]
+          "enum": ["beton", "steinzeug", "pvc", "pe", "gfk", "stahl", "mauerwerk", "faserzement", "unbekannt"]
         },
         "pipe_diameter_mm": { "type": ["integer", "null"] },
         "findings": {
@@ -50,7 +51,6 @@ public sealed class EnhancedVisionAnalysisService
               "intrusion_percent": { "type": ["integer", "null"], "description": "Einragungsgrad in %" },
               "cross_section_reduction_percent": { "type": ["integer", "null"], "description": "Querschnittsverringerung in %" },
               "diameter_reduction_mm": { "type": ["integer", "null"], "description": "Durchmesserverringerung in mm" },
-              "bbox": { "type": ["array", "null"], "description": "Bounding Box [x1, y1, x2, y2] normalisiert 0-1, linke obere und rechte untere Ecke der Schadensregion im Bild", "items": { "type": "number" } },
               "notes": { "type": ["string", "null"] }
             },
             "required": ["label", "severity"]
@@ -67,47 +67,50 @@ public sealed class EnhancedVisionAnalysisService
     """).RootElement.Clone();
 
     // Vollständige Schadensklassen nach DIN EN 13508-2 / VSA-DSS
-    // Gruppiert für besseren Prompt, Grundstruktur zuerst
+    // Gruppiert für besseren Prompt
     private static readonly string DamageClassesPrompt = """
-GRUNDSTRUKTUR DER HALTUNG (HÖCHSTE PRIORITÄT — immer erkennen!):
-- BCD = Rohranfang (Schacht sichtbar, Kamera faehrt in das Rohr ein)
-- BCE = Rohrende (Schacht sichtbar am Ende, Kamera erreicht das Rohrende)
-- BCA/BCAEB = Anschluss (seitliche Rohroeffnung in der Kanalwand, rund oder oval, oft eingespitzt)
-- BAHC = Anschluss unvollstaendig eingebunden (Stutzen ragt in den Kanal hinein)
-- BCC = Bogen (Richtungsaenderung des Kanals, Kamera faehrt um eine Kurve)
-- BCC.Y.B = Bogen nach unten (vertikale Richtungsaenderung)
-- BCC.B.Y = Bogen nach rechts/links (horizontale Richtungsaenderung)
+ERKENNBARE SCHADENSKLASSEN mit VSA/EN 13508-2 Codes (VERWENDE DIESE CODES als vsa_code_hint):
 
-STRUKTURELLE SCHÄDEN:
-- BAB = Riss (laengs BAB.A, quer BAB.B, diagonal BAB.C, ringfoermig BAB.D, verzweigt BAB.E)
-- BAC = Bruch (partiell BAC.A, total BAC.B)
-- BAF = Deformation (vertikal BAF.A, horizontal BAF.B)
-- BAH = Versatz (vertikal BAH.A, horizontal BAH.B)
-- BAI = Einragung Stutzen/Anschluss
+BESTANDSAUFNAHME (BC-Gruppe) – Diese Bilder zeigen KEINEN Schaden, aber MÜSSEN erkannt werden:
+- Rohranfang: Blick vom Schacht ins Rohr, Schachtwand/Mauerwerk sichtbar → BCD
+- Rohrende: Blick auf Endschacht, Schacht am Ende → BCE
+- Seitlicher Anschluss: Runde/ovale Öffnung seitlich in Rohrwand → BCA
+- Bogen/Kurve: Rohr biegt ab → BCC
+- Allgemeine Anmerkung → BDB
 
-OBERFLÄCHENSCHÄDEN:
-- BAJ = Ausbrueche/Abplatzungen
-- BBB = Bewuchs/Wurzeln (BBBA = Wurzeleinwuchs)
-- BBA = Inkrustation/Kalkablagerung
+STRUKTURELLE SCHÄDEN (BA-Gruppe):
+- Riss (längs, quer, diagonal, ringförmig, verzweigt) → BAB
+- Bruch (partiell, total) → BAC
+- Einsturz/Kollaps → BAD
+- Deformation (vertikal, horizontal, Ovalität) → BAF
+- Versatz (vertikal, horizontal) → BAH
+- Einragender Stutzen/Anschluss → BAI
+- Loch/Wanddurchdringung → BAG
+- Offene Muffenverbindung → BAE
 
-BETRIEBLICHE STÖRUNGEN:
-- BBC = Ablagerung Sohle (BBCA = Sand, BBCB = Kies, BBCC = verfestigt)
-- BBD = Eindringender Boden
-- BDA = Allgemeinzustand (Fotobeispiel)
+OBERFLÄCHENSCHÄDEN (BA-Gruppe):
+- Korrosion, Ausbrüche, Abplatzungen → BABB (oder BAB wenn unsicher)
 
-ANSCHLÜSSE / VERBINDUNGEN:
-- BCAEA = Anschluss eingespitzt, offen
-- BCAEB = Anschluss eingespitzt, verschlossen
-- BAFAE = Raue Rohrwandung
+BETRIEBLICHE STÖRUNGEN (BB-Gruppe):
+- Inkrustation/Kalkablagerung → BBA
+- Wurzeleinwuchs → BBB
+- Ablagerung (Sand, Schlamm, Kies) → BBC
+- Fremdkörper → BBD
+- Eindringendes Wasser/Infiltration → BBF
 
-SONSTIGES:
-- BDDC = Wasserspiegel/Wasserstand
-- BABBA = Riss laengs (mit Uhrlage und Breite in mm)
-- BABAA = Riss quer
+ANSCHLÜSSE:
+- Undichter/offener Anschluss → BCA
+- Eindringendes Wasser am Anschluss → BCB
+
+WICHTIG: vsa_code_hint MUSS immer ausgefüllt werden wenn ein Befund vorliegt.
+Verwende IMMER die oben angegebenen Codes (BCD, BAB, BBC usw.), keine anderen Kürzel.
 """;
+
 
     private readonly OllamaClient _client;
     private readonly string _model;
+    private FewShotExampleStore? _fewShotStore;
+    private IReadOnlyList<(FewShotExample Example, string Base64)>? _cachedFewShot;
 
     public EnhancedVisionAnalysisService(OllamaClient client, string model)
     {
@@ -115,75 +118,248 @@ SONSTIGES:
         _model = model;
     }
 
-    private static readonly TimeSpan FrameTimeout = TimeSpan.FromSeconds(60);
-
-    public async Task<EnhancedFrameAnalysis> AnalyzeAsync(
-        string framePngBase64,
-        CancellationToken ct = default)
-        => await AnalyzeAsync(framePngBase64, null, ct);
-
     /// <summary>
-    /// Analyse mit Import-Kontext: Bekannte Befunde aus dem Protokoll werden
-    /// als Erwartungshorizont in den Prompt injiziert, damit Qwen passende
-    /// VSA-Codes zuweisen kann statt "???".
+    /// Aktiviert Few-Shot Learning: Beispielbilder werden in den Prompt injiziert.
+    /// Sollte einmal beim Start aufgerufen werden.
     /// </summary>
+    public async Task EnableFewShotAsync(FewShotExampleStore store, CancellationToken ct = default)
+    {
+        _fewShotStore = store;
+        await store.LoadAsync(ct);
+
+        // Maximal 3 Beispiele fuer 7B (Context-Limit), 5 fuer 32B
+        int maxExamples = _model.Contains("7b", StringComparison.OrdinalIgnoreCase) ? 2 : 4;
+        var examples = await store.GetBestExamplesAsync(maxExamples, ct: ct);
+
+        // Bilder vorladen und als Base64 cachen (einmal laden, bei jeder Analyse verwenden)
+        var loaded = new List<(FewShotExample, string)>();
+        foreach (var ex in examples)
+        {
+            var imgBytes = await store.LoadImageAsync(ex, ct);
+            if (imgBytes != null)
+                loaded.Add((ex, Convert.ToBase64String(imgBytes)));
+        }
+
+        _cachedFewShot = loaded;
+
+        System.Diagnostics.Debug.WriteLine(
+            $"[EnhancedVision] Few-Shot aktiviert: {loaded.Count} Beispiele geladen " +
+            $"({string.Join(", ", loaded.Select(l => l.Item1.VsaCode))})");
+    }
+
     public async Task<EnhancedFrameAnalysis> AnalyzeAsync(
         string framePngBase64,
-        IReadOnlyList<(string Code, string Description, double Meter)>? importContext,
         CancellationToken ct = default)
     {
-        var prompt = BuildPrompt(importContext);
+        var messages = BuildMessages(framePngBase64);
 
         EnhancedVisionDto dto;
         try
         {
-            using var frameCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            frameCts.CancelAfter(FrameTimeout);
-
             dto = await _client.ChatStructuredAsync<EnhancedVisionDto>(
                 model: _model,
-                messages:
-                [
-                    new OllamaClient.ChatMessage(
-                        Role: "user",
-                        Content: prompt,
-                        ImagesBase64: [framePngBase64])
-                ],
+                messages: messages,
                 formatSchema: EnhancedVisionSchema,
-                ct: frameCts.Token).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            return EnhancedFrameAnalysis.Empty("Timeout (60s)");
+                ct: ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"[EnhancedVision] KI-Fehler ({_model}): {ex.GetType().Name}: {ex.Message}");
             return EnhancedFrameAnalysis.Empty(ex.Message);
         }
 
         return MapToAnalysis(dto);
     }
 
-    private string BuildPrompt(IReadOnlyList<(string Code, string Description, double Meter)>? importContext = null)
+    /// <summary>
+    /// Analysiert ein Foto aus einem PDF-Bildbericht (KEIN Video-Frame).
+    /// Angepasster Prompt ohne OSD-Erwartung, fokussiert auf Schadenserkennung.
+    /// </summary>
+    public async Task<EnhancedFrameAnalysis> AnalyzePdfPhotoAsync(
+        string framePngBase64,
+        CancellationToken ct = default)
     {
-        var contextSection = BuildImportContextSection(importContext);
+        var messages = new List<OllamaClient.ChatMessage>();
 
+        // Few-Shot Beispiele auch fuer PDF-Fotos nutzen
+        if (_cachedFewShot is { Count: > 0 })
+        {
+            foreach (var (example, b64) in _cachedFewShot)
+            {
+                var exPrompt = $"Analysiere dieses Kanalbild. " +
+                    $"Hinweis: Dieses Bild zeigt {example.Description}" +
+                    (example.ClockPosition != null ? $" bei {example.ClockPosition}" : "") +
+                    $" (VSA-Code: {example.VsaCode}).";
+
+                messages.Add(new OllamaClient.ChatMessage(
+                    Role: "user",
+                    Content: exPrompt,
+                    ImagesBase64: [b64]));
+
+                var exResponse = BuildFewShotResponse(example);
+                messages.Add(new OllamaClient.ChatMessage(
+                    Role: "assistant",
+                    Content: exResponse));
+            }
+        }
+
+        messages.Add(new OllamaClient.ChatMessage(
+            Role: "user",
+            Content: BuildPdfPhotoPrompt(),
+            ImagesBase64: [framePngBase64]));
+
+        EnhancedVisionDto dto;
+        try
+        {
+            dto = await _client.ChatStructuredAsync<EnhancedVisionDto>(
+                model: _model,
+                messages: messages,
+                formatSchema: EnhancedVisionSchema,
+                ct: ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[EnhancedVision] PDF-Foto KI-Fehler ({_model}): {ex.GetType().Name}: {ex.Message}");
+            return EnhancedFrameAnalysis.Empty(ex.Message);
+        }
+
+        return MapToAnalysis(dto);
+    }
+
+    /// <summary>
+    /// Baut die Chat-Messages auf, mit Few-Shot Beispielen falls vorhanden.
+    /// </summary>
+    private IReadOnlyList<OllamaClient.ChatMessage> BuildMessages(string framePngBase64)
+    {
+        var messages = new List<OllamaClient.ChatMessage>();
+
+        // Few-Shot Beispiele als User/Assistant-Paare injizieren
+        if (_cachedFewShot is { Count: > 0 })
+        {
+            foreach (var (example, b64) in _cachedFewShot)
+            {
+                // User zeigt Beispielbild mit Kontext
+                var exPrompt = $"Analysiere dieses Kanalbild. " +
+                    $"Hinweis: Dieses Bild zeigt {example.Description}" +
+                    (example.ClockPosition != null ? $" bei {example.ClockPosition}" : "") +
+                    $" (VSA-Code: {example.VsaCode}).";
+
+                messages.Add(new OllamaClient.ChatMessage(
+                    Role: "user",
+                    Content: exPrompt,
+                    ImagesBase64: [b64]));
+
+                // Assistant antwortet mit korrekter Klassifizierung
+                var exResponse = BuildFewShotResponse(example);
+                messages.Add(new OllamaClient.ChatMessage(
+                    Role: "assistant",
+                    Content: exResponse));
+            }
+        }
+
+        // Eigentliche Analyse-Anfrage
+        messages.Add(new OllamaClient.ChatMessage(
+            Role: "user",
+            Content: BuildPrompt(),
+            ImagesBase64: [framePngBase64]));
+
+        return messages;
+    }
+
+    /// <summary>Baut eine synthetische "korrekte" Assistant-Antwort fuer ein Few-Shot Beispiel.</summary>
+    private static string BuildFewShotResponse(FewShotExample example)
+    {
+        var finding = new Dictionary<string, object?>
+        {
+            ["label"] = example.Description.Length > 60
+                ? example.Description[..60]
+                : example.Description,
+            ["vsa_code_hint"] = example.VsaCode,
+            ["severity"] = EstimateSeverity(example.VsaCode),
+            ["position_clock"] = FormatClock(example.ClockPosition),
+            ["extent_percent"] = (object?)null,
+            ["height_mm"] = (object?)null,
+            ["width_mm"] = (object?)null,
+            ["intrusion_percent"] = (object?)null,
+            ["cross_section_reduction_percent"] = (object?)null,
+            ["diameter_reduction_mm"] = (object?)null,
+            ["notes"] = (object?)null
+        };
+
+        var response = new Dictionary<string, object?>
+        {
+            ["meter"] = example.MeterPosition,
+            ["time_in_video"] = (object?)null,
+            ["pipe_material"] = GuessMaterial(example.Material),
+            ["pipe_diameter_mm"] = (object?)null,
+            ["findings"] = new[] { finding },
+            ["image_quality"] = "gut",
+            ["is_empty_frame"] = false
+        };
+
+        return JsonSerializer.Serialize(response);
+    }
+
+    /// <summary>Schaetzt Schweregrad anhand VSA-Code Praefix.</summary>
+    private static int EstimateSeverity(string code)
+    {
+        if (code.Length < 2) return 2;
+        return code[..2].ToUpperInvariant() switch
+        {
+            "BA" => code.Length >= 3 && code[2] == 'C' ? 4 : 3, // Bruch=4, sonst Riss=3
+            "BB" => 2,  // Betrieblich
+            "BC" => 2,  // Anschluss
+            "BD" => 1,  // Allgemein
+            _ => 2
+        };
+    }
+
+    /// <summary>Konvertiert Material-String in Schema-Enum.</summary>
+    private static string GuessMaterial(string? material)
+    {
+        if (string.IsNullOrEmpty(material)) return "unbekannt";
+        var m = material.ToLowerInvariant();
+        if (m.Contains("beton")) return "beton";
+        if (m.Contains("steinzeug")) return "steinzeug";
+        if (m.Contains("pvc") || m.Contains("kunststoff") || m.Contains("polypropylen") || m.Contains("pe"))
+            return "pvc";
+        if (m.Contains("gfk")) return "gfk";
+        if (m.Contains("stahl")) return "stahl";
+        if (m.Contains("faser")) return "faserzement";
+        return "unbekannt";
+    }
+
+    /// <summary>Formatiert Uhrzeitlage fuer JSON-Antwort.</summary>
+    private static string? FormatClock(string? clock)
+    {
+        if (string.IsNullOrEmpty(clock)) return null;
+        // "12 Uhr" → "12:00", "6 Uhr bis 9 Uhr" → "6:00"
+        var match = System.Text.RegularExpressions.Regex.Match(clock, @"(\d{1,2})");
+        return match.Success ? $"{int.Parse(match.Groups[1].Value)}:00" : null;
+    }
+
+    /// <summary>
+    /// Prompt fuer PDF-Bildbericht-Fotos: kein OSD erwartet, Fokus auf Schadenserkennung.
+    /// </summary>
+    private string BuildPdfPhotoPrompt()
+    {
         return $"""
-Du analysierst einen Frame aus einem Kanalinspektion-Video (TV-Inspektion Abwasserkanal).
+Du analysierst ein Foto aus einem Kanalinspektion-Protokoll (Bildbericht aus PDF).
+Das Foto stammt aus einer TV-Inspektion eines Abwasserkanals.
+WICHTIG: Es gibt KEIN OSD (On-Screen Display) in diesem Bild. Setze meter=null.
 
 AUFGABEN:
-1. Lies den METERSTAND aus dem OSD (On-Screen Display) – typisch unten rechts im Bild als Dezimalzahl (z.B. "2.64", "18.40").
-   IGNORIERE grosse Zahlen im oberen Header (Knotennummern wie 74468, 80872). Meterstand ist IMMER kleiner als 500.
-2. Erkenne das ROHRMATERIAL und den DURCHMESSER falls sichtbar.
-3. Erkenne ALLE sichtbaren Schäden/Anomalien mit Schweregrad 1-5 (1=kaum, 5=sehr schwer).
-4. Gib für jeden Schaden die Uhrzeitlage an (z.B. "12:00" = Scheitel, "6:00" = Sohle).
+1. Erkenne ALLE sichtbaren Schäden/Anomalien mit Schweregrad 1-5 (1=kaum, 5=sehr schwer).
+2. Gib für jeden Schaden den wahrscheinlichsten VSA/EN 13508-2 Code als vsa_code_hint an.
+3. Gib für jeden Schaden die Uhrzeitlage an (z.B. "12:00" = Scheitel/oben, "6:00" = Sohle/unten).
+4. Erkenne das ROHRMATERIAL falls sichtbar.
 5. Beurteile die Bildqualität.
-6. Schätze, wenn erkennbar, Schadensmaße: Höhe (mm), Breite (mm), Einragungsgrad (%), Querschnittsverringerung (%), Durchmesserverringerung (mm).
-7. Gib fuer jeden Schaden den passenden VSA-Code als vsa_code_hint an.
-8. Wenn der exakte Untertyp unklar ist, verwende den passenden HAUPTCODE statt "???".
-   Beispiele: Anschluss -> BCA, Bogen -> BCC, Ablagerung -> BBC.
-{contextSection}
+6. Schätze, wenn erkennbar, Schadensmaße: Höhe (mm), Breite (mm), Ausdehnung (%), Querschnittsverringerung (%).
+
 {DamageClassesPrompt}
 
 SCHWEREGRAD-SKALA (entspricht VSA Zustandsklasse):
@@ -192,76 +368,65 @@ SCHWEREGRAD-SKALA (entspricht VSA Zustandsklasse):
 3 = Mittlerer Schaden, Sanierung mittelfristig
 4 = Schwerer Schaden, Sanierung kurzfristig
 5 = Kritischer Schaden, Sofortmassnahme
-9. Gib fuer jeden Schaden eine bbox an: [x1, y1, x2, y2] normalisiert (0.0=links/oben, 1.0=rechts/unten).
-   bbox = Region des Schadens IM BILD, nicht die Rohruhr-Position.
+
+TYPISCHE SCHADENSBILDER die du in Kanalfotos siehst:
+- Rohranfang (BCD): Blick vom Schacht ins Rohr, Schachtwand sichtbar
+- Rohrende (BCE): Blick auf Endschacht, Licht am Ende
+- Seitlicher Anschluss (BCA): Runde/ovale Öffnung in der Rohrwand
+- Riss (BAB): Linienförmige Unterbrechung der Rohrwand
+- Wurzeleinwuchs (BBB): Wurzeln die in das Rohr hineinwachsen
+- Ablagerung (BBC): Material auf der Rohrsohle
+- Versatz (BAH): Verschiebung an einer Rohrverbindung
+- Korrosion/Inkrustation (BBA): Verfärbungen, Ablagerungen an Rohrwand
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON gemäß Schema.
 Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
+Wenn du einen Schaden siehst, gib IMMER mindestens einen Finding-Eintrag zurück.
 """;
     }
 
-    /// <summary>
-    /// Baut den Import-Kontext-Abschnitt: Bekannte Befunde aus dem Inspektionsprotokoll
-    /// als Erwartungshorizont fuer die KI-Analyse.
-    /// </summary>
-    private static string BuildImportContextSection(
-        IReadOnlyList<(string Code, string Description, double Meter)>? importContext)
+    private string BuildPrompt()
     {
-        if (importContext is null || importContext.Count == 0)
-            return "";
+        return $"""
+Du analysierst einen Frame aus einem Kanalinspektion-Video (TV-Inspektion Abwasserkanal).
 
-        var sb = new StringBuilder();
-        sb.AppendLine();
-        sb.AppendLine("BEKANNTE BEFUNDE AUS DEM INSPEKTIONSPROTOKOLL (Erwartungshorizont):");
-        sb.AppendLine("Diese Schaeden wurden in dieser Haltung bereits dokumentiert.");
-        sb.AppendLine("Verwende bevorzugt diese VSA-Codes wenn die visuellen Anzeichen passen:");
+AUFGABEN:
+1. Lies den METERSTAND aus dem OSD (On-Screen Display) – typisch oben oder unten im Bild (z.B. "18.40 m").
+2. Erkenne das ROHRMATERIAL und den DURCHMESSER falls sichtbar.
+3. Erkenne ALLE sichtbaren Schäden/Anomalien mit Schweregrad 1-5 (1=kaum, 5=sehr schwer).
+4. Gib für jeden Schaden die Uhrzeitlage an (z.B. "12:00" = Scheitel, "6:00" = Sohle).
+5. Beurteile die Bildqualität.
+6. Schätze, wenn erkennbar, Schadensmaße: Höhe (mm), Breite (mm), Einragungsgrad (%), Querschnittsverringerung (%), Durchmesserverringerung (mm).
 
-        // Deduplizierung: gleicher Code nur einmal zeigen
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (code, desc, meter) in importContext)
-        {
-            if (string.IsNullOrWhiteSpace(code) || !seen.Add(code))
-                continue;
-            var meterInfo = meter > 0 ? $" @ {meter:F1}m" : "";
-            sb.AppendLine($"  - {code}: {desc}{meterInfo}");
-        }
+{DamageClassesPrompt}
 
-        sb.AppendLine();
-        sb.AppendLine("WICHTIG: Wenn du einen Schaden erkennst der zu einem dieser Codes passt,");
-        sb.AppendLine("verwende EXAKT diesen Code als vsa_code_hint (nicht erfinden, nicht ??? verwenden).");
-        return sb.ToString();
+SCHWEREGRAD-SKALA (entspricht VSA Zustandsklasse):
+1 = Optische Auffälligkeit, kein Handlungsbedarf
+2 = Leichter Schaden, Beobachtung empfohlen
+3 = Mittlerer Schaden, Sanierung mittelfristig
+4 = Schwerer Schaden, Sanierung kurzfristig
+5 = Kritischer Schaden, Sofortmassnahme
+Antworte AUSSCHLIESSLICH mit gültigem JSON gemäß Schema.
+Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
+""";
     }
 
     private static EnhancedFrameAnalysis MapToAnalysis(EnhancedVisionDto dto)
     {
         var findings = (dto.Findings ?? Array.Empty<EnhancedFindingDto>())
             .Where(f => !string.IsNullOrWhiteSpace(f.Label))
-            .Select(f =>
-            {
-                // BBox parsen: [x1, y1, x2, y2] normalisiert
-                double? bx1 = null, by1 = null, bx2 = null, by2 = null;
-                if (f.Bbox is { Count: >= 4 })
-                {
-                    bx1 = Math.Clamp(f.Bbox[0], 0, 1);
-                    by1 = Math.Clamp(f.Bbox[1], 0, 1);
-                    bx2 = Math.Clamp(f.Bbox[2], 0, 1);
-                    by2 = Math.Clamp(f.Bbox[3], 0, 1);
-                }
-
-                return new EnhancedFinding(
-                    Label: f.Label.Trim(),
-                    VsaCodeHint: f.VsaCodeHint?.Trim(),
-                    Severity: Math.Clamp(f.Severity, 1, 5),
-                    PositionClock: f.PositionClock?.Trim(),
-                    ExtentPercent: f.ExtentPercent,
-                    HeightMm: f.HeightMm,
-                    WidthMm: f.WidthMm,
-                    IntrusionPercent: f.IntrusionPercent,
-                    CrossSectionReductionPercent: f.CrossSectionReductionPercent,
-                    DiameterReductionMm: f.DiameterReductionMm,
-                    BboxX1: bx1, BboxY1: by1, BboxX2: bx2, BboxY2: by2,
-                    Notes: f.Notes?.Trim());
-            })
+            .Select(f => new EnhancedFinding(
+                Label: f.Label.Trim(),
+                VsaCodeHint: f.VsaCodeHint?.Trim(),
+                Severity: Math.Clamp(f.Severity, 1, 5),
+                PositionClock: f.PositionClock?.Trim(),
+                ExtentPercent: f.ExtentPercent,
+                HeightMm: f.HeightMm,
+                WidthMm: f.WidthMm,
+                IntrusionPercent: f.IntrusionPercent,
+                CrossSectionReductionPercent: f.CrossSectionReductionPercent,
+                DiameterReductionMm: f.DiameterReductionMm,
+                Notes: f.Notes?.Trim()))
             .ToList();
 
         return new EnhancedFrameAnalysis(
@@ -282,18 +447,14 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         string framePngBase64,
         MultiModelFrameResult multiModelContext,
         int pipeDiameterMm = 300,
-        CancellationToken ct = default,
-        (string Code, string Description, double Meter, double Confidence)? previousFinding = null)
+        CancellationToken ct = default)
     {
-        var contextPrompt = BuildContextPrompt(multiModelContext, pipeDiameterMm, previousFinding);
+        var contextPrompt = BuildContextPrompt(multiModelContext, pipeDiameterMm);
         var prompt = contextPrompt + "\n\n" + BuildPrompt();
 
         EnhancedVisionDto dto;
         try
         {
-            using var frameCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            frameCts.CancelAfter(FrameTimeout);
-
             dto = await _client.ChatStructuredAsync<EnhancedVisionDto>(
                 model: _model,
                 messages:
@@ -304,11 +465,7 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
                         ImagesBase64: [framePngBase64])
                 ],
                 formatSchema: EnhancedVisionSchema,
-                ct: frameCts.Token).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            return EnhancedFrameAnalysis.Empty("Timeout (60s)");
+                ct: ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
@@ -319,20 +476,9 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         return MapToAnalysis(dto);
     }
 
-    private static string BuildContextPrompt(MultiModelFrameResult ctx, int pipeDiameterMm,
-        (string Code, string Description, double Meter, double Confidence)? previousFinding = null)
+    private static string BuildContextPrompt(MultiModelFrameResult ctx, int pipeDiameterMm)
     {
         var sb = new StringBuilder();
-
-        // Vorheriger Befund fuer temporale Kohaerenz
-        if (previousFinding is var (prevCode, prevDesc, prevMeter, prevConf))
-        {
-            sb.AppendLine("VORHERIGER BEFUND (Kontext aus dem vorherigen Analyseabschnitt):");
-            sb.AppendLine($"  Bei {prevMeter:F2}m wurde '{prevCode}' ({prevDesc}) vermutet (Konfidenz: {prevConf:F0}%).");
-            sb.AppendLine("  Pruefe ob das aktuelle Bild dasselbe Objekt zeigt oder einen neuen/anderen Befund.");
-            sb.AppendLine();
-        }
-
         sb.AppendLine("KONTEXT AUS VORHERIGER ANALYSE (Computer Vision Modelle):");
         sb.AppendLine($"- Bild: {ctx.ImageWidth}x{ctx.ImageHeight} px");
         sb.AppendLine($"- Rohrdurchmesser: DN{pipeDiameterMm}");
@@ -391,7 +537,6 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         int? IntrusionPercent,
         int? CrossSectionReductionPercent,
         int? DiameterReductionMm,
-        IReadOnlyList<double>? Bbox,
         string? Notes);
 }
 
@@ -424,9 +569,12 @@ public sealed record EnhancedFinding(
     int? IntrusionPercent,
     int? CrossSectionReductionPercent,
     int? DiameterReductionMm,
-    double? BboxX1,       // normalisiert 0-1
-    double? BboxY1,
-    double? BboxX2,
-    double? BboxY2,
-    string? Notes
+    string? Notes,
+    // BBox normiert (0.0–1.0) — aus DINO/SAM Pipeline
+    double? BboxX1Norm = null,
+    double? BboxY1Norm = null,
+    double? BboxX2Norm = null,
+    double? BboxY2Norm = null,
+    double? CentroidXNorm = null,
+    double? CentroidYNorm = null
 );
