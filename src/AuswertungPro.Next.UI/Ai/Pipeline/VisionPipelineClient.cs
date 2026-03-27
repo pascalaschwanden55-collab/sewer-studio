@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -86,6 +88,58 @@ public sealed class VisionPipelineClient
     public async Task<TrainingExportResponseDto> ExportTrainingAsync(TrainingExportRequestDto request, CancellationToken ct = default)
     {
         return await PostAsync<TrainingExportRequestDto, TrainingExportResponseDto>("/training/export-yolo", request, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// NVDEC + YOLO Video-Pipeline: Dekodiert Video auf dem Sidecar-Server und
+    /// liefert YOLO-Ergebnisse als NDJSON-Stream.
+    /// Relevante Frames enthalten image_base64 fuer nachgelagerte DINO/SAM/Qwen-Analyse.
+    /// </summary>
+    public async IAsyncEnumerable<VideoFrameStreamResult> ProcessVideoStreamAsync(
+        VideoProcessRequest request,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var json = JsonSerializer.Serialize(request, JsonOpts);
+        using var req = new HttpRequestMessage(HttpMethod.Post, BuildUri("/process/video"))
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
+
+        // HttpCompletionOption.ResponseHeadersRead ermoeglicht streaming ohne vollstaendiges Puffern
+        using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct)
+            .ConfigureAwait(false);
+
+        if (!resp.IsSuccessStatusCode)
+        {
+            var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            throw new HttpRequestException(
+                $"Sidecar /process/video returned {(int)resp.StatusCode}: {body}");
+        }
+
+        await using var stream = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+        using var reader = new System.IO.StreamReader(stream);
+
+        // ReadLineAsync gibt null zurueck wenn der Stream endet (CA2024: EndOfStream nicht verwenden)
+        while (!ct.IsCancellationRequested)
+        {
+            var line = await reader.ReadLineAsync(ct).ConfigureAwait(false);
+            if (line is null)
+                break;  // Stream-Ende
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+
+            var result = JsonSerializer.Deserialize<VideoFrameStreamResult>(line, JsonOpts);
+            if (result is not null)
+                yield return result;
+        }
+    }
+
+    /// <summary>
+    /// Video Super Resolution: Skaliert einen Frame auf target_height hoch.
+    /// </summary>
+    public async Task<EnhanceResponse> EnhanceAsync(EnhanceRequest request, CancellationToken ct = default)
+    {
+        return await PostAsync<EnhanceRequest, EnhanceResponse>("/enhance", request, ct).ConfigureAwait(false);
     }
 
     // ── Internal ──────────────────────────────────────────────────────────

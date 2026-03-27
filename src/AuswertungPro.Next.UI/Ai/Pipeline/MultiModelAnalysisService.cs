@@ -324,10 +324,10 @@ public sealed class MultiModelAnalysisService
                     IntrusionPercent: q.IntrusionPercent,
                     CrossSectionReductionPercent: q.CrossSectionReductionPercent,
                     DiameterReductionMm: null,
-                    BboxX1: bbox.X1,
-                    BboxY1: bbox.Y1,
-                    BboxX2: bbox.X2,
-                    BboxY2: bbox.Y2,
+                    BboxX1Norm: bbox.X1,
+                    BboxY1Norm: bbox.Y1,
+                    BboxX2Norm: bbox.X2,
+                    BboxY2Norm: bbox.Y2,
                     Notes: $"DINO conf={q.Confidence:F2}"
                 ));
             }
@@ -370,8 +370,7 @@ public sealed class MultiModelAnalysisService
                     var prevCtx = _lastFinding is var (pc, pd, pm, pconf) && Math.Abs(meter - pm) < 1.0
                         ? _lastFinding : null;
                     var qwenResult = await _qwenVision.AnalyzeWithContextAsync(
-                        frameBase64, multiModelContext, pipeDiameterMm, qwenCts.Token,
-                        previousFinding: prevCtx).ConfigureAwait(false);
+                        frameBase64, multiModelContext, pipeDiameterMm, qwenCts.Token).ConfigureAwait(false);
 
                     // OSD-Meterstand IMMER uebernehmen (auch ohne Findings)
                     if (qwenResult.Meter.HasValue)
@@ -484,6 +483,337 @@ public sealed class MultiModelAnalysisService
             detections.OrderBy(d => d.MeterStart).ToList(), null, summary);
     }
 
+    // ── NVDEC Dual-Path ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// NVDEC-beschleunigter Analysepfad: Sidecar dekodiert + YOLO in einem Schritt.
+    /// Spart den PNG→Base64→HTTP-Overhead fuer 80-90% der Frames (irrelevante werden nicht uebertragen).
+    /// Fuer relevante Frames: DINO/SAM/Qwen laufen normal in C# weiter.
+    ///
+    /// Voraussetzung: Sidecar meldet nvdec_available=true oder software-Fallback.
+    /// Aufruf: Nur wenn /health → nvdec.nvdec_available=true oder generell als schnellere Alternative.
+    /// </summary>
+    public async Task<VideoAnalysisResult> AnalyzeWithNvdecAsync(
+        string videoPath,
+        IProgress<VideoAnalysisProgress>? progress = null,
+        bool useVsr = false,
+        CancellationToken ct = default)
+    {
+        videoPath = NormalizePath(videoPath);
+        if (!File.Exists(videoPath))
+            return VideoAnalysisResult.Failed($"Video nicht gefunden: {videoPath}");
+
+        progress?.Report(new VideoAnalysisProgress(0, 0, "NVDEC-Pipeline: Stream wird gestartet..."));
+
+        var detections = new List<RawVideoDetection>();
+        var active = new Dictionary<string, ActiveFindingState>(StringComparer.OrdinalIgnoreCase);
+        int frameIndex = 0;
+        int skippedFrames = 0;
+        double lastMeter = 0;
+        double duration = 0;
+        int totalFrames = 0;
+
+        int pipeDiameterMm = _config.PipeDiameterMmOverride ?? 300;
+
+        var request = new VideoProcessRequest(
+            VideoPath: videoPath,
+            StepSeconds: FrameStepSeconds,
+            Confidence: _config.YoloConfidence,
+            Enhance: useVsr,
+            EnhanceTargetHeight: 1080,
+            MaxWidth: 1280
+        );
+
+        var telemetry = new PipelineTelemetry();
+
+        await foreach (var item in _client.ProcessVideoStreamAsync(request, ct).ConfigureAwait(false))
+        {
+            ct.ThrowIfCancellationRequested();
+
+            // ── Header: Metadaten empfangen ──
+            if (item.Type == "header")
+            {
+                duration = item.DurationSec ?? 0;
+                totalFrames = item.TotalFramesEstimate ?? 0;
+                progress?.Report(new VideoAnalysisProgress(0, totalFrames,
+                    $"NVDEC-Pipeline: {totalFrames} Frames, DN{pipeDiameterMm}, " +
+                    $"Backend: {(item.NvdecAvailable == true ? "NVDEC" : "Software")}"));
+                continue;
+            }
+
+            // ── Footer: Stream-Ende ──
+            if (item.Type == "footer")
+            {
+                _logger.LogInformation("NVDEC-Stream beendet: {Frames} Frames verarbeitet", item.FramesProcessed);
+                continue;
+            }
+
+            // ── Fehler ──
+            if (item.Type == "error" || item.Error is not null)
+            {
+                _logger.LogWarning("NVDEC-Stream Fehler @ Frame {Frame}: {Error}", item.FrameIndex, item.Error);
+                continue;
+            }
+
+            // ── Frame ──
+            if (item.Type != "frame" || item.TimestampSec is null)
+                continue;
+
+            var frameSw = Stopwatch.StartNew();
+            frameIndex++;
+            double t = item.TimestampSec.Value;
+            long yoloMs = (long)(item.YoloMs ?? 0);
+
+            if (item.IsRelevant != true)
+            {
+                skippedFrames++;
+                progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                    $"Frame {frameIndex}/{totalFrames} – {item.FrameClass ?? "irrelevant"} (NVDEC)"));
+                telemetry.RecordFrame(new FrameTiming(frameIndex, t, 0, yoloMs, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                AdvanceAll(active, detections, DedupWindowFrames);
+                continue;
+            }
+
+            // Relevanter Frame: image_base64 vorhanden → DINO/SAM/Qwen
+            var frameBase64 = item.ImageBase64;
+            if (string.IsNullOrEmpty(frameBase64))
+            {
+                _logger.LogWarning("Frame {Frame}: is_relevant=true aber kein image_base64", frameIndex);
+                AdvanceAll(active, detections, DedupWindowFrames);
+                continue;
+            }
+
+            // Fuer frameBytes (Preview): nur bei Bedarf dekodieren
+            byte[]? frameBytes = null;
+
+            // ── YOLO-Ergebnis aus Stream wiederverwenden ──
+            var yoloResult = new YoloResponse(
+                IsRelevant: true,
+                Detections: item.Detections ?? Array.Empty<YoloDetectionDto>(),
+                FrameClass: item.FrameClass ?? "relevant",
+                InferenceTimeMs: item.YoloMs ?? 0
+            );
+
+            // ── Telemetrie-Bypass-Logik (gleich wie FFmpeg-Pfad) ──
+            double estimatedMeter = EstimateMeter(t, duration > 0 ? duration : 300, ref lastMeter);
+            bool isAfterOsd = t > 20.0;
+            bool isBcdZone = isAfterOsd && estimatedMeter < 1.5 && frameIndex <= 10;
+            bool isBceZone = duration > 10 && t > (duration - FrameStepSeconds * 2);
+
+            // Frame als Preview-PNG dekodieren (nur fuer relevante Frames)
+            try
+            {
+                frameBytes = Convert.FromBase64String(frameBase64);
+            }
+            catch { /* preview optional */ }
+
+            progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                $"Frame {frameIndex}/{totalFrames} – DINO Detection (NVDEC)...",
+                FramePreviewPng: frameBytes));
+
+            // ── Step 2: Grounding DINO ──
+            var phaseSw = Stopwatch.StartNew();
+            DinoResponse dinoResult;
+            try
+            {
+                dinoResult = await _client.DetectDinoAsync(
+                    new DinoRequest(
+                        frameBase64,
+                        null,
+                        _config.DinoBoxThreshold,
+                        _config.DinoTextThreshold), ct).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Frame {Frame}: DINO detection failed (NVDEC-Pfad)", frameIndex);
+                telemetry.RecordFrame(new FrameTiming(frameIndex, t, 0, yoloMs, phaseSw.ElapsedMilliseconds, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                AdvanceAll(active, detections, DedupWindowFrames);
+                continue;
+            }
+            var dinoMs = phaseSw.ElapsedMilliseconds;
+
+            if (dinoResult.Detections.Count == 0)
+            {
+                telemetry.RecordFrame(new FrameTiming(frameIndex, t, 0, yoloMs, dinoMs, 0, 0, frameSw.ElapsedMilliseconds, Skipped: false));
+                AdvanceAll(active, detections, DedupWindowFrames);
+                continue;
+            }
+
+            // ── Step 3: SAM Segmentation ──
+            progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                $"Frame {frameIndex}/{totalFrames} – SAM Segmentation ({dinoResult.Detections.Count} Boxes, NVDEC)...",
+                FramePreviewPng: frameBytes));
+
+            var samBoxes = dinoResult.Detections
+                .Select(d => new SamBoundingBox(d.X1, d.Y1, d.X2, d.Y2, d.Label, d.Confidence))
+                .ToList();
+
+            phaseSw.Restart();
+            SamResponse samResult;
+            try
+            {
+                samResult = await _client.SegmentSamAsync(
+                    new SamRequest(frameBase64, samBoxes, pipeDiameterMm), ct).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Frame {Frame}: SAM segmentation failed (NVDEC-Pfad)", frameIndex);
+                telemetry.RecordFrame(new FrameTiming(frameIndex, t, 0, yoloMs, dinoMs, phaseSw.ElapsedMilliseconds, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                AdvanceAll(active, detections, DedupWindowFrames);
+                continue;
+            }
+            var samMs = phaseSw.ElapsedMilliseconds;
+
+            // ── Step 4: Quantification ──
+            var quantified = MaskQuantificationService.QuantifyAll(samResult, pipeDiameterMm);
+            var meter = EstimateMeter(t, duration > 0 ? duration : 300, ref lastMeter);
+
+            var maxDinoConf = dinoResult.Detections.Count > 0
+                ? dinoResult.Detections.Max(d => d.Confidence) : 0.0;
+
+            var findings = new List<EnhancedFinding>(quantified.Count);
+            for (var i = 0; i < quantified.Count; i++)
+            {
+                var q = quantified[i];
+                if (string.IsNullOrWhiteSpace(q.Label))
+                    continue;
+
+                var bbox = i < samResult.Masks.Count
+                    ? GetNormalizedBbox(samResult.Masks[i], samResult.ImageWidth, samResult.ImageHeight)
+                    : default;
+                findings.Add(new EnhancedFinding(
+                    Label: q.Label,
+                    VsaCodeHint: VsaCodeResolver.InferCodeFromLabel(q.Label),
+                    Severity: EstimateSeverity(q),
+                    PositionClock: NormalizeClockPosition(q.ClockPosition),
+                    ExtentPercent: q.ExtentPercent,
+                    HeightMm: q.HeightMm,
+                    WidthMm: q.WidthMm,
+                    IntrusionPercent: q.IntrusionPercent,
+                    CrossSectionReductionPercent: q.CrossSectionReductionPercent,
+                    DiameterReductionMm: null,
+                    BboxX1Norm: bbox.X1,
+                    BboxY1Norm: bbox.Y1,
+                    BboxX2Norm: bbox.X2,
+                    BboxY2Norm: bbox.Y2,
+                    Notes: $"NVDEC/DINO conf={q.Confidence:F2}"
+                ));
+            }
+
+            var frameEvidence = new QualityGate.EvidenceVector(
+                YoloConf: 1.0,
+                DinoConf: maxDinoConf,
+                SamMaskStability: null,
+                QwenVisionConf: null,
+                FrameCount: 1
+            );
+
+            // ── Step 5: Qwen VSA-Code enrichment (optional) ──
+            long qwenMs = 0;
+            if (_qwenVision is not null && findings.Count > 0)
+            {
+                progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                    $"Frame {frameIndex}/{totalFrames} – Qwen VSA-Code-Mapping (NVDEC)...",
+                    FramePreviewPng: frameBytes));
+
+                phaseSw.Restart();
+                try
+                {
+                    var multiModelContext = new MultiModelFrameResult(
+                        TimestampSec: t,
+                        Meter: meter,
+                        IsRelevant: true,
+                        DinoDetections: dinoResult.Detections,
+                        SamMasks: samResult.Masks,
+                        ImageWidth: samResult.ImageWidth,
+                        ImageHeight: samResult.ImageHeight,
+                        YoloTimeMs: item.YoloMs ?? 0,
+                        DinoTimeMs: dinoResult.InferenceTimeMs,
+                        SamTimeMs: samResult.InferenceTimeMs);
+
+                    using var qwenCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    qwenCts.CancelAfter(QwenFrameTimeout);
+
+                    var qwenResult = await _qwenVision.AnalyzeWithContextAsync(
+                        frameBase64, multiModelContext, pipeDiameterMm, qwenCts.Token).ConfigureAwait(false);
+
+                    if (qwenResult.Meter.HasValue)
+                    {
+                        meter = qwenResult.Meter.Value;
+                        lastMeter = meter;
+                    }
+
+                    if (string.Equals(qwenResult.ImageQuality, "schlecht", StringComparison.OrdinalIgnoreCase))
+                        findings.Clear();
+
+                    if (qwenResult.HasFindings)
+                    {
+                        foreach (var qf in qwenResult.Findings)
+                        {
+                            var match = findings.FirstOrDefault(f =>
+                                f.Label.Equals(qf.Label, StringComparison.OrdinalIgnoreCase) ||
+                                qf.Label.Contains(f.Label, StringComparison.OrdinalIgnoreCase) ||
+                                f.Label.Contains(qf.Label, StringComparison.OrdinalIgnoreCase));
+
+                            if (match is not null && !string.IsNullOrWhiteSpace(qf.VsaCodeHint))
+                            {
+                                var idx = findings.IndexOf(match);
+                                findings[idx] = match with { VsaCodeHint = qf.VsaCodeHint };
+                            }
+                        }
+                    }
+                }
+                catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+                {
+                    _logger.LogWarning("Frame {Frame}: Qwen Timeout (NVDEC-Pfad)", frameIndex);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Frame {Frame}: Qwen fehlgeschlagen (NVDEC-Pfad)", frameIndex);
+                }
+                qwenMs = phaseSw.ElapsedMilliseconds;
+            }
+
+            telemetry.RecordFrame(new FrameTiming(frameIndex, t, 0, yoloMs, dinoMs, samMs, qwenMs, frameSw.ElapsedMilliseconds, Skipped: false));
+
+            var liveFindings = findings.Select(f => new LiveFrameFinding(
+                Label: f.Label,
+                Severity: f.Severity,
+                PositionClock: f.PositionClock,
+                ExtentPercent: f.ExtentPercent,
+                VsaCodeHint: f.VsaCodeHint,
+                HeightMm: f.HeightMm,
+                WidthMm: f.WidthMm,
+                IntrusionPercent: f.IntrusionPercent,
+                CrossSectionReductionPercent: f.CrossSectionReductionPercent,
+                DiameterReductionMm: f.DiameterReductionMm
+            )).ToList();
+
+            UpdateActive(active, findings, meter, detections, frameEvidence);
+
+            progress?.Report(new VideoAnalysisProgress(
+                frameIndex, totalFrames,
+                $"Frame {frameIndex}/{totalFrames} @ {meter:0.0}m – {findings.Count} Befunde (NVDEC)",
+                FramePreviewPng: frameBytes,
+                LiveFindings: liveFindings));
+        }
+
+        // Verbleibende aktive Findings abschliessen
+        foreach (var a in active.Values)
+            detections.Add(a.ToDetection());
+
+        _logger.LogInformation(
+            "NVDEC-Pipeline fertig: {Detections} Detektionen, {Skipped}/{Total} Frames uebersprungen, {Duration:F1}s Video",
+            detections.Count, skippedFrames, frameIndex, duration);
+
+        progress?.Report(new VideoAnalysisProgress(totalFrames, totalFrames,
+            $"NVDEC-Pipeline fertig – {detections.Count} Schäden, {skippedFrames} Frames übersprungen."));
+
+        var summary = telemetry.GetSummary();
+        return new VideoAnalysisResult(videoPath, duration, frameIndex,
+            detections.OrderBy(d => d.MeterStart).ToList(), null, summary);
+    }
+
     // ── Conversion helper ──────────────────────────────────────────────
 
     /// <summary>
@@ -523,10 +853,10 @@ public sealed class MultiModelAnalysisService
                 IntrusionPercent: q.IntrusionPercent,
                 CrossSectionReductionPercent: q.CrossSectionReductionPercent,
                 DiameterReductionMm: null,
-                BboxX1: bbox.X1,
-                BboxY1: bbox.Y1,
-                BboxX2: bbox.X2,
-                BboxY2: bbox.Y2,
+                BboxX1Norm: bbox.X1,
+                BboxY1Norm: bbox.Y1,
+                BboxX2Norm: bbox.X2,
+                BboxY2Norm: bbox.Y2,
                 Notes: null
             ));
         }

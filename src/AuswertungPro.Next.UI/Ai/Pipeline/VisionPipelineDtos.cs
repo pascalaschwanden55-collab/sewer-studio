@@ -6,9 +6,11 @@ namespace AuswertungPro.Next.UI.Ai.Pipeline;
 // ── Health ─────────────────────────────────────────────────────────────────
 
 public sealed record SidecarHealthResponse(
-    [property: JsonPropertyName("status")] string Status,
-    [property: JsonPropertyName("version")] string Version,
-    [property: JsonPropertyName("gpu")] GpuStatus? Gpu
+    [property: JsonPropertyName("status")]  string      Status,
+    [property: JsonPropertyName("version")] string      Version,
+    [property: JsonPropertyName("gpu")]     GpuStatus?  Gpu,
+    [property: JsonPropertyName("nvdec")]   NvdecStatus? Nvdec,
+    [property: JsonPropertyName("vsr")]     VsrStatus?   Vsr
 );
 
 public sealed record GpuStatus(
@@ -145,6 +147,74 @@ public sealed record TrainingExportResponseDto(
     [property: JsonPropertyName("val_count")] int ValCount,
     [property: JsonPropertyName("classes_used")] IReadOnlyList<string> ClassesUsed,
     [property: JsonPropertyName("data_yaml_path")] string DataYamlPath
+);
+
+// ── NVDEC / Video-Processing ────────────────────────────────────────────────
+
+public sealed record VideoProcessRequest(
+    [property: JsonPropertyName("video_path")]            string VideoPath,
+    [property: JsonPropertyName("step_seconds")]          double StepSeconds,
+    [property: JsonPropertyName("confidence")]            double Confidence,
+    [property: JsonPropertyName("enhance")]               bool Enhance = false,
+    [property: JsonPropertyName("enhance_target_height")] int EnhanceTargetHeight = 1080,
+    [property: JsonPropertyName("max_width")]             int MaxWidth = 1280
+);
+
+/// <summary>Eine NDJSON-Zeile aus dem /process/video Stream.</summary>
+public sealed record VideoFrameStreamResult(
+    [property: JsonPropertyName("type")]          string Type,
+    // Header-Felder
+    [property: JsonPropertyName("duration_sec")]          double? DurationSec,
+    [property: JsonPropertyName("total_frames_estimate")] int?    TotalFramesEstimate,
+    [property: JsonPropertyName("nvdec_available")]       bool?   NvdecAvailable,
+    // Frame-Felder
+    [property: JsonPropertyName("timestamp_sec")]  double?  TimestampSec,
+    [property: JsonPropertyName("frame_index")]    int?     FrameIndex,
+    [property: JsonPropertyName("is_relevant")]    bool?    IsRelevant,
+    [property: JsonPropertyName("frame_class")]    string?  FrameClass,
+    [property: JsonPropertyName("detections")]     IReadOnlyList<YoloDetectionDto>? Detections,
+    [property: JsonPropertyName("image_base64")]   string?  ImageBase64,
+    [property: JsonPropertyName("image_width")]    int?     ImageWidth,
+    [property: JsonPropertyName("image_height")]   int?     ImageHeight,
+    [property: JsonPropertyName("yolo_ms")]        double?  YoloMs,
+    [property: JsonPropertyName("backend")]        string?  Backend,
+    // Footer-Felder
+    [property: JsonPropertyName("frames_processed")] int?  FramesProcessed,
+    // Fehler
+    [property: JsonPropertyName("error")]          string?  Error
+);
+
+// ── Video Super Resolution ───────────────────────────────────────────────────
+
+public sealed record EnhanceRequest(
+    [property: JsonPropertyName("image_base64")]   string ImageBase64,
+    [property: JsonPropertyName("target_height")]  int    TargetHeight = 1080,
+    [property: JsonPropertyName("denoise")]        bool   Denoise = true
+);
+
+public sealed record EnhanceResponse(
+    [property: JsonPropertyName("enhanced_base64")]  string EnhancedBase64,
+    [property: JsonPropertyName("processing_time_ms")] double ProcessingTimeMs,
+    [property: JsonPropertyName("input_width")]      int    InputWidth,
+    [property: JsonPropertyName("input_height")]     int    InputHeight,
+    [property: JsonPropertyName("output_width")]     int    OutputWidth,
+    [property: JsonPropertyName("output_height")]    int    OutputHeight,
+    [property: JsonPropertyName("scale_factor")]     double ScaleFactor,
+    [property: JsonPropertyName("backend")]          string Backend
+);
+
+// ── Sidecar Health (erweitert) ───────────────────────────────────────────────
+
+public sealed record NvdecStatus(
+    [property: JsonPropertyName("nvdec_available")] bool   NvdecAvailable,
+    [property: JsonPropertyName("nvdec_backend")]   string NvdecBackend,
+    [property: JsonPropertyName("nvdec_error")]     string? NvdecError
+);
+
+public sealed record VsrStatus(
+    [property: JsonPropertyName("vsr_enabled")]         bool   VsrEnabled,
+    [property: JsonPropertyName("vsr_backend")]         string VsrBackend,
+    [property: JsonPropertyName("vsr_min_resolution")]  int    VsrMinResolution
 );
 
 // ── Multi-Model Frame Result (internal) ────────────────────────────────────

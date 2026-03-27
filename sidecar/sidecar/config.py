@@ -33,6 +33,13 @@ class SidecarSettings(BaseSettings):
     yolo_model_name: str = "yolo26m.pt"
     require_custom_yolo: bool = False
 
+    # TensorRT-Beschleunigung fuer YOLO
+    # Aktiviert automatischen Export .pt -> .engine beim ersten Start (dauert 2-5 Min).
+    # Engine-Datei ist GPU-spezifisch und wird neben der .pt Datei gespeichert.
+    # Fallback auf PyTorch wenn TensorRT nicht installiert oder Export fehlschlaegt.
+    yolo_use_tensorrt: bool = True
+    yolo_tensorrt_fp16: bool = True
+
     # Grounding DINO
     dino_box_threshold: float = 0.25
     dino_text_threshold: float = 0.20
@@ -51,6 +58,13 @@ class SidecarSettings(BaseSettings):
 
     # SAM
     sam_model_type: str = "vit_h"
+
+    # Video Super Resolution (VSR) fuer alte PAL-Videos (768x576)
+    # Aktiviert automatisches Upscaling auf vsr_min_resolution Hoehe vor YOLO.
+    # Erfordert: pip install realesrgan basicsr + RealESRGAN_x4plus.pth in models/
+    # Fallback: Lanczos-Bicubic (immer verfuegbar, kein ML)
+    vsr_enabled: bool = False   # opt-in: aktivieren wenn Real-ESRGAN-Gewichte vorhanden
+    vsr_min_resolution: int = 720  # Nur Frames unter dieser Hoehe werden hochskaliert
 
     model_config = {"env_prefix": "SEWER_SIDECAR_"}
 

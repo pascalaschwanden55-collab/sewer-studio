@@ -7,7 +7,7 @@ from fastapi import FastAPI
 
 from .config import settings
 from .gpu_manager import gpu_manager
-from .routes import health, yolo, dino, sam, training
+from .routes import health, yolo, dino, sam, training, video, enhance
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,3 +45,5 @@ app.include_router(yolo.router, tags=["yolo"])
 app.include_router(dino.router, tags=["dino"])
 app.include_router(sam.router, tags=["sam"])
 app.include_router(training.router, tags=["training"])
+app.include_router(video.router, tags=["video"])
+app.include_router(enhance.router, tags=["enhance"])

@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 # Flag: True when custom sewer-specific weights are loaded, False for COCO fallback.
 _using_custom_weights = False
 _resolved_model_path: str | None = None
+_tensorrt_active = False
 
 # CPU-mode singleton (bypasses GpuModelManager when YOLO runs on CPU)
 _cpu_model = None
@@ -28,6 +29,11 @@ _cpu_lock = threading.Lock()
 
 
 def _resolve_yolo_model_path() -> tuple[str, bool]:
+    """Loest den Pfad zum YOLO-Modell auf.
+
+    Wenn TensorRT aktiviert ist und eine .engine Datei existiert,
+    wird diese bevorzugt zurueckgegeben (schnellere Inferenz).
+    """
     # Plan: models/yolo26m/<weights>.pt
     yolo_dir = Path(settings.models_dir) / "yolo26m"
     model_path = yolo_dir / settings.yolo_model_name
@@ -37,6 +43,12 @@ def _resolve_yolo_model_path() -> tuple[str, bool]:
         model_path = Path(settings.models_dir) / settings.yolo_model_name
 
     if model_path.exists():
+        # Pruefen ob eine TensorRT-Engine existiert
+        if settings.yolo_use_tensorrt:
+            engine_path = model_path.with_suffix(".engine")
+            if engine_path.exists():
+                logger.info("TensorRT-Engine gefunden: %s", engine_path)
+                return str(engine_path), True
         return str(model_path), True
 
     if settings.require_custom_yolo:
@@ -46,6 +58,50 @@ def _resolve_yolo_model_path() -> tuple[str, bool]:
         )
 
     return "yolo11m.pt", False
+
+
+def _try_export_tensorrt(pt_path: str) -> str | None:
+    """Exportiert .pt Modell als TensorRT-Engine (.engine).
+
+    Wird einmalig beim ersten Start aufgerufen. Dauert 2-5 Minuten.
+    Bei Fehler (TensorRT nicht installiert, Export schlaegt fehl): gibt None zurueck.
+    """
+    try:
+        from ultralytics import YOLO
+
+        pt = Path(pt_path)
+        engine_path = pt.with_suffix(".engine")
+
+        # Bereits vorhanden (Race-Condition Schutz)
+        if engine_path.exists():
+            return str(engine_path)
+
+        logger.info(
+            "TensorRT-Export gestartet: %s -> %s (FP16=%s). "
+            "Das dauert 2-5 Minuten beim ersten Start...",
+            pt.name, engine_path.name, settings.yolo_tensorrt_fp16
+        )
+
+        model = YOLO(pt_path)
+        exported = model.export(
+            format="engine",
+            half=settings.yolo_tensorrt_fp16,
+        )
+
+        if exported and Path(exported).exists():
+            logger.info("TensorRT-Export abgeschlossen: %s (%.1f MB)",
+                        exported, Path(exported).stat().st_size / 1e6)
+            return str(exported)
+
+        logger.warning("TensorRT-Export gab keinen gueltigen Pfad zurueck")
+        return None
+
+    except ImportError:
+        logger.info("TensorRT nicht installiert — verwende PyTorch-Modell")
+        return None
+    except Exception as e:
+        logger.warning("TensorRT-Export fehlgeschlagen: %s — verwende PyTorch-Modell", e)
+        return None
 
 
 def get_runtime_status() -> dict:
@@ -63,6 +119,8 @@ def get_runtime_status() -> dict:
         "resolved_model_path": _resolved_model_path,
         "fallback_model_name": None if _using_custom_weights or settings.require_custom_yolo else "yolo11m.pt",
         "device": _resolve_device(),
+        "tensorrt_active": _tensorrt_active,
+        "tensorrt_enabled": settings.yolo_use_tensorrt,
     }
 
     if candidate_nested.exists():
@@ -85,16 +143,39 @@ def _resolve_device() -> str:
 
 
 def _load_yolo_on(device: str):
-    """Load YOLO model onto *device*. Returns (model, None)."""
-    global _using_custom_weights, _resolved_model_path
+    """Load YOLO model onto *device*. Returns (model, None).
+
+    Wenn TensorRT aktiviert ist und eine .engine Datei existiert oder exportiert
+    werden kann, wird das TensorRT-Modell geladen (2-4x schneller).
+    Bei Fehler: automatischer Fallback auf PyTorch .pt.
+    """
+    global _using_custom_weights, _resolved_model_path, _tensorrt_active
     from ultralytics import YOLO
 
     model_path, using_custom = _resolve_yolo_model_path()
     _using_custom_weights = using_custom
+    _tensorrt_active = False
+
+    # TensorRT-Export versuchen wenn:
+    # - TensorRT aktiviert (Config)
+    # - Custom Weights vorhanden (.pt)
+    # - Noch keine .engine Datei (wurde nicht von _resolve gefunden)
+    # - GPU-Device (TensorRT braucht CUDA)
+    if (settings.yolo_use_tensorrt
+            and using_custom
+            and model_path.endswith(".pt")
+            and device.startswith("cuda")):
+        engine_path = _try_export_tensorrt(model_path)
+        if engine_path:
+            model_path = engine_path
+
     _resolved_model_path = model_path
 
-    if using_custom:
-        logger.info("Loading custom YOLO weights from %s onto %s", model_path, device)
+    if model_path.endswith(".engine"):
+        logger.info("Lade TensorRT-Engine: %s auf %s", model_path, device)
+        _tensorrt_active = True
+    elif using_custom:
+        logger.info("Lade YOLO PyTorch-Modell: %s auf %s", model_path, device)
     else:
         logger.warning(
             "Custom YOLO weights not found – downloading yolo11m.pt as fallback. "
@@ -103,7 +184,9 @@ def _load_yolo_on(device: str):
         )
 
     model = YOLO(str(model_path))
-    model.to(device)
+    # TensorRT-Engines brauchen kein .to(device) — sie sind bereits kompiliert
+    if not model_path.endswith(".engine"):
+        model.to(device)
     return model, None
 
 
