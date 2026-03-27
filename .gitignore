@@ -14,8 +14,9 @@ packages/
 # Rider / JetBrains
 .idea/
 
-# Claude session data
-.claude/
+# Claude session data (allow skills subdirectory)
+.claude/*
+!.claude/skills/
 
 # OS
 Thumbs.db
