@@ -32,10 +32,20 @@ def is_nvdec_available() -> bool:
         _ = nvc.CreateDemuxer
         _nvdec_available = True
         logger.info("NVDEC Hardware-Dekodierung verfuegbar (PyNvVideoCodec)")
-    except ImportError:
+    except ImportError as ie:
         _nvdec_available = False
-        _nvdec_check_error = "PyNvVideoCodec nicht installiert"
-        logger.info("NVDEC: PyNvVideoCodec nicht installiert — Software-Fallback aktiv")
+        # DLL-Ladefehler = PyNvVideoCodec installiert, aber NVIDIA Video Codec SDK DLL fehlt
+        err_str = str(ie)
+        if "DLL load failed" in err_str or "module" in err_str.lower():
+            _nvdec_check_error = "nvcuvid.dll nicht gefunden (NVIDIA Video Codec SDK fehlt)"
+            logger.info(
+                "NVDEC: nvcuvid.dll nicht gefunden — "
+                "NVIDIA Video Codec SDK 13 installieren oder von nvidia.com herunterladen. "
+                "Software-Fallback (PyAV) aktiv."
+            )
+        else:
+            _nvdec_check_error = "PyNvVideoCodec nicht installiert"
+            logger.info("NVDEC: PyNvVideoCodec nicht installiert — Software-Fallback aktiv")
     except Exception as e:
         _nvdec_available = False
         _nvdec_check_error = str(e)

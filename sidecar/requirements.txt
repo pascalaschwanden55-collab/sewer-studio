@@ -15,3 +15,12 @@ transformers>=4.38,<5
 
 # SAM (pixel-precise segmentation)
 segment-anything>=1.0
+
+# NVIDIA GPU-Beschleunigung
+tensorrt>=10.0          # TensorRT fuer YOLO: .pt -> .engine Export (2-4x schneller)
+pynvvideocodec>=2.0     # NVDEC Hardware-Video-Dekodierung (dedizierter HW-Decoder)
+av>=12.0                # PyAV: Software-Fallback fuer NVDEC (immer benoetigt)
+
+# Video Super Resolution (optional, opt-in via SEWER_SIDECAR_VSR_ENABLED=1)
+# realesrgan>=0.3       # Real-ESRGAN Upscaling (+ pip install basicsr)
+# Gewichte: models/RealESRGAN_x4plus.pth (https://github.com/xinntao/Real-ESRGAN/releases)
