@@ -71,6 +71,23 @@ public sealed class KnowledgeBaseDiagnosticsService(KnowledgeBaseContext db)
         return (createdAt, sampleCount, notes);
     }
 
+    /// <summary>Alle Codes mit Anzahl — ohne LIMIT, fuer Coverage-Analyse.</summary>
+    public List<KnowledgeBaseCodeCount> ReadAllCodeCounts()
+    {
+        var list = new List<KnowledgeBaseCodeCount>();
+        using var cmd = db.Connection.CreateCommand();
+        cmd.CommandText = "SELECT VsaCode, COUNT(*) AS Cnt FROM Samples GROUP BY VsaCode ORDER BY VsaCode";
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+        {
+            var code = r.IsDBNull(0) ? "" : r.GetString(0);
+            var count = r.IsDBNull(1) ? 0 : r.GetInt32(1);
+            if (!string.IsNullOrWhiteSpace(code))
+                list.Add(new KnowledgeBaseCodeCount(code, count));
+        }
+        return list;
+    }
+
     private List<KnowledgeBaseCodeCount> ReadTopCodes(int topCodes)
     {
         var list = new List<KnowledgeBaseCodeCount>(topCodes);

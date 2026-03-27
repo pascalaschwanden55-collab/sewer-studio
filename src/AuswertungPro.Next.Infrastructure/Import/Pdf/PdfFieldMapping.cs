@@ -31,8 +31,8 @@ public static class PdfFieldMapping
         }, multiline: false, maxLines: 1),
         ["Strasse"] = new PdfFieldRule(new[]
         {
-            @"(?im)^\s*Stra(?:ß|ss)e\s*/\s*Standort\s+(?<value>.+?)(?:\s{2,}|$)",
-            @"(?im)^\s*Strasse\s*[:\-]?\s*(?<value>.+?)(?:\s{2,}|$)"
+            @"(?im)^\s*Stra(?:ß|ss|.)e\s*/\s*Standort\s+(?<value>.+?)(?:\s{2,}|$)",
+            @"(?im)^\s*Stra(?:ß|ss|.)e\s*[:\-]?\s*(?<value>.+?)(?:\s{2,}|$)"
         }, multiline: false, maxLines: 1),
         ["Rohrmaterial"] = new PdfFieldRule(new[]
         {
@@ -40,18 +40,22 @@ public static class PdfFieldMapping
         }, multiline: false, maxLines: 1),
         ["DN_mm"] = new PdfFieldRule(new[]
         {
-            @"(?im)^\s*Dimension(?:\s*\[mm\])?\s+(?<value>\d{2,4}\s*/\s*\d{2,4}|\d{2,4})"
+            @"(?im)^\s*Dimension(?:\s*\[mm\])?\s+(?<value>\d{2,4}\s*/\s*\d{2,4}|\d{2,4})",
+            @"(?im)^\s*Profil(?:art)?\s+(?:\w+\s+)*?(?<value>\d{2,4})\s*(?:mm|x\s*\d{2,4})",
+            @"(?im)^\s*(?:DN|Nennweite)\s*[:\-]?\s*(?<value>\d{2,4})"
         }, multiline: false, maxLines: 1),
         ["Nutzungsart"] = new PdfFieldRule(new[]
         {
-            @"(?im)^\s*Nutzungsart\s+(?<value>.+?)(?:\s{2,}|$)",
+            @"(?im)^\s*Nutzungsart(?:_Ist)?\s+(?<value>.+?)(?:\s{2,}|$)",
             @"(?im)^\s*Kanalart\s+(?<value>.+?)(?:\s{2,}|$)",
             @"(?i)\b(?<value>Schmutzabwasser|Schmutzwasser|Regenabwasser|Regenwasser|Mischabwasser)\b"
         }, multiline: false, maxLines: 1),
         ["Haltungslaenge_m"] = new PdfFieldRule(new[]
         {
-            @"(?im)^\s*Leitungsl(?:a|ä)nge\s+(?<value>\d+(?:[.,]\d+)?)\s*m\b",
-            @"(?im)^\s*Inspektionsl(?:a|ä)nge\s+(?<value>\d+(?:[.,]\d+)?)\s*m\b"
+            @"(?im)\bHL\s*\[m\]\s+(?<value>\d+(?:[.,]\d+)?)\b",
+            @"(?im)^\s*Leitungsl(?:a|ä|n)(?:n|a|ä)?ge\s+(?<value>\d+(?:[.,]\d+)?)\s*m?\b",
+            @"(?im)^\s*Insp(?:\.|ektions)[-\s]*[Ll](?:a|ä|n)(?:n|a|ä)?ge\s*(?:\[m\])?\s+(?<value>\d+(?:[.,]\d+)?)\s*m?\b",
+            @"(?im)^\s*Haltungsl(?:a|ä)nge\s*(?:\[m\])?\s+(?<value>\d+(?:[.,]\d+)?)\s*m?\b"
         }, multiline: false, maxLines: 1),
         ["Inspektionsrichtung"] = new PdfFieldRule(new[] {
             @"(?i)Inspektionsrichtung\s*[:\-]?\s*(?<value>gegen\s*flie(?:ss|ß)richtung|in\s*flie(?:ss|ß)richtung)",
@@ -83,7 +87,8 @@ public static class PdfFieldMapping
         ["Datum_Jahr"] = new PdfFieldRule(new[]
         {
             @"(?im)^\s*Insp\.?-?\s*datum\s+(?<value>\d{2}\.\d{2}\.\d{4})",
-            @"(?im)^\s*Insp\.-?\s*Datum\s+(?<value>\d{2}\.\d{2}\.\d{4})"
+            @"(?im)^\s*Insp\.-?\s*Datum\s+(?<value>\d{2}\.\d{2}\.\d{4})",
+            @"(?im)^\s*Datum\s+(?<value>\d{2}\.\d{2}\.\d{4})"
         }, multiline: false, maxLines: 1)
         };
 }
@@ -104,6 +109,7 @@ public static class PdfPostProcessors
             "Nutzungsart" => NormalizeNutzungsart(value),
             "Inspektionsrichtung" => NormalizeInspektionsrichtung(value),
             "DN_mm" => NormalizeDn(value),
+            "Haltungslaenge_m" => NormalizeHaltungslaenge(value),
             "Anschluesse_verpressen" => NormalizeNonNegativeInt(value),
             "Strasse" => TrimAtDoubleSpace(value),
             _ => value
@@ -197,6 +203,15 @@ public static class PdfPostProcessors
 
         var m = Regex.Match(v, @"(?<dn>\d{2,4})");
         return m.Success ? m.Groups["dn"].Value : v.Trim();
+    }
+
+    private static string NormalizeHaltungslaenge(string v)
+    {
+        if (string.IsNullOrWhiteSpace(v)) return "";
+        var normalized = v.Replace(',', '.');
+        if (decimal.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) && parsed <= 0)
+            return "";
+        return normalized;
     }
 
     private static string NormalizeInspektionsrichtung(string v)

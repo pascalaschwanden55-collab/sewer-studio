@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -11,6 +12,7 @@ public sealed record PipelineConfig(
     Uri SidecarUrl,
     PipelineMode Mode,
     double YoloConfidence,
+    Dictionary<string, double> YoloClassConfidence,
     double DinoBoxThreshold,
     double DinoTextThreshold,
     int SidecarTimeoutSec,

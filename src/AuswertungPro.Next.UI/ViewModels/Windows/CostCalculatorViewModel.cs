@@ -103,7 +103,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         Measures = new ObservableCollection<MeasureTemplateListItem>(
             templates.Measures.Select(t => new MeasureTemplateListItem(t)));
 
-        // Build itemKey â†’ group lookup from all template lines
+        // Build itemKey -> group lookup from all template lines
         var keyToGroup = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var t in templates.Measures)
             foreach (var line in t.Lines)
@@ -693,6 +693,20 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         return null;
     }
 
+    /// <summary>
+    /// Oeffentlicher Zugang zur Score-basierten Massnahmen-Aufloesung.
+    /// Wird von SanierungsmassnahmenViewModel.SelectMeasuresInCalc benutzt.
+    /// </summary>
+    public HashSet<string> ResolveMatchingMeasureIds(IReadOnlyList<string> tokens)
+    {
+        var templates = Measures
+            .Where(m => !m.Disabled)
+            .Select(m => m.Template)
+            .ToList();
+        var ids = ResolveMeasureIds(tokens, templates, _catalogItems);
+        return new HashSet<string>(ids, StringComparer.OrdinalIgnoreCase);
+    }
+
     private static List<string> ResolveMeasureIds(
         IReadOnlyList<string> tokens,
         IReadOnlyList<MeasureTemplate> templates,
@@ -891,7 +905,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         foreach (var item in catalog.Items)
             _catalogItems[item.Key] = item;
 
-        // Rebuild keyâ†’group lookup
+        // Rebuild key->group lookup
         var keyToGroup = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var t in _templateItems.Values)
             foreach (var line in t.Lines)

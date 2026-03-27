@@ -1,0 +1,16 @@
+{
+  "haltung": "07.1064934-10417",
+  "datum": "10.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 125 / 125mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Regenabwasser",
+  "inspektionsrichtung": "Gegen Fließrichtung",
+  "schacht_oben": "07.1064934",
+  "schacht_unten": "10417",
+  "inspektionslaenge_m": "0.00",
+  "rohrlaenge_m": "5.00",
+  "gereinigt": null,
+  "schaeden": []
+}

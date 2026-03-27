@@ -146,7 +146,7 @@ public sealed class TrainingSampleGenerator
             {
                 ct.ThrowIfCancellationRequested();
 
-                var sig = BuildSignature(entry.Code, meter, meterEnd);
+                var sig = BuildSignature(tc.CaseId, entry.Code, meter, meterEnd);
                 if (seen.Contains(sig))
                 {
                     duplicateSkipped++;
@@ -195,8 +195,8 @@ public sealed class TrainingSampleGenerator
                     CaseId = tc.CaseId,
                     Code = entry.Code,
                     Beschreibung = entry.Beschreibung,
-                    MeterStart = meterStart,
-                    MeterEnd = meterEnd,
+                    MeterStart = Math.Round(meterStart, 1),
+                    MeterEnd = Math.Round(meterEnd, 1),
                     IsStreckenschaden = entry.IsStreckenschaden,
                     TimeSeconds = t,
                     DetectedMeter = detectedMeter,
@@ -207,7 +207,8 @@ public sealed class TrainingSampleGenerator
                     OdsDeltaMeters = odsDelta,
                     HasOsdMismatch = hasOsdMismatch,
                     Signature = sig,
-                    FrameIndex = frameIndex
+                    FrameIndex = frameIndex,
+                    SourceType = SourceTypeNames.BatchImport
                 });
             }
         }
@@ -270,12 +271,9 @@ public sealed class TrainingSampleGenerator
         return Math.Clamp(meter / maxMeter * duration, 0, duration - 0.1);
     }
 
-    private static string BuildSignature(string code, double meterCenter, double meterEnd)
-    {
-        var rc = Math.Round(meterCenter, 1);
-        var re = Math.Round(meterEnd, 1);
-        return $"{code}|{rc:F1}|{re:F1}";
-    }
+    /// <summary>Delegiert an die zentrale Signatur-Methode auf TrainingSample.</summary>
+    private static string BuildSignature(string caseId, string code, double meterCenter, double meterEnd)
+        => TrainingSample.BuildCanonicalSignature(caseId, code, meterCenter, meterEnd);
 
     private async Task<ProtocolDocument?> LoadProtocolAsync(string path)
     {

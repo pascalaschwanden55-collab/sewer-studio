@@ -26,6 +26,7 @@ public sealed record AiPlatformConfig(
     Uri SidecarUrl,
     PipelineMode PipelineMode,
     double YoloConfidence,
+    Dictionary<string, double> YoloClassConfidence,
     double DinoBoxThreshold,
     double DinoTextThreshold,
     int SidecarTimeoutSec,
@@ -62,6 +63,7 @@ public sealed record AiPlatformConfig(
         SidecarUrl:             SidecarUrl,
         Mode:                   PipelineMode,
         YoloConfidence:         YoloConfidence,
+        YoloClassConfidence:    YoloClassConfidence,
         DinoBoxThreshold:       DinoBoxThreshold,
         DinoTextThreshold:      DinoTextThreshold,
         SidecarTimeoutSec:      SidecarTimeoutSec,
@@ -90,10 +92,34 @@ public sealed record AiPlatformConfig(
                 Env("SEWERSTUDIO_OLLAMA_URL"))
             ?? "http://localhost:11434";
 
-        var vision = FirstNonEmpty(
+        // GPU-Auto-Erkennung: wenn kein VisionModel konfiguriert ist,
+        // VRAM pruefen und passendes Modell waehlen (Workstation vs Laptop)
+        var configuredVision = FirstNonEmpty(
                 settings?.AiVisionModel,
-                Env("SEWERSTUDIO_AI_VISION_MODEL"))
-            ?? OllamaConfig.DefaultVisionModel;
+                Env("SEWERSTUDIO_AI_VISION_MODEL"));
+
+        string vision;
+        int numCtxDefault = OllamaConfig.DefaultNumCtx;
+
+        if (GpuModelSelector.IsAutoMode(configuredVision))
+        {
+            var gpuProfile = GpuModelSelector.DetectAndSelect();
+            if (gpuProfile != null)
+            {
+                vision = gpuProfile.ResolvedModel;
+                numCtxDefault = gpuProfile.ResolvedNumCtx;
+                System.Diagnostics.Debug.WriteLine(
+                    $"[AiPlatformConfig] GPU Auto-Select: {gpuProfile.Reason}");
+            }
+            else
+            {
+                vision = OllamaConfig.DefaultVisionModel;
+            }
+        }
+        else
+        {
+            vision = configuredVision!;
+        }
 
         var text = FirstNonEmpty(
                 settings?.AiTextModel,
@@ -116,7 +142,7 @@ public sealed record AiPlatformConfig(
 
         var numCtx = settings?.AiOllamaNumCtx
             ?? ParseInt(Env("SEWERSTUDIO_OLLAMA_NUM_CTX"))
-            ?? OllamaConfig.DefaultNumCtx;
+            ?? numCtxDefault;
 
         // ── Pipeline ──
         var multiModelEnabled = settings?.PipelineMultiModelEnabled
@@ -141,6 +167,21 @@ public sealed record AiPlatformConfig(
         var yoloConf = settings?.PipelineYoloConfidence
             ?? ParseDouble(Env("SEWERSTUDIO_YOLO_CONFIDENCE"))
             ?? 0.25;
+
+        // Klassenspezifische YOLO-Schwellenwerte (Forschung: unterschiedliche Sensitivitaet pro Schadenstyp)
+        var yoloClassConf = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["BAB"] = 0.15,   // Riss: schwer erkennbar, aggressiv suchen
+            ["BAA"] = 0.20,   // Verformung
+            ["BAC"] = 0.25,   // Bruch/Einsturz
+            ["BBA"] = 0.20,   // Wurzeln/Inkrustation: oft subtil
+            ["BBB"] = 0.25,   // Bewuchs
+            ["BBC"] = 0.25,   // Ablagerungen
+            ["BCA"] = 0.35,   // Anschluss: sehr markant, hohe Sicherheit
+            ["BCC"] = 0.30,   // Bogen: markant
+            ["BCD"] = 0.30,   // Rohranfang: markant
+            ["BCE"] = 0.30,   // Rohrende: markant
+        };
 
         var dinoBox = settings?.PipelineDinoBoxThreshold
             ?? ParseDouble(Env("SEWERSTUDIO_DINO_BOX_THRESHOLD"))
@@ -174,6 +215,7 @@ public sealed record AiPlatformConfig(
             SidecarUrl:             new Uri(sidecarUrl),
             PipelineMode:           mode,
             YoloConfidence:         yoloConf,
+            YoloClassConfidence:    yoloClassConf,
             DinoBoxThreshold:       dinoBox,
             DinoTextThreshold:      dinoText,
             SidecarTimeoutSec:      sidecarTimeout,

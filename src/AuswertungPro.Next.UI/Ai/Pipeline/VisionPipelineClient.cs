@@ -73,6 +73,14 @@ public sealed class VisionPipelineClient
     }
 
     /// <summary>
+    /// YOLO-cls Whole-Frame-Klassifikation (BCD/BCE/BCA/BCC/...).
+    /// </summary>
+    public async Task<YoloClassifyResponse> ClassifyYoloAsync(YoloClassifyRequest request, CancellationToken ct = default)
+    {
+        return await PostAsync<YoloClassifyRequest, YoloClassifyResponse>("/classify/yolo", request, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Export training data to YOLO format.
     /// </summary>
     public async Task<TrainingExportResponseDto> ExportTrainingAsync(TrainingExportRequestDto request, CancellationToken ct = default)

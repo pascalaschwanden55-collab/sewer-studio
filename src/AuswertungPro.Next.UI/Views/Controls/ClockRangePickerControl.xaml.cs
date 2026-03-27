@@ -85,18 +85,20 @@ public partial class ClockRangePickerControl : UserControl
                 IsHitTestVisible = false
             };
 
-            var button = new Button
+            // Unsichtbarer aber klickbarer Bereich um jede Stundenzahl.
+            // Opacity=1 + transparenter Background = zuverlaessiges HitTest.
+            var button = new Border
             {
                 Tag = hour,
-                Width = 30,
-                Height = 30,
-                Background = Brushes.Transparent,
-                BorderBrush = Brushes.Transparent,
-                BorderThickness = new Thickness(0),
+                Width = 36,
+                Height = 36,
+                Background = Brushes.Transparent, // Unsichtbar aber klickbar
+                CornerRadius = new CornerRadius(18),
                 Cursor = Cursors.Hand,
-                Opacity = 0.01
+                IsHitTestVisible = true
             };
-            button.Click += Hour_Click;
+            button.MouseLeftButtonDown += (s, _) => Hour_Click(s, new RoutedEventArgs());
+            Panel.SetZIndex(button, 10);
 
             FaceCanvas.Children.Add(text);
             FaceCanvas.Children.Add(button);
@@ -312,7 +314,13 @@ public partial class ClockRangePickerControl : UserControl
 
     private void Hour_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Button btn || btn.Tag is not int hour)
+        // Sender kann Button oder Border sein (Border fuer zuverlaessiges HitTest)
+        int hour;
+        if (sender is Button btn && btn.Tag is int h1)
+            hour = h1;
+        else if (sender is FrameworkElement fe && fe.Tag is int h2)
+            hour = h2;
+        else
             return;
 
         hour = NormalizeHour(hour);
@@ -386,9 +394,9 @@ public partial class ClockRangePickerControl : UserControl
     {
         public int Hour { get; }
         public TextBlock Text { get; }
-        public Button Button { get; }
+        public FrameworkElement Button { get; }
 
-        public ClockItem(int hour, TextBlock text, Button button)
+        public ClockItem(int hour, TextBlock text, FrameworkElement button)
         {
             Hour = hour;
             Text = text;

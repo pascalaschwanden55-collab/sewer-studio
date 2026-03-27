@@ -267,18 +267,24 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         double minLength,
         double randbedingungen)
     {
-        // EZ-Werte mit Längenfaktoren sammeln
-        var entries = new List<(int EZ, double LF)>();
+        // EZ-Werte mit Längenfaktoren sammeln (inkl. Code-Herkunft fuer Rechnungsweg)
+        var entries = new List<(int EZ, double LF, string OrigCode)>();
+        var skippedCodes = new List<string>(); // Codes ohne EZ fuer diese Anforderung
         foreach (var c in classified)
         {
+            var origCode = NormalizeCode(c.Finding.KanalSchadencode);
             int? ez = requirement switch
             {
                 VsaRequirement.Dichtheit => c.Classification.EZD,
                 VsaRequirement.Standsicherheit => c.Classification.EZS,
                 _ => c.Classification.EZB
             };
-            if (ez is null) continue;
-            entries.Add((ez.Value, ComputeLengthFactor(c.Finding, minLength)));
+            if (ez is null)
+            {
+                if (!c.IsUnknown) skippedCodes.Add(origCode);
+                continue;
+            }
+            entries.Add((ez.Value, ComputeLengthFactor(c.Finding, minLength), origCode));
         }
 
         if (entries.Count == 0)
@@ -287,8 +293,6 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             var hasUnknown = classified.Any(c => c.IsUnknown);
             if (hasUnknown)
             {
-                // Unbekannte Codes vorhanden, aber keine klassifizierbaren EZ-Werte
-                // → Bewertung nicht möglich (n/a), NICHT "Leitung i.O."
                 var na = new VsaConditionResult
                 {
                     Requirement = requirement,
@@ -301,7 +305,6 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
                 return na;
             }
 
-            // Tatsächlich keine Schadenscodes für diese Anforderung → Leitung i.O. (ZN = 4.0)
             var dzOk = Math.Round(4.0 * 100.0 * randbedingungen, 2, MidpointRounding.AwayFromZero);
             var ok = new VsaConditionResult
             {
@@ -311,7 +314,10 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
                 Abminderung = 0,
                 Dringlichkeitszahl = dzOk
             };
-            ok.Notes.Add("Keine Schadenscodes vorhanden – Leitung i.O.");
+            var hint = "Keine Schadenscodes vorhanden – Leitung i.O.";
+            if (skippedCodes.Count > 0)
+                hint += $" (Codes ohne EZ: {string.Join(", ", skippedCodes)})";
+            ok.Notes.Add(hint);
             return ok;
         }
 
@@ -362,7 +368,17 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             Dringlichkeitszahl = dz
         };
 
-        result.Notes.Add($"Beiträge={entries.Count}; A={abminderung:F2}; RB={randbedingungen:F4}");
+        // Zusammenfassung
+        result.Notes.Add($"Beiträge={entries.Count}; EZmin={ezMin}; A={abminderung:F2}; RB={randbedingungen:F4}");
+
+        // Einzelbeitraege auflisten
+        foreach (var e in entries)
+            result.Notes.Add($"  {e.OrigCode}: EZ={e.EZ}, LF={e.LF:F1}m");
+
+        // Codes ohne EZ-Beitrag fuer diese Anforderung
+        if (skippedCodes.Count > 0)
+            result.Notes.Add($"  (ohne EZ: {string.Join(", ", skippedCodes)})");
+
         return result;
     }
 
@@ -580,6 +596,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         s = Regex.Replace(s, @"[^A-Za-z0-9]+", string.Empty);
         return s.ToUpperInvariant();
     }
+
 
     // ── Interne Records ──────────────────────────────────────────────────
 

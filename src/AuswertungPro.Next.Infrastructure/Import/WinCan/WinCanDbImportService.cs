@@ -29,9 +29,49 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
 
         ctx?.Log.AddEntry("WinCan", "Start", ImportLogStatus.Info, sourceFile: exportRoot);
 
+        // WinCan VX speichert in .sdf (SQL Server Compact) — dafuer gibt es keinen .NET 8 Treiber.
+        // Wenn .sdf vorhanden aber kein .db3, versuche XTF aus Misc/Exchange als Fallback.
         var dbPath = FindDb3(exportRoot);
         if (string.IsNullOrWhiteSpace(dbPath))
+        {
+            var sdfPath = FindSdf(exportRoot);
+            if (!string.IsNullOrWhiteSpace(sdfPath))
+            {
+                ctx?.Log.AddEntry("WinCan", "SDF_Detected", ImportLogStatus.Info,
+                    sourceFile: sdfPath,
+                    detail: "WinCan VX SDF erkannt — kein .NET 8 Treiber verfuegbar. Suche XTF-Export als Fallback.");
+
+                try
+                {
+                    var xtfFallback = TryImportViaXtfFallback(exportRoot, project, sdfPath, ctx);
+                    if (xtfFallback is not null)
+                        return xtfFallback;
+                }
+                catch (Exception ex)
+                {
+                    ctx?.Log.AddEntry("WinCan", "XTF_Fallback_Exception", ImportLogStatus.Error,
+                        sourceFile: sdfPath, detail: ex.Message);
+
+                    return Result<ImportStats>.Success(new ImportStats(0, 0, 0, 1, 0,
+                        new[]
+                        {
+                            $"WinCan VX SDF erkannt ({Path.GetFileName(sdfPath)})",
+                            $"XTF-Fallback fehlgeschlagen mit Fehler: {ex.Message}"
+                        }));
+                }
+
+                // Kein XTF gefunden → Benutzer informieren
+                return Result<ImportStats>.Success(new ImportStats(0, 0, 0, 0, 0,
+                    new[]
+                    {
+                        $"WinCan VX SDF erkannt ({Path.GetFileName(sdfPath)}), aber kein XTF-Export gefunden.",
+                        "Gesuchte Ordner: Misc/, Exchange/, Export/, XTF/ und Projektroot.",
+                        "Bitte im WinCan VX unter 'Export → INTERLIS 2' einen XTF-Export erstellen und dann per XTF-Import einlesen."
+                    }));
+            }
+
             return ImportWithoutDb3(exportRoot, project, "WinCan DB3 nicht gefunden. Fallback auf MDB.", ctx: ctx);
+        }
 
         var messages = new List<string>();
         messages.Add($"Importquelle: WinCan DB3 ({Path.GetFileName(dbPath)})");
@@ -450,11 +490,43 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
                 FotoPath = entry.FotoPaths.Count > 0 ? entry.FotoPaths[0] : null
             };
 
+            // Quantifizierung1 aus Beschreibung extrahieren (WinCan liefert kein Q1-Feld)
+            // Nur fuer Codes mit QuantRules: BAA, BAB, BAC, BAF, BBA, BDD
+            if (string.IsNullOrEmpty(finding.Quantifizierung1) && !string.IsNullOrEmpty(entry.Beschreibung))
+            {
+                var normCode = effectiveCode.Length >= 3 ? effectiveCode[..3].ToUpperInvariant() : "";
+                if (normCode is "BAA" or "BAB" or "BAC" or "BAF" or "BBA" or "BDD")
+                {
+                    finding.Quantifizierung1 = ExtractQuantValue(entry.Beschreibung);
+                }
+            }
+
             findings.Add(finding);
         }
 
         // DB3 gilt als Quelle der Wahrheit: vorhandene VsaFindings durch den aktuellen Importstand ersetzen.
         record.VsaFindings = findings;
+    }
+
+    /// <summary>
+    /// Extrahiert einen numerischen Quantifizierungswert aus dem WinCan-Beschreibungstext.
+    /// Sucht nach Prozent (%), Grad (°) oder Millimeter (mm) Angaben.
+    /// </summary>
+    private static string? ExtractQuantValue(string beschreibung)
+    {
+        // Prozent: "5%", "25 %", "10.5%"
+        var m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)\s*%");
+        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
+
+        // Grad: "15°", "45 °"
+        m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)°");
+        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
+
+        // Millimeter: "2mm", "0.5 mm"
+        m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)\s*mm");
+        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
+
+        return null;
     }
 
     private static void LinkSectionPdf(HaltungRecord record, string sectionKey, Dictionary<string, List<string>> index)
@@ -654,7 +726,13 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
 
     private static string? FindDb3(string exportRoot)
     {
-        var candidates = Directory.EnumerateFiles(exportRoot, "*.db3", SearchOption.AllDirectories)
+        var enumOpts = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            MatchCasing = MatchCasing.CaseInsensitive
+        };
+        var candidates = Directory.EnumerateFiles(exportRoot, "*.db3", enumOpts)
             .Where(p => p.IndexOf(Path.DirectorySeparatorChar + "DB" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) >= 0)
             .ToList();
 
@@ -664,7 +742,162 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         return candidates
             .Select(p => new FileInfo(p))
             .OrderByDescending(fi => fi.Length)
-            .First().FullName;
+            .FirstOrDefault()?.FullName;
+    }
+
+    /// <summary>
+    /// Sucht nach WinCan VX .sdf (SQL Server Compact) Datenbanken.
+    /// SDF kann unter .NET 8 nicht direkt gelesen werden (kein Treiber).
+    /// </summary>
+    private static string? FindSdf(string exportRoot)
+    {
+        try
+        {
+            var enumOpts = new EnumerationOptions
+            {
+                RecurseSubdirectories = true,
+                IgnoreInaccessible = true,
+                MatchCasing = MatchCasing.CaseInsensitive
+            };
+
+            var candidates = Directory.EnumerateFiles(exportRoot, "*.sdf", enumOpts)
+                .Where(p =>
+                {
+                    var dir = Path.GetDirectoryName(p) ?? "";
+                    var dirName = Path.GetFileName(dir);
+                    return string.Equals(dirName, "DB", StringComparison.OrdinalIgnoreCase);
+                })
+                .Where(p => !Path.GetFileName(p).Contains("_Meta", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            return candidates
+                .Select(p => new FileInfo(p))
+                .OrderByDescending(fi => fi.Length)
+                .FirstOrDefault()?.FullName;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// WinCan VX SDF-Fallback: suche XTF-Export in Misc/Exchange und importiere diesen.
+    /// WinCan VX legt den INTERLIS-Export standardmaessig dort ab.
+    /// </summary>
+    private Result<ImportStats>? TryImportViaXtfFallback(
+        string exportRoot, Project project, string sdfPath, ImportRunContext? ctx)
+    {
+        // Suche XTF-Dateien im gesamten Projektordner (robust, ignoriert gesperrte Ordner)
+        var xtfFiles = new List<string>();
+        var enumOpts = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            MatchCasing = MatchCasing.CaseInsensitive
+        };
+
+        try
+        {
+            xtfFiles.AddRange(Directory.EnumerateFiles(exportRoot, "*.xtf", enumOpts));
+        }
+        catch (Exception ex)
+        {
+            ctx?.Log.AddEntry("WinCan", "XTF_Search_Error", ImportLogStatus.Info,
+                sourceFile: exportRoot,
+                detail: $"Fehler bei XTF-Suche: {ex.Message}");
+        }
+
+        if (xtfFiles.Count == 0)
+        {
+            ctx?.Log.AddEntry("WinCan", "XTF_NotFound", ImportLogStatus.Info,
+                sourceFile: exportRoot,
+                detail: $"Keine *.xtf Dateien im Projektordner gefunden (Suche in: {exportRoot})");
+            return null;
+        }
+
+        ctx?.Log.AddEntry("WinCan", "XTF_Fallback", ImportLogStatus.Info,
+            detail: $"SDF nicht lesbar, verwende {xtfFiles.Count} XTF-Datei(en) als Fallback: {string.Join(", ", xtfFiles.Select(Path.GetFileName))}");
+
+        // XTF-Import via LegacyXtfImportService
+        var xtfService = new XtfImportServiceAdapter();
+        var xtfResult = xtfService.ImportXtfFiles(xtfFiles, project, ctx);
+
+        if (!xtfResult.Ok || xtfResult.Value is null)
+        {
+            // XTF-Dateien gefunden, aber Import fehlgeschlagen — Fehler nicht verschlucken
+            ctx?.Log.AddEntry("WinCan", "XTF_Fallback_Failed", ImportLogStatus.Error,
+                detail: $"XTF-Fallback fehlgeschlagen: {xtfResult.ErrorMessage ?? "unbekannter Fehler"}");
+
+            var errMessages = new List<string>
+            {
+                $"Importquelle: WinCan VX SDF-Fallback via XTF ({Path.GetFileName(sdfPath)})",
+                $"SDF-Datenbank erkannt, aber nicht direkt lesbar (SQL Server Compact, kein .NET 8 Treiber).",
+                $"{xtfFiles.Count} XTF-Datei(en) gefunden, aber Import fehlgeschlagen: {xtfResult.ErrorMessage ?? "unbekannter Fehler"}"
+            };
+            return Result<ImportStats>.Success(new ImportStats(0, 0, 0, 1, 0, errMessages));
+        }
+
+        // Ergebnis anreichern mit Hinweis auf SDF-Herkunft
+        var messages = new List<string>
+        {
+            $"Importquelle: WinCan VX SDF-Fallback via XTF ({Path.GetFileName(sdfPath)})",
+            $"SDF-Datenbank erkannt, aber nicht direkt lesbar (SQL Server Compact, kein .NET 8 Treiber).",
+            $"Stattdessen {xtfFiles.Count} XTF-Export(e) aus Misc/Exchange importiert."
+        };
+        messages.AddRange(xtfResult.Value.Messages);
+
+        // Medien aus dem WinCan VX Projektordner verknuepfen
+        var fileIndex = BuildFileIndex(exportRoot);
+        LinkMediaFromFileIndex(project, fileIndex, messages);
+
+        return Result<ImportStats>.Success(new ImportStats(
+            xtfResult.Value.Found,
+            xtfResult.Value.Created,
+            xtfResult.Value.Updated,
+            xtfResult.Value.Errors,
+            xtfResult.Value.Uncertain,
+            messages));
+    }
+
+    /// <summary>
+    /// Verknuepft Video- und Foto-Dateien aus dem WinCan VX Projektordner mit importierten Haltungen.
+    /// </summary>
+    private static void LinkMediaFromFileIndex(
+        Project project, Dictionary<string, List<string>> fileIndex, List<string> messages)
+    {
+        var linked = 0;
+        foreach (var record in project.Data)
+        {
+            var haltungsname = record.GetFieldValue("Haltungsname");
+            if (string.IsNullOrWhiteSpace(haltungsname)) continue;
+
+            // Bereits ein Video verlinkt?
+            var existingLink = record.GetFieldValue("Link");
+            if (!string.IsNullOrWhiteSpace(existingLink)) continue;
+
+            // Suche Video-Datei die den Haltungsnamen enthaelt
+            foreach (var kv in fileIndex)
+            {
+                if (!kv.Key.Contains(haltungsname, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                foreach (var filePath in kv.Value)
+                {
+                    var ext = Path.GetExtension(filePath);
+                    if (MediaExtensions.Contains(ext) && MediaFileTypes.VideoExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase))
+                    {
+                        record.SetFieldValue("Link", filePath, Domain.Models.FieldSource.Legacy, userEdited: false);
+                        linked++;
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+
+        if (linked > 0)
+            messages.Add($"Medien verknuepft: {linked} Videos aus dem WinCan VX Projektordner zugeordnet.");
     }
 
     private static IReadOnlyList<string> FindMdbCandidates(string exportRoot)
@@ -767,8 +1000,8 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
                 InspectionFk: r.GetString(1),
                 OpCode: r.IsDBNull(2) ? "" : r.GetString(2),
                 Observation: r.IsDBNull(3) ? "" : r.GetString(3),
-                Distance: r.IsDBNull(4) ? null : (double?)Convert.ToDouble(r[4], CultureInfo.InvariantCulture),
-                ContDefectLength: r.IsDBNull(5) ? null : (double?)Convert.ToDouble(r[5], CultureInfo.InvariantCulture),
+                Distance: SafeReadDouble(r, 4),
+                ContDefectLength: SafeReadDouble(r, 5),
                 TimeCtr: r.IsDBNull(6) ? null : r.GetString(6),
                 Q1: r.IsDBNull(7) ? null : r.GetString(7),
                 Q2: r.IsDBNull(8) ? null : r.GetString(8),
@@ -1213,5 +1446,15 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             return "abgeschlossen";
 
         return raw.Trim();
+    }
+
+    private static double? SafeReadDouble(SqliteDataReader r, int col)
+    {
+        if (r.IsDBNull(col)) return null;
+        var val = r.GetValue(col);
+        if (val is double d) return d;
+        if (val is decimal dec) return (double)dec;
+        if (val is float f) return f;
+        return double.TryParse(val?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var p) ? p : null;
     }
 }

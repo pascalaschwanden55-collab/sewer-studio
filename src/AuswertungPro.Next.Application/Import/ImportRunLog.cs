@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json.Serialization;
+using System.Threading;
 
 namespace AuswertungPro.Next.Application.Import;
 
@@ -29,6 +30,7 @@ public enum ImportLogStatus
 /// <summary>
 /// Sammelt alle strukturierten Eintraege eines Import-Laufs.
 /// Thread-safe: Entries koennen aus verschiedenen Threads geschrieben werden.
+/// Counter via Interlocked (O(1) statt O(n) LINQ-Scan auf ConcurrentBag).
 /// </summary>
 public sealed class ImportRunLog
 {
@@ -42,21 +44,28 @@ public sealed class ImportRunLog
 
     private readonly ConcurrentBag<ImportRunLogEntry> _entries = new();
 
+    // Gecachte Counter (Thread-safe via Interlocked)
+    private int _created, _updated, _skipped, _conflicts, _errors;
+
     [JsonIgnore]
     public IReadOnlyCollection<ImportRunLogEntry> Entries => _entries;
 
     public List<ImportRunLogEntry> EntriesList => _entries.OrderBy(e => e.TimestampUtc).ToList();
 
-    // Summary counters
-    public int TotalCreated => _entries.Count(e => e.Status == ImportLogStatus.Created);
-    public int TotalUpdated => _entries.Count(e => e.Status == ImportLogStatus.Updated);
-    public int TotalSkipped => _entries.Count(e => e.Status == ImportLogStatus.Skipped);
-    public int TotalConflicts => _entries.Count(e => e.Status == ImportLogStatus.Conflict);
-    public int TotalErrors => _entries.Count(e => e.Status == ImportLogStatus.Error);
+    // Summary counters (O(1) statt O(n))
+    public int TotalCreated => _created;
+    public int TotalUpdated => _updated;
+    public int TotalSkipped => _skipped;
+    public int TotalConflicts => _conflicts;
+    public int TotalErrors => _errors;
 
     public TimeSpan Duration => (CompletedAtUtc ?? DateTime.UtcNow) - StartedAtUtc;
 
-    public void AddEntry(ImportRunLogEntry entry) => _entries.Add(entry);
+    public void AddEntry(ImportRunLogEntry entry)
+    {
+        _entries.Add(entry);
+        IncrementCounter(entry.Status);
+    }
 
     public void AddEntry(
         string phase,
@@ -79,6 +88,19 @@ public sealed class ImportRunLog
             SourceFile = sourceFile,
             TargetPath = targetPath
         });
+        IncrementCounter(status);
+    }
+
+    private void IncrementCounter(ImportLogStatus status)
+    {
+        switch (status)
+        {
+            case ImportLogStatus.Created:  Interlocked.Increment(ref _created); break;
+            case ImportLogStatus.Updated:  Interlocked.Increment(ref _updated); break;
+            case ImportLogStatus.Skipped:  Interlocked.Increment(ref _skipped); break;
+            case ImportLogStatus.Conflict: Interlocked.Increment(ref _conflicts); break;
+            case ImportLogStatus.Error:    Interlocked.Increment(ref _errors); break;
+        }
     }
 
     public void Complete()

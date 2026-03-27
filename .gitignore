@@ -42,3 +42,25 @@ sidecar/models/**/*.onnx
 sidecar/models/**/*.safetensors
 sidecar/test_export_tmp/
 sidecar/training_export/
+
+# Lokale SDK/Runtime-Kopien (gross)
+.dotnet/
+.dotnet_cli/
+.dotnet_home/
+
+# IDE
+.vscode/
+
+# Rohdaten / Legacy (nicht ins Repo)
+Rohdaten/
+_legacy/
+runs/
+
+# YOLO-Modelle im Projektroot
+*.pt
+yolo_cls_export/
+yolo_cls_export_v2/
+yolo_cls_runs/
+
+# Tools
+tools/PdfImageAnalyzer/

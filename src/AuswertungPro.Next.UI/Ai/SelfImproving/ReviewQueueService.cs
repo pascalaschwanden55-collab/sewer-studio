@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.UI.Ai.QualityGate;
+using AuswertungPro.Next.UI.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Ai.SelfImproving;
 
@@ -41,6 +42,43 @@ public sealed class ReviewQueueService
             Enqueue(entry);
     }
 
+    /// <summary>
+    /// Fuegt ein Self-Training-Ergebnis in die Review Queue ein.
+    /// Fuer PartialMatch/Mismatch-Ergebnisse die menschliche Pruefung benoetigen.
+    /// </summary>
+    public void EnqueueFromSelfTraining(
+        string caseId, string vsaCode, string suggestedCode,
+        double meter, string framePath, string matchLevel)
+    {
+        // Priority: Mismatch > PartialMatch > andere
+        double priority = matchLevel switch
+        {
+            MatchLevelNames.Mismatch => 0.9,
+            MatchLevelNames.PartialMatch => 0.6,
+            _ => 0.3
+        };
+
+        var item = new ReviewQueueItem(
+            Id: Guid.NewGuid().ToString(),
+            Entry: null!,
+            Priority: priority,
+            EnqueuedUtc: DateTime.UtcNow)
+        {
+            SelfTrainingCaseId = caseId,
+            SelfTrainingVsaCode = vsaCode,
+            SelfTrainingSuggestedCode = suggestedCode,
+            SelfTrainingMeter = meter,
+            SelfTrainingFramePath = framePath,
+            SelfTrainingMatchLevel = matchLevel
+        };
+
+        lock (_lock)
+        {
+            _queue.Add(item);
+            _queue.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+        }
+    }
+
     /// <summary>Get all items sorted by priority (highest first).</summary>
     public IReadOnlyList<ReviewQueueItem> GetAll()
     {
@@ -72,13 +110,26 @@ public sealed class ReviewQueueService
 
 public sealed record ReviewQueueItem(
     string Id,
-    MappedProtocolEntry Entry,
+    MappedProtocolEntry? Entry,
     double Priority,
     DateTime EnqueuedUtc
 )
 {
-    public string Label => Entry.Detection.FindingLabel;
-    public string? SuggestedCode => Entry.SuggestedCode;
-    public double Confidence => Entry.Confidence;
+    /// <summary>True wenn aus Self-Training statt aus Inference-Pipeline.</summary>
+    public bool IsFromSelfTraining => SelfTrainingCaseId is not null;
+
+    // Self-Training-Felder (optional)
+    public string? SelfTrainingCaseId { get; init; }
+    public string? SelfTrainingVsaCode { get; init; }
+    public string? SelfTrainingSuggestedCode { get; init; }
+    public double? SelfTrainingMeter { get; init; }
+    public string? SelfTrainingFramePath { get; init; }
+    public string? SelfTrainingMatchLevel { get; init; }
+
+    public string Label => IsFromSelfTraining
+        ? $"{SelfTrainingVsaCode} @ {SelfTrainingMeter:F1}m ({SelfTrainingMatchLevel})"
+        : Entry!.Detection.FindingLabel;
+    public string? SuggestedCode => IsFromSelfTraining ? SelfTrainingSuggestedCode : Entry?.SuggestedCode;
+    public double Confidence => IsFromSelfTraining ? 0 : Entry?.Confidence ?? 0;
     public string PriorityLabel => Priority >= 0.7 ? "Hoch" : Priority >= 0.4 ? "Mittel" : "Niedrig";
 }

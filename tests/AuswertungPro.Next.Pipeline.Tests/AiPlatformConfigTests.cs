@@ -19,10 +19,12 @@ public sealed class AiPlatformConfigTests
         using var env = new EnvVarScope();
 
         var config = AiPlatformConfig.Load(settings: null);
+        var expectedVision = GpuModelSelector.DetectAndSelect()?.ResolvedModel
+            ?? OllamaConfig.DefaultVisionModel;
 
         Assert.False(config.Enabled);
         Assert.Equal(new Uri("http://localhost:11434"), config.OllamaBaseUri);
-        Assert.Equal(OllamaConfig.DefaultVisionModel, config.VisionModel);
+        Assert.Equal(expectedVision, config.VisionModel);
         Assert.Equal(OllamaConfig.DefaultTextModel, config.TextModel);
         Assert.Equal(OllamaConfig.DefaultEmbedModel, config.EmbedModel);
         Assert.Equal(TimeSpan.FromMinutes(5), config.OllamaRequestTimeout);
@@ -189,15 +191,13 @@ public sealed class AiPlatformConfigTests
 
         var pipeline = config.ToPipelineConfig();
 
-        Assert.Equal(new PipelineConfig(
-            MultiModelEnabled: true,
-            SidecarUrl: new Uri("http://localhost:8100"),
-            Mode: PipelineMode.MultiModel,
-            YoloConfidence: 0.44,
-            DinoBoxThreshold: 0.45,
-            DinoTextThreshold: 0.46,
-            SidecarTimeoutSec: 123,
-            PipeDiameterMmOverride: 600), pipeline);
+        Assert.Equal(0.44, pipeline.YoloConfidence);
+        Assert.Equal(0.45, pipeline.DinoBoxThreshold);
+        Assert.Equal(0.46, pipeline.DinoTextThreshold);
+        Assert.Equal(123, pipeline.SidecarTimeoutSec);
+        Assert.Equal(600, pipeline.PipeDiameterMmOverride);
+        Assert.NotNull(pipeline.YoloClassConfidence);
+        Assert.True(pipeline.YoloClassConfidence.Count > 0);
     }
 
     [Theory]
@@ -275,6 +275,7 @@ public sealed class AiPlatformConfigTests
         SidecarUrl: new Uri("http://localhost:8100"),
         PipelineMode: PipelineMode.MultiModel,
         YoloConfidence: 0.44,
+        YoloClassConfidence: new Dictionary<string, double> { ["BAB"] = 0.15, ["BCA"] = 0.40 },
         DinoBoxThreshold: 0.45,
         DinoTextThreshold: 0.46,
         SidecarTimeoutSec: 123,

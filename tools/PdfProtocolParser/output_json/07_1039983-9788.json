@@ -1,0 +1,61 @@
+{
+  "haltung": "07.1039983-9788",
+  "datum": "10.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 150 / 150mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Mischabwasser",
+  "inspektionsrichtung": "Gegen Fließrichtung",
+  "schacht_oben": "07.1039983",
+  "schacht_unten": "9788",
+  "inspektionslaenge_m": "7.90",
+  "rohrlaenge_m": "5.00",
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 0.0,
+      "en_code": "BCCAY",
+      "beschreibung": "Bogen nach links, Winkel = 45° Entf. gegen Fließr. 1,00 m Pos: 9; Bogen nach links, Winkel = 45° Entf. gegen Fließr. 1,10 m",
+      "uhr_von": "9",
+      "uhr_bis": "9",
+      "stufe": null,
+      "timestamp_video": "00:00:33",
+      "foto_datei": null,
+      "foto_nr": 211
+    },
+    {
+      "meter": 0.0,
+      "en_code": "AEDXO",
+      "beschreibung": "Bogen nach links oben, Winkel = 45° Entf. gegen Fließr. 1,80 m Rohrmaterialwechsel: Polyethylen Entf. gegen Fließr. 1,90 m Position",
+      "uhr_von": "3",
+      "uhr_bis": "3",
+      "stufe": null,
+      "timestamp_video": "00:00:53",
+      "foto_datei": null,
+      "foto_nr": 213
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BDA",
+      "beschreibung": "Bogen nach links oben, Winkel = 45° Entf. gegen Fließr. 3,30 m Allgemeinzustand, Fotobeispiel Entf. gegen Fließr. 4,60 m Position",
+      "uhr_von": "3",
+      "uhr_bis": "3",
+      "stufe": null,
+      "timestamp_video": "00:01:29",
+      "foto_datei": null,
+      "foto_nr": 215
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BDCZB",
+      "beschreibung": "Bogen nach links oben, Winkel = 45° Entf. gegen Fließr. 7,60 m Anderer Grund für Abbruch der Inspektion, Auftraggeber verzichtet auf weitere Inspektion Entf. gegen Fließr. 7,90 m Position",
+      "uhr_von": "3",
+      "uhr_bis": "3",
+      "stufe": null,
+      "timestamp_video": "00:02:04",
+      "foto_datei": null,
+      "foto_nr": 217
+    }
+  ]
+}

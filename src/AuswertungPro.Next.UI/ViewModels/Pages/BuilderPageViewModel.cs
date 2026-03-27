@@ -19,7 +19,7 @@ using AuswertungPro.Next.Infrastructure.Output.Offers;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
-public sealed partial class BuilderPageViewModel : ObservableObject
+public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 {
     private const string AllFilterLabel = "Alle";
     private const string UnknownOwnerLabel = "Unbekannt";
@@ -430,6 +430,22 @@ public sealed partial class BuilderPageViewModel : ObservableObject
             record.PropertyChanged -= RecordPropertyChanged;
     }
 
+    private bool _disposed;
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _shell.PropertyChanged -= ShellPropertyChanged;
+        _refreshDebounceTimer.Stop();
+        _refreshDebounceTimer.Tick -= RefreshDebounceTimerTick;
+        if (_attachedData is not null)
+        {
+            _attachedData.CollectionChanged -= ProjectDataCollectionChanged;
+            DetachRecordHandlers(_attachedData);
+        }
+    }
+
     private void RecordPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(e.PropertyName))
@@ -517,7 +533,9 @@ public sealed partial class BuilderPageViewModel : ObservableObject
 
             var sanieren = SafeText(record.GetFieldValue("Sanieren_JaNein"));
             var executedBy = SafeText(record.GetFieldValue("Ausgefuehrt_durch"));
+            if (executedBy.Length == 0) executedBy = "(unbekannt)";
             var material = SafeText(record.GetFieldValue("Rohrmaterial"));
+            if (material.Length == 0) material = "(unbekannt)";
             var status = SafeText(record.GetFieldValue("Offen_abgeschlossen"));
             var year = NormalizeYear(record.GetFieldValue("Datum_Jahr"));
             var street = SafeText(record.GetFieldValue("Strasse"));
@@ -756,15 +774,15 @@ public sealed partial class BuilderPageViewModel : ObservableObject
             ? "Spezialstatistik auf Basis aller gefilterten Haltungen."
             : $"Spezialstatistik basiert auf {RowsWithDetailedCosts} von {FilteredRowsCount} Haltungen mit Positionsdetails.";
 
-        UpdateRehabilitationShareChart();
+        UpdateRehabilitationShareChart(filtered);
         UpdateCostByExecutorChart(filtered);
     }
 
-    private void UpdateRehabilitationShareChart()
+    private void UpdateRehabilitationShareChart(IReadOnlyList<DruckcenterRowVm> filtered)
     {
-        var total = _allRows.Count;
-        var yesCount = _allRows.Count(row => IsSanierenYes(row.Sanieren));
-        var noCount = _allRows.Count(row => IsSanierenNo(row.Sanieren));
+        var total = filtered.Count;
+        var yesCount = filtered.Count(row => IsSanierenYes(row.Sanieren));
+        var noCount = filtered.Count(row => IsSanierenNo(row.Sanieren));
         var openCount = Math.Max(0, total - yesCount - noCount);
 
         RehabilitationShareChart.Clear();
@@ -773,9 +791,10 @@ public sealed partial class BuilderPageViewModel : ObservableObject
         RehabilitationShareChart.Add(new ChartBarVm("Nicht bewertet", openCount, total));
 
         var yesPercent = total > 0 ? yesCount * 100.0 / total : 0.0;
+        var basis = filtered.Count == _allRows.Count ? "Haltungen" : "gefilterten Haltungen";
         RehabilitationShareHint = total == 0
             ? "Keine Haltungen im Projekt."
-            : $"{yesPercent:0.#}% von {total} Haltungen sind als 'Sanieren = Ja' markiert.";
+            : $"{yesPercent:0.#}% von {total} {basis} sind als 'Sanieren = Ja' markiert.";
     }
 
     private void UpdateCostByExecutorChart(IReadOnlyList<DruckcenterRowVm> filtered)

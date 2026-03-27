@@ -1,0 +1,148 @@
+{
+  "haltung": "06.24341-35625",
+  "datum": "30.08.2023",
+  "ort": "6472 Erstfeld",
+  "strasse": "Schlossbergstrasse",
+  "profil": "Kreisprofil 700mm",
+  "material": "Faserzement",
+  "nutzungsart": "Mischabwasser",
+  "inspektionsrichtung": "Gegen Fliessrichtung",
+  "schacht_oben": "06.24341",
+  "schacht_unten": "35625",
+  "inspektionslaenge_m": "57.00",
+  "rohrlaenge_m": "4",
+  "gereinigt": "Ja",
+  "baujahr": null,
+  "schaeden": [
+    {
+      "meter": 0.0,
+      "en_code": "BCD",
+      "beschreibung": "Rohranfang",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:00:00",
+      "foto_datei": "06.24341-35625_c9984d0b-cadd-4c6c-b41f-2ae95571f45a_20230830_135252_004.jpg"
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BBFA",
+      "beschreibung": "Infiltration, Schwitzen / Verkalkung, an einer Rohrverbindung, von 12 Uhr bis 6 Uhr",
+      "uhr_von": "12",
+      "uhr_bis": "6",
+      "stufe": 4,
+      "timestamp_video": "00:00:22",
+      "foto_datei": "06.24341-35625_d23f0012-f79b-4b76-a6fa-7fdbab1b5189_20230830_135333_282.jpg"
+    },
+    {
+      "meter": 4.4,
+      "en_code": "BDA",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel, an einer Rohrverbindung von",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:02:21",
+      "foto_datei": "06.24341-35625_c6124797-9cf1-43e6-98bc-21f8fba290da_20230830_135551_346.jpg"
+    },
+    {
+      "meter": 28.4,
+      "en_code": "BBFA",
+      "beschreibung": "Infiltration, Schwitzen / Verkalkung, an einer Rohrverbindung, von 8 Uhr bis 9 Uhr",
+      "uhr_von": "8",
+      "uhr_bis": "9",
+      "stufe": 4,
+      "timestamp_video": "00:06:37",
+      "foto_datei": "06.24341-35625_dc8cda56-3adf-4955-94d2-3323950a8260_20230830_140005_682.jpg"
+    },
+    {
+      "meter": 32.4,
+      "en_code": "BBFA",
+      "beschreibung": "Infiltration, Schwitzen / Verkalkung, an einer Rohrverbindung",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": 4,
+      "timestamp_video": "00:07:51",
+      "foto_datei": "06.24341-35625_8ba15e29-919a-403c-a777-18e96c0c106b_20230830_140239_034.jpg"
+    },
+    {
+      "meter": 38.7,
+      "en_code": "BCAEA",
+      "beschreibung": "Anschluss eingespitzt, offen bei 1 Uhr",
+      "uhr_von": "1",
+      "uhr_bis": "1",
+      "stufe": null,
+      "timestamp_video": "00:09:54",
+      "foto_datei": "06.24341-35625_39829aca-04e7-41bb-8a8c-858900d12368_20230830_140425_061.jpg"
+    },
+    {
+      "meter": 38.7,
+      "en_code": "BAHC",
+      "beschreibung": "Anschluss unvollständig eingebunden bei 1 Uhr",
+      "uhr_von": "1",
+      "uhr_bis": "1",
+      "stufe": 2,
+      "timestamp_video": "00:09:57",
+      "foto_datei": "06.24341-35625_5e60a7cf-0188-42c8-9da5-337c435d09e7_20230830_140521_813.jpg"
+    },
+    {
+      "meter": 38.7,
+      "en_code": "BBBA",
+      "beschreibung": "Inkrustation (verkalkt) von 2 Uhr bis 6 Uhr",
+      "uhr_von": "2",
+      "uhr_bis": "6",
+      "stufe": 3,
+      "timestamp_video": "00:09:58",
+      "foto_datei": "06.24341-35625_e8677789-e23d-4758-a4a8-00760ea98430_20230830_140544_287.jpg"
+    },
+    {
+      "meter": 41.2,
+      "en_code": "BCAEA",
+      "beschreibung": "Anschluss eingespitzt, offen bei 9 Uhr",
+      "uhr_von": "9",
+      "uhr_bis": "9",
+      "stufe": null,
+      "timestamp_video": "00:11:38",
+      "foto_datei": "06.24341-35625_fc3c61c7-169d-4df1-90c6-36cdef0fc9d3_20230830_140740_522.jpg"
+    },
+    {
+      "meter": 41.2,
+      "en_code": "BAHC",
+      "beschreibung": "Anschluss unvollständig eingebunden bei 9 Uhr",
+      "uhr_von": "9",
+      "uhr_bis": "9",
+      "stufe": 2,
+      "timestamp_video": "00:11:41",
+      "foto_datei": "06.24341-35625_029f5bdc-3604-4db9-a3f7-3a81f044da72_20230830_140724_691.jpg"
+    },
+    {
+      "meter": 41.2,
+      "en_code": "BBBA",
+      "beschreibung": "Inkrustation (verkalkt) von 6 Uhr bis 10 Uhr",
+      "uhr_von": "6",
+      "uhr_bis": "10",
+      "stufe": 3,
+      "timestamp_video": "00:11:43",
+      "foto_datei": "06.24341-35625_391d2dbf-418b-4243-9a60-c97b6b2bb383_20230830_140717_379.jpg"
+    },
+    {
+      "meter": 57.0,
+      "en_code": "BBFC",
+      "beschreibung": "Infiltration, Wasser fliesst, an einer Rohrverbindung von 6 Uhr, bis 12 Uhr",
+      "uhr_von": "6",
+      "uhr_bis": "12",
+      "stufe": 3,
+      "timestamp_video": "00:14:50",
+      "foto_datei": "06.24341-35625_df916331-3cef-405c-b399-a2f8f9d3eb31_20230830_141112_995.jpg"
+    },
+    {
+      "meter": 57.0,
+      "en_code": "BCE",
+      "beschreibung": "Rohrende",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:14:51",
+      "foto_datei": "06.24341-35625_17625f6e-f142-4892-8685-958f84e3b75e_20230830_141024_699.jpg"
+    }
+  ]
+}

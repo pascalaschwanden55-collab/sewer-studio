@@ -1,0 +1,39 @@
+{
+  "haltung": "9861-1042615",
+  "datum": "10.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 150 / 150mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Regenabwasser",
+  "inspektionsrichtung": "In Fließrichtung",
+  "schacht_oben": "9861",
+  "schacht_unten": "1042615",
+  "inspektionslaenge_m": "5.20",
+  "rohrlaenge_m": "5.00",
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 1.6,
+      "en_code": "BDA",
+      "beschreibung": "Bogen nach unten, Winkel = 20° Allgemeinzustand, Fotobeispiel Position",
+      "uhr_von": "6",
+      "uhr_bis": "6",
+      "stufe": null,
+      "timestamp_video": "00:00:45",
+      "foto_datei": null,
+      "foto_nr": 195
+    },
+    {
+      "meter": 3.0,
+      "en_code": "BCCYA",
+      "beschreibung": "Bogen nach oben, Winkel = 20°, In die Horizontale",
+      "uhr_von": "12",
+      "uhr_bis": "12",
+      "stufe": null,
+      "timestamp_video": "00:00:56",
+      "foto_datei": null,
+      "foto_nr": 196
+    }
+  ]
+}

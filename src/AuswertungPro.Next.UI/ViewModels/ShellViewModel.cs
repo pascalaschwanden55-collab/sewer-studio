@@ -43,6 +43,7 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private bool _isFocusMode;
     [ObservableProperty] private bool _isAiWorking;
     [ObservableProperty] private string _aiStatusLabel = "";
+    [ObservableProperty] private string _aiLoadedModels = "";
     [ObservableProperty] private int _guideStepIndex;
     [ObservableProperty] private string _guideStepTitle = "Ratten-Assistent";
     [ObservableProperty] private string _guideMessage = "Willkommen in SewerStudio.";
@@ -98,6 +99,19 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             IsAiWorking = active;
             AiStatusLabel = active ? label : "";
+            if (active)
+            {
+                try
+                {
+                    var cfg = Ai.AiRuntimeConfig.Load();
+                    AiLoadedModels = cfg.VisionModel ?? "Qwen2.5-VL";
+                }
+                catch { AiLoadedModels = ""; }
+            }
+            else
+            {
+                AiLoadedModels = "";
+            }
         };
 
         PropertyChanged += (_, e) =>

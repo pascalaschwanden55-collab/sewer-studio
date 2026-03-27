@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace AuswertungPro.Next.UI.Ai.Training;
 
 /// <summary>
-/// Verwaltet extrahierte Video-Frames im AppData-Ordner.
+/// Verwaltet extrahierte Video-Frames im Knowledge-Ordner.
 /// </summary>
 public static class FrameStore
 {
@@ -17,11 +17,7 @@ public static class FrameStore
             Directory.CreateDirectory(customDir);
             return customDir;
         }
-        var dir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "AuswertungPro", "frames");
-        Directory.CreateDirectory(dir);
-        return dir;
+        return KnowledgeRoot.GetFramesDir();
     }
 
     /// <summary>

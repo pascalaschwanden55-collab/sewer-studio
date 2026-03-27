@@ -1,0 +1,62 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Controls.PipeGraphTimeline"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             MinHeight="68">
+
+    <Border Background="#1E293B" CornerRadius="10" Padding="12,8"
+            BorderBrush="#334155" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Titel-Zeile -->
+            <Grid Grid.Row="0" Margin="0,0,0,4">
+                <TextBlock Text="Pipe Graph Timeline"
+                           FontSize="11" Foreground="#94A3B8"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+                <TextBlock x:Name="TxtTotalLength"
+                           HorizontalAlignment="Right"
+                           FontSize="11" Foreground="#94A3B8"
+                           FontFamily="Consolas"/>
+            </Grid>
+
+            <!-- Timeline-Balken mit Markern + Playhead -->
+            <Border Grid.Row="1" Background="#334155" CornerRadius="6"
+                    Height="36" x:Name="TimelineBar"
+                    MouseLeftButtonDown="TimelineBar_MouseLeftButtonDown"
+                    MouseMove="TimelineBar_MouseMove"
+                    MouseLeftButtonUp="TimelineBar_MouseLeftButtonUp"
+                    Cursor="Hand">
+                <Grid ClipToBounds="True">
+                    <!-- Fortschritts-Fuellbalken -->
+                    <Border x:Name="ProgressFill"
+                            Background="#333B82F6" CornerRadius="6"
+                            HorizontalAlignment="Left" Width="0"/>
+
+                    <!-- Marker-Canvas (Defekt-Punkte) -->
+                    <Canvas x:Name="MarkerCanvas" ClipToBounds="False"/>
+
+                    <!-- Playhead (aktuelle Position) -->
+                    <Canvas x:Name="PlayheadCanvas" ClipToBounds="False">
+                        <Rectangle x:Name="PlayheadLine"
+                                   Width="2" Fill="White"
+                                   Canvas.Top="0" Canvas.Left="0"
+                                   Opacity="0.9"/>
+                        <Ellipse x:Name="PlayheadDot"
+                                 Width="10" Height="10"
+                                 Fill="White"
+                                 Canvas.Top="-3" Canvas.Left="-4"/>
+                    </Canvas>
+                </Grid>
+            </Border>
+
+            <!-- Meter-Skala -->
+            <Canvas Grid.Row="2" x:Name="ScaleCanvas" Height="16"
+                    Margin="0,2,0,0" ClipToBounds="False"/>
+        </Grid>
+    </Border>
+</UserControl>

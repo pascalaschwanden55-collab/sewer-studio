@@ -40,6 +40,23 @@ public sealed record YoloResponse(
     [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs
 );
 
+// ── YOLO Classify ─────────────────────────────────────────────────────────
+
+public sealed record YoloClassifyRequest(
+    [property: JsonPropertyName("image_base64")] string ImageBase64,
+    [property: JsonPropertyName("top_k")] int TopK = 5
+);
+
+public sealed record YoloClassifyPrediction(
+    [property: JsonPropertyName("class_name")] string ClassName,
+    [property: JsonPropertyName("confidence")] double Confidence
+);
+
+public sealed record YoloClassifyResponse(
+    [property: JsonPropertyName("predictions")] IReadOnlyList<YoloClassifyPrediction> Predictions,
+    [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs
+);
+
 // ── Grounding DINO ─────────────────────────────────────────────────────────
 
 public sealed record DinoRequest(

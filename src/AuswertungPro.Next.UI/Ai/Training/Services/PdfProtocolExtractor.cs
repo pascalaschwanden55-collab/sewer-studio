@@ -15,17 +15,18 @@ namespace AuswertungPro.Next.UI.Ai.Training.Services;
 ///
 /// Strategien (in Priorität):
 /// 1. IKAS Leitungsgrafik: "Entf. Kode Foto Video Beschreibung" (Zeit VOR Text)
-/// 2. Tabellenzeilen mit Timestamp am Ende (Zeit NACH Text)
-/// 3. IKAS Bildbericht: Label-Value Blöcke (Zustand/Entf./Video)
-/// 4. Regelbasiertes Fallback (Bereichsmuster / Einzelmeter)
-/// 5. JSON-Protokolldatei als direkter Fallback
+/// 2. Fretz/IBAK-Tabelle: "Foto Zeit Meter Code Beschreibung" (Zeit VOR Meter)
+/// 3. Tabellenzeilen mit Timestamp am Ende (Zeit NACH Text)
+/// 4. IKAS Bildbericht: Label-Value Blöcke (Zustand/Entf./Video)
+/// 5. Regelbasiertes Fallback (Bereichsmuster / Einzelmeter)
+/// 6. JSON-Protokolldatei als direkter Fallback
 /// </summary>
 public sealed class PdfProtocolExtractor
 {
     // ── Regex-Muster ────────────────────────────────────────────────────────
 
-    // VSA-Code: 2-6 Buchstaben, optional mit Punkt-Suffix (.A, .C, .AB)
-    private const string CodePattern = @"[A-Z]{2,6}(?:\.[A-Z]{1,2})?";
+    // VSA-Code: 2-6 Buchstaben, optional mit Punkt-Suffixen (.A, .C, .AB, .Y.B)
+    private const string CodePattern = @"[A-Z]{2,6}(?:\.[A-Z]{1,2})*";
 
     // IKAS Leitungsgrafik: "[meter]  [CODE]  [foto?]  [HH:MM:SS]  [text]"
     // Zeit kommt VOR der Beschreibung
@@ -36,6 +37,12 @@ public sealed class PdfProtocolExtractor
     // IKAS Fortsetzungszeile (kein Meter): "[CODE]  [foto?]  [HH:MM:SS]  [text]"
     private static readonly Regex IkasContinuationPattern = new(
         $@"^[ \t]{{4,}}(?<code>{CodePattern})[ \t]+(?:\d{{1,5}}[ \t]+)?(?<time>\d{{2}}:\d{{2}}:\d{{2}})[ \t]+(?<text>[^\r\n]+)",
+        RegexOptions.Compiled | RegexOptions.Multiline);
+
+    // Fretz-Format: "[Foto?]  [HH:MM:SS]  [meter]  [CODE]  [text]"
+    // Foto-Nummer und Timestamp kommen VOR dem Meterwert (Fretz/IBAK-PDFs)
+    private static readonly Regex FretzTablePattern = new(
+        $@"^[ \t]*(?:\d{{1,5}}[ \t]+)?(?<time>\d{{2}}:\d{{2}}:\d{{2}})[ \t]+(?<meter>\d{{1,4}}[.,]\d{{1,3}})[ \t]+(?<code>{CodePattern})[ \t]+(?<text>[^\r\n]+)",
         RegexOptions.Compiled | RegexOptions.Multiline);
 
     // Standard-Format: "[meter]  [CODE]  [text...]  [HH:MM:SS]"
@@ -323,7 +330,8 @@ public sealed class PdfProtocolExtractor
 
     /// <summary>
     /// Extrahiert Fotos aus dem PDF-Bildbericht und ordnet sie den Einträgen zu.
-    /// Filtert kleine Bilder (Logos) und ordnet Fotos den Entries nach Position.
+    /// Sicherheitsnetz: Zuordnung nur wenn Bild-Anzahl == Entry-Anzahl (1:1 plausibel).
+    /// Bei Ungleichheit werden keine Bilder zugeordnet um falsche Label-Bild-Paare zu vermeiden.
     /// </summary>
     private static IReadOnlyList<GroundTruthEntry> ExtractAndAssignPdfImages(
         UglyToad.PdfPig.PdfDocument doc,
@@ -337,44 +345,60 @@ public sealed class PdfProtocolExtractor
             var safeName = Regex.Replace(Path.GetFileNameWithoutExtension(pdfPath), @"[^\w\-]", "_");
 
             // Alle sinnvollen Bilder aus dem PDF sammeln (min. 100x100 px)
-            var images = new List<byte[]>();
+            // Seitennummer pro Bild tracken fuer Diagnostik
+            var images = new List<(int pageNum, byte[] data)>();
+            int pageIdx = 0;
             foreach (var page in doc.GetPages())
             {
+                pageIdx++;
                 foreach (var img in page.GetImages())
                 {
                     if (img.WidthInSamples < 100 || img.HeightInSamples < 100)
                         continue; // Logos, Icons etc. überspringen
 
                     if (img.TryGetPng(out var pngBytes))
-                        images.Add(pngBytes);
+                        images.Add((pageIdx, pngBytes));
                 }
             }
 
             if (images.Count == 0)
                 return entries;
 
-            // Bilder den Entries zuordnen (in Reihenfolge)
+            // Plausibilitaetscheck: Alle Bilder muessen von aufsteigenden Seiten kommen.
+            bool pagesMonotonic = true;
+            for (int i = 1; i < images.Count; i++)
+            {
+                if (images[i].pageNum < images[i - 1].pageNum)
+                {
+                    pagesMonotonic = false;
+                    break;
+                }
+            }
+
+            if (!pagesMonotonic)
+                return entries; // Seiten nicht monoton → Zuordnung unsicher
+
+            // Strikte 1:1-Zuordnung: Nur wenn exakt gleich viele Bilder wie Entries.
+            // Bei ungleicher Anzahl ist die Index-basierte Zuordnung nicht vertrauenswuerdig,
+            // weil unklar ist welche Entries ein Bild haben und welche nicht.
+            if (images.Count != entries.Count)
+                return entries;
+
             var result = new List<GroundTruthEntry>(entries.Count);
             for (int i = 0; i < entries.Count; i++)
             {
                 var entry = entries[i];
-                string? framePath = null;
-
-                if (i < images.Count)
+                var fileName = $"{safeName}_{entry.VsaCode}_{entry.MeterStart:F1}m_{i}.png";
+                var framePath = Path.Combine(framesDir, fileName);
+                try
                 {
-                    var fileName = $"{safeName}_{entry.VsaCode}_{entry.MeterStart:F1}m_{i}.png";
-                    framePath = Path.Combine(framesDir, fileName);
-                    try
-                    {
-                        File.WriteAllBytes(framePath, images[i]);
-                    }
-                    catch
-                    {
-                        framePath = null;
-                    }
+                    File.WriteAllBytes(framePath, images[i].data);
+                }
+                catch
+                {
+                    framePath = null;
                 }
 
-                // GroundTruthEntry ist ein record → mit "with" kopieren
                 result.Add(entry with { ExtractedFramePath = framePath });
             }
 
@@ -435,7 +459,29 @@ public sealed class PdfProtocolExtractor
         if (results.Count > 0)
             return results;
 
-        // Strategie 2: Standard-Tabellenformat (Zeit NACH Beschreibung)
+        // Strategie 2: Fretz-Tabellenformat (Foto + Zeit VOR Meter)
+        // Format: "040  00:00:16  0.00  BCD  Rohranfang"
+        foreach (Match m in FretzTablePattern.Matches(text))
+        {
+            var entry = BuildEntry(
+                m.Groups["meter"].Value,
+                "",
+                m.Groups["code"].Value,
+                "",
+                m.Groups["text"].Value,
+                ParseTimestamp(m.Groups["time"].Value));
+
+            if (entry is not null && seen.Add(Sig(entry)))
+                results.Add(entry);
+        }
+
+        // Fretz-PDFs haben auch Zeilen ohne Timestamp (z.B. "27.70 BCE Rohrende").
+        // Diese werden weiter unten durch die Fallback-Patterns ergaenzt.
+        // Deshalb hier KEIN fruehes Return — stattdessen weiter zu Strategie 5/6.
+        if (results.Count > 0)
+            goto fretzFallback;
+
+        // Strategie 3: Standard-Tabellenformat (Zeit NACH Beschreibung, z.B. WinCan)
         // Format: "2.24  BCCBA  Beschreibung...  00:01:07"
         foreach (Match m in TableRowPattern.Matches(text))
         {
@@ -454,12 +500,15 @@ public sealed class PdfProtocolExtractor
         if (results.Count > 0)
             return results;
 
-        // Strategie 3: IKAS Bildbericht (Label-Value Blöcke)
+        // Strategie 4: IKAS Bildbericht (Label-Value Blöcke)
         results = ParseBildberichtBlocks(text, seen);
         if (results.Count > 0)
             return results;
 
-        // Strategie 4: Bereichs-Muster (m1 – m2 CODE)
+        // Strategie 5: Bereichs-Muster (m1 – m2 CODE)
+        // Wird auch als Ergaenzung nach Fretz-Strategie erreicht (fretzFallback),
+        // um Zeilen ohne Timestamp zu erfassen (z.B. "27.70  BCE  Rohrende").
+        fretzFallback:
         foreach (Match m in EntryPattern.Matches(text))
         {
             var entry = BuildEntry(
@@ -474,7 +523,7 @@ public sealed class PdfProtocolExtractor
                 results.Add(entry);
         }
 
-        // Strategie 5: Einzel-Meter-Muster (@m CODE)
+        // Strategie 6: Einzel-Meter-Muster (@m CODE)
         if (results.Count == 0)
         {
             foreach (Match m in SingleMeterPattern.Matches(text))

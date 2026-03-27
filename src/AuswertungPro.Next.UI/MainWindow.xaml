@@ -16,7 +16,7 @@
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <Menu.Style>
-                <Style TargetType="Menu">
+                <Style TargetType="Menu" BasedOn="{StaticResource {x:Type Menu}}">
                     <Setter Property="Visibility" Value="Visible"/>
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding IsFocusMode}" Value="True">
@@ -99,7 +99,7 @@
                 <Border DockPanel.Dock="Bottom" Margin="12,4,12,12" Padding="10,8" CornerRadius="6"
                         BorderThickness="1" BorderBrush="{StaticResource BorderBrush}">
                     <Border.Background>
-                        <SolidColorBrush Color="#FFF0F3F8"/>
+                        <StaticResource ResourceKey="BgLightBrush"/>
                     </Border.Background>
                     <StackPanel>
                         <TextBlock Text="LEISTUNGSMONITOR" FontSize="9" FontWeight="Bold" FontFamily="Consolas"
@@ -118,7 +118,7 @@
                             <TextBlock Grid.Column="0" Text="CPU" FontSize="10" FontWeight="SemiBold" FontFamily="Consolas"
                                        Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
                             <Border Grid.Column="1" Height="5" CornerRadius="2.5"
-                                    Background="#FFDAE1ED" Margin="0,0,6,0" VerticalAlignment="Center">
+                                    Background="{StaticResource SurfaceSubtleBrush}" Margin="0,0,6,0" VerticalAlignment="Center">
                                 <Border CornerRadius="2.5" HorizontalAlignment="Left"
                                         Background="{Binding DataContext.Monitor.CpuPercent, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource PercentToColorConverter}}">
                                     <Border.Width>
@@ -223,7 +223,7 @@
                             <TextBlock Grid.Column="0" Text="RAM" FontSize="10" FontWeight="SemiBold" FontFamily="Consolas"
                                        Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
                             <Border Grid.Column="1" Height="5" CornerRadius="2.5"
-                                    Background="#FFDAE1ED" Margin="0,0,6,0" VerticalAlignment="Center">
+                                    Background="{StaticResource SurfaceSubtleBrush}" Margin="0,0,6,0" VerticalAlignment="Center">
                                 <Border CornerRadius="2.5" HorizontalAlignment="Left"
                                         Background="{Binding DataContext.Monitor.RamPercent, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource PercentToColorConverter}}">
                                     <Border.Width>
@@ -361,7 +361,7 @@
                                 <TextBlock Grid.Column="0" Text="GPU" FontSize="10" FontWeight="SemiBold" FontFamily="Consolas"
                                            Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
                                 <Border Grid.Column="1" Height="5" CornerRadius="2.5"
-                                        Background="#FFDAE1ED" Margin="0,0,6,0" VerticalAlignment="Center">
+                                        Background="{StaticResource SurfaceSubtleBrush}" Margin="0,0,6,0" VerticalAlignment="Center">
                                     <Border CornerRadius="2.5" HorizontalAlignment="Left"
                                             Background="{Binding DataContext.Monitor.GpuPercent, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource PercentToColorConverter}}">
                                         <Border.Width>
@@ -488,7 +488,7 @@
                                 <TextBlock Grid.Column="0" Text="VRAM" FontSize="9" FontWeight="SemiBold" FontFamily="Consolas"
                                            Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
                                 <Border Grid.Column="1" Height="5" CornerRadius="2.5"
-                                        Background="#FFDAE1ED" Margin="0,0,6,0" VerticalAlignment="Center">
+                                        Background="{StaticResource SurfaceSubtleBrush}" Margin="0,0,6,0" VerticalAlignment="Center">
                                     <Border CornerRadius="2.5" HorizontalAlignment="Left"
                                             Background="{Binding DataContext.Monitor.GpuMemPercent, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource PercentToColorConverter}}">
                                         <Border.Width>
@@ -531,6 +531,10 @@
                         <TextBlock Text="KI AKTIV" FontSize="10" FontWeight="Bold"
                             HorizontalAlignment="Center" Margin="0,2,0,0"
                             Foreground="{StaticResource AccentBrush}"/>
+                        <TextBlock Text="{Binding AiLoadedModels}" FontSize="9" FontWeight="SemiBold"
+                            HorizontalAlignment="Center" Margin="0,1,0,0"
+                            Foreground="{StaticResource AccentBrush}"
+                            TextTrimming="CharacterEllipsis" MaxWidth="150"/>
                         <TextBlock Text="{Binding AiStatusLabel}" FontSize="9"
                             HorizontalAlignment="Center" Margin="0,1,0,0"
                             Foreground="{StaticResource MutedBrush}"
@@ -642,20 +646,12 @@
                                         </Grid>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="bd" Property="Background">
-                                                    <Setter.Value>
-                                                        <SolidColorBrush Color="#FFDBEAFE"/>
-                                                    </Setter.Value>
-                                                </Setter>
+                                                <Setter TargetName="bd" Property="Background" Value="{StaticResource AccentSubtleBrush}"/>
                                                 <Setter TargetName="AccentStrip" Property="Opacity" Value="1"/>
                                                 <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
                                             </Trigger>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="bd" Property="Background">
-                                                    <Setter.Value>
-                                                        <SolidColorBrush Color="#FFE8EDF5"/>
-                                                    </Setter.Value>
-                                                </Setter>
+                                                <Setter TargetName="bd" Property="Background" Value="{StaticResource HoverBrush}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -697,7 +693,7 @@
             <Border Style="{StaticResource Card}">
                 <Grid>
                     <ctrl:AnimatedContentControl Content="{Binding CurrentPage}"/>
-                    <Border Background="#F0F8FAFC" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8">
+                    <Border Background="{StaticResource OverlayBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Collapsed"/>

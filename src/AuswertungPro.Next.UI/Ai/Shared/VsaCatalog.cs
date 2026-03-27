@@ -61,6 +61,15 @@ public static class VsaCatalog
             // Bauteilzustand
             ["BHA"] = new("BHA", "Reparatur",              false, false, null),
             ["BHB"] = new("BHB", "Ausbesserung",           false, false, null),
+
+            // Bestandsaufnahme (BC-Gruppe) — Pflicht-Beobachtungen
+            ["BCD"] = new("BCD", "Rohranfang",             false, false, null),
+            ["BCE"] = new("BCE", "Rohrende",               false, false, null),
+            ["BCG"] = new("BCG", "Bogen",                  false, true,  "°"),
+            ["BAI"] = new("BAI", "Einragender Stutzen",    false, true,  "%"),
+
+            // Weitere Codes / Abbruch
+            ["BDC"] = new("BDC", "Inspektionsabbruch",     false, false, null),
         }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>True wenn der Code im Katalog existiert.</summary>

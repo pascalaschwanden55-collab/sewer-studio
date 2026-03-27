@@ -37,19 +37,20 @@ public sealed class RetrievalService(
         if (queryVec is null)
             return [];
 
-        var candidates = LoadAllEmbeddings();
-        var scored = new List<(string SampleId, double Score)>(candidates.Count);
+        // Eine einzige JOIN-Query statt N+1 (vorher: LoadAllEmbeddings + N× LoadSample)
+        var candidates = LoadAllEmbeddingsWithSamples();
+        var scored = new List<(string SampleId, double Score, SampleRecord? Sample)>(candidates.Count);
         var mismatchCount = 0;
 
-        foreach (var (sampleId, vector) in candidates)
+        foreach (var (sampleId, vector, sample) in candidates)
         {
             if (vector.Length != queryVec.Length)
             {
                 mismatchCount++;
-                continue; // skip incompatible vectors
+                continue;
             }
             var score = CosineSimilarity(queryVec, vector);
-            scored.Add((sampleId, score));
+            scored.Add((sampleId, score, sample));
         }
 
         if (mismatchCount > 0 && Interlocked.CompareExchange(ref _dimensionMismatchWarned, 1, 0) == 0)
@@ -64,8 +65,7 @@ public sealed class RetrievalService(
         var results = new List<RetrievalResult>(Math.Min(topK, scored.Count));
         for (var i = 0; i < Math.Min(topK, scored.Count); i++)
         {
-            var (sampleId, score) = scored[i];
-            var sample = LoadSample(sampleId);
+            var (_, score, sample) = scored[i];
             if (sample is not null)
                 results.Add(new RetrievalResult(sample, score));
         }
@@ -121,34 +121,39 @@ public sealed class RetrievalService(
 
     // ── Intern ────────────────────────────────────────────────────────────
 
-    private List<(string SampleId, float[] Vector)> LoadAllEmbeddings()
+    /// <summary>
+    /// Laedt alle Embeddings MIT Sample-Daten in einer einzelnen JOIN-Query.
+    /// Vermeidet N+1-Problem (vorher: 1 Query fuer Embeddings + N Queries fuer Samples).
+    /// </summary>
+    private List<(string SampleId, float[] Vector, SampleRecord? Sample)> LoadAllEmbeddingsWithSamples()
     {
-        var list = new List<(string, float[])>();
+        var list = new List<(string, float[], SampleRecord?)>();
         using var cmd = db.Connection.CreateCommand();
-        cmd.CommandText = "SELECT SampleId, Vector FROM Embeddings";
+        cmd.CommandText = """
+            SELECT e.SampleId, e.Vector,
+                   s.CaseId, s.VsaCode, s.Beschreibung, s.MeterStart, s.MeterEnd
+            FROM Embeddings e
+            LEFT JOIN Samples s ON e.SampleId = s.SampleId
+            """;
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
-            var id   = reader.GetString(0);
+            var id = reader.GetString(0);
             var blob = (byte[])reader.GetValue(1);
-            list.Add((id, EmbeddingService.FromBlob(blob)));
+            SampleRecord? sample = reader.IsDBNull(2) ? null : new SampleRecord(
+                id, reader.GetString(2), reader.GetString(3),
+                reader.GetString(4), reader.GetDouble(5), reader.GetDouble(6));
+            list.Add((id, EmbeddingService.FromBlob(blob), sample));
         }
         return list;
     }
 
-    private SampleRecord? LoadSample(string sampleId)
+    // Legacy-Kompatibilitaet (wird nicht mehr fuer Retrieval genutzt)
+    private List<(string SampleId, float[] Vector)> LoadAllEmbeddings()
     {
-        using var cmd = db.Connection.CreateCommand();
-        cmd.CommandText = """
-            SELECT SampleId, CaseId, VsaCode, Beschreibung, MeterStart, MeterEnd
-            FROM Samples WHERE SampleId = $id
-            """;
-        cmd.Parameters.AddWithValue("$id", sampleId);
-        using var r = cmd.ExecuteReader();
-        if (!r.Read()) return null;
-        return new SampleRecord(
-            r.GetString(0), r.GetString(1), r.GetString(2),
-            r.GetString(3), r.GetDouble(4), r.GetDouble(5));
+        return LoadAllEmbeddingsWithSamples()
+            .Select(x => (x.SampleId, x.Vector))
+            .ToList();
     }
 
     private static double CosineSimilarity(float[] a, float[] b)

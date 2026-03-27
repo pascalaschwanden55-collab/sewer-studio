@@ -8,6 +8,52 @@
         <StackPanel>
             <TextBlock Text="Einstellungen" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
 
+        <TextBlock Text="Design" Margin="0,0,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <DockPanel>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Hell" VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,8,0"/>
+                <ToggleButton IsChecked="{Binding IsDarkTheme, Mode=TwoWay}" Width="64" Height="30">
+                    <ToggleButton.Template>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="Track"
+                                    Background="{StaticResource SurfaceSubtleBrush}"
+                                    BorderBrush="{StaticResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="15">
+                                <Grid>
+                                    <Ellipse x:Name="Thumb"
+                                             Width="24"
+                                             Height="24"
+                                             Margin="3"
+                                             HorizontalAlignment="Left"
+                                             Fill="{StaticResource CardBrush}"/>
+                                </Grid>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Track" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                    <Setter TargetName="Track" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                    <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.5"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </ToggleButton.Template>
+                </ToggleButton>
+                <TextBlock Text="Dunkel" VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" Margin="8,0,0,0"/>
+            </StackPanel>
+            <Button Content="Design anwenden"
+                    Command="{Binding ApplyThemeCommand}"
+                    Margin="8,0,0,0"
+                    Width="150"/>
+        </DockPanel>
+        <TextBlock Text="Hinweis: fuer volle Umstellung ist ein Neustart noetig."
+                   Margin="0,4,0,0"
+                   Foreground="{StaticResource MutedBrush}"
+                   FontSize="11"/>
+
         <CheckBox Content="Diagnose aktiv (Fehlercodes anzeigen)" IsChecked="{Binding EnableDiagnostics}"/>
 
         <TextBlock Text="pdftotext.exe Pfad" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>

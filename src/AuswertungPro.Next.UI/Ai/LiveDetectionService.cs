@@ -21,14 +21,25 @@ public sealed class LiveDetectionService
         Du siehst einen Frame aus einer Kanalinspektion (TV-Inspektion Abwasserkanal).
         Analysiere kurz:
         1. Lies den Meterstand aus dem OSD (On-Screen Display), falls sichtbar.
-        2. Erkenne sichtbare Schaeden.
+        2. Erkenne sichtbare Schaeden und markiere deren Position im Bild.
+
+        WICHTIG zum Meterstand:
+        - Der Meterstand steht UNTEN RECHTS im Bild als kleine Dezimalzahl (z.B. "2.64", "7.90", "14.98").
+        - IGNORIERE alle grossen Zahlen im oberen Headertext (Knotennummern wie 74468, 80872 etc.).
+        - IGNORIERE Datumsangaben und Dateipfade.
+        - Der Meterstand ist IMMER kleiner als 500.
+        - Falls kein Meterstand lesbar: meter = null
 
         Antworte NUR mit gueltigem JSON in diesem Format:
-        {"meter": 12.5, "findings": [{"label": "Riss", "severity": 3, "position_clock": "3", "vsa_code_hint": "BAB", "extent_percent": 20}]}
+        {"meter": 12.5, "findings": [{"label": "Riss", "severity": 3, "position_clock": "3", "vsa_code_hint": "BAB", "extent_percent": 20, "bbox": [0.3, 0.2, 0.7, 0.6]}]}
 
         Falls kein Schaden: {"meter": null, "findings": []}
         severity: 1=kaum, 2=leicht, 3=mittel, 4=schwer, 5=kritisch
         position_clock: Uhrzeitlage (12=Scheitel, 6=Sohle, 3=rechts, 9=links)
+        bbox: [x1, y1, x2, y2] normalisierte Koordinaten (0.0=links/oben, 1.0=rechts/unten).
+          x1,y1 = linke obere Ecke, x2,y2 = rechte untere Ecke der Schadensregion im Bild.
+          WICHTIG: bbox bezieht sich auf die Position des Schadens IM BILD, nicht auf die Rohrquerschnitts-Uhrposition.
+          Falls Position unklar: bbox weglassen.
         """;
 
     private readonly OllamaClient _client;
@@ -92,7 +103,12 @@ public sealed class LiveDetectionService
 
             double? meter = null;
             if (root.TryGetProperty("meter", out var mEl) && mEl.ValueKind == JsonValueKind.Number)
-                meter = mEl.GetDouble();
+            {
+                var rawMeter = mEl.GetDouble();
+                // Plausibilitaet: Kanallaengen sind 0-500m, Knotennummern sind 5+ stellig
+                if (rawMeter >= 0 && rawMeter <= 500)
+                    meter = rawMeter;
+            }
 
             var findings = new List<LiveFrameFinding>();
             if (root.TryGetProperty("findings", out var fArr) && fArr.ValueKind == JsonValueKind.Array)
@@ -116,6 +132,25 @@ public sealed class LiveDetectionService
                     var intrusion = f.TryGetProperty("intrusion_percent", out var ip) && ip.ValueKind == JsonValueKind.Number
                         ? (int?)ip.GetInt32() : null;
 
+                    // Bounding Box parsen (optionales Array [x1, y1, x2, y2], normalisiert 0-1)
+                    double? bboxX1 = null, bboxY1 = null, bboxX2 = null, bboxY2 = null;
+                    if (f.TryGetProperty("bbox", out var bboxArr) && bboxArr.ValueKind == JsonValueKind.Array)
+                    {
+                        var coords = new List<double>();
+                        foreach (var c in bboxArr.EnumerateArray())
+                        {
+                            if (c.ValueKind == JsonValueKind.Number)
+                                coords.Add(c.GetDouble());
+                        }
+                        if (coords.Count >= 4)
+                        {
+                            bboxX1 = Math.Clamp(coords[0], 0, 1);
+                            bboxY1 = Math.Clamp(coords[1], 0, 1);
+                            bboxX2 = Math.Clamp(coords[2], 0, 1);
+                            bboxY2 = Math.Clamp(coords[3], 0, 1);
+                        }
+                    }
+
                     findings.Add(new LiveFrameFinding(
                         Label: label!.Trim(),
                         Severity: severity,
@@ -126,7 +161,11 @@ public sealed class LiveDetectionService
                         WidthMm: widthMm,
                         IntrusionPercent: intrusion,
                         CrossSectionReductionPercent: null,
-                        DiameterReductionMm: null));
+                        DiameterReductionMm: null,
+                        BboxX1: bboxX1,
+                        BboxY1: bboxY1,
+                        BboxX2: bboxX2,
+                        BboxY2: bboxY2));
                 }
             }
 

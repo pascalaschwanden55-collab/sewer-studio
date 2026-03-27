@@ -29,6 +29,15 @@ public sealed class MultiModelAnalysisService
     public int DedupWindowFrames { get; set; } = 3;
     public TimeSpan QwenFrameTimeout { get; set; } = TimeSpan.FromSeconds(300);
 
+    /// <summary>YOLO-cls Vorfilter aktivieren/deaktivieren (Fallback: aus wenn kein Modell).</summary>
+    public bool UseClsPrefilter { get; set; } = true;
+
+    // Letzter Befund fuer Qwen-Kontext (Frame-uebergreifende Kohärenz)
+    private (string Code, string Description, double Meter, double Confidence)? _lastFinding;
+
+    // Gecachter minimaler Confidence-Schwellenwert (einmal berechnet statt pro Frame)
+    private readonly double _minClassConfidence;
+
     public MultiModelAnalysisService(
         VisionPipelineClient client,
         PipelineConfig config,
@@ -42,6 +51,9 @@ public sealed class MultiModelAnalysisService
         _logger = logger ?? NullLogger.Instance;
         _ffmpegPath = ffmpegPath;
         _ffprobePath = DeriveFfprobePath(ffmpegPath);
+        _minClassConfidence = config.YoloClassConfidence.Count > 0
+            ? config.YoloClassConfidence.Values.Min()
+            : config.YoloConfidence;
     }
 
     /// <summary>
@@ -101,28 +113,117 @@ public sealed class MultiModelAnalysisService
 
             var frameBase64 = Convert.ToBase64String(frameBytes);
 
-            // ── Step 1: YOLO Pre-Screening ──
-            progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                $"Frame {frameIndex}/{totalFrames} – YOLO Pre-Screening...",
-                FramePreviewPng: frameBytes));
+            // ── Telemetrie-Bypass: Frames ohne YOLO-Detection an Qwen schicken ──
+            // YOLO erkennt nur Schaeden — Bestandsaufnahme (Anschluesse, Boegen,
+            // Ablagerungen, Rohranfang/Ende) wird verpasst.
+            // Loesung: Jeden N-ten Frame + BCD/BCE-Zonen immer analysieren.
+            double estimatedMeter = EstimateMeter(t, duration, ref lastMeter);
+            bool isAfterOsd = t > 20.0; // OSD-Einblendung 10-20 Sekunden je nach Operateur
+            bool isBcdZone = isAfterOsd && estimatedMeter < 1.5 && frameIndex <= 10;
+            bool isBceZone = duration > 10 && t > (duration - FrameStepSeconds * 2);
+            // Jeden 3. Frame immer analysieren (Bestandsaufnahme-Sweep)
+            bool isPeriodicSweep = isAfterOsd && (frameIndex % 3 == 0);
+            bool telemetryBypass = isBcdZone || isBceZone || isPeriodicSweep;
 
+            // ── Step 1: YOLO Pre-Screening ──
             var phaseSw = Stopwatch.StartNew();
             YoloResponse yoloResult;
-            try
+            long yoloMs;
+
+            if (telemetryBypass)
             {
-                yoloResult = await _client.DetectYoloAsync(
-                    new YoloRequest(frameBase64, _config.YoloConfidence), ct).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Frame {Frame}: YOLO detection failed", frameIndex);
+                // YOLO ueberspringen — Frame direkt an DINO/Qwen weiterleiten
+                yoloResult = new YoloResponse(
+                    IsRelevant: true,
+                    Detections: Array.Empty<YoloDetectionDto>(),
+                    FrameClass: isBcdZone ? "BCD" : "BCE",
+                    InferenceTimeMs: 0);
+                yoloMs = 0;
+                var zone = isBcdZone ? "BCD-Zone (Rohranfang)"
+                    : isBceZone ? "BCE-Zone (Rohrende)"
+                    : "Bestandsaufnahme-Sweep";
+                _logger.LogDebug("Frame {Frame}: Telemetrie-Bypass ({Zone}) @ {Meter:F2}m",
+                    frameIndex, zone, estimatedMeter);
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                    $"Frame {frameIndex} – YOLO Fehler: {ex.Message}"));
-                telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, phaseSw.ElapsedMilliseconds, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
-                AdvanceAll(active, detections, DedupWindowFrames);
-                continue;
+                    $"Frame {frameIndex}/{totalFrames} – {zone} @ {estimatedMeter:F1}m",
+                    FramePreviewPng: frameBytes));
             }
-            var yoloMs = phaseSw.ElapsedMilliseconds;
+            else
+            {
+                // ── YOLO-cls Vorfilter: 90% der normalen Frames ueberspringen ──
+                if (UseClsPrefilter) try
+                {
+                    var clsResult = await _client.ClassifyYoloAsync(
+                        new YoloClassifyRequest(frameBase64, 3), ct).ConfigureAwait(false);
+                    var topPred = clsResult.Predictions.Count > 0 ? clsResult.Predictions[0] : null;
+
+                    if (topPred?.ClassName is "OTHER" or "other" or "NORMAL" or "normal"
+                        && topPred.Confidence > 0.70)
+                    {
+                        // Frame ist normal → ueberspringen (spart DINO/SAM/Qwen)
+                        skippedFrames++;
+                        _logger.LogDebug("Frame {Frame}: YOLO-cls '{Class}' ({Conf:F0}%) → skip",
+                            frameIndex, topPred.ClassName, topPred.Confidence * 100);
+                        progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                            $"Frame {frameIndex}/{totalFrames} – cls: {topPred.ClassName} ({topPred.Confidence:P0}) → skip"));
+                        telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0,
+                            frameSw.ElapsedMilliseconds, Skipped: true));
+                        AdvanceAll(active, detections, DedupWindowFrames);
+                        continue;
+                    }
+
+                    if (topPred != null)
+                        _logger.LogDebug("Frame {Frame}: YOLO-cls '{Class}' ({Conf:F0}%) → weiter zur Detektion",
+                            frameIndex, topPred.ClassName, topPred.Confidence * 100);
+                }
+                catch (Exception ex)
+                {
+                    // cls-Modell nicht verfuegbar → normal weiter (kein harter Fehler)
+                    _logger.LogDebug(ex, "Frame {Frame}: YOLO-cls nicht verfuegbar, ueberspringe Vorfilter", frameIndex);
+                }
+
+                progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                    $"Frame {frameIndex}/{totalFrames} – YOLO Pre-Screening...",
+                    FramePreviewPng: frameBytes));
+
+                try
+                {
+                    // Niedrigsten klassenspezifischen Threshold senden (mehr Kandidaten),
+                    // dann in C# pro Klasse nachfiltern
+                    double minConf = _minClassConfidence;
+                    yoloResult = await _client.DetectYoloAsync(
+                        new YoloRequest(frameBase64, minConf), ct).ConfigureAwait(false);
+
+                    // Klassenspezifische Filterung: Jede Klasse hat ihren eigenen Schwellenwert
+                    if (yoloResult.Detections.Count > 0 && _config.YoloClassConfidence.Count > 0)
+                    {
+                        var filtered = yoloResult.Detections
+                            .Where(d =>
+                            {
+                                // VSA-Hauptcode aus YOLO-Klassenname extrahieren (z.B. "BAB_crack" → "BAB")
+                                var baseCode = d.ClassName.Split('_')[0].ToUpperInvariant();
+                                var threshold = _config.YoloClassConfidence.GetValueOrDefault(baseCode, _config.YoloConfidence);
+                                return d.Confidence >= threshold;
+                            })
+                            .ToList();
+                        yoloResult = yoloResult with
+                        {
+                            Detections = filtered,
+                            IsRelevant = filtered.Count > 0
+                        };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Frame {Frame}: YOLO detection failed", frameIndex);
+                    progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                        $"Frame {frameIndex} – YOLO Fehler: {ex.Message}"));
+                    telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, phaseSw.ElapsedMilliseconds, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                    AdvanceAll(active, detections, DedupWindowFrames);
+                    continue;
+                }
+                yoloMs = phaseSw.ElapsedMilliseconds;
+            }
 
             if (!yoloResult.IsRelevant)
             {
@@ -204,22 +305,32 @@ public sealed class MultiModelAnalysisService
                 ? dinoResult.Detections.Max(d => d.Confidence) : 0.0;
 
             // Build findings from quantified masks
-            var findings = quantified
-                .Where(q => !string.IsNullOrWhiteSpace(q.Label))
-                .Select(q => new EnhancedFinding(
+            var findings = new List<EnhancedFinding>(quantified.Count);
+            for (var i = 0; i < quantified.Count; i++)
+            {
+                var q = quantified[i];
+                if (string.IsNullOrWhiteSpace(q.Label))
+                    continue;
+
+                var bbox = i < samResult.Masks.Count ? GetNormalizedBbox(samResult.Masks[i], samResult.ImageWidth, samResult.ImageHeight) : default;
+                findings.Add(new EnhancedFinding(
                     Label: q.Label,
-                    VsaCodeHint: null,
+                    VsaCodeHint: VsaCodeResolver.InferCodeFromLabel(q.Label),
                     Severity: EstimateSeverity(q),
-                    PositionClock: q.ClockPosition,
+                    PositionClock: NormalizeClockPosition(q.ClockPosition),
                     ExtentPercent: q.ExtentPercent,
                     HeightMm: q.HeightMm,
                     WidthMm: q.WidthMm,
                     IntrusionPercent: q.IntrusionPercent,
                     CrossSectionReductionPercent: q.CrossSectionReductionPercent,
                     DiameterReductionMm: null,
+                    BboxX1: bbox.X1,
+                    BboxY1: bbox.Y1,
+                    BboxX2: bbox.X2,
+                    BboxY2: bbox.Y2,
                     Notes: $"DINO conf={q.Confidence:F2}"
-                ))
-                .ToList();
+                ));
+            }
 
             // Build per-frame EvidenceVector with pipeline signals
             var frameEvidence = new QualityGate.EvidenceVector(
@@ -255,18 +366,31 @@ public sealed class MultiModelAnalysisService
 
                     using var qwenCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                     qwenCts.CancelAfter(QwenFrameTimeout);
+                    // Vorherigen Befund als Kontext uebergeben (nur wenn < 1m entfernt)
+                    var prevCtx = _lastFinding is var (pc, pd, pm, pconf) && Math.Abs(meter - pm) < 1.0
+                        ? _lastFinding : null;
                     var qwenResult = await _qwenVision.AnalyzeWithContextAsync(
-                        frameBase64, multiModelContext, pipeDiameterMm, qwenCts.Token).ConfigureAwait(false);
+                        frameBase64, multiModelContext, pipeDiameterMm, qwenCts.Token,
+                        previousFinding: prevCtx).ConfigureAwait(false);
+
+                    // OSD-Meterstand IMMER uebernehmen (auch ohne Findings)
+                    if (qwenResult.Meter.HasValue)
+                    {
+                        meter = qwenResult.Meter.Value;
+                        lastMeter = meter;
+                    }
+
+                    // ImageQuality-Gate: Bei schlechter Bildqualitaet Findings verwerfen
+                    // (OSD-Meter wird trotzdem uebernommen, nur Schadens-Findings sind unzuverlaessig)
+                    if (string.Equals(qwenResult.ImageQuality, "schlecht", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogDebug("Frame {Frame}: ImageQuality=schlecht, {Count} Findings verworfen",
+                            frameIndex, findings.Count);
+                        findings.Clear();
+                    }
 
                     if (qwenResult.HasFindings)
                     {
-                        // Merge Qwen VSA codes and meter reading into our findings
-                        if (qwenResult.Meter.HasValue)
-                        {
-                            meter = qwenResult.Meter.Value;
-                            lastMeter = meter;
-                        }
-
                         // Match Qwen findings to our quantified findings by label similarity
                         foreach (var qf in qwenResult.Findings)
                         {
@@ -281,6 +405,20 @@ public sealed class MultiModelAnalysisService
                                 // Replace with enriched finding (keep SAM quantification, add Qwen VSA code)
                                 findings[idx] = match with { VsaCodeHint = qf.VsaCodeHint };
                             }
+                        }
+
+                        // Letzten Befund merken fuer Qwen-Kontext beim naechsten Frame
+                        var topFinding = qwenResult.Findings
+                            .Where(f => !string.IsNullOrEmpty(f.VsaCodeHint))
+                            .OrderByDescending(f => f.Severity)
+                            .FirstOrDefault();
+                        if (topFinding != null)
+                        {
+                            _lastFinding = (
+                                topFinding.VsaCodeHint ?? topFinding.Label,
+                                topFinding.Label,
+                                meter,
+                                topFinding.Severity / 5.0); // Severity 1-5 → Confidence 0.2-1.0
                         }
 
                         _logger.LogDebug("Frame {Frame}: Qwen enriched {Count} findings with VSA codes",
@@ -366,22 +504,32 @@ public sealed class MultiModelAnalysisService
                 mask, result.ImageWidth, result.ImageHeight, pipeDiameterMm));
         }
 
-        var findings = quantified
-            .Where(q => !string.IsNullOrWhiteSpace(q.Label))
-            .Select(q => new EnhancedFinding(
+        var findings = new List<EnhancedFinding>(quantified.Count);
+        for (var i = 0; i < quantified.Count; i++)
+        {
+            var q = quantified[i];
+            if (string.IsNullOrWhiteSpace(q.Label))
+                continue;
+
+            var bbox = i < result.SamMasks.Count ? GetNormalizedBbox(result.SamMasks[i], result.ImageWidth, result.ImageHeight) : default;
+            findings.Add(new EnhancedFinding(
                 Label: q.Label,
-                VsaCodeHint: null,
+                VsaCodeHint: VsaCodeResolver.InferCodeFromLabel(q.Label),
                 Severity: EstimateSeverity(q),
-                PositionClock: q.ClockPosition,
+                PositionClock: NormalizeClockPosition(q.ClockPosition),
                 ExtentPercent: q.ExtentPercent,
                 HeightMm: q.HeightMm,
                 WidthMm: q.WidthMm,
                 IntrusionPercent: q.IntrusionPercent,
                 CrossSectionReductionPercent: q.CrossSectionReductionPercent,
                 DiameterReductionMm: null,
+                BboxX1: bbox.X1,
+                BboxY1: bbox.Y1,
+                BboxX2: bbox.X2,
+                BboxY2: bbox.Y2,
                 Notes: null
-            ))
-            .ToList();
+            ));
+        }
 
         return new EnhancedFrameAnalysis(
             Meter: result.Meter,
@@ -407,10 +555,30 @@ public sealed class MultiModelAnalysisService
         return 1;
     }
 
-    private static double EstimateMeter(double t, double duration, ref double lastMeter)
+    private static (double? X1, double? Y1, double? X2, double? Y2) GetNormalizedBbox(
+        SamMaskResult mask,
+        int imageWidth,
+        int imageHeight)
     {
-        // Simple linear estimation (to be improved with OSD reading from Qwen)
-        var estimated = t / Math.Max(duration, 1.0) * 100.0; // assume ~100m max
+        if (mask.Bbox == null || mask.Bbox.Count < 4 || imageWidth <= 0 || imageHeight <= 0)
+            return default;
+
+        return (
+            Clamp01(mask.Bbox[0] / imageWidth),
+            Clamp01(mask.Bbox[1] / imageHeight),
+            Clamp01(mask.Bbox[2] / imageWidth),
+            Clamp01(mask.Bbox[3] / imageHeight));
+    }
+
+    private static double Clamp01(double value) => Math.Clamp(value, 0.0, 1.0);
+
+    /// <summary>Geschaetzte Haltungslaenge in Metern (wird durch OSD-Korrektur von Qwen ueberschrieben).</summary>
+    public double EstimatedReachLengthM { get; set; } = 50.0; // Typisch 15-80m, Fallback 50m
+
+    private double EstimateMeter(double t, double duration, ref double lastMeter)
+    {
+        // Lineare Schaetzung basierend auf geschaetzter Haltungslaenge (wird durch Qwen OSD korrigiert)
+        var estimated = t / Math.Max(duration, 1.0) * EstimatedReachLengthM;
         lastMeter = Math.Max(lastMeter, estimated);
         return Math.Round(lastMeter, 2);
     }
@@ -533,12 +701,83 @@ public sealed class MultiModelAnalysisService
         return string.IsNullOrWhiteSpace(dir) ? "ffprobe" + ext : Path.Combine(dir, "ffprobe" + ext);
     }
 
+    /// <summary>
+    /// Baut einen stabilen Dedup-Key fuer ein Finding.
+    /// Normalisiert Labels gegen DINO-Phrasen-Drift (crack/fracture/break → gleicher Key)
+    /// und Clock-Positionen (3:00/3/rechts → normalisierte Stunde).
+    /// </summary>
     private static string BuildFindingKey(EnhancedFinding f)
     {
-        var label = f.Label.Trim();
-        if (!string.IsNullOrWhiteSpace(f.PositionClock))
-            return $"{label}|{f.PositionClock.Trim()}";
-        return label;
+        var label = VsaCodeResolver.NormalizeFindingCode(f.VsaCodeHint)
+            ?? VsaCodeResolver.InferCodeFromLabel(f.Label)
+            ?? NormalizeFindingLabel(f.Label.Trim());
+        var clock = NormalizeClockPosition(f.PositionClock);
+        return string.IsNullOrEmpty(clock) ? label : $"{label}|{clock}";
+    }
+
+    /// <summary>
+    /// Normalisiert DINO-Labels auf kanonische Gruppen.
+    /// "crack", "fracture", "break" → "crack"
+    /// "root intrusion", "roots" → "roots"
+    /// Reduziert Label-Drift zwischen Frames.
+    /// </summary>
+    private static string NormalizeFindingLabel(string label)
+    {
+        var lower = label.ToLowerInvariant();
+
+        // Risse/Brueche
+        if (lower.Contains("crack") || lower.Contains("fracture") || lower.Contains("riss"))
+            return "crack";
+        if (lower.Contains("break") || lower.Contains("bruch") || lower.Contains("collapse") || lower.Contains("einsturz"))
+            return "break";
+
+        // Deformation
+        if (lower.Contains("deform") || lower.Contains("verform") || lower.Contains("dent") || lower.Contains("oval"))
+            return "deformation";
+
+        // Wurzeln
+        if (lower.Contains("root") || lower.Contains("wurzel"))
+            return "roots";
+
+        // Korrosion / Oberflaechenschaden
+        if (lower.Contains("corros") || lower.Contains("erosion") || lower.Contains("surface damage") || lower.Contains("abplatz"))
+            return "corrosion";
+
+        // Ablagerung
+        if (lower.Contains("deposit") || lower.Contains("sediment") || lower.Contains("buildup")
+            || lower.Contains("ablagerung") || lower.Contains("inkrust"))
+            return "deposit";
+
+        // Infiltration
+        if (lower.Contains("infiltrat") || lower.Contains("ingress") || lower.Contains("leak")
+            || lower.Contains("undicht") || lower.Contains("fremdwasser"))
+            return "infiltration";
+
+        // Versatz
+        if (lower.Contains("displace") || lower.Contains("offset") || lower.Contains("versatz") || lower.Contains("joint"))
+            return "displacement";
+
+        // Hindernis
+        if (lower.Contains("obstacle") || lower.Contains("blockage") || lower.Contains("obstruct") || lower.Contains("hindernis"))
+            return "obstacle";
+
+        // Anschluss
+        if (lower.Contains("connection") || lower.Contains("anschluss") || lower.Contains("intrud") || lower.Contains("protrud"))
+            return "connection";
+
+        return lower;
+    }
+
+    /// <summary>
+    /// Normalisiert Clock-Positionen auf ganzzahlige Stunden.
+    /// "3:00" → "3", "12" → "12", "Scheitel" → "12", "Sohle" → "6", "rechts" → "3", "links" → "9".
+    /// </summary>
+    private static string? NormalizeClockPosition(string? clock)
+    {
+        var normalized = VsaCodeResolver.NormalizeClock(clock);
+        if (string.IsNullOrWhiteSpace(normalized))
+            return null;
+        return normalized;
     }
 
     // ── ActiveFindingState (mirrors VideoFullAnalysisService.ActiveFinding) ──

@@ -24,6 +24,7 @@ using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.UI.Views.Windows;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI
 {
@@ -54,6 +55,7 @@ namespace AuswertungPro.Next.UI
 
                 // Settings
                 var settings = AppSettings.Load();
+                ThemeManager.ApplyTheme(Resources, settings.UiTheme);
 
                 // Logging
                 var logDir = Path.Combine(AppSettings.AppDataDir, "logs");

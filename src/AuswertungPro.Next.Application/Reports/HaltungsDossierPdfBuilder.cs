@@ -656,7 +656,7 @@ public static class HaltungsDossierPdfBuilder
             {
                 ("Sanieren", record.GetFieldValue("Sanieren_JaNein")),
                 ("Empfohlene Massnahme", record.GetFieldValue("Empfohlene_Sanierungsmassnahmen")),
-                ("Kosten", record.GetFieldValue("Kosten")),
+                ("Kosten (exkl. MWST)", record.GetFieldValue("Kosten")),
                 ("Zustandsklasse", record.GetFieldValue("Zustandsklasse")),
             };
 

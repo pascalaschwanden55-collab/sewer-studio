@@ -1,0 +1,131 @@
+{
+  "_meta": {
+    "version": "0.1",
+    "source": "VSA Rili Zustandsbeurteilung 2023 - Anhang C (Kanaele)",
+    "notes": "Initial subset for sample XTF; extend with full tables."
+  },
+  "defaults": {
+    "minLengthKanal_m": 3.0,
+    "minLengthSchacht_m": 0.5,
+    "maxAbminderung": 0.8
+  },
+  "ignoreCodes": [
+    "BCD",
+    "BCE",
+    "BDE",
+    "BDF"
+  ],
+  "fixedEzByMain": {
+    "AEC": 2,
+    "AED": 2,
+    "BAB": 3,
+    "BAC": 3,
+    "BAF": 3,
+    "BBA": 4,
+    "BBC": 4,
+    "BBF": 3,
+    "BCA": 2,
+    "BCC": 2,
+    "BDA": 1,
+    "BDB": 2,
+    "BDC": 2,
+    "BDD": 2,
+    "BCD": 3,
+    "BDBA": 2,
+    "BCCYB": 2,
+    "BABBC": 2,
+    "BACB": 2,
+    "BAJC": 3,
+    "BBAC": 2,
+    "BABAA": 1,
+    "BAJB": 2,
+    "BABBA": 2,
+    "BAJA": 2,
+    "BCE": 3
+  },
+  "rules": {
+    "BAJ": [
+      {
+        "ch1": [
+          "A"
+        ],
+        "targets": [
+          "D"
+        ],
+        "quant1": {
+          "thresholds": [
+            70,
+            50,
+            30,
+            20
+          ],
+          "direction": "desc"
+        },
+        "condition": {
+          "dn_lte": 400
+        },
+        "note": "table BAJ A, DN <= 400"
+      },
+      {
+        "ch1": [
+          "A"
+        ],
+        "targets": [
+          "D"
+        ],
+        "quant1": {
+          "thresholds": [
+            80,
+            60,
+            40,
+            20
+          ],
+          "direction": "desc"
+        },
+        "condition": {
+          "dn_gt": 400
+        },
+        "note": "table BAJ A, DN > 400"
+      },
+      {
+        "ch1": [
+          "B",
+          "C"
+        ],
+        "targets": [
+          "D"
+        ],
+        "quant1": {
+          "thresholds": [
+            30,
+            20,
+            15,
+            10
+          ],
+          "direction": "desc"
+        },
+        "note": "table BAJ B/C"
+      }
+    ],
+    "BAI": [
+      {
+        "ch1": [
+          "Z"
+        ],
+        "targets": [
+          "B"
+        ],
+        "quant1": {
+          "thresholds": [
+            50,
+            35,
+            20,
+            5
+          ],
+          "direction": "desc"
+        },
+        "note": "table BAI Z"
+      }
+    ]
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "haltung": "07.664459-10526",
+  "datum": "10.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 100 / 100mm",
+  "material": "Polyethylen",
+  "nutzungsart": "Regenabwasser",
+  "inspektionsrichtung": "Gegen Fließrichtung",
+  "schacht_oben": "07.664459",
+  "schacht_unten": "10526",
+  "inspektionslaenge_m": "11.50",
+  "rohrlaenge_m": "5.00",
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 0.0,
+      "en_code": "BDA",
+      "beschreibung": "Bogen nach links, Winkel = 45° Entf. gegen Fließr. 0,10 m Allgemeinzustand, Fotobeispiel Entf. gegen Fließr. 0,40 m Position",
+      "uhr_von": "9",
+      "uhr_bis": "9",
+      "stufe": null,
+      "timestamp_video": "00:00:09",
+      "foto_datei": null,
+      "foto_nr": 109
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCAAA",
+      "beschreibung": "Bogen nach links oben, Winkel = 60° Entf. gegen Fließr. 0,60 m Pos: 12; Anschluss mit Formstück, Höhe = 0mm, Breite = 0mm Entf. gegen Fließr. 0,90 m",
+      "uhr_von": "12",
+      "uhr_bis": "12",
+      "stufe": null,
+      "timestamp_video": "00:00:46",
+      "foto_datei": null,
+      "foto_nr": 111
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BDA",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel, Foto 2 zu Station BCA.A.A Entf. gegen Fließr. 0,90 m Allgemeinzustand, Fotobeispiel Entf. gegen Fließr. 3,70 m Position",
+      "uhr_von": "12",
+      "uhr_bis": "12",
+      "stufe": null,
+      "timestamp_video": "00:01:24",
+      "foto_datei": null,
+      "foto_nr": 113
+    },
+    {
+      "meter": 0.0,
+      "en_code": "AEDXP",
+      "beschreibung": "Bogen nach links, Winkel = 10° Entf. gegen Fließr. 9,00 m Rohrmaterialwechsel: Polypropylen Entf. gegen Fließr. 9,20 m Position",
+      "uhr_von": "9",
+      "uhr_bis": "9",
+      "stufe": null,
+      "timestamp_video": "00:02:11",
+      "foto_datei": null,
+      "foto_nr": 115
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCCYA",
+      "beschreibung": "Allgemeinzustand, Fotobeispiel Entf. gegen Fließr. 10,30 m Position Pos: 12; Bogen nach oben, Winkel = 45° Entf. gegen Fließr. 11,20 m",
+      "uhr_von": "12",
+      "uhr_bis": "12",
+      "stufe": null,
+      "timestamp_video": "00:02:34",
+      "foto_datei": null,
+      "foto_nr": 117
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCE",
+      "beschreibung": "Bogen nach oben, Winkel = 45° Entf. gegen Fließr. 11,40 m Rohrende, DW Entf. gegen Fließr. 11,50 m Position",
+      "uhr_von": "12",
+      "uhr_bis": "12",
+      "stufe": null,
+      "timestamp_video": "00:02:48",
+      "foto_datei": null,
+      "foto_nr": 119
+    }
+  ]
+}

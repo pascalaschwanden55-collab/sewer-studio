@@ -62,6 +62,40 @@ public sealed partial class RuleBasedAiSuggestionPlausibilityService : IAiSugges
             confidence = Math.Max(0.0, confidence - UnknownCodePenalty);
         }
 
+        // PL04: Steuercodes die nur 1× pro Haltung vorkommen duerfen
+        // BCD=Rohranfang, BCE=Rohrende, BDC=Abbruch — Duplikate mit niedrigerer Konfidenz verwerfen
+        if (suggestedCode is not null && context.AlreadyConfirmedCodes is not null)
+        {
+            var baseCode = code.Length >= 3 ? code[..3] : code;
+            if (baseCode is "BCD" or "BCE" or "BDC")
+            {
+                // Pruefen ob dieser Steuercode bereits bestaetigt wurde
+                bool alreadyExists = false;
+                foreach (var confirmed in context.AlreadyConfirmedCodes)
+                {
+                    if (confirmed.StartsWith(baseCode, StringComparison.OrdinalIgnoreCase))
+                    {
+                        alreadyExists = true;
+                        break;
+                    }
+                }
+
+                if (alreadyExists)
+                {
+                    var label = baseCode switch
+                    {
+                        "BCD" => "Rohranfang",
+                        "BCE" => "Rohrende",
+                        "BDC" => "Abbruch",
+                        _ => baseCode
+                    };
+                    warnings.Add($"PL04: {label} ({baseCode}) wurde bereits erfasst — Duplikat verworfen.");
+                    confidence = 0.0;
+                    suggestedCode = null;
+                }
+            }
+        }
+
         // PL03: Befund/Code-Mismatch-Heuristik (nur Warning, keine Penalty)
         if (suggestedCode is not null && context.Observation is not null)
         {

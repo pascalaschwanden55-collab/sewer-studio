@@ -7,7 +7,9 @@ namespace AuswertungPro.Next.UI.Ai;
 /// Minimale AI-Typen im UI-Projekt, damit die Video-Pipeline unabhängig von anderen Layern kompiliert.
 /// (Falls du später echte Domain/Application-Typen hast, kannst du diese Datei ersetzen.)
 /// </summary>
-public sealed record ObservationContext(string Observation);
+public sealed record ObservationContext(
+    string Observation,
+    IReadOnlySet<string>? AlreadyConfirmedCodes = null);
 
 public sealed record AiSuggestionResult(
     string? SuggestedCode,

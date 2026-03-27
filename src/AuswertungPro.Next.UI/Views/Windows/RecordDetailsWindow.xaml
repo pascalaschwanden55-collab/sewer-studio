@@ -18,7 +18,7 @@
             <MenuItem Header="Liste bearbeiten..."
                       Command="{Binding EditOptionsCommand}">
                 <MenuItem.Style>
-                    <Style TargetType="MenuItem">
+                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding EditOptionsCommand}" Value="{x:Null}">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -30,7 +30,7 @@
             <MenuItem Header="Vorschau"
                       Command="{Binding PreviewOptionsCommand}">
                 <MenuItem.Style>
-                    <Style TargetType="MenuItem">
+                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding PreviewOptionsCommand}" Value="{x:Null}">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -42,7 +42,7 @@
             <MenuItem Header="Zuruecksetzen auf Standard"
                       Command="{Binding ResetOptionsCommand}">
                 <MenuItem.Style>
-                    <Style TargetType="MenuItem">
+                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding ResetOptionsCommand}" Value="{x:Null}">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -55,7 +55,7 @@
                       Command="{Binding AddOptionCommand}"
                       CommandParameter="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
                 <MenuItem.Style>
-                    <Style TargetType="MenuItem">
+                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding AddOptionCommand}" Value="{x:Null}">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -68,7 +68,7 @@
                       Command="{Binding RemoveOptionCommand}"
                       CommandParameter="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
                 <MenuItem.Style>
-                    <Style TargetType="MenuItem">
+                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding RemoveOptionCommand}" Value="{x:Null}">
                                 <Setter Property="Visibility" Value="Collapsed"/>

@@ -101,26 +101,39 @@ public sealed class LegacyXtfImportService
         }
         var doc = XDocument.Load(path, LoadOptions.PreserveWhitespace);
 
+        // SIA405 und VSA_KEK koennen beide im Header stehen (VSA_KEK referenziert SIA405_Abwasser als Dependency).
+        // Primaeres Modell bestimmen: wenn VSA_KEK-Daten vorhanden, diese bevorzugen.
+        var sia405Imported = false;
         if (isSia405)
         {
             var records = ParseSia405(doc);
-            stats.Found += records.Count;
-
-            foreach (var rec in records)
-                MergeRecordIntoProject(project, rec, FieldSource.Xtf405, stats, ctx);
-
-            project.ImportHistory.Add(new JsonObject
+            if (records.Count > 0)
             {
-                ["type"] = "xtf405",
-                ["file"] = Path.GetFileName(path),
-                ["timestampUtc"] = DateTime.UtcNow.ToString("o"),
-                ["count"] = records.Count
-            });
+                sia405Imported = true;
+                stats.Found += records.Count;
 
-            stats.Messages.Add(new ImportMessage { Level = "Info", Context = "XTF405", Message = $"Importiert {records.Count} Haltungen aus {Path.GetFileName(path)}" });
+                foreach (var rec in records)
+                    MergeRecordIntoProject(project, rec, FieldSource.Xtf405, stats, ctx);
+
+                project.ImportHistory.Add(new JsonObject
+                {
+                    ["type"] = "xtf405",
+                    ["file"] = Path.GetFileName(path),
+                    ["timestampUtc"] = DateTime.UtcNow.ToString("o"),
+                    ["count"] = records.Count
+                });
+
+                stats.Messages.Add(new ImportMessage { Level = "Info", Context = "XTF405", Message = $"Importiert {records.Count} Haltungen aus {Path.GetFileName(path)}" });
+            }
+            else if (isVsa)
+            {
+                // SIA405-Header vorhanden aber keine SIA405-Daten → VSA_KEK als primaeres Modell verwenden
+                stats.Messages.Add(new ImportMessage { Level = "Info", Context = "XTF", Message = $"SIA405-Header erkannt, aber keine SIA405-Daten. Fallback auf VSA_KEK." });
+            }
         }
 
-        if (isVsa)
+        // VSA_KEK verarbeiten, wenn NICHT bereits erfolgreich als SIA405 importiert
+        if (!sia405Imported && isVsa)
         {
             var records = ParseVsaKek(doc, path, out _);
             stats.Found += records.Count;

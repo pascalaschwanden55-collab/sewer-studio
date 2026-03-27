@@ -723,10 +723,26 @@ internal static class M150MdbImportHelper
         if (string.IsNullOrWhiteSpace(v))
             return string.Empty;
 
-        if (v.Contains("oben", StringComparison.OrdinalIgnoreCase) || v.Contains("von", StringComparison.OrdinalIgnoreCase))
-            return "oben -> unten";
-        if (v.Contains("unten", StringComparison.OrdinalIgnoreCase) || v.Contains("nach", StringComparison.OrdinalIgnoreCase))
+        var lower = v.ToLowerInvariant();
+
+        // Spezifische Muster zuerst pruefen (z.B. "von unten nach oben")
+        if (lower.Contains("unten") && lower.Contains("oben") && lower.IndexOf("unten") < lower.IndexOf("oben"))
             return "unten -> oben";
+        if (lower.Contains("oben") && lower.Contains("unten") && lower.IndexOf("oben") < lower.IndexOf("unten"))
+            return "oben -> unten";
+
+        // DWA-M 150 Codes
+        if (lower is "d" or "down" or "1")
+            return "oben -> unten";
+        if (lower is "u" or "up" or "2")
+            return "unten -> oben";
+
+        // Einfache Schluesselwoerter
+        if (lower.Contains("oben") || lower.StartsWith("von"))
+            return "oben -> unten";
+        if (lower.Contains("unten") || lower.StartsWith("nach"))
+            return "unten -> oben";
+
         return v;
     }
 

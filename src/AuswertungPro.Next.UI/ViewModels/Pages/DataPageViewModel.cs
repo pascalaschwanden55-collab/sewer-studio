@@ -1,4 +1,5 @@
 ﻿using AuswertungPro.Next.UI.Dialogs;
+using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Services;
 using System;
 using System.Collections.ObjectModel;
@@ -229,7 +230,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         PropertyChanged += DataPageViewModel_PropertyChanged;
         UpdateLearningInfo();
-        _ = LoadTrainedHaltungenAsync();
+        LoadTrainedHaltungenAsync().SafeFireAndForget("TrainedHaltungen");
     }
 
     partial void OnGridMinRowHeightChanged(double value)
@@ -822,7 +823,11 @@ public sealed partial class DataPageViewModel : ObservableObject
                     damageOverlay = new PlayerDamageOverlayData(pipeLength, markers);
             }
 
-            var window = new PlayerWindow(path, options, damageOverlay: damageOverlay)
+            var window = new PlayerWindow(path, options,
+                damageOverlay: damageOverlay,
+                serviceProvider: _sp,
+                haltungId: record.Id.ToString(),
+                haltungRecord: record)
             {
                 Owner = System.Windows.Application.Current?.MainWindow
             };
@@ -1958,7 +1963,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         return _sp.Protocols.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
     }
 
-    private void PrintHydraulikPdf(HaltungRecord? record)
+    private async void PrintHydraulikPdf(HaltungRecord? record)
     {
         if (record is null)
         {
@@ -2048,8 +2053,10 @@ public sealed partial class DataPageViewModel : ObservableObject
                 AblagerungOk = result.AblagerungOk,
             };
 
-            var pdf = Application.Reports.HydraulikPdfBuilder.Build(record, calc, options);
-            File.WriteAllBytes(output, pdf);
+            // PDF-Erzeugung auf Background-Thread (verhindert UI-Freeze)
+            var pdf = await Task.Run(() => Application.Reports.HydraulikPdfBuilder.Build(record, calc, options));
+            await Task.Run(() => File.WriteAllBytes(output, pdf));
+
             MessageBox.Show($"PDF wurde erstellt:\n{output}", "Hydraulik PDF", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
@@ -2058,7 +2065,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         }
     }
 
-    private void PrintDossierPdf(HaltungRecord? record)
+    private async void PrintDossierPdf(HaltungRecord? record)
     {
         if (record is null)
         {
@@ -2190,21 +2197,8 @@ public sealed partial class DataPageViewModel : ObservableObject
                 || (options.IncludeHydraulik && calcResult != null)
                 || (options.IncludeKostenschaetzung && kostenAvailable);
 
-            var originalsAlreadyMerged = false;
-            byte[] pdf;
-            if (hasDossierBaseSection)
-            {
-                pdf = Application.Reports.HaltungsDossierPdfBuilder.Build(
-                    _shell.Project, record, schachtVon, schachtBis, calcResult, projectFolder, options);
-            }
-            else if (options.IncludeOriginalProtokolle && originalPdfPaths.Count > 0)
-            {
-                pdf = Infrastructure.Media.PdfMergeHelper.MergeOriginals(originalPdfPaths);
-                if (pdf.Length == 0)
-                    throw new InvalidOperationException("Die Original-Protokolle konnten nicht zusammengefuehrt werden.");
-                originalsAlreadyMerged = true;
-            }
-            else
+            // Pruefung ob druckbar (muss auf UI-Thread, wegen MessageBox)
+            if (!hasDossierBaseSection && !(options.IncludeOriginalProtokolle && originalPdfPaths.Count > 0))
             {
                 MessageBox.Show(
                     "Die ausgewaehlte Kombination enthaelt keine druckbaren Inhalte.",
@@ -2214,11 +2208,33 @@ public sealed partial class DataPageViewModel : ObservableObject
                 return;
             }
 
-            // Original-PDFs anhaengen
-            if (!originalsAlreadyMerged && options.IncludeOriginalProtokolle && originalPdfPaths.Count > 0)
-                pdf = Infrastructure.Media.PdfMergeHelper.MergeWithOriginals(pdf, originalPdfPaths);
+            // PDF-Erzeugung auf Background-Thread (verhindert UI-Freeze)
+            // Alle CPU-intensiven Operationen: Build, Merge, WriteAllBytes
+            var localHasDossierBase = hasDossierBaseSection;
+            await Task.Run(() =>
+            {
+                var originalsAlreadyMerged = false;
+                byte[] pdf;
+                if (localHasDossierBase)
+                {
+                    pdf = Application.Reports.HaltungsDossierPdfBuilder.Build(
+                        _shell.Project, record, schachtVon, schachtBis, calcResult, projectFolder, options);
+                }
+                else
+                {
+                    pdf = Infrastructure.Media.PdfMergeHelper.MergeOriginals(originalPdfPaths);
+                    if (pdf.Length == 0)
+                        throw new InvalidOperationException("Die Original-Protokolle konnten nicht zusammengefuehrt werden.");
+                    originalsAlreadyMerged = true;
+                }
 
-            File.WriteAllBytes(output, pdf);
+                // Original-PDFs anhaengen
+                if (!originalsAlreadyMerged && options.IncludeOriginalProtokolle && originalPdfPaths.Count > 0)
+                    pdf = Infrastructure.Media.PdfMergeHelper.MergeWithOriginals(pdf, originalPdfPaths);
+
+                File.WriteAllBytes(output, pdf);
+            });
+
             MessageBox.Show($"Dossier wurde erstellt:\n{output}", "Dossier", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
@@ -2973,31 +2989,32 @@ public sealed partial class DataPageViewModel : ObservableObject
 
     private static string BuildMeasuresText(HoldingCost cost)
     {
-        // Automatically include selected rows that should always be written to recommendations.
-        var autoIncludedPositions = cost.Measures
+        // Nur kanonische Massnahmen-Namen (Template-Level) schreiben,
+        // KEINE einzelnen Kostenzeilen wie Verkehrsdienst oder Nebenarbeiten.
+        // Grund: Dieses Feld wird vom MeasureRecommendationService als Lernlabel
+        // eingelesen. Nebenpositionen wuerden das Learning vergiften.
+        var measureNames = cost.Measures
+            .Where(m => m.Lines.Any(l => l.Selected && IsHauptarbeitLine(l)))
+            .Select(m => m.MeasureName ?? m.MeasureId ?? "")
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (measureNames.Count > 0)
+            return string.Join(Environment.NewLine, measureNames);
+
+        // Fallback: Falls keine Hauptarbeit erkannt, Transfer-markierte Zeilen
+        // (legacy/manuelles Verhalten), aber nur Hauptarbeit-Zeilen, keine Nebenarbeiten.
+        var markedHauptarbeit = cost.Measures
             .SelectMany(m => m.Lines)
-            .Where(l => l.Selected && IsAutoIncludedRecommendationLine(l))
+            .Where(l => l.Selected && l.TransferMarked && IsHauptarbeitLine(l))
             .Select(l => FormatRecommendationBullet(l.Text))
             .Where(t => !string.IsNullOrWhiteSpace(t))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        // Additionally include any transfer-marked rows (legacy/manual behavior).
-        var markedPositions = cost.Measures
-            .SelectMany(m => m.Lines)
-            .Where(l => l.Selected && l.TransferMarked)
-            .Select(l => FormatRecommendationBullet(l.Text))
-            .Where(t => !string.IsNullOrWhiteSpace(t))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        var combined = autoIncludedPositions
-            .Concat(markedPositions)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        if (combined.Count > 0)
-            return string.Join(Environment.NewLine, combined);
+        if (markedHauptarbeit.Count > 0)
+            return string.Join(Environment.NewLine, markedHauptarbeit);
 
         return "";
     }

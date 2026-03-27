@@ -1,0 +1,72 @@
+{
+  "haltung": "07.1027622-10285",
+  "datum": "05.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 110 / 110mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Regenabwasser",
+  "inspektionsrichtung": "Gegen Fließrichtung",
+  "schacht_oben": "07.1027622",
+  "schacht_unten": "10285",
+  "inspektionslaenge_m": "3.30",
+  "rohrlaenge_m": null,
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 0.0,
+      "en_code": "BCCBY",
+      "beschreibung": "Bogen nach rechts, Winkel = ° Entf. gegen Fließr. 0,30 m Position Bogen nach rechts, Winkel = ° Entf. gegen Fließr. 0,80 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:00:47",
+      "foto_datei": null,
+      "foto_nr": 49
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BAFZE",
+      "beschreibung": "Andersartiger Oberflächenschaden, Ursache nicht eindeutig feststellbar, Loch Entf. gegen Fließr. 1,70 m Pos: 1; Andersartiger Oberflächenschaden, Ursache nicht eindeutig feststellbar, Loch Entf. gegen Fließr. 1,70 m",
+      "uhr_von": "1",
+      "uhr_bis": "1",
+      "stufe": null,
+      "timestamp_video": "00:01:16",
+      "foto_datei": null,
+      "foto_nr": 50
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BAAA",
+      "beschreibung": "Andersartiger Oberflächenschaden, Ursache nicht eindeutig feststellbar, Loch Entf. gegen Fließr. 1,70 m Pos: 2; Rohr vertikal deformiert, Querschnittsreduzierung = % Entf. gegen Fließr. 2,60 m",
+      "uhr_von": "2",
+      "uhr_bis": "2",
+      "stufe": null,
+      "timestamp_video": "00:02:46",
+      "foto_datei": null,
+      "foto_nr": 53
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCCYA",
+      "beschreibung": "Bogen nach rechts, Winkel = ° Entf. gegen Fließr. 2,70 m Position Bogen nach oben, Winkel = ° Entf. gegen Fließr. 3,00 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:04:09",
+      "foto_datei": null,
+      "foto_nr": 55
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BCE",
+      "beschreibung": "Rohrende, DW Fallstrang erreicht Entf. gegen Fließr. 3,30 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:04:30",
+      "foto_datei": null,
+      "foto_nr": 56
+    }
+  ]
+}

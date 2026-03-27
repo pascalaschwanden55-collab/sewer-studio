@@ -62,7 +62,7 @@ public sealed class KinsImportServiceTests
     }
 
     [Fact]
-    public void ImportKinsExport_FallbacksToBoth_WhenNoHintsExist()
+    public void ImportKinsExport_FallbacksToWinCan_WhenNoHintsExist()
     {
         using var dir = new TempDir();
         File.WriteAllText(Path.Combine(dir.Path, "readme.txt"), "dummy");
@@ -75,9 +75,9 @@ public sealed class KinsImportServiceTests
 
         Assert.True(res.Ok, res.ErrorMessage);
         Assert.Equal(1, winCan.CallCount);
-        Assert.Equal(1, ibak.CallCount);
+        Assert.Equal(1, ibak.CallCount); // Beide Importer als Fallback bei unbekannter Struktur
         Assert.NotNull(res.Value);
-        Assert.Equal(3, res.Value!.Found);
+        Assert.Equal(3, res.Value!.Found); // WinCan(1) + IBAK(2) = 3
     }
 
     [Fact]

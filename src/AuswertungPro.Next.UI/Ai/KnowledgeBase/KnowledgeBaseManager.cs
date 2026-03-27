@@ -2,10 +2,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai.Training;
+using AuswertungPro.Next.UI.Services.CodeCatalog;
 
 namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
 
@@ -28,14 +30,75 @@ public sealed class KnowledgeBaseManager(
         TrainingSample sample,
         CancellationToken ct = default)
     {
+        if (!IsIndexWorthy(sample))
+        {
+            Debug.WriteLine($"[KnowledgeBaseManager] Sample {sample.SampleId} uebersprungen: Qualitaet ungenuegend ({sample.Code}, Beschreibung={sample.Beschreibung?.Length ?? 0} Zeichen)");
+            return false;
+        }
+
         var vector = await embedder.EmbedAsync(sample.Beschreibung, ct).ConfigureAwait(false);
         if (vector is null)
             return false;
 
+        // Atomar: Sample + Embedding in einer Transaction (kein Zustand ohne Embedding)
         var versionId = GetOrCreateCurrentVersionId();
-        UpsertSample(sample, versionId);
-        UpsertEmbedding(sample.SampleId, vector);
-        return true;
+        using var tx = db.Connection.BeginTransaction();
+        try
+        {
+            UpsertSample(sample, versionId);
+            UpsertEmbedding(sample.SampleId, vector);
+            tx.Commit();
+            return true;
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Indiziert mehrere Samples in einer einzigen SQLite-Transaktion.
+    /// Embeddings werden sequentiell erzeugt (Ollama single-request).
+    /// Gibt die Anzahl erfolgreich indizierter Samples zurueck.
+    /// </summary>
+    public async Task<List<string>> IndexSamplesAsync(
+        IReadOnlyList<TrainingSample> samples,
+        CancellationToken ct = default)
+    {
+        if (samples.Count == 0) return [];
+
+        // Phase 1: Embeddings erzeugen (vor Transaktion — Netzwerk-I/O)
+        var ready = new List<(TrainingSample Sample, float[] Vector)>();
+        foreach (var sample in samples)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!IsIndexWorthy(sample)) continue;
+            var vec = await embedder.EmbedAsync(sample.Beschreibung, ct).ConfigureAwait(false);
+            if (vec is not null)
+                ready.Add((sample, vec));
+        }
+
+        if (ready.Count == 0) return [];
+
+        // Phase 2: Eine Transaktion fuer alle UPSERTs
+        var versionId = GetOrCreateCurrentVersionId();
+        using var tx = db.Connection.BeginTransaction();
+        try
+        {
+            foreach (var (sample, vec) in ready)
+            {
+                UpsertSample(sample, versionId);
+                UpsertEmbedding(sample.SampleId, vec);
+            }
+            tx.Commit();
+            return ready.Select(r => r.Sample.SampleId).ToList();
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
     }
 
     /// <summary>
@@ -53,10 +116,10 @@ public sealed class KnowledgeBaseManager(
     }
 
     /// <summary>
-    /// Löscht die gesamte Wissensdatenbank und indiziert alle übergebenen Samples neu.
-    /// Gibt die Anzahl erfolgreich indizierter Samples zurück.
+    /// Baut die Wissensdatenbank komplett neu auf mit Sicherheitspruefungen.
     /// Phase 1: Embeddings parallel erzeugen (GPU-bound).
-    /// Phase 2: SQLite-Writes sequentiell (SQLite ist nicht thread-safe für Writes).
+    /// Phase 2: Nur loeschen + neu aufbauen wenn genuegend Embeddings vorhanden.
+    /// Gibt die Anzahl erfolgreich indizierter Samples zurueck.
     /// </summary>
     public async Task<int> RebuildAsync(
         IReadOnlyList<TrainingSample> samples,
@@ -64,24 +127,61 @@ public sealed class KnowledgeBaseManager(
         CancellationToken ct = default,
         int concurrency = 1)
     {
-        // Phase 1: Embeddings parallel erzeugen (VOR dem Löschen, damit bei Fehler Daten erhalten bleiben)
+        if (samples.Count == 0)
+            return 0;
+
+        // Phase 1: Embeddings parallel erzeugen (VOR dem Loeschen)
         var embeddings = new ConcurrentDictionary<int, float[]>();
         var done = 0;
+        var errors = 0;
 
         await Parallel.ForEachAsync(
             Enumerable.Range(0, samples.Count),
             new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, concurrency), CancellationToken = ct },
             async (i, token) =>
             {
+                if (!IsIndexWorthy(samples[i]))
+                {
+                    Interlocked.Increment(ref errors);
+                    var n2 = Interlocked.Increment(ref done);
+                    progress?.Report(n2);
+                    return;
+                }
                 var vec = await embedder.EmbedAsync(samples[i].Beschreibung, token).ConfigureAwait(false);
                 if (vec is not null)
                     embeddings[i] = vec;
+                else
+                    Interlocked.Increment(ref errors);
                 var n = Interlocked.Increment(ref done);
                 progress?.Report(n);
             });
 
-        // Phase 2: Löschen + Neuaufbau in einer Transaktion
-        _currentVersionId = null;
+        // Sicherheitspruefung: Wenn weniger als 50% der Embeddings erfolgreich,
+        // ist vermutlich Ollama ausgefallen → KB NICHT loeschen!
+        var successRate = (double)embeddings.Count / samples.Count;
+        if (embeddings.Count == 0)
+        {
+            Debug.WriteLine("[KnowledgeBaseManager] ABBRUCH: 0 Embeddings erzeugt, KB bleibt unveraendert");
+            throw new InvalidOperationException(
+                $"KB-Rebuild abgebrochen: 0 von {samples.Count} Embeddings erzeugt. " +
+                "Ollama vermutlich nicht erreichbar. Bestehende KB bleibt erhalten.");
+        }
+
+        if (successRate < 0.5)
+        {
+            Debug.WriteLine($"[KnowledgeBaseManager] ABBRUCH: Nur {embeddings.Count}/{samples.Count} Embeddings ({successRate:P0})");
+            throw new InvalidOperationException(
+                $"KB-Rebuild abgebrochen: Nur {embeddings.Count} von {samples.Count} Embeddings erzeugt ({successRate:P0}). " +
+                "Bestehende KB bleibt erhalten. Pruefe Ollama-Verbindung.");
+        }
+
+        if (errors > 0)
+        {
+            Debug.WriteLine($"[KnowledgeBaseManager] WARNUNG: {errors} Embedding-Fehler von {samples.Count} Samples");
+        }
+
+        // Phase 2: Loeschen + Neuaufbau in einer Transaktion
+        lock (_versionLock) { _currentVersionId = null; }
         using var tx = db.Connection.BeginTransaction();
         try
         {
@@ -101,6 +201,8 @@ public sealed class KnowledgeBaseManager(
 
             FinalizeCurrentVersion(indexed);
             tx.Commit();
+
+            Debug.WriteLine($"[KnowledgeBaseManager] KB-Rebuild erfolgreich: {indexed}/{samples.Count} Samples indiziert");
             return indexed;
         }
         catch
@@ -137,11 +239,15 @@ public sealed class KnowledgeBaseManager(
         return Convert.ToInt32(cmd.ExecuteScalar());
     }
 
-    /// <summary>True wenn das Sample bereits indiziert ist.</summary>
+    /// <summary>True wenn das Sample UND sein Embedding indiziert sind.</summary>
     public bool IsIndexed(string sampleId)
     {
         using var cmd = db.Connection.CreateCommand();
-        cmd.CommandText = "SELECT 1 FROM Samples WHERE SampleId = $id LIMIT 1";
+        cmd.CommandText = """
+            SELECT 1 FROM Samples s
+            INNER JOIN Embeddings e ON s.SampleId = e.SampleId
+            WHERE s.SampleId = $id LIMIT 1
+            """;
         cmd.Parameters.AddWithValue("$id", sampleId);
         return cmd.ExecuteScalar() is not null;
     }
@@ -149,29 +255,36 @@ public sealed class KnowledgeBaseManager(
     // ── Intern ───────────────────────────────────────────────────────────
 
     private string? _currentVersionId;
+    private readonly object _versionLock = new();
 
     private string GetOrCreateCurrentVersionId()
     {
-        if (_currentVersionId is not null)
+        lock (_versionLock)
+        {
+            if (_currentVersionId is not null)
+                return _currentVersionId;
+
+            _currentVersionId = Guid.NewGuid().ToString("N");
+            ExecuteNonQuery(
+                "INSERT OR IGNORE INTO Versions(VersionId, CreatedAt, SampleCount, Notes) VALUES($v, $t, 0, '')",
+                ("$v", _currentVersionId),
+                ("$t", DateTime.UtcNow.ToString("O")));
+
             return _currentVersionId;
-
-        _currentVersionId = Guid.NewGuid().ToString("N");
-        ExecuteNonQuery(
-            "INSERT OR IGNORE INTO Versions(VersionId, CreatedAt, SampleCount, Notes) VALUES($v, $t, 0, '')",
-            ("$v", _currentVersionId),
-            ("$t", DateTime.UtcNow.ToString("O")));
-
-        return _currentVersionId;
+        }
     }
 
     private void FinalizeCurrentVersion(int count)
     {
-        if (_currentVersionId is null) return;
-        ExecuteNonQuery(
-            "UPDATE Versions SET SampleCount = $c WHERE VersionId = $v",
-            ("$c", count),
-            ("$v", _currentVersionId));
-        _currentVersionId = null;
+        lock (_versionLock)
+        {
+            if (_currentVersionId is null) return;
+            ExecuteNonQuery(
+                "UPDATE Versions SET SampleCount = $c WHERE VersionId = $v",
+                ("$c", count),
+                ("$v", _currentVersionId));
+            _currentVersionId = null;
+        }
     }
 
     private void UpsertSample(TrainingSample s, string versionId)
@@ -179,8 +292,8 @@ public sealed class KnowledgeBaseManager(
         ExecuteNonQuery("""
             INSERT OR REPLACE INTO Samples
                 (SampleId, CaseId, VsaCode, Beschreibung, MeterStart, MeterEnd,
-                 IsStreck, FramePath, ExportedUtc, VersionId)
-            VALUES ($id, $caseId, $code, $desc, $ms, $me, $streck, $frame, $exp, $ver)
+                 IsStreck, FramePath, ExportedUtc, VersionId, SourceType)
+            VALUES ($id, $caseId, $code, $desc, $ms, $me, $streck, $frame, $exp, $ver, $source)
             """,
             ("$id",     s.SampleId),
             ("$caseId", s.CaseId),
@@ -191,7 +304,8 @@ public sealed class KnowledgeBaseManager(
             ("$streck", s.IsStreckenschaden ? 1 : 0),
             ("$frame",  s.FramePath),
             ("$exp",    s.ExportedUtc?.ToString("O") ?? DateTime.UtcNow.ToString("O")),
-            ("$ver",    versionId));
+            ("$ver",    versionId),
+            ("$source", s.SourceType ?? ""));
     }
 
     private void UpsertEmbedding(string sampleId, float[] vector)
@@ -213,5 +327,22 @@ public sealed class KnowledgeBaseManager(
         foreach (var (name, value) in parameters)
             cmd.Parameters.AddWithValue(name, value);
         cmd.ExecuteNonQuery();
+    }
+
+    // ── Quality Gate ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Prueft ob ein Sample die Mindestqualitaet fuer KB-Indexierung erfuellt.
+    /// Leere Beschreibungen, unbekannte VSA-Codes und zu kurze Texte werden abgelehnt.
+    /// </summary>
+    public static bool IsIndexWorthy(TrainingSample sample)
+    {
+        if (string.IsNullOrWhiteSpace(sample.Beschreibung) || sample.Beschreibung.Length < 10)
+            return false;
+        if (string.IsNullOrWhiteSpace(sample.Code))
+            return false;
+        if (VsaCodeTree.LookupLabel(sample.Code) is null)
+            return false;
+        return true;
     }
 }

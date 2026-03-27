@@ -2,18 +2,14 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Ai.Training
 {
     public static class TrainingCenterSettingsStore
     {
         private static string GetStorePath()
-        {
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var dir = Path.Combine(appData, "AuswertungPro");
-            Directory.CreateDirectory(dir);
-            return Path.Combine(dir, "training_center_settings.json");
-        }
+            => KnowledgeRoot.GetTrainingSettingsPath();
 
         public static async Task<TrainingCenterSettings> LoadAsync()
         {

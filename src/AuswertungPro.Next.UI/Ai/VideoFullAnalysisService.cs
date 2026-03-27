@@ -414,38 +414,31 @@ public sealed class VideoFullAnalysisService
 
     private static string BuildFindingKey(EnhancedFinding finding)
     {
-        var label = finding.Label.Trim();
-        var hour = TryParseClockHour(finding.PositionClock);
-        return hour.HasValue
-            ? $"{label}|{hour.Value.ToString(CultureInfo.InvariantCulture)}"
-            : label;
+        var keyBase = VsaCodeResolver.NormalizeFindingCode(finding.VsaCodeHint)
+            ?? VsaCodeResolver.InferCodeFromLabel(finding.Label)
+            ?? finding.Label.Trim();
+        var clock = NormalizeClock(finding.PositionClock);
+        return string.IsNullOrWhiteSpace(clock) ? keyBase : $"{keyBase}|{clock}";
     }
 
     private static int? TryParseClockHour(string? raw)
     {
-        if (string.IsNullOrWhiteSpace(raw))
+        var normalized = VsaCodeResolver.NormalizeClock(raw);
+        if (string.IsNullOrWhiteSpace(normalized))
             return null;
 
-        var m = Regex.Match(raw, @"\b(?<h>1[0-2]|0?[1-9])(?:\s*:\s*[0-5]\d)?\b");
+        var m = Regex.Match(normalized, @"\b(?<h>1[0-2]|0?[1-9])\b");
         if (!m.Success)
             return null;
 
-        if (!int.TryParse(m.Groups["h"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var h))
-            return null;
-
-        if (h == 0)
-            return 12;
-
-        if (h > 12)
-            h %= 12;
-
-        return h == 0 ? 12 : h;
+        return int.TryParse(m.Groups["h"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var h)
+            ? h
+            : null;
     }
 
     private static string? NormalizeClock(string? raw)
     {
-        var hour = TryParseClockHour(raw);
-        return hour.HasValue ? hour.Value.ToString(CultureInfo.InvariantCulture) : null;
+        return VsaCodeResolver.NormalizeClock(raw);
     }
 
     private static string DeriveFFprobePath(string ffmpegPath)
@@ -574,7 +567,11 @@ public sealed record LiveFrameFinding(
     int? WidthMm = null,
     int? IntrusionPercent = null,
     int? CrossSectionReductionPercent = null,
-    int? DiameterReductionMm = null);
+    int? DiameterReductionMm = null,
+    double? BboxX1 = null,
+    double? BboxY1 = null,
+    double? BboxX2 = null,
+    double? BboxY2 = null);
 
 public sealed record RawVideoDetection(
     string FindingLabel,

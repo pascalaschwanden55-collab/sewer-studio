@@ -1,0 +1,72 @@
+{
+  "haltung": "07.106489-10750",
+  "datum": "10.11.2025",
+  "ort": "6487 Göschenen",
+  "strasse": "Unterdorfstrasse",
+  "profil": "Kreisprofil 150 / 150mm",
+  "material": "Polypropylen",
+  "nutzungsart": "Mischabwasser",
+  "inspektionsrichtung": "Gegen Fließrichtung",
+  "schacht_oben": "07.106489",
+  "schacht_unten": "10750",
+  "inspektionslaenge_m": "6.50",
+  "rohrlaenge_m": null,
+  "gereinigt": null,
+  "schaeden": [
+    {
+      "meter": 0.0,
+      "en_code": "BCCBB",
+      "beschreibung": "Bogen nach links oben, Winkel = 30° Entf. gegen Fließr. 0,40 m Pos: 4; Bogen nach rechts unten, Winkel = 45°, In die Horizontale Entf. gegen Fließr. 1,60 m",
+      "uhr_von": "4",
+      "uhr_bis": "4",
+      "stufe": null,
+      "timestamp_video": "00:00:56",
+      "foto_datei": null,
+      "foto_nr": 2
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BAFAE",
+      "beschreibung": "Rohrmaterialwechsel: Normalbeton Entf. gegen Fließr. 1,90 m Position Anfang (1): Pos: 5 - 7; Rauhe Rohrwandung, Ursache nicht eindeutig feststellbar Entf. gegen Fließr. 1,90 m",
+      "uhr_von": "5",
+      "uhr_bis": "5",
+      "stufe": null,
+      "timestamp_video": "00:01:55",
+      "foto_datei": null,
+      "foto_nr": 4
+    },
+    {
+      "meter": 0.0,
+      "en_code": "BDA",
+      "beschreibung": "Anschluss mit Formstück, Höhe = 0mm, Breite = 0mm Entf. gegen Fließr. 5,70 m Pos: 2; Allgemeinzustand, Fotobeispiel, Foto 2 zu Station BCA.A.A Entf. gegen Fließr. 5,70 m",
+      "uhr_von": "2",
+      "uhr_bis": "2",
+      "stufe": null,
+      "timestamp_video": "00:02:35",
+      "foto_datei": null,
+      "foto_nr": 6
+    },
+    {
+      "meter": 0.0,
+      "en_code": "AEDXJ",
+      "beschreibung": "Bogen nach rechts oben, Winkel = 20° Entf. gegen Fließr. 6,20 m Rohrmaterialwechsel: Duktiler Guss Entf. gegen Fließr. 6,50 m Position",
+      "uhr_von": "1",
+      "uhr_bis": "1",
+      "stufe": null,
+      "timestamp_video": "00:03:31",
+      "foto_datei": null,
+      "foto_nr": 8
+    },
+    {
+      "meter": 0.0,
+      "en_code": "AECXC",
+      "beschreibung": "Rohrprofilwechsel: Kreisprofil, Höhe = 0mm, Durchmesser nicht messbar Entf. gegen Fließr. 6,50 m Position",
+      "uhr_von": null,
+      "uhr_bis": null,
+      "stufe": null,
+      "timestamp_video": "00:03:33",
+      "foto_datei": null,
+      "foto_nr": 9
+    }
+  ]
+}

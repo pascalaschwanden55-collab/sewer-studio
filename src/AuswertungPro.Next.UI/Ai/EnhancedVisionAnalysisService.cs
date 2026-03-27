@@ -50,6 +50,7 @@ public sealed class EnhancedVisionAnalysisService
               "intrusion_percent": { "type": ["integer", "null"], "description": "Einragungsgrad in %" },
               "cross_section_reduction_percent": { "type": ["integer", "null"], "description": "Querschnittsverringerung in %" },
               "diameter_reduction_mm": { "type": ["integer", "null"], "description": "Durchmesserverringerung in mm" },
+              "bbox": { "type": ["array", "null"], "description": "Bounding Box [x1, y1, x2, y2] normalisiert 0-1, linke obere und rechte untere Ecke der Schadensregion im Bild", "items": { "type": "number" } },
               "notes": { "type": ["string", "null"] }
             },
             "required": ["label", "severity"]
@@ -66,43 +67,43 @@ public sealed class EnhancedVisionAnalysisService
     """).RootElement.Clone();
 
     // Vollständige Schadensklassen nach DIN EN 13508-2 / VSA-DSS
-    // Gruppiert für besseren Prompt
+    // Gruppiert für besseren Prompt, Grundstruktur zuerst
     private static readonly string DamageClassesPrompt = """
-ERKENNBARE SCHADENSKLASSEN (DIN EN 13508-2 / VSA-DSS):
+GRUNDSTRUKTUR DER HALTUNG (HÖCHSTE PRIORITÄT — immer erkennen!):
+- BCD = Rohranfang (Schacht sichtbar, Kamera faehrt in das Rohr ein)
+- BCE = Rohrende (Schacht sichtbar am Ende, Kamera erreicht das Rohrende)
+- BCA/BCAEB = Anschluss (seitliche Rohroeffnung in der Kanalwand, rund oder oval, oft eingespitzt)
+- BAHC = Anschluss unvollstaendig eingebunden (Stutzen ragt in den Kanal hinein)
+- BCC = Bogen (Richtungsaenderung des Kanals, Kamera faehrt um eine Kurve)
+- BCC.Y.B = Bogen nach unten (vertikale Richtungsaenderung)
+- BCC.B.Y = Bogen nach rechts/links (horizontale Richtungsaenderung)
 
 STRUKTURELLE SCHÄDEN:
-- Riss (längs, quer, diagonal, ringförmig, verzweigt)
-- Bruch (partiell, total, Einsturz)
-- Scherben/Splitternde Wandung
-- Deformation (vertikal, horizontal)
-- Wanddurchdringung
-- Loch in der Wandung
-- Fehlstelle/offene Muffenverbindung
-- Versatz (vertikal, horizontal)
-- Einragung Stutzen/Anschluss
+- BAB = Riss (laengs BAB.A, quer BAB.B, diagonal BAB.C, ringfoermig BAB.D, verzweigt BAB.E)
+- BAC = Bruch (partiell BAC.A, total BAC.B)
+- BAF = Deformation (vertikal BAF.A, horizontal BAF.B)
+- BAH = Versatz (vertikal BAH.A, horizontal BAH.B)
+- BAI = Einragung Stutzen/Anschluss
 
 OBERFLÄCHENSCHÄDEN:
-- Korrosion (gleichmäßig, ungleichmäßig)
-- Ausbrüche/Abplatzungen
-- Porosität/Rillen
-- Bewuchs (Pilze, Algen, Wurzeln)
-- Inkrustation (Kalkablagerung, Fettablagerung)
+- BAJ = Ausbrueche/Abplatzungen
+- BBB = Bewuchs/Wurzeln (BBBA = Wurzeleinwuchs)
+- BBA = Inkrustation/Kalkablagerung
 
 BETRIEBLICHE STÖRUNGEN:
-- Ablagerung (verfestigt, nicht verfestigt)
-- Fremdkörper (Steine, Textilien, sonstige)
-- Fettablagerung
-- Hindernisse
+- BBC = Ablagerung Sohle (BBCA = Sand, BBCB = Kies, BBCC = verfestigt)
+- BBD = Eindringender Boden
+- BDA = Allgemeinzustand (Fotobeispiel)
 
 ANSCHLÜSSE / VERBINDUNGEN:
-- Falschanschluss (Einleitung oberhalb Sohlhöhe)
-- Undichter Anschluss
-- Offener/fehlender Anschluss
-- Eindringendes Wasser (Infiltration)
+- BCAEA = Anschluss eingespitzt, offen
+- BCAEB = Anschluss eingespitzt, verschlossen
+- BAFAE = Raue Rohrwandung
 
 SONSTIGES:
-- Wasserstand (ruhend, fließend)
-- Schaumblasen (Gasbildung)
+- BDDC = Wasserspiegel/Wasserstand
+- BABBA = Riss laengs (mit Uhrlage und Breite in mm)
+- BABAA = Riss quer
 """;
 
     private readonly OllamaClient _client;
@@ -114,15 +115,31 @@ SONSTIGES:
         _model = model;
     }
 
+    private static readonly TimeSpan FrameTimeout = TimeSpan.FromSeconds(60);
+
     public async Task<EnhancedFrameAnalysis> AnalyzeAsync(
         string framePngBase64,
         CancellationToken ct = default)
+        => await AnalyzeAsync(framePngBase64, null, ct);
+
+    /// <summary>
+    /// Analyse mit Import-Kontext: Bekannte Befunde aus dem Protokoll werden
+    /// als Erwartungshorizont in den Prompt injiziert, damit Qwen passende
+    /// VSA-Codes zuweisen kann statt "???".
+    /// </summary>
+    public async Task<EnhancedFrameAnalysis> AnalyzeAsync(
+        string framePngBase64,
+        IReadOnlyList<(string Code, string Description, double Meter)>? importContext,
+        CancellationToken ct = default)
     {
-        var prompt = BuildPrompt();
+        var prompt = BuildPrompt(importContext);
 
         EnhancedVisionDto dto;
         try
         {
+            using var frameCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            frameCts.CancelAfter(FrameTimeout);
+
             dto = await _client.ChatStructuredAsync<EnhancedVisionDto>(
                 model: _model,
                 messages:
@@ -133,7 +150,11 @@ SONSTIGES:
                         ImagesBase64: [framePngBase64])
                 ],
                 formatSchema: EnhancedVisionSchema,
-                ct: ct).ConfigureAwait(false);
+                ct: frameCts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            return EnhancedFrameAnalysis.Empty("Timeout (60s)");
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
@@ -144,19 +165,25 @@ SONSTIGES:
         return MapToAnalysis(dto);
     }
 
-    private string BuildPrompt()
+    private string BuildPrompt(IReadOnlyList<(string Code, string Description, double Meter)>? importContext = null)
     {
+        var contextSection = BuildImportContextSection(importContext);
+
         return $"""
 Du analysierst einen Frame aus einem Kanalinspektion-Video (TV-Inspektion Abwasserkanal).
 
 AUFGABEN:
-1. Lies den METERSTAND aus dem OSD (On-Screen Display) – typisch oben oder unten im Bild (z.B. "18.40 m").
+1. Lies den METERSTAND aus dem OSD (On-Screen Display) – typisch unten rechts im Bild als Dezimalzahl (z.B. "2.64", "18.40").
+   IGNORIERE grosse Zahlen im oberen Header (Knotennummern wie 74468, 80872). Meterstand ist IMMER kleiner als 500.
 2. Erkenne das ROHRMATERIAL und den DURCHMESSER falls sichtbar.
 3. Erkenne ALLE sichtbaren Schäden/Anomalien mit Schweregrad 1-5 (1=kaum, 5=sehr schwer).
 4. Gib für jeden Schaden die Uhrzeitlage an (z.B. "12:00" = Scheitel, "6:00" = Sohle).
 5. Beurteile die Bildqualität.
 6. Schätze, wenn erkennbar, Schadensmaße: Höhe (mm), Breite (mm), Einragungsgrad (%), Querschnittsverringerung (%), Durchmesserverringerung (mm).
-
+7. Gib fuer jeden Schaden den passenden VSA-Code als vsa_code_hint an.
+8. Wenn der exakte Untertyp unklar ist, verwende den passenden HAUPTCODE statt "???".
+   Beispiele: Anschluss -> BCA, Bogen -> BCC, Ablagerung -> BBC.
+{contextSection}
 {DamageClassesPrompt}
 
 SCHWEREGRAD-SKALA (entspricht VSA Zustandsklasse):
@@ -165,27 +192,76 @@ SCHWEREGRAD-SKALA (entspricht VSA Zustandsklasse):
 3 = Mittlerer Schaden, Sanierung mittelfristig
 4 = Schwerer Schaden, Sanierung kurzfristig
 5 = Kritischer Schaden, Sofortmassnahme
+9. Gib fuer jeden Schaden eine bbox an: [x1, y1, x2, y2] normalisiert (0.0=links/oben, 1.0=rechts/unten).
+   bbox = Region des Schadens IM BILD, nicht die Rohruhr-Position.
+
 Antworte AUSSCHLIESSLICH mit gültigem JSON gemäß Schema.
 Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
 """;
+    }
+
+    /// <summary>
+    /// Baut den Import-Kontext-Abschnitt: Bekannte Befunde aus dem Inspektionsprotokoll
+    /// als Erwartungshorizont fuer die KI-Analyse.
+    /// </summary>
+    private static string BuildImportContextSection(
+        IReadOnlyList<(string Code, string Description, double Meter)>? importContext)
+    {
+        if (importContext is null || importContext.Count == 0)
+            return "";
+
+        var sb = new StringBuilder();
+        sb.AppendLine();
+        sb.AppendLine("BEKANNTE BEFUNDE AUS DEM INSPEKTIONSPROTOKOLL (Erwartungshorizont):");
+        sb.AppendLine("Diese Schaeden wurden in dieser Haltung bereits dokumentiert.");
+        sb.AppendLine("Verwende bevorzugt diese VSA-Codes wenn die visuellen Anzeichen passen:");
+
+        // Deduplizierung: gleicher Code nur einmal zeigen
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (code, desc, meter) in importContext)
+        {
+            if (string.IsNullOrWhiteSpace(code) || !seen.Add(code))
+                continue;
+            var meterInfo = meter > 0 ? $" @ {meter:F1}m" : "";
+            sb.AppendLine($"  - {code}: {desc}{meterInfo}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("WICHTIG: Wenn du einen Schaden erkennst der zu einem dieser Codes passt,");
+        sb.AppendLine("verwende EXAKT diesen Code als vsa_code_hint (nicht erfinden, nicht ??? verwenden).");
+        return sb.ToString();
     }
 
     private static EnhancedFrameAnalysis MapToAnalysis(EnhancedVisionDto dto)
     {
         var findings = (dto.Findings ?? Array.Empty<EnhancedFindingDto>())
             .Where(f => !string.IsNullOrWhiteSpace(f.Label))
-            .Select(f => new EnhancedFinding(
-                Label: f.Label.Trim(),
-                VsaCodeHint: f.VsaCodeHint?.Trim(),
-                Severity: Math.Clamp(f.Severity, 1, 5),
-                PositionClock: f.PositionClock?.Trim(),
-                ExtentPercent: f.ExtentPercent,
-                HeightMm: f.HeightMm,
-                WidthMm: f.WidthMm,
-                IntrusionPercent: f.IntrusionPercent,
-                CrossSectionReductionPercent: f.CrossSectionReductionPercent,
-                DiameterReductionMm: f.DiameterReductionMm,
-                Notes: f.Notes?.Trim()))
+            .Select(f =>
+            {
+                // BBox parsen: [x1, y1, x2, y2] normalisiert
+                double? bx1 = null, by1 = null, bx2 = null, by2 = null;
+                if (f.Bbox is { Count: >= 4 })
+                {
+                    bx1 = Math.Clamp(f.Bbox[0], 0, 1);
+                    by1 = Math.Clamp(f.Bbox[1], 0, 1);
+                    bx2 = Math.Clamp(f.Bbox[2], 0, 1);
+                    by2 = Math.Clamp(f.Bbox[3], 0, 1);
+                }
+
+                return new EnhancedFinding(
+                    Label: f.Label.Trim(),
+                    VsaCodeHint: f.VsaCodeHint?.Trim(),
+                    Severity: Math.Clamp(f.Severity, 1, 5),
+                    PositionClock: f.PositionClock?.Trim(),
+                    ExtentPercent: f.ExtentPercent,
+                    HeightMm: f.HeightMm,
+                    WidthMm: f.WidthMm,
+                    IntrusionPercent: f.IntrusionPercent,
+                    CrossSectionReductionPercent: f.CrossSectionReductionPercent,
+                    DiameterReductionMm: f.DiameterReductionMm,
+                    BboxX1: bx1, BboxY1: by1, BboxX2: bx2, BboxY2: by2,
+                    Notes: f.Notes?.Trim());
+            })
             .ToList();
 
         return new EnhancedFrameAnalysis(
@@ -206,14 +282,18 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         string framePngBase64,
         MultiModelFrameResult multiModelContext,
         int pipeDiameterMm = 300,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        (string Code, string Description, double Meter, double Confidence)? previousFinding = null)
     {
-        var contextPrompt = BuildContextPrompt(multiModelContext, pipeDiameterMm);
+        var contextPrompt = BuildContextPrompt(multiModelContext, pipeDiameterMm, previousFinding);
         var prompt = contextPrompt + "\n\n" + BuildPrompt();
 
         EnhancedVisionDto dto;
         try
         {
+            using var frameCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            frameCts.CancelAfter(FrameTimeout);
+
             dto = await _client.ChatStructuredAsync<EnhancedVisionDto>(
                 model: _model,
                 messages:
@@ -224,7 +304,11 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
                         ImagesBase64: [framePngBase64])
                 ],
                 formatSchema: EnhancedVisionSchema,
-                ct: ct).ConfigureAwait(false);
+                ct: frameCts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            return EnhancedFrameAnalysis.Empty("Timeout (60s)");
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
@@ -235,9 +319,20 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         return MapToAnalysis(dto);
     }
 
-    private static string BuildContextPrompt(MultiModelFrameResult ctx, int pipeDiameterMm)
+    private static string BuildContextPrompt(MultiModelFrameResult ctx, int pipeDiameterMm,
+        (string Code, string Description, double Meter, double Confidence)? previousFinding = null)
     {
         var sb = new StringBuilder();
+
+        // Vorheriger Befund fuer temporale Kohaerenz
+        if (previousFinding is var (prevCode, prevDesc, prevMeter, prevConf))
+        {
+            sb.AppendLine("VORHERIGER BEFUND (Kontext aus dem vorherigen Analyseabschnitt):");
+            sb.AppendLine($"  Bei {prevMeter:F2}m wurde '{prevCode}' ({prevDesc}) vermutet (Konfidenz: {prevConf:F0}%).");
+            sb.AppendLine("  Pruefe ob das aktuelle Bild dasselbe Objekt zeigt oder einen neuen/anderen Befund.");
+            sb.AppendLine();
+        }
+
         sb.AppendLine("KONTEXT AUS VORHERIGER ANALYSE (Computer Vision Modelle):");
         sb.AppendLine($"- Bild: {ctx.ImageWidth}x{ctx.ImageHeight} px");
         sb.AppendLine($"- Rohrdurchmesser: DN{pipeDiameterMm}");
@@ -296,6 +391,7 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         int? IntrusionPercent,
         int? CrossSectionReductionPercent,
         int? DiameterReductionMm,
+        IReadOnlyList<double>? Bbox,
         string? Notes);
 }
 
@@ -328,5 +424,9 @@ public sealed record EnhancedFinding(
     int? IntrusionPercent,
     int? CrossSectionReductionPercent,
     int? DiameterReductionMm,
+    double? BboxX1,       // normalisiert 0-1
+    double? BboxY1,
+    double? BboxX2,
+    double? BboxY2,
     string? Notes
 );

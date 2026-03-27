@@ -190,7 +190,7 @@ public sealed class CostCalculationService
         var noDn = candidates.Where(i => !i.DnMin.HasValue || !i.DnMax.HasValue).ToList();
         if (noDn.Count > 0) return noDn.First();
 
-        return candidates.First();
+        return candidates.FirstOrDefault();
     }
 
     public decimal ResolveQty(JsonElement qtySpec, Dictionary<string, object> inputs)
@@ -202,8 +202,16 @@ public sealed class CostCalculationService
         {
             var key = qtySpec.GetString() ?? "";
             if (inputs.TryGetValue(key, out var value))
-                return Convert.ToDecimal(value);
-            throw new Exception($"Unbekannte qty-Variable: '{key}'");
+            {
+                if (value is decimal d) return d;
+                if (value is double dbl) return (decimal)dbl;
+                if (value is int i) return i;
+                if (value is long l) return l;
+                if (decimal.TryParse(value?.ToString() ?? "", NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed))
+                    return parsed;
+                throw new InvalidOperationException($"qty-Variable '{key}' kann nicht in Dezimal konvertiert werden: {value}");
+            }
+            throw new InvalidOperationException($"Unbekannte qty-Variable: '{key}'");
         }
 
         throw new Exception($"Ungültiger qty-Typ: {qtySpec.ValueKind}");
