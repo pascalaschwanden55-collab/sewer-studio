@@ -69,7 +69,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 
             // Create Qwen vision service for VSA-Code enrichment
             var ollamaClient = _cfg.CreateOllamaClient(_httpClient);
-            var qwenVision = new EnhancedVisionAnalysisService(ollamaClient, _cfg.VisionModel);
+            var qwenVision = new EnhancedVisionAnalysisService(ollamaClient, _cfg.VisionModel, _cfg.ReferenceVisionModel);
 
             var multiModel = new MultiModelAnalysisService(
                 pipelineClient, pipelineCfg,
@@ -88,6 +88,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             var videoService = VideoFullAnalysisService.Create(
                 client: client,
                 visionModel: _cfg.VisionModel,
+                referenceModel: _cfg.ReferenceVisionModel,
                 ffmpegPath: _cfg.FfmpegPath ?? "ffmpeg");
 
             videoService.FrameStepSeconds = request.FrameStepSeconds;

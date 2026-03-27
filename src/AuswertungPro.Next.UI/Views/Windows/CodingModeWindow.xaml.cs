@@ -2280,7 +2280,7 @@ public partial class CodingModeWindow : Window
 
             _ollamaClient = _aiConfig.CreateOllamaClient();
             _liveDetection = new LiveDetectionService(_ollamaClient, _aiConfig.VisionModel);
-            _enhancedVision = new EnhancedVisionAnalysisService(_ollamaClient, _aiConfig.VisionModel);
+            _enhancedVision = new EnhancedVisionAnalysisService(_ollamaClient, _aiConfig.VisionModel, _aiConfig.ReferenceVisionModel);
             SetAiStatus("Bereit", "#22C55E",
                 $"Qwen aktiv ({CompactModelName(_aiModelName)})");
         }
@@ -2424,7 +2424,7 @@ public partial class CodingModeWindow : Window
             if (_enhancedVision != null)
             {
                 var b64 = Convert.ToBase64String(pngBytes);
-                var enhanced = await _enhancedVision.AnalyzeAsync(b64, null, _analysisCts.Token);
+                var enhanced = await _enhancedVision.AnalyzeAsync(b64, _analysisCts.Token);
                 result = Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, timestampSec);
             }
             else

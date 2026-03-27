@@ -10,6 +10,7 @@ public sealed record AiRuntimeConfig(
     string TextModel,
     string? EmbedModel,
     string? FfmpegPath,
+    string? ReferenceVisionModel = null,
     TimeSpan OllamaRequestTimeout = default,
     string OllamaKeepAlive = "24h",
     int OllamaNumCtx = 8192

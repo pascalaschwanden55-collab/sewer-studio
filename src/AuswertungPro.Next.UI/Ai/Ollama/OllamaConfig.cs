@@ -13,11 +13,13 @@ public sealed record OllamaConfig(
     string EmbedModel,
     TimeSpan RequestTimeout,
     string KeepAlive = OllamaConfig.DefaultKeepAlive,
-    int NumCtx = OllamaConfig.DefaultNumCtx)
+    int NumCtx = OllamaConfig.DefaultNumCtx,
+    string? ReferenceVisionModel = null)
 {
     // ── Modell-Konstanten (Single Source of Truth) ──────────────────────
-    public const string DefaultVisionModel = "qwen2.5vl:3b";
-    public const string DefaultTextModel   = "qwen2.5:3b";
+    public const string DefaultVisionModel = "qwen3-vl:8b";
+    public const string DefaultTextModel   = "qwen3:8b";
+    public const string DefaultReferenceVisionModel = "qwen3-vl:32b";
     public const string DefaultEmbedModel  = "nomic-embed-text";
     public const string DefaultKeepAlive   = "24h";
     public const int    DefaultNumCtx      = 8192;

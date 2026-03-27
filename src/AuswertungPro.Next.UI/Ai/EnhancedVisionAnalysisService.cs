@@ -109,14 +109,23 @@ Verwende IMMER die oben angegebenen Codes (BCD, BAB, BBC usw.), keine anderen K�
 
     private readonly OllamaClient _client;
     private readonly string _model;
+    private readonly string? _referenceModel;
+    private readonly int _numCtx;
+    private readonly SemaphoreSlim _escalationLock = new(1, 1);
+    private int _escalationCount;
     private FewShotExampleStore? _fewShotStore;
     private IReadOnlyList<(FewShotExample Example, string Base64)>? _cachedFewShot;
 
-    public EnhancedVisionAnalysisService(OllamaClient client, string model)
+    public EnhancedVisionAnalysisService(OllamaClient client, string model, string? referenceModel = null, int numCtx = 4096)
     {
         _client = client;
         _model = model;
+        _referenceModel = referenceModel;
+        _numCtx = numCtx;
     }
+
+    /// <summary>Anzahl erfolgreicher Eskalationen (Telemetrie).</summary>
+    public int EscalationCount => _escalationCount;
 
     /// <summary>
     /// Aktiviert Few-Shot Learning: Beispielbilder werden in den Prompt injiziert.
@@ -127,8 +136,8 @@ Verwende IMMER die oben angegebenen Codes (BCD, BAB, BBC usw.), keine anderen K�
         _fewShotStore = store;
         await store.LoadAsync(ct);
 
-        // Maximal 3 Beispiele fuer 7B (Context-Limit), 5 fuer 32B
-        int maxExamples = _model.Contains("7b", StringComparison.OrdinalIgnoreCase) ? 2 : 4;
+        // Few-Shot Beispiele basierend auf Context-Limit
+        int maxExamples = _numCtx <= 2048 ? 2 : 4;
         var examples = await store.GetBestExamplesAsync(maxExamples, ct: ct);
 
         // Bilder vorladen und als Base64 cachen (einmal laden, bei jeder Analyse verwenden)
@@ -474,6 +483,161 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         }
 
         return MapToAnalysis(dto);
+    }
+
+    /// <summary>
+    /// Analysiert mit dem schnellen 8B-Modell. Wenn die Erkennung unsicher ist
+    /// und ein Reference-Modell (32B) konfiguriert ist, wird eskaliert.
+    /// VRAM-Sicherheit: Primary entladen, Reference laden, danach zurueck.
+    /// </summary>
+    public async Task<(EnhancedFrameAnalysis Result, bool Escalated)> AnalyzeWithEscalationAsync(
+        string framePngBase64,
+        MultiModelFrameResult? context,
+        int pipeDiameterMm = 300,
+        CancellationToken ct = default)
+    {
+        // 1. Schnelle Analyse mit 8B
+        var fast = context != null
+            ? await AnalyzeWithContextAsync(framePngBase64, context, pipeDiameterMm, ct).ConfigureAwait(false)
+            : await AnalyzeAsync(framePngBase64, ct).ConfigureAwait(false);
+
+        if (_referenceModel == null || !NeedsEscalation(fast))
+            return (fast, false);
+
+        // 2. Eskalation mit 32B — SemaphoreSlim verhindert parallele Modellwechsel
+        //    Timeout 120s: wenn Lock nicht verfuegbar → Graceful Degradation (8B-Ergebnis)
+        if (!await _escalationLock.WaitAsync(TimeSpan.FromSeconds(120), ct).ConfigureAwait(false))
+        {
+            System.Diagnostics.Debug.WriteLine(
+                "[EnhancedVision] Eskalation uebersprungen — Lock-Timeout (andere Eskalation laeuft)");
+            return (fast, false);
+        }
+        try
+        {
+            // Primary entladen um VRAM frei zu machen
+            await _client.UnloadModelAsync(_model, ct).ConfigureAwait(false);
+            await Task.Delay(500, ct).ConfigureAwait(false); // GPU-Treiber VRAM-Freigabe
+
+            try
+            {
+                // Reference-Modell (32B) fuer Re-Analyse nutzen
+                var result = context != null
+                    ? await AnalyzeWithModelAsync(_referenceModel, framePngBase64, context, pipeDiameterMm, ct)
+                        .ConfigureAwait(false)
+                    : await AnalyzeWithModelAsync(_referenceModel, framePngBase64, ct)
+                        .ConfigureAwait(false);
+
+                Interlocked.Increment(ref _escalationCount);
+                System.Diagnostics.Debug.WriteLine(
+                    $"[EnhancedVision] Eskalation #{_escalationCount} zu {_referenceModel}: " +
+                    $"{result.Findings.Count} Findings, Quality={result.ImageQuality}");
+
+                return (result, true);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                // OOM oder anderer Fehler beim 32B-Aufruf → 8B-Ergebnis als Fallback
+                System.Diagnostics.Debug.WriteLine(
+                    $"[EnhancedVision] Eskalation fehlgeschlagen ({ex.GetType().Name}): {ex.Message} — verwende 8B-Ergebnis");
+                return (fast, false);
+            }
+            finally
+            {
+                // IMMER: Reference entladen, Primary wieder laden
+                await _client.UnloadModelAsync(_referenceModel, CancellationToken.None)
+                    .ConfigureAwait(false);
+                await _client.WarmupModelAsync(_model, _numCtx, CancellationToken.None)
+                    .ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            _escalationLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Prueft ob eine Eskalation zum Reference-Modell noetig ist.
+    /// Statische Kriterien: keine VSA-Codes, hoher Schweregrad, schlechte Qualitaet.
+    /// </summary>
+    private static bool NeedsEscalation(EnhancedFrameAnalysis fast)
+    {
+        if (fast.IsEmptyFrame || !fast.HasFindings) return false;
+
+        // Alle Findings ohne VSA-Code → 8B hat keine Zuordnung gefunden
+        bool allCodesNull = fast.Findings.All(f => string.IsNullOrEmpty(f.VsaCodeHint));
+
+        // Hoher Schweregrad → Genauigkeit kritisch
+        bool highSeverity = fast.Findings.Any(f => f.Severity >= 4);
+
+        // Schlechte Bildqualitaet mit Findings → unsichere Erkennung
+        bool poorWithFindings = fast.ImageQuality == "mittel" && fast.HasFindings;
+
+        return allCodesNull || highSeverity || poorWithFindings;
+    }
+
+    /// <summary>
+    /// Analysiert mit einem spezifischen Modell (fuer Eskalation).
+    /// </summary>
+    private async Task<EnhancedFrameAnalysis> AnalyzeWithModelAsync(
+        string model,
+        string framePngBase64,
+        CancellationToken ct)
+    {
+        var messages = BuildMessages(framePngBase64);
+        try
+        {
+            var dto = await _client.ChatStructuredAsync<EnhancedVisionDto>(
+                model: model,
+                messages: messages,
+                formatSchema: EnhancedVisionSchema,
+                ct: ct).ConfigureAwait(false);
+            return MapToAnalysis(dto);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[EnhancedVision] Eskalation fehlgeschlagen ({model}): {ex.Message}");
+            return EnhancedFrameAnalysis.Empty(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Analysiert mit spezifischem Modell und Multi-Model-Kontext (fuer Eskalation).
+    /// </summary>
+    private async Task<EnhancedFrameAnalysis> AnalyzeWithModelAsync(
+        string model,
+        string framePngBase64,
+        MultiModelFrameResult multiModelContext,
+        int pipeDiameterMm,
+        CancellationToken ct)
+    {
+        var contextPrompt = BuildContextPrompt(multiModelContext, pipeDiameterMm);
+        var prompt = contextPrompt + "\n\n" + BuildPrompt();
+        try
+        {
+            var dto = await _client.ChatStructuredAsync<EnhancedVisionDto>(
+                model: model,
+                messages:
+                [
+                    new OllamaClient.ChatMessage(
+                        Role: "user",
+                        Content: prompt,
+                        ImagesBase64: [framePngBase64])
+                ],
+                formatSchema: EnhancedVisionSchema,
+                ct: ct).ConfigureAwait(false);
+            return MapToAnalysis(dto);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[EnhancedVision] Eskalation mit Kontext fehlgeschlagen ({model}): {ex.Message}");
+            return EnhancedFrameAnalysis.Empty(ex.Message);
+        }
     }
 
     private static string BuildContextPrompt(MultiModelFrameResult ctx, int pipeDiameterMm)

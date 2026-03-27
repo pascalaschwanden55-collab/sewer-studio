@@ -18,6 +18,7 @@ class ModelSlot(str, enum.Enum):
     YOLO = "yolo"
     DINO = "dino"
     SAM = "sam"
+    VSR = "vsr"
 
 
 @dataclass
@@ -43,6 +44,7 @@ class GpuModelManager:
             ModelSlot.YOLO: threading.Lock(),
             ModelSlot.DINO: threading.Lock(),
             ModelSlot.SAM: threading.Lock(),
+            ModelSlot.VSR: threading.Lock(),
         }
         self._global_lock = threading.Lock()
 
@@ -118,11 +120,14 @@ class GpuModelManager:
         """
         vram_allocated = 0.0
         vram_total = 0.0
+        vram_free_mb = 0
         try:
             import torch
             if torch.cuda.is_available():
                 vram_allocated = torch.cuda.memory_allocated(0) / (1024**3)
                 vram_total = torch.cuda.get_device_properties(0).total_mem / (1024**3)
+                free_bytes, _ = torch.cuda.mem_get_info(0)
+                vram_free_mb = int(free_bytes / (1024**2))
         except Exception:
             pass
 
@@ -138,10 +143,20 @@ class GpuModelManager:
         loaded_names = [s.value for s in self._slots if self._slots[s].model is not None]
         current = loaded_names[0] if loaded_names else "none"
 
+        # Always-On Pipeline: pruefen ob YOLO+DINO+SAM geladen sind
+        core_slots = {ModelSlot.YOLO, ModelSlot.DINO, ModelSlot.SAM}
+        all_core_loaded = all(
+            self._slots.get(s) is not None and self._slots[s].model is not None
+            for s in core_slots
+        )
+
         return {
             "current_model": current,
             "vram_allocated_gb": round(vram_allocated, 2),
             "vram_total_gb": round(vram_total, 2),
+            "vram_free_mb": vram_free_mb,
+            "all_resident": all_core_loaded,
+            "prewarm_done": all_core_loaded,
             "load_times_sec": {
                 s.value: round(st.load_time_sec, 2)
                 for s, st in self._slots.items()

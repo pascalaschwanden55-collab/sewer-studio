@@ -91,6 +91,7 @@ public sealed class AppSettings
     public int? AiOllamaTimeoutMin { get; set; }
     public string? AiOllamaKeepAlive { get; set; }
     public int? AiOllamaNumCtx { get; set; }
+    public string? AiReferenceVisionModel { get; set; }
     public string? AiFfmpegPath { get; set; }
 
     // Hydraulik-Panel letzte Eingaben

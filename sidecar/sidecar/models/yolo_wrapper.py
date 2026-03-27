@@ -57,7 +57,14 @@ def _resolve_yolo_model_path() -> tuple[str, bool]:
             f"Expected '{settings.yolo_model_name}' in '{yolo_dir}' or '{settings.models_dir}'."
         )
 
-    return "yolo11m.pt", False
+    # Fallback: yolo11m.pt — pruefen ob bereits eine TensorRT-Engine exportiert wurde
+    fallback = "yolo11m.pt"
+    if settings.yolo_use_tensorrt:
+        engine_path = Path(fallback).with_suffix(".engine")
+        if engine_path.exists():
+            logger.info("TensorRT-Engine fuer Fallback gefunden: %s", engine_path)
+            return str(engine_path), False
+    return fallback, False
 
 
 def _try_export_tensorrt(pt_path: str) -> str | None:
@@ -158,11 +165,10 @@ def _load_yolo_on(device: str):
 
     # TensorRT-Export versuchen wenn:
     # - TensorRT aktiviert (Config)
-    # - Custom Weights vorhanden (.pt)
-    # - Noch keine .engine Datei (wurde nicht von _resolve gefunden)
+    # - Modell ist .pt (kein bereits exportiertes .engine)
     # - GPU-Device (TensorRT braucht CUDA)
+    # Gilt fuer Custom UND Fallback-Modell (yolo11m.pt profitiert genauso)
     if (settings.yolo_use_tensorrt
-            and using_custom
             and model_path.endswith(".pt")
             and device.startswith("cuda")):
         engine_path = _try_export_tensorrt(model_path)
@@ -311,16 +317,20 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
         boxes = result.boxes
         if boxes is not None and len(boxes) > 0:
             frame_class = "relevant"
-            for box in boxes:
-                xyxy = box.xyxy[0].cpu().numpy()
-                cls_id = int(box.cls[0].cpu().item())
-                conf = float(box.conf[0].cpu().item())
+            # Batch-Transfer GPU→CPU: alle Tensoren auf einmal kopieren
+            all_xyxy = boxes.xyxy.cpu().numpy()
+            all_cls = boxes.cls.cpu().numpy().astype(int)
+            all_conf = boxes.conf.cpu().numpy()
+
+            for i in range(len(boxes)):
+                cls_id = int(all_cls[i])
+                conf = float(all_conf[i])
                 cls_name = result.names.get(cls_id, str(cls_id))
                 detections.append(YoloDetection(
-                    x1=float(xyxy[0]),
-                    y1=float(xyxy[1]),
-                    x2=float(xyxy[2]),
-                    y2=float(xyxy[3]),
+                    x1=float(all_xyxy[i, 0]),
+                    y1=float(all_xyxy[i, 1]),
+                    x2=float(all_xyxy[i, 2]),
+                    y2=float(all_xyxy[i, 3]),
                     class_name=cls_name,
                     confidence=conf,
                 ))

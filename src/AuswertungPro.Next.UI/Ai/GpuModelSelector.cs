@@ -17,23 +17,26 @@ namespace AuswertungPro.Next.UI.Ai;
 /// </summary>
 public static class GpuModelSelector
 {
-    /// <summary>Modell fuer grosse GPUs (RTX 5090, 4090, A6000 etc.)</summary>
-    public const string LargeModel = "qwen2.5vl:32b";
+    /// <summary>Schnelles CLASSIFY-Modell (permanent geladen, ~10 GB).</summary>
+    public const string FastModel = "qwen3-vl:8b";
 
-    /// <summary>Modell fuer kleinere GPUs (RTX 4070, 3060 12GB etc.)</summary>
-    public const string SmallModel = "qwen2.5vl:7b";
+    /// <summary>Grosses Reference-Modell fuer Yellow-Zone Eskalation (~22 GB).</summary>
+    public const string ReferenceModel = "qwen3-vl:32b";
 
-    /// <summary>VRAM-Schwelle in MB ab der das grosse Modell verwendet wird.</summary>
-    public const long LargeModelThresholdMb = 24_000;
+    /// <summary>Laptop-Modell (nur 8B, kein Dual-Mode).</summary>
+    public const string LaptopModel = "qwen3-vl:8b";
 
-    /// <summary>VRAM-Schwelle in MB ab der das kleine Modell verwendet wird.</summary>
-    public const long SmallModelThresholdMb = 8_000;
+    /// <summary>VRAM-Schwelle in MB ab der Dual-Mode (8B + 32B Fallback) aktiv ist.</summary>
+    public const long DualModelThresholdMb = 24_000;
 
-    /// <summary>NumCtx fuer das grosse Modell.</summary>
-    public const int LargeModelNumCtx = 8192;
+    /// <summary>VRAM-Schwelle in MB ab der Single-Mode (nur 8B) aktiv ist.</summary>
+    public const long SingleModelThresholdMb = 8_000;
 
-    /// <summary>NumCtx fuer das kleine Modell (weniger RAM-Verbrauch).</summary>
-    public const int SmallModelNumCtx = 4096;
+    /// <summary>NumCtx fuer das schnelle Modell (kompakt, wenig VRAM).</summary>
+    public const int FastModelNumCtx = 4096;
+
+    /// <summary>NumCtx fuer das Reference-Modell (mehr Kontext).</summary>
+    public const int ReferenceModelNumCtx = 4096;
 
     /// <summary>
     /// Ergebnis der GPU-Erkennung.
@@ -43,7 +46,8 @@ public static class GpuModelSelector
         int ResolvedNumCtx,
         long VramTotalMb,
         string GpuName,
-        string Reason);
+        string Reason,
+        string? ReferenceModel = null);
 
     /// <summary>
     /// Prueft ob der uebergebene Modellname eine automatische Aufloesung erfordert.
@@ -61,8 +65,8 @@ public static class GpuModelSelector
         var nvidiaSmi = FindNvidiaSmi();
         if (nvidiaSmi is null)
             return new GpuProfile(
-                SmallModel, SmallModelNumCtx, 0, "Unbekannt",
-                "nvidia-smi nicht gefunden — verwende kleines Modell als Fallback");
+                LaptopModel, FastModelNumCtx, 0, "Unbekannt",
+                "nvidia-smi nicht gefunden — verwende 8B als Fallback");
 
         try
         {
@@ -93,22 +97,23 @@ public static class GpuModelSelector
 
             var gpuName = parts.Length >= 2 ? parts[1] : "NVIDIA GPU";
 
-            if (vramMb >= LargeModelThresholdMb)
+            if (vramMb >= DualModelThresholdMb)
             {
                 return new GpuProfile(
-                    LargeModel, LargeModelNumCtx, vramMb, gpuName,
-                    $"GPU {gpuName} mit {vramMb} MB VRAM erkannt — verwende grosses Modell (32B)");
+                    FastModel, FastModelNumCtx, vramMb, gpuName,
+                    $"GPU {gpuName} mit {vramMb} MB VRAM — Dual-Mode (8B + 32B Fallback)",
+                    ReferenceModel: ReferenceModel);
             }
 
-            if (vramMb >= SmallModelThresholdMb)
+            if (vramMb >= SingleModelThresholdMb)
             {
                 return new GpuProfile(
-                    SmallModel, SmallModelNumCtx, vramMb, gpuName,
-                    $"GPU {gpuName} mit {vramMb} MB VRAM erkannt — verwende kleines Modell (7B)");
+                    LaptopModel, FastModelNumCtx, vramMb, gpuName,
+                    $"GPU {gpuName} mit {vramMb} MB VRAM — Single-Mode (nur 8B)");
             }
 
             return new GpuProfile(
-                SmallModel, SmallModelNumCtx, vramMb, gpuName,
+                LaptopModel, FastModelNumCtx, vramMb, gpuName,
                 $"GPU {gpuName} mit nur {vramMb} MB VRAM — KI-Vision evtl. eingeschraenkt");
         }
         catch

@@ -16,7 +16,10 @@ public sealed record SidecarHealthResponse(
 public sealed record GpuStatus(
     [property: JsonPropertyName("current_model")] string CurrentModel,
     [property: JsonPropertyName("vram_allocated_gb")] double VramAllocatedGb,
-    [property: JsonPropertyName("vram_total_gb")] double VramTotalGb
+    [property: JsonPropertyName("vram_total_gb")] double VramTotalGb,
+    [property: JsonPropertyName("vram_free_mb")] int VramFreeMb = 0,
+    [property: JsonPropertyName("all_resident")] bool AllResident = false,
+    [property: JsonPropertyName("prewarm_done")] bool PrewarmDone = false
 );
 
 // ── YOLO ───────────────────────────────────────────────────────────────────

@@ -5961,7 +5961,7 @@ public partial class PlayerWindow : Window
 
             var client = config.CreateOllamaClient();
             _codingLiveDetection = new LiveDetectionService(client, config.VisionModel);
-            _codingEnhancedVision = new EnhancedVisionAnalysisService(client, config.VisionModel);
+            _codingEnhancedVision = new EnhancedVisionAnalysisService(client, config.VisionModel, config.ReferenceVisionModel);
             _codingQualityGate = new QualityGateService();
 
             // Multi-Model Pipeline (YOLO → DINO → SAM) initialisieren
@@ -6372,7 +6372,7 @@ public partial class PlayerWindow : Window
                     var b64 = Convert.ToBase64String(pngBytes);
                     var importContext = GatherImportContext();
                     var enhanced = await _codingEnhancedVision.AnalyzeAsync(
-                        b64, importContext, _codingAnalysisCts.Token);
+                        b64, _codingAnalysisCts.Token);
                     result = Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, captureTimestampSec);
                 }
                 else

@@ -46,8 +46,9 @@ public sealed class VideoFullAnalysisService
     public static VideoFullAnalysisService Create(
         OllamaClient client,
         string visionModel,
+        string? referenceModel = null,
         string ffmpegPath = "ffmpeg")
-        => new(new EnhancedVisionAnalysisService(client, visionModel), ffmpegPath);
+        => new(new EnhancedVisionAnalysisService(client, visionModel, referenceModel), ffmpegPath);
 
     public async Task<VideoAnalysisResult> AnalyzeAsync(
         string videoPath,

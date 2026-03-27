@@ -32,6 +32,9 @@ public sealed record AiPlatformConfig(
     int SidecarTimeoutSec,
     int? PipeDiameterMmOverride,
 
+    // ── Fallback ──
+    string? ReferenceVisionModel,
+
     // ── Tools ──
     string FfmpegPath
 )
@@ -45,18 +48,20 @@ public sealed record AiPlatformConfig(
         TextModel:            TextModel,
         EmbedModel:           EmbedModel,
         FfmpegPath:           FfmpegPath,
+        ReferenceVisionModel:  ReferenceVisionModel,
         OllamaRequestTimeout: OllamaRequestTimeout,
         OllamaKeepAlive:      OllamaKeepAlive,
         OllamaNumCtx:         OllamaNumCtx);
 
     public OllamaConfig ToOllamaConfig() => new(
-        BaseUri:        OllamaBaseUri,
-        VisionModel:    VisionModel,
-        TextModel:      TextModel,
-        EmbedModel:     EmbedModel,
-        RequestTimeout: OllamaRequestTimeout,
-        KeepAlive:      OllamaKeepAlive,
-        NumCtx:         OllamaNumCtx);
+        BaseUri:              OllamaBaseUri,
+        VisionModel:          VisionModel,
+        TextModel:            TextModel,
+        EmbedModel:           EmbedModel,
+        RequestTimeout:       OllamaRequestTimeout,
+        KeepAlive:            OllamaKeepAlive,
+        NumCtx:               OllamaNumCtx,
+        ReferenceVisionModel: ReferenceVisionModel);
 
     public PipelineConfig ToPipelineConfig() => new(
         MultiModelEnabled:      MultiModelEnabled,
@@ -99,6 +104,7 @@ public sealed record AiPlatformConfig(
                 Env("SEWERSTUDIO_AI_VISION_MODEL"));
 
         string vision;
+        string? gpuReferenceModel = null;
         int numCtxDefault = OllamaConfig.DefaultNumCtx;
 
         if (GpuModelSelector.IsAutoMode(configuredVision))
@@ -108,6 +114,7 @@ public sealed record AiPlatformConfig(
             {
                 vision = gpuProfile.ResolvedModel;
                 numCtxDefault = gpuProfile.ResolvedNumCtx;
+                gpuReferenceModel = gpuProfile.ReferenceModel;
                 System.Diagnostics.Debug.WriteLine(
                     $"[AiPlatformConfig] GPU Auto-Select: {gpuProfile.Reason}");
             }
@@ -196,6 +203,14 @@ public sealed record AiPlatformConfig(
         var pipeDiameter = settings?.PipelinePipeDiameterMm
             ?? ParseInt(Env("SEWERSTUDIO_PIPE_DIAMETER_MM"));
 
+        // ── Reference-Modell (Yellow-Zone Eskalation) ──
+        // Prioritaet: AppSettings > Env-Var > GPU-Auto-Detect > Default
+        var referenceVision = FirstNonEmpty(
+                settings?.AiReferenceVisionModel,
+                Env("SEWERSTUDIO_AI_REFERENCE_MODEL"))
+            ?? gpuReferenceModel
+            ?? Ollama.OllamaConfig.DefaultReferenceVisionModel;
+
         // ── Tools ──
         var ffmpeg = FirstNonEmpty(
                 settings?.AiFfmpegPath,
@@ -220,6 +235,7 @@ public sealed record AiPlatformConfig(
             DinoTextThreshold:      dinoText,
             SidecarTimeoutSec:      sidecarTimeout,
             PipeDiameterMmOverride: pipeDiameter,
+            ReferenceVisionModel:    referenceVision,
             FfmpegPath:             ffmpeg);
     }
 

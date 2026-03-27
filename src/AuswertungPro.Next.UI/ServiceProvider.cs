@@ -114,6 +114,41 @@ namespace AuswertungPro.Next.UI
 
             // AI/CodeCatalog Init (AiLocalPack)
             var cfg = aiPlatform.ToRuntimeConfig();
+
+            // Startup-Warmup: Alle fremden Modelle entladen, dann 8B vorladen
+            if (cfg.Enabled)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var warmupClient = cfg.CreateOllamaClient();
+                        // Alle geladenen Modelle pruefen und fremde entladen
+                        // (z.B. altes qwen2.5vl:32b von vorheriger Sitzung)
+                        var loaded = await warmupClient.ListLoadedModelsAsync();
+                        foreach (var modelName in loaded)
+                        {
+                            if (!string.Equals(modelName, cfg.VisionModel, StringComparison.OrdinalIgnoreCase))
+                            {
+                                await warmupClient.UnloadModelAsync(modelName);
+                                System.Diagnostics.Debug.WriteLine(
+                                    $"[Startup] Fremdes Modell '{modelName}' entladen");
+                            }
+                        }
+                        if (loaded.Count > 0)
+                            await Task.Delay(500); // GPU-Treiber VRAM-Freigabe
+                        // 8B permanent vorladen
+                        await warmupClient.WarmupModelAsync(cfg.VisionModel, cfg.OllamaNumCtx);
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[Startup] FastModel {cfg.VisionModel} vorgeladen (num_ctx={cfg.OllamaNumCtx})");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[Startup] Modell-Warmup fehlgeschlagen: {ex.Message}");
+                    }
+                });
+            }
             var codeCatalogPath = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_codes.json");
             EnsureEmbeddedCatalogFile(codeCatalogPath);
             var nodCatalogPath = ResolveVsaCatalogNodPath(settings);

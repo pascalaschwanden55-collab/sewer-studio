@@ -69,6 +69,97 @@ public sealed class OllamaClient : IDisposable
     }
 
     // ======================
+    // /api/ps (geladene Modelle im VRAM)
+    // ======================
+
+    /// <summary>
+    /// Gibt die Namen aller aktuell im VRAM geladenen Modelle zurueck.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> ListLoadedModelsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var resp = await _http.GetAsync("/api/ps", ct).ConfigureAwait(false);
+            resp.EnsureSuccessStatusCode();
+            var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            using var doc = JsonDocument.Parse(body);
+            var names = new List<string>();
+            if (doc.RootElement.TryGetProperty("models", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var m in arr.EnumerateArray())
+                {
+                    if (m.TryGetProperty("name", out var n) && n.ValueKind == JsonValueKind.String)
+                        names.Add(n.GetString()!);
+                }
+            }
+            return names;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[OllamaClient] ListLoadedModels fehlgeschlagen: {ex.Message}");
+            return Array.Empty<string>();
+        }
+    }
+
+    // ==============================
+    // Modell-Management (VRAM)
+    // ==============================
+
+    /// <summary>
+    /// Entlaedt ein Modell aus dem VRAM (keep_alive=0).
+    /// Fehler werden ignoriert — Modell war evtl. schon entladen.
+    /// </summary>
+    public async Task UnloadModelAsync(string model, CancellationToken ct = default)
+    {
+        var payload = new Dictionary<string, object?>
+        {
+            ["model"] = model,
+            ["prompt"] = "",
+            ["stream"] = false,
+            ["keep_alive"] = "0"
+        };
+        try
+        {
+            var json = JsonSerializer.Serialize(payload);
+            using var req = new HttpRequestMessage(HttpMethod.Post, "/api/generate")
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+            using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
+            System.Diagnostics.Debug.WriteLine(
+                $"[OllamaClient] UnloadModel {model}: {(int)resp.StatusCode}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[OllamaClient] UnloadModel {model} fehlgeschlagen: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Laedt ein Modell in den VRAM vor (leerer Prompt mit keep_alive).
+    /// </summary>
+    public async Task WarmupModelAsync(string model, int numCtx = 0, CancellationToken ct = default)
+    {
+        var payload = new Dictionary<string, object?>
+        {
+            ["model"] = model,
+            ["prompt"] = "",
+            ["stream"] = false,
+            ["keep_alive"] = "-1"   // permanent im VRAM halten
+        };
+        if (numCtx > 0)
+            payload["options"] = new Dictionary<string, object> { ["num_ctx"] = numCtx };
+        var json = JsonSerializer.Serialize(payload);
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/api/generate")
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
+        using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
+        resp.EnsureSuccessStatusCode();
+    }
+
+    // ======================
     // /api/generate (legacy)
     // ======================
     public async Task<string> GenerateAsync(
