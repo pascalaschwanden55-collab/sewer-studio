@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.UI.Ai.Training.Services;
+using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
@@ -42,7 +43,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     private readonly ISelfTrainingComparisonService _comparison;
     private readonly ITechniqueAssessmentService _technique;
     private readonly PdfProtocolExtractor _pdfExtractor;
-    private readonly TrainingCenterSettings _settings;
+    private readonly ILogger<SelfTrainingOrchestrator>? _logger;
 
     private readonly ManualResetEventSlim _pauseGate = new(true);
 
@@ -53,13 +54,13 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         ISelfTrainingComparisonService comparison,
         ITechniqueAssessmentService technique,
         PdfProtocolExtractor pdfExtractor,
-        TrainingCenterSettings? settings = null)
+        ILogger<SelfTrainingOrchestrator>? logger = null)
     {
         _vision = vision;
         _comparison = comparison;
         _technique = technique;
         _pdfExtractor = pdfExtractor;
-        _settings = settings ?? new TrainingCenterSettings();
+        _logger = logger;
     }
 
     public void Pause() => _pauseGate.Reset();
@@ -72,7 +73,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     {
         var sw = Stopwatch.StartNew();
 
-        // 1. Protokoll-Eintraege extrahieren
+        // 1. Protokoll-Eintraege MIT Fotos extrahieren
         string framesDir = Path.Combine(tc.FolderPath, "self_training_frames");
         Directory.CreateDirectory(framesDir);
 
@@ -86,85 +87,14 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             0, allEntries.Count, "", 0, SelfTrainingStage.BuildingTimeline, null, null, null,
             $"{allEntries.Count} Protokoll-Eintraege gefunden"));
 
-        // Eintraege mit Foto behalten
+        // Nur Eintraege mit Foto behalten — das sind unsere Trainingsbilder
         var entries = allEntries
             .Where(e => !string.IsNullOrEmpty(e.ExtractedFramePath)
                         && File.Exists(e.ExtractedFramePath))
             .ToList();
-        bool usedVideoFallback = false;
-
-        // Fallback: Wenn keine Fotos im PDF, Frames aus Video extrahieren
-        if (entries.Count == 0 && !string.IsNullOrEmpty(tc.VideoPath) && File.Exists(tc.VideoPath))
-        {
-            progress.Report(new SelfTrainingStep(
-                0, allEntries.Count, "", 0, SelfTrainingStage.ExtractingFrame, null, null, null,
-                "Keine Fotos im PDF — extrahiere Frames aus Video..."));
-
-            var ffmpeg = FindFfmpeg();
-
-            // Videodauer ermitteln fuer Meter→Zeit-Mapping
-            var probe = new VideoProbeService(ffmpegPath: ffmpeg);
-            var probeResult = await probe.ProbeAsync(tc.VideoPath, ct);
-            double videoDuration = probeResult.Success ? probeResult.DurationSeconds : 300.0;
-
-            // Max-Meter aus Protokoll fuer lineare Interpolation
-            double maxMeter = allEntries.Max(e => Math.Max(e.MeterStart, e.MeterEnd));
-            if (maxMeter <= 0) maxMeter = 100.0;
-
-            progress.Report(new SelfTrainingStep(
-                0, allEntries.Count, "", 0, SelfTrainingStage.ExtractingFrame, null, null, null,
-                $"Video: {videoDuration:F0}s, Max-Meter: {maxMeter:F1}m — {allEntries.Count} Frames extrahieren..."));
-
-            var videoEntries = new List<GroundTruthEntry>();
-
-            for (int i = 0; i < allEntries.Count; i++)
-            {
-                ct.ThrowIfCancellationRequested();
-                var entry = allEntries[i];
-
-                // Zeitstempel: 1. Protokoll-Zeit, 2. Meter→Zeit linear interpoliert
-                double timeSec;
-                if (entry.Zeit.HasValue && entry.Zeit.Value.TotalSeconds > 0)
-                {
-                    timeSec = entry.Zeit.Value.TotalSeconds;
-                }
-                else
-                {
-                    // Meter-Position linear auf Videodauer mappen
-                    // +10s Offset um Logo/Anfang zu ueberspringen
-                    double meterCenter = (entry.MeterStart + entry.MeterEnd) / 2.0;
-                    timeSec = 10.0 + (meterCenter / maxMeter) * (videoDuration - 20.0);
-                    timeSec = Math.Clamp(timeSec, 5.0, videoDuration - 2.0);
-                }
-
-                var sampleId = $"st_{tc.CaseId}_{i:D3}";
-                var framePath = await FrameStore.ExtractAndStoreAsync(
-                    ffmpeg, tc.VideoPath, timeSec, sampleId, framesDir, ct);
-
-                if (framePath is not null)
-                {
-                    videoEntries.Add(entry with { ExtractedFramePath = framePath });
-
-                    progress.Report(new SelfTrainingStep(
-                        i, allEntries.Count, entry.VsaCode, entry.MeterStart,
-                        SelfTrainingStage.ExtractingFrame, null, null, framePath,
-                        $"Frame @ {timeSec:F1}s fuer {entry.VsaCode} @ {entry.MeterStart:F1}m"));
-                }
-            }
-
-            entries = videoEntries;
-            usedVideoFallback = true;
-
-            progress.Report(new SelfTrainingStep(
-                0, entries.Count, "", 0, SelfTrainingStage.ExtractingFrame, null, null, null,
-                $"{entries.Count} Frames aus Video extrahiert"));
-        }
 
         if (entries.Count == 0)
         {
-            progress.Report(new SelfTrainingStep(
-                0, allEntries.Count, "", 0, SelfTrainingStage.Completed, null, null, null,
-                "Keine Bilder verfuegbar (weder PDF-Fotos noch Video-Frames)."));
             return new SelfTrainingResult(tc.CaseId, allEntries.Count, 0, 0, 0, 0, null, sw.Elapsed, 0);
         }
 
@@ -204,19 +134,25 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
 
             string b64 = Convert.ToBase64String(pngBytes);
 
-            // KI-Fehler in Logdatei schreiben (fuer Debugging auf anderen PCs)
+            // Bilder aus self_training_frames stammen aus PDF-Protokollen.
+            // Sie sind aber meistens Video-Frames MIT OSD (Datum, Meter, Haltungsname).
+            // → Standard-Prompt verwenden (OSD lesen), aber im Vergleich toleranter sein
+            //   (Meter/Clock-Fallback, da Zuordnung Bild↔Eintrag schon korrekt ist).
+            bool isPdfPhoto = framePath.Contains("self_training_frames", StringComparison.OrdinalIgnoreCase);
+
             EnhancedFrameAnalysis analysis;
             try
             {
+                // Immer Standard-Analyse (mit OSD-Lesen), da die meisten PDF-Fotos
+                // Video-Frames mit sichtbarem OSD sind
                 analysis = await _vision.AnalyzeAsync(b64, ct);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 var errMsg = $"[SelfTraining] EXCEPTION bei {entry.VsaCode}@{entry.MeterStart:F1}m: {ex.GetType().Name}: {ex.Message}";
-                try { File.AppendAllText(
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                        "SewerStudio", "logs", "selftraining_errors.log"),
-                    $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {errMsg}\n"); } catch { }
+                _logger?.LogWarning(ex, "Selbsttraining KI-Analyse fehlgeschlagen: {Code}@{Meter:F1}m",
+                    entry.VsaCode, entry.MeterStart);
+                LogToFile(errMsg);
                 progress.Report(new SelfTrainingStep(
                     i, entries.Count, entry.VsaCode, entry.MeterStart,
                     SelfTrainingStage.Analyzing, null, null, framePath,
@@ -227,10 +163,9 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             if (analysis.Error is not null)
             {
                 var errMsg = $"KI-Fehler: {analysis.Error}";
-                try { File.AppendAllText(
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                        "SewerStudio", "logs", "selftraining_errors.log"),
-                    $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [SelfTraining] {entry.VsaCode}@{entry.MeterStart:F1}m: {errMsg}\n"); } catch { }
+                _logger?.LogWarning("Selbsttraining KI-Fehler: {Code}@{Meter:F1}m: {Error}",
+                    entry.VsaCode, entry.MeterStart, analysis.Error);
+                LogToFile($"[SelfTraining] {entry.VsaCode}@{entry.MeterStart:F1}m: {errMsg}");
                 progress.Report(new SelfTrainingStep(
                     i, entries.Count, entry.VsaCode, entry.MeterStart,
                     SelfTrainingStage.Analyzing, null, null, framePath,
@@ -242,7 +177,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 i, entries.Count, entry.VsaCode, entry.MeterStart,
                 SelfTrainingStage.Comparing, null, null, framePath));
 
-            var comparison = _comparison.Compare(entry, analysis);
+            var comparison = _comparison.Compare(entry, analysis, isPdfPhoto: isPdfPhoto);
 
             // ── Aufnahmetechnik (1x mit Qwen, danach deterministisch) ──
             TechniqueAssessment? technique = null;
@@ -284,12 +219,12 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             var meterCenter = (entry.MeterStart + entry.MeterEnd) / 2.0;
             var sample = new TrainingSample
             {
-                SampleId = $"{tc.CaseId}_st_{i:D3}_{DateTime.UtcNow:HHmmss}",
+                SampleId = $"{tc.CaseId}_st_{i:D3}",
                 CaseId = tc.CaseId,
                 Code = entry.VsaCode,
                 Beschreibung = entry.Text,
-                MeterStart = Math.Round(entry.MeterStart, 1),
-                MeterEnd = Math.Round(entry.MeterEnd, 1),
+                MeterStart = entry.MeterStart,
+                MeterEnd = entry.MeterEnd,
                 IsStreckenschaden = entry.IsStreckenschaden,
                 TimeSeconds = 0,
                 DetectedMeter = analysis.Meter,
@@ -303,13 +238,11 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                     : KbIndexState.None,
                 TruthMeterCenter = meterCenter,
                 OdsDeltaMeters = technique?.OsdDeltaMeters,
-                HasOsdMismatch = technique?.OsdDeltaMeters > _settings.OsdMismatchThresholdMeters,
+                HasOsdMismatch = technique?.OsdDeltaMeters > 5.0,
                 Signature = TrainingSample.BuildCanonicalSignature(tc.CaseId, entry.VsaCode, meterCenter, entry.MeterEnd),
                 MatchLevel = comparison.Level.ToString(),
                 KiCode = comparison.BestMatchCode,
-                SourceType = usedVideoFallback
-                    ? (entry.Zeit.HasValue ? SourceTypeNames.VideoTimestamp : SourceTypeNames.VideoLinear)
-                    : SourceTypeNames.PdfPhoto,
+                SourceType = SourceTypeNames.PdfPhoto,
                 TechniqueGrade = technique?.OverallGrade
             };
             generatedSamples.Add(sample);
@@ -339,16 +272,18 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             SamplesGenerated: generatedSamples.Count);
     }
 
-    /// <summary>ffmpeg-Pfad aus AiRuntimeConfig oder Fallback.</summary>
-    private static string FindFfmpeg()
+    private static void LogToFile(string message)
     {
         try
         {
-            var cfg = AiRuntimeConfig.Load();
-            if (!string.IsNullOrEmpty(cfg.FfmpegPath) && File.Exists(cfg.FfmpegPath))
-                return cfg.FfmpegPath;
+            var logDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "SewerStudio", "logs");
+            Directory.CreateDirectory(logDir);
+            File.AppendAllText(
+                Path.Combine(logDir, "selftraining_errors.log"),
+                $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {message}\n");
         }
-        catch { }
-        return "ffmpeg";
+        catch { /* Logging darf nie crashen */ }
     }
 }

@@ -64,6 +64,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     [ObservableProperty] private int _kbSampleCount;
     [ObservableProperty] private int _kbErrorCount;   // Approved aber Quality-Gate fehlgeschlagen
     [ObservableProperty] private int _kbNewCount;      // Nicht-approved (Status=New)
+    [ObservableProperty] private bool _forceRerunAll;  // Erneut durchlaufen (bereits verarbeitete nicht ueberspringen)
     [ObservableProperty] private int _kbEmbeddingCount;
     [ObservableProperty] private int _kbCodesCovered;
     [ObservableProperty] private string _kbReadinessLabel = "Unbekannt";
@@ -260,7 +261,8 @@ public partial class TrainingCenterViewModel : ObservableObject
     private void ResetSelfTrainingVisuals(bool resetMatchRate = false)
     {
         SelfTrainingResults.Clear();
-        CodeDistribution.Clear();
+        // CodeDistribution NICHT leeren — Gesamtstand wird beibehalten
+        // und im Lauf inkrementell erweitert
         SelfTrainingLogEntries.Clear();
         PipelineActiveStep = 0;
         CurrentEntryCode = "";
@@ -331,7 +333,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         try
         {
-            var (summary, totalDistinctCodes, errorCount, newCount) = await Task.Run(() =>
+            var (summary, totalDistinctCodes, errorCount, newCount, codeCounts) = await Task.Run(() =>
             {
                 using var db = new KnowledgeBaseContext();
                 var diag = new KnowledgeBaseDiagnosticsService(db);
@@ -340,6 +342,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 
                 // Sample-Statistik aus JSON fuer Diagnose-Anzeige
                 int errors = 0, news = 0;
+                Dictionary<string, int> codeCounts = new();
                 try
                 {
                     var samples = TrainingSamplesStore.LoadAsync().GetAwaiter().GetResult();
@@ -347,11 +350,20 @@ public partial class TrainingCenterViewModel : ObservableObject
                     {
                         if (sample.KbIndexState == KbIndexState.Error) errors++;
                         else if (sample.Status == TrainingSampleStatus.New) news++;
+
+                        // Code-Verteilung aus allen Samples (Gesamtstand)
+                        if (!string.IsNullOrEmpty(sample.Code))
+                        {
+                            if (!codeCounts.TryGetValue(sample.Code, out var cnt))
+                                codeCounts[sample.Code] = 1;
+                            else
+                                codeCounts[sample.Code] = cnt + 1;
+                        }
                     }
                 }
                 catch { /* optional */ }
 
-                return (s, allCodes, errors, news);
+                return (s, allCodes, errors, news, codeCounts);
             });
 
             void Apply()
@@ -376,6 +388,19 @@ public partial class TrainingCenterViewModel : ObservableObject
 
                 KbTopCodesText = string.Join("\n", summary.TopCodes
                     .Select(c => $"{c.VsaCode}: {c.Count} Samples"));
+
+                // Code-Verteilung aus Gesamtstand befuellen (wenn leer)
+                if (CodeDistribution.Count == 0 && codeCounts.Count > 0)
+                {
+                    foreach (var (code, count) in codeCounts.OrderByDescending(kv => kv.Value))
+                    {
+                        CodeDistribution.Add(new CodeDistributionEntry
+                        {
+                            Code = code,
+                            Total = count
+                        });
+                    }
+                }
             }
 
             if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
@@ -1980,82 +2005,131 @@ public partial class TrainingCenterViewModel : ObservableObject
             var technique = new TechniqueAssessmentService(ollamaClient, visionModel);
             var pdfExtractor = new PdfProtocolExtractor();
 
-            var stSettings = await TrainingCenterSettingsStore.LoadAsync();
             _selfTrainingOrchestrator = new SelfTrainingOrchestrator(
-                vision, comparison, technique, pdfExtractor, stSettings);
+                vision, comparison, technique, pdfExtractor);
 
             // Progress-Callback verbindet Orchestrator → ViewModel-Visualisierungen
             var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);
 
-            Log("Pipeline gestartet: OSD-Scan → Frame → KI-Analyse → Vergleich → Technik");
-            var result = await _selfTrainingOrchestrator.RunAsync(SelectedCase, progress, ct);
+            // Alle Faelle mit Protokoll durchlaufen (Batch-Selbsttraining)
+            var existingSamples = await TrainingSamplesStore.LoadAsync();
+            var processedIds = existingSamples.Select(s => s.CaseId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            // Ergebnis loggen
-            Log($"--- Selbsttraining abgeschlossen ---");
-            Log($"  Dauer: {result.Duration:mm\\:ss}");
-            Log($"  Eintraege: {result.TotalEntries} gesamt");
-            Log($"  ExactMatch: {result.ExactMatches} | PartialMatch: {result.PartialMatches}");
-            Log($"  Mismatch: {result.Mismatches} | NoFindings: {result.NoFindings}");
-            Log($"  Samples erzeugt: {result.SamplesGenerated}");
-            if (result.OverallTechnique is { } t)
-                Log($"  Technik: {t.OverallGrade} (Licht={t.LightingQuality}, Schaerfe={t.SharpnessQuality})");
+            var casesToTrain = Cases
+                .Where(c => !string.IsNullOrEmpty(c.ProtocolPath))
+                .Where(c => ForceRerunAll || !processedIds.Contains(c.CaseId))
+                .ToList();
 
-            StatusText = $"Fertig! {result.ExactMatches}/{result.TotalEntries} ExactMatch, "
-                       + $"{result.SamplesGenerated} Samples in {result.Duration:mm\\:ss}";
-
-            // Match-Rate-Verlauf persistieren (Counts → Prozente)
-            var matchTotal = result.ExactMatches + result.PartialMatches + result.Mismatches + result.NoFindings;
-            if (matchTotal > 0)
+            if (casesToTrain.Count == 0)
             {
-                await SelfTrainingHistoryStore.AppendRunAsync(new SelfTrainingRunSnapshot(
-                    DateTime.UtcNow,
-                    result.CaseId,
-                    result.TotalEntries,
-                    (double)result.ExactMatches / matchTotal,
-                    (double)result.PartialMatches / matchTotal,
-                    (double)result.Mismatches / matchTotal,
-                    (double)result.NoFindings / matchTotal));
+                // Fallback: Alle bereits verarbeitet → nur den ausgewaehlten Fall erneut
+                casesToTrain = new List<TrainingCase> { SelectedCase };
             }
 
-            // Inkrementelles KB-Update fuer ExactMatch-Samples (B1)
-            if (result.ExactMatches > 0 && result.SamplesGenerated > 0)
+            Log($"Selbsttraining: {casesToTrain.Count} Faelle zu verarbeiten");
+            ProgressMax = casesToTrain.Count;
+
+            int totalExact = 0, totalPartial = 0, totalMismatch = 0, totalNoFindings = 0, totalSamples = 0;
+            int caseErrors = 0;
+
+            for (int ci = 0; ci < casesToTrain.Count; ci++)
             {
-                var allSamples = await TrainingSamplesStore.LoadAsync();
-                var newApproved = allSamples
-                    .Where(s => s.CaseId == result.CaseId
-                        && s.Status == TrainingSampleStatus.Approved)
-                    .ToList();
+                ct.ThrowIfCancellationRequested();
+                var currentCase = casesToTrain[ci];
+                SelectedCase = currentCase;
+                ProgressValue = ci + 1;
+                StatusText = $"[{ci + 1}/{casesToTrain.Count}] {currentCase.CaseId}...";
+                Log($"--- [{ci + 1}/{casesToTrain.Count}] Selbsttraining: {currentCase.CaseId} ---");
+                Log($"  Protokoll: {currentCase.ProtocolPath}");
 
-                if (newApproved.Count > 0)
+                SelfTrainingResult result;
+                try
                 {
-                    // Samples als Pending markieren VOR dem Index-Versuch
-                    foreach (var s in newApproved.Where(s => s.KbIndexState is KbIndexState.None or KbIndexState.Error))
-                        s.KbIndexState = KbIndexState.Pending;
-                    await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
+                    result = await _selfTrainingOrchestrator.RunAsync(currentCase, progress, ct);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    Log($"  FEHLER: {ex.Message}");
+                    caseErrors++;
+                    continue;
+                }
 
-                    Log($"{newApproved.Count} ExactMatch-Samples — starte KB-Update...");
-                    var stIndexedIds = await IncrementalKbUpdateAsync(newApproved, ct);
-                    var stIndexedSet = stIndexedIds.ToHashSet();
-                    foreach (var s in newApproved)
-                        s.KbIndexState = stIndexedSet.Contains(s.SampleId)
-                            ? KbIndexState.Indexed
-                            : (s.KbIndexState == KbIndexState.Pending ? KbIndexState.Error : s.KbIndexState);
-                    await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
+                // Ergebnis loggen
+                Log($"  Eintraege: {result.TotalEntries} | ExactMatch: {result.ExactMatches} | "
+                  + $"Partial: {result.PartialMatches} | Mismatch: {result.Mismatches} | "
+                  + $"NoFindings: {result.NoFindings} | Samples: {result.SamplesGenerated} | "
+                  + $"Dauer: {result.Duration:mm\\:ss}");
+                if (result.OverallTechnique is { } tech)
+                    Log($"  Technik: {tech.OverallGrade} (Licht={tech.LightingQuality}, Schaerfe={tech.SharpnessQuality})");
+
+                totalExact += result.ExactMatches;
+                totalPartial += result.PartialMatches;
+                totalMismatch += result.Mismatches;
+                totalNoFindings += result.NoFindings;
+                totalSamples += result.SamplesGenerated;
+
+                // Match-Rate-Verlauf persistieren
+                var matchTotal = result.ExactMatches + result.PartialMatches + result.Mismatches + result.NoFindings;
+                if (matchTotal > 0)
+                {
+                    await SelfTrainingHistoryStore.AppendRunAsync(new SelfTrainingRunSnapshot(
+                        DateTime.UtcNow,
+                        result.CaseId,
+                        result.TotalEntries,
+                        (double)result.ExactMatches / matchTotal,
+                        (double)result.PartialMatches / matchTotal,
+                        (double)result.Mismatches / matchTotal,
+                        (double)result.NoFindings / matchTotal));
+                }
+
+                // Inkrementelles KB-Update fuer ExactMatch-Samples
+                if (result.ExactMatches > 0 && result.SamplesGenerated > 0)
+                {
+                    var allSamples = await TrainingSamplesStore.LoadAsync();
+                    var newApproved = allSamples
+                        .Where(s => s.CaseId == result.CaseId
+                            && s.Status == TrainingSampleStatus.Approved)
+                        .ToList();
+
+                    if (newApproved.Count > 0)
+                    {
+                        foreach (var s in newApproved.Where(s => s.KbIndexState is KbIndexState.None or KbIndexState.Error))
+                            s.KbIndexState = KbIndexState.Pending;
+                        await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
+
+                        Log($"  {newApproved.Count} Samples → KB-Update...");
+                        var stIndexedIds = await IncrementalKbUpdateAsync(newApproved, ct);
+                        var stIndexedSet = stIndexedIds.ToHashSet();
+                        foreach (var s in newApproved)
+                            s.KbIndexState = stIndexedSet.Contains(s.SampleId)
+                                ? KbIndexState.Indexed
+                                : (s.KbIndexState == KbIndexState.Pending ? KbIndexState.Error : s.KbIndexState);
+                        await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
+                    }
                 }
             }
 
+            ForceRerunAll = false; // Nach Durchlauf zuruecksetzen
+            Log($"=== Selbsttraining abgeschlossen ===");
+            Log($"  Faelle: {casesToTrain.Count} ({caseErrors} Fehler)");
+            Log($"  ExactMatch: {totalExact} | Partial: {totalPartial} | Mismatch: {totalMismatch} | NoFindings: {totalNoFindings}");
+            Log($"  Samples erzeugt: {totalSamples}");
+
+            StatusText = $"Fertig! {casesToTrain.Count} Faelle, {totalExact} ExactMatch, {totalSamples} Samples";
+
             // Hinweis fuer Few-Shot-Export (B2)
-            if (result.ExactMatches > 0)
+            if (totalExact > 0)
             {
-                Log($"{result.ExactMatches} ExactMatch-Samples erzeugt. Fuer Few-Shot-Export: Tab 'Samples' → 'Export Approved'");
+                Log($"{totalExact} ExactMatch-Samples erzeugt. Fuer Few-Shot-Export: Tab 'Samples' → 'Export Approved'");
             }
 
             // Review Queue befuellen mit PartialMatch/Mismatch (C1)
-            if (ReviewQueueServiceRef is not null && (result.PartialMatches > 0 || result.Mismatches > 0))
+            if (ReviewQueueServiceRef is not null && (totalPartial > 0 || totalMismatch > 0))
             {
                 var allSamplesForReview = await TrainingSamplesStore.LoadAsync();
                 var reviewCandidates = allSamplesForReview
-                    .Where(s => s.CaseId == result.CaseId
+                    .Where(s => casesToTrain.Any(c => c.CaseId == s.CaseId)
                         && s.MatchLevel is MatchLevelNames.PartialMatch or MatchLevelNames.Mismatch)
                     .ToList();
 

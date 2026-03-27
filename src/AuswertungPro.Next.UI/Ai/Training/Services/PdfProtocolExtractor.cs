@@ -15,17 +15,18 @@ namespace AuswertungPro.Next.UI.Ai.Training.Services;
 ///
 /// Strategien (in Priorität):
 /// 1. IKAS Leitungsgrafik: "Entf. Kode Foto Video Beschreibung" (Zeit VOR Text)
-/// 2. Tabellenzeilen mit Timestamp am Ende (Zeit NACH Text)
-/// 3. IKAS Bildbericht: Label-Value Blöcke (Zustand/Entf./Video)
-/// 4. Regelbasiertes Fallback (Bereichsmuster / Einzelmeter)
-/// 5. JSON-Protokolldatei als direkter Fallback
+/// 2. Fretz/IBAK-Tabelle: "Foto Zeit Meter Code Beschreibung" (Zeit VOR Meter)
+/// 3. Tabellenzeilen mit Timestamp am Ende (Zeit NACH Text)
+/// 4. IKAS Bildbericht: Label-Value Blöcke (Zustand/Entf./Video)
+/// 5. Regelbasiertes Fallback (Bereichsmuster / Einzelmeter)
+/// 6. JSON-Protokolldatei als direkter Fallback
 /// </summary>
 public sealed class PdfProtocolExtractor
 {
     // ── Regex-Muster ────────────────────────────────────────────────────────
 
-    // VSA-Code: 2-6 Buchstaben, optional mit Punkt-Suffix (.A, .C, .AB)
-    private const string CodePattern = @"[A-Z]{2,6}(?:\.[A-Z]{1,2})?";
+    // VSA-Code: 2-6 Buchstaben, optional mit Punkt-Suffixen (.A, .C, .AB, .Y.B)
+    private const string CodePattern = @"[A-Z]{2,6}(?:\.[A-Z]{1,2})*";
 
     // IKAS Leitungsgrafik: "[meter]  [CODE]  [foto?]  [HH:MM:SS]  [text]"
     // Zeit kommt VOR der Beschreibung
@@ -36,6 +37,12 @@ public sealed class PdfProtocolExtractor
     // IKAS Fortsetzungszeile (kein Meter): "[CODE]  [foto?]  [HH:MM:SS]  [text]"
     private static readonly Regex IkasContinuationPattern = new(
         $@"^[ \t]{{4,}}(?<code>{CodePattern})[ \t]+(?:\d{{1,5}}[ \t]+)?(?<time>\d{{2}}:\d{{2}}:\d{{2}})[ \t]+(?<text>[^\r\n]+)",
+        RegexOptions.Compiled | RegexOptions.Multiline);
+
+    // Fretz-Format: "[Foto?]  [HH:MM:SS]  [meter]  [CODE]  [text]"
+    // Foto-Nummer und Timestamp kommen VOR dem Meterwert (Fretz/IBAK-PDFs)
+    private static readonly Regex FretzTablePattern = new(
+        $@"^[ \t]*(?:\d{{1,5}}[ \t]+)?(?<time>\d{{2}}:\d{{2}}:\d{{2}})[ \t]+(?<meter>\d{{1,4}}[.,]\d{{1,3}})[ \t]+(?<code>{CodePattern})[ \t]+(?<text>[^\r\n]+)",
         RegexOptions.Compiled | RegexOptions.Multiline);
 
     // Standard-Format: "[meter]  [CODE]  [text...]  [HH:MM:SS]"
@@ -321,10 +328,30 @@ public sealed class PdfProtocolExtractor
 
     // ── Bild-Extraktion aus PDF ─────────────────────────────────────────────
 
+    // Filter-Konstanten fuer echte Inspektionsfotos
+    // Echte Kanalfotos: min 640x480 (PAL) oder 1920x1080 (HD), typisch 4:3 oder 16:9
+    // Logos/Banner: klein, breite Seitenverhaeltnisse, wiederholen sich auf jeder Seite
+    // PDF-Seitenrender: sehr gross (3508x2480 = A4 @ 300dpi), keine echten Fotos
+    private const int MinPhotoWidth = 400;
+    private const int MinPhotoHeight = 300;
+    private const int MaxPhotoDimension = 2500;     // Echte Fotos ≤ 1920px, PDF-Render > 3000px
+    private const double MinAspect = 1.2;            // Echte Fotos 4:3=1.33, Leitungsgrafiken ~1.12
+    private const double MaxAspect = 2.0;            // 16:9 = 1.78, Logos oft > 2.0
+    private const int MinPhotoBytes = 30_000;        // 30KB — echte JPEGs aus Video > 50KB
+
     /// <summary>
-    /// Extrahiert echte Inspektionsfotos aus dem PDF-Bildbericht und ordnet sie den Einträgen zu.
-    /// Unterstuetzt JPEG-kodierte Bilder (haeufig in IKAS/WinCan PDFs) und PNG.
-    /// Filtert Logos, Icons, Header-Banner und Querschnitt-Zeichnungen heraus.
+    /// Extrahiert echte Inspektionsfotos aus dem PDF-Bildbericht und ordnet sie den Eintraegen zu.
+    /// Filtert Logos, Icons, Banner, PDF-Seitenrender und Querschnitt-Zeichnungen heraus.
+    ///
+    /// Filter-Kriterien:
+    /// - Min 400x300 Pixel (echte Fotos sind mind. PAL-Aufloesung)
+    /// - Max 2500px pro Dimension (PDF-Seitenrender sind 3508x2480+)
+    /// - Seitenverhaeltnis 1.1–2.0 (echte Fotos: 4:3=1.33 oder 16:9=1.78; Logos oft >2.0)
+    /// - Min 30KB Bilddaten (Logos/Icons sind kleiner)
+    /// - Deduplizierung: Identische Bilder (Logos auf jeder Seite) werden entfernt
+    /// - JPEG-Bilder bevorzugt (echte Inspektionsfotos sind fast immer JPEG)
+    ///
+    /// Zuordnung: Strikte 1:1 wenn Bildanzahl == Entryanzahl, sonst keine Zuordnung.
     /// </summary>
     private static IReadOnlyList<GroundTruthEntry> ExtractAndAssignPdfImages(
         UglyToad.PdfPig.PdfDocument doc,
@@ -337,70 +364,110 @@ public sealed class PdfProtocolExtractor
             Directory.CreateDirectory(framesDir);
             var safeName = Regex.Replace(Path.GetFileNameWithoutExtension(pdfPath), @"[^\w\-]", "_");
 
-            // Filter-Kriterien fuer echte Inspektionsfotos:
-            //   - Min. 300x200 Pixel (echte Fotos sind mindestens SD-Aufloesung)
-            //   - Seitenverhaeltnis 1.0–2.5 (Landscape-Fotos, keine Banner/Streifen)
-            //   - Min. 20 KB Bilddaten (Zeichnungen/Schemata sind kleiner)
-            const int MinWidth = 300;
-            const int MinHeight = 200;
-            const int MinBytesForPhoto = 20_000; // 20 KB — echte Fotos typisch 50KB+ (JPEG) oder 200KB+ (PNG)
+            var images = new List<(int pageNum, byte[] data, string ext)>();
+            // Deduplizierung: Bilder gleicher Groesse (Logos!) nur einmal behalten
+            var seenSizes = new HashSet<int>();
+            int pageIdx = 0;
 
-            var images = new List<(byte[] data, string ext)>();
             foreach (var page in doc.GetPages())
             {
+                pageIdx++;
                 foreach (var img in page.GetImages())
                 {
-                    // Groessenfilter: Logos, Icons und kleine Grafiken raus
-                    if (img.WidthInSamples < MinWidth || img.HeightInSamples < MinHeight)
-                        continue;
+                    int w = (int)img.WidthInSamples;
+                    int h = (int)img.HeightInSamples;
 
-                    // Seitenverhaeltnis: Banner (z.B. 748x250 = 3.0) und schmale Streifen raus
-                    // Echte Inspektionsfotos sind typisch 4:3 (1.33) oder 16:9 (1.78)
-                    var aspect = (double)img.WidthInSamples / img.HeightInSamples;
-                    if (aspect < 1.0 || aspect > 2.5)
-                        continue;
+                    // ── Dimensionsfilter ──
+                    if (w < MinPhotoWidth || h < MinPhotoHeight)
+                        continue; // Zu klein fuer ein echtes Foto
 
-                    // Strategie 1: PNG-Konvertierung (funktioniert fuer nicht-JPEG-Bilder)
-                    if (img.TryGetPng(out var pngBytes) && pngBytes.Length >= MinBytesForPhoto)
-                    {
-                        images.Add((pngBytes, ".png"));
-                        continue;
-                    }
+                    if (w > MaxPhotoDimension || h > MaxPhotoDimension)
+                        continue; // PDF-Seitenrender (A4 @300dpi = 3508x2480)
 
-                    // Strategie 2: JPEG-RawBytes direkt verwenden
-                    // Die meisten Inspektionsfotos in IKAS/WinCan-PDFs sind JPEG-kodiert.
-                    // TryGetPng() scheitert bei diesen, aber RawBytes enthaelt das JPEG direkt.
-                    // ACHTUNG: Manche PDFs haben invertierte Decode-Arrays ([1,0,1,0,1,0]),
-                    // wodurch die Raw-JPEG-Daten wie ein Farbnegativ aussehen.
+                    // ── Seitenverhaeltnis ──
+                    double aspect = (double)w / h;
+                    if (aspect < MinAspect || aspect > MaxAspect)
+                        continue; // Banner, Streifen, Logos
+
+                    // ── Strategie 1: JPEG-RawBytes (bevorzugt — echte Fotos sind JPEG) ──
+                    byte[]? photoBytes = null;
+                    string ext = ".png";
                     try
                     {
                         var raw = img.RawBytes;
-                        if (raw.Count >= MinBytesForPhoto
+                        if (raw.Count >= MinPhotoBytes
                             && raw.Count >= 3
                             && raw[0] == 0xFF && raw[1] == 0xD8 && raw[2] == 0xFF) // JPEG SOI Marker
                         {
                             var jpegBytes = raw.ToArray();
 
-                            // Pruefen ob das PDF einen invertierten Decode-Array hat
-                            if (IsInvertedImage(img))
-                            {
+                            // Farbnegativ-Korrektur: Manche PDFs (WinCan, aeltere IKAS)
+                            // speichern JPEGs mit invertiertem Decode-Array
+                            if (IsLikelyInvertedJpeg(jpegBytes))
                                 jpegBytes = InvertJpegColors(jpegBytes);
-                            }
 
-                            images.Add((jpegBytes, ".jpg"));
+                            photoBytes = jpegBytes;
+                            ext = ".jpg";
                         }
                     }
-                    catch
+                    catch { /* RawBytes-Zugriff fehlgeschlagen */ }
+
+                    // ── Strategie 2: PNG-Konvertierung (Fallback) ──
+                    if (photoBytes == null && img.TryGetPng(out var pngBytes))
                     {
-                        // RawBytes-Zugriff kann bei manchen PDFs fehlschlagen
+                        if (pngBytes.Length >= MinPhotoBytes)
+                        {
+                            photoBytes = pngBytes;
+                            ext = ".png";
+                        }
                     }
+
+                    if (photoBytes == null)
+                        continue;
+
+                    // ── Deduplizierung: Logos wiederholen sich auf jeder Seite ──
+                    // Bilder mit identischer Byte-Laenge sind fast sicher Duplikate
+                    if (!seenSizes.Add(photoBytes.Length))
+                        continue; // Bereits gesehen → Logo/Wasserzeichen
+
+                    images.Add((pageIdx, photoBytes, ext));
                 }
             }
 
             if (images.Count == 0)
                 return entries;
 
-            // Bilder den Entries zuordnen (in Reihenfolge)
+            // Plausibilitaetscheck: Alle Bilder muessen von aufsteigenden Seiten kommen.
+            bool pagesMonotonic = true;
+            for (int i = 1; i < images.Count; i++)
+            {
+                if (images[i].pageNum < images[i - 1].pageNum)
+                {
+                    pagesMonotonic = false;
+                    break;
+                }
+            }
+
+            if (!pagesMonotonic)
+                return entries; // Seiten nicht monoton → Zuordnung unsicher
+
+            // Zuordnung: Bilder den Entries zuweisen.
+            // - Exakt gleich viele: perfekte 1:1-Zuordnung (Index = Index)
+            // - Weniger Bilder als Entries: Bilder den ersten N Entries zuweisen,
+            //   restliche Entries bekommen kein Bild (typisch bei PDFs mit Bildbericht-Sektion)
+            // - Mehr Bilder als Entries: Nur die ersten N Bilder verwenden (ueberzaehlige ignorieren)
+            // - Aber: Wenn weniger als 30% der Entries ein Bild bekommen wuerden UND
+            //   die Differenz > 3 ist, ist die Zuordnung zu unsicher → abbrechen
+            int assignable = Math.Min(images.Count, entries.Count);
+            double coverageRatio = entries.Count > 0 ? (double)assignable / entries.Count : 0;
+            if (coverageRatio < 0.30 && Math.Abs(images.Count - entries.Count) > 3)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[PdfExtractor] Zuordnung unsicher: {images.Count} Bilder vs {entries.Count} Eintraege " +
+                    $"(Coverage {coverageRatio:P0}) in {Path.GetFileName(pdfPath)}");
+                return entries;
+            }
+
             var result = new List<GroundTruthEntry>(entries.Count);
             for (int i = 0; i < entries.Count; i++)
             {
@@ -409,8 +476,8 @@ public sealed class PdfProtocolExtractor
 
                 if (i < images.Count)
                 {
-                    var (data, ext) = images[i];
-                    var fileName = $"{safeName}_{entry.VsaCode}_{entry.MeterStart:F1}m_{i}{ext}";
+                    var (_, data, imgExt) = images[i];
+                    var fileName = $"{safeName}_{entry.VsaCode}_{entry.MeterStart:F1}m_{i}{imgExt}";
                     framePath = Path.Combine(framesDir, fileName);
                     try
                     {
@@ -422,7 +489,6 @@ public sealed class PdfProtocolExtractor
                     }
                 }
 
-                // GroundTruthEntry ist ein record → mit "with" kopieren
                 result.Add(entry with { ExtractedFramePath = framePath });
             }
 
@@ -483,7 +549,29 @@ public sealed class PdfProtocolExtractor
         if (results.Count > 0)
             return results;
 
-        // Strategie 2: Standard-Tabellenformat (Zeit NACH Beschreibung)
+        // Strategie 2: Fretz-Tabellenformat (Foto + Zeit VOR Meter)
+        // Format: "040  00:00:16  0.00  BCD  Rohranfang"
+        foreach (Match m in FretzTablePattern.Matches(text))
+        {
+            var entry = BuildEntry(
+                m.Groups["meter"].Value,
+                "",
+                m.Groups["code"].Value,
+                "",
+                m.Groups["text"].Value,
+                ParseTimestamp(m.Groups["time"].Value));
+
+            if (entry is not null && seen.Add(Sig(entry)))
+                results.Add(entry);
+        }
+
+        // Fretz-PDFs haben auch Zeilen ohne Timestamp (z.B. "27.70 BCE Rohrende").
+        // Diese werden weiter unten durch die Fallback-Patterns ergaenzt.
+        // Deshalb hier KEIN fruehes Return — stattdessen weiter zu Strategie 5/6.
+        if (results.Count > 0)
+            goto fretzFallback;
+
+        // Strategie 3: Standard-Tabellenformat (Zeit NACH Beschreibung, z.B. WinCan)
         // Format: "2.24  BCCBA  Beschreibung...  00:01:07"
         foreach (Match m in TableRowPattern.Matches(text))
         {
@@ -502,12 +590,15 @@ public sealed class PdfProtocolExtractor
         if (results.Count > 0)
             return results;
 
-        // Strategie 3: IKAS Bildbericht (Label-Value Blöcke)
+        // Strategie 4: IKAS Bildbericht (Label-Value Blöcke)
         results = ParseBildberichtBlocks(text, seen);
         if (results.Count > 0)
             return results;
 
-        // Strategie 4: Bereichs-Muster (m1 – m2 CODE)
+        // Strategie 5: Bereichs-Muster (m1 – m2 CODE)
+        // Wird auch als Ergaenzung nach Fretz-Strategie erreicht (fretzFallback),
+        // um Zeilen ohne Timestamp zu erfassen (z.B. "27.70  BCE  Rohrende").
+        fretzFallback:
         foreach (Match m in EntryPattern.Matches(text))
         {
             var entry = BuildEntry(
@@ -522,7 +613,7 @@ public sealed class PdfProtocolExtractor
                 results.Add(entry);
         }
 
-        // Strategie 5: Einzel-Meter-Muster (@m CODE)
+        // Strategie 6: Einzel-Meter-Muster (@m CODE)
         if (results.Count == 0)
         {
             foreach (Match m in SingleMeterPattern.Matches(text))
@@ -723,85 +814,16 @@ public sealed class PdfProtocolExtractor
     private static string Sig(GroundTruthEntry e)
         => $"{e.VsaCode}|{e.MeterStart:F2}|{e.MeterEnd:F2}";
 
-    // ── Farbnegativ-Korrektur fuer PDF-JPEG-Bilder ──────────────────────────
+    // ── Farbnegativ-Erkennung und Korrektur fuer PDF-JPEG-Bilder ──────────
 
     /// <summary>
-    /// Prueft ob ein PDF-Bild einen invertierten Decode-Array hat.
-    /// Manche PDF-Generatoren (WinCan, aeltere IKAS) speichern JPEG-Bilder
-    /// mit Decode [1,0,1,0,1,0] statt [0,1,0,1,0,1], was die Farben invertiert.
-    /// PdfPig exponiert den Decode-Array nicht direkt, daher pruefen wir
-    /// per Reflection oder anhand einer Heuristik (mittlere Helligkeit).
+    /// Prueft ob ein JPEG-Bild wahrscheinlich farbinvertiert ist (Negativ).
+    /// Manche PDF-Generatoren (WinCan, aeltere IKAS) speichern JPEGs
+    /// mit invertiertem Decode-Array, wodurch die Farben invertiert erscheinen.
+    /// Heuristik: Kanalbilder sind typischerweise dunkel (Rohrinneres, avgLum &lt; 120).
+    /// Invertierte Bilder haben avgLum &gt; 170.
     /// </summary>
-    private static bool IsInvertedImage(UglyToad.PdfPig.Content.IPdfImage img)
-    {
-        try
-        {
-            // Versuch 1: Decode-Array per Reflection holen
-            // PdfPig speichert intern ein Dictionary mit dem "Decode" Key
-            var dictProp = img.GetType().GetProperty("ImageDictionary",
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-            if (dictProp != null)
-            {
-                var dict = dictProp.GetValue(img);
-                if (dict != null)
-                {
-                    // DictionaryToken hat TryGet<T>(NameToken, out T)
-                    var tryGetMethod = dict.GetType().GetMethod("TryGet",
-                        new[] { typeof(UglyToad.PdfPig.Tokens.NameToken),
-                                typeof(UglyToad.PdfPig.Tokens.ArrayToken).MakeByRefType() });
-
-                    if (tryGetMethod == null)
-                    {
-                        // Generische TryGet<T> Methode suchen
-                        var methods = dict.GetType().GetMethods()
-                            .Where(m => m.Name == "TryGet" && m.IsGenericMethod);
-                        foreach (var method in methods)
-                        {
-                            try
-                            {
-                                var generic = method.MakeGenericMethod(typeof(UglyToad.PdfPig.Tokens.ArrayToken));
-                                var args = new object?[] {
-                                    UglyToad.PdfPig.Tokens.NameToken.Create("Decode"),
-                                    null };
-                                var found = (bool)generic.Invoke(dict, args)!;
-                                if (found && args[1] is UglyToad.PdfPig.Tokens.ArrayToken arr)
-                                {
-                                    // Decode [1,0,...] = invertiert, [0,1,...] = normal
-                                    if (arr.Data.Count >= 2
-                                        && arr.Data[0] is UglyToad.PdfPig.Tokens.NumericToken first
-                                        && first.Double > 0.5)
-                                    {
-                                        return true;
-                                    }
-                                    return false;
-                                }
-                                break;
-                            }
-                            catch { }
-                        }
-                    }
-                }
-            }
-
-            // Versuch 2: Heuristik — JPEG laden und mittlere Helligkeit pruefen
-            // Invertierte Bilder haben typischerweise eine sehr hohe mittlere Helligkeit
-            // (dunkles Rohr wird hell, heller Hintergrund wird dunkel)
-            return IsLikelyInvertedByBrightness(img.RawBytes.ToArray());
-        }
-        catch
-        {
-            // Im Zweifel: Heuristik auf RawBytes anwenden
-            try { return IsLikelyInvertedByBrightness(img.RawBytes.ToArray()); }
-            catch { return false; }
-        }
-    }
-
-    /// <summary>
-    /// Heuristik: Prueft ob ein JPEG-Bild wahrscheinlich invertiert ist.
-    /// Kanalbilder sind typischerweise dunkel (Rohrinneres). Wenn die mittlere
-    /// Helligkeit sehr hoch ist (>180), sind die Farben wahrscheinlich invertiert.
-    /// </summary>
-    private static bool IsLikelyInvertedByBrightness(byte[] jpegBytes)
+    private static bool IsLikelyInvertedJpeg(byte[] jpegBytes)
     {
         try
         {
@@ -810,32 +832,29 @@ public sealed class PdfProtocolExtractor
             bi.BeginInit();
             bi.StreamSource = ms;
             bi.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-            bi.DecodePixelWidth = 100; // Klein laden fuer Geschwindigkeit
+            bi.DecodePixelWidth = 80; // Klein laden fuer Geschwindigkeit
             bi.EndInit();
             bi.Freeze();
 
-            // In Pixel-Array konvertieren
             var wb = new System.Windows.Media.Imaging.WriteableBitmap(bi);
             int stride = wb.PixelWidth * 4;
             byte[] pixels = new byte[stride * wb.PixelHeight];
             wb.CopyPixels(pixels, stride, 0);
 
-            // Mittlere Helligkeit berechnen (nur Luminanz)
+            // Mittlere Helligkeit (ITU-R BT.601)
             long totalLum = 0;
             int count = 0;
             for (int i = 0; i < pixels.Length - 3; i += 4)
             {
-                // BGRA Format
                 int b = pixels[i], g = pixels[i + 1], r = pixels[i + 2];
-                totalLum += (r * 299 + g * 587 + b * 114) / 1000; // ITU-R BT.601
+                totalLum += (r * 299 + g * 587 + b * 114) / 1000;
                 count++;
             }
 
             if (count == 0) return false;
             double avgLum = (double)totalLum / count;
 
-            // Kanalbilder sind typischerweise dunkel (avgLum < 100)
-            // Invertierte Bilder haben avgLum > 170
+            // Kanalbilder: dunkel (avgLum < 120), Invertiert: hell (avgLum > 170)
             return avgLum > 170;
         }
         catch
@@ -845,14 +864,13 @@ public sealed class PdfProtocolExtractor
     }
 
     /// <summary>
-    /// Invertiert die Farben eines JPEG-Bildes.
-    /// Decodiert JPEG → invertiert Pixeldaten → re-encodiert als JPEG.
+    /// Invertiert die Farben eines JPEG-Bildes (Negativ → Positiv).
+    /// Decodiert JPEG → invertiert RGB-Kanaele → re-encodiert als JPEG.
     /// </summary>
     private static byte[] InvertJpegColors(byte[] jpegBytes)
     {
         try
         {
-            // JPEG decodieren
             using var inputMs = new MemoryStream(jpegBytes);
             var decoder = new System.Windows.Media.Imaging.JpegBitmapDecoder(
                 inputMs,
@@ -860,35 +878,26 @@ public sealed class PdfProtocolExtractor
                 System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
 
             var frame = decoder.Frames[0];
-
-            // In WriteableBitmap konvertieren
             var wb = new System.Windows.Media.Imaging.WriteableBitmap(frame);
-            int stride = wb.PixelWidth * (wb.Format.BitsPerPixel / 8);
+            int bytesPerPixel = wb.Format.BitsPerPixel / 8;
+            int stride = wb.PixelWidth * bytesPerPixel;
             byte[] pixels = new byte[stride * wb.PixelHeight];
             wb.CopyPixels(pixels, stride, 0);
 
-            // Alle Farbkanaele invertieren (nicht Alpha)
-            int bytesPerPixel = wb.Format.BitsPerPixel / 8;
-            int alphaOffset = bytesPerPixel == 4 ? 3 : -1; // BGRA: Alpha ist Byte 3
-
+            // RGB invertieren, Alpha-Kanal behalten
+            int alphaOffset = bytesPerPixel == 4 ? 3 : -1;
             for (int i = 0; i < pixels.Length; i++)
             {
-                // Alpha-Kanal nicht invertieren
                 if (alphaOffset >= 0 && (i % bytesPerPixel) == alphaOffset)
                     continue;
                 pixels[i] = (byte)(255 - pixels[i]);
             }
 
-            // Zurueckschreiben
             wb.WritePixels(
                 new System.Windows.Int32Rect(0, 0, wb.PixelWidth, wb.PixelHeight),
                 pixels, stride, 0);
 
-            // Als JPEG re-encodieren
-            var encoder = new System.Windows.Media.Imaging.JpegBitmapEncoder
-            {
-                QualityLevel = 92
-            };
+            var encoder = new System.Windows.Media.Imaging.JpegBitmapEncoder { QualityLevel = 92 };
             encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(wb));
 
             using var outputMs = new MemoryStream();
@@ -897,8 +906,7 @@ public sealed class PdfProtocolExtractor
         }
         catch
         {
-            // Falls Inversion fehlschlaegt: Original zurueckgeben
-            return jpegBytes;
+            return jpegBytes; // Fallback: Original zurueckgeben
         }
     }
 }

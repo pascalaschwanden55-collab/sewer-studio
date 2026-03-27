@@ -9,9 +9,10 @@
 
 ## AI-Pipeline (lokal, Workstation-Mode)
 - YOLO26m-seg         → permanent GPU, ~1.5GB VRAM
-- Qwen2.5-VL-32B Q5  → permanent GPU, ~26GB VRAM (via Ollama)
-- Grounding DINO 1.5  → on-demand, nur bei QualityGate Yellow/Red
-- SAM 3               → on-demand, exklusiv mit DINO
+- Qwen3-VL-8B         → FastModel GPU, ~10GB VRAM (via Ollama, keep_alive=-1 permanent)
+- Qwen3-VL-32B        → ReferenceModel GPU, ~22GB VRAM (via Ollama, on-demand bei Eskalation)
+- Grounding DINO 1.5  → pre-warmed, persistent im VRAM (~2GB)
+- SAM 3               → pre-warmed, persistent im VRAM (~2.5GB)
 - ByteTrack/OC-SORT   → CPU, immer aktiv
 
 ## Architektur-Prinzipien (NICHT brechen)
@@ -22,9 +23,15 @@
 - QualityGate Green/Yellow/Red muss immer durchlaufen
 
 ## Inference-Orchestrator Zustaende
-1. DETECT  → GPU: YOLO | CPU: Tracker + Aggregator
-2. SEGMENT → GPU: YOLO + SAM | Qwen: entladen
-3. CLASSIFY→ GPU: YOLO + Qwen | SAM/DINO: entladen
+1. DETECT   → GPU: YOLO | CPU: Tracker + Aggregator
+2. SEGMENT  → GPU: YOLO + SAM | Qwen: entladen
+3. CLASSIFY → GPU: YOLO + Qwen-8B | SAM/DINO: entladen
+4. ESCALATE → GPU: YOLO + Qwen-32B | 8B entladen, nur bei Eskalation
+   - Trigger: allCodesNull || severity>=4 || poorQuality (in EnhancedVisionAnalysisService)
+   - FastModel (8B) entladen → ReferenceModel (32B) laden → Re-Analyse → 32B entladen → 8B wieder laden
+   - SemaphoreSlim(1) schuetzt vor parallelen Modellwechseln
+   - VRAM Normal: 8B(10)+YOLO(1.5)+DINO(3)+SAM(3)=17.5GB
+   - VRAM Eskalation: 32B(22)+YOLO(1.5)+DINO(3)+SAM(3)=29.5GB (kurzzeitig)
 
 ## Build & Test
 ```bash

@@ -101,7 +101,10 @@ public enum SelfTrainingStage
     AssessingTechnique,
 
     /// <summary>Eintrag abgeschlossen.</summary>
-    Completed
+    Completed,
+
+    /// <summary>Eintrag uebersprungen (kein VSA-Code, administrativer Eintrag).</summary>
+    Skipped
 }
 
 // ── Gesamtergebnis nach Selbsttraining einer Haltung ──

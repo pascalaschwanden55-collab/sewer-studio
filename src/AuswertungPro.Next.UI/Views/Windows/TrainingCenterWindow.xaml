@@ -278,6 +278,11 @@
                                 Command="{Binding RunSelfTrainingCommand}"
                                 Background="#059669" Foreground="White" FontWeight="SemiBold"
                                 Padding="16,6" Margin="0,0,8,0" Cursor="Hand"/>
+                        <CheckBox Content="Alle erneut durchlaufen"
+                                 IsChecked="{Binding ForceRerunAll}"
+                                 Foreground="White" FontSize="11"
+                                 VerticalAlignment="Center" Margin="0,0,12,0"
+                                 ToolTip="Bereits verarbeitete Haltungen nochmals analysieren (KI lernt mit mehr Wissen)"/>
                         <Button Content="⏸ Pause / Fortsetzen"
                                 Command="{Binding PauseSelfTrainingCommand}"
                                 IsEnabled="{Binding IsSelfTrainingRunning}"

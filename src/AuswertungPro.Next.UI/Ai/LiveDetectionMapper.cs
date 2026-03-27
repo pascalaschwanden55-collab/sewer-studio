@@ -32,10 +32,10 @@ public static class LiveDetectionMapper
                 IntrusionPercent: f.IntrusionPercent,
                 CrossSectionReductionPercent: f.CrossSectionReductionPercent,
                 DiameterReductionMm: f.DiameterReductionMm,
-                BboxX1: f.BboxX1,
-                BboxY1: f.BboxY1,
-                BboxX2: f.BboxX2,
-                BboxY2: f.BboxY2));
+                BboxX1: f.BboxX1Norm,
+                BboxY1: f.BboxY1Norm,
+                BboxX2: f.BboxX2Norm,
+                BboxY2: f.BboxY2Norm));
         }
 
         // Bei schlechter Bildqualitaet: Severity leicht abstufen als Warnung,

@@ -27,7 +27,7 @@ public sealed class MultiModelAnalysisService
 
     public double FrameStepSeconds { get; set; } = 3.0;
     public int DedupWindowFrames { get; set; } = 3;
-    public TimeSpan QwenFrameTimeout { get; set; } = TimeSpan.FromSeconds(300);
+    public TimeSpan QwenFrameTimeout { get; set; } = TimeSpan.FromSeconds(45);
 
     /// <summary>YOLO-cls Vorfilter aktivieren/deaktivieren (Fallback: aus wenn kein Modell).</summary>
     public bool UseClsPrefilter { get; set; } = true;

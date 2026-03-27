@@ -39,9 +39,9 @@ public sealed class MultiModelAnalysisServiceTests
         var finding = Assert.Single(analysis.Findings);
         Assert.Equal("BCA", finding.VsaCodeHint);
         Assert.Equal("3:00", finding.PositionClock);
-        Assert.Equal(420.0 / 640.0, finding.BboxX1);
-        Assert.Equal(160.0 / 480.0, finding.BboxY1);
-        Assert.Equal(580.0 / 640.0, finding.BboxX2);
-        Assert.Equal(320.0 / 480.0, finding.BboxY2);
+        Assert.Equal(420.0 / 640.0, finding.BboxX1Norm);
+        Assert.Equal(160.0 / 480.0, finding.BboxY1Norm);
+        Assert.Equal(580.0 / 640.0, finding.BboxX2Norm);
+        Assert.Equal(320.0 / 480.0, finding.BboxY2Norm);
     }
 }

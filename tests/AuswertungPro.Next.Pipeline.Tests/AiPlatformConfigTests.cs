@@ -36,6 +36,7 @@ public sealed class AiPlatformConfigTests
         Assert.Equal(0.25, config.DinoTextThreshold);
         Assert.Equal(300, config.SidecarTimeoutSec);
         Assert.Null(config.PipeDiameterMmOverride);
+        Assert.Equal(OllamaConfig.DefaultReferenceVisionModel, config.ReferenceVisionModel);
         Assert.Equal("ffmpeg", config.FfmpegPath);
     }
 
@@ -58,6 +59,7 @@ public sealed class AiPlatformConfigTests
         env.Set("SEWERSTUDIO_SIDECAR_TIMEOUT_SEC", "222");
         env.Set("SEWERSTUDIO_PIPE_DIAMETER_MM", "500");
         env.Set("SEWERSTUDIO_FFMPEG", "C:\\tools\\ffmpeg.exe");
+        env.Set("SEWERSTUDIO_AI_REFERENCE_MODEL", "fallback-env");
 
         var config = AiPlatformConfig.Load(settings: null);
 
@@ -75,6 +77,7 @@ public sealed class AiPlatformConfigTests
         Assert.Equal(0.35, config.DinoTextThreshold);
         Assert.Equal(222, config.SidecarTimeoutSec);
         Assert.Equal(500, config.PipeDiameterMmOverride);
+        Assert.Equal("fallback-env", config.ReferenceVisionModel);
         Assert.Equal("C:\\tools\\ffmpeg.exe", config.FfmpegPath);
     }
 
@@ -97,6 +100,7 @@ public sealed class AiPlatformConfigTests
         env.Set("SEWERSTUDIO_SIDECAR_TIMEOUT_SEC", "77");
         env.Set("SEWERSTUDIO_PIPE_DIAMETER_MM", "250");
         env.Set("SEWERSTUDIO_FFMPEG", "env-ffmpeg");
+        env.Set("SEWERSTUDIO_AI_REFERENCE_MODEL", "env-fallback");
 
         var settings = new AppSettings
         {
@@ -106,6 +110,7 @@ public sealed class AiPlatformConfigTests
             AiTextModel = "settings-text",
             AiEmbedModel = "settings-embed",
             AiOllamaTimeoutMin = 99,
+            AiReferenceVisionModel = "settings-fallback",
             AiFfmpegPath = "settings-ffmpeg",
             PipelineMultiModelEnabled = true,
             PipelineSidecarUrl = "http://settings-sidecar:8102",
@@ -132,6 +137,7 @@ public sealed class AiPlatformConfigTests
         Assert.Equal(0.63, config.DinoTextThreshold);
         Assert.Equal(77, config.SidecarTimeoutSec);
         Assert.Equal(700, config.PipeDiameterMmOverride);
+        Assert.Equal("settings-fallback", config.ReferenceVisionModel);
         Assert.Equal("settings-ffmpeg", config.FfmpegPath);
     }
 
@@ -164,6 +170,7 @@ public sealed class AiPlatformConfigTests
             TextModel: "text-model",
             EmbedModel: "embed-model",
             FfmpegPath: "ffmpeg-custom",
+            ReferenceVisionModel: "fallback-vision",
             OllamaRequestTimeout: TimeSpan.FromMinutes(12),
             OllamaKeepAlive: "24h"), runtime);
     }
@@ -280,6 +287,7 @@ public sealed class AiPlatformConfigTests
         DinoTextThreshold: 0.46,
         SidecarTimeoutSec: 123,
         PipeDiameterMmOverride: 600,
+        ReferenceVisionModel: "fallback-vision",
         FfmpegPath: "ffmpeg-custom");
 
     private sealed class EnvVarScope : IDisposable
@@ -301,6 +309,7 @@ public sealed class AiPlatformConfigTests
             "SEWERSTUDIO_DINO_TEXT_THRESHOLD",
             "SEWERSTUDIO_SIDECAR_TIMEOUT_SEC",
             "SEWERSTUDIO_PIPE_DIAMETER_MM",
+            "SEWERSTUDIO_AI_REFERENCE_MODEL",
             "SEWERSTUDIO_FFMPEG"
         ];
 
