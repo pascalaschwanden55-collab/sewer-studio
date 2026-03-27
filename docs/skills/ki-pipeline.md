@@ -95,6 +95,33 @@ User akzeptiert/korrigiert Code
 - 3 LLM-Passes bei Temperaturen [0.1, 0.5, 0.9]
 - Agreement Rate = Anteil uebereinstimmender Codes
 - Epistemic = 1 - Agreement Rate
+- Wird automatisch in FullProtocolGenerationService bei Yellow-Zone ausgefuehrt
+
+## Dual-Model Architektur (NEU)
+
+Das System nutzt zwei Modelle gestaffelt ueber den QualityGate-Mechanismus:
+
+| QualityGate | Modell | VRAM | Aktion |
+|-------------|--------|------|--------|
+| **GREEN** (>= 0.75) | Qwen3-VL-8B Q8 (Default) | ~10 GB | 8B-Ergebnis akzeptieren |
+| **YELLOW** (>= 0.45) | Qwen3-VL-32B Q4 (Fallback) | ~22 GB | MC Dropout + 32B re-analysiert |
+| **RED** (< 0.45) | Mensch | - | Review Queue (manuelle Pruefung) |
+
+### Ablauf bei Yellow Zone
+1. QualityGate ergibt Yellow (Composite 0.45-0.75)
+2. MC Dropout: 3 Passes bei T=[0.1, 0.5, 0.9] → Uncertainty Estimation
+3. Fallback-Modell (32B) re-analysiert den gleichen Befund
+4. Wenn Fallback bessere Confidence liefert → ersetzt 8B-Ergebnis
+5. QualityGate wird mit neuem Ergebnis re-evaluiert
+
+### VRAM-Budget
+| Komponente | VRAM | Status |
+|------------|------|--------|
+| YOLO TensorRT | 1.5 GB | Permanent geladen |
+| Qwen3-VL-8B Q8 | ~10 GB | Permanent geladen (CLASSIFY-Default) |
+| Qwen3-VL-32B Q4 | ~22 GB | On-demand (verdraengt 8B bei Yellow) |
+| **Total (Normal)** | **11.5 GB** | 20.5 GB frei fuer DINO/SAM/VSR |
+| **Total (Eskalation)** | **23.5 GB** | 8.5 GB Headroom |
 
 ## Modell-Konfiguration
 
@@ -102,7 +129,8 @@ User akzeptiert/korrigiert Code
 |----------|---------|-------------|
 | `SEWERSTUDIO_AI_ENABLED` | false | KI Master-Schalter |
 | `SEWERSTUDIO_OLLAMA_URL` | http://localhost:11434 | Ollama Server |
-| `SEWERSTUDIO_AI_VISION_MODEL` | qwen2.5vl:3b | Vision-Modell |
+| `SEWERSTUDIO_AI_VISION_MODEL` | qwen3-vl:8b | Vision-Modell (Primary) |
+| `SEWERSTUDIO_AI_FALLBACK_VISION_MODEL` | qwen3-vl:32b | Fallback-Modell (Yellow Zone) |
 | `SEWERSTUDIO_AI_TEXT_MODEL` | qwen2.5:3b | Text/Code-Modell |
 | `SEWERSTUDIO_AI_EMBED_MODEL` | nomic-embed-text | Embedding-Modell |
 | `SEWERSTUDIO_AI_TIMEOUT_MIN` | 5 | Ollama Timeout (Min) |
@@ -113,11 +141,10 @@ User akzeptiert/korrigiert Code
 
 ## Aktuelle Limitierungen (Stand Maerz 2026)
 
-1. **Kein Dual-Model Switching**: System nutzt EIN konfiguriertes Modell fuer alle Frames.
-   Die geplante 8B-Default + 32B-Fallback Architektur ist NICHT implementiert.
-2. **Kein automatisches Model-Hotswap**: Wechsel zwischen Modellen erfordert Neustart
-   oder manuelle Umkonfiguration.
-3. **Selbsttraining optimiert nur Gewichte**, nicht das Modell selbst (kein Fine-Tuning).
+1. **Selbsttraining optimiert nur Gewichte**, nicht das Modell selbst (kein Fine-Tuning).
+2. **Fallback-Modell Hotswap**: Ollama laedt das 32B-Modell on-demand nach.
+   Bei der ersten Yellow-Zone-Eskalation kann es zu einer Verzoegerung kommen,
+   bis das Modell im VRAM ist.
 
 ## Wichtige Dateien
 

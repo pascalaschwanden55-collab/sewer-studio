@@ -71,6 +71,7 @@ public sealed class AppSettings
     public bool? AiEnabled { get; set; }
     public string? AiOllamaUrl { get; set; }
     public string? AiVisionModel { get; set; }
+    public string? AiFallbackVisionModel { get; set; }
     public string? AiTextModel { get; set; }
     public string? AiEmbedModel { get; set; }
     public int? AiOllamaTimeoutMin { get; set; }

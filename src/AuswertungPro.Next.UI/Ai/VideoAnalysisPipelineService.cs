@@ -140,6 +140,9 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 
         progress?.Report(new PipelineProgress(PipelinePhase.Done, 100, "Fertig."));
 
+        var fallbackCount = genResult.MappedEntries
+            .Count(e => e.Reason?.Contains("Fallback") == true);
+
         return new PipelineResult(
             Document: genResult.Document,
             Detections: videoResult.Detections,
@@ -149,7 +152,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 DurationSeconds: videoResult.DurationSeconds,
                 DetectionsRaw: videoResult.Detections.Count,
                 EntriesGenerated: genResult.Document?.Current?.Entries?.Count ?? 0,
-                EntriesWithHighConfidence: genResult.MappedEntries.Count(e => e.Confidence >= 0.75)),
+                EntriesWithHighConfidence: genResult.MappedEntries.Count(e => e.Confidence >= 0.75),
+                FallbackEscalations: fallbackCount),
             Warnings: genResult.Warnings,
             Error: null,
             Telemetry: videoResult.Telemetry);
@@ -233,7 +237,8 @@ public sealed record PipelineStats(
     double DurationSeconds,
     int DetectionsRaw,
     int EntriesGenerated,
-    int EntriesWithHighConfidence
+    int EntriesWithHighConfidence,
+    int FallbackEscalations = 0
 );
 
 public sealed record PipelineProgress(
@@ -252,5 +257,6 @@ public enum PipelinePhase
     VideoAnalysis,
     MultiModelDetection,
     CodeMapping,
+    FallbackEscalation,
     Done
 }

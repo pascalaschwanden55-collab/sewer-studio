@@ -23,6 +23,7 @@ public sealed class AiPlatformConfigTests
         Assert.False(config.Enabled);
         Assert.Equal(new Uri("http://localhost:11434"), config.OllamaBaseUri);
         Assert.Equal(OllamaConfig.DefaultVisionModel, config.VisionModel);
+        Assert.Equal(OllamaConfig.DefaultFallbackVisionModel, config.FallbackVisionModel);
         Assert.Equal(OllamaConfig.DefaultTextModel, config.TextModel);
         Assert.Equal(OllamaConfig.DefaultEmbedModel, config.EmbedModel);
         Assert.Equal(TimeSpan.FromMinutes(5), config.OllamaRequestTimeout);
@@ -159,6 +160,7 @@ public sealed class AiPlatformConfigTests
             Enabled: true,
             OllamaBaseUri: new Uri("http://localhost:11434"),
             VisionModel: "vision-model",
+            FallbackVisionModel: "fallback-vision-model",
             TextModel: "text-model",
             EmbedModel: "embed-model",
             FfmpegPath: "ffmpeg-custom",
@@ -266,6 +268,7 @@ public sealed class AiPlatformConfigTests
         Enabled: true,
         OllamaBaseUri: new Uri("http://localhost:11434"),
         VisionModel: "vision-model",
+        FallbackVisionModel: "fallback-vision-model",
         TextModel: "text-model",
         EmbedModel: "embed-model",
         OllamaRequestTimeout: TimeSpan.FromMinutes(12),
@@ -288,6 +291,7 @@ public sealed class AiPlatformConfigTests
             "SEWERSTUDIO_AI_ENABLED",
             "SEWERSTUDIO_OLLAMA_URL",
             "SEWERSTUDIO_AI_VISION_MODEL",
+            "SEWERSTUDIO_AI_FALLBACK_VISION_MODEL",
             "SEWERSTUDIO_AI_TEXT_MODEL",
             "SEWERSTUDIO_AI_EMBED_MODEL",
             "SEWERSTUDIO_AI_TIMEOUT_MIN",

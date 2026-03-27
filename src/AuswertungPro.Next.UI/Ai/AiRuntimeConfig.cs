@@ -7,6 +7,7 @@ public sealed record AiRuntimeConfig(
     bool Enabled,
     Uri OllamaBaseUri,
     string VisionModel,
+    string FallbackVisionModel,
     string TextModel,
     string? EmbedModel,
     string? FfmpegPath,

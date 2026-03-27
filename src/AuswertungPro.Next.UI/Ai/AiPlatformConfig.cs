@@ -15,6 +15,7 @@ public sealed record AiPlatformConfig(
     // ── Ollama ──
     Uri OllamaBaseUri,
     string VisionModel,
+    string FallbackVisionModel,
     string TextModel,
     string EmbedModel,
     TimeSpan OllamaRequestTimeout,
@@ -41,6 +42,7 @@ public sealed record AiPlatformConfig(
         Enabled:              Enabled,
         OllamaBaseUri:        OllamaBaseUri,
         VisionModel:          VisionModel,
+        FallbackVisionModel:  FallbackVisionModel,
         TextModel:            TextModel,
         EmbedModel:           EmbedModel,
         FfmpegPath:           FfmpegPath,
@@ -94,6 +96,11 @@ public sealed record AiPlatformConfig(
                 settings?.AiVisionModel,
                 Env("SEWERSTUDIO_AI_VISION_MODEL"))
             ?? OllamaConfig.DefaultVisionModel;
+
+        var fallbackVision = FirstNonEmpty(
+                settings?.AiFallbackVisionModel,
+                Env("SEWERSTUDIO_AI_FALLBACK_VISION_MODEL"))
+            ?? OllamaConfig.DefaultFallbackVisionModel;
 
         var text = FirstNonEmpty(
                 settings?.AiTextModel,
@@ -165,6 +172,7 @@ public sealed record AiPlatformConfig(
             Enabled:                enabled,
             OllamaBaseUri:          new Uri(ollamaUrl),
             VisionModel:            vision,
+            FallbackVisionModel:    fallbackVision,
             TextModel:              text,
             EmbedModel:             embed,
             OllamaRequestTimeout:   TimeSpan.FromMinutes(timeoutMin),

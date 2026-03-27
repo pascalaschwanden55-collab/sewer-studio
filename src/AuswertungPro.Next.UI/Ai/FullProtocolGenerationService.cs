@@ -24,11 +24,13 @@ namespace AuswertungPro.Next.UI.Ai;
 public sealed class FullProtocolGenerationService : IDisposable
 {
     private readonly OllamaClient _client;
+    private readonly OllamaClient? _fallbackClient;
     private readonly IAiSuggestionPlausibilityService _plausibility;
     private readonly AiRuntimeConfig _cfg;
     private readonly IRetrievalService? _retrieval;
     private readonly KnowledgeBaseContext? _ownedKbContext;
     private readonly QualityGateService _qualityGate;
+    private readonly McDropoutService? _mcDropout;
     private readonly Dictionary<string, IReadOnlyList<RetrievalResult>> _retrievalCache =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -44,6 +46,16 @@ public sealed class FullProtocolGenerationService : IDisposable
         _client = cfg.CreateOllamaClient(httpClient);
         _retrieval = retrieval;
         _qualityGate = qualityGate ?? new QualityGateService();
+
+        // Dual-Model: create fallback client if a different model is configured
+        if (!string.IsNullOrWhiteSpace(cfg.FallbackVisionModel)
+            && !string.Equals(cfg.FallbackVisionModel, cfg.TextModel, StringComparison.OrdinalIgnoreCase))
+        {
+            _fallbackClient = cfg.CreateOllamaClient(httpClient);
+        }
+
+        // MC Dropout for Yellow-zone uncertainty estimation
+        _mcDropout = new McDropoutService(_client, cfg.TextModel, AiSuggestionSchemas.AiSuggestionResultSchema);
 
         // Only create own KB when none provided and AI is active
         if (_retrieval is null && cfg.Enabled)
@@ -216,6 +228,76 @@ public sealed class FullProtocolGenerationService : IDisposable
 
         var qgResult = _qualityGate.Evaluate(evidence);
         var compositeConfidence = qgResult.CompositeConfidence;
+        var uncertainty = UncertaintyEstimate.FromSinglePass(compositeConfidence);
+
+        // ── Yellow Zone: MC Dropout + Fallback-Modell Eskalation ──
+        if (qgResult.IsYellow)
+        {
+            // 1. MC Dropout: quantify uncertainty with 3 temperature passes
+            if (_mcDropout is not null)
+            {
+                try
+                {
+                    var mcMessages = new[]
+                    {
+                        new OllamaClient.ChatMessage("system", BuildSystemPrompt()),
+                        new OllamaClient.ChatMessage("user", prompt)
+                    };
+                    uncertainty = await _mcDropout.EstimateAsync(mcMessages, compositeConfidence, ct)
+                        .ConfigureAwait(false);
+                }
+                catch
+                {
+                    // MC Dropout failure is non-critical, keep single-pass estimate
+                }
+            }
+
+            // 2. Fallback-Modell (32B): re-analyze with larger model
+            if (_fallbackClient is not null && !string.IsNullOrWhiteSpace(_cfg.FallbackVisionModel))
+            {
+                try
+                {
+                    var fallbackDto = await _fallbackClient.ChatStructuredAsync<AiSuggestionResultDto>(
+                        model: _cfg.FallbackVisionModel,
+                        messages: new[]
+                        {
+                            new OllamaClient.ChatMessage("system", BuildSystemPrompt()),
+                            new OllamaClient.ChatMessage("user", prompt)
+                        },
+                        formatSchema: AiSuggestionSchemas.AiSuggestionResultSchema,
+                        ct: ct).ConfigureAwait(false);
+
+                    var fallbackChecked = _plausibility.ApplyChecks(
+                        fallbackDto.ToDomain(),
+                        new ObservationContext(detection.FindingLabel));
+
+                    if (!string.IsNullOrWhiteSpace(fallbackChecked.SuggestedCode)
+                        && fallbackChecked.Confidence > compositeConfidence)
+                    {
+                        suggestedCode = fallbackChecked.SuggestedCode;
+                        confidence = fallbackChecked.Confidence;
+                        reason = $"[Fallback {_cfg.FallbackVisionModel}] {fallbackChecked.Rationale}";
+                        warnings.Add($"Yellow-Zone Eskalation: Fallback-Modell {_cfg.FallbackVisionModel} verwendet.");
+
+                        // Re-evaluate QualityGate with fallback result
+                        evidence = evidence with
+                        {
+                            LlmCodeConf = confidence,
+                            PlausibilityScore = fallbackChecked.Confidence,
+                            DamageCategory = suggestedCode
+                        };
+                        qgResult = _qualityGate.Evaluate(evidence);
+                        compositeConfidence = qgResult.CompositeConfidence;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    warnings.Add($"Fallback-Modell Eskalation fehlgeschlagen: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[FullProtocolGen] Fallback escalation failed: {ex.Message}");
+                }
+            }
+        }
 
         // Update detection with enriched evidence
         var enrichedDetection = detection with { Evidence = evidence };
@@ -227,7 +309,7 @@ public sealed class FullProtocolGenerationService : IDisposable
             Reason: reason,
             Warnings: warnings,
             QualityGateResult: qgResult,
-            Uncertainty: UncertaintyEstimate.FromSinglePass(compositeConfidence));
+            Uncertainty: uncertainty);
     }
 
     private static string BuildPrompt(

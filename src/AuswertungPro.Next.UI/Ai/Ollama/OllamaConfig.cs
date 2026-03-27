@@ -16,11 +16,12 @@ public sealed record OllamaConfig(
     int NumCtx = OllamaConfig.DefaultNumCtx)
 {
     // ── Modell-Konstanten (Single Source of Truth) ──────────────────────
-    public const string DefaultVisionModel = "qwen2.5vl:3b";
-    public const string DefaultTextModel   = "qwen2.5:3b";
-    public const string DefaultEmbedModel  = "nomic-embed-text";
-    public const string DefaultKeepAlive   = "24h";
-    public const int    DefaultNumCtx      = 8192;
+    public const string DefaultVisionModel         = "qwen3-vl:8b";
+    public const string DefaultTextModel           = "qwen2.5:3b";
+    public const string DefaultEmbedModel          = "nomic-embed-text";
+    public const string DefaultFallbackVisionModel = "qwen3-vl:32b";
+    public const string DefaultKeepAlive           = "24h";
+    public const int    DefaultNumCtx              = 8192;
 
     /// <summary>Lädt via einheitliche AiPlatformConfig.</summary>
     public static OllamaConfig Load() =>
