@@ -36,7 +36,7 @@ public sealed class KnowledgeBaseManager(
             return false;
         }
 
-        var vector = await embedder.EmbedAsync(sample.Beschreibung, ct).ConfigureAwait(false);
+        var vector = await embedder.EmbedAsync(BuildEmbeddingText(sample), ct).ConfigureAwait(false);
         if (vector is null)
             return false;
 
@@ -74,7 +74,7 @@ public sealed class KnowledgeBaseManager(
         {
             ct.ThrowIfCancellationRequested();
             if (!IsIndexWorthy(sample)) continue;
-            var vec = await embedder.EmbedAsync(sample.Beschreibung, ct).ConfigureAwait(false);
+            var vec = await embedder.EmbedAsync(BuildEmbeddingText(sample), ct).ConfigureAwait(false);
             if (vec is not null)
                 ready.Add((sample, vec));
         }
@@ -147,7 +147,7 @@ public sealed class KnowledgeBaseManager(
                     progress?.Report(n2);
                     return;
                 }
-                var vec = await embedder.EmbedAsync(samples[i].Beschreibung, token).ConfigureAwait(false);
+                var vec = await embedder.EmbedAsync(BuildEmbeddingText(samples[i]), token).ConfigureAwait(false);
                 if (vec is not null)
                     embeddings[i] = vec;
                 else
@@ -331,18 +331,77 @@ public sealed class KnowledgeBaseManager(
 
     // ── Quality Gate ────────────────────────────────────────────────────
 
+    // ── Embedding-Text ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// Baut einen sinnvollen Text fuer das Embedding aus Code + VSA-Label + Beschreibung.
+    /// Wenn die Beschreibung nur der Code selbst ist (z.B. "BDB"), wird das VSA-Label
+    /// als Kontext angehaengt, damit das Embedding semantisch brauchbar ist.
+    /// Beispiel: "BDB" → "BDB — Kameraposition, Beginn der Bestandsaufnahme"
+    /// </summary>
+    public static string BuildEmbeddingText(TrainingSample sample)
+    {
+        var desc = sample.Beschreibung?.Trim() ?? "";
+        var code = sample.Code?.Trim() ?? "";
+
+        // Punkt-Codes normalisieren fuer VsaCodeTree
+        var normalized = code.Replace(".", "", StringComparison.Ordinal);
+        var label = VsaCodeTree.LookupLabel(normalized);
+
+        // Beschreibung ist schon ausfuehrlich genug → direkt verwenden
+        if (desc.Length > 15 && !desc.Equals(code, StringComparison.OrdinalIgnoreCase))
+            return $"{code}: {desc}";
+
+        // Kurze/fehlende Beschreibung → mit VSA-Label anreichern
+        if (label is not null)
+        {
+            return desc.Equals(code, StringComparison.OrdinalIgnoreCase) || desc.Length < 5
+                ? $"{code} — {label}"
+                : $"{code} — {label}, {desc}";
+        }
+
+        // Kein Label (WinCan-interne Codes) → Code + Beschreibung
+        return desc.Length > 0 ? $"{code}: {desc}" : code;
+    }
+
+    /// <summary>
+    /// WinCan-interne Codes die keine VSA-Schadenscodes sind, aber
+    /// als Kontext-Samples in der KB gebraucht werden.
+    /// </summary>
+    private static readonly HashSet<string> AcceptedNonVsaCodes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "BEGINN", "ANFANG", "BOGEN", "FOTO", "NEUE", "LAGE",
+        "ORT", "ROHR", "BREITE", "DN", "DATUM", "TOTAL"
+    };
+
     /// <summary>
     /// Prueft ob ein Sample die Mindestqualitaet fuer KB-Indexierung erfuellt.
-    /// Leere Beschreibungen, unbekannte VSA-Codes und zu kurze Texte werden abgelehnt.
+    /// Beschreibung muss vorhanden sein (mind. 3 Zeichen) und Code muss
+    /// entweder im VSA-Baum oder als bekannter WinCan-Code existieren.
+    /// Punkt-Codes (BCA.A.A) werden automatisch normalisiert (→ BCAAA).
     /// </summary>
     public static bool IsIndexWorthy(TrainingSample sample)
     {
-        if (string.IsNullOrWhiteSpace(sample.Beschreibung) || sample.Beschreibung.Length < 10)
+        // Beschreibung: mind. 3 Zeichen (z.B. "BDB" reicht, leer nicht)
+        if (string.IsNullOrWhiteSpace(sample.Beschreibung) || sample.Beschreibung.Trim().Length < 3)
             return false;
+
         if (string.IsNullOrWhiteSpace(sample.Code))
             return false;
-        if (VsaCodeTree.LookupLabel(sample.Code) is null)
-            return false;
-        return true;
+
+        // WinCan-interne Codes akzeptieren (Kontext-Samples)
+        if (AcceptedNonVsaCodes.Contains(sample.Code))
+            return true;
+
+        // Punkt-Notation normalisieren: "BCA.A.A" → "BCAAA"
+        var normalized = sample.Code.Replace(".", "", StringComparison.Ordinal);
+        if (VsaCodeTree.LookupLabel(normalized) is not null)
+            return true;
+
+        // Letzter Versuch: Code ohne Punkte direkt pruefen
+        if (normalized != sample.Code && VsaCodeTree.LookupLabel(sample.Code) is not null)
+            return true;
+
+        return false;
     }
 }

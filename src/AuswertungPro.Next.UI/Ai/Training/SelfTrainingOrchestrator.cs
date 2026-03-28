@@ -43,6 +43,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     private readonly ISelfTrainingComparisonService _comparison;
     private readonly ITechniqueAssessmentService _technique;
     private readonly PdfProtocolExtractor _pdfExtractor;
+    private readonly SampleQualityGateService _qualityGate;
     private readonly ILogger<SelfTrainingOrchestrator>? _logger;
 
     private readonly ManualResetEventSlim _pauseGate = new(true);
@@ -54,12 +55,14 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         ISelfTrainingComparisonService comparison,
         ITechniqueAssessmentService technique,
         PdfProtocolExtractor pdfExtractor,
+        SampleQualityGateService? qualityGate = null,
         ILogger<SelfTrainingOrchestrator>? logger = null)
     {
         _vision = vision;
         _comparison = comparison;
         _technique = technique;
         _pdfExtractor = pdfExtractor;
+        _qualityGate = qualityGate ?? new SampleQualityGateService();
         _logger = logger;
     }
 
@@ -253,10 +256,21 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 SelfTrainingStage.Completed, comparison, technique, framePath));
         }
 
-        // Samples mergen (bestehende laden + neue hinzufuegen + Dedup via Signature)
+        // QualityGate: nur akzeptierte Samples speichern
+        var samplesAccepted = 0;
         if (generatedSamples.Count > 0)
         {
-            await TrainingSamplesStore.MergeAndSaveAsync(generatedSamples);
+            var qgBatch = _qualityGate.EvaluateBatch(generatedSamples);
+            if (qgBatch.Red > 0)
+            {
+                _logger?.LogWarning(
+                    "QualityGate: {Count} Samples abgelehnt (Red) fuer {CaseId}",
+                    qgBatch.Red, tc.CaseId);
+            }
+            var accepted = qgBatch.Accepted.ToList();
+            samplesAccepted = accepted.Count;
+            if (accepted.Count > 0)
+                await TrainingSamplesStore.MergeAndSaveAsync(accepted);
         }
 
         sw.Stop();
@@ -269,7 +283,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             NoFindings: noFindings,
             OverallTechnique: overallTechnique,
             Duration: sw.Elapsed,
-            SamplesGenerated: generatedSamples.Count);
+            SamplesGenerated: samplesAccepted);
     }
 
     private static void LogToFile(string message)

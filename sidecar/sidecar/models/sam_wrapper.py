@@ -78,6 +78,49 @@ def _rle_encode(mask: np.ndarray) -> str:
     return ",".join(parts)
 
 
+def _append_mask_result(
+    masks_out: list[MaskResult],
+    mask: np.ndarray,
+    score: float,
+    bbox: BoundingBox,
+    h: int,
+    w: int,
+) -> None:
+    """Berechnet Masken-Statistik und fuegt MaskResult hinzu."""
+    mask_area = int(mask.sum())
+    ys, xs = np.where(mask)
+    if len(xs) == 0:
+        return
+    masks_out.append(MaskResult(
+        label=bbox.label,
+        confidence=round(score, 4),
+        bbox=[bbox.x1, bbox.y1, bbox.x2, bbox.y2],
+        mask_rle=_rle_encode(mask.astype(np.uint8)),
+        mask_area_pixels=mask_area,
+        image_area_pixels=h * w,
+        height_pixels=int(ys.max() - ys.min() + 1),
+        width_pixels=int(xs.max() - xs.min() + 1),
+        centroid_x=round(float(xs.mean()), 1),
+        centroid_y=round(float(ys.mean()), 1),
+    ))
+
+
+def _predict_single_box(predictor, bbox: BoundingBox, masks_out: list[MaskResult],
+                         h: int, w: int, device: str) -> None:
+    """Fallback: einzelne Box vorhersagen (sequentiell)."""
+    import torch
+    try:
+        box_np = np.array([bbox.x1, bbox.y1, bbox.x2, bbox.y2])
+        with torch.cuda.amp.autocast(enabled=device.startswith("cuda")):
+            pred_masks, scores, _ = predictor.predict(
+                point_coords=None, point_labels=None,
+                box=box_np[None, :], multimask_output=False,
+            )
+        _append_mask_result(masks_out, pred_masks[0], float(scores[0]), bbox, h, w)
+    except Exception as exc:
+        logger.warning("SAM prediction failed for box %s: %s", bbox, exc)
+
+
 def segment(
     image_base64: str,
     bounding_boxes: list[BoundingBox],
@@ -95,53 +138,44 @@ def segment(
 
     t0 = time.perf_counter()
 
-    # Set image once for all boxes
-    predictor.set_image(img_array)
+    import torch
+
+    # Set image once for all boxes (Encoder laeuft 1x, Decoder pro Box)
+    with torch.cuda.amp.autocast(enabled=device.startswith("cuda")):
+        predictor.set_image(img_array)
 
     masks_out: list[MaskResult] = []
 
-    for bbox in bounding_boxes:
+    # Batch-Predict: alle Boxen auf einmal wenn moeglich (1 Forward-Pass statt N)
+    if len(bounding_boxes) > 1:
         try:
-            box_np = np.array([bbox.x1, bbox.y1, bbox.x2, bbox.y2])
+            all_boxes = np.array([[b.x1, b.y1, b.x2, b.y2] for b in bounding_boxes])
+            import torch as _torch
+            box_tensor = _torch.tensor(all_boxes, device=predictor.device)
 
-            pred_masks, scores, _ = predictor.predict(
-                point_coords=None,
-                point_labels=None,
-                box=box_np[None, :],  # (1, 4)
-                multimask_output=False,
-            )
+            with torch.cuda.amp.autocast(enabled=device.startswith("cuda")):
+                transformed_boxes = predictor.transform.apply_boxes_torch(
+                    box_tensor, img_array.shape[:2])
+                pred_masks, scores, _ = predictor.predict_torch(
+                    point_coords=None,
+                    point_labels=None,
+                    boxes=transformed_boxes,
+                    multimask_output=False,
+                )
+            # pred_masks: (N, 1, H, W), scores: (N, 1)
+            for i, bbox in enumerate(bounding_boxes):
+                mask = pred_masks[i, 0].cpu().numpy()  # (H, W)
+                score = float(scores[i, 0].cpu())
+                _append_mask_result(masks_out, mask, score, bbox, h, w)
+
         except Exception as exc:
-            logger.warning("SAM prediction failed for box %s: %s", bbox, exc)
-            continue
-
-        # Take best mask
-        mask = pred_masks[0]  # (H, W) bool
-        score = float(scores[0])
-
-        # Compute mask statistics
-        mask_area = int(mask.sum())
-        ys, xs = np.where(mask)
-
-        if len(xs) == 0:
-            continue
-
-        mask_h = int(ys.max() - ys.min() + 1)
-        mask_w = int(xs.max() - xs.min() + 1)
-        centroid_x = float(xs.mean())
-        centroid_y = float(ys.mean())
-
-        masks_out.append(MaskResult(
-            label=bbox.label,
-            confidence=round(score, 4),
-            bbox=[bbox.x1, bbox.y1, bbox.x2, bbox.y2],
-            mask_rle=_rle_encode(mask.astype(np.uint8)),
-            mask_area_pixels=mask_area,
-            image_area_pixels=h * w,
-            height_pixels=mask_h,
-            width_pixels=mask_w,
-            centroid_x=round(centroid_x, 1),
-            centroid_y=round(centroid_y, 1),
-        ))
+            logger.warning("SAM batch predict failed, fallback to sequential: %s", exc)
+            masks_out.clear()
+            # Fallback: sequentiell (alter Code-Pfad)
+            for bbox in bounding_boxes:
+                _predict_single_box(predictor, bbox, masks_out, h, w, device)
+    elif len(bounding_boxes) == 1:
+        _predict_single_box(predictor, bounding_boxes[0], masks_out, h, w, device)
 
     elapsed_ms = (time.perf_counter() - t0) * 1000
 

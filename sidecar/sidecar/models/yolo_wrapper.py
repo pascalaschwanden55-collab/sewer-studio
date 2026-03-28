@@ -252,16 +252,17 @@ def _is_frame_usable(img: Image.Image) -> tuple[bool, str]:
     mean_brightness = gray.mean()
     std_brightness = gray.std()
 
-    # Too dark (lens cap, black frame, no signal)
-    if mean_brightness < 10:
+    # Kanalvideos sind grundsaetzlich dunkel (Beton, nass, Schatten).
+    # Schwelle 5 statt 10: nur echte Schwarzframes (Objektivkappe, kein Signal)
+    if mean_brightness < 5:
         return False, "too_dark"
 
     # Too bright (overexposed, white frame)
     if mean_brightness > 245:
         return False, "too_bright"
 
-    # Too uniform (solid color, no texture = likely no pipe content)
-    if std_brightness < 5:
+    # Intakte Betonrohre haben wenig Textur — Schwelle 3 statt 5
+    if std_brightness < 3:
         return False, "too_uniform"
 
     # Check edge density using Laplacian-like filter for blur detection

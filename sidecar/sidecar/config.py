@@ -47,13 +47,14 @@ class SidecarSettings(BaseSettings):
         "crack . fracture . break . deformation . "
         "corrosion . surface damage . erosion . "
         "root intrusion . roots . "
-        "deposit . sediment . buildup . "
-        "obstacle . blockage . "
+        "deposit . sediment . buildup . scale . calcite . "
+        "obstacle . blockage . grease . "
         "infiltration . water ingress . leak . "
         "displaced joint . open joint . offset joint . "
         "hole . collapse . missing wall . "
         "connection defect . pipe defect . "
-        "intruding connection . protruding seal"
+        "intruding connection . protruding seal . "
+        "lateral connection . pipe junction"
     )
 
     # SAM

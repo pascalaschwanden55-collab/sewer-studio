@@ -70,7 +70,8 @@ public sealed class TrainingSampleGenerator
         TrainingCase tc,
         IReadOnlyCollection<string>? existingSignatures = null,
         string? framesDir = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        bool skipVideoTimeline = false)
     {
         var result = new List<TrainingSample>();
         var duplicateSkipped = 0;
@@ -111,9 +112,9 @@ public sealed class TrainingSampleGenerator
             hasVideo = duration > 0; // ffmpeg nicht verfügbar → protocol-only
         }
 
-        // OSD-Zeitreihe nur mit Video + AI
+        // OSD-Zeitreihe nur mit Video + AI (beim Batch-Import uebersprungen fuer Speed)
         IReadOnlyList<(double TimeSeconds, double Meter)> timeline = [];
-        if (hasVideo)
+        if (hasVideo && !skipVideoTimeline)
         {
             timeline = await _meterTimeline.BuildTimelineAsync(
                 tc.VideoPath, duration, stepSeconds: 5.0, ct).ConfigureAwait(false);

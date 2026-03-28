@@ -25,6 +25,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 {
     private readonly TrainingCenterStore _store;
     private readonly TrainingCenterImportService _import;
+    private readonly SampleQualityGateService _sampleQualityGate;
 
     /// <summary>Wiederverwendbarer HttpClient fuer KB-Operationen (Embedding-Requests).</summary>
     private System.Net.Http.HttpClient? _kbHttpClient;
@@ -514,6 +515,19 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         _store = store;
         _import = import;
+
+        // QualityGate mit VSA-Code-Katalog initialisieren
+        try
+        {
+            var sp = App.Services as ServiceProvider;
+            var codes = sp?.CodeCatalog?.AllowedCodes();
+            _sampleQualityGate = new SampleQualityGateService(codes);
+        }
+        catch
+        {
+            // Fallback ohne Code-Katalog (nur Struktur-Checks)
+            _sampleQualityGate = new SampleQualityGateService();
+        }
     }
 
     // ── Cases ────────────────────────────────────────────────────────────────
@@ -1374,7 +1388,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                     else
                         UpdateLivePreview(tc.CaseId, "Verarbeite...", "—", null);
 
-                    var generation = await generator.GenerateWithDiagnosticsAsync(tc, existingSigs, framesDir: null, ct);
+                    var generation = await generator.GenerateWithDiagnosticsAsync(tc, existingSigs, framesDir: null, ct, skipVideoTimeline: false);
                     var newSamples = generation.Samples;
 
                     if (newSamples.Count == 0)
@@ -1428,23 +1442,32 @@ public partial class TrainingCenterViewModel : ObservableObject
                         continue; // Naechster Case
                     }
 
-                    // Smart-Approve + Signaturen registrieren + Live-Visualisierung
+                    // ── QualityGate: Samples pruefen bevor sie gespeichert werden ──
+                    var qgBatch = _sampleQualityGate.EvaluateBatch(newSamples);
+                    if (qgBatch.Red > 0)
+                    {
+                        Log($"  QualityGate: {qgBatch.Red} Samples abgelehnt (Red)");
+                        foreach (var (rs, rr) in qgBatch.Results.Where(r => !r.Result.IsAcceptable))
+                            Log($"     REJECT {rs.Code} @ {rs.MeterStart:F2}m: {string.Join(", ", rr.Issues)}");
+                    }
+                    // Nur akzeptierte Samples weiterverarbeiten
+                    newSamples = qgBatch.Accepted.ToList();
+
+                    // Smart-Approve basierend auf QualityGate-Ergebnis
                     foreach (var s in newSamples)
                     {
-                        s.Status = !string.IsNullOrEmpty(s.FramePath)
+                        var qr = qgBatch.Results.First(r => r.Sample == s).Result;
+                        s.Status = qr.IsGreen
                             ? TrainingSampleStatus.Approved
-                            : TrainingSampleStatus.New;
+                            : TrainingSampleStatus.New; // Yellow → Review Queue
                         existingSigs.Add(s.Signature);
 
                         // Live-Frame pro Sample (nicht nur pro Case)
                         var sampleFrame = !string.IsNullOrEmpty(s.FramePath) ? s.FramePath : previewFrame;
                         UpdateLivePreview(tc.CaseId, s.Code, $"{s.MeterStart:F2} – {s.MeterEnd:F2} m", sampleFrame);
 
-                        // Ergebnis-Verlauf: Sample als Eintrag hinzufuegen
-                        // Batch-Import hat keinen echten KI-vs-Protokoll Vergleich,
-                        // daher Match-Rate NICHT aktualisieren (nur im Selbsttraining sinnvoll).
-                        var level = s.Status == TrainingSampleStatus.Approved
-                            ? MatchLevel.ExactMatch : MatchLevel.NoFindings;
+                        // Ergebnis-Verlauf (Yellow = brauchbar mit Maengeln, nicht "nichts gefunden")
+                        var level = qr.IsGreen ? MatchLevel.ExactMatch : MatchLevel.PartialMatch;
                         void AddResult()
                         {
                             SelfTrainingResults.Add(new SelfTrainingEntryResult
@@ -1453,9 +1476,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                                 VsaCode = s.Code,
                                 Meter = s.MeterStart,
                                 Level = level,
-                                Summary = s.Beschreibung
+                                Summary = qr.IsGreen ? s.Beschreibung : $"[Yellow] {string.Join(", ", qr.Issues)}"
                             });
-                            // Code-Verteilung aktualisieren
                             UpdateCodeDistribution(s.Code, level);
                         }
                         if (System.Windows.Application.Current?.Dispatcher is { } dp && !dp.CheckAccess())
@@ -1468,7 +1490,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                     var needsReview = newSamples.Count - autoApproved;
                     totalNew += newSamples.Count;
 
-                    Log($"  -> {newSamples.Count} Samples ({autoApproved} approved, {needsReview} zur Pruefung):");
+                    Log($"  -> {newSamples.Count} Samples (QG: {qgBatch.Green}G/{qgBatch.Yellow}Y/{qgBatch.Red}R, {autoApproved} approved):");
                     foreach (var s in newSamples)
                         Log($"     {s.Code} @ {s.MeterStart:F2}m [{s.Status}] - {s.Beschreibung}");
 
@@ -1477,7 +1499,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                         s.KbIndexState = KbIndexState.Pending;
 
                     // ══════════════════════════════════════════════════════════════════
-                    // SOFORT SPEICHERN — Crash-sicher pro Haltung
+                    // SOFORT SPEICHERN — nur QualityGate-akzeptierte Samples
                     // ══════════════════════════════════════════════════════════════════
                     await TrainingSamplesStore.MergeAndSaveAsync(newSamples);
 
@@ -2006,7 +2028,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             var pdfExtractor = new PdfProtocolExtractor();
 
             _selfTrainingOrchestrator = new SelfTrainingOrchestrator(
-                vision, comparison, technique, pdfExtractor);
+                vision, comparison, technique, pdfExtractor, _sampleQualityGate);
 
             // Progress-Callback verbindet Orchestrator → ViewModel-Visualisierungen
             var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);
