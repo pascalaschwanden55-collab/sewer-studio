@@ -17,7 +17,7 @@ public sealed class MeterTimelineService
     private readonly OsdMeterDetectionService? _osd;
     private readonly int _concurrency;
 
-    public MeterTimelineService(AiRuntimeConfig cfg, OsdMeterDetectionService? osd = null, int concurrency = 1)
+    public MeterTimelineService(AiRuntimeConfig cfg, OsdMeterDetectionService? osd = null, int concurrency = 4)
     {
         _cfg = cfg;
         _osd = osd;

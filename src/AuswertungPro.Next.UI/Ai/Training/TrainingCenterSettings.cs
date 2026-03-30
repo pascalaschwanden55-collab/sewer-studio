@@ -12,5 +12,10 @@ public sealed class TrainingCenterSettings
     public double MinRangeLengthForSampling { get; set; } = 0.50;
     public int TimelineSampleCount { get; set; } = 30;
     public string? FramesOutputFolder { get; set; } = null; // null = default AppData folder
-    public int GpuConcurrency { get; set; } = 1;
+    /// <summary>
+    /// Anzahl paralleler GPU-Requests (Ollama).
+    /// RTX 5090 (32GB): 4 empfohlen — erfordert OLLAMA_NUM_PARALLEL=4.
+    /// Kleinere GPUs (8-16GB): 1-2.
+    /// </summary>
+    public int GpuConcurrency { get; set; } = 4;
 }

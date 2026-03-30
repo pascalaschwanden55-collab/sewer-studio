@@ -101,18 +101,49 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             return new SelfTrainingResult(tc.CaseId, allEntries.Count, 0, 0, 0, 0, null, sw.Elapsed, 0);
         }
 
-        // 2. Jeden Eintrag mit Foto durchlaufen
-        int exactMatches = 0, partialMatches = 0, mismatches = 0, noFindings = 0;
-        var generatedSamples = new List<TrainingSample>();
+        // 2. Aufnahmetechnik EINMAL mit dem ersten Frame bewerten (Qwen-basiert)
         TechniqueAssessment? overallTechnique = null;
-        bool techniqueAssessed = false;
-
-        for (int i = 0; i < entries.Count; i++)
+        if (entries.Count > 0)
         {
-            ct.ThrowIfCancellationRequested();
-            _pauseGate.Wait(ct);
+            var firstEntry = entries[0];
+            var firstPath = firstEntry.ExtractedFramePath!;
+            try
+            {
+                var firstBytes = await File.ReadAllBytesAsync(firstPath, ct);
+                var firstB64 = Convert.ToBase64String(firstBytes);
+                var firstAnalysis = await _vision.AnalyzeAsync(firstB64, ct);
+                overallTechnique = await _technique.AssessFrameWithVisionAsync(
+                    firstBytes, firstAnalysis.Meter, firstEntry.MeterStart, ct);
+            }
+            catch
+            {
+                // Fallback: deterministisch ohne Qwen
+                try
+                {
+                    var firstBytes = await File.ReadAllBytesAsync(firstPath, ct);
+                    overallTechnique = _technique.AssessFrame(firstBytes, 0, firstEntry.MeterStart);
+                }
+                catch { /* Technik-Bewertung nicht moeglich */ }
+            }
+        }
 
-            var entry = entries[i];
+        // 3. Alle Entries PARALLEL verarbeiten (GPU-Concurrency konfigurierbar)
+        int exactMatches = 0, partialMatches = 0, mismatches = 0, noFindings = 0;
+        var generatedSamples = new System.Collections.Concurrent.ConcurrentBag<TrainingSample>();
+        int gpuConcurrency = Math.Max(1, _qualityGate is not null ? 4 : 1); // TODO: aus TrainingCenterSettings lesen
+        int completedCount = 0;
+
+        progress.Report(new SelfTrainingStep(
+            0, entries.Count, "", 0, SelfTrainingStage.Analyzing, null, null, null,
+            $"Parallele KI-Analyse: {gpuConcurrency} gleichzeitige Requests..."));
+
+        await Parallel.ForEachAsync(
+            entries.Select((e, i) => (Entry: e, Index: i)),
+            new ParallelOptions { MaxDegreeOfParallelism = gpuConcurrency, CancellationToken = ct },
+            async (item, token) =>
+        {
+            _pauseGate.Wait(token);
+            var (entry, i) = item;
             string framePath = entry.ExtractedFramePath!;
 
             // ── Foto laden ──
@@ -123,11 +154,11 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             byte[] pngBytes;
             try
             {
-                pngBytes = await File.ReadAllBytesAsync(framePath, ct);
+                pngBytes = await File.ReadAllBytesAsync(framePath, token);
             }
             catch
             {
-                continue;
+                return; // Skip
             }
 
             // ── Blinde KI-Analyse (weiss NICHTS vom Protokoll) ──
@@ -136,19 +167,12 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 SelfTrainingStage.Analyzing, null, null, framePath));
 
             string b64 = Convert.ToBase64String(pngBytes);
-
-            // Bilder aus self_training_frames stammen aus PDF-Protokollen.
-            // Sie sind aber meistens Video-Frames MIT OSD (Datum, Meter, Haltungsname).
-            // → Standard-Prompt verwenden (OSD lesen), aber im Vergleich toleranter sein
-            //   (Meter/Clock-Fallback, da Zuordnung Bild↔Eintrag schon korrekt ist).
             bool isPdfPhoto = framePath.Contains("self_training_frames", StringComparison.OrdinalIgnoreCase);
 
             EnhancedFrameAnalysis analysis;
             try
             {
-                // Immer Standard-Analyse (mit OSD-Lesen), da die meisten PDF-Fotos
-                // Video-Frames mit sichtbarem OSD sind
-                analysis = await _vision.AnalyzeAsync(b64, ct);
+                analysis = await _vision.AnalyzeAsync(b64, token);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -169,53 +193,21 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 _logger?.LogWarning("Selbsttraining KI-Fehler: {Code}@{Meter:F1}m: {Error}",
                     entry.VsaCode, entry.MeterStart, analysis.Error);
                 LogToFile($"[SelfTraining] {entry.VsaCode}@{entry.MeterStart:F1}m: {errMsg}");
-                progress.Report(new SelfTrainingStep(
-                    i, entries.Count, entry.VsaCode, entry.MeterStart,
-                    SelfTrainingStage.Analyzing, null, null, framePath,
-                    ErrorMessage: errMsg));
             }
 
-            // ── Deterministischer Vergleich mit Protokoll ──
-            progress.Report(new SelfTrainingStep(
-                i, entries.Count, entry.VsaCode, entry.MeterStart,
-                SelfTrainingStage.Comparing, null, null, framePath));
-
+            // ── Deterministischer Vergleich ──
             var comparison = _comparison.Compare(entry, analysis, isPdfPhoto: isPdfPhoto);
 
-            // ── Aufnahmetechnik (1x mit Qwen, danach deterministisch) ──
-            TechniqueAssessment? technique = null;
-            if (!techniqueAssessed)
-            {
-                progress.Report(new SelfTrainingStep(
-                    i, entries.Count, entry.VsaCode, entry.MeterStart,
-                    SelfTrainingStage.AssessingTechnique, comparison, null, framePath));
+            // ── Aufnahmetechnik (deterministisch, Qwen wurde oben einmalig gemacht) ──
+            var technique = _technique.AssessFrame(pngBytes, analysis.Meter, entry.MeterStart);
 
-                try
-                {
-                    technique = await _technique.AssessFrameWithVisionAsync(
-                        pngBytes, analysis.Meter, entry.MeterStart, ct);
-                    overallTechnique = technique;
-                    techniqueAssessed = true;
-                }
-                catch
-                {
-                    technique = _technique.AssessFrame(pngBytes, analysis.Meter, entry.MeterStart);
-                    overallTechnique = technique;
-                    techniqueAssessed = true;
-                }
-            }
-            else
-            {
-                technique = _technique.AssessFrame(pngBytes, analysis.Meter, entry.MeterStart);
-            }
-
-            // ── Zaehler aktualisieren ──
+            // ── Thread-safe Zaehler ──
             switch (comparison.Level)
             {
-                case MatchLevel.ExactMatch: exactMatches++; break;
-                case MatchLevel.PartialMatch: partialMatches++; break;
-                case MatchLevel.Mismatch: mismatches++; break;
-                case MatchLevel.NoFindings: noFindings++; break;
+                case MatchLevel.ExactMatch: Interlocked.Increment(ref exactMatches); break;
+                case MatchLevel.PartialMatch: Interlocked.Increment(ref partialMatches); break;
+                case MatchLevel.Mismatch: Interlocked.Increment(ref mismatches); break;
+                case MatchLevel.NoFindings: Interlocked.Increment(ref noFindings); break;
             }
 
             // ── TrainingSample erzeugen ──
@@ -250,17 +242,19 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             };
             generatedSamples.Add(sample);
 
-            // ── Abschluss melden ──
+            // ── Fortschritt melden ──
+            var done = Interlocked.Increment(ref completedCount);
             progress.Report(new SelfTrainingStep(
-                i, entries.Count, entry.VsaCode, entry.MeterStart,
+                done - 1, entries.Count, entry.VsaCode, entry.MeterStart,
                 SelfTrainingStage.Completed, comparison, technique, framePath));
-        }
+        });
 
         // QualityGate: nur akzeptierte Samples speichern
+        var samplesList = generatedSamples.ToList();
         var samplesAccepted = 0;
-        if (generatedSamples.Count > 0)
+        if (samplesList.Count > 0)
         {
-            var qgBatch = _qualityGate.EvaluateBatch(generatedSamples);
+            var qgBatch = _qualityGate.EvaluateBatch(samplesList);
             if (qgBatch.Red > 0)
             {
                 _logger?.LogWarning(

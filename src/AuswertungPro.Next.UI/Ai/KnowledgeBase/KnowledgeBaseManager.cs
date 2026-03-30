@@ -125,7 +125,7 @@ public sealed class KnowledgeBaseManager(
         IReadOnlyList<TrainingSample> samples,
         IProgress<int>? progress = null,
         CancellationToken ct = default,
-        int concurrency = 1)
+        int concurrency = 4)
     {
         if (samples.Count == 0)
             return 0;

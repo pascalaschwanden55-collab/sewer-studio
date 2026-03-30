@@ -111,7 +111,8 @@ Verwende IMMER die oben angegebenen Codes (BCD, BAB, BBC usw.), keine anderen KÃ
     private readonly string _model;
     private readonly string? _referenceModel;
     private readonly int _numCtx;
-    private readonly SemaphoreSlim _escalationLock = new(1, 1);
+    // 2 parallele Eskalationen erlauben (RTX 5090: genug VRAM fuer 32B + 8B)
+    private readonly SemaphoreSlim _escalationLock = new(2, 2);
     private int _escalationCount;
     private FewShotExampleStore? _fewShotStore;
     private IReadOnlyList<(FewShotExample Example, string Base64)>? _cachedFewShot;
