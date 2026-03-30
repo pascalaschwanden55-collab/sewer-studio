@@ -922,14 +922,20 @@ public sealed class PdfProtocolExtractor
             "HALTUNG" or "HALTUNGSNAME"                 => null, // Haltungsbezeichnung
             "DN" or "NENNWEITE" or "DIMENSION"          => null, // Dimensionsangabe
             "STRASSE" or "GEMEINDE" or "KANALNUTZUNG"   => null, // Adressinfo
+            "HARTE" or "HAERTE" or "AUSHAERTUNG"       => null, // Aushaertungsprotokoll
 
             // Bereits ein VSA-Code (beginnt mit B + 2. Buchstabe A-D) → unveraendert
             _ when upper.Length >= 2
                   && upper[0] == 'B'
                   && upper[1] is >= 'A' and <= 'D' => upper,
 
-            // Sonstige AE-Codes (Profilwechsel, Materialwechsel etc.)
-            _ when upper.StartsWith("AE", StringComparison.Ordinal) => upper,
+            // AE-Codes (Profilwechsel, Materialwechsel, Neue Laenge) → skip
+            // Diese sind administrative Grundlagen-Aenderungen, nicht im Bild erkennbar
+            _ when upper.StartsWith("AE", StringComparison.Ordinal) => null,
+
+            // BD-Codes: Administrative (BDBA=Beginn TV, BDBB=Ende TV, BDBC=Inspektion spaeter)
+            // BDA=Allgemeinzustand und BDB=Kamera nicht einsetzbar behalten (visuell erkennbar)
+            "BDBA" or "BDBB" or "BDBC" or "BDBD" or "BDBE" => null,
 
             // Unbekannter Code → durchlassen (besser zu viel als zu wenig)
             _ => upper
