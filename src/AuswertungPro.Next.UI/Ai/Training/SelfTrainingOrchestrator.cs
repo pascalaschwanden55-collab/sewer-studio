@@ -44,6 +44,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     private readonly ITechniqueAssessmentService _technique;
     private readonly PdfProtocolExtractor _pdfExtractor;
     private readonly SampleQualityGateService _qualityGate;
+    private readonly int _gpuConcurrency;
     private readonly ILogger<SelfTrainingOrchestrator>? _logger;
 
     private readonly ManualResetEventSlim _pauseGate = new(true);
@@ -55,6 +56,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         ISelfTrainingComparisonService comparison,
         ITechniqueAssessmentService technique,
         PdfProtocolExtractor pdfExtractor,
+        TrainingCenterSettings? settings = null,
         SampleQualityGateService? qualityGate = null,
         ILogger<SelfTrainingOrchestrator>? logger = null)
     {
@@ -62,6 +64,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         _comparison = comparison;
         _technique = technique;
         _pdfExtractor = pdfExtractor;
+        _gpuConcurrency = Math.Max(1, (settings ?? new TrainingCenterSettings()).GpuConcurrency);
         _qualityGate = qualityGate ?? new SampleQualityGateService();
         _logger = logger;
     }
@@ -130,7 +133,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         // 3. Alle Entries PARALLEL verarbeiten (GPU-Concurrency konfigurierbar)
         int exactMatches = 0, partialMatches = 0, mismatches = 0, noFindings = 0;
         var generatedSamples = new System.Collections.Concurrent.ConcurrentBag<TrainingSample>();
-        int gpuConcurrency = Math.Max(1, _qualityGate is not null ? 4 : 1); // TODO: aus TrainingCenterSettings lesen
+        int gpuConcurrency = _gpuConcurrency;
         int completedCount = 0;
 
         progress.Report(new SelfTrainingStep(

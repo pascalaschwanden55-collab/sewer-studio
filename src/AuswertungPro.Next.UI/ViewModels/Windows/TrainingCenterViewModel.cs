@@ -2028,7 +2028,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             var pdfExtractor = new PdfProtocolExtractor();
 
             _selfTrainingOrchestrator = new SelfTrainingOrchestrator(
-                vision, comparison, technique, pdfExtractor, _sampleQualityGate);
+                vision, comparison, technique, pdfExtractor, new TrainingCenterSettings(), _sampleQualityGate);
 
             // Progress-Callback verbindet Orchestrator → ViewModel-Visualisierungen
             var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);
@@ -2051,6 +2051,26 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             Log($"Selbsttraining: {casesToTrain.Count} Faelle zu verarbeiten");
             ProgressMax = casesToTrain.Count;
+
+            // PDF-Fotos fuer ALLE Faelle vorab extrahieren (CPU-parallel, blockiert GPU nicht)
+            Log("PDF-Fotos vorab extrahieren...");
+            await Parallel.ForEachAsync(casesToTrain,
+                new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = ct },
+                async (c, token) =>
+                {
+                    if (string.IsNullOrEmpty(c.ProtocolPath)) return;
+                    var framesDir = Path.Combine(c.FolderPath, "self_training_frames");
+                    if (Directory.Exists(framesDir) && Directory.GetFiles(framesDir, "*.png").Length > 0) return;
+                    // PdfProtocolExtractor wird in RunAsync nochmal aufgerufen —
+                    // aber die Frames sind dann schon auf Disk und muessen nicht nochmal extrahiert werden
+                    try
+                    {
+                        var extractor = new PdfProtocolExtractor();
+                        await extractor.ExtractAsync(c.ProtocolPath, framesDir, token);
+                    }
+                    catch { /* Fehler beim Vorextrahieren ignorieren — RunAsync versucht es nochmal */ }
+                });
+            Log("PDF-Fotos vorab extrahiert");
 
             int totalExact = 0, totalPartial = 0, totalMismatch = 0, totalNoFindings = 0, totalSamples = 0;
             int caseErrors = 0;
@@ -2106,6 +2126,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 }
 
                 // Inkrementelles KB-Update fuer ExactMatch-Samples
+                // KB-Indexierung als Background-Task (blockiert nicht den naechsten Fall)
                 if (result.ExactMatches > 0 && result.SamplesGenerated > 0)
                 {
                     var allSamples = await TrainingSamplesStore.LoadAsync();
@@ -2120,14 +2141,26 @@ public partial class TrainingCenterViewModel : ObservableObject
                             s.KbIndexState = KbIndexState.Pending;
                         await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
 
-                        Log($"  {newApproved.Count} Samples → KB-Update...");
-                        var stIndexedIds = await IncrementalKbUpdateAsync(newApproved, ct);
-                        var stIndexedSet = stIndexedIds.ToHashSet();
-                        foreach (var s in newApproved)
-                            s.KbIndexState = stIndexedSet.Contains(s.SampleId)
-                                ? KbIndexState.Indexed
-                                : (s.KbIndexState == KbIndexState.Pending ? KbIndexState.Error : s.KbIndexState);
-                        await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
+                        Log($"  {newApproved.Count} Samples → KB-Update (Hintergrund)...");
+                        // Fire-and-forget: KB-Indexierung laeuft auf CPU parallel zum naechsten Fall
+                        var kbSamples = newApproved.ToList(); // Kopie fuer Background-Task
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                var indexed = await IncrementalKbUpdateAsync(kbSamples, CancellationToken.None);
+                                var indexedSet = indexed.ToHashSet();
+                                foreach (var s in kbSamples)
+                                    s.KbIndexState = indexedSet.Contains(s.SampleId)
+                                        ? KbIndexState.Indexed
+                                        : (s.KbIndexState == KbIndexState.Pending ? KbIndexState.Error : s.KbIndexState);
+                                await TrainingSamplesStore.MergeOrUpdateAsync(kbSamples);
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[KB-Background] Fehler: {ex.Message}");
+                            }
+                        });
                     }
                 }
             }
@@ -2217,14 +2250,17 @@ public partial class TrainingCenterViewModel : ObservableObject
             var embedder = new EmbeddingService(_kbHttpClient, ollamaConfig);
             var kbManager = new KnowledgeBaseManager(kbCtx, embedder);
 
-            foreach (var sample in samples)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (kbManager.IsIndexed(sample.SampleId))
-                    continue;
-                if (await kbManager.IndexSampleAsync(sample, ct))
-                    indexedIds.Add(sample.SampleId);
-            }
+            // Embeddings parallel generieren (CPU-Arbeit, blockiert GPU nicht)
+            var indexedBag = new System.Collections.Concurrent.ConcurrentBag<string>();
+            await Parallel.ForEachAsync(samples,
+                new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = ct },
+                async (sample, token) =>
+                {
+                    if (kbManager.IsIndexed(sample.SampleId)) return;
+                    if (await kbManager.IndexSampleAsync(sample, token))
+                        indexedBag.Add(sample.SampleId);
+                });
+            indexedIds.AddRange(indexedBag);
 
             if (indexedIds.Count > 0)
             {

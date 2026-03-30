@@ -17,5 +17,10 @@ public sealed class TrainingCenterSettings
     /// RTX 5090 (32GB): 4 empfohlen — erfordert OLLAMA_NUM_PARALLEL=4.
     /// Kleinere GPUs (8-16GB): 1-2.
     /// </summary>
-    public int GpuConcurrency { get; set; } = 4;
+    /// <summary>
+    /// Anzahl paralleler GPU-Requests (Ollama).
+    /// Muss mit OLLAMA_NUM_PARALLEL uebereinstimmen.
+    /// RTX 5090 (32GB): 2 empfohlen (mit ctx=32768).
+    /// </summary>
+    public int GpuConcurrency { get; set; } = 2;
 }
