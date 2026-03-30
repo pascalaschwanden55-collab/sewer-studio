@@ -353,6 +353,30 @@ public sealed class PdfProtocolExtractor
     ///
     /// Zuordnung: Strikte 1:1 wenn Bildanzahl == Entryanzahl, sonst keine Zuordnung.
     /// </summary>
+    /// <summary>
+    /// Pfad zum Python-Helper-Script fuer PyMuPDF-Bildextraktion.
+    /// PyMuPDF konvertiert CMYK→RGB korrekt, im Gegensatz zu PdfPig/WPF.
+    /// </summary>
+    private static string GetPyMuPdfScriptPath()
+    {
+        var baseDir = Path.GetDirectoryName(typeof(PdfProtocolExtractor).Assembly.Location)
+                      ?? AppContext.BaseDirectory;
+
+        // Build-Output: Ai/Training/Scripts/ (csproj-Struktur wird beibehalten)
+        var scriptPath = Path.Combine(baseDir, "Ai", "Training", "Scripts", "extract_pdf_images.py");
+        if (File.Exists(scriptPath)) return scriptPath;
+
+        // Fallback: direkt unter Scripts/
+        scriptPath = Path.Combine(baseDir, "Scripts", "extract_pdf_images.py");
+        if (File.Exists(scriptPath)) return scriptPath;
+
+        // Fallback: AppContext.BaseDirectory
+        scriptPath = Path.Combine(AppContext.BaseDirectory, "Ai", "Training", "Scripts", "extract_pdf_images.py");
+        if (File.Exists(scriptPath)) return scriptPath;
+
+        return Path.Combine(baseDir, "Ai", "Training", "Scripts", "extract_pdf_images.py");
+    }
+
     private static IReadOnlyList<GroundTruthEntry> ExtractAndAssignPdfImages(
         UglyToad.PdfPig.PdfDocument doc,
         IReadOnlyList<GroundTruthEntry> entries,
@@ -362,130 +386,53 @@ public sealed class PdfProtocolExtractor
         try
         {
             Directory.CreateDirectory(framesDir);
-            var safeName = Regex.Replace(Path.GetFileNameWithoutExtension(pdfPath), @"[^\w\-]", "_");
 
-            var images = new List<(int pageNum, byte[] data, string ext)>();
-            // Deduplizierung: Bilder gleicher Groesse (Logos!) nur einmal behalten
-            var seenSizes = new HashSet<int>();
-            int pageIdx = 0;
+            // ── PyMuPDF-Extraktion (korrekte CMYK→RGB Konvertierung) ──
+            var imagePaths = ExtractImagesViaPyMuPdf(pdfPath, framesDir);
 
-            foreach (var page in doc.GetPages())
-            {
-                pageIdx++;
-                foreach (var img in page.GetImages())
-                {
-                    int w = (int)img.WidthInSamples;
-                    int h = (int)img.HeightInSamples;
+            // Fallback: PdfPig-Extraktion wenn PyMuPDF fehlschlaegt
+            if (imagePaths.Count == 0)
+                imagePaths = ExtractImagesViaPdfPig(doc, pdfPath, framesDir);
 
-                    // ── Dimensionsfilter ──
-                    if (w < MinPhotoWidth || h < MinPhotoHeight)
-                        continue; // Zu klein fuer ein echtes Foto
-
-                    if (w > MaxPhotoDimension || h > MaxPhotoDimension)
-                        continue; // PDF-Seitenrender (A4 @300dpi = 3508x2480)
-
-                    // ── Seitenverhaeltnis ──
-                    double aspect = (double)w / h;
-                    if (aspect < MinAspect || aspect > MaxAspect)
-                        continue; // Banner, Streifen, Logos
-
-                    // ── Strategie 1: JPEG-RawBytes (bevorzugt — echte Fotos sind JPEG) ──
-                    byte[]? photoBytes = null;
-                    string ext = ".png";
-                    try
-                    {
-                        var raw = img.RawBytes;
-                        if (raw.Count >= MinPhotoBytes
-                            && raw.Count >= 3
-                            && raw[0] == 0xFF && raw[1] == 0xD8 && raw[2] == 0xFF) // JPEG SOI Marker
-                        {
-                            var jpegBytes = raw.ToArray();
-
-                            // Farbnegativ-Korrektur: Manche PDFs (WinCan, aeltere IKAS)
-                            // speichern JPEGs mit invertiertem Decode-Array
-                            if (IsLikelyInvertedJpeg(jpegBytes))
-                                jpegBytes = InvertJpegColors(jpegBytes);
-
-                            photoBytes = jpegBytes;
-                            ext = ".jpg";
-                        }
-                    }
-                    catch { /* RawBytes-Zugriff fehlgeschlagen */ }
-
-                    // ── Strategie 2: PNG-Konvertierung (Fallback) ──
-                    if (photoBytes == null && img.TryGetPng(out var pngBytes))
-                    {
-                        if (pngBytes.Length >= MinPhotoBytes)
-                        {
-                            photoBytes = pngBytes;
-                            ext = ".png";
-                        }
-                    }
-
-                    if (photoBytes == null)
-                        continue;
-
-                    // ── Deduplizierung: Logos wiederholen sich auf jeder Seite ──
-                    // Bilder mit identischer Byte-Laenge sind fast sicher Duplikate
-                    if (!seenSizes.Add(photoBytes.Length))
-                        continue; // Bereits gesehen → Logo/Wasserzeichen
-
-                    images.Add((pageIdx, photoBytes, ext));
-                }
-            }
-
-            if (images.Count == 0)
+            if (imagePaths.Count == 0)
                 return entries;
 
-            // Plausibilitaetscheck: Alle Bilder muessen von aufsteigenden Seiten kommen.
-            bool pagesMonotonic = true;
-            for (int i = 1; i < images.Count; i++)
-            {
-                if (images[i].pageNum < images[i - 1].pageNum)
-                {
-                    pagesMonotonic = false;
-                    break;
-                }
-            }
-
-            if (!pagesMonotonic)
-                return entries; // Seiten nicht monoton → Zuordnung unsicher
-
-            // Zuordnung: Bilder den Entries zuweisen.
-            // - Exakt gleich viele: perfekte 1:1-Zuordnung (Index = Index)
-            // - Weniger Bilder als Entries: Bilder den ersten N Entries zuweisen,
-            //   restliche Entries bekommen kein Bild (typisch bei PDFs mit Bildbericht-Sektion)
-            // - Mehr Bilder als Entries: Nur die ersten N Bilder verwenden (ueberzaehlige ignorieren)
-            // - Aber: Wenn weniger als 30% der Entries ein Bild bekommen wuerden UND
-            //   die Differenz > 3 ist, ist die Zuordnung zu unsicher → abbrechen
-            int assignable = Math.Min(images.Count, entries.Count);
+            // Zuordnung: Bilder den Entries zuweisen (1:1 nach Index)
+            int assignable = Math.Min(imagePaths.Count, entries.Count);
             double coverageRatio = entries.Count > 0 ? (double)assignable / entries.Count : 0;
-            if (coverageRatio < 0.30 && Math.Abs(images.Count - entries.Count) > 3)
+            if (coverageRatio < 0.30 && Math.Abs(imagePaths.Count - entries.Count) > 3)
             {
                 System.Diagnostics.Debug.WriteLine(
-                    $"[PdfExtractor] Zuordnung unsicher: {images.Count} Bilder vs {entries.Count} Eintraege " +
+                    $"[PdfExtractor] Zuordnung unsicher: {imagePaths.Count} Bilder vs {entries.Count} Eintraege " +
                     $"(Coverage {coverageRatio:P0}) in {Path.GetFileName(pdfPath)}");
                 return entries;
             }
 
+            var safeName = Regex.Replace(Path.GetFileNameWithoutExtension(pdfPath), @"[^\w\-]", "_");
             var result = new List<GroundTruthEntry>(entries.Count);
             for (int i = 0; i < entries.Count; i++)
             {
                 var entry = entries[i];
                 string? framePath = null;
 
-                if (i < images.Count)
+                if (i < imagePaths.Count)
                 {
-                    var (_, data, imgExt) = images[i];
-                    var fileName = $"{safeName}_{entry.VsaCode}_{entry.MeterStart:F1}m_{i}{imgExt}";
-                    framePath = Path.Combine(framesDir, fileName);
+                    var srcPath = imagePaths[i];
+                    // Umbenennen: Code + Meterposition im Dateinamen
+                    var targetName = $"{safeName}_{entry.VsaCode}_{entry.MeterStart:F1}m_{i}.png";
+                    var targetPath = Path.Combine(framesDir, targetName);
                     try
                     {
-                        File.WriteAllBytes(framePath, data);
+                        if (srcPath != targetPath)
+                        {
+                            if (File.Exists(targetPath)) File.Delete(targetPath);
+                            File.Move(srcPath, targetPath);
+                        }
+                        framePath = targetPath;
                     }
                     catch
                     {
-                        framePath = null;
+                        framePath = File.Exists(srcPath) ? srcPath : null;
                     }
                 }
 
@@ -498,6 +445,117 @@ public sealed class PdfProtocolExtractor
         {
             return entries;
         }
+    }
+
+    /// <summary>
+    /// Extrahiert Fotos per PyMuPDF (Python-Subprocess).
+    /// Konvertiert CMYK→RGB korrekt — WinCan/IKAS-PDFs haben oft CMYK-JPEGs.
+    /// </summary>
+    private static IReadOnlyList<string> ExtractImagesViaPyMuPdf(string pdfPath, string framesDir)
+    {
+        try
+        {
+            var scriptPath = GetPyMuPdfScriptPath();
+            if (!File.Exists(scriptPath))
+            {
+                System.Diagnostics.Debug.WriteLine($"[PdfExtractor] PyMuPDF-Script nicht gefunden: {scriptPath}");
+                return Array.Empty<string>();
+            }
+
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "python",
+                Arguments = $"\"{scriptPath}\" \"{pdfPath}\" \"{framesDir}\" {MinPhotoWidth} {MinPhotoHeight}",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var p = System.Diagnostics.Process.Start(psi);
+            if (p == null) return Array.Empty<string>();
+
+            var output = p.StandardOutput.ReadToEnd();
+            p.WaitForExit(30_000); // Max 30 Sekunden
+
+            if (p.ExitCode != 0 || string.IsNullOrWhiteSpace(output))
+                return Array.Empty<string>();
+
+            // JSON parsen: [{"page": 1, "index": 0, "path": "...", "width": 788, "height": 576}, ...]
+            using var jsonDoc = System.Text.Json.JsonDocument.Parse(output);
+            if (jsonDoc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object
+                && jsonDoc.RootElement.TryGetProperty("error", out _))
+                return Array.Empty<string>(); // Fehler-Objekt
+
+            var paths = new List<string>();
+            foreach (var item in jsonDoc.RootElement.EnumerateArray())
+            {
+                var path = item.GetProperty("path").GetString();
+                if (path != null && File.Exists(path))
+                    paths.Add(path);
+            }
+
+            return paths;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PdfExtractor] PyMuPDF fehlgeschlagen: {ex.Message}");
+            return Array.Empty<string>();
+        }
+    }
+
+    /// <summary>
+    /// Fallback: PdfPig-Bildextraktion (ohne Farbraum-Konvertierung).
+    /// Wird nur verwendet wenn PyMuPDF nicht verfuegbar ist.
+    /// </summary>
+    private static IReadOnlyList<string> ExtractImagesViaPdfPig(
+        UglyToad.PdfPig.PdfDocument doc, string pdfPath, string framesDir)
+    {
+        var safeName = Regex.Replace(Path.GetFileNameWithoutExtension(pdfPath), @"[^\w\-]", "_");
+        var paths = new List<string>();
+        var seenSizes = new HashSet<int>();
+        int imgCounter = 0;
+
+        foreach (var page in doc.GetPages())
+        {
+            foreach (var img in page.GetImages())
+            {
+                int w = (int)img.WidthInSamples;
+                int h = (int)img.HeightInSamples;
+                if (w < MinPhotoWidth || h < MinPhotoHeight) continue;
+                if (w > MaxPhotoDimension || h > MaxPhotoDimension) continue;
+                double aspect = (double)w / h;
+                if (aspect < MinAspect || aspect > MaxAspect) continue;
+
+                byte[]? photoBytes = null;
+                string ext = ".jpg";
+                try
+                {
+                    var raw = img.RawBytes;
+                    if (raw.Count >= MinPhotoBytes && raw.Count >= 3
+                        && raw[0] == 0xFF && raw[1] == 0xD8 && raw[2] == 0xFF)
+                    {
+                        photoBytes = raw.ToArray();
+                    }
+                }
+                catch { }
+
+                if (photoBytes == null && img.TryGetPng(out var pngBytes) && pngBytes.Length >= MinPhotoBytes)
+                {
+                    photoBytes = pngBytes;
+                    ext = ".png";
+                }
+
+                if (photoBytes == null) continue;
+                if (!seenSizes.Add(photoBytes.Length)) continue;
+
+                var fileName = $"{safeName}_fallback_{imgCounter++}{ext}";
+                var filePath = Path.Combine(framesDir, fileName);
+                File.WriteAllBytes(filePath, photoBytes);
+                paths.Add(filePath);
+            }
+        }
+        return paths;
     }
 
     // ── Parsing ─────────────────────────────────────────────────────────────
@@ -817,96 +875,4 @@ public sealed class PdfProtocolExtractor
     // ── Farbnegativ-Erkennung und Korrektur fuer PDF-JPEG-Bilder ──────────
 
     /// <summary>
-    /// Prueft ob ein JPEG-Bild wahrscheinlich farbinvertiert ist (Negativ).
-    /// Manche PDF-Generatoren (WinCan, aeltere IKAS) speichern JPEGs
-    /// mit invertiertem Decode-Array, wodurch die Farben invertiert erscheinen.
-    /// Heuristik: Kanalbilder sind typischerweise dunkel (Rohrinneres, avgLum &lt; 120).
-    /// Invertierte Bilder haben avgLum &gt; 170.
-    /// </summary>
-    private static bool IsLikelyInvertedJpeg(byte[] jpegBytes)
-    {
-        try
-        {
-            using var ms = new MemoryStream(jpegBytes);
-            var bi = new System.Windows.Media.Imaging.BitmapImage();
-            bi.BeginInit();
-            bi.StreamSource = ms;
-            bi.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-            bi.DecodePixelWidth = 80; // Klein laden fuer Geschwindigkeit
-            bi.EndInit();
-            bi.Freeze();
-
-            var wb = new System.Windows.Media.Imaging.WriteableBitmap(bi);
-            int stride = wb.PixelWidth * 4;
-            byte[] pixels = new byte[stride * wb.PixelHeight];
-            wb.CopyPixels(pixels, stride, 0);
-
-            // Mittlere Helligkeit (ITU-R BT.601)
-            long totalLum = 0;
-            int count = 0;
-            for (int i = 0; i < pixels.Length - 3; i += 4)
-            {
-                int b = pixels[i], g = pixels[i + 1], r = pixels[i + 2];
-                totalLum += (r * 299 + g * 587 + b * 114) / 1000;
-                count++;
-            }
-
-            if (count == 0) return false;
-            double avgLum = (double)totalLum / count;
-
-            // Kanalbilder: dunkel (avgLum < 120), Invertiert: hell (avgLum > 170)
-            return avgLum > 170;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Invertiert die Farben eines JPEG-Bildes (Negativ → Positiv).
-    /// Decodiert JPEG → invertiert RGB-Kanaele → re-encodiert als JPEG.
-    /// </summary>
-    private static byte[] InvertJpegColors(byte[] jpegBytes)
-    {
-        try
-        {
-            using var inputMs = new MemoryStream(jpegBytes);
-            var decoder = new System.Windows.Media.Imaging.JpegBitmapDecoder(
-                inputMs,
-                System.Windows.Media.Imaging.BitmapCreateOptions.PreservePixelFormat,
-                System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
-
-            var frame = decoder.Frames[0];
-            var wb = new System.Windows.Media.Imaging.WriteableBitmap(frame);
-            int bytesPerPixel = wb.Format.BitsPerPixel / 8;
-            int stride = wb.PixelWidth * bytesPerPixel;
-            byte[] pixels = new byte[stride * wb.PixelHeight];
-            wb.CopyPixels(pixels, stride, 0);
-
-            // RGB invertieren, Alpha-Kanal behalten
-            int alphaOffset = bytesPerPixel == 4 ? 3 : -1;
-            for (int i = 0; i < pixels.Length; i++)
-            {
-                if (alphaOffset >= 0 && (i % bytesPerPixel) == alphaOffset)
-                    continue;
-                pixels[i] = (byte)(255 - pixels[i]);
-            }
-
-            wb.WritePixels(
-                new System.Windows.Int32Rect(0, 0, wb.PixelWidth, wb.PixelHeight),
-                pixels, stride, 0);
-
-            var encoder = new System.Windows.Media.Imaging.JpegBitmapEncoder { QualityLevel = 92 };
-            encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(wb));
-
-            using var outputMs = new MemoryStream();
-            encoder.Save(outputMs);
-            return outputMs.ToArray();
-        }
-        catch
-        {
-            return jpegBytes; // Fallback: Original zurueckgeben
-        }
-    }
 }

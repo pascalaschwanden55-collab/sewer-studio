@@ -286,6 +286,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             SamplesGenerated: samplesAccepted);
     }
 
+    /// <summary>
     private static void LogToFile(string message)
     {
         try
