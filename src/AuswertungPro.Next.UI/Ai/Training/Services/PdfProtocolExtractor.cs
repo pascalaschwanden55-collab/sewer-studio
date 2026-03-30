@@ -893,23 +893,46 @@ public sealed class PdfProtocolExtractor
     /// </summary>
     private static string? NormalizeVsaCode(string code)
     {
-        return code.ToUpperInvariant() switch
+        var upper = code.ToUpperInvariant();
+        return upper switch
         {
             // Bestandsaufnahme → VSA BC-Codes
-            "BEGINN" or "ROHRANFANG" or "ANFANG"     => "BCD",
-            "ENDE" or "ROHRENDE"                      => "BCE",
-            "BOGEN" or "KURVE" or "RICHTUNGSWECHSEL"  => "BCC",
-            "ANSCHLUSS" or "ABZWEIG" or "STUTZEN"     => "BCA",
+            "BEGINN" or "ROHRANFANG" or "ANFANG"      => "BCD",
+            "ENDE" or "ROHRENDE"                       => "BCE",
+            "BOGEN" or "KURVE" or "RICHTUNGSWECHSEL"   => "BCC",
+            "ANSCHLUSS" or "ABZWEIG" or "STUTZEN"      => "BCA",
 
-            // Nicht trainingsrelevant → skip
-            "LAGE" or "LAGEBESTIMMUNG"                => null,
-            "ORT" or "ORTUNG"                         => null,
-            "IN" or "INSPEKTION"                      => null,
-            "NEUE" or "NEUEROHR" or "NEUELAENGE"      => null,
-            "TEXT" or "BEMERKUNG" or "NOTIZ"           => null,
+            // Nicht trainingsrelevant (Metadaten, Verwaltung) → skip
+            "LAGE" or "LAGEBESTIMMUNG"                 => null,
+            "ORT" or "ORTUNG"                          => null,
+            "IN" or "INSPEKTION"                       => null,
+            "NEUE" or "NEUEROHR" or "NEUELAENGE"       => null,
+            "TEXT" or "BEMERKUNG" or "NOTIZ"            => null,
+            "IVECO" or "FAHRZEUG" or "KAMERA"          => null, // Fahrzeug/Kamera-Info
+            "BREITE" or "HOEHE" or "LAENGE"            => null, // Massangaben
+            "ROHR" or "ROHRART" or "MATERIAL"          => null, // Rohrinformation
+            "PROFIL" or "PROFILART"                     => null, // Profilangabe
+            "FOTO" or "BILD" or "VIDEO"                => null, // Medienreferenz
+            "SCHACHT" or "DECKEL"                       => null, // Schachtinfo
+            "REINIGUNG" or "SPUELUNG"                   => null, // Betriebsinfo
+            "WETTER" or "TEMPERATUR"                    => null, // Umgebungsbedingungen
+            "DATUM" or "ZEIT" or "UHRZEIT"              => null, // Zeitangaben
+            "INSPEKTEUR" or "OPERATEUR"                 => null, // Personal
+            "AUFTRAGGEBER" or "KUNDE"                   => null, // Verwaltung
+            "HALTUNG" or "HALTUNGSNAME"                 => null, // Haltungsbezeichnung
+            "DN" or "NENNWEITE" or "DIMENSION"          => null, // Dimensionsangabe
+            "STRASSE" or "GEMEINDE" or "KANALNUTZUNG"   => null, // Adressinfo
 
-            // Bereits ein VSA-Code → unveraendert
-            _ => code.ToUpperInvariant()
+            // Bereits ein VSA-Code (beginnt mit B + 2. Buchstabe A-D) → unveraendert
+            _ when upper.Length >= 3
+                  && upper[0] == 'B'
+                  && upper[1] is >= 'A' and <= 'D' => upper,
+
+            // Sonstige AE-Codes (Profilwechsel, Materialwechsel etc.)
+            _ when upper.StartsWith("AE", StringComparison.Ordinal) => upper,
+
+            // Unbekannter Code → skip (lieber sicher filtern)
+            _ => null
         };
     }
 }
