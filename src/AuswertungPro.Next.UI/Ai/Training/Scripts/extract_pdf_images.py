@@ -22,8 +22,54 @@ except ImportError:
     sys.exit(1)
 
 
+def is_likely_photo(pix) -> bool:
+    """
+    Prueft ob ein Bild wahrscheinlich ein Kanalfoto ist (dunkel, farbig)
+    und keine technische Zeichnung/Haltungsgrafik (hell, weisser Hintergrund).
+
+    Kanalfotos: durchschnittliche Luminanz < 180, Farbvarianz > 10
+    Haltungsgrafiken: weisser Hintergrund, avgLum > 200, wenig Farbvarianz
+    """
+    # Kleines Sampling fuer Geschwindigkeit (jeden 10. Pixel)
+    samples = pix.samples
+    n_channels = pix.n
+    step = max(1, len(samples) // (n_channels * 500)) * n_channels  # ~500 Samples
+
+    total_r, total_g, total_b = 0, 0, 0
+    count = 0
+
+    for i in range(0, len(samples) - n_channels + 1, step):
+        if n_channels >= 3:
+            r, g, b = samples[i], samples[i + 1], samples[i + 2]
+        else:
+            r = g = b = samples[i]  # Graustufen
+        total_r += r
+        total_g += g
+        total_b += b
+        count += 1
+
+    if count == 0:
+        return True  # Im Zweifel behalten
+
+    avg_r = total_r / count
+    avg_g = total_g / count
+    avg_b = total_b / count
+    avg_lum = (avg_r * 299 + avg_g * 587 + avg_b * 114) / 1000
+
+    # Haltungsgrafiken: weisser Hintergrund (avgLum > 200)
+    if avg_lum > 200:
+        return False
+
+    # Sehr helle Bilder mit wenig Farbvarianz = Diagramm/Grafik
+    color_range = max(avg_r, avg_g, avg_b) - min(avg_r, avg_g, avg_b)
+    if avg_lum > 180 and color_range < 15:
+        return False
+
+    return True
+
+
 def extract_images(pdf_path: str, output_dir: str, min_w: int = 400, min_h: int = 300) -> list:
-    """Extrahiert alle Fotos (grosse Bilder) aus einem PDF."""
+    """Extrahiert Kanalfotos aus einem PDF (filtert Haltungsgrafiken/Diagramme)."""
     os.makedirs(output_dir, exist_ok=True)
     doc = fitz.open(pdf_path)
     safe_name = re.sub(r'[^\w\-]', '_', os.path.splitext(os.path.basename(pdf_path))[0])
@@ -50,9 +96,10 @@ def extract_images(pdf_path: str, output_dir: str, min_w: int = 400, min_h: int 
             if w > 5000 or h > 5000:
                 continue
 
-            # Seitenverhaeltnis (Kanalbilder: ~4:3 oder 16:9)
+            # Seitenverhaeltnis: Kanalfotos sind querformat (~4:3 oder 16:9)
+            # Haltungsgrafiken sind oft hochformat (A4-artig, aspect < 1.0)
             aspect = w / h
-            if aspect < 0.5 or aspect > 3.0:
+            if aspect < 0.8 or aspect > 3.0:
                 continue
 
             # Deduplizierung: gleiche Byte-Laenge = wahrscheinlich Duplikat (Logo)
@@ -65,6 +112,10 @@ def extract_images(pdf_path: str, output_dir: str, min_w: int = 400, min_h: int 
             pix = fitz.Pixmap(doc, xref)
             if pix.n - pix.alpha > 3:  # CMYK oder aehnlich
                 pix = fitz.Pixmap(fitz.csRGB, pix)
+
+            # Foto-Filter: helle Bilder (Grafiken/Diagramme) ausschliessen
+            if not is_likely_photo(pix):
+                continue
 
             out_name = f"{safe_name}_p{page_num + 1}_{img_idx}.png"
             out_path = os.path.join(output_dir, out_name)
