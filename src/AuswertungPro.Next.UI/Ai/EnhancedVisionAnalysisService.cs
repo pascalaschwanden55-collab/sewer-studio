@@ -69,16 +69,19 @@ public sealed class EnhancedVisionAnalysisService
     // Vollständige Schadensklassen nach DIN EN 13508-2 / VSA-DSS
     // Gruppiert für besseren Prompt
     private static readonly string DamageClassesPrompt = """
-ERKENNBARE SCHADENSKLASSEN mit VSA/EN 13508-2 Codes (VERWENDE DIESE CODES als vsa_code_hint):
+ERKENNBARE CODES nach VSA/EN 13508-2 (VERWENDE DIESE CODES als vsa_code_hint):
 
-BESTANDSAUFNAHME (BC-Gruppe) – Diese Bilder zeigen KEINEN Schaden, aber MÜSSEN erkannt werden:
-- Rohranfang: Blick vom Schacht ins Rohr, Schachtwand/Mauerwerk sichtbar → BCD
-- Rohrende: Blick auf Endschacht, Schacht am Ende → BCE
-- Seitlicher Anschluss: Runde/ovale Öffnung seitlich in Rohrwand → BCA
-- Bogen/Kurve: Rohr biegt ab → BCC
-- Allgemeine Anmerkung → BDB
+Melde ALLES was du siehst — Schäden (severity 2-5) UND Beobachtungen (severity 1).
+Jede Beobachtung ist ein Finding mit vsa_code_hint und severity.
 
-STRUKTURELLE SCHÄDEN (BA-Gruppe):
+BESTANDSAUFNAHME / BEOBACHTUNGEN (BC-Gruppe, severity=1):
+Diese sind KEINE Schäden, MÜSSEN aber als Finding gemeldet werden!
+- Rohranfang: Blick vom Schacht ins Rohr, Schachtwand sichtbar → BCD (severity=1)
+- Rohrende: Blick auf Endschacht, Schacht am Ende → BCE (severity=1)
+- Seitlicher Anschluss: Runde/ovale Öffnung seitlich in Rohrwand → BCA (severity=1)
+- Bogen/Kurve: Rohr biegt ab, Richtungsänderung → BCC (severity=1)
+
+STRUKTURELLE SCHÄDEN (BA-Gruppe, severity 2-5):
 - Riss (längs, quer, diagonal, ringförmig, verzweigt) → BAB
 - Bruch (partiell, total) → BAC
 - Einsturz/Kollaps → BAD
@@ -88,22 +91,25 @@ STRUKTURELLE SCHÄDEN (BA-Gruppe):
 - Loch/Wanddurchdringung → BAG
 - Offene Muffenverbindung → BAE
 
-OBERFLÄCHENSCHÄDEN (BA-Gruppe):
+OBERFLÄCHENSCHÄDEN (BA-Gruppe, severity 2-4):
 - Korrosion, Ausbrüche, Abplatzungen → BABB (oder BAB wenn unsicher)
 
-BETRIEBLICHE STÖRUNGEN (BB-Gruppe):
+BETRIEBLICHE STÖRUNGEN (BB-Gruppe, severity 2-5):
 - Inkrustation/Kalkablagerung → BBA
 - Wurzeleinwuchs → BBB
 - Ablagerung (Sand, Schlamm, Kies) → BBC
 - Fremdkörper → BBD
 - Eindringendes Wasser/Infiltration → BBF
 
-ANSCHLÜSSE:
+ANSCHLÜSSE (severity 1-3):
 - Undichter/offener Anschluss → BCA
 - Eindringendes Wasser am Anschluss → BCB
 
-WICHTIG: vsa_code_hint MUSS immer ausgefüllt werden wenn ein Befund vorliegt.
-Verwende IMMER die oben angegebenen Codes (BCD, BAB, BBC usw.), keine anderen Kürzel.
+WICHTIG:
+- vsa_code_hint MUSS bei JEDEM Finding ausgefüllt werden.
+- Verwende IMMER die oben angegebenen Codes (BCD, BAB, BBC usw.).
+- Auch Beobachtungen ohne Schaden (Bogen, Rohranfang, Anschluss) MÜSSEN als Finding mit severity=1 gemeldet werden.
+- Wenn du NICHTS siehst (leere Haltung, verschwommenes Bild): findings=[] und is_empty_frame=true.
 """;
 
 
