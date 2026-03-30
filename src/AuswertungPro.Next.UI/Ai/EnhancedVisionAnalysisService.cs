@@ -69,47 +69,60 @@ public sealed class EnhancedVisionAnalysisService
     // Vollständige Schadensklassen nach DIN EN 13508-2 / VSA-DSS
     // Gruppiert für besseren Prompt
     private static readonly string DamageClassesPrompt = """
-ERKENNBARE CODES nach VSA/EN 13508-2 (VERWENDE DIESE CODES als vsa_code_hint):
+VSA/EN 13508-2 CODES fuer Kanalinspektion (Haltungen).
+Melde ALLES was du siehst. Jeder Befund braucht vsa_code_hint, severity, position_clock.
 
-Melde ALLES was du siehst — Schäden (severity 2-5) UND Beobachtungen (severity 1).
-Jede Beobachtung ist ein Finding mit vsa_code_hint und severity.
+=== BA: BAULICHE SCHAEDEN (severity 2-5) ===
+BAA  Deformation (BAAA=vertikal, BAAB=horizontal) — Uhrlage + Querschnittsverringerung %
+BAB  Riss (BABA/BABBA=laengs, BABB/BABBB=radial, BABC=klaffend) — Uhrlage von-bis
+BAC  Bruch/Scherbe (BACA=verschoben, BACB=Loch, BACC=Einsturz) — Uhrlage von-bis
+BAD  Mauerwerk defekt (BADA=verschoben, BADB=fehlen, BADC=Sohle, BADD=Einsturz)
+BAE  Moertel fehlt — Uhrlage von-bis
+BAF  Oberflaechenschaden (BAFA=rau, BAFB=Abplatzung, BAFC-BAFH=Zuschlag/Armierung, BAFI=Wand fehlt, BAFJ=korrodiert)
+BAG  Anschluss einragend — Uhrlage
+BAH  Anschluss schadhaft (BAHA=falsch, BAHB=zurueck, BAHC=unvollstaendig, BAHD=beschaedigt)
+BAI  Dichtung (BAIA=Dichtring verschoben/einragend)
+BAJ  Rohrverbindung (BAJA=breit, BAJB=versetzt, BAJC=Knick) — Uhrlage
+BAK  Innenauskleidung (BAKA=abgeloest, BAKB=verfaerbt, BAKC=Endstelle, BAKE=Blasen, BAKI=Riss)
+BAL  Reparatur mangelhaft (BALA=Wand fehlt, BALB=Loch, BALC=loest sich)
+BAM  Schweissnaht mangelhaft (BAMA=laengs, BAMB=radial)
+BAN  Leitung poroes
+BAO  Boden sichtbar
+BAP  Hohlraum sichtbar
 
-BESTANDSAUFNAHME / BEOBACHTUNGEN (BC-Gruppe, severity=1):
-Diese sind KEINE Schäden, MÜSSEN aber als Finding gemeldet werden!
-- Rohranfang: Blick vom Schacht ins Rohr, Schachtwand sichtbar → BCD (severity=1)
-- Rohrende: Blick auf Endschacht, Schacht am Ende → BCE (severity=1)
-- Seitlicher Anschluss: Runde/ovale Öffnung seitlich in Rohrwand → BCA (severity=1)
-- Bogen/Kurve: Rohr biegt ab, Richtungsänderung → BCC (severity=1)
+=== BB: BETRIEBLICHE STOERUNGEN (severity 2-5) ===
+BBA  Wurzeleinwuchs (BBAA=Pfahlwurzel, BBAB=fein, BBAC=komplex) — Uhrlage + Ausmass %
+BBB  Anhaftungen (BBBA=Inkrustation/Kalk, BBBB=Fett, BBBC=Faeulnis) — Uhrlage + Ausmass %
+BBC  Ablagerungen (BBCA=Sand, BBCB=Kies, BBCC=hart) — Hoehe in % des Querschnitts
+BBD  Bodeneindringung (BBDA=Sand, BBDB=Humus, BBDC=Fein, BBDD=Grob) — Uhrlage
+BBE  Hindernis (BBEA=Backsteine, BBEB=Leitungsstueck, BBEC=Gegenstand, BBED=durch Wand)
+BBF  Infiltration/Eindringendes Wasser (BBFA=Schwitzen, BBFB=tropft, BBFC=fliesst, BBFD=spritzt) — Uhrlage
+BBG  Sichtbarer Wasseraustritt
+BBH  Tiere (BBHA=Ratte, BBHB=Kakerlake)
 
-STRUKTURELLE SCHÄDEN (BA-Gruppe, severity 2-5):
-- Riss (längs, quer, diagonal, ringförmig, verzweigt) → BAB
-- Bruch (partiell, total) → BAC
-- Einsturz/Kollaps → BAD
-- Deformation (vertikal, horizontal, Ovalität) → BAF
-- Versatz (vertikal, horizontal) → BAH
-- Einragender Stutzen/Anschluss → BAI
-- Loch/Wanddurchdringung → BAG
-- Offene Muffenverbindung → BAE
+=== BC: BESTANDSAUFNAHME (severity=1, MUESSEN gemeldet werden!) ===
+BCA  Anschluss (BCAAA=Formstueck, BCABA=Sattel gebohrt, BCACA=eingespitzt, BCADA=gebohrt) — Uhrlage + Durchmesser mm
+BCB  Reparatur (BCBA=Rohr ausgetauscht, BCBB=Innenauskleidung, BCBZ=grabenlos)
+BCC  Bogen/Kurve (BCCA=links, BCCB=rechts, BCCY=vertikal) — Richtung
+BCD  Rohranfang — immer bei Meter 0.0
+BCE  Rohrende — am Ende der Haltung
 
-OBERFLÄCHENSCHÄDEN (BA-Gruppe, severity 2-4):
-- Korrosion, Ausbrüche, Abplatzungen → BABB (oder BAB wenn unsicher)
+=== BD: WEITERE INFORMATIONEN (severity=1) ===
+BDA  Allgemeinzustand, Fotobeispiel
+BDD  Wasserspiegel (BDDA=klar, BDDB=trueb, BDDD=gefaerbt) — Hoehe %
+BDE  Fehlanschluss — Uhrlage
+BDF  Gefaehrdung (BDFA=Sauerstoffmangel, BDFB=Schwefelwasserstoff, BDFC=Methan)
+BDG  Keine Sicht (BDGA=unter Wasser, BDGB=Verschlammung, BDGC=Dampf)
 
-BETRIEBLICHE STÖRUNGEN (BB-Gruppe, severity 2-5):
-- Inkrustation/Kalkablagerung → BBA
-- Wurzeleinwuchs → BBB
-- Ablagerung (Sand, Schlamm, Kies) → BBC
-- Fremdkörper → BBD
-- Eindringendes Wasser/Infiltration → BBF
-
-ANSCHLÜSSE (severity 1-3):
-- Undichter/offener Anschluss → BCA
-- Eindringendes Wasser am Anschluss → BCB
-
-WICHTIG:
-- vsa_code_hint MUSS bei JEDEM Finding ausgefüllt werden.
-- Verwende IMMER die oben angegebenen Codes (BCD, BAB, BBC usw.).
-- Auch Beobachtungen ohne Schaden (Bogen, Rohranfang, Anschluss) MÜSSEN als Finding mit severity=1 gemeldet werden.
-- Wenn du NICHTS siehst (leere Haltung, verschwommenes Bild): findings=[] und is_empty_frame=true.
+=== REGELN ===
+- vsa_code_hint MUSS bei JEDEM Finding gesetzt werden (z.B. "BABBA", "BCAAA", "BCD")
+- Verwende den SPEZIFISCHSTEN Code den du bestimmen kannst (BABBA statt BAB)
+- severity: 1=Beobachtung, 2=leicht, 3=mittel, 4=schwer, 5=kritisch
+- position_clock: Uhrlage als "HH" (z.B. "12"=Scheitel, "6"=Sohle, "3"=rechts, "9"=links)
+- extent_percent: Ausdehnung in % des Rohrumfangs (bei Rissen, Wurzeln, Inkrustation)
+- cross_section_reduction_percent: Querschnittsverringerung % (bei Deformation, Ablagerung)
+- BC-Codes (Rohranfang, Rohrende, Bogen, Anschluss) sind severity=1, MUESSEN gemeldet werden
+- Wenn NICHTS sichtbar: findings=[] und is_empty_frame=true
 """;
 
 
