@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.UI.Ai.Training.Services;
 using Microsoft.Extensions.Logging;
@@ -44,10 +45,13 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     private readonly ITechniqueAssessmentService _technique;
     private readonly PdfProtocolExtractor _pdfExtractor;
     private readonly SampleQualityGateService _qualityGate;
+    private readonly SingleFrameMultiModelService? _multiModel;
     private readonly int _gpuConcurrency;
+    private readonly int _pipeDiameterMm;
     private readonly ILogger<SelfTrainingOrchestrator>? _logger;
 
     private readonly ManualResetEventSlim _pauseGate = new(true);
+    private bool _sidecarAvailable;
 
     public bool IsPaused => !_pauseGate.IsSet;
 
@@ -57,6 +61,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         ITechniqueAssessmentService technique,
         PdfProtocolExtractor pdfExtractor,
         TrainingCenterSettings? settings = null,
+        SingleFrameMultiModelService? multiModel = null,
         SampleQualityGateService? qualityGate = null,
         ILogger<SelfTrainingOrchestrator>? logger = null)
     {
@@ -64,7 +69,9 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         _comparison = comparison;
         _technique = technique;
         _pdfExtractor = pdfExtractor;
+        _multiModel = multiModel;
         _gpuConcurrency = Math.Max(1, (settings ?? new TrainingCenterSettings()).GpuConcurrency);
+        _pipeDiameterMm = 300; // Default DN300, wird spaeter aus Haltung gelesen
         _qualityGate = qualityGate ?? new SampleQualityGateService();
         _logger = logger;
     }
@@ -78,6 +85,26 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         CancellationToken ct)
     {
         var sw = Stopwatch.StartNew();
+
+        // 0. Sidecar-Verfuegbarkeit pruefen (YOLO/DINO/SAM)
+        _sidecarAvailable = false;
+        if (_multiModel is not null)
+        {
+            try
+            {
+                var cfg = PipelineConfig.Load();
+                using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+                var resp = await http.GetAsync(new Uri(cfg.SidecarUrl, "/health"), ct);
+                _sidecarAvailable = resp.IsSuccessStatusCode;
+            }
+            catch { /* Sidecar nicht erreichbar */ }
+
+            progress.Report(new SelfTrainingStep(
+                0, 1, "", 0, SelfTrainingStage.BuildingTimeline, null, null, null,
+                _sidecarAvailable
+                    ? "Multi-Modell aktiv: YOLO + DINO + SAM + Qwen"
+                    : "Sidecar nicht erreichbar — Fallback: nur Qwen"));
+        }
 
         // 1. Protokoll-Eintraege MIT Fotos extrahieren
         string framesDir = Path.Combine(tc.FolderPath, "self_training_frames");
@@ -175,7 +202,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             EnhancedFrameAnalysis analysis;
             try
             {
-                analysis = await _vision.AnalyzeAsync(b64, token);
+                analysis = await AnalyzeFrameAsync(pngBytes, b64, token);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -284,6 +311,50 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     }
 
     /// <summary>
+    /// Analysiert einen Frame mit der vollen Multi-Modell-Pipeline (YOLO→DINO→SAM→Qwen)
+    /// oder nur mit Qwen wenn der Sidecar nicht verfuegbar ist.
+    /// </summary>
+    private async Task<EnhancedFrameAnalysis> AnalyzeFrameAsync(
+        byte[] pngBytes, string b64, CancellationToken ct)
+    {
+        // Multi-Modell: YOLO → DINO → SAM → Qwen (mit Kontext)
+        if (_sidecarAvailable && _multiModel is not null)
+        {
+            try
+            {
+                var result = await _multiModel.AnalyzeFrameAsync(pngBytes, _pipeDiameterMm, null, ct);
+                if (result.Error is null && result.IsRelevant)
+                {
+                    // Konvertiere SingleFrameResult → MultiModelFrameResult fuer Qwen
+                    var context = new MultiModelFrameResult(
+                        TimestampSec: 0,
+                        Meter: null,
+                        IsRelevant: true,
+                        DinoDetections: result.DinoDetections ?? Array.Empty<DinoDetectionDto>(),
+                        SamMasks: result.SamResponse?.Masks ?? Array.Empty<SamMaskResult>(),
+                        ImageWidth: result.SamResponse?.ImageWidth ?? 0,
+                        ImageHeight: result.SamResponse?.ImageHeight ?? 0,
+                        YoloTimeMs: result.YoloTimeMs,
+                        DinoTimeMs: result.DinoTimeMs,
+                        SamTimeMs: result.SamTimeMs);
+
+                    return await _vision.AnalyzeWithContextAsync(b64, context, _pipeDiameterMm, ct);
+                }
+
+                // YOLO sagt "nicht relevant" → Qwen-only Fallback
+                if (result.Error is null && !result.IsRelevant)
+                    return await _vision.AnalyzeAsync(b64, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Multi-Modell-Pipeline fehlgeschlagen, Fallback auf Qwen-only");
+            }
+        }
+
+        // Fallback: nur Qwen
+        return await _vision.AnalyzeAsync(b64, ct);
+    }
+
     private static void LogToFile(string message)
     {
         try

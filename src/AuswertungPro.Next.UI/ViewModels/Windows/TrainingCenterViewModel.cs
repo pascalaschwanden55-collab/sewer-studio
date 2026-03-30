@@ -2027,8 +2027,27 @@ public partial class TrainingCenterViewModel : ObservableObject
             var technique = new TechniqueAssessmentService(ollamaClient, visionModel);
             var pdfExtractor = new PdfProtocolExtractor();
 
+            // Multi-Modell-Pipeline (YOLO/DINO/SAM) wenn Sidecar verfuegbar
+            Ai.Pipeline.SingleFrameMultiModelService? multiModel = null;
+            try
+            {
+                var pipeCfg = Ai.PipelineConfig.Load();
+                if (pipeCfg.MultiModelEnabled)
+                {
+                    var sidecarHttp = new System.Net.Http.HttpClient
+                    {
+                        BaseAddress = pipeCfg.SidecarUrl,
+                        Timeout = TimeSpan.FromSeconds(pipeCfg.SidecarTimeoutSec)
+                    };
+                    var pipelineClient = new Ai.Pipeline.VisionPipelineClient(pipeCfg.SidecarUrl, sidecarHttp);
+                    multiModel = new Ai.Pipeline.SingleFrameMultiModelService(
+                        pipelineClient, pipeCfg.YoloConfidence, pipeCfg.DinoBoxThreshold, pipeCfg.DinoTextThreshold);
+                }
+            }
+            catch { /* Sidecar nicht konfiguriert — nur Qwen */ }
+
             _selfTrainingOrchestrator = new SelfTrainingOrchestrator(
-                vision, comparison, technique, pdfExtractor, new TrainingCenterSettings(), _sampleQualityGate);
+                vision, comparison, technique, pdfExtractor, new TrainingCenterSettings(), multiModel, _sampleQualityGate);
 
             // Progress-Callback verbindet Orchestrator → ViewModel-Visualisierungen
             var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);
