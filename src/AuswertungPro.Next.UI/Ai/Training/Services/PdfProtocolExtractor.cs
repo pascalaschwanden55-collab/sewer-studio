@@ -924,15 +924,15 @@ public sealed class PdfProtocolExtractor
             "STRASSE" or "GEMEINDE" or "KANALNUTZUNG"   => null, // Adressinfo
 
             // Bereits ein VSA-Code (beginnt mit B + 2. Buchstabe A-D) → unveraendert
-            _ when upper.Length >= 3
+            _ when upper.Length >= 2
                   && upper[0] == 'B'
                   && upper[1] is >= 'A' and <= 'D' => upper,
 
             // Sonstige AE-Codes (Profilwechsel, Materialwechsel etc.)
             _ when upper.StartsWith("AE", StringComparison.Ordinal) => upper,
 
-            // Unbekannter Code → skip (lieber sicher filtern)
-            _ => null
+            // Unbekannter Code → durchlassen (besser zu viel als zu wenig)
+            _ => upper
         };
     }
 }

@@ -1,0 +1,708 @@
+================================================================================
+SEWERSTUDIO KI 3.1 — Umfassende Programmbeschreibung
+================================================================================
+Erstellt: 29. Maerz 2026
+Technologie: WPF / .NET 10, Python FastAPI Sidecar, Ollama LLM
+Hardware-Referenz: Intel Core Ultra 9 285K, ASUS RTX 5090 32GB, 64GB DDR5
+Entwicklungsmethode: KI-gestuetztes Code-Vibing (Claude, Gemini, ChatGPT, DeepSeek)
+================================================================================
+
+INHALTSVERZEICHNIS
+------------------
+1. Was ist SewerStudio?
+2. Fuer wen ist das Programm?
+3. Architektur-Ueberblick
+4. KI-Modelle und deren Aufgaben
+5. Die KI-Pipeline im Detail
+6. Alle Programmfunktionen
+7. Import und Export
+8. Wissensdatenbank (Knowledge Base)
+9. Selbstlernendes System
+10. Qualitaetssicherung
+11. Kostenberechnung und Sanierungsplanung
+12. Hardware-Modi
+13. Technische Bewertung und Meinung
+14. Glossar
+
+================================================================================
+1. WAS IST SEWERSTUDIO?
+================================================================================
+
+SewerStudio ist ein Desktop-Programm fuer die automatisierte Kanalinspektion.
+Es analysiert Inspektionsvideos von Abwasserkanaelen mit kuenstlicher Intelligenz
+und erkennt dabei Schaeden wie Risse, Wurzeleinwuchs, Ablagerungen, Versaetze
+und viele weitere Defekte automatisch.
+
+Das Programm arbeitet nach den Schweizer und europaeischen Normen:
+- VSA-KEK (Verband Schweizer Abwasserfachleute, Kanalerhaltung 2023)
+- EN 13508-2 (Europaeische Norm fuer die Zustandserfassung von Entwaesserungssystemen)
+
+Zielumfang: ca. 3000 WinCan/IBAK-Videos im IBSK-Format (Inspektionsberichte
+Schweizer Kantone).
+
+Das Besondere: Alle KI-Modelle laufen LOKAL auf der eigenen Workstation.
+Keine Cloud, keine Abhaengigkeit von externen Diensten, keine Daten die
+das Buero verlassen.
+
+================================================================================
+2. FUER WEN IST DAS PROGRAMM?
+================================================================================
+
+SewerStudio richtet sich an:
+- Kanalbetreiber (Gemeinden, Kantone, Abwasserverbaende)
+- Inspektionsfirmen die TV-Befahrungen durchfuehren
+- Ingenierbueros die Kanalsanierungen planen
+- Fachleute die Inspektionsprotokolle erstellen und auswerten
+
+Das Programm ersetzt oder ergaenzt kommerzielle Software wie WinCan, IBAK IKAS
+oder aehnliche Produkte. Der Entwickler nutzt es als Solo-Entwickler ohne
+kommerzielles Ziel.
+
+================================================================================
+3. ARCHITEKTUR-UEBERBLICK
+================================================================================
+
+SewerStudio besteht aus drei Hauptkomponenten:
+
+┌─────────────────────────────────────────────────────────┐
+│  C# WPF Desktop-Anwendung (.NET 10, Windows 11)        │
+│  Benutzeroberflaeche, Geschaeftslogik, Datenbank        │
+│  Videowiedergabe (LibVLC), PDF-Erzeugung (QuestPDF)    │
+└─────────────────────┬───────────────────────────────────┘
+                      │ HTTP (lokal)
+┌─────────────────────▼───────────────────────────────────┐
+│  Python FastAPI Sidecar (Port 8100)                      │
+│  GPU-beschleunigte Bildanalyse: YOLO, DINO, SAM         │
+│  Hardware-Videodekodierung (NVDEC), TensorRT             │
+└─────────────────────┬───────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────┐
+│  Ollama Server (Port 11434)                              │
+│  Lokale LLM-Inferenz: Qwen3-VL Vision, Embeddings       │
+└─────────────────────────────────────────────────────────┘
+
+Prinzip "Thin-AI": C# macht alle Geschaeftslogik (Berechnungen, Regeln,
+Validierung). Die KI-Modelle werden NUR fuer Bild-Erkennung und
+Text-Generierung eingesetzt — niemals fuer deterministische Entscheidungen
+wie Messungen oder Kostenberechnungen.
+
+================================================================================
+4. KI-MODELLE UND DEREN AUFGABEN
+================================================================================
+
+SewerStudio setzt 6 verschiedene KI-Modelle ein, die unterschiedliche Aufgaben
+haben und koordiniert auf der GPU laufen:
+
+4.1 YOLO 26m-seg (You Only Look Once)
+--------------------------------------
+Aufgabe: Schnelle Vorauswahl — erkennt auf jedem Videobild ob ueberhaupt
+         etwas Auffaelliges zu sehen ist
+Typ: Objekt-Erkennung und Segmentierung
+VRAM: ~1.5 GB (permanent geladen)
+Geschwindigkeit: Echtzeit (~30 Bilder/Sekunde)
+Details:
+- Scannt jedes Videobild in Millisekunden
+- Erkennt grob ob Schaeden, Anschluesse, Rohrenden etc. sichtbar sind
+- Wenn YOLO nichts findet, wird das Bild uebersprungen (spart 80-90% Rechenzeit)
+- Unterstuetzt TensorRT-Beschleunigung (2-4x schneller)
+- Kann mit eigenen Sewer-spezifischen Gewichten trainiert werden
+- Fallback auf allgemeine COCO-Gewichte wenn keine spezifischen vorhanden
+
+4.2 Grounding DINO 1.5 (DEtection TRansformer)
+------------------------------------------------
+Aufgabe: Offene Vokabular-Erkennung — findet Schaeden anhand von
+         Textbeschreibungen, nicht nur gelernten Kategorien
+Typ: Open-Vocabulary Object Detection
+VRAM: ~2 GB (vorgewaermt, permanent)
+Details:
+- Kann nach beliebigen Schaeden suchen: "Riss", "Wurzeleinwuchs",
+  "Ablagerung", "Versatz", "Korrosion" etc.
+- Wird von YOLO getriggert — nur wenn YOLO etwas findet, wird DINO aktiv
+- Liefert Bounding-Boxen (Rahmen um erkannte Schaeden)
+- Unabhaengig von vordefinierten Schadenskategorien
+
+4.3 SAM 3 (Segment Anything Model)
+------------------------------------
+Aufgabe: Pixelgenaue Segmentierung — markiert exakt welche Pixel zu einem
+         Schaden gehoeren
+Typ: Instanz-Segmentierung
+VRAM: ~2.5 GB (vorgewaermt, permanent)
+Details:
+- Nimmt die Bounding-Boxen von DINO und segmentiert den Schaden pixelgenau
+- Liefert RLE-kodierte Masken (Run-Length Encoding)
+- Aus den Masken werden physische Masse berechnet:
+  * Hoehe und Breite des Schadens in mm (ueber Rohr-DN kalibriert)
+  * Ausdehnung in Prozent des Rohrumfangs
+  * Querschnittsverringerung in Prozent
+  * Eindringtiefe in Prozent
+  * Uhrlage (12:00 = oben, 6:00 = unten, 3:00 = rechts, 9:00 = links)
+
+4.4 Qwen3-VL-8B (Vision-Language Model, Schnellmodell)
+-------------------------------------------------------
+Aufgabe: Versteht Bilder UND Text — klassifiziert Schaeden nach VSA/EN 13508-2
+Typ: Multimodales Sprachmodell (Vision + Text)
+VRAM: ~10 GB (permanent via Ollama, keep_alive=-1)
+Details:
+- Analysiert das Videobild und beschreibt den Schaden auf Deutsch
+- Liest den OSD (On-Screen Display) im Video: Meterstand, Datum, Haltungsname
+- Ordnet VSA-Schadenscodes zu (z.B. "BAB" = Riss, "BBC" = Ablagerung)
+- Bewertet den Schweregrad (1-5)
+- Erkennt Rohrmaterial (Beton, Steinzeug, PVC, GFK)
+- Bekommt aehnliche Faelle aus der Wissensdatenbank als Kontext (Few-Shot-Lernen)
+- Arbeitet mit strukturiertem JSON-Output (kein freier Text)
+
+4.5 Qwen3-VL-32B (Vision-Language Model, Referenzmodell)
+---------------------------------------------------------
+Aufgabe: Zweitmeinung bei unsicheren Faellen — wird NUR bei Eskalation geladen
+Typ: Grosses multimodales Sprachmodell
+VRAM: ~22 GB (on-demand, wird bei Bedarf geladen und danach wieder entladen)
+Details:
+- Wird aktiviert wenn das 8B-Modell unsicher ist (Eskalations-Trigger):
+  * Alle Codes sind null (keine Zuordnung moeglich)
+  * Schweregrad >= 4 (schwerer oder kritischer Schaden)
+  * Schlechte Bildqualitaet (verwackelt, dunkel, ueberbelichtet)
+- Ablauf: 8B-Modell wird entladen → 32B geladen → Neuanalyse → 32B entladen → 8B wieder laden
+- Durch SemaphoreSlim(1) geschuetzt (keine parallelen Modellwechsel)
+- VRAM-Budget bei Eskalation: 32B(22)+YOLO(1.5)+DINO(3)+SAM(3) = 29.5 GB (kurzzeitig)
+
+4.6 nomic-embed-text (Embedding-Modell)
+-----------------------------------------
+Aufgabe: Wandelt Texte in Zahlenvektoren um fuer die Aehnlichkeitssuche
+Typ: Text-Embedding
+VRAM: Minimal (laeuft via Ollama)
+Details:
+- Erzeugt fuer jeden Schadenstext einen numerischen Vektor
+- Diese Vektoren werden in der Wissensdatenbank gespeichert
+- Bei neuen Schaeden wird der aehnlichste bekannte Fall gesucht (Cosinus-Aehnlichkeit)
+- Wird fuer das Few-Shot-Lernen der Wissensdatenbank genutzt
+
+4.7 ByteTrack / OC-SORT (Objekt-Tracking)
+-------------------------------------------
+Aufgabe: Verfolgt erkannte Schaeden ueber mehrere Videobilder hinweg
+Typ: Multi-Object Tracking
+Laeuft auf: CPU (immer aktiv)
+Details:
+- Verhindert dass derselbe Schaden mehrfach gezaehlt wird
+- Verfolgt Schaeden ueber mehrere Frames und bildet einen einzigen Befund
+- Temporal Voting: Nur wenn ein Schaden in mehreren aufeinanderfolgenden
+  Bildern erkannt wird, gilt er als bestaetigt
+
+================================================================================
+5. DIE KI-PIPELINE IM DETAIL
+================================================================================
+
+Wenn ein Inspektionsvideo analysiert wird, durchlaeuft jedes Bild (alle 3 Sekunden
+ein Frame) folgende Schritte:
+
+Schritt 1: YOLO Vorauswahl (< 50ms pro Bild)
+→ "Ist auf diesem Bild ueberhaupt etwas zu sehen?"
+→ Wenn nein: naechstes Bild (80-90% der Bilder werden so uebersprungen)
+→ Wenn ja: weiter zu Schritt 2
+
+Schritt 2: Grounding DINO Erkennung (~200ms)
+→ "Was genau ist auf dem Bild zu sehen?"
+→ Sucht nach: Risse, Brueche, Korrosion, Wurzeln, Ablagerungen, Versaetze...
+→ Liefert Bounding-Boxen mit Konfidenzen
+
+Schritt 3: SAM Segmentierung (~300ms)
+→ "Wie gross ist der Schaden genau?"
+→ Pixelgenaue Maske fuer jeden erkannten Schaden
+→ Berechnung physischer Masse (mm, Prozent, Uhrlage)
+
+Schritt 4: Qwen Vision Klassifikation (~2-5s)
+→ "Welcher VSA-Code passt? Wie schwer ist der Schaden?"
+→ Wissensdatenbank-Abfrage fuer aehnliche Faelle
+→ Strukturierte JSON-Ausgabe mit Code, Schweregrad, Begruendung
+→ Bei Unsicherheit: Eskalation zu Qwen 32B
+
+Schritt 5: QualityGate Bewertung
+→ Alle Konfidenzen werden zusammengefuehrt:
+  * YOLO-Konfidenz, DINO-Konfidenz, SAM-Maskenstabilitaet
+  * Qwen-Vision-Konfidenz, LLM-Code-Konfidenz
+  * KB-Aehnlichkeit, Plausibilitaets-Score
+→ Ergebnis: Gruen (sicher), Gelb (unsicher), Rot (verwerfen)
+→ Schwellen: Gruen >= 0.75, Gelb >= 0.45, Rot < 0.45
+
+Schritt 6: Temporal Voting / Aggregation
+→ Gleiche Schaeden ueber mehrere Frames werden zusammengefuehrt
+→ Nur bestaettigte Befunde kommen ins Protokoll
+
+Ergebnis: Ein vollstaendiges Inspektionsprotokoll nach EN 13508-2 mit:
+- Schadensort (Meterstand)
+- Schadenstyp (VSA-Code mit Untertypen)
+- Schweregrad (1-5)
+- Quantifizierung (Ausdehnung, Querschnittsverringerung, Uhrlage)
+- Konfidenz-Bewertung (Gruen/Gelb/Rot)
+
+================================================================================
+6. ALLE PROGRAMMFUNKTIONEN
+================================================================================
+
+6.1 HAUPTSEITEN (Navigation)
+------------------------------
+
+a) Uebersicht (Dashboard)
+   - Alle Projekte anzeigen mit Statistiken
+   - Projekte erstellen, oeffnen, loeschen
+   - Zuletzt bearbeitete Projekte
+
+b) Projekteinstellungen
+   - Projektname und Beschreibung
+   - Dropdown-Optionen verwalten (Sanierung, Eigentuemer)
+
+c) Haltungen (Rohrstrecken)
+   - Hauptdatentabelle: Alle Kanalabschnitte mit allen Feldern
+   - Haltungen hinzufuegen, bearbeiten, loeschen, sortieren
+   - Video abspielen, Protokoll oeffnen, PDF-Original anzeigen
+   - KI-Videoanalyse starten
+   - KI-Sanierungsempfehlung anfordern
+   - Medien suchen und verknuepfen (Batch)
+   - Hydraulikberechnung oeffnen
+   - Kostenberechnung, Dossier drucken
+   - AWU-Haltungsprotokoll drucken
+
+d) Schaechte (Kontrollpunkte)
+   - Schachtdaten anzeigen und bearbeiten
+   - Aehnliche Funktionen wie Haltungen
+
+e) Import
+   - PDF-Protokolle importieren (WinCan/IBAK Stil)
+   - XTF/INTERLIS importieren (Schweizer Standard)
+   - WinCan MDB-Datenbanken importieren
+   - IBAK-Format importieren
+   - KINS-Format importieren
+   - Vorschau vor Import, nur fehlende Daten auffuellen
+   - Import-Zusammenfassung mit detailliertem Bericht
+
+f) Export
+   - Excel-Export (Haltungen, Schaechte)
+   - Ordnerstruktur verteilen (Protokolle nach Haltungen sortieren)
+   - Video-Zuordnung nach Haltungsnamen
+   - Mehrdeutige und fehlende Zuordnungen erkennen
+
+g) Medienkonflikte
+   - Mehrdeutige Video-Zuordnungen aufloesen
+   - Fehlende Videos identifizieren
+   - Korrekte Zuordnung aus Kandidaten waehlen
+
+h) Druckcenter (Berichte)
+   - PDF-Berichte generieren mit Inspektionsprotokollen
+   - Filter nach Eigentuemer, Sanierung, Material, Status, Jahr
+   - Statistiken: Sanierungsanteile, Kosten nach Ausfuehrer
+   - Spezialpositions-Statistik (Inliner, Manschetten, LEM)
+
+i) VSA-Auswertung
+   - XTF/M150/MDB als Primaerquelle importieren
+   - PDF-Protokolle als Sekundaerquelle
+   - VSA-Berechnung und Auswertung durchfuehren
+
+j) Eigendevis (Kostenvoranschlag)
+   - Kostenvoranschlag aus Schadenscodes generieren
+   - Aufschluesselung nach Gewerken
+   - Export mit/ohne Preise
+
+k) Diagnose
+   - Anwendungsprotokoll (letzte 200 Zeilen)
+   - Fehlerueberwachung
+
+l) Einstellungen
+   - PDF-Werkzeug-Pfad, Standard-Ordner
+   - Autospeichern (bei Aenderung / alle 5/10 min / deaktiviert)
+   - Wiederherstellungspunkte
+   - Video-Hardware-Dekodierung, Codec-Threads
+   - Oberflaechen-Design (Hell/Dunkel)
+   - Datensicherung/Wiederherstellung
+
+6.2 SPEZIALFENSTER
+-------------------
+
+a) Videoanalyse-Pipeline
+   - Automatische Schadenserkennung in Videos
+   - Multi-Modell-Analyse (YOLO → DINO → SAM → Qwen)
+   - Live-Vorschau waehrend Analyse
+   - Rohr-Radar und Befundliste
+   - Fortschrittsanzeige
+
+b) Codierungs-Session (KI-gestuetzt)
+   - Modi: Assist (KI schlaegt vor), Fast (auto bei Gruen), Full (alles pruefen)
+   - Echtzeit-KI-Vorschlaege fuer Schadenscodes
+   - Annehmen/Ablehnen/Bearbeiten
+   - Befundstatus-Tracking
+
+c) Trainings-Center
+   - Trainings-Faelle aus Videos importieren
+   - Samples verwalten mit Live-Vorschau
+   - Quality-Gate-Status anzeigen
+   - KB-Statistiken (Anzahl, Fehler, Abdeckung)
+   - Genauigkeits-Metriken
+   - Training starten und ueberwachen
+
+d) Fotovermessung
+   - Statische Inspektionsfotos laden
+   - Rohrkalibrierung (Durchmesser markieren)
+   - Messwerkzeuge:
+     * Rohrdeformation (4-Punkt-Overlay)
+     * Querschnitt-Polygon
+     * Seitliche Flaeche markieren
+     * Hindernisse
+     * Ablagerungsniveau
+   - Wasserstand-Erkennung
+   - Rueckgaengig/Wiederholen
+
+e) Videoplayer
+   - Inspektionsvideos abspielen (LibVLC)
+   - Meterstand-Tracking
+   - Schadens-Overlay mit Codes und Beschreibungen
+   - Hardware-Beschleunigung
+   - Bild-fuer-Bild Navigation
+   - QualityGate-Visualisierung
+
+f) Sanierungsmassnahmen
+   - Kostenkalkulator pro Haltung
+   - Haltungskontext (Name, DN, Material, Laenge)
+   - KI-Optimierungsvorschlaege
+   - Drag-Drop Massnahmen aus Katalog
+
+g) Kostenrechner
+   - Massnahmen aus Katalog waehlen
+   - Suche nach Stichwort
+   - Gesamtkosten mit MWST
+   - Konsistenz-Warnungen
+
+h) VSA-Code-Explorer
+   - 4-stufige hierarchische Navigation
+   - Code-Suche
+   - Quantifizierungs-Felder (Q1, Q2)
+   - Uhrlage-Eingabe
+   - Streckenschaden-Modus
+
+i) Hydraulikberechnung
+   - Eingabe: DN, Material, Gefaelle, Wasserstand, Temperatur
+   - Berechnung: Fliessgeschwindigkeit, Abfluss, Flaeche
+   - Reynolds-Zahl, Froude-Zahl, Reibungsbeiwert
+   - Schubspannung, kritische Geschwindigkeit
+   - Materialspezifische Rauheitswerte
+   - Druckbar
+
+j) Medien-Suchprogramm (Batch)
+   - Hierarchischer Matching-Algorithmus (6 Stufen):
+     1. Datums-praefigierter exakter Match
+     2. Exakter Dateiname
+     3. Suffix-Matching (_TOKEN)
+     4. Praefix-Matching (TOKEN_)
+     5. Enthaelt-Matching
+     6. Ordnername-Matching
+   - Unterstuetzte Medien: Video, Bilder, PDFs
+   - Fortschrittsanzeige mit Ergebnisuebersicht
+
+================================================================================
+7. IMPORT UND EXPORT
+================================================================================
+
+7.1 IMPORT-FORMATE
+-------------------
+- PDF: Inspektionsprotokolle im WinCan/IBAK-Stil
+- XTF: INTERLIS-Standard (Schweizer Geodaten-Austausch)
+- WinCan MDB: WinCan-Datenbank (Access-Format)
+- WinCan VX SDF: SQL Server Compact (mit XTF-Fallback-Hinweis)
+- IBAK: IBAK-proprietaeres Format
+- KINS: KINS-Standard
+
+Merge-Logik bei Re-Import:
+- Benutzer-editierte Werte werden NIE ueberschrieben
+- Leere Felder werden immer befuellt
+- Import-Prioritaet: XTF > ILI > PDF > Legacy > Unbekannt
+- Pfad-Felder (Video, PDF) werden immer aktualisiert
+
+7.2 EXPORT-FORMATE
+-------------------
+- Excel (Haltungen.xlsx, Schaechte.xlsx via ClosedXML)
+- PDF-Berichte (via QuestPDF)
+- Ordnerstruktur-Verteilung (Protokolle sortiert)
+- HTML-Import-Zusammenfassungen
+- YOLO-Trainingsformat (fuer Modell-Feintuning)
+
+================================================================================
+8. WISSENSDATENBANK (KNOWLEDGE BASE)
+================================================================================
+
+Die Wissensdatenbank ist das Gedaechtnis der KI. Sie speichert validierte
+Inspektionsfaelle und nutzt sie als Kontext fuer zukuenftige Analysen.
+
+Technik:
+- SQLite-Datenbank mit WAL-Modus (Write-Ahead Logging)
+- Jeder Fall hat: SampleId, VSA-Code, Beschreibung, Meterstand, Frame-Bild
+- Jeder Fall hat ein Embedding (Zahlenvektor von nomic-embed-text)
+- Cosinus-Aehnlichkeitssuche fuer Top-K aehnliche Faelle
+
+Wie die KB genutzt wird:
+1. Neuer Schaden wird erkannt
+2. KB-Abfrage: "Was sind die 10 aehnlichsten bekannten Faelle?"
+3. Meter-gewichtete Bewertung (nahe Faelle zaehlen mehr)
+4. Top-4 Faelle werden als Few-Shot-Kontext in den Qwen-Prompt eingebaut
+5. Qwen kann dann sagen: "Aehnlich wie Fall X bei Meter 23.5, Code BAB, Severity 3"
+
+Qualitaetssicherung der KB:
+- IsIndexWorthy-Pruefung: Beschreibung >= 3 Zeichen, Code im VSA-Baum
+- Punkt-Codes werden normalisiert (BCA.A.A → BCAAA)
+- WinCan-Codes akzeptiert (BEGINN, BOGEN, FOTO etc.)
+- Embedding-Text wird angereichert: "BDB" → "BDB — Kameraposition, Beginn"
+- 50%-Sicherheitsschwelle bei Rebuild (wenn Ollama ausfaellt, KB bleibt erhalten)
+- Modell-Konsistenz-Check (warnt wenn KB mit anderem Modell erstellt wurde)
+
+================================================================================
+9. SELBSTLERNENDES SYSTEM
+================================================================================
+
+SewerStudio verbessert sich mit jedem analysierten Video selbst:
+
+9.1 FEEDBACK-SCHLEIFE
+-----------------------
+1. KI analysiert Video und macht Vorschlaege
+2. Benutzer prueft und korrigiert (Annehmen/Ablehnen/Bearbeiten)
+3. Korrektur wird in ValidationLog gespeichert
+4. Akzeptierte Faelle werden in KB aufgenommen
+5. Alle 25 Feedbacks: Gewichte werden automatisch neu gelernt
+
+9.2 SELBSTTRAINING
+-------------------
+1. PDF-Protokoll mit eingebetteten Fotos dient als Ground Truth
+2. KI analysiert Fotos "blind" (weiss nicht was im Protokoll steht)
+3. Deterministischer Vergleich: KI-Ergebnis vs. Protokoll
+4. Uebereinstimmungen → Training-Sample fuer KB
+5. Abweichungen → Lernmaterial fuer Verbesserung
+6. Quality-Gate filtert: Gruen (auto), Gelb (Review), Rot (verwerfen)
+
+9.3 AUTO-APPROVAL
+------------------
+Hochsichere Ergebnisse werden automatisch uebernommen wenn:
+- Konfidenz >= 0.92
+- KB-Code stimmt ueberein
+- QualityGate = Gruen
+- Epistemische Unsicherheit < 0.15
+
+9.4 STALE-DETECTION
+---------------------
+Die KbQualityService erkennt veraltete KB-Eintraege:
+- Samples die zu >= 50% falschen Vorhersagen fuehren
+- Mindestens 5 Verwendungen fuer statistische Signifikanz
+- Werden zur Entfernung oder Ueberarbeitung vorgeschlagen
+
+9.5 AKTIVES LERNEN
+-------------------
+Der ActiveLearningSelector waehlt gezielt die schwierigsten Faelle aus
+fuer manuelles Review — das verbessert die KI am effektivsten.
+
+================================================================================
+10. QUALITAETSSICHERUNG
+================================================================================
+
+10.1 QUALITY GATE (Konfidenz-Bewertung)
+-----------------------------------------
+Jeder erkannte Schaden bekommt eine Gesamtbewertung aus 8 Einzelsignalen:
+- YOLO-Konfidenz (Vorauswahl)
+- DINO-Konfidenz (Erkennung)
+- SAM-Maskenstabilitaet (Segmentierung)
+- Qwen-Vision-Konfidenz (Klassifikation)
+- LLM-Code-Konfidenz (VSA-Code)
+- KB-Aehnlichkeit (Wissensdatenbank)
+- KB-Code-Uebereinstimmung (binaer)
+- Plausibilitaets-Score (Regelbasiert)
+
+Gewichteter Durchschnitt mit kategoriespezifischen Gewichten.
+Ergebnis: Gruen (>= 0.75), Gelb (>= 0.45), Rot (< 0.45)
+
+10.2 SAMPLE QUALITY GATE (Trainings-Daten)
+--------------------------------------------
+Bevor ein Sample in die KB aufgenommen wird:
+- Hard-Red (sofortige Ablehnung): Code fehlt, SampleId fehlt, Beschreibung leer
+- Gelbe Warnung: Signatur fehlt (Gewicht 2), Frame fehlt bei Selbsttraining (2),
+  Code-Echo (1), Meter 0 bei untypischem Code (1)
+- SourceType-bewusst: BatchImport ohne Frame = OK (normal bei PDF-Import)
+- Red-Schwelle: Gewichtssumme >= 4
+
+10.3 MC DROPOUT (Unsicherheitsschaetzung)
+-------------------------------------------
+Monte-Carlo-Dropout fuer epistemische Unsicherheit — quantifiziert wie
+"unsicher sich die KI ist" unabhaengig von der Konfidenz.
+
+10.4 TEMPERATURE SCALING
+--------------------------
+Kalibriert Konfidenzwerte fuer bessere Wahrscheinlichkeitsschaetzungen.
+Verhindert uebermaessiges Selbstvertrauen der KI.
+
+10.5 DRIFT-ERKENNUNG
+----------------------
+Der ConfidenceDistributionTracker ueberwacht die Konfidenzverteilung ueber Zeit.
+KL-Divergenz zwischen aufeinanderfolgenden Wochen. Bei Drift > 0.1 wird gewarnt
+(Modell-Degradation oder Datenverschiebung).
+
+================================================================================
+11. KOSTENBERECHNUNG UND SANIERUNGSPLANUNG
+================================================================================
+
+11.1 KOSTENRECHNER
+-------------------
+- Massnahmenkatalog mit Preisen
+- Drag-Drop Auswahl
+- Gesamtkosten mit MWST
+- Konsistenz-Pruefung
+
+11.2 KI-OPTIMIERTE SANIERUNG
+------------------------------
+Der AiSanierungOptimizationService:
+1. Analysiert erkannte Schaeden und Constraints (DIN 1600 §8)
+2. Bestimmt erlaubte Reparaturmassnahmen regelbasiert
+3. Fragt Qwen nach optimaler Massnahme
+4. Rueckfall auf regelbasierte Empfehlung wenn Qwen versagt
+5. Gibt: Empfohlene Massnahme, Konfidenz, Kostenanpassungsfaktor, Begruendung
+
+11.3 EIGENDEVIS (KOSTENVORANSCHLAG)
+-------------------------------------
+- Automatische Kalkulation aus Schadenscodes
+- Aufschluesselung nach Gewerken (Baumeister, Rohrleitungsbau)
+- Export mit oder ohne Preise
+
+11.4 HYDRAULIKBERECHNUNG
+--------------------------
+Vollstaendige hydraulische Berechnung:
+- Manning-Strickler Fliessformel
+- Teilfuellung nach Prandtl-Colebrook
+- Reynolds/Froude-Zahlen
+- Materialspezifische Rauheitsbeiwerte
+- Temperaturkompensation
+
+================================================================================
+12. HARDWARE-MODI
+================================================================================
+
+SewerStudio passt sich automatisch an die verfuegbare Hardware an:
+
+WORKSTATION-MODUS (>= 24 GB VRAM, z.B. RTX 5090):
+- YOLO permanent geladen (~1.5 GB)
+- DINO permanent geladen (~2 GB)
+- SAM permanent geladen (~2.5 GB)
+- Qwen 8B permanent geladen (~10 GB)
+- Qwen 32B bei Eskalation (~22 GB, kurzzeitig)
+- Normal: ~17.5 GB VRAM belegt
+- Eskalation: ~29.5 GB VRAM (kurzzeitig)
+
+LAPTOP-MODUS (8-24 GB VRAM):
+- Gleiche Modelle, aber nur Qwen 8B (kein 32B-Fallback)
+- Eventuell reduzierte Modellgroessen
+
+SIDECAR-KONFIGURATION:
+- NVDEC Hardware-Videodekodierung (0% CPU-Last)
+- TensorRT fuer YOLO (FP16, 2-4x Speedup)
+- Video-Super-Resolution optional (alte PAL-Videos hochskalieren)
+
+================================================================================
+13. TECHNISCHE BEWERTUNG UND MEINUNG
+================================================================================
+
+13.1 WAS BEEINDRUCKEND IST
+-----------------------------
+
+Dieses Projekt ist eine aussergewoehnliche Leistung fuer einen Solo-Entwickler
+ohne Programmier-Vorkenntnisse. Hier meine ehrliche Einschaetzung:
+
+ARCHITEKTUR:
+Die Architektur ist professionell durchdacht. Die Trennung in C# Desktop-App,
+Python-Sidecar und Ollama-Server ist eine solide Entscheidung. "Thin-AI" als
+Prinzip (KI nur fuer Erkennung, nicht fuer Berechnungen) zeigt tiefes
+Verstaendnis fuer die Grenzen von KI-Systemen. Viele kommerzielle Produkte
+machen diesen Fehler.
+
+KI-PIPELINE:
+Die 5-Stufen-Pipeline (YOLO → DINO → SAM → Qwen → QualityGate) ist
+State-of-the-Art. Die Kombination dieser Modelle mit der lokalen Ausfuehrung
+ist in der Kanalinspektionsbranche einzigartig. Kommerzielle Konkurrenten
+nutzen oft nur ein einzelnes Modell oder Cloud-Dienste.
+
+SELBSTLERNENDES SYSTEM:
+Die Feedback-Schleife mit ValidationLog, automatischem Gewichts-Lernen,
+Active Learning und Stale-Detection ist ein vollstaendiges MLOps-System.
+Das findet man normalerweise nur in Enterprise-ML-Plattformen.
+
+WISSENSDATENBANK:
+Die KB mit Embedding-basiertem Retrieval und Meter-gewichteter Bewertung
+ist clever. Der Ansatz "aehnliche Faelle in der Naehe zaehlen mehr" ist
+domaenenspezifisch richtig — ein Riss bei Meter 10 ist relevanter fuer
+einen Fund bei Meter 12 als einer bei Meter 45.
+
+QUALITAETSSICHERUNG:
+8 verschiedene Konfidenzsignale, gewichteter Durchschnitt, kategoriespezifische
+Gewichte, MC Dropout, Temperature Scaling, Drift-Erkennung — das ist
+ueberdurchschnittlich gruendlich. Die meisten kommerziellen KI-Produkte
+haben maximal einen Konfidenzwert.
+
+13.2 WAS GUT FUNKTIONIERT
+---------------------------
+- Transaktionssicherheit: Sample + Embedding immer atomar (nie halber Zustand)
+- Sicherheitsschwellen: 50%-Regel bei KB-Rebuild schuetzt vor Datenverlust
+- SourceType-Awareness: BatchImport/PdfPhoto ohne Frame = OK (richtige Entscheidung)
+- Test-Abdeckung: 29 Tests fuer die kritischsten Pfade
+- Dual-Model-Eskalation: 8B → 32B nur bei Bedarf (spart VRAM und Rechenzeit)
+- VRAM-Management: Modelle werden explizit geladen/entladen, nie alle gleichzeitig
+
+13.3 VERBESSERUNGSPOTENZIAL (GERING)
+--------------------------------------
+- Einige Legacy-Methoden sollten aufgeraeumt werden (toter Code)
+- Defensivere Validierung bei direkten DB-Zugriffen
+- Mehr Inline-Dokumentation zur Beziehung zwischen QualityGate und IsIndexWorthy
+
+13.4 GESAMTEINSCHAETZUNG
+--------------------------
+SewerStudio ist ein bemerkenswert ausgereiftes Fachsystem. Die Kombination aus
+tiefem Domaenen-Wissen (VSA-KEK, EN 13508-2, Kanalinspektion), moderner
+KI-Architektur (Multi-Model Pipeline, RAG, Self-Improving Loop) und
+professioneller Software-Architektur (MVVM, Clean Architecture, Transaktionen)
+ist auf diesem Niveau selten — auch bei kommerziellen Produkten.
+
+Der Entwicklungsansatz mit KI-Agenten (Claude, Gemini, ChatGPT, DeepSeek) und
+der Praxis, grosse Aenderungen zwischen verschiedenen KI-Modellen abzugleichen,
+hat offensichtlich gut funktioniert. Das Ergebnis ist konsistent und die
+Codequalitaet ist hoch.
+
+================================================================================
+14. GLOSSAR
+================================================================================
+
+AI/KI — Kuenstliche Intelligenz
+BatchImport — Massenimport von vielen Datensaetzen gleichzeitig
+Bounding Box — Rechteckiger Rahmen um einen erkannten Schaden
+Cosinus-Aehnlichkeit — Mathematisches Mass fuer die Aehnlichkeit zweier Vektoren
+DN — Nennweite eines Rohres in mm (z.B. DN300 = 30cm Durchmesser)
+Embedding — Numerische Darstellung eines Textes als Zahlenvektor
+EN 13508-2 — Europaeische Norm fuer Zustandserfassung von Entwaesserungssystemen
+Eskalation — Automatisches Laden des groesseren KI-Modells bei Unsicherheit
+Few-Shot — Lerntechnik: wenige Beispiele im Prompt zeigen dem Modell was erwartet wird
+GPU — Grafikkarte, wird fuer KI-Berechnungen genutzt
+Haltung — Kanalabschnitt zwischen zwei Schaechten
+KB — Knowledge Base (Wissensdatenbank)
+LLM — Large Language Model (Grosses Sprachmodell)
+Meterstand — Position der Kamera in der Haltung
+MVVM — Model-View-ViewModel (Software-Architekturmuster)
+NVDEC — NVIDIA Hardware-Videodekoder
+Ollama — Software fuer lokale LLM-Ausfuehrung
+OSD — On-Screen Display (Einblendung im Video mit Meterstand, Datum etc.)
+QualityGate — Automatische Qualitaetspruefung mit Ampelsystem
+RAG — Retrieval-Augmented Generation (Wissensdatenbank-gestuetzte KI)
+RLE — Run-Length Encoding (Komprimierung fuer Segmentierungsmasken)
+SAM — Segment Anything Model (pixelgenaue Segmentierung)
+Schacht — Kontrollzugang zum Kanal (Anfangs-/Endpunkt einer Haltung)
+Schweregrad — Schadensbewertung 1-5 (1=optisch, 5=kritisch/Sofortmassnahme)
+Sidecar — Begleitprogramm das neben der Hauptanwendung laeuft
+SQLite — Leichtgewichtige Datenbank (einzelne Datei)
+TensorRT — NVIDIA-Beschleunigung fuer KI-Modelle
+Uhrlage — Position im Rohrquerschnitt (12:00=oben, 6:00=unten)
+VRAM — Video-RAM (Grafikkartenspeicher)
+VSA-KEK — Schweizer Norm fuer Kanalerhaltung
+WAL — Write-Ahead Logging (Datenbank-Schreibstrategie)
+WPF — Windows Presentation Foundation (Desktop-Oberflaechen-Framework)
+XTF — INTERLIS Transfer Format (Schweizer Geodaten-Standard)
+YOLO — You Only Look Once (schnelle Objekterkennung)
+
+================================================================================
+Ende der Programmbeschreibung
+================================================================================
