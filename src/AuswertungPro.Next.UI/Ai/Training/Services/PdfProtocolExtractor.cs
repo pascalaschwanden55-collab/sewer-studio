@@ -137,8 +137,10 @@ public sealed class PdfProtocolExtractor
         if (e.TryGetProperty("IsDeleted", out var deleted) && deleted.GetBoolean())
             return null;
 
-        var code = e.TryGetProperty("Code", out var c) ? c.GetString() : null;
-        if (string.IsNullOrWhiteSpace(code)) return null;
+        var rawCode = e.TryGetProperty("Code", out var c) ? c.GetString() : null;
+        if (string.IsNullOrWhiteSpace(rawCode)) return null;
+        var code = NormalizeVsaCode(rawCode.Trim().ToUpperInvariant());
+        if (code is null) return null; // Nicht trainingsrelevant
 
         var text  = e.TryGetProperty("Beschreibung", out var t) ? t.GetString() ?? "" : "";
         var mStart = e.TryGetProperty("MeterStart", out var ms) && ms.ValueKind != System.Text.Json.JsonValueKind.Null
@@ -787,6 +789,11 @@ public sealed class PdfProtocolExtractor
         code = code.Trim().ToUpperInvariant();
         if (code.Length < 2 || code.Length > 8) return null;
 
+        // Kurzbezeichnungen normalisieren (BEGINN→BCD, BOGEN→BCC, LAGE→skip)
+        var normalized = NormalizeVsaCode(code);
+        if (normalized is null) return null; // Nicht trainingsrelevant
+        code = normalized;
+
         text = text.Trim();
         if (text.Length < 2) return null;
 
@@ -818,6 +825,11 @@ public sealed class PdfProtocolExtractor
     {
         code = code.Trim().ToUpperInvariant();
         if (code.Length < 2 || code.Length > 8) return null;
+
+        // Kurzbezeichnungen normalisieren (BEGINN→BCD, BOGEN→BCC, LAGE→skip)
+        var normalized = NormalizeVsaCode(code);
+        if (normalized is null) return null;
+        code = normalized;
 
         text = text.Trim();
         if (text.Length < 2) text = code; // Fallback: Code als Beschreibung
@@ -872,7 +884,32 @@ public sealed class PdfProtocolExtractor
     private static string Sig(GroundTruthEntry e)
         => $"{e.VsaCode}|{e.MeterStart:F2}|{e.MeterEnd:F2}";
 
-    // ── Farbnegativ-Erkennung und Korrektur fuer PDF-JPEG-Bilder ──────────
+    // ── Code-Normalisierung ────────────────────────────────────────────────
 
     /// <summary>
+    /// Normalisiert PDF-Kurzbezeichnungen zu VSA-Codes.
+    /// Manche PDFs (WinCan, IKAS) verwenden Kurzbezeichnungen statt VSA-Codes.
+    /// Gibt null zurueck wenn der Code nicht trainingsrelevant ist (skip).
+    /// </summary>
+    private static string? NormalizeVsaCode(string code)
+    {
+        return code.ToUpperInvariant() switch
+        {
+            // Bestandsaufnahme → VSA BC-Codes
+            "BEGINN" or "ROHRANFANG" or "ANFANG"     => "BCD",
+            "ENDE" or "ROHRENDE"                      => "BCE",
+            "BOGEN" or "KURVE" or "RICHTUNGSWECHSEL"  => "BCC",
+            "ANSCHLUSS" or "ABZWEIG" or "STUTZEN"     => "BCA",
+
+            // Nicht trainingsrelevant → skip
+            "LAGE" or "LAGEBESTIMMUNG"                => null,
+            "ORT" or "ORTUNG"                         => null,
+            "IN" or "INSPEKTION"                      => null,
+            "NEUE" or "NEUEROHR" or "NEUELAENGE"      => null,
+            "TEXT" or "BEMERKUNG" or "NOTIZ"           => null,
+
+            // Bereits ein VSA-Code → unveraendert
+            _ => code.ToUpperInvariant()
+        };
+    }
 }
