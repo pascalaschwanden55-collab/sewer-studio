@@ -8,10 +8,11 @@ namespace AuswertungPro.Next.Application.Common;
 /// </summary>
 public static class JsonDefaults
 {
-    /// <summary>PropertyNameCaseInsensitive = true</summary>
+    /// <summary>PropertyNameCaseInsensitive = true + SnakeCase fuer Ollama/Qwen JSON</summary>
     public static JsonSerializerOptions CaseInsensitive { get; } = new()
     {
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
     };
 
     /// <summary>WriteIndented = true</summary>
