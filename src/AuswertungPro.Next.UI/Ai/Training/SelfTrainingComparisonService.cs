@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Training.Models;
+using AuswertungPro.Next.UI.Services.CodeCatalog;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
@@ -29,21 +30,33 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
     private const int SeverityTolerance = 1;         // ± 1 Stufe
 
     // Grundgeruest-Codes die KEIN "Schaden" sind — Qwen gibt dafuer meist findings=[] zurueck.
-    // Bei leerem findings-Array aber passendem Grundgeruest-Code: ExactMatch (Protokoll korrekt)
+    // Bei leerem findings-Array aber passendem Grundgeruest-Code: ExactMatch (Protokoll korrekt).
+    // Erweitert um alle BD-Codes (Steuercodes, Allgemein) und AE-Codes (Aenderungen).
     private static readonly HashSet<string> _basicStructureCodes = new(StringComparer.OrdinalIgnoreCase)
-        { "BCD", "BCE", "BCC", "BDB", "BDA", "BDC" };
+        { "BCD", "BCE", "BCC", "BDB", "BDA", "BDC", "BDD", "BDE", "BDF", "BDG",
+          "BDBA", "BDBB", "BDBC", "BDBD", "BDBE",
+          "AEC", "AED", "AEF", "AECXC", "AEDXO", "AEDXP", "AEDXQ", "AEDXG", "AEDXU" };
 
     public ComparisonResult Compare(GroundTruthEntry truth, EnhancedFrameAnalysis analysis, bool isPdfPhoto = false)
     {
         if (!analysis.HasFindings)
         {
-            // Sonderfall Grundgeruest: BCD/BCE/BCC sind keine Schaeden.
-            // Wenn Qwen nichts findet UND der Protokolleintrag ein Grundgeruest-Code ist →
-            // das ist KORREKT (KI sieht: leere Haltung / normaler Rohrblick).
-            // Werte als ExactMatch (PDF-Foto ist bereits dem richtigen Eintrag zugeordnet).
-            if (isPdfPhoto && _basicStructureCodes.Contains(truth.VsaCode.Split('.')[0].ToUpperInvariant()))
+            // Grundgeruest-Codes (BCD, BCE, BDB, BDA, AE* etc.) sind keine Schaeden.
+            // Wenn Qwen nichts findet UND der Protokolleintrag ein solcher Code ist →
+            // das ist KORREKT (normaler Rohrblick, Materialwechsel, Steuercode).
+            // Gilt fuer alle Quellen (Video + PDF), nicht nur PDF.
+            var truthNorm = truth.VsaCode.Replace(".", "", StringComparison.Ordinal).ToUpperInvariant();
+            bool isStructure = _basicStructureCodes.Contains(truthNorm);
+            // Auch Praefix-Match: AEDXO → AED ist in der Liste
+            if (!isStructure && truthNorm.Length > 3)
+                isStructure = _basicStructureCodes.Contains(truthNorm[..3]);
+            if (!isStructure && truthNorm.Length > 2)
+                isStructure = _basicStructureCodes.Contains(truthNorm[..2]);
+
+            if (isStructure)
             {
-                bool meterOk = isPdfPhoto && !analysis.Meter.HasValue || MeterMatches(truth.MeterStart, analysis.Meter);
+                bool meterOk = (isPdfPhoto && !analysis.Meter.HasValue)
+                    || MeterMatches(truth.MeterStart, analysis.Meter);
                 return new ComparisonResult(
                     Level: meterOk ? MatchLevel.ExactMatch : MatchLevel.PartialMatch,
                     ConfidenceScore: 0.70,
@@ -78,11 +91,17 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
 
         foreach (var finding in analysis.Findings)
         {
-            // Primär: vsa_code_hint aus Qwen direkt matchen
-            // Fallback: aus Label inferieren (wenn Qwen keinen Code liefert)
-            bool codeMatch = CodesMatch(truth.VsaCode, finding.VsaCodeHint)
-                || (!string.IsNullOrEmpty(finding.Label)
-                    && CodesMatch(truth.VsaCode, VsaCodeResolver.InferCodeFromLabel(finding.Label)));
+            // Code-Matching: 3-stufiger Fallback
+            // 1. vsa_code_hint direkt aus Qwen (z.B. "BABBA")
+            // 2. InferCodeFromLabel: Label-Text → Code (z.B. "Riss" → "BAB")
+            // 3. ReverseLookup: Langtext → Code (z.B. "Anschluss mit Formstück" → "BCAAA")
+            string? resolvedCode = finding.VsaCodeHint;
+            if (string.IsNullOrEmpty(resolvedCode) && !string.IsNullOrEmpty(finding.Label))
+            {
+                resolvedCode = VsaCodeResolver.InferCodeFromLabel(finding.Label)
+                    ?? VsaCodeTree.ReverseLookup(finding.Label);
+            }
+            bool codeMatch = CodesMatch(truth.VsaCode, resolvedCode);
 
             // Bei PDF-Fotos: Meter ist implizit korrekt (Foto gehoert zum Protokolleintrag)
             bool meterMatch = isPdfPhoto && !analysis.Meter.HasValue
@@ -125,6 +144,14 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
 
         string explanation = BuildExplanation(truth, bestMatch!, level, bestCodeMatch, bestMeterMatch, bestClockMatch);
 
+        // BestMatchCode: den aufgeloesten Code zurueckgeben (nicht nur VsaCodeHint)
+        string? bestResolvedCode = bestMatch?.VsaCodeHint;
+        if (string.IsNullOrEmpty(bestResolvedCode) && bestMatch is not null && !string.IsNullOrEmpty(bestMatch.Label))
+        {
+            bestResolvedCode = VsaCodeResolver.InferCodeFromLabel(bestMatch.Label)
+                ?? VsaCodeTree.ReverseLookup(bestMatch.Label);
+        }
+
         return new ComparisonResult(
             Level: level,
             ConfidenceScore: Math.Round(bestScore, 2),
@@ -133,7 +160,7 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
             MeterMatched: bestMeterMatch,
             SeverityPlausible: bestSeverityOk,
             ClockMatched: bestClockMatch,
-            BestMatchCode: bestMatch?.VsaCodeHint,
+            BestMatchCode: bestResolvedCode,
             BestMatchMeter: analysis.Meter);
     }
 
