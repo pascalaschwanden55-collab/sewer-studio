@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai.Training.Models;
+using AuswertungPro.Next.UI.Services.CodeCatalog;
 
 namespace AuswertungPro.Next.UI.Ai.Training.Services;
 
@@ -929,16 +930,29 @@ public sealed class PdfProtocolExtractor
                   && upper[0] == 'B'
                   && upper[1] is >= 'A' and <= 'D' => upper,
 
-            // AE-Codes (Profilwechsel, Materialwechsel, Neue Laenge) → skip
-            // Diese sind administrative Grundlagen-Aenderungen, nicht im Bild erkennbar
-            _ when upper.StartsWith("AE", StringComparison.Ordinal) => null,
+            // AE-Codes (Profilwechsel, Materialwechsel, Neue Laenge) → durchlassen
+            // Im Video erkennbar als Wechsel des Rohrmaterials/Profils
+            _ when upper.StartsWith("AE", StringComparison.Ordinal) => upper,
 
             // BD-Codes: Administrative (BDBA=Beginn TV, BDBB=Ende TV, BDBC=Inspektion spaeter)
             // BDA=Allgemeinzustand und BDB=Kamera nicht einsetzbar behalten (visuell erkennbar)
             "BDBA" or "BDBB" or "BDBC" or "BDBD" or "BDBE" => null,
 
-            // Unbekannter Code → durchlassen (besser zu viel als zu wenig)
-            _ => upper
+            // Unbekannter Code → Reverse-Lookup: Langtext → VSA-Code
+            // z.B. "Rohranfang" → BCD, "Bogen nach links" → BCCAY
+            _ => VsaCodeTree.ReverseLookup(upper) ?? VsaCodeTree.ReverseLookup(code)
         };
+    }
+
+    /// <summary>
+    /// Versucht aus einem reinen Langtext (ohne Code-Praefix) den VSA-Code aufzuloesen.
+    /// Wird in den PDF-Parse-Strategien aufgerufen wenn kein Code erkannt wurde.
+    /// </summary>
+    private static string? TryResolveFromLangtext(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text) || text.Length < 4)
+            return null;
+
+        return VsaCodeTree.ReverseLookup(text.Trim());
     }
 }

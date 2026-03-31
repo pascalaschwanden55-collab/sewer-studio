@@ -579,6 +579,213 @@ public static class VsaCodeTree
         return string.Join(", ", parts);
     }
 
+    // ── Reverse-Lookup: Langtext → VSA-Code ──────────────────────────
+
+    private static Dictionary<string, string>? _reverseLookup;
+    private static readonly object _reverseLock = new();
+
+    /// <summary>
+    /// Sucht den VSA-Code zu einem Langtext aus dem Protokoll.
+    /// Beispiel: "Rohranfang" → "BCD", "Bogen nach links" → "BCCAY",
+    ///           "Riss laengs" → "BABBA", "Inkrustation (verkalkt)" → "BBBA"
+    ///
+    /// Unterstuetzt:
+    ///   - Exakte Treffer (case-insensitive)
+    ///   - Zusammengesetzte Langtexte aus Hauptcode + Char1 + Char2
+    ///     z.B. "Bogen nach links" = BCC.Label("Bogen") + Char1.A.Label("links") + Char2.Y("ohne Hoehe") → BCCAY
+    ///   - Haeufige Protokoll-Varianten (manuelles Mapping fuer Faelle die der Tree nicht direkt abdeckt)
+    /// </summary>
+    public static string? ReverseLookup(string langtext)
+    {
+        if (string.IsNullOrWhiteSpace(langtext)) return null;
+
+        var lookup = GetReverseLookup();
+        var key = NormalizeForLookup(langtext);
+
+        // Exakter Treffer
+        if (lookup.TryGetValue(key, out var code))
+            return code;
+
+        // Teilmatch: laengster passender Praefix
+        // z.B. "Bogen nach links oben 45°" → "Bogen nach links oben" → BCCAA
+        string? bestCode = null;
+        int bestLen = 0;
+        foreach (var (k, v) in lookup)
+        {
+            if (key.StartsWith(k) && k.Length > bestLen)
+            {
+                bestLen = k.Length;
+                bestCode = v;
+            }
+        }
+
+        return bestCode;
+    }
+
+    /// <summary>
+    /// Baut die Reverse-Lookup-Tabelle aus dem VsaCodeTree.
+    /// Wird einmalig generiert und gecacht.
+    /// </summary>
+    private static Dictionary<string, string> GetReverseLookup()
+    {
+        if (_reverseLookup is not null)
+            return _reverseLookup;
+
+        lock (_reverseLock)
+        {
+            if (_reverseLookup is not null)
+                return _reverseLookup;
+
+            var map = new Dictionary<string, string>(StringComparer.Ordinal);
+
+            // Haeufige Protokoll-Langtexte die nicht 1:1 aus dem Tree kommen
+            AddManualMappings(map);
+
+            // Automatisch aus Tree generieren
+            foreach (var (groupKey, group) in Groups)
+            {
+                foreach (var (mainKey, mainDef) in group.Codes)
+                {
+                    // Hauptcode-Label: "Risse" → BAB, "Rohranfang" → BCD
+                    Add(map, mainDef.Label, mainDef.FinalCode ?? mainKey);
+
+                    if (mainDef.Char1 == null) continue;
+
+                    foreach (var (c1Key, c1Def) in mainDef.Char1)
+                    {
+                        var code4 = mainKey + c1Key;
+                        // "Risse, Haarriss" → BABA
+                        Add(map, $"{mainDef.Label} {c1Def.Label}", code4);
+                        // Nur Char1-Label: "Haarriss" → BABA (wenn eindeutig)
+                        Add(map, c1Def.Label, code4);
+
+                        // Char2 aus verschiedenen Quellen
+                        var char2Sources = new List<Dictionary<string, string>?>();
+                        if (c1Def.Char2 != null) char2Sources.Add(c1Def.Char2);
+                        if (mainDef.Char2PerChar1 != null && mainDef.Char2PerChar1.TryGetValue(c1Key, out var perC1))
+                            char2Sources.Add(perC1);
+                        if (mainDef.Char2 != null) char2Sources.Add(mainDef.Char2);
+
+                        foreach (var c2Dict in char2Sources)
+                        {
+                            if (c2Dict == null) continue;
+                            foreach (var (c2Key, c2Label) in c2Dict)
+                            {
+                                var code5 = code4 + c2Key;
+                                // Voller Langtext: "Risse, Haarriss, laengs" → BABAA
+                                Add(map, $"{mainDef.Label} {c1Def.Label} {c2Label}", code5);
+                                // Verkuerzt: "Haarriss laengs" → BABAA
+                                Add(map, $"{c1Def.Label} {c2Label}", code5);
+                                // Haupt + Char2: "Risse laengs" → BABA? (nur wenn eindeutig)
+                                Add(map, $"{mainDef.Label} {c2Label}", code4 + c2Key);
+                            }
+                        }
+                    }
+                }
+            }
+
+            _reverseLookup = map;
+            return map;
+        }
+    }
+
+    /// <summary>Manuelle Mappings fuer haeufige Protokoll-Formulierungen.</summary>
+    private static void AddManualMappings(Dictionary<string, string> map)
+    {
+        // Steuercodes
+        Add(map, "Rohranfang", "BCD");
+        Add(map, "Rohrende", "BCE");
+        Add(map, "Beginn TV-Untersuchung", "BDB");
+        Add(map, "Beginn TV-Untersuchung (Vorgabe)", "BDB");
+        Add(map, "Beginn TV-Untersuch (Vorgabe)", "BDB");
+        Add(map, "Beginn der Untersuchung", "BDB");
+        Add(map, "Abbruch der Inspektion", "BDC");
+        Add(map, "Distanzmessung Anfang", "BCDXP");
+        Add(map, "Distanzmessung Ende", "BCEXP");
+
+        // Bogen-Varianten (haeufig in Protokollen)
+        Add(map, "Bogen nach links", "BCCAY");
+        Add(map, "Bogen nach rechts", "BCCBY");
+        Add(map, "Bogen nach links oben", "BCCAA");
+        Add(map, "Bogen nach links unten", "BCCAB");
+        Add(map, "Bogen nach rechts oben", "BCCBA");
+        Add(map, "Bogen nach rechts unten", "BCCBB");
+        Add(map, "Bogen nach oben", "BCCYA");
+        Add(map, "Bogen nach unten", "BCCYB");
+        Add(map, "Richtungsaenderung nach links", "BCCAY");
+        Add(map, "Richtungsaenderung nach rechts", "BCCBY");
+        Add(map, "Richtungsaenderung nach oben", "BCCYA");
+        Add(map, "Richtungsaenderung nach unten", "BCCYB");
+
+        // Anschluss-Varianten
+        Add(map, "Anschluss mit Formstueck", "BCAAA");
+        Add(map, "Anschluss mit Formstück", "BCAAA");
+        Add(map, "Sattelanschluss gebohrt", "BCABA");
+        Add(map, "Sattelanschluss eingespitzt", "BCACA");
+        Add(map, "Anschluss gebohrt", "BCADA");
+        Add(map, "Anschluss eingespitzt", "BCAEA");
+        Add(map, "Spezialanschluss", "BCAFA");
+        Add(map, "Anschluss unbekannter Bauart", "BCAGA");
+        Add(map, "Andersartiger Anschluss", "BCAZA");
+
+        // Allgemein-Codes
+        Add(map, "Allgemeinzustand Fotobeispiel", "BDA");
+        Add(map, "Pos. Allgemeinzustand Fotobeispiel", "BDA");
+        Add(map, "Allgemeinzustand", "BDA");
+        Add(map, "Wasserspiegel", "BDD");
+
+        // Riss-Varianten
+        Add(map, "Haarriss laengs", "BABAA");
+        Add(map, "Haarriss radial", "BABAB");
+        Add(map, "Riss laengs", "BABBA");
+        Add(map, "Riss längs", "BABBA");
+        Add(map, "Riss radial", "BABBB");
+        Add(map, "Klaffender Riss laengs", "BABCA");
+        Add(map, "Klaffender Riss radial", "BABCB");
+
+        // Betriebliche Feststellungen
+        Add(map, "Inkrustation (verkalkt)", "BBBA");
+        Add(map, "Inkrustation", "BBBA");
+        Add(map, "Harte Ablagerungen", "BBCC");
+        Add(map, "Lose Ablagerungen Sand", "BBCA");
+        Add(map, "Lose Ablagerungen Kies", "BBCB");
+        Add(map, "Wurzeleinwuchs", "BBAC");
+        Add(map, "Komplexes Wurzelwerk", "BBAC");
+        Add(map, "Pfahlwurzel", "BBAA");
+
+        // Material-Aenderungen
+        Add(map, "Rohrmaterialwechsel: Polypropylen", "AEDXP");
+        Add(map, "Rohrmaterialwechsel: Polyethylen", "AEDXO");
+        Add(map, "Rohrmaterialwechsel: Polyvinylchlorid", "AEDXQ");
+        Add(map, "Rohrmaterialwechsel: Beton", "AEDXG");
+        Add(map, "Rohrmaterialwechsel: Steinzeug", "AEDXU");
+        Add(map, "Rohrmaterialwechsel: Kunststoff unbekannt", "AEDXR");
+        Add(map, "Neue Laenge einzelnes Rohr", "AEF");
+        Add(map, "Neue Länge einzelnes Rohr", "AEF");
+        Add(map, "Rohrprofilwechsel: Kreisprofil", "AECXC");
+        Add(map, "Rohrprofilwechsel: Eiprofil", "AECXB");
+    }
+
+    private static void Add(Dictionary<string, string> map, string langtext, string code)
+    {
+        var key = NormalizeForLookup(langtext);
+        map.TryAdd(key, code); // Erster Eintrag gewinnt (spezifischste Mappings zuerst)
+    }
+
+    private static string NormalizeForLookup(string text)
+    {
+        // Kleinbuchstaben, Umlaute normalisieren, Satzzeichen/Klammern entfernen, Mehrfach-Spaces
+        var s = text.Trim().ToLowerInvariant()
+            .Replace("ä", "ae").Replace("ö", "oe").Replace("ü", "ue")
+            .Replace("ß", "ss")
+            .Replace("(", "").Replace(")", "")
+            .Replace(",", " ").Replace(".", " ").Replace("/", " ")
+            .Replace("-", " ").Replace(":", " ");
+        // Mehrfach-Spaces entfernen
+        while (s.Contains("  ")) s = s.Replace("  ", " ");
+        return s.Trim();
+    }
+
     /// <summary>
     /// Prueft ob ein VSA-Code typischerweise ein Streckenschaden ist (requiresRange laut Katalog).
     /// Typisch fuer: Risse laengs (BABA/BABAB), Korrosion (BAFA), Ablagerung (BBA), Infiltration (BBB),
