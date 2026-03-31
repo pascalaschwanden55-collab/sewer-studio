@@ -62,11 +62,15 @@ public sealed class RetrievalService(
 
         scored.Sort((a, b) => b.Score.CompareTo(a.Score));
 
+        // Minimum-Schwelle: nur semantisch relevante Matches zurueckgeben.
+        // nomic-embed-text Cosine-Similarity unter 0.35 ist typisch irrelevant.
+        const double MinSimilarity = 0.35;
+
         var results = new List<RetrievalResult>(Math.Min(topK, scored.Count));
         for (var i = 0; i < Math.Min(topK, scored.Count); i++)
         {
             var (_, score, sample) = scored[i];
-            if (sample is not null)
+            if (sample is not null && score >= MinSimilarity)
                 results.Add(new RetrievalResult(sample, score));
         }
 

@@ -255,10 +255,12 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 DetectedMeter = analysis.Meter,
                 MeterSource = "Protokoll",
                 FramePath = framePath,
-                Status = comparison.Level == MatchLevel.ExactMatch
+                // ExactMatch + PartialMatch → Approved (Protokoll-Code ist Ground Truth,
+                // auch wenn Meter/Clock daneben liegen ist das Sample wertvoll fuer KB)
+                Status = comparison.Level is MatchLevel.ExactMatch or MatchLevel.PartialMatch
                     ? TrainingSampleStatus.Approved
                     : TrainingSampleStatus.New,
-                KbIndexState = comparison.Level == MatchLevel.ExactMatch
+                KbIndexState = comparison.Level is MatchLevel.ExactMatch or MatchLevel.PartialMatch
                     ? KbIndexState.Pending
                     : KbIndexState.None,
                 TruthMeterCenter = meterCenter,

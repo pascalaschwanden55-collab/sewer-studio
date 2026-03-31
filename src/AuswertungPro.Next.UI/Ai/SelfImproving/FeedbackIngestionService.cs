@@ -70,10 +70,10 @@ public sealed class FeedbackIngestionService
             }
         }
 
-        _feedbackCount++;
+        var count = Interlocked.Increment(ref _feedbackCount);
 
         // 3. Every N validations: re-learn weights
-        if (_feedbackCount % ReLearnInterval == 0)
+        if (count % ReLearnInterval == 0)
         {
             try
             {

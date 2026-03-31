@@ -98,6 +98,10 @@ namespace AuswertungPro.Next.UI.Ai.Training
         /// </summary>
         public static string BuildCanonicalSignature(string caseId, string code, double meterCenter, double meterEnd)
         {
+            // Leere Signaturen verhindern — ohne CaseId/Code ist Dedup unmoeglich
+            if (string.IsNullOrWhiteSpace(caseId) || string.IsNullOrWhiteSpace(code))
+                return "";
+
             var rc = Math.Round(meterCenter, 1);
             var re = Math.Round(meterEnd, 1);
             return $"{caseId}|{code}|{rc:F1}|{re:F1}";
