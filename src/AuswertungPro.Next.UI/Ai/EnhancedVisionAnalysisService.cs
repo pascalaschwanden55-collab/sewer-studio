@@ -115,13 +115,18 @@ BDE  Fehlanschluss — Uhrlage
 BDF  Gefaehrdung (BDFA=Sauerstoffmangel, BDFB=Schwefelwasserstoff, BDFC=Methan)
 BDG  Keine Sicht (BDGA=unter Wasser, BDGB=Verschlammung, BDGC=Dampf)
 
-=== REGELN ===
-- vsa_code_hint MUSS bei JEDEM Finding gesetzt werden (z.B. "BABBA", "BCAAA", "BCD")
-- Verwende den SPEZIFISCHSTEN Code den du bestimmen kannst (BABBA statt BAB)
+=== REGELN (STRIKT EINHALTEN) ===
+- SPRACHE: Antworte AUSSCHLIESSLICH auf Deutsch. Kein Englisch.
+- label MUSS ein VSA-Code sein (z.B. "BABBA", "BCAAA", "BCD", "BBFA"). KEIN Freitext, KEIN Englisch, KEINE Beschreibung.
+  FALSCH: "Seal defect", "hole", "Ablagerungen", "Korrosion (Corroded)"
+  RICHTIG: "BAI", "BACB", "BBCC", "BAFJ"
+- vsa_code_hint: gleicher Code wie label (Pflicht)
+- Verwende den SPEZIFISCHSTEN Code den du bestimmen kannst (BABBA statt BAB, BCAAA statt BCA)
 - severity: 1=Beobachtung, 2=leicht, 3=mittel, 4=schwer, 5=kritisch
 - position_clock: Uhrlage als "HH" (z.B. "12"=Scheitel, "6"=Sohle, "3"=rechts, "9"=links)
 - extent_percent: Ausdehnung in % des Rohrumfangs (bei Rissen, Wurzeln, Inkrustation)
 - cross_section_reduction_percent: Querschnittsverringerung % (bei Deformation, Ablagerung)
+- NUR offizielle VSA/EN 13508-2 Codes verwenden. Keine erfundenen Codes.
 - BC-Codes (Rohranfang, Rohrende, Bogen, Anschluss) sind severity=1, MUESSEN gemeldet werden
 - Wenn NICHTS sichtbar: findings=[] und is_empty_frame=true
 """;
@@ -399,19 +404,21 @@ SCHWEREGRAD-SKALA (entspricht VSA Zustandsklasse):
 4 = Schwerer Schaden, Sanierung kurzfristig
 5 = Kritischer Schaden, Sofortmassnahme
 
-TYPISCHE SCHADENSBILDER die du in Kanalfotos siehst:
-- Rohranfang (BCD): Blick vom Schacht ins Rohr, Schachtwand sichtbar
-- Rohrende (BCE): Blick auf Endschacht, Licht am Ende
-- Seitlicher Anschluss (BCA): Runde/ovale Öffnung in der Rohrwand
-- Riss (BAB): Linienförmige Unterbrechung der Rohrwand
-- Wurzeleinwuchs (BBB): Wurzeln die in das Rohr hineinwachsen
-- Ablagerung (BBC): Material auf der Rohrsohle
-- Versatz (BAH): Verschiebung an einer Rohrverbindung
-- Korrosion/Inkrustation (BBA): Verfärbungen, Ablagerungen an Rohrwand
+WICHTIG: Das label-Feld ist IMMER ein VSA-Code, z.B.:
+- Rohranfang → label="BCD"
+- Rohrende → label="BCE"
+- Seitlicher Anschluss → label="BCAAA" (oder BCAEA, BCADA etc.)
+- Riss laengs → label="BABBA"
+- Bruch/Loch → label="BACB"
+- Wurzeleinwuchs → label="BBAC"
+- Ablagerung hart → label="BBCC"
+- Infiltration → label="BBFA"
+- Inkrustation → label="BBBA"
+- Bogen nach links → label="BCCAY"
 
-Antworte AUSSCHLIESSLICH mit gültigem JSON gemäß Schema.
+Antworte AUSSCHLIESSLICH auf Deutsch mit gueltigem JSON gemaess Schema.
 Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
-Wenn du einen Schaden siehst, gib IMMER mindestens einen Finding-Eintrag zurück.
+Wenn du einen Schaden siehst, gib IMMER mindestens einen Finding-Eintrag zurueck.
 """;
     }
 
@@ -436,7 +443,8 @@ SCHWEREGRAD-SKALA (entspricht VSA Zustandsklasse):
 3 = Mittlerer Schaden, Sanierung mittelfristig
 4 = Schwerer Schaden, Sanierung kurzfristig
 5 = Kritischer Schaden, Sofortmassnahme
-Antworte AUSSCHLIESSLICH mit gültigem JSON gemäß Schema.
+WICHTIG: Das label-Feld ist IMMER ein VSA-Code (z.B. "BABBA", "BCAAA", "BBFA"). KEIN Freitext.
+Antworte AUSSCHLIESSLICH auf Deutsch mit gueltigem JSON gemaess Schema.
 Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
 """;
     }
@@ -450,13 +458,33 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
                 var label = f.Label.Trim();
                 var codeHint = f.VsaCodeHint?.Trim();
 
-                // Qwen schreibt den VSA-Code oft ins label-Feld statt ins vsa_code_hint.
-                // Erkennung: Label ist 3-6 Grossbuchstaben und sieht aus wie ein VSA-Code.
-                if (string.IsNullOrEmpty(codeHint)
-                    && label.Length >= 3 && label.Length <= 6
-                    && label.All(c => c >= 'A' && c <= 'Z'))
+                // Code-Extraktion aus Label (3 Fallbacks):
+                // 1. Label ist reiner VSA-Code (3-6 Grossbuchstaben): "BABBA" → codeHint
+                // 2. Label beginnt mit Code + Doppelpunkt: "BBBA: Inkrustation..." → "BBBA"
+                // 3. Label ist Freitext → InferCodeFromLabel/ReverseLookup
+                if (string.IsNullOrEmpty(codeHint))
                 {
-                    codeHint = label;
+                    if (label.Length >= 3 && label.Length <= 6
+                        && label.All(c => c >= 'A' && c <= 'Z'))
+                    {
+                        // Reiner VSA-Code
+                        codeHint = label;
+                    }
+                    else if (label.Length >= 4 && label[..3].All(c => c >= 'A' && c <= 'Z')
+                             && (label[3] == ':' || label[3] == ' ' || (label.Length > 3 && label[3] >= 'A' && label[3] <= 'Z')))
+                    {
+                        // Code am Anfang: "BBBA: Inkrustation..." oder "BBBA Inkrustation"
+                        var codePart = label.Split(new[] { ':', ' ', '-' }, 2)[0].Trim();
+                        if (codePart.Length >= 3 && codePart.Length <= 6 && codePart.All(c => c >= 'A' && c <= 'Z'))
+                            codeHint = codePart;
+                    }
+
+                    // Freitext → VSA-Code (deutsch + englisch)
+                    if (string.IsNullOrEmpty(codeHint))
+                    {
+                        codeHint = VsaCodeResolver.InferCodeFromLabel(label)
+                            ?? Services.CodeCatalog.VsaCodeTree.ReverseLookup(label);
+                    }
                 }
 
                 return new EnhancedFinding(
