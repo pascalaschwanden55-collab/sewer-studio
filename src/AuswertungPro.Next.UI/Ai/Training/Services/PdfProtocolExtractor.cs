@@ -338,9 +338,10 @@ public sealed class PdfProtocolExtractor
     private const int MinPhotoWidth = 400;
     private const int MinPhotoHeight = 300;
     private const int MaxPhotoDimension = 2500;     // Echte Fotos ≤ 1920px, PDF-Render > 3000px
-    private const double MinAspect = 1.2;            // Echte Fotos 4:3=1.33, Leitungsgrafiken ~1.12
+    private const double MinAspect = 1.15;           // Echte Fotos 4:3=1.33, Leitungsgrafiken ~1.12
     private const double MaxAspect = 2.0;            // 16:9 = 1.78, Logos oft > 2.0
     private const int MinPhotoBytes = 30_000;        // 30KB — echte JPEGs aus Video > 50KB
+    private const int MinUniqueColors = 500;         // Echte Fotos > 1000 Farben, Logos/Symbole < 100
 
     /// <summary>
     /// Extrahiert echte Inspektionsfotos aus dem PDF-Bildbericht und ordnet sie den Eintraegen zu.
@@ -396,6 +397,11 @@ public sealed class PdfProtocolExtractor
             // Fallback: PdfPig-Extraktion wenn PyMuPDF fehlschlaegt
             if (imagePaths.Count == 0)
                 imagePaths = ExtractImagesViaPdfPig(doc, pdfPath, framesDir);
+
+            // Logos/Symbole filtern (geometrische Grafiken, wenige Farben)
+            imagePaths = imagePaths
+                .Where(p => !IsLikelyLogoOrSymbol(File.ReadAllBytes(p), Path.GetExtension(p)))
+                .ToList();
 
             if (imagePaths.Count == 0)
                 return entries;
@@ -551,6 +557,10 @@ public sealed class PdfProtocolExtractor
 
                 if (photoBytes == null) continue;
                 if (!seenSizes.Add(photoBytes.Length)) continue;
+
+                // Logos/Symbole filtern: echte Kanalfotos haben viele Farben
+                if (IsLikelyLogoOrSymbol(photoBytes, ext))
+                    continue;
 
                 var fileName = $"{safeName}_fallback_{imgCounter++}{ext}";
                 var filePath = Path.Combine(framesDir, fileName);
@@ -884,6 +894,51 @@ public sealed class PdfProtocolExtractor
 
     private static string Sig(GroundTruthEntry e)
         => $"{e.VsaCode}|{e.MeterStart:F2}|{e.MeterEnd:F2}";
+
+    // ── Logo/Symbol-Erkennung ────────────────────────────────────────────
+
+    /// <summary>
+    /// Erkennt Logos, Symbole und geometrische Grafiken anhand der Farbvielfalt.
+    /// Echte Kanalfotos haben tausende verschiedene Farben (natuerliche Szene).
+    /// Logos/Symbole haben typisch 2-50 verschiedene Farben (Vektorgrafik/Flaechen).
+    /// </summary>
+    private static bool IsLikelyLogoOrSymbol(byte[] imageBytes, string ext)
+    {
+        try
+        {
+            using var ms = new MemoryStream(imageBytes);
+            var bi = new System.Windows.Media.Imaging.BitmapImage();
+            bi.BeginInit();
+            bi.StreamSource = ms;
+            bi.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+            bi.DecodePixelWidth = 100; // Klein laden fuer Speed
+            bi.EndInit();
+            bi.Freeze();
+
+            var wb = new System.Windows.Media.Imaging.WriteableBitmap(bi);
+            int stride = wb.PixelWidth * 4;
+            byte[] pixels = new byte[stride * wb.PixelHeight];
+            wb.CopyPixels(pixels, stride, 0);
+
+            // Eindeutige Farben zaehlen (auf 5-Bit quantisiert fuer Robustheit)
+            var colors = new HashSet<int>();
+            for (int i = 0; i < pixels.Length - 3; i += 4)
+            {
+                // Quantisieren: 256 Farben → 32 Stufen pro Kanal
+                int r = pixels[i + 2] >> 3;
+                int g = pixels[i + 1] >> 3;
+                int b = pixels[i] >> 3;
+                colors.Add((r << 10) | (g << 5) | b);
+            }
+
+            // Weniger als MinUniqueColors → wahrscheinlich Logo/Symbol
+            return colors.Count < MinUniqueColors;
+        }
+        catch
+        {
+            return false; // Im Zweifel durchlassen
+        }
+    }
 
     // ── Code-Normalisierung ────────────────────────────────────────────────
 
