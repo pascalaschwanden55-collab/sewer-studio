@@ -45,6 +45,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     private readonly ITechniqueAssessmentService _technique;
     private readonly PdfProtocolExtractor _pdfExtractor;
     private readonly SampleQualityGateService _qualityGate;
+    private readonly FewShotExampleStore _fewShotStore;
     private readonly SingleFrameMultiModelService? _multiModel;
     private readonly int _gpuConcurrency;
     private readonly int _pipeDiameterMm;
@@ -52,6 +53,11 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
 
     private readonly ManualResetEventSlim _pauseGate = new(true);
     private bool _sidecarAvailable;
+
+    // Grundgeruest-Codes: keine Schaeden, kein Few-Shot-Material
+    private static readonly HashSet<string> _basicStructureCodes = new(StringComparer.OrdinalIgnoreCase)
+        { "BCD", "BCE", "BCC", "BDB", "BDA", "BDC", "BDD", "BDE", "BDF", "BDG",
+          "AEC", "AED", "AEF" };
 
     public bool IsPaused => !_pauseGate.IsSet;
 
@@ -63,6 +69,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         TrainingCenterSettings? settings = null,
         SingleFrameMultiModelService? multiModel = null,
         SampleQualityGateService? qualityGate = null,
+        FewShotExampleStore? fewShotStore = null,
         ILogger<SelfTrainingOrchestrator>? logger = null)
     {
         _vision = vision;
@@ -71,8 +78,9 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         _pdfExtractor = pdfExtractor;
         _multiModel = multiModel;
         _gpuConcurrency = Math.Max(1, (settings ?? new TrainingCenterSettings()).GpuConcurrency);
-        _pipeDiameterMm = 300; // Default DN300, wird spaeter aus Haltung gelesen
+        _pipeDiameterMm = 300;
         _qualityGate = qualityGate ?? new SampleQualityGateService();
+        _fewShotStore = fewShotStore ?? new FewShotExampleStore();
         _logger = logger;
     }
 
@@ -273,6 +281,23 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 TechniqueGrade = technique?.OverallGrade
             };
             generatedSamples.Add(sample);
+
+            // ── Few-Shot: ExactMatch-Samples als Trainingsbeispiele speichern ──
+            // Nur echte Schaeden (nicht BCD/BCE/BDB etc.), nur mit gutem Foto
+            if (comparison.Level == MatchLevel.ExactMatch
+                && pngBytes.Length > 10_000
+                && !_basicStructureCodes.Contains(entry.VsaCode.Replace(".", "").ToUpperInvariant()[..Math.Min(3, entry.VsaCode.Length)]))
+            {
+                try
+                {
+                    var clock = entry.ClockPosition;
+                    await _fewShotStore.AddExampleAsync(
+                        pngBytes, ".png", entry.VsaCode, entry.Text,
+                        clock, entry.MeterStart, null, null,
+                        $"selftraining:{tc.CaseId}", 0.85, token);
+                }
+                catch { /* Few-Shot ist optional */ }
+            }
 
             // ── Fortschritt melden ──
             var done = Interlocked.Increment(ref completedCount);

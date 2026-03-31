@@ -2160,26 +2160,22 @@ public partial class TrainingCenterViewModel : ObservableObject
                             s.KbIndexState = KbIndexState.Pending;
                         await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
 
-                        Log($"  {newApproved.Count} Samples → KB-Update (Hintergrund)...");
-                        // Fire-and-forget: KB-Indexierung laeuft auf CPU parallel zum naechsten Fall
-                        var kbSamples = newApproved.ToList(); // Kopie fuer Background-Task
-                        _ = Task.Run(async () =>
+                        Log($"  {newApproved.Count} Samples → KB-Update...");
+                        // Serialisiert: kein Fire-and-Forget mehr (verhindert Race Conditions + .bad-Dateien)
+                        try
                         {
-                            try
-                            {
-                                var indexed = await IncrementalKbUpdateAsync(kbSamples, CancellationToken.None);
-                                var indexedSet = indexed.ToHashSet();
-                                foreach (var s in kbSamples)
-                                    s.KbIndexState = indexedSet.Contains(s.SampleId)
-                                        ? KbIndexState.Indexed
-                                        : (s.KbIndexState == KbIndexState.Pending ? KbIndexState.Error : s.KbIndexState);
-                                await TrainingSamplesStore.MergeOrUpdateAsync(kbSamples);
-                            }
-                            catch (Exception ex)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"[KB-Background] Fehler: {ex.Message}");
-                            }
-                        });
+                            var indexed = await IncrementalKbUpdateAsync(newApproved, ct);
+                            var indexedSet = indexed.ToHashSet();
+                            foreach (var s in newApproved)
+                                s.KbIndexState = indexedSet.Contains(s.SampleId)
+                                    ? KbIndexState.Indexed
+                                    : (s.KbIndexState == KbIndexState.Pending ? KbIndexState.Error : s.KbIndexState);
+                            await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                            Log($"  KB-Update Fehler: {ex.Message}");
+                        }
                     }
                 }
             }

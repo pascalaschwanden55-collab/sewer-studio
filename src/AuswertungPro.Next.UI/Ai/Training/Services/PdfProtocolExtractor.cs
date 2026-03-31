@@ -162,10 +162,20 @@ public sealed class PdfProtocolExtractor
 
     // ── PDF ─────────────────────────────────────────────────────────────────
 
+    /// <summary>Dateinamen-Muster die KEINE Inspektionsprotokolle sind.</summary>
+    private static readonly string[] NonProtocolKeywords =
+        ["faktura", "rechnung", "offerte", "angebot", "lieferschein",
+         "quittung", "mahnung", "vertrag", "auftrag", "kostenvor"];
+
     private static IReadOnlyList<GroundTruthEntry> ExtractFromPdf(string path, string? framesDir)
     {
         try
         {
+            // Rechnungen, Offerten, Lieferscheine etc. ueberspringen
+            var fileName = Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
+            if (NonProtocolKeywords.Any(kw => fileName.Contains(kw)))
+                return Array.Empty<GroundTruthEntry>();
+
             using var doc = UglyToad.PdfPig.PdfDocument.Open(path);
 
             var text = ExtractTextFromPdfDoc(doc);
