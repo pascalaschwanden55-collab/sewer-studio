@@ -543,19 +543,31 @@ public static class VsaCodeTree
 
         if (code.Length == 3) return mainDef.Label;
 
-        // Char1 (4 Zeichen): z.B. "BABA" → "Risse, Haarriss"
+        // XPrefix-Codes (AEC, AED): offiziell AECXC, AEDXV etc.
+        // Wenn XPrefix gesetzt, muss Zeichen 4 ein 'X' sein.
+        // "AEDV" ist ungueltig → nur "AEDXV" ist korrekt.
+        int c1Offset = 3;
+        if (mainDef.XPrefix)
+        {
+            if (code.Length < 5 || code[3] != 'X')
+                return null; // Ungueltig: XPrefix fehlt
+            c1Offset = 4; // Char1 ist an Position 5 (Index 4)
+        }
+
+        // Char1
         var parts = new List<string> { mainDef.Label };
-        var c1Key = code[3].ToString();
+        var c1Key = code[c1Offset].ToString();
         string? c1Label = null;
         if (mainDef.Char1 != null && mainDef.Char1.TryGetValue(c1Key, out var c1Def))
             c1Label = c1Def.Label;
 
         if (c1Label != null) parts.Add(c1Label);
 
-        // Char2 (5 Zeichen): z.B. "BABAA" → "Risse, Haarriss, laengs"
-        if (code.Length >= 5)
+        // Char2
+        int c2Offset = c1Offset + 1;
+        if (code.Length > c2Offset)
         {
-            var c2Key = code[4].ToString();
+            var c2Key = code[c2Offset].ToString();
             string? c2Label = null;
 
             // Char2 pro Char1 zuerst pruefen
