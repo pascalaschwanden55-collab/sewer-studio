@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -339,6 +340,19 @@ public sealed class OllamaClient : IDisposable
         var content = contentEl.GetString() ?? "";
         if (string.IsNullOrWhiteSpace(content))
             throw new InvalidOperationException("Ollama /api/chat Antwort: content leer");
+
+        // Debug-Log: Qwen-Rohantwort speichern (temporaer)
+        try
+        {
+            var logDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "SewerStudio", "logs");
+            Directory.CreateDirectory(logDir);
+            File.AppendAllText(
+                Path.Combine(logDir, "qwen_raw_responses.log"),
+                $"{DateTime.Now:HH:mm:ss} [{model}] {content[..Math.Min(content.Length, 500)]}\n---\n");
+        }
+        catch { /* Logging darf nie crashen */ }
 
         try
         {

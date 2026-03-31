@@ -445,9 +445,23 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
     {
         var findings = (dto.Findings ?? Array.Empty<EnhancedFindingDto>())
             .Where(f => !string.IsNullOrWhiteSpace(f.Label))
-            .Select(f => new EnhancedFinding(
-                Label: f.Label.Trim(),
-                VsaCodeHint: f.VsaCodeHint?.Trim(),
+            .Select(f =>
+            {
+                var label = f.Label.Trim();
+                var codeHint = f.VsaCodeHint?.Trim();
+
+                // Qwen schreibt den VSA-Code oft ins label-Feld statt ins vsa_code_hint.
+                // Erkennung: Label ist 3-6 Grossbuchstaben und sieht aus wie ein VSA-Code.
+                if (string.IsNullOrEmpty(codeHint)
+                    && label.Length >= 3 && label.Length <= 6
+                    && label.All(c => c >= 'A' && c <= 'Z'))
+                {
+                    codeHint = label;
+                }
+
+                return new EnhancedFinding(
+                Label: label,
+                VsaCodeHint: codeHint,
                 Severity: Math.Clamp(f.Severity, 1, 5),
                 PositionClock: f.PositionClock?.Trim(),
                 ExtentPercent: f.ExtentPercent,
@@ -456,7 +470,8 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
                 IntrusionPercent: f.IntrusionPercent,
                 CrossSectionReductionPercent: f.CrossSectionReductionPercent,
                 DiameterReductionMm: f.DiameterReductionMm,
-                Notes: f.Notes?.Trim()))
+                Notes: f.Notes?.Trim());
+            })
             .ToList();
 
         return new EnhancedFrameAnalysis(
