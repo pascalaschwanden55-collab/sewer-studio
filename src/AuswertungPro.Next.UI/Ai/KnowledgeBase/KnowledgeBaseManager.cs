@@ -365,43 +365,44 @@ public sealed class KnowledgeBaseManager(
     }
 
     /// <summary>
-    /// WinCan-interne Codes die keine VSA-Schadenscodes sind, aber
-    /// als Kontext-Samples in der KB gebraucht werden.
-    /// </summary>
-    private static readonly HashSet<string> AcceptedNonVsaCodes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "BEGINN", "ANFANG", "BOGEN", "FOTO", "NEUE", "LAGE",
-        "ORT", "ROHR", "BREITE", "DN", "DATUM", "TOTAL"
-    };
-
-    /// <summary>
     /// Prueft ob ein Sample die Mindestqualitaet fuer KB-Indexierung erfuellt.
-    /// Beschreibung muss vorhanden sein (mind. 3 Zeichen) und Code muss
-    /// entweder im VSA-Baum oder als bekannter WinCan-Code existieren.
+    /// STRENG: Nur offizielle VSA/EN 13508-2 Leitungscodes (B-Gruppe + AE).
+    /// Keine WinCan-internen Codes (BEGINN, BOGEN, FOTO etc.).
+    /// Keine Schachtcodes (D-Gruppe).
     /// Punkt-Codes (BCA.A.A) werden automatisch normalisiert (→ BCAAA).
     /// </summary>
     public static bool IsIndexWorthy(TrainingSample sample)
     {
-        // Beschreibung: mind. 3 Zeichen (z.B. "BDB" reicht, leer nicht)
         if (string.IsNullOrWhiteSpace(sample.Beschreibung) || sample.Beschreibung.Trim().Length < 3)
             return false;
 
         if (string.IsNullOrWhiteSpace(sample.Code))
             return false;
 
-        // WinCan-interne Codes akzeptieren (Kontext-Samples)
-        if (AcceptedNonVsaCodes.Contains(sample.Code))
-            return true;
+        return IsValidVsaLeitungscode(sample.Code);
+    }
+
+    /// <summary>
+    /// Prueft ob ein Code ein gueltiger VSA-Leitungscode ist.
+    /// Nur B-Codes (BA, BB, BC, BD) und AE-Codes.
+    /// Keine D-Codes (Schacht), keine WinCan-internen Codes.
+    /// Punkt-Notation wird automatisch normalisiert.
+    /// </summary>
+    public static bool IsValidVsaLeitungscode(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code) || code.Length < 2)
+            return false;
 
         // Punkt-Notation normalisieren: "BCA.A.A" → "BCAAA"
-        var normalized = sample.Code.Replace(".", "", StringComparison.Ordinal);
-        if (VsaCodeTree.LookupLabel(normalized) is not null)
-            return true;
+        var normalized = code.Replace(".", "", StringComparison.Ordinal).ToUpperInvariant();
 
-        // Letzter Versuch: Code ohne Punkte direkt pruefen
-        if (normalized != sample.Code && VsaCodeTree.LookupLabel(sample.Code) is not null)
-            return true;
+        // Nur Leitungscodes: B-Gruppe (BA-BD) und AE-Gruppe
+        // Keine D-Codes (Schacht: DA, DB, DC, DD)
+        var prefix = normalized[..2];
+        if (prefix is not ("BA" or "BB" or "BC" or "BD" or "AE"))
+            return false;
 
-        return false;
+        // VsaCodeTree muss den Code kennen
+        return VsaCodeTree.LookupLabel(normalized) is not null;
     }
 }

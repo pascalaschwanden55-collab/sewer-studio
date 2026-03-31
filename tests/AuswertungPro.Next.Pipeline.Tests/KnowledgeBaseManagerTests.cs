@@ -39,21 +39,29 @@ public sealed class KnowledgeBaseManagerTests
     }
 
     [Fact]
-    public void WinCanCode_BEGINN_IstAkzeptiert()
+    public void WinCanCode_BEGINN_WirdAbgelehnt()
     {
-        Assert.True(KnowledgeBaseManager.IsIndexWorthy(MakeSample("BEGINN", "Beginn der Inspektion")));
+        // BEGINN ist kein VSA-Code — darf NICHT in die KB
+        Assert.False(KnowledgeBaseManager.IsIndexWorthy(MakeSample("BEGINN", "Beginn der Inspektion")));
     }
 
     [Fact]
-    public void WinCanCode_BOGEN_IstAkzeptiert()
+    public void WinCanCode_BOGEN_WirdAbgelehnt()
     {
-        Assert.True(KnowledgeBaseManager.IsIndexWorthy(MakeSample("BOGEN", "Richtungsaenderung")));
+        Assert.False(KnowledgeBaseManager.IsIndexWorthy(MakeSample("BOGEN", "Richtungsaenderung")));
     }
 
     [Fact]
-    public void WinCanCode_FOTO_IstAkzeptiert()
+    public void WinCanCode_FOTO_WirdAbgelehnt()
     {
-        Assert.True(KnowledgeBaseManager.IsIndexWorthy(MakeSample("FOTO", "Foto aufgenommen")));
+        Assert.False(KnowledgeBaseManager.IsIndexWorthy(MakeSample("FOTO", "Foto aufgenommen")));
+    }
+
+    [Fact]
+    public void SchachtCode_DAB_WirdAbgelehnt()
+    {
+        // D-Codes (Schacht) gehoeren nicht in die Leitungs-KB
+        Assert.False(KnowledgeBaseManager.IsIndexWorthy(MakeSample("DABBA", "Riss vertikal")));
     }
 
     [Fact]

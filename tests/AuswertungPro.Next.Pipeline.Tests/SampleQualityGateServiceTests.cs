@@ -53,18 +53,36 @@ public sealed class SampleQualityGateServiceTests
     }
 
     [Fact]
-    public void Code_NichtImKatalog_Ist_HardRed()
+    public void Code_NichtImVsaTree_Ist_HardRed()
     {
-        var gate = new SampleQualityGateService(["BAB", "BCA", "BBC"]);
+        var gate = new SampleQualityGateService();
         var result = gate.Evaluate(MakeSample(code: "ZZZ"));
         Assert.Equal(SampleQualityGrade.Red, result.Grade);
     }
 
     [Fact]
-    public void Code_PraefixImKatalog_Ist_NichtRed()
+    public void WinCanCode_BEGINN_Ist_HardRed()
     {
-        // "BABAA" sollte akzeptiert werden wenn "BAB" im Katalog ist
-        var gate = new SampleQualityGateService(["BAB", "BCA"]);
+        // BEGINN ist KEIN VSA-Code — muss abgelehnt werden
+        var gate = new SampleQualityGateService();
+        var result = gate.Evaluate(MakeSample(code: "BEGINN"));
+        Assert.Equal(SampleQualityGrade.Red, result.Grade);
+    }
+
+    [Fact]
+    public void SchachtCode_DAB_Ist_HardRed()
+    {
+        // D-Codes (Schacht) sind nicht erlaubt, nur Leitungscodes
+        var gate = new SampleQualityGateService();
+        var result = gate.Evaluate(MakeSample(code: "DABBA"));
+        Assert.Equal(SampleQualityGrade.Red, result.Grade);
+    }
+
+    [Fact]
+    public void Code_BABAA_Ist_Gueltig()
+    {
+        // BABAA ist ein gueltiger VSA-Leitungscode (Haarriss laengs)
+        var gate = new SampleQualityGateService();
         var result = gate.Evaluate(MakeSample(code: "BABAA"));
         Assert.NotEqual(SampleQualityGrade.Red, result.Grade);
     }
@@ -214,24 +232,22 @@ public sealed class SampleQualityGateServiceTests
         Assert.Equal(SampleQualityGrade.Red, result.Grade);
     }
 
-    // ── Leerer Katalog vs. kein Katalog ─────────────────────────────
+    // ── VSA-Code Pruefung ist IMMER aktiv ─────────────────────────────
 
     [Fact]
-    public void OhneKatalog_AkzeptiertAlles()
+    public void NichtVsaCode_WirdImmerAbgelehnt()
     {
-        var gate = new SampleQualityGateService(); // kein Katalog
+        // Egal ob Katalog oder nicht — Nicht-VSA-Codes sind immer Red
+        var gate = new SampleQualityGateService();
         var result = gate.Evaluate(MakeSample(code: "XYZZY"));
-        // Ohne Katalog: keine Code-Pruefung → Green (wenn alles andere stimmt)
-        Assert.NotEqual(SampleQualityGrade.Red, result.Grade);
+        Assert.Equal(SampleQualityGrade.Red, result.Grade);
     }
 
     [Fact]
-    public void LeererKatalog_LehntAllesAb()
+    public void VsaCode_BAB_WirdAkzeptiert()
     {
-        // Leerer Katalog (Count=0) sollte Code-Pruefung ueberspringen (wie kein Katalog)
-        var gate = new SampleQualityGateService(new string[] { });
+        var gate = new SampleQualityGateService();
         var result = gate.Evaluate(MakeSample(code: "BAB"));
-        // Leerer Katalog mit Count=0 → _allowedCodes.Count > 0 ist false → kein Code-Check
         Assert.NotEqual(SampleQualityGrade.Red, result.Grade);
     }
 

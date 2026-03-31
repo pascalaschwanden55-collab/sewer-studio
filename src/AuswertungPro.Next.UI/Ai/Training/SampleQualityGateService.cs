@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
@@ -23,27 +24,24 @@ namespace AuswertungPro.Next.UI.Ai.Training;
 /// </summary>
 public sealed class SampleQualityGateService
 {
-    private readonly HashSet<string>? _allowedCodes;
-
     /// <summary>Schwelle ab der Yellow in Red kippt (Summe der Gewichte).</summary>
     private const int RedThreshold = 4;
 
     /// <summary>
-    /// Codes die am Rohranfang (MeterStart=0) normal vorkommen.
-    /// BCD=Rohranfang, BDB=Beginn der Bestandsaufnahme, BCE=Rohrende (bei Rueckwaertsbefahrung).
+    /// Codes die am Rohranfang (MeterStart=0) normal vorkommen (VSA-konform).
+    /// BCD=Rohranfang, BDB=Beginn der Bestandsaufnahme, BCE=Rohrende (Rueckwaertsbefahrung).
     /// </summary>
     private static readonly string[] ZeroMeterCodes =
-        ["BCD", "BDB", "BCE", "BEGINN"];
+        ["BCD", "BDB", "BCE"];
 
     /// <summary>
-    /// Erstellt das Gate mit optionalem Code-Katalog.
-    /// Ohne Katalog wird die Code-Pruefung uebersprungen (nur Struktur-Checks).
+    /// Erstellt das Gate. Code-Pruefung erfolgt IMMER gegen den VsaCodeTree
+    /// (nur offizielle VSA/EN 13508-2 Leitungscodes).
+    /// Der optionale allowedCodes-Parameter wird aus Kompatibilitaet akzeptiert aber ignoriert.
     /// </summary>
     public SampleQualityGateService(IEnumerable<string>? allowedCodes = null)
     {
-        _allowedCodes = allowedCodes != null
-            ? new HashSet<string>(allowedCodes, StringComparer.OrdinalIgnoreCase)
-            : null;
+        // allowedCodes wird ignoriert — wir pruefen immer gegen VsaCodeTree
     }
 
     /// <summary>Prueft ein einzelnes Sample und gibt das Ergebnis zurueck.</summary>
@@ -57,9 +55,11 @@ public sealed class SampleQualityGateService
         if (string.IsNullOrWhiteSpace(sample.Code) || sample.Code.Length < 2)
             return HardRed("Code fehlt oder zu kurz (min. 2 Zeichen)");
 
-        // Code muss im VSA-Katalog sein (wenn Katalog verfuegbar)
-        if (_allowedCodes is { Count: > 0 } && !IsCodeValid(sample.Code))
-            return HardRed($"Code '{sample.Code}' nicht im VSA-Katalog");
+        // Code MUSS ein gueltiger VSA-Leitungscode sein (IMMER pruefen).
+        // Keine WinCan-internen Codes (BEGINN, BOGEN, FOTO etc.).
+        // Keine Schachtcodes (D-Gruppe).
+        if (!KnowledgeBase.KnowledgeBaseManager.IsValidVsaLeitungscode(sample.Code))
+            return HardRed($"Code '{sample.Code}' ist kein gueltiger VSA-Leitungscode");
 
         // SampleId ist Pflicht (internes Tracking)
         if (string.IsNullOrWhiteSpace(sample.SampleId))
@@ -141,25 +141,6 @@ public sealed class SampleQualityGateService
     /// <summary>Sofortiges Red ohne weitere Pruefung.</summary>
     private static SampleQualityResult HardRed(string reason)
         => new(SampleQualityGrade.Red, [reason]);
-
-    /// <summary>
-    /// Prueft ob ein Code im VSA-Katalog gueltig ist.
-    /// Beruecksichtigt Praefix-Matching: "BCAAA" ist gueltig wenn "BCA" im Katalog ist.
-    /// </summary>
-    private bool IsCodeValid(string code)
-    {
-        if (_allowedCodes == null) return true;
-        if (_allowedCodes.Contains(code)) return true;
-
-        // Praefix-Matching: "BCAAA" → pruefe "BCAA", "BCA", "BC"
-        for (var len = code.Length - 1; len >= 2; len--)
-        {
-            if (_allowedCodes.Contains(code[..len]))
-                return true;
-        }
-
-        return false;
-    }
 
     /// <summary>Prueft ob ein Code normalerweise bei MeterStart=0 vorkommt.</summary>
     private static bool IsZeroMeterCode(string code)
