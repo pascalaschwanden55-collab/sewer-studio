@@ -416,28 +416,54 @@ public sealed class PdfProtocolExtractor
             if (imagePaths.Count == 0)
                 return entries;
 
-            // Zuordnung: Bilder den Entries zuweisen (1:1 nach Index)
-            int assignable = Math.Min(imagePaths.Count, entries.Count);
+            // Zuordnung: Bilder den Entries zuweisen.
+            //
+            // Problem: Pro Protokolleintrag koennen 2 Fotos existieren:
+            //   1. Axialansicht (codierbar — KI kann Schaden erkennen)
+            //   2. Einblick-Foto (90° in Anschluss hinein — NICHT codierbar)
+            // Beide haben gleichen Meter + Code im PDF.
+            //
+            // Strategie: Wenn mehr Bilder als Eintraege → nur das ERSTE Bild
+            // pro Entry verwenden (Axial kommt immer vor Einblick im PDF).
+            // Wenn gleich viele oder weniger → 1:1 nach Index.
+
+            var safeName = Regex.Replace(Path.GetFileNameWithoutExtension(pdfPath), @"[^\w\-]", "_");
+
+            // Mehr Bilder als Eintraege → Einblick-Fotos rausfiltern
+            var filteredImages = imagePaths.ToList();
+            if (imagePaths.Count > entries.Count && entries.Count > 0)
+            {
+                // Bilder auf entries.Count reduzieren:
+                // Gleichmaessig verteilt, nur jedes N-te Bild nehmen
+                double ratio = (double)imagePaths.Count / entries.Count;
+                filteredImages = new List<string>(entries.Count);
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    int imgIdx = (int)(i * ratio);
+                    if (imgIdx < imagePaths.Count)
+                        filteredImages.Add(imagePaths[imgIdx]);
+                }
+            }
+
+            int assignable = Math.Min(filteredImages.Count, entries.Count);
             double coverageRatio = entries.Count > 0 ? (double)assignable / entries.Count : 0;
-            if (coverageRatio < 0.30 && Math.Abs(imagePaths.Count - entries.Count) > 3)
+            if (coverageRatio < 0.30 && Math.Abs(filteredImages.Count - entries.Count) > 3)
             {
                 System.Diagnostics.Debug.WriteLine(
-                    $"[PdfExtractor] Zuordnung unsicher: {imagePaths.Count} Bilder vs {entries.Count} Eintraege " +
+                    $"[PdfExtractor] Zuordnung unsicher: {filteredImages.Count} Bilder vs {entries.Count} Eintraege " +
                     $"(Coverage {coverageRatio:P0}) in {Path.GetFileName(pdfPath)}");
                 return entries;
             }
 
-            var safeName = Regex.Replace(Path.GetFileNameWithoutExtension(pdfPath), @"[^\w\-]", "_");
             var result = new List<GroundTruthEntry>(entries.Count);
             for (int i = 0; i < entries.Count; i++)
             {
                 var entry = entries[i];
                 string? framePath = null;
 
-                if (i < imagePaths.Count)
+                if (i < filteredImages.Count)
                 {
-                    var srcPath = imagePaths[i];
-                    // Umbenennen: Code + Meterposition im Dateinamen
+                    var srcPath = filteredImages[i];
                     var targetName = $"{safeName}_{entry.VsaCode}_{entry.MeterStart:F1}m_{i}.png";
                     var targetPath = Path.Combine(framesDir, targetName);
                     try
