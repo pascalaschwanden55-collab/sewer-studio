@@ -390,7 +390,7 @@ public sealed class KnowledgeBaseManager(
     /// </summary>
     public static bool IsValidVsaLeitungscode(string code)
     {
-        if (string.IsNullOrWhiteSpace(code) || code.Length < 2)
+        if (string.IsNullOrWhiteSpace(code) || code.Length < 3)
             return false;
 
         // Punkt-Notation normalisieren: "BCA.A.A" → "BCAAA"

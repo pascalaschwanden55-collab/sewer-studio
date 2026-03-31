@@ -51,9 +51,10 @@ public sealed class SampleQualityGateService
 
         // ── Hard-Red: sofortiger Ausschluss (eines reicht) ────────────
 
-        // Code muss vorhanden sein (mind. 2 Zeichen: z.B. "BA", "BC")
-        if (string.IsNullOrWhiteSpace(sample.Code) || sample.Code.Length < 2)
-            return HardRed("Code fehlt oder zu kurz (min. 2 Zeichen)");
+        // Code muss vorhanden sein (mind. 3 Zeichen: z.B. "BCD", "BAG", "AEF")
+        // 2-Zeichen-Codes wie "BA" oder "BC" sind nur Gruppen, keine gueltigen Codes
+        if (string.IsNullOrWhiteSpace(sample.Code) || sample.Code.Length < 3)
+            return HardRed("Code fehlt oder zu kurz (min. 3 Zeichen)");
 
         // Code MUSS ein gueltiger VSA-Leitungscode sein (IMMER pruefen).
         // Keine WinCan-internen Codes (BEGINN, BOGEN, FOTO etc.).
