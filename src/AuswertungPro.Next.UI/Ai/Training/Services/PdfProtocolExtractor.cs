@@ -418,30 +418,60 @@ public sealed class PdfProtocolExtractor
 
             // Zuordnung: Bilder den Entries zuweisen.
             //
-            // Problem: Pro Protokolleintrag koennen 2 Fotos existieren:
-            //   1. Axialansicht (codierbar — KI kann Schaden erkennen)
-            //   2. Einblick-Foto (90° in Anschluss hinein — NICHT codierbar)
-            // Beide haben gleichen Meter + Code im PDF.
+            // Bei manchen Codes werden 2 Fotos pro Eintrag gemacht:
+            //   BCA/BAG/BAH (Anschluss): Foto 1 = Axialansicht (codierbar),
+            //     Foto 2 = 90° Einblick (NICHT codierbar → ueberspringen)
+            //   BAB/BAC/BAF etc. (Schaeden): Foto 1 = Axial, Foto 2 = Nahaufnahme
+            //     (beide nuetzlich → beide behalten)
             //
-            // Strategie: Wenn mehr Bilder als Eintraege → nur das ERSTE Bild
-            // pro Entry verwenden (Axial kommt immer vor Einblick im PDF).
-            // Wenn gleich viele oder weniger → 1:1 nach Index.
+            // Strategie: Wenn mehr Bilder als Eintraege UND Anschluss-Codes vorhanden →
+            // Einblick-Fotos bei Anschluss-Codes filtern. Sonst alle behalten.
+
+            // Codes bei denen das zweite Foto (Einblick) verwirrend ist
+            var anschlussCodesSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                { "BCA", "BAG", "BAH" };
 
             var safeName = Regex.Replace(Path.GetFileNameWithoutExtension(pdfPath), @"[^\w\-]", "_");
 
-            // Mehr Bilder als Eintraege → Einblick-Fotos rausfiltern
+            // Mehr Bilder als Eintraege → Anschluss-Einblick-Fotos rausfiltern
             var filteredImages = imagePaths.ToList();
             if (imagePaths.Count > entries.Count && entries.Count > 0)
             {
-                // Bilder auf entries.Count reduzieren:
-                // Gleichmaessig verteilt, nur jedes N-te Bild nehmen
-                double ratio = (double)imagePaths.Count / entries.Count;
-                filteredImages = new List<string>(entries.Count);
-                for (int i = 0; i < entries.Count; i++)
+                // Zaehle wie viele Anschluss-Codes es gibt (die haben je 2 Fotos)
+                int anschlussCount = entries.Count(e =>
+                    e.VsaCode.Length >= 3
+                    && anschlussCodesSet.Contains(e.VsaCode.Replace(".", "")[..3].ToUpperInvariant()));
+                int expectedImages = entries.Count + anschlussCount; // Anschluss = 2 Fotos
+
+                if (imagePaths.Count >= expectedImages - 2 && imagePaths.Count <= expectedImages + 2)
                 {
-                    int imgIdx = (int)(i * ratio);
-                    if (imgIdx < imagePaths.Count)
+                    // Bilder intelligent zuordnen: Bei Anschluss-Codes nur 1. Bild nehmen
+                    filteredImages = new List<string>(entries.Count);
+                    int imgIdx = 0;
+                    foreach (var entry in entries)
+                    {
+                        if (imgIdx >= imagePaths.Count) break;
                         filteredImages.Add(imagePaths[imgIdx]);
+                        imgIdx++;
+
+                        // Bei Anschluss-Code: 2. Bild (Einblick) ueberspringen
+                        bool isAnschluss = entry.VsaCode.Length >= 3
+                            && anschlussCodesSet.Contains(entry.VsaCode.Replace(".", "")[..3].ToUpperInvariant());
+                        if (isAnschluss && imgIdx < imagePaths.Count)
+                            imgIdx++; // Einblick-Foto ueberspringen
+                    }
+                }
+                else
+                {
+                    // Fallback: gleichmaessig verteilt
+                    double ratio = (double)imagePaths.Count / entries.Count;
+                    filteredImages = new List<string>(entries.Count);
+                    for (int i = 0; i < entries.Count; i++)
+                    {
+                        int idx = (int)(i * ratio);
+                        if (idx < imagePaths.Count)
+                            filteredImages.Add(imagePaths[idx]);
+                    }
                 }
             }
 
