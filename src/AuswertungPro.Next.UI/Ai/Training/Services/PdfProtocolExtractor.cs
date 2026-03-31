@@ -583,10 +583,37 @@ public sealed class PdfProtocolExtractor
 
     // ── Parsing ─────────────────────────────────────────────────────────────
 
+    // Strategie 0: Mehrzeiliges Spalten-Format (KIT Bauinspekt / Fretz neue PDFs)
+    // Meter + optional OP-Code + VSA-Code auf einer Zeile, Text auf der naechsten.
+    // Beispiel:
+    //   0.00
+    //   BCD
+    //   Rohranfang
+    //   00:00:00 35644-06...
+    // Oder: "9.60 A01 BDDC\nWasserspiegel...\n00:03:59"
+    private static readonly Regex MultiLineHeaderPattern = new(
+        $@"^[ \t]*(?<meter>\d{{1,4}}[.,]\d{{1,3}})(?:[ \t]+[A-Z]\d{{1,3}})?[ \t]+(?<code>{CodePattern})\s*$",
+        RegexOptions.Compiled | RegexOptions.Multiline);
+
+    // Variante: Meter allein auf einer Zeile, Code auf der naechsten
+    private static readonly Regex MeterAlonePattern = new(
+        @"^[ \t]*(?<meter>\d{1,4}[.,]\d{1,3})\s*$",
+        RegexOptions.Compiled | RegexOptions.Multiline);
+
     private static IReadOnlyList<GroundTruthEntry> ParseEntriesFromText(string text)
     {
         var results = new List<GroundTruthEntry>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // Strategie 0: Mehrzeiliges Spalten-Format
+        // Erkennung: Wenn der Text "m +\n" oder "m +" gefolgt von Spaltenheadern hat
+        // UND Zeilen mit nur Meter oder Meter+Code existieren
+        if (text.Contains("m +") || text.Contains("m+"))
+        {
+            var multiLineResults = ParseMultiLineTable(text, seen);
+            if (multiLineResults.Count > 0)
+                return multiLineResults;
+        }
 
         // Strategie 1: IKAS Leitungsgrafik (Zeit VOR Beschreibung)
         // Format: "0.00  BCD  [1777]  00:00:09  Rohranfang"
@@ -710,6 +737,92 @@ public sealed class PdfProtocolExtractor
                 if (entry is not null && seen.Add(Sig(entry)))
                     results.Add(entry);
             }
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Strategie 0: Mehrzeiliges Spalten-Format (KIT Bauinspekt / Fretz neue PDFs).
+    /// PDF-Text hat Meter+Code auf einer Zeile, Beschreibung auf der naechsten.
+    /// Erkennt auch: Meter allein → Code auf naechster Zeile → Text → Zeit.
+    /// </summary>
+    private static List<GroundTruthEntry> ParseMultiLineTable(string text, HashSet<string> seen)
+    {
+        var results = new List<GroundTruthEntry>();
+        var lines = text.Split('\n').Select(l => l.TrimEnd('\r')).ToArray();
+        var codeRegex = new Regex($@"^\s*(?<code>{CodePattern})\s*$", RegexOptions.Compiled);
+        var meterRegex = new Regex(@"^\s*(?<meter>\d{1,4}[.,]\d{1,3})(?:\s+[A-Z]\d{1,3})?\s*$", RegexOptions.Compiled);
+        var meterCodeRegex = new Regex($@"^\s*(?<meter>\d{1,4}[.,]\d{1,3})(?:\s+[A-Z]\d{{1,3}})?\s+(?<code>{CodePattern})\s*$", RegexOptions.Compiled);
+        var timeRegex = new Regex(@"(?<time>\d{2}:\d{2}:\d{2})", RegexOptions.Compiled);
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string? meterStr = null;
+            string? code = null;
+            int textLineStart = -1;
+
+            // Variante A: Meter + Code auf gleicher Zeile
+            var mcMatch = meterCodeRegex.Match(lines[i]);
+            if (mcMatch.Success)
+            {
+                meterStr = mcMatch.Groups["meter"].Value;
+                code = mcMatch.Groups["code"].Value;
+                textLineStart = i + 1;
+            }
+            else
+            {
+                // Variante B: Meter allein, Code auf naechster Zeile
+                var mMatch = meterRegex.Match(lines[i]);
+                if (mMatch.Success && i + 1 < lines.Length)
+                {
+                    var cMatch = codeRegex.Match(lines[i + 1]);
+                    if (cMatch.Success)
+                    {
+                        meterStr = mMatch.Groups["meter"].Value;
+                        code = cMatch.Groups["code"].Value;
+                        textLineStart = i + 2;
+                    }
+                }
+            }
+
+            if (meterStr == null || code == null || textLineStart >= lines.Length)
+                continue;
+
+            // Text sammeln: alles bis zur naechsten Zeile mit Timestamp oder naechstem Meter/Code
+            var textParts = new List<string>();
+            TimeSpan? zeit = null;
+            for (int j = textLineStart; j < Math.Min(textLineStart + 5, lines.Length); j++)
+            {
+                var line = lines[j].Trim();
+                if (string.IsNullOrWhiteSpace(line)) break;
+
+                // Timestamp gefunden → Zeit merken und aufhoeren
+                var tMatch = timeRegex.Match(line);
+                if (tMatch.Success)
+                {
+                    zeit = ParseTimestamp(tMatch.Groups["time"].Value);
+                    break;
+                }
+
+                // Naechster Meter oder Code → aufhoeren (gehoert zum naechsten Eintrag)
+                if (meterRegex.IsMatch(line) || meterCodeRegex.IsMatch(line))
+                    break;
+
+                // "Stufe" / "Seite" Zeilen ueberspringen
+                if (line.StartsWith("Stufe", StringComparison.OrdinalIgnoreCase)
+                    || line.StartsWith("Seite", StringComparison.OrdinalIgnoreCase))
+                    break;
+
+                textParts.Add(line);
+            }
+
+            var beschreibung = string.Join(" ", textParts).Trim();
+            if (beschreibung.Length < 2) beschreibung = code;
+
+            var entry = BuildEntry(meterStr, "", code, "", beschreibung, zeit);
+            if (entry is not null && seen.Add(Sig(entry)))
+                results.Add(entry);
         }
 
         return results;
