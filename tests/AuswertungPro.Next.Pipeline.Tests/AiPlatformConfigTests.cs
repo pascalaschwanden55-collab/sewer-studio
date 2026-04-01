@@ -28,9 +28,9 @@ public sealed class AiPlatformConfigTests
         Assert.Equal(OllamaConfig.DefaultTextModel, config.TextModel);
         Assert.Equal(OllamaConfig.DefaultEmbedModel, config.EmbedModel);
         Assert.Equal(TimeSpan.FromMinutes(5), config.OllamaRequestTimeout);
-        Assert.False(config.MultiModelEnabled);
+        Assert.True(config.MultiModelEnabled);  // Default: true
         Assert.Equal(new Uri("http://localhost:8100"), config.SidecarUrl);
-        Assert.Equal(PipelineMode.OllamaOnly, config.PipelineMode);
+        Assert.Equal(PipelineMode.Auto, config.PipelineMode);  // Default: Auto
         Assert.Equal(0.25, config.YoloConfidence);
         Assert.Equal(0.30, config.DinoBoxThreshold);
         Assert.Equal(0.25, config.DinoTextThreshold);

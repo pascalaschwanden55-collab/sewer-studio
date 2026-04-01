@@ -153,7 +153,9 @@ public sealed record AiPlatformConfig(
 
         // ── Pipeline ──
         var multiModelEnabled = settings?.PipelineMultiModelEnabled
-            ?? ParseBool(Env("SEWERSTUDIO_MULTIMODEL_ENABLED"));
+            ?? (string.IsNullOrEmpty(Env("SEWERSTUDIO_MULTIMODEL_ENABLED"))
+                ? true  // Default: Multi-Model aktiv wenn Sidecar erreichbar (Mode=Auto)
+                : ParseBool(Env("SEWERSTUDIO_MULTIMODEL_ENABLED")));
 
         var sidecarUrl = FirstNonEmpty(
                 settings?.PipelineSidecarUrl,
@@ -163,7 +165,7 @@ public sealed record AiPlatformConfig(
         var modeStr = FirstNonEmpty(
                 settings?.PipelineMode,
                 Env("SEWERSTUDIO_PIPELINE_MODE"))
-            ?? "ollamaonly";
+            ?? "auto";
         var mode = modeStr.Trim().ToLowerInvariant() switch
         {
             "multimodel" or "multi" => PipelineMode.MultiModel,

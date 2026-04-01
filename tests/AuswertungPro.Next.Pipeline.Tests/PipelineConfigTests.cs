@@ -18,9 +18,9 @@ public class PipelineConfigTests
 
             var config = PipelineConfig.Load();
 
-            Assert.False(config.MultiModelEnabled);
+            Assert.True(config.MultiModelEnabled);  // Default: true (Auto-Modus nutzt Sidecar wenn erreichbar)
             Assert.Equal(new Uri("http://localhost:8100"), config.SidecarUrl);
-            Assert.Equal(PipelineMode.OllamaOnly, config.Mode);
+            Assert.Equal(PipelineMode.Auto, config.Mode);  // Default: Auto (nicht mehr OllamaOnly)
             Assert.Equal(0.25, config.YoloConfidence);
             Assert.Equal(0.30, config.DinoBoxThreshold);
             Assert.Equal(0.25, config.DinoTextThreshold);
@@ -58,7 +58,7 @@ public class PipelineConfigTests
     [InlineData("ollama", PipelineMode.OllamaOnly)]
     [InlineData("ollamaonly", PipelineMode.OllamaOnly)]
     [InlineData("auto", PipelineMode.Auto)]
-    [InlineData("", PipelineMode.OllamaOnly)]
+    [InlineData("", PipelineMode.Auto)]  // Leerer String → Default Auto
     [InlineData("unknown", PipelineMode.Auto)]
     public void Load_PipelineMode_ParsesCorrectly(string modeStr, PipelineMode expected)
     {
