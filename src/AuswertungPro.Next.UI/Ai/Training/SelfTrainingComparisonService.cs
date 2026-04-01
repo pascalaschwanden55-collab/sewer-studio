@@ -30,12 +30,12 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
     private const int SeverityTolerance = 1;         // ± 1 Stufe
 
     // Grundgeruest-Codes die KEIN "Schaden" sind — Qwen gibt dafuer meist findings=[] zurueck.
-    // Bei leerem findings-Array aber passendem Grundgeruest-Code: ExactMatch (Protokoll korrekt).
-    // Erweitert um alle BD-Codes (Steuercodes, Allgemein) und AE-Codes (Aenderungen).
+    // Grundgeruest-Codes: visuell "kein Schaden", KI darf findings=[] zurueckgeben.
+    // NUR Codes die im Prompt definiert sind UND keine sichtbaren Schaeden zeigen.
+    // KEINE AE-Codes (die muessen im Prompt separat erkannt werden).
+    // KEINE BDBA-BDBE (das sind BDB mit Anmerkung, werden als eigene Codes gefuehrt).
     private static readonly HashSet<string> _basicStructureCodes = new(StringComparer.OrdinalIgnoreCase)
-        { "BCD", "BCE", "BCC", "BDB", "BDA", "BDC", "BDD", "BDE", "BDF", "BDG",
-          "BDBA", "BDBB", "BDBC", "BDBD", "BDBE",
-          "AEC", "AED", "AEF", "AECXC", "AEDXO", "AEDXP", "AEDXQ", "AEDXG", "AEDXU" };
+        { "BCD", "BCE", "BCC", "BDA", "BDB", "BDC", "BDD", "BDBA" };
 
     public ComparisonResult Compare(GroundTruthEntry truth, EnhancedFrameAnalysis analysis, bool isPdfPhoto = false)
     {
@@ -170,7 +170,8 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
     /// Vergleicht VSA-Codes. Beruecksichtigt:
     /// - Exakte Uebereinstimmung
     /// - Praefix-Match (z.B. "BAB" matcht "BABA" = Laengsriss)
-    /// - Gleiche Gruppe (erste 2 Zeichen = gleiche Schadensart)
+    /// - Gleiche 3-Zeichen-Gruppe NUR wenn beide mindestens 4 Zeichen haben
+    ///   (verhindert dass "BAB" Riss und "BAC" Bruch matchen)
     /// </summary>
     private static bool CodesMatch(string truthCode, string? kiCode)
     {
@@ -183,12 +184,15 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
         // Exakt
         if (t == k) return true;
 
-        // Praefix: Protokoll "BAB" matcht KI "BABA"
-        if (k.StartsWith(t, StringComparison.Ordinal)) return true;
-        if (t.StartsWith(k, StringComparison.Ordinal)) return true;
+        // Praefix-Match: "BAB" matcht "BABA" (spezifischere Variante des gleichen Codes)
+        // Mindestens 3 Zeichen muessen uebereinstimmen um Fehlmatches zu vermeiden
+        if (k.Length > t.Length && t.Length >= 3 && k.StartsWith(t, StringComparison.Ordinal)) return true;
+        if (t.Length > k.Length && k.Length >= 3 && t.StartsWith(k, StringComparison.Ordinal)) return true;
 
-        // Gleiche Schadensgruppe (erste 3 Zeichen bei Haltung: B + Kategorie + Typ)
-        if (t.Length >= 3 && k.Length >= 3 && t[..3] == k[..3]) return true;
+        // Gleiche 3-Zeichen-Gruppe NUR wenn beide Codes laenger sind (= spezifischere Varianten)
+        // "BABA" und "BABB" → gleiche Gruppe BAB → Match (beides Riss-Untertypen)
+        // "BAB" und "BAC" → KEIN Match (verschiedene Schadensarten auf 3-Zeichen-Ebene)
+        if (t.Length >= 4 && k.Length >= 4 && t[..3] == k[..3]) return true;
 
         return false;
     }
@@ -205,7 +209,9 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
 
     /// <summary>
     /// Prueft ob der KI-Schweregrad zum VSA-Code plausibel ist.
-    /// Vereinfachte Heuristik: Strukturschaden (BA*) → Severity 2-5, Betrieblich (BB*) → 1-4.
+    /// BA (Strukturell): Severity 2-5 (1 = "optisch" kommt bei Strukturschaeden nicht vor)
+    /// BB (Betrieblich): Severity 1-4 (5 = kritisch bei betrieblichen Stoerungen unueblich)
+    /// BC/BD (Inventar/Steuer): immer plausibel
     /// </summary>
     private static bool SeverityPlausible(string truthCode, int kiSeverity)
     {
@@ -214,14 +220,13 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
         string upper = truthCode.ToUpperInvariant();
         if (upper.Length < 2) return true; // Nicht genug Info
 
-        // Grundsaetzlich: Severity 1-5 ist fast immer plausibel
-        // Strenger nur bei offensichtlichen Widerspruechen
         char category = upper.Length >= 2 ? upper[1] : ' ';
         return category switch
         {
-            'A' => kiSeverity >= 1, // Baulich: alle plausibel
-            'B' => kiSeverity >= 1, // Betrieblich: alle plausibel
-            'C' => kiSeverity >= 1, // Inventar
+            'A' => kiSeverity >= 2 && kiSeverity <= 5, // Strukturell: 2-5 (kein rein optischer Strukturschaden)
+            'B' => kiSeverity >= 1 && kiSeverity <= 4, // Betrieblich: 1-4 (Severity 5 bei BB unueblich)
+            'C' => true, // Inventar: alle plausibel
+            'D' => true, // Steuer: alle plausibel
             _ => true
         };
     }

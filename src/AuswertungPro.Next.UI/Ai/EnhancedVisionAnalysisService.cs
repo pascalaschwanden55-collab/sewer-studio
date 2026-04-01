@@ -115,6 +115,47 @@ BDE  Fehlanschluss — Uhrlage
 BDF  Gefaehrdung (BDFA=Sauerstoffmangel, BDFB=Schwefelwasserstoff, BDFC=Methan)
 BDG  Keine Sicht (BDGA=unter Wasser, BDGB=Verschlammung, BDGC=Dampf)
 
+=== AE: AENDERUNGEN WAEHREND INSPEKTION (severity=1) ===
+AECXC  Rohrprofilwechsel (Kreisprofil→Eiprofil etc.) — sichtbarer Querschnittswechsel im Bild
+AEDXO  Rohrmaterialwechsel: Polyethylen (PE) — Farbwechsel der Rohrwand sichtbar (z.B. grau→schwarz)
+AEDXP  Rohrmaterialwechsel: Polypropylen (PP) — aehnlich PE, oft heller
+AEDXQ  Rohrmaterialwechsel: PVC — typisch hellgrau/weiss, glatte Oberflaeche
+AEDXG  Rohrmaterialwechsel: Beton — raue, graue Oberflaeche
+AEDXU  Rohrmaterialwechsel: Steinzeug — braun/rotbraun, glasiert
+AEF    Neue Baulaenge — normaler Rohruebergang mit Laengenmarkierung, KEIN Schaden
+
+=== HAEUFIGE VERWECHSLUNGEN (VERMEIDEN!) ===
+BACB (Loch) vs BCD (Rohranfang) vs BCA (Anschluss) — WICHTIGSTE UNTERSCHEIDUNG:
+- BCD (Rohranfang): RUNDE, SAUBERE Oeffnung. GLATTE Raender. Rohrwand dahinter SICHTBAR.
+  Das Bild zeigt den kompletten Rohrquerschnitt von vorne. severity=1.
+  MERKE: Wenn du am ANFANG einer Haltung bist (Meter ~0.0) und eine grosse runde Oeffnung siehst = BCD!
+- BCA (Anschluss): SEITLICHE Oeffnung in der Rohrwand. KLEINER als Hauptkanal. Rund/oval.
+  Fuehrt zu einem Abzweig. severity=1. Code: BCAAA (Formstueck) oder BCAEA (eingespitzt).
+- BACB (Loch): UNRUNDE, UNREGELMAESSIGE Form. SCHARFE, GEZACKTE, GEBROCHENE Raender.
+  Material FEHLT. Rohr ist BESCHAEDIGT. severity=3-4.
+  ENTSCHEIDUNGSREGEL:
+  → Raender GLATT + RUND → KEIN BACB sondern BCD oder BCA
+  → Raender GEZACKT + GEBROCHEN → BACB
+  → Im Zweifel: BCD oder BCA ist WAHRSCHEINLICHER als BACB (Schaeden sind selten, Rohranfaenge haeufig)
+
+BAIA (Dichtring) vs BAJ (Rohrverbindung) vs AEF (Materialwechsel):
+- BAJ: Sichtbare FUGE zwischen zwei Rohrsegmenten (Spalt, Versatz, Knick). Code: BAJA/BAJB/BAJC.
+  Das ist der HAEUFIGSTE Fall bei Rohrverbindungen.
+- BAIA: Dichtungsmaterial RAGT PHYSISCH in den Rohrquerschnitt HINEIN. Gummiring SICHTBAR verlagert.
+  NUR wenn Material tatsaechlich EINRAGT (>20% des Querschnitts). Severity=2-3.
+  → Normale Dichtung sichtbar aber NICHT einragend = BAJ, NICHT BAIA!
+- AEF: Normaler Rohruebergang, Laengenmarkierung. KEIN Schaden, severity=1.
+  ENTSCHEIDUNGSREGEL:
+  → Normale Rohrverbindung ohne Auffaelligkeit = AEF
+  → Fuge sichtbar, Versatz/Spalt = BAJ
+  → Dichtungsmaterial ragt PHYSISCH ins Rohr = BAIA (selten!)
+
+BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
+- BCD: Am Rohranfang ist oft Wasser sichtbar (Restwasser im Schacht). Das ist KEIN Infiltration.
+  → Wasser am Rohranfang/Schacht = normal, NICHT BBFC melden.
+- BBFC: Wasser DRINGT AKTIV DURCH die Rohrwand oder Fuge. Nasser Fleck, Rinnsal an der Wand.
+  → Nur wenn Wasser DURCH eine Schadstelle eindringt = BBFC.
+
 === REGELN (STRIKT EINHALTEN) ===
 - SPRACHE: Antworte AUSSCHLIESSLICH auf Deutsch. Kein Englisch.
 - label MUSS ein VSA-Code sein (z.B. "BABBA", "BCAAA", "BCD", "BBFA"). KEIN Freitext, KEIN Englisch, KEINE Beschreibung.
@@ -139,6 +180,10 @@ BDG  Keine Sicht (BDGA=unter Wasser, BDGB=Verschlammung, BDGC=Dampf)
     // 2 parallele Eskalationen erlauben (RTX 5090: genug VRAM fuer 32B + 8B)
     private readonly SemaphoreSlim _escalationLock = new(2, 2);
     private int _escalationCount;
+    // Telemetrie: Eskalationsgruende einzeln zaehlen fuer datenbasierte Schwellen-Justierung
+    private int _escalationAllCodesNull;
+    private int _escalationHighSeverity;
+    private int _escalationPoorQuality;
     private FewShotExampleStore? _fewShotStore;
     private IReadOnlyList<(FewShotExample Example, string Base64)>? _cachedFewShot;
 
@@ -152,6 +197,12 @@ BDG  Keine Sicht (BDGA=unter Wasser, BDGB=Verschlammung, BDGC=Dampf)
 
     /// <summary>Anzahl erfolgreicher Eskalationen (Telemetrie).</summary>
     public int EscalationCount => _escalationCount;
+    /// <summary>Eskalationen wegen fehlender VSA-Codes (alle Findings ohne Code).</summary>
+    public int EscalationAllCodesNull => _escalationAllCodesNull;
+    /// <summary>Eskalationen wegen hohem Schweregrad (Severity >= 4).</summary>
+    public int EscalationHighSeverity => _escalationHighSeverity;
+    /// <summary>Eskalationen wegen schlechter Bildqualitaet mit Findings.</summary>
+    public int EscalationPoorQuality => _escalationPoorQuality;
 
     /// <summary>
     /// Aktiviert Few-Shot Learning: Beispielbilder werden in den Prompt injiziert.
@@ -405,14 +456,15 @@ SCHWEREGRAD-SKALA (entspricht VSA Zustandsklasse):
 5 = Kritischer Schaden, Sofortmassnahme
 
 WICHTIG: Das label-Feld ist IMMER ein VSA-Code, z.B.:
-- Rohranfang → label="BCD"
+- Rohranfang (Blick vom Schacht ins Rohr, grosse runde Oeffnung) → label="BCD" (NICHT "BACB"!)
 - Rohrende → label="BCE"
-- Seitlicher Anschluss → label="BCAAA" (oder BCAEA, BCADA etc.)
+- Seitlicher Anschluss (runde Oeffnung in der Wand) → label="BCAAA" (NICHT "BACB"!)
+- Rohrverbindung (Fuge zwischen Segmenten) → label="BAJC" (NICHT "BAIA"!)
 - Riss laengs → label="BABBA"
-- Bruch/Loch → label="BACB"
+- Bruch/Loch (fehlende Wandung, gezackte Kanten) → label="BACB"
 - Wurzeleinwuchs → label="BBAC"
 - Ablagerung hart → label="BBCC"
-- Infiltration → label="BBFA"
+- Infiltration (Wasser dringt aktiv durch Wand) → label="BBFA" (NICHT bei Restwasser am Rohranfang!)
 - Inkrustation → label="BBBA"
 - Bogen nach links → label="BCCAY"
 
@@ -565,8 +617,17 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
             ? await AnalyzeWithContextAsync(framePngBase64, context, pipeDiameterMm, ct).ConfigureAwait(false)
             : await AnalyzeAsync(framePngBase64, ct).ConfigureAwait(false);
 
-        if (_referenceModel == null || !NeedsEscalation(fast))
+        var reason = GetEscalationReason(fast);
+        if (_referenceModel == null || reason == EscalationReason.None)
             return (fast, false);
+
+        // Telemetrie: Eskalationsgrund zaehlen (vor dem Lock, damit auch Timeouts erfasst werden)
+        switch (reason)
+        {
+            case EscalationReason.AllCodesNull: Interlocked.Increment(ref _escalationAllCodesNull); break;
+            case EscalationReason.HighSeverity: Interlocked.Increment(ref _escalationHighSeverity); break;
+            case EscalationReason.PoorQuality: Interlocked.Increment(ref _escalationPoorQuality); break;
+        }
 
         // 2. Eskalation mit 32B — SemaphoreSlim verhindert parallele Modellwechsel
         //    Timeout 120s: wenn Lock nicht verfuegbar → Graceful Degradation (8B-Ergebnis)
@@ -621,24 +682,31 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         }
     }
 
+    /// <summary>Grund fuer die Eskalation (fuer Telemetrie).</summary>
+    private enum EscalationReason { None, AllCodesNull, HighSeverity, PoorQuality }
+
     /// <summary>
     /// Prueft ob eine Eskalation zum Reference-Modell noetig ist.
-    /// Statische Kriterien: keine VSA-Codes, hoher Schweregrad, schlechte Qualitaet.
+    /// Gibt den konkreten Grund zurueck (fuer Telemetrie-Zaehler).
     /// </summary>
-    private static bool NeedsEscalation(EnhancedFrameAnalysis fast)
+    private static EscalationReason GetEscalationReason(EnhancedFrameAnalysis fast)
     {
-        if (fast.IsEmptyFrame || !fast.HasFindings) return false;
+        if (fast.IsEmptyFrame || !fast.HasFindings) return EscalationReason.None;
 
         // Alle Findings ohne VSA-Code → 8B hat keine Zuordnung gefunden
-        bool allCodesNull = fast.Findings.All(f => string.IsNullOrEmpty(f.VsaCodeHint));
+        if (fast.Findings.All(f => string.IsNullOrEmpty(f.VsaCodeHint)))
+            return EscalationReason.AllCodesNull;
 
         // Hoher Schweregrad → Genauigkeit kritisch
-        bool highSeverity = fast.Findings.Any(f => f.Severity >= 4);
+        if (fast.Findings.Any(f => f.Severity >= 4))
+            return EscalationReason.HighSeverity;
 
         // Schlechte Bildqualitaet mit Findings → unsichere Erkennung
-        bool poorWithFindings = fast.ImageQuality == "mittel" && fast.HasFindings;
+        // "schlecht" statt "mittel" — "mittel" ist Normalfall bei Kanalvideos und wuerde zu breit triggern
+        if (fast.ImageQuality == "schlecht" && fast.HasFindings)
+            return EscalationReason.PoorQuality;
 
-        return allCodesNull || highSeverity || poorWithFindings;
+        return EscalationReason.None;
     }
 
     /// <summary>
