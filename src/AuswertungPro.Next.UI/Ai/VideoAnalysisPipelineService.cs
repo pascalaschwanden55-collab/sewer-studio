@@ -182,10 +182,15 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         if (!pipelineCfg.MultiModelEnabled && pipelineCfg.Mode != PipelineMode.MultiModel)
             return (false, pipelineCfg);
 
-        // Check sidecar health
+        // Check sidecar health (eigener HttpClient — nicht den geteilten verwenden!)
         try
         {
-            var client = new VisionPipelineClient(pipelineCfg.SidecarUrl, _httpClient);
+            var healthHttp = new System.Net.Http.HttpClient
+            {
+                BaseAddress = pipelineCfg.SidecarUrl,
+                Timeout = TimeSpan.FromSeconds(5)
+            };
+            var client = new VisionPipelineClient(pipelineCfg.SidecarUrl, healthHttp);
             var health = await client.HealthCheckAsync(ct).ConfigureAwait(false);
 
             if (health is null || health.Status != "ok")
