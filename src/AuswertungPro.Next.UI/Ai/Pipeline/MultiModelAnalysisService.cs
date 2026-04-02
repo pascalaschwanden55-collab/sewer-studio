@@ -25,12 +25,33 @@ public sealed class MultiModelAnalysisService
     private readonly string _ffmpegPath;
     private readonly string _ffprobePath;
 
-    public double FrameStepSeconds { get; set; } = 3.0;
+    public double FrameStepSeconds { get; set; } = 1.5;
     public int DedupWindowFrames { get; set; } = 3;
     public TimeSpan QwenFrameTimeout { get; set; } = TimeSpan.FromSeconds(45);
 
     /// <summary>YOLO-cls Vorfilter aktivieren/deaktivieren (Fallback: aus wenn kein Modell).</summary>
     public bool UseClsPrefilter { get; set; } = true;
+
+    /// <summary>
+    /// Konfidenzschwelle fuer YOLO-cls Skip bei "OTHER/NORMAL".
+    /// Hoeherer Wert = weniger aggressive Skips (bessere Recall, mehr Rechenlast).
+    /// </summary>
+    public double ClsSkipConfidence { get; set; } = 0.90;
+
+    /// <summary>
+    /// Fuehrt trotz YOLO-"irrelevant" periodisch DINO aus, um YOLO-Misses abzufangen.
+    /// </summary>
+    public bool EnableDinoFallbackOnIrrelevantFrames { get; set; } = true;
+
+    /// <summary>
+    /// Jeder N-te YOLO-irrelevante Frame wird dennoch an DINO weitergeleitet.
+    /// </summary>
+    public int DinoFallbackEveryNIrrelevantFrames { get; set; } = 2;
+
+    /// <summary>
+    /// Startzeit fuer Recall-Fallbacks nach der OSD-Phase.
+    /// </summary>
+    public double DinoFallbackStartSeconds { get; set; } = 20.0;
 
     // Letzter Befund fuer Qwen-Kontext (Frame-uebergreifende Kohärenz)
     private (string Code, string Description, double Meter, double Confidence)? _lastFinding;
@@ -80,6 +101,7 @@ public sealed class MultiModelAnalysisService
         var active = new Dictionary<string, ActiveFindingState>(StringComparer.OrdinalIgnoreCase);
         int frameIndex = 0;
         int skippedFrames = 0;
+        int irrelevantFrames = 0;
         double lastMeter = 0;
 
         // Pipe diameter: from config override or default 300mm
@@ -118,11 +140,11 @@ public sealed class MultiModelAnalysisService
             // Ablagerungen, Rohranfang/Ende) wird verpasst.
             // Loesung: Jeden N-ten Frame + BCD/BCE-Zonen immer analysieren.
             double estimatedMeter = EstimateMeter(t, duration, ref lastMeter);
-            bool isAfterOsd = t > 20.0; // OSD-Einblendung 10-20 Sekunden je nach Operateur
+            bool isAfterOsd = t > DinoFallbackStartSeconds; // OSD-Einblendung 10-20 Sekunden je nach Operateur
             bool isBcdZone = isAfterOsd && estimatedMeter < 1.5 && frameIndex <= 10;
             bool isBceZone = duration > 10 && t > (duration - FrameStepSeconds * 2);
-            // Jeden 3. Frame immer analysieren (Bestandsaufnahme-Sweep)
-            bool isPeriodicSweep = isAfterOsd && (frameIndex % 3 == 0);
+            // Jeden 2. Frame immer analysieren (Recall-optimierter Bestandsaufnahme-Sweep)
+            bool isPeriodicSweep = isAfterOsd && (frameIndex % 2 == 0);
             bool telemetryBypass = isBcdZone || isBceZone || isPeriodicSweep;
 
             // ── Step 1: YOLO Pre-Screening ──
@@ -158,7 +180,7 @@ public sealed class MultiModelAnalysisService
                     var topPred = clsResult.Predictions.Count > 0 ? clsResult.Predictions[0] : null;
 
                     if (topPred?.ClassName is "OTHER" or "other" or "NORMAL" or "normal"
-                        && topPred.Confidence > 0.70)
+                        && topPred.Confidence >= ClsSkipConfidence)
                     {
                         // Frame ist normal → ueberspringen (spart DINO/SAM/Qwen)
                         skippedFrames++;
@@ -227,12 +249,29 @@ public sealed class MultiModelAnalysisService
 
             if (!yoloResult.IsRelevant)
             {
-                skippedFrames++;
+                irrelevantFrames++;
+                var runDinoFallback = EnableDinoFallbackOnIrrelevantFrames
+                    && isAfterOsd
+                    && DinoFallbackEveryNIrrelevantFrames > 0
+                    && (irrelevantFrames % DinoFallbackEveryNIrrelevantFrames == 0);
+
+                if (!runDinoFallback)
+                {
+                    skippedFrames++;
+                    progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                        $"Frame {frameIndex}/{totalFrames} – übersprungen (YOLO: irrelevant, {skippedFrames} gesamt)"));
+                    telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                    AdvanceAll(active, detections, DedupWindowFrames);
+                    continue;
+                }
+
+                yoloResult = yoloResult with { IsRelevant = true };
+                _logger.LogDebug(
+                    "Frame {Frame}: YOLO irrelevant -> DINO-Fallback (irrelevant#{IrrelevantCount})",
+                    frameIndex, irrelevantFrames);
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                    $"Frame {frameIndex}/{totalFrames} – übersprungen (YOLO: irrelevant, {skippedFrames} gesamt)"));
-                telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
-                AdvanceAll(active, detections, DedupWindowFrames);
-                continue;
+                    $"Frame {frameIndex}/{totalFrames} - YOLO irrelevant -> DINO-Fallback",
+                    FramePreviewPng: frameBytes));
             }
 
             // ── Step 2: Grounding DINO Detection ──
@@ -333,8 +372,12 @@ public sealed class MultiModelAnalysisService
             }
 
             // Build per-frame EvidenceVector with pipeline signals
+            var yoloEvidence = yoloResult.Detections.Count > 0
+                ? yoloResult.Detections.Max(d => d.Confidence)
+                : (telemetryBypass ? 0.60 : (yoloResult.IsRelevant ? 0.50 : 0.0));
+
             var frameEvidence = new QualityGate.EvidenceVector(
-                YoloConf: yoloResult.IsRelevant ? 1.0 : 0.0,
+                YoloConf: yoloEvidence,
                 DinoConf: maxDinoConf,
                 SamMaskStability: null, // populated when SamStabilityCheckEnabled
                 QwenVisionConf: null,   // populated after Qwen enrichment
@@ -372,6 +415,11 @@ public sealed class MultiModelAnalysisService
                     var qwenResult = await _qwenVision.AnalyzeWithContextAsync(
                         frameBase64, multiModelContext, pipeDiameterMm, qwenCts.Token).ConfigureAwait(false);
 
+                    frameEvidence = frameEvidence with
+                    {
+                        QwenVisionConf = EstimateQwenVisionConfidence(qwenResult.ImageQuality, qwenResult.HasFindings)
+                    };
+
                     // OSD-Meterstand IMMER uebernehmen (auch ohne Findings)
                     if (qwenResult.Meter.HasValue)
                     {
@@ -379,12 +427,14 @@ public sealed class MultiModelAnalysisService
                         lastMeter = meter;
                     }
 
-                    // ImageQuality-Gate: Bei schlechter Bildqualitaet Findings verwerfen
-                    // (OSD-Meter wird trotzdem uebernommen, nur Schadens-Findings sind unzuverlaessig)
-                    if (string.Equals(qwenResult.ImageQuality, "schlecht", StringComparison.OrdinalIgnoreCase))
+                    // ImageQuality-Gate (recall-optimiert):
+                    // Bei schlechter Bildqualitaet nur dann verwerfen, wenn auch DINO schwach ist.
+                    // So bleiben plausible SAM/DINO-Treffer erhalten.
+                    if (ShouldSuppressByImageQuality(qwenResult.ImageQuality, maxDinoConf))
                     {
-                        _logger.LogDebug("Frame {Frame}: ImageQuality=schlecht, {Count} Findings verworfen",
-                            frameIndex, findings.Count);
+                        _logger.LogDebug(
+                            "Frame {Frame}: ImageQuality=schlecht + DINO={Dino:F2} -> {Count} Findings verworfen",
+                            frameIndex, maxDinoConf, findings.Count);
                         findings.Clear();
                     }
 
@@ -509,6 +559,7 @@ public sealed class MultiModelAnalysisService
         var active = new Dictionary<string, ActiveFindingState>(StringComparer.OrdinalIgnoreCase);
         int frameIndex = 0;
         int skippedFrames = 0;
+        int irrelevantFrames = 0;
         double lastMeter = 0;
         double duration = 0;
         int totalFrames = 0;
@@ -566,12 +617,28 @@ public sealed class MultiModelAnalysisService
 
             if (item.IsRelevant != true)
             {
-                skippedFrames++;
+                irrelevantFrames++;
+                var runDinoFallback = EnableDinoFallbackOnIrrelevantFrames
+                    && t > DinoFallbackStartSeconds
+                    && DinoFallbackEveryNIrrelevantFrames > 0
+                    && (irrelevantFrames % DinoFallbackEveryNIrrelevantFrames == 0)
+                    && !string.IsNullOrWhiteSpace(item.ImageBase64);
+
+                if (!runDinoFallback)
+                {
+                    skippedFrames++;
+                    progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                        $"Frame {frameIndex}/{totalFrames} – {item.FrameClass ?? "irrelevant"} (NVDEC)"));
+                    telemetry.RecordFrame(new FrameTiming(frameIndex, t, 0, yoloMs, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                    AdvanceAll(active, detections, DedupWindowFrames);
+                    continue;
+                }
+
+                _logger.LogDebug(
+                    "Frame {Frame}: NVDEC/YOLO irrelevant -> DINO-Fallback (irrelevant#{IrrelevantCount})",
+                    frameIndex, irrelevantFrames);
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                    $"Frame {frameIndex}/{totalFrames} – {item.FrameClass ?? "irrelevant"} (NVDEC)"));
-                telemetry.RecordFrame(new FrameTiming(frameIndex, t, 0, yoloMs, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
-                AdvanceAll(active, detections, DedupWindowFrames);
-                continue;
+                    $"Frame {frameIndex}/{totalFrames} - YOLO irrelevant -> DINO-Fallback (NVDEC)"));
             }
 
             // Relevanter Frame: image_base64 vorhanden → DINO/SAM/Qwen
@@ -596,7 +663,7 @@ public sealed class MultiModelAnalysisService
 
             // ── Telemetrie-Bypass-Logik (gleich wie FFmpeg-Pfad) ──
             double estimatedMeter = EstimateMeter(t, duration > 0 ? duration : 300, ref lastMeter);
-            bool isAfterOsd = t > 20.0;
+            bool isAfterOsd = t > DinoFallbackStartSeconds;
             bool isBcdZone = isAfterOsd && estimatedMeter < 1.5 && frameIndex <= 10;
             bool isBceZone = duration > 10 && t > (duration - FrameStepSeconds * 2);
 
@@ -700,8 +767,12 @@ public sealed class MultiModelAnalysisService
                 ));
             }
 
+            var yoloEvidence = yoloResult.Detections.Count > 0
+                ? yoloResult.Detections.Max(d => d.Confidence)
+                : 0.60;
+
             var frameEvidence = new QualityGate.EvidenceVector(
-                YoloConf: 1.0,
+                YoloConf: yoloEvidence,
                 DinoConf: maxDinoConf,
                 SamMaskStability: null,
                 QwenVisionConf: null,
@@ -737,13 +808,18 @@ public sealed class MultiModelAnalysisService
                     var qwenResult = await _qwenVision.AnalyzeWithContextAsync(
                         frameBase64, multiModelContext, pipeDiameterMm, qwenCts.Token).ConfigureAwait(false);
 
+                    frameEvidence = frameEvidence with
+                    {
+                        QwenVisionConf = EstimateQwenVisionConfidence(qwenResult.ImageQuality, qwenResult.HasFindings)
+                    };
+
                     if (qwenResult.Meter.HasValue)
                     {
                         meter = qwenResult.Meter.Value;
                         lastMeter = meter;
                     }
 
-                    if (string.Equals(qwenResult.ImageQuality, "schlecht", StringComparison.OrdinalIgnoreCase))
+                    if (ShouldSuppressByImageQuality(qwenResult.ImageQuality, maxDinoConf))
                         findings.Clear();
 
                     if (qwenResult.HasFindings)
@@ -901,6 +977,32 @@ public sealed class MultiModelAnalysisService
     }
 
     private static double Clamp01(double value) => Math.Clamp(value, 0.0, 1.0);
+
+    private static bool ShouldSuppressByImageQuality(string? imageQuality, double dinoConf)
+    {
+        if (!string.Equals(imageQuality, "schlecht", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // Niedrige DINO-Konfidenz + schlechte Bildqualitaet => likely false positive.
+        // Bei starken DINO-Hinweisen behalten wir Findings fuer bessere Recall.
+        return dinoConf < 0.35;
+    }
+
+    private static double EstimateQwenVisionConfidence(string? imageQuality, bool hasFindings)
+    {
+        var baseConf = imageQuality?.ToLowerInvariant() switch
+        {
+            "gut" => 0.85,
+            "mittel" => 0.65,
+            "schlecht" => 0.35,
+            _ => 0.55
+        };
+
+        if (hasFindings)
+            baseConf += 0.05;
+
+        return Math.Clamp(baseConf, 0.0, 1.0);
+    }
 
     /// <summary>Geschaetzte Haltungslaenge in Metern (wird durch OSD-Korrektur von Qwen ueberschrieben).</summary>
     public double EstimatedReachLengthM { get; set; } = 50.0; // Typisch 15-80m, Fallback 50m
@@ -1192,3 +1294,5 @@ public sealed class MultiModelAnalysisService
             : a ?? b;
     }
 }
+
+
