@@ -578,17 +578,17 @@ public partial class TrainingCenterViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void BrowseRootFolder()
+    private async Task BrowseRootFolderAsync()
     {
         var dlg = new OpenFolderDialog
         {
-            Title = "Trainings-Ordner wählen (Mehrfachauswahl möglich)",
+            Title = "Trainings-Ordner waehlen (Mehrfachauswahl moeglich)",
             Multiselect = true
         };
         if (dlg.ShowDialog() != true)
             return;
 
-        // Neue Auswahl zu bestehenden hinzufügen (Duplikate vermeiden)
+        // Neue Auswahl zu bestehenden hinzufuegen (Duplikate vermeiden)
         foreach (var folder in dlg.FolderNames)
         {
             if (!_rootFolders.Contains(folder, StringComparer.OrdinalIgnoreCase))
@@ -596,13 +596,30 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
 
         UpdateRootFolderDisplay();
+
+        // Auto-Scan nach Ordnerauswahl
+        await ScanAsync();
     }
 
     [RelayCommand]
-    private void ClearRootFolders()
+    private async Task ClearRootFoldersAsync()
     {
         _rootFolders.Clear();
+        Cases.Clear();
+        SelectedCase = null;
         UpdateRootFolderDisplay();
+        await AutoSaveStateAsync();
+        StatusText = "Ordner und Faelle geleert.";
+    }
+
+    [RelayCommand]
+    private async Task RemoveAllCasesAsync()
+    {
+        var count = Cases.Count;
+        Cases.Clear();
+        SelectedCase = null;
+        await AutoSaveStateAsync();
+        StatusText = $"Alle {count} Faelle entfernt.";
     }
 
     private void UpdateRootFolderDisplay()
@@ -697,6 +714,11 @@ public partial class TrainingCenterViewModel : ObservableObject
         {
             IsBusy = true;
             StatusText = "Scanne Ordner...";
+
+            // Status bestehender Faelle merken (Merge statt Clear)
+            var existingStatus = new Dictionary<string, TrainingCaseStatus>();
+            foreach (var c in Cases)
+                existingStatus.TryAdd(c.CaseId, c.Status);
             Cases.Clear();
 
             foreach (var folder in _rootFolders)
@@ -704,7 +726,12 @@ public partial class TrainingCenterViewModel : ObservableObject
                 if (!Directory.Exists(folder)) continue;
                 var found = await _import.ScanAsync(folder);
                 foreach (var c in found)
+                {
+                    // Status wiederherstellen wenn Fall schon bekannt
+                    if (existingStatus.TryGetValue(c.CaseId, out var prevStatus))
+                        c.Status = prevStatus;
                     Cases.Add(c);
+                }
             }
 
             var withProto    = Cases.Count(c => !string.IsNullOrEmpty(c.ProtocolPath));
@@ -788,11 +815,35 @@ public partial class TrainingCenterViewModel : ObservableObject
         StatusText = $"Status New: {SelectedCase.CaseId}";
     }
 
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private async Task RemoveCaseAsync()
+    {
+        if (SelectedCase is null) return;
+        var id = SelectedCase.CaseId;
+        Cases.Remove(SelectedCase);
+        SelectedCase = null;
+        await AutoSaveStateAsync();
+        StatusText = $"Entfernt: {id} ({Cases.Count} Faelle verbleiben)";
+    }
+
+    [RelayCommand]
+    private async Task RemoveSelectedCasesAsync(System.Collections.IList? selectedItems)
+    {
+        if (selectedItems is null || selectedItems.Count == 0) return;
+        var toRemove = selectedItems.Cast<TrainingCase>().ToList();
+        foreach (var c in toRemove)
+            Cases.Remove(c);
+        SelectedCase = null;
+        await AutoSaveStateAsync();
+        StatusText = $"{toRemove.Count} Faelle entfernt ({Cases.Count} verbleiben)";
+    }
+
     partial void OnSelectedCaseChanged(TrainingCase? value)
     {
         ApproveCommand.NotifyCanExecuteChanged();
         RejectCommand.NotifyCanExecuteChanged();
         SetNewCommand.NotifyCanExecuteChanged();
+        RemoveCaseCommand.NotifyCanExecuteChanged();
         GenerateSamplesCommand.NotifyCanExecuteChanged();
     }
 
@@ -1260,9 +1311,17 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             StatusText = $"Gefunden: {found.Count} Ordner, {casesWithProtocol.Count} mit Protokoll";
 
+            // Status bestehender Faelle erhalten (Merge statt Clear)
+            var existingStatus = new Dictionary<string, TrainingCaseStatus>();
+            foreach (var c in Cases)
+                existingStatus.TryAdd(c.CaseId, c.Status);
             Cases.Clear();
             foreach (var c in found)
+            {
+                if (existingStatus.TryGetValue(c.CaseId, out var prevStatus))
+                    c.Status = prevStatus;
                 Cases.Add(c);
+            }
 
             if (casesWithProtocol.Count == 0)
             {
@@ -1547,6 +1606,9 @@ public partial class TrainingCenterViewModel : ObservableObject
 
                     Log($"  Gespeichert + KB: {autoApproved} indexiert | Gesamt: {allSamples.Count} Samples, {distinctCodes} Codes");
 
+                    // Fall als BatchImported markieren
+                    tc.Status = TrainingCaseStatus.BatchImported;
+
                     // Case-State periodisch sichern (alle 10 Haltungen),
                     // damit die UI nach einem Crash den Fortschritt korrekt anzeigt.
                     if ((i + 1) % 5 == 0)
@@ -1811,7 +1873,8 @@ public partial class TrainingCenterViewModel : ObservableObject
             // Self-Training Review: Sample-Status auf Approved setzen + in KB indexieren
             await ApplySelfTrainingReviewAsync(
                 item.SelfTrainingCaseId!, item.SelfTrainingVsaCode!,
-                item.SelfTrainingMeter ?? 0, approved: true, correctedCode: null, ct);
+                item.SelfTrainingMeter ?? 0, approved: true, correctedCode: null,
+                sampleId: item.SelfTrainingSampleId, ct: ct);
         }
         queueService.Remove(item.Id);
         ReviewQueue.Remove(item);
@@ -1838,7 +1901,8 @@ public partial class TrainingCenterViewModel : ObservableObject
             // Self-Training Review: Sample-Status auf Rejected setzen, Code korrigieren
             await ApplySelfTrainingReviewAsync(
                 item.SelfTrainingCaseId!, item.SelfTrainingVsaCode!,
-                item.SelfTrainingMeter ?? 0, approved: false, correctedCode: correctedCode, ct);
+                item.SelfTrainingMeter ?? 0, approved: false, correctedCode: correctedCode,
+                sampleId: item.SelfTrainingSampleId, ct: ct);
         }
         queueService.Remove(item.Id);
         ReviewQueue.Remove(item);
@@ -1854,15 +1918,19 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// </summary>
     private async Task ApplySelfTrainingReviewAsync(
         string caseId, string vsaCode, double meter,
-        bool approved, string? correctedCode, CancellationToken ct)
+        bool approved, string? correctedCode,
+        string? sampleId = null, CancellationToken ct = default)
     {
         try
         {
             var allSamples = await TrainingSamplesStore.LoadAsync();
-            var match = allSamples.FirstOrDefault(s =>
-                s.CaseId == caseId
-                && s.Code == vsaCode
-                && Math.Abs(s.MeterStart - meter) < 0.2);
+            // Primaer ueber SampleId suchen (eindeutig), Fallback fuer alte Queue-Eintraege
+            var match = !string.IsNullOrEmpty(sampleId)
+                ? allSamples.FirstOrDefault(s => s.SampleId == sampleId)
+                : allSamples.FirstOrDefault(s =>
+                    s.CaseId == caseId
+                    && s.Code == vsaCode
+                    && Math.Abs(s.MeterStart - meter) < 0.2);
 
             if (match is null)
             {
@@ -2047,7 +2115,8 @@ public partial class TrainingCenterViewModel : ObservableObject
             catch { /* Sidecar nicht konfiguriert — nur Qwen */ }
 
             _selfTrainingOrchestrator = new SelfTrainingOrchestrator(
-                vision, comparison, technique, pdfExtractor, new TrainingCenterSettings(), multiModel, _sampleQualityGate);
+                vision, comparison, technique, pdfExtractor, new TrainingCenterSettings(), multiModel, _sampleQualityGate,
+                reviewQueue: ReviewQueueServiceRef);
 
             // Progress-Callback verbindet Orchestrator → ViewModel-Visualisierungen
             var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);
@@ -2117,10 +2186,10 @@ public partial class TrainingCenterViewModel : ObservableObject
                 }
 
                 // Ergebnis loggen
-                Log($"  Eintraege: {result.TotalEntries} | ExactMatch: {result.ExactMatches} | "
-                  + $"Partial: {result.PartialMatches} | Mismatch: {result.Mismatches} | "
-                  + $"NoFindings: {result.NoFindings} | Samples: {result.SamplesGenerated} | "
-                  + $"Dauer: {result.Duration:mm\\:ss}");
+                Log($"  Eintraege: {result.TotalEntries} | CodeHit: {result.CodeHits} | "
+                  + $"ExactMatch: {result.ExactMatches} | Partial: {result.PartialMatches} | "
+                  + $"Mismatch: {result.Mismatches} | NoFindings: {result.NoFindings} | "
+                  + $"Samples: {result.SamplesGenerated} | Dauer: {result.Duration:mm\\:ss}");
                 if (result.OverallTechnique is { } tech)
                     Log($"  Technik: {tech.OverallGrade} (Licht={tech.LightingQuality}, Schaerfe={tech.SharpnessQuality})");
 
@@ -2129,6 +2198,9 @@ public partial class TrainingCenterViewModel : ObservableObject
                 totalMismatch += result.Mismatches;
                 totalNoFindings += result.NoFindings;
                 totalSamples += result.SamplesGenerated;
+
+                // Fall als verarbeitet markieren
+                currentCase.Status = TrainingCaseStatus.SelfTrained;
 
                 // Match-Rate-Verlauf persistieren
                 var matchTotal = result.ExactMatches + result.PartialMatches + result.Mismatches + result.NoFindings;
@@ -2141,7 +2213,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                         (double)result.ExactMatches / matchTotal,
                         (double)result.PartialMatches / matchTotal,
                         (double)result.Mismatches / matchTotal,
-                        (double)result.NoFindings / matchTotal));
+                        (double)result.NoFindings / matchTotal,
+                        (double)result.CodeHits / matchTotal));
                 }
 
                 // Inkrementelles KB-Update fuer ExactMatch-Samples
@@ -2181,12 +2254,13 @@ public partial class TrainingCenterViewModel : ObservableObject
             }
 
             ForceRerunAll = false; // Nach Durchlauf zuruecksetzen
+            var totalCodeHits = totalExact + totalPartial;
             Log($"=== Selbsttraining abgeschlossen ===");
             Log($"  Faelle: {casesToTrain.Count} ({caseErrors} Fehler)");
-            Log($"  ExactMatch: {totalExact} | Partial: {totalPartial} | Mismatch: {totalMismatch} | NoFindings: {totalNoFindings}");
+            Log($"  CodeHit: {totalCodeHits} (Code korrekt) | ExactMatch: {totalExact} (Code+Meter+Clock) | Partial: {totalPartial} | Mismatch: {totalMismatch} | NoFindings: {totalNoFindings}");
             Log($"  Samples erzeugt: {totalSamples}");
 
-            StatusText = $"Fertig! {casesToTrain.Count} Faelle, {totalExact} ExactMatch, {totalSamples} Samples";
+            StatusText = $"Fertig! {casesToTrain.Count} Faelle, {totalCodeHits} CodeHit, {totalExact} ExactMatch, {totalSamples} Samples";
 
             // Hinweis fuer Few-Shot-Export (B2)
             if (totalExact > 0)
@@ -2207,7 +2281,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                 {
                     ReviewQueueServiceRef.EnqueueFromSelfTraining(
                         s.CaseId, s.Code, s.KiCode ?? s.Code,
-                        s.MeterStart, s.FramePath, s.MatchLevel!);
+                        s.MeterStart, s.FramePath, s.MatchLevel!,
+                        s.SampleId);
                 }
 
                 if (reviewCandidates.Count > 0)
@@ -2265,17 +2340,16 @@ public partial class TrainingCenterViewModel : ObservableObject
             var embedder = new EmbeddingService(_kbHttpClient, ollamaConfig);
             var kbManager = new KnowledgeBaseManager(kbCtx, embedder);
 
-            // Embeddings parallel generieren (CPU-Arbeit, blockiert GPU nicht)
-            var indexedBag = new System.Collections.Concurrent.ConcurrentBag<string>();
-            await Parallel.ForEachAsync(samples,
-                new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = ct },
-                async (sample, token) =>
-                {
-                    if (kbManager.IsIndexed(sample.SampleId)) return;
-                    if (await kbManager.IndexSampleAsync(sample, token))
-                        indexedBag.Add(sample.SampleId);
-                });
-            indexedIds.AddRange(indexedBag);
+            // Nur noch nicht indexierte Samples filtern
+            var toIndex = samples.Where(s => !kbManager.IsIndexed(s.SampleId)).ToList();
+
+            // IndexSamplesAsync macht Embeddings sequentiell + DB-Writes in einer Transaktion
+            // (thread-safe, kein paralleler Zugriff auf SQLite-Connection)
+            if (toIndex.Count > 0)
+            {
+                var batchResult = await kbManager.IndexSamplesAsync(toIndex, ct);
+                indexedIds.AddRange(batchResult);
+            }
 
             if (indexedIds.Count > 0)
             {
