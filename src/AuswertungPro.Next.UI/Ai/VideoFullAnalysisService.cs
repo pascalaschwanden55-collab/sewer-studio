@@ -25,7 +25,7 @@ public sealed class VideoFullAnalysisService
     private readonly string _ffmpegPath;
     private readonly string _ffprobePath;
 
-    public double FrameStepSeconds { get; set; } = 3.0;
+    public double FrameStepSeconds { get; set; } = 1.5;
     public int DedupWindowFrames { get; set; } = 3;
     public int MinSeverity { get; set; } = 1;
     public TimeSpan VisionFrameTimeout { get; set; } = TimeSpan.FromSeconds(300);

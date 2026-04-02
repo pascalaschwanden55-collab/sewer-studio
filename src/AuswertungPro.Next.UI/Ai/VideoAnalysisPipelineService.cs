@@ -65,7 +65,15 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         if (useMultiModel)
         {
             // ── Multi-Model Path: YOLO -> DINO -> SAM -> Qwen ──
-            var pipelineClient = new VisionPipelineClient(pipelineCfg.SidecarUrl, _httpClient);
+            // Eigener HttpClient fuer den Sidecar (nicht den geteilten _httpClient verwenden,
+            // weil BaseAddress nur einmal gesetzt werden kann und _httpClient evtl.
+            // bereits fuer Ollama konfiguriert ist)
+            var sidecarHttp = new System.Net.Http.HttpClient
+            {
+                BaseAddress = pipelineCfg.SidecarUrl,
+                Timeout = TimeSpan.FromSeconds(pipelineCfg.SidecarTimeoutSec)
+            };
+            var pipelineClient = new VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
 
             // Create Qwen vision service for VSA-Code enrichment
             var ollamaClient = _cfg.CreateOllamaClient(_httpClient);
