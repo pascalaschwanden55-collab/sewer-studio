@@ -27,7 +27,10 @@ public sealed class VisionPipelineClient
     {
         _baseUri = baseUri;
         _http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
-        _http.BaseAddress = baseUri;
+        // BaseAddress nur setzen wenn noch nicht gesetzt (sonst InvalidOperationException
+        // "This instance has already started one or more requests")
+        if (_http.BaseAddress is null)
+            _http.BaseAddress = baseUri;
     }
 
     /// <summary>
