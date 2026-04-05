@@ -171,8 +171,10 @@
         </ScrollViewer>
 
         <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-            <Button x:Name="ApplyButton" Content="Uebernehmen" Width="120" Margin="0,0,8,0" />
-            <Button x:Name="CancelButton" Content="Abbrechen" Width="120" IsCancel="True" />
+            <Button x:Name="ApplyButton" Content="Uebernehmen" Width="120" Margin="0,0,8,0"
+                    ToolTip="Ausgewaehlten Code mit Parametern und Quantifizierung uebernehmen" />
+            <Button x:Name="CancelButton" Content="Abbrechen" Width="120" IsCancel="True"
+                    ToolTip="Code-Auswahl abbrechen ohne Aenderungen" />
         </StackPanel>
     </Grid>
 </Window>

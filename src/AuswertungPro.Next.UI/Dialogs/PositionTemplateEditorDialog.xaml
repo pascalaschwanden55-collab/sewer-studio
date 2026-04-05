@@ -36,10 +36,12 @@
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
                         <TextBlock Text="Massnahmen-Gruppen" FontWeight="SemiBold" FontSize="14"/>
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                            <Button Content="+ Gruppe" Command="{Binding AddGroupCommand}" 
-                                    Padding="8,4" MinWidth="80" Margin="0,0,4,0"/>
-                            <Button Content="✕ Löschen" Command="{Binding RemoveGroupCommand}" 
-                                    Padding="8,4" MinWidth="80" Style="{StaticResource SecondaryButton}"/>
+                            <Button Content="+ Gruppe" Command="{Binding AddGroupCommand}"
+                                    Padding="8,4" MinWidth="80" Margin="0,0,4,0"
+                                    ToolTip="Neue Massnahmen-Gruppe anlegen"/>
+                            <Button Content="✕ Löschen" Command="{Binding RemoveGroupCommand}"
+                                    Padding="8,4" MinWidth="80" Style="{StaticResource SecondaryButton}"
+                                    ToolTip="Ausgewaehlte Massnahmen-Gruppe mit allen Positionen loeschen"/>
                         </StackPanel>
                     </StackPanel>
                     
@@ -66,10 +68,12 @@
                         </DockPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                            <Button Content="+ Position" Command="{Binding AddPositionCommand}" 
-                                    Padding="8,4" MinWidth="100" Margin="0,0,4,0"/>
-                            <Button Content="✕ Entfernen" Command="{Binding RemovePositionCommand}" 
-                                    Padding="8,4" MinWidth="100" Margin="0,0,4,0" Style="{StaticResource SecondaryButton}"/>
+                            <Button Content="+ Position" Command="{Binding AddPositionCommand}"
+                                    Padding="8,4" MinWidth="100" Margin="0,0,4,0"
+                                    ToolTip="Neue Position zur aktuellen Massnahmen-Gruppe hinzufuegen"/>
+                            <Button Content="✕ Entfernen" Command="{Binding RemovePositionCommand}"
+                                    Padding="8,4" MinWidth="100" Margin="0,0,4,0" Style="{StaticResource SecondaryButton}"
+                                    ToolTip="Ausgewaehlte Position aus der Gruppe entfernen"/>
                             <Button Content="→ Wartebox" Command="{Binding MoveToStorageCommand}" 
                                     Padding="8,4" MinWidth="100" Margin="0,0,4,0" Style="{StaticResource SecondaryButton}"
                                     ToolTip="In Wartebox verschieben"/>
@@ -149,16 +153,19 @@
 
         <!-- Footer Buttons -->
         <DockPanel Grid.Row="2" Margin="0,12,0,0">
-            <Button Content="Standard wiederherstellen" Command="{Binding ResetToDefaultCommand}" 
+            <Button Content="Standard wiederherstellen" Command="{Binding ResetToDefaultCommand}"
                     DockPanel.Dock="Left"
-                    Padding="12,8" MinWidth="100" Style="{StaticResource SecondaryButton}"/>
+                    Padding="12,8" MinWidth="100" Style="{StaticResource SecondaryButton}"
+                    ToolTip="Alle Vorlagen auf die werkseitigen Standardwerte zuruecksetzen"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Speichern" Command="{Binding SaveCommand}" 
+                <Button Content="Speichern" Command="{Binding SaveCommand}"
                         IsDefault="True" Margin="0,0,8,0" Padding="20,8" MinWidth="120"
-                        Style="{StaticResource PrimaryButton}"/>
-                <Button Content="Abbrechen" Command="{Binding CancelCommand}" 
+                        Style="{StaticResource PrimaryButton}"
+                        ToolTip="Alle Vorlagen-Aenderungen dauerhaft speichern"/>
+                <Button Content="Abbrechen" Command="{Binding CancelCommand}"
                         IsCancel="True" Padding="20,8" MinWidth="120"
-                        Style="{StaticResource SecondaryButton}"/>
+                        Style="{StaticResource SecondaryButton}"
+                        ToolTip="Aenderungen verwerfen und Vorlagen-Editor schliessen"/>
             </StackPanel>
         </DockPanel>
     </Grid>

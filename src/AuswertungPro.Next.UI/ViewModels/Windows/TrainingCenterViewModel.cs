@@ -93,6 +93,9 @@ public partial class TrainingCenterViewModel : ObservableObject
     public ObservableCollection<CodeDistributionEntry> CodeDistribution { get; } = new();
     public ObservableCollection<string> SelfTrainingLogEntries { get; } = new();
 
+    /// <summary>Echtzeit-Log als mehrzeiliger String (fuer TextBox-Binding, weisse Schrift auf dunkel).</summary>
+    [ObservableProperty] private string _echtzeitLogText = "";
+
     [ObservableProperty] private int _pipelineActiveStep; // 0-5 (BuildingTimeline..Completed)
     [ObservableProperty] private string _currentEntryCode = "";
     [ObservableProperty] private double _currentEntryMeter;
@@ -129,6 +132,8 @@ public partial class TrainingCenterViewModel : ObservableObject
             SelfTrainingLogEntries.Add(line);
             while (SelfTrainingLogEntries.Count > 100)
                 SelfTrainingLogEntries.RemoveAt(0);
+            // TextBox-Binding aktualisieren (weisse Schrift auf dunkel)
+            EchtzeitLogText = string.Join("\n", SelfTrainingLogEntries);
         }
         if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
             d.Invoke(Apply);

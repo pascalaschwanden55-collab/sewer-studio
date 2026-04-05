@@ -5,31 +5,31 @@
         Title="Sewer Studio — Pipeline Analysis" Height="860" Width="1320"
         WindowStartupLocation="CenterOwner"
         WindowState="Normal"
-        Background="#0C1019"
+        Background="{StaticResource BackgroundBrush}"
         ResizeMode="CanResize"
         MinWidth="900" MinHeight="600">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
-        <!-- Sci-Fi Engineering Dark — Blue-steel palette -->
-        <SolidColorBrush x:Key="BgMain"       Color="#0C1019"/>
-        <SolidColorBrush x:Key="BgCard"       Color="#131825"/>
-        <SolidColorBrush x:Key="BgCardHover"  Color="#1A2030"/>
-        <SolidColorBrush x:Key="Border1"      Color="#243049"/>
-        <SolidColorBrush x:Key="TextPrimary"  Color="#F0F4FA"/>
-        <SolidColorBrush x:Key="TextMuted"    Color="#7B8DA6"/>
-        <SolidColorBrush x:Key="TextSub"      Color="#94A3B8"/>
-        <SolidColorBrush x:Key="Accent"       Color="#2563EB"/>
-        <SolidColorBrush x:Key="AccentLight"  Color="#60A5FA"/>
+        <!-- Theme-aware aliases (local keys → global theme brushes) -->
+        <SolidColorBrush x:Key="BgMain"       Color="{Binding Color, Source={StaticResource BackgroundBrush}}"/>
+        <SolidColorBrush x:Key="BgCard"       Color="{Binding Color, Source={StaticResource CardBrush}}"/>
+        <SolidColorBrush x:Key="BgCardHover"  Color="{Binding Color, Source={StaticResource HeaderBrush}}"/>
+        <SolidColorBrush x:Key="Border1"      Color="{Binding Color, Source={StaticResource BorderBrush}}"/>
+        <SolidColorBrush x:Key="TextPrimary"  Color="{Binding Color, Source={StaticResource TextBrush}}"/>
+        <SolidColorBrush x:Key="TextMuted"    Color="{Binding Color, Source={StaticResource MutedBrush}}"/>
+        <SolidColorBrush x:Key="TextSub"      Color="{Binding Color, Source={StaticResource MutedBrush}}"/>
+        <SolidColorBrush x:Key="Accent"       Color="{Binding Color, Source={StaticResource AccentBrush}}"/>
+        <SolidColorBrush x:Key="AccentLight"  Color="{Binding Color, Source={StaticResource AccentBrush}}"/>
         <SolidColorBrush x:Key="Green"        Color="#16A34A"/>
         <SolidColorBrush x:Key="Amber"        Color="#F59E0B"/>
         <SolidColorBrush x:Key="Red"          Color="#DC2626"/>
 
         <!-- Gemeinsame Styles -->
         <Style x:Key="CardBorder" TargetType="Border">
-            <Setter Property="Background"       Value="#131825"/>
-            <Setter Property="BorderBrush"      Value="#243049"/>
+            <Setter Property="Background"       Value="{StaticResource CardBrush}"/>
+            <Setter Property="BorderBrush"      Value="{StaticResource BorderBrush}"/>
             <Setter Property="BorderThickness"  Value="1"/>
             <Setter Property="CornerRadius"     Value="8"/>
             <Setter Property="Padding"          Value="14"/>
@@ -38,7 +38,7 @@
         <Style x:Key="LabelSmall" TargetType="TextBlock">
             <Setter Property="FontSize"         Value="10"/>
             <Setter Property="FontWeight"       Value="Bold"/>
-            <Setter Property="Foreground"       Value="#94A3B8"/>
+            <Setter Property="Foreground"       Value="{StaticResource MutedBrush}"/>
             <Setter Property="FontFamily"       Value="Consolas"/>
             <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
         </Style>
@@ -47,13 +47,13 @@
             <Setter Property="FontSize"   Value="24"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontFamily" Value="Consolas"/>
-            <Setter Property="Foreground" Value="#F0F4FA"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
         </Style>
 
         <!-- Phase-Button -->
         <Style x:Key="PhaseCard" TargetType="Border">
-            <Setter Property="Background"      Value="#131825"/>
-            <Setter Property="BorderBrush"     Value="#243049"/>
+            <Setter Property="Background"      Value="{StaticResource CardBrush}"/>
+            <Setter Property="BorderBrush"     Value="{StaticResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius"    Value="8"/>
             <Setter Property="Padding"         Value="14,10"/>
@@ -61,11 +61,7 @@
 
         <!-- Primär-Button -->
         <Style x:Key="BtnPrimary" TargetType="Button">
-            <Setter Property="Background">
-                <Setter.Value>
-                    <SolidColorBrush Color="#2563EB"/>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
             <Setter Property="Foreground"   Value="White"/>
             <Setter Property="FontWeight"   Value="SemiBold"/>
             <Setter Property="FontSize"     Value="13"/>
@@ -86,11 +82,11 @@
 
         <!-- Abbrechen-Button -->
         <Style x:Key="BtnCancel" TargetType="Button">
-            <Setter Property="Background"   Value="#1A2030"/>
-            <Setter Property="Foreground"   Value="#94A3B8"/>
+            <Setter Property="Background"   Value="{StaticResource HeaderBrush}"/>
+            <Setter Property="Foreground"   Value="{StaticResource MutedBrush}"/>
             <Setter Property="FontSize"     Value="13"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush"  Value="#2A3A55"/>
+            <Setter Property="BorderBrush"  Value="{StaticResource BorderBrush}"/>
             <Setter Property="Padding"      Value="20,9"/>
             <Setter Property="Cursor"       Value="Hand"/>
             <Setter Property="Template">
@@ -125,7 +121,7 @@
         <!-- ProgressBar -->
         <Style x:Key="ThinProgress" TargetType="ProgressBar">
             <Setter Property="Height"          Value="3"/>
-            <Setter Property="Background"      Value="#1A2538"/>
+            <Setter Property="Background"      Value="{StaticResource HeaderBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -134,10 +130,8 @@
                             <Border x:Name="PART_Track">
                                 <Border x:Name="PART_Indicator"
                                         CornerRadius="2"
-                                        HorizontalAlignment="Left">
-                                    <Border.Background>
-                                        <SolidColorBrush Color="#2563EB"/>
-                                    </Border.Background>
+                                        HorizontalAlignment="Left"
+                                        Background="{StaticResource AccentBrush}">
                                 </Border>
                             </Border>
                         </Border>
@@ -156,8 +150,8 @@
         </Grid.RowDefinitions>
 
         <!-- ── Header ── -->
-        <Border Grid.Row="0" Background="#0C1019"
-                BorderBrush="#243049" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Background="{StaticResource BackgroundBrush}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
             <Grid Margin="20,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -170,12 +164,12 @@
                             VerticalAlignment="Center" Margin="0,0,16,0">
                     <!-- Blue accent bar -->
                     <Border Width="4" Height="28" CornerRadius="2" Margin="0,0,10,0"
-                            Background="#2563EB"/>
+                            Background="{StaticResource AccentBrush}"/>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="S E W E R  S T U D I O" FontWeight="Bold" FontSize="11"
-                                   FontFamily="Consolas" Foreground="#60A5FA" Margin="0,0,0,1"/>
+                                   FontFamily="Consolas" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,1"/>
                         <TextBlock Text="PIPELINE ANALYSIS" FontSize="8" FontWeight="SemiBold"
-                                   FontFamily="Consolas" Foreground="#4A5F7A"/>
+                                   FontFamily="Consolas" Foreground="{StaticResource MutedBrush}"/>
                     </StackPanel>
                 </StackPanel>
 
@@ -184,10 +178,10 @@
                             VerticalAlignment="Center" HorizontalAlignment="Center">
                     <TextBlock Text="{Binding PhaseLabel}"
                                FontSize="13" FontWeight="SemiBold"
-                               FontFamily="Consolas" Foreground="#94A3B8"/>
-                    <TextBlock Text="  //  " Foreground="#2A3A55" FontSize="13" FontFamily="Consolas"/>
+                               FontFamily="Consolas" Foreground="{StaticResource MutedBrush}"/>
+                    <TextBlock Text="  //  " Foreground="{StaticResource BorderBrush}" FontSize="13" FontFamily="Consolas"/>
                     <TextBlock Text="{Binding StatusText}"
-                               FontSize="12" Foreground="#7B8DA6" FontFamily="Consolas"
+                               FontSize="12" Foreground="{StaticResource MutedBrush}" FontFamily="Consolas"
                                MaxWidth="400" TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center"/>
                 </StackPanel>
@@ -205,7 +199,7 @@
                                        FontWeight="Bold" Foreground="#16A34A"
                                        VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock FontFamily="Consolas" FontSize="10"
-                                       Foreground="#7B8DA6" VerticalAlignment="Center">
+                                       Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center">
                                 <Run Text="Skip "/>
                                 <Run Text="{Binding YoloSkippedFrames}" FontWeight="Bold"
                                      Foreground="#F59E0B"/>
@@ -214,14 +208,14 @@
                     </Border>
                     <!-- Meter Badge -->
                     <Border CornerRadius="4" Padding="10,4"
-                            Background="#131825" BorderBrush="#243049" BorderThickness="1">
+                            Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="● " Foreground="#2563EB" FontSize="8"
+                            <TextBlock Text="● " Foreground="{StaticResource AccentBrush}" FontSize="8"
                                        VerticalAlignment="Center"
                                        Visibility="{Binding VideoPhaseActive,
                                            Converter={StaticResource BoolToVis}}"/>
                             <TextBlock FontFamily="Consolas" FontSize="12"
-                                       Foreground="#60A5FA">
+                                       Foreground="{StaticResource AccentBrush}">
                                 <Run Text="Meter "/>
                                 <Run Text="{Binding CurrentMeter}" FontWeight="Bold"/>
                             </TextBlock>
@@ -284,15 +278,15 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <TextBlock Grid.Row="0" Style="{StaticResource LabelSmall}" Text="ERKENNEN"/>
-                                    <TextBlock Grid.Row="2" FontSize="9" Foreground="#4A5F7A" Text="Detection"/>
+                                    <TextBlock Grid.Row="2" FontSize="9" Foreground="{StaticResource MutedBrush}" Text="Detection"/>
                                     <TextBlock Grid.Row="4" Style="{StaticResource ValueLarge}"
                                                Text="{Binding PillarDetectionCount}"
-                                               Foreground="#60A5FA"/>
+                                               Foreground="{StaticResource AccentBrush}"/>
                                     <ProgressBar Grid.Row="6"
                                                  Style="{StaticResource ThinProgress}"
                                                  Value="{Binding VideoProgressPct}"
                                                  Maximum="100"/>
-                                    <TextBlock Grid.Row="8" FontSize="10" Foreground="#94A3B8">
+                                    <TextBlock Grid.Row="8" FontSize="10" Foreground="{StaticResource MutedBrush}">
                                         <Run Text="{Binding PillarDetectionCount}"/>
                                         <Run Text=" Schäden"/>
                                     </TextBlock>
@@ -300,7 +294,7 @@
                             </Border>
                             <!-- Top accent line -->
                             <Border Height="3" VerticalAlignment="Top" CornerRadius="8,8,0,0"
-                                    Background="#2563EB" Margin="1,1,1,0"/>
+                                    Background="{StaticResource AccentBrush}" Margin="1,1,1,0"/>
                         </Grid>
 
                         <!-- Säule 2: QUANTIFIZIERUNG -->
@@ -319,7 +313,7 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <TextBlock Grid.Row="0" Style="{StaticResource LabelSmall}" Text="QUANTIFIZIERUNG"/>
-                                    <TextBlock Grid.Row="2" FontSize="9" Foreground="#4A5F7A" Text="Messung"/>
+                                    <TextBlock Grid.Row="2" FontSize="9" Foreground="{StaticResource MutedBrush}" Text="Messung"/>
                                     <TextBlock Grid.Row="4" Style="{StaticResource ValueLarge}"
                                                Text="{Binding PillarQuantCount}"
                                                Foreground="#16A34A"/>
@@ -327,7 +321,7 @@
                                                  Style="{StaticResource ThinProgress}"
                                                  Value="{Binding MappingProgressPct}"
                                                  Maximum="100"/>
-                                    <TextBlock Grid.Row="8" FontSize="10" Foreground="#94A3B8">
+                                    <TextBlock Grid.Row="8" FontSize="10" Foreground="{StaticResource MutedBrush}">
                                         <Run Text="{Binding PillarQuantCount}"/>
                                         <Run Text=" quantifiziert"/>
                                     </TextBlock>
@@ -354,7 +348,7 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <TextBlock Grid.Row="0" Style="{StaticResource LabelSmall}" Text="LOKALISIERUNG"/>
-                                    <TextBlock Grid.Row="2" FontSize="9" Foreground="#4A5F7A" Text="Position"/>
+                                    <TextBlock Grid.Row="2" FontSize="9" Foreground="{StaticResource MutedBrush}" Text="Position"/>
                                     <TextBlock Grid.Row="4" Style="{StaticResource ValueLarge}"
                                                Text="{Binding PillarLocalCount}"
                                                Foreground="#F59E0B"/>
@@ -368,7 +362,7 @@
                                             </Binding>
                                         </ProgressBar.Value>
                                     </ProgressBar>
-                                    <TextBlock Grid.Row="8" FontSize="10" Foreground="#94A3B8">
+                                    <TextBlock Grid.Row="8" FontSize="10" Foreground="{StaticResource MutedBrush}">
                                         <Run Text="{Binding PillarLocalCount}"/>
                                         <Run Text=" lokalisiert"/>
                                     </TextBlock>
@@ -382,27 +376,27 @@
 
                     <!-- Compact Phase Strip -->
                     <Border Grid.Row="2" CornerRadius="6" Padding="10,5"
-                            Background="#0E1320" BorderBrush="#243049" BorderThickness="1">
+                            Background="{StaticResource BackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                         <DockPanel LastChildFill="True">
                             <!-- Speed Selector (rechts) -->
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
                                         VerticalAlignment="Center" Margin="12,0,0,0">
-                                <TextBlock Text="Tempo" FontSize="9" Foreground="#7B8DA6"
+                                <TextBlock Text="Tempo" FontSize="9" Foreground="{StaticResource MutedBrush}"
                                            VerticalAlignment="Center" Margin="0,0,6,0"/>
                                 <ComboBox x:Name="SpeedModeCombo"
                                           Width="58" Height="22"
                                           SelectedIndex="0"
-                                          Background="#131825"
-                                          Foreground="#60A5FA"
-                                          BorderBrush="#243049"
+                                          Background="{StaticResource CardBrush}"
+                                          Foreground="{StaticResource AccentBrush}"
+                                          BorderBrush="{StaticResource BorderBrush}"
                                           BorderThickness="1"
                                           FontSize="11"
                                           FontWeight="SemiBold"
                                           FontFamily="Consolas">
-                                    <ComboBoxItem Content="x1" Tag="1" Foreground="#E0E8F0"/>
-                                    <ComboBoxItem Content="x2" Tag="2" Foreground="#E0E8F0"/>
-                                    <ComboBoxItem Content="x4" Tag="4" Foreground="#E0E8F0"/>
-                                    <ComboBoxItem Content="x6" Tag="6" Foreground="#E0E8F0"/>
+                                    <ComboBoxItem Content="x1" Tag="1" Foreground="{StaticResource TextBrush}"/>
+                                    <ComboBoxItem Content="x2" Tag="2" Foreground="{StaticResource TextBrush}"/>
+                                    <ComboBoxItem Content="x4" Tag="4" Foreground="{StaticResource TextBrush}"/>
+                                    <ComboBoxItem Content="x6" Tag="6" Foreground="{StaticResource TextBrush}"/>
                                 </ComboBox>
                                 <Button x:Name="StartButton"
                                         Content="▶ Start"
@@ -412,13 +406,12 @@
                                         Foreground="White"
                                         Padding="12,2"
                                         Cursor="Hand"
-                                        Click="Start_Click">
+                                        Click="Start_Click"
+                                        ToolTip="KI-Videoanalyse mit YOLO-Erkennung und Multi-Model-Pipeline starten">
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
-                                            <Border CornerRadius="4" Padding="{TemplateBinding Padding}">
-                                                <Border.Background>
-                                                    <SolidColorBrush Color="#2563EB"/>
-                                                </Border.Background>
+                                            <Border CornerRadius="4" Padding="{TemplateBinding Padding}"
+                                                    Background="{StaticResource AccentBrush}">
                                                 <ContentPresenter HorizontalAlignment="Center"
                                                                   VerticalAlignment="Center"/>
                                             </Border>
@@ -433,7 +426,7 @@
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Text" Value="●"/>
-                                            <Setter Property="Foreground" Value="#2563EB"/>
+                                            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding VideoPhaseDone}" Value="True">
                                                     <Setter Property="Text" Value="✓"/>
@@ -443,12 +436,12 @@
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
-                                <TextBlock Text="Video" FontSize="10" Foreground="#94A3B8" VerticalAlignment="Center"/>
-                                <TextBlock FontSize="10" Foreground="#7B8DA6" VerticalAlignment="Center" Margin="4,0,0,0">
+                                <TextBlock Text="Video" FontSize="10" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                                <TextBlock FontSize="10" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="4,0,0,0">
                                     <Run Text="{Binding FramesAnalyzed}"/>/<Run Text="{Binding TotalFrames}"/>
                                 </TextBlock>
                             </StackPanel>
-                            <TextBlock Text="→" Foreground="#4A5F7A" FontSize="10"
+                            <TextBlock Text="→" Foreground="{StaticResource MutedBrush}" FontSize="10"
                                        VerticalAlignment="Center" Margin="0,0,16,0"/>
                             <!-- Code-Mapping -->
                             <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
@@ -456,7 +449,7 @@
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Text" Value="○"/>
-                                            <Setter Property="Foreground" Value="#334155"/>
+                                            <Setter Property="Foreground" Value="{StaticResource BorderBrush}"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding MappingPhaseDone}" Value="True">
                                                     <Setter Property="Text" Value="✓"/>
@@ -464,18 +457,18 @@
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding VideoPhaseDone}" Value="True">
                                                     <Setter Property="Text" Value="●"/>
-                                                    <Setter Property="Foreground" Value="#2563EB"/>
+                                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
-                                <TextBlock Text="Mapping" FontSize="10" Foreground="#94A3B8" VerticalAlignment="Center"/>
-                                <TextBlock FontSize="10" Foreground="#7B8DA6" VerticalAlignment="Center" Margin="4,0,0,0">
+                                <TextBlock Text="Mapping" FontSize="10" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                                <TextBlock FontSize="10" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="4,0,0,0">
                                     <Run Text="{Binding DetectionCount}"/>
                                 </TextBlock>
                             </StackPanel>
-                            <TextBlock Text="→" Foreground="#4A5F7A" FontSize="10"
+                            <TextBlock Text="→" Foreground="{StaticResource MutedBrush}" FontSize="10"
                                        VerticalAlignment="Center" Margin="0,0,16,0"/>
                             <!-- Protokoll -->
                             <StackPanel Orientation="Horizontal">
@@ -483,7 +476,7 @@
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Text" Value="○"/>
-                                            <Setter Property="Foreground" Value="#334155"/>
+                                            <Setter Property="Foreground" Value="{StaticResource BorderBrush}"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsDone}" Value="True">
                                                     <Setter Property="Text" Value="✓"/>
@@ -493,8 +486,8 @@
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
-                                <TextBlock Text="Protokoll" FontSize="10" Foreground="#94A3B8" VerticalAlignment="Center"/>
-                                <TextBlock FontSize="10" Foreground="#7B8DA6" VerticalAlignment="Center" Margin="4,0,0,0">
+                                <TextBlock Text="Protokoll" FontSize="10" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                                <TextBlock FontSize="10" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="4,0,0,0">
                                     <Run Text="{Binding HighConfidenceCount}"/>
                                     <Run Text=" HC"/>
                                 </TextBlock>
@@ -506,7 +499,7 @@
 
                 <!-- Kompakte Stats-Leiste -->
                 <Border Grid.Row="2" CornerRadius="8" Padding="12,7"
-                        Background="#131825" BorderBrush="#243049" BorderThickness="1">
+                        Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                     <DockPanel>
                         <!-- Status rechts -->
                         <TextBlock DockPanel.Dock="Right" FontSize="12" FontWeight="SemiBold"
@@ -514,7 +507,7 @@
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Text" Value="Läuft"/>
-                                    <Setter Property="Foreground" Value="#2563EB"/>
+                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsDone}" Value="True">
                                             <Setter Property="Text" Value="Fertig ✓"/>
@@ -530,13 +523,13 @@
                         </TextBlock>
                         <!-- Stats inline -->
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock FontSize="11" Foreground="#7B8DA6" Margin="0,0,4,0" Text="Frames"/>
-                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="#F0F4FA"
+                            <TextBlock FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,0,4,0" Text="Frames"/>
+                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="{StaticResource TextBrush}"
                                        Margin="0,0,16,0" Text="{Binding FramesAnalyzed}"/>
-                            <TextBlock FontSize="11" Foreground="#7B8DA6" Margin="0,0,4,0" Text="Schäden"/>
-                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="#60A5FA"
+                            <TextBlock FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,0,4,0" Text="Schäden"/>
+                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"
                                        Margin="0,0,16,0" Text="{Binding DetectionCount}"/>
-                            <TextBlock FontSize="11" Foreground="#7B8DA6" Margin="0,0,4,0" Text="Hohe Konf."/>
+                            <TextBlock FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,0,4,0" Text="Hohe Konf."/>
                             <TextBlock FontSize="13" FontWeight="Bold" Foreground="#16A34A"
                                        Text="{Binding HighConfidenceCount}"/>
                         </StackPanel>
@@ -563,14 +556,15 @@
                                     x:Name="UndockButton"
                                     Content="⬜ Abdocken"
                                     FontSize="10"
-                                    Foreground="#94A3B8"
-                                    Background="#1A2030"
-                                    BorderBrush="#243049"
+                                    Foreground="{StaticResource MutedBrush}"
+                                    Background="{StaticResource HeaderBrush}"
+                                    BorderBrush="{StaticResource BorderBrush}"
                                     BorderThickness="1"
                                     Padding="8,2"
                                     Cursor="Hand"
                                     HorizontalAlignment="Right"
-                                    Click="Undock_Click">
+                                    Click="Undock_Click"
+                                    ToolTip="Live-Frame-Vorschau in eigenem Fenster anzeigen fuer groessere Ansicht">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
                                         <Border Background="{TemplateBinding Background}"
@@ -587,8 +581,8 @@
 
                         <Border Grid.Row="2"
                                 CornerRadius="8"
-                                Background="#080C14"
-                                BorderBrush="#243049"
+                                Background="{StaticResource BackgroundBrush}"
+                                BorderBrush="{StaticResource BorderBrush}"
                                 BorderThickness="1"
                                 ClipToBounds="True">
                             <Grid>
@@ -599,7 +593,7 @@
                                         Background="Transparent"
                                         IsHitTestVisible="False"/>
                                 <TextBlock Text="Noch kein Frame verfügbar"
-                                           Foreground="#7B8DA6"
+                                           Foreground="{StaticResource MutedBrush}"
                                            FontSize="12"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center">
@@ -620,15 +614,15 @@
                         <StackPanel Grid.Row="4">
                             <TextBlock Text="{Binding LiveFrameStatus}"
                                        FontSize="11"
-                                       Foreground="#60A5FA"
+                                       Foreground="{StaticResource AccentBrush}"
                                        TextWrapping="Wrap"/>
                             <TextBlock Text="{Binding LiveFrameInfo}"
                                        FontSize="10"
-                                       Foreground="#94A3B8"
+                                       Foreground="{StaticResource MutedBrush}"
                                        Margin="0,2,0,0"/>
                             <TextBlock Text="{Binding LiveFrameQuantSummary}"
                                        FontSize="10"
-                                       Foreground="#8B95A8"
+                                       Foreground="{StaticResource MutedBrush}"
                                        Margin="0,2,0,0"
                                        TextWrapping="Wrap"/>
                         </StackPanel>
@@ -667,18 +661,18 @@
                                       Margin="0,0,6,0"
                                       SelectionChanged="OverlayModeCombo_SelectionChanged"
                                       SelectedIndex="1"
-                                      Background="#0E1620"
-                                      Foreground="#C0D4E8"
-                                      BorderBrush="#243049"
+                                      Background="{StaticResource BackgroundBrush}"
+                                      Foreground="{StaticResource TextBrush}"
+                                      BorderBrush="{StaticResource BorderBrush}"
                                       BorderThickness="1"
                                       FontSize="11">
-                                <ComboBoxItem Content="Kompakt" Foreground="#E0E8F0"/>
-                                <ComboBoxItem Content="Detail" Foreground="#E0E8F0"/>
+                                <ComboBoxItem Content="Kompakt" Foreground="{StaticResource TextBrush}"/>
+                                <ComboBoxItem Content="Detail" Foreground="{StaticResource TextBrush}"/>
                             </ComboBox>
 
                             <Border CornerRadius="10" Padding="6,1"
                                     Background="#2563EB15">
-                                <TextBlock FontSize="11" FontWeight="Bold" Foreground="#60A5FA"
+                                <TextBlock FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"
                                            Text="{Binding DetectionCount}"/>
                             </Border>
                         </StackPanel>
@@ -686,8 +680,8 @@
 
                     <Border Grid.Row="2"
                             CornerRadius="8"
-                            Background="#0A1928"
-                            BorderBrush="#243049"
+                            Background="{StaticResource BackgroundBrush}"
+                            BorderBrush="{StaticResource BorderBrush}"
                             BorderThickness="1"
                             Padding="6">
                         <Grid>
@@ -698,7 +692,7 @@
                             <TextBlock x:Name="PipeRadarEmptyText"
                                        VerticalAlignment="Center"
                                        HorizontalAlignment="Center"
-                                       Foreground="#7B8DA6"
+                                       Foreground="{StaticResource MutedBrush}"
                                        FontSize="11"
                                        Text="Noch keine Erkennungen"
                                        Visibility="Collapsed"
@@ -716,7 +710,7 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border Margin="0,0,0,5" CornerRadius="7" Padding="10,8"
-                                        Background="#151C2A"
+                                        Background="{StaticResource CardBrush}"
                                         BorderThickness="1">
                                     <Border.BorderBrush>
                                         <SolidColorBrush Color="{Binding SeverityColor}" Opacity="0.2"/>
@@ -744,7 +738,7 @@
                                             </Ellipse>
                                             <TextBlock Text="{Binding Label}"
                                                        FontSize="12" FontWeight="SemiBold"
-                                                       Foreground="#D0D9E8"
+                                                       Foreground="{StaticResource TextBrush}"
                                                        TextTrimming="CharacterEllipsis"
                                                        MaxWidth="160"/>
                                             <!-- Code-Badge -->
@@ -753,19 +747,19 @@
                                                     Background="#2563EB15">
                                                 <TextBlock Text="{Binding Code}"
                                                            FontFamily="Consolas" FontSize="10"
-                                                           FontWeight="Bold" Foreground="#60A5FA"/>
+                                                           FontWeight="Bold" Foreground="{StaticResource AccentBrush}"/>
                                             </Border>
                                         </DockPanel>
 
                                         <TextBlock Grid.Row="2"
                                                    FontSize="10"
-                                                   Foreground="#94A3B8"
+                                                   Foreground="{StaticResource MutedBrush}"
                                                    Text="{Binding PositionSummary}"/>
 
                                         <!-- Quantifizierung (nur wenn vorhanden) -->
                                         <TextBlock Grid.Row="4"
                                                    FontSize="9"
-                                                   Foreground="#8B95A8"
+                                                   Foreground="{StaticResource MutedBrush}"
                                                    Text="{Binding QuantSummary}"
                                                    Visibility="{Binding HasQuantification,
                                                        Converter={StaticResource BoolToVis}}"/>
@@ -779,13 +773,13 @@
 
                                             <TextBlock Grid.Column="0"
                                                        FontFamily="Consolas" FontSize="10"
-                                                       Foreground="#7B8DA6"
+                                                       Foreground="{StaticResource MutedBrush}"
                                                        Text="{Binding MeterRange}"/>
 
                                             <!-- Konfidenz-Bar -->
                                             <StackPanel Grid.Column="1" Orientation="Horizontal">
                                                 <ProgressBar Width="44" Height="3"
-                                                             Background="#1A2538"
+                                                             Background="{StaticResource HeaderBrush}"
                                                              BorderThickness="0"
                                                              Maximum="1"
                                                              Value="{Binding Confidence}">
@@ -813,12 +807,12 @@
         </Grid>
 
         <!-- ── Footer ── -->
-        <Border Grid.Row="2" Background="#0C1019"
-                BorderBrush="#243049" BorderThickness="0,1,0,0">
+        <Border Grid.Row="2" Background="{StaticResource BackgroundBrush}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
             <Grid Margin="16,0">
                 <!-- Stats links -->
                 <TextBlock VerticalAlignment="Center" FontSize="11"
-                           Foreground="#4A5F7A" FontFamily="Consolas"
+                           Foreground="{StaticResource MutedBrush}" FontFamily="Consolas"
                            Text="{Binding StatsText}"/>
 
                 <!-- Buttons rechts -->
@@ -826,12 +820,14 @@
                             VerticalAlignment="Center" Margin="0,0,0,0">
                     <Button Style="{StaticResource BtnCancel}"
                             Content="Abbrechen" Margin="0,0,8,0"
-                            Click="Cancel_Click"/>
+                            Click="Cancel_Click"
+                            ToolTip="Laufende Pipeline-Analyse abbrechen und Fenster schliessen"/>
                     <Button x:Name="AcceptButton"
                             Style="{StaticResource BtnPrimary}"
                             Content="Protokoll übernehmen"
                             IsEnabled="{Binding IsDone}"
-                            Click="Accept_Click"/>
+                            Click="Accept_Click"
+                            ToolTip="Erkannte Schaeden als Protokolleintraege in die Haltung uebernehmen"/>
                 </StackPanel>
             </Grid>
         </Border>

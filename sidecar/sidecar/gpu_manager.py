@@ -112,15 +112,53 @@ class GpuModelManager:
             self.unload(slot)
         logger.info("All model slots unloaded.")
 
+    # VRAM Watermark-Schwellen
+    VRAM_WARN_PERCENT = 75.0
+    VRAM_ERROR_PERCENT = 90.0
+
+    def get_vram_utilization_percent(self) -> float:
+        """Gibt die aktuelle VRAM-Auslastung in Prozent zurueck (0-100)."""
+        try:
+            import torch
+            if torch.cuda.is_available():
+                allocated = torch.cuda.memory_allocated(0)
+                total = torch.cuda.get_device_properties(0).total_mem
+                if total > 0:
+                    return (allocated / total) * 100.0
+        except Exception:
+            pass
+        return 0.0
+
+    def check_vram_health(self) -> str:
+        """Prueft VRAM-Auslastung und gibt Status zurueck: ok/warning/critical.
+        Loggt Warnungen bei Ueberschreitung der Schwellen.
+        """
+        pct = self.get_vram_utilization_percent()
+        if pct >= self.VRAM_ERROR_PERCENT:
+            logger.error(
+                "VRAM KRITISCH: %.1f%% belegt (Schwelle: %.0f%%) — OOM-Risiko!",
+                pct, self.VRAM_ERROR_PERCENT
+            )
+            return "critical"
+        elif pct >= self.VRAM_WARN_PERCENT:
+            logger.warning(
+                "VRAM Warnung: %.1f%% belegt (Schwelle: %.0f%%)",
+                pct, self.VRAM_WARN_PERCENT
+            )
+            return "warning"
+        return "ok"
+
     def get_status(self) -> dict:
         """Return status dict for /health endpoint.
 
         Keeps legacy keys (current_model, vram_allocated_gb, vram_total_gb)
         for backwards compatibility and adds loaded_models detail.
+        Neu: vram_utilization_percent und vram_health fuer VRAM-Monitoring.
         """
         vram_allocated = 0.0
         vram_total = 0.0
         vram_free_mb = 0
+        vram_utilization = 0.0
         try:
             import torch
             if torch.cuda.is_available():
@@ -128,6 +166,8 @@ class GpuModelManager:
                 vram_total = torch.cuda.get_device_properties(0).total_mem / (1024**3)
                 free_bytes, _ = torch.cuda.mem_get_info(0)
                 vram_free_mb = int(free_bytes / (1024**2))
+                if vram_total > 0:
+                    vram_utilization = (vram_allocated / vram_total) * 100.0
         except Exception:
             pass
 
@@ -150,11 +190,16 @@ class GpuModelManager:
             for s in core_slots
         )
 
+        # VRAM Health-Check (loggt Warnungen bei Ueberschreitung)
+        vram_health = self.check_vram_health()
+
         return {
             "current_model": current,
             "vram_allocated_gb": round(vram_allocated, 2),
             "vram_total_gb": round(vram_total, 2),
             "vram_free_mb": vram_free_mb,
+            "vram_utilization_percent": round(vram_utilization, 1),
+            "vram_health": vram_health,
             "all_resident": all_core_loaded,
             "prewarm_done": all_core_loaded,
             "load_times_sec": {

@@ -65,9 +65,11 @@
         <!-- Buttons -->
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
             <Button Content="Schliessen" Click="CloseButton_Click" Padding="16,6" Margin="0,0,8,0"
-                    Style="{StaticResource ToolbarButton}"/>
+                    Style="{StaticResource ToolbarButton}"
+                    ToolTip="Vorschau schliessen ohne den Import auszufuehren"/>
             <Button Content="Import ausfuehren" Click="ExecuteButton_Click" Padding="16,6"
-                    Style="{StaticResource ToolbarButtonAccent}"/>
+                    Style="{StaticResource ToolbarButtonAccent}"
+                    ToolTip="Angezeigte Aenderungen in das Projekt importieren"/>
         </StackPanel>
     </Grid>
 </Window>

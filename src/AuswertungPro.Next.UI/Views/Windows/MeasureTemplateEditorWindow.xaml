@@ -22,8 +22,10 @@
                        FontWeight="Bold" Margin="0,0,0,8"/>
             
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
-                <Button Command="{Binding NewTemplateCommand}" Content="Neu" Width="80" Margin="0,0,6,0"/>
-                <Button Command="{Binding DeleteTemplateCommand}" Content="Löschen" Width="80"/>
+                <Button Command="{Binding NewTemplateCommand}" Content="Neu" Width="80" Margin="0,0,6,0"
+                        ToolTip="Neue Sanierungsmassnahmen-Vorlage erstellen"/>
+                <Button Command="{Binding DeleteTemplateCommand}" Content="Löschen" Width="80"
+                        ToolTip="Ausgewaehlte Massnahmen-Vorlage dauerhaft loeschen"/>
             </StackPanel>
 
             <ListBox ItemsSource="{Binding Templates}" 
@@ -65,11 +67,14 @@
             
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
                 <Button Content="+ Position" Width="110" Margin="0,0,6,0"
-                        Command="{Binding AddCatalogItemCommand}"/>
+                        Command="{Binding AddCatalogItemCommand}"
+                        ToolTip="Neue Preisposition zum Katalog hinzufuegen"/>
                 <Button Content="✕ Löschen" Width="110" Margin="0,0,6,0"
-                        Command="{Binding RemoveCatalogItemCommand}"/>
+                        Command="{Binding RemoveCatalogItemCommand}"
+                        ToolTip="Ausgewaehlte Preisposition aus dem Katalog entfernen"/>
                 <Button Content="Positionen speichern" Width="150"
-                        Command="{Binding SaveCatalogCommand}"/>
+                        Command="{Binding SaveCatalogCommand}"
+                        ToolTip="Alle Aenderungen am Preiskatalog auf Festplatte speichern"/>
             </StackPanel>
 
             <DataGrid x:Name="AvailablePricesGrid"
@@ -133,10 +138,14 @@
                 <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding TemplateDescription}" Margin="0,0,0,6"/>
 
                 <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,6,0,0">
-                    <Button Command="{Binding SaveTemplateCommand}" Content="Template speichern" Width="150" Margin="0,0,6,0"/>
-                    <Button Command="{Binding DeleteLineCommand}" Content="Zeile löschen" Width="120" Margin="0,0,6,0"/>
-                    <Button Command="{Binding MoveLineUpCommand}" Content="↑" Width="40" Margin="0,0,6,0"/>
-                    <Button Command="{Binding MoveLineDownCommand}" Content="↓" Width="40"/>
+                    <Button Command="{Binding SaveTemplateCommand}" Content="Template speichern" Width="150" Margin="0,0,6,0"
+                            ToolTip="Aktuelle Massnahmen-Vorlage mit allen Positionen speichern"/>
+                    <Button Command="{Binding DeleteLineCommand}" Content="Zeile löschen" Width="120" Margin="0,0,6,0"
+                            ToolTip="Ausgewaehlte Positionszeile aus der Vorlage entfernen"/>
+                    <Button Command="{Binding MoveLineUpCommand}" Content="↑" Width="40" Margin="0,0,6,0"
+                            ToolTip="Ausgewaehlte Position in der Reihenfolge nach oben verschieben"/>
+                    <Button Command="{Binding MoveLineDownCommand}" Content="↓" Width="40"
+                            ToolTip="Ausgewaehlte Position in der Reihenfolge nach unten verschieben"/>
                 </StackPanel>
             </Grid>
 

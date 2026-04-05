@@ -96,42 +96,48 @@
                 CornerRadius="10"
                 Margin="0,0,0,8">
             <WrapPanel>
-                <Button Command="{Binding RefreshCommand}" Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,4">
+                <Button Command="{Binding RefreshCommand}" Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,4"
+                        ToolTip="Konflikte neu analysieren und Liste aktualisieren">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Aktualisieren" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
-                <Button Command="{Binding ResolveFromCandidateCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4">
+                <Button Command="{Binding ResolveFromCandidateCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4"
+                        ToolTip="Ausgewaehlten Video-Kandidaten der Haltung fest zuordnen">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Kandidat zuordnen" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
-                <Button Command="{Binding ResolveManualCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4">
+                <Button Command="{Binding ResolveManualCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4"
+                        ToolTip="Video manuell per Dateiauswahl zuordnen">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Video waehlen" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
-                <Button Command="{Binding ResolveSuggestedCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4">
+                <Button Command="{Binding ResolveSuggestedCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4"
+                        ToolTip="Zuordnung aus frueher gelernter Quelle uebernehmen">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Gelernte Quelle zuordnen" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
-                <Button Command="{Binding AutoResolveLearnedCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4">
+                <Button Command="{Binding AutoResolveLearnedCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4"
+                        ToolTip="Alle offenen Konflikte automatisch mit gelernten Quellen loesen">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Auto-Resolve (gelernt)" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
-                <Button Command="{Binding ClearLearnedMappingsCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4">
+                <Button Command="{Binding ClearLearnedMappingsCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4"
+                        ToolTip="Alle gelernten Video-Zuordnungen zuruecksetzen und loeschen">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Mappings loeschen" VerticalAlignment="Center"/>
@@ -255,70 +261,80 @@
 
                         <TextBlock Text="Aktionen" FontSize="14" FontWeight="SemiBold"/>
                         <WrapPanel Margin="0,8,0,0">
-                            <Button Command="{Binding PlaySelectedCandidateCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                            <Button Command="{Binding PlaySelectedCandidateCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6"
+                                    ToolTip="Ausgewaehlten Video-Kandidaten im Player abspielen">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
                                     <TextBlock Text="Kandidat abspielen"/>
                                 </StackPanel>
                             </Button>
 
-                            <Button Command="{Binding ResolveFromCandidateCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                            <Button Command="{Binding ResolveFromCandidateCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6"
+                                    ToolTip="Ausgewaehlten Kandidaten als Video dieser Haltung festlegen">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
                                     <TextBlock Text="Kandidat uebernehmen"/>
                                 </StackPanel>
                             </Button>
 
-                            <Button Command="{Binding ResolveManualCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                            <Button Command="{Binding ResolveManualCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6"
+                                    ToolTip="Videodatei manuell per Datei-Dialog auswaehlen und zuordnen">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
                                     <TextBlock Text="Video manuell waehlen"/>
                                 </StackPanel>
                             </Button>
 
-                            <Button Command="{Binding PlaySuggestedSourceCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                            <Button Command="{Binding PlaySuggestedSourceCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6"
+                                    ToolTip="Gelernte Videoquelle im Player zur Ueberpruefung abspielen">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
                                     <TextBlock Text="Gelernte Quelle abspielen"/>
                                 </StackPanel>
                             </Button>
 
-                            <Button Command="{Binding ResolveSuggestedCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                            <Button Command="{Binding ResolveSuggestedCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6"
+                                    ToolTip="Gelernte Videoquelle als Zuordnung fuer diese Haltung uebernehmen">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
                                     <TextBlock Text="Gelernte Quelle uebernehmen"/>
                                 </StackPanel>
                             </Button>
 
-                            <Button Command="{Binding OpenPdfCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                            <Button Command="{Binding OpenPdfCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6"
+                                    ToolTip="Zugehoeriges PDF-Inspektionsprotokoll im Standardprogramm oeffnen">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
                                     <TextBlock Text="PDF oeffnen"/>
                                 </StackPanel>
                             </Button>
 
-                            <Button Command="{Binding OpenSelectedCandidateCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                            <Button Command="{Binding OpenSelectedCandidateCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6"
+                                    ToolTip="Ordner des ausgewaehlten Video-Kandidaten im Windows Explorer anzeigen">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
                                     <TextBlock Text="Kandidat im Explorer"/>
                                 </StackPanel>
                             </Button>
 
-                            <Button Command="{Binding OpenSuggestedSourceCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                            <Button Command="{Binding OpenSuggestedSourceCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6"
+                                    ToolTip="Ordner der gelernten Videoquelle im Windows Explorer anzeigen">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
                                     <TextBlock Text="Gelernte Quelle im Explorer"/>
                                 </StackPanel>
                             </Button>
 
-                            <Button Command="{Binding OpenInfoCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                            <Button Command="{Binding OpenInfoCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6"
+                                    ToolTip="Begleitende Info-Datei (.txt) mit Haltungsdetails oeffnen">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
                                     <TextBlock Text="Info-Datei"/>
                                 </StackPanel>
                             </Button>
 
-                            <Button Command="{Binding OpenHoldingFolderCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
+                            <Button Command="{Binding OpenHoldingFolderCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6"
+                                    ToolTip="Haltungsordner mit allen zugehoerigen Dateien im Explorer oeffnen">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
                                     <TextBlock Text="Haltungsordner"/>

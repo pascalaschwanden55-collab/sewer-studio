@@ -13,13 +13,13 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal" Grid.Column="0">
-                <Button Content="Neues Projekt" Command="{Binding NewCommand}" />
-                <Button Content="Oeffnen" Command="{Binding OpenCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"/>
-                <Button Content="Speichern unter" Command="{Binding SaveAsCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"/>
+                <Button Content="Neues Projekt" Command="{Binding NewCommand}" ToolTip="Neues leeres Projekt erstellen und vorheriges schliessen"/>
+                <Button Content="Oeffnen" Command="{Binding OpenCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}" ToolTip="Bestehendes Projekt aus JSON-Datei oeffnen"/>
+                <Button Content="Speichern unter" Command="{Binding SaveAsCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}" ToolTip="Projekt unter neuem Dateinamen speichern"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Grid.Column="1" HorizontalAlignment="Right">
-                <Button Content="Projekt speichern" Command="{Binding SaveCommand}" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" Margin="0,0,8,0" />
-                <Button Content="Programm schliessen" Click="CloseButton_Click" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" />
+                <Button Content="Projekt speichern" Command="{Binding SaveCommand}" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" Margin="0,0,8,0" ToolTip="Aktuelle Projektdaten in die vorhandene Datei speichern"/>
+                <Button Content="Programm schliessen" Click="CloseButton_Click" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" ToolTip="SewerStudio beenden und alle offenen Fenster schliessen"/>
             </StackPanel>
         </Grid>
 

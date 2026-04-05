@@ -15,23 +15,29 @@
             <Button Content="+ Hinzufuegen"
                     IsEnabled="{Binding IsEditingEnabled}"
                     Command="{Binding AddCommand}"
-                    Margin="8,0,0,0"/>
+                    Margin="8,0,0,0"
+                    ToolTip="Neuen Eintrag zur Dropdown-Liste hinzufuegen"/>
         </StackPanel>
         <ListBox Grid.Row="1" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}"/>
         <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Right" Margin="0,8,0,0">
             <Button Content="- Entfernen"
                     IsEnabled="{Binding IsEditingEnabled}"
-                    Command="{Binding RemoveCommand}" Margin="0,0,8,0"/>
+                    Command="{Binding RemoveCommand}" Margin="0,0,8,0"
+                    ToolTip="Ausgewaehlten Eintrag aus der Liste entfernen"/>
             <Button Content="Nach oben"
                     IsEnabled="{Binding IsEditingEnabled}"
-                    Command="{Binding MoveUpCommand}" Margin="0,0,8,0"/>
+                    Command="{Binding MoveUpCommand}" Margin="0,0,8,0"
+                    ToolTip="Ausgewaehlten Eintrag in der Reihenfolge nach oben verschieben"/>
             <Button Content="Nach unten"
                     IsEnabled="{Binding IsEditingEnabled}"
-                    Command="{Binding MoveDownCommand}" Margin="0,0,8,0"/>
+                    Command="{Binding MoveDownCommand}" Margin="0,0,8,0"
+                    ToolTip="Ausgewaehlten Eintrag in der Reihenfolge nach unten verschieben"/>
             <Button Content="Speichern"
                     IsEnabled="{Binding IsEditingEnabled}"
-                    Command="{Binding SaveCommand}" Margin="0,0,8,0" IsDefault="True"/>
-            <Button Content="Abbrechen" Command="{Binding CancelCommand}" IsCancel="True"/>
+                    Command="{Binding SaveCommand}" Margin="0,0,8,0" IsDefault="True"
+                    ToolTip="Aenderungen an der Liste dauerhaft speichern"/>
+            <Button Content="Abbrechen" Command="{Binding CancelCommand}" IsCancel="True"
+                    ToolTip="Aenderungen verwerfen und Editor schliessen"/>
         </StackPanel>
     </Grid>
 </Window>

@@ -35,7 +35,7 @@
                     <TextBlock Text="Generiert automatisch Kostenschaetzungen (Baumeister + Rohrleitungsbau) basierend auf erkannten Schaeden und konfigurierbaren Mapping-Regeln."
                                TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"
                                Margin="0,0,0,12"/>
-                    <Button Command="{Binding GenerateCommand}" Style="{StaticResource ActionCardButton}" HorizontalAlignment="Left">
+                    <Button Command="{Binding GenerateCommand}" Style="{StaticResource ActionCardButton}" HorizontalAlignment="Left" ToolTip="Kostenschaetzung automatisch aus Schadencodes und Mapping-Regeln berechnen">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                        Foreground="{StaticResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -152,14 +152,14 @@
         <!-- Export Buttons -->
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0"
                     Visibility="{Binding HasResult, Converter={StaticResource BoolToVis}}">
-            <Button Command="{Binding ExportOhnePreisCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,8,0">
+            <Button Command="{Binding ExportOhnePreisCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,8,0" ToolTip="Eigendevis als Excel exportieren, ohne Einheitspreise anzuzeigen">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                Foreground="{StaticResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                     <TextBlock Text="Excel Export (ohne Preise)" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
-            <Button Command="{Binding ExportMitKVCommand}" Style="{StaticResource ActionCardButton}">
+            <Button Command="{Binding ExportMitKVCommand}" Style="{StaticResource ActionCardButton}" ToolTip="Eigendevis als Excel exportieren, inklusive Kostenvoranschlag und Preisen">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                Foreground="{StaticResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>

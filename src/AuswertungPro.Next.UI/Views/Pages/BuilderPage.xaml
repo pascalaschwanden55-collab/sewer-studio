@@ -30,10 +30,12 @@
                     <Button Content="Aktualisieren"
                             Command="{Binding RefreshCommand}"
                             Style="{StaticResource SecondaryButton}"
-                            Margin="0,0,8,0"/>
+                            Margin="0,0,8,0"
+                            ToolTip="Daten und Statistiken im Druckcenter neu laden"/>
                     <Button Content="Filter zuruecksetzen"
                             Command="{Binding ResetFiltersCommand}"
-                            Style="{StaticResource SecondaryButton}"/>
+                            Style="{StaticResource SecondaryButton}"
+                            ToolTip="Alle aktiven Filter entfernen und alle Haltungen anzeigen"/>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -450,7 +452,8 @@
                     </StackPanel>
                     <Button Content="PDF oeffnen"
                             Command="{Binding OpenLastExportedPdfCommand}"
-                            Margin="0,0,8,0">
+                            Margin="0,0,8,0"
+                            ToolTip="Zuletzt exportierte PDF-Datei im Standard-Viewer oeffnen">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
                                 <Style.Triggers>
@@ -463,7 +466,8 @@
                     </Button>
                     <Button Content="PDF ausdrucken"
                             Command="{Binding PrintPdfCommand}"
-                            Margin="0,0,8,0">
+                            Margin="0,0,8,0"
+                            ToolTip="Zuletzt exportierte PDF an den Drucker senden">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
                                 <Style.Triggers>
@@ -475,7 +479,8 @@
                         </Button.Style>
                     </Button>
                     <Button Content="PDF exportieren"
-                            Command="{Binding ExportPdfCommand}">
+                            Command="{Binding ExportPdfCommand}"
+                            ToolTip="Kostenzusammenstellung als PDF-Datei generieren und speichern">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
                                 <Style.Triggers>

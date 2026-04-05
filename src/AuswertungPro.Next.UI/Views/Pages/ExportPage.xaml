@@ -18,14 +18,16 @@
                 Padding="6,4" CornerRadius="8" Margin="0,0,0,8">
             <StackPanel Orientation="Horizontal">
                 <Button Command="{Binding ExportCommand}"
-                        Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,0">
+                        Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,0"
+                        ToolTip="Haltungsdaten als Excel-Datei (Haltungen.xlsx) exportieren">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE78C;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="Export Haltungen.xlsx" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                 <Button Command="{Binding ExportSchaechteCommand}"
-                        Style="{StaticResource ToolbarButton}" Margin="0,0,4,0">
+                        Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
+                        ToolTip="Schachtdaten als Excel-Datei (Schaechte.xlsx) exportieren">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE78C;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="Export Schächte.xlsx" VerticalAlignment="Center"/>
