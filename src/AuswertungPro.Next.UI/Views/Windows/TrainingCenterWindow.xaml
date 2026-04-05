@@ -634,18 +634,24 @@
                         <ListBox ItemsSource="{Binding SelfTrainingLogEntries}"
                                  x:Name="SelfTrainingLogList"
                                  MaxHeight="150" Background="#0F172A" BorderThickness="0"
-                                 FontFamily="Consolas" FontSize="10" Foreground="#E2E8F0"
+                                 FontFamily="Consolas" FontSize="10"
                                  ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" Foreground="#FFFFFF" Padding="1,0"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
                             <ListBox.ItemContainerStyle>
                                 <Style TargetType="ListBoxItem">
-                                    <Setter Property="Foreground" Value="#E2E8F0"/>
-                                    <Setter Property="Background" Value="Transparent"/>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsSelected" Value="True">
-                                            <Setter Property="Foreground" Value="#FFFFFF"/>
-                                            <Setter Property="Background" Value="#1E293B"/>
-                                        </Trigger>
-                                    </Style.Triggers>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <ContentPresenter/>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
                                 </Style>
                             </ListBox.ItemContainerStyle>
                         </ListBox>
