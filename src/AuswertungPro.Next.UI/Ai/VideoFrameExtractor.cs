@@ -12,6 +12,9 @@ public static class VideoFrameExtractor
     /// Extrahiert ein einzelnes PNG-Frame aus einem Video bei einer Zeitposition.
     /// Benötigt ffmpeg im PATH oder als absoluter Pfad.
     /// </summary>
+    /// <summary>Max Wartezeit fuer ffmpeg pro Frame (Sekunden).</summary>
+    private const int FfmpegTimeoutSeconds = 30;
+
     public static async Task<byte[]?> TryExtractFramePngAsync(
         string ffmpegPath,
         string videoPath,
@@ -42,13 +45,25 @@ public static class VideoFrameExtractor
             if (p == null)
                 return null;
 
-            await p.WaitForExitAsync(ct).ConfigureAwait(false);
+            // Timeout: ffmpeg darf max 30s pro Frame brauchen
+            // Manche MPG-Videos blockieren ffmpeg endlos
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(FfmpegTimeoutSeconds));
 
-            if (p.ExitCode != 0)
+            try
             {
-                // optional: string err = await p.StandardError.ReadToEndAsync();
+                await p.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // ffmpeg-Timeout (nicht Batch-Abbruch) → Prozess killen
+                try { p.Kill(entireProcessTree: true); } catch { }
+                Debug.WriteLine($"[VideoFrameExtractor] ffmpeg Timeout nach {FfmpegTimeoutSeconds}s bei {videoPath} @ {at.TotalSeconds:F1}s");
                 return null;
             }
+
+            if (p.ExitCode != 0)
+                return null;
 
             if (!File.Exists(outPng))
                 return null;
