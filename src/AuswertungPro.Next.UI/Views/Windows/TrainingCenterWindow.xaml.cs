@@ -485,8 +485,10 @@ public partial class TrainingCenterWindow : Window
 
     private async void RemoveSelectedCases_Click(object sender, RoutedEventArgs e)
     {
-        var selected = CasesGrid.SelectedItems.Cast<TrainingCase>().ToList();
-        if (selected.Count == 0) return;
+        // CasesGrid wird dynamisch aus dem XAML-Baum gesucht (x:Name noch nicht definiert)
+        var grid = this.FindName("CasesGrid") as System.Windows.Controls.DataGrid;
+        var selected = grid?.SelectedItems.Cast<TrainingCase>().ToList();
+        if (selected is null or { Count: 0 }) return;
         await Vm.RemoveSelectedCasesCommand.ExecuteAsync(selected);
     }
 
@@ -599,8 +601,8 @@ public partial class TrainingCenterWindow : Window
         var batchOrch = new Ai.Training.BatchSelfTrainingOrchestrator(videoOrch, protocolLoader, enrichment);
         var request = new Ai.Training.Models.BatchSelfTrainingRequest { ExportRootPath = dlg.FolderName };
 
-        BtnBatchNight.IsEnabled = false;
-        BtnBatchNight.Content = "🌙 Batch laeuft...";
+        var btnBatch = this.FindName("BtnBatchNight") as System.Windows.Controls.Button;
+        if (btnBatch is not null) { btnBatch.IsEnabled = false; btnBatch.Content = "Batch laeuft..."; }
 
         var progress = new Progress<Ai.Training.Models.BatchSelfTrainingProgress>(p =>
         {
@@ -620,7 +622,12 @@ public partial class TrainingCenterWindow : Window
                 "Batch-Nachtbetrieb", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex) { MessageBox.Show($"Batch-Fehler: {ex.Message}"); }
-        finally { BtnBatchNight.IsEnabled = true; BtnBatchNight.Content = "🌙 Batch-Nachtbetrieb"; Title = "Training Center"; }
+        finally
+        {
+            var btnRestore = this.FindName("BtnBatchNight") as System.Windows.Controls.Button;
+            if (btnRestore is not null) { btnRestore.IsEnabled = true; btnRestore.Content = "Batch-Nachtbetrieb"; }
+            Title = "Training Center";
+        }
     }
 }
 
