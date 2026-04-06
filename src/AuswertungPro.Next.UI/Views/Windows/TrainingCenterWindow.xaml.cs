@@ -92,15 +92,17 @@ public partial class TrainingCenterWindow : Window
         _scrollDebounceLog.Tick += (_, _) =>
         {
             _scrollDebounceLog.Stop();
-            if (SelfTrainingLogList.Items.Count > 0)
-                SelfTrainingLogList.ScrollIntoView(SelfTrainingLogList.Items[^1]);
+            SelfTrainingLogList.ScrollToEnd();
         };
 
-        ((System.Collections.Specialized.INotifyCollectionChanged)Vm.SelfTrainingLogEntries)
-            .CollectionChanged += (_, _) =>
+        // EchtzeitLogText wird vom ViewModel aktualisiert — Auto-Scroll via PropertyChanged
+        Vm.PropertyChanged += (_, e) =>
         {
-            _scrollDebounceLog.Stop();
-            _scrollDebounceLog.Start();
+            if (e.PropertyName == nameof(TrainingCenterViewModel.EchtzeitLogText))
+            {
+                _scrollDebounceLog.Stop();
+                _scrollDebounceLog.Start();
+            }
         };
     }
 
@@ -481,6 +483,18 @@ public partial class TrainingCenterWindow : Window
         }
     }
 
+    private async void RemoveSelectedCases_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = CasesGrid.SelectedItems.Cast<TrainingCase>().ToList();
+        if (selected.Count == 0) return;
+        await Vm.RemoveSelectedCasesCommand.ExecuteAsync(selected);
+    }
+
+    private async void RemoveAllCases_Click(object sender, RoutedEventArgs e)
+    {
+        await Vm.RemoveAllCasesCommand.ExecuteAsync(null);
+    }
+
     private static void TryDeleteFile(string? path)
     {
         try
@@ -489,6 +503,124 @@ public partial class TrainingCenterWindow : Window
                 File.Delete(path);
         }
         catch { /* best effort */ }
+    }
+
+    // ═══ Batch-Nachtbetrieb + Video-Selbsttraining + Benchmark ═════════
+
+    private void OpenVideoTrainingReview_Click(object sender, RoutedEventArgs e)
+    {
+        if (App.Services is not ServiceProvider sp) return;
+
+        // pdftotext-Pfad aus den App-Einstellungen setzen
+        Ai.Training.Services.PdfProtocolTableParser.PdfToTextExePath = sp.Diagnostics.ExplicitPdfToTextPath;
+
+        var cfg = Ai.AiRuntimeConfig.Load();
+        if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Video-Blindtest"); return; }
+
+        // Factory: Erstellt pro Analyse-Durchlauf frischen HttpClient + Pipeline
+        // (HttpClient kann nicht wiederverwendet werden nachdem Headers geaendert wurden)
+        Func<Ai.Training.VideoSelfTrainingOrchestrator> orchestratorFactory = () =>
+        {
+            var allowedSet = new System.Collections.Generic.HashSet<string>(
+                sp.CodeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
+            var plausibility = new Ai.RuleBasedAiSuggestionPlausibilityService(allowedSet);
+            var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(30) };
+            var pipeline = sp.CreateVideoAnalysisPipeline(cfg, plausibility, http);
+            var meterTimeline = new Ai.Training.MeterTimelineService(cfg);
+            return new Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
+        };
+
+        var vm = new VideoTrainingReviewViewModel(orchestratorFactory, sp.WinCanImport, sp.IbakImport);
+        new VideoTrainingReviewWindow(vm) { Owner = this }.Show();
+    }
+
+    private void OpenBenchmark_Click(object sender, RoutedEventArgs e)
+    {
+        if (App.Services is not ServiceProvider sp) return;
+        var cfg = Ai.AiRuntimeConfig.Load();
+        if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Benchmark"); return; }
+
+        var allowedSet = new System.Collections.Generic.HashSet<string>(
+            sp.CodeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
+        var plausibility = new Ai.RuleBasedAiSuggestionPlausibilityService(allowedSet);
+        var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(30) };
+        var pipeline = sp.CreateVideoAnalysisPipeline(cfg, plausibility, http);
+        var protocolLoader = new Ai.Training.Services.ProtocolLoaderFactory(sp.WinCanImport, sp.IbakImport);
+        var setStore = new BenchmarkSetStore();
+        var metricsStore = new BenchmarkMetricsStore();
+        var meterTimeline = new Ai.Training.MeterTimelineService(cfg);
+        var orchestrator = new Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
+        var runner = new BenchmarkRunner(setStore, metricsStore, orchestrator, protocolLoader.LoadProtocolAsync);
+        var vm = new BenchmarkViewModel(setStore, runner, metricsStore, protocolLoader);
+        new BenchmarkWindow(vm) { Owner = this }.Show();
+    }
+
+    private async void StartBatchNightRun_Click(object sender, RoutedEventArgs e)
+    {
+        if (App.Services is not ServiceProvider sp) return;
+
+        // pdftotext-Pfad aus den App-Einstellungen setzen
+        Ai.Training.Services.PdfProtocolTableParser.PdfToTextExePath = sp.Diagnostics.ExplicitPdfToTextPath;
+
+        var cfg = Ai.AiRuntimeConfig.Load();
+        if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Batch-Nachtbetrieb"); return; }
+
+        var dlg = new Microsoft.Win32.OpenFolderDialog { Title = "Ordner mit Haltungen waehlen" };
+        if (dlg.ShowDialog() != true) return;
+
+        var confirm = MessageBox.Show(
+            $"Batch-Nachtbetrieb starten?\n\nOrdner: {dlg.FolderName}\n\nAlle Haltungen mit Video + PDF werden automatisch verarbeitet.\nDas kann mehrere Stunden dauern.",
+            "Batch-Nachtbetrieb", MessageBoxButton.OKCancel, MessageBoxImage.Question);
+        if (confirm != MessageBoxResult.OK) return;
+
+        var allowedSet = new System.Collections.Generic.HashSet<string>(
+            sp.CodeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
+        var plausibility = new Ai.RuleBasedAiSuggestionPlausibilityService(allowedSet);
+        var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(30) };
+        var pipeline = sp.CreateVideoAnalysisPipeline(cfg, plausibility, http);
+        var protocolLoader = new Ai.Training.Services.ProtocolLoaderFactory(sp.WinCanImport, sp.IbakImport);
+        var meterTimeline = new Ai.Training.MeterTimelineService(cfg);
+        var videoOrch = new Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
+
+        Ai.KnowledgeBase.KbEnrichmentService enrichment;
+        try
+        {
+            var kbHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+            var ollamaConfig = Ai.Ollama.OllamaConfig.Load();
+            var kbCtx = new Ai.KnowledgeBase.KnowledgeBaseContext();
+            var embedder = new Ai.KnowledgeBase.EmbeddingService(kbHttp, ollamaConfig);
+            var retrieval = new Ai.KnowledgeBase.RetrievalService(kbCtx, embedder);
+            var kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(kbCtx, embedder);
+            var dedup = new Ai.KnowledgeBase.KbDeduplicationService(embedder, retrieval);
+            enrichment = new Ai.KnowledgeBase.KbEnrichmentService(kbManager, dedup);
+        }
+        catch (Exception ex) { MessageBox.Show($"KB-Fehler: {ex.Message}"); return; }
+
+        var batchOrch = new Ai.Training.BatchSelfTrainingOrchestrator(videoOrch, protocolLoader, enrichment);
+        var request = new Ai.Training.Models.BatchSelfTrainingRequest { ExportRootPath = dlg.FolderName };
+
+        BtnBatchNight.IsEnabled = false;
+        BtnBatchNight.Content = "🌙 Batch laeuft...";
+
+        var progress = new Progress<Ai.Training.Models.BatchSelfTrainingProgress>(p =>
+        {
+            Vm.StatusText = p.Status;
+            if (p.EstimatedRemaining.HasValue)
+                Title = $"Training Center — Batch {p.CurrentIndex}/{p.TotalHaltungen} — {p.EstimatedRemaining.Value.Hours}h {p.EstimatedRemaining.Value.Minutes}min";
+        });
+
+        try
+        {
+            var result = await Task.Run(() => batchOrch.RunAsync(request, progress));
+            var s = result.FinalStats;
+            MessageBox.Show(
+                $"Batch fertig: {result.Processed}/{result.TotalHaltungen} Haltungen in {result.TotalDuration.TotalMinutes:F0} Min\n\n" +
+                $"TP:{s.TruePositives} FN:{s.FalseNegatives} FP:{s.FalsePositives} MM:{s.CodeMismatches}\n" +
+                $"F1: {s.F1:P1}\n\nKB: +{s.KbIndexed} neu, {s.KbDeduplicated} Duplikate",
+                "Batch-Nachtbetrieb", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex) { MessageBox.Show($"Batch-Fehler: {ex.Message}"); }
+        finally { BtnBatchNight.IsEnabled = true; BtnBatchNight.Content = "🌙 Batch-Nachtbetrieb"; Title = "Training Center"; }
     }
 }
 

@@ -29,6 +29,9 @@ public sealed class MultiModelAnalysisService
     public int DedupWindowFrames { get; set; } = 3;
     public TimeSpan QwenFrameTimeout { get; set; } = TimeSpan.FromSeconds(45);
 
+    /// <summary>Maximale Zeit pro Frame (YOLO+DINO+SAM+Qwen zusammen). Ueberschrittene Frames werden uebersprungen.</summary>
+    public TimeSpan PerFrameTimeout { get; set; } = TimeSpan.FromSeconds(45);
+
     /// <summary>YOLO-cls Vorfilter aktivieren/deaktivieren (Fallback: aus wenn kein Modell).</summary>
     public bool UseClsPrefilter { get; set; } = true;
 
@@ -118,6 +121,12 @@ public sealed class MultiModelAnalysisService
         await foreach (var frame in stream.ReadFramesAsync(ct).ConfigureAwait(false))
         {
             ct.ThrowIfCancellationRequested();
+
+            // Per-Frame-Timeout: Jedes Frame bekommt 45s. Haengende Frames werden
+            // uebersprungen statt den gesamten Blindtest abzubrechen.
+            using var frameCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            frameCts.CancelAfter(PerFrameTimeout);
+
             var frameSw = Stopwatch.StartNew();
             frameIndex++;
             var t = frame.TimestampSeconds;
@@ -134,6 +143,9 @@ public sealed class MultiModelAnalysisService
             }
 
             var frameBase64 = Convert.ToBase64String(frameBytes);
+
+            try // Per-Frame-Timeout: Haengende Frames uebersprungen
+            {
 
             // ── Telemetrie-Bypass: Frames ohne YOLO-Detection an Qwen schicken ──
             // YOLO erkennt nur Schaeden — Bestandsaufnahme (Anschluesse, Boegen,
@@ -509,6 +521,18 @@ public sealed class MultiModelAnalysisService
                 $"Frame {frameIndex}/{totalFrames} @ {meter:0.0}m – {findings.Count} Befunde (Multi-Model)",
                 FramePreviewPng: frameBytes,
                 LiveFindings: liveFindings));
+
+            } // end try (Per-Frame-Timeout)
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // Frame-Timeout (45s) — nur dieses Frame uebersprungen, Blindtest laeuft weiter
+                _logger.LogWarning("Frame {Index} @ {Time:F1}s: Per-Frame-Timeout ({Sec}s) — ueberspringe",
+                    frameIndex, frame.TimestampSeconds, PerFrameTimeout.TotalSeconds);
+                telemetry.RecordFrame(new FrameTiming(frameIndex, frame.TimestampSeconds,
+                    0, 0, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                AdvanceAll(active, detections, DedupWindowFrames);
+            }
+            // OperationCanceledException von ct (Benutzer-Abbruch) fliegt durch → Pipeline stoppt
         }
 
         // Flush remaining active findings
@@ -614,6 +638,13 @@ public sealed class MultiModelAnalysisService
             frameIndex++;
             double t = item.TimestampSec.Value;
             long yoloMs = (long)(item.YoloMs ?? 0);
+
+            // Per-Frame-Timeout (NVDEC-Pfad)
+            using var frameCtsNvdec = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            frameCtsNvdec.CancelAfter(PerFrameTimeout);
+
+            try
+            {
 
             if (item.IsRelevant != true)
             {
@@ -872,6 +903,16 @@ public sealed class MultiModelAnalysisService
                 $"Frame {frameIndex}/{totalFrames} @ {meter:0.0}m – {findings.Count} Befunde (NVDEC)",
                 FramePreviewPng: frameBytes,
                 LiveFindings: liveFindings));
+
+            } // end try (Per-Frame-Timeout NVDEC)
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                _logger.LogWarning("NVDEC Frame {Index} @ {Time:F1}s: Per-Frame-Timeout ({Sec}s) — ueberspringe",
+                    frameIndex, t, PerFrameTimeout.TotalSeconds);
+                telemetry.RecordFrame(new FrameTiming(frameIndex, t,
+                    0, yoloMs, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                AdvanceAll(active, detections, DedupWindowFrames);
+            }
         }
 
         // Verbleibende aktive Findings abschliessen
