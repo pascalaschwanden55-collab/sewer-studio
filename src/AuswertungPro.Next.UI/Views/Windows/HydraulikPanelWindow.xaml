@@ -6,19 +6,19 @@
         Width="920" Height="780"
         MinWidth="800" MinHeight="650"
         WindowStartupLocation="CenterOwner"
-        Background="#FFF5F7FA">
+        Background="{DynamicResource BackgroundBrush}">
 
     <Window.Resources>
-        <!-- Brushes (helles Layout) -->
-        <SolidColorBrush x:Key="HBg" Color="#FFF5F7FA"/>
-        <SolidColorBrush x:Key="HCard" Color="#FFFFFFFF"/>
-        <SolidColorBrush x:Key="HBorder" Color="#FFD0D7DE"/>
-        <SolidColorBrush x:Key="HInputBg" Color="#FFFFFFFF"/>
-        <SolidColorBrush x:Key="HInputBorder" Color="#FFB0B8C1"/>
-        <SolidColorBrush x:Key="HAccent" Color="#FF0969DA"/>
-        <SolidColorBrush x:Key="HTextPrimary" Color="#FF1F2328"/>
-        <SolidColorBrush x:Key="HTextSecondary" Color="#FF57606A"/>
-        <SolidColorBrush x:Key="HTextDim" Color="#FF8C959F"/>
+        <!-- Brushes: verweise auf globales Theme -->
+        <SolidColorBrush x:Key="HBg" Color="{DynamicResource ColorBackground}"/>
+        <SolidColorBrush x:Key="HCard" Color="{DynamicResource ColorCard}"/>
+        <SolidColorBrush x:Key="HBorder" Color="{DynamicResource ColorBorder}"/>
+        <SolidColorBrush x:Key="HInputBg" Color="{DynamicResource ColorCard}"/>
+        <SolidColorBrush x:Key="HInputBorder" Color="{DynamicResource ColorBorder}"/>
+        <SolidColorBrush x:Key="HAccent" Color="{DynamicResource ColorAccent}"/>
+        <SolidColorBrush x:Key="HTextPrimary" Color="{DynamicResource ColorText}"/>
+        <SolidColorBrush x:Key="HTextSecondary" Color="{DynamicResource ColorMuted}"/>
+        <SolidColorBrush x:Key="HTextDim" Color="{DynamicResource ColorMuted}"/>
         <SolidColorBrush x:Key="HGreen" Color="#FF1A7F37"/>
         <SolidColorBrush x:Key="HRed" Color="#FFCF222E"/>
         <SolidColorBrush x:Key="HYellow" Color="#FF9A6700"/>
@@ -39,13 +39,13 @@
             <Setter Property="ItemContainerStyle">
                 <Setter.Value>
                     <Style TargetType="ComboBoxItem">
-                        <Setter Property="Background" Value="#FFFFFFFF"/>
-                        <Setter Property="Foreground" Value="#FF1F2328"/>
+                        <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                         <Setter Property="Padding" Value="8,5"/>
                         <Style.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter Property="Background" Value="#FFDDF4FF"/>
-                                <Setter Property="Foreground" Value="#FF0969DA"/>
+                                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="White"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -125,7 +125,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#FFDDF4FF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HeaderBrush}"/>
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource HAccent}"/>
                                 <Setter Property="Foreground" Value="{StaticResource HAccent}"/>
                             </Trigger>
@@ -152,8 +152,8 @@
                 <Border Width="38" Height="38" CornerRadius="8" Margin="0,0,14,0">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#FF0969DA" Offset="0"/>
-                            <GradientStop Color="#FF54AEFF" Offset="1"/>
+                            <GradientStop Color="{DynamicResource ColorAccent}" Offset="0"/>
+                            <GradientStop Color="{DynamicResource ColorAccent}" Offset="1"/>
                         </LinearGradientBrush>
                     </Border.Background>
                     <TextBlock Text="&#x1F4A7;" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -289,7 +289,7 @@
                     </Border>
 
                     <!-- Info-Hinweis -->
-                    <Border Background="#FFE8F4FD" BorderBrush="#FFB6D6F2"
+                    <Border Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,8">
                         <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource HAccent}"
                                    LineHeight="17">

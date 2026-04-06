@@ -62,11 +62,13 @@
         <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,8">
             <Button x:Name="CatalogButton"
                     Content="Code auswaehlen..."
-                    Padding="12,4" />
+                    Padding="12,4"
+                    ToolTip="Beobachtungskatalog oeffnen um einen EN 13508-2 Code auszuwaehlen" />
             <Button x:Name="KiSuggestButton"
                     Content="KI-Vorschlag"
                     Margin="0,6,0,0"
-                    Padding="12,4" />
+                    Padding="12,4"
+                    ToolTip="KI-gestuetzten Codierungsvorschlag basierend auf dem aktuellen Videobild abrufen" />
         </StackPanel>
 
         <TextBlock x:Name="AiStatusText"
@@ -86,8 +88,10 @@
         <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Text="Zeit" />
         <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,8">
             <TextBox x:Name="ZeitTextBox" Width="140" Margin="0,0,8,0" />
-            <Button x:Name="ZeitFromVideoButton" Content="Zeit aus Video" Padding="10,2" Margin="0,0,8,0" />
-            <Button x:Name="SeekToZeitButton" Content="Zum Zeitpunkt" Padding="10,2" />
+            <Button x:Name="ZeitFromVideoButton" Content="Zeit aus Video" Padding="10,2" Margin="0,0,8,0"
+                    ToolTip="Aktuelle Wiedergabezeit aus dem Video-Player uebernehmen" />
+            <Button x:Name="SeekToZeitButton" Content="Zum Zeitpunkt" Padding="10,2"
+                    ToolTip="Video-Player zur eingetragenen Zeit springen lassen" />
         </StackPanel>
 
         <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Text="MPEG" />
@@ -183,14 +187,14 @@
                     <TextBlock Text="Distanz (m)" TextWrapping="Wrap"/>
                     <TextBox x:Name="VsaDistanzTextBox"
                              Text="{Binding VsaDistanz, UpdateSourceTrigger=PropertyChanged}"
-                             Background="#FFF6A8"/>
+                             Background="{StaticResource AccentSubtleBrush}"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
                     <TextBlock Text="Uhrzeit (Video)" TextWrapping="Wrap"/>
                     <TextBox x:Name="VsaVideoTextBox"
                              Text="{Binding VsaVideo, UpdateSourceTrigger=PropertyChanged}"
-                             Background="#FFF6A8"/>
+                             Background="{StaticResource AccentSubtleBrush}"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,8">
@@ -199,7 +203,7 @@
                               ItemsSource="{StaticResource ClockPositions}"
                               IsEditable="True"
                               Text="{Binding VsaUhrVon, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,4"/>
-                    <Border Background="#FFF6A8" BorderBrush="#B6A400" BorderThickness="1" Padding="4">
+                    <Border Background="{StaticResource AccentSubtleBrush}" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1" Padding="4">
                         <controls:ClockPickerControl Width="110"
                                                      Height="110"
                                                      Value="{Binding VsaUhrVon, UpdateSourceTrigger=PropertyChanged}"/>
@@ -212,7 +216,7 @@
                               ItemsSource="{StaticResource ClockPositions}"
                               IsEditable="True"
                               Text="{Binding VsaUhrBis, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,4"/>
-                    <Border Background="#FFF6A8" BorderBrush="#B6A400" BorderThickness="1" Padding="4">
+                    <Border Background="{StaticResource AccentSubtleBrush}" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1" Padding="4">
                         <controls:ClockPickerControl Width="110"
                                                      Height="110"
                                                      Value="{Binding VsaUhrBis, UpdateSourceTrigger=PropertyChanged}"/>
@@ -223,21 +227,21 @@
                     <TextBlock Text="Quantifizierung 1" TextWrapping="Wrap"/>
                     <TextBox x:Name="VsaQ1TextBox"
                              Text="{Binding VsaQ1, UpdateSourceTrigger=PropertyChanged}"
-                             Background="#FFF6A8"/>
+                             Background="{StaticResource AccentSubtleBrush}"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,8">
                     <TextBlock Text="Quantifizierung 2" TextWrapping="Wrap"/>
                     <TextBox x:Name="VsaQ2TextBox"
                              Text="{Binding VsaQ2, UpdateSourceTrigger=PropertyChanged}"
-                             Background="#FFF6A8"/>
+                             Background="{StaticResource AccentSubtleBrush}"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,0,12,8">
                     <TextBlock Text="Strecke" TextWrapping="Wrap"/>
                     <TextBox x:Name="VsaStreckeTextBox"
                              Text="{Binding VsaStrecke, UpdateSourceTrigger=PropertyChanged}"
-                             Background="#FFF6A8"/>
+                             Background="{StaticResource AccentSubtleBrush}"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,0,0,8">
@@ -251,7 +255,7 @@
                     <TextBlock Text="Ansicht" TextWrapping="Wrap"/>
                     <TextBox x:Name="VsaAnsichtTextBox"
                              Text="{Binding VsaAnsicht, UpdateSourceTrigger=PropertyChanged}"
-                             Background="#FFF6A8"/>
+                             Background="{StaticResource AccentSubtleBrush}"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="4" Grid.Column="1" Margin="0,0,0,8">
@@ -265,7 +269,7 @@
                         <TextBox x:Name="VsaSchachtbereichTextBox"
                                  Width="90"
                                  Text="{Binding VsaSchachtbereich, UpdateSourceTrigger=PropertyChanged}"
-                                 Background="#FFF6A8"/>
+                                 Background="{StaticResource AccentSubtleBrush}"/>
                     </StackPanel>
                 </StackPanel>
 
@@ -273,7 +277,7 @@
                     <TextBlock Text="Diverses" TextWrapping="Wrap"/>
                     <TextBox x:Name="VsaAnmerkungTextBox"
                              Text="{Binding VsaAnmerkung, UpdateSourceTrigger=PropertyChanged}"
-                             Background="#FFF6A8"/>
+                             Background="{StaticResource AccentSubtleBrush}"/>
                 </StackPanel>
             </Grid>
         </GroupBox>
@@ -291,8 +295,10 @@
         <StackPanel Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Vertical" Margin="0,10,0,0">
             <TextBlock x:Name="ValidationStatus" Margin="0,0,0,8" Foreground="OrangeRed" TextWrapping="Wrap" />
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="OkButton" Content="Uebernehmen" Width="120" Margin="0,0,8,0" />
-                <Button x:Name="CancelButton" Content="Abbrechen" Width="120" IsCancel="True" />
+                <Button x:Name="OkButton" Content="Uebernehmen" Width="120" Margin="0,0,8,0"
+                        ToolTip="Protokolleintrag mit allen Parametern speichern und uebernehmen" />
+                <Button x:Name="CancelButton" Content="Abbrechen" Width="120" IsCancel="True"
+                        ToolTip="Aenderungen am Protokolleintrag verwerfen" />
             </StackPanel>
         </StackPanel>
     </Grid>

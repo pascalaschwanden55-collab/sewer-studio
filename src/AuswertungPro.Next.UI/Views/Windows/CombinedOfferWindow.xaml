@@ -10,9 +10,10 @@
     <DockPanel Margin="10">
         <StackPanel DockPanel.Dock="Top" Orientation="Vertical" Margin="0,0,0,8">
             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                <Button Command="{Binding SelectMeasuresCommand}" 
+                <Button Command="{Binding SelectMeasuresCommand}"
                         CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
-                        Content="Maßnahmen auswählen..." Width="180" Margin="0,0,8,0"/>
+                        Content="Maßnahmen auswählen..." Width="180" Margin="0,0,8,0"
+                        ToolTip="Sanierungsmassnahmen fuer diese Haltung aus dem Katalog auswaehlen"/>
 
                 <TextBlock Text="Ausgewählt:" VerticalAlignment="Center" Margin="0,0,6,0"/>
                 <ItemsControl ItemsSource="{Binding SelectedMeasures}">
@@ -54,19 +55,24 @@
                 <TextBlock Text="Skonto %:" VerticalAlignment="Center" Margin="0,0,6,0"/>
                 <TextBox Text="{Binding SkontoPct}" Width="60" Margin="0,0,12,0"/>
 
-                <Button Command="{Binding CalculateCommand}" 
-                        Content="Berechnen" Width="120" Margin="0,0,6,0"/>
+                <Button Command="{Binding CalculateCommand}"
+                        Content="Berechnen" Width="120" Margin="0,0,6,0"
+                        ToolTip="Offerte mit aktuellen Mengen, Rabatten und Preisen neu berechnen"/>
                 <Button Command="{Binding OpenPriceEditorCommand}"
                         CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
-                        Content="Preise..." Width="120" Margin="0,0,6,0"/>
-                <Button Command="{Binding CopyToClipboardCommand}" 
-                        Content="Offerte kopieren" Width="150"/>
+                        Content="Preise..." Width="120" Margin="0,0,6,0"
+                        ToolTip="Preiskatalog-Editor oeffnen um Einheitspreise anzupassen"/>
+                <Button Command="{Binding CopyToClipboardCommand}"
+                        Content="Offerte kopieren" Width="150"
+                        ToolTip="Berechnete Offerte als Text in die Zwischenablage kopieren"/>
                 <Button Command="{Binding ExportPdfCommand}"
                     CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
-                    Content="PDF exportieren" Width="150" Margin="6,0,0,0"/>
+                    Content="PDF exportieren" Width="150" Margin="6,0,0,0"
+                    ToolTip="Offerte als professionelles PDF-Dokument exportieren und speichern"/>
                 <Button Command="{Binding InstallChromiumCommand}"
                     CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
-                    Content="Chromium installieren" Width="170" Margin="6,0,0,0"/>
+                    Content="Chromium installieren" Width="170" Margin="6,0,0,0"
+                    ToolTip="Playwright-Chromium fuer PDF-Rendering herunterladen und installieren"/>
             </StackPanel>
         </StackPanel>
 

@@ -10,9 +10,9 @@
         WindowState="Maximized"
         WindowStartupLocation="CenterOwner">
     <Window.Resources>
-        <SolidColorBrush x:Key="PanelBgBrush" Color="#F8FAFC"/>
-        <SolidColorBrush x:Key="PanelBorderBrush" Color="#D7DEE8"/>
-        <SolidColorBrush x:Key="HeaderBgBrush" Color="#EEF5FB"/>
+        <SolidColorBrush x:Key="PanelBgBrush" Color="{StaticResource ColorBgLight}"/>
+        <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource ColorBorder}"/>
+        <SolidColorBrush x:Key="HeaderBgBrush" Color="{StaticResource ColorHeader}"/>
 
         <Style x:Key="ToolbarButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
             <Setter Property="MinHeight" Value="30"/>
@@ -59,10 +59,14 @@
                 </StackPanel>
 
                 <WrapPanel Grid.Row="1" Margin="0,10,0,0">
-                    <Button x:Name="StartNachprotokollButton" Content="Nachprotokoll starten" Style="{StaticResource ToolbarButtonStyle}"/>
-                    <Button x:Name="StartNeuButton" Content="Neu-Protokoll" Style="{StaticResource ToolbarButtonStyle}"/>
-                    <Button x:Name="RestoreOriginalButton" Content="Original wiederherstellen" Style="{StaticResource ToolbarButtonStyle}"/>
-                    <Button x:Name="HistoryButton" Content="Historie..." Style="{StaticResource ToolbarButtonStyle}" Margin="0"/>
+                    <Button x:Name="StartNachprotokollButton" Content="Nachprotokoll starten" Style="{StaticResource ToolbarButtonStyle}"
+                            ToolTip="Neues Nachprotokoll auf Basis des bestehenden Protokolls starten"/>
+                    <Button x:Name="StartNeuButton" Content="Neu-Protokoll" Style="{StaticResource ToolbarButtonStyle}"
+                            ToolTip="Komplett neues Protokoll ohne bestehende Eintraege anlegen"/>
+                    <Button x:Name="RestoreOriginalButton" Content="Original wiederherstellen" Style="{StaticResource ToolbarButtonStyle}"
+                            ToolTip="Urspruengliches Protokoll aus dem Import wiederherstellen"/>
+                    <Button x:Name="HistoryButton" Content="Historie..." Style="{StaticResource ToolbarButtonStyle}" Margin="0"
+                            ToolTip="Aeltere Protokollversionen anzeigen und vergleichen"/>
                 </WrapPanel>
             </Grid>
         </Border>
@@ -71,7 +75,7 @@
                 BorderBrush="{StaticResource PanelBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="8"
-                Background="White">
+                Background="{StaticResource CardBrush}">
             <DataGrid x:Name="EntriesGrid"
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"
@@ -81,25 +85,25 @@
                       AlternationCount="2"
                       HeadersVisibility="Column"
                       GridLinesVisibility="Horizontal"
-                      HorizontalGridLinesBrush="#E5EAF1"
-                      VerticalGridLinesBrush="#E5EAF1"
+                      HorizontalGridLinesBrush="{StaticResource BorderBrush}"
+                      VerticalGridLinesBrush="{StaticResource BorderBrush}"
                       MinRowHeight="30">
                 <DataGrid.ColumnHeaderStyle>
                     <Style TargetType="{x:Type DataGridColumnHeader}">
                         <Setter Property="Background" Value="{StaticResource HeaderBgBrush}"/>
-                        <Setter Property="Foreground" Value="#1E293B"/>
+                        <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
                         <Setter Property="FontWeight" Value="SemiBold"/>
-                        <Setter Property="BorderBrush" Value="#D7DEE8"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource PanelBorderBrush}"/>
                         <Setter Property="BorderThickness" Value="0,0,0,1"/>
                         <Setter Property="Padding" Value="6,4"/>
                     </Style>
                 </DataGrid.ColumnHeaderStyle>
                 <DataGrid.RowStyle>
                     <Style TargetType="{x:Type DataGridRow}">
-                        <Setter Property="Background" Value="White"/>
+                        <Setter Property="Background" Value="{StaticResource CardBrush}"/>
                         <Style.Triggers>
                             <Trigger Property="ItemsControl.AlternationIndex" Value="1">
-                                <Setter Property="Background" Value="#FBFDFF"/>
+                                <Setter Property="Background" Value="{StaticResource BgLightBrush}"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -125,13 +129,20 @@
                 CornerRadius="8"
                 Padding="8">
             <WrapPanel HorizontalAlignment="Right">
-                <Button x:Name="NewButton" Content="Neu" Width="100" Style="{StaticResource FooterButtonStyle}"/>
-                <Button x:Name="CopyButton" Content="Kopieren" Width="110" Style="{StaticResource FooterButtonStyle}"/>
-                <Button x:Name="DeleteButton" Content="Loeschen" Width="100" Style="{StaticResource FooterButtonStyle}"/>
-                <Button x:Name="OverlayButton" Content="Im Video einblenden" Width="160" Style="{StaticResource FooterButtonStyle}"/>
-                <Button x:Name="TrainButton" Content="Als Training speichern" Width="160" Style="{StaticResource FooterButtonStyle}"/>
-                <Button x:Name="ExportPdfButton" Content="Haltungsprotokoll PDF" Width="180" Style="{StaticResource FooterButtonStyle}"/>
-                <Button x:Name="CloseButton" Content="Schliessen" Width="110" Style="{StaticResource FooterButtonStyle}" Margin="0" IsCancel="True"/>
+                <Button x:Name="NewButton" Content="Neu" Width="100" Style="{StaticResource FooterButtonStyle}"
+                        ToolTip="Neuen Protokolleintrag (Beobachtung/Schaden) hinzufuegen"/>
+                <Button x:Name="CopyButton" Content="Kopieren" Width="110" Style="{StaticResource FooterButtonStyle}"
+                        ToolTip="Ausgewaehlten Protokolleintrag duplizieren"/>
+                <Button x:Name="DeleteButton" Content="Loeschen" Width="100" Style="{StaticResource FooterButtonStyle}"
+                        ToolTip="Ausgewaehlten Protokolleintrag unwiderruflich entfernen"/>
+                <Button x:Name="OverlayButton" Content="Im Video einblenden" Width="160" Style="{StaticResource FooterButtonStyle}"
+                        ToolTip="Ausgewaehlten Schaden im Video-Player als Overlay anzeigen"/>
+                <Button x:Name="TrainButton" Content="Als Training speichern" Width="160" Style="{StaticResource FooterButtonStyle}"
+                        ToolTip="Aktuellen Eintrag als Trainingsbeispiel fuer die KI-Pipeline speichern"/>
+                <Button x:Name="ExportPdfButton" Content="Haltungsprotokoll PDF" Width="180" Style="{StaticResource FooterButtonStyle}"
+                        ToolTip="Komplettes Haltungsprotokoll als PDF-Dokument exportieren"/>
+                <Button x:Name="CloseButton" Content="Schliessen" Width="110" Style="{StaticResource FooterButtonStyle}" Margin="0" IsCancel="True"
+                        ToolTip="Beobachtungsfenster schliessen und zum Hauptfenster zurueckkehren"/>
             </WrapPanel>
         </Border>
     </Grid>

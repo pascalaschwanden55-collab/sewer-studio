@@ -30,7 +30,7 @@
                     <TextBlock Text="Berechnet die VSA-Zustandsbewertung für alle Haltungen und Schächte basierend auf den erfassten Schadencodes und dem Regelwerk (SN EN 13508-2)."
                                TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"
                                Margin="0,0,0,12"/>
-                    <Button Command="{Binding RunCommand}" Style="{StaticResource ActionCardButton}" HorizontalAlignment="Left">
+                    <Button Command="{Binding RunCommand}" Style="{StaticResource ActionCardButton}" HorizontalAlignment="Left" ToolTip="VSA-Zustandsbewertung fuer alle Haltungen und Schaechte ausfuehren">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                        Foreground="{StaticResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>

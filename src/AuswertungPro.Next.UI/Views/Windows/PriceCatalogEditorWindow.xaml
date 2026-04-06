@@ -12,19 +12,23 @@
             <TextBlock Text="Suche:" VerticalAlignment="Center" Margin="0,0,6,0"/>
             <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
                      Width="320" Margin="0,0,10,0"/>
-            <Button Command="{Binding AddNewCommand}" Content="Neu" Width="90" Margin="0,0,6,0"/>
-            <Button Command="{Binding DeleteCommand}" 
+            <Button Command="{Binding AddNewCommand}" Content="Neu" Width="90" Margin="0,0,6,0"
+                    ToolTip="Neue Preisposition im Katalog anlegen"/>
+            <Button Command="{Binding DeleteCommand}"
                     CommandParameter="{Binding ElementName=dg, Path=SelectedItem}"
-                    Content="Löschen" Width="90" Margin="0,0,20,0"/>
+                    Content="Löschen" Width="90" Margin="0,0,20,0"
+                    ToolTip="Ausgewaehlte Preisposition aus dem Katalog entfernen"/>
             <TextBlock Text="DN-Preise: z.B. DN500 -> dn_min=500, dn_max=500." 
                        VerticalAlignment="Center" TextWrapping="Wrap" Width="300"/>
         </StackPanel>
 
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" 
                     HorizontalAlignment="Right" Margin="0,8,0,0">
-            <Button Command="{Binding SaveCommand}" Content="Speichern" 
-                    Width="120" Margin="0,0,6,0"/>
-            <Button Content="Schließen" Width="120" Click="Close_Click"/>
+            <Button Command="{Binding SaveCommand}" Content="Speichern"
+                    Width="120" Margin="0,0,6,0"
+                    ToolTip="Alle Aenderungen am Preiskatalog dauerhaft speichern"/>
+            <Button Content="Schließen" Width="120" Click="Close_Click"
+                    ToolTip="Preiskatalog-Editor schliessen"/>
         </StackPanel>
 
         <DataGrid x:Name="dg" 

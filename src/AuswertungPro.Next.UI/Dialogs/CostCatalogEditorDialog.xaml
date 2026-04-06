@@ -37,14 +37,18 @@
 
         <DockPanel Grid.Row="2" Margin="0,12,0,0">
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                <Button Content="+ Position" Command="{Binding AddCommand}" Padding="12,6" Margin="0,0,6,0"/>
-                <Button Content="✕ Löschen" Command="{Binding RemoveCommand}" Padding="12,6" Style="{StaticResource SecondaryButton}"/>
+                <Button Content="+ Position" Command="{Binding AddCommand}" Padding="12,6" Margin="0,0,6,0"
+                        ToolTip="Neue Kostenposition zur Tabelle hinzufuegen"/>
+                <Button Content="✕ Löschen" Command="{Binding RemoveCommand}" Padding="12,6" Style="{StaticResource SecondaryButton}"
+                        ToolTip="Ausgewaehlte Kostenposition aus der Tabelle entfernen"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Speichern" Command="{Binding SaveCommand}" Padding="18,6" Margin="0,0,6,0"
-                        Style="{StaticResource PrimaryButton}"/>
+                        Style="{StaticResource PrimaryButton}"
+                        ToolTip="Alle Aenderungen an den Kostenpositionen dauerhaft speichern"/>
                 <Button Content="Schliessen" Command="{Binding CloseCommand}" Padding="18,6"
-                        Style="{StaticResource SecondaryButton}"/>
+                        Style="{StaticResource SecondaryButton}"
+                        ToolTip="Editor schliessen ohne weitere Aenderungen"/>
             </StackPanel>
         </DockPanel>
     </Grid>

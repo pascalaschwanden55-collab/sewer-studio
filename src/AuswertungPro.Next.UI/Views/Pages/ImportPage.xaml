@@ -15,7 +15,8 @@
                     Padding="6,4" CornerRadius="8">
                 <StackPanel Orientation="Horizontal">
                     <Button Command="{Binding ImportPdfCommand}"
-                            Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,0">
+                            Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,0"
+                            ToolTip="PDF-Inspektionsprotokolle einlesen und Haltungsdaten importieren">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE8B5;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Import PDF" VerticalAlignment="Center"/>
@@ -73,7 +74,8 @@
                     <Border Width="1" Background="{StaticResource BorderBrush}" Margin="4,4"/>
 
                     <Button Command="{Binding ExportImportSummaryCommand}"
-                            Style="{StaticResource ToolbarButton}" Margin="0,0,4,0">
+                            Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
+                            ToolTip="Zusammenfassung des letzten Imports als Bericht exportieren">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE9F9;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Import-Report" VerticalAlignment="Center"/>
@@ -131,7 +133,8 @@
                     <Button DockPanel.Dock="Right" Command="{Binding CancelImportCommand}"
                             Content="Abbrechen" Margin="8,0,0,0" Padding="12,2"
                             IsEnabled="{Binding CanCancel}"
-                            Style="{StaticResource ToolbarButton}"/>
+                            Style="{StaticResource ToolbarButton}"
+                            ToolTip="Laufenden Import-Vorgang abbrechen"/>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Text="{Binding ImportPhase}" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>

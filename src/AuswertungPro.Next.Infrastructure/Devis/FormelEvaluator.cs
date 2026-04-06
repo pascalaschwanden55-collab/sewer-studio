@@ -105,7 +105,9 @@ public static class FormelEvaluator
         {
             if (parts[i].op == '/')
             {
-                if (parts[i].value == 0) continue;
+                if (parts[i].value == 0)
+                    throw new DivideByZeroException(
+                        $"Division durch 0 in Formel-Position {i}: {result} / 0");
                 result /= parts[i].value;
             }
             else

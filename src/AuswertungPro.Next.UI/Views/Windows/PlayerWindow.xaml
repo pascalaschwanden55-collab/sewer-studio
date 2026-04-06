@@ -97,7 +97,7 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#1E2D46"/>
+                    <Setter Property="Background" Value="{StaticResource HeaderBrush}"/>
                     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
                     <Setter Property="TextElement.Foreground" Value="White"/>
@@ -360,23 +360,26 @@
                             <TextBlock x:Name="TxtConfirmCode" FontSize="16" FontWeight="Bold"
                                        Foreground="{DynamicResource NeonCyanBrush}" VerticalAlignment="Center"/>
                             <TextBlock x:Name="TxtConfirmConfidence" FontSize="12" Margin="8,0,0,0"
-                                       Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                       Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
                         </StackPanel>
                         <TextBlock x:Name="TxtConfirmDescription" Foreground="White" FontSize="13"
                                    TextWrapping="Wrap" Margin="0,0,0,4"/>
-                        <TextBlock x:Name="TxtConfirmDetail" Foreground="#94A3B8" FontSize="11"
+                        <TextBlock x:Name="TxtConfirmDetail" Foreground="{StaticResource MutedBrush}" FontSize="11"
                                    TextWrapping="Wrap" Margin="0,0,0,12"/>
 
                         <!-- Aktionen -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <Button Content="&#x2713; Uebernehmen" Click="ConfirmAccept_Click"
-                                    Style="{StaticResource PlayerPrimaryButton}" Padding="12,6" Margin="0,0,6,0"/>
+                                    Style="{StaticResource PlayerPrimaryButton}" Padding="12,6" Margin="0,0,6,0"
+                                    ToolTip="KI-Vorschlag akzeptieren und als Befund in das Protokoll uebernehmen"/>
                             <Button Content="&#x270E; Code aendern" Click="ConfirmEdit_Click"
                                     Style="{StaticResource PlayerButton}" Padding="12,6" Margin="0,0,6,0"
-                                    Foreground="{DynamicResource NeonCyanBrush}"/>
+                                    Foreground="{DynamicResource NeonCyanBrush}"
+                                    ToolTip="KI-Vorschlag bearbeiten und Schadenscode manuell korrigieren"/>
                             <Button Content="&#x2717; Verwerfen" Click="ConfirmReject_Click"
                                     Style="{StaticResource PlayerButton}" Padding="12,6"
-                                    Foreground="#EF4444"/>
+                                    Foreground="#EF4444"
+                                    ToolTip="KI-Vorschlag ablehnen und nicht ins Protokoll uebernehmen"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -392,16 +395,19 @@
                                    Foreground="#F59E0B" TextAlignment="Center" TextWrapping="Wrap"
                                    Margin="0,0,0,4"/>
                         <TextBlock x:Name="TxtDetectionDetail" FontSize="12"
-                                   Foreground="#94A3B8" TextAlignment="Center" TextWrapping="Wrap"
+                                   Foreground="{StaticResource MutedBrush}" TextAlignment="Center" TextWrapping="Wrap"
                                    Margin="0,0,0,10"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <Button Content="&#x2713; Akzeptieren" Click="DetectionAccept_Click"
-                                    Style="{StaticResource PlayerPrimaryButton}" Padding="12,6" Margin="0,0,6,0"/>
+                                    Style="{StaticResource PlayerPrimaryButton}" Padding="12,6" Margin="0,0,6,0"
+                                    ToolTip="Live-Erkennung akzeptieren und Befund ins Protokoll eintragen"/>
                             <Button Content="&#x270E; Korrigieren" Click="DetectionCorrect_Click"
                                     Style="{StaticResource PlayerButton}" Padding="12,6" Margin="0,0,6,0"
-                                    Foreground="#F59E0B"/>
+                                    Foreground="#F59E0B"
+                                    ToolTip="Erkannten Befund manuell korrigieren bevor er uebernommen wird"/>
                             <Button Content="&#x25B6; Weiter" Click="DetectionSkip_Click"
-                                    Style="{StaticResource PlayerButton}" Padding="12,6"/>
+                                    Style="{StaticResource PlayerButton}" Padding="12,6"
+                                    ToolTip="Erkennung ueberspringen und Video-Wiedergabe fortsetzen"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -668,19 +674,22 @@
                                         <Button x:Name="BtnInlineAccept"
                                                 Style="{StaticResource DefectActionBtn}"
                                                 Background="#16A34A" Margin="0,0,0,4"
-                                                Click="CodingAcceptDefect_Click">
+                                                Click="CodingAcceptDefect_Click"
+                                                ToolTip="Ausgewaehlten KI-Befund akzeptieren und ins Protokoll uebernehmen">
                                             <TextBlock Text="&#x2713; Akzeptieren" FontSize="10"/>
                                         </Button>
                                         <Button x:Name="BtnInlineEdit"
                                                 Style="{StaticResource DefectActionBtn}"
                                                 Background="#D97706" Margin="0,0,0,4"
-                                                Click="CodingEditDefect_Click">
+                                                Click="CodingEditDefect_Click"
+                                                ToolTip="Befund-Details wie Code, Schweregrad oder Beschreibung bearbeiten">
                                             <TextBlock Text="&#x2699; Bearbeiten" FontSize="10"/>
                                         </Button>
                                         <Button x:Name="BtnInlineReject"
                                                 Style="{StaticResource DefectActionBtn}"
                                                 Background="#DC2626"
-                                                Click="CodingRejectDefect_Click">
+                                                Click="CodingRejectDefect_Click"
+                                                ToolTip="Befund ablehnen und aus der KI-Befundliste entfernen">
                                             <TextBlock Text="&#x2717; Ablehnen" FontSize="10"/>
                                         </Button>
                                     </StackPanel>
@@ -896,7 +905,8 @@
                                     <Button Grid.Column="0" x:Name="BtnCodingAcceptDefect"
                                             Style="{StaticResource DefectActionBtn}"
                                             Background="#16A34A"
-                                            Click="CodingAcceptDefect_Click">
+                                            Click="CodingAcceptDefect_Click"
+                                            ToolTip="Defekt bestaetigen und mit aktuellem Code ins Protokoll uebernehmen">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="&#x2713;" Margin="0,0,4,0"/>
                                             <TextBlock Text="Akzeptieren"/>
@@ -905,7 +915,8 @@
                                     <Button Grid.Column="2" x:Name="BtnCodingEditDefect"
                                             Style="{StaticResource DefectActionBtn}"
                                             Background="#D97706"
-                                            Click="CodingEditDefect_Click">
+                                            Click="CodingEditDefect_Click"
+                                            ToolTip="Schadenscode, Schweregrad und Position im Detail-Editor anpassen">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="&#x2699;" Margin="0,0,4,0"/>
                                             <TextBlock Text="Bearbeiten"/>
@@ -915,7 +926,8 @@
                                             Style="{StaticResource DefectActionBtn}"
                                             Background="#DC2626"
                                             MinWidth="40"
-                                            Click="CodingRejectDefect_Click">
+                                            Click="CodingRejectDefect_Click"
+                                            ToolTip="Defekt verwerfen und aus der Befundliste entfernen">
                                         <TextBlock Text="&#x2717;" FontSize="14"/>
                                     </Button>
                                 </Grid>
@@ -962,7 +974,8 @@
                                 <Button x:Name="BtnCodingCreateEvent"
                                         Visibility="Collapsed"
                                         Click="CodingCreateEvent_Click"
-                                        IsEnabled="False"/>
+                                        IsEnabled="False"
+                                        ToolTip="Neues Ereignis mit ausgewaehltem Code an aktueller Position erstellen"/>
                             </StackPanel>
                         </Border>
 
@@ -1044,14 +1057,14 @@
                 <!-- Meter-Navigation -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
                     <Button Style="{StaticResource PlayerButton}" Content="&#x25C0;" Padding="8,6"
-                            Click="CodingPrevious_Click" ToolTip="Zurueck (Step)"/>
+                            Click="CodingPrevious_Click" ToolTip="Einen Schritt zurueck zum vorherigen Meterstand in der Haltung"/>
                     <TextBlock x:Name="TxtCodingMeter"
                                FontFamily="Consolas, Cascadia Mono" FontSize="15" FontWeight="Bold"
                                Foreground="{DynamicResource TextBrush}"
                                VerticalAlignment="Center" Margin="8,0"
                                Text="0.00m"/>
                     <Button Style="{StaticResource PlayerButton}" Content="&#x25B6;" Padding="8,6"
-                            Click="CodingNext_Click" ToolTip="Weiter (Step)"/>
+                            Click="CodingNext_Click" ToolTip="Einen Schritt vorwaerts zum naechsten Meterstand in der Haltung"/>
                     <TextBlock x:Name="TxtCodingRange"
                                FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
                                VerticalAlignment="Center" Margin="8,0,0,0"/>
@@ -1089,11 +1102,13 @@
                                 <!-- Kalibrieren -->
                                 <Button x:Name="BtnCodingCalibrate" Style="{StaticResource MarkToolPopupButton}"
                                         Content="&#x2295;  Rohr kalibrieren (DN)"
-                                        Click="CodingCalibrate_Click"/>
+                                        Click="CodingCalibrate_Click"
+                                        ToolTip="Rohrdurchmesser im Video kalibrieren fuer praezise Vermessungen"/>
                                 <!-- Markieren fuer KI -->
                                 <Button x:Name="BtnCodingRect" Style="{StaticResource MarkToolPopupButton}"
                                         Content="&#x25A2;  Bereich markieren"
-                                        Click="CodingToolRect_Click"/>
+                                        Click="CodingToolRect_Click"
+                                        ToolTip="Rechteckigen Bereich im Frame markieren fuer gezielte KI-Analyse"/>
                                 <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="4,6"/>
                                 <!-- Hinweis -->
                                 <TextBlock Text="Alle Messwerkzeuge im PhotoAssistant"
@@ -1122,13 +1137,13 @@
                                 <ScaleTransform ScaleX="1" ScaleY="1"/>
                             </Ellipse.RenderTransform>
                         </Ellipse>
-                        <Ellipse x:Name="CodingAiDot" Width="10" Height="10" Fill="#94A3B8"/>
+                        <Ellipse x:Name="CodingAiDot" Width="10" Height="10" Fill="{StaticResource MutedBrush}"/>
                     </Grid>
                     <TextBlock x:Name="TxtCodingAiStatus" FontSize="11"
                                Foreground="{DynamicResource TextBrush}"
                                Text="Kuenstliche Intelligenz bereit" VerticalAlignment="Center" Margin="0,0,4,0"/>
                     <TextBlock x:Name="TxtCodingAiStage" FontSize="9"
-                               Foreground="#94A3B8"
+                               Foreground="{StaticResource MutedBrush}"
                                Text="" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <ToggleButton x:Name="BtnCodingLiveAi" Style="{StaticResource SpeedToggleButton}"
                                   IsChecked="False" Margin="0,0,6,0"
@@ -1144,8 +1159,8 @@
                     </Button>
                     <Button x:Name="BtnCodingClearOverlays"
                             Padding="8,5" FontSize="11" Margin="6,0,0,0"
-                            Background="#334155" Foreground="#94A3B8"
-                            BorderBrush="#475569" BorderThickness="1"
+                            Background="{StaticResource CardBrush}" Foreground="{StaticResource MutedBrush}"
+                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                             Cursor="Hand"
                             Click="CodingClearOverlays_Click"
                             ToolTip="Alle Einblendungen/Markierungen vom Video entfernen">
@@ -1166,15 +1181,15 @@
                     <!-- Eingabemarker: Freitext + Schnellauswahl -->
                     <Border x:Name="EingabemarkerPopup" Visibility="Collapsed"
                             Margin="6,0,0,0" VerticalAlignment="Center"
-                            Background="#1E293B" CornerRadius="6"
-                            BorderBrush="#3B82F6" BorderThickness="2"
+                            Background="{StaticResource HeaderBrush}" CornerRadius="6"
+                            BorderBrush="{StaticResource AccentBrush}" BorderThickness="2"
                             Padding="6,4">
                         <StackPanel Orientation="Horizontal">
                             <!-- Freitext-Eingabe (primaer) -->
                             <TextBox x:Name="TxtEingabemarker"
                                      FontSize="12" Width="220"
-                                     Background="#0F172A" Foreground="White"
-                                     BorderBrush="#475569" BorderThickness="1"
+                                     Background="{StaticResource BackgroundBrush}" Foreground="{StaticResource TextBrush}"
+                                     BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                                      Padding="4,3" VerticalContentAlignment="Center"
                                      KeyDown="CmbEingabemarker_KeyDown">
                                 <TextBox.ToolTip>
@@ -1188,8 +1203,8 @@
                             <!-- Schnellauswahl (Dropdown) -->
                             <ComboBox x:Name="CmbEingabemarker"
                                       FontSize="11" Width="130" Margin="4,0,0,0"
-                                      Background="#0F172A" Foreground="White"
-                                      BorderBrush="#475569"
+                                      Background="{StaticResource BackgroundBrush}" Foreground="{StaticResource TextBrush}"
+                                      BorderBrush="{StaticResource BorderBrush}"
                                       SelectionChanged="CmbEingabemarker_SelectionChanged">
                                 <ComboBox.ToolTip>Schnellauswahl: Haeufigste Codes</ComboBox.ToolTip>
                                 <ComboBoxItem Content="Rohranfang" FontWeight="SemiBold"/>
@@ -1207,7 +1222,7 @@
                                 <ComboBoxItem Content="Wasserstand"/>
                                 <ComboBoxItem Content="Abbruch"/>
                             </ComboBox>
-                            <TextBlock Text="Enter &#x2714;" Foreground="#64748B" FontSize="9"
+                            <TextBlock Text="Enter &#x2714;" Foreground="{StaticResource MutedBrush}" FontSize="9"
                                        VerticalAlignment="Center" Margin="6,0,0,0"/>
                         </StackPanel>
                     </Border>
@@ -1294,7 +1309,7 @@
                     Padding="10,4" Margin="0,0,0,8">
                 <StackPanel Orientation="Horizontal">
                     <Ellipse x:Name="YoloDot" Width="8" Height="8"
-                             Fill="#94A3B8" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                             Fill="{StaticResource MutedBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                     <TextBlock x:Name="TxtYoloStatus" Text="YOLO: Bereit"
                                FontSize="11" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
@@ -1440,16 +1455,20 @@
                                 <StackPanel>
                                     <Button Click="MarkTool_Punkt_Click"
                                             Content="&#x25CF; Punkt (Klick)" Padding="12,6"
-                                            Style="{StaticResource MarkToolPopupButton}"/>
+                                            Style="{StaticResource MarkToolPopupButton}"
+                                            ToolTip="Punktschaden manuell im aktuellen Frame per Klick markieren"/>
                                     <Button Click="MarkTool_Ellipse_Click"
                                             Content="&#x2B2D; Ellipse" Padding="12,6"
-                                            Style="{StaticResource MarkToolPopupButton}"/>
+                                            Style="{StaticResource MarkToolPopupButton}"
+                                            ToolTip="Ellipsenfoermigen Bereich um Schadensstelle zeichnen"/>
                                     <Button Click="MarkTool_Freihand_Click"
                                             Content="&#x270E; Freihand" Padding="12,6"
-                                            Style="{StaticResource MarkToolPopupButton}"/>
+                                            Style="{StaticResource MarkToolPopupButton}"
+                                            ToolTip="Freihandlinie zeichnen um unregelmaessige Schadensformen zu markieren"/>
                                     <Button Click="MarkTool_Rechteck_Click"
                                             Content="&#x25A2; Rechteck" Padding="12,6"
-                                            Style="{StaticResource MarkToolPopupButton}"/>
+                                            Style="{StaticResource MarkToolPopupButton}"
+                                            ToolTip="Rechteckige Markierung um Schadensstelle im Frame aufziehen"/>
                                 </StackPanel>
                             </Border>
                         </Popup>

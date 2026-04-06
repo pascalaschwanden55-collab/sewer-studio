@@ -64,7 +64,8 @@
                     <TextBox x:Name="FolderBox" Width="600" Margin="0,0,8,0"
                              Padding="6,4" FontSize="13" VerticalContentAlignment="Center"/>
                     <Button x:Name="BrowseButton" Content="Durchsuchen..." Click="Browse_Click"
-                            Style="{DynamicResource SecondaryButton}"/>
+                            Style="{DynamicResource SecondaryButton}"
+                            ToolTip="Ordner auswaehlen in dem nach Medien-Dateien gesucht werden soll"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
@@ -80,9 +81,11 @@
 
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                     <Button x:Name="StartButton" Content="Suche starten" Click="Start_Click"
-                            Style="{DynamicResource PrimaryButton}" Margin="90,0,10,0"/>
+                            Style="{DynamicResource PrimaryButton}" Margin="90,0,10,0"
+                            ToolTip="Mediensuche im gewaehlten Ordner starten und Dateien den Haltungen zuordnen"/>
                     <Button x:Name="CancelSearchButton" Content="Abbrechen" Click="CancelSearch_Click"
-                            Style="{DynamicResource SecondaryButton}" IsEnabled="False"/>
+                            Style="{DynamicResource SecondaryButton}" IsEnabled="False"
+                            ToolTip="Laufende Mediensuche abbrechen"/>
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -146,9 +149,11 @@
             <DockPanel>
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
                     <Button x:Name="ApplyButton" Content="Anwenden" Click="Apply_Click"
-                            Style="{DynamicResource PrimaryButton}" IsEnabled="False" Margin="0,0,8,0"/>
+                            Style="{DynamicResource PrimaryButton}" IsEnabled="False" Margin="0,0,8,0"
+                            ToolTip="Gefundene Medien-Zuordnungen auf die Haltungen anwenden"/>
                     <Button x:Name="CloseButton" Content="Schliessen" Click="Close_Click"
-                            Style="{DynamicResource SecondaryButton}"/>
+                            Style="{DynamicResource SecondaryButton}"
+                            ToolTip="Fenster schliessen ohne Aenderungen zu uebernehmen"/>
                 </StackPanel>
                 <TextBlock x:Name="SummaryText" Style="{StaticResource LabelText}"
                            Text="Starten Sie die Suche um Ergebnisse anzuzeigen."

@@ -14,9 +14,9 @@
             <Setter Property="MinWidth" Value="58"/>
             <Setter Property="Height" Value="50"/>
             <Setter Property="Margin" Value="2"/>
-            <Setter Property="Background" Value="#DD1E293B"/>
+            <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#55FFFFFF"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -43,7 +43,7 @@
                                     <Condition Property="IsChecked" Value="False"/>
                                 </MultiTrigger.Conditions>
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                <Setter TargetName="Bd" Property="Background" Value="#EE2D3A4F"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBrush}"/>
                             </MultiTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -65,7 +65,7 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="{TemplateBinding Background}"
                                 CornerRadius="6" Padding="12,4"
-                                BorderThickness="1" BorderBrush="#44FFFFFF">
+                                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -99,14 +99,14 @@
             <Setter Property="Margin" Value="2,0"/>
             <Setter Property="FontSize" Value="10"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Background" Value="#CC1E293B"/>
+            <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="{TemplateBinding Background}"
                                 CornerRadius="4" Padding="4,2"
-                                BorderThickness="1" BorderBrush="#44FFFFFF">
+                                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -358,7 +358,7 @@
                             Visibility="Collapsed"/>
 
                     <!-- OSD -->
-                    <Border Background="#CC1E293B" CornerRadius="4" Padding="6" Margin="0,8,0,0">
+                    <Border Background="{DynamicResource HeaderBrush}" CornerRadius="4" Padding="6" Margin="0,8,0,0">
                         <StackPanel>
                             <TextBlock x:Name="TxtDnInfo" Text="DN —" FontSize="10"
                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
@@ -373,16 +373,20 @@
 
                     <!-- OK / Abbrechen -->
                     <Button x:Name="BtnOk" Content="OK &#x2714;" Style="{StaticResource ActionBtn}"
-                            Background="#22C55E" Click="BtnOk_Click"/>
+                            Background="#22C55E" Click="BtnOk_Click"
+                            ToolTip="Alle Messungen und Markierungen uebernehmen und Fenster schliessen"/>
                     <Button x:Name="BtnCancel" Content="Abbrechen" Style="{StaticResource ActionBtn}"
-                            Background="#EF4444" Click="BtnCancel_Click"/>
+                            Background="#EF4444" Click="BtnCancel_Click"
+                            ToolTip="Alle Aenderungen verwerfen und Fenster ohne Speichern schliessen"/>
 
                     <!-- Undo -->
                     <Button x:Name="BtnUndo" Content="&#x21B6; Undo" Style="{StaticResource ActionBtn}"
                             Background="#6366F1" Click="BtnUndo_Click" Margin="0,8,0,0"
+                            ToolTip="Letzte Zeichnung oder Messung rueckgaengig machen"
                             Visibility="Collapsed"/>
                     <Button x:Name="BtnDelete" Content="&#x2716; Loeschen" Style="{StaticResource ActionBtn}"
                             Background="#EF4444" Click="BtnDelete_Click" Margin="0,4,0,0"
+                            ToolTip="Ausgewaehlte Markierung oder Messung dauerhaft vom Foto entfernen"
                             Visibility="Collapsed"/>
                 </StackPanel>
             </Border>
@@ -408,29 +412,41 @@
                                Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                     <WrapPanel>
                         <Button Content="12h" Style="{StaticResource PresetBtn}" Tag="0"
-                                Click="PositionPreset_Click"/>
+                                Click="PositionPreset_Click"
+                                ToolTip="Uhrlage 12 Uhr setzen — Scheitel (oben, 0 Grad)"/>
                         <Button Content="1h" Style="{StaticResource PresetBtn}" Tag="30"
-                                Click="PositionPreset_Click"/>
+                                Click="PositionPreset_Click"
+                                ToolTip="Uhrlage 1 Uhr setzen — rechts oben (30 Grad)"/>
                         <Button Content="2h" Style="{StaticResource PresetBtn}" Tag="60"
-                                Click="PositionPreset_Click"/>
+                                Click="PositionPreset_Click"
+                                ToolTip="Uhrlage 2 Uhr setzen — rechts oben (60 Grad)"/>
                         <Button Content="3h" Style="{StaticResource PresetBtn}" Tag="90"
-                                Click="PositionPreset_Click"/>
+                                Click="PositionPreset_Click"
+                                ToolTip="Uhrlage 3 Uhr setzen — rechte Seite (90 Grad)"/>
                         <Button Content="4h" Style="{StaticResource PresetBtn}" Tag="120"
-                                Click="PositionPreset_Click"/>
+                                Click="PositionPreset_Click"
+                                ToolTip="Uhrlage 4 Uhr setzen — rechts unten (120 Grad)"/>
                         <Button Content="5h" Style="{StaticResource PresetBtn}" Tag="150"
-                                Click="PositionPreset_Click"/>
+                                Click="PositionPreset_Click"
+                                ToolTip="Uhrlage 5 Uhr setzen — rechts unten (150 Grad)"/>
                         <Button Content="6h" Style="{StaticResource PresetBtn}" Tag="180"
-                                Click="PositionPreset_Click"/>
+                                Click="PositionPreset_Click"
+                                ToolTip="Uhrlage 6 Uhr setzen — Sohle (unten, 180 Grad)"/>
                         <Button Content="7h" Style="{StaticResource PresetBtn}" Tag="210"
-                                Click="PositionPreset_Click"/>
+                                Click="PositionPreset_Click"
+                                ToolTip="Uhrlage 7 Uhr setzen — links unten (210 Grad)"/>
                         <Button Content="8h" Style="{StaticResource PresetBtn}" Tag="240"
-                                Click="PositionPreset_Click"/>
+                                Click="PositionPreset_Click"
+                                ToolTip="Uhrlage 8 Uhr setzen — links unten (240 Grad)"/>
                         <Button Content="9h" Style="{StaticResource PresetBtn}" Tag="270"
-                                Click="PositionPreset_Click"/>
+                                Click="PositionPreset_Click"
+                                ToolTip="Uhrlage 9 Uhr setzen — linke Seite (270 Grad)"/>
                         <Button Content="10h" Style="{StaticResource PresetBtn}" Tag="300"
-                                Click="PositionPreset_Click"/>
+                                Click="PositionPreset_Click"
+                                ToolTip="Uhrlage 10 Uhr setzen — links oben (300 Grad)"/>
                         <Button Content="11h" Style="{StaticResource PresetBtn}" Tag="330"
-                                Click="PositionPreset_Click"/>
+                                Click="PositionPreset_Click"
+                                ToolTip="Uhrlage 11 Uhr setzen — links oben (330 Grad)"/>
                     </WrapPanel>
                     <Slider x:Name="SliderPosition" Minimum="0" Maximum="360"
                             Value="0" TickFrequency="30" IsSnapToTickEnabled="False"
@@ -446,19 +462,26 @@
                                Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,4"/>
                     <WrapPanel>
                         <Button Content="15°" Style="{StaticResource PresetBtn}" Tag="15"
-                                Click="AnglePreset_Click"/>
+                                Click="AnglePreset_Click"
+                                ToolTip="Einmuendungswinkel auf 15 Grad setzen — sehr flacher Abzweig"/>
                         <Button Content="30°" Style="{StaticResource PresetBtn}" Tag="30"
-                                Click="AnglePreset_Click"/>
+                                Click="AnglePreset_Click"
+                                ToolTip="Einmuendungswinkel auf 30 Grad setzen — flacher Abzweig"/>
                         <Button Content="45°" Style="{StaticResource PresetBtn}" Tag="45"
-                                Click="AnglePreset_Click"/>
+                                Click="AnglePreset_Click"
+                                ToolTip="Einmuendungswinkel auf 45 Grad setzen — haeufigster Standardwinkel"/>
                         <Button Content="60°" Style="{StaticResource PresetBtn}" Tag="60"
-                                Click="AnglePreset_Click"/>
+                                Click="AnglePreset_Click"
+                                ToolTip="Einmuendungswinkel auf 60 Grad setzen — steiler Abzweig"/>
                         <Button Content="90°" Style="{StaticResource PresetBtn}" Tag="90"
-                                Click="AnglePreset_Click"/>
+                                Click="AnglePreset_Click"
+                                ToolTip="Einmuendungswinkel auf 90 Grad setzen — rechtwinkliger Anschluss"/>
                         <Button Content="135°" Style="{StaticResource PresetBtn}" Tag="135"
-                                Click="AnglePreset_Click"/>
+                                Click="AnglePreset_Click"
+                                ToolTip="Einmuendungswinkel auf 135 Grad setzen — stumpfer Winkel"/>
                         <Button Content="150°" Style="{StaticResource PresetBtn}" Tag="150"
-                                Click="AnglePreset_Click"/>
+                                Click="AnglePreset_Click"
+                                ToolTip="Einmuendungswinkel auf 150 Grad setzen — sehr stumpfer Winkel"/>
                     </WrapPanel>
                     <Slider x:Name="SliderAngle" Minimum="5" Maximum="175"
                             Value="45" TickFrequency="15" IsSnapToTickEnabled="False"

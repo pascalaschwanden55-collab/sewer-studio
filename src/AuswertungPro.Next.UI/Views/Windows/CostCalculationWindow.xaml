@@ -29,19 +29,24 @@
                       Content="Wasserhaltung" 
                       VerticalAlignment="Center" Margin="0,0,12,0"/>
 
-            <Button Command="{Binding CalculateCommand}" 
-                    Content="Berechnen" Width="120" Margin="0,0,6,0"/>
+            <Button Command="{Binding CalculateCommand}"
+                    Content="Berechnen" Width="120" Margin="0,0,6,0"
+                    ToolTip="Kostenberechnung mit den aktuellen Eingabewerten durchfuehren"/>
             <Button Command="{Binding OpenPriceEditorCommand}"
                     CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
-                    Content="Preise..." Width="120" Margin="0,0,6,0"/>
-            <Button Command="{Binding CopyToClipboardCommand}" 
-                    Content="Offerte kopieren" Width="150"/>
+                    Content="Preise..." Width="120" Margin="0,0,6,0"
+                    ToolTip="Preiskatalog oeffnen um Einheitspreise zu bearbeiten"/>
+            <Button Command="{Binding CopyToClipboardCommand}"
+                    Content="Offerte kopieren" Width="150"
+                    ToolTip="Berechnete Offerte in die Zwischenablage kopieren"/>
                 <Button Command="{Binding ExportPdfCommand}"
                     CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
-                    Content="PDF exportieren" Width="150" Margin="6,0,0,0"/>
+                    Content="PDF exportieren" Width="150" Margin="6,0,0,0"
+                    ToolTip="Kostenzusammenstellung als PDF-Dokument exportieren"/>
                 <Button Command="{Binding InstallChromiumCommand}"
                     CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
-                    Content="Chromium installieren" Width="170" Margin="6,0,0,0"/>
+                    Content="Chromium installieren" Width="170" Margin="6,0,0,0"
+                    ToolTip="Chromium-Browser fuer die PDF-Erzeugung herunterladen und installieren"/>
         </StackPanel>
 
         <TextBlock Text="{Binding WarningText}" 

@@ -231,7 +231,8 @@
             <Button DockPanel.Dock="Right"
                     Width="120"
                     Command="{Binding CloseCommand}"
-                    Style="{StaticResource SecondaryButton}">
+                    Style="{StaticResource SecondaryButton}"
+                    ToolTip="Detailansicht schliessen und zum Hauptfenster zurueckkehren">
                 Schliessen
             </Button>
             <Button DockPanel.Dock="Right"
@@ -239,7 +240,8 @@
                     Padding="14,6"
                     Command="{Binding SuggestMeasuresCommand}"
                     Visibility="{Binding SuggestMeasuresVisibility}"
-                    Style="{StaticResource PrimaryButton}">
+                    Style="{StaticResource PrimaryButton}"
+                    ToolTip="Sanierungsmassnahmen basierend auf den Schaeden dieser Haltung vorschlagen">
                 Empfohlene Massnahmen
             </Button>
         </DockPanel>

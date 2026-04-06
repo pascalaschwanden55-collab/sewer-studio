@@ -1,0 +1,539 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.CatalogManagerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
+        mc:Ignorable="d"
+        Title="Katalog-Manager — SewerStudio"
+        Width="1200" Height="700"
+        MinWidth="900" MinHeight="550"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BgLightBrush}">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <x:Array x:Key="ClockPositions" Type="{x:Type sys:String}"
+                 xmlns:sys="clr-namespace:System;assembly=mscorlib">
+            <sys:String>00</sys:String>
+            <sys:String>01</sys:String>
+            <sys:String>02</sys:String>
+            <sys:String>03</sys:String>
+            <sys:String>04</sys:String>
+            <sys:String>05</sys:String>
+            <sys:String>06</sys:String>
+            <sys:String>07</sys:String>
+            <sys:String>08</sys:String>
+            <sys:String>09</sys:String>
+            <sys:String>10</sys:String>
+            <sys:String>11</sys:String>
+            <sys:String>12</sys:String>
+        </x:Array>
+        <x:Array x:Key="EzOptions" Type="{x:Type sys:String}"
+                 xmlns:sys="clr-namespace:System;assembly=mscorlib">
+            <sys:String>EZ0</sys:String>
+            <sys:String>EZ1</sys:String>
+            <sys:String>EZ2</sys:String>
+            <sys:String>EZ3</sys:String>
+            <sys:String>EZ4</sys:String>
+        </x:Array>
+    </Window.Resources>
+
+    <Grid Margin="8">
+        <TabControl x:Name="MainTabControl"
+                    Background="Transparent"
+                    BorderThickness="0">
+
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <!-- Tab 1: VSA-Codes (aus CodeCatalogEditorWindow)            -->
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <TabItem Header="VSA-Codes">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.2*" />
+                        <ColumnDefinition Width="0.9*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Suchleiste -->
+                    <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="Suche:" VerticalAlignment="Center" Margin="0,0,6,0"
+                                   Foreground="{StaticResource TextBrush}" />
+                        <TextBox Width="280"
+                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Text="Gruppe:" VerticalAlignment="Center" Margin="14,0,6,0"
+                                   Foreground="{StaticResource TextBrush}" />
+                        <ComboBox Width="200"
+                                  ItemsSource="{Binding GroupOptions}"
+                                  SelectedItem="{Binding SelectedGroup}" />
+                    </StackPanel>
+
+                    <!-- Code-Tabelle -->
+                    <DataGrid Grid.Row="1"
+                              Grid.Column="0"
+                              Margin="0,0,10,0"
+                              ItemsSource="{Binding CodesView}"
+                              SelectedItem="{Binding SelectedCode}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              SelectionUnit="FullRow"
+                              RowHeaderWidth="0">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Code" Binding="{Binding Code, UpdateSourceTrigger=PropertyChanged}" Width="110" />
+                            <DataGridTextColumn Header="Title" Binding="{Binding Title, UpdateSourceTrigger=PropertyChanged}" Width="*" />
+                            <DataGridTextColumn Header="Group" Binding="{Binding Group, UpdateSourceTrigger=PropertyChanged}" Width="150" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- Detail-Panel -->
+                    <Border Grid.Row="1" Grid.Column="1" Padding="12"
+                            BorderThickness="1" CornerRadius="8"
+                            Background="{StaticResource CardBrush}"
+                            BorderBrush="{StaticResource BorderBrush}">
+                        <StackPanel>
+                            <TextBlock Text="Detail" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"
+                                       Foreground="{StaticResource TextBrush}" />
+                            <TextBlock Text="Code" Foreground="{StaticResource TextSecondaryBrush}" />
+                            <TextBox Margin="0,2,0,8"
+                                     Text="{Binding SelectedCode.Code, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <TextBlock Text="Title" Foreground="{StaticResource TextSecondaryBrush}" />
+                            <TextBox Margin="0,2,0,8"
+                                     Text="{Binding SelectedCode.Title, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <TextBlock Text="Group" Foreground="{StaticResource TextSecondaryBrush}" />
+                            <TextBox Margin="0,2,0,8"
+                                     Text="{Binding SelectedCode.Group, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <TextBlock Text="Description" Foreground="{StaticResource TextSecondaryBrush}" />
+                            <TextBox Margin="0,2,0,8"
+                                     Height="170"
+                                     TextWrapping="Wrap"
+                                     AcceptsReturn="True"
+                                     VerticalScrollBarVisibility="Auto"
+                                     Text="{Binding SelectedCode.Description, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <TextBlock Text="Validierungsfehler" FontWeight="SemiBold" Margin="0,6,0,4"
+                                       Foreground="{StaticResource TextBrush}" />
+                            <ListBox Height="140" ItemsSource="{Binding ValidationMessages}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Buttons -->
+                    <DockPanel Grid.Row="2" Grid.ColumnSpan="2" Margin="0,12,0,0">
+                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                            <Button Content="Neu" Width="100" Margin="0,0,8,0" Command="{Binding NewCommand}"
+                                    ToolTip="Neuen Code-Eintrag im Katalog anlegen" />
+                            <Button Content="Loeschen" Width="100" Command="{Binding DeleteCommand}"
+                                    ToolTip="Ausgewaehlten Code-Eintrag aus dem Katalog entfernen" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="Validieren" Width="110" Margin="0,0,8,0" Command="{Binding ValidateCommand}"
+                                    ToolTip="Alle Katalogeintraege auf Vollstaendigkeit und Konsistenz pruefen" />
+                            <Button Content="Speichern" Width="110" Margin="0,0,8,0" Command="{Binding SaveCommand}"
+                                    ToolTip="Aenderungen am Code-Katalog dauerhaft speichern" />
+                            <Button Content="Abbrechen" Width="110" Command="{Binding CancelCommand}"
+                                    ToolTip="Aenderungen verwerfen und Fenster schliessen" />
+                        </StackPanel>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <!-- Tab 2: Preiskatalog (aus PriceCatalogEditorWindow)        -->
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <TabItem Header="Preiskatalog">
+                <DockPanel Margin="10">
+                    <!-- Suchleiste + Aktionen -->
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="Suche:" VerticalAlignment="Center" Margin="0,0,6,0"
+                                   Foreground="{StaticResource TextBrush}" />
+                        <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 Width="320" Margin="0,0,10,0"/>
+                        <Button Command="{Binding AddNewCommand}" Content="Neu" Width="90" Margin="0,0,6,0"
+                                ToolTip="Neue Preisposition im Katalog anlegen"/>
+                        <Button Command="{Binding DeleteCommand}"
+                                CommandParameter="{Binding ElementName=PriceDg, Path=SelectedItem}"
+                                Content="Löschen" Width="90" Margin="0,0,20,0"
+                                ToolTip="Ausgewaehlte Preisposition aus dem Katalog entfernen"/>
+                        <TextBlock Text="DN-Preise: z.B. DN500 -> dn_min=500, dn_max=500."
+                                   VerticalAlignment="Center" TextWrapping="Wrap" Width="300"
+                                   Foreground="{StaticResource MutedBrush}" />
+                    </StackPanel>
+
+                    <!-- Buttons unten -->
+                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                                HorizontalAlignment="Right" Margin="0,8,0,0">
+                        <Button Command="{Binding SaveCommand}" Content="Speichern"
+                                Width="120" Margin="0,0,6,0"
+                                ToolTip="Alle Aenderungen am Preiskatalog dauerhaft speichern"/>
+                        <Button Content="Schließen" Width="120" Click="PriceClose_Click"
+                                ToolTip="Preiskatalog-Editor schliessen"/>
+                    </StackPanel>
+
+                    <!-- Preis-Tabelle -->
+                    <DataGrid x:Name="PriceDg"
+                              ItemsSource="{Binding Items}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              SelectionUnit="FullRow"
+                              GridLinesVisibility="Horizontal"
+                              HeadersVisibility="Column"
+                              RowHeaderWidth="0">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="id" Binding="{Binding Id}" Width="170"/>
+                            <DataGridTextColumn Header="Gruppe" Binding="{Binding Group}" Width="140"/>
+                            <DataGridTextColumn Header="Bezeichnung" Binding="{Binding Label}" Width="280"/>
+                            <DataGridTextColumn Header="Einheit" Binding="{Binding Unit}" Width="60"/>
+                            <DataGridTextColumn Header="DN min" Binding="{Binding DnMin}" Width="70"/>
+                            <DataGridTextColumn Header="DN max" Binding="{Binding DnMax}" Width="70"/>
+                            <DataGridTextColumn Header="Preis" Binding="{Binding UnitPrice}" Width="90"/>
+                            <DataGridTextColumn Header="Quelle Datei" Binding="{Binding SourceFile}" Width="170"/>
+                            <DataGridTextColumn Header="Quelle Pos" Binding="{Binding SourcePos}" Width="110"/>
+                            <DataGridTextColumn Header="Notiz" Binding="{Binding Notes}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <!-- Tab 3: Beobachtungen (aus ObservationCatalogWindow)       -->
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <TabItem Header="Beobachtungen">
+                <Grid Margin="6" Background="{StaticResource BgLightBrush}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="400"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Links: Suche + Code-Liste -->
+                    <Grid Grid.Column="0" Grid.RowSpan="3" Margin="0,0,6,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="Suchen" FontWeight="SemiBold" Margin="2,0,0,4"
+                                   Foreground="{StaticResource TextBrush}" />
+                        <TextBox x:Name="ObsSearchTextBox"
+                                 Grid.Row="1"
+                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,0,0,6"/>
+                        <ListView Grid.Row="2"
+                                  x:Name="ObsSearchList"
+                                  ItemsSource="{Binding FilteredCodes}"
+                                  SelectionChanged="ObsSearchList_SelectionChanged">
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="Code" Width="70" DisplayMemberBinding="{Binding Code}"/>
+                                    <GridViewColumn Header="Text" Width="200" DisplayMemberBinding="{Binding Title}"/>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                    </Grid>
+
+                    <!-- Oben Mitte: Code-Titel und Beschreibung -->
+                    <StackPanel Grid.Column="1" Grid.Row="0" Grid.ColumnSpan="2" Margin="4,0,0,0">
+                        <TextBlock Text="Beobachtung" FontWeight="SemiBold" Margin="0,2,0,4"
+                                   Foreground="{StaticResource TextBrush}" />
+                        <TextBlock Text="{Binding CodeTitle}" FontSize="18" FontWeight="Bold"
+                                   Foreground="{StaticResource AccentBrush}"
+                                   Margin="0,0,0,4" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding CodeDescription}" Foreground="{StaticResource MutedBrush}"
+                                   TextWrapping="Wrap" Margin="0,0,0,6" MaxHeight="40"/>
+                    </StackPanel>
+
+                    <!-- Mitte: Kaskaden-Navigation -->
+                    <Border Grid.Column="1" Grid.Row="1" Grid.RowSpan="2"
+                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                            Background="{StaticResource CardBrush}" Margin="4,0,6,0">
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding Columns}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <ListBox ItemsSource="{Binding Items}"
+                                                 SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                                                 SelectionChanged="ObsColumn_SelectionChanged"
+                                                 MinWidth="180"
+                                                 MaxWidth="260"
+                                                 Margin="0,0,2,0"
+                                                 BorderThickness="0">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Label}" TextWrapping="Wrap" Margin="4,2"/>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+
+                    <!-- Rechts: VSA-KEK Parameter -->
+                    <ScrollViewer Grid.Column="2" Grid.Row="1" Grid.RowSpan="2"
+                                  VerticalScrollBarVisibility="Auto" Margin="0,0,0,0">
+                        <StackPanel>
+                            <!-- Code-spezifische Parameter -->
+                            <ItemsControl ItemsSource="{Binding Parameters}" Margin="0,0,0,4">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="0,0,0,8">
+                                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"
+                                                       Foreground="{StaticResource TextBrush}" />
+                                            <ComboBox ItemsSource="{Binding AllowedValues}"
+                                                      Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                      IsEditable="True"
+                                                      Visibility="{Binding IsEnum, Converter={StaticResource BoolToVis}}">
+                                                <ComboBox.Style>
+                                                    <Style TargetType="ComboBox">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsValid}" Value="False">
+                                                                <Setter Property="BorderBrush" Value="OrangeRed"/>
+                                                                <Setter Property="BorderThickness" Value="2"/>
+                                                                <Setter Property="ToolTip" Value="{Binding ErrorMessage}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ComboBox.Style>
+                                            </ComboBox>
+                                            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                     Background="{StaticResource AccentSubtleBrush}">
+                                                <TextBox.Style>
+                                                    <Style TargetType="TextBox">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsEnum}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsClock}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsValid}" Value="False">
+                                                                <Setter Property="BorderBrush" Value="OrangeRed"/>
+                                                                <Setter Property="BorderThickness" Value="2"/>
+                                                                <Setter Property="ToolTip" Value="{Binding ErrorMessage}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBox.Style>
+                                            </TextBox>
+
+                                            <!-- Clock -->
+                                            <StackPanel Visibility="{Binding IsClock, Converter={StaticResource BoolToVis}}">
+                                                <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,6">
+                                                    <TextBox.Style>
+                                                        <Style TargetType="TextBox">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsValid}" Value="False">
+                                                                    <Setter Property="BorderBrush" Value="OrangeRed"/>
+                                                                    <Setter Property="BorderThickness" Value="2"/>
+                                                                    <Setter Property="ToolTip" Value="{Binding ErrorMessage}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBox.Style>
+                                                </TextBox>
+                                                <Border Background="{StaticResource AccentSubtleBrush}" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1"
+                                                        Padding="4" Margin="0,0,0,6">
+                                                    <controls:ClockPickerControl Value="{Binding Value, UpdateSourceTrigger=PropertyChanged}" />
+                                                </Border>
+                                            </StackPanel>
+
+                                            <TextBlock Text="{Binding UnitSuffix}" Foreground="{StaticResource MutedBrush}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- VSA-KEK Bereich -->
+                            <GroupBox Header="VSA-KEK (Kanalschaden)" Margin="0,4,0,0"
+                                      BorderBrush="{StaticResource AccentBrush}" BorderThickness="2">
+                                <GroupBox.HeaderTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" FontWeight="Bold"
+                                                   Foreground="{StaticResource AccentBrush}"/>
+                                    </DataTemplate>
+                                </GroupBox.HeaderTemplate>
+                                <Grid Margin="8,6,8,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,12,8">
+                                        <TextBlock Text="Distanz (m)" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource TextBrush}" />
+                                        <TextBox x:Name="VsaDistanzTextBox"
+                                                 Text="{Binding VsaDistanz, UpdateSourceTrigger=PropertyChanged}"
+                                                 Background="{StaticResource AccentSubtleBrush}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
+                                        <TextBlock Text="Uhrzeit (Video)" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource TextBrush}" />
+                                        <TextBox x:Name="VsaVideoTextBox"
+                                                 Text="{Binding VsaVideo, UpdateSourceTrigger=PropertyChanged}"
+                                                 Background="{StaticResource AccentSubtleBrush}"/>
+                                    </StackPanel>
+
+                                    <!-- Uhrzeit von/bis Dropdowns -->
+                                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,4">
+                                        <TextBlock Text="Uhrzeit von" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource TextBrush}" />
+                                        <ComboBox x:Name="VsaUhrVonComboBox"
+                                                  ItemsSource="{StaticResource ClockPositions}"
+                                                  IsEditable="True"
+                                                  Text="{Binding VsaUhrVon, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,4">
+                                        <TextBlock Text="Uhrzeit bis" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource TextBrush}" />
+                                        <ComboBox x:Name="VsaUhrBisComboBox"
+                                                  ItemsSource="{StaticResource ClockPositions}"
+                                                  IsEditable="True"
+                                                  Text="{Binding VsaUhrBis, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+
+                                    <!-- Bereichs-Uhr -->
+                                    <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                                            Background="{StaticResource AccentSubtleBrush}" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1"
+                                            Padding="4" Margin="0,0,0,8"
+                                            HorizontalAlignment="Center">
+                                        <controls:ClockRangePickerControl
+                                            Width="200" Height="200"
+                                            ValueFrom="{Binding VsaUhrVon, UpdateSourceTrigger=PropertyChanged}"
+                                            ValueTo="{Binding VsaUhrBis, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </Border>
+
+                                    <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,0,12,8">
+                                        <TextBlock Text="Quantifizierung 1" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource TextBrush}" />
+                                        <TextBox x:Name="VsaQ1TextBox"
+                                                 Text="{Binding VsaQ1, UpdateSourceTrigger=PropertyChanged}"
+                                                 Background="{StaticResource AccentSubtleBrush}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,0,0,8">
+                                        <TextBlock Text="Quantifizierung 2" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource TextBrush}" />
+                                        <TextBox x:Name="VsaQ2TextBox"
+                                                 Text="{Binding VsaQ2, UpdateSourceTrigger=PropertyChanged}"
+                                                 Background="{StaticResource AccentSubtleBrush}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="4" Grid.Column="0" Margin="0,0,12,8">
+                                        <TextBlock Text="Strecke" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource TextBrush}" />
+                                        <TextBox x:Name="VsaStreckeTextBox"
+                                                 Text="{Binding VsaStrecke, UpdateSourceTrigger=PropertyChanged}"
+                                                 Background="{StaticResource AccentSubtleBrush}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="4" Grid.Column="1" Margin="0,0,0,8">
+                                        <TextBlock Text="Verbindung" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource TextBrush}" />
+                                        <CheckBox x:Name="VsaVerbindungCheckBox"
+                                                  IsChecked="{Binding VsaVerbindung}"
+                                                  Margin="0,2,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="5" Grid.Column="0" Margin="0,0,12,8">
+                                        <TextBlock Text="Ansicht" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource TextBrush}" />
+                                        <TextBox x:Name="VsaAnsichtTextBox"
+                                                 Text="{Binding VsaAnsicht, UpdateSourceTrigger=PropertyChanged}"
+                                                 Background="{StaticResource AccentSubtleBrush}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="5" Grid.Column="1" Margin="0,0,0,8">
+                                        <TextBlock Text="EZ / Bereich" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource TextBrush}" />
+                                        <StackPanel Orientation="Horizontal">
+                                            <ComboBox x:Name="VsaEzComboBox"
+                                                      Width="70"
+                                                      ItemsSource="{StaticResource EzOptions}"
+                                                      IsEditable="True"
+                                                      Text="{Binding VsaEz, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0"/>
+                                            <TextBox x:Name="VsaSchachtbereichTextBox"
+                                                     Width="90"
+                                                     Text="{Binding VsaSchachtbereich, UpdateSourceTrigger=PropertyChanged}"
+                                                     Background="{StaticResource AccentSubtleBrush}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,4">
+                                        <TextBlock Text="Diverses" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource TextBrush}" />
+                                        <TextBox x:Name="VsaAnmerkungTextBox"
+                                                 Text="{Binding VsaAnmerkung, UpdateSourceTrigger=PropertyChanged}"
+                                                 Background="{StaticResource AccentSubtleBrush}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </GroupBox>
+
+                            <TextBlock Text="{Binding ValidationMessage}" Foreground="OrangeRed"
+                                       TextWrapping="Wrap" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Buttons unten -->
+                    <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="ObsKiSuggestButton"
+                                    Content="KI-Vorschlag (KB)"
+                                    Width="160"
+                                    Height="32"
+                                    Margin="0,0,10,0"
+                                    Visibility="{Binding HasKiService, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="KI-gestuetzten Codierungsvorschlag aus der KnowledgeBase abrufen"/>
+                            <TextBlock Text="{Binding KiStatus}" VerticalAlignment="Center"
+                                       Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="ObsApplyButton" Content="Uebernehmen" Width="130" Height="32"
+                                    FontWeight="SemiBold" Margin="0,0,8,0"
+                                    ToolTip="Ausgewaehlten Beobachtungscode mit Parametern in das Protokoll uebernehmen"/>
+                            <Button x:Name="ObsCancelButton" Content="Abbrechen" Width="130" Height="32" IsCancel="True"
+                                    ToolTip="Beobachtungskatalog schliessen ohne Aenderungen"/>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>

@@ -4,7 +4,7 @@
         Title="Live-Frame Vorschau"
         Height="640" Width="860"
         MinWidth="400" MinHeight="300"
-        Background="#111318"
+        Background="{StaticResource BgLightBrush}"
         ResizeMode="CanResize"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="True">
@@ -17,16 +17,16 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="#151820" Padding="12,8"
-                BorderBrush="#2A3248" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Background="{StaticResource HeaderBrush}" Padding="12,8"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Left"
                            Text="LIVE-FRAME / ANALYSE"
-                           FontSize="11" FontWeight="SemiBold" Foreground="#6B7A94"
+                           FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"
                            VerticalAlignment="Center"/>
                 <TextBlock DockPanel.Dock="Right"
                            Text="{Binding LiveFrameInfo}"
-                           FontSize="11" Foreground="#8090A8"
+                           FontSize="11" Foreground="{StaticResource MutedBrush}"
                            VerticalAlignment="Center" HorizontalAlignment="Right"/>
             </DockPanel>
         </Border>
@@ -34,8 +34,8 @@
         <!-- Live Frame -->
         <Border Grid.Row="1" Margin="8"
                 CornerRadius="8"
-                Background="#0E1118"
-                BorderBrush="#2A3248"
+                Background="{StaticResource BgLightBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
                 BorderThickness="1"
                 ClipToBounds="True">
             <Grid>
@@ -46,7 +46,7 @@
                         Background="Transparent"
                         IsHitTestVisible="False"/>
                 <TextBlock Text="Warte auf Frame..."
-                           Foreground="#6B7A94"
+                           Foreground="{StaticResource MutedBrush}"
                            FontSize="14"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
@@ -55,17 +55,17 @@
         </Border>
 
         <!-- Footer -->
-        <Border Grid.Row="2" Background="#151820" Padding="12,6"
-                BorderBrush="#2A3248" BorderThickness="0,1,0,0">
+        <Border Grid.Row="2" Background="{StaticResource HeaderBrush}" Padding="12,6"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Left"
                            x:Name="StatusText"
-                           FontSize="11" Foreground="#A5B4FC"
+                           FontSize="11" Foreground="{StaticResource AccentBrush}"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis"/>
                 <TextBlock DockPanel.Dock="Right"
                            x:Name="QuantText"
-                           FontSize="10" Foreground="#9CA3AF"
+                           FontSize="10" Foreground="{StaticResource MutedBrush}"
                            VerticalAlignment="Center" HorizontalAlignment="Right"
                            TextTrimming="CharacterEllipsis"
                            MaxWidth="400"/>

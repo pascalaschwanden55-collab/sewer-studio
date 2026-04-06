@@ -23,9 +23,9 @@
             <Setter Property="MinWidth" Value="54"/>
             <Setter Property="Height" Value="54"/>
             <Setter Property="Margin" Value="3"/>
-            <Setter Property="Background" Value="#DD1E293B"/>
+            <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#55FFFFFF"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -49,7 +49,7 @@
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                <Setter TargetName="Bd" Property="Background" Value="#EE2D3A4F"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -313,7 +313,7 @@
                                        FontSize="14" FontWeight="Bold"/>
                             <TextBlock x:Name="TxtVideoTime"
                                        Text="00:00"
-                                       Foreground="#94A3B8"
+                                       Foreground="{StaticResource MutedBrush}"
                                        FontFamily="Consolas, Cascadia Mono"
                                        FontSize="12" Margin="12,1,0,0"
                                        VerticalAlignment="Center"/>
@@ -326,17 +326,17 @@
                             Background="#CC000000" CornerRadius="6"
                             Padding="8,4" IsHitTestVisible="False">
                         <StackPanel Orientation="Horizontal">
-                            <Ellipse x:Name="DotYolo" Width="6" Height="6" Fill="#94A3B8"
+                            <Ellipse x:Name="DotYolo" Width="6" Height="6" Fill="{StaticResource MutedBrush}"
                                      VerticalAlignment="Center" Margin="0,0,3,0"/>
-                            <TextBlock Text="YOLO" FontSize="9" Foreground="#94A3B8"
+                            <TextBlock Text="YOLO" FontSize="9" Foreground="{StaticResource MutedBrush}"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <Ellipse x:Name="DotQwen" Width="6" Height="6" Fill="#94A3B8"
+                            <Ellipse x:Name="DotQwen" Width="6" Height="6" Fill="{StaticResource MutedBrush}"
                                      VerticalAlignment="Center" Margin="0,0,3,0"/>
-                            <TextBlock Text="Qwen" FontSize="9" Foreground="#94A3B8"
+                            <TextBlock Text="Qwen" FontSize="9" Foreground="{StaticResource MutedBrush}"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <Ellipse x:Name="DotTracker" Width="6" Height="6" Fill="#94A3B8"
+                            <Ellipse x:Name="DotTracker" Width="6" Height="6" Fill="{StaticResource MutedBrush}"
                                      VerticalAlignment="Center" Margin="0,0,3,0"/>
-                            <TextBlock Text="Tracker" FontSize="9" Foreground="#94A3B8"
+                            <TextBlock Text="Tracker" FontSize="9" Foreground="{StaticResource MutedBrush}"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -429,12 +429,12 @@
                                                     </Border>
                                                     <ControlTemplate.Triggers>
                                                         <Trigger Property="IsSelected" Value="True">
-                                                            <Setter TargetName="Bd" Property="Background" Value="#334155"/>
+                                                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource CardBrush}"/>
                                                             <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                                             <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
                                                         </Trigger>
                                                         <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="Bd" Property="Background" Value="#334155"/>
+                                                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource CardBrush}"/>
                                                         </Trigger>
                                                     </ControlTemplate.Triggers>
                                                 </ControlTemplate>
@@ -516,6 +516,7 @@
                             <Button Grid.Column="0" x:Name="BtnAcceptDefect"
                                     Style="{StaticResource DefectActionBtn}"
                                     Background="#16A34A" Padding="8,3" Margin="0,0,4,0"
+                                    ToolTip="KI-Erkennung akzeptieren und ins Protokoll uebernehmen"
                                     Click="BtnAcceptDefect_Click">
                                 <TextBlock Text="&#x2713; Akzeptieren" FontSize="11"/>
                             </Button>
@@ -523,6 +524,7 @@
                             <Button Grid.Column="1" x:Name="BtnRejectDefect"
                                     Style="{StaticResource DefectActionBtn}"
                                     Background="#DC2626" Padding="8,3" Margin="0,0,4,0"
+                                    ToolTip="KI-Erkennung ablehnen und aus der Beobachtungsliste entfernen"
                                     Click="BtnRejectDefect_Click">
                                 <TextBlock Text="&#x2717; Ablehnen" FontSize="11"/>
                             </Button>
@@ -532,6 +534,7 @@
                             <Button Grid.Column="3" x:Name="BtnEditDefect"
                                     Style="{StaticResource DefectActionBtn}"
                                     Background="#D97706" Padding="8,3" Margin="0,0,4,0"
+                                    ToolTip="Ausgewaehlte Beobachtung im Detail-Editor bearbeiten"
                                     Click="BtnEditDefect_Click">
                                 <TextBlock Text="&#x2699; Bearbeiten" FontSize="11"/>
                             </Button>
@@ -539,6 +542,7 @@
                             <Button Grid.Column="4" x:Name="BtnDeleteDefect"
                                     Style="{StaticResource DefectActionBtn}"
                                     Background="#DC2626" Padding="8,3"
+                                    ToolTip="Ausgewaehlte Beobachtung endgueltig aus dem Protokoll loeschen"
                                     Click="BtnDeleteDefect_Click">
                                 <TextBlock Text="&#x2716;" FontSize="11"/>
                             </Button>
@@ -571,6 +575,7 @@
                             <Button x:Name="BtnSelectCode"
                                     Style="{StaticResource CodingBtn}"
                                     Content="Code waehlen..." Margin="0,0,0,6"
+                                    ToolTip="VSA-Schadenscode aus dem Katalog waehlen fuer manuelle Codierung"
                                     Click="BtnSelectCode_Click"/>
 
                             <TextBlock x:Name="TxtSelectedCode"
@@ -581,12 +586,14 @@
                             <Button x:Name="BtnCreateEvent"
                                     Style="{StaticResource CodingBtnAccent}"
                                     Content="Ereignis protokollieren"
+                                    ToolTip="Neues Ereignis mit gewaehltem Code an aktueller Meterposition erfassen"
                                     Click="BtnCreateEvent_Click"
                                     IsEnabled="False"/>
 
                             <Button x:Name="BtnSaveAsTraining"
                                     Style="{StaticResource CodingBtn}"
                                     Content="&#x1F4DA; Als Training speichern"
+                                    ToolTip="Aktuelles Frame und Codierung als KI-Trainingsbeispiel sichern"
                                     Click="BtnSaveAsTraining_Click"
                                     IsEnabled="False"
                                     Margin="0,4,0,0"/>
@@ -603,11 +610,13 @@
                                 <Button x:Name="BtnFoto1" Grid.Column="0"
                                         Style="{StaticResource CodingBtn}"
                                         Content="Foto 1"
+                                        ToolTip="Screenshot vom aktuellen Videoframe als erstes Beweisfoto aufnehmen"
                                         Click="BtnFoto1_Click"
                                         IsEnabled="False"/>
                                 <Button x:Name="BtnFoto2" Grid.Column="2"
                                         Style="{StaticResource CodingBtn}"
                                         Content="Foto 2"
+                                        ToolTip="Screenshot vom aktuellen Videoframe als zweites Beweisfoto aufnehmen"
                                         Click="BtnFoto2_Click"
                                         IsEnabled="False"/>
                             </Grid>
@@ -696,7 +705,7 @@
                     <!-- KI-Ampel + Status -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
                         <Ellipse x:Name="AiStatusDot" Width="10" Height="10"
-                                 Fill="#94A3B8" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                 Fill="{StaticResource MutedBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         <TextBlock Text="KI" FontSize="11" FontWeight="Bold"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -715,6 +724,7 @@
                             VerticalAlignment="Center"
                             Background="{DynamicResource AccentBrush}"
                             Foreground="White" FontSize="11" FontWeight="SemiBold"
+                            ToolTip="Aktuelles Videoframe mit KI-Pipeline analysieren und Schaeden erkennen"
                             Cursor="Hand" Click="BtnAnalyzeFrame_Click">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
@@ -810,6 +820,7 @@
                 <!-- Links: Navigation -->
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
                     <Button x:Name="BtnPrevious" Style="{StaticResource CodingBtn}"
+                            ToolTip="Einen Schritt zurueck zur vorherigen Meterposition im Video springen"
                             Content="&#x25C0;Zurueck" Click="BtnPrevious_Click"/>
                     <TextBlock x:Name="TxtCurrentMeter" Style="{StaticResource MeterText}"
                                Margin="12,0" VerticalAlignment="Center"
@@ -819,16 +830,20 @@
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                VerticalAlignment="Center" Margin="0,0,12,0"/>
                     <Button x:Name="BtnNext" Style="{StaticResource CodingBtn}"
+                            ToolTip="Einen Schritt vorwaerts zur naechsten Meterposition im Video springen"
                             Content="Weiter &#x25B6;" Click="BtnNext_Click"/>
                 </StackPanel>
 
                 <!-- Rechts: Session-Steuerung -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button x:Name="BtnPause" Style="{StaticResource CodingBtn}"
+                            ToolTip="Codier-Session pausieren oder fortsetzen ohne Daten zu verlieren"
                             Content="Fortsetzen" Click="BtnPause_Click"/>
                     <Button x:Name="BtnComplete" Style="{StaticResource CodingBtnAccent}"
+                            ToolTip="Codier-Session abschliessen und alle Beobachtungen ins Protokoll uebernehmen"
                             Content="Abschliessen" Click="BtnComplete_Click" Margin="6,0,0,0"/>
                     <Button x:Name="BtnAbort" Style="{StaticResource CodingBtn}"
+                            ToolTip="Codier-Session abbrechen und alle nicht gespeicherten Aenderungen verwerfen"
                             Content="Abbrechen" Click="BtnAbort_Click" Margin="6,0,0,0"
                             Foreground="{DynamicResource DangerBrush}"/>
                 </StackPanel>

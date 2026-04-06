@@ -37,7 +37,8 @@
                                FontSize="10" Foreground="{StaticResource MutedBrush}"
                                VerticalAlignment="Center" Margin="12,0,0,0"/>
                     <Button x:Name="ResetButton" Content="Reset" HorizontalAlignment="Right"
-                            Style="{StaticResource ToolbarButton}" MinWidth="50" Padding="8,3"/>
+                            Style="{StaticResource ToolbarButton}" MinWidth="50" Padding="8,3"
+                            ToolTip="Alle Auswahlen zuruecksetzen und Code-Picker von vorn beginnen"/>
                 </DockPanel>
 
                 <!-- Breadcrumb -->
@@ -327,19 +328,24 @@
                                             <WrapPanel Orientation="Horizontal">
                                                 <Button x:Name="BtnClockScheitel" Content="12 00 Scheitel"
                                                         Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
-                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="12,00"/>
+                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="12,00"
+                                                        ToolTip="Uhrlage auf 12:00 Scheitel (oben) setzen"/>
                                                 <Button x:Name="BtnClockSohle" Content="06 00 Sohle"
                                                         Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
-                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="06,00"/>
+                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="06,00"
+                                                        ToolTip="Uhrlage auf 06:00 Sohle (unten) setzen"/>
                                                 <Button x:Name="BtnClockRechts" Content="09 03 Rechts"
                                                         Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
-                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="09,03"/>
+                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="09,03"
+                                                        ToolTip="Uhrlage auf 09:00 bis 03:00 rechte Seite setzen"/>
                                                 <Button x:Name="BtnClockGesamt" Content="12 12 Gesamt"
                                                         Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
-                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="12,12"/>
+                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="12,12"
+                                                        ToolTip="Gesamten Rohrumfang als Uhrlage waehlen (360 Grad)"/>
                                                 <Button x:Name="BtnClockKeine" Content="00 00 Keine"
                                                         Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
-                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="00,00"/>
+                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="00,00"
+                                                        ToolTip="Keine Uhrlage angeben (Position nicht bestimmbar)"/>
                                             </WrapPanel>
 
                                             <!-- Von/Bis Anzeige -->
@@ -487,14 +493,14 @@
                                         <Button x:Name="BtnCaptureFoto1" Content="Aus Video"
                                                 Style="{StaticResource ToolbarButton}"
                                                 HorizontalAlignment="Stretch" Padding="4,3" Margin="0,3,0,0"
-                                                FontSize="10"/>
+                                                FontSize="10"
+                                                ToolTip="Aktuelles Videobild als Foto 1 fuer diesen Schaden aufnehmen"/>
                                         <Button x:Name="BtnMeasureFoto1" Content="&#x2316; Vermessen"
                                                 Style="{StaticResource ToolbarButton}"
                                                 HorizontalAlignment="Stretch" Padding="4,3" Margin="0,2,0,0"
-                                                FontSize="10"/>
+                                                FontSize="10"
+                                                ToolTip="Foto 1 im Vermessungsfenster oeffnen und Schadenausdehnung messen"/>
                                     </StackPanel>
-
-                                    <!-- Foto 2 -->
                                     <StackPanel Grid.Column="2">
                                         <TextBlock Text="Foto 2" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,3"/>
                                         <Border Height="90" CornerRadius="4" BorderThickness="1"
@@ -511,11 +517,13 @@
                                         <Button x:Name="BtnCaptureFoto2" Content="Aus Video"
                                                 Style="{StaticResource ToolbarButton}"
                                                 HorizontalAlignment="Stretch" Padding="4,3" Margin="0,3,0,0"
-                                                FontSize="10"/>
+                                                FontSize="10"
+                                                ToolTip="Aktuelles Videobild als Foto 2 fuer diesen Schaden aufnehmen"/>
                                         <Button x:Name="BtnMeasureFoto2" Content="&#x2316; Vermessen"
                                                 Style="{StaticResource ToolbarButton}"
                                                 HorizontalAlignment="Stretch" Padding="4,3" Margin="0,2,0,0"
-                                                FontSize="10"/>
+                                                FontSize="10"
+                                                ToolTip="Foto 2 im Vermessungsfenster oeffnen und Schadenausdehnung messen"/>
                                     </StackPanel>
                                 </Grid>
                             </StackPanel>
@@ -551,8 +559,10 @@
                                MaxWidth="300" TextWrapping="Wrap"/>
                     <Button x:Name="BtnApply" Content="Uebernehmen" Width="130"
                             Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"
-                            IsEnabled="False"/>
-                    <Button x:Name="BtnCancel" Content="Abbrechen" Width="100" IsCancel="True"/>
+                            IsEnabled="False"
+                            ToolTip="Gewaehlten VSA-Code mit Quantifizierung und Position ins Protokoll uebernehmen"/>
+                    <Button x:Name="BtnCancel" Content="Abbrechen" Width="100" IsCancel="True"
+                            ToolTip="Code-Auswahl verwerfen und Fenster schliessen"/>
                 </StackPanel>
             </DockPanel>
         </Border>

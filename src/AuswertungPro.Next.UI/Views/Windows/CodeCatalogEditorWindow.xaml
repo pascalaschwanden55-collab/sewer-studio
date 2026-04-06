@@ -72,14 +72,19 @@
 
         <DockPanel Grid.Row="2" Grid.ColumnSpan="2" Margin="0,12,0,0">
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                <Button Content="Neu" Width="100" Margin="0,0,8,0" Command="{Binding NewCommand}" />
-                <Button Content="Loeschen" Width="100" Command="{Binding DeleteCommand}" />
+                <Button Content="Neu" Width="100" Margin="0,0,8,0" Command="{Binding NewCommand}"
+                        ToolTip="Neuen Code-Eintrag im Katalog anlegen" />
+                <Button Content="Loeschen" Width="100" Command="{Binding DeleteCommand}"
+                        ToolTip="Ausgewaehlten Code-Eintrag aus dem Katalog entfernen" />
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Validieren" Width="110" Margin="0,0,8,0" Command="{Binding ValidateCommand}" />
-                <Button Content="Speichern" Width="110" Margin="0,0,8,0" Command="{Binding SaveCommand}" />
-                <Button Content="Abbrechen" Width="110" Command="{Binding CancelCommand}" />
+                <Button Content="Validieren" Width="110" Margin="0,0,8,0" Command="{Binding ValidateCommand}"
+                        ToolTip="Alle Katalogeintraege auf Vollstaendigkeit und Konsistenz pruefen" />
+                <Button Content="Speichern" Width="110" Margin="0,0,8,0" Command="{Binding SaveCommand}"
+                        ToolTip="Aenderungen am Code-Katalog dauerhaft speichern" />
+                <Button Content="Abbrechen" Width="110" Command="{Binding CancelCommand}"
+                        ToolTip="Aenderungen verwerfen und Fenster schliessen" />
             </StackPanel>
         </DockPanel>
     </Grid>

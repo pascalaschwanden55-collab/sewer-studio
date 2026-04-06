@@ -5,46 +5,7 @@
         Width="380" Height="340"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
-        Background="#FF0D1117">
-
-    <Window.Resources>
-        <Style TargetType="CheckBox">
-            <Setter Property="Foreground" Value="#E6EDF3"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Margin" Value="0,5"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="CheckBox">
-                        <StackPanel Orientation="Horizontal">
-                            <Border x:Name="Bd" Width="18" Height="18"
-                                    Background="#21262D" BorderBrush="#30363D" BorderThickness="1"
-                                    CornerRadius="3" VerticalAlignment="Center" Margin="0,0,8,0">
-                                <TextBlock x:Name="CheckMark" Text="&#x2713;"
-                                           FontSize="13" FontWeight="Bold"
-                                           Foreground="#58A6FF"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           Visibility="Collapsed"/>
-                            </Border>
-                            <TextBlock Text="{TemplateBinding Content}"
-                                       Foreground="{TemplateBinding Foreground}"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
-                                <Setter TargetName="Bd" Property="Background" Value="#1A3A5C"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#58A6FF"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#58A6FF"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
+        Background="{StaticResource BackgroundBrush}">
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -54,7 +15,7 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Text="Abschnitte fuer den Druck auswaehlen:"
-                   FontSize="13" FontWeight="SemiBold" Foreground="#E6EDF3"
+                   FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"
                    Margin="0,0,0,12"/>
 
         <StackPanel Grid.Row="1" Margin="8,0,0,0">
@@ -75,10 +36,12 @@
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Content="Abbrechen" Width="90" Height="30" Margin="0,0,8,0"
                     Click="Cancel_Click"
-                    Background="#21262D" Foreground="#C9D1D9" BorderBrush="#30363D"/>
+                    Background="{StaticResource CardBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource BorderBrush}"
+                    ToolTip="PDF-Erstellung abbrechen"/>
             <Button Content="PDF erstellen" Width="110" Height="30"
                     Click="Ok_Click"
-                    Background="#238636" Foreground="White" BorderBrush="#2EA043" FontWeight="SemiBold"/>
+                    Background="{StaticResource AccentBrush}" Foreground="White" BorderBrush="#2EA043" FontWeight="SemiBold"
+                    ToolTip="Hydraulik-Bericht als PDF mit den gewaehlten Abschnitten erzeugen"/>
         </StackPanel>
     </Grid>
 </Window>
