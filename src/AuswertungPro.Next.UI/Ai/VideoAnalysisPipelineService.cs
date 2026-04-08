@@ -45,10 +45,28 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         // ── Decide: Multi-Model or Ollama-Only ────────────────────────────────
         var (useMultiModel, pipelineCfg) = await ShouldUseMultiModelAsync(ct).ConfigureAwait(false);
 
+        // ── Qwen vorladen damit der erste Frame nicht haengt ──────────────────
+        try
+        {
+            progress?.Report(new PipelineProgress(
+                PipelinePhase.VideoAnalysis, 0, "Qwen Vision-Modell wird geladen...",
+                FramesDone: 0, FramesTotal: 0));
+
+            var preloadClient = _cfg.CreateOllamaClient(null);
+            await preloadClient.EnsureModelLoadedAsync(_cfg.VisionModel, 0, ct).ConfigureAwait(false);
+            preloadClient.Dispose();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Pipeline] Modell-Vorladen fehlgeschlagen: {ex.Message}");
+        }
+
         // ── Phase 1: Video-Analyse ────────────────────────────────────────────
+        var modeLabel = useMultiModel ? "MULTI-MODEL (YOLO+DINO+SAM+Qwen)" : "OLLAMA-ONLY (nur Qwen)";
+        System.Diagnostics.Debug.WriteLine($"[Pipeline] Modus: {modeLabel} fuer {request.HaltungId}");
         progress?.Report(new PipelineProgress(
             useMultiModel ? PipelinePhase.MultiModelDetection : PipelinePhase.VideoAnalysis,
-            0, useMultiModel ? "Starte Multi-Model Pipeline..." : "Starte Video-Analyse...",
+            0, $"{modeLabel}",
             FramesDone: 0, FramesTotal: 0));
 
         var analysisProgress = new Progress<VideoAnalysisProgress>(p =>
@@ -68,9 +86,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             // Eigener HttpClient fuer den Sidecar (nicht den geteilten _httpClient verwenden,
             // weil BaseAddress nur einmal gesetzt werden kann und _httpClient evtl.
             // bereits fuer Ollama konfiguriert ist)
-            var sidecarHttp = new System.Net.Http.HttpClient
+            using var sidecarHttp = new System.Net.Http.HttpClient
             {
-                BaseAddress = pipelineCfg.SidecarUrl,
                 Timeout = TimeSpan.FromSeconds(pipelineCfg.SidecarTimeoutSec)
             };
             var pipelineClient = new VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
@@ -106,11 +123,19 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 request.VideoPath, analysisProgress, ct).ConfigureAwait(false);
         }
 
+        var resultLabel = videoResult.IsSuccess
+            ? $"OK: {videoResult.Detections?.Count ?? 0} Detektionen in {videoResult.FramesAnalyzed} Frames"
+            : $"FEHLER: {videoResult.Error}";
+        System.Diagnostics.Debug.WriteLine($"[Pipeline] Ergebnis: {resultLabel}");
+        progress?.Report(new PipelineProgress(
+            PipelinePhase.VideoAnalysis, 100, resultLabel,
+            FramesDone: videoResult.FramesAnalyzed, FramesTotal: videoResult.FramesAnalyzed));
+
         if (!videoResult.IsSuccess)
             return PipelineResult.Failed($"Video-Analyse fehlgeschlagen: {videoResult.Error}");
 
         progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 100,
-            $"{videoResult.Detections.Count} Schäden erkannt in {videoResult.FramesAnalyzed} Frames.",
+            $"{videoResult.Detections?.Count ?? 0} Schäden erkannt in {videoResult.FramesAnalyzed} Frames.",
             FramesDone: videoResult.FramesAnalyzed,
             FramesTotal: videoResult.FramesAnalyzed));
 
@@ -137,7 +162,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 
         // BUG 1.3 FIX: Detections direkt übergeben
         var genResult = await generator.GenerateFromDetectionsAsync(
-            videoResult.Detections, genRequest, mappingProgress, ct).ConfigureAwait(false);
+            videoResult.Detections ?? [], genRequest, mappingProgress, ct).ConfigureAwait(false);
 
         if (!genResult.IsSuccess)
             return PipelineResult.Failed($"Code-Mapping fehlgeschlagen: {genResult.Error}");
@@ -151,12 +176,12 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 
         return new PipelineResult(
             Document: genResult.Document,
-            Detections: videoResult.Detections,
+            Detections: videoResult.Detections ?? [],
             MappedEntries: genResult.MappedEntries,
             Stats: new PipelineStats(
                 FramesAnalyzed: videoResult.FramesAnalyzed,
                 DurationSeconds: videoResult.DurationSeconds,
-                DetectionsRaw: videoResult.Detections.Count,
+                DetectionsRaw: videoResult.Detections?.Count ?? 0,
                 EntriesGenerated: genResult.Document?.Current?.Entries?.Count ?? 0,
                 EntriesWithHighConfidence: genResult.MappedEntries.Count(e => e.Confidence >= 0.75)),
             Warnings: genResult.Warnings,
@@ -175,19 +200,22 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         var pipelineCfg = PipelineConfig.Load();
 
         if (pipelineCfg.Mode == PipelineMode.OllamaOnly)
+        {
+            System.Diagnostics.Debug.WriteLine("[Pipeline] Mode=OllamaOnly → kein Sidecar");
             return (false, pipelineCfg);
+        }
 
-        // MultiModelEnabled ist ein Master-Kill-Switch.
-        // Nur ein explizites Mode=MultiModel übersteuert ihn.
         if (!pipelineCfg.MultiModelEnabled && pipelineCfg.Mode != PipelineMode.MultiModel)
+        {
+            System.Diagnostics.Debug.WriteLine("[Pipeline] MultiModelEnabled=false → kein Sidecar");
             return (false, pipelineCfg);
+        }
 
-        // Check sidecar health (eigener HttpClient — nicht den geteilten verwenden!)
+        // Check sidecar health
         try
         {
-            var healthHttp = new System.Net.Http.HttpClient
+            using var healthHttp = new System.Net.Http.HttpClient
             {
-                BaseAddress = pipelineCfg.SidecarUrl,
                 Timeout = TimeSpan.FromSeconds(5)
             };
             var client = new VisionPipelineClient(pipelineCfg.SidecarUrl, healthHttp);
@@ -195,17 +223,20 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 
             if (health is null || health.Status != "ok")
             {
+                System.Diagnostics.Debug.WriteLine($"[Pipeline] Sidecar Health: {health?.Status ?? "null"} → Ollama-Only");
                 if (pipelineCfg.Mode == PipelineMode.MultiModel)
                     throw new InvalidOperationException(
                         $"Sidecar nicht erreichbar ({pipelineCfg.SidecarUrl}), aber PipelineMode=MultiModel erzwungen.");
                 return (false, pipelineCfg);
             }
 
+            System.Diagnostics.Debug.WriteLine("[Pipeline] Sidecar Health: ok → MULTI-MODEL aktiv");
             return (true, pipelineCfg);
         }
         catch (InvalidOperationException) { throw; }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[Pipeline] Sidecar Health-Check EXCEPTION: {ex.GetType().Name}: {ex.Message} → Ollama-Only");
             if (pipelineCfg.Mode == PipelineMode.MultiModel)
                 throw;
             return (false, pipelineCfg);

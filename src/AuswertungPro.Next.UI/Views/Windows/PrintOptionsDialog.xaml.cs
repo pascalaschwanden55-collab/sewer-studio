@@ -131,14 +131,18 @@ public sealed class PrintOptionsDialogViewModel : INotifyPropertyChanged
     public bool HasAnySelection() =>
         Sections.Any(s => s.Options.Any(o => o.IsChecked));
 
+#pragma warning disable CS0067
     public event PropertyChangedEventHandler? PropertyChanged;
+#pragma warning restore CS0067
 }
 
 public sealed class PrintSectionViewModel : INotifyPropertyChanged
 {
     public string? Header { get; init; }
     public ObservableCollection<PrintOptionViewModel> Options { get; init; } = [];
+#pragma warning disable CS0067
     public event PropertyChangedEventHandler? PropertyChanged;
+#pragma warning restore CS0067
 }
 
 public sealed class PrintOptionViewModel : INotifyPropertyChanged

@@ -6521,16 +6521,17 @@ public partial class PlayerWindow : Window
             // Messungen in CodeMeta (gleiche Logik wie Qwen-Pfad)
             ApplyQuantificationToEntry(entry, code, quant);
 
-            var codingEvent = _codingSessionService.AddEvent(entry);
-            codingEvent.AiContext = new CodingEventAiContext
-            {
-                SuggestedCode = code,
-                Confidence = gateResult.CompositeConfidence,
-                Reason = $"{quant.Label} (DINO {dinoConf:P0})",
-                Decision = gateResult.IsGreen
-                    ? CodingUserDecision.Accepted
-                    : CodingUserDecision.Ignored
-            };
+            var codingEvent = _codingSessionService?.AddEvent(entry);
+            if (codingEvent is not null)
+                codingEvent.AiContext = new CodingEventAiContext
+                {
+                    SuggestedCode = code,
+                    Confidence = gateResult.CompositeConfidence,
+                    Reason = $"{quant.Label} (DINO {dinoConf:P0})",
+                    Decision = gateResult.IsGreen
+                        ? CodingUserDecision.Accepted
+                        : CodingUserDecision.Ignored
+                };
 
             anyAdded = true;
         }
@@ -7091,16 +7092,17 @@ public partial class PlayerWindow : Window
             if (fotoPath != null)
                 entry.FotoPaths.Add(fotoPath);
 
-            var codingEvent = _codingSessionService.AddEvent(entry);
-            codingEvent.AiContext = new CodingEventAiContext
-            {
-                SuggestedCode = code,
-                Confidence = gateResult.CompositeConfidence,
-                Reason = finding.Label,
-                Decision = gateResult.IsGreen
-                    ? CodingUserDecision.Accepted
-                    : CodingUserDecision.Ignored
-            };
+            var codingEvent = _codingSessionService?.AddEvent(entry);
+            if (codingEvent is not null)
+                codingEvent.AiContext = new CodingEventAiContext
+                {
+                    SuggestedCode = code,
+                    Confidence = gateResult.CompositeConfidence,
+                    Reason = finding.Label,
+                    Decision = gateResult.IsGreen
+                        ? CodingUserDecision.Accepted
+                        : CodingUserDecision.Ignored
+                };
 
             // Bbox → OverlayGeometry (Rectangle) fuer Kontur-Rendering auf CodingOverlayCanvas
             if (finding.BboxX1.HasValue && finding.BboxY1.HasValue
@@ -7110,7 +7112,7 @@ public partial class PlayerWindow : Window
                 var y1 = finding.BboxY1.Value;
                 var x2 = finding.BboxX2.Value;
                 var y2 = finding.BboxY2.Value;
-                codingEvent.Overlay = new OverlayGeometry
+                if (codingEvent is not null) codingEvent.Overlay = new OverlayGeometry
                 {
                     ToolType = OverlayToolType.Rectangle,
                     Points = new List<NormalizedPoint>
