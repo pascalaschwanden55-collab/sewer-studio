@@ -1572,17 +1572,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void Grid_LoadingRow(object? sender, DataGridRowEventArgs e)
     {
-        if (e.Row.Item is not HaltungRecord record)
-            return;
-
-        if (DataContext is DataPageViewModel vm && vm.IsTrainedCase(record.GetFieldValue("Haltungsname")))
-        {
-            e.Row.Background = TrainedRowBrush;
-        }
-        else
-        {
-            e.Row.ClearValue(DataGridRow.BackgroundProperty);
-        }
+        // Keine spezielle Zeilen-Markierung — Theme-Standard verwenden
+        e.Row.ClearValue(DataGridRow.BackgroundProperty);
     }
 
     private void OpenPhotoLink_Click(object sender, RoutedEventArgs e)
