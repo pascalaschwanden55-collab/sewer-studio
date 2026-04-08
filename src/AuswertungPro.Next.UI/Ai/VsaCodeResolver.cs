@@ -80,57 +80,136 @@ public static class VsaCodeResolver
             .Replace("ä", "ae").Replace("ö", "oe")
             .Replace("ü", "ue").Replace("ß", "ss");
 
-        // Grundstruktur
+        // ══════════════════════════════════════════════════════════════
+        // VSA/EN 13508-2 Keyword → Code Mapping (vollstaendig)
+        // Reihenfolge: Spezifischste zuerst, generische zuletzt
+        // ══════════════════════════════════════════════════════════════
+
+        // ── BC: Bestandsaufnahme ──
         if (Has(text, "anschluss") || Has(text, "abzweig") || Has(text, "stutzen")
             || Has(text, "zulauf") || Has(text, "lateral connection") || HasWord(text, "lateral"))
             return "BCA";
-        if (Has(text, "bogen") || Has(text, "kruemm") || Has(text, "kurve") || HasWord(text, "bend"))
+        if (Has(text, "reparatur sichtbar") || Has(text, "rohr ausgetauscht") || Has(text, "innenauskleidung sichtbar"))
+            return "BCB";
+        if (Has(text, "bogen") || Has(text, "kruemm") || Has(text, "kurve") || HasWord(text, "bend")
+            || Has(text, "richtungsaenderung"))
             return "BCC";
-        if (Has(text, "rohranfang") || Has(text, "pipe start") || Has(text, "anfangsknoten")
-            || Has(text, "einstieg") || HasWord(text, "manhole"))
+        if (Has(text, "rohranfang") || Has(text, "pipe start") || Has(text, "anfangsknoten"))
             return "BCD";
-        if (Has(text, "rohrende") || Has(text, "pipe end") || Has(text, "endknoten")
-            || Has(text, "ausstieg"))
+        if (Has(text, "rohrende") || Has(text, "pipe end") || Has(text, "endknoten"))
             return "BCE";
 
-        // Strukturelle Schaeden
-        if (Has(text, "riss") || HasWord(text, "crack") || Has(text, "fracture") || Has(text, "fissure"))
+        // ── BA: Bauliche Schaeden ──
+        // BAA: Verformung/Deformation
+        if (Has(text, "verformung") || Has(text, "deformation") || Has(text, "deformiert")
+            || HasWord(text, "oval") || HasWord(text, "dent") || HasWord(text, "deformed"))
+            return "BAA";
+        // BAB: Risse
+        if (Has(text, "riss") || HasWord(text, "crack") || Has(text, "fracture") || Has(text, "fissure")
+            || Has(text, "haarriss"))
             return "BAB";
-        if (Has(text, "bruch") || Has(text, "einsturz") || Has(text, "collapse"))
+        // BAC: Bruch/Einsturz/Loch
+        if (Has(text, "bruch") || Has(text, "einsturz") || Has(text, "collapse")
+            || HasWord(text, "hole") || Has(text, "loch") || Has(text, "scherbe") || Has(text, "missing wall"))
             return "BAC";
-        if (Has(text, "deformation") || Has(text, "verformung") || HasWord(text, "oval"))
+        // BAD: Defektes Mauerwerk
+        if (Has(text, "mauerwerk") || Has(text, "backstein") || Has(text, "sohle abgesackt")
+            || Has(text, "brickwork"))
+            return "BAD";
+        // BAE: Fehlender Moertel
+        if (Has(text, "moertel") || Has(text, "mortar"))
+            return "BAE";
+        // BAF: Oberflaechenschaden (Korrosion, Abplatzung, Armierung, Beule etc.)
+        if (Has(text, "oberflaechenschaden") || Has(text, "surface damage") || Has(text, "abplatzung")
+            || Has(text, "zuschlag") || Has(text, "armierung") || Has(text, "korrodiert")
+            || Has(text, "korrosion") || Has(text, "corrosion") || HasWord(text, "rost")
+            || Has(text, "erosion") || Has(text, "beule") || Has(text, "druckstelle"))
             return "BAF";
-        if (Has(text, "versatz") || HasWord(text, "offset") || Has(text, "displaced"))
+        // BAG: Einragender Anschluss
+        if (Has(text, "einragender anschluss") || Has(text, "anschluss einragend")
+            || Has(text, "protruding connection"))
+            return "BAG";
+        // BAH: Schadhafter Anschluss
+        if (Has(text, "schadhafter anschluss") || Has(text, "anschluss beschaedigt")
+            || Has(text, "anschluss verstopft") || Has(text, "connection defect"))
             return "BAH";
-        if (Has(text, "einragung") || Has(text, "intrusion") || Has(text, "protruding"))
+        // BAI: Einragendes Dichtungsmaterial
+        if (Has(text, "dichtung") || Has(text, "dichtring") || HasWord(text, "seal")
+            || Has(text, "seal defect") || Has(text, "seal displaced"))
             return "BAI";
-
-        // Oberflaechenschaeden
-        if (Has(text, "korrosion") || Has(text, "corrosion") || HasWord(text, "rost")
-            || Has(text, "erosion"))
+        // BAJ: Verschobene Rohrverbindung (Versatz, Knick)
+        if (Has(text, "versatz") || Has(text, "verschobene rohrverbindung") || HasWord(text, "offset")
+            || Has(text, "displaced") || HasWord(text, "joint") || Has(text, "knick"))
             return "BAJ";
-        if (Has(text, "wurzel") || Has(text, "root intrusion") || Has(text, "bewuchs"))
-            return "BBB";
-        if (Has(text, "inkrustation") || Has(text, "encrustation") || Has(text, "kalk")
-            || Has(text, "anhaftung") || Has(text, "sinter") || Has(text, "attached deposit"))
-            return "BBA";
+        // BAK: Schadhafte Innenauskleidung
+        if (Has(text, "innenauskleidung") || Has(text, "liner") || Has(text, "auskleidung schadhaft"))
+            return "BAK";
+        // BAL: Schadhafte Reparatur
+        if (Has(text, "reparatur mangelhaft") || Has(text, "reparatur schadhaft")
+            || Has(text, "reparaturwerkstoff"))
+            return "BAL";
+        // BAM: Schadhafte Schweissnaht
+        if (Has(text, "schweissnaht") || Has(text, "weld"))
+            return "BAM";
+        // BAN: Poroese Leitung
+        if (Has(text, "poroes") || Has(text, "porous"))
+            return "BAN";
+        // BAO: Boden sichtbar
+        if (Has(text, "boden sichtbar") || Has(text, "visible soil"))
+            return "BAO";
+        // BAP: Hohlraum sichtbar
+        if (Has(text, "hohlraum") || Has(text, "void") || Has(text, "cavity"))
+            return "BAP";
 
-        // Betrieblich
+        // ── BB: Betriebliche Stoerungen ──
+        // BBA: Wurzeln
+        if (Has(text, "wurzel") || Has(text, "root") || Has(text, "bewuchs"))
+            return "BBA";
+        // BBB: Anhaftende Stoffe (Inkrustation, Fett, Faeulnis)
+        if (Has(text, "inkrustation") || Has(text, "encrustation") || Has(text, "kalk")
+            || Has(text, "anhaftung") || Has(text, "sinter") || Has(text, "calcite")
+            || HasWord(text, "fett") || Has(text, "faeulnis") || Has(text, "grease"))
+            return "BBB";
+        // BBC: Ablagerungen
         if (Has(text, "ablagerung") || HasWord(text, "sediment") || Has(text, "schlamm")
-            || HasWord(text, "silt") || HasWord(text, "debris"))
+            || HasWord(text, "silt") || HasWord(text, "debris") || HasWord(text, "deposit")
+            || HasWord(text, "buildup"))
             return "BBC";
-        if (Has(text, "wasserspiegel")
-            || Has(text, "wasserstand")
-            || Has(text, "wasserlinie")
-            || Has(text, "water level")
-            || Has(text, "waterline")
-            || Has(text, "standing water")
-            || HasWord(text, "puddle")
-            || Has(text, "rueckstau")
-            || (HasWord(text, "water") &&
-                (HasWord(text, "level") || HasWord(text, "standing")
-                 || Has(text, "sohle") || Has(text, "invert"))))
-            return "BDDC";
+        // BBD: Eindringender Boden
+        if (Has(text, "bodeneindringung") || Has(text, "eindringender boden")
+            || Has(text, "sand dringt") || Has(text, "humus dringt") || Has(text, "soil intrusion"))
+            return "BBD";
+        // BBE: Andere Hindernisse
+        if (Has(text, "hindernis") || Has(text, "obstacle") || Has(text, "blockage")
+            || Has(text, "gegenstand") || Has(text, "werkleitung"))
+            return "BBE";
+        // BBF: Infiltration
+        if (Has(text, "infiltration") || Has(text, "water ingress") || HasWord(text, "ingress")
+            || Has(text, "undicht") || Has(text, "fremdwasser") || HasWord(text, "leak")
+            || Has(text, "schwitzen") || Has(text, "tropft") || Has(text, "wasseraustritt"))
+            return "BBF";
+        // BBG: Exfiltration
+        if (Has(text, "exfiltration"))
+            return "BBG";
+        // BBH: Ungeziefer
+        if (Has(text, "ungeziefer") || Has(text, "ratte") || Has(text, "kakerlake")
+            || Has(text, "pest") || Has(text, "rodent"))
+            return "BBH";
+
+        // ── BD: Weitere Codes ──
+        if (Has(text, "allgemeinzustand") || Has(text, "fotobeispiel"))
+            return "BDA";
+        if (Has(text, "wasserspiegel") || Has(text, "wasserstand") || Has(text, "wasserlinie")
+            || Has(text, "water level") || Has(text, "rueckstau") || Has(text, "standing water"))
+            return "BDD";
+        if (Has(text, "fehlanschluss") || Has(text, "zufluss") || Has(text, "misconnection"))
+            return "BDE";
+        if (Has(text, "gefaehrliche atmosphaere") || Has(text, "sauerstoffmangel")
+            || Has(text, "schwefelwasserstoff") || Has(text, "methan"))
+            return "BDF";
+        if (Has(text, "keine sicht") || Has(text, "unter wasser") || Has(text, "verschlammung")
+            || HasWord(text, "dampf") || Has(text, "no visibility"))
+            return "BDG";
 
         return null;
     }

@@ -4,44 +4,44 @@
   "rules": [
     {
       "code": "BAA", "ezd": null, "ezs": 2, "ezb": 2,
-      "_desc": "Riss (Crack) – Q1 = Rissbreite mm",
+      "_desc": "Verformung (Deformation) – Q1 = Verformung %",
       "quantRules": [
         {
           "requirement": "ezs", "parameter": "Q1",
           "ranges": [
-            { "min": 0, "max": 1,   "ez": 3 },
-            { "min": 1, "max": 5,   "ez": 2 },
-            { "min": 5, "max": 999, "ez": 1 }
+            { "min": 0,  "max": 5,   "ez": 3 },
+            { "min": 5,  "max": 15,  "ez": 2 },
+            { "min": 15, "max": 999, "ez": 1 }
           ]
         },
         {
           "requirement": "ezb", "parameter": "Q1",
           "ranges": [
-            { "min": 0, "max": 1,   "ez": 3 },
-            { "min": 1, "max": 5,   "ez": 2 },
-            { "min": 5, "max": 999, "ez": 1 }
+            { "min": 0,  "max": 5,   "ez": 3 },
+            { "min": 5,  "max": 10,  "ez": 2 },
+            { "min": 10, "max": 999, "ez": 1 }
           ]
         }
       ]
     },
     {
       "code": "BAB", "ezd": 2, "ezs": 2, "ezb": null,
-      "_desc": "Bruch/Einsturz (Fracture) – Q1 = Ausmass %",
+      "_desc": "Risse (Cracks) – Q1 = Rissbreite mm",
       "quantRules": [
         {
           "requirement": "ezd", "parameter": "Q1",
           "ranges": [
-            { "min": 0,  "max": 10,  "ez": 3 },
-            { "min": 10, "max": 30,  "ez": 2 },
-            { "min": 30, "max": 999, "ez": 1 }
+            { "min": 0, "max": 1,   "ez": 3 },
+            { "min": 1, "max": 5,   "ez": 2 },
+            { "min": 5, "max": 999, "ez": 1 }
           ]
         },
         {
           "requirement": "ezs", "parameter": "Q1",
           "ranges": [
-            { "min": 0,  "max": 10,  "ez": 3 },
-            { "min": 10, "max": 30,  "ez": 2 },
-            { "min": 30, "max": 999, "ez": 1 }
+            { "min": 0, "max": 1,   "ez": 3 },
+            { "min": 1, "max": 5,   "ez": 2 },
+            { "min": 5, "max": 999, "ez": 1 }
           ]
         }
       ]
@@ -106,22 +106,22 @@
     { "code": "BAP", "ezd": 2,    "ezs": null, "ezb": 1    },
     {
       "code": "BBA", "ezd": 2, "ezs": null, "ezb": 2,
-      "_desc": "Deformation – Q1 = Verformung %",
+      "_desc": "Wurzeleinwuchs (Root Intrusion) – Q1 = Ausmass %",
       "quantRules": [
         {
           "requirement": "ezd", "parameter": "Q1",
           "ranges": [
-            { "min": 0,  "max": 5,   "ez": 3 },
-            { "min": 5,  "max": 15,  "ez": 2 },
-            { "min": 15, "max": 999, "ez": 1 }
+            { "min": 0,  "max": 10,  "ez": 3 },
+            { "min": 10, "max": 30,  "ez": 2 },
+            { "min": 30, "max": 999, "ez": 1 }
           ]
         },
         {
           "requirement": "ezb", "parameter": "Q1",
           "ranges": [
-            { "min": 0,  "max": 5,   "ez": 3 },
-            { "min": 5,  "max": 10,  "ez": 2 },
-            { "min": 10, "max": 999, "ez": 1 }
+            { "min": 0,  "max": 10,  "ez": 3 },
+            { "min": 10, "max": 30,  "ez": 2 },
+            { "min": 30, "max": 999, "ez": 1 }
           ]
         }
       ]
@@ -143,7 +143,7 @@
     { "code": "BDC", "ezd": null, "ezs": 2,    "ezb": 2    },
     {
       "code": "BDD", "ezd": null, "ezs": null, "ezb": 2,
-      "_desc": "Verformung (Deformation) – Q1 = Verformung %",
+      "_desc": "Wasserspiegel (Water level) – Q1 = Wasserstand % lichte Hoehe",
       "quantRules": [
         {
           "requirement": "ezb", "parameter": "Q1",

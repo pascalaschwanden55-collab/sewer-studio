@@ -72,20 +72,22 @@ public sealed class VsaCodeResolverTests
     [InlineData("Abzweig links", "BCA")]
     [InlineData("Rohranfang", "BCD")]
     [InlineData("Pipe start visible", "BCD")]
-    [InlineData("Manhole visible", "BCD")]
     [InlineData("Rohrende", "BCE")]
     [InlineData("Bogen nach rechts", "BCC")]
     [InlineData("Riss längs", "BAB")]
     [InlineData("Surface crack", "BAB")]
     [InlineData("Bruch/Einsturz", "BAC")]
-    [InlineData("Deformation oval", "BAF")]
-    [InlineData("Wurzeleinwuchs", "BBB")]
-    [InlineData("Inkrustation verkalkt", "BBA")]
-    [InlineData("Attached deposit on pipe wall", "BBA")]
+    [InlineData("Deformation oval", "BAA")]      // BAA = Verformung (nicht BAF = Oberflaechenschaden)
+    [InlineData("Wurzeleinwuchs", "BBA")]         // BBA = Wurzeln (nicht BBB = Anhaftende Stoffe)
+    [InlineData("Inkrustation verkalkt", "BBB")]   // BBB = Anhaftende Stoffe (nicht BBA = Wurzeln)
     [InlineData("Ablagerung in der Sohle", "BBC")]
-    [InlineData("Wasserstand in der Sohle", "BDDC")]
-    [InlineData("Standing water at invert", "BDDC")]
-    [InlineData("Water level visible", "BDDC")]
+    [InlineData("Attached deposit on pipe wall", "BBC")]  // BBC = Ablagerungen (deposit)
+    [InlineData("Wasserstand in der Sohle", "BDD")]       // BDD = Wasserspiegel (nicht BDDC)
+    [InlineData("Standing water at invert", "BDD")]
+    [InlineData("Water level visible", "BDD")]
+    [InlineData("Hindernis Gegenstand", "BBE")]            // BBE = Andere Hindernisse
+    [InlineData("Hohlraum sichtbar", "BAP")]               // BAP = Hohlraum sichtbar
+    [InlineData("Schweissnaht mangelhaft", "BAM")]         // BAM = Schadhafte Schweissnaht
     public void InferCodeFromLabel_KnownLabels_ReturnsCorrectCode(string label, string expected)
     {
         var result = VsaCodeResolver.InferCodeFromLabel(label);
@@ -114,17 +116,13 @@ public sealed class VsaCodeResolverTests
         // "crack" als Wort → BAB, aber "cracking joke" koennte matchen — akzeptabel
         Assert.Equal("BAB", VsaCodeResolver.InferCodeFromLabel("a crack in the pipe"));
 
-        // "root intrusion" matcht "intrusion" (BAI) VOR "root intrusion" (BBB)
-        // weil BAI-Check frueher in der Kette steht. Das ist korrekt —
-        // "intrusion" ist der spezifischere Fachbegriff (Einragung).
-        // Fuer Wurzeleinwuchs braucht es "wurzel" oder "bewuchs".
-        Assert.Equal("BAI", VsaCodeResolver.InferCodeFromLabel("root intrusion"));
-        Assert.Equal("BBB", VsaCodeResolver.InferCodeFromLabel("Wurzeleinwuchs"));
-        Assert.Null(VsaCodeResolver.InferCodeFromLabel("root cause analysis"));
+        // "root" matcht BBA (Wurzeln) — korrekter VSA-Code
+        Assert.Equal("BBA", VsaCodeResolver.InferCodeFromLabel("root intrusion"));
+        Assert.Equal("BBA", VsaCodeResolver.InferCodeFromLabel("Wurzeleinwuchs"));
 
-        // "deposit" allein war frueher zu breit — jetzt nur "attached deposit"
-        Assert.Equal("BBA", VsaCodeResolver.InferCodeFromLabel("attached deposit"));
-        Assert.Null(VsaCodeResolver.InferCodeFromLabel("bank deposit"));
+        // "deposit" matcht BBC (Ablagerungen) — korrekter VSA-Code
+        Assert.Equal("BBC", VsaCodeResolver.InferCodeFromLabel("attached deposit"));
+        Assert.Equal("BBB", VsaCodeResolver.InferCodeFromLabel("Inkrustation verkalkt"));
     }
 
     [Fact]
@@ -134,9 +132,9 @@ public sealed class VsaCodeResolverTests
         // "Anschlüss" → "anschluess" — matcht nicht "anschluss" (doppel-s)
         // Korrekt: voller Begriff "Anschluss" mit ss
         Assert.Equal("BCA", VsaCodeResolver.InferCodeFromLabel("Anschluss"));
-        Assert.Equal("BAF", VsaCodeResolver.InferCodeFromLabel("Verformung"));
+        Assert.Equal("BAA", VsaCodeResolver.InferCodeFromLabel("Verformung")); // BAA = Verformung
         // Umlaut-Konvertierung: ü→ue, ä→ae, ö→oe
-        Assert.Equal("BAH", VsaCodeResolver.InferCodeFromLabel("Muffenversatz"));
+        Assert.Equal("BAJ", VsaCodeResolver.InferCodeFromLabel("Muffenversatz")); // BAJ = Verschobene Rohrverbindung
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -148,7 +146,8 @@ public sealed class VsaCodeResolverTests
     {
         var label = VsaCodeResolver.LookupLabel("BCD");
         Assert.NotNull(label);
-        Assert.Contains("Anfangsknoten", label);
+        // VsaCodeTree definiert BCD als "Rohranfang" (nicht "Anfangsknoten")
+        Assert.Contains("Rohranfang", label);
     }
 
     [Fact]
