@@ -1188,7 +1188,7 @@
                             <!-- Freitext-Eingabe (primaer) -->
                             <TextBox x:Name="TxtEingabemarker"
                                      FontSize="12" Width="220"
-                                     Background="{StaticResource BackgroundBrush}" Foreground="{StaticResource TextBrush}"
+                                     Background="{StaticResource CardBrush}" Foreground="{StaticResource TextBrush}"
                                      BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                                      Padding="4,3" VerticalContentAlignment="Center"
                                      KeyDown="CmbEingabemarker_KeyDown">
@@ -1203,7 +1203,7 @@
                             <!-- Schnellauswahl (Dropdown) -->
                             <ComboBox x:Name="CmbEingabemarker"
                                       FontSize="11" Width="130" Margin="4,0,0,0"
-                                      Background="{StaticResource BackgroundBrush}" Foreground="{StaticResource TextBrush}"
+                                      Background="{StaticResource CardBrush}" Foreground="{StaticResource TextBrush}"
                                       BorderBrush="{StaticResource BorderBrush}"
                                       SelectionChanged="CmbEingabemarker_SelectionChanged">
                                 <ComboBox.ToolTip>Schnellauswahl: Haeufigste Codes</ComboBox.ToolTip>
