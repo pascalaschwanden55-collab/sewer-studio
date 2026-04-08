@@ -106,7 +106,7 @@ public sealed class VsaEvaluationServiceTests
     [Fact]
     public void Evaluate_UsesQuantRules_WhenQ1Provided()
     {
-        // BAA mit Q1=0.5mm (Rissbreite < 1mm) → EZS=3, EZB=3 (gemäss quantRules)
+        // BAA mit Q1=0.5% (Verformung < 5%) → EZS=3, EZB=3 (gemaess quantRules)
         // Ohne Q1 wäre der statische Default: EZS=2, EZB=2
         var project = new Project();
         var rec = new HaltungRecord();
@@ -172,7 +172,7 @@ public sealed class VsaEvaluationServiceTests
     [Fact]
     public void Evaluate_UsesQuantRules_LargeQ1GivesWorseEZ()
     {
-        // BAA mit Q1=10mm (Rissbreite > 5mm) → EZS=1, EZB=1 (schlechter Zustand)
+        // BAA mit Q1=10% (Verformung > 5%) → EZS=1, EZB=1 (schlechter Zustand)
         var project = new Project();
         var rec = new HaltungRecord();
         rec.SetFieldValue("Haltungsname", "H6_largeQ1", FieldSource.Xtf, userEdited: false);

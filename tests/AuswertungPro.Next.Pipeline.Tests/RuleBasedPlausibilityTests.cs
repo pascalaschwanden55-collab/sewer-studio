@@ -67,11 +67,22 @@ public class RuleBasedPlausibilityTests
     [Fact]
     public void ObservationMismatch_DeformationWithNonDeformCode_AddsWarning()
     {
+        // BAB (Risse) mit "Verformung" → PL03 Warnung (Verformung ist BAA, nicht BAB)
+        var input = new AiSuggestionResult("BAB", 0.85, "test", null, null);
+        var result = _sut.ApplyChecks(input, new ObservationContext("Verformung im Scheitel"));
+        Assert.Equal("BAB", result.SuggestedCode);
+        Assert.Equal(0.85, result.Confidence);
+        Assert.Contains(result.Warnings!, w => w.Contains("PL03"));
+    }
+
+    [Fact]
+    public void ObservationMatch_DeformationWithBAACode_NoWarning()
+    {
+        // BAA (Verformung) mit "Verformung" → KEINE Warnung (Code passt)
         var input = new AiSuggestionResult("BAA", 0.85, "test", null, null);
         var result = _sut.ApplyChecks(input, new ObservationContext("Verformung im Scheitel"));
         Assert.Equal("BAA", result.SuggestedCode);
-        Assert.Equal(0.85, result.Confidence);
-        Assert.Contains(result.Warnings!, w => w.Contains("PL03"));
+        Assert.True(result.Warnings is null || !result.Warnings.Any(w => w.Contains("PL03")));
     }
 
     [Fact]

@@ -109,11 +109,12 @@ public sealed partial class RuleBasedAiSuggestionPlausibilityService : IAiSugges
                 warnings.Add($"PL03: Befund enthält 'Riss' aber Code '{code}' ({codeInfo.Label}) ist keine Riss-Kategorie.");
             }
 
+            // BAA = Verformung/Deformation (VSA 2018), NICHT BB-Gruppe
             if (codeInfo is not null
                 && (obs.Contains("verformung") || obs.Contains("deformation"))
-                && !code.StartsWith("BB"))
+                && !code.StartsWith("BAA", StringComparison.OrdinalIgnoreCase))
             {
-                warnings.Add($"PL03: Befund enthält 'Verformung' aber Code '{code}' ({codeInfo.Label}) ist keine Verformungs-Kategorie.");
+                warnings.Add($"PL03: Befund enthält 'Verformung' aber Code '{code}' ({codeInfo.Label}) ist keine Verformungs-Kategorie (BAA erwartet).");
             }
         }
 
