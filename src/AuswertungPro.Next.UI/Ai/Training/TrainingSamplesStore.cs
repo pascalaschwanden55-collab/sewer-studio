@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Ai.Training
 {
@@ -68,6 +69,7 @@ namespace AuswertungPro.Next.UI.Ai.Training
                 }
 
                 await SaveInternalAsync(existing);
+                KnowledgeMirrorService.Current?.NotifyChanged();
             }
             finally
             {
@@ -117,6 +119,7 @@ namespace AuswertungPro.Next.UI.Ai.Training
                 }
 
                 await SaveInternalAsync(existing);
+                KnowledgeMirrorService.Current?.NotifyChanged();
             }
             finally
             {

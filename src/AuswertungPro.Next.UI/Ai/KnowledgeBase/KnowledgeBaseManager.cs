@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai.Training;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Services.CodeCatalog;
 
 namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
@@ -48,6 +49,7 @@ public sealed class KnowledgeBaseManager(
             UpsertSample(sample, versionId);
             UpsertEmbedding(sample.SampleId, vector);
             tx.Commit();
+            KnowledgeMirrorService.Current?.NotifyChanged();
             return true;
         }
         catch
@@ -92,6 +94,7 @@ public sealed class KnowledgeBaseManager(
                 UpsertEmbedding(sample.SampleId, vec);
             }
             tx.Commit();
+            KnowledgeMirrorService.Current?.NotifyChanged();
             return ready.Select(r => r.Sample.SampleId).ToList();
         }
         catch
@@ -113,6 +116,8 @@ public sealed class KnowledgeBaseManager(
         ExecuteNonQuery(
             "DELETE FROM Embeddings WHERE SampleId = $id",
             ("$id", sampleId));
+
+        KnowledgeMirrorService.Current?.NotifyChanged();
     }
 
     /// <summary>
@@ -203,6 +208,7 @@ public sealed class KnowledgeBaseManager(
             tx.Commit();
 
             Debug.WriteLine($"[KnowledgeBaseManager] KB-Rebuild erfolgreich: {indexed}/{samples.Count} Samples indiziert");
+            KnowledgeMirrorService.Current?.NotifyChanged();
             return indexed;
         }
         catch

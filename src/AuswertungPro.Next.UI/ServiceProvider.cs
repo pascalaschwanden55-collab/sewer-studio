@@ -33,6 +33,7 @@ using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Sanierung;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Sanierung;
@@ -191,6 +192,19 @@ namespace AuswertungPro.Next.UI
             var channelsTable = Path.Combine(AppContext.BaseDirectory, "Data", "classification_channels.json");
             var manholesTable = Path.Combine(AppContext.BaseDirectory, "Data", "classification_manholes.json");
             Vsa = new VsaEvaluationService(channelsTable, manholesTable);
+
+            // Brain-Mirror: Alle KI-Lerndaten nach E:\Brain spiegeln
+            var brainPath = settings.BrainMirrorPath ?? Ai.KnowledgeRoot.ResolveBrainMirrorPath();
+            _ = new KnowledgeMirrorService(
+                Ai.KnowledgeRoot.GetRoot(),
+                brainPath,
+                logger);
+            // Initialer Sync beim Start (async, blockiert nicht)
+            _ = Task.Run(async () =>
+            {
+                try { await KnowledgeMirrorService.Current!.SyncNowAsync(); }
+                catch (Exception ex) { Debug.WriteLine($"[BrainMirror] Initialer Sync fehlgeschlagen: {ex.Message}"); }
+            });
 
             MeasureRecommendation = new Infrastructure.Ai.MeasureRecommendationService(
                 Ai.KnowledgeRoot.GetMeasuresLearningPath(),

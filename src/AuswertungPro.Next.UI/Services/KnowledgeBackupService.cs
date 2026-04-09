@@ -186,6 +186,10 @@ public static class KnowledgeBackupService
                 // Erfolg — Backup-Ordner aufraeumen
                 SafeDeleteBackupDir(backupDir);
 
+                // Brain-Mirror sofort synchronisieren (kompletter Import)
+                if (KnowledgeMirrorService.Current is { } mirror)
+                    await mirror.SyncNowAsync(ct);
+
                 progress?.Report($"Import abgeschlossen: {fileCount} Dateien");
                 return new BackupResult(true, null, fileCount, totalBytes);
             }

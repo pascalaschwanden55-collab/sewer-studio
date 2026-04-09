@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
@@ -115,6 +116,7 @@ public sealed class FewShotExampleStore
         Directory.CreateDirectory(Path.GetDirectoryName(_indexPath)!);
         var json = JsonSerializer.Serialize(_examples, JsonOpts);
         await File.WriteAllTextAsync(_indexPath, json, ct);
+        KnowledgeMirrorService.Current?.NotifyChanged();
     }
 
     /// <summary>Fuegt ein neues Beispiel hinzu und speichert das Bild.</summary>

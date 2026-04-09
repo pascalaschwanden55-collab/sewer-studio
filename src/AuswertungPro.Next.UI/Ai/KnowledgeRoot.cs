@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -35,6 +36,15 @@ public static class KnowledgeRoot
         {
             _migrationDone = true;
             TryMigrateFromAppData(root);
+
+            // Brain-Mirror Restore: Wenn Knowledge immer noch leer,
+            // aus E:\Brain wiederherstellen (ueberlebt Clean-Build)
+            var dbPath = Path.Combine(root, "KnowledgeBase.db");
+            if (!File.Exists(dbPath))
+            {
+                var brainPath = ResolveBrainMirrorPath();
+                KnowledgeMirrorService.TryRestoreFromBrain(root, brainPath);
+            }
         }
 
         if (settingsOverride is null)
@@ -106,6 +116,18 @@ public static class KnowledgeRoot
 
     // ── Interne Aufloesung ───────────────────────────────────────────
 
+    /// <summary>Brain-Mirror Pfad aus Settings oder Umgebungsvariable.</summary>
+    public static string ResolveBrainMirrorPath()
+    {
+        // 1. Umgebungsvariable
+        var envBrain = Environment.GetEnvironmentVariable("SEWERSTUDIO_BRAIN_PATH")?.Trim();
+        if (!string.IsNullOrEmpty(envBrain))
+            return envBrain;
+
+        // 2. Default
+        return @"E:\Brain";
+    }
+
     private static string ResolveRoot(string? settingsOverride)
     {
         // 1. Expliziter Override
@@ -117,8 +139,26 @@ public static class KnowledgeRoot
         if (!string.IsNullOrEmpty(envRoot))
             return envRoot;
 
-        // 3. Default: Programmordner\Knowledge (portabel)
-        return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Knowledge");
+        // 3. Default: Projektroot\Knowledge (ausserhalb bin/, ueberlebt dotnet clean)
+        //    Ermittelt durch Aufsteigen vom BaseDirectory bis zur .sln-Datei.
+        var projectRoot = FindProjectRoot(AppDomain.CurrentDomain.BaseDirectory);
+        return Path.Combine(projectRoot ?? AppDomain.CurrentDomain.BaseDirectory, "Knowledge");
+    }
+
+    /// <summary>
+    /// Sucht das Projektroot-Verzeichnis durch Aufsteigen vom BaseDirectory
+    /// bis eine .sln-Datei gefunden wird. Gibt null zurueck falls keins gefunden.
+    /// </summary>
+    private static string? FindProjectRoot(string startDir)
+    {
+        var dir = new DirectoryInfo(startDir);
+        while (dir is not null)
+        {
+            if (dir.GetFiles("*.sln").Length > 0)
+                return dir.FullName;
+            dir = dir.Parent;
+        }
+        return null;
     }
 
     // ── Migration von AppData → Knowledge ────────────────────────────

@@ -94,6 +94,9 @@ public sealed class AppSettings
     public string? AiReferenceVisionModel { get; set; }
     public string? AiFfmpegPath { get; set; }
 
+    // Brain-Mirror: Zweite Kopie aller KI-Daten auf separatem Laufwerk
+    public string? BrainMirrorPath { get; set; }
+
     // Hydraulik-Panel letzte Eingaben
     public HydraulikPanelSettings HydraulikPanel { get; set; } = new();
 

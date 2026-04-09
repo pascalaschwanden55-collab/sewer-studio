@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Ai.Teacher;
 
@@ -80,6 +81,7 @@ public static class TeacherAnnotationStore
             }
 
             await SaveInternalAsync(existing);
+            KnowledgeMirrorService.Current?.NotifyChanged();
         }
         finally
         {
