@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Ai.Pipeline;
 
@@ -20,12 +21,38 @@ public static class SamMaskRenderer
     /// <summary>Tag fuer Mess-Label-Elemente.</summary>
     public const string LabelTag = "mm_label";
 
-    // ── Farben ──────────────────────────────────────────────────────
+    // ── Farben pro Schadenstyp ─────────────────────────────────────
+    // Jede Schadensgruppe hat eine eigene Farbe damit man sofort sieht
+    // was die KI erkannt hat und gezielt korrigieren kann.
 
-    private static readonly Color MaskFill = Color.FromArgb(64, 0, 255, 0);       // Gruen, 25% opak
-    private static readonly Color MaskStroke = Color.FromArgb(204, 0, 255, 0);     // Gruen, 80% opak
     private static readonly Color LabelBg = Color.FromArgb(220, 30, 30, 30);       // Dunkelgrau
     private static readonly Color LabelFg = Color.FromArgb(255, 255, 255, 255);    // Weiss
+
+    /// <summary>
+    /// Gibt Fill- und Stroke-Farbe fuer ein DINO-Label zurueck.
+    /// Farbschema: Gruen=Bestand, Rot=Strukturell, Orange=Betrieblich, Cyan=Wasser.
+    /// </summary>
+    private static (Color Fill, Color Stroke) GetMaskColors(string? label)
+    {
+        var vsaCode = VsaCodeResolver.InferCodeFromLabel(label ?? "");
+        var prefix = vsaCode?.Length >= 2 ? vsaCode[..2].ToUpperInvariant() : "";
+
+        return prefix switch
+        {
+            // BA: Strukturelle Schaeden (Riss, Bruch, Deformation) → Rot
+            "BA" => (Color.FromArgb(50, 255, 40, 40), Color.FromArgb(200, 255, 60, 60)),
+            // BB: Betriebliche Stoerungen (Wurzeln, Ablagerung) → Orange
+            "BB" => (Color.FromArgb(50, 255, 165, 0), Color.FromArgb(200, 255, 180, 30)),
+            // BC: Bestandsaufnahme (Anschluss, Bogen) → Gruen
+            "BC" => (Color.FromArgb(50, 0, 255, 0), Color.FromArgb(200, 0, 255, 0)),
+            // BD: Steuercodes (Wasserspiegel, Abbruch) → Cyan
+            "BD" => (Color.FromArgb(50, 0, 200, 255), Color.FromArgb(200, 0, 220, 255)),
+            // AE: Aenderungen (Profilwechsel) → Gelb
+            "AE" => (Color.FromArgb(50, 255, 255, 0), Color.FromArgb(200, 255, 255, 50)),
+            // Unbekannt → Gruen (Standard)
+            _ => (Color.FromArgb(64, 0, 255, 0), Color.FromArgb(204, 0, 255, 0)),
+        };
+    }
 
     // ── RLE-Dekodierung ─────────────────────────────────────────────
 
@@ -235,23 +262,26 @@ public static class SamMaskRenderer
             // RLE dekodieren
             var decoded = DecodeRle(mask.MaskRle, imgW, imgH);
 
-            // Fuellung rendern (semi-transparent gruen)
+            // Farbe nach Schadenstyp (Label → VSA-Code → Farbgruppe)
+            var (fillColor, strokeColor) = GetMaskColors(mask.Label);
+
+            // Fuellung rendern (semi-transparent)
             var fillGeom = ExtractFillGeometry(decoded, imgW, imgH, canvasWidth, canvasHeight);
             var fillPath = new Path
             {
                 Data = fillGeom,
-                Fill = new SolidColorBrush(MaskFill),
+                Fill = new SolidColorBrush(fillColor),
                 Tag = MaskTag,
                 IsHitTestVisible = false
             };
             canvas.Children.Add(fillPath);
 
-            // Kontur rendern (gruene Linie)
+            // Kontur rendern (farbig)
             var contourGeom = ExtractContourGeometry(decoded, imgW, imgH, canvasWidth, canvasHeight);
             var contourPath = new Path
             {
                 Data = contourGeom,
-                Stroke = new SolidColorBrush(MaskStroke),
+                Stroke = new SolidColorBrush(strokeColor),
                 StrokeThickness = 2,
                 Tag = MaskTag,
                 IsHitTestVisible = false
@@ -263,7 +293,7 @@ public static class SamMaskRenderer
             {
                 double bboxX = mask.Bbox[0] / imgW * canvasWidth;
                 double bboxY = mask.Bbox[1] / imgH * canvasHeight;
-                RenderMaskLabel(canvas, quant, bboxX, Math.Max(0, bboxY - 40));
+                RenderMaskLabel(canvas, quant, bboxX, Math.Max(0, bboxY - 40), strokeColor);
             }
         }
     }
@@ -275,7 +305,8 @@ public static class SamMaskRenderer
     private static void RenderMaskLabel(
         Canvas canvas,
         MaskQuantificationService.QuantifiedMask quant,
-        double x, double y)
+        double x, double y,
+        Color borderColor)
     {
         // Klartext-Label bauen
         var label = Services.CodeCatalog.VsaCodeTree.LookupLabel(quant.Label) ?? quant.Label;
@@ -297,7 +328,7 @@ public static class SamMaskRenderer
         var border = new Border
         {
             Background = new SolidColorBrush(LabelBg),
-            BorderBrush = new SolidColorBrush(MaskStroke),
+            BorderBrush = new SolidColorBrush(borderColor),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(3),
             Padding = new Thickness(5, 2, 5, 2),

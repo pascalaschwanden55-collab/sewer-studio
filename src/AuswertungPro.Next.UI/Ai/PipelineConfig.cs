@@ -18,7 +18,9 @@ public sealed record PipelineConfig(
     int SidecarTimeoutSec,
     int? PipeDiameterMmOverride,
     bool SamStabilityCheckEnabled = false,
-    bool McDropoutEnabled = true
+    bool McDropoutEnabled = true,
+    /// <summary>Rohrmaterial fuer Plausibilitaetsfilter (z.B. "Polyethylen", "Beton", "Steinzeug").</summary>
+    string? PipeMaterial = null
 )
 {
     /// <summary>Lädt via einheitliche AiPlatformConfig.</summary>

@@ -57,6 +57,8 @@ public sealed class MultiModelAnalysisService
     public double DinoFallbackStartSeconds { get; set; } = 20.0;
 
     // Letzter Befund fuer Qwen-Kontext (Frame-uebergreifende Kohärenz)
+    // Lock schuetzt vor Race Condition bei parallelen async Frames
+    private readonly object _lastFindingLock = new();
     private (string Code, string Description, double Meter, double Confidence)? _lastFinding;
 
     // Gecachter minimaler Confidence-Schwellenwert (einmal berechnet statt pro Frame)
@@ -320,12 +322,55 @@ public sealed class MultiModelAnalysisService
                 continue;
             }
 
+            // ── Tiefenfilter: Punkt vs. Streckenschaden unterscheiden ──
+            // VSA-Konvention: Metrierung bei Oberkante des Ereignisses im Bild.
+            // Objekte im oberen Bilddrittel (nahe Fluchtpunkt) sind ~1m entfernt.
+            //
+            // Streckenschaden (BA=Riss/Bruch, BB=Wurzeln/Ablagerung, BDD=Wasserspiegel):
+            //   → Tief schauen erlaubt — Ausdehnung des Schadens muss erfasst werden.
+            // Punktereignis (BC=Anschluss/Bogen, BD ohne BDD, AE=Aenderungen):
+            //   → Muss auf Kamerahoehe sein — obere 30% des Bildes filtern.
+            var estimatedImageH = dinoResult.Detections.Max(d => d.Y2);
+            if (estimatedImageH < 100) estimatedImageH = 720; // Fallback
+            const double MinYCenterRatio = 0.30; // Obere 30% des Bildes = zu weit weg
+
+            var filteredDino = dinoResult.Detections
+                .Where(d =>
+                {
+                    double yCenterNorm = ((d.Y1 + d.Y2) / 2.0) / estimatedImageH;
+                    // VSA-Code aus DINO-Label ableiten → Schadenstyp bestimmen
+                    var vsaCode = VsaCodeResolver.InferCodeFromLabel(d.Label);
+                    var prefix = vsaCode?.Length >= 2 ? vsaCode[..2] : "";
+                    // BA (Riss/Bruch/Deformation) + BB (Wurzeln/Ablagerung/Infiltration)
+                    // + BDD (Wasserspiegel/Rueckstau) = potenziell Streckenschaden
+                    var code3 = vsaCode?.Length >= 3 ? vsaCode[..3].ToUpperInvariant() : "";
+                    bool canBeStrecke = prefix is "BA" or "BB" || code3 is "BDD";
+                    if (canBeStrecke) return true;
+                    // BC (Anschluss/Bogen/Rohranfang), BD (Steuercodes), AE (Aenderungen)
+                    // = Punktereignis → muss auf Kamerahoehe sein
+                    return yCenterNorm >= MinYCenterRatio;
+                })
+                .ToList();
+
+            if (filteredDino.Count < dinoResult.Detections.Count)
+            {
+                _logger.LogDebug("Frame {Frame}: {Removed} DINO-Boxen zu tief im Rohr gefiltert (Y < {Thresh:P0})",
+                    frameIndex, dinoResult.Detections.Count - filteredDino.Count, MinYCenterRatio);
+            }
+
+            if (filteredDino.Count == 0)
+            {
+                telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, 0, 0, frameSw.ElapsedMilliseconds, Skipped: false));
+                AdvanceAll(active, detections, DedupWindowFrames);
+                continue;
+            }
+
             // ── Step 3: SAM Segmentation ──
             progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                $"Frame {frameIndex}/{totalFrames} – SAM Segmentation ({dinoResult.Detections.Count} Boxes)...",
+                $"Frame {frameIndex}/{totalFrames} – SAM Segmentation ({filteredDino.Count} Boxes)...",
                 FramePreviewPng: frameBytes));
 
-            var samBoxes = dinoResult.Detections
+            var samBoxes = filteredDino
                 .Select(d => new SamBoundingBox(d.X1, d.Y1, d.X2, d.Y2, d.Label, d.Confidence))
                 .ToList();
 
@@ -334,7 +379,7 @@ public sealed class MultiModelAnalysisService
             try
             {
                 samResult = await _client.SegmentSamAsync(
-                    new SamRequest(frameBase64, samBoxes, pipeDiameterMm), ct).ConfigureAwait(false);
+                    new SamRequest(frameBase64, samBoxes, PipeDiameterMm: pipeDiameterMm), ct).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -351,9 +396,9 @@ public sealed class MultiModelAnalysisService
             var quantified = MaskQuantificationService.QuantifyAll(samResult, pipeDiameterMm);
             var meter = EstimateMeter(t, duration, ref lastMeter);
 
-            // Capture max DINO confidence for EvidenceVector
-            var maxDinoConf = dinoResult.Detections.Count > 0
-                ? dinoResult.Detections.Max(d => d.Confidence) : 0.0;
+            // Capture max DINO confidence for EvidenceVector (nach Tiefenfilter)
+            var maxDinoConf = filteredDino.Count > 0
+                ? filteredDino.Max(d => d.Confidence) : 0.0;
 
             // Build findings from quantified masks
             var findings = new List<EnhancedFinding>(quantified.Count);
@@ -422,8 +467,12 @@ public sealed class MultiModelAnalysisService
                     using var qwenCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                     qwenCts.CancelAfter(QwenFrameTimeout);
                     // Vorherigen Befund als Kontext uebergeben (nur wenn < 1m entfernt)
-                    var prevCtx = _lastFinding is var (pc, pd, pm, pconf) && Math.Abs(meter - pm) < 1.0
-                        ? _lastFinding : null;
+                    (string Code, string Description, double Meter, double Confidence)? prevCtx;
+                    lock (_lastFindingLock)
+                    {
+                        prevCtx = _lastFinding is var (pc, pd, pm, pconf) && Math.Abs(meter - pm) < 1.0
+                            ? _lastFinding : null;
+                    }
                     var qwenResult = await _qwenVision.AnalyzeWithContextAsync(
                         frameBase64, multiModelContext, pipeDiameterMm, qwenCts.Token).ConfigureAwait(false);
 
@@ -475,11 +524,14 @@ public sealed class MultiModelAnalysisService
                             .FirstOrDefault();
                         if (topFinding != null)
                         {
-                            _lastFinding = (
-                                topFinding.VsaCodeHint ?? topFinding.Label,
-                                topFinding.Label,
-                                meter,
-                                topFinding.Severity / 5.0); // Severity 1-5 → Confidence 0.2-1.0
+                            lock (_lastFindingLock)
+                            {
+                                _lastFinding = (
+                                    topFinding.VsaCodeHint ?? topFinding.Label,
+                                    topFinding.Label,
+                                    meter,
+                                    topFinding.Severity / 5.0); // Severity 1-5 → Confidence 0.2-1.0
+                            }
                         }
 
                         _logger.LogDebug("Frame {Frame}: Qwen enriched {Count} findings with VSA codes",
@@ -513,6 +565,26 @@ public sealed class MultiModelAnalysisService
                 DiameterReductionMm: f.DiameterReductionMm
             )).ToList();
 
+            // ── BCD-Regel: Erster Befund bei 0.00m ist immer Rohranfang ──
+            // In der BCD-Zone (Meter < 1.5, Anfang Video) sieht die Kamera den
+            // Schacht: Wasser, Schmutz, Rohrwand — keine echten Schaeden.
+            // Alle Findings werden zu einem BCD konsolidiert.
+            if (isBcdZone && findings.Count > 0)
+            {
+                findings.Clear();
+                findings.Add(new EnhancedFinding(
+                    Label: "pipe_start",
+                    VsaCodeHint: "BCD",
+                    Severity: 0,
+                    PositionClock: null,
+                    ExtentPercent: null,
+                    HeightMm: null, WidthMm: null,
+                    IntrusionPercent: null,
+                    CrossSectionReductionPercent: null,
+                    DiameterReductionMm: null,
+                    Notes: "BCD-Regel: Rohranfang bei 0.00m"));
+            }
+
             // Update active findings (dedup)
             UpdateActive(active, findings, meter, detections, frameEvidence);
 
@@ -535,9 +607,18 @@ public sealed class MultiModelAnalysisService
             // OperationCanceledException von ct (Benutzer-Abbruch) fliegt durch → Pipeline stoppt
         }
 
-        // Flush remaining active findings
+        // Verbleibende aktive Findings: nur bestaetigte finalisieren
         foreach (var a in active.Values)
-            detections.Add(a.ToDetection());
+        {
+            if (a.ShouldFinalize)
+                detections.Add(a.ToDetection());
+        }
+
+        // Konsens-Filter: nur Detektionen mit 2+ Modell-Bestaetigung und nicht Red
+        ApplyConsensusAndQualityFilter(detections);
+
+        // Materialplausibilitaet: unplausible Codes fuer Rohrmaterial entfernen
+        ApplyMaterialPlausibilityFilter(detections);
 
         _logger.LogInformation(
             "Multi-Model Pipeline complete: {Detections} detections, {Skipped}/{Total} frames skipped, {Duration:F1}s video",
@@ -751,7 +832,7 @@ public sealed class MultiModelAnalysisService
             try
             {
                 samResult = await _client.SegmentSamAsync(
-                    new SamRequest(frameBase64, samBoxes, pipeDiameterMm), ct).ConfigureAwait(false);
+                    new SamRequest(frameBase64, samBoxes, PipeDiameterMm: pipeDiameterMm), ct).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -915,9 +996,18 @@ public sealed class MultiModelAnalysisService
             }
         }
 
-        // Verbleibende aktive Findings abschliessen
+        // Verbleibende aktive Findings: nur bestaetigte finalisieren
         foreach (var a in active.Values)
-            detections.Add(a.ToDetection());
+        {
+            if (a.ShouldFinalize)
+                detections.Add(a.ToDetection());
+        }
+
+        // Konsens-Filter: nur Detektionen mit 2+ Modell-Bestaetigung und nicht Red
+        ApplyConsensusAndQualityFilter(detections);
+
+        // Materialplausibilitaet: unplausible Codes fuer Rohrmaterial entfernen
+        ApplyMaterialPlausibilityFilter(detections);
 
         _logger.LogInformation(
             "NVDEC-Pipeline fertig: {Detections} Detektionen, {Skipped}/{Total} Frames uebersprungen, {Duration:F1}s Video",
@@ -1083,18 +1173,19 @@ public sealed class MultiModelAnalysisService
         {
             if (currentMap.TryGetValue(key, out var finding))
             {
+                // BBox Y-Zentrum fuer Bestaetigungs-Tracking berechnen
+                double yCenter = (finding.BboxY1Norm ?? 0 + (finding.BboxY2Norm ?? 1)) / 2.0;
                 active[key].Update(meter, finding.Severity, finding.VsaCodeHint, finding.PositionClock,
                     finding.ExtentPercent, finding.HeightMm, finding.WidthMm,
                     finding.IntrusionPercent, finding.CrossSectionReductionPercent, finding.DiameterReductionMm,
-                    evidence);
+                    evidence, yCenter);
             }
             else
             {
                 active[key].MissedFrames++;
                 if (active[key].MissedFrames >= DedupWindowFrames)
                 {
-                    completed.Add(active[key].ToDetection());
-                    active.Remove(key);
+                    FinalizeOrDiscard(active, key, completed);
                 }
             }
         }
@@ -1104,13 +1195,37 @@ public sealed class MultiModelAnalysisService
             if (!active.ContainsKey(pair.Key))
             {
                 var f = pair.Value;
+                double yCenter = (f.BboxY1Norm ?? 0 + (f.BboxY2Norm ?? 1)) / 2.0;
                 active[pair.Key] = new ActiveFindingState(
                     f.Label.Trim(), meter, f.Severity, f.VsaCodeHint, f.PositionClock,
                     f.ExtentPercent, f.HeightMm, f.WidthMm,
                     f.IntrusionPercent, f.CrossSectionReductionPercent, f.DiameterReductionMm,
-                    evidence);
+                    evidence, yCenter);
             }
         }
+    }
+
+    /// <summary>
+    /// Finalisiert oder verwirft einen Befund basierend auf Bestaetigung.
+    /// Unbestaetigte Ferndetektionen werden still verworfen (Selbstkorrektur).
+    /// </summary>
+    private void FinalizeOrDiscard(
+        Dictionary<string, ActiveFindingState> active,
+        string key,
+        List<RawVideoDetection> completed)
+    {
+        var state = active[key];
+        if (state.ShouldFinalize)
+        {
+            completed.Add(state.ToDetection());
+        }
+        else
+        {
+            _logger.LogDebug(
+                "Selbstkorrektur: '{Name}' verworfen — {Frames} Frames, MaxY={Y:F2}, bestaetigt={Confirmed}",
+                state.Name, state.FrameCount, state.MaxYCenter, state.IsConfirmed);
+        }
+        active.Remove(key);
     }
 
     private static void AdvanceAll(
@@ -1123,7 +1238,9 @@ public sealed class MultiModelAnalysisService
             active[key].MissedFrames++;
             if (active[key].MissedFrames >= dedupWindow)
             {
-                completed.Add(active[key].ToDetection());
+                // Nur bestaetigte Befunde finalisieren
+                if (active[key].ShouldFinalize)
+                    completed.Add(active[key].ToDetection());
                 active.Remove(key);
             }
         }
@@ -1185,7 +1302,11 @@ public sealed class MultiModelAnalysisService
             ?? VsaCodeResolver.InferCodeFromLabel(f.Label)
             ?? NormalizeFindingLabel(f.Label.Trim());
         var clock = NormalizeClockPosition(f.PositionClock);
-        return string.IsNullOrEmpty(clock) ? label : $"{label}|{clock}";
+        // Dimensionen einbeziehen damit zwei Schaeden an gleicher Uhrlage nicht kollidieren
+        var dims = $"{f.HeightMm ?? 0}x{f.WidthMm ?? 0}";
+        if (string.IsNullOrEmpty(clock))
+            return $"{label}|{dims}";
+        return $"{label}|{clock}|{dims}";
     }
 
     /// <summary>
@@ -1253,12 +1374,139 @@ public sealed class MultiModelAnalysisService
         return normalized;
     }
 
+    // ── Materialplausibilitaet ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Filtert Detektionen die fuer das verbaute Rohrmaterial unplausibel sind.
+    /// Kunststoffrohre (PE, PVC, PP, GFK) sind dicht — Infiltration (BBF) ist nur
+    /// bei gleichzeitigem Strukturschaden (BA) oder defekter Verbindung (BAJ/BAH)
+    /// moeglich. Ohne Begleitschaden wird BBF bei Kunststoff verworfen.
+    /// </summary>
+    private void ApplyMaterialPlausibilityFilter(List<RawVideoDetection> detections)
+    {
+        var material = _config.PipeMaterial;
+        if (string.IsNullOrWhiteSpace(material)) return;
+
+        bool isKunststoff = IsKunststoffMaterial(material);
+        if (!isKunststoff) return;
+
+        // Pruefen ob ein Strukturschaden in der Naehe ist (±2m)
+        bool HasNearbyStructuralDamage(double meter)
+        {
+            return detections.Any(d =>
+            {
+                var code = d.VsaCodeHint;
+                if (string.IsNullOrEmpty(code) || code.Length < 2) return false;
+                var prefix = code[..2].ToUpperInvariant();
+                // BA = Strukturell (Riss, Bruch, Versatz), oder BAJ/BAH (defekte Verbindung)
+                return prefix == "BA" && Math.Abs(d.MeterStart - meter) < 2.0;
+            });
+        }
+
+        var before = detections.Count;
+        detections.RemoveAll(d =>
+        {
+            var code = d.VsaCodeHint?.ToUpperInvariant() ?? "";
+            // BBF = Infiltration: bei Kunststoff nur mit Begleitschaden
+            if (code.StartsWith("BBF") && !HasNearbyStructuralDamage(d.MeterStart))
+            {
+                _logger.LogInformation(
+                    "Materialplausibilitaet: {Code} @ {Meter:F1}m verworfen — Kunststoffrohr ({Material}) ohne Begleitschaden",
+                    code, d.MeterStart, material);
+                return true;
+            }
+            // BBD = Eindringender Boden: bei intaktem Kunststoff ebenfalls nur mit Schaden
+            if (code.StartsWith("BBD") && !HasNearbyStructuralDamage(d.MeterStart))
+            {
+                _logger.LogInformation(
+                    "Materialplausibilitaet: {Code} @ {Meter:F1}m verworfen — Kunststoffrohr ({Material}) ohne Begleitschaden",
+                    code, d.MeterStart, material);
+                return true;
+            }
+            return false;
+        });
+
+        if (before != detections.Count)
+        {
+            _logger.LogInformation(
+                "Materialplausibilitaet ({Material}): {Before} → {After} Detektionen",
+                material, before, detections.Count);
+        }
+    }
+
+    /// <summary>
+    /// Prueft ob das Material ein Kunststoff ist (dichte Rohrwand).
+    /// Erkennt: Polyethylen, PE, PVC, PP, GFK, Kunststoff, Plastik etc.
+    /// </summary>
+    private static bool IsKunststoffMaterial(string material)
+    {
+        var m = material.ToUpperInvariant();
+        return m.Contains("PE") || m.Contains("PVC") || m.Contains("PP")
+            || m.Contains("GFK") || m.Contains("KUNSTSTOFF") || m.Contains("PLASTIK")
+            || m.Contains("POLYETHYL") || m.Contains("POLYPROP") || m.Contains("POLYVINYL")
+            || m.Contains("HDPE") || m.Contains("FASERZ"); // Faserzement = auch dicht
+    }
+
     // ── ActiveFindingState (mirrors VideoFullAnalysisService.ActiveFinding) ──
+
+    /// <summary>
+    /// Filtert Detektionen die nicht von mindestens 2 Modellen bestaetigt werden,
+    /// entfernt Red-QualityGate-Ergebnisse und verwirft zu kleine/weit entfernte Objekte.
+    /// </summary>
+    private void ApplyConsensusAndQualityFilter(List<RawVideoDetection> detections)
+    {
+        const double YoloMin = 0.20;  // YOLO bestaetigt
+        const double DinoMin = 0.25;  // DINO bestaetigt
+        const double QwenMin = 0.40;  // Qwen bestaetigt
+
+        // Minimale BBox-Flaeche (normiert): Objekte unter ~3% der Bildflaeche sind zu weit weg
+        // (max ~20cm Entfernung bei typischen Kanalrohren DN100-DN600)
+        const double MinBboxArea = 0.03;
+
+        var qg = new QualityGate.QualityGateService();
+        var before = detections.Count;
+
+        detections.RemoveAll(d =>
+        {
+            // 0. Zu kleine/weit entfernte Objekte verwerfen
+            if (d.BboxX1 is not null && d.BboxY1 is not null &&
+                d.BboxX2 is not null && d.BboxY2 is not null)
+            {
+                var bboxW = Math.Abs(d.BboxX2.Value - d.BboxX1.Value);
+                var bboxH = Math.Abs(d.BboxY2.Value - d.BboxY1.Value);
+                var area = bboxW * bboxH;
+                if (area < MinBboxArea)
+                    return true;
+            }
+
+            if (d.Evidence is not { } ev) return false; // Kein Evidence → behalten (Legacy)
+
+            // 1. QualityGate Red → raus
+            var result = qg.Evaluate(ev);
+            if (result.IsRed)
+                return true;
+
+            // 2. Multi-Model-Konsens: mindestens 2 Modelle muessen bestaetigen
+            int confirmations = 0;
+            if (ev.YoloConf is >= YoloMin) confirmations++;
+            if (ev.DinoConf is >= DinoMin) confirmations++;
+            if (ev.QwenVisionConf is >= QwenMin) confirmations++;
+
+            return confirmations < 2;
+        });
+
+        if (before != detections.Count)
+        {
+            _logger.LogInformation(
+                "Konsens+QualityGate-Filter: {Before} → {After} Detektionen ({Removed} entfernt)",
+                before, detections.Count, before - detections.Count);
+        }
+    }
 
     private sealed class ActiveFindingState
     {
         public string Name { get; }
-        public double MeterStart { get; }
+        public double MeterStart { get; private set; }
         public double MeterEnd { get; private set; }
         public int MaxSeverity { get; private set; }
         public string? VsaCodeHint { get; private set; }
@@ -1273,10 +1521,31 @@ public sealed class MultiModelAnalysisService
         public int FrameCount { get; private set; } = 1;
         public int MissedFrames { get; set; }
 
+        // ── Bestaetigungs-Tracking ──────────────────────────────────
+        // Ein Befund gilt erst als bestaetigt wenn er mindestens einmal
+        // auf Kamerahoehe (Y >= 0.30) gesehen wurde. Ferndetektionen
+        // (oberes Bilddrittel) allein reichen nicht.
+
+        /// <summary>True wenn die Detection mindestens einmal auf Kamerahoehe bestaetigt wurde.</summary>
+        public bool IsConfirmed { get; private set; }
+
+        /// <summary>Naechste Y-Position (normiert) an der die Detection gesehen wurde. Hoeher = naeher.</summary>
+        public double MaxYCenter { get; private set; }
+
+        /// <summary>Meterstand bei Bestaetigung (naeher = genauer).</summary>
+        public double? ConfirmedMeter { get; private set; }
+
+        /// <summary>Mindestanzahl Frames bevor ein Befund finalisiert wird.</summary>
+        public const int MinConfirmationFrames = 2;
+
+        /// <summary>Y-Schwelle ab der eine Detection als "auf Kamerahoehe" gilt (normiert).</summary>
+        private const double ConfirmationYThreshold = 0.30;
+
         public ActiveFindingState(
             string name, double start, int severity, string? hint, string? clock,
             int? extent, int? height, int? width, int? intrusion, int? crossSection, int? diameterReduction,
-            QualityGate.EvidenceVector? evidence = null)
+            QualityGate.EvidenceVector? evidence = null,
+            double bboxYCenterNorm = 0.5)
         {
             Name = name; MeterStart = start; MeterEnd = start;
             MaxSeverity = severity; VsaCodeHint = hint; PositionClock = clock;
@@ -1284,11 +1553,18 @@ public sealed class MultiModelAnalysisService
             IntrusionPercent = intrusion; CrossSectionReductionPercent = crossSection;
             DiameterReductionMm = diameterReduction;
             Evidence = evidence;
+            MaxYCenter = bboxYCenterNorm;
+            if (bboxYCenterNorm >= ConfirmationYThreshold)
+            {
+                IsConfirmed = true;
+                ConfirmedMeter = start;
+            }
         }
 
         public void Update(double meter, int severity, string? hint, string? clock,
             int? extent, int? height, int? width, int? intrusion, int? crossSection, int? diameterReduction,
-            QualityGate.EvidenceVector? evidence = null)
+            QualityGate.EvidenceVector? evidence = null,
+            double bboxYCenterNorm = 0.5)
         {
             MeterEnd = meter;
             MissedFrames = 0;
@@ -1302,15 +1578,36 @@ public sealed class MultiModelAnalysisService
             if (intrusion is { } ip) IntrusionPercent = Math.Max(IntrusionPercent ?? 0, ip);
             if (crossSection is { } csr) CrossSectionReductionPercent = Math.Max(CrossSectionReductionPercent ?? 0, csr);
             if (diameterReduction is { } dr) DiameterReductionMm = Math.Max(DiameterReductionMm ?? 0, dr);
-            // Merge evidence: keep max of each signal
             if (evidence is not null)
             {
                 Evidence = Evidence is null ? evidence : MergeEvidence(Evidence, evidence);
             }
+
+            // Bestaetigungs-Tracking: wenn naeher gesehen → Meter korrigieren
+            if (bboxYCenterNorm > MaxYCenter)
+            {
+                MaxYCenter = bboxYCenterNorm;
+                if (bboxYCenterNorm >= ConfirmationYThreshold && !IsConfirmed)
+                {
+                    IsConfirmed = true;
+                    ConfirmedMeter = meter;
+                    // Meter korrigieren: Bestaetigung auf Kamerahoehe ist genauer
+                    MeterStart = meter;
+                }
+            }
         }
 
+        /// <summary>
+        /// True wenn der Befund finalisiert werden soll (genug Frames + bestaetigt).
+        /// Unbestaetigte Ferndetektionen werden still verworfen.
+        /// </summary>
+        public bool ShouldFinalize => IsConfirmed && FrameCount >= MinConfirmationFrames;
+
         public RawVideoDetection ToDetection() =>
-            new(Name, MeterStart, MeterEnd, SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock,
+            new(Name,
+                ConfirmedMeter ?? MeterStart, // Bestaetigung-Meter hat Vorrang
+                MeterEnd,
+                SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock,
                 ExtentPercent, HeightMm, WidthMm, IntrusionPercent, CrossSectionReductionPercent, DiameterReductionMm,
                 Evidence: Evidence is not null ? Evidence with { FrameCount = FrameCount } : null);
 
