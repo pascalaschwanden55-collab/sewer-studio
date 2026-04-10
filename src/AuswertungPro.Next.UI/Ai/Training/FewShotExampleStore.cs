@@ -68,6 +68,7 @@ public sealed class FewShotExampleStore
         PropertyNameCaseInsensitive = true
     };
 
+    private static readonly SemaphoreSlim _lock = new(1, 1);
     private readonly string _indexPath;
     private readonly string _imagesDir;
     private List<FewShotExample> _examples = new();
@@ -91,32 +92,48 @@ public sealed class FewShotExampleStore
     /// <summary>Laedt den Index aus der JSON-Datei.</summary>
     public async Task LoadAsync(CancellationToken ct = default)
     {
-        if (_loaded) return;
-
-        if (File.Exists(_indexPath))
+        await _lock.WaitAsync(ct).ConfigureAwait(false);
+        try
         {
-            try
-            {
-                var json = await File.ReadAllTextAsync(_indexPath, ct);
-                _examples = JsonSerializer.Deserialize<List<FewShotExample>>(json, JsonOpts)
-                            ?? new List<FewShotExample>();
-            }
-            catch
-            {
-                _examples = new List<FewShotExample>();
-            }
-        }
+            if (_loaded) return;
 
-        _loaded = true;
+            if (File.Exists(_indexPath))
+            {
+                try
+                {
+                    var json = await File.ReadAllTextAsync(_indexPath, ct);
+                    _examples = JsonSerializer.Deserialize<List<FewShotExample>>(json, JsonOpts)
+                                ?? new List<FewShotExample>();
+                }
+                catch
+                {
+                    _examples = new List<FewShotExample>();
+                }
+            }
+
+            _loaded = true;
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     /// <summary>Speichert den Index.</summary>
     public async Task SaveAsync(CancellationToken ct = default)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(_indexPath)!);
-        var json = JsonSerializer.Serialize(_examples, JsonOpts);
-        await File.WriteAllTextAsync(_indexPath, json, ct);
-        KnowledgeMirrorService.Current?.NotifyChanged();
+        await _lock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_indexPath)!);
+            var json = JsonSerializer.Serialize(_examples, JsonOpts);
+            await File.WriteAllTextAsync(_indexPath, json, ct);
+            KnowledgeMirrorService.Current?.NotifyChanged();
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     /// <summary>Fuegt ein neues Beispiel hinzu und speichert das Bild.</summary>
@@ -137,7 +154,7 @@ public sealed class FewShotExampleStore
 
         var category = vsaCode.Length >= 2 ? vsaCode[..2].ToUpperInvariant() : vsaCode.ToUpperInvariant();
 
-        // Bild speichern
+        // Bild speichern (ausserhalb Lock — I/O)
         Directory.CreateDirectory(_imagesDir);
         var ext = imageExtension.StartsWith('.') ? imageExtension : "." + imageExtension;
         var fileName = $"{category}_{vsaCode}_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid():N}"[..40] + ext;
@@ -158,9 +175,17 @@ public sealed class FewShotExampleStore
             Source = source
         };
 
-        _examples.Add(example);
-        await SaveAsync(ct);
+        await _lock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            _examples.Add(example);
+        }
+        finally
+        {
+            _lock.Release();
+        }
 
+        await SaveAsync(ct);
         return example;
     }
 
@@ -260,17 +285,26 @@ public sealed class FewShotExampleStore
     {
         await LoadAsync(ct);
 
-        var ex = _examples.FirstOrDefault(e => e.Id == exampleId);
-        if (ex == null) return;
+        FewShotExample? ex;
+        await _lock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            ex = _examples.FirstOrDefault(e => e.Id == exampleId);
+            if (ex == null) return;
+            _examples.Remove(ex);
+        }
+        finally
+        {
+            _lock.Release();
+        }
 
-        // Bild loeschen
+        // Bild loeschen (ausserhalb Lock — I/O)
         var imgPath = GetImagePath(ex);
         if (File.Exists(imgPath))
         {
             try { File.Delete(imgPath); } catch { }
         }
 
-        _examples.Remove(ex);
         await SaveAsync(ct);
     }
 

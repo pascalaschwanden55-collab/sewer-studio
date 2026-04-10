@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -76,6 +77,7 @@ namespace AuswertungPro.Next.UI
         public IDialogService Dialogs { get; } = new DialogService();
         public IPlaywrightInstallService PlaywrightInstaller { get; }
         public PipelineConfig PipelineCfg { get; }
+        public PythonSidecarService Sidecar { get; }
 
         public IMeasureRecommendationService MeasureRecommendation { get; }
         public IRetrievalService? Retrieval { get; }
@@ -112,6 +114,16 @@ namespace AuswertungPro.Next.UI
             // Einheitliche KI-Konfiguration (1x laden, 3x projizieren)
             var aiPlatform = AiPlatformConfig.Load(settings);
             PipelineCfg = aiPlatform.ToPipelineConfig();
+
+            // Sidecar (YOLO/DINO/SAM) — wird in App.xaml.cs async gestartet
+            var sidecarDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "sidecar");
+            if (!Directory.Exists(sidecarDir))
+                sidecarDir = Path.Combine(AppContext.BaseDirectory, "sidecar");
+            Sidecar = new PythonSidecarService(
+                loggerFactory.CreateLogger<PythonSidecarService>(),
+                Path.GetFullPath(sidecarDir),
+                PipelineCfg.SidecarUrl.Host,
+                PipelineCfg.SidecarUrl.Port);
 
             // AI/CodeCatalog Init (AiLocalPack)
             var cfg = aiPlatform.ToRuntimeConfig();
@@ -195,16 +207,24 @@ namespace AuswertungPro.Next.UI
 
             // Brain-Mirror: Alle KI-Lerndaten nach E:\Brain spiegeln
             var brainPath = settings.BrainMirrorPath ?? Ai.KnowledgeRoot.ResolveBrainMirrorPath();
-            _ = new KnowledgeMirrorService(
-                Ai.KnowledgeRoot.GetRoot(),
-                brainPath,
-                logger);
-            // Initialer Sync beim Start (async, blockiert nicht)
-            _ = Task.Run(async () =>
+            var brainDrive = Path.GetPathRoot(brainPath);
+            if (brainDrive is not null && Directory.Exists(brainDrive))
             {
-                try { await KnowledgeMirrorService.Current!.SyncNowAsync(); }
-                catch (Exception ex) { Debug.WriteLine($"[BrainMirror] Initialer Sync fehlgeschlagen: {ex.Message}"); }
-            });
+                _ = new KnowledgeMirrorService(
+                    Ai.KnowledgeRoot.GetRoot(),
+                    brainPath,
+                    logger);
+                // Initialer Sync beim Start (async, blockiert nicht)
+                _ = Task.Run(async () =>
+                {
+                    try { await KnowledgeMirrorService.Current!.SyncNowAsync(); }
+                    catch (Exception ex) { Debug.WriteLine($"[BrainMirror] Initialer Sync fehlgeschlagen: {ex.Message}"); }
+                });
+            }
+            else
+            {
+                logger.LogWarning("Brain-Mirror deaktiviert: Laufwerk {Drive} nicht verfuegbar", brainDrive);
+            }
 
             MeasureRecommendation = new Infrastructure.Ai.MeasureRecommendationService(
                 Ai.KnowledgeRoot.GetMeasuresLearningPath(),

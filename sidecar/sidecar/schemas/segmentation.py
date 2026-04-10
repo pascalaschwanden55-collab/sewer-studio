@@ -6,10 +6,37 @@ from pydantic import BaseModel, Field
 from .detection import BoundingBox
 
 
+class SamPoint(BaseModel):
+    """Punkt-Prompt fuer SAM: x/y in Pixel, label=1 positiv, label=0 negativ."""
+    x: float
+    y: float
+    label: int = 1  # 1=positiv (das will ich), 0=negativ (das nicht)
+
+
+class RingScanParams(BaseModel):
+    """Ring-Scan: SAM tastet den Annulus-Bereich (Rohrwand) systematisch ab."""
+    center_x: float  # Pixel
+    center_y: float  # Pixel
+    inner_radius: float  # Pixel
+    outer_radius: float  # Pixel
+    num_angles: int = 24  # Winkelschritte (alle 15°)
+    num_radii: int = 3  # Radiale Schritte zwischen inner und outer
+    min_score: float = 0.25  # Mindest-Confidence (tief, da Rohrwand subtil)
+    min_area_pixels: int = 100  # Mindest-Maskenflaeche
+    iou_threshold: float = 0.4  # NMS IoU-Schwelle
+
+
 class SamRequest(BaseModel):
     image_base64: str
     bounding_boxes: list[BoundingBox] = []
+    point_prompts: list[SamPoint] | None = None
     pipe_diameter_mm: int | None = None
+    ring_scan: RingScanParams | None = None
+
+    @property
+    def point_prompts_safe(self) -> list[SamPoint]:
+        """Gibt immer eine Liste zurueck, auch wenn null/None gesendet wurde."""
+        return self.point_prompts or []
 
 
 class MaskResult(BaseModel):

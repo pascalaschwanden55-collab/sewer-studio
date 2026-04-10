@@ -147,14 +147,15 @@ public static class KnowledgeRoot
 
     /// <summary>
     /// Sucht das Projektroot-Verzeichnis durch Aufsteigen vom BaseDirectory
-    /// bis eine .sln-Datei gefunden wird. Gibt null zurueck falls keins gefunden.
+    /// bis die Haupt-Solution (AuswertungPro.sln) gefunden wird.
+    /// Sub-Projekte haben eigene .sln — deshalb wird gezielt gesucht.
     /// </summary>
     private static string? FindProjectRoot(string startDir)
     {
         var dir = new DirectoryInfo(startDir);
         while (dir is not null)
         {
-            if (dir.GetFiles("*.sln").Length > 0)
+            if (File.Exists(Path.Combine(dir.FullName, "AuswertungPro.sln")))
                 return dir.FullName;
             dir = dir.Parent;
         }

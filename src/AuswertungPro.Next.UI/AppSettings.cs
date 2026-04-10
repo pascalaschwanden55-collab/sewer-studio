@@ -19,6 +19,7 @@ public sealed class AppSettings
     private static readonly object SaveSync = new();
     private static Timer? SaveDebounceTimer;
     private static PendingSettingsWrite? PendingWrite;
+    public static string? TestAppDataDirOverride { get; set; }
 
     public bool EnableDiagnostics { get; set; } = true;
     public string? PdfToTextPath { get; set; }
@@ -82,6 +83,9 @@ public sealed class AppSettings
     public double? PipelineDinoTextThreshold { get; set; }
     public int? PipelinePipeDiameterMm { get; set; }
 
+    /// <summary>Sidecar (YOLO/DINO/SAM) beim App-Start automatisch mitstartet. Standard: true.</summary>
+    public bool? SidecarAutoStart { get; set; }
+
     // AI / Ollama settings (overrides env vars if set)
     public bool? AiEnabled { get; set; }
     public string? AiOllamaUrl { get; set; }
@@ -101,10 +105,12 @@ public sealed class AppSettings
     public HydraulikPanelSettings HydraulikPanel { get; set; } = new();
 
     public static string AppDataDir =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.ProductName);
+        TestAppDataDirOverride
+        ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.ProductName);
 
     private static string LegacyAppDataDir =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.LegacyLocalDataFolder);
+        TestAppDataDirOverride
+        ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.LegacyLocalDataFolder);
 
     private static string SettingsPath => Path.Combine(AppDataDir, "settings.json");
     private static string LegacySettingsPath => Path.Combine(LegacyAppDataDir, "settings.json");

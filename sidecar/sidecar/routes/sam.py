@@ -13,4 +13,6 @@ async def segment_sam(req: SamRequest) -> SamResponse:
         image_base64=req.image_base64,
         bounding_boxes=req.bounding_boxes,
         pipe_diameter_mm=req.pipe_diameter_mm,
+        point_prompts=req.point_prompts_safe,
+        ring_scan=req.ring_scan,
     )
