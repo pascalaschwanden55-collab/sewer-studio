@@ -503,6 +503,16 @@ public partial class PlayerWindow : Window
                 e.Handled = true;
                 return;
             }
+
+            if (e.Key == Key.Tab)
+            {
+                // Tab: zur naechsten Maske wechseln
+                var current = _selectedMaskIndex >= 0 ? _selectedMaskIndex : -1;
+                var next = FindNextVisibleMaskIndex(current);
+                if (next >= 0) OnMaskOverlayClicked(next);
+                e.Handled = true;
+                return;
+            }
         }
 
         if (e.Key == Key.Space)
@@ -6681,16 +6691,92 @@ public partial class PlayerWindow : Window
     /// <summary>Aktuell selektierte Maske (Klick auf Overlay).</summary>
     private int _selectedMaskIndex = -1;
 
-    /// <summary>Maske angeklickt — selektieren und hervorheben.</summary>
+    /// <summary>Maske angeklickt — selektieren, hervorheben, Befundliste synchronisieren.</summary>
     private void OnMaskOverlayClicked(int maskIndex)
     {
+        // Wenn gleiche Maske nochmal geklickt → zur naechsten wechseln (Cycle)
+        if (maskIndex == _selectedMaskIndex)
+        {
+            maskIndex = FindNextVisibleMaskIndex(maskIndex);
+            if (maskIndex < 0) return;
+        }
+
         _selectedMaskIndex = maskIndex;
+
+        // Visuelle Hervorhebung: selektierte Maske dicker, andere normal
+        HighlightSelectedMask(maskIndex);
+
         if (_currentMmResult?.QuantifiedMasks is { } masks && maskIndex < masks.Count)
         {
+            var vsaCode = Ai.VsaCodeResolver.InferCodeFromLabel(masks[maskIndex].Label);
             SetCodingAiState(
-                $"Befund {maskIndex + 1}: {masks[maskIndex].Label}",
+                $"Befund {maskIndex + 1}/{masks.Count}: {vsaCode ?? masks[maskIndex].Label}",
                 Color.FromRgb(0x38, 0xBD, 0xF8),
                 "Delete = verwerfen | O = OK | Leertaste = weiter");
+
+            // Befundliste synchronisieren: passenden Eintrag selektieren
+            SyncBefundListeToMask(maskIndex, vsaCode);
+        }
+    }
+
+    /// <summary>Findet die naechste sichtbare Maske nach dem gegebenen Index (Cycle).</summary>
+    private int FindNextVisibleMaskIndex(int afterIndex)
+    {
+        int total = _currentMmResult?.QuantifiedMasks.Count ?? 0;
+        for (int offset = 1; offset < total; offset++)
+        {
+            int candidate = (afterIndex + offset) % total;
+            var tag = $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{candidate}";
+            if (CodingOverlayCanvas.Children.OfType<FrameworkElement>()
+                .Any(e => tag.Equals(e.Tag as string)))
+                return candidate;
+        }
+        return afterIndex; // Nur eine Maske uebrig
+    }
+
+    /// <summary>Selektierte Maske visuell hervorheben (dickere Kontur, andere duenner).</summary>
+    private void HighlightSelectedMask(int selectedIndex)
+    {
+        foreach (var el in CodingOverlayCanvas.Children.OfType<System.Windows.Shapes.Path>())
+        {
+            if (el.Tag is not string tag || !tag.StartsWith(Ai.Pipeline.SamMaskRenderer.MaskTag))
+                continue;
+            if (el.Stroke is null) continue; // Fill-Path, nicht Kontur
+
+            bool isSelected = tag == $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{selectedIndex}";
+            el.StrokeThickness = isSelected ? 4 : 2;
+            el.Opacity = isSelected ? 1.0 : 0.5;
+        }
+
+        // Auch Fill-Opacity anpassen
+        foreach (var el in CodingOverlayCanvas.Children.OfType<System.Windows.Shapes.Path>())
+        {
+            if (el.Tag is not string tag || !tag.StartsWith(Ai.Pipeline.SamMaskRenderer.MaskTag))
+                continue;
+            if (el.Stroke is not null) continue; // Kontur, nicht Fill
+
+            bool isSelected = tag == $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{selectedIndex}";
+            el.Opacity = isSelected ? 1.0 : 0.3;
+        }
+    }
+
+    /// <summary>Synchronisiert die Befundliste (LstCodingEvents) mit der selektierten Maske.</summary>
+    private void SyncBefundListeToMask(int maskIndex, string? vsaCode)
+    {
+        if (LstCodingEvents.Items.Count == 0 || string.IsNullOrEmpty(vsaCode)) return;
+
+        // Suche den Event in der Liste der zum Maske-Code passt
+        // Events sind in derselben Reihenfolge wie Masken erstellt
+        for (int i = LstCodingEvents.Items.Count - 1; i >= 0; i--)
+        {
+            if (LstCodingEvents.Items[i] is not CodingEvent ev) continue;
+            if (string.Equals(ev.Entry.Code, vsaCode, StringComparison.OrdinalIgnoreCase)
+                || (ev.Entry.Code?.StartsWith(vsaCode, StringComparison.OrdinalIgnoreCase) == true))
+            {
+                LstCodingEvents.SelectedIndex = i;
+                LstCodingEvents.ScrollIntoView(LstCodingEvents.Items[i]);
+                return;
+            }
         }
     }
 
