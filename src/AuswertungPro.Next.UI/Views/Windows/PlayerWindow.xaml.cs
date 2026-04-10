@@ -6662,16 +6662,66 @@ public partial class PlayerWindow : Window
     {
         if (_currentMmResult?.QuantifiedMasks is not { } masks || maskIndex >= masks.Count) return;
 
-        var label = masks[maskIndex].Label;
-        System.Diagnostics.Debug.WriteLine($"[Overlay] Maske {maskIndex} geloescht: {label}");
+        var quant = masks[maskIndex];
+        var vsaCode = Ai.VsaCodeResolver.InferCodeFromLabel(quant.Label);
+        var meter = _codingVm?.CurrentMeter ?? 0;
 
-        // Maske aus dem Ergebnis entfernen (damit sie nicht nochmal gerendert wird)
-        var mutableMasks = _currentMmResult.QuantifiedMasks.ToList();
-        mutableMasks.RemoveAt(maskIndex);
+        System.Diagnostics.Debug.WriteLine(
+            $"[Overlay] Maske {maskIndex} geloescht: {quant.Label} ({vsaCode}) @ {meter:F1}m");
 
         // Visuell: alle Elemente dieser Maske entfernen
         Ai.Pipeline.SamMaskRenderer.RemoveMaskGroup(
             CodingOverlayCanvas, $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{maskIndex}");
+
+        // Negativ-Feedback persistent speichern (KB lernt: "da ist nichts")
+        _ = Task.Run(() => SaveNegativeFeedbackAsync(quant.Label, vsaCode, meter));
+    }
+
+    /// <summary>
+    /// Speichert ein Negativ-Feedback in der KB (ValidationLog).
+    /// Die KI lernt: bei diesem Label/Code war nichts — Fehlalarm.
+    /// Wird asynchron im Hintergrund ausgefuehrt.
+    /// </summary>
+    private static async Task SaveNegativeFeedbackAsync(string label, string? vsaCode, double meter)
+    {
+        try
+        {
+            var feedbackPath = System.IO.Path.Combine(
+                Ai.KnowledgeRoot.GetRoot(), "negative_feedback.jsonl");
+
+            var entry = new
+            {
+                timestamp = DateTime.UtcNow.ToString("o"),
+                label,
+                vsaCode = vsaCode ?? "",
+                meter,
+                action = "deleted_by_user",
+                reason = "Fehlalarm — Benutzer hat Overlay geloescht"
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(entry);
+            await System.IO.File.AppendAllTextAsync(feedbackPath, json + Environment.NewLine);
+
+            // ValidationLog ebenfalls aktualisieren (wenn KB verfuegbar)
+            try
+            {
+                using var db = new Ai.KnowledgeBase.KnowledgeBaseContext();
+                var logger = new Ai.QualityGate.ValidationLogger(db.Connection);
+                logger.Log(
+                    vsaCode: vsaCode ?? label,
+                    suggestedCode: vsaCode ?? label,
+                    finalCode: "",          // Leer = "nichts da"
+                    wasCorrect: false,
+                    evidence: null);
+            }
+            catch { /* KB-Logging ist optional */ }
+
+            Services.KnowledgeMirrorService.Current?.NotifyChanged();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Feedback] Fehler beim Speichern: {ex.Message}");
+        }
     }
 
     /// <summary>
