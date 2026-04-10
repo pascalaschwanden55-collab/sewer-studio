@@ -1587,13 +1587,16 @@ public partial class PlayerWindow : Window
     {
         DetectionCanvas.Children.Clear();
 
-        var width = DetectionCanvas.ActualWidth;
-        var height = DetectionCanvas.ActualHeight;
-        if (width < 60 || height < 60)
+        var canvasWidth = DetectionCanvas.ActualWidth;
+        var canvasHeight = DetectionCanvas.ActualHeight;
+        if (canvasWidth < 60 || canvasHeight < 60)
             return;
 
         if (findings.Count == 0)
             return;
+
+        // Tatsaechliche Videoflaeche berechnen (Aspect-Ratio-korrigiert)
+        var (offX, offY, width, height) = GetVideoViewRenderRect();
 
         // Pruefen ob mindestens ein Finding Bbox hat
         bool hasBbox = findings.Any(f => f.BboxX1.HasValue && f.BboxY1.HasValue
@@ -1615,10 +1618,10 @@ public partial class PlayerWindow : Window
             if (finding.BboxX1.HasValue && finding.BboxY1.HasValue
                 && finding.BboxX2.HasValue && finding.BboxY2.HasValue)
             {
-                var px1 = finding.BboxX1.Value * width;
-                var py1 = finding.BboxY1.Value * height;
-                var px2 = finding.BboxX2.Value * width;
-                var py2 = finding.BboxY2.Value * height;
+                var px1 = offX + finding.BboxX1.Value * width;
+                var py1 = offY + finding.BboxY1.Value * height;
+                var px2 = offX + finding.BboxX2.Value * width;
+                var py2 = offY + finding.BboxY2.Value * height;
 
                 var rectLeft = Math.Min(px1, px2);
                 var rectTop = Math.Min(py1, py2);
@@ -3201,18 +3204,74 @@ public partial class PlayerWindow : Window
     /// Hält die Overlay-Zeichenfläche exakt auf VideoView-Größe.
     /// Wichtig für Popup-Overlay über VLC (HwndHost/Airspace).
     /// </summary>
+    /// <summary>
+    /// Berechnet die tatsaechliche Video-Renderflaeche innerhalb des VideoView-Containers.
+    /// VLC behaelt das Aspect-Ratio bei und zentriert das Video (Letterboxing/Pillarboxing).
+    /// </summary>
+    private (double OffX, double OffY, double W, double H) GetVideoViewRenderRect()
+    {
+        double containerW = VideoView.ActualWidth;
+        double containerH = VideoView.ActualHeight;
+
+        if (double.IsNaN(containerW) || containerW <= 1 ||
+            double.IsNaN(containerH) || containerH <= 1)
+            return (0, 0, containerW, containerH);
+
+        try
+        {
+            if (_player?.Media is { } media)
+            {
+                foreach (var track in media.Tracks)
+                {
+                    if (track.TrackType == TrackType.Video && track.Data.Video.Width > 0)
+                    {
+                        uint vidW = track.Data.Video.Width;
+                        uint vidH = track.Data.Video.Height;
+                        // SAR (nicht-quadratische Pixel) beruecksichtigen
+                        if (track.Data.Video.SarNum > 0 && track.Data.Video.SarDen > 0)
+                            vidW = (uint)(vidW * track.Data.Video.SarNum / track.Data.Video.SarDen);
+
+                        double videoAspect = (double)vidW / vidH;
+                        double containerAspect = containerW / containerH;
+
+                        if (videoAspect > containerAspect)
+                        {
+                            // Video breiter → volle Breite, Letterboxing oben/unten
+                            double renderW = containerW;
+                            double renderH = containerW / videoAspect;
+                            return (0, (containerH - renderH) / 2, renderW, renderH);
+                        }
+                        else
+                        {
+                            // Video hoeher → volle Hoehe, Pillarboxing links/rechts
+                            double renderH = containerH;
+                            double renderW = containerH * videoAspect;
+                            return ((containerW - renderW) / 2, 0, renderW, renderH);
+                        }
+                    }
+                }
+            }
+        }
+        catch { /* Kein Video-Track verfuegbar */ }
+
+        return (0, 0, containerW, containerH);
+    }
+
     private void UpdateCodingOverlayViewport()
     {
-        double w = VideoView.ActualWidth;
-        double h = VideoView.ActualHeight;
-        if (double.IsNaN(w) || double.IsInfinity(w) || w <= 1 ||
-            double.IsNaN(h) || double.IsInfinity(h) || h <= 1)
+        var (offX, offY, w, h) = GetVideoViewRenderRect();
+
+        if (double.IsNaN(w) || w <= 1 || double.IsNaN(h) || h <= 1)
             return;
 
         if (Math.Abs(CodingOverlayCanvas.Width - w) > 0.5)
             CodingOverlayCanvas.Width = w;
         if (Math.Abs(CodingOverlayCanvas.Height - h) > 0.5)
             CodingOverlayCanvas.Height = h;
+
+        // Popup-Offset setzen damit Canvas ueber dem tatsaechlichen Video liegt
+        CodingOverlayPopup.HorizontalOffset = offX;
+        CodingOverlayPopup.VerticalOffset = offY;
     }
 
     // --- Coding Navigation ---
@@ -3372,7 +3431,7 @@ public partial class PlayerWindow : Window
 
     private bool IsCodingSchemaToolSelected()
         => _codingSchemaType.HasValue
-           && _codingOverlayService?.ActiveTool is OverlayToolType.PipeBend or OverlayToolType.Level;
+           && _codingOverlayService?.ActiveTool is OverlayToolType.PipeBend or OverlayToolType.Level or OverlayToolType.PipeDirection;
 
     private SchemaOverlayBase? CreateCodingSchemaOverlay()
     {
@@ -3390,6 +3449,7 @@ public partial class PlayerWindow : Window
                 Mode = _codingOverlayService.ActiveLevelMode
             },
             SchemaType.Intrusion => new IntrusionSchema(),
+            SchemaType.PipeDirection => new PipeDirectionSchema(),
             _ => null
         };
     }
@@ -3400,6 +3460,7 @@ public partial class PlayerWindow : Window
             SchemaType.PipeBend => "vertex",
             SchemaType.FillLevel => "level",
             SchemaType.Intrusion => "depth",
+            SchemaType.PipeDirection => "center1",
             _ => "vertex"
         };
 
@@ -3453,6 +3514,11 @@ public partial class PlayerWindow : Window
                 LevelSubMode = LevelMode.Obstacle,
                 ClockFrom = Math.Round(intrusion.ClockHour, 1)
             };
+        }
+
+        if (_codingSchemaManager.Active is PipeDirectionSchema pipeDir)
+        {
+            return pipeDir.Confirm();
         }
 
         return null;
@@ -3523,6 +3589,15 @@ public partial class PlayerWindow : Window
         {
             if (!_codingSchemaManager.IsActive)
             {
+                // Schema noch nicht platziert oder wartet auf zweiten Klick (PipeDirection)
+                if (_codingSchemaManager.Active is PipeDirectionSchema pd && pd.IsWaitingForSecondClick)
+                {
+                    // Zweiter Klick: Platziert die zweite Ellipse → Adjusting
+                    _codingSchemaManager.Place(norm);
+                    UpdateCodingSchemaOverlay(enableCreateEvent: true);
+                    return;
+                }
+
                 var schema = CreateCodingSchemaOverlay();
                 if (schema == null) return;
                 _codingSchemaManager.Activate(schema, _codingOverlayService.Calibration);
@@ -3928,6 +4003,10 @@ public partial class PlayerWindow : Window
                 RenderPipeBendOverlay(overlay, isPreview, stroke, glowEffect, tag, labelAnchor);
                 return; // Eigenes Label-Rendering
 
+            case OverlayToolType.PipeDirection:
+                RenderPipeDirectionOverlay(overlay, isPreview, glowEffect, tag);
+                return;
+
             case OverlayToolType.LateralCircle:
                 RenderLateralCircleOverlay(overlay, isPreview, stroke, glowEffect, tag, labelAnchor);
                 return; // Eigenes Label-Rendering
@@ -4159,6 +4238,75 @@ public partial class PlayerWindow : Window
                 AddSchemaLabel(tip, $"{overlay.FillPercent:F1}% @ {overlay.ClockFrom:F1}h", stroke, glowEffect);
                 break;
             }
+
+            case PipeDirectionSchema pipeDir:
+            {
+                // Zwei Ellipsen + Verbindungslinie + Winkel-Label
+                var stroke1 = new SolidColorBrush(Color.FromRgb(0, 200, 255));   // Cyan
+                var stroke2 = new SolidColorBrush(Color.FromRgb(255, 165, 0));   // Orange
+                var fillBrush = new SolidColorBrush(Color.FromArgb(30, 0, 200, 255));
+
+                var c1 = CodingNormToPixel(pipeDir.Center1);
+                var c2 = CodingNormToPixel(pipeDir.Center2);
+
+                double canvasW = CodingOverlayCanvas.ActualWidth;
+                double canvasH = CodingOverlayCanvas.ActualHeight;
+
+                // Ellipse 1 (Rohrverbindung — Cyan)
+                double rx1Px = pipeDir.RadiusX1 * canvasW;
+                double ry1Px = pipeDir.RadiusY1 * canvasH;
+                var ellipse1 = new System.Windows.Shapes.Ellipse
+                {
+                    Width = rx1Px * 2, Height = ry1Px * 2,
+                    Stroke = stroke1, StrokeThickness = 2.5,
+                    StrokeDashArray = new DoubleCollection { 5, 3 },
+                    Fill = fillBrush,
+                    Effect = glowEffect, Tag = "overlay_preview"
+                };
+                Canvas.SetLeft(ellipse1, c1.X - rx1Px);
+                Canvas.SetTop(ellipse1, c1.Y - ry1Px);
+                CodingOverlayCanvas.Children.Add(ellipse1);
+
+                // Ellipse 2 (weiter im Rohr — Orange)
+                double rx2Px = pipeDir.RadiusX2 * canvasW;
+                double ry2Px = pipeDir.RadiusY2 * canvasH;
+                var ellipse2 = new System.Windows.Shapes.Ellipse
+                {
+                    Width = rx2Px * 2, Height = ry2Px * 2,
+                    Stroke = stroke2, StrokeThickness = 2.5,
+                    StrokeDashArray = new DoubleCollection { 5, 3 },
+                    Fill = new SolidColorBrush(Color.FromArgb(30, 255, 165, 0)),
+                    Effect = glowEffect, Tag = "overlay_preview"
+                };
+                Canvas.SetLeft(ellipse2, c2.X - rx2Px);
+                Canvas.SetTop(ellipse2, c2.Y - ry2Px);
+                CodingOverlayCanvas.Children.Add(ellipse2);
+
+                // Verbindungslinie (Richtungswechsel)
+                var connector = new System.Windows.Shapes.Line
+                {
+                    X1 = c1.X, Y1 = c1.Y, X2 = c2.X, Y2 = c2.Y,
+                    Stroke = Brushes.White, StrokeThickness = 1.5,
+                    StrokeDashArray = new DoubleCollection { 6, 3 },
+                    Effect = glowEffect, Tag = "overlay_preview"
+                };
+                CodingOverlayCanvas.Children.Add(connector);
+
+                // Handles
+                AddDotMarker(c1, 7, stroke1, "overlay_preview", glowEffect);
+                AddDotMarker(c2, 7, stroke2, "overlay_preview", glowEffect);
+
+                // Groessen-Handles (kleine Punkte an den Ellipsenraendern)
+                AddDotMarker(new Point(c1.X + rx1Px, c1.Y), 4, stroke1, "overlay_preview", glowEffect);
+                AddDotMarker(new Point(c1.X, c1.Y + ry1Px), 4, stroke1, "overlay_preview", glowEffect);
+                AddDotMarker(new Point(c2.X + rx2Px, c2.Y), 4, stroke2, "overlay_preview", glowEffect);
+                AddDotMarker(new Point(c2.X, c2.Y + ry2Px), 4, stroke2, "overlay_preview", glowEffect);
+
+                // Winkel-Label
+                var midPoint = new Point((c1.X + c2.X) / 2, (c1.Y + c2.Y) / 2);
+                AddSchemaLabel(midPoint, $"{pipeDir.AngleDeg:F0}°", Brushes.White, glowEffect);
+                break;
+            }
         }
     }
 
@@ -4371,6 +4519,68 @@ public partial class PlayerWindow : Window
     }
 
     // --- Winkelmesser (Protractor): 2 Linien + Winkelbogen + Grad-Label ---
+
+    /// <summary>
+    /// Zeichnet ein gespeichertes PipeDirection-Overlay (2 Ellipsen + Winkel).
+    /// Points: [Center1, Corner1(cx+rx, cy+ry), Center2, Corner2(cx+rx, cy+ry)]
+    /// </summary>
+    private void RenderPipeDirectionOverlay(
+        OverlayGeometry overlay, bool isPreview,
+        System.Windows.Media.Effects.DropShadowEffect glowEffect, string tag)
+    {
+        if (overlay.Points.Count < 4) return;
+
+        var c1 = CodingNormToPixel(overlay.Points[0]);
+        var corner1 = CodingNormToPixel(overlay.Points[1]);
+        var c2 = CodingNormToPixel(overlay.Points[2]);
+        var corner2 = CodingNormToPixel(overlay.Points[3]);
+
+        double rx1 = Math.Abs(corner1.X - c1.X);
+        double ry1 = Math.Abs(corner1.Y - c1.Y);
+        double rx2 = Math.Abs(corner2.X - c2.X);
+        double ry2 = Math.Abs(corner2.Y - c2.Y);
+
+        var cyan = new SolidColorBrush(Color.FromRgb(0, 200, 255));
+        var orange = new SolidColorBrush(Color.FromRgb(255, 165, 0));
+
+        var e1 = new System.Windows.Shapes.Ellipse
+        {
+            Width = rx1 * 2, Height = ry1 * 2,
+            Stroke = cyan, StrokeThickness = 2,
+            StrokeDashArray = new DoubleCollection { 5, 3 },
+            Fill = new SolidColorBrush(Color.FromArgb(25, 0, 200, 255)),
+            Effect = glowEffect, Tag = tag
+        };
+        Canvas.SetLeft(e1, c1.X - rx1);
+        Canvas.SetTop(e1, c1.Y - ry1);
+        CodingOverlayCanvas.Children.Add(e1);
+
+        var e2 = new System.Windows.Shapes.Ellipse
+        {
+            Width = rx2 * 2, Height = ry2 * 2,
+            Stroke = orange, StrokeThickness = 2,
+            StrokeDashArray = new DoubleCollection { 5, 3 },
+            Fill = new SolidColorBrush(Color.FromArgb(25, 255, 165, 0)),
+            Effect = glowEffect, Tag = tag
+        };
+        Canvas.SetLeft(e2, c2.X - rx2);
+        Canvas.SetTop(e2, c2.Y - ry2);
+        CodingOverlayCanvas.Children.Add(e2);
+
+        CodingOverlayCanvas.Children.Add(new System.Windows.Shapes.Line
+        {
+            X1 = c1.X, Y1 = c1.Y, X2 = c2.X, Y2 = c2.Y,
+            Stroke = Brushes.White, StrokeThickness = 1.5,
+            StrokeDashArray = new DoubleCollection { 6, 3 },
+            Effect = glowEffect, Tag = tag
+        });
+
+        if (overlay.ArcDegrees.HasValue)
+        {
+            var mid = new Point((c1.X + c2.X) / 2, (c1.Y + c2.Y) / 2);
+            AddSchemaLabel(mid, $"{overlay.ArcDegrees:F0}°", Brushes.White, glowEffect);
+        }
+    }
 
     private void RenderPipeBendOverlay(
         OverlayGeometry overlay, bool isPreview, Brush defaultStroke,
@@ -4733,7 +4943,7 @@ public partial class PlayerWindow : Window
     private static string BuildOverlayMeasurementText(OverlayGeometry overlay)
     {
         // Werkzeug-spezifische Texte
-        if (overlay.ToolType == OverlayToolType.PipeBend && overlay.ArcDegrees.HasValue)
+        if (overlay.ToolType is OverlayToolType.PipeBend or OverlayToolType.PipeDirection && overlay.ArcDegrees.HasValue)
             return $"Winkel: {overlay.ArcDegrees.Value:F1}\u00B0";
 
         if (overlay.ToolType == OverlayToolType.Level && overlay.FillPercent.HasValue)
@@ -6171,11 +6381,11 @@ public partial class PlayerWindow : Window
             "BRUCH" => "BAC",
             "VERFORMUNG" => "BAA",
             "OBERFLAECHENSCHADEN" => "BAF",
-            "VERSATZ" or "VERSCHIEBUNG" => "BAH",
-            "WURZELN" or "BEWUCHS" => "BBB",
+            "VERSATZ" or "VERSCHIEBUNG" => "BAJ",
+            "WURZELN" or "BEWUCHS" => "BBA",
             "ABLAGERUNG" => "BBC",
-            "INKRUSTATION" => "BBA",
-            "WASSERSTAND" => "BDDC",
+            "INKRUSTATION" => "BBB",
+            "WASSERSTAND" => "BDD",
             "ABBRUCH" => "BDC",
             // Kein exaktes Stichwort → Freitext-Heuristik (z.B. "beule unten", "riss bei 3 uhr")
             _ => Ai.VsaCodeResolver.InferCodeFromLabel(keyword)
@@ -6408,12 +6618,17 @@ public partial class PlayerWindow : Window
     /// <summary>
     /// Rendert Multi-Model Ergebnisse: SAM-Masken (gruene Konturen) + Label-Badges mit Messungen.
     /// </summary>
+    /// <summary>Aktuelles Multi-Model-Ergebnis fuer Klick-Interaktion.</summary>
+    private Ai.Pipeline.SingleFrameResult? _currentMmResult;
+
     private void ShowMultiModelResults(Ai.Pipeline.SingleFrameResult mmResult)
     {
+        _currentMmResult = mmResult;
+
         // Alte Masken entfernen
         Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
 
-        // SAM-Masken rendern (gruene Konturen + semi-transparente Fuellung)
+        // SAM-Masken rendern (farbig nach Schadenstyp, klickbar)
         if (mmResult.SamResponse != null)
         {
             Ai.Pipeline.SamMaskRenderer.RenderMasks(
@@ -6421,12 +6636,42 @@ public partial class PlayerWindow : Window
                 mmResult.SamResponse,
                 mmResult.QuantifiedMasks,
                 CodingOverlayCanvas.ActualWidth,
-                CodingOverlayCanvas.ActualHeight);
+                CodingOverlayCanvas.ActualHeight,
+                onMaskClicked: OnMaskOverlayClicked,
+                onMaskDeleted: OnMaskOverlayDeleted);
         }
 
         // Kalibrierkreis anzeigen
         _showReferenceDn = true;
         RenderReferenceDn();
+    }
+
+    /// <summary>Maske angeklickt — Befund im KI-Panel hervorheben.</summary>
+    private void OnMaskOverlayClicked(int maskIndex)
+    {
+        if (_currentMmResult?.QuantifiedMasks is { } masks && maskIndex < masks.Count)
+        {
+            var label = masks[maskIndex].Label;
+            // TODO: KI-Befund im Panel selektieren (wenn Panel vorhanden)
+            System.Diagnostics.Debug.WriteLine($"[Overlay] Maske {maskIndex} angeklickt: {label}");
+        }
+    }
+
+    /// <summary>Delete auf Maske — Befund verwerfen und als Negativ-Feedback speichern.</summary>
+    private void OnMaskOverlayDeleted(int maskIndex)
+    {
+        if (_currentMmResult?.QuantifiedMasks is not { } masks || maskIndex >= masks.Count) return;
+
+        var label = masks[maskIndex].Label;
+        System.Diagnostics.Debug.WriteLine($"[Overlay] Maske {maskIndex} geloescht: {label}");
+
+        // Maske aus dem Ergebnis entfernen (damit sie nicht nochmal gerendert wird)
+        var mutableMasks = _currentMmResult.QuantifiedMasks.ToList();
+        mutableMasks.RemoveAt(maskIndex);
+
+        // Visuell: alle Elemente dieser Maske entfernen
+        Ai.Pipeline.SamMaskRenderer.RemoveMaskGroup(
+            CodingOverlayCanvas, $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{maskIndex}");
     }
 
     /// <summary>
@@ -6968,18 +7213,21 @@ public partial class PlayerWindow : Window
            || code.StartsWith("BCA", StringComparison.OrdinalIgnoreCase) // Seitl. Anschluss
            || code.StartsWith("BCC", StringComparison.OrdinalIgnoreCase) // Bogen
            || code.StartsWith("BBC", StringComparison.OrdinalIgnoreCase) // Ablagerung
-           || code.StartsWith("BDDC", StringComparison.OrdinalIgnoreCase) // Wasserspiegel
+           || code.StartsWith("BDD", StringComparison.OrdinalIgnoreCase) // Wasserspiegel
            // Strukturschaeden (BA-Gruppe)
+           || code.StartsWith("BAA", StringComparison.OrdinalIgnoreCase) // Verformung
            || code.StartsWith("BAB", StringComparison.OrdinalIgnoreCase) // Riss
            || code.StartsWith("BAC", StringComparison.OrdinalIgnoreCase) // Bruch
-           || code.StartsWith("BAF", StringComparison.OrdinalIgnoreCase) // Deformation
-           || code.StartsWith("BAH", StringComparison.OrdinalIgnoreCase) // Versatz
-           || code.StartsWith("BAI", StringComparison.OrdinalIgnoreCase) // Einragender Stutzen
-           || code.StartsWith("BAJ", StringComparison.OrdinalIgnoreCase) // Undichtheit
+           || code.StartsWith("BAF", StringComparison.OrdinalIgnoreCase) // Oberflaechenschaden
+           || code.StartsWith("BAG", StringComparison.OrdinalIgnoreCase) // Einragender Anschluss
+           || code.StartsWith("BAH", StringComparison.OrdinalIgnoreCase) // Schadhafter Anschluss
+           || code.StartsWith("BAI", StringComparison.OrdinalIgnoreCase) // Einragendes Dichtungsmaterial
+           || code.StartsWith("BAJ", StringComparison.OrdinalIgnoreCase) // Versatz
            // Betriebliche Stoerungen (BB-Gruppe)
-           || code.StartsWith("BBA", StringComparison.OrdinalIgnoreCase) // Inkrustation
-           || code.StartsWith("BBB", StringComparison.OrdinalIgnoreCase) // Wurzeleinwuchs
-           || code.StartsWith("BBD", StringComparison.OrdinalIgnoreCase); // Eindringender Boden
+           || code.StartsWith("BBA", StringComparison.OrdinalIgnoreCase) // Wurzeleinwuchs
+           || code.StartsWith("BBB", StringComparison.OrdinalIgnoreCase) // Inkrustation / Anhaftungen
+           || code.StartsWith("BBD", StringComparison.OrdinalIgnoreCase) // Eindringender Boden
+           || code.StartsWith("BBF", StringComparison.OrdinalIgnoreCase); // Infiltration
 
     /// <summary>
     /// KI-Befunde als CodingEvents eintragen — mit QualityGate-Ampelsystem.
@@ -7355,6 +7603,7 @@ public partial class PlayerWindow : Window
             OverlayToolType.Point => "Punkt",
             OverlayToolType.Stretch => "Strecke",
             OverlayToolType.PipeBend => "Bogen",
+            OverlayToolType.PipeDirection => "Richtung",
             OverlayToolType.LateralCircle => "Anschluss",
             OverlayToolType.Level => _codingSchemaType switch
             {

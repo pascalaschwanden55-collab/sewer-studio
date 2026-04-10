@@ -115,6 +115,9 @@ public sealed class MultiModelAnalysisService
         // Material-Voting: Qwen erkennt Material visuell/OSD, Mehrheitsentscheid
         var materialVotes = new System.Collections.Concurrent.ConcurrentDictionary<string, int>(
             StringComparer.OrdinalIgnoreCase);
+        // Material-Wechsel-Tracking (AED): letztes erkanntes Material + Meter
+        string? lastDetectedMaterial = null;
+        double lastMaterialChangeMeter = -10.0; // Mindestabstand zwischen Wechseln
 
         progress?.Report(new VideoAnalysisProgress(0, totalFrames,
             $"Multi-Model Pipeline: {totalFrames} Frames, DN{pipeDiameterMm}"));
@@ -492,12 +495,38 @@ public sealed class MultiModelAnalysisService
                         lastMeter = meter;
                     }
 
-                    // Material-Selbsterkennung: Qwen liest Material aus OSD/Bild
+                    // Material-Selbsterkennung + Wechsel-Erkennung (AED)
                     if (!string.IsNullOrWhiteSpace(qwenResult.PipeMaterial)
                         && qwenResult.PipeMaterial != "unbekannt")
                     {
                         materialVotes.AddOrUpdate(qwenResult.PipeMaterial,
                             1, (_, count) => count + 1);
+
+                        // AED: Rohrmaterialwechsel erkennen
+                        // Nur wenn (a) vorher ein anderes Material lief und
+                        // (b) mindestens 3m seit letztem Wechsel (Spam vermeiden)
+                        if (lastDetectedMaterial is not null
+                            && !lastDetectedMaterial.Equals(qwenResult.PipeMaterial, StringComparison.OrdinalIgnoreCase)
+                            && meter - lastMaterialChangeMeter > 3.0)
+                        {
+                            var aedCode = MapMaterialToAedCode(qwenResult.PipeMaterial);
+                            findings.Add(new EnhancedFinding(
+                                Label: $"material_change_{qwenResult.PipeMaterial}",
+                                VsaCodeHint: aedCode,
+                                Severity: 1,
+                                PositionClock: null,
+                                ExtentPercent: null,
+                                HeightMm: null, WidthMm: null,
+                                IntrusionPercent: null,
+                                CrossSectionReductionPercent: null,
+                                DiameterReductionMm: null,
+                                Notes: $"Materialwechsel: {lastDetectedMaterial} → {qwenResult.PipeMaterial}"));
+                            lastMaterialChangeMeter = meter;
+                            _logger.LogInformation(
+                                "AED erkannt @ {Meter:F1}m: {Von} → {Nach} (Code: {Code})",
+                                meter, lastDetectedMaterial, qwenResult.PipeMaterial, aedCode);
+                        }
+                        lastDetectedMaterial = qwenResult.PipeMaterial;
                     }
 
                     // ImageQuality-Gate (recall-optimiert):
@@ -1462,6 +1491,25 @@ public sealed class MultiModelAnalysisService
                 "Materialplausibilitaet ({Material}): {Before} → {After} Detektionen",
                 material, before, detections.Count);
         }
+    }
+
+    /// <summary>
+    /// Mappt ein Qwen-Material auf den spezifischen AED-Untercode.
+    /// VSA: AEDXO=PE, AEDXP=PP, AEDXQ=PVC, AEDXG=Beton, AEDXU=Steinzeug, AED=generisch.
+    /// </summary>
+    private static string MapMaterialToAedCode(string material)
+    {
+        var m = material.ToUpperInvariant();
+        if (m.Contains("PE") || m.Contains("POLYETHYL")) return "AEDXO";
+        if (m.Contains("PP") || m.Contains("POLYPROP")) return "AEDXP";
+        if (m.Contains("PVC") || m.Contains("POLYVINYL")) return "AEDXQ";
+        if (m.Contains("BETON") || m.Contains("CONCRETE")) return "AEDXG";
+        if (m.Contains("STEINZEUG") || m.Contains("VITRIF")) return "AEDXU";
+        if (m.Contains("GFK") || m.Contains("FIBERGLASS")) return "AEDXH";
+        if (m.Contains("STAHL") || m.Contains("STEEL")) return "AEDXI";
+        if (m.Contains("GUSS") || m.Contains("CAST")) return "AEDXJ";
+        if (m.Contains("FASER") || m.Contains("ASBESTOS")) return "AEDXK";
+        return "AED"; // Generisch
     }
 
     /// <summary>

@@ -240,24 +240,31 @@ public static class SamMaskRenderer
     // ── Canvas-Rendering ────────────────────────────────────────────
 
     /// <summary>
-    /// Rendert alle SAM-Masken als gruene Konturen + Fuellung auf den Canvas.
+    /// Rendert alle SAM-Masken als Konturen + Fuellung auf den Canvas.
+    /// Farben werden automatisch nach VSA-Schadenstyp gewaehlt.
     /// </summary>
+    /// <param name="onMaskClicked">Optionaler Callback wenn eine Maske angeklickt wird (Index).</param>
+    /// <param name="onMaskDeleted">Optionaler Callback wenn Delete auf einer Maske gedrueckt wird (Index).</param>
     public static void RenderMasks(
         Canvas canvas,
         SamResponse samResponse,
         IReadOnlyList<MaskQuantificationService.QuantifiedMask> quantified,
         double canvasWidth,
-        double canvasHeight)
+        double canvasHeight,
+        Action<int>? onMaskClicked = null,
+        Action<int>? onMaskDeleted = null)
     {
         if (samResponse == null || samResponse.Masks.Count == 0) return;
 
         int imgW = samResponse.ImageWidth;
         int imgH = samResponse.ImageHeight;
+        bool interactive = onMaskClicked is not null || onMaskDeleted is not null;
 
         for (int i = 0; i < samResponse.Masks.Count; i++)
         {
             var mask = samResponse.Masks[i];
             var quant = i < quantified.Count ? quantified[i] : null;
+            var maskIndex = i; // Closure-Kopie
 
             // RLE dekodieren
             var decoded = DecodeRle(mask.MaskRle, imgW, imgH);
@@ -265,15 +272,46 @@ public static class SamMaskRenderer
             // Farbe nach Schadenstyp (Label → VSA-Code → Farbgruppe)
             var (fillColor, strokeColor) = GetMaskColors(mask.Label);
 
-            // Fuellung rendern (semi-transparent)
+            // Gruppen-Tag fuer zusammengehoerige Elemente (Fill + Kontur + Label)
+            var groupTag = $"{MaskTag}_{maskIndex}";
+
+            // Fuellung rendern (semi-transparent, klickbar wenn interaktiv)
             var fillGeom = ExtractFillGeometry(decoded, imgW, imgH, canvasWidth, canvasHeight);
             var fillPath = new Path
             {
                 Data = fillGeom,
                 Fill = new SolidColorBrush(fillColor),
-                Tag = MaskTag,
-                IsHitTestVisible = false
+                Tag = groupTag,
+                IsHitTestVisible = interactive,
+                Cursor = interactive ? System.Windows.Input.Cursors.Hand : null
             };
+            if (interactive)
+            {
+                fillPath.MouseLeftButtonDown += (_, _) => onMaskClicked?.Invoke(maskIndex);
+                fillPath.KeyDown += (s, e) =>
+                {
+                    if (e.Key == System.Windows.Input.Key.Delete)
+                    {
+                        onMaskDeleted?.Invoke(maskIndex);
+                        // Alle Elemente dieser Maske vom Canvas entfernen
+                        RemoveMaskGroup(canvas, groupTag);
+                        e.Handled = true;
+                    }
+                };
+                // Hover-Effekt: Kontur verdicken
+                fillPath.MouseEnter += (s, _) =>
+                {
+                    foreach (var el in canvas.Children.OfType<Path>()
+                        .Where(p => groupTag.Equals(p.Tag as string) && p.Stroke is not null))
+                        el.StrokeThickness = 4;
+                };
+                fillPath.MouseLeave += (s, _) =>
+                {
+                    foreach (var el in canvas.Children.OfType<Path>()
+                        .Where(p => groupTag.Equals(p.Tag as string) && p.Stroke is not null))
+                        el.StrokeThickness = 2;
+                };
+            }
             canvas.Children.Add(fillPath);
 
             // Kontur rendern (farbig)
@@ -283,8 +321,8 @@ public static class SamMaskRenderer
                 Data = contourGeom,
                 Stroke = new SolidColorBrush(strokeColor),
                 StrokeThickness = 2,
-                Tag = MaskTag,
-                IsHitTestVisible = false
+                Tag = groupTag,
+                IsHitTestVisible = false // Kontur nicht klickbar, nur Fill
             };
             canvas.Children.Add(contourPath);
 
@@ -293,9 +331,19 @@ public static class SamMaskRenderer
             {
                 double bboxX = mask.Bbox[0] / imgW * canvasWidth;
                 double bboxY = mask.Bbox[1] / imgH * canvasHeight;
-                RenderMaskLabel(canvas, quant, bboxX, Math.Max(0, bboxY - 40), strokeColor);
+                RenderMaskLabel(canvas, quant, bboxX, Math.Max(0, bboxY - 40), strokeColor, groupTag);
             }
         }
+    }
+
+    /// <summary>Entfernt alle Canvas-Elemente einer Masken-Gruppe.</summary>
+    public static void RemoveMaskGroup(Canvas canvas, string groupTag)
+    {
+        var toRemove = canvas.Children.OfType<UIElement>()
+            .Where(e => e is FrameworkElement fe && groupTag.Equals(fe.Tag as string))
+            .ToList();
+        foreach (var el in toRemove)
+            canvas.Children.Remove(el);
     }
 
     /// <summary>
@@ -306,7 +354,8 @@ public static class SamMaskRenderer
         Canvas canvas,
         MaskQuantificationService.QuantifiedMask quant,
         double x, double y,
-        Color borderColor)
+        Color borderColor,
+        string? groupTag = null)
     {
         // Klartext-Label bauen
         var label = Services.CodeCatalog.VsaCodeTree.LookupLabel(quant.Label) ?? quant.Label;
@@ -333,7 +382,7 @@ public static class SamMaskRenderer
             CornerRadius = new CornerRadius(3),
             Padding = new Thickness(5, 2, 5, 2),
             Child = textBlock,
-            Tag = LabelTag,
+            Tag = groupTag ?? LabelTag,
             IsHitTestVisible = false
         };
 
