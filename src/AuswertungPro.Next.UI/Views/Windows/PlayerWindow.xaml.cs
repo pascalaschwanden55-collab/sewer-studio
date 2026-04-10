@@ -483,6 +483,28 @@ public partial class PlayerWindow : Window
             return;
         }
 
+        // ── Pausenmodus-Tasten: Delete/O nur wenn pausiert + Masken sichtbar ──
+        if (BtnCodingPauseMode?.IsChecked == true && _player is { IsPlaying: false } && HasVisibleMasks())
+        {
+            if (e.Key == Key.Delete || e.Key == Key.Back)
+            {
+                // Delete: selektierte Maske verwerfen, oder erste sichtbare
+                var idx = _selectedMaskIndex >= 0 ? _selectedMaskIndex : FindFirstVisibleMaskIndex();
+                if (idx >= 0) DeleteMaskAtIndex(idx);
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.O)
+            {
+                // O: selektierte Maske akzeptieren, oder erste sichtbare
+                var idx = _selectedMaskIndex >= 0 ? _selectedMaskIndex : FindFirstVisibleMaskIndex();
+                if (idx >= 0) AcceptMaskAtIndex(idx);
+                e.Handled = true;
+                return;
+            }
+        }
+
         if (e.Key == Key.Space)
         {
             TogglePlayPause();
@@ -6656,19 +6678,30 @@ public partial class PlayerWindow : Window
         RenderReferenceDn();
     }
 
-    /// <summary>Maske angeklickt — Befund im KI-Panel hervorheben.</summary>
+    /// <summary>Aktuell selektierte Maske (Klick auf Overlay).</summary>
+    private int _selectedMaskIndex = -1;
+
+    /// <summary>Maske angeklickt — selektieren und hervorheben.</summary>
     private void OnMaskOverlayClicked(int maskIndex)
     {
+        _selectedMaskIndex = maskIndex;
         if (_currentMmResult?.QuantifiedMasks is { } masks && maskIndex < masks.Count)
         {
-            var label = masks[maskIndex].Label;
-            // TODO: KI-Befund im Panel selektieren (wenn Panel vorhanden)
-            System.Diagnostics.Debug.WriteLine($"[Overlay] Maske {maskIndex} angeklickt: {label}");
+            SetCodingAiState(
+                $"Befund {maskIndex + 1}: {masks[maskIndex].Label}",
+                Color.FromRgb(0x38, 0xBD, 0xF8),
+                "Delete = verwerfen | O = OK | Leertaste = weiter");
         }
     }
 
-    /// <summary>Delete auf Maske — Befund verwerfen und als Negativ-Feedback speichern.</summary>
+    /// <summary>Delete auf Maske (via Maus-Callback) — weiterleiten an zentrale Methode.</summary>
     private void OnMaskOverlayDeleted(int maskIndex)
+    {
+        DeleteMaskAtIndex(maskIndex);
+    }
+
+    /// <summary>Verwirft eine Maske: visuell entfernen + Negativ-Feedback + ggf. Video weiter.</summary>
+    private void DeleteMaskAtIndex(int maskIndex)
     {
         if (_currentMmResult?.QuantifiedMasks is not { } masks || maskIndex >= masks.Count) return;
 
@@ -6676,15 +6709,114 @@ public partial class PlayerWindow : Window
         var vsaCode = Ai.VsaCodeResolver.InferCodeFromLabel(quant.Label);
         var meter = _codingVm?.CurrentMeter ?? 0;
 
-        System.Diagnostics.Debug.WriteLine(
-            $"[Overlay] Maske {maskIndex} geloescht: {quant.Label} ({vsaCode}) @ {meter:F1}m");
-
-        // Visuell: alle Elemente dieser Maske entfernen
+        // Visuell entfernen
         Ai.Pipeline.SamMaskRenderer.RemoveMaskGroup(
             CodingOverlayCanvas, $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{maskIndex}");
 
-        // Negativ-Feedback persistent speichern (KB lernt: "da ist nichts")
+        // Negativ-Feedback speichern
         _ = Task.Run(() => SaveNegativeFeedbackAsync(quant.Label, vsaCode, meter));
+
+        _selectedMaskIndex = -1;
+
+        // Wenn keine Masken mehr sichtbar → Video weiter
+        if (!HasVisibleMasks())
+            ResumeAfterPause();
+    }
+
+    /// <summary>Akzeptiert eine Maske: visuell entfernen + Positiv-Feedback + ggf. Video weiter.</summary>
+    private void AcceptMaskAtIndex(int maskIndex)
+    {
+        if (_currentMmResult?.QuantifiedMasks is not { } masks || maskIndex >= masks.Count) return;
+
+        var quant = masks[maskIndex];
+        var vsaCode = Ai.VsaCodeResolver.InferCodeFromLabel(quant.Label);
+        var meter = _codingVm?.CurrentMeter ?? 0;
+
+        // Visuell entfernen
+        Ai.Pipeline.SamMaskRenderer.RemoveMaskGroup(
+            CodingOverlayCanvas, $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{maskIndex}");
+
+        // Positiv-Feedback speichern
+        _ = Task.Run(() => SavePositiveFeedbackAsync(quant.Label, vsaCode, meter));
+
+        _selectedMaskIndex = -1;
+
+        // Wenn keine Masken mehr sichtbar → Video weiter
+        if (!HasVisibleMasks())
+            ResumeAfterPause();
+    }
+
+    /// <summary>Findet den Index der ersten noch sichtbaren Maske auf dem Canvas.</summary>
+    private int FindFirstVisibleMaskIndex()
+    {
+        for (int i = 0; i < (_currentMmResult?.QuantifiedMasks.Count ?? 0); i++)
+        {
+            var tag = $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{i}";
+            if (CodingOverlayCanvas.Children.OfType<FrameworkElement>()
+                .Any(e => tag.Equals(e.Tag as string)))
+                return i;
+        }
+        return -1;
+    }
+
+    /// <summary>Prueft ob noch sichtbare SAM-Masken auf dem Canvas sind.</summary>
+    private bool HasVisibleMasks()
+    {
+        return CodingOverlayCanvas.Children.OfType<FrameworkElement>()
+            .Any(e => (e.Tag as string)?.StartsWith(Ai.Pipeline.SamMaskRenderer.MaskTag) == true);
+    }
+
+    /// <summary>Setzt Video fort nach Pause (wenn Pausenmodus aktiv).</summary>
+    private void ResumeAfterPause()
+    {
+        if (BtnCodingPauseMode.IsChecked == true && _player is not null)
+        {
+            _player.SetPause(false);
+            SetCodingAiState("Weiter...", Color.FromRgb(0x22, 0xC5, 0x5E),
+                "KI-Analyse mit Pause aktiv");
+        }
+    }
+
+    /// <summary>Positiv-Feedback: KI hat richtig erkannt.</summary>
+    private static async Task SavePositiveFeedbackAsync(string label, string? vsaCode, double meter)
+    {
+        try
+        {
+            var feedbackPath = System.IO.Path.Combine(
+                Ai.KnowledgeRoot.GetRoot(), "positive_feedback.jsonl");
+
+            var entry = new
+            {
+                timestamp = DateTime.UtcNow.ToString("o"),
+                label,
+                vsaCode = vsaCode ?? "",
+                meter,
+                action = "accepted_by_user"
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(entry);
+            await System.IO.File.AppendAllTextAsync(feedbackPath, json + Environment.NewLine);
+
+            // ValidationLog aktualisieren
+            try
+            {
+                using var db = new Ai.KnowledgeBase.KnowledgeBaseContext();
+                var logger = new Ai.QualityGate.ValidationLogger(db.Connection);
+                logger.Log(
+                    vsaCode: vsaCode ?? label,
+                    suggestedCode: vsaCode ?? label,
+                    finalCode: vsaCode ?? label,  // Gleicher Code = korrekt
+                    wasCorrect: true,
+                    evidence: null);
+            }
+            catch { }
+
+            Services.KnowledgeMirrorService.Current?.NotifyChanged();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Feedback] Fehler: {ex.Message}");
+        }
     }
 
     /// <summary>
