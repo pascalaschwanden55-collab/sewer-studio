@@ -1125,58 +1125,67 @@
                            PlacementTarget="{Binding ElementName=BtnToolsDropdown}" IsOpen="False"/>
                 </StackPanel>
 
-                <!-- KI-Status + Analyse -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-                    <Border Width="1" Height="28" Background="{DynamicResource BorderBrush}" Margin="0,0,8,0"/>
-                    <Grid Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center">
-                        <!-- Puls-Ring (sichtbar waehrend Analyse) -->
-                        <Ellipse x:Name="CodingAiPulseRing" Width="10" Height="10"
-                                 Stroke="#F59E0B" StrokeThickness="2" Fill="Transparent"
-                                 Opacity="0" RenderTransformOrigin="0.5,0.5">
-                            <Ellipse.RenderTransform>
-                                <ScaleTransform ScaleX="1" ScaleY="1"/>
-                            </Ellipse.RenderTransform>
-                        </Ellipse>
-                        <Ellipse x:Name="CodingAiDot" Width="10" Height="10" Fill="{StaticResource MutedBrush}"/>
-                    </Grid>
-                    <TextBlock x:Name="TxtCodingAiStatus" FontSize="11"
-                               Foreground="{DynamicResource TextBrush}"
-                               Text="Kuenstliche Intelligenz bereit" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                    <TextBlock x:Name="TxtCodingAiStage" FontSize="9"
-                               Foreground="{StaticResource MutedBrush}"
-                               Text="" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <ToggleButton x:Name="BtnCodingLiveAi" Style="{StaticResource SpeedToggleButton}"
-                                  IsChecked="False" Margin="0,0,6,0"
-                                  ToolTip="Automatische KI-Analyse im Codiermodus an/aus (alle 5s)" Click="CodingLiveAi_Click">
-                        <TextBlock Text="Automatische KI-Analyse" FontSize="11"/>
-                    </ToggleButton>
-                    <Button x:Name="BtnCodingAnalyze"
-                            Style="{StaticResource PlayerPrimaryButton}"
-                            Padding="10,5" FontSize="11"
-                            Click="CodingAnalyzeFrame_Click"
-                            ToolTip="Aktuellen Frame einmalig per KI analysieren">
-                        <TextBlock Text="Aktuellen Frame analysieren"/>
-                    </Button>
-                    <Button x:Name="BtnCodingClearOverlays"
-                            Padding="8,5" FontSize="11" Margin="6,0,0,0"
-                            Background="{StaticResource CardBrush}" Foreground="{StaticResource MutedBrush}"
-                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                            Cursor="Hand"
-                            Click="CodingClearOverlays_Click"
-                            ToolTip="Alle Einblendungen/Markierungen vom Video entfernen">
-                        <TextBlock Text="&#x2716; Overlays aus" FontSize="10"/>
-                    </Button>
-
-                    <!-- Eingabemarker: Klick auf Stelle + Stichwort → KI analysiert -->
-                    <ToggleButton x:Name="BtnEingabemarker" Style="{StaticResource SpeedToggleButton}"
-                                  IsChecked="False" Margin="6,0,0,0"
-                                  ToolTip="Eingabemarker: Video pausiert, Stelle markieren, Stichwort eingeben → KI bestimmt Code"
-                                  Click="Eingabemarker_Click">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#x1F4CD;" FontSize="14" Margin="0,0,4,0"/>
-                            <TextBlock Text="Eingabemarker" FontSize="11"/>
-                        </StackPanel>
-                    </ToggleButton>
+                <!-- KI-Status + Analyse (zwei Zeilen) -->
+                <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,12,0">
+                    <!-- Zeile 1: Status + Hauptbuttons -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                        <Border Width="1" Height="28" Background="{DynamicResource BorderBrush}" Margin="0,0,8,0"/>
+                        <Grid Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center">
+                            <Ellipse x:Name="CodingAiPulseRing" Width="10" Height="10"
+                                     Stroke="#F59E0B" StrokeThickness="2" Fill="Transparent"
+                                     Opacity="0" RenderTransformOrigin="0.5,0.5">
+                                <Ellipse.RenderTransform>
+                                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
+                            <Ellipse x:Name="CodingAiDot" Width="10" Height="10" Fill="{StaticResource MutedBrush}"/>
+                        </Grid>
+                        <TextBlock x:Name="TxtCodingAiStatus" FontSize="11"
+                                   Foreground="{DynamicResource TextBrush}"
+                                   Text="Kuenstliche Intelligenz bereit" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                        <TextBlock x:Name="TxtCodingAiStage" FontSize="9"
+                                   Foreground="{StaticResource MutedBrush}"
+                                   Text="" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ToggleButton x:Name="BtnCodingLiveAi" Style="{StaticResource SpeedToggleButton}"
+                                      IsChecked="False" Margin="0,0,6,0"
+                                      ToolTip="Automatische KI-Analyse im Codiermodus an/aus (alle 5s)" Click="CodingLiveAi_Click">
+                            <TextBlock Text="Automatische KI-Analyse" FontSize="11"/>
+                        </ToggleButton>
+                        <Button x:Name="BtnCodingAnalyze"
+                                Style="{StaticResource PlayerPrimaryButton}"
+                                Padding="10,5" FontSize="11"
+                                Click="CodingAnalyzeFrame_Click"
+                                ToolTip="Aktuellen Frame einmalig per KI analysieren">
+                            <TextBlock Text="Aktuellen Frame analysieren"/>
+                        </Button>
+                    </StackPanel>
+                    <!-- Zeile 2: Pausenmodus + Eingabemarker + Overlays -->
+                    <StackPanel Orientation="Horizontal">
+                        <ToggleButton x:Name="BtnCodingPauseMode" Style="{StaticResource SpeedToggleButton}"
+                                      IsChecked="False" Margin="0,0,6,0"
+                                      ToolTip="Pausenmodus: Video pausiert bei jedem KI-Befund — Zeit zum Korrigieren oder Bestaetigen"
+                                      Click="CodingPauseMode_Click">
+                            <TextBlock Text="KI-Analyse mit Pause" FontSize="11"/>
+                        </ToggleButton>
+                        <Button x:Name="BtnCodingClearOverlays"
+                                Padding="8,5" FontSize="11" Margin="0,0,6,0"
+                                Background="{StaticResource CardBrush}" Foreground="{StaticResource MutedBrush}"
+                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                Cursor="Hand"
+                                Click="CodingClearOverlays_Click"
+                                ToolTip="Alle Einblendungen/Markierungen vom Video entfernen">
+                            <TextBlock Text="&#x2716; Overlays aus" FontSize="10"/>
+                        </Button>
+                        <ToggleButton x:Name="BtnEingabemarker" Style="{StaticResource SpeedToggleButton}"
+                                      IsChecked="False" Margin="0,0,0,0"
+                                      ToolTip="Eingabemarker: Video pausiert, Stelle markieren, Stichwort eingeben → KI bestimmt Code"
+                                      Click="Eingabemarker_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#x1F4CD;" FontSize="14" Margin="0,0,4,0"/>
+                                <TextBlock Text="Eingabemarker" FontSize="11"/>
+                            </StackPanel>
+                        </ToggleButton>
+                    </StackPanel>
 
                     <!-- Eingabemarker: Freitext + Schnellauswahl -->
                     <Border x:Name="EingabemarkerPopup" Visibility="Collapsed"

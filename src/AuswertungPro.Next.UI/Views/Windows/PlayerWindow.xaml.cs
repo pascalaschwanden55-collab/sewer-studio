@@ -6557,6 +6557,16 @@ public partial class PlayerWindow : Window
 
                 // Events erstellen
                 AddMultiModelFindingsAsEvents(mmResult, captureTimestampSec);
+
+                // Pausenmodus: Video pausieren wenn Befunde erkannt und Modus aktiv
+                if (BtnCodingPauseMode.IsChecked == true && mmResult.HasDetections)
+                {
+                    _player?.SetPause(true);
+                    SetCodingAiState(
+                        $"{mmResult.DinoDetections.Count} Befunde — pausiert zum Pruefen",
+                        Color.FromRgb(0x38, 0xBD, 0xF8),  // Blau = Pause
+                        "Delete = Befund loeschen | Leertaste = weiter");
+                }
                 return;
             }
 
@@ -6936,6 +6946,16 @@ public partial class PlayerWindow : Window
         {
             DetectionOverlayGrid.Visibility = Visibility.Visible;
             RenderDetectionOverlay(validFindings, _player.Time / 1000.0);
+        }
+
+        // Pausenmodus: Video pausieren wenn Befunde erkannt
+        if (BtnCodingPauseMode.IsChecked == true && validFindings.Count > 0)
+        {
+            _player?.SetPause(true);
+            SetCodingAiState(
+                $"{validFindings.Count} Befunde — pausiert zum Pruefen",
+                Color.FromRgb(0x38, 0xBD, 0xF8),
+                "Delete = Befund loeschen | Leertaste = weiter");
         }
     }
 
@@ -7443,6 +7463,28 @@ public partial class PlayerWindow : Window
 
         if (firstUnsure != null && firstUnsureGate != null)
             PauseAndAskConfirmation(firstUnsure, firstUnsureGate);
+    }
+
+    private void CodingPauseMode_Click(object sender, RoutedEventArgs e)
+    {
+        if (BtnCodingPauseMode.IsChecked == true)
+        {
+            // Pausenmodus aktivieren — setzt auch Auto-Analyse an falls nicht schon aktiv
+            if (BtnCodingLiveAi.IsChecked != true)
+            {
+                BtnCodingLiveAi.IsChecked = true;
+                CodingLiveAi_Click(BtnCodingLiveAi, new RoutedEventArgs());
+            }
+            BtnCodingPauseMode.Background = new SolidColorBrush(Color.FromRgb(0x38, 0xBD, 0xF8));
+            SetCodingAiState("KI-Analyse mit Pause aktiv", Color.FromRgb(0x38, 0xBD, 0xF8),
+                "Video pausiert bei jedem Befund — Delete = loeschen, Leertaste = weiter");
+        }
+        else
+        {
+            BtnCodingPauseMode.ClearValue(System.Windows.Controls.Control.BackgroundProperty);
+            SetCodingAiState("Pausenmodus deaktiviert", Color.FromRgb(0x22, 0xC5, 0x5E),
+                $"Modell: {CompactModelName(_codingAiModelName)}");
+        }
     }
 
     private void CodingLiveAi_Click(object sender, RoutedEventArgs e)
