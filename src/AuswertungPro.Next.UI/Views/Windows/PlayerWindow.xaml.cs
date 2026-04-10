@@ -5648,12 +5648,41 @@ public partial class PlayerWindow : Window
             if (_codingVm != null) _codingVm.SelectedDefect = ev;
             UpdateCodingDefectDetailPanel(ev);
             UpdateInlineDefectDetail(ev);
+
+            // Maske im Bild hervorheben die zum selektierten Befund gehoert
+            SyncMaskToBefundListe(ev);
         }
         else
         {
             if (_codingVm != null) _codingVm.SelectedDefect = null;
             CodingDefectDetailPanel.Visibility = Visibility.Collapsed;
             HideInlineDefectDetail();
+        }
+    }
+
+    /// <summary>Hebt die Maske hervor die zum selektierten CodingEvent gehoert.</summary>
+    private void SyncMaskToBefundListe(CodingEvent ev)
+    {
+        if (_currentMmResult?.QuantifiedMasks is not { } masks) return;
+        var evCode = ev.Entry.Code?.ToUpperInvariant() ?? "";
+        if (string.IsNullOrEmpty(evCode)) return;
+
+        // Maske finden die zum Code passt
+        for (int i = 0; i < masks.Count; i++)
+        {
+            var tag = $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{i}";
+            // Nur noch sichtbare Masken beruecksichtigen
+            if (!CodingOverlayCanvas.Children.OfType<FrameworkElement>()
+                .Any(el => tag.Equals(el.Tag as string)))
+                continue;
+
+            var maskCode = Ai.VsaCodeResolver.InferCodeFromLabel(masks[i].Label)?.ToUpperInvariant() ?? "";
+            if (evCode == maskCode || evCode.StartsWith(maskCode) || maskCode.StartsWith(evCode))
+            {
+                _selectedMaskIndex = i;
+                HighlightSelectedMask(i);
+                return;
+            }
         }
     }
 
