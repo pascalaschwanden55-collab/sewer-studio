@@ -112,6 +112,10 @@ public sealed class MultiModelAnalysisService
         // Pipe diameter: from config override or default 300mm
         int pipeDiameterMm = _config.PipeDiameterMmOverride ?? 300;
 
+        // Material-Voting: Qwen erkennt Material visuell/OSD, Mehrheitsentscheid
+        var materialVotes = new System.Collections.Concurrent.ConcurrentDictionary<string, int>(
+            StringComparer.OrdinalIgnoreCase);
+
         progress?.Report(new VideoAnalysisProgress(0, totalFrames,
             $"Multi-Model Pipeline: {totalFrames} Frames, DN{pipeDiameterMm}"));
 
@@ -488,6 +492,14 @@ public sealed class MultiModelAnalysisService
                         lastMeter = meter;
                     }
 
+                    // Material-Selbsterkennung: Qwen liest Material aus OSD/Bild
+                    if (!string.IsNullOrWhiteSpace(qwenResult.PipeMaterial)
+                        && qwenResult.PipeMaterial != "unbekannt")
+                    {
+                        materialVotes.AddOrUpdate(qwenResult.PipeMaterial,
+                            1, (_, count) => count + 1);
+                    }
+
                     // ImageQuality-Gate (recall-optimiert):
                     // Bei schlechter Bildqualitaet nur dann verwerfen, wenn auch DINO schwach ist.
                     // So bleiben plausible SAM/DINO-Treffer erhalten.
@@ -617,15 +629,33 @@ public sealed class MultiModelAnalysisService
         // Konsens-Filter: nur Detektionen mit 2+ Modell-Bestaetigung und nicht Red
         ApplyConsensusAndQualityFilter(detections);
 
-        // Materialplausibilitaet: unplausible Codes fuer Rohrmaterial entfernen
-        ApplyMaterialPlausibilityFilter(detections);
+        // Material-Selbsterkennung auswerten: Mehrheitsentscheid ueber alle Frames
+        // Ueberschreibt _config.PipeMaterial wenn (a) Config leer und (b) Qwen >= 3 Stimmen
+        string? detectedMaterial = null;
+        if (materialVotes.Count > 0)
+        {
+            var topMaterial = materialVotes.OrderByDescending(kv => kv.Value).First();
+            if (topMaterial.Value >= 3) // Mindestens 3 Frames muessen uebereinstimmen
+            {
+                detectedMaterial = topMaterial.Key;
+                _logger.LogInformation(
+                    "Material-Selbsterkennung: {Material} ({Votes} Stimmen von {Total} Frames)",
+                    detectedMaterial, topMaterial.Value, materialVotes.Values.Sum());
+
+                // Wenn Config kein Material hat → erkanntes verwenden fuer Plausibilitaetsfilter
+            }
+        }
+
+        // Materialplausibilitaet: Config-Material hat Vorrang, sonst Qwen-Erkennung
+        var effectiveMaterial = _config.PipeMaterial ?? detectedMaterial;
+        ApplyMaterialPlausibilityFilter(detections, effectiveMaterial);
 
         _logger.LogInformation(
-            "Multi-Model Pipeline complete: {Detections} detections, {Skipped}/{Total} frames skipped, {Duration:F1}s video",
-            detections.Count, skippedFrames, frameIndex, duration);
+            "Multi-Model Pipeline complete: {Detections} detections, {Skipped}/{Total} frames skipped, {Duration:F1}s video, Material={Material}",
+            detections.Count, skippedFrames, frameIndex, duration, effectiveMaterial ?? "unbekannt");
 
         progress?.Report(new VideoAnalysisProgress(totalFrames, totalFrames,
-            $"Multi-Model fertig – {detections.Count} Schäden, {skippedFrames} Frames übersprungen."));
+            $"Multi-Model fertig – {detections.Count} Schäden, Material: {effectiveMaterial ?? "unbekannt"}"));
 
         var summary = telemetry.GetSummary();
         _logger.LogInformation(
@@ -1382,9 +1412,9 @@ public sealed class MultiModelAnalysisService
     /// bei gleichzeitigem Strukturschaden (BA) oder defekter Verbindung (BAJ/BAH)
     /// moeglich. Ohne Begleitschaden wird BBF bei Kunststoff verworfen.
     /// </summary>
-    private void ApplyMaterialPlausibilityFilter(List<RawVideoDetection> detections)
+    private void ApplyMaterialPlausibilityFilter(List<RawVideoDetection> detections, string? materialOverride = null)
     {
-        var material = _config.PipeMaterial;
+        var material = materialOverride ?? _config.PipeMaterial;
         if (string.IsNullOrWhiteSpace(material)) return;
 
         bool isKunststoff = IsKunststoffMaterial(material);

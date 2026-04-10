@@ -8,7 +8,11 @@ public enum TrainingCaseStatus
 {
     New = 0,
     Approved = 1,
-    Rejected = 2
+    Rejected = 2,
+    /// <summary>Fall wurde durch Selbsttraining verarbeitet.</summary>
+    SelfTrained = 3,
+    /// <summary>Fall wurde durch Batch-Import + KB verarbeitet.</summary>
+    BatchImported = 4
 }
 
 public partial class TrainingCase : ObservableObject
@@ -19,6 +23,15 @@ public partial class TrainingCase : ObservableObject
     [ObservableProperty] private string _protocolPath = "";
     [ObservableProperty] private TrainingCaseStatus _status = TrainingCaseStatus.New;
     [ObservableProperty] private DateTime _createdUtc = DateTime.UtcNow;
+
+    /// <summary>Rohrmaterial aus PDF/Import (z.B. "Polyethylen", "Beton"). Null wenn unbekannt.</summary>
+    public string? Rohrmaterial { get; set; }
+
+    /// <summary>Nennweite in mm aus PDF/Import. Null wenn unbekannt.</summary>
+    public int? NennweiteMm { get; set; }
+
+    /// <summary>Rohrprofil-Text (z.B. "Kreisprofil 300mm"). Null wenn unbekannt.</summary>
+    public string? Profil { get; set; }
 
     public override string ToString() => CaseId;
 }
