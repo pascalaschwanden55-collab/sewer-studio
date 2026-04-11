@@ -93,7 +93,8 @@ class ProtocolEntry:
 
 # Regex fuer Format 2 (POSITION [m] SK CODE BEOBACHTUNG VIDEO)
 RE_METER = re.compile(r"^\s*(\d{1,4}[.,]\d{1,2})\s+")
-RE_CODE = re.compile(r"\b(B[A-D][A-Z](?:[A-Z])?(?:\.[A-Z](?:\.[A-Z])?)?)\b")
+# VSA-Codes: 3-5 Buchstaben, optional mit Punkten (BAB, BABBB, BAB.B.B, BCAXB)
+RE_CODE = re.compile(r"\b(B[A-D][A-Z](?:[A-Z.]{0,4}))\b")
 RE_VIDEO_TIME = re.compile(r"(\d{2}:\d{2}:\d{2})")
 RE_FOTO = re.compile(r"(\S+\.jpg)", re.IGNORECASE)
 RE_ZUSTAND = re.compile(r"\b([1-4])\s*$")
