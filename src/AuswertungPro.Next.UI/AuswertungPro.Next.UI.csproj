@@ -12,6 +12,10 @@
     <Product>SewerStudio</Product>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="AuswertungPro.Next.Pipeline.Tests" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <ProjectReference Include="..\AuswertungPro.Next.Domain\AuswertungPro.Next.Domain.csproj" />
