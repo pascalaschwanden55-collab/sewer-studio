@@ -811,7 +811,27 @@ public sealed class MultiModelAnalysisService
                 evt.VsaCode ?? "(n/a)", evt.Severity);
         }
 
-        // Verbleibende aktive Findings: nur bestaetigte finalisieren
+        // ── Aggregierte Events in RawVideoDetections konvertieren ──
+        foreach (var evt in aggregatedEvents)
+        {
+            if (!evt.IsClassified && string.IsNullOrEmpty(evt.VsaCode))
+                evt.VsaCode = evt.YoloClassName;  // Fallback: YOLO-Klasse als Hint
+
+            detections.Add(new RawVideoDetection(
+                FindingLabel: evt.VsaCode ?? evt.YoloClassName,
+                MeterStart: evt.MeterStart,
+                MeterEnd: evt.MeterEnd,
+                Severity: (evt.Severity ?? 2).ToString(),
+                VsaCodeHint: evt.VsaCode,
+                PositionClock: evt.ClockPosition,
+                BboxX1: evt.PeakBbox?[0],
+                BboxY1: evt.PeakBbox?[1],
+                BboxX2: evt.PeakBbox?[2],
+                BboxY2: evt.PeakBbox?[3]
+            ));
+        }
+
+        // Verbleibende aktive Findings: Steuercodes (BCD/BCE) finalisieren
         foreach (var a in active.Values)
         {
             if (a.ShouldFinalize)
