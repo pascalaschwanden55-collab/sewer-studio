@@ -93,32 +93,34 @@ public class DetectionAggregatorTests
     {
         // maxGapFrames=5 standardmaessig
         var agg = new DetectionAggregator();
+        var allFeedEvents = new List<DetectionEvent>();
 
         // Erste Gruppe: 3 Frames (Riss bei Meter 5)
         for (int i = 0; i < 3; i++)
-            agg.Feed(MakeDetection(0, "crack", 0.8, i, 5.0 + i * 0.1));
+        {
+            var r = agg.Feed(MakeDetection(0, "crack", 0.8, i, 5.0 + i * 0.1));
+            if (r != null) allFeedEvents.Add(r);
+        }
 
         // Luecke: 6 Feed-Aufrufe ohne crack — erzwinge Gap-Schliessung
         for (int i = 0; i < 6; i++)
-            agg.Feed(MakeDetection(1, "deposit", 0.1, 3 + i, 10.0)); // unter Schwelle, wird ignoriert
-
-        // Zweite Gruppe: 3 Frames (Riss bei Meter 25)
-        DetectionEvent? closedDuringFeed = null;
-        for (int i = 0; i < 3; i++)
         {
-            var result = agg.Feed(MakeDetection(0, "crack", 0.8, 9 + i, 25.0 + i * 0.1));
-            if (result != null) closedDuringFeed = result;
+            var r = agg.Feed(MakeDetection(1, "deposit", 0.1, 3 + i, 10.0));
+            if (r != null) allFeedEvents.Add(r);
         }
 
-        var events = agg.Flush();
+        // Zweite Gruppe: 3 Frames (Riss bei Meter 25)
+        for (int i = 0; i < 3; i++)
+        {
+            var r = agg.Feed(MakeDetection(0, "crack", 0.8, 9 + i, 25.0 + i * 0.1));
+            if (r != null) allFeedEvents.Add(r);
+        }
 
-        // Erste Gruppe wurde geschlossen (via Feed-Rueckgabe oder Flush)
-        var allEvents = new List<DetectionEvent>();
-        if (closedDuringFeed != null) allEvents.Add(closedDuringFeed);
-        allEvents.AddRange(events);
+        var flushed = agg.Flush();
+        allFeedEvents.AddRange(flushed);
 
         // Nur crack-Events zaehlen
-        var crackEvents = allEvents.Where(e => e.YoloClassName == "crack").ToList();
+        var crackEvents = allFeedEvents.Where(e => e.YoloClassName == "crack").ToList();
         Assert.Equal(2, crackEvents.Count);
     }
 
