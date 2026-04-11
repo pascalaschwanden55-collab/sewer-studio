@@ -747,11 +747,19 @@ public sealed class MultiModelAnalysisService
                     }
 
                     var peakBase64 = Convert.ToBase64String(peakBytes);
+                    // YOLO-Klasse als DINO-Detection-Kontext mitgeben,
+                    // damit Qwen weiss was YOLO erkannt hat
+                    var yoloHint = new DinoDetectionDto(
+                        X1: evt.PeakBbox?[0] ?? 0, Y1: evt.PeakBbox?[1] ?? 0,
+                        X2: evt.PeakBbox?[2] ?? 1, Y2: evt.PeakBbox?[3] ?? 1,
+                        Label: evt.YoloClassName,
+                        Confidence: evt.PeakConfidence,
+                        Phrase: $"YOLO-Detektion: {evt.YoloClassName}");
                     var peakContext = new MultiModelFrameResult(
                         TimestampSec: evt.PeakTimeSeconds,
                         Meter: evt.MeterStart,
                         IsRelevant: true,
-                        DinoDetections: [],
+                        DinoDetections: [yoloHint],
                         SamMasks: [],
                         ImageWidth: 0, ImageHeight: 0,
                         YoloTimeMs: 0, DinoTimeMs: 0, SamTimeMs: 0);
