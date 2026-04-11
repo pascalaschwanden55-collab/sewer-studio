@@ -511,16 +511,19 @@ def generate_dataset(
 def start_training(dataset_path: str, sidecar_url: str = "http://localhost:8100",
                    epochs: int = 100, imgsz: int = 640) -> Optional[str]:
     """Startet YOLO-Training via Sidecar API."""
+    # Sidecar erwartet den Pfad zur data.yaml, nicht zum Verzeichnis
+    data_yaml = os.path.join(dataset_path, "data.yaml") if not dataset_path.endswith(".yaml") else dataset_path
     try:
         resp = requests.post(
             f"{sidecar_url}/training/train-yolo",
             json={
-                "dataset_path": dataset_path,
+                "dataset_path": data_yaml,
                 "epochs": epochs,
                 "imgsz": imgsz,
                 "batch": -1,  # auto
                 "base_model": "yolo11m.pt",
                 "amp": True,
+                "max_fallback_ratio": 1.0,  # Full-Frame-BBoxen fuer initialen Lauf erlauben
             },
             timeout=30,
         )
