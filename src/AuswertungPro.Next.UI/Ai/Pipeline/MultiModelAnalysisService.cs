@@ -121,10 +121,13 @@ public sealed class MultiModelAnalysisService
         int irrelevantFrames = 0;
         double lastMeter = 0;
 
-        // Aggregierte Schadensereignisse: YOLO-Detektionen werden temporär verdichtet,
+        // Aggregierte Schadensereignisse: YOLO-Detektionen werden temporaer verdichtet,
         // sodass Qwen nur fuer Peak-Frames aufgerufen wird (~20 statt hunderte).
         var aggregator = CreateAggregator();
         var aggregatedEvents = new List<DetectionEvent>();
+        // Peak-Frame-Cache: Speichert die Frame-Bytes des aktuell hoechsten Confidence-Frames
+        // pro aktiver Detektion. Key = "classId_meterStart", Value = PNG-Bytes.
+        var peakFrameCache = new Dictionary<string, byte[]>();
 
         // Pipe diameter: from config override or default 300mm
         int pipeDiameterMm = _config.PipeDiameterMmOverride ?? 300;
@@ -297,19 +300,22 @@ public sealed class MultiModelAnalysisService
                     int classId = defectClass.ClassName != null ? defectClass.ClassId : -1;
                     string className = defectClass.ClassName ?? det.ClassName;
 
-                    // Frame-Pfad: Wir haben keinen persistierten Frame-Pfad im Streaming-Modus.
-                    // Der Aggregator speichert den Pfad des Peak-Frames fuer spaetere Qwen-Analyse.
-                    // TODO: Frame-PNG bei Peak-Confidence persistieren fuer Qwen-Klassifikation
+                    var effectiveClassId = classId >= 0 ? classId : 0;
+                    // Eindeutiger Frame-Key — Aggregator speichert den Key des Peak-Frames
+                    var frameKey = $"f{frameIndex}";
                     var frameDet = new FrameDetection
                     {
-                        YoloClassId = classId >= 0 ? classId : 0,
+                        YoloClassId = effectiveClassId,
                         YoloClassName = className,
                         Confidence = det.Confidence,
                         TimeSeconds = t,
                         Meter = estimatedMeter,
-                        FramePath = $"frame_{frameIndex}_{t:F1}s",  // Platzhalter — kein persistierter Pfad
+                        FramePath = frameKey,
                         Bbox = new[] { det.X1, det.Y1, det.X2, det.Y2 }
                     };
+
+                    // Frame-Bytes cachen (Aggregator waehlt spaeter den Peak-Frame)
+                    peakFrameCache.TryAdd(frameKey, frameBytes);
 
                     var closedEvent = aggregator.Feed(frameDet);
                     if (closedEvent != null)
@@ -718,19 +724,91 @@ public sealed class MultiModelAnalysisService
             "(vor Qwen-Klassifikation)",
             aggregatedEvents.Count);
 
-        // TODO: Qwen-Klassifikation nur fuer aggregierte Peak-Frames ausfuehren.
-        // Fuer jedes DetectionEvent: PeakFramePath laden, an Qwen senden,
-        // event.VsaCode / event.Severity / event.ClockPosition setzen.
-        // Aktuell laeuft Qwen noch im bestehenden Per-Frame-Modus (Step 5 oben).
-        // Naechster Schritt: Per-Frame Qwen durch aggregierte Qwen-Analyse ersetzen.
+        // ── Qwen-Klassifikation fuer aggregierte Peak-Frames ──
+        // Statt Qwen fuer jeden Frame aufzurufen, nur fuer die ~20 Peak-Frames
+        if (_qwenVision is not null && aggregatedEvents.Count > 0)
+        {
+            _logger.LogInformation(
+                "Starte Qwen-Klassifikation fuer {Count} aggregierte Events...",
+                aggregatedEvents.Count);
+
+            foreach (var evt in aggregatedEvents)
+            {
+                ct.ThrowIfCancellationRequested();
+                try
+                {
+                    // Peak-Frame-Bytes aus Cache holen
+                    if (!peakFrameCache.TryGetValue(evt.PeakFramePath, out var peakBytes))
+                    {
+                        _logger.LogWarning(
+                            "Peak-Frame {Key} nicht im Cache — ueberspringe Qwen fuer {Class}",
+                            evt.PeakFramePath, evt.YoloClassName);
+                        continue;
+                    }
+
+                    var peakBase64 = Convert.ToBase64String(peakBytes);
+                    var peakContext = new MultiModelFrameResult(
+                        TimestampSec: evt.PeakTimeSeconds,
+                        Meter: evt.MeterStart,
+                        IsRelevant: true,
+                        DinoDetections: [],
+                        SamMasks: [],
+                        ImageWidth: 0, ImageHeight: 0,
+                        YoloTimeMs: 0, DinoTimeMs: 0, SamTimeMs: 0);
+
+                    using var qwenCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    qwenCts.CancelAfter(QwenFrameTimeout);
+
+                    var qwenResult = await _qwenVision.AnalyzeWithContextAsync(
+                        peakBase64, peakContext, pipeDiameterMm, qwenCts.Token)
+                        .ConfigureAwait(false);
+
+                    // Ergebnis auf Event schreiben
+                    if (qwenResult.HasFindings && qwenResult.Findings.Count > 0)
+                    {
+                        var topFinding = qwenResult.Findings[0];
+                        evt.VsaCode = topFinding.VsaCodeHint;
+                        evt.Severity = topFinding.Severity;
+                        evt.ClockPosition = topFinding.PositionClock;
+                        evt.IsClassified = true;
+
+                        _logger.LogInformation(
+                            "Qwen: {YoloClass} → {VsaCode} (Severity {Sev}, Uhr {Clock}) @ {Meter:F1}m",
+                            evt.YoloClassName, evt.VsaCode, evt.Severity,
+                            evt.ClockPosition, evt.MeterStart);
+                    }
+                    else
+                    {
+                        _logger.LogDebug(
+                            "Qwen: Kein Befund fuer {Class} @ {Meter:F1}m",
+                            evt.YoloClassName, evt.MeterStart);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogWarning("Qwen-Timeout fuer {Class} @ {Meter:F1}m",
+                        evt.YoloClassName, evt.MeterStart);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Qwen-Fehler fuer {Class} @ {Meter:F1}m",
+                        evt.YoloClassName, evt.MeterStart);
+                }
+            }
+        }
+
+        // Nicht mehr benoetigte Frame-Bytes freigeben
+        peakFrameCache.Clear();
+
         foreach (var evt in aggregatedEvents)
         {
             _logger.LogDebug(
                 "Aggregiertes Event: {Class} (ID={ClassId}), Peak={PeakConf:F2}, " +
                 "Meter={MeterStart:F1}-{MeterEnd:F1}, Frames={FrameCount}, " +
-                "Peak@{PeakTime:F1}s",
+                "VSA={VsaCode}, Severity={Sev}",
                 evt.YoloClassName, evt.YoloClassId, evt.PeakConfidence,
-                evt.MeterStart, evt.MeterEnd, evt.FrameCount, evt.PeakTimeSeconds);
+                evt.MeterStart, evt.MeterEnd, evt.FrameCount,
+                evt.VsaCode ?? "(n/a)", evt.Severity);
         }
 
         // Verbleibende aktive Findings: nur bestaetigte finalisieren
