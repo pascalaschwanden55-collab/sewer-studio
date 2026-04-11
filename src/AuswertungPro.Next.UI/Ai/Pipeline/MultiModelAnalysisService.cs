@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.UI.Ai.Training.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -24,6 +25,17 @@ public sealed class MultiModelAnalysisService
     private readonly ILogger _logger;
     private readonly string _ffmpegPath;
     private readonly string _ffprobePath;
+
+    /// <summary>
+    /// Temporale Aggregation: Verdichtet hunderte YOLO-Einzeldetektionen zu ~20 Schadensereignissen.
+    /// Qwen wird nur fuer Peak-Frames aufgerufen statt fuer jeden Frame.
+    /// </summary>
+    /// <summary>Erzeugt pro Analyse-Aufruf einen frischen Aggregator (kein Zustand zwischen Videos).</summary>
+    private static DetectionAggregator CreateAggregator() => new(
+        minConsecutiveFrames: 3,
+        minConfidence: 0.4,
+        meterMergeRadius: 1.5,
+        maxGapFrames: 5);
 
     public double FrameStepSeconds { get; set; } = 1.5;
     public int DedupWindowFrames { get; set; } = 3;
@@ -108,6 +120,11 @@ public sealed class MultiModelAnalysisService
         int skippedFrames = 0;
         int irrelevantFrames = 0;
         double lastMeter = 0;
+
+        // Aggregierte Schadensereignisse: YOLO-Detektionen werden temporär verdichtet,
+        // sodass Qwen nur fuer Peak-Frames aufgerufen wird (~20 statt hunderte).
+        var aggregator = CreateAggregator();
+        var aggregatedEvents = new List<DetectionEvent>();
 
         // Pipe diameter: from config override or default 300mm
         int pipeDiameterMm = _config.PipeDiameterMmOverride ?? 300;
@@ -266,6 +283,45 @@ public sealed class MultiModelAnalysisService
                     continue;
                 }
                 yoloMs = phaseSw.ElapsedMilliseconds;
+            }
+
+            // ── DetectionAggregator: YOLO-Detektionen einspeisen ──
+            // Jede YOLO-Detektion wird als FrameDetection an den Aggregator uebergeben.
+            // Der Aggregator verdichtet hunderte Einzeldetektionen zu ~20 Schadensereignissen.
+            if (yoloResult.Detections.Count > 0)
+            {
+                foreach (var det in yoloResult.Detections)
+                {
+                    var defectClass = YoloDefectTaxonomy.AllClasses
+                        .FirstOrDefault(c => c.ClassName.Equals(det.ClassName, StringComparison.OrdinalIgnoreCase));
+                    int classId = defectClass.ClassName != null ? defectClass.ClassId : -1;
+                    string className = defectClass.ClassName ?? det.ClassName;
+
+                    // Frame-Pfad: Wir haben keinen persistierten Frame-Pfad im Streaming-Modus.
+                    // Der Aggregator speichert den Pfad des Peak-Frames fuer spaetere Qwen-Analyse.
+                    // TODO: Frame-PNG bei Peak-Confidence persistieren fuer Qwen-Klassifikation
+                    var frameDet = new FrameDetection
+                    {
+                        YoloClassId = classId >= 0 ? classId : 0,
+                        YoloClassName = className,
+                        Confidence = det.Confidence,
+                        TimeSeconds = t,
+                        Meter = estimatedMeter,
+                        FramePath = $"frame_{frameIndex}_{t:F1}s",  // Platzhalter — kein persistierter Pfad
+                        Bbox = new[] { det.X1, det.Y1, det.X2, det.Y2 }
+                    };
+
+                    var closedEvent = aggregator.Feed(frameDet);
+                    if (closedEvent != null)
+                    {
+                        aggregatedEvents.Add(closedEvent);
+                        _logger.LogDebug(
+                            "Aggregator Event geschlossen: {Class} @ {MeterStart:F1}-{MeterEnd:F1}m, " +
+                            "Peak={PeakConf:F2}, Frames={FrameCount}",
+                            closedEvent.YoloClassName, closedEvent.MeterStart, closedEvent.MeterEnd,
+                            closedEvent.PeakConfidence, closedEvent.FrameCount);
+                    }
+                }
             }
 
             if (!yoloResult.IsRelevant)
@@ -440,10 +496,15 @@ public sealed class MultiModelAnalysisService
                 ? yoloResult.Detections.Max(d => d.Confidence)
                 : (telemetryBypass ? 0.60 : (yoloResult.IsRelevant ? 0.50 : 0.0));
 
+            // SAM Mask-Stability: Mittelwert der Masken-Konfidenzen (0-1)
+            var samStability = samResult.Masks.Count > 0
+                ? samResult.Masks.Average(m => m.Confidence)
+                : (double?)null;
+
             var frameEvidence = new QualityGate.EvidenceVector(
                 YoloConf: yoloEvidence,
                 DinoConf: maxDinoConf,
-                SamMaskStability: null, // populated when SamStabilityCheckEnabled
+                SamMaskStability: samStability,
                 QwenVisionConf: null,   // populated after Qwen enrichment
                 FrameCount: 1
             );
@@ -648,6 +709,30 @@ public sealed class MultiModelAnalysisService
             // OperationCanceledException von ct (Benutzer-Abbruch) fliegt durch → Pipeline stoppt
         }
 
+        // ── DetectionAggregator: Verbleibende aktive Detektionen schliessen ──
+        var flushedEvents = aggregator.Flush();
+        aggregatedEvents.AddRange(flushedEvents);
+
+        _logger.LogInformation(
+            "DetectionAggregator: {EventCount} aggregierte Schadensereignisse aus Video " +
+            "(vor Qwen-Klassifikation)",
+            aggregatedEvents.Count);
+
+        // TODO: Qwen-Klassifikation nur fuer aggregierte Peak-Frames ausfuehren.
+        // Fuer jedes DetectionEvent: PeakFramePath laden, an Qwen senden,
+        // event.VsaCode / event.Severity / event.ClockPosition setzen.
+        // Aktuell laeuft Qwen noch im bestehenden Per-Frame-Modus (Step 5 oben).
+        // Naechster Schritt: Per-Frame Qwen durch aggregierte Qwen-Analyse ersetzen.
+        foreach (var evt in aggregatedEvents)
+        {
+            _logger.LogDebug(
+                "Aggregiertes Event: {Class} (ID={ClassId}), Peak={PeakConf:F2}, " +
+                "Meter={MeterStart:F1}-{MeterEnd:F1}, Frames={FrameCount}, " +
+                "Peak@{PeakTime:F1}s",
+                evt.YoloClassName, evt.YoloClassId, evt.PeakConfidence,
+                evt.MeterStart, evt.MeterEnd, evt.FrameCount, evt.PeakTimeSeconds);
+        }
+
         // Verbleibende aktive Findings: nur bestaetigte finalisieren
         foreach (var a in active.Values)
         {
@@ -727,6 +812,10 @@ public sealed class MultiModelAnalysisService
         double lastMeter = 0;
         double duration = 0;
         int totalFrames = 0;
+
+        // Aggregierte Schadensereignisse (NVDEC-Pfad)
+        var aggregatorNvdec = CreateAggregator();
+        var aggregatedEventsNvdec = new List<DetectionEvent>();
 
         int pipeDiameterMm = _config.PipeDiameterMmOverride ?? 300;
 
@@ -838,6 +927,39 @@ public sealed class MultiModelAnalysisService
             bool isBcdZone = isAfterOsd && estimatedMeter < 1.5 && frameIndex <= 10;
             bool isBceZone = duration > 10 && t > (duration - FrameStepSeconds * 2);
 
+            // ── DetectionAggregator: YOLO-Detektionen einspeisen (NVDEC-Pfad) ──
+            if (yoloResult.Detections.Count > 0)
+            {
+                foreach (var det in yoloResult.Detections)
+                {
+                    var defectClass = YoloDefectTaxonomy.AllClasses
+                        .FirstOrDefault(c => c.ClassName.Equals(det.ClassName, StringComparison.OrdinalIgnoreCase));
+                    int classId = defectClass.ClassName != null ? defectClass.ClassId : -1;
+
+                    var frameDet = new FrameDetection
+                    {
+                        YoloClassId = classId >= 0 ? classId : 0,
+                        YoloClassName = defectClass.ClassName ?? det.ClassName,
+                        Confidence = det.Confidence,
+                        TimeSeconds = t,
+                        Meter = estimatedMeter,
+                        FramePath = $"nvdec_frame_{frameIndex}_{t:F1}s",
+                        Bbox = new[] { det.X1, det.Y1, det.X2, det.Y2 }
+                    };
+
+                    var closedEvent = aggregatorNvdec.Feed(frameDet);
+                    if (closedEvent != null)
+                    {
+                        aggregatedEventsNvdec.Add(closedEvent);
+                        _logger.LogDebug(
+                            "Aggregator Event (NVDEC): {Class} @ {MeterStart:F1}-{MeterEnd:F1}m, " +
+                            "Peak={PeakConf:F2}, Frames={FrameCount}",
+                            closedEvent.YoloClassName, closedEvent.MeterStart, closedEvent.MeterEnd,
+                            closedEvent.PeakConfidence, closedEvent.FrameCount);
+                    }
+                }
+            }
+
             // Frame als Preview-PNG dekodieren (nur fuer relevante Frames)
             try
             {
@@ -942,10 +1064,15 @@ public sealed class MultiModelAnalysisService
                 ? yoloResult.Detections.Max(d => d.Confidence)
                 : 0.60;
 
+            // SAM Mask-Stability: Mittelwert der Masken-Konfidenzen (0-1)
+            var samStability = samResult.Masks.Count > 0
+                ? samResult.Masks.Average(m => m.Confidence)
+                : (double?)null;
+
             var frameEvidence = new QualityGate.EvidenceVector(
                 YoloConf: yoloEvidence,
                 DinoConf: maxDinoConf,
-                SamMaskStability: null,
+                SamMaskStability: samStability,
                 QwenVisionConf: null,
                 FrameCount: 1
             );
@@ -1053,6 +1180,24 @@ public sealed class MultiModelAnalysisService
                     0, yoloMs, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
                 AdvanceAll(active, detections, DedupWindowFrames);
             }
+        }
+
+        // ── DetectionAggregator: Verbleibende aktive Detektionen schliessen (NVDEC) ──
+        var flushedEventsNvdec = aggregatorNvdec.Flush();
+        aggregatedEventsNvdec.AddRange(flushedEventsNvdec);
+
+        _logger.LogInformation(
+            "DetectionAggregator (NVDEC): {EventCount} aggregierte Schadensereignisse",
+            aggregatedEventsNvdec.Count);
+
+        // TODO: Qwen-Klassifikation nur fuer aggregierte Peak-Frames (NVDEC-Pfad)
+        foreach (var evt in aggregatedEventsNvdec)
+        {
+            _logger.LogDebug(
+                "Aggregiertes Event (NVDEC): {Class} (ID={ClassId}), Peak={PeakConf:F2}, " +
+                "Meter={MeterStart:F1}-{MeterEnd:F1}, Frames={FrameCount}",
+                evt.YoloClassName, evt.YoloClassId, evt.PeakConfidence,
+                evt.MeterStart, evt.MeterEnd, evt.FrameCount);
         }
 
         // Verbleibende aktive Findings: nur bestaetigte finalisieren
@@ -1361,11 +1506,12 @@ public sealed class MultiModelAnalysisService
             ?? VsaCodeResolver.InferCodeFromLabel(f.Label)
             ?? NormalizeFindingLabel(f.Label.Trim());
         var clock = NormalizeClockPosition(f.PositionClock);
-        // Dimensionen einbeziehen damit zwei Schaeden an gleicher Uhrlage nicht kollidieren
-        var dims = $"{f.HeightMm ?? 0}x{f.WidthMm ?? 0}";
+        // Keine Dimensionen im Key — wachsende Schaeden (z.B. 5x3 → 8x5mm)
+        // wuerden sonst neue Keys erzeugen und die Dedup brechen.
+        // Maximalwerte werden stattdessen in UpdateActive() aktualisiert.
         if (string.IsNullOrEmpty(clock))
-            return $"{label}|{dims}";
-        return $"{label}|{clock}|{dims}";
+            return label;
+        return $"{label}|{clock}";
     }
 
     /// <summary>
@@ -1535,7 +1681,7 @@ public sealed class MultiModelAnalysisService
     {
         const double YoloMin = 0.20;  // YOLO bestaetigt
         const double DinoMin = 0.25;  // DINO bestaetigt
-        const double QwenMin = 0.40;  // Qwen bestaetigt
+        const double QwenMin = 0.55;  // Qwen bestaetigt (vorher 0.40 — zu nah an Zufall)
 
         // Minimale BBox-Flaeche (normiert): Objekte unter ~3% der Bildflaeche sind zu weit weg
         // (max ~20cm Entfernung bei typischen Kanalrohren DN100-DN600)
