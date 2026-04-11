@@ -37,6 +37,9 @@ public sealed class BatchSelfTrainingOrchestrator
     private readonly KbEnrichmentService _enrichment;
     private readonly ILogger? _log;
 
+    // YOLO-Retraining nach Batch-Durchlauf (optional)
+    private readonly YoloRetrainOrchestrator? _yoloRetrain;
+
     // Zustandsverwaltung
     private volatile bool _isPaused;
     private volatile bool _isCancelled;
@@ -53,13 +56,15 @@ public sealed class BatchSelfTrainingOrchestrator
         ProtocolLoaderFactory protocolLoader,
         KbEnrichmentService enrichment,
         ILogger? log = null,
-        string? sidecarDir = null)
+        string? sidecarDir = null,
+        YoloRetrainOrchestrator? yoloRetrain = null)
     {
         _videoOrchestrator = videoOrchestrator ?? throw new ArgumentNullException(nameof(videoOrchestrator));
         _protocolLoader = protocolLoader ?? throw new ArgumentNullException(nameof(protocolLoader));
         _enrichment = enrichment ?? throw new ArgumentNullException(nameof(enrichment));
         _log = log;
         _sidecarDir = sidecarDir;
+        _yoloRetrain = yoloRetrain;
     }
 
     /// <summary>
@@ -101,11 +106,11 @@ public sealed class BatchSelfTrainingOrchestrator
             // 1b. Bereits verarbeitete Haltungen ueberspringen (sofern aktiviert)
             if (request.SkipAlreadyProcessed)
             {
-                var processedDirs = await LoadBatchHistoryAsync().ConfigureAwait(false);
+                var processedKeys = await LoadBatchHistoryAsync().ConfigureAwait(false);
 
                 var beforeCount = haltungen.Count;
                 haltungen = haltungen
-                    .Where(h => !processedDirs.Contains(h.HaltungId))
+                    .Where(h => !processedKeys.Contains(BuildHistoryKey(h)))
                     .ToList();
                 skipped = beforeCount - haltungen.Count;
 
@@ -185,12 +190,10 @@ public sealed class BatchSelfTrainingOrchestrator
 
                     haltungResults.Add(result);
 
-                    // Haltung IMMER als verarbeitet merken — auch bei Fehler.
-                    // Verhindert endloses Wiederholen der gleichen Haltungen.
-                    await AppendBatchHistoryAsync(h.HaltungId).ConfigureAwait(false);
-
                     if (result.Success)
                     {
+                        // Nur erfolgreiche Haltungen als verarbeitet markieren.
+                        await AppendBatchHistoryAsync(BuildHistoryKey(h)).ConfigureAwait(false);
                         processed++;
                         // Ergebnis anzeigen
                         progress?.Report(new BatchSelfTrainingProgress
@@ -227,8 +230,6 @@ public sealed class BatchSelfTrainingOrchestrator
                     failed++;
                     var errMsg = $"{ex.GetType().Name}: {ex.Message}";
                     LogToFile($"[{i+1}/{total}] {h.HaltungId}: EXCEPTION {errMsg}");
-                    // Auch bei Exception als verarbeitet merken
-                    try { await AppendBatchHistoryAsync(h.HaltungId).ConfigureAwait(false); } catch { }
                     progress?.Report(new BatchSelfTrainingProgress
                     {
                         CurrentIndex = i + 1, TotalHaltungen = total,
@@ -265,6 +266,38 @@ public sealed class BatchSelfTrainingOrchestrator
             _log?.LogInformation(
                 "Batch abgeschlossen: {Processed}/{Total} OK, {Failed} Fehler, KB +{Indexed} (Dedup {Dedup}), F1={F1:P1}",
                 processed, total, failed, stats.KbIndexed, stats.KbDeduplicated, stats.F1);
+
+            // ── YOLO-Retraining pruefen wenn genug neue Samples ──
+            if (_yoloRetrain != null && processed > 0)
+            {
+                try
+                {
+                    progress?.Report(new BatchSelfTrainingProgress
+                    {
+                        CurrentIndex = total, TotalHaltungen = total,
+                        Phase = "Retraining",
+                        Status = "Pruefe YOLO-Retraining-Berechtigung...",
+                        RunningStats = stats
+                    });
+
+                    _log?.LogInformation("Pruefe YOLO-Retraining nach Batch-Durchlauf...");
+                    var retrainResult = await _yoloRetrain.RunIfEligibleAsync(ct: ct)
+                        .ConfigureAwait(false);
+                    _log?.LogInformation("YOLO-Retraining: {Status}", retrainResult.StatusText);
+
+                    progress?.Report(new BatchSelfTrainingProgress
+                    {
+                        CurrentIndex = total, TotalHaltungen = total,
+                        Phase = "Retraining",
+                        Status = $"YOLO-Retraining: {retrainResult.StatusText}",
+                        RunningStats = stats
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _log?.LogWarning(ex, "YOLO-Retraining nach Batch fehlgeschlagen");
+                }
+            }
 
             return BuildResult(startedUtc, sw.Elapsed, total, processed, skipped, failed, stats, haltungResults);
         }
@@ -435,9 +468,23 @@ public sealed class BatchSelfTrainingOrchestrator
         if (!Directory.Exists(root)) return [];
 
         var result = new List<DiscoveredHaltung>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var scanDirs = new List<string> { root };
+        var searchOption = request.RecurseSubdirectories
+            ? SearchOption.AllDirectories
+            : SearchOption.TopDirectoryOnly;
+        try
+        {
+            scanDirs.AddRange(Directory.GetDirectories(root, "*", searchOption));
+        }
+        catch (Exception ex)
+        {
+            _log?.LogWarning(ex, "Discovery: Unterordner konnten nicht vollstaendig gelesen werden");
+        }
 
         // Hauptstrategie: Ordner-pro-Haltung mit PDF + Video (D:\Haltungen-Struktur)
-        foreach (var dir in Directory.GetDirectories(root))
+        foreach (var dir in scanDirs)
         {
             var haltungId = Path.GetFileName(dir);
 
@@ -500,6 +547,10 @@ public sealed class BatchSelfTrainingOrchestrator
                 SourceType = ProtocolSourceTypes.InspektionsPdf,
                 ExportDir = dir
             });
+
+            var key = BuildHistoryKey(result[^1]);
+            if (!seen.Add(key))
+                result.RemoveAt(result.Count - 1);
         }
 
         _log?.LogInformation("Discovery: {Count} Haltungen mit Video+PDF in {Root}",
@@ -690,7 +741,10 @@ public sealed class BatchSelfTrainingOrchestrator
     private static string GetBatchHistoryPath()
         => Path.Combine(KnowledgeRoot.GetRoot(), "batch_processed.txt");
 
-    /// <summary>Laedt die Liste bereits verarbeiteter Haltungs-Ordner.</summary>
+    /// <summary>
+    /// Laedt die Liste bereits verarbeiteter Batch-Keys.
+    /// Nur v2-Eintraege werden ausgewertet (Legacy-IDs ohne Pfadkontext werden ignoriert).
+    /// </summary>
     private static async Task<HashSet<string>> LoadBatchHistoryAsync()
     {
         var path = GetBatchHistoryPath();
@@ -699,16 +753,66 @@ public sealed class BatchSelfTrainingOrchestrator
 
         var lines = await File.ReadAllLinesAsync(path).ConfigureAwait(false);
         return new HashSet<string>(
-            lines.Where(l => !string.IsNullOrWhiteSpace(l)),
+            lines.Where(l =>
+                    !string.IsNullOrWhiteSpace(l)
+                    && l.StartsWith("v2|", StringComparison.OrdinalIgnoreCase))
+                .Select(l => l.Trim()),
             StringComparer.OrdinalIgnoreCase);
     }
 
-    /// <summary>Fuegt eine Haltung zur History hinzu (append, kein volles Neuschreiben).</summary>
-    private static async Task AppendBatchHistoryAsync(string haltungId)
+    /// <summary>Fuegt einen Batch-History-Key hinzu (append, kein volles Neuschreiben).</summary>
+    private static async Task AppendBatchHistoryAsync(string historyKey)
     {
         var path = GetBatchHistoryPath();
         var dir = Path.GetDirectoryName(path);
         if (dir is not null) Directory.CreateDirectory(dir);
-        await File.AppendAllTextAsync(path, haltungId + Environment.NewLine).ConfigureAwait(false);
+        await File.AppendAllTextAsync(path, historyKey + Environment.NewLine).ConfigureAwait(false);
+
+        // Rotation: aelteste Eintraege entfernen wenn Datei zu gross wird
+        await RotateBatchHistoryIfNeededAsync(path).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Baut einen stabilen History-Key fuer eine Haltung.
+    /// Enthaelt HaltungId + absolute Video/Protokoll-Pfade, um Kollisionen bei gleichen IDs zu vermeiden.
+    /// </summary>
+    private static string BuildHistoryKey(DiscoveredHaltung h)
+    {
+        var id = h.HaltungId.Trim().ToUpperInvariant();
+        var video = NormalizePathForHistory(h.VideoPath);
+        var protocol = NormalizePathForHistory(h.ProtocolSource);
+        return $"v2|{id}|{video}|{protocol}";
+    }
+
+    private static string NormalizePathForHistory(string path)
+    {
+        try
+        {
+            return Path.GetFullPath(path)
+                .Trim()
+                .Replace('\\', '/')
+                .ToLowerInvariant();
+        }
+        catch
+        {
+            return path.Trim().Replace('\\', '/').ToLowerInvariant();
+        }
+    }
+
+    private static async Task RotateBatchHistoryIfNeededAsync(string path)
+    {
+        const int maxLines = 5000;
+        const int trimTo = 4000;
+
+        try
+        {
+            var lines = await File.ReadAllLinesAsync(path).ConfigureAwait(false);
+            if (lines.Length <= maxLines) return;
+
+            // Aelteste Eintraege (oben) entfernen, neueste behalten
+            var kept = lines.Skip(lines.Length - trimTo).ToArray();
+            await File.WriteAllLinesAsync(path, kept).ConfigureAwait(false);
+        }
+        catch { /* Best effort — Rotation darf nie die Hauptlogik stoeren */ }
     }
 }
