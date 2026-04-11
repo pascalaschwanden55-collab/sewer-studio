@@ -501,7 +501,8 @@ public sealed class OverlayToolService : IOverlayToolService
             },
             FillPercent = Math.Round(fillPercent, 1),
             LevelSubMode = _activeLevelMode,
-            ClockFrom = PointToClockHour(new NormalizedPoint(0.5, levelY))
+            ClockFrom = _calibration?.PointToClockHour(new NormalizedPoint(0.5, levelY))
+                       ?? PointToClockHour(new NormalizedPoint(0.5, levelY))
         };
 
         return geo;
@@ -565,17 +566,18 @@ public sealed class OverlayToolService : IOverlayToolService
 
     private static double SnapPipeBendAngle(double angleDeg)
     {
-        // In der Praxis typische Bogenwinkel nach VSA-Kontext.
-        ReadOnlySpan<double> standards = stackalloc double[] { 15, 30, 45, 90 };
-        double best = standards[0];
-        double bestDelta = Math.Abs(angleDeg - best);
-        for (int i = 1; i < standards.Length; i++)
+        // Typische Bogenwinkel nach VSA/EN 13508-2 (vollstaendige Liste)
+        ReadOnlySpan<double> standards = stackalloc double[] { 15, 30, 45, 60, 90, 120, 135, 150 };
+        // Nur snappen wenn der Winkel innerhalb ±5° eines Standardwerts liegt
+        const double snapTolerance = 5.0;
+        double best = angleDeg; // Kein Snap als Default
+        double bestDelta = snapTolerance;
+        for (int i = 0; i < standards.Length; i++)
         {
-            double candidate = standards[i];
-            double delta = Math.Abs(angleDeg - candidate);
+            double delta = Math.Abs(angleDeg - standards[i]);
             if (delta < bestDelta)
             {
-                best = candidate;
+                best = standards[i];
                 bestDelta = delta;
             }
         }
@@ -608,11 +610,18 @@ public sealed class OverlayToolService : IOverlayToolService
 
         if (Math.Abs(D) < 1e-10)
         {
-            // Punkte sind kollinear — Fallback: Mittelpunkt der aeussersten Punkte
-            center = new NormalizedPoint((ax + bx + cx) / 3.0, (ay + by + cy) / 3.0);
+            // Punkte sind kollinear — Fallback: Mittelpunkt der laengsten Strecke
             double d1 = Math.Sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay));
             double d2 = Math.Sqrt((cx - bx) * (cx - bx) + (cy - by) * (cy - by));
             double d3 = Math.Sqrt((ax - cx) * (ax - cx) + (ay - cy) * (ay - cy));
+
+            // Die zwei Punkte mit dem groessten Abstand bilden den Durchmesser
+            if (d1 >= d2 && d1 >= d3)
+                center = new NormalizedPoint((ax + bx) / 2.0, (ay + by) / 2.0);
+            else if (d2 >= d1 && d2 >= d3)
+                center = new NormalizedPoint((bx + cx) / 2.0, (by + cy) / 2.0);
+            else
+                center = new NormalizedPoint((ax + cx) / 2.0, (ay + cy) / 2.0);
             radiusNorm = Math.Max(d1, Math.Max(d2, d3)) / 2.0;
         }
         else

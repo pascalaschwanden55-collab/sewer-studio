@@ -21,9 +21,10 @@ public enum SchemaPhase
 /// <summary>Typ des Schema-Overlays.</summary>
 public enum SchemaType
 {
-    PipeBend,      // Winkel-Schablone (°)
-    FillLevel,     // Fuellstand-Zunge (% Querschnitt)
-    Intrusion      // Einragung BAI (% Querschnittsreduktion)
+    PipeBend,        // Winkel-Schablone (°)
+    FillLevel,       // Fuellstand-Zunge (% Querschnitt)
+    Intrusion,       // Einragung BAI (% Querschnittsreduktion)
+    PipeDirection    // Bogen-Werkzeug: 2 Ellipsen → Richtungswechsel
 }
 
 /// <summary>
@@ -323,17 +324,8 @@ public sealed class FillLevelSchema : SchemaOverlayBase
     }
 
     /// <summary>Berechnet den Kreissegment-Anteil (%) fuer gegebene Fuellhoehe.</summary>
-    private static double CircleSegmentPercent(double hRatio)
-    {
-        // h = Fuellhoehe relativ zum Durchmesser (0..1)
-        // theta = 2 * arccos(1 - 2h)
-        // A_segment / A_circle = (theta - sin(theta)) / (2*pi)
-        double h = Math.Clamp(hRatio, 0, 1);
-        if (h <= 0) return 0;
-        if (h >= 1) return 100;
-        double theta = 2.0 * Math.Acos(1.0 - 2.0 * h);
-        return (theta - Math.Sin(theta)) / (2.0 * Math.PI) * 100.0;
-    }
+    private static double CircleSegmentPercent(double hRatio) =>
+        OverlayToolService.CircleSegmentPercent(hRatio);
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -473,6 +465,186 @@ public sealed class IntrusionSchema : SchemaOverlayBase
         return (
             new NormalizedPoint(PipeCenter.X + Math.Cos(radL) * PipeRadius, PipeCenter.Y + Math.Sin(radL) * PipeRadius),
             new NormalizedPoint(PipeCenter.X + Math.Cos(radR) * PipeRadius, PipeCenter.Y + Math.Sin(radR) * PipeRadius));
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 4. PipeDirection: Bogen-Werkzeug (2 Ellipsen → Richtungswechsel)
+// ═══════════════════════════════════════════════════════════════════
+
+/// <summary>
+/// Bogen/Knick-Werkzeug: Zwei ovale Ringe zeigen die Rohrachse
+/// an zwei Positionen. Der Winkel zwischen den Ellipsen-Zentren
+/// ergibt den Richtungswechsel.
+///
+/// Klick 1: Erste Ellipse (bei Rohrverbindung) — Rohr vor dem Bogen
+/// Klick 2: Zweite Ellipse (weiter vorne)      — Rohr nach dem Bogen
+/// Handles: center1/center2 (verschieben), radiusX1/radiusY1, radiusX2/radiusY2 (Ovalform)
+///
+/// Ergebnis: Winkel in Grad + Richtung des Richtungswechsels.
+/// </summary>
+public sealed class PipeDirectionSchema : SchemaOverlayBase
+{
+    private enum PlaceStep { First, Second }
+    private PlaceStep _step = PlaceStep.First;
+
+    // Erste Ellipse (bei Rohrverbindung)
+    public NormalizedPoint Center1 { get; set; } = new(0.5, 0.5);
+    public double RadiusX1 { get; set; } = 0.12;
+    public double RadiusY1 { get; set; } = 0.12;
+
+    // Zweite Ellipse (weiter im Rohr)
+    public NormalizedPoint Center2 { get; set; } = new(0.5, 0.35);
+    public double RadiusX2 { get; set; } = 0.08;
+    public double RadiusY2 { get; set; } = 0.08;
+
+    /// <summary>Berechneter Winkel in Grad.</summary>
+    public double AngleDeg => CalculateAngle();
+
+    public override void Place(NormalizedPoint clickPos)
+    {
+        if (_step == PlaceStep.First)
+        {
+            Center1 = clickPos;
+            // Initiale Groesse relativ zum Rohr
+            RadiusX1 = PipeRadius * 0.9;
+            RadiusY1 = PipeRadius * 0.9;
+            _step = PlaceStep.Second;
+            Phase = SchemaPhase.Placing; // Noch nicht fertig
+        }
+        else
+        {
+            Center2 = clickPos;
+            // Zweite Ellipse kleiner (weiter weg = perspektivisch kleiner)
+            RadiusX2 = PipeRadius * 0.55;
+            RadiusY2 = PipeRadius * 0.55;
+            _step = PlaceStep.First;
+            Phase = SchemaPhase.Adjusting;
+        }
+    }
+
+    /// <summary>True wenn der erste Klick gesetzt ist und der zweite erwartet wird.</summary>
+    public bool IsWaitingForSecondClick => _step == PlaceStep.Second;
+
+    public override IReadOnlyList<SchemaHandle> GetHandles()
+    {
+        return new[]
+        {
+            // Zentren verschieben
+            new SchemaHandle("center1", Center1, "SizeAll"),
+            new SchemaHandle("center2", Center2, "SizeAll"),
+            // Ellipse 1: Breite/Hoehe
+            new SchemaHandle("rx1", new NormalizedPoint(Center1.X + RadiusX1, Center1.Y), "SizeWE"),
+            new SchemaHandle("ry1", new NormalizedPoint(Center1.X, Center1.Y + RadiusY1), "SizeNS"),
+            // Ellipse 2: Breite/Hoehe
+            new SchemaHandle("rx2", new NormalizedPoint(Center2.X + RadiusX2, Center2.Y), "SizeWE"),
+            new SchemaHandle("ry2", new NormalizedPoint(Center2.X, Center2.Y + RadiusY2), "SizeNS"),
+        };
+    }
+
+    public override void DragHandle(string handleId, NormalizedPoint mousePos)
+    {
+        switch (handleId)
+        {
+            case "center1": Center1 = mousePos; break;
+            case "center2": Center2 = mousePos; break;
+            case "rx1":
+                RadiusX1 = Math.Clamp(Math.Abs(mousePos.X - Center1.X), 0.02, 0.45);
+                break;
+            case "ry1":
+                RadiusY1 = Math.Clamp(Math.Abs(mousePos.Y - Center1.Y), 0.02, 0.45);
+                break;
+            case "rx2":
+                RadiusX2 = Math.Clamp(Math.Abs(mousePos.X - Center2.X), 0.02, 0.45);
+                break;
+            case "ry2":
+                RadiusY2 = Math.Clamp(Math.Abs(mousePos.Y - Center2.Y), 0.02, 0.45);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Baut die Geometrie ohne den Phase-Zustand zu aendern.
+    /// Wird fuer Preview/Rendering verwendet (BuildCodingSchemaGeometry).
+    /// </summary>
+    public OverlayGeometry BuildGeometry()
+    {
+        return new OverlayGeometry
+        {
+            ToolType = OverlayToolType.PipeDirection,
+            Points = new List<NormalizedPoint>
+            {
+                // Ellipse 1: Zentrum + RadiusX + RadiusY (als Punkte kodiert)
+                Center1,
+                new(Center1.X + RadiusX1, Center1.Y + RadiusY1),
+                // Ellipse 2: Zentrum + RadiusX + RadiusY
+                Center2,
+                new(Center2.X + RadiusX2, Center2.Y + RadiusY2),
+            },
+            ArcDegrees = Math.Round(AngleDeg, 1)
+        };
+    }
+
+    public override OverlayGeometry Confirm()
+    {
+        Phase = SchemaPhase.Confirmed;
+        return BuildGeometry();
+    }
+
+    public override void Reset()
+    {
+        RadiusX1 = PipeRadius * 0.9;
+        RadiusY1 = PipeRadius * 0.9;
+        RadiusX2 = PipeRadius * 0.55;
+        RadiusY2 = PipeRadius * 0.55;
+        _step = PlaceStep.First;
+    }
+
+    public override string ResultLabel => $"{AngleDeg:F0}°";
+
+    /// <summary>
+    /// Winkel aus der Verschiebung der Ellipsen-Zentren berechnen.
+    /// Die Verschiebung relativ zur Verbindungslinie ergibt den Richtungswechsel.
+    ///
+    /// Geometrie: Wenn Ellipse 2 gegenueber Ellipse 1 seitlich verschoben ist,
+    /// zeigt das einen Richtungswechsel an. Der Winkel wird aus der Verschiebung
+    /// relativ zum Abstand der Zentren berechnet.
+    /// </summary>
+    private double CalculateAngle()
+    {
+        double dx = Center2.X - Center1.X;
+        double dy = Center2.Y - Center1.Y;
+        double dist = Math.Sqrt(dx * dx + dy * dy);
+        if (dist < 0.01) return 0;
+
+        // Bildmitte als Referenz-Achse (Kamera schaut geradeaus)
+        double refX = PipeCenter.X;
+        double refY = PipeCenter.Y;
+
+        // Vektor von Ellipse 1 zum Bild-Zentrum
+        double v1x = refX - Center1.X;
+        double v1y = refY - Center1.Y;
+        double v1len = Math.Sqrt(v1x * v1x + v1y * v1y);
+
+        // Vektor von Ellipse 1 zu Ellipse 2
+        double v2x = Center2.X - Center1.X;
+        double v2y = Center2.Y - Center1.Y;
+        double v2len = Math.Sqrt(v2x * v2x + v2y * v2y);
+
+        if (v1len < 0.01 || v2len < 0.01) return 0;
+
+        // Winkel zwischen den Vektoren
+        double dot = (v1x * v2x + v1y * v2y) / (v1len * v2len);
+        dot = Math.Clamp(dot, -1.0, 1.0);
+        double angleRad = Math.Acos(dot);
+
+        // Ovalitaet als zusaetzlicher Indikator:
+        // Stark ovale Ellipsen = groesserer Blickwinkel
+        double ovalFactor1 = Math.Max(RadiusX1, RadiusY1) / Math.Max(Math.Min(RadiusX1, RadiusY1), 0.01);
+        double ovalFactor2 = Math.Max(RadiusX2, RadiusY2) / Math.Max(Math.Min(RadiusX2, RadiusY2), 0.01);
+        double ovalBoost = 1.0 + (ovalFactor1 + ovalFactor2 - 2.0) * 0.15;
+
+        return Math.Round(angleRad * 180.0 / Math.PI * ovalBoost, 1);
     }
 }
 

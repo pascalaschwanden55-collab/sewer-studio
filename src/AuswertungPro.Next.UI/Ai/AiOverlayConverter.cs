@@ -97,7 +97,7 @@ public static class AiOverlayConverter
 
             // BBox normieren
             double x1 = 0, y1 = 0, x2 = 1, y2 = 1;
-            if (mask.Bbox.Count >= 4 && samResponse.ImageWidth > 0)
+            if (mask.Bbox.Count >= 4 && samResponse.ImageWidth > 0 && samResponse.ImageHeight > 0)
             {
                 x1 = mask.Bbox[0] / samResponse.ImageWidth;
                 y1 = mask.Bbox[1] / samResponse.ImageHeight;
@@ -117,8 +117,8 @@ public static class AiOverlayConverter
                 Q2Mm = quantified.WidthMm,
             };
 
-            // Ablagerung/Wasser → Level-Overlay
-            if (quantified.CrossSectionReductionPercent is > 0)
+            // Ablagerung/Wasser → Level-Overlay (Schwelle >= 5% um Rauschen/Artefakte zu filtern)
+            if (quantified.CrossSectionReductionPercent is >= 5)
             {
                 geo.FillPercent = quantified.CrossSectionReductionPercent;
                 geo.ToolType = OverlayToolType.Level;

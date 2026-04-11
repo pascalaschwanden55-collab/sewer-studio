@@ -532,6 +532,7 @@ public partial class PlayerWindow : Window
         if (e.Key == Key.P)
         {
             _player.SetPause(true);
+            _codingAnalysisCts?.Cancel();
             e.Handled = true;
             return;
         }
@@ -602,7 +603,12 @@ public partial class PlayerWindow : Window
     private void TogglePlayPause()
     {
         EnsurePlaying();
-        _player.SetPause(_player.IsPlaying);
+        var willPause = _player.IsPlaying;
+        _player.SetPause(willPause);
+
+        // Laufende KI-Analyse abbrechen wenn pausiert wird
+        if (willPause)
+            _codingAnalysisCts?.Cancel();
     }
 
     private void EnsurePlaying()
@@ -2038,10 +2044,11 @@ public partial class PlayerWindow : Window
 
             // Uhrzeiger-Position aus Overlay-Zentrum berechnen
             string? clockPos = null;
+            double avgX = 0.5, avgY = 0.5;
             if (overlay.Points.Count > 0)
             {
-                var avgX = overlay.Points.Average(p => p.X);
-                var avgY = overlay.Points.Average(p => p.Y);
+                avgX = overlay.Points.Average(p => p.X);
+                avgY = overlay.Points.Average(p => p.Y);
                 var cx = 0.5; var cy = 0.5; // Rohrmitte (normalisiert)
                 var dx = avgX - cx;
                 var dy = avgY - cy;
@@ -2051,6 +2058,9 @@ public partial class PlayerWindow : Window
                 if (hour == 0) hour = 12;
                 clockPos = hour.ToString();
             }
+
+            // SAM-Segmentierung an der markierten Stelle anzeigen
+            await ShowSamPreviewAtMarkAsync(overlay, avgX, avgY);
 
             // Training speichern: Frame + YOLO-Export + TeacherAnnotation + CodingEvent
             bool saved = await SaveMarkAsTrainingAsync(overlay, timestampSec, clockPos);
@@ -2075,6 +2085,70 @@ public partial class PlayerWindow : Window
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[PlayerWindow] HandleMarkDrawingComplete error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Zeigt eine SAM-Segmentierung als Vorschau an der markierten Stelle.
+    /// Der User sieht sofort die Konturen des Objekts das die KI dort erkennt.
+    /// </summary>
+    private async Task ShowSamPreviewAtMarkAsync(OverlayGeometry overlay, double normX, double normY)
+    {
+        if (_codingVisionClient == null) return;
+
+        try
+        {
+            // Snapshot fuer SAM
+            var pngBytes = await CaptureSnapshotAsync();
+            if (pngBytes == null || pngBytes.Length == 0) return;
+
+            var b64 = Convert.ToBase64String(pngBytes);
+
+            // Bild-Aufloesung schaetzen (SAM braucht Pixel-Koordinaten)
+            // Standardmaessig 640x480, wird vom Sidecar sowieso skaliert
+            int imgW = 640, imgH = 480;
+
+            // BBox aus Overlay berechnen (normiert → Pixel)
+            double minX = overlay.Points.Min(p => p.X) * imgW;
+            double minY = overlay.Points.Min(p => p.Y) * imgH;
+            double maxX = overlay.Points.Max(p => p.X) * imgW;
+            double maxY = overlay.Points.Max(p => p.Y) * imgH;
+
+            // Punkt-Prompt (Mittelpunkt der Markierung) + BBox als Hint
+            var pointPrompts = new[] { new Ai.Pipeline.SamPointPrompt(normX * imgW, normY * imgH, 1) };
+            var boxes = new[] { new Ai.Pipeline.SamBoundingBox(minX, minY, maxX, maxY, "mark", 1.0) };
+
+            int dn = _codingOverlayService?.Calibration?.NominalDiameterMm ?? 300;
+            var samReq = new Ai.Pipeline.SamRequest(b64, boxes, pointPrompts, dn);
+            var samResp = await _codingVisionClient.SegmentSamAsync(samReq);
+
+            if (samResp?.Masks.Count > 0)
+            {
+                // Alte Masken entfernen, SAM-Vorschau rendern (Cyan = manuell markiert)
+                Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+
+                // Quantifizierung fuer Label-Anzeige
+                var quantified = new List<Ai.Pipeline.MaskQuantificationService.QuantifiedMask>();
+                var cal = _codingOverlayService?.Calibration;
+                foreach (var mask in samResp.Masks)
+                {
+                    var q = cal != null
+                        ? Ai.Pipeline.MaskQuantificationService.Quantify(mask, samResp.ImageWidth, samResp.ImageHeight, dn, cal)
+                        : Ai.Pipeline.MaskQuantificationService.Quantify(mask, samResp.ImageWidth, samResp.ImageHeight, dn);
+                    quantified.Add(q);
+                }
+
+                Ai.Pipeline.SamMaskRenderer.RenderMasks(
+                    CodingOverlayCanvas,
+                    samResp,
+                    quantified,
+                    CodingOverlayCanvas.ActualWidth,
+                    CodingOverlayCanvas.ActualHeight);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PlayerWindow] SAM-Vorschau Fehler: {ex.Message}");
         }
     }
 
@@ -3346,10 +3420,17 @@ public partial class PlayerWindow : Window
 
     // --- Coding Werkzeuge ---
 
-    // Vereinfachte Werkzeuge: nur Kalibrieren + Rechteck (Rest im PhotoAssistant)
-    // Rechteck nutzt ActivateMarkTool → nach Zeichnen oeffnet sich automatisch der Code-Katalog
     private void CodingToolRect_Click(object sender, RoutedEventArgs e)
         => ActivateMarkTool(OverlayToolType.Rectangle, "Markieren");
+
+    private void CodingToolBend_Click(object sender, RoutedEventArgs e)
+        => SetCodingTool(sender, OverlayToolType.PipeDirection, SchemaType.PipeDirection);
+
+    private void CodingToolLevel_Click(object sender, RoutedEventArgs e)
+        => SetCodingTool(sender, OverlayToolType.Level, SchemaType.FillLevel, LevelMode.Water);
+
+    private void CodingToolIntrusion_Click(object sender, RoutedEventArgs e)
+        => SetCodingTool(sender, OverlayToolType.Level, SchemaType.Intrusion, LevelMode.Obstacle);
 
     private string? _activeCodingToolName;
 
@@ -3386,6 +3467,20 @@ public partial class PlayerWindow : Window
         _codingVm.CurrentOverlay = null;
         BtnCodingCreateEvent.IsEnabled = false;
         UpdateCodingOverlayInfo(null);
+
+        // Overlay-Canvas oeffnen/schliessen je nach Aktivierung
+        if (activate && !CodingOverlayPopup.IsOpen)
+        {
+            _player.SetPause(true);
+            CodingOverlayPopup.IsOpen = true;
+            UpdateCodingOverlayViewport();
+            CodingOverlayCanvas.IsHitTestVisible = true;
+        }
+        else if (!activate && CodingOverlayPopup.IsOpen)
+        {
+            CodingOverlayPopup.IsOpen = false;
+        }
+
         UpdateCodingOverlayCursor();
         RedrawCodingCanvas(includeManualOverlay: false);
     }
@@ -3550,7 +3645,7 @@ public partial class PlayerWindow : Window
 
         if (_codingSchemaManager.Active is PipeDirectionSchema pipeDir)
         {
-            return pipeDir.Confirm();
+            return pipeDir.BuildGeometry();
         }
 
         return null;
@@ -4273,6 +4368,10 @@ public partial class PlayerWindow : Window
 
             case PipeDirectionSchema pipeDir:
             {
+                var pipeDirectionOverlay = BuildCodingSchemaGeometry();
+                if (pipeDirectionOverlay != null)
+                    RenderPipeDirectionOverlay(pipeDirectionOverlay, true, glowEffect, "overlay_preview");
+
                 // Zwei Ellipsen + Verbindungslinie + Winkel-Label
                 var stroke1 = new SolidColorBrush(Color.FromRgb(0, 200, 255));   // Cyan
                 var stroke2 = new SolidColorBrush(Color.FromRgb(255, 165, 0));   // Orange
@@ -4572,40 +4671,98 @@ public partial class PlayerWindow : Window
         double rx2 = Math.Abs(corner2.X - c2.X);
         double ry2 = Math.Abs(corner2.Y - c2.Y);
 
-        var cyan = new SolidColorBrush(Color.FromRgb(0, 200, 255));
-        var orange = new SolidColorBrush(Color.FromRgb(255, 165, 0));
+        var colorStart = Color.FromRgb(0, 200, 255);
+        var colorEnd = Color.FromRgb(255, 165, 0);
 
-        var e1 = new System.Windows.Shapes.Ellipse
+        static Point LerpPoint(Point a, Point b, double t)
+            => new(a.X + (b.X - a.X) * t, a.Y + (b.Y - a.Y) * t);
+        static double Lerp(double a, double b, double t)
+            => a + (b - a) * t;
+        static Color LerpColor(Color a, Color b, double t)
+            => Color.FromRgb(
+                (byte)Math.Clamp((int)Math.Round(a.R + (b.R - a.R) * t), 0, 255),
+                (byte)Math.Clamp((int)Math.Round(a.G + (b.G - a.G) * t), 0, 255),
+                (byte)Math.Clamp((int)Math.Round(a.B + (b.B - a.B) * t), 0, 255));
+
+        double axisDx = c2.X - c1.X;
+        double axisDy = c2.Y - c1.Y;
+        double axisLen = Math.Sqrt(axisDx * axisDx + axisDy * axisDy);
+        int ringCount = Math.Clamp((int)Math.Round(axisLen / 30.0), 4, 12);
+
+        var spine = new System.Windows.Shapes.Line
         {
-            Width = rx1 * 2, Height = ry1 * 2,
-            Stroke = cyan, StrokeThickness = 2,
-            StrokeDashArray = new DoubleCollection { 5, 3 },
-            Fill = new SolidColorBrush(Color.FromArgb(25, 0, 200, 255)),
-            Effect = glowEffect, Tag = tag
+            X1 = c1.X,
+            Y1 = c1.Y,
+            X2 = c2.X,
+            Y2 = c2.Y,
+            Stroke = new SolidColorBrush(Color.FromArgb(180, 255, 255, 255)),
+            StrokeThickness = 1.6,
+            StrokeDashArray = new DoubleCollection { 4, 3 },
+            Effect = glowEffect,
+            Tag = tag
         };
-        Canvas.SetLeft(e1, c1.X - rx1);
-        Canvas.SetTop(e1, c1.Y - ry1);
-        CodingOverlayCanvas.Children.Add(e1);
+        CodingOverlayCanvas.Children.Add(spine);
 
-        var e2 = new System.Windows.Shapes.Ellipse
+        if (axisLen > 0.5)
         {
-            Width = rx2 * 2, Height = ry2 * 2,
-            Stroke = orange, StrokeThickness = 2,
-            StrokeDashArray = new DoubleCollection { 5, 3 },
-            Fill = new SolidColorBrush(Color.FromArgb(25, 255, 165, 0)),
-            Effect = glowEffect, Tag = tag
-        };
-        Canvas.SetLeft(e2, c2.X - rx2);
-        Canvas.SetTop(e2, c2.Y - ry2);
-        CodingOverlayCanvas.Children.Add(e2);
+            double nx = -axisDy / axisLen;
+            double ny = axisDx / axisLen;
+            double off1 = Math.Max(2.0, Math.Min(rx1, ry1) * 0.55);
+            double off2 = Math.Max(2.0, Math.Min(rx2, ry2) * 0.55);
 
-        CodingOverlayCanvas.Children.Add(new System.Windows.Shapes.Line
+            var leftRail = new System.Windows.Shapes.Line
+            {
+                X1 = c1.X + nx * off1,
+                Y1 = c1.Y + ny * off1,
+                X2 = c2.X + nx * off2,
+                Y2 = c2.Y + ny * off2,
+                Stroke = new SolidColorBrush(Color.FromArgb(120, 255, 255, 255)),
+                StrokeThickness = 1.1,
+                StrokeDashArray = new DoubleCollection { 3, 3 },
+                Effect = glowEffect,
+                Tag = tag
+            };
+            var rightRail = new System.Windows.Shapes.Line
+            {
+                X1 = c1.X - nx * off1,
+                Y1 = c1.Y - ny * off1,
+                X2 = c2.X - nx * off2,
+                Y2 = c2.Y - ny * off2,
+                Stroke = new SolidColorBrush(Color.FromArgb(120, 255, 255, 255)),
+                StrokeThickness = 1.1,
+                StrokeDashArray = new DoubleCollection { 3, 3 },
+                Effect = glowEffect,
+                Tag = tag
+            };
+            CodingOverlayCanvas.Children.Add(leftRail);
+            CodingOverlayCanvas.Children.Add(rightRail);
+        }
+
+        for (int i = 0; i <= ringCount; i++)
         {
-            X1 = c1.X, Y1 = c1.Y, X2 = c2.X, Y2 = c2.Y,
-            Stroke = Brushes.White, StrokeThickness = 1.5,
-            StrokeDashArray = new DoubleCollection { 6, 3 },
-            Effect = glowEffect, Tag = tag
-        });
+            double t = ringCount == 0 ? 0 : i / (double)ringCount;
+            var center = LerpPoint(c1, c2, t);
+            double ringRx = Math.Max(2.0, Lerp(rx1, rx2, t));
+            double ringRy = Math.Max(2.0, Lerp(ry1, ry2, t));
+            var ringColor = LerpColor(colorStart, colorEnd, t);
+
+            var ring = new System.Windows.Shapes.Ellipse
+            {
+                Width = ringRx * 2,
+                Height = ringRy * 2,
+                Stroke = new SolidColorBrush(Color.FromArgb(240, ringColor.R, ringColor.G, ringColor.B)),
+                StrokeThickness = i == 0 || i == ringCount ? 2.6 : 1.8,
+                Fill = new SolidColorBrush(Color.FromArgb(24, ringColor.R, ringColor.G, ringColor.B)),
+                Effect = glowEffect,
+                Tag = tag
+            };
+            if (isPreview && i % 2 == 1)
+                ring.StrokeDashArray = new DoubleCollection { 4, 2 };
+
+            Canvas.SetLeft(ring, center.X - ringRx);
+            Canvas.SetTop(ring, center.Y - ringRy);
+            CodingOverlayCanvas.Children.Add(ring);
+        }
 
         if (overlay.ArcDegrees.HasValue)
         {
@@ -5051,7 +5208,7 @@ public partial class PlayerWindow : Window
         var parts = new List<string>();
 
         // Werkzeug-spezifische Anzeige
-        if (overlay.ToolType == OverlayToolType.PipeBend)
+        if (overlay.ToolType is OverlayToolType.PipeBend or OverlayToolType.PipeDirection)
         {
             if (overlay.ArcDegrees.HasValue) parts.Add($"Winkel:{overlay.ArcDegrees:F1}\u00B0");
             if (overlay.ClockFrom.HasValue) parts.Add($"Uhr:{overlay.ClockFrom:F1}");
@@ -5135,7 +5292,9 @@ public partial class PlayerWindow : Window
                     entry.CodeMeta.Parameters["vsa.q1"] = _codingVm.CurrentOverlay.Q1Mm.Value.ToString("F1");
                 if (_codingVm.CurrentOverlay.Q2Mm.HasValue)
                     entry.CodeMeta.Parameters["vsa.q2"] = _codingVm.CurrentOverlay.Q2Mm.Value.ToString("F1");
-                if (_codingVm.CurrentOverlay.ArcDegrees.HasValue && _codingVm.CurrentOverlay.ToolType == OverlayToolType.PipeBend)
+                if (_codingVm.CurrentOverlay.ArcDegrees.HasValue
+                    && (_codingVm.CurrentOverlay.ToolType == OverlayToolType.PipeBend
+                        || _codingVm.CurrentOverlay.ToolType == OverlayToolType.PipeDirection))
                     entry.CodeMeta.Parameters["vsa.winkel"] = _codingVm.CurrentOverlay.ArcDegrees.Value.ToString("F1");
                 if (_codingVm.CurrentOverlay.FillPercent.HasValue)
                 {
@@ -5180,15 +5339,21 @@ public partial class PlayerWindow : Window
 
                 var createdEvent = _codingSessionService!.AddEvent(entry, _codingVm.CurrentOverlay);
 
-                // Manuell codiert: Noch nicht bestaetigt — User muss "Akzeptieren" klicken.
-                // Erst wenn alles gruen ist, stimmen die Daten fuer das KI-Training.
+                // Manuell codiert = direkt akzeptiert (User hat selbst entschieden)
                 createdEvent.AiContext = new CodingEventAiContext
                 {
                     SuggestedCode = entry.Code,
                     Confidence = 1.0,
-                    Reason = "Manuell codiert — bitte bestaetigen",
-                    Decision = CodingUserDecision.Ignored
+                    Reason = "Manuell codiert",
+                    Decision = CodingUserDecision.Accepted
                 };
+
+                // Sperrliste: KI soll diesen Befund nicht erneut melden
+                _rejectedFindings.Add(MakeRejectionKey(entry.Code, entry.MeterStart ?? 0));
+
+                // KI-Overlays raeumen — manuell codiert heisst erledigt
+                Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+                DetectionCanvas.Children.Clear();
 
                 RefreshCodingEventsList();
                 LstCodingEvents.SelectedItem = createdEvent;
@@ -5236,7 +5401,9 @@ public partial class PlayerWindow : Window
                 entry.CodeMeta.Parameters["vsa.q1"] = _codingVm.CurrentOverlay.Q1Mm.Value.ToString("F1");
             if (_codingVm.CurrentOverlay.Q2Mm.HasValue)
                 entry.CodeMeta.Parameters["vsa.q2"] = _codingVm.CurrentOverlay.Q2Mm.Value.ToString("F1");
-            if (_codingVm.CurrentOverlay.ArcDegrees.HasValue && _codingVm.CurrentOverlay.ToolType == OverlayToolType.PipeBend)
+            if (_codingVm.CurrentOverlay.ArcDegrees.HasValue
+                && (_codingVm.CurrentOverlay.ToolType == OverlayToolType.PipeBend
+                    || _codingVm.CurrentOverlay.ToolType == OverlayToolType.PipeDirection))
                 entry.CodeMeta.Parameters["vsa.winkel"] = _codingVm.CurrentOverlay.ArcDegrees.Value.ToString("F1");
             if (_codingVm.CurrentOverlay.FillPercent.HasValue)
             {
@@ -5254,15 +5421,21 @@ public partial class PlayerWindow : Window
 
         var manualEvent = _codingSessionService!.AddEvent(entry, _codingVm.CurrentOverlay);
 
-        // Manuell codiert: Noch nicht bestaetigt — User muss "Akzeptieren" klicken.
-        // Erst wenn alles gruen ist, stimmen die Daten fuer das KI-Training.
+        // Manuell codiert = direkt akzeptiert (User hat selbst entschieden)
         manualEvent.AiContext = new CodingEventAiContext
         {
             SuggestedCode = entry.Code,
             Confidence = 1.0,
-            Reason = "Manuell codiert — bitte bestaetigen",
-            Decision = CodingUserDecision.Ignored
+            Reason = "Manuell codiert",
+            Decision = CodingUserDecision.Accepted
         };
+
+        // Sperrliste: KI soll diesen Befund nicht erneut melden
+        _rejectedFindings.Add(MakeRejectionKey(entry.Code, entry.MeterStart ?? 0));
+
+        // KI-Overlays raeumen — manuell codiert heisst erledigt
+        Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+        DetectionCanvas.Children.Clear();
 
         // Nach Meter sortiert anzeigen
         RefreshCodingEventsList();
@@ -5643,6 +5816,10 @@ public partial class PlayerWindow : Window
 
     private void CodingEvents_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        // Vorheriges vergroessertes Item zuruecksetzen (nicht wenn Maske die Selektion steuert)
+        if (!_enlargeSuppressShrink)
+            ShrinkEnlargedListItem();
+
         if (LstCodingEvents.SelectedItem is CodingEvent ev)
         {
             if (_codingVm != null) _codingVm.SelectedDefect = ev;
@@ -5699,8 +5876,6 @@ public partial class PlayerWindow : Window
             TxtInlineDetailConfidence.Text = $"{conf * 100:F0}%";
             TxtInlineDetailConfidence.Foreground =
                 ViewModels.Windows.CodingSessionViewModel.GetConfidenceBrush(conf);
-            BtnInlineAccept.Visibility = Visibility.Visible;
-            BtnInlineReject.Visibility = Visibility.Visible;
         }
         else
         {
@@ -5708,9 +5883,11 @@ public partial class PlayerWindow : Window
             TxtInlineDetailConfidence.Foreground =
                 new System.Windows.Media.SolidColorBrush(
                     System.Windows.Media.Color.FromRgb(0x94, 0xA3, 0xB8));
-            BtnInlineAccept.Visibility = Visibility.Collapsed;
-            BtnInlineReject.Visibility = Visibility.Collapsed;
         }
+
+        // Accept/Reject immer verfuegbar — auch fuer manuell erstellte Events
+        BtnInlineAccept.Visibility = Visibility.Visible;
+        BtnInlineReject.Visibility = Visibility.Visible;
 
         var status = ViewModels.Windows.CodingSessionViewModel.GetDefectStatus(ev);
         TxtInlineDetailStatus.Text = CodingStatusToDisplayText(status);
@@ -5821,13 +5998,37 @@ public partial class PlayerWindow : Window
 
     private void CodingAcceptDefect_Click(object sender, RoutedEventArgs e)
     {
+        ShrinkEnlargedListItem();
+
+        // Fallback: wenn kein SelectedDefect, aber ListBox hat Auswahl → uebernehmen
+        if (_codingVm?.SelectedDefect == null && LstCodingEvents.SelectedItem is CodingEvent fallback)
+            _codingVm!.SelectedDefect = fallback;
+
         _codingVm?.AcceptDefectCommand.Execute(null);
         if (_codingVm?.SelectedDefect != null)
         {
-            UpdateCodingDefectDetailPanel(_codingVm.SelectedDefect);
+            var ev = _codingVm.SelectedDefect;
+
+            // Auf Sperrliste setzen → wird bei naechster Analyse nicht erneut erkannt
+            _rejectedFindings.Add(MakeRejectionKey(ev.Entry.Code, ev.MeterAtCapture));
+
+            // ALLE Overlays komplett raeumen — Befund ist erledigt
+            CodingOverlayCanvas.Children.Clear();
+            DetectionCanvas.Children.Clear();
+            DetectionOverlayGrid.Visibility = Visibility.Collapsed;
+            _currentMmResult = null;
+            _previewMmResult = null;
+
+            // Positiv-Feedback speichern (gleich wie O auf Maske)
+            var label = ev.AiContext?.Reason ?? ev.Entry.Code ?? "";
+            _ = Task.Run(() => SavePositiveFeedbackAsync(label, ev.Entry.Code, ev.MeterAtCapture));
+
+            UpdateCodingDefectDetailPanel(ev);
             RefreshCodingEventsList();
-            // Overlay kurz gruen blinken lassen, dann entfernen
-            FadeOutAiOverlayAfterAction();
+
+            // Wenn Pausenmodus → Video weiter
+            if (BtnCodingPauseMode.IsChecked == true)
+                ResumeAfterPause();
         }
     }
 
@@ -5885,8 +6086,23 @@ public partial class PlayerWindow : Window
 
     private void CodingRejectDefect_Click(object sender, RoutedEventArgs e)
     {
+        ShrinkEnlargedListItem();
         var ev = _codingVm?.SelectedDefect ?? LstCodingEvents.SelectedItem as CodingEvent;
         if (ev == null || _codingVm == null) return;
+
+        // Auf Sperrliste setzen → wird bei naechster Analyse nicht erneut erkannt
+        _rejectedFindings.Add(MakeRejectionKey(ev.Entry.Code, ev.MeterAtCapture));
+
+        // ALLE Overlays komplett raeumen
+        CodingOverlayCanvas.Children.Clear();
+        DetectionCanvas.Children.Clear();
+        DetectionOverlayGrid.Visibility = Visibility.Collapsed;
+        _currentMmResult = null;
+        _previewMmResult = null;
+
+        // Negativ-Feedback speichern (gleich wie Delete auf Maske)
+        var label = ev.AiContext?.Reason ?? ev.Entry.Code ?? "";
+        _ = Task.Run(() => SaveNegativeFeedbackAsync(label, ev.Entry.Code, ev.MeterAtCapture));
 
         // Ablehnen = Eintrag komplett entfernen (nicht nur Status setzen)
         _codingSessionService?.RemoveEvent(ev.EventId);
@@ -5894,7 +6110,10 @@ public partial class PlayerWindow : Window
         _codingVm.SelectedDefect = null;
         CodingDefectDetailPanel.Visibility = Visibility.Collapsed;
         RefreshCodingEventsList();
-        FadeOutAiOverlayAfterAction();
+
+        // Wenn keine Masken mehr sichtbar → Video weiter (gleich wie Delete auf Maske)
+        if (BtnCodingPauseMode.IsChecked == true && !HasVisibleMasks())
+            ResumeAfterPause();
     }
 
     /// <summary>Defekt-Detail-Panel mit Werten des ausgewaehlten Events befuellen.</summary>
@@ -6608,25 +6827,30 @@ public partial class PlayerWindow : Window
                 SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
                     $"Schritt 3 von 4: SAM-Masken ({mmResult.DinoDetections.Count} Befunde)", pulse: true);
 
-                // Masken und Labels auf Canvas rendern
-                ShowMultiModelResults(mmResult);
+                // ── Zentrale Filterung: EIN Ort fuer alle Entscheidungen ──
+                // 1. Events erstellen (filtert: VSA-Code, Sperrliste, Kunststoff, Dedup, Zone)
+                // 2. acceptedIndices = nur Masken die ein Event bekommen haben
+                // 3. Rendering: akzeptierte farbig, Rest grau (Vorschau)
+                var acceptedIndices = AddMultiModelFindingsAsEvents(mmResult, captureTimestampSec);
+                ShowMultiModelResults(mmResult, acceptedIndices);
 
+                int nearCount = _currentMmResult?.QuantifiedMasks.Count ?? 0;
+                int farCount = _previewMmResult?.QuantifiedMasks.Count ?? 0;
                 SetCodingAiState(
-                    $"{mmResult.DinoDetections.Count} Befunde erkannt",
-                    Color.FromRgb(0x22, 0xC5, 0x5E),
+                    nearCount > 0
+                        ? $"{nearCount} Befunde erkannt" + (farCount > 0 ? $" ({farCount} in Tiefe)" : "")
+                        : "Kein Schaden in Reichweite" + (farCount > 0 ? $" ({farCount} in Tiefe)" : ""),
+                    nearCount > 0 ? Color.FromRgb(0x22, 0xC5, 0x5E) : Color.FromRgb(0x94, 0xA3, 0xB8),
                     $"YOLO {mmResult.YoloTimeMs:F0}ms | DINO {mmResult.DinoTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms");
 
-                // Events erstellen
-                AddMultiModelFindingsAsEvents(mmResult, captureTimestampSec);
-
-                // Pausenmodus: Video pausieren wenn Befunde erkannt und Modus aktiv
-                if (BtnCodingPauseMode.IsChecked == true && mmResult.HasDetections)
+                // Pausenmodus: nur wenn tatsaechlich nahe Befunde erkannt
+                if (BtnCodingPauseMode.IsChecked == true && nearCount > 0)
                 {
                     _player?.SetPause(true);
                     SetCodingAiState(
-                        $"{mmResult.DinoDetections.Count} Befunde — pausiert zum Pruefen",
-                        Color.FromRgb(0x38, 0xBD, 0xF8),  // Blau = Pause
-                        "Delete = Befund loeschen | Leertaste = weiter");
+                        $"{nearCount} Befunde — pausiert zum Pruefen",
+                        Color.FromRgb(0x38, 0xBD, 0xF8),
+                        "Delete = Befund loeschen | O = OK | Leertaste = weiter");
                 }
                 return;
             }
@@ -6691,25 +6915,76 @@ public partial class PlayerWindow : Window
     /// </summary>
     /// <summary>Aktuelles Multi-Model-Ergebnis fuer Klick-Interaktion.</summary>
     private Ai.Pipeline.SingleFrameResult? _currentMmResult;
+    /// <summary>Ferne Detektionen (innerhalb Rohrkreis) — grau als Vorschau angezeigt.</summary>
+    private Ai.Pipeline.SingleFrameResult? _previewMmResult;
 
-    private void ShowMultiModelResults(Ai.Pipeline.SingleFrameResult mmResult)
+    /// <param name="mmResult">Analyse-Ergebnis (ungefiltert).</param>
+    /// <param name="acceptedIndices">Masken-Indices die ein Event bekommen haben (null = VSA-Code-Filter).</param>
+    private void ShowMultiModelResults(Ai.Pipeline.SingleFrameResult mmResult, HashSet<int>? acceptedIndices = null)
     {
-        _currentMmResult = mmResult;
+        // Masken aufteilen: akzeptierte (nah) vs. verworfene (fern/ungueltig)
+        var validIndices = new List<int>();
+        var rejectedIndices = new List<int>();
+        for (int i = 0; i < mmResult.QuantifiedMasks.Count; i++)
+        {
+            bool accepted = acceptedIndices != null
+                ? acceptedIndices.Contains(i)
+                : Ai.VsaCodeResolver.InferCodeFromLabel(mmResult.QuantifiedMasks[i].Label) != null;
+
+            if (accepted) validIndices.Add(i);
+            else rejectedIndices.Add(i);
+        }
+
+        // Akzeptierte Masken als Haupt-Ergebnis
+        Ai.Pipeline.SingleFrameResult FilterByIndices(List<int> indices)
+        {
+            var fq = indices.Select(i => mmResult.QuantifiedMasks[i]).ToList();
+            var fd = indices.Where(i => i < mmResult.DinoDetections.Count)
+                .Select(i => mmResult.DinoDetections[i]).ToList();
+            var fs = mmResult.SamResponse != null
+                ? new Ai.Pipeline.SamResponse(
+                    indices.Where(i => i < mmResult.SamResponse.Masks.Count)
+                        .Select(i => mmResult.SamResponse.Masks[i]).ToList(),
+                    mmResult.SamResponse.ImageWidth, mmResult.SamResponse.ImageHeight,
+                    mmResult.SamResponse.InferenceTimeMs)
+                : mmResult.SamResponse;
+            return new Ai.Pipeline.SingleFrameResult(
+                mmResult.IsRelevant, fd, fs, fq,
+                mmResult.YoloTimeMs, mmResult.DinoTimeMs, mmResult.SamTimeMs, mmResult.Error);
+        }
+
+        var nearResult = validIndices.Count < mmResult.QuantifiedMasks.Count
+            ? FilterByIndices(validIndices) : mmResult;
+        _currentMmResult = nearResult;
+        _previewMmResult = rejectedIndices.Count > 0 ? FilterByIndices(rejectedIndices) : null;
 
         // Alte Masken entfernen
         Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
 
-        // SAM-Masken rendern (farbig nach Schadenstyp, klickbar)
-        if (mmResult.SamResponse != null)
+        // SAM-Masken rendern: nahe Befunde farbig + klickbar
+        if (nearResult.SamResponse != null && nearResult.QuantifiedMasks.Count > 0)
         {
             Ai.Pipeline.SamMaskRenderer.RenderMasks(
                 CodingOverlayCanvas,
-                mmResult.SamResponse,
-                mmResult.QuantifiedMasks,
+                nearResult.SamResponse,
+                nearResult.QuantifiedMasks,
                 CodingOverlayCanvas.ActualWidth,
                 CodingOverlayCanvas.ActualHeight,
                 onMaskClicked: OnMaskOverlayClicked,
                 onMaskDeleted: OnMaskOverlayDeleted);
+        }
+
+        // Ferne Befunde (innerhalb Rohrkreis) grau + gedimmt rendern (Vorschau)
+        if (_previewMmResult?.SamResponse != null && _previewMmResult.QuantifiedMasks.Count > 0)
+        {
+            Ai.Pipeline.SamMaskRenderer.RenderMasks(
+                CodingOverlayCanvas,
+                _previewMmResult.SamResponse,
+                _previewMmResult.QuantifiedMasks,
+                CodingOverlayCanvas.ActualWidth,
+                CodingOverlayCanvas.ActualHeight,
+                previewMode: true,
+                indexOffset: nearResult.QuantifiedMasks.Count);
         }
 
         // Kalibrierkreis anzeigen
@@ -6719,6 +6994,17 @@ public partial class PlayerWindow : Window
 
     /// <summary>Aktuell selektierte Maske (Klick auf Overlay).</summary>
     private int _selectedMaskIndex = -1;
+
+    /// <summary>
+    /// Sperrliste: vom Benutzer abgelehnte Befunde (Code + Meter-Bereich).
+    /// Verhindert dass die Auto-Analyse denselben Befund erneut einfuegt.
+    /// Wird pro Session gefuehrt, Reset bei neuem Video.
+    /// </summary>
+    private readonly HashSet<string> _rejectedFindings = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Erzeugt einen Sperrlisten-Key: Code + gerundeter Meterstand (±0.5m Toleranz).</summary>
+    private static string MakeRejectionKey(string? vsaCode, double meter)
+        => $"{vsaCode ?? "?"}@{Math.Round(meter * 2) / 2:F1}";  // Auf 0.5m runden
 
     /// <summary>Maske angeklickt — selektieren, hervorheben, Befundliste synchronisieren.</summary>
     private void OnMaskOverlayClicked(int maskIndex)
@@ -6763,50 +7049,134 @@ public partial class PlayerWindow : Window
         return afterIndex; // Nur eine Maske uebrig
     }
 
-    /// <summary>Selektierte Maske visuell hervorheben (dickere Kontur, andere duenner).</summary>
+    /// <summary>Selektierte Maske visuell hervorheben (dickere Kontur, Blink-Animation, andere gedimmt).</summary>
     private void HighlightSelectedMask(int selectedIndex)
     {
+        var selectedTag = $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{selectedIndex}";
+
         foreach (var el in CodingOverlayCanvas.Children.OfType<System.Windows.Shapes.Path>())
         {
             if (el.Tag is not string tag || !tag.StartsWith(Ai.Pipeline.SamMaskRenderer.MaskTag))
                 continue;
-            if (el.Stroke is null) continue; // Fill-Path, nicht Kontur
 
-            bool isSelected = tag == $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{selectedIndex}";
-            el.StrokeThickness = isSelected ? 4 : 2;
-            el.Opacity = isSelected ? 1.0 : 0.5;
-        }
+            bool isSelected = tag == selectedTag;
 
-        // Auch Fill-Opacity anpassen
-        foreach (var el in CodingOverlayCanvas.Children.OfType<System.Windows.Shapes.Path>())
-        {
-            if (el.Tag is not string tag || !tag.StartsWith(Ai.Pipeline.SamMaskRenderer.MaskTag))
-                continue;
-            if (el.Stroke is not null) continue; // Kontur, nicht Fill
+            if (el.Stroke is not null)
+            {
+                // Kontur-Path
+                el.StrokeThickness = isSelected ? 5 : 2;
+                el.Opacity = isSelected ? 1.0 : 0.4;
+            }
+            else
+            {
+                // Fill-Path
+                el.Opacity = isSelected ? 1.0 : 0.2;
+            }
 
-            bool isSelected = tag == $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{selectedIndex}";
-            el.Opacity = isSelected ? 1.0 : 0.3;
+            // Blink-Animation auf selektierter Maske
+            el.BeginAnimation(UIElement.OpacityProperty, null); // Alte Animation stoppen
+            if (isSelected)
+            {
+                var blink = new System.Windows.Media.Animation.DoubleAnimation
+                {
+                    From = 1.0,
+                    To = 0.3,
+                    Duration = TimeSpan.FromMilliseconds(300),
+                    AutoReverse = true,
+                    RepeatBehavior = new System.Windows.Media.Animation.RepeatBehavior(2)
+                };
+                el.BeginAnimation(UIElement.OpacityProperty, blink);
+            }
         }
     }
 
-    /// <summary>Synchronisiert die Befundliste (LstCodingEvents) mit der selektierten Maske.</summary>
+    /// <summary>Synchronisiert die Befundliste (LstCodingEvents) mit der selektierten Maske — mit Flash-Animation.</summary>
     private void SyncBefundListeToMask(int maskIndex, string? vsaCode)
     {
         if (LstCodingEvents.Items.Count == 0 || string.IsNullOrEmpty(vsaCode)) return;
 
         // Suche den Event in der Liste der zum Maske-Code passt
-        // Events sind in derselben Reihenfolge wie Masken erstellt
         for (int i = LstCodingEvents.Items.Count - 1; i >= 0; i--)
         {
             if (LstCodingEvents.Items[i] is not CodingEvent ev) continue;
             if (string.Equals(ev.Entry.Code, vsaCode, StringComparison.OrdinalIgnoreCase)
                 || (ev.Entry.Code?.StartsWith(vsaCode, StringComparison.OrdinalIgnoreCase) == true))
             {
+                _enlargeSuppressShrink = true;
                 LstCodingEvents.SelectedIndex = i;
                 LstCodingEvents.ScrollIntoView(LstCodingEvents.Items[i]);
+                _enlargeSuppressShrink = false;
+
+                // Ballon-Effekt: vergroessert bis abgehandelt oder anderes Event gewaehlt
+                EnlargeListItem(i);
                 return;
             }
         }
+    }
+
+    /// <summary>Aktuell vergroessertes ListBox-Item (bleibt gross bis abgehandelt oder anderes gewaehlt).</summary>
+    private System.Windows.Controls.ListBoxItem? _enlargedListItem;
+    /// <summary>Unterdrueckt Shrink in SelectionChanged wenn Maske die Selektion steuert.</summary>
+    private bool _enlargeSuppressShrink;
+
+    /// <summary>Vergroessert ein ListBox-Item persistent (Ballon-Effekt) + blauer Hintergrund.</summary>
+    private void EnlargeListItem(int index)
+    {
+        // Vorheriges zuruecksetzen
+        ShrinkEnlargedListItem();
+
+        if (index < 0 || index >= LstCodingEvents.Items.Count) return;
+
+        // Container holen — ggf. erst nach ScrollIntoView verfuegbar
+        LstCodingEvents.UpdateLayout();
+        var container = LstCodingEvents.ItemContainerGenerator
+            .ContainerFromIndex(index) as System.Windows.Controls.ListBoxItem;
+        if (container == null) return;
+
+        _enlargedListItem = container;
+
+        // Hintergrund blau — deutlich sichtbar
+        container.Background = new SolidColorBrush(Color.FromRgb(0x38, 0xBD, 0xF8));
+        container.FontWeight = System.Windows.FontWeights.Bold;
+
+        // Vergroessern mit Animation: 1.0 → 1.18 (deutlich sichtbar)
+        container.RenderTransformOrigin = new System.Windows.Point(0.0, 0.5); // Links verankert
+        container.RenderTransform = new ScaleTransform(1.0, 1.0);
+        var grow = new System.Windows.Media.Animation.DoubleAnimation
+        {
+            To = 1.18,
+            Duration = TimeSpan.FromMilliseconds(250),
+            EasingFunction = new System.Windows.Media.Animation.CubicEase
+                { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
+        };
+        ((ScaleTransform)container.RenderTransform).BeginAnimation(ScaleTransform.ScaleXProperty, grow);
+        ((ScaleTransform)container.RenderTransform).BeginAnimation(ScaleTransform.ScaleYProperty, grow);
+    }
+
+    /// <summary>Setzt das vergroesserte ListBox-Item auf Normalgroesse zurueck.</summary>
+    private void ShrinkEnlargedListItem()
+    {
+        if (_enlargedListItem == null) return;
+
+        // Hintergrund und Schrift zuruecksetzen
+        _enlargedListItem.ClearValue(System.Windows.Controls.Control.BackgroundProperty);
+        _enlargedListItem.ClearValue(System.Windows.Controls.Control.FontWeightProperty);
+
+        // Zurueckschrumpfen mit Animation
+        if (_enlargedListItem.RenderTransform is ScaleTransform st)
+        {
+            var shrink = new System.Windows.Media.Animation.DoubleAnimation
+            {
+                To = 1.0,
+                Duration = TimeSpan.FromMilliseconds(150),
+                EasingFunction = new System.Windows.Media.Animation.CubicEase
+                    { EasingMode = System.Windows.Media.Animation.EasingMode.EaseIn }
+            };
+            st.BeginAnimation(ScaleTransform.ScaleXProperty, shrink);
+            st.BeginAnimation(ScaleTransform.ScaleYProperty, shrink);
+        }
+
+        _enlargedListItem = null;
     }
 
     /// <summary>Delete auf Maske (via Maus-Callback) — weiterleiten an zentrale Methode.</summary>
@@ -6815,7 +7185,10 @@ public partial class PlayerWindow : Window
         DeleteMaskAtIndex(maskIndex);
     }
 
-    /// <summary>Verwirft eine Maske: visuell entfernen + Negativ-Feedback + ggf. Video weiter.</summary>
+    /// <summary>
+    /// Verwirft eine Maske (Delete-Taste). Identische Funktion wie Ablehnen in der Befundliste:
+    /// Sperrliste, Event entfernen, SAM-Maske entfernen, Negativ-Feedback, ggf. Video weiter.
+    /// </summary>
     private void DeleteMaskAtIndex(int maskIndex)
     {
         if (_currentMmResult?.QuantifiedMasks is not { } masks || maskIndex >= masks.Count) return;
@@ -6824,7 +7197,18 @@ public partial class PlayerWindow : Window
         var vsaCode = Ai.VsaCodeResolver.InferCodeFromLabel(quant.Label);
         var meter = _codingVm?.CurrentMeter ?? 0;
 
-        // Visuell entfernen
+        // Auf Sperrliste setzen → wird nicht mehr erneut eingefuegt
+        _rejectedFindings.Add(MakeRejectionKey(vsaCode, meter));
+
+        // Zugehoeriges CodingEvent entfernen (gleicher Pfad wie Ablehnen in Befundliste)
+        RemoveMatchingCodingEvent(vsaCode, meter);
+        if (_codingVm != null)
+        {
+            _codingVm.SelectedDefect = null;
+            CodingDefectDetailPanel.Visibility = Visibility.Collapsed;
+        }
+
+        // SAM-Maske visuell entfernen
         Ai.Pipeline.SamMaskRenderer.RemoveMaskGroup(
             CodingOverlayCanvas, $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{maskIndex}");
 
@@ -6832,13 +7216,38 @@ public partial class PlayerWindow : Window
         _ = Task.Run(() => SaveNegativeFeedbackAsync(quant.Label, vsaCode, meter));
 
         _selectedMaskIndex = -1;
+        RefreshCodingEventsList();
 
         // Wenn keine Masken mehr sichtbar → Video weiter
         if (!HasVisibleMasks())
             ResumeAfterPause();
     }
 
-    /// <summary>Akzeptiert eine Maske: visuell entfernen + Positiv-Feedback + ggf. Video weiter.</summary>
+    /// <summary>Entfernt das CodingEvent das zum geloeschten Overlay gehoert.</summary>
+    private void RemoveMatchingCodingEvent(string? vsaCode, double meter)
+    {
+        if (_codingVm == null || string.IsNullOrEmpty(vsaCode)) return;
+
+        // Neueste Events zuerst (rueckwaerts suchen)
+        for (int i = _codingVm.Events.Count - 1; i >= 0; i--)
+        {
+            var ev = _codingVm.Events[i];
+            if (CodesMatchForDedup(ev.Entry.Code, vsaCode)
+                && Math.Abs((ev.MeterAtCapture) - meter) < 1.0)
+            {
+                _codingVm.Events.RemoveAt(i);
+                _codingSessionService?.ActiveSession?.Events.Remove(ev);
+                System.Diagnostics.Debug.WriteLine(
+                    $"[Sperrliste] CodingEvent entfernt: {ev.Entry.Code} @ {ev.MeterAtCapture:F1}m");
+                break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Akzeptiert eine Maske (O-Taste). Identische Funktion wie Akzeptieren in der Befundliste:
+    /// Decision=Accepted, Sperrliste, SAM-Maske entfernen, Positiv-Feedback, ggf. Video weiter.
+    /// </summary>
     private void AcceptMaskAtIndex(int maskIndex)
     {
         if (_currentMmResult?.QuantifiedMasks is not { } masks || maskIndex >= masks.Count) return;
@@ -6847,7 +7256,23 @@ public partial class PlayerWindow : Window
         var vsaCode = Ai.VsaCodeResolver.InferCodeFromLabel(quant.Label);
         var meter = _codingVm?.CurrentMeter ?? 0;
 
-        // Visuell entfernen
+        // Zugehoeriges CodingEvent finden und ueber ViewModel akzeptieren (gleicher Pfad wie Liste)
+        if (_codingVm != null && !string.IsNullOrEmpty(vsaCode))
+        {
+            var matchingEvent = _codingVm.Events.FirstOrDefault(e =>
+                CodesMatchForDedup(e.Entry.Code, vsaCode)
+                && Math.Abs(e.MeterAtCapture - meter) < 1.0);
+            if (matchingEvent != null)
+            {
+                _codingVm.SelectedDefect = matchingEvent;
+                _codingVm.AcceptDefectCommand.Execute(null);
+            }
+        }
+
+        // Auf Sperrliste setzen → wird bei naechster Analyse nicht erneut erkannt
+        _rejectedFindings.Add(MakeRejectionKey(vsaCode, meter));
+
+        // SAM-Maske visuell entfernen
         Ai.Pipeline.SamMaskRenderer.RemoveMaskGroup(
             CodingOverlayCanvas, $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{maskIndex}");
 
@@ -6855,10 +7280,32 @@ public partial class PlayerWindow : Window
         _ = Task.Run(() => SavePositiveFeedbackAsync(quant.Label, vsaCode, meter));
 
         _selectedMaskIndex = -1;
+        RefreshCodingEventsList();
 
         // Wenn keine Masken mehr sichtbar → Video weiter
         if (!HasVisibleMasks())
             ResumeAfterPause();
+    }
+
+    /// <summary>Entfernt ALLE SAM-Masken die zum gegebenen VSA-Code passen (Befundliste → Canvas-Sync).</summary>
+    private void RemoveMatchingSamMask(string? vsaCode, double meter)
+    {
+        if (_currentMmResult?.QuantifiedMasks is not { } masks || string.IsNullOrEmpty(vsaCode)) return;
+
+        // Alle Masken entfernen die zum gleichen VSA-Code aufloesen
+        // (z.B. "hole", "hole seal" → beide BAC)
+        for (int i = 0; i < masks.Count; i++)
+        {
+            var inferredCode = Ai.VsaCodeResolver.InferCodeFromLabel(masks[i].Label);
+            if (!string.Equals(inferredCode, vsaCode, StringComparison.OrdinalIgnoreCase)) continue;
+
+            var tag = $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{i}";
+            if (CodingOverlayCanvas.Children.OfType<FrameworkElement>()
+                .Any(e => tag.Equals(e.Tag as string)))
+            {
+                Ai.Pipeline.SamMaskRenderer.RemoveMaskGroup(CodingOverlayCanvas, tag);
+            }
+        }
     }
 
     /// <summary>Findet den Index der ersten noch sichtbaren Maske auf dem Canvas.</summary>
@@ -6881,14 +7328,162 @@ public partial class PlayerWindow : Window
             .Any(e => (e.Tag as string)?.StartsWith(Ai.Pipeline.SamMaskRenderer.MaskTag) == true);
     }
 
+    /// <summary>
+    /// Prueft ob eine DINO-Detektion in der Erkennungszone liegt (nah genug fuer zuverlaessige Segmentierung).
+    /// Nur aktiv wenn Kalibrierung vorliegt UND Kamera frontal ins Rohr schaut.
+    /// Bei abgeschwenkter Kamera oder ohne Kalibrierung → alles akzeptieren.
+    /// </summary>
+    private bool IsInsideDetectionZone(Ai.Pipeline.DinoDetectionDto? dino, int imgW, int imgH)
+    {
+        if (dino == null || imgW <= 0 || imgH <= 0) return true;
+
+        // Ohne Kalibrierung: kein Tiefenfilter — alles akzeptieren
+        // Bei abgeschwenkter Kamera wuerde ein statischer Kreis falsche Ergebnisse liefern
+        var cal = _codingOverlayService?.Calibration;
+        if (cal == null || cal.NormalizedDiameter <= 0) return true;
+
+        double centerX = cal.PipeCenter.X;
+        double centerY = cal.PipeCenter.Y;
+        double pipeRadius = cal.NormalizedDiameter / 2.0;
+
+        // BBox-Mittelpunkt normiert (0..1)
+        double cx = ((dino.X1 + dino.X2) / 2.0) / imgW;
+        double cy = ((dino.Y1 + dino.Y2) / 2.0) / imgH;
+
+        // Abstand vom Rohrmittelpunkt
+        double dx = cx - centerX;
+        double dy = cy - centerY;
+        double dist = Math.Sqrt(dx * dx + dy * dy);
+
+        // AUSSERHALB des Rohrkreises = nah an der Wand = zuverlaessig erkennbar
+        return dist > pipeRadius;
+    }
+
+    /// <summary>
+    /// Prueft ob die aktuelle Haltung ein Kunststoffrohr hat (PE, PVC, PP, GFK).
+    /// Kunststoffrohre sind dicht — Infiltration nur bei Begleitschaden moeglich.
+    /// </summary>
+    private bool IsKunststoffRohr()
+    {
+        var material = _haltungRecord?.GetFieldValue("Rohrmaterial") ?? "";
+        if (string.IsNullOrWhiteSpace(material)) return false;
+        var m = material.ToUpperInvariant();
+        return m.Contains("PE") || m.Contains("PVC") || m.Contains("PP")
+            || m.Contains("GFK") || m.Contains("KUNSTSTOFF") || m.Contains("PLASTIK")
+            || m.Contains("POLYETHYL") || m.Contains("POLYPROP") || m.Contains("POLYVINYL")
+            || m.Contains("HDPE") || m.Contains("FASERZ");
+    }
+
+    /// <summary>
+    /// Prueft ob in der Naehe (±2m) ein Strukturschaden (BA-Code) existiert.
+    /// BA = Riss, Bruch, Deformation, Versatz, defekte Verbindung.
+    /// Wenn ja, ist Infiltration auch bei Kunststoff plausibel.
+    /// </summary>
+    private bool HasNearbyStructuralDamage(double meter)
+    {
+        if (_codingVm == null) return false;
+        return _codingVm.Events.Any(e =>
+        {
+            var evCode = e.Entry.Code;
+            if (string.IsNullOrEmpty(evCode) || evCode.Length < 2) return false;
+            var prefix = evCode[..2].ToUpperInvariant();
+            return prefix == "BA" && Math.Abs(e.MeterAtCapture - meter) < 2.0;
+        });
+    }
+
     /// <summary>Setzt Video fort nach Pause (wenn Pausenmodus aktiv).</summary>
     private void ResumeAfterPause()
     {
         if (BtnCodingPauseMode.IsChecked == true && _player is not null)
         {
+            // 2s Cooldown: Kamera soll sich erst weiterbewegen bevor naechste Analyse
+            _codingIsAnalyzing = true;
             _player.SetPause(false);
             SetCodingAiState("Weiter...", Color.FromRgb(0x22, 0xC5, 0x5E),
                 "KI-Analyse mit Pause aktiv");
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(2000);
+                _codingIsAnalyzing = false;
+            });
+        }
+    }
+
+    /// <summary>Erzeugt FeedbackIngestionService mit optionalem KbManager fuer KB-Re-Indexierung.</summary>
+    private static Ai.SelfImproving.FeedbackIngestionService CreateFeedbackService(
+        Ai.KnowledgeBase.KnowledgeBaseContext db)
+    {
+        var logger = new Ai.QualityGate.ValidationLogger(db.Connection);
+        var weights = new Ai.QualityGate.WeightLearningService(db.Connection);
+
+        // KbManager optional - wenn Ollama offline, wird nur geloggt
+        Ai.KnowledgeBase.KnowledgeBaseManager? kbManager = null;
+        try
+        {
+            var cfg = Ai.Ollama.OllamaConfig.Load();
+            var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
+            var embedder = new Ai.KnowledgeBase.EmbeddingService(http, cfg);
+            kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(db, embedder);
+        }
+        catch { /* Ollama nicht verfuegbar - Feedback wird geloggt, KB-Update uebersprungen */ }
+
+        return new Ai.SelfImproving.FeedbackIngestionService(logger, weights, kbManager);
+    }
+
+    private static string ResolveFeedbackCode(string label, string? vsaCode)
+    {
+        if (!string.IsNullOrWhiteSpace(vsaCode))
+            return vsaCode.Trim().ToUpperInvariant();
+
+        var inferred = Ai.VsaCodeResolver.InferCodeFromLabel(label);
+        if (!string.IsNullOrWhiteSpace(inferred))
+            return inferred.Trim().ToUpperInvariant();
+
+        return label?.Trim() ?? string.Empty;
+    }
+
+    private static MappedProtocolEntry BuildFeedbackMappedEntry(string label, string resolvedCode, double meter)
+    {
+        var safeMeter = double.IsFinite(meter) ? meter : 0d;
+        var normalizedLabel = string.IsNullOrWhiteSpace(label) ? resolvedCode : label.Trim();
+        var codeHint = string.IsNullOrWhiteSpace(resolvedCode) ? null : resolvedCode;
+
+        var detection = new RawVideoDetection(
+            FindingLabel: normalizedLabel,
+            MeterStart: safeMeter,
+            MeterEnd: safeMeter,
+            Severity: "mid",
+            VsaCodeHint: codeHint);
+
+        return new MappedProtocolEntry(
+            Detection: detection,
+            SuggestedCode: codeHint,
+            Confidence: 1.0,
+            Reason: normalizedLabel,
+            Warnings: Array.Empty<string>(),
+            QualityGateResult: null,
+            Uncertainty: null);
+    }
+
+    private static async Task IngestFeedbackAsync(
+        string label,
+        string? vsaCode,
+        double meter,
+        bool accepted)
+    {
+        try
+        {
+            var resolvedCode = ResolveFeedbackCode(label, vsaCode);
+            var mapped = BuildFeedbackMappedEntry(label, resolvedCode, meter);
+            var finalCode = accepted ? resolvedCode : string.Empty;
+
+            using var db = new Ai.KnowledgeBase.KnowledgeBaseContext();
+            var feedback = CreateFeedbackService(db);
+            await feedback.ProcessFeedbackAsync(mapped, finalCode, accepted).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Feedback] Ingestion-Fehler: {ex.Message}");
         }
     }
 
@@ -6911,21 +7506,7 @@ public partial class PlayerWindow : Window
 
             var json = System.Text.Json.JsonSerializer.Serialize(entry);
             await System.IO.File.AppendAllTextAsync(feedbackPath, json + Environment.NewLine);
-
-            // ValidationLog aktualisieren
-            try
-            {
-                using var db = new Ai.KnowledgeBase.KnowledgeBaseContext();
-                var logger = new Ai.QualityGate.ValidationLogger(db.Connection);
-                logger.Log(
-                    vsaCode: vsaCode ?? label,
-                    suggestedCode: vsaCode ?? label,
-                    finalCode: vsaCode ?? label,  // Gleicher Code = korrekt
-                    wasCorrect: true,
-                    evidence: null);
-            }
-            catch { }
-
+            await IngestFeedbackAsync(label, vsaCode, meter, accepted: true).ConfigureAwait(false);
             Services.KnowledgeMirrorService.Current?.NotifyChanged();
         }
         catch (Exception ex)
@@ -6936,7 +7517,7 @@ public partial class PlayerWindow : Window
 
     /// <summary>
     /// Speichert ein Negativ-Feedback in der KB (ValidationLog).
-    /// Die KI lernt: bei diesem Label/Code war nichts — Fehlalarm.
+    /// Die KI lernt: bei diesem Label/Code war nichts - Fehlalarm.
     /// Wird asynchron im Hintergrund ausgefuehrt.
     /// </summary>
     private static async Task SaveNegativeFeedbackAsync(string label, string? vsaCode, double meter)
@@ -6953,26 +7534,12 @@ public partial class PlayerWindow : Window
                 vsaCode = vsaCode ?? "",
                 meter,
                 action = "deleted_by_user",
-                reason = "Fehlalarm — Benutzer hat Overlay geloescht"
+                reason = "Fehlalarm - Benutzer hat Overlay geloescht"
             };
 
             var json = System.Text.Json.JsonSerializer.Serialize(entry);
             await System.IO.File.AppendAllTextAsync(feedbackPath, json + Environment.NewLine);
-
-            // ValidationLog ebenfalls aktualisieren (wenn KB verfuegbar)
-            try
-            {
-                using var db = new Ai.KnowledgeBase.KnowledgeBaseContext();
-                var logger = new Ai.QualityGate.ValidationLogger(db.Connection);
-                logger.Log(
-                    vsaCode: vsaCode ?? label,
-                    suggestedCode: vsaCode ?? label,
-                    finalCode: "",          // Leer = "nichts da"
-                    wasCorrect: false,
-                    evidence: null);
-            }
-            catch { /* KB-Logging ist optional */ }
-
+            await IngestFeedbackAsync(label, vsaCode, meter, accepted: false).ConfigureAwait(false);
             Services.KnowledgeMirrorService.Current?.NotifyChanged();
         }
         catch (Exception ex)
@@ -6988,10 +7555,14 @@ public partial class PlayerWindow : Window
     /// Multi-Model Findings als CodingEvents — nutzt denselben Resolver-
     /// und Label-Pfad wie der Qwen/Enhanced-Pfad (ResolveFindingCodeForCoding, LookupVsaLabel).
     /// </summary>
-    private void AddMultiModelFindingsAsEvents(
+    /// <summary>
+    /// Erstellt Events und gibt die Masken-Indices zurueck die tatsaechlich ein Event bekommen haben.
+    /// </summary>
+    private HashSet<int> AddMultiModelFindingsAsEvents(
         Ai.Pipeline.SingleFrameResult mmResult, double captureTimestampSec)
     {
-        if (_codingVm == null || _codingSessionService == null) return;
+        var acceptedIndices = new HashSet<int>();
+        if (_codingVm == null || _codingSessionService == null) return acceptedIndices;
 
         double meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
         var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
@@ -7004,6 +7575,13 @@ public partial class PlayerWindow : Window
         {
             var quant = mmResult.QuantifiedMasks[i];
             var dino = i < mmResult.DinoDetections.Count ? mmResult.DinoDetections[i] : null;
+
+            // Erkennungszone: nur Detektionen AUSSERHALB des Rohrkreises (nah) auswerten
+            // Detektionen in der Tiefe (innerhalb Rohrkreis) → grau anzeigen, kein Event
+            int imgW = mmResult.SamResponse?.ImageWidth ?? 1;
+            int imgH = mmResult.SamResponse?.ImageHeight ?? 1;
+            if (!IsInsideDetectionZone(dino, imgW, imgH))
+                continue;
 
             // Gemeinsamer Resolver: DINO-Label → LiveFrameFinding → ResolveFindingCodeForCoding
             // So laeuft der Multi-Model-Pfad durch exakt denselben Code wie Qwen.
@@ -7030,6 +7608,29 @@ public partial class PlayerWindow : Window
                 System.Diagnostics.Debug.WriteLine(
                     $"[Multi-Model] Kein VSA-Code fuer Label='{quant.Label}' — uebersprungen");
                 continue;
+            }
+
+            // Sperrliste: vom Benutzer abgelehnte Befunde nicht erneut einfuegen
+            if (_rejectedFindings.Contains(MakeRejectionKey(code, meter)))
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[Multi-Model] Gesperrt: {code} @ {meter:F1}m (vom Benutzer geloescht)");
+                continue;
+            }
+
+            // Kunststoffrohr-Regel: Infiltration (BBF) und Bodeneindringung (BBD) sind
+            // bei intakten Kunststoffrohren physikalisch unmoeglich — das Rohr ist dicht.
+            // Nur wenn ein Strukturschaden (BA = Riss/Bruch/Versatz) in der Naehe ist,
+            // kann Wasser eindringen. Ohne Begleitschaden → Fehlalarm verwerfen.
+            if (code.StartsWith("BBF", StringComparison.OrdinalIgnoreCase)
+                || code.StartsWith("BBD", StringComparison.OrdinalIgnoreCase))
+            {
+                if (IsKunststoffRohr() && !HasNearbyStructuralDamage(meter))
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[Multi-Model] Kunststoff-Filter: {code} @ {meter:F1}m verworfen — kein Begleitschaden");
+                    continue;
+                }
             }
 
             var officialLabel = LookupVsaLabel(code);
@@ -7085,6 +7686,7 @@ public partial class PlayerWindow : Window
                         : CodingUserDecision.Ignored
                 };
 
+            acceptedIndices.Add(i);
             anyAdded = true;
         }
 
@@ -7093,6 +7695,8 @@ public partial class PlayerWindow : Window
             RefreshCodingEventsList();
             UpdateToolBadge();
         }
+
+        return acceptedIndices;
     }
 
     private IReadOnlyList<(string Code, string Description, double Meter)>? GatherImportContext()
@@ -7357,9 +7961,16 @@ public partial class PlayerWindow : Window
 
             if (code == null)
             {
-                // Kein VSA-Code ableitbar — Finding verwerfen
                 System.Diagnostics.Debug.WriteLine(
                     $"[KI-Filter] Verworfen: Label='{f.Label}' (kein VSA-Code ableitbar)");
+                continue;
+            }
+
+            // Sperrliste: vom Benutzer abgelehnte Befunde nicht erneut einfuegen
+            if (_rejectedFindings.Contains(MakeRejectionKey(code, currentMeter)))
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[KI-Filter] Gesperrt: {code} @ {currentMeter:F1}m (vom Benutzer geloescht)");
                 continue;
             }
 
@@ -7878,6 +8489,11 @@ public partial class PlayerWindow : Window
     {
         if (_codingPendingConfirmEvent != null)
         {
+            // Auf Sperrliste → wird bei naechster Analyse nicht erneut erkannt
+            _rejectedFindings.Add(MakeRejectionKey(
+                _codingPendingConfirmEvent.Entry.Code,
+                _codingPendingConfirmEvent.MeterAtCapture));
+
             _codingPendingConfirmEvent.AiContext!.Decision = CodingUserDecision.Rejected;
             // Event entfernen
             _codingSessionService?.RemoveEvent(_codingPendingConfirmEvent.EventId);
@@ -7941,8 +8557,8 @@ public partial class PlayerWindow : Window
             OverlayToolType.Rectangle => "Flaeche",
             OverlayToolType.Point => "Punkt",
             OverlayToolType.Stretch => "Strecke",
-            OverlayToolType.PipeBend => "Bogen",
-            OverlayToolType.PipeDirection => "Richtung",
+            OverlayToolType.PipeBend => "Winkel",
+            OverlayToolType.PipeDirection => "Bogen-Wurm",
             OverlayToolType.LateralCircle => "Anschluss",
             OverlayToolType.Level => _codingSchemaType switch
             {
@@ -8133,12 +8749,65 @@ public partial class PlayerWindow : Window
                     RenderPipeBendOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
                     break;
 
+                case OverlayToolType.PipeDirection:
+                    RenderPipeDirectionOverlay(geo, true, aiGlow, "ai_overlay");
+                    break;
+
                 case OverlayToolType.LateralCircle:
                     RenderLateralCircleOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
                     break;
 
                 case OverlayToolType.Ruler:
                     RenderRulerOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
+                    break;
+
+                case OverlayToolType.Level:
+                case OverlayToolType.CrossSection:
+                    RenderLevelOverlay(geo, true, aiGlow, "ai_overlay");
+                    break;
+
+                case OverlayToolType.Ellipse:
+                    if (geo.Points.Count >= 2)
+                    {
+                        // Punkte: Zentrum + Radius-Punkt
+                        double ecx = geo.Points[0].X * w;
+                        double ecy = geo.Points[0].Y * h;
+                        double erx = Math.Abs(geo.Points[1].X - geo.Points[0].X) * w;
+                        double ery = Math.Abs(geo.Points[1].Y - geo.Points[0].Y) * h;
+                        if (erx > 0 && ery > 0)
+                        {
+                            var ellipse = new System.Windows.Shapes.Ellipse
+                            {
+                                Width = erx * 2,
+                                Height = ery * 2,
+                                Stroke = stroke,
+                                StrokeThickness = 2.5,
+                                StrokeDashArray = new DoubleCollection { 5, 3 },
+                                Tag = "ai_overlay",
+                                Effect = aiGlow
+                            };
+                            Canvas.SetLeft(ellipse, ecx - erx);
+                            Canvas.SetTop(ellipse, ecy - ery);
+                            CodingOverlayCanvas.Children.Add(ellipse);
+                        }
+                    }
+                    break;
+
+                case OverlayToolType.Freehand:
+                    if (geo.Points.Count >= 2)
+                    {
+                        var polyline = new System.Windows.Shapes.Polyline
+                        {
+                            Stroke = stroke,
+                            StrokeThickness = 2.5,
+                            StrokeDashArray = new DoubleCollection { 5, 3 },
+                            Tag = "ai_overlay",
+                            Effect = aiGlow
+                        };
+                        foreach (var pt in geo.Points)
+                            polyline.Points.Add(new System.Windows.Point(pt.X * w, pt.Y * h));
+                        CodingOverlayCanvas.Children.Add(polyline);
+                    }
                     break;
             }
         }
