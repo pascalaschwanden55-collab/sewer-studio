@@ -178,7 +178,7 @@ namespace AuswertungPro.Next.UI
                 var kbHttp = new HttpClient { Timeout = ollamaConfig.RequestTimeout };
                 var kbCtx = new KnowledgeBaseContext();
                 var embedder = new EmbeddingService(kbHttp, ollamaConfig);
-                retrieval = new RetrievalService(kbCtx, embedder);
+                retrieval = new RetrievalService(kbCtx, embedder, Settings);
                 retrieval.CheckModelConsistency();
                 if (retrieval.HasModelMismatch)
                     Logger.LogWarning(

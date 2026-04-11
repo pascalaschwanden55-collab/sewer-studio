@@ -29,6 +29,10 @@ public static class MergeEngine
 
     public static MergeResult MergeRecord(HaltungRecord target, HaltungRecord source, FieldSource importSource, bool fillMissingOnly = false, ImportRunContext? ctx = null)
     {
+        // DryRun: auf Klon arbeiten damit das Original garantiert unveraendert bleibt
+        if (ctx?.DryRun == true)
+            target = target.DeepClone();
+
         var res = new MergeResult();
         var recordKey = (target.GetFieldValue("Haltungsname") ?? "").Trim();
 

@@ -98,6 +98,10 @@ public sealed class AppSettings
     public string? AiReferenceVisionModel { get; set; }
     public string? AiFfmpegPath { get; set; }
 
+    // Knowledge Base Retrieval-Schwellen (ueberschreibt Defaults wenn gesetzt)
+    public double? KbRetrievalMinSimilarity { get; set; }
+    public double? KbRetrievalHybridSimilarity { get; set; }
+
     // Brain-Mirror: Zweite Kopie aller KI-Daten auf separatem Laufwerk
     public string? BrainMirrorPath { get; set; }
 

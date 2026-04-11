@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace AuswertungPro.Next.Infrastructure.Devis;
 
@@ -11,10 +12,12 @@ public static class FormelEvaluator
     public static decimal Evaluate(string formel, Dictionary<string, decimal> variablen)
     {
         var expr = formel;
-        // Sort by key length descending to avoid partial replacements
+        // Wortgrenzen-basierte Ersetzung: verhindert dass "qty" in "quantity" ersetzt wird.
+        // Sortierung nach Laenge absteigend bleibt als zusaetzliche Sicherheit.
         foreach (var kv in variablen.OrderByDescending(x => x.Key.Length))
         {
-            expr = expr.Replace(kv.Key, kv.Value.ToString(CultureInfo.InvariantCulture));
+            var pattern = @"\b" + Regex.Escape(kv.Key) + @"\b";
+            expr = Regex.Replace(expr, pattern, kv.Value.ToString(CultureInfo.InvariantCulture));
         }
 
         return EvaluateExpression(expr.Trim());
@@ -98,7 +101,7 @@ public static class FormelEvaluator
             parts.Add((ParseNumber(current.Trim()), op));
 
         if (parts.Count == 0)
-            return 0;
+            throw new FormatException($"Ungueltiger Ausdruck: '{expr}' ergibt keine auswertbaren Terme.");
 
         decimal result = parts[0].value;
         for (int i = 1; i < parts.Count; i++)
@@ -122,6 +125,6 @@ public static class FormelEvaluator
     {
         if (decimal.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
             return d;
-        return 0;
+        throw new FormatException($"'{s}' ist kein gueltiger Zahlenwert.");
     }
 }

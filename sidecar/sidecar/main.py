@@ -4,6 +4,7 @@ Always-On Pipeline: YOLO + DINO + SAM werden beim Start permanent geladen.
 Kein Swap-Overhead — jeder Frame bekommt die volle CV-Pipeline.
 """
 
+import asyncio
 import logging
 import os
 import sys
@@ -24,7 +25,7 @@ except ImportError:
 
 from .config import settings
 from .gpu_manager import gpu_manager, ModelSlot
-from .routes import health, yolo, dino, sam, training
+from .routes import health, yolo, dino, sam, training, lora_training, pipe_axis
 
 logging.basicConfig(
     level=logging.INFO,
@@ -60,6 +61,30 @@ def _prewarm_sam() -> None:
         logger.warning("SAM pre-warm fehlgeschlagen: %s — wird lazy geladen", e)
 
 
+_VRAM_MONITOR_INTERVAL_SEC = int(os.environ.get("SEWER_SIDECAR_VRAM_MONITOR_INTERVAL", "30"))
+
+
+async def _vram_monitor_loop() -> None:
+    """Periodischer VRAM-Watermark-Check (alle 30s, konfigurierbar).
+
+    Loggt Warnungen bei Ueberschreitung der Schwellen (75% warning, 90% critical).
+    Laeuft als Background-Task waehrend der gesamten Sidecar-Laufzeit.
+    """
+    while True:
+        try:
+            await asyncio.sleep(_VRAM_MONITOR_INTERVAL_SEC)
+            status = gpu_manager.check_vram_health()
+            if status != "ok":
+                pct = gpu_manager.get_vram_utilization_percent()
+                logger.warning(
+                    "VRAM-Monitor: Status=%s (%.1f%% belegt)", status, pct
+                )
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.exception("VRAM-Monitor Fehler: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(
@@ -81,8 +106,22 @@ async def lifespan(app: FastAPI):
     elapsed = time.perf_counter() - t0
     logger.info("Pre-warm abgeschlossen in %.1fs", elapsed)
 
+    # ── VRAM-Watermark Monitor starten ──
+    monitor_task = asyncio.create_task(_vram_monitor_loop())
+    logger.info(
+        "VRAM-Monitor gestartet (Intervall: %ds, Warn: %.0f%%, Kritisch: %.0f%%)",
+        _VRAM_MONITOR_INTERVAL_SEC,
+        gpu_manager.VRAM_WARN_PERCENT,
+        gpu_manager.VRAM_ERROR_PERCENT,
+    )
+
     yield
 
+    monitor_task.cancel()
+    try:
+        await monitor_task
+    except asyncio.CancelledError:
+        pass
     logger.info("Sidecar shutting down — unloading all models ...")
     gpu_manager.unload_all()
 
@@ -100,6 +139,8 @@ app.include_router(yolo.router, tags=["yolo"])
 app.include_router(dino.router, tags=["dino"])
 app.include_router(sam.router, tags=["sam"])
 app.include_router(training.router, tags=["training"])
+app.include_router(lora_training.router, tags=["lora-training"])
+app.include_router(pipe_axis.router, tags=["pipe-axis"])
 
 # Video + Enhance Endpoints (Phase 2/3)
 try:

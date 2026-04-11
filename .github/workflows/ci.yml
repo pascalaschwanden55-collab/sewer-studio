@@ -1,0 +1,60 @@
+name: CI – Build & Test
+
+on:
+  push:
+    branches: [master, main, "feature/**"]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore AuswertungPro.sln
+
+      - name: Build (Release)
+        run: dotnet build AuswertungPro.sln -c Release --no-restore
+
+      - name: Run tests
+        run: dotnet test AuswertungPro.sln -c Release --no-build --verbosity normal --logger "trx;LogFileName=results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: "**/results.trx"
+
+  python-sidecar-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: sidecar
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install lint dependencies
+        run: pip install ruff
+
+      - name: Ruff check (lint)
+        run: ruff check .
+
+      - name: Ruff format check
+        run: ruff format --check .

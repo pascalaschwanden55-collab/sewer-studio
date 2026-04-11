@@ -40,6 +40,29 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// Erstellt eine tiefe Kopie (Fields + FieldMeta + VsaFindings).
+    /// Wird von MergeEngine.DryRun genutzt um das Original nicht zu veraendern.
+    /// </summary>
+    public HaltungRecord DeepClone()
+    {
+        var clone = new HaltungRecord { Id = Id, CreatedAtUtc = CreatedAtUtc, ModifiedAtUtc = ModifiedAtUtc };
+        clone.Fields = new Dictionary<string, string>(Fields, StringComparer.Ordinal);
+        clone.FieldMeta = new Dictionary<string, FieldMetadata>(FieldMeta.Count, StringComparer.Ordinal);
+        foreach (var (key, meta) in FieldMeta)
+        {
+            clone.FieldMeta[key] = new FieldMetadata
+            {
+                FieldName = meta.FieldName,
+                Source = meta.Source,
+                UserEdited = meta.UserEdited,
+                LastUpdatedUtc = meta.LastUpdatedUtc
+            };
+        }
+        clone.VsaFindings = VsaFindings.ToList();
+        return clone;
+    }
+
     public string GetFieldValue(string fieldName)
         => Fields.TryGetValue(fieldName, out var v) ? v ?? "" : "";
 

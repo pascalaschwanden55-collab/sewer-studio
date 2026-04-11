@@ -40,7 +40,10 @@ public sealed class OllamaClient : IDisposable
     {
         _ownsHttp = http is null;
         _http = http ?? new HttpClient();
-        _http.BaseAddress = baseUri;
+        // BaseAddress kann nur VOR dem ersten Request gesetzt werden.
+        // Bei wiederverwendeten HttpClients (Batch) ist sie schon gesetzt.
+        if (_http.BaseAddress is null)
+            _http.BaseAddress = baseUri;
         _keepAlive = keepAlive;
         _numCtx = numCtx;
         if (_ownsHttp)
@@ -103,20 +106,23 @@ public sealed class OllamaClient : IDisposable
     {
         try
         {
-            using var resp = await _http.GetAsync("/api/tags", ct).ConfigureAwait(false);
-            resp.EnsureSuccessStatusCode();
-            var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-            using var doc = JsonDocument.Parse(body);
-            var names = new List<string>();
-            if (doc.RootElement.TryGetProperty("models", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            return await _resiliencePipeline.ExecuteAsync(async token =>
             {
-                foreach (var m in arr.EnumerateArray())
+                using var resp = await _http.GetAsync("/api/tags", token).ConfigureAwait(false);
+                resp.EnsureSuccessStatusCode();
+                var body = await resp.Content.ReadAsStringAsync(token).ConfigureAwait(false);
+                using var doc = JsonDocument.Parse(body);
+                var names = new List<string>();
+                if (doc.RootElement.TryGetProperty("models", out var arr) && arr.ValueKind == JsonValueKind.Array)
                 {
-                    if (m.TryGetProperty("name", out var n) && n.ValueKind == JsonValueKind.String)
-                        names.Add(n.GetString()!);
+                    foreach (var m in arr.EnumerateArray())
+                    {
+                        if (m.TryGetProperty("name", out var n) && n.ValueKind == JsonValueKind.String)
+                            names.Add(n.GetString()!);
+                    }
                 }
-            }
-            return names;
+                return (IReadOnlyList<string>)names;
+            }, ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -136,20 +142,23 @@ public sealed class OllamaClient : IDisposable
     {
         try
         {
-            using var resp = await _http.GetAsync("/api/ps", ct).ConfigureAwait(false);
-            resp.EnsureSuccessStatusCode();
-            var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-            using var doc = JsonDocument.Parse(body);
-            var names = new List<string>();
-            if (doc.RootElement.TryGetProperty("models", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            return await _resiliencePipeline.ExecuteAsync(async token =>
             {
-                foreach (var m in arr.EnumerateArray())
+                using var resp = await _http.GetAsync("/api/ps", token).ConfigureAwait(false);
+                resp.EnsureSuccessStatusCode();
+                var body = await resp.Content.ReadAsStringAsync(token).ConfigureAwait(false);
+                using var doc = JsonDocument.Parse(body);
+                var names = new List<string>();
+                if (doc.RootElement.TryGetProperty("models", out var arr) && arr.ValueKind == JsonValueKind.Array)
                 {
-                    if (m.TryGetProperty("name", out var n) && n.ValueKind == JsonValueKind.String)
-                        names.Add(n.GetString()!);
+                    foreach (var m in arr.EnumerateArray())
+                    {
+                        if (m.TryGetProperty("name", out var n) && n.ValueKind == JsonValueKind.String)
+                            names.Add(n.GetString()!);
+                    }
                 }
-            }
-            return names;
+                return (IReadOnlyList<string>)names;
+            }, ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -177,14 +186,17 @@ public sealed class OllamaClient : IDisposable
         };
         try
         {
-            var json = JsonSerializer.Serialize(payload);
-            using var req = new HttpRequestMessage(HttpMethod.Post, "/api/generate")
+            await _resiliencePipeline.ExecuteAsync(async token =>
             {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
-            };
-            using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
-            System.Diagnostics.Debug.WriteLine(
-                $"[OllamaClient] UnloadModel {model}: {(int)resp.StatusCode}");
+                var json = JsonSerializer.Serialize(payload);
+                using var req = new HttpRequestMessage(HttpMethod.Post, "/api/generate")
+                {
+                    Content = new StringContent(json, Encoding.UTF8, "application/json")
+                };
+                using var resp = await _http.SendAsync(req, token).ConfigureAwait(false);
+                System.Diagnostics.Debug.WriteLine(
+                    $"[OllamaClient] UnloadModel {model}: {(int)resp.StatusCode}");
+            }, ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -198,22 +210,61 @@ public sealed class OllamaClient : IDisposable
     /// </summary>
     public async Task WarmupModelAsync(string model, int numCtx = 0, CancellationToken ct = default)
     {
-        var payload = new Dictionary<string, object?>
+        await _resiliencePipeline.ExecuteAsync(async token =>
         {
-            ["model"] = model,
-            ["prompt"] = "",
-            ["stream"] = false,
-            ["keep_alive"] = "-1"   // permanent im VRAM halten
-        };
-        if (numCtx > 0)
-            payload["options"] = new Dictionary<string, object> { ["num_ctx"] = numCtx };
-        var json = JsonSerializer.Serialize(payload);
-        using var req = new HttpRequestMessage(HttpMethod.Post, "/api/generate")
+            var payload = new Dictionary<string, object?>
+            {
+                ["model"] = model,
+                ["prompt"] = "",
+                ["stream"] = false,
+                ["keep_alive"] = "-1"   // permanent im VRAM halten
+            };
+            if (numCtx > 0)
+                payload["options"] = new Dictionary<string, object> { ["num_ctx"] = numCtx };
+            var json = JsonSerializer.Serialize(payload);
+            using var req = new HttpRequestMessage(HttpMethod.Post, "/api/generate")
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+            using var resp = await _http.SendAsync(req, token).ConfigureAwait(false);
+            resp.EnsureSuccessStatusCode();
+        }, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Stellt sicher dass ein Modell im VRAM geladen ist.
+    /// Prueft zuerst via /api/ps, laedt bei Bedarf via WarmupModelAsync.
+    /// Gibt true zurueck wenn das Modell bereit ist.
+    /// </summary>
+    public async Task<bool> EnsureModelLoadedAsync(string model, int numCtx = 0, CancellationToken ct = default)
+    {
+        try
         {
-            Content = new StringContent(json, Encoding.UTF8, "application/json")
-        };
-        using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
-        resp.EnsureSuccessStatusCode();
+            // 1. Pruefen ob schon geladen
+            var loaded = await ListLoadedModelsAsync(ct).ConfigureAwait(false);
+            foreach (var name in loaded)
+            {
+                // Vergleich ohne Tag-Suffix (z.B. "qwen3-vl:8b" passt auf "qwen3-vl:8b")
+                if (name.Equals(model, StringComparison.OrdinalIgnoreCase)
+                    || name.StartsWith(model.Split(':')[0], StringComparison.OrdinalIgnoreCase))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[OllamaClient] Modell {model} bereits geladen");
+                    return true;
+                }
+            }
+
+            // 2. Nicht geladen → Warmup (laedt ins VRAM)
+            System.Diagnostics.Debug.WriteLine($"[OllamaClient] Modell {model} wird geladen...");
+            await WarmupModelAsync(model, numCtx, ct).ConfigureAwait(false);
+            System.Diagnostics.Debug.WriteLine($"[OllamaClient] Modell {model} erfolgreich geladen");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[OllamaClient] EnsureModelLoaded fehlgeschlagen fuer {model}: {ex.Message}");
+            return false;
+        }
     }
 
     // ======================

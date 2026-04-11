@@ -135,6 +135,66 @@ public class MergeEngineDryRunTests
         Assert.Equal("300", (target.GetFieldValue("DN_mm") ?? "").Trim());
     }
 
+    [Fact]
+    public void DryRun_DoesNotMutateFieldMeta()
+    {
+        // Sicherstellen dass auch FieldMeta (Source, UserEdited) nicht veraendert wird
+        var target = CreateRecord("H1", new Dictionary<string, string>
+        {
+            ["Haltungsname"] = "H1",
+            ["DN_mm"] = "200"
+        });
+        // UserEdited=false, Source=Manual (Default)
+        var originalSource = target.FieldMeta["DN_mm"].Source;
+        var originalUserEdited = target.FieldMeta["DN_mm"].UserEdited;
+        var originalModified = target.ModifiedAtUtc;
+
+        var source = CreateRecord("H1", new Dictionary<string, string>
+        {
+            ["Haltungsname"] = "H1",
+            ["DN_mm"] = "400"
+        });
+
+        var log = new ImportRunLog();
+        var ctx = new ImportRunContext(CancellationToken.None, null, log, dryRun: true);
+
+        MergeEngine.MergeRecord(target, source, FieldSource.Xtf, ctx: ctx);
+
+        // Werte und Meta muessen komplett unveraendert sein
+        Assert.Equal("200", target.GetFieldValue("DN_mm"));
+        Assert.Equal(originalSource, target.FieldMeta["DN_mm"].Source);
+        Assert.Equal(originalUserEdited, target.FieldMeta["DN_mm"].UserEdited);
+        Assert.Equal(originalModified, target.ModifiedAtUtc);
+    }
+
+    [Fact]
+    public void DryRun_UserEditedFieldsCreateConflicts()
+    {
+        var target = CreateRecord("H1", new Dictionary<string, string>
+        {
+            ["Haltungsname"] = "H1",
+            ["DN_mm"] = "200"
+        });
+        // Simuliere User-Edit
+        target.SetFieldValue("DN_mm", "200", FieldSource.Manual, userEdited: true);
+
+        var source = CreateRecord("H1", new Dictionary<string, string>
+        {
+            ["Haltungsname"] = "H1",
+            ["DN_mm"] = "400"
+        });
+
+        var log = new ImportRunLog();
+        var ctx = new ImportRunContext(CancellationToken.None, null, log, dryRun: true);
+
+        var result = MergeEngine.MergeRecord(target, source, FieldSource.Xtf, ctx: ctx);
+
+        // Konflikt muss gezaehlt werden
+        Assert.True(result.Conflicts > 0);
+        // Wert darf nicht geaendert sein
+        Assert.Equal("200", target.GetFieldValue("DN_mm"));
+    }
+
     private static HaltungRecord CreateRecord(string key, Dictionary<string, string> fields)
     {
         var record = new HaltungRecord();
