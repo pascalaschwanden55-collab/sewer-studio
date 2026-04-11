@@ -1288,17 +1288,33 @@ public sealed class MultiModelAnalysisService
             "DetectionAggregator (NVDEC): {EventCount} aggregierte Schadensereignisse",
             aggregatedEventsNvdec.Count);
 
-        // TODO: Qwen-Klassifikation nur fuer aggregierte Peak-Frames (NVDEC-Pfad)
+        // ── Aggregierte Events in RawVideoDetections konvertieren (NVDEC-Pfad) ──
         foreach (var evt in aggregatedEventsNvdec)
         {
+            if (!evt.IsClassified && string.IsNullOrEmpty(evt.VsaCode))
+                evt.VsaCode = evt.YoloClassName;
+
+            detections.Add(new RawVideoDetection(
+                FindingLabel: evt.VsaCode ?? evt.YoloClassName,
+                MeterStart: evt.MeterStart,
+                MeterEnd: evt.MeterEnd,
+                Severity: (evt.Severity ?? 2).ToString(),
+                VsaCodeHint: evt.VsaCode,
+                PositionClock: evt.ClockPosition,
+                BboxX1: evt.PeakBbox?[0],
+                BboxY1: evt.PeakBbox?[1],
+                BboxX2: evt.PeakBbox?[2],
+                BboxY2: evt.PeakBbox?[3]
+            ));
+
             _logger.LogDebug(
-                "Aggregiertes Event (NVDEC): {Class} (ID={ClassId}), Peak={PeakConf:F2}, " +
+                "Aggregiertes Event (NVDEC): {Class} → {VsaCode}, Severity={Sev}, " +
                 "Meter={MeterStart:F1}-{MeterEnd:F1}, Frames={FrameCount}",
-                evt.YoloClassName, evt.YoloClassId, evt.PeakConfidence,
+                evt.YoloClassName, evt.VsaCode ?? "(n/a)", evt.Severity,
                 evt.MeterStart, evt.MeterEnd, evt.FrameCount);
         }
 
-        // Verbleibende aktive Findings: nur bestaetigte finalisieren
+        // Verbleibende aktive Findings: Steuercodes finalisieren
         foreach (var a in active.Values)
         {
             if (a.ShouldFinalize)
