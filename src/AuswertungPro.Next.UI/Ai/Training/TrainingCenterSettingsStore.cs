@@ -33,9 +33,17 @@ namespace AuswertungPro.Next.UI.Ai.Training
 
         public static async Task SaveAsync(TrainingCenterSettings settings)
         {
+            // B8 Fix: Atomic Write — Temp-Datei schreiben, dann umbenennen.
+            // Verhindert korrupte Settings bei Crash waehrend Serialize.
             var path = GetStorePath();
-            using var stream = File.Create(path);
-            await JsonSerializer.SerializeAsync(stream, settings, Application.Common.JsonDefaults.Indented);
+            var dir = Path.GetDirectoryName(path);
+            if (dir != null) Directory.CreateDirectory(dir);
+            var tmp = path + ".tmp";
+            using (var stream = File.Create(tmp))
+            {
+                await JsonSerializer.SerializeAsync(stream, settings, Application.Common.JsonDefaults.Indented);
+            }
+            File.Move(tmp, path, overwrite: true);
         }
     }
 }

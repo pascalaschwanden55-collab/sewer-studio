@@ -28,6 +28,9 @@ public sealed class YoloRetrainOrchestrator
     private readonly string _sidecarRootDir;
     private readonly Action<string>? _log;
 
+    // B3 Fix: Mutex verhindert parallele Retrains (VRAM-Konflikt + Manifest-Korruption)
+    private readonly SemaphoreSlim _retrainMutex = new(1, 1);
+
     public YoloRetrainOrchestrator(
         VisionPipelineClient sidecar,
         YoloDatasetExportService datasetExport,
@@ -50,6 +53,26 @@ public sealed class YoloRetrainOrchestrator
         int imageSize = 640,
         int batch = -1,
         CancellationToken ct = default)
+    {
+        if (!await _retrainMutex.WaitAsync(TimeSpan.FromSeconds(1), ct).ConfigureAwait(false))
+            return YoloRetrainResult.Skipped("Retraining laeuft bereits (Mutex belegt)");
+        try
+        {
+            return await RunIfEligibleCoreAsync(minNewApprovedSamples, epochs, imageSize, batch, ct)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            _retrainMutex.Release();
+        }
+    }
+
+    private async Task<YoloRetrainResult> RunIfEligibleCoreAsync(
+        int minNewApprovedSamples,
+        int epochs,
+        int imageSize,
+        int batch,
+        CancellationToken ct)
     {
         var modelDir = Path.Combine(_sidecarRootDir, "models", "yolo26m");
         Directory.CreateDirectory(modelDir);

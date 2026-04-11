@@ -287,20 +287,22 @@ async def train_lora(req: LoraTrainRequest) -> LoraTrainJobResponse:
                     detail=f"Training job already running: {_active_job_id}",
                 )
 
-    # Training-Guard: Verhindert parallele Inferenz waehrend LoRA-Training
+    # B4/B5 Fix: Guard + Lock atomar — verhindert Race und Deadlock bei Start-Fehler
     from ..models import yolo_wrapper
-    try:
-        yolo_wrapper.begin_training_guard(timeout_sec=0.1)
-    except Exception:
-        raise HTTPException(
-            status_code=409,
-            detail="Training oder Inferenz laeuft bereits — LoRA kann nicht starten",
-        )
 
     job_id = str(uuid.uuid4())
     state = _LoraJobState(job_id=job_id, status="queued", message="LoRA training queued")
 
     with _jobs_lock:
+        # Guard innerhalb des Locks — verhindert Race (B5)
+        try:
+            yolo_wrapper.begin_training_guard(timeout_sec=0.1)
+        except Exception:
+            raise HTTPException(
+                status_code=409,
+                detail="Training oder Inferenz laeuft bereits — LoRA kann nicht starten",
+            )
+
         _jobs[job_id] = state
         _active_job_id = job_id
 
@@ -313,6 +315,11 @@ async def train_lora(req: LoraTrainRequest) -> LoraTrainJobResponse:
     try:
         worker.start()
     except Exception:
+        # Guard freigeben bei Thread-Start-Fehler (B4)
+        try:
+            yolo_wrapper.end_training_guard()
+        except Exception:
+            pass
         with _jobs_lock:
             _jobs.pop(job_id, None)
             if _active_job_id == job_id:
@@ -346,6 +353,13 @@ async def get_lora_job(job_id: str) -> LoraTrainJobStatusResponse:
 async def deploy_lora(req: LoraDeployRequest) -> LoraDeployResponse:
     """Deploy LoRA adapter via Ollama Modelfile."""
     adapter_path = Path(req.adapter_path).resolve()
+    # S1 Fix: Path Traversal verhindern — nur Pfade innerhalb des Sidecar-Verzeichnisses erlauben
+    allowed_root = Path(__file__).resolve().parent.parent.parent  # sidecar/
+    if not str(adapter_path).startswith(str(allowed_root)):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Adapter-Pfad ausserhalb des erlaubten Verzeichnisses: {adapter_path}",
+        )
     if not adapter_path.exists():
         raise HTTPException(status_code=404, detail=f"Adapter not found: {adapter_path}")
 
