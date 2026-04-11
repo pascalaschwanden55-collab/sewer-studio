@@ -392,6 +392,9 @@ public sealed class YoloRetrainOrchestrator
 
     private static async Task PruneOldVersionsAsync(YoloModelManifest manifest, string modelDir, CancellationToken ct)
     {
+        // H14-Fix: Aktives Modell darf niemals geloescht werden
+        var activeModel = manifest.ActiveModel;
+
         var toKeep = manifest.Versions
             .OrderByDescending(v => v.CreatedUtc)
             .Take(MaxArchivedVersions)
@@ -406,6 +409,11 @@ public sealed class YoloRetrainOrchestrator
         foreach (var old in toRemove)
         {
             ct.ThrowIfCancellationRequested();
+
+            // H14-Fix: Aktives Modell nicht loeschen
+            if (string.Equals(old.Version, activeModel, StringComparison.OrdinalIgnoreCase))
+                continue;
+
             if (!string.IsNullOrWhiteSpace(old.Version))
             {
                 var oldPath = Path.Combine(modelDir, old.Version);
@@ -438,8 +446,33 @@ public sealed class YoloRetrainOrchestrator
             var json = await File.ReadAllTextAsync(path, ct).ConfigureAwait(false);
             return JsonSerializer.Deserialize<YoloModelManifest>(json, JsonOpts) ?? new YoloModelManifest();
         }
-        catch
+        catch (Exception ex)
         {
+            // H15-Fix: Warnung loggen statt stillem Fallback
+            System.Diagnostics.Debug.WriteLine(
+                $"[YoloRetrainOrchestrator] Manifest korrupt ({path}): {ex.Message} – versuche Backup.");
+
+            // Backup versuchen (.bak)
+            var bakPath = path + ".bak";
+            if (File.Exists(bakPath))
+            {
+                try
+                {
+                    var bakJson = await File.ReadAllTextAsync(bakPath, ct).ConfigureAwait(false);
+                    var restored = JsonSerializer.Deserialize<YoloModelManifest>(bakJson, JsonOpts);
+                    if (restored is not null)
+                    {
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[YoloRetrainOrchestrator] Manifest aus Backup wiederhergestellt: {bakPath}");
+                        return restored;
+                    }
+                }
+                catch
+                {
+                    // Backup ebenfalls korrupt – leeres Manifest zurueckgeben
+                }
+            }
+
             return new YoloModelManifest();
         }
     }
@@ -447,6 +480,14 @@ public sealed class YoloRetrainOrchestrator
     private static async Task SaveManifestAsync(string path, YoloModelManifest manifest, CancellationToken ct)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
+        // H15-Fix: Vor dem Schreiben bestehende Datei als Backup sichern
+        if (File.Exists(path))
+        {
+            try { File.Copy(path, path + ".bak", overwrite: true); }
+            catch { /* Best-effort Backup */ }
+        }
+
         var tmp = path + ".tmp";
         var json = JsonSerializer.Serialize(manifest, JsonOpts);
         await File.WriteAllTextAsync(tmp, json, ct).ConfigureAwait(false);
