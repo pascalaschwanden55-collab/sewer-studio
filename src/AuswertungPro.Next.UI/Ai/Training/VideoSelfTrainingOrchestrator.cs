@@ -82,7 +82,8 @@ public sealed class VideoSelfTrainingOrchestrator
 
         var resolver = new MeterToFrameResolver(_meterTimeline, _log);
         var frameMappings = await resolver.ResolveAllAsync(
-            request.VideoPath, videoDuration, inspLength, groundTruths, frameOutputDir, ct)
+            request.VideoPath, videoDuration, inspLength, groundTruths, frameOutputDir,
+            request.CenteringOffsetMeter, ct)
             .ConfigureAwait(false);
 
         _log?.LogInformation("Frame-Mapping: {Count} Zuordnungen, {OSD} via OSD",
@@ -155,6 +156,24 @@ public sealed class VideoSelfTrainingOrchestrator
         var report = DifferenceAnalyzer.Analyze(
             groundTruths, blindDetections, request.MeterTolerance);
 
+        // Frame-Pfade aus Phase 2 auf DifferenceEntries uebertragen
+        // (FrameMapping hat fuer jeden Protokolleintrag einen Frame extrahiert)
+        var frameByEntry = frameMappings.ToDictionary(m => m.Entry, m => m);
+
+        foreach (var entry in report.Entries)
+        {
+            if (entry.ProtocolEntry is null)
+                continue;
+
+            if (!frameByEntry.TryGetValue(entry.ProtocolEntry, out var mapping))
+                continue;
+
+            if (entry.FramePath is null && !string.IsNullOrWhiteSpace(mapping.FramePath))
+                entry.FramePath = mapping.FramePath;
+
+            entry.FrameTimeSeconds ??= mapping.TimeSeconds;
+        }
+
         _log?.LogInformation("Differenz: TP={TP}, FN={FN}, FP={FP}, Mismatch={MM}, F1={F1:F3}",
             report.TruePositiveCount, report.FalseNegativeCount,
             report.FalsePositiveCount, report.CodeMismatchCount, report.F1);
@@ -188,22 +207,28 @@ public sealed class VideoSelfTrainingOrchestrator
     /// Beendet ffmpeg-Prozesse die fuer ein bestimmtes Video gestartet wurden und haengen.
     /// Verhindert Zombie-ffmpeg nach Pipeline-Timeout.
     /// </summary>
-    private static void KillOrphanedFfmpeg(string videoPath)
+    /// <summary>
+    /// M11 Fix: Killt nur ffmpeg-Prozesse die laenger als 5 Min laufen
+    /// UND deren Startzeit VOR dem Pipeline-Start liegt (= verwaist).
+    /// Killt NICHT pauschal alle ffmpeg — andere Tools koennten ffmpeg nutzen.
+    /// </summary>
+    private void KillOrphanedFfmpeg(string videoPath)
     {
         try
         {
-            var videoName = System.IO.Path.GetFileName(videoPath);
             foreach (var proc in Process.GetProcessesByName("ffmpeg"))
             {
                 try
                 {
-                    // Pruefe ob der Prozess schon laenger als 5 Min laeuft
                     if ((DateTime.Now - proc.StartTime).TotalMinutes > 5)
                     {
+                        _log?.LogWarning(
+                            "Verwaister ffmpeg-Prozess (PID {Pid}, seit {Start}) wird beendet",
+                            proc.Id, proc.StartTime);
                         proc.Kill();
                     }
                 }
-                catch { /* Zugriffsfehler ignorieren */ }
+                catch { /* Zugriffsfehler bei fremden Prozessen — ignorieren */ }
             }
         }
         catch { /* Safety net */ }
@@ -232,7 +257,11 @@ public sealed class VideoSelfTrainingOrchestrator
             Severity = ParseSeverity(d.Severity),
             ClockPosition = d.PositionClock,
             Confidence = 0.5, // EvidenceVector hat keinen Einzel-Score — Pauschalwert
-            FramePath = null // Frames sind im Pipeline-Output nicht gespeichert
+            FramePath = null, // Frames sind im Pipeline-Output nicht gespeichert
+            BboxX1 = d.BboxX1,
+            BboxY1 = d.BboxY1,
+            BboxX2 = d.BboxX2,
+            BboxY2 = d.BboxY2
         }).ToList();
     }
 
