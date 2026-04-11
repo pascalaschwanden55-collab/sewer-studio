@@ -206,6 +206,7 @@ def process_dataset(input_dir: str, output_dir: str, min_confidence: float = 0.2
 
 
 def main():
+    global SIDECAR
     parser = argparse.ArgumentParser(
         description="BBox-Generierung mit DINO+SAM fuer YOLO-Training")
     parser.add_argument("--dataset", required=True,
@@ -218,7 +219,6 @@ def main():
                         help="Sidecar-URL")
     args = parser.parse_args()
 
-    global SIDECAR
     SIDECAR = args.sidecar
 
     # Health-Check
