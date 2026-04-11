@@ -109,22 +109,31 @@ RE_FORMAT1 = re.compile(
 def decode_caesar(text: str, shift: int = 29) -> str:
     """Decodiert Caesar-verschluesselte PDF-Texte (Font-Encoding-Problem).
     Viele WinCan/IBAK-PDFs verwenden eine Custom-Font-Map die effektiv
-    eine ASCII-Verschiebung von -29 auf Buchstaben anwendet.
-    Leerzeichen, Ziffern und Satzzeichen werden nur verschoben wenn
-    das Ergebnis ein Buchstabe ist."""
+    eine ASCII-Verschiebung von -29 auf alle druckbaren Zeichen anwendet.
+    Ziffern (0-9) werden zu Steuerzeichen (ASCII 19-28) und muessen
+    ebenfalls zurueck-verschoben werden."""
     result = []
     for c in text:
         code = ord(c)
         if 65 <= code <= 90 or 97 <= code <= 122:  # A-Z, a-z → immer verschieben
             result.append(chr(code + shift))
-        elif 33 <= code <= 64:  # !-@ → nur wenn Ergebnis ein Buchstabe ist
+        elif 33 <= code <= 64:  # !-@ → nur wenn Ergebnis ein Buchstabe oder Ziffer ist
             decoded = code + shift
-            if 65 <= decoded <= 90 or 97 <= decoded <= 122:
+            if (65 <= decoded <= 90 or 97 <= decoded <= 122 or
+                    48 <= decoded <= 57):  # auch Ziffern akzeptieren
+                result.append(chr(decoded))
+            else:
+                result.append(c)
+        elif 19 <= code <= 28:  # Steuerzeichen die verschobene Ziffern sind (48-57 - 29 = 19-28)
+            result.append(chr(code + shift))  # → Ziffern 0-9
+        elif 3 <= code <= 6:  # Steuerzeichen die verschobene Satzzeichen sein koennten
+            decoded = code + shift
+            if 32 <= decoded < 127:
                 result.append(chr(decoded))
             else:
                 result.append(c)
         else:
-            result.append(c)  # Space, Zeilenumbrueche, Sonderzeichen beibehalten
+            result.append(c)  # Space, Zeilenumbrueche beibehalten
     return "".join(result)
 
 
@@ -158,23 +167,28 @@ def parse_pdf(pdf_path: str) -> tuple[list[ProtocolEntry], Optional[float]]:
     haltungslaenge: Optional[float] = None
 
     # Haltungslaenge extrahieren
-    m = re.search(r"(?:HL|Haltungsl|Insp\.?L)[^0-9]*(\d{1,4}[.,]\d{1,2})\s*m", text)
-    if m:
-        haltungslaenge = float(m.group(1).replace(",", "."))
+    m_hl = re.search(r"(?:HL|Haltungsl|Insp\.?L|Inspektionslnge)[^0-9]*(\d{1,4}[.,]\d{1,2})\s*m", text)
+    if m_hl:
+        haltungslaenge = float(m_hl.group(1).replace(",", "."))
 
-    for line in text.split("\n"):
+    # ── Format-Erkennung ──
+    # Format A: Tabellarisch (Meter am Zeilenanfang + Code auf gleicher Zeile)
+    # Format B: Formular (Caesar-decodierte PDFs: "Entf...m" / "Zustand" / "Position" Bloecke)
+
+    lines = text.split("\n")
+
+    # Versuche zuerst Format A (tabellarisch)
+    for line in lines:
         line_stripped = line.strip()
         if not line_stripped:
             continue
 
-        # Meter am Zeilenanfang?
         m_meter = RE_METER.match(line_stripped)
         if not m_meter:
             continue
 
         meter = float(m_meter.group(1).replace(",", "."))
 
-        # VSA-Code finden
         m_code = RE_CODE.search(line_stripped)
         if not m_code:
             continue
@@ -182,21 +196,91 @@ def parse_pdf(pdf_path: str) -> tuple[list[ProtocolEntry], Optional[float]]:
         code = m_code.group(1).upper()
         description = line_stripped[m_code.end():].strip()
 
-        # Video-Zeitcode
         m_time = RE_VIDEO_TIME.search(line_stripped)
         video_time = m_time.group(1) if m_time else None
 
-        # Foto-Dateiname
         m_foto = RE_FOTO.search(line_stripped)
         foto = m_foto.group(1) if m_foto else None
 
         entries.append(ProtocolEntry(
-            meter=meter,
-            code=code,
-            description=description,
-            video_time=video_time,
-            foto=foto,
+            meter=meter, code=code, description=description,
+            video_time=video_time, foto=foto,
         ))
+
+    if entries:
+        return entries, haltungslaenge
+
+    # ── Format B: Formular-Layout (Caesar-decodierte PDFs) ──
+    # Zwei Sub-Formate:
+    #   B1: Tabelle "Foto  Video  Entfm  Zustand  V  Beschreibung" mit Codes darunter
+    #   B2: Einzelbloecke "EntfgegenFlier / Zustand / Position"
+
+    # B1: Tabelle suchen
+    # Muster: Zeilen mit nur einem VSA-Code + optionaler Beschreibung, evtl. Meter davor
+    re_table_line = re.compile(
+        r"^\s*(?:(\d{1,4}[.,]\d{1,2})\s+)?"  # optionaler Meter
+        r"(B[A-D][A-Z]{1,5})\s*"              # VSA-Code
+        r"(.*?)$"                              # optionale Beschreibung
+    )
+    current_meter = 0.0
+    in_table = False
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        # Tabellenkopf erkennen
+        if re.search(r"Foto\s+Video\s+Entf|Entfm\s+Zustand", stripped):
+            in_table = True
+            continue
+        # Tabelle endet bei Leerzeile nach Abschnitt oder neuem Header
+        if in_table and not stripped:
+            continue
+        if in_table and re.search(r"ObjektID|Gedrucktam|Haltung\s", stripped):
+            in_table = False
+            continue
+
+        if in_table:
+            m_tbl = re_table_line.match(stripped)
+            if m_tbl:
+                if m_tbl.group(1):
+                    current_meter = float(m_tbl.group(1).replace(",", "."))
+                code = m_tbl.group(2).upper()
+                desc = m_tbl.group(3).strip() if m_tbl.group(3) else ""
+                entries.append(ProtocolEntry(
+                    meter=current_meter, code=code, description=desc,
+                ))
+
+    if entries:
+        return entries, haltungslaenge
+
+    # B2: Einzelblock-Format (Bildteil)
+    # Bloecke: "EntfgegenFlier [meter] m" / "Zustand [CODE]" / "Position [CODE]"
+    re_entf = re.compile(r"Entf(?:gegen|in)Flie?r?\s+(\d{1,4}[.,]\d{1,2})\s*m", re.IGNORECASE)
+    re_zustand = re.compile(r"Zustand\s+(B[A-D][A-Z]{1,5})", re.IGNORECASE)
+    re_position = re.compile(r"Position\s+(B[A-D][A-Z]{1,5})", re.IGNORECASE)
+
+    current_meter = 0.0
+    for line in lines:
+        stripped = line.strip()
+
+        m_entf = re_entf.search(stripped)
+        if m_entf:
+            current_meter = float(m_entf.group(1).replace(",", "."))
+            continue
+
+        m_zust = re_zustand.search(stripped)
+        if m_zust:
+            entries.append(ProtocolEntry(
+                meter=current_meter, code=m_zust.group(1).upper(), description="",
+            ))
+            continue
+
+        m_pos = re_position.search(stripped)
+        if m_pos:
+            code = m_pos.group(1).upper()
+            # Nur hinzufuegen wenn nicht schon als Zustand erfasst
+            if not entries or entries[-1].code != code:
+                entries.append(ProtocolEntry(
+                    meter=current_meter, code=code, description="",
+                ))
 
     return entries, haltungslaenge
 
@@ -337,15 +421,19 @@ def generate_dataset(
 
         # Haltungslaenge schaetzen falls nicht aus PDF
         if not haltungslaenge:
-            # Groessten Meterstand als Laenge nehmen
-            haltungslaenge = max(e.meter for e in entries) or duration * 0.1
+            max_meter = max((e.meter for e in entries), default=0)
+            haltungslaenge = max_meter if max_meter > 0 else duration * 0.1
+
+        # Pruefen ob alle Meter 0.0 sind (Caesar-PDFs ohne Zahlen)
+        all_meters_zero = all(e.meter == 0.0 for e in entries)
 
         # 3. Fuer jeden Defekt-Eintrag: Frame extrahieren
         temp_dir = os.path.join(os.path.dirname(video_path), "self_training_frames")
         os.makedirs(temp_dir, exist_ok=True)
 
         extracted = 0
-        for entry in defect_entries:
+        total_entries = len(entries)  # Alle Eintraege (nicht nur Defekte) fuer Positionsberechnung
+        for entry_idx, entry in enumerate(defect_entries):
             yolo_class = vsa_to_yolo_class(entry.code)
             if yolo_class is None:
                 stats.skipped += 1
@@ -354,6 +442,15 @@ def generate_dataset(
             # Zeit berechnen: Video-Zeitcode oder lineare Interpolation
             if entry.video_time:
                 time_sec = time_str_to_seconds(entry.video_time)
+            elif all_meters_zero and total_entries > 1:
+                # Caesar-PDFs: Alle Eintraege finden, Position dieses Eintrags bestimmen
+                try:
+                    pos_in_all = entries.index(entry)
+                except ValueError:
+                    pos_in_all = entry_idx
+                # Gleichmaessig ueber Videodauer verteilen (10% Rand an Start/Ende)
+                usable = duration * 0.8
+                time_sec = duration * 0.1 + (pos_in_all / max(total_entries - 1, 1)) * usable
             else:
                 # Lineare Interpolation: meter / haltungslaenge * duration
                 time_sec = (entry.meter / max(haltungslaenge, 0.1)) * duration
