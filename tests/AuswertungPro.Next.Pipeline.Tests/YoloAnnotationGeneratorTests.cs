@@ -45,16 +45,28 @@ public class YoloAnnotationGeneratorTests
         Assert.Null(result);
     }
 
-    /// <summary>BBB (Wurzeleinwuchs) → Klasse 5.</summary>
+    /// <summary>BBA (Wurzeln, VSA 2018) → Klasse 5 (root).</summary>
     [Fact]
     public void GenerateLabel_Root_ClassId5()
     {
-        var entry = MakeEntry("BBB");
+        var entry = MakeEntry("BBA");  // VSA 2018: BBA = Wurzeln
 
         var result = YoloAnnotationGenerator.GenerateLabelLine(entry);
 
         Assert.NotNull(result);
         Assert.StartsWith("5 ", result);
+    }
+
+    /// <summary>BBB (Anhaftende Stoffe, VSA 2018) → Klasse 6 (deposit).</summary>
+    [Fact]
+    public void GenerateLabel_Deposit_ClassId6()
+    {
+        var entry = MakeEntry("BBB");  // VSA 2018: BBB = Anhaftende Stoffe
+
+        var result = YoloAnnotationGenerator.GenerateLabelLine(entry);
+
+        Assert.NotNull(result);
+        Assert.StartsWith("6 ", result);
     }
 
     /// <summary>ExportDataset ueberspringt Steuercodes und nicht-existierende Frames.</summary>

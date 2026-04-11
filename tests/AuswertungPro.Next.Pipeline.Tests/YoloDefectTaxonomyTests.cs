@@ -13,28 +13,34 @@ public sealed class YoloDefectTaxonomyTests
     // FromVsaCode — Jeder VSA-Praefix auf korrekte Klasse
     // ═══════════════════════════════════════════════════════════════
 
+    // VSA-Merkblatt 2018 (Vernehmlassung 1.0.8) — verbindliche Zuordnung
     [Theory]
-    [InlineData("BAB", 0, "crack")]
-    [InlineData("BAC", 1, "fracture")]
-    [InlineData("BAA", 2, "deformation")]
-    [InlineData("BAF", 2, "deformation")]
-    [InlineData("BAH", 3, "displacement")]
-    [InlineData("BAI", 4, "intrusion")]
-    [InlineData("BBD", 4, "intrusion")]
-    [InlineData("BBB", 5, "root")]
-    [InlineData("BBC", 6, "deposit")]
-    [InlineData("BBA", 6, "deposit")]
-    [InlineData("BBF", 7, "infiltration")]
-    [InlineData("BBG", 7, "infiltration")]
-    [InlineData("BCA", 8, "connection")]
-    [InlineData("BAD", 9, "structural_other")]
-    [InlineData("BAE", 9, "structural_other")]
-    [InlineData("BAG", 9, "structural_other")]
-    [InlineData("BAJ", 9, "structural_other")]
-    [InlineData("BAK", 9, "structural_other")]
-    [InlineData("BBE", 9, "structural_other")]
-    [InlineData("BBH", 9, "structural_other")]
-    [InlineData("BCB", 9, "structural_other")]
+    [InlineData("BAB", 0, "crack")]           // Risse
+    [InlineData("BAC", 1, "fracture")]        // Bruch/Einsturz
+    [InlineData("BAA", 2, "deformation")]     // Verformung
+    [InlineData("BAF", 2, "deformation")]     // Oberflaechenschaden
+    [InlineData("BAJ", 3, "displacement")]    // Verschobene Rohrverbindung (= Versatz!)
+    [InlineData("BAG", 4, "intrusion")]       // Einragender Anschluss
+    [InlineData("BBD", 4, "intrusion")]       // Eindringen von Bodenmaterial
+    [InlineData("BBA", 5, "root")]            // Wurzeln (VSA 2018!)
+    [InlineData("BBC", 6, "deposit")]         // Ablagerungen
+    [InlineData("BBB", 6, "deposit")]         // Anhaftende Stoffe/Inkrustation (VSA 2018!)
+    [InlineData("BBF", 7, "infiltration")]    // Infiltration
+    [InlineData("BBG", 7, "infiltration")]    // Exfiltration
+    [InlineData("BCA", 8, "connection")]      // Seitlicher Anschluss
+    [InlineData("BAD", 9, "structural_other")]  // Defektes Mauerwerk
+    [InlineData("BAE", 9, "structural_other")]  // Fehlender Moertel
+    [InlineData("BAH", 9, "structural_other")]  // Schadhafter Anschluss
+    [InlineData("BAI", 9, "structural_other")]  // Einragendes Dichtungsmaterial
+    [InlineData("BAK", 9, "structural_other")]  // Feststellung Innenauskleidung
+    [InlineData("BAL", 9, "structural_other")]  // Schadhafte Reparatur
+    [InlineData("BAM", 9, "structural_other")]  // Schadhafte Schweissnaht
+    [InlineData("BAN", 9, "structural_other")]  // Poroese Leitung
+    [InlineData("BAO", 9, "structural_other")]  // Boden sichtbar
+    [InlineData("BAP", 9, "structural_other")]  // Hohlraum sichtbar
+    [InlineData("BBE", 9, "structural_other")]  // Andere Hindernisse
+    [InlineData("BBH", 9, "structural_other")]  // Ungeziefer
+    [InlineData("BCB", 9, "structural_other")]  // Punktuelle Reparatur
     public void FromVsaCode_KnownCodes_ReturnsCorrectClass(string vsaCode, int expectedId, string expectedName)
     {
         var result = YoloDefectTaxonomy.FromVsaCode(vsaCode);
@@ -68,12 +74,13 @@ public sealed class YoloDefectTaxonomyTests
     // ═══════════════════════════════════════════════════════════════
 
     [Theory]
+    // VSA 2018: BBA=Wurzeln, BBB=Anhaftende Stoffe, BAJ=Versatz
     [InlineData("BAB.B.A", 0, "crack")]       // Querriss laengs → crack
     [InlineData("BAB.A", 0, "crack")]          // Laengsriss → crack
     [InlineData("BAC.A.B", 1, "fracture")]     // Bruch partiell → fracture
-    [InlineData("BAH.B.C", 3, "displacement")] // Versatz → displacement
+    [InlineData("BAJ.B.C", 3, "displacement")] // Verschobene Rohrverbindung → displacement (VSA 2018)
     [InlineData("BCA.E.B", 8, "connection")]   // Seitl. Anschluss → connection
-    [InlineData("BBB.A", 5, "root")]           // Wurzeln → root
+    [InlineData("BBA.A", 5, "root")]           // Wurzeln → root (VSA 2018: BBA = Wurzeln!)
     [InlineData("BBC.A.D", 6, "deposit")]      // Ablagerung → deposit
     public void FromVsaCode_SubCodesWithDots_ExtractsPrefixCorrectly(
         string vsaCode, int expectedId, string expectedName)

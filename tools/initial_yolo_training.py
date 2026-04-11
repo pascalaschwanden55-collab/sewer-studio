@@ -54,11 +54,14 @@ YOLO_CLASSES = {
     9: "structural_other",  # Rest
 }
 
+# VSA-Merkblatt 2018 (Vernehmlassung 1.0.8) — verbindliche Zuordnung
+# ACHTUNG: BBA=Wurzeln, BBB=Anhaftende Stoffe, BAJ=Versatz, BAG=Einragender Anschluss
 VSA_TO_YOLO = {
-    "BAB": 0, "BAC": 1, "BAA": 2, "BAF": 2, "BAH": 3,
-    "BAI": 4, "BBD": 4, "BBB": 5, "BBC": 6, "BBA": 6,
+    "BAB": 0, "BAC": 1, "BAA": 2, "BAF": 2, "BAJ": 3,
+    "BAG": 4, "BBD": 4, "BBA": 5, "BBC": 6, "BBB": 6,
     "BBF": 7, "BBG": 7, "BCA": 8,
-    "BAD": 9, "BAE": 9, "BAG": 9, "BAJ": 9, "BAK": 9,
+    "BAD": 9, "BAE": 9, "BAH": 9, "BAI": 9, "BAK": 9,
+    "BAL": 9, "BAM": 9, "BAN": 9, "BAO": 9, "BAP": 9,
     "BBE": 9, "BBH": 9, "BCB": 9,
 }
 

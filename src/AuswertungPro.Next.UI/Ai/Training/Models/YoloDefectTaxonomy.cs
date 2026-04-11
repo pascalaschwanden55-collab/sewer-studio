@@ -35,6 +35,16 @@ public static class YoloDefectTaxonomy
     /// VSA-3-Zeichen-Praefix → YOLO-Klassen-Index.
     /// Steuercodes sind NICHT enthalten — FromVsaCode gibt fuer sie null zurueck.
     /// </summary>
+    /// <summary>
+    /// VSA-Merkblatt 2018 (Vernehmlassung 1.0.8, 28.03.2018) — verbindliche Zuordnung.
+    /// ACHTUNG: Die Code-Bedeutungen unterscheiden sich vom aelteren Standard!
+    ///   BBA = Wurzeln (NICHT Inkrustation)
+    ///   BBB = Anhaftende Stoffe/Inkrustation (NICHT Wurzeln)
+    ///   BAG = Einragender Anschluss
+    ///   BAH = Schadhafter Anschluss (NICHT Versatz)
+    ///   BAI = Einragendes Dichtungsmaterial
+    ///   BAJ = Verschobene Rohrverbindung (= Versatz!)
+    /// </summary>
     private static readonly FrozenDictionary<string, int> VsaToClassId =
         new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
         {
@@ -48,36 +58,41 @@ public static class YoloDefectTaxonomy
             ["BAA"] = 2,
             ["BAF"] = 2,
 
-            // 3 = displacement (Versatz)
-            ["BAH"] = 3,
+            // 3 = displacement (Verschobene Rohrverbindung / Versatz)
+            ["BAJ"] = 3,
 
-            // 4 = intrusion (Einragender Stutzen + Eindringender Boden)
-            ["BAI"] = 4,
-            ["BBD"] = 4,
+            // 4 = intrusion (Einragender Anschluss + Eindringender Boden)
+            ["BAG"] = 4,   // Einragender Anschluss
+            ["BBD"] = 4,   // Eindringen von Bodenmaterial
 
-            // 5 = root (Wurzeleinwuchs)
-            ["BBB"] = 5,
+            // 5 = root (Wurzeln)
+            ["BBA"] = 5,   // VSA 2018: BBA = Wurzeln
 
-            // 6 = deposit (Ablagerung + Inkrustation)
-            ["BBC"] = 6,
-            ["BBA"] = 6,
+            // 6 = deposit (Ablagerung + Anhaftende Stoffe/Inkrustation)
+            ["BBC"] = 6,   // Ablagerungen an der Rohrsohle
+            ["BBB"] = 6,   // VSA 2018: BBB = Anhaftende Stoffe (Inkrustation)
 
-            // 7 = infiltration (Undichtheit / Infiltration)
+            // 7 = infiltration (Undichtheit / Infiltration / Exfiltration)
             ["BBF"] = 7,
             ["BBG"] = 7,
 
             // 8 = connection (Seitlicher Anschluss)
             ["BCA"] = 8,
 
-            // 9 = structural_other (Sammelklasse fuer seltene Schaeden)
-            ["BAD"] = 9,
-            ["BAE"] = 9,
-            ["BAG"] = 9,
-            ["BAJ"] = 9,
-            ["BAK"] = 9,
-            ["BBE"] = 9,
-            ["BBH"] = 9,
-            ["BCB"] = 9,
+            // 9 = structural_other (Sammelklasse)
+            ["BAD"] = 9,   // Defektes Mauerwerk
+            ["BAE"] = 9,   // Fehlender Moertel
+            ["BAH"] = 9,   // Schadhafter Anschluss
+            ["BAI"] = 9,   // Einragendes Dichtungsmaterial
+            ["BAK"] = 9,   // Feststellung Innenauskleidung
+            ["BAL"] = 9,   // Schadhafte Reparatur
+            ["BAM"] = 9,   // Schadhafte Schweissnaht
+            ["BAN"] = 9,   // Poroese Leitung
+            ["BAO"] = 9,   // Boden sichtbar
+            ["BAP"] = 9,   // Hohlraum sichtbar
+            ["BBE"] = 9,   // Andere Hindernisse
+            ["BBH"] = 9,   // Ungeziefer
+            ["BCB"] = 9,   // Punktuelle Reparatur
         }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
