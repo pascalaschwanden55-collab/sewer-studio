@@ -839,11 +839,18 @@ public sealed class MultiModelAnalysisService
             ));
         }
 
-        // Verbleibende aktive Findings: Steuercodes (BCD/BCE) finalisieren
+        // Verbleibende aktive Findings: NUR Steuercodes (BCD/BCE/BCC/BDB) finalisieren.
+        // Defekt-Findings kommen jetzt ausschliesslich vom DetectionAggregator.
         foreach (var a in active.Values)
         {
-            if (a.ShouldFinalize)
-                detections.Add(a.ToDetection());
+            if (!a.ShouldFinalize) continue;
+            var det = a.ToDetection();
+            // Nur Steuercodes und Grundgeruest-Codes behalten
+            var code = det.VsaCodeHint?.ToUpperInvariant() ?? det.FindingLabel?.ToUpperInvariant() ?? "";
+            var prefix = code.Length >= 3 ? code[..3] : code;
+            var isSteuercode = prefix is "BCD" or "BCE" or "BCC" or "BDB" or "BDC" or "BDD" or "BDE" or "BDF" or "BDA";
+            if (isSteuercode)
+                detections.Add(det);
         }
 
         // Konsens-Filter: nur Detektionen mit 2+ Modell-Bestaetigung und nicht Red
