@@ -168,6 +168,7 @@ def run_smoke_test(haltung_dir: str, frame_step: float = 1.5):
 
     # Erwartung: Der DetectionAggregator wuerde diese ~N Detektionen
     # auf ~M Events verdichten (M << N)
+    events = []
     if len(all_detections) > 0:
         # Einfache Simulation: Zusammenhaengende Frames gleicher Klasse = 1 Event
         events = []
@@ -198,20 +199,20 @@ def run_smoke_test(haltung_dir: str, frame_step: float = 1.5):
     if defects:
         log.info("  PDF-Defekte:          %d", len(defects))
         log.info("  Differenz:            %+d",
-                 len([e for e in events if e["count"] >= 3]) - len(defects)
-                 if 'events' in dir() else 0)
+                 len([e for e in events if e["count"] >= 3]) - len(defects))
 
     log.info("=" * 60)
 
 
 def main():
+    global SIDECAR
+
     parser = argparse.ArgumentParser(description="Smoke-Test fuer SewerStudio KI-Pipeline")
     parser.add_argument("--haltung", required=True, help="Pfad zum Haltungs-Ordner")
     parser.add_argument("--step", type=float, default=1.5, help="Frame-Schritt in Sekunden")
     parser.add_argument("--sidecar", default=SIDECAR, help="Sidecar-URL")
     args = parser.parse_args()
 
-    global SIDECAR
     SIDECAR = args.sidecar
 
     if not check_sidecar():
