@@ -63,17 +63,23 @@ def _prewarm_sam() -> None:
 
 _VRAM_MONITOR_INTERVAL_SEC = int(os.environ.get("SEWER_SIDECAR_VRAM_MONITOR_INTERVAL", "30"))
 
+# Globales Flag: True wenn VRAM kritisch belegt ist (>90%)
+vram_critical: bool = False
+
 
 async def _vram_monitor_loop() -> None:
     """Periodischer VRAM-Watermark-Check (alle 30s, konfigurierbar).
 
     Loggt Warnungen bei Ueberschreitung der Schwellen (75% warning, 90% critical).
+    Setzt vram_critical Flag fuer Request-Ablehnung bei Spitzenlast.
     Laeuft als Background-Task waehrend der gesamten Sidecar-Laufzeit.
     """
+    global vram_critical
     while True:
         try:
             await asyncio.sleep(_VRAM_MONITOR_INTERVAL_SEC)
             status = gpu_manager.check_vram_health()
+            vram_critical = (status == "critical")
             if status != "ok":
                 pct = gpu_manager.get_vram_utilization_percent()
                 logger.warning(
@@ -132,6 +138,26 @@ app = FastAPI(
     description="Always-On Multi-Model Vision Pipeline (YOLO / Grounding DINO / SAM / VSR)",
     lifespan=lifespan,
 )
+
+
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+
+
+@app.middleware("http")
+async def vram_guard_middleware(request: Request, call_next):
+    """Lehnt Inference-Requests ab wenn VRAM kritisch belegt ist (>90%).
+    Health-Endpoint bleibt immer erreichbar."""
+    if vram_critical and not request.url.path.startswith("/health"):
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "VRAM kritisch belegt (>90%) — Request abgelehnt",
+                "vram_utilization_percent": gpu_manager.get_vram_utilization_percent(),
+            },
+        )
+    return await call_next(request)
+
 
 # Register routes
 app.include_router(health.router, tags=["health"])

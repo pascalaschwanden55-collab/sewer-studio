@@ -157,12 +157,15 @@ public static class MaskQuantificationService
     /// </summary>
     public static IReadOnlyList<QuantifiedMask> QuantifyAll(
         SamResponse samResponse,
-        int pipeDiameterMm)
+        int pipeDiameterMm,
+        PipeCalibration? calibration = null)
     {
         var results = new List<QuantifiedMask>(samResponse.Masks.Count);
         foreach (var mask in samResponse.Masks)
         {
-            results.Add(Quantify(mask, samResponse.ImageWidth, samResponse.ImageHeight, pipeDiameterMm));
+            results.Add(calibration != null
+                ? Quantify(mask, samResponse.ImageWidth, samResponse.ImageHeight, pipeDiameterMm, calibration)
+                : Quantify(mask, samResponse.ImageWidth, samResponse.ImageHeight, pipeDiameterMm));
         }
         return results;
     }
@@ -185,6 +188,12 @@ public static class MaskQuantificationService
 
         double dx = centroidX - cx;
         double dy = -(centroidY - cy); // flip Y (image Y goes down, clock Y goes up)
+
+        // Zentrale Schaeden (direkt in Rohrmitte) → keine sinnvolle Uhrlage bestimmbar
+        double distFromCenter = Math.Sqrt(dx * dx + dy * dy);
+        double maxDim = Math.Max(imageWidth, imageHeight);
+        if (distFromCenter < maxDim * 0.03)
+            return null;
 
         // atan2 gives angle from positive X axis, counter-clockwise
         double angle = Math.Atan2(dx, dy); // Note: (dx, dy) so 12 o'clock = 0 radians

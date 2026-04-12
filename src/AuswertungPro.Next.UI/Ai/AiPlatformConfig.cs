@@ -80,7 +80,12 @@ public sealed record AiPlatformConfig(
     public static AiPlatformConfig Load()
     {
         AppSettings? settings = null;
-        try { settings = AppSettings.Load(); } catch { /* ignore */ }
+        try { settings = AppSettings.Load(); }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[AiPlatformConfig] AppSettings.Load fehlgeschlagen: {ex.Message} — verwende Defaults");
+        }
         return Load(settings);
     }
 
@@ -177,19 +182,19 @@ public sealed record AiPlatformConfig(
             ?? ParseDouble(Env("SEWERSTUDIO_YOLO_CONFIDENCE"))
             ?? 0.25;
 
-        // Klassenspezifische YOLO-Schwellenwerte (Forschung: unterschiedliche Sensitivitaet pro Schadenstyp)
+        // Klassenspezifische YOLO-Schwellenwerte — Balance Recall/Precision
         var yoloClassConf = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
         {
-            ["BAB"] = 0.15,   // Riss: schwer erkennbar, aggressiv suchen
-            ["BAA"] = 0.20,   // Verformung
-            ["BAC"] = 0.25,   // Bruch/Einsturz
-            ["BBA"] = 0.20,   // Wurzeln/Inkrustation: oft subtil
-            ["BBB"] = 0.25,   // Bewuchs
-            ["BBC"] = 0.25,   // Ablagerungen
-            ["BCA"] = 0.35,   // Anschluss: sehr markant, hohe Sicherheit
-            ["BCC"] = 0.30,   // Bogen: markant
-            ["BCD"] = 0.30,   // Rohranfang: markant
-            ["BCE"] = 0.30,   // Rohrende: markant
+            ["BAB"] = 0.20,   // Riss: sensibel halten, aber nicht so aggressiv wie 0.15
+            ["BAA"] = 0.25,   // Verformung
+            ["BAC"] = 0.28,   // Bruch/Einsturz
+            ["BBA"] = 0.25,   // Wurzeln/Inkrustation
+            ["BBB"] = 0.28,   // Bewuchs
+            ["BBC"] = 0.28,   // Ablagerungen
+            ["BCA"] = 0.35,   // Anschluss: sehr markant
+            ["BCC"] = 0.35,   // Bogen: markant
+            ["BCD"] = 0.35,   // Rohranfang: markant
+            ["BCE"] = 0.35,   // Rohrende: markant
         };
 
         var dinoBox = settings?.PipelineDinoBoxThreshold
@@ -198,7 +203,7 @@ public sealed record AiPlatformConfig(
 
         var dinoText = settings?.PipelineDinoTextThreshold
             ?? ParseDouble(Env("SEWERSTUDIO_DINO_TEXT_THRESHOLD"))
-            ?? 0.25;
+            ?? 0.30;
 
         var sidecarTimeout = ParseInt(Env("SEWERSTUDIO_SIDECAR_TIMEOUT_SEC")) ?? 300;
 

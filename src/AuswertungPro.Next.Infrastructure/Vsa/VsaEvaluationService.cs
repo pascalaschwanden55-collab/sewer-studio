@@ -56,7 +56,9 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             unknownCodeCount += unknownForRecord;
 
             var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
-            const double minLength = 3.0; // Kanäle; Schächte: 0.5
+            // Schaechte haben kuerzere Mindestlaenge (0.5m) als Kanaele (3.0m)
+            var isManhole = assessmentLength is > 0 and < 1.5;
+            var minLength = isManhole ? 0.5 : table.DefaultMinLength_m;
             var rb = ComputeRandbedingungen(record);
 
             var d = ComputeForRequirement(VsaRequirement.Dichtheit, classified, assessmentLength, minLength, rb);

@@ -71,9 +71,9 @@ public sealed class OllamaClient : IDisposable
             })
             .AddCircuitBreaker(new CircuitBreakerStrategyOptions
             {
-                FailureRatio = 1.0,
+                FailureRatio = 0.5,
                 SamplingDuration = TimeSpan.FromSeconds(60),
-                MinimumThroughput = 5,
+                MinimumThroughput = 10,
                 BreakDuration = TimeSpan.FromSeconds(30),
                 ShouldHandle = new PredicateBuilder()
                     .Handle<HttpRequestException>()

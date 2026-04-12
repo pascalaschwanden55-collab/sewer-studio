@@ -62,5 +62,14 @@ yolo_cls_export/
 yolo_cls_export_v2/
 yolo_cls_runs/
 
+# KnowledgeBase SQLite (potentiell mehrere GB, nicht ins Repo)
+**/Knowledge/*.db
+**/Knowledge/*.db-wal
+**/Knowledge/*.db-shm
+**/KnowledgeBase.db
+
+# WPF Temp-Projektdateien (Build-Artefakte)
+*_wpftmp.csproj
+
 # Tools
 tools/PdfImageAnalyzer/

@@ -459,8 +459,10 @@ public sealed class IbakExportImportService : IIbakImportService
             var cs = new FbConnectionStringBuilder
             {
                 Database = fdbPath,
-                UserID = Environment.GetEnvironmentVariable("IBAK_FDB_USER") ?? "SYSDBA",
-                Password = Environment.GetEnvironmentVariable("IBAK_FDB_PASSWORD") ?? "masterkey",
+                UserID = Environment.GetEnvironmentVariable("IBAK_FDB_USER")
+                    ?? throw new InvalidOperationException("IBAK_FDB_USER muss als Umgebungsvariable gesetzt sein."),
+                Password = Environment.GetEnvironmentVariable("IBAK_FDB_PASSWORD")
+                    ?? throw new InvalidOperationException("IBAK_FDB_PASSWORD muss als Umgebungsvariable gesetzt sein."),
                 Charset = "WIN1252",
                 Dialect = 3,
                 Pooling = false

@@ -281,8 +281,17 @@ public static class AiOverlayConverter
     {
         if (string.IsNullOrEmpty(label)) return false;
         var lower = label.ToLowerInvariant();
+        // BAA = Deformation (nicht Riss!), BAB = Riss
         return lower.Contains("riss") || lower.Contains("crack")
-            || lower.Contains("baa") || lower.Contains("bab");
+            || lower.Contains("bab");
+    }
+
+    private static bool IsDeformationLabel(string? label)
+    {
+        if (string.IsNullOrEmpty(label)) return false;
+        var lower = label.ToLowerInvariant();
+        return lower.Contains("deform") || lower.Contains("verform")
+            || lower.Contains("baa") || lower.Contains("baf");
     }
 
     private static int ConfidenceToSeverity(double confidence) =>

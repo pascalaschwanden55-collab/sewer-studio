@@ -582,6 +582,12 @@ public sealed class KinsImportService : IKinsImportService
             return;
         }
 
+        // Duplikat-Check: nur hinzufuegen wenn sich die Entries tatsaechlich geaendert haben
+        var existingHash = ComputeEntriesHash(record.Protocol.Current.Entries);
+        var newHash = ComputeEntriesHash(cloned);
+        if (existingHash == newHash)
+            return;
+
         record.Protocol.History.Add(record.Protocol.Current);
         record.Protocol.Current = new ProtocolRevision
         {
@@ -589,6 +595,15 @@ public sealed class KinsImportService : IKinsImportService
             CreatedAt = DateTimeOffset.UtcNow,
             Entries = cloned
         };
+    }
+
+    private static string ComputeEntriesHash(IReadOnlyList<ProtocolEntry> entries)
+    {
+        // Einfacher Content-Hash: Code+Meter aller Entries konkateniert
+        var sb = new System.Text.StringBuilder();
+        foreach (var e in entries.OrderBy(x => x.Code).ThenBy(x => x.MeterStart))
+            sb.Append(e.Code).Append('|').Append(e.MeterStart).Append(';');
+        return sb.ToString();
     }
 
     private static ProtocolEntry CloneEntry(ProtocolEntry e)
