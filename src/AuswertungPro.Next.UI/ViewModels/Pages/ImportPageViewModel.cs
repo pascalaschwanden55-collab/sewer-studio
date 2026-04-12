@@ -641,6 +641,18 @@ public sealed partial class ImportPageViewModel : ObservableObject
             return;
         }
 
+        // JSON-Fallback aktiv? Dann ist der Katalog funktional, nur nicht via XML konfiguriert.
+        if (_sp.CodeCatalog is AuswertungPro.Next.Application.Protocol.JsonCodeCatalogProvider jsonProvider)
+        {
+            var codeCount = jsonProvider.AllowedCodes().Count;
+            var noiseInfo = jsonProvider.FilteredNoiseCount > 0
+                ? $", {jsonProvider.FilteredNoiseCount} Artefakte gefiltert"
+                : "";
+            CatalogStatus = $"VSA-Katalog (JSON embedded): {codeCount} Codes{noiseInfo}";
+            IsCatalogOk = codeCount > 0;
+            return;
+        }
+
         CatalogStatus = "VSA-Katalog (SEC/NOD): nicht konfiguriert";
         IsCatalogOk = false;
     }

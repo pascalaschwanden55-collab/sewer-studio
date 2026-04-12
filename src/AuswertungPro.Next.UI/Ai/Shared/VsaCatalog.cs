@@ -70,7 +70,7 @@ public static class VsaCatalog
             // BD: Weitere Codes / Steuercodes
             // ══════════════════════════════════════════════════════════
             ["BDA"] = new("BDA", "Allgemeinzustand Foto",       false, false, null),
-            ["BDB"] = new("BDB", "Beginn TV-Untersuchung",      false, false, null),
+            ["BDB"] = new("BDB", "Kamera nicht einsetzbar",      false, false, null),
             ["BDC"] = new("BDC", "Inspektionsabbruch",          true,  false, null),
             ["BDD"] = new("BDD", "Wasserspiegel",               true,  true,  "%"),
             ["BDE"] = new("BDE", "Zufluss/Fehlanschluss",       true,  true,  "%"),

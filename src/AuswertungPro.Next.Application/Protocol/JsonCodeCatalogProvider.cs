@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace AuswertungPro.Next.Application.Protocol;
 
@@ -86,9 +87,14 @@ public sealed class JsonCodeCatalogProvider : ICodeCatalogProvider
         AllowTrailingCommas = true
     };
 
+    // VSA-Codes muessen mindestens 2 Grossbuchstaben sein (filtert OCR-Artefakte wie "auf", "ben", "der")
+    private static readonly Regex ValidCodePattern = new(@"^[A-Z][A-Z0-9]{1,}$", RegexOptions.Compiled);
+
     private List<CodeDefinition> _codes = new();
     public IReadOnlyList<string> LastLoadErrors { get; private set; } = Array.Empty<string>();
     public IReadOnlyList<string> LastLoadWarnings { get; private set; } = Array.Empty<string>();
+    /// <summary>Anzahl der beim Laden als OCR-Artefakte gefilterten Codes.</summary>
+    public int FilteredNoiseCount { get; private set; }
 
     public JsonCodeCatalogProvider(string catalogPath)
     {
@@ -138,10 +144,27 @@ public sealed class JsonCodeCatalogProvider : ICodeCatalogProvider
 
     public IReadOnlyList<string> AllowedCodes()
     {
-        return _codes
+        var codes = _codes
             .Select(x => x.Code)
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // Basiscodes ergaenzen die nur als Praefix existieren (z.B. BDD hat BDDA-BDDE)
+        // Damit der Resolver "BDD" als gueltig erkennen kann
+        var prefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var code in codes)
+        {
+            if (code.Length >= 4)
+                prefixes.Add(code[..3]);
+        }
+        // Nur Praefixe hinzufuegen die nicht schon als eigener Code existieren
+        foreach (var prefix in prefixes)
+        {
+            codes.Add(prefix); // HashSet ignoriert Duplikate
+        }
+
+        return codes
             .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
@@ -199,13 +222,28 @@ public sealed class JsonCodeCatalogProvider : ICodeCatalogProvider
             var json = File.ReadAllText(_catalogPath);
             var document = JsonSerializer.Deserialize<CodeCatalogDocument>(json, _jsonOptions) ?? new CodeCatalogDocument();
             var normalized = NormalizeCodes(document.Codes);
+
+            // OCR-Artefakte filtern: Codes die nicht dem VSA-Pattern entsprechen
+            var beforeCount = normalized.Count;
+            normalized = normalized.Where(c => ValidCodePattern.IsMatch(c.Code)).ToList();
+            FilteredNoiseCount = beforeCount - normalized.Count;
+
             _codes = DeduplicateCodes(normalized, out var warnings);
+
+            // Validate() beim Laden ausfuehren — Fehler als Warnings loggen (kein Gate)
+            var validationErrors = Validate(_codes);
+            if (validationErrors.Count > 0)
+                warnings.AddRange(validationErrors.Select(e => $"[Validierung] {e}"));
+            if (FilteredNoiseCount > 0)
+                warnings.Add($"{FilteredNoiseCount} OCR-Artefakte gefiltert (Pattern: {ValidCodePattern})");
+
             LastLoadWarnings = warnings;
             LastLoadErrors = Array.Empty<string>();
         }
         catch (Exception ex)
         {
             _codes = new List<CodeDefinition>();
+            FilteredNoiseCount = 0;
             LastLoadWarnings = Array.Empty<string>();
             LastLoadErrors = new[]
             {

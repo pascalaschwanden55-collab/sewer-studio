@@ -199,6 +199,8 @@ public static class VsaCodeResolver
         // ── BD: Weitere Codes ──
         if (Has(text, "allgemeinzustand") || Has(text, "fotobeispiel"))
             return "BDA";
+        // BDD ist Basiscode mit Kindern (BDDA-BDDE). Wird als Hint zurueckgegeben —
+        // der Code-Picker muss den Untertyp (klar/trueb/gefaerbt) ergaenzen.
         if (Has(text, "wasserspiegel") || Has(text, "wasserstand") || Has(text, "wasserlinie")
             || Has(text, "water level") || Has(text, "rueckstau") || Has(text, "standing water"))
             return "BDD";
