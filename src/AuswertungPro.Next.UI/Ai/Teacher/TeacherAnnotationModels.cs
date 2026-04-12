@@ -50,6 +50,15 @@ public sealed class TeacherAnnotation
     /// <summary>Pfad zur YOLO-Annotation (.txt).</summary>
     public string? YoloAnnotationPath { get; set; }
 
+    /// <summary>SAM-Segmentierungsmaske als Run-Length-Encoding.</summary>
+    public string? MaskRle { get; set; }
+
+    /// <summary>Bildgroesse der Maske (Breite).</summary>
+    public int? MaskWidth { get; set; }
+
+    /// <summary>Bildgroesse der Maske (Hoehe).</summary>
+    public int? MaskHeight { get; set; }
+
     // --- Masse (aus Kalibrierung) ---
     public double? WidthMm { get; set; }
     public double? HeightMm { get; set; }

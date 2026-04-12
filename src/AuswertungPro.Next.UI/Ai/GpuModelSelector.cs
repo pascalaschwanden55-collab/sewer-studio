@@ -17,20 +17,20 @@ namespace AuswertungPro.Next.UI.Ai;
 /// </summary>
 public static class GpuModelSelector
 {
-    /// <summary>Schnelles CLASSIFY-Modell (permanent geladen, ~10 GB).</summary>
-    public const string FastModel = "qwen3-vl:8b";
+    /// <summary>Schnelles CLASSIFY-Modell (permanent geladen, ~3 GB + KV-Cache).</summary>
+    public const string FastModel = "qwen3-vl:2b";
 
-    /// <summary>Grosses Reference-Modell fuer Yellow-Zone Eskalation (~22 GB).</summary>
-    public const string ReferenceModel = "qwen3-vl:32b";
+    /// <summary>Eskalationsmodell fuer Yellow-Zone (permanent geladen, ~6 GB + KV-Cache).</summary>
+    public const string ReferenceModel = "qwen3-vl:8b";
 
-    /// <summary>Laptop-Modell (nur 8B, kein Dual-Mode).</summary>
-    public const string LaptopModel = "qwen3-vl:8b";
+    /// <summary>Laptop-Modell (nur 3B, kein Dual-Mode).</summary>
+    public const string LaptopModel = "qwen3-vl:2b";
 
-    /// <summary>VRAM-Schwelle in MB ab der Dual-Mode (8B + 32B Fallback) aktiv ist.</summary>
-    public const long DualModelThresholdMb = 24_000;
+    /// <summary>VRAM-Schwelle in MB ab der Dual-Mode (3B + 8B permanent) aktiv ist.</summary>
+    public const long DualModelThresholdMb = 16_000;
 
-    /// <summary>VRAM-Schwelle in MB ab der Single-Mode (nur 8B) aktiv ist.</summary>
-    public const long SingleModelThresholdMb = 8_000;
+    /// <summary>VRAM-Schwelle in MB ab der Single-Mode (nur 3B) aktiv ist.</summary>
+    public const long SingleModelThresholdMb = 6_000;
 
     /// <summary>NumCtx fuer das schnelle Modell (kompakt, wenig VRAM).</summary>
     public const int FastModelNumCtx = 4096;

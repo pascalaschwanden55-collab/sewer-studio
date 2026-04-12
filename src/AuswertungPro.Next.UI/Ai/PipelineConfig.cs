@@ -20,7 +20,15 @@ public sealed record PipelineConfig(
     bool SamStabilityCheckEnabled = false,
     bool McDropoutEnabled = true,
     /// <summary>Rohrmaterial fuer Plausibilitaetsfilter (z.B. "Polyethylen", "Beton", "Steinzeug").</summary>
-    string? PipeMaterial = null
+    string? PipeMaterial = null,
+    /// <summary>DetectionAggregator: Mindestanzahl aufeinanderfolgender Frames fuer ein Schadensereignis.</summary>
+    int AggregatorMinFrames = 3,
+    /// <summary>DetectionAggregator: Minimale Confidence fuer Aggregation.</summary>
+    double AggregatorMinConfidence = 0.4,
+    /// <summary>DetectionAggregator: Radius in Metern fuer Meter-basiertes Merging.</summary>
+    double AggregatorMergeRadius = 1.5,
+    /// <summary>DetectionAggregator: Maximale Luecke in Frames bevor ein Event geschlossen wird.</summary>
+    int AggregatorMaxGap = 5
 )
 {
     /// <summary>Lädt via einheitliche AiPlatformConfig.</summary>

@@ -21,6 +21,7 @@ Vorteile ggue. Frame-by-Frame HTTP:
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import io
 import json
@@ -75,6 +76,93 @@ def _resize_if_needed(img_rgb: np.ndarray, max_width: int) -> np.ndarray:
     return np.array(pil.resize((new_w, new_h), Image.LANCZOS))
 
 
+def _decode_frames_blocking(video_path: str, step_seconds: float, frame_queue: asyncio.Queue, loop: asyncio.AbstractEventLoop, worker_count: int) -> None:
+    frame_index = 0
+    try:
+        for ts, frame_rgb, backend in video_decoder.decode_frames(video_path, step_seconds):
+            frame_index += 1
+            asyncio.run_coroutine_threadsafe(
+                frame_queue.put((frame_index, ts, frame_rgb, backend)), loop
+            ).result()
+    finally:
+        for _ in range(worker_count):
+            asyncio.run_coroutine_threadsafe(frame_queue.put(None), loop).result()
+
+
+async def _decode_frames_to_queue(video_path: str, step_seconds: float, frame_queue: asyncio.Queue, worker_count: int) -> None:
+    loop = asyncio.get_running_loop()
+    await asyncio.to_thread(
+        _decode_frames_blocking,
+        video_path,
+        step_seconds,
+        frame_queue,
+        loop,
+        worker_count,
+    )
+
+
+def _process_frame(req: VideoProcessRequest, frame_item: tuple[int, float, np.ndarray, str]) -> dict:
+    frame_index, ts, frame_rgb, backend = frame_item
+    t0 = time.perf_counter()
+
+    if req.enhance and should_enhance(frame_rgb):
+        frame_rgb = enhance_frame(frame_rgb, req.enhance_target_height)
+
+    frame_rgb = _resize_if_needed(frame_rgb, req.max_width)
+    h, w = frame_rgb.shape[:2]
+
+    yolo_result = yolo_wrapper.detect_image(frame_rgb, req.confidence)
+    yolo_ms = round((time.perf_counter() - t0) * 1000, 1)
+
+    result: dict = {
+        "type": "frame",
+        "timestamp_sec": round(ts, 3),
+        "frame_index": frame_index,
+        "is_relevant": yolo_result.is_relevant,
+        "frame_class": yolo_result.frame_class,
+        "image_width": w,
+        "image_height": h,
+        "yolo_ms": yolo_ms,
+        "backend": backend,
+    }
+
+    if yolo_result.is_relevant:
+        result["detections"] = [
+            {
+                "x1": d.x1, "y1": d.y1, "x2": d.x2, "y2": d.y2,
+                "class_name": d.class_name, "confidence": d.confidence,
+            }
+            for d in yolo_result.detections
+        ]
+        result["image_base64"] = _frame_to_base64(frame_rgb)
+
+    return result
+
+
+async def _process_worker(
+    req: VideoProcessRequest,
+    frame_queue: asyncio.Queue,
+    result_queue: asyncio.Queue,
+) -> None:
+    while True:
+        frame_item = await frame_queue.get()
+        if frame_item is None:
+            await result_queue.put(None)
+            frame_queue.task_done()
+            break
+
+        try:
+            result = await asyncio.to_thread(_process_frame, req, frame_item)
+            await result_queue.put(result)
+        except Exception as exc:
+            logger.exception("Worker-Fehler bei Frame-Verarbeitung: %s", exc)
+            await result_queue.put(
+                {"type": "error", "error": str(exc), "frame_index": frame_item[0]}
+            )
+        finally:
+            frame_queue.task_done()
+
+
 async def _process_video_stream(req: VideoProcessRequest):
     """Generator: liefert NDJSON-Zeilen fuer jeden Frame."""
     video_path = req.video_path
@@ -84,17 +172,15 @@ async def _process_video_stream(req: VideoProcessRequest):
         yield json.dumps(error) + "\n"
         return
 
-    # Videodauer ermitteln
     duration = video_decoder.get_video_duration(video_path)
     if duration <= 0:
         error = {"error": "Videodauer konnte nicht ermittelt werden"}
         yield json.dumps(error) + "\n"
         return
 
-    # Gesamt-Frame-Anzahl schaetzen fuer progress
     total_frames = int(duration / req.step_seconds) + 1
+    worker_count = max(1, settings.video_worker_count)
 
-    # Metadaten-Header
     header = {
         "type": "header",
         "video_path": video_path,
@@ -102,66 +188,37 @@ async def _process_video_stream(req: VideoProcessRequest):
         "total_frames_estimate": total_frames,
         "step_seconds": req.step_seconds,
         "nvdec_available": video_decoder.is_nvdec_available(),
+        "video_worker_count": worker_count,
     }
     yield json.dumps(header) + "\n"
 
-    frame_index = 0
+    frame_queue: asyncio.Queue = asyncio.Queue(maxsize=settings.video_queue_maxsize)
+    result_queue: asyncio.Queue = asyncio.Queue(maxsize=settings.video_queue_maxsize)
 
-    try:
-        for ts, frame_rgb, backend in video_decoder.decode_frames(
-            video_path, req.step_seconds
-        ):
-            frame_index += 1
-            t0 = time.perf_counter()
+    decode_task = asyncio.create_task(
+        _decode_frames_to_queue(video_path, req.step_seconds, frame_queue, worker_count)
+    )
+    workers = [
+        asyncio.create_task(_process_worker(req, frame_queue, result_queue))
+        for _ in range(worker_count)
+    ]
 
-            # ── Optionales VSR-Upscaling ──
-            if req.enhance and should_enhance(frame_rgb):
-                frame_rgb = enhance_frame(frame_rgb, req.enhance_target_height)
+    finished_workers = 0
+    frames_processed = 0
+    while finished_workers < worker_count:
+        result = await result_queue.get()
+        if result is None:
+            finished_workers += 1
+            continue
+        frames_processed += 1
+        yield json.dumps(result) + "\n"
 
-            # ── Groessen-Normierung ──
-            frame_rgb = _resize_if_needed(frame_rgb, req.max_width)
-            h, w = frame_rgb.shape[:2]
+    await decode_task
+    await asyncio.gather(*workers)
 
-            # ── YOLO Detection ──
-            frame_b64 = _frame_to_base64(frame_rgb)
-            yolo_result = yolo_wrapper.detect(frame_b64, req.confidence)
-            yolo_ms = round((time.perf_counter() - t0) * 1000, 1)
-
-            # ── Frame-Ergebnis ──
-            result: dict = {
-                "type": "frame",
-                "timestamp_sec": round(ts, 3),
-                "frame_index": frame_index,
-                "is_relevant": yolo_result.is_relevant,
-                "frame_class": yolo_result.frame_class,
-                "image_width": w,
-                "image_height": h,
-                "yolo_ms": yolo_ms,
-                "backend": backend,
-            }
-
-            if yolo_result.is_relevant:
-                # Nur fuer relevante Frames: Bounding Boxes + Bild fuer C# (DINO/SAM/Qwen)
-                result["detections"] = [
-                    {
-                        "x1": d.x1, "y1": d.y1, "x2": d.x2, "y2": d.y2,
-                        "class_name": d.class_name, "confidence": d.confidence,
-                    }
-                    for d in yolo_result.detections
-                ]
-                result["image_base64"] = frame_b64
-
-            yield json.dumps(result) + "\n"
-
-    except Exception as e:
-        logger.exception("Fehler bei Video-Verarbeitung: %s", video_path)
-        error = {"type": "error", "error": str(e), "frame_index": frame_index}
-        yield json.dumps(error) + "\n"
-
-    # Abschluss-Footer
     footer = {
         "type": "footer",
-        "frames_processed": frame_index,
+        "frames_processed": frames_processed,
     }
     yield json.dumps(footer) + "\n"
 

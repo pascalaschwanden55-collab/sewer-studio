@@ -1,4 +1,9 @@
-"""SAM (Segment Anything Model) wrapper for pixel-precise segmentation."""
+"""SAM 2 (Segment Anything Model 2) Wrapper fuer Pixel-praezise Segmentierung.
+
+Ersetzt SAM 3. API-Schemas (SamRequest/SamResponse) bleiben identisch.
+GPU-Slot: ModelSlot.SAM (unveraendert).
+Ring-Scan Logik (Annulus-Geometrie) bleibt komplett erhalten.
+"""
 
 from __future__ import annotations
 
@@ -18,43 +23,50 @@ from ..schemas.segmentation import MaskResult, SamResponse
 
 logger = logging.getLogger(__name__)
 
-# Max Bounding-Boxen pro SAM-Batch um OOM zu vermeiden
-_SAM_MAX_BATCH = 100
 
-def _find_sam_weights() -> str:
-    """Locate SAM weights in models_dir."""
-    sam_dir = Path(settings.models_dir) / "sam3"
-    candidates = list(sam_dir.glob("*.pth")) + list(sam_dir.glob("*.pt"))
+def _get_sam_max_batch() -> int:
+    """Dynamische Batch-Groesse basierend auf verfuegbarem VRAM."""
+    avail_gb = gpu_manager.get_available_vram_gb()
+    return max(10, min(100, int(avail_gb * 15)))
+
+
+def _find_sam2_checkpoint() -> str:
+    """Locate SAM 2 checkpoint in models_dir."""
+    sam_dir = Path(settings.models_dir) / "sam2"
+    candidates = list(sam_dir.glob("*.pt")) + list(sam_dir.glob("*.pth"))
     if not candidates:
         raise FileNotFoundError(
-            f"SAM weights not found in {sam_dir}. "
-            "Please place SAM checkpoint (.pth) there."
+            f"SAM 2 Checkpoint nicht gefunden in {sam_dir}. "
+            "Bitte SAM 2 Checkpoint (.pt/.pth) dort ablegen."
         )
     return str(candidates[0])
 
 
 def _resolve_device() -> str:
-    """Determine the effective device for SAM inference."""
+    """Determine the effective device for SAM 2 inference."""
     device = settings.effective_sam_device
     if device.startswith("cuda") and not _cuda_available():
         return "cpu"
     return device
 
 
-def _load_sam_on(device: str):
-    """Load SAM model onto *device*. Returns (model, predictor)."""
+def _load_sam2_on(device: str):
+    """Load SAM 2 model onto *device*. Returns (model, predictor)."""
     try:
-        from segment_anything import sam_model_registry, SamPredictor
+        from sam2.build_sam import build_sam2
+        from sam2.sam2_image_predictor import SAM2ImagePredictor
     except ImportError:
         raise ImportError(
-            "segment-anything is not installed. "
-            "Install with: pip install segment-anything"
+            "sam2 ist nicht installiert. "
+            "Install mit: pip install sam2"
         )
 
-    weights_path = _find_sam_weights()
-    sam = sam_model_registry[settings.sam_model_type](checkpoint=weights_path)
-    sam.to(device)
-    predictor = SamPredictor(sam)
+    checkpoint = _find_sam2_checkpoint()
+    # sam2.build_sam2 erwartet Hydra-Config Name (z.B. "sam2.1/sam2.1_hiera_l.yaml")
+    model_cfg = settings.sam_model_type
+
+    sam = build_sam2(model_cfg, ckpt_path=checkpoint, device=device)
+    predictor = SAM2ImagePredictor(sam)
     return sam, predictor
 
 
@@ -75,7 +87,6 @@ def _rle_encode(mask: np.ndarray) -> str:
     change_indices = np.where(diffs != 0)[0] + 1
     runs = np.diff(np.concatenate([[0], change_indices, [len(flat)]]))
     start_val = int(flat[0])
-    # Format: start_value,run1,run2,...
     parts = [str(start_val)] + [str(int(r)) for r in runs]
     return ",".join(parts)
 
@@ -113,14 +124,14 @@ def _predict_single_box(predictor, bbox: BoundingBox, masks_out: list[MaskResult
     import torch
     try:
         box_np = np.array([bbox.x1, bbox.y1, bbox.x2, bbox.y2])
-        with torch.cuda.amp.autocast(enabled=device.startswith("cuda")):
-            pred_masks, scores, _ = predictor.predict(
+        with torch.inference_mode():
+            masks, scores, _ = predictor.predict(
                 point_coords=None, point_labels=None,
-                box=box_np[None, :], multimask_output=False,
+                box=box_np, multimask_output=False,
             )
-        _append_mask_result(masks_out, pred_masks[0], float(scores[0]), bbox, h, w)
+        _append_mask_result(masks_out, masks[0], float(scores[0]), bbox, h, w)
     except Exception as exc:
-        logger.warning("SAM prediction failed for box %s: %s", bbox, exc)
+        logger.warning("SAM 2 Prediction fehlgeschlagen fuer Box %s: %s", bbox, exc)
 
 
 def _is_in_annulus(cx: float, cy: float, center_x: float, center_y: float,
@@ -150,7 +161,7 @@ def _clip_annulus_mask(mask: np.ndarray, cx: float, cy: float,
 
 
 def _ring_scan(predictor, ring_params, h: int, w: int, device: str) -> list[MaskResult]:
-    """Annulus-Bereich systematisch mit SAM abtasten (Sektoren-Ansatz).
+    """Annulus-Bereich systematisch mit SAM 2 abtasten (Sektoren-Ansatz).
 
     Strategie: Jeder Sektor bekommt positive Punkte + Constraint-Punkte
     (negativ im Zentrum + ausserhalb), damit SAM nur im Annulus sucht.
@@ -190,7 +201,6 @@ def _ring_scan(predictor, ring_params, h: int, w: int, device: str) -> list[Mask
                 n_angles, n_radii, r_inner, r_outer)
 
     candidates: list[tuple[np.ndarray, float, dict]] = []
-    use_amp = device.startswith("cuda")
 
     for sector_idx in range(n_angles):
         angle = sector_idx * sector_step
@@ -222,7 +232,7 @@ def _ring_scan(predictor, ring_params, h: int, w: int, device: str) -> list[Mask
             coords_np = np.array(all_coords, dtype=np.float32)
             labels_np = np.array(all_labels, dtype=np.int32)
 
-            with torch.cuda.amp.autocast(enabled=use_amp):
+            with torch.inference_mode():
                 pred_masks, scores, _ = predictor.predict(
                     point_coords=coords_np,
                     point_labels=labels_np,
@@ -253,7 +263,6 @@ def _ring_scan(predictor, ring_params, h: int, w: int, device: str) -> list[Mask
                 centroid_y = float(ys.mean())
 
                 # Annulus-Anteil: Wie viel der Maske liegt im Annulus?
-                # (hoher Anteil = Maske ist gut eingegrenzt)
                 raw_area = int(raw_mask.sum())
                 annulus_ratio = mask_area / max(raw_area, 1)
 
@@ -261,7 +270,7 @@ def _ring_scan(predictor, ring_params, h: int, w: int, device: str) -> list[Mask
                 if annulus_ratio < 0.15:
                     continue
 
-                # Maske die den ganzen Annulus ausfuellt → skip (kein spezifisches Segment)
+                # Maske die den ganzen Annulus ausfuellt → skip
                 annulus_area = np.pi * (r_outer ** 2 - r_inner ** 2)
                 if mask_area > annulus_area * 0.6:
                     continue
@@ -306,7 +315,7 @@ def _ring_scan(predictor, ring_params, h: int, w: int, device: str) -> list[Mask
             bbox=meta["bbox"],
             mask_rle=_rle_encode(mask.astype(np.uint8)),
             mask_area_pixels=meta["area"],
-            image_area_pixels=h * w,
+            image_area_pixels=0,  # wird unten gesetzt
             height_pixels=meta["h_px"],
             width_pixels=meta["w_px"],
             centroid_x=round(meta["centroid_x"], 1),
@@ -323,10 +332,12 @@ def segment(
     point_prompts: list | None = None,
     ring_scan=None,
 ) -> SamResponse:
-    """Run SAM segmentation with bounding boxes, point prompts, or ring scan."""
+    """Run SAM 2 Segmentation mit Bounding Boxes, Point Prompts oder Ring Scan."""
     device = _resolve_device()
-    state = gpu_manager.ensure_loaded(ModelSlot.SAM, device, lambda: _load_sam_on(device))
-    predictor = state.processor  # SamPredictor
+    state = gpu_manager.ensure_loaded(
+        ModelSlot.SAM, device, lambda: _load_sam2_on(device)
+    )
+    predictor = state.processor  # SAM2ImagePredictor
 
     raw = base64.b64decode(image_base64)
     img = Image.open(io.BytesIO(raw)).convert("RGB")
@@ -337,15 +348,18 @@ def segment(
 
     import torch
 
-    # Set image once (Encoder laeuft 1x)
-    with torch.cuda.amp.autocast(enabled=device.startswith("cuda")):
+    # SAM 2: set_image (Encoder laeuft 1x)
+    with torch.inference_mode():
         predictor.set_image(img_array)
 
     masks_out: list[MaskResult] = []
 
     # ── Ring-Scan: Annulus-Bereich systematisch abtasten ──
     if ring_scan is not None:
-        masks_out = _ring_scan(predictor, ring_scan, h, w, device)
+        masks_out = _ring_scan(predictor, ring_params=ring_scan, h=h, w=w, device=device)
+        # image_area nachtraeglich setzen
+        for m in masks_out:
+            m.image_area_pixels = h * w
         elapsed_ms = (time.perf_counter() - t0) * 1000
         return SamResponse(
             masks=masks_out,
@@ -360,12 +374,12 @@ def segment(
             coords = np.array([[p.x, p.y] for p in point_prompts])
             labels = np.array([p.label for p in point_prompts])
 
-            with torch.cuda.amp.autocast(enabled=device.startswith("cuda")):
+            with torch.inference_mode():
                 pred_masks, scores, _ = predictor.predict(
                     point_coords=coords,
                     point_labels=labels,
                     box=None,
-                    multimask_output=True,  # 3 Masken, beste waehlen
+                    multimask_output=True,
                 )
 
             # Beste Maske waehlen (hoechster Score)
@@ -373,10 +387,8 @@ def segment(
             mask = pred_masks[best_idx]
             score = float(scores[best_idx])
 
-            mask_area = int(mask.sum())
             ys, xs = np.where(mask)
             if len(xs) > 0:
-                # Dummy-BBox aus Masken-Extent
                 dummy_bbox = BoundingBox(
                     x1=float(xs.min()), y1=float(ys.min()),
                     x2=float(xs.max()), y2=float(ys.max()),
@@ -385,42 +397,43 @@ def segment(
                 _append_mask_result(masks_out, mask, score, dummy_bbox, h, w)
 
         except Exception as exc:
-            logger.warning("SAM point-prompt prediction failed: %s", exc)
+            logger.warning("SAM 2 Point-Prompt Prediction fehlgeschlagen: %s", exc)
 
     # ── Bounding-Box-Prompts ──
-    # Batch-Limit: max 100 Boxen pro Forward-Pass um OOM zu vermeiden
     elif len(bounding_boxes) > 1:
-        if len(bounding_boxes) > _SAM_MAX_BATCH:
+        max_batch = _get_sam_max_batch()
+        if len(bounding_boxes) > max_batch:
             logger.warning(
-                "SAM batch %d Boxen > Limit %d — wird in Chunks aufgeteilt",
-                len(bounding_boxes), _SAM_MAX_BATCH,
+                "SAM 2 Batch %d Boxen > Limit %d — wird in Chunks aufgeteilt",
+                len(bounding_boxes), max_batch,
             )
-        # In Chunks von max _SAM_MAX_BATCH verarbeiten
-        for chunk_start in range(0, len(bounding_boxes), _SAM_MAX_BATCH):
-            chunk = bounding_boxes[chunk_start : chunk_start + _SAM_MAX_BATCH]
+        for chunk_start in range(0, len(bounding_boxes), max_batch):
+            chunk = bounding_boxes[chunk_start : chunk_start + max_batch]
             try:
                 all_boxes = np.array([[b.x1, b.y1, b.x2, b.y2] for b in chunk])
-                import torch as _torch
-                box_tensor = _torch.tensor(all_boxes, device=predictor.device)
 
-                with torch.cuda.amp.autocast(enabled=device.startswith("cuda")):
-                    transformed_boxes = predictor.transform.apply_boxes_torch(
-                        box_tensor, img_array.shape[:2])
-                    pred_masks, scores, _ = predictor.predict_torch(
-                        point_coords=None,
-                        point_labels=None,
-                        boxes=transformed_boxes,
-                        multimask_output=False,
-                    )
-                for i, bbox in enumerate(chunk):
-                    mask = pred_masks[i, 0].cpu().numpy()
-                    score = float(scores[i, 0].cpu())
-                    _append_mask_result(masks_out, mask, score, bbox, h, w)
+                with torch.inference_mode():
+                    # SAM 2: predict mit Batch-Boxes
+                    # SAM 2 unterstuetzt Batch via Iteration
+                    for i, bbox in enumerate(chunk):
+                        box_np = all_boxes[i]
+                        masks, scores, _ = predictor.predict(
+                            point_coords=None,
+                            point_labels=None,
+                            box=box_np,
+                            multimask_output=False,
+                        )
+                        _append_mask_result(
+                            masks_out, masks[0], float(scores[0]), bbox, h, w
+                        )
 
             except Exception as exc:
-                logger.warning("SAM batch chunk failed, fallback to sequential: %s", exc)
+                logger.warning(
+                    "SAM 2 Batch-Chunk fehlgeschlagen, Fallback sequentiell: %s", exc
+                )
                 for bbox in chunk:
                     _predict_single_box(predictor, bbox, masks_out, h, w, device)
+
     elif len(bounding_boxes) == 1:
         _predict_single_box(predictor, bounding_boxes[0], masks_out, h, w, device)
 

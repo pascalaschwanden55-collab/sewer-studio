@@ -1110,13 +1110,19 @@
                                         Click="CodingToolRect_Click"
                                         ToolTip="Rechteckigen Bereich im Frame markieren fuer gezielte KI-Analyse"/>
                                 <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="4,6"/>
-                                <!-- Hinweis -->
-                                <TextBlock Text="Alle Messwerkzeuge im PhotoAssistant"
-                                           FontSize="9" Foreground="{DynamicResource TextSecondaryBrush}"
-                                           Margin="12,2" FontStyle="Italic"/>
-                                <TextBlock Text="(Foto aufnehmen → Foto vermessen)"
-                                           FontSize="9" Foreground="{DynamicResource TextSecondaryBrush}"
-                                           Margin="12,0,12,4" FontStyle="Italic"/>
+                                <!-- Messwerkzeuge -->
+                                <Button x:Name="BtnCodingBend" Style="{StaticResource MarkToolPopupButton}"
+                                        Content="&#x2312;  Bogen projizieren (Wurm)"
+                                        Click="CodingToolBend_Click"
+                                        ToolTip="Rohrbogen als Ring-Wurm markieren: 2 Rohrverbindungen setzen und Ellipsen justieren"/>
+                                <Button x:Name="BtnCodingLevel" Style="{StaticResource MarkToolPopupButton}"
+                                        Content="&#x2261;  Fuellgrad messen"
+                                        Click="CodingToolLevel_Click"
+                                        ToolTip="Fuellgrad/Wasserstand im Rohr bestimmen (Wasserlinie zeichnen)"/>
+                                <Button x:Name="BtnCodingIntrusion" Style="{StaticResource MarkToolPopupButton}"
+                                        Content="&#x25B2;  Einragung messen"
+                                        Click="CodingToolIntrusion_Click"
+                                        ToolTip="Einragenden Stutzen oder Hindernis vermessen"/>
                             </StackPanel>
                         </Border>
                     </Popup>

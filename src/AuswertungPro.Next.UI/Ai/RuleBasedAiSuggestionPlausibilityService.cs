@@ -118,6 +118,22 @@ public sealed partial class RuleBasedAiSuggestionPlausibilityService : IAiSugges
             }
         }
 
+        // PL05: Characterization/Quantification-Pruefung
+        // Wenn der VSA-Code eine Charakterisierung erfordert (z.B. BAB braucht A-E),
+        // aber der Code nur 3 Zeichen hat → Penalty (unvollstaendig)
+        if (suggestedCode is not null && code.Length >= 3)
+        {
+            var catalogEntry = Shared.VsaCatalog.Get(code[..3]);
+            if (catalogEntry is not null)
+            {
+                if (catalogEntry.RequiresCharacterization && code.Length <= 3)
+                {
+                    warnings.Add($"PL05: Code '{code}' erfordert Charakterisierung (Char1 fehlt).");
+                    confidence = Math.Max(0.0, confidence - 0.10);
+                }
+            }
+        }
+
         return new AiSuggestionResult(
             SuggestedCode: suggestedCode,
             Confidence: confidence,

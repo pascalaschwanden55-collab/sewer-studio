@@ -7,6 +7,8 @@ using System.Text.Json;
 using System.Globalization;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages
@@ -27,6 +29,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
         public ObservableCollection<ProjectOverviewEntry> ProjectEntries { get; } = new();
         private List<ProjectOverviewEntry> _allEntries = new();
+        private int _loadRevision;
 
         public IRelayCommand NewCommand { get; }
         public IRelayCommand OpenCommand { get; }
@@ -48,10 +51,10 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             OpenCommand = new RelayCommand(OpenProject);
             OpenSelectedCommand = new RelayCommand(OpenSelectedProject, () => SelectedProjectEntry is not null);
             ContinueCommand = new RelayCommand(OpenLastProject, () => HasLastProject);
-            RefreshCommand = new RelayCommand(LoadAllProjects);
+            RefreshCommand = new RelayCommand(() => _ = LoadAllProjectsAsync());
             DeleteSelectedCommand = new RelayCommand(DeleteSelectedProject, () => SelectedProjectEntry is not null);
 
-            LoadAllProjects();
+            _ = LoadAllProjectsAsync();
 
             _shell.PropertyChanged += (_, e) =>
             {
@@ -63,7 +66,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                     ProjectStatus = BuildProjectStatus();
                     LastProjectPath = _sp.Settings.LastProjectPath;
                     if (e.PropertyName == nameof(ShellViewModel.IsProjectReady))
-                        LoadAllProjects();
+                        _ = LoadAllProjectsAsync();
                 }
             };
         }
@@ -85,11 +88,31 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             ProjectEntries.Add(entry);
     }
 
-    private void LoadAllProjects()
+    private async Task LoadAllProjectsAsync()
     {
         _allEntries.Clear();
         ProjectEntries.Clear();
 
+        var lastProjectPath = LastProjectPath;
+        var hasLastProject = HasLastProject && !string.IsNullOrWhiteSpace(lastProjectPath);
+        var recentPaths = _sp.Settings.RecentProjectPaths.ToList();
+        var loadRevision = Interlocked.Increment(ref _loadRevision);
+
+        var entries = await Task.Run(() => CollectProjectEntries(lastProjectPath, hasLastProject, recentPaths));
+        if (loadRevision != Volatile.Read(ref _loadRevision))
+            return;
+
+        _allEntries = entries
+            .OrderByDescending(e => e.IsLastProject)
+            .ThenByDescending(e => e.ModifiedAtUtc ?? DateTime.MinValue)
+            .ThenBy(e => e.Name)
+            .ToList();
+
+        ApplyFilter();
+    }
+
+    private static List<ProjectOverviewEntry> CollectProjectEntries(string? lastProjectPath, bool hasLastProject, IReadOnlyCollection<string> recentPaths)
+    {
         var entries = new List<ProjectOverviewEntry>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -126,12 +149,12 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         }
 
         // 1. Letztes Projekt
-        if (HasLastProject && LastProjectPath is not null)
-            AddEntry(LastProjectPath, true);
+        if (hasLastProject && lastProjectPath is not null)
+            AddEntry(lastProjectPath, true);
 
         // 2. Alle RecentProjectPaths
-        foreach (var recentPath in _sp.Settings.RecentProjectPaths)
-            AddEntry(recentPath, string.Equals(recentPath, LastProjectPath, StringComparison.OrdinalIgnoreCase));
+        foreach (var recentPath in recentPaths)
+            AddEntry(recentPath, string.Equals(recentPath, lastProjectPath, StringComparison.OrdinalIgnoreCase));
 
         // 3. Standard-Scan-Ordner
         var rootDirs = new List<string>
@@ -168,13 +191,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             catch { /* Zugriff verweigert */ }
         }
 
-        _allEntries = entries
-            .OrderByDescending(e => e.IsLastProject)
-            .ThenByDescending(e => e.ModifiedAtUtc ?? DateTime.MinValue)
-            .ThenBy(e => e.Name)
-            .ToList();
-
-        ApplyFilter();
+        return entries;
     }
 
     private string BuildProjectStatus()
@@ -185,7 +202,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         _shell.NewProject();
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
-        LoadAllProjects();
+        _ = LoadAllProjectsAsync();
         _shell.NavigateTo("Projekt");
     }
 
@@ -195,7 +212,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             return;
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
-        LoadAllProjects();
+        _ = LoadAllProjectsAsync();
         _shell.NavigateTo("Projekt");
     }
 
@@ -210,7 +227,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         _sp.Settings.Save();
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
-        LoadAllProjects();
+        _ = LoadAllProjectsAsync();
         _shell.NavigateTo("Projekt");
     }
 
@@ -242,7 +259,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 _shell.NewProject();
             }
 
-            LoadAllProjects();
+            _ = LoadAllProjectsAsync();
         }
         catch (Exception ex)
         {
@@ -258,7 +275,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             return;
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
-        LoadAllProjects();
+        _ = LoadAllProjectsAsync();
         _shell.NavigateTo("Projekt");
     }
 

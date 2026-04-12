@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai.Training.Models;
+using AuswertungPro.Next.UI.Services.CodeCatalog;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
@@ -31,7 +32,7 @@ public sealed record GuidedVerificationResult(
 /// </summary>
 public sealed class GuidedVerificationService
 {
-    private static readonly TimeSpan FrameTimeout = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan FrameTimeout = TimeSpan.FromSeconds(120);
     private readonly OllamaClient _client;
     private readonly string _model;
 
@@ -209,45 +210,13 @@ public sealed class GuidedVerificationService
     /// <summary>VSA-Code Kurzbeschreibungen fuer den Prompt.</summary>
     private static string GetCodeDescription(string vsaCode)
     {
-        string baseCode = vsaCode.Split('.')[0].ToUpperInvariant();
+        string baseCode = vsaCode.Replace(".", "", StringComparison.Ordinal).ToUpperInvariant();
+        var label = VsaCodeTree.LookupLabel(baseCode);
+        if (!string.IsNullOrWhiteSpace(label))
+            return label;
+
         return baseCode switch
         {
-            // Bauliche Schaeden (BA*)
-            "BAA" => "Verformung",
-            "BAB" => "Riss/Bruch",
-            "BAC" => "Rohrbruch/Einsturz",
-            "BAD" => "Oberflaechenschaden",
-            "BAE" => "Verschobene Verbindung",
-            "BAF" => "Scherbenbildung",
-            "BAG" => "Fehlende Wandteile",
-            "BAH" => "Korrosion",
-            "BAI" => "Poroese Rohrwand",
-            "BAJ" => "Schadhafter Anschluss",
-            "BAK" => "Einragender Anschluss",
-            "BAL" => "Verschobene Rohrverbindung",
-            "BAM" => "Klaffende Rohrverbindung",
-            "BAN" => "Mechanischer Verschleiss",
-            "BAO" => "Fehlstelle",
-            // Betriebliche Schaeden (BB*)
-            "BBA" => "Wurzeleinwuchs",
-            "BBB" => "Inkrustation/Ablagerung hart",
-            "BBC" => "Ablagerung fein",
-            "BBD" => "Anhaftungen",
-            "BBE" => "Verstopfung/Pfropfen",
-            "BBF" => "Eingewachsener Dichtring",
-            "BBG" => "Sichtbare Undichtheit",
-            // Inventar (BC*)
-            "BCA" => "Anschluss",
-            "BCB" => "Seitlicher Anschluss",
-            "BCC" => "Scheitelanschluss",
-            // Sonderfaelle (BD*)
-            "BDA" => "Hindernis",
-            "BDB" => "Eindringen von Erdreich",
-            "BDC" => "Eindringen anderes Material",
-            "BDD" => "Nagertiere/Ungeziefer",
-            "BDE" => "Sonstiger Schaden",
-            "BDBD" => "Eindringen von Boden/Erdreich",
-            // Allgemein
             _ => baseCode.Length >= 2 ? baseCode[1] switch
             {
                 'A' => $"Baulicher Schaden ({baseCode})",

@@ -129,7 +129,22 @@ public static class FfmpegLocator
         var path = ResolveFfmpeg();
         if (Path.IsPathRooted(path))
             return File.Exists(path);
-        // PATH-basiert: Datei kann nicht via File.Exists geprüft werden
-        return true;
+
+        // PATH-basiert: ffmpeg -version ausfuehren um Erreichbarkeit zu pruefen
+        try
+        {
+            using var proc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = path,
+                Arguments = "-version",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            });
+            proc?.WaitForExit(3000);
+            return proc is { ExitCode: 0 };
+        }
+        catch { return false; }
     }
 }

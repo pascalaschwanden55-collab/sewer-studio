@@ -54,7 +54,7 @@ public sealed class VsaClassificationTable
         {
             var json = File.ReadAllText(path);
             return JsonSerializer.Deserialize<VsaClassificationTable>(json,
-                Application.Common.JsonDefaults.CaseInsensitive) ?? new VsaClassificationTable();
+                Application.Common.JsonDefaults.Lenient) ?? new VsaClassificationTable();
         }
         catch (Exception)
         {

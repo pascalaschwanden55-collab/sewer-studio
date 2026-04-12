@@ -98,7 +98,9 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         var classified = ClassifyFindings(findings, table, out _);
 
         var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
-        const double minLength = 3.0;
+        // Schaechte haben kuerzere Mindestlaenge (0.5m) als Kanaele (3.0m)
+        var isManhole = assessmentLength is > 0 and < 1.5;
+        var minLength = isManhole ? 0.5 : table.DefaultMinLength_m;
         var rb = ComputeRandbedingungen(record);
 
         var d = ComputeForRequirement(VsaRequirement.Dichtheit, classified, assessmentLength, minLength, rb);
@@ -132,7 +134,9 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         var classified = ClassifyFindings(findings, table, out var unknownForRecord);
 
         var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
-        const double minLength = 3.0;
+        // Schaechte haben kuerzere Mindestlaenge (0.5m) als Kanaele (3.0m)
+        var isManhole = assessmentLength is > 0 and < 1.5;
+        var minLength = isManhole ? 0.5 : table.DefaultMinLength_m;
         var rb = ComputeRandbedingungen(record);
 
         var d = ComputeForRequirement(VsaRequirement.Dichtheit, classified, assessmentLength, minLength, rb);

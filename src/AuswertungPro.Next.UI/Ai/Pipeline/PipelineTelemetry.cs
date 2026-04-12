@@ -9,16 +9,19 @@ namespace AuswertungPro.Next.UI.Ai.Pipeline;
 /// </summary>
 public sealed class PipelineTelemetry
 {
+    private readonly object _lock = new();
     private readonly List<FrameTiming> _frames = new();
     private readonly System.Diagnostics.Stopwatch _wallClock = System.Diagnostics.Stopwatch.StartNew();
 
-    public IReadOnlyList<FrameTiming> Frames => _frames;
+    public IReadOnlyList<FrameTiming> Frames { get { lock (_lock) { return _frames.ToList(); } } }
 
-    public void RecordFrame(FrameTiming timing) => _frames.Add(timing);
+    public void RecordFrame(FrameTiming timing) { lock (_lock) { _frames.Add(timing); } }
 
     public TelemetrySummary GetSummary()
     {
-        _wallClock.Stop();
+        lock (_lock)
+        {
+        if (_wallClock.IsRunning) _wallClock.Stop();
 
         var active = _frames.Where(f => !f.Skipped).ToList();
         var skipped = _frames.Count(f => f.Skipped);
@@ -33,6 +36,7 @@ public sealed class PipelineTelemetry
             Qwen: ComputePhase(active, f => f.QwenMs),
             Total: ComputePhase(active, f => f.TotalMs),
             WallClockMs: _wallClock.ElapsedMilliseconds);
+        } // lock
     }
 
     private static PhaseStat ComputePhase(

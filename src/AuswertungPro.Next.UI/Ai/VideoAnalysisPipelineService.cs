@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai.Pipeline;
+using AuswertungPro.Next.UI.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -95,6 +96,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             // Create Qwen vision service for VSA-Code enrichment
             var ollamaClient = _cfg.CreateOllamaClient(_httpClient);
             var qwenVision = new EnhancedVisionAnalysisService(ollamaClient, _cfg.VisionModel, _cfg.ReferenceVisionModel);
+            await EnableFewShotIfAvailableAsync(qwenVision, ct).ConfigureAwait(false);
 
             var multiModel = new MultiModelAnalysisService(
                 pipelineClient, pipelineCfg,
@@ -110,14 +112,27 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         {
             // ── Ollama-Only Path (existing behavior) ──
             var client = _cfg.CreateOllamaClient(_httpClient);
-            var videoService = VideoFullAnalysisService.Create(
-                client: client,
-                visionModel: _cfg.VisionModel,
-                referenceModel: _cfg.ReferenceVisionModel,
+            var ollamaVision = new EnhancedVisionAnalysisService(client, _cfg.VisionModel, _cfg.ReferenceVisionModel);
+            await EnableFewShotIfAvailableAsync(ollamaVision, ct).ConfigureAwait(false);
+            var videoService = new VideoFullAnalysisService(
+                vision: ollamaVision,
                 ffmpegPath: _cfg.FfmpegPath ?? "ffmpeg");
 
             videoService.FrameStepSeconds = request.FrameStepSeconds;
             videoService.DedupWindowFrames = request.DedupWindowFrames;
+
+            // Knick-Erkennung (BAG) einhaengen wenn Sidecar verfuegbar
+            try
+            {
+                var (_, sidecarCfg) = await ShouldUseMultiModelAsync(ct).ConfigureAwait(false);
+                if (sidecarCfg is not null)
+                {
+                    using var knickHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                    var knickClient = new VisionPipelineClient(sidecarCfg.SidecarUrl, knickHttp);
+                    videoService.KnickDetection = new KnickDetectionService(knickClient);
+                }
+            }
+            catch { /* Knick-Erkennung optional */ }
 
             videoResult = await videoService.AnalyzeAsync(
                 request.VideoPath, analysisProgress, ct).ConfigureAwait(false);
@@ -187,6 +202,22 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             Warnings: genResult.Warnings,
             Error: null,
             Telemetry: videoResult.Telemetry);
+    }
+
+    private static async Task EnableFewShotIfAvailableAsync(
+        EnhancedVisionAnalysisService vision,
+        CancellationToken ct)
+    {
+        try
+        {
+            var fewShotStore = new FewShotExampleStore();
+            await vision.EnableFewShotAsync(fewShotStore, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[Pipeline] Few-Shot Aktivierung fehlgeschlagen: {ex.Message}");
+        }
     }
 
     /// <summary>

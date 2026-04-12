@@ -14,7 +14,7 @@ namespace AuswertungPro.Next.UI.Ai.Pipeline;
 
 /// <summary>
 /// Orchestrates the Multi-Model pipeline per frame:
-/// YOLO (pre-screening) -> DINO (detection) -> SAM (segmentation) -> Quantification -> Qwen VSA-Code.
+/// YOLO (pre-screening) -> Florence-2 (detection) -> SAM 2 (segmentation) -> Quantification -> Qwen VSA-Code.
 /// Output is convertible to the existing <see cref="EnhancedFrameAnalysis"/> / <see cref="RawVideoDetection"/>.
 /// </summary>
 public sealed class MultiModelAnalysisService
@@ -31,18 +31,18 @@ public sealed class MultiModelAnalysisService
     /// Qwen wird nur fuer Peak-Frames aufgerufen statt fuer jeden Frame.
     /// </summary>
     /// <summary>Erzeugt pro Analyse-Aufruf einen frischen Aggregator (kein Zustand zwischen Videos).</summary>
-    private static DetectionAggregator CreateAggregator() => new(
-        minConsecutiveFrames: 3,
-        minConfidence: 0.4,
-        meterMergeRadius: 1.5,
-        maxGapFrames: 5);
+    private DetectionAggregator CreateAggregator() => new(
+        minConsecutiveFrames: _config.AggregatorMinFrames,
+        minConfidence: _config.AggregatorMinConfidence,
+        meterMergeRadius: _config.AggregatorMergeRadius,
+        maxGapFrames: _config.AggregatorMaxGap);
 
     public double FrameStepSeconds { get; set; } = 1.5;
     public int DedupWindowFrames { get; set; } = 3;
     public TimeSpan QwenFrameTimeout { get; set; } = TimeSpan.FromSeconds(45);
 
     /// <summary>Maximale Zeit pro Frame (YOLO+DINO+SAM+Qwen zusammen). Ueberschrittene Frames werden uebersprungen.</summary>
-    public TimeSpan PerFrameTimeout { get; set; } = TimeSpan.FromSeconds(45);
+    public TimeSpan PerFrameTimeout { get; set; } = TimeSpan.FromSeconds(90);
 
     /// <summary>YOLO-cls Vorfilter aktivieren/deaktivieren (Fallback: aus wenn kein Modell).</summary>
     public bool UseClsPrefilter { get; set; } = true;
@@ -524,6 +524,7 @@ public sealed class MultiModelAnalysisService
                     FramePreviewPng: frameBytes));
 
                 phaseSw.Restart();
+                EnhancedFrameAnalysis? qwenResult = null;
                 try
                 {
                     var multiModelContext = new MultiModelFrameResult(
@@ -547,9 +548,50 @@ public sealed class MultiModelAnalysisService
                         prevCtx = _lastFinding is var (pc, pd, pm, pconf) && Math.Abs(meter - pm) < 1.0
                             ? _lastFinding : null;
                     }
-                    var qwenResult = await _qwenVision.AnalyzeWithContextAsync(
+                    qwenResult = await _qwenVision.AnalyzeWithContextAsync(
                         frameBase64, multiModelContext, pipeDiameterMm, qwenCts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+                {
+                    _logger.LogWarning("Frame {Frame}: Qwen timeout ({Timeout}s) — versuche FastModel",
+                        frameIndex, QwenFrameTimeout.TotalSeconds);
+                    try
+                    {
+                        using var fallbackCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                        fallbackCts.CancelAfter(TimeSpan.FromSeconds(20));
+                        qwenResult = await _qwenVision.AnalyzeWithFastModelAsync(
+                            frameBase64,
+                            new MultiModelFrameResult(
+                                TimestampSec: t,
+                                Meter: meter,
+                                IsRelevant: true,
+                                DinoDetections: dinoResult.Detections,
+                                SamMasks: samResult.Masks,
+                                ImageWidth: samResult.ImageWidth,
+                                ImageHeight: samResult.ImageHeight,
+                                YoloTimeMs: yoloResult.InferenceTimeMs,
+                                DinoTimeMs: dinoResult.InferenceTimeMs,
+                                SamTimeMs: samResult.InferenceTimeMs),
+                            pipeDiameterMm,
+                            fallbackCts.Token).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        _logger.LogWarning("Frame {Frame}: FastModel timeout ({Timeout}s) — Frame uebersprungen",
+                            frameIndex, 20);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Frame {Frame}: FastModel fehlgeschlagen", frameIndex);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Frame {Frame}: Qwen VSA-Code-Mapping fehlgeschlagen", frameIndex);
+                }
 
+                if (qwenResult is not null)
+                {
                     frameEvidence = frameEvidence with
                     {
                         QwenVisionConf = EstimateQwenVisionConfidence(qwenResult.ImageQuality, qwenResult.HasFindings)
@@ -645,15 +687,6 @@ public sealed class MultiModelAnalysisService
                         _logger.LogDebug("Frame {Frame}: Qwen enriched {Count} findings with VSA codes",
                             frameIndex, qwenResult.Findings.Count(f => !string.IsNullOrWhiteSpace(f.VsaCodeHint)));
                     }
-                }
-                catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-                {
-                    _logger.LogWarning("Frame {Frame}: Qwen VSA-Code-Mapping timeout ({Timeout}s)",
-                        frameIndex, QwenFrameTimeout.TotalSeconds);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Frame {Frame}: Qwen VSA-Code-Mapping fehlgeschlagen", frameIndex);
                 }
                 qwenMs = phaseSw.ElapsedMilliseconds;
             }

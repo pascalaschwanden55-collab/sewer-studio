@@ -551,11 +551,13 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
         var subLabels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             // BA - Struktur
-            ["BAA"] = "Verformung", ["BAB"] = "Bruch/Einsturz", ["BAC"] = "Rissbildung",
-            ["BAD"] = "Oberflaeche schadhaft", ["BAE"] = "Verbindung schadhaft",
-            ["BAF"] = "Oberflaechenschaden", ["BAG"] = "Inliner schadhaft",
-            ["BAH"] = "Korrosion", ["BAI"] = "Verschiebung / Lageabweichung",
-            ["BAJ"] = "Schweissnaht/Verbindung", ["BAK"] = "Wanddicke",
+            ["BAA"] = "Verformung", ["BAB"] = "Risse", ["BAC"] = "Bruch/Einsturz",
+            ["BAD"] = "Defektes Mauerwerk", ["BAE"] = "Fehlender Moertel",
+            ["BAF"] = "Oberflaechenschaden", ["BAG"] = "Einragender Anschluss",
+            ["BAH"] = "Schadhafter Anschluss", ["BAI"] = "Einragendes Dichtungsmaterial",
+            ["BAJ"] = "Verschobene Rohrverbindung", ["BAK"] = "Innenauskleidung",
+            ["BAL"] = "Schadhafte Reparatur", ["BAM"] = "Schweissnaht",
+            ["BAN"] = "Poroese Leitung", ["BAO"] = "Boden sichtbar", ["BAP"] = "Hohlraum sichtbar",
             // BB - Betrieb
             ["BBA"] = "Wurzeln", ["BBB"] = "Anhaftende Stoffe", ["BBC"] = "Ablagerungen",
             ["BBD"] = "Eindringen von Bodenmaterial", ["BBE"] = "Andere Hindernisse",

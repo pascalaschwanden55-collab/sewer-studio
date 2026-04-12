@@ -11,12 +11,15 @@ def restore_yolo_settings():
     original_models_dir = settings.models_dir
     original_model_name = settings.yolo_model_name
     original_require = settings.require_custom_yolo
+    original_override = getattr(yolo_wrapper, "_runtime_model_override", None)
     try:
         yield
     finally:
         settings.models_dir = original_models_dir
         settings.yolo_model_name = original_model_name
         settings.require_custom_yolo = original_require
+        if hasattr(yolo_wrapper, "_runtime_model_override"):
+            yolo_wrapper._runtime_model_override = original_override
 
 
 def test_resolve_yolo_model_path_uses_custom_weights(tmp_path: Path, restore_yolo_settings):
@@ -42,3 +45,20 @@ def test_resolve_yolo_model_path_strict_mode_raises_without_weights(tmp_path: Pa
 
     with pytest.raises(FileNotFoundError):
         yolo_wrapper._resolve_yolo_model_path()
+
+
+def test_resolve_yolo_model_path_uses_active_pointer(tmp_path: Path, restore_yolo_settings):
+    yolo_dir = tmp_path / "yolo26m"
+    yolo_dir.mkdir(parents=True)
+    weights = yolo_dir / "yolo_v2.pt"
+    weights.write_bytes(b"weights")
+    (yolo_dir / "active.json").write_text('{"active_model":"yolo_v2.pt"}', encoding="utf-8")
+
+    settings.models_dir = str(tmp_path)
+    settings.yolo_model_name = "missing.pt"
+    settings.require_custom_yolo = True
+
+    model_path, using_custom = yolo_wrapper._resolve_yolo_model_path()
+
+    assert model_path == str(weights.resolve())
+    assert using_custom is True

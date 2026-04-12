@@ -7,7 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\AuswertungPro.Next.UI\AuswertungPro.Next.UI.csproj" />
+    <ProjectReference Include="..\..\src\AuswertungPro.Next.UI\AuswertungPro.Next.UI.csproj"
+                      AdditionalProperties="BaseOutputPath=$(MSBuildThisFileDirectory)bin\ProjectRefs\;UseAppHost=false" />
   </ItemGroup>
 
   <ItemGroup>

@@ -31,14 +31,17 @@ public sealed class OllamaVisionFindingsService
         var prompt =
             "Du analysierst ein Kanal-TV Frame (Kanalinspektion).\n" +
             "Erkenne nur sichtbare Schäden/Anomalien: Riss, Infiltration, Wurzeleinwuchs, Ablagerung, Versatz, Korrosion, Einragung, Fremdkörper, Scherben, Einbruch, Deformation, offene Stösse.\n" +
-            "Lies den Meterstand aus dem Bild, falls sichtbar (z.B. 18.40 m).\n" +
+            "METERSTAND: Lies den Meterstand (Kameraposition im Rohr) aus dem OSD-Bereich des Bildes. " +
+            "Der Meterstand steht typischerweise UNTEN RECHTS oder UNTEN im Bild als Zahl mit Dezimalstelle (z.B. '12.50', '3.20 m', '045.80'). " +
+            "ACHTUNG: Verwechsle den Meterstand NICHT mit Datum oder Uhrzeit (oben links/rechts). " +
+            "Der Meterstand ist eine Distanz in Metern (0-500m).\n" +
             "Gib AUSSCHLIESSLICH gültiges JSON zurück (keine Erklärung):\n" +
             "{\n" +
             "  \"meter\": 18.4 | null,\n" +
             "  \"findings\": [\"Riss\", \"Infiltration\"],\n" +
             "  \"severity\": \"low\"|\"mid\"|\"high\"\n" +
             "}\n" +
-            "Wenn nichts erkennbar: findings=[], severity=\"low\".";
+            "Wenn kein Meterstand erkennbar: meter=null. Wenn nichts erkennbar: findings=[], severity=\"low\".";
 
         var raw = await _client.GenerateAsync(_model, prompt, new[] { framePngBase64 }, ct).ConfigureAwait(false);
         var json = TryExtractFirstJsonObject(raw) ?? "{}";

@@ -75,6 +75,22 @@ namespace AuswertungPro.Next.UI
 
                 _services = new ServiceProvider(settings, diagnostics, logger, loggerFactory);
 
+                // Sidecar (YOLO/Florence-2/SAM 2) im Hintergrund starten
+                if (settings.SidecarAutoStart != false)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _services.Sidecar.StartAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogWarning(ex, "[Sidecar] Auto-Start fehlgeschlagen — Qwen-only Fallback");
+                        }
+                    });
+                }
+
                 // Global exception handling (after services initialized, but before first window).
                 DispatcherUnhandledException += (_, exArgs) =>
                 {
@@ -176,6 +192,15 @@ namespace AuswertungPro.Next.UI
 
         protected override void OnExit(ExitEventArgs e)
         {
+            try
+            {
+                (_services as ServiceProvider)?.Sidecar.Dispose();
+            }
+            catch
+            {
+                // best effort sidecar shutdown
+            }
+
             try
             {
                 AppSettings.FlushPendingSave();

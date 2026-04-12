@@ -43,6 +43,84 @@
             </MenuItem>
 
         </Menu>
+
+        <!-- ═══ STATUSLEISTE (vor Haupt-Grid, damit Grid als letztes DockPanel-Kind den vollen Platz bekommt) ═══ -->
+        <Border DockPanel.Dock="Bottom"
+                Background="{StaticResource HeaderBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="12,4">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Aktuelle Seite -->
+                <TextBlock Grid.Column="0"
+                           Text="{Binding SelectedNavItem.Label, FallbackValue=Uebersicht}"
+                           FontSize="11" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextBrush}"
+                           VerticalAlignment="Center"/>
+
+                <!-- Trennstrich -->
+                <Border Grid.Column="1" Width="1" Margin="10,2"
+                        Background="{StaticResource BorderBrush}"/>
+
+                <!-- Projektname -->
+                <TextBlock Grid.Column="2"
+                           Text="{Binding Subtitle, FallbackValue=Kein Projekt geladen}"
+                           FontSize="11"
+                           Foreground="{StaticResource MutedBrush}"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+
+                <!-- KI-Status Ampel -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="10,0"
+                            VerticalAlignment="Center"
+                            ToolTip="KI-Pipeline Status">
+                    <Ellipse Width="8" Height="8" Margin="0,0,5,0">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="{StaticResource MutedBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAiWorking}" Value="True">
+                                        <Setter Property="Fill" Value="{StaticResource SuccessBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <TextBlock FontSize="10" Foreground="{StaticResource MutedBrush}"
+                               VerticalAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="KI Idle"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAiWorking}" Value="True">
+                                        <Setter Property="Text" Value="KI aktiv"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+
+                <!-- CPU/RAM/GPU Monitor -->
+                <StackPanel Grid.Column="4" Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <TextBlock FontSize="10" Foreground="{StaticResource MutedBrush}"
+                               Text="{Binding CpuUsageText, FallbackValue=CPU --}"
+                               Margin="0,0,8,0"/>
+                    <TextBlock FontSize="10" Foreground="{StaticResource MutedBrush}"
+                               Text="{Binding GpuUsageText, FallbackValue=GPU --}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition>
@@ -722,83 +800,6 @@
         </Grid>
 
     </Grid>
-
-        <!-- ═══ STATUSLEISTE ═══ -->
-        <Border DockPanel.Dock="Bottom"
-                Background="{StaticResource HeaderBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
-                BorderThickness="0,1,0,0"
-                Padding="12,4">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Aktuelle Seite -->
-                <TextBlock Grid.Column="0"
-                           Text="{Binding SelectedNavItem.Label, FallbackValue=Uebersicht}"
-                           FontSize="11" FontWeight="SemiBold"
-                           Foreground="{StaticResource TextBrush}"
-                           VerticalAlignment="Center"/>
-
-                <!-- Trennstrich -->
-                <Border Grid.Column="1" Width="1" Margin="10,2"
-                        Background="{StaticResource BorderBrush}"/>
-
-                <!-- Projektname -->
-                <TextBlock Grid.Column="2"
-                           Text="{Binding Subtitle, FallbackValue=Kein Projekt geladen}"
-                           FontSize="11"
-                           Foreground="{StaticResource MutedBrush}"
-                           VerticalAlignment="Center"
-                           TextTrimming="CharacterEllipsis"/>
-
-                <!-- KI-Status Ampel -->
-                <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="10,0"
-                            VerticalAlignment="Center"
-                            ToolTip="KI-Pipeline Status">
-                    <Ellipse Width="8" Height="8" Margin="0,0,5,0">
-                        <Ellipse.Style>
-                            <Style TargetType="Ellipse">
-                                <Setter Property="Fill" Value="{StaticResource MutedBrush}"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsAiWorking}" Value="True">
-                                        <Setter Property="Fill" Value="{StaticResource SuccessBrush}"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Ellipse.Style>
-                    </Ellipse>
-                    <TextBlock FontSize="10" Foreground="{StaticResource MutedBrush}"
-                               VerticalAlignment="Center">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Text" Value="KI Idle"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsAiWorking}" Value="True">
-                                        <Setter Property="Text" Value="KI aktiv"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                </StackPanel>
-
-                <!-- CPU/RAM/GPU Monitor -->
-                <StackPanel Grid.Column="4" Orientation="Horizontal"
-                            VerticalAlignment="Center">
-                    <TextBlock FontSize="10" Foreground="{StaticResource MutedBrush}"
-                               Text="{Binding CpuUsageText, FallbackValue=CPU --}"
-                               Margin="0,0,8,0"/>
-                    <TextBlock FontSize="10" Foreground="{StaticResource MutedBrush}"
-                               Text="{Binding GpuUsageText, FallbackValue=GPU --}"/>
-                </StackPanel>
-            </Grid>
-        </Border>
 
     </DockPanel>
 </Window>

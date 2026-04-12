@@ -820,19 +820,32 @@ public partial class CodingModeWindow : Window
                 };
                 double levelY = p2.Y;
 
-                double previewTop = _overlayService.ActiveLevelMode == LevelMode.Obstacle ? 0 : levelY;
-                double previewBottom = _overlayService.ActiveLevelMode == LevelMode.Obstacle ? levelY : OverlayCanvas.ActualHeight;
+                // Fuellflaeche mit Rohr-Ellipsen-Clip (nicht ueber den Kreis hinaus)
+                var prevCalib = _overlayService.Calibration;
+                var prevCenter = prevCalib?.PipeCenter ?? new NormalizedPoint(0.5, 0.5);
+                double prevR = (prevCalib?.NormalizedDiameter ?? 0.7) / 2.0;
+                var prevCenterPx = NormalizedToPixel(prevCenter);
+                double prevRxPx = prevR * OverlayCanvas.ActualWidth;
+                double prevRyPx = prevR * OverlayCanvas.ActualHeight;
+
+                double previewTop = _overlayService.ActiveLevelMode == LevelMode.Obstacle
+                    ? (prevCenterPx.Y - prevRyPx) : levelY;
+                double previewBottom = _overlayService.ActiveLevelMode == LevelMode.Obstacle
+                    ? levelY : (prevCenterPx.Y + prevRyPx);
                 var previewFill = new Rectangle
                 {
-                    Width = Math.Abs(p2.X - p1.X),
+                    Width = prevRxPx * 2,
                     Height = Math.Abs(previewBottom - previewTop),
                     Fill = new SolidColorBrush(Color.FromArgb(38,
                         ((SolidColorBrush)levelStroke).Color.R,
                         ((SolidColorBrush)levelStroke).Color.G,
                         ((SolidColorBrush)levelStroke).Color.B)),
-                    Tag = OverlayTagPreview
+                    Tag = OverlayTagPreview,
+                    Clip = new EllipseGeometry(
+                        new Point(prevRxPx, prevCenterPx.Y - Math.Min(previewTop, previewBottom)),
+                        prevRxPx, prevRyPx)
                 };
-                Canvas.SetLeft(previewFill, Math.Min(p1.X, p2.X));
+                Canvas.SetLeft(previewFill, prevCenterPx.X - prevRxPx);
                 Canvas.SetTop(previewFill, Math.Min(previewTop, previewBottom));
                 OverlayCanvas.Children.Add(previewFill);
 
@@ -1069,6 +1082,7 @@ public partial class CodingModeWindow : Window
                     _ => Brushes.Chocolate
                 };
 
+                // Fuellstand-Linie (Sehne im Kreis)
                 var line = new Line
                 {
                     X1 = p1.X, Y1 = y,
@@ -1080,19 +1094,30 @@ public partial class CodingModeWindow : Window
                 };
                 OverlayCanvas.Children.Add(line);
 
-                double top = geometry.LevelSubMode == LevelMode.Obstacle ? 0 : y;
-                double bottom = geometry.LevelSubMode == LevelMode.Obstacle ? y : OverlayCanvas.ActualHeight;
+                // Fuellflaeche als Rechteck mit Rohr-Ellipsen-Clip
+                var calib = _overlayService.Calibration;
+                var pipeCenter = calib?.PipeCenter ?? new NormalizedPoint(0.5, 0.5);
+                double pipeR = (calib?.NormalizedDiameter ?? 0.7) / 2.0;
+                var centerPx = NormalizedToPixel(pipeCenter);
+                double rxPx = pipeR * OverlayCanvas.ActualWidth;
+                double ryPx = pipeR * OverlayCanvas.ActualHeight;
+
+                double top = geometry.LevelSubMode == LevelMode.Obstacle ? (centerPx.Y - ryPx) : y;
+                double bottom = geometry.LevelSubMode == LevelMode.Obstacle ? y : (centerPx.Y + ryPx);
                 var fill = new Rectangle
                 {
-                    Width = Math.Abs(p2.X - p1.X),
+                    Width = rxPx * 2,
                     Height = Math.Abs(bottom - top),
                     Fill = new SolidColorBrush(Color.FromArgb(45,
                         ((SolidColorBrush)stroke).Color.R,
                         ((SolidColorBrush)stroke).Color.G,
                         ((SolidColorBrush)stroke).Color.B)),
-                    Tag = OverlayTagManual
+                    Tag = OverlayTagManual,
+                    Clip = new EllipseGeometry(
+                        new Point(rxPx, centerPx.Y - Math.Min(top, bottom)),
+                        rxPx, ryPx)
                 };
-                Canvas.SetLeft(fill, Math.Min(p1.X, p2.X));
+                Canvas.SetLeft(fill, centerPx.X - rxPx);
                 Canvas.SetTop(fill, Math.Min(top, bottom));
                 OverlayCanvas.Children.Add(fill);
 
@@ -1966,11 +1991,13 @@ public partial class CodingModeWindow : Window
                 SyncVideoToMeter();
             }
             UpdateDefectDetailPanel(ev);
+            RefreshAiOverlaySelectionView();
         }
         else
         {
             _vm.SelectedDefect = null;
             DefectDetailPanel.Visibility = Visibility.Collapsed;
+            RefreshAiOverlaySelectionView();
         }
     }
 
@@ -1986,8 +2013,13 @@ public partial class CodingModeWindow : Window
 
     private void BtnAcceptDefect_Click(object sender, RoutedEventArgs e)
     {
+        var selected = _vm.SelectedDefect ?? LstEvents.SelectedItem as CodingEvent;
+        if (selected == null) return;
+        _vm.SelectedDefect = selected;
+
         _vm.AcceptDefectCommand.Execute(null);
         ClearAllDrawingShapes(); // Overlay entfernen nach Aktion
+        RefreshAiOverlaySelectionView();
         if (_vm.SelectedDefect != null)
         {
             UpdateDefectDetailPanel(_vm.SelectedDefect);
@@ -2031,6 +2063,7 @@ public partial class CodingModeWindow : Window
                 _vm.EditDefectCommand.Execute(null);
 
             ClearAllDrawingShapes(); // Overlay entfernen nach Bearbeitung
+            RefreshAiOverlaySelectionView();
             LstEvents.Items.Refresh();
             UpdateDefectDetailPanel(ev);
             UpdateEventMarkers();
@@ -2091,8 +2124,13 @@ public partial class CodingModeWindow : Window
 
     private void BtnRejectDefect_Click(object sender, RoutedEventArgs e)
     {
+        var selected = _vm.SelectedDefect ?? LstEvents.SelectedItem as CodingEvent;
+        if (selected == null) return;
+        _vm.SelectedDefect = selected;
+
         _vm.RejectDefectCommand.Execute(null);
         ClearAllDrawingShapes(); // Overlay entfernen nach Aktion
+        RefreshAiOverlaySelectionView();
         if (_vm.SelectedDefect != null)
         {
             UpdateDefectDetailPanel(_vm.SelectedDefect);
@@ -2106,13 +2144,21 @@ public partial class CodingModeWindow : Window
     {
         DefectDetailPanel.Visibility = Visibility.Visible;
 
-        // KI-Aktionsbuttons nur bei offenen KI-Events anzeigen
-        var status = CodingSessionViewModel.GetDefectStatus(ev);
-        bool showAiActions = ev.AiContext != null &&
-            status is DefectStatus.Pending or DefectStatus.ReviewRequired;
+        // Actions immer verfuegbar: auch manuelle/auto-accept Events sollen erneut bestaetigt
+        // oder verworfen werden koennen.
+        BtnAcceptDefect.Visibility = Visibility.Visible;
+        BtnRejectDefect.Visibility = Visibility.Visible;
+    }
 
-        BtnAcceptDefect.Visibility = showAiActions ? Visibility.Visible : Visibility.Collapsed;
-        BtnRejectDefect.Visibility = showAiActions ? Visibility.Visible : Visibility.Collapsed;
+    private void RefreshAiOverlaySelectionView()
+    {
+        if (_currentAiOverlays == null || _currentAiOverlays.Count == 0)
+        {
+            AiOverlayCanvas.Children.Clear();
+            return;
+        }
+
+        RenderAiOverlays(_currentAiOverlays);
     }
 
     private static string StatusToDisplayText(DefectStatus status) => status switch
@@ -2535,6 +2581,13 @@ public partial class CodingModeWindow : Window
 
         // Nur das selektierte Overlay anzeigen (nicht alle gleichzeitig)
         var selectedEvent = _vm?.SelectedDefect;
+        if (selectedEvent != null)
+        {
+            var selectedStatus = CodingSessionViewModel.GetDefectStatus(selectedEvent);
+            if (selectedStatus is DefectStatus.Accepted or DefectStatus.AcceptedWithEdit or DefectStatus.Rejected)
+                return; // Nach Benutzerentscheidung Overlay fuer selektierten Befund ausblenden
+        }
+
         foreach (var overlay in overlays)
         {
             if (overlay.IsRejected) continue;
@@ -2619,15 +2672,25 @@ public partial class CodingModeWindow : Window
         };
         AiOverlayCanvas.Children.Add(line);
 
-        double fillTop = geo.LevelSubMode == LevelMode.Obstacle ? 0 : y;
-        double fillBottom = geo.LevelSubMode == LevelMode.Obstacle ? y : h;
+        // Fuellflaeche mit Rohr-Ellipsen-Clip
+        var aiCalib = _overlayService.Calibration;
+        var aiPipeCenter = aiCalib?.PipeCenter ?? new NormalizedPoint(0.5, 0.5);
+        double aiPipeR = (aiCalib?.NormalizedDiameter ?? 0.7) / 2.0;
+        double aiCxPx = aiPipeCenter.X * w, aiCyPx = aiPipeCenter.Y * h;
+        double aiRxPx = aiPipeR * w, aiRyPx = aiPipeR * h;
+
+        double fillTop = geo.LevelSubMode == LevelMode.Obstacle ? (aiCyPx - aiRyPx) : y;
+        double fillBottom = geo.LevelSubMode == LevelMode.Obstacle ? y : (aiCyPx + aiRyPx);
         var fillRect = new Rectangle
         {
-            Width = Math.Abs(x2 - x1), Height = Math.Abs(fillBottom - fillTop),
-            Fill = fill, Tag = "ai_overlay"
+            Width = aiRxPx * 2, Height = Math.Abs(fillBottom - fillTop),
+            Fill = fill, Tag = "ai_overlay",
+            Clip = new EllipseGeometry(
+                new Point(aiRxPx, aiCyPx - Math.Min(fillTop, fillBottom)),
+                aiRxPx, aiRyPx)
         };
-        Canvas.SetLeft(fillRect, Math.Min(x1, x2));
-        Canvas.SetTop(fillRect, fillTop);
+        Canvas.SetLeft(fillRect, aiCxPx - aiRxPx);
+        Canvas.SetTop(fillRect, Math.Min(fillTop, fillBottom));
         AiOverlayCanvas.Children.Add(fillRect);
 
         var pctText = geo.FillPercent.HasValue ? $"{geo.FillPercent:F1}%" : "?%";

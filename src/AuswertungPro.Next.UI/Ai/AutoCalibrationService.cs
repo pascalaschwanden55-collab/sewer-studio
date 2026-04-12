@@ -20,7 +20,7 @@ public static class AutoCalibrationService
     private const double MaxDiameterRatio = 0.92;
 
     // Zeilen die abgetastet werden (relativ zur Bildhoehe, 0.0-1.0)
-    private static readonly double[] ScanLines = { 0.45, 0.475, 0.50, 0.525, 0.55 };
+    private static readonly double[] ScanLines = { 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70 };
 
     /// <summary>
     /// Versucht den Rohrdurchmesser automatisch aus einem Frame zu erkennen.
@@ -53,7 +53,7 @@ public static class AutoCalibrationService
                 measurements.Add(edges.Value);
         }
 
-        if (measurements.Count < 3) return null; // Mindestens 3 von 5 Zeilen muessen Kanten finden
+        if (measurements.Count < 5) return null; // Mindestens 5 von 9 Zeilen muessen Kanten finden
 
         // Median der Messungen fuer Robustheit
         var diameters = measurements

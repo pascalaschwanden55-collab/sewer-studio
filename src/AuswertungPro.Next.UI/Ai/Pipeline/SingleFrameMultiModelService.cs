@@ -8,7 +8,7 @@ using AuswertungPro.Next.Domain.Models;
 namespace AuswertungPro.Next.UI.Ai.Pipeline;
 
 /// <summary>
-/// Orchestriert YOLO → DINO → SAM fuer einen einzelnen Frame.
+/// Orchestriert YOLO → Florence-2 → SAM 2 fuer einen einzelnen Frame.
 /// Extrahiert aus MultiModelAnalysisService, ohne Video-Streaming und Temporal-Dedup.
 /// Fuer den Codiermodus: "Jetzt analysieren" auf dem aktuellen Frame.
 /// </summary>
@@ -18,6 +18,11 @@ public sealed class SingleFrameMultiModelService
     private readonly double _yoloConfidence;
     private readonly double _dinoBoxThreshold;
     private readonly double _dinoTextThreshold;
+
+    /// <summary>
+    /// Recall-Boost: Wenn YOLO einen Frame als irrelevant markiert, optional trotzdem DINO pruefen.
+    /// </summary>
+    public bool RunDinoFallbackOnIrrelevantFrames { get; set; } = true;
 
     public SingleFrameMultiModelService(
         VisionPipelineClient client,
@@ -57,7 +62,7 @@ public sealed class SingleFrameMultiModelService
             var yoloResp = await _client.DetectYoloAsync(yoloReq, ct);
             yoloMs = yoloResp.InferenceTimeMs;
 
-            if (!yoloResp.IsRelevant)
+            if (!yoloResp.IsRelevant && !RunDinoFallbackOnIrrelevantFrames)
             {
                 return new SingleFrameResult(
                     IsRelevant: false,
@@ -68,7 +73,7 @@ public sealed class SingleFrameMultiModelService
                     Error: null);
             }
 
-            // 2. DINO Open-Vocabulary Detection
+            // 2. Florence-2 Open-Vocabulary Detection
             var dinoReq = new DinoRequest(b64, null, _dinoBoxThreshold, _dinoTextThreshold);
             var dinoResp = await _client.DetectDinoAsync(dinoReq, ct);
             dinoMs = dinoResp.InferenceTimeMs;
@@ -76,7 +81,7 @@ public sealed class SingleFrameMultiModelService
             if (dinoResp.Detections.Count == 0)
             {
                 return new SingleFrameResult(
-                    IsRelevant: true,
+                    IsRelevant: yoloResp.IsRelevant,
                     DinoDetections: Array.Empty<DinoDetectionDto>(),
                     SamResponse: null,
                     QuantifiedMasks: Array.Empty<MaskQuantificationService.QuantifiedMask>(),
@@ -84,11 +89,11 @@ public sealed class SingleFrameMultiModelService
                     Error: null);
             }
 
-            // 3. SAM Segmentation (DINO-Boxes als Input)
+            // 3. SAM 2 Segmentation (Florence-2 Boxes als Input)
             var samBoxes = dinoResp.Detections.Select(d => new SamBoundingBox(
                 d.X1, d.Y1, d.X2, d.Y2, d.Label, d.Confidence)).ToList();
 
-            var samReq = new SamRequest(b64, samBoxes, pipeDiameterMm > 0 ? pipeDiameterMm : null);
+            var samReq = new SamRequest(b64, samBoxes, PipeDiameterMm: pipeDiameterMm > 0 ? pipeDiameterMm : null);
             var samResp = await _client.SegmentSamAsync(samReq, ct);
             samMs = samResp.InferenceTimeMs;
 
@@ -103,7 +108,7 @@ public sealed class SingleFrameMultiModelService
             }
 
             return new SingleFrameResult(
-                IsRelevant: true,
+                IsRelevant: yoloResp.IsRelevant || dinoResp.Detections.Count > 0,
                 DinoDetections: dinoResp.Detections,
                 SamResponse: samResp,
                 QuantifiedMasks: quantified,

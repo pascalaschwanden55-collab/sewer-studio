@@ -98,7 +98,9 @@ public sealed class PdfProtocolExtractor
         return ext switch
         {
             ".json" => Task.FromResult(ExtractFromJson(filePath)),
-            ".pdf"  => Task.FromResult(ExtractFromPdf(filePath, framesDir)),
+            // Task.Run: PDF-Extraktion (PyMuPDF-Subprocess + PdfPig I/O) auf ThreadPool
+            // statt den aufrufenden Thread zu blockieren
+            ".pdf"  => Task.Run(() => ExtractFromPdf(filePath, framesDir), ct),
             _       => Task.FromResult<IReadOnlyList<GroundTruthEntry>>(Array.Empty<GroundTruthEntry>())
         };
     }
@@ -397,24 +399,52 @@ public sealed class PdfProtocolExtractor
         string pdfPath,
         string framesDir)
     {
+        // Diagnose-Log fuer Foto-Zuweisung
+        void DiagLog(string msg)
+        {
+            try
+            {
+                var diagPath = Path.Combine(framesDir, "_diag_assignment.txt");
+                File.AppendAllText(diagPath, $"{DateTime.Now:HH:mm:ss} {msg}\n");
+            }
+            catch { /* Diagnose darf nie crashen */ }
+        }
+
         try
         {
             Directory.CreateDirectory(framesDir);
+            DiagLog($"Start: {entries.Count} Eintraege, PDF={Path.GetFileName(pdfPath)}");
 
             // ── PyMuPDF-Extraktion (korrekte CMYK→RGB Konvertierung) ──
+            // PyMuPDF filtert bereits in Python: Mindestgroesse, Seitenverhaeltnis,
+            // Deduplizierung und is_likely_photo (Luminanz/Farbvarianz).
+            // Der C#-Logo-Filter wird NUR fuer PdfPig-Fallback angewendet.
             var imagePaths = ExtractImagesViaPyMuPdf(pdfPath, framesDir);
+            bool fromPyMuPdf = imagePaths.Count > 0;
+            DiagLog($"PyMuPDF: {imagePaths.Count} Bilder");
 
             // Fallback: PdfPig-Extraktion wenn PyMuPDF fehlschlaegt
             if (imagePaths.Count == 0)
+            {
                 imagePaths = ExtractImagesViaPdfPig(doc, pdfPath, framesDir);
+                DiagLog($"PdfPig-Fallback: {imagePaths.Count} Bilder");
+            }
 
-            // Logos/Symbole filtern (geometrische Grafiken, wenige Farben)
-            imagePaths = imagePaths
-                .Where(p => !IsLikelyLogoOrSymbol(File.ReadAllBytes(p), Path.GetExtension(p)))
-                .ToList();
+            // Logo-Filter nur fuer PdfPig-Bilder (PyMuPDF hat eigenen Filter in Python)
+            if (!fromPyMuPdf && imagePaths.Count > 0)
+            {
+                var beforeFilter = imagePaths.Count;
+                imagePaths = imagePaths
+                    .Where(p => !IsLikelyLogoOrSymbol(File.ReadAllBytes(p), Path.GetExtension(p)))
+                    .ToList();
+                DiagLog($"Logo-Filter: {beforeFilter} → {imagePaths.Count} Bilder");
+            }
 
             if (imagePaths.Count == 0)
+            {
+                DiagLog("ABBRUCH: 0 Bilder nach Logo-Filter");
                 return entries;
+            }
 
             // Zuordnung: Bilder den Entries zuweisen.
             //
@@ -477,8 +507,10 @@ public sealed class PdfProtocolExtractor
 
             int assignable = Math.Min(filteredImages.Count, entries.Count);
             double coverageRatio = entries.Count > 0 ? (double)assignable / entries.Count : 0;
+            DiagLog($"Zuweisung: {filteredImages.Count} gefilterte Bilder, {entries.Count} Eintraege, Coverage={coverageRatio:P0}");
             if (coverageRatio < 0.30 && Math.Abs(filteredImages.Count - entries.Count) > 3)
             {
+                DiagLog($"ABBRUCH: Coverage zu niedrig ({coverageRatio:P0} < 30%)");
                 System.Diagnostics.Debug.WriteLine(
                     $"[PdfExtractor] Zuordnung unsicher: {filteredImages.Count} Bilder vs {entries.Count} Eintraege " +
                     $"(Coverage {coverageRatio:P0}) in {Path.GetFileName(pdfPath)}");
@@ -486,6 +518,7 @@ public sealed class PdfProtocolExtractor
             }
 
             var result = new List<GroundTruthEntry>(entries.Count);
+            int assigned = 0;
             for (int i = 0; i < entries.Count; i++)
             {
                 var entry = entries[i];
@@ -504,20 +537,25 @@ public sealed class PdfProtocolExtractor
                             File.Move(srcPath, targetPath);
                         }
                         framePath = targetPath;
+                        assigned++;
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        DiagLog($"  Move FEHLER [{i}]: {ex.GetType().Name}: {ex.Message}");
                         framePath = File.Exists(srcPath) ? srcPath : null;
+                        if (framePath != null) assigned++;
                     }
                 }
 
                 result.Add(entry with { ExtractedFramePath = framePath });
             }
 
+            DiagLog($"Ergebnis: {assigned}/{entries.Count} Fotos zugewiesen");
             return result;
         }
-        catch
+        catch (Exception ex)
         {
+            DiagLog($"EXCEPTION: {ex.GetType().Name}: {ex.Message}");
             return entries;
         }
     }
@@ -550,11 +588,28 @@ public sealed class PdfProtocolExtractor
             using var p = System.Diagnostics.Process.Start(psi);
             if (p == null) return Array.Empty<string>();
 
+            // WICHTIG: stdout und stderr PARALLEL lesen — sonst Deadlock!
+            // Wenn stderr voll ist und der Prozess blockiert, haengt ReadToEnd() ewig.
+            var stderrTask = p.StandardError.ReadToEndAsync();
             var output = p.StandardOutput.ReadToEnd();
-            p.WaitForExit(30_000); // Max 30 Sekunden
+
+            if (!p.WaitForExit(30_000))
+            {
+                // Timeout: Prozess haengt → killen
+                try { p.Kill(); } catch { /* ignore */ }
+                System.Diagnostics.Debug.WriteLine(
+                    $"[PdfExtractor] PyMuPDF Timeout nach 30s fuer {Path.GetFileName(pdfPath)}");
+                return Array.Empty<string>();
+            }
 
             if (p.ExitCode != 0 || string.IsNullOrWhiteSpace(output))
+            {
+                var stderr = stderrTask.Result;
+                if (!string.IsNullOrWhiteSpace(stderr))
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[PdfExtractor] PyMuPDF stderr: {stderr[..Math.Min(stderr.Length, 300)]}");
                 return Array.Empty<string>();
+            }
 
             // JSON parsen: [{"page": 1, "index": 0, "path": "...", "width": 788, "height": 576}, ...]
             using var jsonDoc = System.Text.Json.JsonDocument.Parse(output);
@@ -1094,16 +1149,26 @@ public sealed class PdfProtocolExtractor
             bi.EndInit();
             bi.Freeze();
 
-            var wb = new System.Windows.Media.Imaging.WriteableBitmap(bi);
-            int stride = wb.PixelWidth * 4;
-            byte[] pixels = new byte[stride * wb.PixelHeight];
-            wb.CopyPixels(pixels, stride, 0);
+            // Pixelformat auf Bgra32 normalisieren — BitmapImage kann je nach PNG
+            // verschiedene Formate liefern (Bgr24, Bgra32, Gray8 etc.).
+            // Ohne Konvertierung stimmt der Stride nicht und der Farbzaehler liest Muell.
+            System.Windows.Media.Imaging.BitmapSource src = bi;
+            if (bi.Format != System.Windows.Media.PixelFormats.Bgra32)
+            {
+                src = new System.Windows.Media.Imaging.FormatConvertedBitmap(
+                    bi, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+                ((System.Windows.Media.Imaging.FormatConvertedBitmap)src).Freeze();
+            }
+
+            int stride = src.PixelWidth * 4;
+            byte[] pixels = new byte[stride * src.PixelHeight];
+            src.CopyPixels(pixels, stride, 0);
 
             // Eindeutige Farben zaehlen (auf 5-Bit quantisiert fuer Robustheit)
             var colors = new HashSet<int>();
             for (int i = 0; i < pixels.Length - 3; i += 4)
             {
-                // Quantisieren: 256 Farben → 32 Stufen pro Kanal
+                // Quantisieren: 256 Farben → 32 Stufen pro Kanal (BGRA: B=i, G=i+1, R=i+2)
                 int r = pixels[i + 2] >> 3;
                 int g = pixels[i + 1] >> 3;
                 int b = pixels[i] >> 3;

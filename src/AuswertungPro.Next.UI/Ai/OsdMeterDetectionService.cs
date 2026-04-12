@@ -112,7 +112,7 @@ public sealed class OsdMeterDetectionService
     /// </summary>
     public static IReadOnlyList<(double TimeSeconds, double Meter)> SmoothMeterTimeline(
         IReadOnlyList<(double TimeSeconds, double? Meter)> rawTimeline,
-        double maxJumpPerSecond = 5.0)
+        double maxJumpPerSecond = 2.5)
     {
         if (rawTimeline.Count == 0)
             return Array.Empty<(double, double)>();

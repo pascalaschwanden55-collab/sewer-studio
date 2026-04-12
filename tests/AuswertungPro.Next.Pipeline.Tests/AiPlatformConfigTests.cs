@@ -33,7 +33,7 @@ public sealed class AiPlatformConfigTests
         Assert.Equal(PipelineMode.Auto, config.PipelineMode);  // Default: Auto
         Assert.Equal(0.25, config.YoloConfidence);
         Assert.Equal(0.30, config.DinoBoxThreshold);
-        Assert.Equal(0.25, config.DinoTextThreshold);
+        Assert.Equal(0.30, config.DinoTextThreshold);
         Assert.Equal(300, config.SidecarTimeoutSec);
         Assert.Null(config.PipeDiameterMmOverride);
         Assert.Equal(OllamaConfig.DefaultReferenceVisionModel, config.ReferenceVisionModel);
@@ -188,7 +188,9 @@ public sealed class AiPlatformConfigTests
             TextModel: "text-model",
             EmbedModel: "embed-model",
             RequestTimeout: TimeSpan.FromMinutes(12),
-            KeepAlive: "24h"), ollama);
+            KeepAlive: "24h",
+            NumCtx: 8192,
+            ReferenceVisionModel: "fallback-vision"), ollama);
     }
 
     [Fact]
@@ -347,35 +349,38 @@ public sealed class AiPlatformConfigTests
 
     private sealed class SettingsFileScope : IDisposable
     {
-        private readonly string _settingsPath = Path.Combine(AppSettings.AppDataDir, "settings.json");
-        private readonly string? _backupPath;
+        private readonly string _appDataDir = Path.Combine(Path.GetTempPath(), "AuswertungPro.Tests", Guid.NewGuid().ToString("N"));
+        private readonly string? _previousOverride;
 
         public SettingsFileScope()
         {
-            var dir = Path.GetDirectoryName(_settingsPath);
-            if (!string.IsNullOrWhiteSpace(dir))
-                Directory.CreateDirectory(dir);
-
-            if (!File.Exists(_settingsPath))
-                return;
-
-            _backupPath = _settingsPath + ".bak_" + Guid.NewGuid().ToString("N");
-            File.Move(_settingsPath, _backupPath);
+            _previousOverride = AppSettings.TestAppDataDirOverride;
+            AppSettings.TestAppDataDirOverride = _appDataDir;
+            Directory.CreateDirectory(_appDataDir);
         }
 
         public void Dispose()
         {
             try
             {
-                if (File.Exists(_settingsPath))
-                    File.Delete(_settingsPath);
-
-                if (!string.IsNullOrWhiteSpace(_backupPath) && File.Exists(_backupPath))
-                    File.Move(_backupPath, _settingsPath);
+                AppSettings.FlushPendingSave();
             }
             catch
             {
                 // Test cleanup should not mask assertions.
+            }
+            finally
+            {
+                AppSettings.TestAppDataDirOverride = _previousOverride;
+                try
+                {
+                    if (Directory.Exists(_appDataDir))
+                        Directory.Delete(_appDataDir, recursive: true);
+                }
+                catch
+                {
+                    // Test cleanup should not mask assertions.
+                }
             }
         }
     }

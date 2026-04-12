@@ -47,4 +47,15 @@ public sealed record GroundTruthEntry
     /// Wird als Frame verwendet wenn kein Video vorhanden ist.
     /// </summary>
     public string? ExtractedFramePath { get; init; }
+
+    // --- Kontextfelder fuer Video-Selbsttraining ---
+
+    /// <summary>Rohrmaterial der Haltung (z.B. "Beton", "PVC", "Steinzeug"). Fuer KB-Kontext.</summary>
+    public string? Rohrmaterial { get; init; }
+
+    /// <summary>Nennweite in mm (z.B. 300 fuer DN300). Fuer KB-Kontext.</summary>
+    public int? NennweiteMm { get; init; }
+
+    /// <summary>Original-Freitext aus dem Protokoll (Beschreibung des Codierers).</summary>
+    public string? Freitext { get; init; }
 }

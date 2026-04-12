@@ -60,7 +60,10 @@ public sealed class FeedbackIngestionService
                     Code = vsaCode,
                     Beschreibung = det.FindingLabel ?? "",
                     MeterStart = det.MeterStart,
-                    MeterEnd = det.MeterEnd
+                    MeterEnd = det.MeterEnd,
+                    IsKorrigiert = !wasCorrect,
+                    QualityGateLevel = entry.QualityGateResult?.TrafficLight.ToString(),
+                    SourceType = "FeedbackReview"
                 };
                 await _kbManager.IndexSampleAsync(sample, ct).ConfigureAwait(false);
             }
@@ -70,19 +73,32 @@ public sealed class FeedbackIngestionService
             }
         }
 
-        var count = Interlocked.Increment(ref _feedbackCount);
-
-        // 3. Every N validations: re-learn weights
-        if (count % ReLearnInterval == 0)
+        Interlocked.Increment(ref _feedbackCount);
+        int totalCount;
+        try
         {
-            try
+            totalCount = _logger.GetTotalCount();
+        }
+        catch
+        {
+            totalCount = 0;
+        }
+
+        // 3. Every N persisted validations: re-learn weights in background.
+        // Uses global ValidationLog count so a fresh service instance still triggers learning.
+        if (ReLearnInterval > 0 && totalCount > 0 && totalCount % ReLearnInterval == 0)
+        {
+            _ = Task.Run(async () =>
             {
-                await _weightLearner.ReLearnAsync(ct).ConfigureAwait(false);
-            }
-            catch
-            {
-                // Weight learning failure is non-critical
-            }
+                try
+                {
+                    await _weightLearner.ReLearnAsync(CancellationToken.None).ConfigureAwait(false);
+                }
+                catch
+                {
+                    // Weight learning failure is non-critical
+                }
+            });
         }
     }
 

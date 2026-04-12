@@ -78,6 +78,12 @@ public sealed class KnowledgeBaseContext : IDisposable
         // Migration: SourceType-Spalte hinzufuegen (bestehende DBs upgraden)
         MigrateAddColumn("Samples", "SourceType", "TEXT NOT NULL DEFAULT ''");
 
+        // Migration: Video-Selbsttraining — Kontextfelder fuer KB-Anreicherung
+        MigrateAddColumn("Samples", "Rohrmaterial", "TEXT DEFAULT NULL");
+        MigrateAddColumn("Samples", "NennweiteMm", "INTEGER DEFAULT NULL");
+        MigrateAddColumn("Samples", "IsKorrigiert", "INTEGER NOT NULL DEFAULT 0");
+        MigrateAddColumn("Samples", "QualityGateLevel", "TEXT DEFAULT NULL");
+
         // Index für schnelle Code-Suche
         ExecuteNonQuery("""
             CREATE INDEX IF NOT EXISTS idx_samples_code

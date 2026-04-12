@@ -863,7 +863,7 @@ public partial class VideoAnalysisPipelineWindow : Window
         };
 
         if (t.Yolo.TotalMs > 0) parts.Add($"YOLO: {Fmt(t.Yolo)}");
-        if (t.Dino.TotalMs > 0) parts.Add($"DINO: {Fmt(t.Dino)}");
+        if (t.Dino.TotalMs > 0) parts.Add($"Florence-2: {Fmt(t.Dino)}");
         if (t.Sam.TotalMs > 0) parts.Add($"SAM: {Fmt(t.Sam)}");
         if (t.Qwen.TotalMs > 0) parts.Add($"Vision: {Fmt(t.Qwen)}");
         parts.Add($"Total/Frame: {Fmt(t.Total)}");

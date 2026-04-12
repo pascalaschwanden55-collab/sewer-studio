@@ -51,11 +51,11 @@ public sealed class FewShotExampleBuilder
     private readonly FewShotExampleStore _store;
     private readonly PdfProtocolExtractor _pdfExtractor;
 
-    // Codes die KEINE Schadensbeispiele sind (Rohrstart/-ende, Beginn TV etc.)
+    // Codes die KEINE nuetzlichen Trainingsbeispiele sind (Beginn/Ende TV, Metadaten)
+    // BCD/BCE NICHT mehr skippen — Qwen verwechselt sie mit BACB (Loch),
+    // Few-Shot-Beispiele helfen bei der Unterscheidung Rohranfang ≠ Loch
     private static readonly HashSet<string> SkipCodes = new(StringComparer.OrdinalIgnoreCase)
     {
-        "BCD",   // Rohranfang
-        "BCE",   // Rohrende
         "BDBA",  // Beginn TV-Untersuchung
         "BDBB",  // Ende TV-Untersuchung
         "AEF",   // Neue Laenge
@@ -72,17 +72,17 @@ public sealed class FewShotExampleBuilder
         "BAC",  // Bruch/Einsturz
         "BAD",  // Defekte Wandung
         "BAE",  // Fehlender Moertel
-        "BAF",  // Scherbe
+        "BAF",  // Oberflaechenschaden
         "BAG",  // Einragender Anschluss
-        "BAH",  // Versatz
-        "BAI",  // Abzweig/Anschluss
-        "BAJ",  // Verformung
+        "BAH",  // Schadhafter Anschluss
+        "BAI",  // Einragendes Dichtungsmaterial
+        "BAJ",  // Versatz
         "BBA",  // Wurzeleinwuchs
         "BBB",  // Anhaftungen
-        "BBC",  // Infiltration
-        "BBD",  // Exfiltration
+        "BBC",  // Ablagerungen
+        "BBD",  // Bodeneindringung
         "BBE",  // Hindernisse
-        "BBF",  // Ablagerung
+        "BBF",  // Infiltration
     };
 
     // Uhrzeitlage aus Beschreibungstext extrahieren
@@ -380,6 +380,11 @@ public sealed class FewShotExampleBuilder
         // BDA = Allgemeinzustand — niedrigere Qualitaet weil wenig spezifisch
         if (code.StartsWith("BDA", StringComparison.OrdinalIgnoreCase))
             return 0.3;
+
+        // BCD/BCE = Anti-Verwechslungs-Beispiele (Rohranfang/Rohrende ≠ BACB Loch)
+        // Hohe Qualitaet weil Qwen diese Codes am haeufigsten verwechselt
+        if (code is "BCD" or "BCE")
+            return 0.85;
 
         // Anschluss-Codes (BC*) → mittlere Qualitaet
         if (code.StartsWith("BC", StringComparison.OrdinalIgnoreCase))

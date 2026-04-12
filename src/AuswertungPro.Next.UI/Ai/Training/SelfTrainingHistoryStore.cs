@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 namespace AuswertungPro.Next.UI.Ai.Training;
 
 /// <summary>Snapshot eines einzelnen Self-Training-Laufs.</summary>
+/// <param name="CodeHitPercent">Code-Treffer-Rate (Code korrekt, unabhaengig von Meter/Clock). Zeigt die echte Erkennungsleistung.</param>
 public sealed record SelfTrainingRunSnapshot(
     DateTime TimestampUtc,
     string CaseId,
@@ -19,7 +20,8 @@ public sealed record SelfTrainingRunSnapshot(
     double ExactPercent,
     double PartialPercent,
     double MismatchPercent,
-    double NoFindingsPercent);
+    double NoFindingsPercent,
+    double CodeHitPercent = 0);
 
 /// <summary>
 /// Persistiert Match-Rate-Verlaeufe im Knowledge-Ordner (portabel).

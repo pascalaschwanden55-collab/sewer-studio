@@ -271,7 +271,7 @@
             <TabItem Header="Selbsttraining" x:Name="SelfTrainingTab">
                 <Grid Margin="0,4,0,0">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>  <!-- Start/Stop Buttons -->
+                        <RowDefinition Height="Auto"/>  <!-- Steuerung + Werkzeuge -->
                         <RowDefinition Height="4"/>
                         <RowDefinition Height="Auto"/>  <!-- Pipeline-Leiste -->
                         <RowDefinition Height="4"/>
@@ -282,30 +282,62 @@
                         <RowDefinition Height="Auto"/>  <!-- Log (klappbar) -->
                     </Grid.RowDefinitions>
 
-                    <!-- ═══ Row 0: Start/Stop/Pause Buttons ═══ -->
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
-                        <Button Content="▶ Selbsttraining starten"
-                                Command="{Binding RunSelfTrainingCommand}"
-                                Background="#059669" Foreground="White" FontWeight="SemiBold"
-                                Padding="16,6" Margin="0,0,8,0" Cursor="Hand"
-                                ToolTip="Selbsttraining starten — KI analysiert alle Haltungen und vergleicht mit Protokollen"/>
-                        <CheckBox Content="Alle erneut durchlaufen"
-                                 IsChecked="{Binding ForceRerunAll}"
-                                 Foreground="White" FontSize="11"
-                                 VerticalAlignment="Center" Margin="0,0,12,0"
-                                 ToolTip="Bereits verarbeitete Haltungen nochmals analysieren (KI lernt mit mehr Wissen)"/>
-                        <Button Content="⏸ Pause / Fortsetzen"
-                                Command="{Binding PauseSelfTrainingCommand}"
-                                IsEnabled="{Binding IsSelfTrainingRunning}"
-                                Background="#D97706" Foreground="White" FontWeight="SemiBold"
-                                Padding="16,6" Margin="0,0,8,0" Cursor="Hand"
-                                ToolTip="Laufendes Selbsttraining pausieren oder nach Pause fortsetzen ohne Datenverlust"/>
-                        <Button Content="⏹ Abbrechen"
-                                Command="{Binding StopSelfTrainingCommand}"
-                                IsEnabled="{Binding IsSelfTrainingRunning}"
-                                Background="#DC2626" Foreground="White" FontWeight="SemiBold"
-                                Padding="16,6" Cursor="Hand"
-                                ToolTip="Selbsttraining sofort abbrechen — bisherige Ergebnisse bleiben erhalten"/>
+                    <!-- ═══ Row 0: Steuerung (oben) + Werkzeuge (unten) ═══ -->
+                    <StackPanel Grid.Row="0">
+                        <!-- Zeile 1: Start/Pause/Stop -->
+                        <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,4">
+                            <Button Content="▶ Selbsttraining starten"
+                                    Command="{Binding RunSelfTrainingCommand}"
+                                    Background="#059669" Foreground="White" FontWeight="SemiBold"
+                                    Padding="16,6" Margin="0,0,8,0" Cursor="Hand"
+                                    ToolTip="Selbsttraining starten — KI analysiert alle Haltungen und vergleicht mit Protokollen"/>
+                            <CheckBox Content="Alle erneut durchlaufen"
+                                     IsChecked="{Binding ForceRerunAll}"
+                                     Foreground="White" FontSize="11"
+                                     VerticalAlignment="Center" Margin="0,0,12,0"
+                                     ToolTip="Bereits verarbeitete Haltungen nochmals analysieren (KI lernt mit mehr Wissen)"/>
+                            <Button Content="⏸ Pause / Fortsetzen"
+                                    Command="{Binding PauseSelfTrainingCommand}"
+                                    IsEnabled="{Binding IsSelfTrainingRunning}"
+                                    Background="#D97706" Foreground="White" FontWeight="SemiBold"
+                                    Padding="16,6" Margin="0,0,8,0" Cursor="Hand"
+                                    ToolTip="Laufendes Selbsttraining pausieren oder nach Pause fortsetzen ohne Datenverlust"/>
+                            <Button Content="⏹ Abbrechen"
+                                    Command="{Binding StopSelfTrainingCommand}"
+                                    IsEnabled="{Binding IsSelfTrainingRunning}"
+                                    Background="#DC2626" Foreground="White" FontWeight="SemiBold"
+                                    Padding="16,6" Cursor="Hand"
+                                    ToolTip="Selbsttraining sofort abbrechen — bisherige Ergebnisse bleiben erhalten"/>
+                        </WrapPanel>
+
+                        <!-- Zeile 2: Werkzeuge -->
+                        <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,2">
+                            <Button Content="🖼 Bild-Bibliothek"
+                                    Click="OpenImageAnnotation_Click"
+                                    Background="#059669" Foreground="White" FontWeight="SemiBold"
+                                    Padding="12,5" Margin="0,0,6,0" Cursor="Hand"
+                                    ToolTip="Bild-Bibliothek: Kanalbilder manuell annotieren — Rechteck zeichnen, Code zuweisen, KI lernt"/>
+                            <Button Content="🎬 Video-Blindtest"
+                                    Click="OpenVideoTrainingReview_Click"
+                                    Background="#2563EB" Foreground="White" FontWeight="SemiBold"
+                                    Padding="12,5" Margin="0,0,6,0" Cursor="Hand"
+                                    ToolTip="Video-Blindtest: KI analysiert ein Video blind und vergleicht Ergebnisse mit dem Protokoll (F1-Score)"/>
+                            <Button Content="📊 Benchmark"
+                                    Click="OpenBenchmark_Click"
+                                    Background="#7C3AED" Foreground="White" FontWeight="SemiBold"
+                                    Padding="12,5" Margin="0,0,6,0" Cursor="Hand"
+                                    ToolTip="Benchmark-Suite: Mehrere Haltungen automatisch testen und Metriken vergleichen"/>
+                            <Button x:Name="BtnBatchNight" Content="🌙 Batch-Nachtbetrieb"
+                                    Click="StartBatchNightRun_Click"
+                                    Background="#0D9488" Foreground="White" FontWeight="SemiBold"
+                                    Padding="12,5" Cursor="Hand"
+                                    ToolTip="Batch-Nachtbetrieb: Alle Haltungen in einem Ordner automatisch ueber Nacht verarbeiten"/>
+                            <Button x:Name="BtnBatchCancel" Content="⛔ Abbrechen"
+                                    Click="CancelBatchNightRun_Click"
+                                    Background="#DC2626" Foreground="White" FontWeight="SemiBold"
+                                    Padding="12,5" Cursor="Hand" Visibility="Collapsed"
+                                    ToolTip="Batch-Nachtbetrieb abbrechen (aktuelle Haltung wird noch fertig verarbeitet)"/>
+                        </WrapPanel>
                     </StackPanel>
 
                     <!-- ═══ Row 2: Pipeline-Stage-Leiste ═══ -->

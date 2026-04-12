@@ -757,11 +757,11 @@ public static class VsaCodeTree
 
         // Betriebliche Feststellungen
         Add(map, "Inkrustation (verkalkt)", "BBBA");
-        Add(map, "Inkrustation", "BBBA");
+        Add(map, "Inkrustation", "BBB");
         Add(map, "Harte Ablagerungen", "BBCC");
         Add(map, "Lose Ablagerungen Sand", "BBCA");
         Add(map, "Lose Ablagerungen Kies", "BBCB");
-        Add(map, "Wurzeleinwuchs", "BBAC");
+        Add(map, "Wurzeleinwuchs", "BBA");
         Add(map, "Komplexes Wurzelwerk", "BBAC");
         Add(map, "Pfahlwurzel", "BBAA");
 
@@ -800,8 +800,8 @@ public static class VsaCodeTree
 
     /// <summary>
     /// Prueft ob ein VSA-Code typischerweise ein Streckenschaden ist (requiresRange laut Katalog).
-    /// Typisch fuer: Risse laengs (BABA/BABAB), Korrosion (BAFA), Ablagerung (BBA), Infiltration (BBB),
-    /// Wasserrueckstau (BBBA), Wurzeleinwuchs (BBC), Inkrustation (BBD) etc.
+    /// Typisch fuer: Risse laengs (BABA/BABAB), Korrosion (BAFA), Wurzeln (BBA),
+    /// Anhaftungen/Inkrustation (BBB), Ablagerungen (BBC), Bodeneindringung (BBD), Infiltration (BBF) etc.
     /// </summary>
     private static readonly HashSet<string> StreckenschadenCodes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -820,21 +820,12 @@ public static class VsaCodeTree
         "BAFB",   // Oberflaechenschaden - Korrosion/Erosion
         "BAFC",   // Oberflaechenschaden - Sichtbare Bewehrung
         "BAFD",   // Oberflaechenschaden - Fehlstelle Beschichtung
-        "BAG",    // Verformung allgemein
-        "BAGA",   // Verformung - Deformation
         // BB: Betriebliche Schaeden
-        "BBA",    // Ablagerung (hart/weich)
-        "BBAA",   // Ablagerung - fein
-        "BBAB",   // Ablagerung - grob
-        "BBB",    // Eindringendes Wasser / Infiltration
-        "BBBA",   // Infiltration - Wasserrueckstau
-        "BBC",    // Wurzeleinwuchs
-        "BBCA",   // Wurzeleinwuchs - fein
-        "BBCB",   // Wurzeleinwuchs - einzeln
-        "BBCC",   // Wurzeleinwuchs - verwachsen
-        "BBD",    // Anhaftung / Inkrustation
-        "BBDA",   // Inkrustation - Sintertropfen
-        "BBDB",   // Inkrustation - Sinterschicht
+        "BBA",    // Wurzeln
+        "BBB",    // Anhaftende Stoffe / Inkrustation
+        "BBC",    // Ablagerungen
+        "BBD",    // Eindringender Boden
+        "BBF",    // Infiltration
     };
 
     public static bool IsStreckenschadenCode(string code)

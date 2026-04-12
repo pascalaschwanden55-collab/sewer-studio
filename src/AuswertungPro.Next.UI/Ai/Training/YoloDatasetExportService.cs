@@ -33,6 +33,8 @@ public sealed class YoloDatasetExportService
         IReadOnlyList<TrainingSample> samples,
         string outputDir,
         double trainSplit = 0.8,
+        bool stratifiedByClass = false,
+        bool requireRealBboxes = false,
         Action<int, string>? progress = null,
         CancellationToken ct = default)
     {
@@ -40,7 +42,8 @@ public sealed class YoloDatasetExportService
         var approved = samples
             .Where(s => s.Status == TrainingSampleStatus.Approved
                         && !string.IsNullOrEmpty(s.FramePath)
-                        && File.Exists(s.FramePath))
+                        && File.Exists(s.FramePath)
+                        && (!requireRealBboxes || s.HasBbox))
             .ToList();
 
         if (approved.Count == 0)
@@ -68,21 +71,21 @@ public sealed class YoloDatasetExportService
         Directory.CreateDirectory(trainLblDir);
         Directory.CreateDirectory(valLblDir);
 
-        // Shuffle und Split
+        // Shuffle und Split (optional: stratifiziert nach Klasse)
         var rng = new Random(42); // Deterministisch fuer Reproduzierbarkeit
-        var shuffled = approved.OrderBy(_ => rng.Next()).ToList();
-        int trainCount = (int)(shuffled.Count * trainSplit);
+        var assignments = BuildAssignments(approved, trainSplit, stratifiedByClass, rng);
 
         int trainExported = 0;
         int valExported = 0;
         int skipped = 0;
+        int fallbackBoxes = 0;
+        int realBoxes = 0;
 
-        for (int i = 0; i < shuffled.Count; i++)
+        for (int i = 0; i < assignments.Count; i++)
         {
             ct.ThrowIfCancellationRequested();
-            var sample = shuffled[i];
+            var (sample, isTrain) = assignments[i];
 
-            bool isTrain = i < trainCount;
             var imgDir = isTrain ? trainImgDir : valImgDir;
             var lblDir = isTrain ? trainLblDir : valLblDir;
 
@@ -112,6 +115,8 @@ public sealed class YoloDatasetExportService
 
             // Label schreiben (YOLO-Format: class_id x_center y_center width height)
             var (xc, yc, w, h) = GetBoundingBox(sample);
+            if (sample.HasBbox) realBoxes++;
+            else fallbackBoxes++;
             var labelLine = string.Format(CultureInfo.InvariantCulture,
                 "{0} {1:F6} {2:F6} {3:F6} {4:F6}", classId, xc, yc, w, h);
             await File.WriteAllTextAsync(lblDest, labelLine + "\n", ct);
@@ -119,7 +124,7 @@ public sealed class YoloDatasetExportService
             if (isTrain) trainExported++; else valExported++;
             int total = trainExported + valExported;
             if (total % 10 == 0)
-                progress?.Invoke((int)(100.0 * i / shuffled.Count), $"{total}/{shuffled.Count} exportiert");
+                progress?.Invoke((int)(100.0 * i / assignments.Count), $"{total}/{assignments.Count} exportiert");
         }
 
         // data.yaml schreiben
@@ -145,7 +150,55 @@ public sealed class YoloDatasetExportService
             totalExported,
             trainExported,
             valExported,
-            yamlPath);
+            yamlPath,
+            realBoxes,
+            fallbackBoxes);
+    }
+
+    private static List<(TrainingSample Sample, bool IsTrain)> BuildAssignments(
+        IReadOnlyList<TrainingSample> approved,
+        double trainSplit,
+        bool stratifiedByClass,
+        Random rng)
+    {
+        if (!stratifiedByClass)
+        {
+            var shuffled = approved.OrderBy(_ => rng.Next()).ToList();
+            int trainCount = (int)(shuffled.Count * trainSplit);
+            var output = new List<(TrainingSample Sample, bool IsTrain)>(shuffled.Count);
+            for (int i = 0; i < shuffled.Count; i++)
+                output.Add((shuffled[i], i < trainCount));
+            return output;
+        }
+
+        var grouped = approved
+            .GroupBy(s => NormalizeClassName(s.Code))
+            .ToList();
+
+        var assignments = new List<(TrainingSample Sample, bool IsTrain)>(approved.Count);
+        foreach (var group in grouped)
+        {
+            var groupShuffled = group.OrderBy(_ => rng.Next()).ToList();
+            var groupCount = groupShuffled.Count;
+            if (groupCount == 0) continue;
+
+            int groupTrainCount;
+            if (groupCount == 1)
+            {
+                groupTrainCount = 1;
+            }
+            else
+            {
+                groupTrainCount = (int)Math.Round(groupCount * trainSplit, MidpointRounding.AwayFromZero);
+                groupTrainCount = Math.Max(1, Math.Min(groupCount - 1, groupTrainCount));
+            }
+
+            for (int i = 0; i < groupShuffled.Count; i++)
+                assignments.Add((groupShuffled[i], i < groupTrainCount));
+        }
+
+        // Nochmals mischen fuer bessere Durchmischung der Export-Reihenfolge
+        return assignments.OrderBy(_ => rng.Next()).ToList();
     }
 
     /// <summary>
@@ -191,5 +244,7 @@ public sealed record YoloExportResult(
     int TotalExported,
     int TrainCount,
     int ValCount,
-    string? YamlPath
+    string? YamlPath,
+    int RealBboxCount = 0,
+    int FallbackBboxCount = 0
 );

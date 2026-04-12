@@ -2247,16 +2247,16 @@ public sealed class ProtocolPdfExporter
     private static string ClassifyDamageSymbol(ProtocolEntry entry)
     {
         var code = (entry.Code ?? "").Trim().ToUpperInvariant();
-        if (code.StartsWith("BAA", StringComparison.Ordinal)) return "crack";        // Rissbildung
-        if (code.StartsWith("BAB", StringComparison.Ordinal)) return "break";        // Bruch / Einsturz
-        if (code.StartsWith("BAC", StringComparison.Ordinal)) return "deformation";  // Deformation
-        if (code.StartsWith("BAD", StringComparison.Ordinal)) return "leak";         // Undichtheit
-        if (code.StartsWith("BAE", StringComparison.Ordinal)) return "offset";       // Versatz
+        if (code.StartsWith("BAA", StringComparison.Ordinal)) return "deformation";  // Verformung
+        if (code.StartsWith("BAB", StringComparison.Ordinal)) return "crack";        // Risse
+        if (code.StartsWith("BAC", StringComparison.Ordinal)) return "break";        // Bruch / Einsturz
+        if (code.StartsWith("BAD", StringComparison.Ordinal)) return "break";        // Defektes Mauerwerk
+        if (code.StartsWith("BAE", StringComparison.Ordinal)) return "surface";      // Fehlender Moertel
         if (code.StartsWith("BAF", StringComparison.Ordinal)) return "surface";      // Oberflaechenschaden
-        if (code.StartsWith("BAI", StringComparison.Ordinal)) return "obstacle";     // Hindernis
-        if (code.StartsWith("BAJ", StringComparison.Ordinal)) return "roots";        // Wurzeleinwuchs
-        if (code.StartsWith("BAK", StringComparison.Ordinal)) return "infiltration"; // Infiltration
-        if (code.StartsWith("BAL", StringComparison.Ordinal)) return "exfiltration"; // Exfiltration
+        if (code.StartsWith("BAI", StringComparison.Ordinal)) return "obstacle";     // Einragendes Dichtungsmaterial
+        if (code.StartsWith("BAJ", StringComparison.Ordinal)) return "offset";       // Verschobene Rohrverbindung
+        if (code.StartsWith("BAK", StringComparison.Ordinal)) return "surface";      // Innenauskleidung
+        if (code.StartsWith("BAL", StringComparison.Ordinal)) return "break";        // Schadhafte Reparatur
         if (code.StartsWith("BBA", StringComparison.Ordinal)) return "deposit";      // Ablagerung
         if (code.StartsWith("BBB", StringComparison.Ordinal)) return "obstacle";     // Verstopfung
         return "default";

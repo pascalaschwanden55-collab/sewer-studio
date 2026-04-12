@@ -352,9 +352,19 @@ public sealed class KinsImportService : IKinsImportService
         {
             return File.ReadLines(path, Encoding.GetEncoding(1252)).ToList();
         }
-        catch
+        catch (Exception ex1)
         {
-            return File.ReadLines(path, Encoding.UTF8).ToList();
+            System.Diagnostics.Debug.WriteLine(
+                $"[KinsImport] Windows-1252 fehlgeschlagen fuer {Path.GetFileName(path)}: {ex1.Message} — versuche UTF-8");
+            try
+            {
+                return File.ReadLines(path, Encoding.UTF8).ToList();
+            }
+            catch (Exception ex2)
+            {
+                throw new InvalidOperationException(
+                    $"Datei {path} konnte weder als Windows-1252 noch als UTF-8 gelesen werden.", ex2);
+            }
         }
     }
 

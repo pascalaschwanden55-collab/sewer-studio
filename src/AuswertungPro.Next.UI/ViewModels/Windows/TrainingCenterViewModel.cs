@@ -23,6 +23,9 @@ using AiTrack = AuswertungPro.Next.UI.Services.AiActivityTracker;
 
 public partial class TrainingCenterViewModel : ObservableObject
 {
+    private const int MaxBatchLogLines = 500;
+    // KB-Update serialisieren: SQLite vertraegt keine parallelen Schreibzugriffe
+    private readonly SemaphoreSlim _kbUpdateLock = new(1, 1);
     private readonly TrainingCenterStore _store;
     private readonly TrainingCenterImportService _import;
     private readonly SampleQualityGateService _sampleQualityGate;
@@ -293,7 +296,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         var line = $"{ts} {message}\n";
         void Apply()
         {
-            LogText += line;
+            LogText = TrimLogText(LogText + line);
             // Auch ins Echtzeit-Log schreiben (klappbares Panel)
             SelfTrainingLogEntries.Add($"{ts} {message}");
             while (SelfTrainingLogEntries.Count > 100)
@@ -303,6 +306,36 @@ public partial class TrainingCenterViewModel : ObservableObject
             d.Invoke(Apply);
         else
             Apply();
+    }
+
+    public void AppendToLogText(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return;
+
+        void Apply() => LogText = TrimLogText(LogText + text);
+
+        if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
+            d.Invoke(Apply);
+        else
+            Apply();
+    }
+
+    private static string TrimLogText(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return string.Empty;
+
+        var normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal);
+        var hadTrailingNewline = normalized.EndsWith('\n');
+        var lines = normalized.Split('\n');
+        var lineCount = hadTrailingNewline ? lines.Length - 1 : lines.Length;
+
+        if (lineCount <= MaxBatchLogLines)
+            return normalized;
+
+        var trimmed = string.Join('\n', lines.Skip(lineCount - MaxBatchLogLines).Take(MaxBatchLogLines));
+        return hadTrailingNewline ? trimmed + "\n" : trimmed;
     }
 
     /// <summary>Aktualisiert die Live-Vorschau (Thread-safe).</summary>
@@ -1347,10 +1380,40 @@ public partial class TrainingCenterViewModel : ObservableObject
             var existingSigs = allSamples.Select(s => s.Signature)
                 .Where(s => !string.IsNullOrEmpty(s))
                 .ToHashSet(StringComparer.Ordinal);
-            Log($"Bestehende Samples: {allSamples.Count} ({existingSigs.Count} Signaturen)");
 
-            // Dedup passiert per Signature auf Entry-Level.
-            var casesToProcess = casesWithProtocol;
+            // ── Case-Level Skip: Haltungen die bereits Samples haben komplett ueberspringen ──
+            var existingCaseIds = allSamples
+                .Where(s => !string.IsNullOrEmpty(s.CaseId))
+                .Select(s => s.CaseId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var casesToProcess = new List<TrainingCase>();
+            var caseSkipped = 0;
+            foreach (var c in casesWithProtocol)
+            {
+                if (existingCaseIds.Contains(c.CaseId))
+                {
+                    caseSkipped++;
+                    c.Status = TrainingCaseStatus.BatchImported; // UI-Status aktualisieren
+                }
+                else
+                {
+                    casesToProcess.Add(c);
+                }
+            }
+
+            Log($"Bestehende Samples: {allSamples.Count} ({existingSigs.Count} Signaturen, {existingCaseIds.Count} CaseIds)");
+            if (caseSkipped > 0)
+                Log($"Case-Level Skip: {caseSkipped} Haltungen bereits verarbeitet, {casesToProcess.Count} neu");
+            else
+                Log($"Keine bereits verarbeiteten Haltungen gefunden — alle {casesToProcess.Count} werden verarbeitet");
+
+            if (casesToProcess.Count == 0)
+            {
+                StatusText = $"Alle {casesWithProtocol.Count} Haltungen bereits verarbeitet. KB ist aktuell.";
+                Log($"FERTIG: Alle {casesWithProtocol.Count} Haltungen haben bereits Samples in der KB.");
+                // KB-Nachholpfad trotzdem pruefen (unten)
+            }
 
             // Ollama-Verbindung einmalig pruefen + KB-Objekte vorbereiten
             var ollamaConfig = OllamaConfig.Load();
@@ -1452,7 +1515,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                     else
                         UpdateLivePreview(tc.CaseId, "Verarbeite...", "—", null);
 
-                    var generation = await generator.GenerateWithDiagnosticsAsync(tc, existingSigs, framesDir: null, ct, skipVideoTimeline: false);
+                    var generation = await generator.GenerateWithDiagnosticsAsync(tc, existingSigs, framesDir: null, ct, skipVideoTimeline: true);
                     var newSamples = generation.Samples;
 
                     if (newSamples.Count == 0)
@@ -1662,9 +1725,17 @@ public partial class TrainingCenterViewModel : ObservableObject
             foreach (var s in allSamples)
                 Samples.Add(s);
 
-            if (totalNew == 0 && casesToProcess.Count > 0)
+            if (totalNew == 0 && casesToProcess.Count == 0 && caseSkipped > 0)
+            {
+                // Alle Haltungen komplett uebersprungen (Case-Level Skip)
+                var diag = $"Alle {caseSkipped} Haltungen bereits verarbeitet — KB ist aktuell.";
+                Log(diag);
+                StatusText = diag;
+            }
+            else if (totalNew == 0 && casesToProcess.Count > 0)
             {
                 var diag = $"0 neue Samples aus {casesToProcess.Count} Faellen.";
+                if (caseSkipped > 0) diag += $" {caseSkipped} bereits verarbeitet.";
                 if (errors > 0) diag += $" {errors} Fehler (letzter: {lastError}).";
                 if (emptyProtocols > 0) diag += $" {emptyProtocols} ohne Eintraege.";
                 if (duplicateOnlyCases > 0) diag += $" {duplicateOnlyCases} nur Duplikate.";
@@ -1672,14 +1743,16 @@ public partial class TrainingCenterViewModel : ObservableObject
                 if (unreadableProtocols > 0) diag += $" {unreadableProtocols} nicht lesbar.";
                 Log(diag);
                 StatusText = diag;
-                return;
             }
-
-            var finalStatus = $"Fertig! {totalNew} Samples gespeichert, {totalIndexed} in KB indexiert";
-            if (errors > 0) finalStatus += $", {errors} Fehler";
-            if (!ollamaReachable) finalStatus += " (KB-Indexierung uebersprungen: Ollama offline)";
-            Log(finalStatus);
-            StatusText = finalStatus;
+            else
+            {
+                var finalStatus = $"Fertig! {totalNew} Samples gespeichert, {totalIndexed} in KB indexiert";
+                if (caseSkipped > 0) finalStatus += $", {caseSkipped} uebersprungen";
+                if (errors > 0) finalStatus += $", {errors} Fehler";
+                if (!ollamaReachable) finalStatus += " (KB-Indexierung uebersprungen: Ollama offline)";
+                Log(finalStatus);
+                StatusText = finalStatus;
+            }
 
             await RefreshKbStatusAsync();
 
@@ -2087,15 +2160,39 @@ public partial class TrainingCenterViewModel : ObservableObject
             StatusText = $"Selbsttraining: {SelectedCase.CaseId}...";
             Log($"--- Selbsttraining starten: {SelectedCase.CaseId} ---");
             Log($"  Protokoll: {SelectedCase.ProtocolPath}");
+            var settings = await TrainingCenterSettingsStore.LoadAsync();
+            var gpuConcurrency = Math.Clamp(settings.GpuConcurrency, 1, 12);
+            var preExtractCpuParallelism = Math.Clamp(settings.CpuPreExtractParallelism, 1, 48);
+            var caseParallelism = Math.Clamp(settings.CaseParallelism, 1, 8);
+            var maxInFlightRequests = gpuConcurrency * caseParallelism;
+            settings.GpuConcurrency = gpuConcurrency;
+            settings.CpuPreExtractParallelism = preExtractCpuParallelism;
+            settings.CaseParallelism = caseParallelism;
 
             // Services instanziieren (gleicher Pattern wie BatchImport)
             var cfg = AiRuntimeConfig.Load();
             Log($"Ollama: {cfg.OllamaBaseUri}, Modell: {cfg.VisionModel}");
+            Log($"Parallelitaet: GPU={gpuConcurrency}, Faelle={caseParallelism}, PDF-CPU={preExtractCpuParallelism} (max. Requests ~{maxInFlightRequests})");
+            if (int.TryParse(Environment.GetEnvironmentVariable("OLLAMA_NUM_PARALLEL"), out var ollamaSlots)
+                && ollamaSlots > 0
+                && ollamaSlots < gpuConcurrency)
+            {
+                Log($"Hinweis: OLLAMA_NUM_PARALLEL={ollamaSlots} < GPU-Parallelitaet={gpuConcurrency}. Dadurch bleibt Kapazitaet ungenutzt.");
+            }
 
             var visionModel = cfg.VisionModel ?? "Qwen2.5-VL";
             _activeVisionModel = visionModel;
             var ollamaClient = cfg.CreateOllamaClient();
             var vision = new EnhancedVisionAnalysisService(ollamaClient, visionModel);
+            try
+            {
+                await vision.EnableFewShotAsync(new Ai.Training.FewShotExampleStore(), ct);
+                Log("Few-Shot aktiviert: gespeicherte Beispiele werden fuer Self-Training genutzt.");
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                Log($"Few-Shot konnte nicht aktiviert werden: {ex.Message}");
+            }
             var comparison = new SelfTrainingComparisonService();
             var technique = new TechniqueAssessmentService(ollamaClient, visionModel);
             var pdfExtractor = new PdfProtocolExtractor();
@@ -2120,7 +2217,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             catch { /* Sidecar nicht konfiguriert — nur Qwen */ }
 
             _selfTrainingOrchestrator = new SelfTrainingOrchestrator(
-                vision, comparison, technique, pdfExtractor, new TrainingCenterSettings(), multiModel, _sampleQualityGate,
+                vision, comparison, technique, pdfExtractor, settings, multiModel, _sampleQualityGate,
                 reviewQueue: ReviewQueueServiceRef);
 
             // Progress-Callback verbindet Orchestrator → ViewModel-Visualisierungen
@@ -2146,9 +2243,9 @@ public partial class TrainingCenterViewModel : ObservableObject
             ProgressMax = casesToTrain.Count;
 
             // PDF-Fotos fuer ALLE Faelle vorab extrahieren (CPU-parallel, blockiert GPU nicht)
-            Log("PDF-Fotos vorab extrahieren...");
+            Log($"PDF-Fotos vorab extrahieren (CPU-Parallelitaet: {preExtractCpuParallelism})...");
             await Parallel.ForEachAsync(casesToTrain,
-                new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = ct },
+                new ParallelOptions { MaxDegreeOfParallelism = preExtractCpuParallelism, CancellationToken = ct },
                 async (c, token) =>
                 {
                     if (string.IsNullOrEmpty(c.ProtocolPath)) return;
@@ -2167,27 +2264,38 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             int totalExact = 0, totalPartial = 0, totalMismatch = 0, totalNoFindings = 0, totalSamples = 0;
             int caseErrors = 0;
+            int completedCases = 0;
 
-            for (int ci = 0; ci < casesToTrain.Count; ci++)
+            // Mehrere Faelle parallel: waehrend Fall A KB-Update macht (CPU+Disk),
+            // analysieren andere Faelle bereits Frames (GPU).
+            await Parallel.ForEachAsync(
+                casesToTrain.Select((c, i) => (Case: c, Index: i)),
+                new ParallelOptions { MaxDegreeOfParallelism = caseParallelism, CancellationToken = ct },
+                async (item, token) =>
             {
-                ct.ThrowIfCancellationRequested();
-                var currentCase = casesToTrain[ci];
-                SelectedCase = currentCase;
-                ProgressValue = ci + 1;
-                StatusText = $"[{ci + 1}/{casesToTrain.Count}] {currentCase.CaseId}...";
+                var (currentCase, ci) = item;
+                var caseNum = Interlocked.Increment(ref completedCases);
+
+                // UI-Updates via Dispatcher (Thread-Safety)
+                System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    SelectedCase = currentCase;
+                    ProgressValue = caseNum;
+                    StatusText = $"[{caseNum}/{casesToTrain.Count}] {currentCase.CaseId}...";
+                });
                 Log($"--- [{ci + 1}/{casesToTrain.Count}] Selbsttraining: {currentCase.CaseId} ---");
                 Log($"  Protokoll: {currentCase.ProtocolPath}");
 
                 SelfTrainingResult result;
                 try
                 {
-                    result = await _selfTrainingOrchestrator.RunAsync(currentCase, progress, ct);
+                    result = await _selfTrainingOrchestrator.RunAsync(currentCase, progress, token);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     Log($"  FEHLER: {ex.Message}");
-                    caseErrors++;
-                    continue;
+                    Interlocked.Increment(ref caseErrors);
+                    return;
                 }
 
                 // Ergebnis loggen
@@ -2198,16 +2306,16 @@ public partial class TrainingCenterViewModel : ObservableObject
                 if (result.OverallTechnique is { } tech)
                     Log($"  Technik: {tech.OverallGrade} (Licht={tech.LightingQuality}, Schaerfe={tech.SharpnessQuality})");
 
-                totalExact += result.ExactMatches;
-                totalPartial += result.PartialMatches;
-                totalMismatch += result.Mismatches;
-                totalNoFindings += result.NoFindings;
-                totalSamples += result.SamplesGenerated;
+                Interlocked.Add(ref totalExact, result.ExactMatches);
+                Interlocked.Add(ref totalPartial, result.PartialMatches);
+                Interlocked.Add(ref totalMismatch, result.Mismatches);
+                Interlocked.Add(ref totalNoFindings, result.NoFindings);
+                Interlocked.Add(ref totalSamples, result.SamplesGenerated);
 
                 // Fall als verarbeitet markieren
                 currentCase.Status = TrainingCaseStatus.SelfTrained;
 
-                // Match-Rate-Verlauf persistieren
+                // Match-Rate-Verlauf persistieren (HistoryStore hat eigenen Lock)
                 var matchTotal = result.ExactMatches + result.PartialMatches + result.Mismatches + result.NoFindings;
                 if (matchTotal > 0)
                 {
@@ -2222,41 +2330,47 @@ public partial class TrainingCenterViewModel : ObservableObject
                         (double)result.CodeHits / matchTotal));
                 }
 
-                // Inkrementelles KB-Update fuer ExactMatch-Samples
-                // KB-Indexierung als Background-Task (blockiert nicht den naechsten Fall)
-                if (result.ExactMatches > 0 && result.SamplesGenerated > 0)
+                // Inkrementelles KB-Update — mit Lock serialisiert (SQLite)
+                if (result.SamplesGenerated > 0)
                 {
-                    var allSamples = await TrainingSamplesStore.LoadAsync();
-                    var newApproved = allSamples
-                        .Where(s => s.CaseId == result.CaseId
-                            && s.Status == TrainingSampleStatus.Approved)
-                        .ToList();
-
-                    if (newApproved.Count > 0)
+                    await _kbUpdateLock.WaitAsync(token);
+                    try
                     {
-                        foreach (var s in newApproved.Where(s => s.KbIndexState is KbIndexState.None or KbIndexState.Error))
-                            s.KbIndexState = KbIndexState.Pending;
-                        await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
+                        var allSamples = await TrainingSamplesStore.LoadAsync();
+                        var newApproved = allSamples
+                            .Where(s => s.CaseId == result.CaseId
+                                && s.Status == TrainingSampleStatus.Approved)
+                            .ToList();
 
-                        Log($"  {newApproved.Count} Samples → KB-Update...");
-                        // Serialisiert: kein Fire-and-Forget mehr (verhindert Race Conditions + .bad-Dateien)
-                        try
+                        if (newApproved.Count > 0)
                         {
-                            var indexed = await IncrementalKbUpdateAsync(newApproved, ct);
-                            var indexedSet = indexed.ToHashSet();
-                            foreach (var s in newApproved)
-                                s.KbIndexState = indexedSet.Contains(s.SampleId)
-                                    ? KbIndexState.Indexed
-                                    : (s.KbIndexState == KbIndexState.Pending ? KbIndexState.Error : s.KbIndexState);
+                            foreach (var s in newApproved.Where(s => s.KbIndexState is KbIndexState.None or KbIndexState.Error))
+                                s.KbIndexState = KbIndexState.Pending;
                             await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
-                        }
-                        catch (Exception ex) when (ex is not OperationCanceledException)
-                        {
-                            Log($"  KB-Update Fehler: {ex.Message}");
+
+                            Log($"  {newApproved.Count} Samples → KB-Update...");
+                            try
+                            {
+                                var indexed = await IncrementalKbUpdateAsync(newApproved, token);
+                                var indexedSet = indexed.ToHashSet();
+                                foreach (var s in newApproved)
+                                    s.KbIndexState = indexedSet.Contains(s.SampleId)
+                                        ? KbIndexState.Indexed
+                                        : (s.KbIndexState == KbIndexState.Pending ? KbIndexState.Error : s.KbIndexState);
+                                await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
+                            }
+                            catch (Exception ex) when (ex is not OperationCanceledException)
+                            {
+                                Log($"  KB-Update Fehler: {ex.Message}");
+                            }
                         }
                     }
+                    finally
+                    {
+                        _kbUpdateLock.Release();
+                    }
                 }
-            }
+            });
 
             ForceRerunAll = false; // Nach Durchlauf zuruecksetzen
             var totalCodeHits = totalExact + totalPartial;
@@ -2279,7 +2393,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                 var allSamplesForReview = await TrainingSamplesStore.LoadAsync();
                 var reviewCandidates = allSamplesForReview
                     .Where(s => casesToTrain.Any(c => c.CaseId == s.CaseId)
-                        && s.MatchLevel is MatchLevelNames.PartialMatch or MatchLevelNames.Mismatch)
+                        && s.Status == TrainingSampleStatus.New
+                        && (s.MatchLevel is MatchLevelNames.PartialMatch or MatchLevelNames.Mismatch))
                     .ToList();
 
                 foreach (var s in reviewCandidates)

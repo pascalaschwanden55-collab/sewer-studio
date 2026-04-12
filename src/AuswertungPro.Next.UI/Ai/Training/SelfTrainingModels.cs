@@ -111,10 +111,11 @@ public enum SelfTrainingStage
 
 /// <param name="CaseId">TrainingCase ID.</param>
 /// <param name="TotalEntries">Anzahl Protokolleintraege.</param>
-/// <param name="ExactMatches">Anzahl ExactMatch.</param>
-/// <param name="PartialMatches">Anzahl PartialMatch.</param>
-/// <param name="Mismatches">Anzahl Mismatch.</param>
+/// <param name="ExactMatches">Anzahl ExactMatch (Code + Meter + Clock).</param>
+/// <param name="PartialMatches">Anzahl PartialMatch (Code stimmt, Meter/Clock nicht).</param>
+/// <param name="Mismatches">Anzahl Mismatch (Code stimmt nicht).</param>
 /// <param name="NoFindings">Anzahl NoFindings.</param>
+/// <param name="CodeHits">Anzahl Code-Treffer (Code stimmt, unabhaengig von Meter/Clock). = ExactMatch + PartialMatch.</param>
 /// <param name="OverallTechnique">Gesamtbewertung der Aufnahmetechnik (1x pro Haltung).</param>
 /// <param name="Duration">Dauer des Trainingslaufs.</param>
 /// <param name="SamplesGenerated">Anzahl erzeugter TrainingSamples.</param>
@@ -125,6 +126,7 @@ public sealed record SelfTrainingResult(
     int PartialMatches,
     int Mismatches,
     int NoFindings,
+    int CodeHits,
     TechniqueAssessment? OverallTechnique,
     TimeSpan Duration,
     int SamplesGenerated);

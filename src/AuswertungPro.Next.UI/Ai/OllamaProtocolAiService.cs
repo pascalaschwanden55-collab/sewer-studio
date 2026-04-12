@@ -261,7 +261,7 @@ public sealed class OllamaProtocolAiService : IProtocolAiService
         IReadOnlyList<RetrievalResult> retrieved;
         try
         {
-            retrieved = await _retrieval.RetrieveAsync(query, topK: 10, ct).ConfigureAwait(false);
+            retrieved = await _retrieval.RetrieveAsync(query, topK: 10, ct: ct).ConfigureAwait(false);
         }
         catch
         {

@@ -1,0 +1,253 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.VideoTrainingReviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Video-Selbsttraining — Differenz-Review"
+        Width="1400" Height="900"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgBrush}"
+        Foreground="{DynamicResource TextBrush}">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- Farben fuer Kategorie-Spalte (funktioniert hell + dunkel) -->
+        <Style x:Key="CategoryCellStyle" TargetType="TextBlock">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Category}" Value="TruePositive">
+                    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Category}" Value="FalseNegative">
+                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Category}" Value="FalsePositive">
+                    <Setter Property="Foreground" Value="#FFEA580C"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Category}" Value="CodeMismatch">
+                    <Setter Property="Foreground" Value="#FFF59E0B"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="3*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="2*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ═══ Zeile 0: Ordner-Auswahl ═══ -->
+        <Border Grid.Row="0" Background="{DynamicResource CardBrush}" CornerRadius="6"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                Padding="12,10" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="Haltungsordner:" VerticalAlignment="Center" Margin="0,0,8,0"
+                           ToolTip="Ordner mit Video (.mp4/.mpg) und Protokoll (.pdf)"/>
+                <TextBox Grid.Column="1" Text="{Binding FolderPath, UpdateSourceTrigger=PropertyChanged}"
+                         IsReadOnly="True" Margin="0,0,8,0" Padding="6,4"
+                         ToolTip="{Binding FolderPath}"/>
+                <Button Grid.Column="2" Content="Ordner waehlen..." Click="BrowseFolder_Click"
+                        Padding="12,4" Margin="0,0,8,0"/>
+                <Button Grid.Column="3" Content="Analyse starten" Command="{Binding StartAnalysisCommand}"
+                        Padding="16,4" FontWeight="SemiBold"
+                        Background="{DynamicResource AccentBrush}" Foreground="White"/>
+            </Grid>
+        </Border>
+
+        <!-- ═══ Zeile 1: Stammdaten (automatisch aus PDF gefuellt) ═══ -->
+        <Border Grid.Row="1" Background="{DynamicResource CardBrush}" CornerRadius="6"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                Padding="12,6" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Haltung:" Foreground="{DynamicResource MutedBrush}" Margin="0,0,4,0"/>
+                <TextBlock Text="{Binding HaltungId}" FontWeight="Bold" Margin="0,0,16,0"/>
+
+                <TextBlock Text="Material:" Foreground="{DynamicResource MutedBrush}" Margin="0,0,4,0"/>
+                <TextBlock Text="{Binding Rohrmaterial}" Margin="0,0,16,0"/>
+
+                <TextBlock Text="DN:" Foreground="{DynamicResource MutedBrush}" Margin="0,0,4,0"/>
+                <TextBlock Text="{Binding NennweiteText}" Margin="0,0,16,0"/>
+
+                <TextBlock Text="Laenge:" Foreground="{DynamicResource MutedBrush}" Margin="0,0,4,0"/>
+                <TextBlock Text="{Binding HaltungslaengeText}" Margin="0,0,4,0"/>
+                <TextBlock Text="m" Foreground="{DynamicResource MutedBrush}" Margin="0,0,16,0"/>
+
+                <TextBlock Text="Video:" Foreground="{DynamicResource MutedBrush}" Margin="0,0,4,0"/>
+                <TextBlock Text="{Binding VideoFileName}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ═══ Zeile 2: Differenz-Tabelle ═══ -->
+        <DataGrid Grid.Row="2"
+                  ItemsSource="{Binding Entries}"
+                  SelectedItem="{Binding SelectedEntry}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  SelectionMode="Single"
+                  GridLinesVisibility="Horizontal"
+                  HeadersVisibility="Column"
+                  CanUserSortColumns="True"
+                  FontSize="13"
+                  Margin="0,0,0,4">
+
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                    <Setter Property="Height" Value="56"/>
+                </Style>
+            </DataGrid.RowStyle>
+
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Foto" Width="90" IsReadOnly="True">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Image Source="{Binding Thumbnail}" Stretch="Uniform"
+                                   Height="50" Margin="2"
+                                   ToolTip="{Binding FramePath}"
+                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Status" Binding="{Binding CategoryDisplay}" Width="100"
+                                    ElementStyle="{StaticResource CategoryCellStyle}"/>
+                <DataGridTextColumn Header="Prot. Code" Binding="{Binding ProtocolCode}" Width="90"/>
+                <DataGridTextColumn Header="Meter" Binding="{Binding ProtocolMeter, StringFormat=F1}" Width="70"/>
+                <DataGridTextColumn Header="Uhr" Binding="{Binding ProtocolClock}" Width="50"/>
+                <DataGridTextColumn Header="KI Code" Binding="{Binding KiCode}" Width="90"/>
+                <DataGridTextColumn Header="KI Meter" Binding="{Binding KiMeter, StringFormat=F1}" Width="70"/>
+                <DataGridTextColumn Header="Konf." Binding="{Binding KiConfidence, StringFormat=P0}" Width="60"/>
+                <DataGridTextColumn Header="Erklaerung" Binding="{Binding Explanation}" Width="*"/>
+                <DataGridTextColumn Header="Review" Binding="{Binding Decision}" Width="90"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- ═══ Zeile 3: Review-Buttons ═══ -->
+        <Border Grid.Row="3" Background="{DynamicResource HeaderBrush}" CornerRadius="6"
+                Padding="12,8" Margin="0,0,0,4">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Content="KI korrekt (K)" Command="{Binding ApproveKiCommand}"
+                        Background="#16A34A" Foreground="White" Padding="20,6" Margin="0,0,8,0"
+                        FontWeight="SemiBold"/>
+                <Button Content="Protokoll korrekt (P)" Command="{Binding ApproveProtocolCommand}"
+                        Background="#DC2626" Foreground="White" Padding="20,6" Margin="0,0,8,0"
+                        FontWeight="SemiBold"/>
+                <Button Content="Ignorieren (I)" Command="{Binding IgnoreEntryCommand}"
+                        Padding="20,6" Margin="0,0,8,0"/>
+
+                <ToggleButton Content="Markieren (M)" IsChecked="{Binding IsAnnotating}"
+                              Padding="20,6" Margin="0,0,24,0"
+                              ToolTip="Rechteck auf dem Frame zeichnen um den Schaden zu markieren"/>
+
+                <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="0,2"/>
+
+                <Button Content="Review abschliessen → KB" Command="{Binding SubmitReviewCommand}"
+                        Background="{DynamicResource AccentBrush}" Foreground="White"
+                        Padding="20,6" Margin="24,0,0,0" FontWeight="SemiBold"
+                        ToolTip="Bestaetigte Korrekturen in die KnowledgeBase uebernehmen"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ═══ Zeile 4: Frame-Viewer mit Annotations-Canvas ═══ -->
+        <Border Grid.Row="4" Background="{DynamicResource CardBrush}" CornerRadius="6"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+            <Grid>
+                <Image x:Name="FrameImage" Source="{Binding CurrentFrame}" Stretch="Uniform"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       IsHitTestVisible="False"/>
+
+                <!-- Anzeige-Canvas: zeigt gespeicherte Annotation (immer sichtbar) -->
+                <Canvas x:Name="DisplayCanvas" IsHitTestVisible="False" ClipToBounds="True"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                <!-- Zeichen-Canvas: immer aktiv — Rechteck zeichnen speichert sofort -->
+                <Canvas x:Name="AnnotationCanvas" Background="Transparent" ClipToBounds="True"
+                        Cursor="Cross"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        MouseLeftButtonDown="AnnotationCanvas_MouseDown"
+                        MouseMove="AnnotationCanvas_MouseMove"
+                        MouseLeftButtonUp="AnnotationCanvas_MouseUp"/>
+
+                <TextBlock Text="Kein Frame verfuegbar" FontSize="14"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="{DynamicResource MutedBrush}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CurrentFrame}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </Border>
+
+        <!-- ═══ Zeile 5: Statistik-Leiste ═══ -->
+        <Border Grid.Row="5" Background="{DynamicResource HeaderBrush}" CornerRadius="6"
+                Padding="12,8" Margin="0,4,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Zaehler -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock FontWeight="Bold" Foreground="#16A34A" Margin="0,0,4,0">
+                        <Run Text="TP: "/><Run Text="{Binding TpCount, Mode=OneWay}"/>
+                    </TextBlock>
+                    <TextBlock FontWeight="Bold" Foreground="#DC2626" Margin="12,0,4,0">
+                        <Run Text="FN: "/><Run Text="{Binding FnCount, Mode=OneWay}"/>
+                    </TextBlock>
+                    <TextBlock FontWeight="Bold" Foreground="#EA580C" Margin="12,0,4,0">
+                        <Run Text="FP: "/><Run Text="{Binding FpCount, Mode=OneWay}"/>
+                    </TextBlock>
+                    <TextBlock FontWeight="Bold" Foreground="#F59E0B" Margin="12,0,4,0">
+                        <Run Text="Mismatch: "/><Run Text="{Binding MismatchCount, Mode=OneWay}"/>
+                    </TextBlock>
+                </StackPanel>
+
+                <!-- Status -->
+                <TextBlock Grid.Column="1" Text="{Binding StatusText}"
+                           Foreground="{DynamicResource MutedBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                <!-- Metriken -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <TextBlock Margin="0,0,16,0">
+                        <Run Text="Precision: "/><Run Text="{Binding PrecisionText, Mode=OneWay}" FontWeight="Bold"/>
+                    </TextBlock>
+                    <TextBlock Margin="0,0,16,0">
+                        <Run Text="Recall: "/><Run Text="{Binding RecallText, Mode=OneWay}" FontWeight="Bold"/>
+                    </TextBlock>
+                    <TextBlock Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="15">
+                        <Run Text="F1: "/><Run Text="{Binding F1Text, Mode=OneWay}"/>
+                    </TextBlock>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Fortschrittsbalken (Overlay oben auf der Tabelle) -->
+        <ProgressBar Grid.Row="2" VerticalAlignment="Top" Height="3"
+                     Minimum="0" Maximum="{Binding ProgressMax}"
+                     Value="{Binding ProgressValue}"
+                     Foreground="{DynamicResource AccentBrush}" Background="Transparent"
+                     Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
+    </Grid>
+</Window>

@@ -37,7 +37,8 @@ public enum OverlayToolType
     Level = 9,           // Horizontale Linie → Kreissegment-% (Ablagerung/Wasser/Hindernis)
     Ellipse = 10,        // Ellipse/Kreis fuer Flaechenschaeden (Ecke-zu-Ecke Drag)
     Freehand = 11,       // Freihand-Zeichnung (Polyline aus Mauspfad)
-    CrossSection = 12    // Querschnittsverminderung (Polygon mit FillPercent)
+    CrossSection = 12,   // Querschnittsverminderung (Polygon mit FillPercent)
+    PipeDirection = 13   // Bogen-Werkzeug: 2 Ellipsen → Richtungswechsel (BCC/BAG)
 }
 
 /// <summary>
@@ -168,19 +169,26 @@ public sealed class PipeCalibration
     /// <summary>Normierte Laenge in Millimeter umrechnen.</summary>
     public double NormToMm(double normalizedLength)
     {
-        if (NormalizedDiameter <= 0) return normalizedLength * 500; // Fallback
+        if (NormalizedDiameter <= 0)
+        {
+            // Fallback: Annahme DN300 bei ~60% Bildbreite (300mm / 0.6 = 500)
+            const double fallbackMmPerNorm = 500.0;
+            return normalizedLength * fallbackMmPerNorm;
+        }
         return normalizedLength * MmPerNormUnit;
     }
 
     /// <summary>Pixel (normiert) in Millimeter umrechnen.</summary>
-    public double PixelToMm(double normalizedPixels, double frameWidthPx)
+    public double PixelToMm(double normalizedPixels, double frameWidthPx, double imageAspect = 1.0)
     {
+        // Aspect-Korrektur anwenden falls nicht-quadratisch
+        double corrected = normalizedPixels * (imageAspect > 0 ? imageAspect : 1.0);
         if (NormalizedDiameter > 0)
-            return NormToMm(normalizedPixels);
+            return NormToMm(corrected);
         if (PipePixelDiameter <= 0) return 0;
         double pipePixelNormalized = PipePixelDiameter / frameWidthPx;
         double mmPerNormPixel = NominalDiameterMm / pipePixelNormalized;
-        return normalizedPixels * mmPerNormPixel;
+        return corrected * mmPerNormPixel;
     }
 
     /// <summary>

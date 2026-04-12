@@ -25,7 +25,7 @@ except ImportError:
 
 from .config import settings
 from .gpu_manager import gpu_manager, ModelSlot
-from .routes import health, yolo, dino, sam, training, lora_training, pipe_axis
+from .routes import health, yolo, dino, sam, training, lora_training, pipe_axis, parse, changenet
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,29 +36,30 @@ logger = logging.getLogger("sidecar")
 
 
 def _prewarm_dino() -> None:
-    """Laedt Grounding DINO beim Start in den VRAM (persistent)."""
+    """Laedt Grounding DINO beim Start in den VRAM (persistent).
+    Florence-2 wird als Shadow-Modell lazy beim ersten Request geladen."""
     try:
         from .models.dino_wrapper import _load_dino_on
         device = settings.effective_dino_device
         gpu_manager.ensure_loaded(
             ModelSlot.DINO, device,
             lambda: _load_dino_on(device))
-        logger.info("DINO pre-warmed on %s", device)
+        logger.info("DINO pre-warmed on %s (Florence-2 Shadow wird lazy geladen)", device)
     except Exception as e:
         logger.warning("DINO pre-warm fehlgeschlagen: %s — wird lazy geladen", e)
 
 
 def _prewarm_sam() -> None:
-    """Laedt SAM beim Start in den VRAM (persistent)."""
+    """Laedt SAM 2 beim Start in den VRAM (persistent)."""
     try:
-        from .models.sam_wrapper import _load_sam_on
+        from .models.sam_wrapper import _load_sam2_on
         device = settings.effective_sam_device
         gpu_manager.ensure_loaded(
             ModelSlot.SAM, device,
-            lambda: _load_sam_on(device))
-        logger.info("SAM pre-warmed on %s", device)
+            lambda: _load_sam2_on(device))
+        logger.info("SAM 2 pre-warmed on %s", device)
     except Exception as e:
-        logger.warning("SAM pre-warm fehlgeschlagen: %s — wird lazy geladen", e)
+        logger.warning("SAM 2 pre-warm fehlgeschlagen: %s — wird lazy geladen", e)
 
 
 _VRAM_MONITOR_INTERVAL_SEC = int(os.environ.get("SEWER_SIDECAR_VRAM_MONITOR_INTERVAL", "30"))
@@ -104,6 +105,16 @@ async def lifespan(app: FastAPI):
         settings.effective_sam_device,
     )
 
+    # ── CPU-Threading konfigurieren ──
+    try:
+        import torch
+
+        torch.set_num_threads(settings.cpu_threads)
+        torch.set_num_interop_threads(settings.cpu_threads)
+        logger.info("Torch CPU threads konfiguriert: %d", settings.cpu_threads)
+    except Exception as exc:
+        logger.warning("Torch CPU-Thread-Konfiguration fehlgeschlagen: %s", exc)
+
     # ── Always-On Pre-Warm: DINO + SAM sofort laden ──
     # YOLO wird beim ersten Request via TensorRT geladen (Auto-Export dauert)
     t0 = time.perf_counter()
@@ -134,8 +145,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Sewer-Studio Vision Sidecar",
-    version="1.2.0",
-    description="Always-On Multi-Model Vision Pipeline (YOLO / Grounding DINO / SAM / VSR)",
+    version="2.0.0",
+    description="Always-On Multi-Model Vision Pipeline (YOLO / Florence-2 / SAM 2 / VSR)",
     lifespan=lifespan,
 )
 
@@ -167,6 +178,8 @@ app.include_router(sam.router, tags=["sam"])
 app.include_router(training.router, tags=["training"])
 app.include_router(lora_training.router, tags=["lora-training"])
 app.include_router(pipe_axis.router, tags=["pipe-axis"])
+app.include_router(parse.router, tags=["parse"])
+app.include_router(changenet.router, tags=["changenet"])
 
 # Video + Enhance Endpoints (Phase 2/3)
 try:

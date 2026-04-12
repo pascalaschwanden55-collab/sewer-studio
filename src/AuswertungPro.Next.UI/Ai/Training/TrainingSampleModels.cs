@@ -27,6 +27,7 @@ namespace AuswertungPro.Next.UI.Ai.Training
         public const string NoFindings = "NoFindings";
         public const string ReviewApproved = "ReviewApproved";
         public const string ReviewCorrected = "ReviewCorrected";
+        public const string TeacherAnnotation = "TeacherAnnotation";
     }
 
     /// <summary>String-Konstanten fuer TrainingSample.SourceType (vermeidet Magic Strings).</summary>
@@ -79,6 +80,20 @@ namespace AuswertungPro.Next.UI.Ai.Training
         /// <summary>KB-Indexierungszustand (None → Pending → Indexed/Error).</summary>
         public KbIndexState KbIndexState { get; set; } = KbIndexState.None;
 
+        // --- Video-Selbsttraining: Kontextfelder fuer KB-Anreicherung ---
+
+        /// <summary>Rohrmaterial der Haltung (z.B. "Beton", "PVC"). Fuer KB-Embedding-Kontext.</summary>
+        public string? Rohrmaterial { get; set; }
+
+        /// <summary>Nennweite in mm (z.B. 300). Fuer KB-Embedding-Kontext.</summary>
+        public int? NennweiteMm { get; set; }
+
+        /// <summary>True wenn dieses Sample eine menschliche Korrektur einer KI-Fehlklassifikation ist.</summary>
+        public bool IsKorrigiert { get; set; }
+
+        /// <summary>QualityGate-Ampel zum Sample-Zeitpunkt (Green/Yellow/Red).</summary>
+        public string? QualityGateLevel { get; set; }
+
         // BoundingBox (normiert 0-1, YOLO-Format: center + size)
         /// <summary>BBox X-Center (normiert 0-1). Null = keine BBox vorhanden.</summary>
         public double? BboxXCenter { get; set; }
@@ -95,8 +110,10 @@ namespace AuswertungPro.Next.UI.Ai.Training
         /// <summary>
         /// Zentrale Signatur-Berechnung fuer Dedup.
         /// CaseId ist Teil der Signatur, damit gleiche Codes in verschiedenen Haltungen nicht kollidieren.
+        /// Uhrlage ist Teil der Signatur, damit zwei Schaeden am gleichen Meter mit
+        /// unterschiedlicher Uhrlage (z.B. 3 Uhr vs 9 Uhr) nicht als Duplikat verworfen werden.
         /// </summary>
-        public static string BuildCanonicalSignature(string caseId, string code, double meterCenter, double meterEnd)
+        public static string BuildCanonicalSignature(string caseId, string code, double meterCenter, double meterEnd, string? clock = null)
         {
             // Leere Signaturen verhindern — ohne CaseId/Code ist Dedup unmoeglich
             if (string.IsNullOrWhiteSpace(caseId) || string.IsNullOrWhiteSpace(code))
@@ -104,7 +121,22 @@ namespace AuswertungPro.Next.UI.Ai.Training
 
             var rc = Math.Round(meterCenter, 1);
             var re = Math.Round(meterEnd, 1);
-            return $"{caseId}|{code}|{rc:F1}|{re:F1}";
+            // Uhrlage normalisieren: nur die Stunde (1-12), null → leer
+            var clockNorm = NormalizeClockForSignature(clock);
+            return string.IsNullOrEmpty(clockNorm)
+                ? $"{caseId}|{code}|{rc:F1}|{re:F1}"
+                : $"{caseId}|{code}|{rc:F1}|{re:F1}|{clockNorm}";
+        }
+
+        /// <summary>Extrahiert die Stunde aus einer Uhrlage-Angabe fuer die Signatur.</summary>
+        private static string? NormalizeClockForSignature(string? clock)
+        {
+            if (string.IsNullOrWhiteSpace(clock)) return null;
+            // "3 Uhr" → "3", "12:00" → "12", "9" → "9"
+            var cleaned = clock.Replace("Uhr", "", StringComparison.OrdinalIgnoreCase)
+                               .Replace(":00", "", StringComparison.Ordinal)
+                               .Trim();
+            return int.TryParse(cleaned, out var h) && h >= 1 && h <= 12 ? h.ToString() : null;
         }
     }
 }

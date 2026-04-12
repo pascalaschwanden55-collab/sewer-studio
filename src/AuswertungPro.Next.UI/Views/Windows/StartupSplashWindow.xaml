@@ -10,75 +10,151 @@
         WindowStartupLocation="Manual"
         Topmost="True"
         Opacity="0">
-    <Grid Background="{StaticResource BgLightBrush}">
-        <!-- Centered animation content -->
-        <Grid Width="900" Height="500" HorizontalAlignment="Center" VerticalAlignment="Center">
-            <Border CornerRadius="18" Background="{StaticResource BgLightBrush}">
+    <Grid Background="#FF0A0E17">
+        <!-- Vollbild dunkler Hintergrund mit subtiler Vignette -->
+        <Border>
+            <Border.Background>
+                <RadialGradientBrush Center="0.5,0.5" RadiusX="0.7" RadiusY="0.7">
+                    <GradientStop Color="#FF0F1520" Offset="0"/>
+                    <GradientStop Color="#FF060A10" Offset="1"/>
+                </RadialGradientBrush>
+            </Border.Background>
+        </Border>
+
+        <!-- Zentraler Content-Bereich -->
+        <Grid Width="1000" Height="560" HorizontalAlignment="Center" VerticalAlignment="Center">
+
+            <!-- Aeusserer Rahmen mit Glow -->
+            <Border CornerRadius="20" Background="#FF0D1117" BorderBrush="#1800D4FF" BorderThickness="1">
                 <Border.Effect>
-                    <DropShadowEffect BlurRadius="40" ShadowDepth="0" Color="#00E5FF" Opacity="0.25"/>
+                    <DropShadowEffect BlurRadius="60" ShadowDepth="0" Color="#0088FF" Opacity="0.15"/>
                 </Border.Effect>
             </Border>
 
-            <Canvas Opacity="0.12">
-                <Rectangle Width="900" Height="500" Fill="{StaticResource BgLightBrush}"/>
-                <Path Stroke="#5AC8FF" StrokeThickness="1" Data="M0,60 H900 M0,120 H900 M0,180 H900 M0,240 H900 M0,300 H900 M0,360 H900 M0,420 H900"/>
-                <Path Stroke="#5AC8FF" StrokeThickness="1" Data="M90,0 V500 M180,0 V500 M270,0 V500 M360,0 V500 M450,0 V500 M540,0 V500 M630,0 V500 M720,0 V500 M810,0 V500"/>
-            </Canvas>
+            <!-- Neural Network Canvas (Knoten + Verbindungen werden im Code-Behind gezeichnet) -->
+            <Canvas x:Name="NeuralCanvas" ClipToBounds="True" Margin="20"/>
 
-            <Grid>
+            <!-- Zentraler Glow-Ring (KI-Kern) -->
+            <Grid HorizontalAlignment="Left" VerticalAlignment="Center" Margin="100,0,0,0">
+                <!-- Aeusserer Glow -->
+                <Ellipse Width="220" Height="220" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Ellipse.Fill>
+                        <RadialGradientBrush>
+                            <GradientStop Color="#2000B4FF" Offset="0.3"/>
+                            <GradientStop Color="#0000B4FF" Offset="1"/>
+                        </RadialGradientBrush>
+                    </Ellipse.Fill>
+                </Ellipse>
+
+                <!-- Animierter Ring -->
                 <Ellipse x:Name="GlowRing"
-                         Width="260"
-                         Height="260"
-                         HorizontalAlignment="Left"
-                         Margin="110,0,0,0"
-                         Stroke="#00E5FF"
-                         StrokeThickness="10"
-                         Opacity="0.9">
+                         Width="160" Height="160"
+                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Stroke="#00B4FF" StrokeThickness="3"
+                         Opacity="0.8"
+                         StrokeDashArray="2 3">
                     <Ellipse.Effect>
-                        <DropShadowEffect BlurRadius="45" ShadowDepth="0" Color="#00E5FF" Opacity="0.9"/>
+                        <DropShadowEffect BlurRadius="30" ShadowDepth="0" Color="#00B4FF" Opacity="0.7"/>
                     </Ellipse.Effect>
                     <Ellipse.RenderTransform>
-                        <ScaleTransform x:Name="RingScale" ScaleX="0.2" ScaleY="0.2" CenterX="130" CenterY="130"/>
+                        <TransformGroup>
+                            <ScaleTransform x:Name="RingScale" ScaleX="0.1" ScaleY="0.1" CenterX="80" CenterY="80"/>
+                            <RotateTransform x:Name="RingRotation" CenterX="80" CenterY="80"/>
+                        </TransformGroup>
                     </Ellipse.RenderTransform>
                 </Ellipse>
 
-                <Canvas x:Name="DataCanvas" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    <Rectangle x:Name="B1" Width="14" Height="10" Fill="#FF3B5C" Opacity="0" RadiusX="2" RadiusY="2"/>
-                    <Rectangle x:Name="B2" Width="10" Height="10" Fill="#FF3B5C" Opacity="0" RadiusX="2" RadiusY="2"/>
-                    <Rectangle x:Name="B3" Width="18" Height="12" Fill="#FF3B5C" Opacity="0" RadiusX="2" RadiusY="2"/>
-                    <Rectangle x:Name="B4" Width="12" Height="8" Fill="#FF3B5C" Opacity="0" RadiusX="2" RadiusY="2"/>
-                </Canvas>
+                <!-- Innerer Ring -->
+                <Ellipse x:Name="InnerRing"
+                         Width="90" Height="90"
+                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Stroke="#0066CC" StrokeThickness="1.5"
+                         Opacity="0" StrokeDashArray="1 2">
+                    <Ellipse.RenderTransform>
+                        <RotateTransform x:Name="InnerRotation" CenterX="45" CenterY="45"/>
+                    </Ellipse.RenderTransform>
+                </Ellipse>
 
-                <StackPanel HorizontalAlignment="Left" Margin="430,0,0,0" VerticalAlignment="Center">
-                    <TextBlock x:Name="TitleText"
-                               Text="SEWER STUDIO"
-                               Foreground="White"
-                               FontSize="54"
-                               FontWeight="Bold"
-                               FontFamily="Consolas"
-                               Margin="0"
-                               Opacity="0"
-                               RenderTransformOrigin="0.5,0.5">
-                        <TextBlock.RenderTransform>
-                            <ScaleTransform x:Name="TitleScale" ScaleX="1.12" ScaleY="1.12"/>
-                        </TextBlock.RenderTransform>
-                    </TextBlock>
+                <!-- Kernpunkt -->
+                <Ellipse x:Name="CoreDot"
+                         Width="12" Height="12"
+                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Opacity="0">
+                    <Ellipse.Fill>
+                        <RadialGradientBrush>
+                            <GradientStop Color="#FF00D4FF" Offset="0"/>
+                            <GradientStop Color="#0000D4FF" Offset="1"/>
+                        </RadialGradientBrush>
+                    </Ellipse.Fill>
+                </Ellipse>
+            </Grid>
 
-                    <TextBlock x:Name="SubText"
-                               Text="AI-Powered Infrastructure Analytics"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               FontSize="20"
-                               Margin="0,10,0,0"
-                               Opacity="0"/>
+            <!-- Text rechts -->
+            <StackPanel HorizontalAlignment="Left" Margin="440,0,0,0" VerticalAlignment="Center">
+                <TextBlock x:Name="TitleText"
+                           Text="SEWER STUDIO"
+                           Foreground="#FFFAFCFF"
+                           FontSize="52"
+                           FontWeight="Bold"
+                           FontFamily="Consolas"
+                           Opacity="0"
+                           RenderTransformOrigin="0,0.5">
+                    <TextBlock.RenderTransform>
+                        <TranslateTransform x:Name="TitleSlide" X="30"/>
+                    </TextBlock.RenderTransform>
+                </TextBlock>
 
+                <TextBlock x:Name="SubText"
+                           Text="Neural Sewer Inspection Engine"
+                           FontSize="17"
+                           Margin="2,6,0,0"
+                           Opacity="0">
+                    <TextBlock.Foreground>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="#FF0088CC" Offset="0"/>
+                            <GradientStop Color="#FF00CCAA" Offset="1"/>
+                        </LinearGradientBrush>
+                    </TextBlock.Foreground>
+                </TextBlock>
+
+                <!-- Versions-Info -->
+                <TextBlock x:Name="VersionText"
+                           Text="v3.1"
+                           Foreground="#40FFFFFF"
+                           FontSize="12"
+                           FontFamily="Consolas"
+                           Margin="2,4,0,0"
+                           Opacity="0"/>
+
+                <!-- Status mit Lade-Indikator -->
+                <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
+                    <Ellipse x:Name="StatusDot" Width="8" Height="8"
+                             Fill="#0088FF" Margin="0,3,8,0" Opacity="0"/>
                     <TextBlock x:Name="StatusText"
                                Text="Initialisiere Anwendung..."
-                               Foreground="{StaticResource MutedBrush}"
+                               Foreground="#FF5A6577"
                                FontSize="13"
-                               Margin="0,18,0,0"
+                               FontFamily="Segoe UI"
                                Opacity="0"/>
                 </StackPanel>
-            </Grid>
+            </StackPanel>
+
+            <!-- Untere Fortschrittsleiste -->
+            <Border Height="2" VerticalAlignment="Bottom" Margin="40,0,40,30"
+                    CornerRadius="1" Background="#10FFFFFF">
+                <Border x:Name="ProgressBar"
+                        Height="2" HorizontalAlignment="Left" Width="0"
+                        CornerRadius="1">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="#FF0066CC" Offset="0"/>
+                            <GradientStop Color="#FF00BBFF" Offset="0.5"/>
+                            <GradientStop Color="#FF00CCAA" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+            </Border>
+
         </Grid>
     </Grid>
 </Window>

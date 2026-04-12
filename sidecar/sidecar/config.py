@@ -1,5 +1,7 @@
 """Configuration loaded from environment variables with SEWER_SIDECAR_ prefix."""
 
+import os
+
 from pydantic_settings import BaseSettings
 
 
@@ -10,6 +12,16 @@ class SidecarSettings(BaseSettings):
     port: int = 8100
     models_dir: str = "./models"
     gpu_device: str = "cuda:0"
+
+    # Shadow / CPU utilization
+    florence2_shadow_device: str = "cuda:0"
+    shadow_worker_count: int = 2
+    shadow_every_n: int = 5
+    cpu_threads: int = max(1, os.cpu_count() or 4)
+
+    # Video pipeline parallelism
+    video_worker_count: int = min(8, max(2, os.cpu_count() or 4))
+    video_queue_maxsize: int = 16
 
     # Per-model device overrides (empty = fallback to gpu_device)
     yolo_device: str = ""
@@ -39,10 +51,14 @@ class SidecarSettings(BaseSettings):
     # Fallback auf PyTorch wenn TensorRT nicht installiert oder Export fehlschlaegt.
     yolo_use_tensorrt: bool = True
     yolo_tensorrt_fp16: bool = True
+    # Precision: "fp16" (Standard) oder "fp4" (NVFP4, RTX 50xx)
+    yolo_precision: str = "fp16"
 
-    # Grounding DINO
-    dino_box_threshold: float = 0.25
-    dino_text_threshold: float = 0.20
+    # Florence-2 (ersetzt Grounding DINO)
+    florence2_model_path: str = "models/florence-2"
+    florence2_confidence: float = 0.25
+    dino_box_threshold: float = 0.25   # Wird intern als florence2_confidence interpretiert
+    dino_text_threshold: float = 0.20  # Wird ignoriert (Florence-2 braucht das nicht)
     dino_labels: str = (
         "crack . fracture . break . deformation . "
         "corrosion . surface damage . erosion . "
@@ -57,8 +73,10 @@ class SidecarSettings(BaseSettings):
         "lateral connection . pipe junction"
     )
 
-    # SAM
-    sam_model_type: str = "vit_h"
+    # SAM 2 (ersetzt SAM 3)
+    # SAM 2 Config-Name (Hydra): mit configs/ Prefix
+    sam_model_type: str = "configs/sam2.1/sam2.1_hiera_l.yaml"
+    sam_model_path: str = "models/sam2"
 
     # Video Super Resolution (VSR) fuer alte PAL-Videos (768x576)
     # Aktiviert automatisches Upscaling auf vsr_min_resolution Hoehe vor YOLO.

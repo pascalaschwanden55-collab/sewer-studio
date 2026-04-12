@@ -134,7 +134,7 @@ public sealed class VsaEvaluationServiceTests
             System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var znSVal));
         // EZ=3 + 0.4 = 3.4 (Startwert vor Abminderung) → ZN muss > 2.4 sein
-        Assert.True(znSVal > 2.4, $"ZN_S mit Q1=0.5mm (EZ=3) sollte > 2.4 sein, ist aber {znSVal}");
+        Assert.True(znSVal > 2.4, $"ZN_S mit Q1=0.5% (EZ=3) sollte > 2.4 sein, ist aber {znSVal}");
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public sealed class VsaEvaluationServiceTests
     [Fact]
     public void Evaluate_UsesQuantRules_LargeQ1GivesWorseEZ()
     {
-        // BAA mit Q1=10% (Verformung > 5%) → EZS=1, EZB=1 (schlechter Zustand)
+        // BAA mit Q1=20% (Verformung >= 15%) → EZS=1, EZB=1 (schlechter Zustand)
         var project = new Project();
         var rec = new HaltungRecord();
         rec.SetFieldValue("Haltungsname", "H6_largeQ1", FieldSource.Xtf, userEdited: false);
@@ -180,7 +180,7 @@ public sealed class VsaEvaluationServiceTests
 
         rec.VsaFindings = new List<VsaFinding>
         {
-            new() { KanalSchadencode = "BAA", Quantifizierung1 = "10", LL = 3.0 }
+            new() { KanalSchadencode = "BAA", Quantifizierung1 = "20", LL = 3.0 }
         };
 
         project.Data.Add(rec);
@@ -189,12 +189,12 @@ public sealed class VsaEvaluationServiceTests
         var res = svc.Evaluate(project);
         Assert.True(res.Ok, res.ErrorMessage);
 
-        // Grosser Riss → schlechtere ZN (EZ=1 + 0.4 = 1.4 Startwert)
+        // Grosse Verformung → schlechtere ZN (EZ=1 + 0.4 = 1.4 Startwert)
         var znS = rec.GetFieldValue("VSA_Zustandsnote_S");
         Assert.True(double.TryParse(znS?.Replace(',', '.'),
             System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var znSVal));
-        Assert.True(znSVal < 2.0, $"ZN_S mit Q1=10mm (EZ=1) sollte < 2.0 sein, ist aber {znSVal}");
+        Assert.True(znSVal < 2.0, $"ZN_S mit Q1=20% (EZ=1) sollte < 2.0 sein, ist aber {znSVal}");
     }
 
     [Fact]

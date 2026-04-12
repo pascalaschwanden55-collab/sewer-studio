@@ -174,11 +174,26 @@ public sealed class ProtocolLoaderFactory
         var parseResult = PdfProtocolTableParser.Parse(pdfPath);
 
         // Fallback: PdfProtocolExtractor (PdfPig-basiert, gleiche Parsing-Logik)
-        // Greift wenn pdftotext nicht installiert oder Format nicht erkannt
+        // Greift wenn pdftotext nicht installiert, Format nicht erkannt, oder
+        // verschluesselte PDF (Custom Font Encoding) — PdfPig hat TryDecodeShiftedText
         if (!parseResult.HasEntries)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"[ProtocolLoader] PdfProtocolTableParser fand keine Eintraege in {Path.GetFileName(pdfPath)}" +
+                (parseResult.Error != null ? $" ({parseResult.Error[..Math.Min(parseResult.Error.Length, 100)]})" : "") +
+                " — versuche PdfProtocolExtractor Fallback...");
             var extractor = new PdfProtocolExtractor();
-            var entries = extractor.ExtractAsync(pdfPath).GetAwaiter().GetResult();
+            IReadOnlyList<Training.Models.GroundTruthEntry> entries;
+            try
+            {
+                entries = extractor.ExtractAsync(pdfPath).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[ProtocolLoader] PdfProtocolExtractor Fallback FEHLGESCHLAGEN: {ex.GetType().Name}: {ex.Message}");
+                return null;
+            }
             if (entries.Count > 0)
             {
                 var hId = Path.GetFileNameWithoutExtension(pdfPath);

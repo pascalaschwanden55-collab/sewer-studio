@@ -25,6 +25,7 @@ public sealed class OllamaClient : IDisposable
     private readonly bool _ownsHttp;
     private readonly string _keepAlive;
     private readonly int _numCtx;
+    private readonly bool _diagnosticsEnabled;
 
     // Polly Resilience-Pipeline: Retry + Circuit Breaker
     private readonly ResiliencePipeline _resiliencePipeline;
@@ -36,10 +37,11 @@ public sealed class OllamaClient : IDisposable
     /// <summary>Anzahl Circuit-Breaker-Ausloeser seit Start.</summary>
     public int CircuitBreakerTrips => _circuitBreakerTrips;
 
-    public OllamaClient(Uri baseUri, HttpClient? http = null, TimeSpan? ownedTimeout = null, string keepAlive = "24h", int numCtx = 0)
+    public OllamaClient(Uri baseUri, HttpClient? http = null, TimeSpan? ownedTimeout = null, string keepAlive = "24h", int numCtx = 0, bool diagnosticsEnabled = false)
     {
         _ownsHttp = http is null;
         _http = http ?? new HttpClient();
+        _diagnosticsEnabled = diagnosticsEnabled;
         // BaseAddress kann nur VOR dem ersten Request gesetzt werden.
         // Bei wiederverwendeten HttpClients (Batch) ist sie schon gesetzt.
         if (_http.BaseAddress is null)
@@ -456,18 +458,21 @@ public sealed class OllamaClient : IDisposable
         if (string.IsNullOrWhiteSpace(content))
             throw new InvalidOperationException("Ollama /api/chat Antwort: content leer");
 
-        // Debug-Log: Qwen-Rohantwort speichern (temporaer)
-        try
+        // Debug-Log: Qwen-Rohantwort speichern (nur bei Diagnostics)
+        if (System.Diagnostics.Debugger.IsAttached || _diagnosticsEnabled)
         {
-            var logDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "SewerStudio", "logs");
-            Directory.CreateDirectory(logDir);
-            File.AppendAllText(
-                Path.Combine(logDir, "qwen_raw_responses.log"),
-                $"{DateTime.Now:HH:mm:ss} [{model}] {content[..Math.Min(content.Length, 500)]}\n---\n");
+            try
+            {
+                var logDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "SewerStudio", "logs");
+                Directory.CreateDirectory(logDir);
+                File.AppendAllText(
+                    Path.Combine(logDir, "qwen_raw_responses.log"),
+                    $"{DateTime.Now:HH:mm:ss} [{model}] {content[..Math.Min(content.Length, 500)]}\n---\n");
+            }
+            catch { /* Logging darf nie crashen */ }
         }
-        catch { /* Logging darf nie crashen */ }
 
         try
         {

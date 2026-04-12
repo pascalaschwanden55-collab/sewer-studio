@@ -13,6 +13,7 @@ using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.SelfImproving;
 using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.UI.Ai.Training.Services;
+using AuswertungPro.Next.UI.Services.CodeCatalog;
 using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
@@ -51,6 +52,10 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     private readonly ReviewQueueService? _reviewQueue;
     private readonly int _gpuConcurrency;
     private readonly int _pipeDiameterMm;
+    private readonly bool _autoApproveHighConfidenceCodeHits;
+    private readonly double _partialAutoApproveMinScore;
+    private readonly bool _enableGuidedVerification;
+    private readonly int _guidedVerificationBudgetPerCase;
     private readonly ILogger<SelfTrainingOrchestrator>? _logger;
 
     private readonly ManualResetEventSlim _pauseGate = new(true);
@@ -83,7 +88,12 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         _pdfExtractor = pdfExtractor;
         _multiModel = multiModel;
         _reviewQueue = reviewQueue;
-        _gpuConcurrency = Math.Max(1, (settings ?? new TrainingCenterSettings()).GpuConcurrency);
+        var effectiveSettings = settings ?? new TrainingCenterSettings();
+        _gpuConcurrency = Math.Max(1, effectiveSettings.GpuConcurrency);
+        _autoApproveHighConfidenceCodeHits = effectiveSettings.AutoApproveHighConfidenceCodeHits;
+        _partialAutoApproveMinScore = Math.Clamp(effectiveSettings.PartialAutoApproveMinScore, 0.0, 1.0);
+        _enableGuidedVerification = effectiveSettings.EnableGuidedVerification;
+        _guidedVerificationBudgetPerCase = Math.Max(0, effectiveSettings.GuidedVerificationBudgetPerCase);
         _pipeDiameterMm = 300;
         _qualityGate = qualityGate ?? new SampleQualityGateService();
         _fewShotStore = fewShotStore ?? new FewShotExampleStore();
@@ -208,6 +218,10 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         var generatedSamples = new System.Collections.Concurrent.ConcurrentBag<TrainingSample>();
         int gpuConcurrency = _gpuConcurrency;
         int completedCount = 0;
+        int guidedBudgetRemaining = _guidedVerificationBudgetPerCase;
+        GuidedVerificationService? guidedVerification = _enableGuidedVerification
+            ? new GuidedVerificationService(_vision.Client, _vision.ModelName)
+            : null;
 
         progress.Report(new SelfTrainingStep(
             0, entries.Count, "", 0, SelfTrainingStage.Analyzing, null, null, null,
@@ -248,10 +262,11 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             EnhancedFrameAnalysis analysis;
             try
             {
-                // Timeout pro Frame: 60s fuer Multi-Modell, 45s fuer Qwen-only
-                // Verhindert dass ein einzelner haengender Frame den ganzen Batch blockiert
+                // Timeout pro Frame: 120s fuer Multi-Modell, 90s fuer Qwen-only
+                // Erhoeht gegenueber 60/45s weil Ollama bei parallelen Requests
+                // intern serialisiert und Wartezeiten von 30-60s normal sind
                 using var frameCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-                frameCts.CancelAfter(TimeSpan.FromSeconds(_sidecarAvailable ? 60 : 45));
+                frameCts.CancelAfter(TimeSpan.FromSeconds(_sidecarAvailable ? 120 : 90));
                 analysis = await AnalyzeFrameAsync(pngBytes, b64, frameCts.Token);
             }
             catch (OperationCanceledException) when (!token.IsCancellationRequested)
@@ -265,7 +280,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                     i, entries.Count, entry.VsaCode, entry.MeterStart,
                     SelfTrainingStage.Analyzing, null, null, framePath,
                     ErrorMessage: errMsg));
-                analysis = EnhancedFrameAnalysis.Empty("Frame-Timeout nach 60s");
+                analysis = EnhancedFrameAnalysis.Empty("Frame-Timeout nach 120s");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -302,6 +317,39 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 i, entries.Count, entry.VsaCode, entry.MeterStart,
                 SelfTrainingStage.AssessingTechnique, comparison, technique, framePath));
 
+            var autoApproveCodeHit = _autoApproveHighConfidenceCodeHits
+                && isPdfPhoto
+                && comparison.Level == MatchLevel.PartialMatch
+                && comparison.CodeMatched
+                && comparison.ConfidenceScore >= _partialAutoApproveMinScore;
+
+            var guidedApproved = false;
+            if (!autoApproveCodeHit
+                && guidedVerification is not null
+                && ShouldAttemptGuidedVerification(comparison, isPdfPhoto)
+                && TryConsumeBudget(ref guidedBudgetRemaining))
+            {
+                try
+                {
+                    var guided = await guidedVerification.VerifyAsync(pngBytes, entry, token);
+                    var guidedCode = ResolveGuidedCode(guided);
+                    if (GuidedVerificationSupportsApproval(entry, guided, guidedCode))
+                        guidedApproved = true;
+                }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch
+                {
+                    // Guided Verification ist optional.
+                }
+            }
+
+            var approvedByPolicy = comparison.Level == MatchLevel.ExactMatch
+                || autoApproveCodeHit
+                || guidedApproved;
+
             // ── Thread-safe Zaehler ──
             switch (comparison.Level)
             {
@@ -328,10 +376,10 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 FramePath = framePath,
                 // Nur ExactMatch → Approved (strenger: PartialMatch koennte falscher Code sein,
                 // z.B. durch zu lockeren Praefix-Match oder fehlende Clock/Meter-Validierung)
-                Status = comparison.Level == MatchLevel.ExactMatch
+                Status = approvedByPolicy
                     ? TrainingSampleStatus.Approved
                     : TrainingSampleStatus.New,
-                KbIndexState = comparison.Level == MatchLevel.ExactMatch
+                KbIndexState = approvedByPolicy
                     ? KbIndexState.Pending
                     : KbIndexState.None,
                 TruthMeterCenter = meterCenter,
@@ -342,13 +390,13 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 KiCode = comparison.BestMatchCode,
                 SourceType = SourceTypeNames.PdfPhoto,
                 TechniqueGrade = technique?.OverallGrade,
-                Notes = comparison.Explanation
+                Notes = BuildApprovalNotes(comparison, autoApproveCodeHit, guidedApproved)
             };
             generatedSamples.Add(sample);
 
             // ── Few-Shot: ExactMatch-Samples als Trainingsbeispiele speichern ──
             // Nur echte Schaeden (nicht BCD/BCE/BDB etc.), nur mit gutem Foto
-            if (comparison.Level == MatchLevel.ExactMatch
+            if ((comparison.Level == MatchLevel.ExactMatch || guidedApproved)
                 && pngBytes.Length > 10_000
                 && !_fewShotSkipCodes.Contains(entry.VsaCode.Replace(".", "").ToUpperInvariant()[..Math.Min(3, entry.VsaCode.Length)]))
             {
@@ -391,7 +439,8 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             if (_reviewQueue is not null)
             {
                 foreach (var s in accepted.Where(s =>
-                    s.MatchLevel is MatchLevelNames.PartialMatch or MatchLevelNames.Mismatch))
+                    s.Status == TrainingSampleStatus.New
+                    && (s.MatchLevel is MatchLevelNames.PartialMatch or MatchLevelNames.Mismatch)))
                 {
                     _reviewQueue.EnqueueFromSelfTraining(
                         s.CaseId, s.Code, s.KiCode ?? "",
@@ -535,6 +584,89 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         if (q.HeightMm is > 10) return 2;
         return 1;
     }
+
+    private static bool ShouldAttemptGuidedVerification(ComparisonResult comparison, bool isPdfPhoto)
+    {
+        if (!isPdfPhoto) return false;
+        return comparison.Level switch
+        {
+            MatchLevel.ExactMatch => false,
+            MatchLevel.PartialMatch => !comparison.CodeMatched || comparison.ConfidenceScore < 0.60,
+            _ => true
+        };
+    }
+
+    private static bool TryConsumeBudget(ref int remaining)
+    {
+        while (true)
+        {
+            var current = Volatile.Read(ref remaining);
+            if (current <= 0)
+                return false;
+
+            if (Interlocked.CompareExchange(ref remaining, current - 1, current) == current)
+                return true;
+        }
+    }
+
+    private static bool GuidedVerificationSupportsApproval(
+        GroundTruthEntry entry,
+        GuidedVerificationResult guided,
+        string? guidedCode)
+    {
+        var confirmation = (guided.ConfirmationLevel ?? string.Empty).Trim().ToLowerInvariant();
+        var confirmsDamage = guided.ProtocolDamageVisible
+            || confirmation is "bestaetigt" or "teilweise";
+
+        if (!confirmsDamage)
+            return false;
+
+        if (string.IsNullOrWhiteSpace(guidedCode))
+            return true;
+
+        return CodesLikelyMatch(entry.VsaCode, guidedCode);
+    }
+
+    private static string? ResolveGuidedCode(GuidedVerificationResult guided)
+    {
+        var fromCode = VsaCodeResolver.NormalizeFindingCode(guided.ActualVsaCode)
+            ?? VsaCodeResolver.InferCodeFromLabel(guided.ActualVsaCode ?? string.Empty);
+        if (!string.IsNullOrWhiteSpace(fromCode))
+            return fromCode;
+
+        return VsaCodeResolver.InferCodeFromLabel(guided.ActualLabel ?? string.Empty)
+            ?? VsaCodeTree.ReverseLookup(guided.ActualLabel ?? string.Empty);
+    }
+
+    private static bool CodesLikelyMatch(string truthCode, string candidateCode)
+    {
+        if (string.IsNullOrWhiteSpace(truthCode) || string.IsNullOrWhiteSpace(candidateCode))
+            return false;
+
+        var t = truthCode.ToUpperInvariant().Trim().Split('.')[0];
+        var k = candidateCode.ToUpperInvariant().Trim().Split('.')[0];
+
+        if (t == k) return true;
+        if (k.Length > t.Length && t.Length >= 3 && k.StartsWith(t, StringComparison.Ordinal)) return true;
+        if (t.Length > k.Length && k.Length >= 3 && t.StartsWith(k, StringComparison.Ordinal)) return true;
+        if (t.Length >= 4 && k.Length >= 4 && t[..3] == k[..3]) return true;
+        return false;
+    }
+
+    private static string BuildApprovalNotes(
+        ComparisonResult comparison,
+        bool autoApproveCodeHit,
+        bool guidedApproved)
+    {
+        if (guidedApproved)
+            return comparison.Explanation + " · GuidedVerify bestaetigt Protokollschaden.";
+
+        if (autoApproveCodeHit)
+            return comparison.Explanation + $" · AutoApprove: codekorrekter Partial-Match (Score {comparison.ConfidenceScore:F2}).";
+
+        return comparison.Explanation;
+    }
+
     private static void LogToFile(string message)
     {
         try

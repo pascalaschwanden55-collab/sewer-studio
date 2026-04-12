@@ -109,6 +109,10 @@ namespace AuswertungPro.Next.UI.Ai.Training
                         // Anreicherung: nur ueberschreiben wenn der neue Wert gesetzt ist
                         if (s.SourceType is not null) target.SourceType = s.SourceType;
                         if (s.TechniqueGrade is not null) target.TechniqueGrade = s.TechniqueGrade;
+                        if (!string.IsNullOrWhiteSpace(s.Rohrmaterial)) target.Rohrmaterial = s.Rohrmaterial;
+                        if (s.NennweiteMm.HasValue) target.NennweiteMm = s.NennweiteMm;
+                        target.IsKorrigiert |= s.IsKorrigiert;
+                        if (!string.IsNullOrWhiteSpace(s.QualityGateLevel)) target.QualityGateLevel = s.QualityGateLevel;
                     }
                     else
                     {

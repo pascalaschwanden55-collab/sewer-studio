@@ -91,14 +91,18 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
 
         foreach (var finding in analysis.Findings)
         {
-            // Code-Matching: 3-stufiger Fallback
+            // Code-Matching: 4-stufiger Fallback
+            // 0. Label direkt als VSA-Code normalisieren (seit Prompt label=Code fordert,
+            //    kann finding.Label direkt "BABBA" enthalten — das muss erkannt werden)
             // 1. vsa_code_hint direkt aus Qwen (z.B. "BABBA")
             // 2. InferCodeFromLabel: Label-Text → Code (z.B. "Riss" → "BAB")
             // 3. ReverseLookup: Langtext → Code (z.B. "Anschluss mit Formstück" → "BCAAA")
             string? resolvedCode = finding.VsaCodeHint;
             if (string.IsNullOrEmpty(resolvedCode) && !string.IsNullOrEmpty(finding.Label))
             {
-                resolvedCode = VsaCodeResolver.InferCodeFromLabel(finding.Label)
+                // Schritt 0: Label selbst koennte ein gueltiger VSA-Code sein (z.B. "BABBA")
+                resolvedCode = VsaCodeResolver.NormalizeFindingCode(finding.Label)
+                    ?? VsaCodeResolver.InferCodeFromLabel(finding.Label)
                     ?? VsaCodeTree.ReverseLookup(finding.Label);
             }
             bool codeMatch = CodesMatch(truth.VsaCode, resolvedCode);

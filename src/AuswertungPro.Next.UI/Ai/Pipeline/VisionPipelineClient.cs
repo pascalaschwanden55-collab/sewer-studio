@@ -60,7 +60,7 @@ public sealed class VisionPipelineClient
     }
 
     /// <summary>
-    /// Grounding DINO open-vocabulary detection.
+    /// Florence-2 Open-Vocabulary Detection (Endpoint: /detect/dino, Slot: DINO).
     /// </summary>
     public async Task<DinoResponse> DetectDinoAsync(DinoRequest request, CancellationToken ct = default)
     {
@@ -89,6 +89,59 @@ public sealed class VisionPipelineClient
     public async Task<TrainingExportResponseDto> ExportTrainingAsync(TrainingExportRequestDto request, CancellationToken ct = default)
     {
         return await PostAsync<TrainingExportRequestDto, TrainingExportResponseDto>("/training/export-yolo", request, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Start asynchronous YOLO training on the sidecar.
+    /// </summary>
+    public async Task<YoloTrainJobStartDto> StartYoloTrainingAsync(YoloTrainRequestDto request, CancellationToken ct = default)
+    {
+        return await PostAsync<YoloTrainRequestDto, YoloTrainJobStartDto>("/training/train-yolo", request, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Fetch status for a running/completed YOLO training job.
+    /// </summary>
+    public async Task<YoloTrainJobStatusDto> GetYoloTrainingJobAsync(string jobId, CancellationToken ct = default)
+    {
+        return await GetAsync<YoloTrainJobStatusDto>($"/training/jobs/{jobId}", ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Hot-swap active YOLO model on the sidecar without process restart.
+    /// </summary>
+    public async Task<ModelReloadResponseDto> ReloadYoloModelAsync(ModelReloadRequestDto request, CancellationToken ct = default)
+    {
+        return await PostAsync<ModelReloadRequestDto, ModelReloadResponseDto>("/model/reload", request, ct).ConfigureAwait(false);
+    }
+
+    // ── LoRA Training ──────────────────────────────────────────────────────
+
+    /// <summary>Start asynchronous LoRA fine-tuning on the sidecar.</summary>
+    public async Task<LoraTrainJobStartDto> StartLoraTrainingAsync(LoraTrainRequestDto request, CancellationToken ct = default)
+    {
+        return await PostAsync<LoraTrainRequestDto, LoraTrainJobStartDto>("/training/train-lora", request, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Fetch status for a running/completed LoRA training job.</summary>
+    public async Task<LoraTrainJobStatusDto> GetLoraTrainingJobAsync(string jobId, CancellationToken ct = default)
+    {
+        return await GetAsync<LoraTrainJobStatusDto>($"/training/lora-jobs/{jobId}", ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Deploy LoRA adapter via Ollama Modelfile.</summary>
+    public async Task<LoraDeployResponseDto> DeployLoraAdapterAsync(LoraDeployRequestDto request, CancellationToken ct = default)
+    {
+        return await PostAsync<LoraDeployRequestDto, LoraDeployResponseDto>("/training/deploy-lora", request, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Rohrachsen-Analyse: Fluchtpunkt + Rohrmitte + Muffen-Erkennung.
+    /// Leichtgewichtig (~5ms/Frame), fuer Knick-Detektion.
+    /// </summary>
+    public async Task<PipeAxisResult> AnalyzePipeAxisAsync(PipeAxisRequest request, CancellationToken ct = default)
+    {
+        return await PostAsync<PipeAxisRequest, PipeAxisResult>("/analyze/pipe-axis", request, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -143,7 +196,20 @@ public sealed class VisionPipelineClient
         return await PostAsync<EnhanceRequest, EnhanceResponse>("/enhance", request, ct).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// PDF-Tabellen-Extraktion via Nemotron-Parse.
+    /// </summary>
+    public async Task<ParsePdfTableResponse> ParsePdfTableAsync(ParsePdfTableRequest request, CancellationToken ct = default)
+    {
+        return await PostAsync<ParsePdfTableRequest, ParsePdfTableResponse>("/parse/pdf-table", request, ct).ConfigureAwait(false);
+    }
+
     // ── Internal ──────────────────────────────────────────────────────────
+
+    /// <summary>Generischer POST-Aufruf gegen den Sidecar (intern + fuer Services).</summary>
+    internal async Task<TResponse> PostJsonAsync<TRequest, TResponse>(
+        string endpoint, TRequest request, CancellationToken ct)
+        => await PostAsync<TRequest, TResponse>(endpoint, request, ct).ConfigureAwait(false);
 
     private async Task<TResponse> PostAsync<TRequest, TResponse>(
         string endpoint, TRequest request, CancellationToken ct)
@@ -157,6 +223,20 @@ public sealed class VisionPipelineClient
 
         var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
+        if (!resp.IsSuccessStatusCode)
+            throw new HttpRequestException(
+                $"Sidecar {endpoint} returned {(int)resp.StatusCode}: {body}");
+
+        return JsonSerializer.Deserialize<TResponse>(body, JsonOpts)
+            ?? throw new InvalidOperationException($"Failed to deserialize response from {endpoint}");
+    }
+
+    private async Task<TResponse> GetAsync<TResponse>(string endpoint, CancellationToken ct)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, BuildUri(endpoint));
+        using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
+
+        var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
         if (!resp.IsSuccessStatusCode)
             throw new HttpRequestException(
                 $"Sidecar {endpoint} returned {(int)resp.StatusCode}: {body}");

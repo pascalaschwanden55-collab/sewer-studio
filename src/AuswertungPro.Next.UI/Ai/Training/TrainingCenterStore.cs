@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
@@ -14,6 +15,9 @@ public sealed class TrainingCenterStore
         PropertyNameCaseInsensitive = true
     };
 
+    // Verhindert gleichzeitige Load+Save-Operationen (analog zu TrainingSamplesStore)
+    private static readonly SemaphoreSlim _fileLock = new(1, 1);
+
     public string StoreFilePath { get; }
 
     public TrainingCenterStore(string? storeFilePath = null)
@@ -22,6 +26,19 @@ public sealed class TrainingCenterStore
     }
 
     public async Task<TrainingCenterState> LoadAsync()
+    {
+        await _fileLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            return await LoadInternalAsync();
+        }
+        finally
+        {
+            _fileLock.Release();
+        }
+    }
+
+    private async Task<TrainingCenterState> LoadInternalAsync()
     {
         try
         {
@@ -71,6 +88,19 @@ public sealed class TrainingCenterStore
     /// Atomar speichern: temp-Datei + rename, mit Backup vor dem Schreiben.
     /// </summary>
     public async Task SaveAsync(TrainingCenterState state)
+    {
+        await _fileLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await SaveInternalAsync(state);
+        }
+        finally
+        {
+            _fileLock.Release();
+        }
+    }
+
+    private async Task SaveInternalAsync(TrainingCenterState state)
     {
         var dir = Path.GetDirectoryName(StoreFilePath)!;
         Directory.CreateDirectory(dir);

@@ -46,9 +46,11 @@ public sealed class ReviewQueueService
     /// Fuegt ein Self-Training-Ergebnis in die Review Queue ein.
     /// Fuer PartialMatch/Mismatch-Ergebnisse die menschliche Pruefung benoetigen.
     /// </summary>
+    /// <param name="sampleId">Stabiler SampleId fuer eindeutiges Mapping bei Review-Korrektur.</param>
     public void EnqueueFromSelfTraining(
         string caseId, string vsaCode, string suggestedCode,
-        double meter, string framePath, string matchLevel)
+        double meter, string framePath, string matchLevel,
+        string sampleId)
     {
         // Priority: Mismatch > PartialMatch > andere
         double priority = matchLevel switch
@@ -69,11 +71,18 @@ public sealed class ReviewQueueService
             SelfTrainingSuggestedCode = suggestedCode,
             SelfTrainingMeter = meter,
             SelfTrainingFramePath = framePath,
-            SelfTrainingMatchLevel = matchLevel
+            SelfTrainingMatchLevel = matchLevel,
+            SelfTrainingSampleId = sampleId
         };
 
         lock (_lock)
         {
+            // Deduplizierung: gleiches Sample nicht doppelt einspeisen
+            // (Orchestrator und ViewModel koennten denselben Kandidaten einspeisen)
+            if (!string.IsNullOrEmpty(sampleId)
+                && _queue.Any(q => q.SelfTrainingSampleId == sampleId))
+                return;
+
             _queue.Add(item);
             _queue.Sort((a, b) => b.Priority.CompareTo(a.Priority));
         }
@@ -125,6 +134,8 @@ public sealed record ReviewQueueItem(
     public double? SelfTrainingMeter { get; init; }
     public string? SelfTrainingFramePath { get; init; }
     public string? SelfTrainingMatchLevel { get; init; }
+    /// <summary>Stabiler SampleId fuer eindeutiges Mapping bei Review-Korrektur (Finding 2 Fix).</summary>
+    public string? SelfTrainingSampleId { get; init; }
 
     public string Label => IsFromSelfTraining
         ? $"{SelfTrainingVsaCode} @ {SelfTrainingMeter:F1}m ({SelfTrainingMatchLevel})"

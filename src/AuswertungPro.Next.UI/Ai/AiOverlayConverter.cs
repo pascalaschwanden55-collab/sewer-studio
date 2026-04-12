@@ -70,7 +70,7 @@ public static class AiOverlayConverter
                 Geometry = geo,
                 Label = d.ClassName,
                 Confidence = d.Confidence,
-                Severity = ConfidenceToSeverity(d.Confidence),
+                Severity = ComputeSeverity(d.ClassName, d.Confidence),
                 Source = AiOverlaySource.Yolo
             };
         }).ToList();
@@ -132,7 +132,7 @@ public static class AiOverlayConverter
                 Geometry = geo,
                 Label = quantified.Label,
                 Confidence = quantified.Confidence,
-                Severity = EstimateSeverity(quantified),
+                Severity = ComputeSeverity(quantified.Label, quantified.Confidence, quantified),
                 VsaCodeHint = null,
                 Source = AiOverlaySource.Sam
             });
@@ -181,7 +181,7 @@ public static class AiOverlayConverter
                     },
                     Q1Mm = f.HeightMm,
                     Q2Mm = f.WidthMm,
-                    ClockFrom = ParseClockHour(f.PositionClock)
+                    ClockFrom = ParseClockHour(f.PositionClock) ?? 12.0
                 },
                 Label = f.Label,
                 Confidence = 0.0,
@@ -196,7 +196,7 @@ public static class AiOverlayConverter
         double pipeCenterY = cal?.PipeCenter.Y ?? 0.5;
         double pipeRadius = (cal?.NormalizedDiameter ?? 0.7) / 2.0;
 
-        var clockHour = ParseClockHour(f.PositionClock);
+        var clockHour = ParseClockHour(f.PositionClock) ?? 12.0;
         var (pointX, pointY) = ClockToNormalized(clockHour, pipeCenterX, pipeCenterY, pipeRadius);
 
         var geo = new OverlayGeometry();
@@ -294,33 +294,41 @@ public static class AiOverlayConverter
             || lower.Contains("baa") || lower.Contains("baf");
     }
 
-    private static int ConfidenceToSeverity(double confidence) =>
-        confidence switch
+    private static int ComputeSeverity(
+        string? label, double confidence,
+        MaskQuantificationService.QuantifiedMask? quantified = null)
+    {
+        // Wenn SAM-Quantifizierung vorhanden: physische Groesse priorisieren
+        if (quantified != null)
         {
-            >= 0.9 => 5,
-            >= 0.7 => 4,
-            >= 0.5 => 3,
-            >= 0.3 => 2,
+            if (quantified.CrossSectionReductionPercent is >= 50) return 5;
+            if (quantified.CrossSectionReductionPercent is >= 30) return 4;
+            if (quantified.CrossSectionReductionPercent is >= 15) return 3;
+            if (quantified.IntrusionPercent is >= 30) return 4;
+        }
+        // Sonst: Label-gewichtete Confidence
+        var labelLower = label?.ToLowerInvariant() ?? "";
+        bool isCriticalLabel = labelLower.Contains("bac") || labelLower.Contains("bruch")
+            || labelLower.Contains("einsturz");
+        double adjustedConf = isCriticalLabel ? confidence + 0.15 : confidence;
+        return adjustedConf switch
+        {
+            >= 0.85 => 5,
+            >= 0.65 => 4,
+            >= 0.45 => 3,
+            >= 0.25 => 2,
             _ => 1
         };
-
-    private static int EstimateSeverity(MaskQuantificationService.QuantifiedMask q)
-    {
-        if (q.CrossSectionReductionPercent is >= 50) return 5;
-        if (q.CrossSectionReductionPercent is >= 30) return 4;
-        if (q.CrossSectionReductionPercent is >= 15) return 3;
-        if (q.IntrusionPercent is >= 30) return 4;
-        return 2;
     }
 
-    private static double ParseClockHour(string? clockStr)
+    private static double? ParseClockHour(string? clockStr)
     {
         var normalized = VsaCodeResolver.NormalizeClock(clockStr);
-        if (string.IsNullOrWhiteSpace(normalized)) return 12.0;
+        if (string.IsNullOrWhiteSpace(normalized)) return null;
         var match = System.Text.RegularExpressions.Regex.Match(normalized, @"(\d{1,2})");
         if (match.Success && int.TryParse(match.Groups[1].Value, out var h))
             return h == 0 ? 12.0 : Math.Clamp(h, 1, 12);
-        return 12.0;
+        return null;
     }
 
     /// <summary>Uhrposition → normierte XY-Koordinate im Rohrbild.</summary>
@@ -330,6 +338,8 @@ public static class AiOverlayConverter
         double angleDeg = (clockHour % 12) * 30.0;
         double angleRad = angleDeg * Math.PI / 180.0;
         // 12 Uhr = oben (-Y), Uhrzeigersinn
+        // 0.8-Faktor: Uhrzeiger-Indikatoren 20% innerhalb des Rohrrands
+        // fuer bessere Sichtbarkeit bei ueberlappendem Overlay
         double x = cx + Math.Sin(angleRad) * radius * 0.8;
         double y = cy - Math.Cos(angleRad) * radius * 0.8;
         return (x, y);

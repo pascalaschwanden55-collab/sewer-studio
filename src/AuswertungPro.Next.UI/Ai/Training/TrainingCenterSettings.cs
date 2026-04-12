@@ -72,9 +72,11 @@ public sealed class TrainingCenterSettings
         {
             var profile = GpuModelSelector.DetectAndSelect();
             var vramMb = profile?.VramTotalMb ?? 0;
-            if (vramMb >= 30_000) detected = 6;  // RTX 5090 32GB
-            else if (vramMb >= 24_000) detected = 4;
-            else if (vramMb >= 12_000) detected = 3;
+            // VRAM ist gross genug, aber Ollama serialisiert Requests intern.
+            // Mehr als 3 parallele Qwen-Requests fuehren zu Timeouts (>60s Wartezeit).
+            if (vramMb >= 30_000) detected = 3;  // RTX 5090 32GB — Ollama-Limit beachten
+            else if (vramMb >= 24_000) detected = 3;
+            else if (vramMb >= 12_000) detected = 2;
         }
         catch
         {

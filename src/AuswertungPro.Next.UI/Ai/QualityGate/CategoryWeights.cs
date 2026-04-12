@@ -11,14 +11,14 @@ namespace AuswertungPro.Next.UI.Ai.QualityGate;
 public sealed class CategoryWeights
 {
     public string Category { get; set; } = "default";
-    public double WYolo { get; set; } = 0.10;
-    public double WDino { get; set; } = 0.15;
+    public double WYolo { get; set; } = 0.12;
+    public double WDino { get; set; } = 0.18;
     public double WSam { get; set; } = 0.10;
     public double WQwen { get; set; } = 0.15;
-    public double WLlm { get; set; } = 0.20;
-    public double WKb { get; set; } = 0.10;
+    public double WLlm { get; set; } = 0.12;
+    public double WKb { get; set; } = 0.12;
     public double WKbAgreement { get; set; } = 0.10;
-    public double WPlausibility { get; set; } = 0.10;
+    public double WPlausibility { get; set; } = 0.11;
     public int ValidationCount { get; set; }
     public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
 

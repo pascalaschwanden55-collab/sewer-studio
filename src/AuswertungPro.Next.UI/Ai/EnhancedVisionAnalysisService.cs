@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.UI.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Training;
 
@@ -185,6 +186,7 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
     private int _escalationHighSeverity;
     private int _escalationPoorQuality;
     private FewShotExampleStore? _fewShotStore;
+    private readonly object _fewShotLock = new();
     private IReadOnlyList<(FewShotExample Example, string Base64)>? _cachedFewShot;
 
     public EnhancedVisionAnalysisService(OllamaClient client, string model, string? referenceModel = null, int numCtx = 4096)
@@ -194,6 +196,11 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
         _referenceModel = referenceModel;
         _numCtx = numCtx;
     }
+
+    /// <summary>Zugriff auf den OllamaClient (fuer Modell-Vorladen).</summary>
+    public OllamaClient Client => _client;
+    /// <summary>Name des primaeren Vision-Modells.</summary>
+    public string ModelName => _model;
 
     /// <summary>Anzahl erfolgreicher Eskalationen (Telemetrie).</summary>
     public int EscalationCount => _escalationCount;
@@ -213,8 +220,14 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
         _fewShotStore = store;
         await store.LoadAsync(ct);
 
-        // Few-Shot Beispiele basierend auf Context-Limit
-        int maxExamples = _numCtx <= 2048 ? 2 : 4;
+        // Adaptives Few-Shot-Budget: mehr Context → mehr Beispiele
+        int maxExamples = _numCtx switch
+        {
+            <= 2048  => 2,
+            <= 8192  => 4,
+            <= 16384 => 6,
+            _        => 10
+        };
         var examples = await store.GetBestExamplesAsync(maxExamples, ct: ct);
 
         // Bilder vorladen und als Base64 cachen (einmal laden, bei jeder Analyse verwenden)
@@ -226,7 +239,7 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
                 loaded.Add((ex, Convert.ToBase64String(imgBytes)));
         }
 
-        _cachedFewShot = loaded;
+        lock (_fewShotLock) { _cachedFewShot = loaded; }
 
         System.Diagnostics.Debug.WriteLine(
             $"[EnhancedVision] Few-Shot aktiviert: {loaded.Count} Beispiele geladen " +
@@ -270,9 +283,10 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
         var messages = new List<OllamaClient.ChatMessage>();
 
         // Few-Shot Beispiele auch fuer PDF-Fotos nutzen
-        if (_cachedFewShot is { Count: > 0 })
+        var fewShot = _cachedFewShot;
+        if (fewShot is { Count: > 0 })
         {
-            foreach (var (example, b64) in _cachedFewShot)
+            foreach (var (example, b64) in fewShot)
             {
                 var exPrompt = $"Analysiere dieses Kanalbild. " +
                     $"Hinweis: Dieses Bild zeigt {example.Description}" +
@@ -324,9 +338,10 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
         var messages = new List<OllamaClient.ChatMessage>();
 
         // Few-Shot Beispiele als User/Assistant-Paare injizieren
-        if (_cachedFewShot is { Count: > 0 })
+        var fewShot = _cachedFewShot;
+        if (fewShot is { Count: > 0 })
         {
-            foreach (var (example, b64) in _cachedFewShot)
+            foreach (var (example, b64) in fewShot)
             {
                 // User zeigt Beispielbild mit Kontext
                 var exPrompt = $"Analysiere dieses Kanalbild. " +
@@ -462,10 +477,10 @@ WICHTIG: Das label-Feld ist IMMER ein VSA-Code, z.B.:
 - Rohrverbindung (Fuge zwischen Segmenten) → label="BAJC" (NICHT "BAIA"!)
 - Riss laengs → label="BABBA"
 - Bruch/Loch (fehlende Wandung, gezackte Kanten) → label="BACB"
-- Wurzeleinwuchs → label="BBAC"
+- Wurzeleinwuchs → label="BBA"
 - Ablagerung hart → label="BBCC"
 - Infiltration (Wasser dringt aktiv durch Wand) → label="BBFA" (NICHT bei Restwasser am Rohranfang!)
-- Inkrustation → label="BBBA"
+- Inkrustation → label="BBB"
 - Bogen nach links → label="BCCAY"
 
 Antworte AUSSCHLIESSLICH auf Deutsch mit gueltigem JSON gemaess Schema.
@@ -599,6 +614,23 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         }
 
         return MapToAnalysis(dto);
+    }
+
+    public async Task<EnhancedFrameAnalysis> AnalyzeWithFastModelAsync(
+        string framePngBase64,
+        MultiModelFrameResult multiModelContext,
+        int pipeDiameterMm = 300,
+        CancellationToken ct = default)
+    {
+        if (string.Equals(_model, OllamaConfig.DefaultVisionModel, StringComparison.OrdinalIgnoreCase))
+            return await AnalyzeWithContextAsync(framePngBase64, multiModelContext, pipeDiameterMm, ct).ConfigureAwait(false);
+
+        return await AnalyzeWithModelAsync(
+            OllamaConfig.DefaultVisionModel,
+            framePngBase64,
+            multiModelContext,
+            pipeDiameterMm,
+            ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -782,7 +814,7 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
 
         if (ctx.DinoDetections.Count > 0)
         {
-            sb.AppendLine("ERKANNTE OBJEKTE (Grounding DINO):");
+            sb.AppendLine("ERKANNTE OBJEKTE (Florence-2):");
             foreach (var det in ctx.DinoDetections)
             {
                 sb.AppendLine($"  - {det.Label} (Confidence={det.Confidence:F2}) @ [{det.X1:F0},{det.Y1:F0},{det.X2:F0},{det.Y2:F0}]");

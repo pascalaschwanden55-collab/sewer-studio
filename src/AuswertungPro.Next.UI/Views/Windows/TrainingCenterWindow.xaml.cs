@@ -27,6 +27,9 @@ public partial class TrainingCenterWindow : Window
     // Review-Services (lazy, erst bei erster Review-Aktion)
     private Ai.SelfImproving.ReviewQueueService? _reviewQueueService;
 
+    // Batch-Nachtbetrieb Abbruch
+    private System.Threading.CancellationTokenSource? _batchCts;
+
     public TrainingCenterWindow()
     {
         InitializeComponent();
@@ -509,6 +512,32 @@ public partial class TrainingCenterWindow : Window
 
     // ═══ Batch-Nachtbetrieb + Video-Selbsttraining + Benchmark ═════════
 
+    private void OpenImageAnnotation_Click(object sender, RoutedEventArgs e)
+    {
+        Ai.KnowledgeBase.KnowledgeBaseManager? kbManager = null;
+        Ai.KnowledgeBase.KbDeduplicationService? dedup = null;
+
+        try
+        {
+            var kbCtx = new Ai.KnowledgeBase.KnowledgeBaseContext();
+            var ollamaConfig = Ai.Ollama.OllamaConfig.Load();
+            var http = new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
+            var embedder = new Ai.KnowledgeBase.EmbeddingService(http, ollamaConfig);
+            kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(kbCtx, embedder);
+            var retrieval = new Ai.KnowledgeBase.RetrievalService(kbCtx, embedder);
+            dedup = new Ai.KnowledgeBase.KbDeduplicationService(embedder, retrieval);
+        }
+        catch { /* KB nicht verfuegbar — Annotationen werden trotzdem als TeacherAnnotation gespeichert */ }
+
+        // Sidecar-Client fuer SAM-Segmentierung
+        Ai.Pipeline.VisionPipelineClient? sidecar = null;
+        if (App.Services is ServiceProvider sp2)
+            sidecar = new Ai.Pipeline.VisionPipelineClient(sp2.PipelineCfg.SidecarUrl);
+
+        var vm = new ImageAnnotationViewModel(kbManager, dedup, sidecar);
+        new ImageAnnotationWindow(vm) { Owner = this }.Show();
+    }
+
     private void OpenVideoTrainingReview_Click(object sender, RoutedEventArgs e)
     {
         if (App.Services is not ServiceProvider sp) return;
@@ -598,35 +627,279 @@ public partial class TrainingCenterWindow : Window
         }
         catch (Exception ex) { MessageBox.Show($"KB-Fehler: {ex.Message}"); return; }
 
-        var batchOrch = new Ai.Training.BatchSelfTrainingOrchestrator(videoOrch, protocolLoader, enrichment);
+        // Sidecar-Pfad fuer Auto-Restart bei Crash
+        var sidecarDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "sidecar");
+        if (!System.IO.Directory.Exists(sidecarDir))
+            sidecarDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "sidecar");
+        var batchOrch = new Ai.Training.BatchSelfTrainingOrchestrator(
+            videoOrch, protocolLoader, enrichment, sidecarDir: sidecarDir);
         var request = new Ai.Training.Models.BatchSelfTrainingRequest { ExportRootPath = dlg.FolderName };
 
         var btnBatch = this.FindName("BtnBatchNight") as System.Windows.Controls.Button;
         if (btnBatch is not null) { btnBatch.IsEnabled = false; btnBatch.Content = "Batch laeuft..."; }
+        BtnBatchCancel.Visibility = Visibility.Visible;
 
+        _batchCts?.Dispose();
+        _batchCts = new System.Threading.CancellationTokenSource();
+
+        if (TryCreateKnowledgeBaseSnapshot(out var snapshotInfo))
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [KB] Snapshot: {snapshotInfo}\n");
+        else
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [KB] Snapshot uebersprungen: {snapshotInfo}\n");
+
+        var sampleIdsBefore = new HashSet<string>(StringComparer.Ordinal);
+        var trainingCountBefore = 0;
+        var trainingBboxBefore = 0;
+        try
+        {
+            var before = await TrainingSamplesStore.LoadAsync();
+            trainingCountBefore = before.Count;
+            trainingBboxBefore = before.Count(s => s.HasBbox);
+            foreach (var sample in before)
+            {
+                if (!string.IsNullOrWhiteSpace(sample.SampleId))
+                    sampleIdsBefore.Add(sample.SampleId);
+            }
+        }
+        catch
+        {
+            // Training-Sample-Statistik ist optional.
+        }
+
+        Vm.LogText = ""; // Log leeren vor Batch-Start
         var progress = new Progress<Ai.Training.Models.BatchSelfTrainingProgress>(p =>
         {
             Vm.StatusText = p.Status;
+
+            // Alles ins Live-Log schreiben damit der User sieht was passiert
+            var ts = $"[{DateTime.Now:HH:mm:ss}]";
+            var phase = p.Phase ?? "";
+            Vm.AppendToLogText($"{ts} [{p.CurrentIndex}/{p.TotalHaltungen}] {p.Status}\n");
+
+            // Gesamtstatistik nach Ergebnis-Zeilen
+            if (p.RunningStats is { } s && phase == "Ergebnis")
+            {
+                Vm.AppendToLogText($"    Gesamt: F1={s.F1:P0} | TP:{s.TruePositives} FN:{s.FalseNegatives} FP:{s.FalsePositives} | KB:+{s.KbIndexed}\n");
+            }
+
+            // Log-Textbox automatisch nach unten scrollen
+            LogTextBox?.ScrollToEnd();
+
             if (p.EstimatedRemaining.HasValue)
                 Title = $"Training Center — Batch {p.CurrentIndex}/{p.TotalHaltungen} — {p.EstimatedRemaining.Value.Hours}h {p.EstimatedRemaining.Value.Minutes}min";
         });
 
         try
         {
-            var result = await Task.Run(() => batchOrch.RunAsync(request, progress));
+            var result = await Task.Run(() => batchOrch.RunAsync(request, progress, _batchCts!.Token));
             var s = result.FinalStats;
+            string retrainSummary;
+            var trainingCountAfter = trainingCountBefore;
+            var trainingBboxAfter = trainingBboxBefore;
+            var newSampleCount = 0;
+            var newVideoTimestampCount = 0;
+            var newBboxCount = 0;
+            double? newTimeMin = null;
+            double? newTimeMax = null;
+            var timeExamples = "n/a";
+
+            try
+            {
+                Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [YOLO] Auto-Retrain Pruefung gestartet...\n");
+
+                using var retrainHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(90) };
+                var retrainClient = new Ai.Pipeline.VisionPipelineClient(sp.PipelineCfg.SidecarUrl, retrainHttp);
+                var benchmarkSetStore = new Ai.Training.BenchmarkSetStore();
+                var benchmarkMetricsStore = new Ai.Training.BenchmarkMetricsStore();
+                var benchmarkRunner = new Ai.Training.BenchmarkRunner(
+                    benchmarkSetStore,
+                    benchmarkMetricsStore,
+                    videoOrch,
+                    protocolLoader.LoadProtocolAsync);
+
+                var retrainOrchestrator = new Ai.Training.YoloRetrainOrchestrator(
+                    retrainClient,
+                    new Ai.Training.YoloDatasetExportService(),
+                    benchmarkRunner,
+                    benchmarkMetricsStore,
+                    sidecarDir,
+                    msg => Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [YOLO] {msg}\n"));
+
+                var retrain = await retrainOrchestrator.RunIfEligibleAsync(ct: _batchCts!.Token);
+                retrainSummary = retrain.Deployed
+                    ? $"Deploy OK ({System.IO.Path.GetFileName(retrain.ActiveModelPath)}, F1={retrain.BenchmarkF1:P1})"
+                    : retrain.StatusText;
+            }
+            catch (Exception retrainEx)
+            {
+                retrainSummary = $"Auto-Retrain Fehler: {retrainEx.Message}";
+                Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [YOLO] {retrainSummary}\n");
+            }
+
+            // ── Phase 3: LoRA-Training (nach YOLO-Retrain) ──
+            string loraSummary;
+            try
+            {
+                Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [LoRA] Qwen LoRA-Training Pruefung...\n");
+
+                using var loraHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(120) };
+                var loraClient = new Ai.Pipeline.VisionPipelineClient(sp.PipelineCfg.SidecarUrl, loraHttp);
+                var ollamaConfig = Ai.Ollama.OllamaConfig.Load();
+
+                var loraBenchmarkSetStore = new Ai.Training.BenchmarkSetStore();
+                var loraBenchmarkMetricsStore = new Ai.Training.BenchmarkMetricsStore();
+                var loraBenchmarkRunner = new Ai.Training.BenchmarkRunner(
+                    loraBenchmarkSetStore,
+                    loraBenchmarkMetricsStore,
+                    videoOrch,
+                    protocolLoader.LoadProtocolAsync);
+
+                using var kbCtx = new Ai.KnowledgeBase.KnowledgeBaseContext();
+                var loraOrchestrator = new Ai.Training.QwenLoraOrchestrator(
+                    loraClient,
+                    kbCtx,
+                    ollamaConfig,
+                    loraBenchmarkRunner,
+                    loraBenchmarkMetricsStore,
+                    msg => Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [LoRA] {msg}\n"));
+
+                var loraResult = await loraOrchestrator.RunIfEligibleAsync(ct: _batchCts!.Token);
+                loraSummary = loraResult.Deployed
+                    ? $"Deploy OK ({loraResult.ActiveModelName}, F1={loraResult.BenchmarkF1:P1})"
+                    : loraResult.StatusText;
+            }
+            catch (Exception loraEx)
+            {
+                loraSummary = $"LoRA Fehler: {loraEx.Message}";
+                Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [LoRA] {loraSummary}\n");
+            }
+
+            try
+            {
+                var after = await TrainingSamplesStore.LoadAsync();
+                trainingCountAfter = after.Count;
+                trainingBboxAfter = after.Count(s => s.HasBbox);
+
+                var newSamples = after
+                    .Where(sample => !string.IsNullOrWhiteSpace(sample.SampleId) && !sampleIdsBefore.Contains(sample.SampleId))
+                    .ToList();
+
+                newSampleCount = newSamples.Count;
+                newVideoTimestampCount = newSamples.Count(sample =>
+                    string.Equals(sample.SourceType, SourceTypeNames.VideoTimestamp, StringComparison.OrdinalIgnoreCase));
+                newBboxCount = newSamples.Count(sample => sample.HasBbox);
+
+                var times = newSamples
+                    .Where(sample => sample.TimeSeconds > 0)
+                    .Select(sample => sample.TimeSeconds)
+                    .OrderBy(seconds => seconds)
+                    .ToList();
+
+                if (times.Count > 0)
+                {
+                    newTimeMin = times[0];
+                    newTimeMax = times[^1];
+                    var median = times[times.Count / 2];
+                    timeExamples = $"{times[0]:F1}s, {median:F1}s, {times[^1]:F1}s";
+                }
+
+                var videoShare = newSampleCount > 0
+                    ? (double)newVideoTimestampCount / newSampleCount
+                    : 0.0;
+                var timeRangeText = newTimeMin.HasValue
+                    ? $"{newTimeMin.Value:F1}s..{newTimeMax!.Value:F1}s"
+                    : "keine >0s";
+                Vm.AppendToLogText(
+                    $"[{DateTime.Now:HH:mm:ss}] [QA] Neu: {newSampleCount}, VideoTimestamp: {newVideoTimestampCount} ({videoShare:P1}), " +
+                    $"BBox: {newBboxCount}, TimeSeconds: {timeRangeText}, Beispiele: {timeExamples}\n");
+            }
+            catch
+            {
+                // Training-Sample-Statistik ist optional.
+            }
+
+            var trainingDelta = Math.Max(0, trainingCountAfter - trainingCountBefore);
+            var trainingBboxDelta = Math.Max(0, trainingBboxAfter - trainingBboxBefore);
+
             MessageBox.Show(
                 $"Batch fertig: {result.Processed}/{result.TotalHaltungen} Haltungen in {result.TotalDuration.TotalMinutes:F0} Min\n\n" +
                 $"TP:{s.TruePositives} FN:{s.FalseNegatives} FP:{s.FalsePositives} MM:{s.CodeMismatches}\n" +
-                $"F1: {s.F1:P1}\n\nKB: +{s.KbIndexed} neu, {s.KbDeduplicated} Duplikate",
+                $"F1: {s.F1:P1}\n\nKB: +{s.KbIndexed} neu, {s.KbDeduplicated} Duplikate\n" +
+                $"Training-Samples: +{trainingDelta} neu, davon +{trainingBboxDelta} mit BBox\n" +
+                $"Neu seit Start: {newSampleCount}, VideoTimestamp: {newVideoTimestampCount}, BBox: {newBboxCount}\n" +
+                $"TimeSeconds > 0: {(newTimeMin.HasValue ? $"{newTimeMin.Value:F1}s..{newTimeMax!.Value:F1}s ({timeExamples})" : "keine")}\n\n" +
+                $"YOLO Auto-Retrain: {retrainSummary}\n" +
+                $"Qwen LoRA: {loraSummary}",
                 "Batch-Nachtbetrieb", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (OperationCanceledException)
+        {
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Batch abgebrochen.\n");
+            MessageBox.Show("Batch-Nachtbetrieb wurde abgebrochen.", "Abgebrochen", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex) { MessageBox.Show($"Batch-Fehler: {ex.Message}"); }
         finally
         {
             var btnRestore = this.FindName("BtnBatchNight") as System.Windows.Controls.Button;
-            if (btnRestore is not null) { btnRestore.IsEnabled = true; btnRestore.Content = "Batch-Nachtbetrieb"; }
+            if (btnRestore is not null) { btnRestore.IsEnabled = true; btnRestore.Content = "\U0001f319 Batch-Nachtbetrieb"; }
+            BtnBatchCancel.Visibility = Visibility.Collapsed;
+            BtnBatchCancel.IsEnabled = true;
+            BtnBatchCancel.Content = "\u26d4 Abbrechen";
+            _batchCts?.Dispose();
+            _batchCts = null;
             Title = "Training Center";
+        }
+    }
+
+    private void CancelBatchNightRun_Click(object sender, RoutedEventArgs e)
+    {
+        if (_batchCts == null || _batchCts.IsCancellationRequested) return;
+
+        var confirm = MessageBox.Show(
+            "Batch-Nachtbetrieb wirklich abbrechen?\n\nDie aktuelle Haltung wird noch fertig verarbeitet.",
+            "Abbrechen?", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (confirm != MessageBoxResult.Yes) return;
+
+        _batchCts.Cancel();
+        BtnBatchCancel.IsEnabled = false;
+        BtnBatchCancel.Content = "Wird abgebrochen...";
+        Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Abbruch angefordert — aktuelle Haltung wird fertig verarbeitet...\n");
+    }
+
+    private static bool TryCreateKnowledgeBaseSnapshot(out string info)
+    {
+        try
+        {
+            var dbPath = Ai.KnowledgeRoot.GetKnowledgeDbPath();
+            if (!File.Exists(dbPath))
+            {
+                info = "KnowledgeBase.db nicht gefunden.";
+                return false;
+            }
+
+            var rootDir = System.IO.Path.GetDirectoryName(dbPath) ?? Ai.KnowledgeRoot.GetRoot();
+            var snapshotDir = System.IO.Path.Combine(rootDir, "snapshots");
+            Directory.CreateDirectory(snapshotDir);
+
+            var stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var targetDbPath = System.IO.Path.Combine(snapshotDir, $"KnowledgeBase_{stamp}.db");
+            File.Copy(dbPath, targetDbPath, overwrite: true);
+
+            var walPath = dbPath + "-wal";
+            if (File.Exists(walPath))
+                File.Copy(walPath, targetDbPath + "-wal", overwrite: true);
+
+            var shmPath = dbPath + "-shm";
+            if (File.Exists(shmPath))
+                File.Copy(shmPath, targetDbPath + "-shm", overwrite: true);
+
+            info = targetDbPath;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            info = ex.Message;
+            return false;
         }
     }
 }
@@ -678,3 +951,4 @@ public sealed class FileToImageConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }
+

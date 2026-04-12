@@ -22,13 +22,13 @@ public class VisionPipelineClientTests
     }
 
     [Fact]
-    public void Constructor_SetsBaseAddress()
+    public void Constructor_DoesNotSetBaseAddress()
     {
         var uri = new Uri("http://localhost:8100");
         var httpClient = new HttpClient();
-        var client = new VisionPipelineClient(uri, httpClient);
+        _ = new VisionPipelineClient(uri, httpClient);
 
-        Assert.Equal(uri, httpClient.BaseAddress);
+        Assert.Null(httpClient.BaseAddress);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class VisionPipelineClientTests
     public void SamRequest_SerializesCorrectly()
     {
         var boxes = new[] { new SamBoundingBox(10, 20, 100, 200, "crack", 0.95) };
-        var request = new SamRequest("base64data==", boxes, 300);
+        var request = new SamRequest("base64data==", boxes, PipeDiameterMm: 300);
 
         var json = JsonSerializer.Serialize(request, new JsonSerializerOptions
         {

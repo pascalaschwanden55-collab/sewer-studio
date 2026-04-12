@@ -25,6 +25,9 @@ public sealed class VideoFullAnalysisService
     private readonly string _ffmpegPath;
     private readonly string _ffprobePath;
 
+    /// <summary>Optional: Knick-Erkennung (BAG) via Fluchtpunkt-Tracking.</summary>
+    public KnickDetectionService? KnickDetection { get; set; }
+
     public double FrameStepSeconds { get; set; } = 1.5;
     public int DedupWindowFrames { get; set; } = 3;
     public int MinSeverity { get; set; } = 1;
@@ -65,6 +68,7 @@ public sealed class VideoFullAnalysisService
             return VideoAnalysisResult.Failed($"Video nicht gefunden: {videoPath}");
 
         _lastKnownMeter = 0;
+        KnickDetection?.Reset();
         progress?.Report(new VideoAnalysisProgress(0, 0, "Videodauer wird ermittelt..."));
 
         var (duration, probeError) = await GetVideoDurationWithErrorAsync(videoPath, ct).ConfigureAwait(false);
@@ -166,6 +170,50 @@ public sealed class VideoFullAnalysisService
                     DiameterReductionMm: f.DiameterReductionMm))
                 .ToList();
 
+            // Knick-Erkennung: Fluchtpunkt-Tracking parallel (~5ms, blockiert nicht)
+            if (KnickDetection is not null && frameBytes is { Length: > 0 })
+            {
+                try
+                {
+                    var b64 = Convert.ToBase64String(frameBytes);
+                    var knick = await KnickDetection.ProcessFrameAsync(b64, meter, frameIndex, ct: ct)
+                        .ConfigureAwait(false);
+                    if (knick != null)
+                    {
+                        // Knick als Finding hinzufuegen (BAG = Lageabweichung/Knick)
+                        int knickSeverity = knick.AngleDeg >= 30 ? 4 : knick.AngleDeg >= 15 ? 3 : 2;
+                        var knickLabel = $"Knick {knick.AngleDeg:F0}°";
+                        liveFindings.Add(new LiveFrameFinding(
+                            Label: knickLabel,
+                            Severity: knickSeverity,
+                            PositionClock: null,
+                            ExtentPercent: null,
+                            VsaCodeHint: "BAG",
+                            HeightMm: null, WidthMm: null,
+                            IntrusionPercent: null,
+                            CrossSectionReductionPercent: null,
+                            DiameterReductionMm: null));
+
+                        current.Add(new EnhancedFinding(
+                            Label: knickLabel,
+                            VsaCodeHint: "BAG",
+                            Severity: knickSeverity,
+                            PositionClock: null,
+                            ExtentPercent: null,
+                            HeightMm: null, WidthMm: null,
+                            IntrusionPercent: null,
+                            CrossSectionReductionPercent: null,
+                            DiameterReductionMm: null,
+                            Notes: $"Lageabweichung {knick.AngleDeg:F1}° an Rohrverbindung (Konf: {knick.Confidence:F0}%)"
+                        ));
+                    }
+                }
+                catch
+                {
+                    // Knick-Erkennung darf Pipeline nicht blockieren
+                }
+            }
+
             UpdateActive(active, current, meter, detections);
 
             progress?.Report(new VideoAnalysisProgress(
@@ -207,7 +255,8 @@ public sealed class VideoFullAnalysisService
             if (currentMap.TryGetValue(key, out var finding))
             {
                 active[key].Update(meter, finding.Severity, finding.VsaCodeHint, finding.PositionClock, finding.ExtentPercent,
-                    finding.HeightMm, finding.WidthMm, finding.IntrusionPercent, finding.CrossSectionReductionPercent, finding.DiameterReductionMm);
+                    finding.HeightMm, finding.WidthMm, finding.IntrusionPercent, finding.CrossSectionReductionPercent, finding.DiameterReductionMm,
+                    finding.BboxX1Norm, finding.BboxY1Norm, finding.BboxX2Norm, finding.BboxY2Norm);
             }
             else
             {
@@ -237,7 +286,8 @@ public sealed class VideoFullAnalysisService
                     f.WidthMm,
                     f.IntrusionPercent,
                     f.CrossSectionReductionPercent,
-                    f.DiameterReductionMm);
+                    f.DiameterReductionMm,
+                    f.BboxX1Norm, f.BboxY1Norm, f.BboxX2Norm, f.BboxY2Norm);
             }
         }
     }
@@ -468,6 +518,12 @@ public sealed class VideoFullAnalysisService
         public int? DiameterReductionMm { get; private set; }
         public int MissedFrames { get; set; }
 
+        // BoundingBox (normiert 0-1) — vom Frame mit hoechster Severity
+        public double? BboxX1 { get; private set; }
+        public double? BboxY1 { get; private set; }
+        public double? BboxX2 { get; private set; }
+        public double? BboxY2 { get; private set; }
+
         public ActiveFinding(
             string name,
             double start,
@@ -479,7 +535,11 @@ public sealed class VideoFullAnalysisService
             int? widthMm = null,
             int? intrusionPercent = null,
             int? crossSectionReductionPercent = null,
-            int? diameterReductionMm = null)
+            int? diameterReductionMm = null,
+            double? bboxX1 = null,
+            double? bboxY1 = null,
+            double? bboxX2 = null,
+            double? bboxY2 = null)
         {
             Name = name; MeterStart = start; MeterEnd = start;
             MaxSeverity = severity; VsaCodeHint = hint;
@@ -490,6 +550,7 @@ public sealed class VideoFullAnalysisService
             IntrusionPercent = intrusionPercent;
             CrossSectionReductionPercent = crossSectionReductionPercent;
             DiameterReductionMm = diameterReductionMm;
+            BboxX1 = bboxX1; BboxY1 = bboxY1; BboxX2 = bboxX2; BboxY2 = bboxY2;
         }
 
         public void Update(
@@ -502,11 +563,20 @@ public sealed class VideoFullAnalysisService
             int? widthMm = null,
             int? intrusionPercent = null,
             int? crossSectionReductionPercent = null,
-            int? diameterReductionMm = null)
+            int? diameterReductionMm = null,
+            double? bboxX1 = null,
+            double? bboxY1 = null,
+            double? bboxX2 = null,
+            double? bboxY2 = null)
         {
             MeterEnd = meter;
             MissedFrames = 0;
-            if (severity > MaxSeverity) MaxSeverity = severity;
+            if (severity > MaxSeverity)
+            {
+                MaxSeverity = severity;
+                // BBox vom Frame mit hoechster Severity uebernehmen
+                if (bboxX1 is not null) { BboxX1 = bboxX1; BboxY1 = bboxY1; BboxX2 = bboxX2; BboxY2 = bboxY2; }
+            }
             if (!string.IsNullOrWhiteSpace(hint)) VsaCodeHint = hint;
             if (!string.IsNullOrWhiteSpace(positionClock))
                 PositionClock = NormalizeClock(positionClock);
@@ -522,11 +592,15 @@ public sealed class VideoFullAnalysisService
                 CrossSectionReductionPercent = Math.Max(CrossSectionReductionPercent ?? 0, csr);
             if (diameterReductionMm is { } dr)
                 DiameterReductionMm = Math.Max(DiameterReductionMm ?? 0, dr);
+            // Falls noch keine BBox gesetzt, erste verfuegbare uebernehmen
+            if (BboxX1 is null && bboxX1 is not null)
+            { BboxX1 = bboxX1; BboxY1 = bboxY1; BboxX2 = bboxX2; BboxY2 = bboxY2; }
         }
 
         public RawVideoDetection ToDetection() =>
             new(Name, MeterStart, MeterEnd, SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock, ExtentPercent,
-                HeightMm, WidthMm, IntrusionPercent, CrossSectionReductionPercent, DiameterReductionMm);
+                HeightMm, WidthMm, IntrusionPercent, CrossSectionReductionPercent, DiameterReductionMm,
+                BboxX1: BboxX1, BboxY1: BboxY1, BboxX2: BboxX2, BboxY2: BboxY2);
 
         private static string SeverityLabel(int s) => s >= 4 ? "high" : s == 3 ? "mid" : "low";
     }
@@ -587,7 +661,11 @@ public sealed record RawVideoDetection(
     int? IntrusionPercent = null,
     int? CrossSectionReductionPercent = null,
     int? DiameterReductionMm = null,
-    QualityGate.EvidenceVector? Evidence = null
+    QualityGate.EvidenceVector? Evidence = null,
+    double? BboxX1 = null,
+    double? BboxY1 = null,
+    double? BboxX2 = null,
+    double? BboxY2 = null
 )
 {
     // Für UI-Bindings / Mapping

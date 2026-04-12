@@ -20,6 +20,9 @@ public sealed class KnowledgeBaseManager(
     KnowledgeBaseContext db,
     EmbeddingService embedder)
 {
+    // Schuetzt vor gleichzeitigem Rebuild + Index (Datenverlust vermeiden)
+    private static readonly SemaphoreSlim RebuildGuard = new(1, 1);
+
     // ── Öffentliche API ───────────────────────────────────────────────────
 
     /// <summary>
@@ -30,6 +33,22 @@ public sealed class KnowledgeBaseManager(
     public async Task<bool> IndexSampleAsync(
         TrainingSample sample,
         CancellationToken ct = default)
+    {
+        // Warten falls gerade ein Rebuild laeuft (verhindert Datenverlust)
+        await RebuildGuard.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            return await IndexSampleCoreAsync(sample, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            RebuildGuard.Release();
+        }
+    }
+
+    private async Task<bool> IndexSampleCoreAsync(
+        TrainingSample sample,
+        CancellationToken ct)
     {
         if (!IsIndexWorthy(sample))
         {
@@ -135,6 +154,24 @@ public sealed class KnowledgeBaseManager(
         if (samples.Count == 0)
             return 0;
 
+        // Exklusiver Zugriff: blockiert IndexSampleAsync waehrend Rebuild
+        await RebuildGuard.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            return await RebuildCoreAsync(samples, progress, ct, concurrency).ConfigureAwait(false);
+        }
+        finally
+        {
+            RebuildGuard.Release();
+        }
+    }
+
+    private async Task<int> RebuildCoreAsync(
+        IReadOnlyList<TrainingSample> samples,
+        IProgress<int>? progress,
+        CancellationToken ct,
+        int concurrency)
+    {
         // Phase 1: Embeddings parallel erzeugen (VOR dem Loeschen)
         var embeddings = new ConcurrentDictionary<int, float[]>();
         var done = 0;
@@ -298,8 +335,10 @@ public sealed class KnowledgeBaseManager(
         ExecuteNonQuery("""
             INSERT OR REPLACE INTO Samples
                 (SampleId, CaseId, VsaCode, Beschreibung, MeterStart, MeterEnd,
-                 IsStreck, FramePath, ExportedUtc, VersionId, SourceType)
-            VALUES ($id, $caseId, $code, $desc, $ms, $me, $streck, $frame, $exp, $ver, $source)
+                 IsStreck, FramePath, ExportedUtc, VersionId, SourceType,
+                 Rohrmaterial, NennweiteMm, IsKorrigiert, QualityGateLevel)
+            VALUES ($id, $caseId, $code, $desc, $ms, $me, $streck, $frame, $exp, $ver, $source,
+                    $rm, $dn, $korr, $qg)
             """,
             ("$id",     s.SampleId),
             ("$caseId", s.CaseId),
@@ -311,7 +350,11 @@ public sealed class KnowledgeBaseManager(
             ("$frame",  s.FramePath),
             ("$exp",    s.ExportedUtc?.ToString("O") ?? DateTime.UtcNow.ToString("O")),
             ("$ver",    versionId),
-            ("$source", s.SourceType ?? ""));
+            ("$source", s.SourceType ?? ""),
+            ("$rm",     s.Rohrmaterial),
+            ("$dn",     s.NennweiteMm),
+            ("$korr",   s.IsKorrigiert ? 1 : 0),
+            ("$qg",     s.QualityGateLevel));
     }
 
     private void UpsertEmbedding(string sampleId, float[] vector)
@@ -326,12 +369,12 @@ public sealed class KnowledgeBaseManager(
             ("$at",    DateTime.UtcNow.ToString("O")));
     }
 
-    private void ExecuteNonQuery(string sql, params (string Name, object Value)[] parameters)
+    private void ExecuteNonQuery(string sql, params (string Name, object? Value)[] parameters)
     {
         using var cmd = db.Connection.CreateCommand();
         cmd.CommandText = sql;
         foreach (var (name, value) in parameters)
-            cmd.Parameters.AddWithValue(name, value);
+            cmd.Parameters.AddWithValue(name, value ?? DBNull.Value);
         cmd.ExecuteNonQuery();
     }
 
@@ -346,6 +389,12 @@ public sealed class KnowledgeBaseManager(
     /// Beispiel: "BDB" → "BDB — Kameraposition, Beginn der Bestandsaufnahme"
     /// </summary>
     public static string BuildEmbeddingText(TrainingSample sample)
+    {
+        var baseText = BuildBaseEmbeddingText(sample);
+        return AppendEmbeddingContext(baseText, sample.Rohrmaterial, sample.NennweiteMm);
+    }
+
+    private static string BuildBaseEmbeddingText(TrainingSample sample)
     {
         var desc = sample.Beschreibung?.Trim() ?? "";
         var code = sample.Code?.Trim() ?? "";
@@ -368,6 +417,35 @@ public sealed class KnowledgeBaseManager(
 
         // Kein Label (WinCan-interne Codes) → Code + Beschreibung
         return desc.Length > 0 ? $"{code}: {desc}" : code;
+    }
+
+    /// <summary>
+    /// Baut Embedding-Text mit optionalem Rohrmaterial/DN-Kontext.
+    /// Fuer Video-Selbsttraining: KB-Anreicherung mit Kontextfeldern.
+    /// </summary>
+    public static string BuildEmbeddingText(
+        string code, string beschreibung, string? rohrmaterial, int? nennweiteMm)
+    {
+        var sample = new Training.TrainingSample { Code = code, Beschreibung = beschreibung };
+        return AppendEmbeddingContext(BuildBaseEmbeddingText(sample), rohrmaterial, nennweiteMm);
+    }
+
+    private static string AppendEmbeddingContext(string baseText, string? rohrmaterial, int? nennweiteMm)
+    {
+        var hasRm = !string.IsNullOrWhiteSpace(rohrmaterial);
+        var hasDn = nennweiteMm.HasValue && nennweiteMm.Value > 0;
+
+        if (!hasRm && !hasDn) return baseText;
+
+        var context = (hasRm, hasDn) switch
+        {
+            (true, true) => $" [Material: {rohrmaterial}, DN{nennweiteMm}]",
+            (true, false) => $" [Material: {rohrmaterial}]",
+            (false, true) => $" [DN{nennweiteMm}]",
+            _ => ""
+        };
+
+        return baseText + context;
     }
 
     /// <summary>

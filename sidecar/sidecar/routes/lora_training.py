@@ -95,10 +95,10 @@ def _restore_models_after_training() -> None:
     except Exception as exc:
         logger.warning("Could not restore DINO: %s", exc)
     try:
-        from ..models.sam_wrapper import _load_sam_on, _resolve_device as _sam_dev
+        from ..models.sam_wrapper import _load_sam2_on, _resolve_device as _sam_dev
 
         dev = _sam_dev()
-        gpu_manager.ensure_loaded(ModelSlot.SAM, dev, lambda: _load_sam_on(dev))
+        gpu_manager.ensure_loaded(ModelSlot.SAM, dev, lambda: _load_sam2_on(dev))
     except Exception as exc:
         logger.warning("Could not restore SAM: %s", exc)
 

@@ -27,9 +27,10 @@ public class RuleBasedPlausibilityTests
     [Fact]
     public void KnownCode_ReturnsUnchanged()
     {
-        var input = new AiSuggestionResult("BAA", 0.9, "Längsriss", null, null);
-        var result = _sut.ApplyChecks(input, new ObservationContext("Längsriss"));
-        Assert.Equal("BAA", result.SuggestedCode);
+        // BCD = Rohranfang, RequiresCharacterization=false → keine PL05-Penalty
+        var input = new AiSuggestionResult("BCD", 0.9, "Rohranfang", null, null);
+        var result = _sut.ApplyChecks(input, new ObservationContext("Rohranfang"));
+        Assert.Equal("BCD", result.SuggestedCode);
         Assert.Equal(0.9, result.Confidence);
     }
 
@@ -57,10 +58,11 @@ public class RuleBasedPlausibilityTests
     [Fact]
     public void ObservationMismatch_CrackWithNonCrackCode_AddsWarning()
     {
+        // BBA + PL05 (-0.10): 0.85 → 0.75
         var input = new AiSuggestionResult("BBA", 0.85, "test", null, null);
         var result = _sut.ApplyChecks(input, new ObservationContext("Längsriss in der Sohle"));
         Assert.Equal("BBA", result.SuggestedCode);
-        Assert.Equal(0.85, result.Confidence);
+        Assert.Equal(0.75, result.Confidence);
         Assert.Contains(result.Warnings!, w => w.Contains("PL03"));
     }
 
@@ -68,11 +70,13 @@ public class RuleBasedPlausibilityTests
     public void ObservationMismatch_DeformationWithNonDeformCode_AddsWarning()
     {
         // BAB (Risse) mit "Verformung" → PL03 Warnung (Verformung ist BAA, nicht BAB)
+        // + PL05 Penalty (-0.10) weil BAB Char1 braucht aber nur 3 Zeichen hat
         var input = new AiSuggestionResult("BAB", 0.85, "test", null, null);
         var result = _sut.ApplyChecks(input, new ObservationContext("Verformung im Scheitel"));
         Assert.Equal("BAB", result.SuggestedCode);
-        Assert.Equal(0.85, result.Confidence);
+        Assert.Equal(0.75, result.Confidence); // 0.85 - 0.10 (PL05)
         Assert.Contains(result.Warnings!, w => w.Contains("PL03"));
+        Assert.Contains(result.Warnings!, w => w.Contains("PL05"));
     }
 
     [Fact]
@@ -129,13 +133,14 @@ public class RuleBasedPlausibilityTests
     [Fact]
     public void CatalogCode_VsaFormat_PassesWithoutWarning()
     {
-        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "BAA", "BBA" };
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "BCD", "BCA" };
         var sut = new RuleBasedAiSuggestionPlausibilityService(allowed);
-        var input = new AiSuggestionResult("BAA", 0.9, "Längsriss", null, null);
+        // BCD = Rohranfang, RequiresCharacterization=false → keine PL05-Penalty
+        var input = new AiSuggestionResult("BCD", 0.9, "Rohranfang", null, null);
 
-        var result = sut.ApplyChecks(input, new ObservationContext("Riss"));
+        var result = sut.ApplyChecks(input, new ObservationContext("Rohranfang"));
 
-        Assert.Equal("BAA", result.SuggestedCode);
+        Assert.Equal("BCD", result.SuggestedCode);
         Assert.Equal(0.9, result.Confidence);
     }
 

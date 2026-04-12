@@ -198,16 +198,22 @@ public sealed class FewShotExampleStore
     public async Task<IReadOnlyList<FewShotExample>> GetBestExamplesAsync(
         int maxExamples = 3,
         string? preferredMaterial = null,
+        int maxPerMainGroup = 3,
         CancellationToken ct = default)
     {
         await LoadAsync(ct);
 
-        if (_examples.Count == 0)
+        if (_examples.Count == 0 || maxExamples <= 0)
             return Array.Empty<FewShotExample>();
 
-        // Strategie: Verschiedene Kategorien abdecken, hoechste Qualitaet bevorzugen
+        // Strategie:
+        // 1) Diversitaet je Kategorie zuerst
+        // 2) Dann mit bester Qualitaet auffuellen
+        // 3) Dominante Hauptgruppen (BA/BB/BC/BD) bei Bedarf deckeln
         var selected = new List<FewShotExample>();
+        var selectedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var usedCategories = new HashSet<string>();
+        var mainGroupCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         // Sortiere: Qualitaet absteigend, Material-Match bevorzugt
         var sorted = _examples
@@ -217,25 +223,71 @@ public sealed class FewShotExampleStore
                                    && e.Material.Contains(preferredMaterial, StringComparison.OrdinalIgnoreCase) ? 1 : 0)
             .ToList();
 
-        // Runde 1: Je 1 Beispiel pro Kategorie (Diversitaet)
+        static string GetMainGroup(FewShotExample ex)
+        {
+            var source = !string.IsNullOrWhiteSpace(ex.Category)
+                ? ex.Category
+                : ex.VsaCode;
+            if (string.IsNullOrWhiteSpace(source))
+                return "__";
+            var normalized = source.Trim().ToUpperInvariant();
+            return normalized.Length >= 2 ? normalized[..2] : normalized;
+        }
+
+        bool TrySelect(FewShotExample ex, bool enforceMainGroupCap)
+        {
+            if (!selectedIds.Add(ex.Id))
+                return false;
+            if (!HasValidImage(ex))
+            {
+                selectedIds.Remove(ex.Id);
+                return false;
+            }
+
+            var group = GetMainGroup(ex);
+            if (enforceMainGroupCap
+                && maxPerMainGroup > 0
+                && mainGroupCounts.TryGetValue(group, out var groupCount)
+                && groupCount >= maxPerMainGroup)
+            {
+                selectedIds.Remove(ex.Id);
+                return false;
+            }
+
+            selected.Add(ex);
+            mainGroupCounts[group] = mainGroupCounts.TryGetValue(group, out groupCount)
+                ? groupCount + 1
+                : 1;
+            return true;
+        }
+
+        // Runde 1: Je 1 Beispiel pro Kategorie (Diversitaet priorisieren)
         foreach (var ex in sorted)
         {
             if (selected.Count >= maxExamples) break;
-            if (usedCategories.Add(ex.Category))
-            {
-                if (HasValidImage(ex))
-                    selected.Add(ex);
-            }
+            if (usedCategories.Contains(ex.Category)) continue;
+            if (TrySelect(ex, enforceMainGroupCap: true))
+                usedCategories.Add(ex.Category);
         }
 
-        // Runde 2: Auffuellen mit besten verbleibenden
+        // Runde 2: Auffuellen mit besten verbleibenden (mit Main-Group-Cap)
         if (selected.Count < maxExamples)
         {
             foreach (var ex in sorted)
             {
                 if (selected.Count >= maxExamples) break;
-                if (!selected.Contains(ex) && HasValidImage(ex))
-                    selected.Add(ex);
+                TrySelect(ex, enforceMainGroupCap: true);
+            }
+        }
+
+        // Runde 3: Falls zu strikt gecappt wurde (z.B. nur eine Hauptgruppe vorhanden),
+        // Rest ohne Cap auffuellen, damit maxExamples trotzdem erreicht wird.
+        if (selected.Count < maxExamples && maxPerMainGroup > 0)
+        {
+            foreach (var ex in sorted)
+            {
+                if (selected.Count >= maxExamples) break;
+                TrySelect(ex, enforceMainGroupCap: false);
             }
         }
 

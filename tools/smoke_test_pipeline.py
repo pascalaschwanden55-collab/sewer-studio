@@ -168,7 +168,6 @@ def run_smoke_test(haltung_dir: str, frame_step: float = 1.5):
 
     # Erwartung: Der DetectionAggregator wuerde diese ~N Detektionen
     # auf ~M Events verdichten (M << N)
-    events = []
     if len(all_detections) > 0:
         # Einfache Simulation: Zusammenhaengende Frames gleicher Klasse = 1 Event
         events = []
@@ -199,7 +198,8 @@ def run_smoke_test(haltung_dir: str, frame_step: float = 1.5):
     if defects:
         log.info("  PDF-Defekte:          %d", len(defects))
         log.info("  Differenz:            %+d",
-                 len([e for e in events if e["count"] >= 3]) - len(defects))
+                 len([e for e in events if e["count"] >= 3]) - len(defects)
+                 if 'events' in dir() else 0)
 
     log.info("=" * 60)
 

@@ -4,50 +4,177 @@ from __future__ import annotations
 
 import base64
 import io
-import time
+import json
 import logging
 import threading
+import time
+from contextlib import contextmanager
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
 
 from ..config import settings
-from ..gpu_manager import gpu_manager, ModelSlot
+from ..gpu_manager import ModelSlot, gpu_manager
 from ..schemas.detection import YoloDetection, YoloResponse
 
 logger = logging.getLogger(__name__)
 
-# Flag: True when custom sewer-specific weights are loaded, False for COCO fallback.
+# True when custom sewer-specific weights are loaded, False for COCO fallback.
 _using_custom_weights = False
 _resolved_model_path: str | None = None
 _tensorrt_active = False
+_runtime_model_override: str | None = None
 
 # CPU-mode singleton (bypasses GpuModelManager when YOLO runs on CPU)
 _cpu_model = None
 _cpu_lock = threading.Lock()
 
+# Coordination between inference and maintenance (training/reload)
+_state_cv = threading.Condition()
+_active_inference = 0
+_maintenance_reason: str | None = None
+
+
+def _resolve_path(path_like: str, *, base: Path | None = None) -> Path:
+    candidate = Path(path_like)
+    if not candidate.is_absolute() and base is not None:
+        candidate = base / candidate
+    try:
+        return candidate.resolve()
+    except Exception:
+        return candidate
+
+
+def _yolo_dir() -> Path:
+    return Path(settings.models_dir) / "yolo26m"
+
+
+def _resolve_active_model_from_file() -> Path | None:
+    """Read active model pointer from models/yolo26m/active.json if present."""
+    active_file = _yolo_dir() / "active.json"
+    if not active_file.exists():
+        return None
+    try:
+        payload = json.loads(active_file.read_text(encoding="utf-8"))
+        model_name = str(payload.get("active_model", "")).strip()
+        if not model_name:
+            return None
+        candidate = _resolve_path(model_name, base=_yolo_dir())
+        return candidate if candidate.exists() else None
+    except Exception as exc:
+        logger.warning("Unable to read active model pointer %s: %s", active_file, exc)
+        return None
+
+
+def _resolve_candidate_model_path(path_like: str) -> Path:
+    raw = Path(path_like)
+    if raw.is_absolute():
+        return raw.resolve()
+    nested = _resolve_path(path_like, base=_yolo_dir())
+    if nested.exists():
+        return nested
+    return _resolve_path(path_like, base=Path(settings.models_dir))
+
+
+def _begin_maintenance(reason: str, timeout_sec: float = 0.0) -> None:
+    """Block new inferences and wait until active ones are finished."""
+    global _maintenance_reason
+    deadline = time.monotonic() + max(timeout_sec, 0.0)
+    with _state_cv:
+        if _maintenance_reason is not None:
+            raise RuntimeError(f"YOLO maintenance already active ({_maintenance_reason})")
+        _maintenance_reason = reason
+        while _active_inference > 0:
+            remaining = deadline - time.monotonic()
+            if timeout_sec <= 0.0 or remaining <= 0.0:
+                _maintenance_reason = None
+                _state_cv.notify_all()
+                raise TimeoutError(
+                    f"YOLO maintenance '{reason}' blocked by active inference ({_active_inference})"
+                )
+            _state_cv.wait(timeout=min(remaining, 0.25))
+
+
+def _end_maintenance(reason: str) -> None:
+    global _maintenance_reason
+    with _state_cv:
+        if _maintenance_reason == reason:
+            _maintenance_reason = None
+            _state_cv.notify_all()
+
+
+@contextmanager
+def _inference_guard():
+    global _active_inference
+    with _state_cv:
+        if _maintenance_reason is not None:
+            raise RuntimeError(
+                f"YOLO temporary unavailable: {_maintenance_reason} is running"
+            )
+        _active_inference += 1
+    try:
+        yield
+    finally:
+        with _state_cv:
+            _active_inference = max(0, _active_inference - 1)
+            if _active_inference == 0:
+                _state_cv.notify_all()
+
+
+def get_inference_state() -> dict:
+    with _state_cv:
+        return {
+            "active_inference": _active_inference,
+            "maintenance_reason": _maintenance_reason,
+        }
+
+
+def has_active_inference() -> bool:
+    with _state_cv:
+        return _active_inference > 0
+
 
 def _resolve_yolo_model_path() -> tuple[str, bool]:
-    """Loest den Pfad zum YOLO-Modell auf.
+    """Resolve YOLO weights/engine path.
 
-    Wenn TensorRT aktiviert ist und eine .engine Datei existiert,
-    wird diese bevorzugt zurueckgegeben (schnellere Inferenz).
+    Priority:
+    1) Runtime override (set by /model/reload)
+    2) Persistent active pointer (models/yolo26m/active.json)
+    3) Configured model name (SEWER_SIDECAR_YOLO_MODEL_NAME)
+    4) Fallback yolo11m.pt (unless strict custom mode)
     """
-    # Plan: models/yolo26m/<weights>.pt
-    yolo_dir = Path(settings.models_dir) / "yolo26m"
-    model_path = yolo_dir / settings.yolo_model_name
+    yolo_dir = _yolo_dir()
 
+    if _runtime_model_override:
+        override = _resolve_candidate_model_path(_runtime_model_override)
+        if override.exists():
+            if settings.yolo_use_tensorrt:
+                engine = override.with_suffix(".engine")
+                if engine.exists():
+                    logger.info("TensorRT engine for runtime override found: %s", engine)
+                    return str(engine), True
+            return str(override), True
+        logger.warning("Runtime override does not exist anymore: %s", override)
+
+    active_model = _resolve_active_model_from_file()
+    if active_model is not None:
+        if settings.yolo_use_tensorrt:
+            engine = active_model.with_suffix(".engine")
+            if engine.exists():
+                logger.info("TensorRT engine for active model found: %s", engine)
+                return str(engine), True
+        return str(active_model), True
+
+    model_path = yolo_dir / settings.yolo_model_name
     if not model_path.exists():
-        # Try flat path: models/<yolo_model_name>
         model_path = Path(settings.models_dir) / settings.yolo_model_name
 
     if model_path.exists():
-        # Pruefen ob eine TensorRT-Engine existiert
         if settings.yolo_use_tensorrt:
             engine_path = model_path.with_suffix(".engine")
             if engine_path.exists():
-                logger.info("TensorRT-Engine gefunden: %s", engine_path)
+                logger.info("TensorRT engine found: %s", engine_path)
                 return str(engine_path), True
         return str(model_path), True
 
@@ -57,66 +184,74 @@ def _resolve_yolo_model_path() -> tuple[str, bool]:
             f"Expected '{settings.yolo_model_name}' in '{yolo_dir}' or '{settings.models_dir}'."
         )
 
-    # Fallback: yolo11m.pt — pruefen ob bereits eine TensorRT-Engine exportiert wurde
     fallback = "yolo11m.pt"
     if settings.yolo_use_tensorrt:
-        engine_path = Path(fallback).with_suffix(".engine")
-        if engine_path.exists():
-            logger.info("TensorRT-Engine fuer Fallback gefunden: %s", engine_path)
-            return str(engine_path), False
+        fallback_engine = Path(fallback).with_suffix(".engine")
+        if fallback_engine.exists():
+            logger.info("TensorRT engine for fallback found: %s", fallback_engine)
+            return str(fallback_engine), False
     return fallback, False
 
 
 def _try_export_tensorrt(pt_path: str) -> str | None:
-    """Exportiert .pt Modell als TensorRT-Engine (.engine).
+    """Export .pt model to TensorRT engine (.engine).
 
-    Wird einmalig beim ersten Start aufgerufen. Dauert 2-5 Minuten.
-    Bei Fehler (TensorRT nicht installiert, Export schlaegt fehl): gibt None zurueck.
+    Unterstuetzt FP16 (Standard) und FP4 (NVFP4, RTX 50xx).
+    Precision wird ueber settings.yolo_precision gesteuert:
+      - "fp16": Standard FP16 (Default)
+      - "fp4":  NVFP4 native 4-bit (RTX 5090+, VRAM ~0.5GB statt ~1.5GB)
     """
     try:
         from ultralytics import YOLO
 
         pt = Path(pt_path)
-        engine_path = pt.with_suffix(".engine")
-
-        # Bereits vorhanden (Race-Condition Schutz)
+        precision = getattr(settings, "yolo_precision", "fp16")
+        suffix = f".{precision}.engine" if precision != "fp16" else ".engine"
+        engine_path = pt.with_suffix(suffix)
         if engine_path.exists():
             return str(engine_path)
 
+        use_fp16 = precision in ("fp16", "fp4")
         logger.info(
-            "TensorRT-Export gestartet: %s -> %s (FP16=%s). "
-            "Das dauert 2-5 Minuten beim ersten Start...",
-            pt.name, engine_path.name, settings.yolo_tensorrt_fp16
+            "TensorRT export started: %s -> %s (precision=%s)",
+            pt.name,
+            engine_path.name,
+            precision,
         )
 
         model = YOLO(pt_path)
-        exported = model.export(
-            format="engine",
-            half=settings.yolo_tensorrt_fp16,
-        )
+        export_kwargs = {"format": "engine", "half": use_fp16}
+        # NVFP4: TensorRT 10+ mit INT4/FP4 Quantisierung
+        if precision == "fp4":
+            export_kwargs["int8"] = True  # TensorRT INT4 via INT8-Pfad
+        exported = model.export(**export_kwargs)
 
         if exported and Path(exported).exists():
-            logger.info("TensorRT-Export abgeschlossen: %s (%.1f MB)",
-                        exported, Path(exported).stat().st_size / 1e6)
+            logger.info(
+                "TensorRT export completed: %s (%.1f MB)",
+                exported,
+                Path(exported).stat().st_size / 1e6,
+            )
             return str(exported)
 
-        logger.warning("TensorRT-Export gab keinen gueltigen Pfad zurueck")
+        logger.warning("TensorRT export returned no valid file")
         return None
-
     except ImportError:
-        logger.info("TensorRT nicht installiert — verwende PyTorch-Modell")
+        logger.info("TensorRT not installed - using PyTorch model")
         return None
-    except Exception as e:
-        logger.warning("TensorRT-Export fehlgeschlagen: %s — verwende PyTorch-Modell", e)
+    except Exception as exc:
+        logger.warning("TensorRT export failed (%s) - using PyTorch model", exc)
         return None
 
 
 def get_runtime_status() -> dict:
     """Return current YOLO runtime/configuration information for diagnostics."""
-    yolo_dir = Path(settings.models_dir) / "yolo26m"
+    yolo_dir = _yolo_dir()
     candidate_nested = yolo_dir / settings.yolo_model_name
     candidate_flat = Path(settings.models_dir) / settings.yolo_model_name
     custom_exists = candidate_nested.exists() or candidate_flat.exists()
+    active_model = _resolve_active_model_from_file()
+    inference_state = get_inference_state()
 
     status = {
         "configured_model_name": settings.yolo_model_name,
@@ -124,10 +259,16 @@ def get_runtime_status() -> dict:
         "custom_weights_present": custom_exists,
         "using_custom_weights": _using_custom_weights,
         "resolved_model_path": _resolved_model_path,
-        "fallback_model_name": None if _using_custom_weights or settings.require_custom_yolo else "yolo11m.pt",
+        "fallback_model_name": None
+        if _using_custom_weights or settings.require_custom_yolo
+        else "yolo11m.pt",
         "device": _resolve_device(),
         "tensorrt_active": _tensorrt_active,
         "tensorrt_enabled": settings.yolo_use_tensorrt,
+        "runtime_model_override": _runtime_model_override,
+        "active_model_path": str(active_model) if active_model else None,
+        "active_inference": inference_state["active_inference"],
+        "maintenance_reason": inference_state["maintenance_reason"],
     }
 
     if candidate_nested.exists():
@@ -141,7 +282,7 @@ def get_runtime_status() -> dict:
 
 
 def _resolve_device() -> str:
-    """Determine the effective device for YOLO inference."""
+    """Determine effective device for YOLO inference."""
     device = settings.effective_yolo_device
     if device.startswith("cuda") and not _cuda_available():
         logger.warning("YOLO configured for %s but CUDA unavailable, falling back to cpu", device)
@@ -150,12 +291,7 @@ def _resolve_device() -> str:
 
 
 def _load_yolo_on(device: str):
-    """Load YOLO model onto *device*. Returns (model, None).
-
-    Wenn TensorRT aktiviert ist und eine .engine Datei existiert oder exportiert
-    werden kann, wird das TensorRT-Modell geladen (2-4x schneller).
-    Bei Fehler: automatischer Fallback auf PyTorch .pt.
-    """
+    """Load YOLO model onto *device*. Returns (model, None)."""
     global _using_custom_weights, _resolved_model_path, _tensorrt_active
     from ultralytics import YOLO
 
@@ -163,14 +299,11 @@ def _load_yolo_on(device: str):
     _using_custom_weights = using_custom
     _tensorrt_active = False
 
-    # TensorRT-Export versuchen wenn:
-    # - TensorRT aktiviert (Config)
-    # - Modell ist .pt (kein bereits exportiertes .engine)
-    # - GPU-Device (TensorRT braucht CUDA)
-    # Gilt fuer Custom UND Fallback-Modell (yolo11m.pt profitiert genauso)
-    if (settings.yolo_use_tensorrt
-            and model_path.endswith(".pt")
-            and device.startswith("cuda")):
+    if (
+        settings.yolo_use_tensorrt
+        and model_path.endswith(".pt")
+        and device.startswith("cuda")
+    ):
         engine_path = _try_export_tensorrt(model_path)
         if engine_path:
             model_path = engine_path
@@ -178,30 +311,24 @@ def _load_yolo_on(device: str):
     _resolved_model_path = model_path
 
     if model_path.endswith(".engine"):
-        logger.info("Lade TensorRT-Engine: %s auf %s", model_path, device)
+        logger.info("Loading TensorRT engine: %s on %s", model_path, device)
         _tensorrt_active = True
     elif using_custom:
-        logger.info("Lade YOLO PyTorch-Modell: %s auf %s", model_path, device)
+        logger.info("Loading YOLO PyTorch model: %s on %s", model_path, device)
     else:
         logger.warning(
-            "Custom YOLO weights not found – downloading yolo11m.pt as fallback. "
-            "Using image-quality pre-screening instead of defect detection. "
-            "Fine-tune and place custom weights in models/yolo26m/ for sewer-specific detection."
+            "Custom YOLO weights not found - downloading yolo11m.pt as fallback. "
+            "Using image-quality pre-screening instead of defect detection."
         )
 
     model = YOLO(str(model_path))
-    # TensorRT-Engines brauchen kein .to(device) — sie sind bereits kompiliert
     if not model_path.endswith(".engine"):
         model.to(device)
     return model, None
 
 
 def _get_yolo_model():
-    """Get the YOLO model, loading if necessary.
-
-    CPU path: module-level singleton bypassing the GPU manager.
-    GPU path: uses gpu_manager.ensure_loaded for persistent slot.
-    """
+    """Get YOLO model, loading if necessary."""
     global _cpu_model
     device = _resolve_device()
 
@@ -214,168 +341,178 @@ def _get_yolo_model():
             model, _ = _load_yolo_on(device)
             _cpu_model = model
             return _cpu_model
-    else:
-        state = gpu_manager.ensure_loaded(
-            ModelSlot.YOLO, device, lambda: _load_yolo_on(device)
-        )
-        return state.model
+
+    state = gpu_manager.ensure_loaded(
+        ModelSlot.YOLO,
+        device,
+        lambda: _load_yolo_on(device),
+    )
+    return state.model
+
+
+def unload_current_model() -> None:
+    """Unload YOLO from CPU/GPU slots to free VRAM."""
+    global _cpu_model, _resolved_model_path, _tensorrt_active
+    with _cpu_lock:
+        _cpu_model = None
+    gpu_manager.unload(ModelSlot.YOLO)
+    _resolved_model_path = None
+    _tensorrt_active = False
+
+
+def begin_training_guard(timeout_sec: float = 0.0) -> None:
+    """Reserve exclusive YOLO access for training."""
+    _begin_maintenance("training", timeout_sec=timeout_sec)
+
+
+def end_training_guard() -> None:
+    _end_maintenance("training")
+
+
+def reload_model(model_path: str, wait_timeout_sec: float = 30.0) -> dict:
+    """Hot-swap YOLO weights and eagerly load them."""
+    global _runtime_model_override
+    target = _resolve_candidate_model_path(model_path)
+    if not target.exists():
+        raise FileNotFoundError(f"YOLO model not found: {target}")
+    if target.suffix.lower() not in {".pt", ".engine"}:
+        raise ValueError("Model path must point to a .pt or .engine file")
+
+    _begin_maintenance("reload", timeout_sec=wait_timeout_sec)
+    try:
+        _runtime_model_override = str(target)
+        unload_current_model()
+        _get_yolo_model()
+        return get_runtime_status()
+    finally:
+        _end_maintenance("reload")
 
 
 def _cuda_available() -> bool:
     try:
         import torch
+
         return torch.cuda.is_available()
     except Exception:
         return False
 
 
 def decode_image(image_base64: str) -> Image.Image:
-    """Decode a base64-encoded image to PIL Image."""
     raw = base64.b64decode(image_base64)
     return Image.open(io.BytesIO(raw)).convert("RGB")
 
 
+def detect_image(image: Image.Image | np.ndarray, confidence_threshold: float) -> YoloResponse:
+    """Run YOLO detection on a PIL image or numpy RGB array."""
+    if isinstance(image, np.ndarray):
+        image = Image.fromarray(image)
+
+    with _inference_guard():
+        model = _get_yolo_model()
+        usable, quality_reason = _is_frame_usable(image)
+
+        if not usable:
+            return YoloResponse(
+                is_relevant=False,
+                detections=[],
+                frame_class=quality_reason,
+                inference_time_ms=0.0,
+            )
+
+        t0 = time.perf_counter()
+        results = model.predict(
+            source=np.array(image),
+            conf=confidence_threshold,
+            verbose=False,
+        )
+        elapsed_ms = (time.perf_counter() - t0) * 1000
+
+        detections: list[YoloDetection] = []
+        frame_class = "empty"
+        if results and len(results) > 0:
+            result = results[0]
+            boxes = result.boxes
+            if boxes is not None and len(boxes) > 0:
+                frame_class = "relevant"
+                all_xyxy = boxes.xyxy.cpu().numpy()
+                all_cls = boxes.cls.cpu().numpy().astype(int)
+                all_conf = boxes.conf.cpu().numpy()
+
+                for i in range(len(boxes)):
+                    cls_id = int(all_cls[i])
+                    conf = float(all_conf[i])
+                    cls_name = result.names.get(cls_id, str(cls_id))
+                    detections.append(
+                        YoloDetection(
+                            x1=float(all_xyxy[i, 0]),
+                            y1=float(all_xyxy[i, 1]),
+                            x2=float(all_xyxy[i, 2]),
+                            y2=float(all_xyxy[i, 3]),
+                            class_name=cls_name,
+                            confidence=conf,
+                        )
+                    )
+
+        if _using_custom_weights:
+            is_relevant = len(detections) > 0
+        else:
+            is_relevant = True
+            frame_class = "pipe_content" if frame_class == "empty" else frame_class
+
+        return YoloResponse(
+            is_relevant=is_relevant,
+            detections=detections,
+            frame_class=frame_class,
+            inference_time_ms=round(elapsed_ms, 1),
+        )
+
+
 def _is_frame_usable(img: Image.Image) -> tuple[bool, str]:
-    """Check if a frame is usable for analysis using image quality heuristics.
-
-    Filters out:
-    - Completely black/dark frames (lens cap, no signal)
-    - Completely white/overexposed frames
-    - Very low variance frames (solid color, no texture)
-
-    Returns (is_usable, reason).
-    """
+    """Check if a frame is usable for analysis using quality heuristics."""
     arr = np.array(img, dtype=np.float32)
-
-    # Convert to grayscale for analysis
     gray = arr.mean(axis=2)
     mean_brightness = gray.mean()
     std_brightness = gray.std()
 
-    # Kanalvideos sind grundsaetzlich dunkel (Beton, nass, Schatten).
-    # Schwelle 5 statt 10: nur echte Schwarzframes (Objektivkappe, kein Signal)
     if mean_brightness < 5:
         return False, "too_dark"
-
-    # Too bright (overexposed, white frame)
     if mean_brightness > 245:
         return False, "too_bright"
-
-    # Intakte Betonrohre haben wenig Textur — Schwelle 3 statt 5
     if std_brightness < 3:
         return False, "too_uniform"
 
-    # Check edge density using Laplacian-like filter for blur detection
-    # A very blurry frame has low edge variance
     from scipy.ndimage import laplace
+
     edges = laplace(gray)
-    edge_var = edges.var()
-
-    if edge_var < 3:
+    if edges.var() < 3:
         return False, "too_blurry"
-
     return True, "ok"
 
 
 def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
-    """Run YOLO detection on a base64-encoded image.
-
-    Behavior depends on model type:
-    - Custom sewer weights: True defect detection via YOLO.
-    - COCO fallback (yolo11m): Image-quality pre-screening that filters out
-      dark/blank/blurry frames. YOLO detections are still returned for info,
-      but is_relevant is based on image quality, not COCO class detections.
-    """
-    model = _get_yolo_model()
-
-    img = decode_image(image_base64)
-
-    # Image-quality pre-screening (always run, fast)
-    usable, quality_reason = _is_frame_usable(img)
-
-    if not usable:
-        # Frame is not usable at all – skip without running YOLO inference
-        return YoloResponse(
-            is_relevant=False,
-            detections=[],
-            frame_class=quality_reason,
-            inference_time_ms=0.0,
-        )
-
-    t0 = time.perf_counter()
-    results = model.predict(
-        source=np.array(img),
-        conf=confidence_threshold,
-        verbose=False,
-    )
-    elapsed_ms = (time.perf_counter() - t0) * 1000
-
-    detections: list[YoloDetection] = []
-    frame_class = "empty"
-
-    if results and len(results) > 0:
-        result = results[0]
-        boxes = result.boxes
-        if boxes is not None and len(boxes) > 0:
-            frame_class = "relevant"
-            # Batch-Transfer GPU→CPU: alle Tensoren auf einmal kopieren
-            all_xyxy = boxes.xyxy.cpu().numpy()
-            all_cls = boxes.cls.cpu().numpy().astype(int)
-            all_conf = boxes.conf.cpu().numpy()
-
-            for i in range(len(boxes)):
-                cls_id = int(all_cls[i])
-                conf = float(all_conf[i])
-                cls_name = result.names.get(cls_id, str(cls_id))
-                detections.append(YoloDetection(
-                    x1=float(all_xyxy[i, 0]),
-                    y1=float(all_xyxy[i, 1]),
-                    x2=float(all_xyxy[i, 2]),
-                    y2=float(all_xyxy[i, 3]),
-                    class_name=cls_name,
-                    confidence=conf,
-                ))
-
-    if _using_custom_weights:
-        # Custom weights: relevance = has defect detections
-        is_relevant = len(detections) > 0
-    else:
-        # COCO fallback: frame passed quality check → relevant for DINO analysis.
-        # COCO detections are informational only.
-        is_relevant = True
-        frame_class = "pipe_content" if frame_class == "empty" else frame_class
-
-    return YoloResponse(
-        is_relevant=is_relevant,
-        detections=detections,
-        frame_class=frame_class,
-        inference_time_ms=round(elapsed_ms, 1),
-    )
+    """Run YOLO detection on a base64-encoded image."""
+    return detect_image(decode_image(image_base64), confidence_threshold)
 
 
-# ── YOLO Classify (Whole-Frame-Klassifikator) ──────────────────────────
-
+# YOLO classify (whole-frame classifier)
 _cls_model = None
 _cls_lock = threading.Lock()
 
 
 def _resolve_cls_model_path() -> str | None:
-    """Suche best.pt aus dem YOLO-cls Trainingslauf."""
-    # Relativer Pfad vom Sidecar-Root (portabel, kein absoluter Pfad)
     project_root = Path(__file__).resolve().parent.parent.parent.parent
     candidates = [
         Path(settings.models_dir) / "yolo_cls_best.pt",
         project_root / "yolo_cls_runs" / "grundgeruest_v2" / "weights" / "best.pt",
         project_root / "yolo_cls_runs" / "grundgeruest_v1" / "weights" / "best.pt",
     ]
-    for p in candidates:
-        if p.exists():
-            return str(p)
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
     return None
 
 
 def _get_cls_model():
-    """Lazy-load des Classify-Modells (CPU, ~3 MB)."""
     global _cls_model
     if _cls_model is not None:
         return _cls_model
@@ -386,38 +523,37 @@ def _get_cls_model():
         if path is None:
             return None
         from ultralytics import YOLO
+
         _cls_model = YOLO(path)
-        _cls_model.to("cpu")  # Leichtgewicht, CPU reicht
-        logger.info("YOLO-cls Modell geladen: %s", path)
+        _cls_model.to("cpu")
+        logger.info("YOLO classify model loaded: %s", path)
         return _cls_model
 
 
 def classify(image_base64: str, top_k: int = 5) -> list[tuple[str, float]]:
-    """Whole-Frame-Klassifikation: Gibt Top-K Klassen mit Konfidenz zurueck."""
-    model = _get_cls_model()
-    if model is None:
-        return []
+    """Whole-frame classification: return top-k classes with confidence."""
+    with _inference_guard():
+        model = _get_cls_model()
+        if model is None:
+            return []
 
-    img = decode_image(image_base64)
+        img = decode_image(image_base64)
+        t0 = time.perf_counter()
+        results = model.predict(source=np.array(img), verbose=False)
+        elapsed_ms = (time.perf_counter() - t0) * 1000
 
-    t0 = time.perf_counter()
-    results = model.predict(source=np.array(img), verbose=False)
-    elapsed_ms = (time.perf_counter() - t0) * 1000
+        if not results or len(results) == 0:
+            return []
 
-    if not results or len(results) == 0:
-        return []
+        probs = results[0].probs
+        if probs is None:
+            return []
 
-    probs = results[0].probs
-    if probs is None:
-        return []
-
-    # Top-K Indizes nach Konfidenz sortiert
-    top_indices = probs.data.topk(min(top_k, len(probs.data))).indices.cpu().tolist()
-    predictions = []
-    for idx in top_indices:
-        name = model.names.get(idx, str(idx))
-        conf = float(probs.data[idx].cpu().item())
-        if conf > 0.01:  # Nur relevante Klassen
-            predictions.append((name, conf, elapsed_ms))
-
-    return predictions
+        top_indices = probs.data.topk(min(top_k, len(probs.data))).indices.cpu().tolist()
+        predictions = []
+        for idx in top_indices:
+            name = model.names.get(idx, str(idx))
+            conf = float(probs.data[idx].cpu().item())
+            if conf > 0.01:
+                predictions.append((name, conf, elapsed_ms))
+        return predictions

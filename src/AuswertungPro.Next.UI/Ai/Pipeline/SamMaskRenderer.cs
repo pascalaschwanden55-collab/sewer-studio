@@ -245,6 +245,8 @@ public static class SamMaskRenderer
     /// </summary>
     /// <param name="onMaskClicked">Optionaler Callback wenn eine Maske angeklickt wird (Index).</param>
     /// <param name="onMaskDeleted">Optionaler Callback wenn Delete auf einer Maske gedrueckt wird (Index).</param>
+    /// <param name="previewMode">Wenn true: Masken grau + gedimmt rendern (Vorschau fuer ferne Detektionen).</param>
+    /// <param name="indexOffset">Offset fuer Masken-Index im Tag (fuer zweiten RenderMasks-Aufruf).</param>
     public static void RenderMasks(
         Canvas canvas,
         SamResponse samResponse,
@@ -252,25 +254,29 @@ public static class SamMaskRenderer
         double canvasWidth,
         double canvasHeight,
         Action<int>? onMaskClicked = null,
-        Action<int>? onMaskDeleted = null)
+        Action<int>? onMaskDeleted = null,
+        bool previewMode = false,
+        int indexOffset = 0)
     {
         if (samResponse == null || samResponse.Masks.Count == 0) return;
 
         int imgW = samResponse.ImageWidth;
         int imgH = samResponse.ImageHeight;
-        bool interactive = onMaskClicked is not null || onMaskDeleted is not null;
+        bool interactive = !previewMode && (onMaskClicked is not null || onMaskDeleted is not null);
 
         for (int i = 0; i < samResponse.Masks.Count; i++)
         {
             var mask = samResponse.Masks[i];
             var quant = i < quantified.Count ? quantified[i] : null;
-            var maskIndex = i; // Closure-Kopie
+            var maskIndex = i + indexOffset; // Closure-Kopie (mit Offset fuer zweiten Aufruf)
 
             // RLE dekodieren
             var decoded = DecodeRle(mask.MaskRle, imgW, imgH);
 
-            // Farbe nach Schadenstyp (Label → VSA-Code → Farbgruppe)
-            var (fillColor, strokeColor) = GetMaskColors(mask.Label);
+            // Farbe: normal nach Schadenstyp, oder grau wenn Vorschau (fern)
+            var (fillColor, strokeColor) = previewMode
+                ? (Color.FromArgb(30, 128, 128, 128), Color.FromArgb(100, 160, 160, 160))
+                : GetMaskColors(mask.Label);
 
             // Gruppen-Tag fuer zusammengehoerige Elemente (Fill + Kontur + Label)
             var groupTag = $"{MaskTag}_{maskIndex}";
@@ -423,7 +429,13 @@ public static class SamMaskRenderer
     public static void ClearMasks(Canvas canvas)
     {
         var toRemove = canvas.Children.OfType<FrameworkElement>()
-            .Where(e => MaskTag.Equals(e.Tag) || LabelTag.Equals(e.Tag))
+            .Where(e =>
+            {
+                var tag = e.Tag as string;
+                if (tag == null) return false;
+                return tag.StartsWith(MaskTag, StringComparison.Ordinal)
+                    || tag.StartsWith(LabelTag, StringComparison.Ordinal);
+            })
             .ToList();
         foreach (var el in toRemove)
             canvas.Children.Remove(el);

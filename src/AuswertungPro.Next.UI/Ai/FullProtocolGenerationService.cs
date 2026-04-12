@@ -134,6 +134,7 @@ public sealed class FullProtocolGenerationService : IDisposable
         FullProtocolGenerationRequest request,
         CancellationToken ct)
     {
+        var allowedSet = new HashSet<string>(request.AllowedCodes, StringComparer.OrdinalIgnoreCase);
         var kbExamples = await GetKnowledgeExamplesAsync(detection, request, ct).ConfigureAwait(false);
 
         // Wenn EnhancedVision bereits einen Code-Hinweis geliefert hat,
@@ -197,6 +198,21 @@ public sealed class FullProtocolGenerationService : IDisposable
                 ? $"KB-Fallback: {fallback.Code}"
                 : $"{reason} | KB-Fallback: {fallback.Code}";
             warnings.Add("LLM lieferte keinen gültigen Code, KB-Fallback verwendet.");
+        }
+
+        // Zweiter Fallback: Vision-Code-Hinweis nutzen, wenn LLM/KB keinen Code liefern.
+        if (string.IsNullOrWhiteSpace(suggestedCode))
+        {
+            var hintCode = ResolveVisionHintToAllowedCode(detection.VsaCodeHint, allowedSet);
+            if (!string.IsNullOrWhiteSpace(hintCode))
+            {
+                suggestedCode = hintCode;
+                confidence = Math.Max(confidence, 0.58);
+                reason = string.IsNullOrWhiteSpace(reason)
+                    ? $"Vision-Hinweis-Fallback: {hintCode}"
+                    : $"{reason} | Vision-Hinweis-Fallback: {hintCode}";
+                warnings.Add("LLM/KB ohne Ergebnis – Vision-Hinweis als Fallback genutzt.");
+            }
         }
 
         // ── QualityGate: build EvidenceVector and evaluate ──
@@ -292,7 +308,7 @@ public sealed class FullProtocolGenerationService : IDisposable
         {
             try
             {
-                retrieved = await _retrieval.RetrieveAsync(query, topK: 8, ct).ConfigureAwait(false);
+                retrieved = await _retrieval.RetrieveAsync(query, topK: 8, ct: ct).ConfigureAwait(false);
                 _retrievalCache[query] = retrieved;
             }
             catch
@@ -352,6 +368,43 @@ public sealed class FullProtocolGenerationService : IDisposable
             parts.Add($"QV {detection.CrossSectionReductionPercent}%");
 
         return string.Join(" | ", parts.Where(p => !string.IsNullOrWhiteSpace(p)));
+    }
+
+    private static string? ResolveVisionHintToAllowedCode(
+        string? hintCode,
+        IReadOnlySet<string> allowed)
+    {
+        if (string.IsNullOrWhiteSpace(hintCode) || allowed.Count == 0)
+            return null;
+
+        var normalized = hintCode.Trim().Replace(".", "", StringComparison.Ordinal).ToUpperInvariant();
+        if (normalized.Length == 0)
+            return null;
+
+        // 1) Exakter Treffer
+        var exact = allowed.FirstOrDefault(c => string.Equals(c, normalized, StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(exact))
+            return exact;
+
+        // 2) Praefix-Match auf erlaubte Untercodes (z.B. Hint BAB -> Allowed BABBA)
+        if (normalized.Length >= 3)
+        {
+            var pref = allowed.FirstOrDefault(c =>
+                c.StartsWith(normalized, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(pref))
+                return pref;
+        }
+
+        // 3) Hauptcode aus Untercode ableiten (z.B. Hint BABBA -> Allowed BAB)
+        if (normalized.Length >= 3)
+        {
+            var main = normalized[..3];
+            var mainMatch = allowed.FirstOrDefault(c => string.Equals(c, main, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(mainMatch))
+                return mainMatch;
+        }
+
+        return null;
     }
 
     private string BuildSystemPrompt()

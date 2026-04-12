@@ -19,6 +19,8 @@ class ModelSlot(str, enum.Enum):
     DINO = "dino"
     SAM = "sam"
     VSR = "vsr"
+    PARSE = "parse"
+    CHANGENET = "changenet"
 
 
 @dataclass
@@ -115,6 +117,18 @@ class GpuModelManager:
     # VRAM Watermark-Schwellen
     VRAM_WARN_PERCENT = 75.0
     VRAM_ERROR_PERCENT = 90.0
+
+    def get_available_vram_gb(self) -> float:
+        """Gibt den verfuegbaren (freien) VRAM in GB zurueck."""
+        try:
+            import torch
+            if torch.cuda.is_available():
+                allocated = torch.cuda.memory_allocated(0)
+                total = torch.cuda.get_device_properties(0).total_mem
+                return (total - allocated) / (1024 ** 3)
+        except Exception:
+            pass
+        return 8.0  # Konservativer Fallback
 
     def get_vram_utilization_percent(self) -> float:
         """Gibt die aktuelle VRAM-Auslastung in Prozent zurueck (0-100)."""
