@@ -134,6 +134,35 @@ def _predict_single_box(predictor, bbox: BoundingBox, masks_out: list[MaskResult
         logger.warning("SAM 2 Prediction fehlgeschlagen fuer Box %s: %s", bbox, exc)
 
 
+def _predict_boxes_batched(
+    predictor, boxes: list[BoundingBox], masks_out: list[MaskResult],
+    h: int, w: int, device: str,
+) -> None:
+    """Batch: alle Boxen in einem Forward Pass durch SAM 2."""
+    import torch
+    if not boxes:
+        return
+
+    boxes_np = np.array([[b.x1, b.y1, b.x2, b.y2] for b in boxes])
+    try:
+        with torch.inference_mode():
+            masks, scores, _ = predictor.predict(
+                point_coords=None,
+                point_labels=None,
+                box=boxes_np,
+                multimask_output=False,
+            )
+        # masks shape: (N, 1, H, W) oder (N, H, W)
+        if masks.ndim == 4:
+            masks = masks[:, 0]  # → (N, H, W)
+        for i, bbox in enumerate(boxes):
+            _append_mask_result(masks_out, masks[i], float(scores[i]), bbox, h, w)
+    except Exception as exc:
+        logger.warning("SAM 2 Batch fehlgeschlagen (%d Boxen): %s — Fallback sequentiell", len(boxes), exc)
+        for bbox in boxes:
+            _predict_single_box(predictor, bbox, masks_out, h, w, device)
+
+
 def _is_in_annulus(cx: float, cy: float, center_x: float, center_y: float,
                    inner_r: float, outer_r: float) -> bool:
     """Prueft ob Punkt im Annulus (Ring-Bereich) liegt."""
@@ -409,30 +438,7 @@ def segment(
             )
         for chunk_start in range(0, len(bounding_boxes), max_batch):
             chunk = bounding_boxes[chunk_start : chunk_start + max_batch]
-            try:
-                all_boxes = np.array([[b.x1, b.y1, b.x2, b.y2] for b in chunk])
-
-                with torch.inference_mode():
-                    # SAM 2: predict mit Batch-Boxes
-                    # SAM 2 unterstuetzt Batch via Iteration
-                    for i, bbox in enumerate(chunk):
-                        box_np = all_boxes[i]
-                        masks, scores, _ = predictor.predict(
-                            point_coords=None,
-                            point_labels=None,
-                            box=box_np,
-                            multimask_output=False,
-                        )
-                        _append_mask_result(
-                            masks_out, masks[0], float(scores[0]), bbox, h, w
-                        )
-
-            except Exception as exc:
-                logger.warning(
-                    "SAM 2 Batch-Chunk fehlgeschlagen, Fallback sequentiell: %s", exc
-                )
-                for bbox in chunk:
-                    _predict_single_box(predictor, bbox, masks_out, h, w, device)
+            _predict_boxes_batched(predictor, chunk, masks_out, h, w, device)
 
     elif len(bounding_boxes) == 1:
         _predict_single_box(predictor, bounding_boxes[0], masks_out, h, w, device)
