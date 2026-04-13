@@ -128,7 +128,10 @@ namespace AuswertungPro.Next.UI
             // AI/CodeCatalog Init (AiLocalPack)
             var cfg = aiPlatform.ToRuntimeConfig();
 
-            // Startup-Warmup: Alle fremden Modelle entladen, dann 8B vorladen
+            // Startup-Warmup: 8B Vision + Embed permanent vorladen
+            // V4.1: 8B×6 Slots (8192 ctx) + nomic — VRAM: ~8.1 + 0.6 = ~9 GB (Flash Attn)
+            // Sidecar (YOLO+DINO+SAM+Florence-2): ~10 GB → Total ~20 GB, ~12 GB Reserve
+            // 32B Eskalation: on-demand Swap bei Yellow/Red (~30-60s)
             if (cfg.Enabled)
             {
                 _ = Task.Run(async () =>
@@ -136,24 +139,54 @@ namespace AuswertungPro.Next.UI
                     try
                     {
                         using var warmupClient = cfg.CreateOllamaClient();
-                        // Alle geladenen Modelle pruefen und fremde entladen
-                        // (z.B. altes qwen2.5vl:32b von vorheriger Sitzung)
-                        var loaded = await warmupClient.ListLoadedModelsAsync();
-                        foreach (var modelName in loaded)
-                        {
-                            if (!string.Equals(modelName, cfg.VisionModel, StringComparison.OrdinalIgnoreCase))
-                            {
-                                await warmupClient.UnloadModelAsync(modelName);
-                                System.Diagnostics.Debug.WriteLine(
-                                    $"[Startup] Fremdes Modell '{modelName}' entladen");
-                            }
-                        }
-                        if (loaded.Count > 0)
-                            await Task.Delay(500); // GPU-Treiber VRAM-Freigabe
-                        // 8B permanent vorladen
+
+                        // 1. VisionModel (8B) permanent vorladen — 4 parallele Slots
                         await warmupClient.WarmupModelAsync(cfg.VisionModel, cfg.OllamaNumCtx);
                         System.Diagnostics.Debug.WriteLine(
-                            $"[Startup] FastModel {cfg.VisionModel} vorgeladen (num_ctx={cfg.OllamaNumCtx})");
+                            $"[Startup] VisionModel {cfg.VisionModel} vorgeladen (NUM_PARALLEL={Environment.GetEnvironmentVariable("OLLAMA_NUM_PARALLEL") ?? "?"}, ctx={cfg.OllamaNumCtx})");
+
+                        // 2. EmbedModel (nomic-embed-text) vorladen
+                        if (!string.IsNullOrEmpty(cfg.EmbedModel))
+                        {
+                            await warmupClient.WarmupModelAsync(cfg.EmbedModel, 0);
+                            System.Diagnostics.Debug.WriteLine(
+                                $"[Startup] EmbedModel {cfg.EmbedModel} vorgeladen");
+                        }
+
+                        // 3. ReferenceModel (32B) permanent vorladen — hybrid GPU/CPU mit num_gpu=10
+                        if (!string.IsNullOrEmpty(cfg.ReferenceVisionModel)
+                            && !string.Equals(cfg.ReferenceVisionModel, cfg.VisionModel, StringComparison.OrdinalIgnoreCase))
+                        {
+                            try
+                            {
+                                using var warmupHttp = new HttpClient { BaseAddress = cfg.OllamaBaseUri, Timeout = TimeSpan.FromMinutes(5) };
+                                var payload = new Dictionary<string, object?>
+                                {
+                                    ["model"] = cfg.ReferenceVisionModel,
+                                    ["prompt"] = "",
+                                    ["stream"] = false,
+                                    ["keep_alive"] = "-1",
+                                    ["options"] = new Dictionary<string, object>
+                                    {
+                                        ["num_gpu"] = 10,
+                                        ["num_ctx"] = cfg.OllamaNumCtx > 0 ? Math.Min(cfg.OllamaNumCtx, 4096) : 4096
+                                    }
+                                };
+                                var json = System.Text.Json.JsonSerializer.Serialize(payload);
+                                using var req = new HttpRequestMessage(HttpMethod.Post, "/api/generate")
+                                {
+                                    Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+                                };
+                                using var resp = await warmupHttp.SendAsync(req).ConfigureAwait(false);
+                                System.Diagnostics.Debug.WriteLine(
+                                    $"[Startup] ReferenceModel {cfg.ReferenceVisionModel} vorgeladen (num_gpu=10, hybrid GPU/CPU)");
+                            }
+                            catch (Exception exRef)
+                            {
+                                System.Diagnostics.Debug.WriteLine(
+                                    $"[Startup] ReferenceModel {cfg.ReferenceVisionModel} Warmup fehlgeschlagen: {exRef.Message}");
+                            }
+                        }
                     }
                     catch (Exception ex)
                     {
