@@ -13,27 +13,35 @@ Write-Host ""
 # ── Ollama Server-Konfiguration ──────────────────────────────────────────
 # Diese Variablen muessen gesetzt sein BEVOR Ollama startet.
 # Bei bereits laufendem Ollama: Dienst neu starten nach Aenderung.
-$env:OLLAMA_NUM_PARALLEL = "6"           # 6 parallele Inference-Slots (passend zu GpuConcurrency=6)
-$env:OLLAMA_MAX_LOADED_MODELS = "2"      # Qwen3-VL-8B + nomic-embed-text gleichzeitig
+$env:OLLAMA_NUM_PARALLEL = "6"           # 6 parallele Inference-Slots fuer 8B (Flash Attention)
+$env:OLLAMA_MAX_LOADED_MODELS = "2"      # 8B + nomic-embed-text
 $env:OLLAMA_FLASH_ATTENTION = "1"        # Flash Attention fuer schnellere Inference
 
 # ── App / Ollama Client ──────────────────────────────────────────────────
+# V4.1: 8B×4 Slots permanent, kein Kaskaden-Modell, Yellow-Retry im gleichen 8B
 $env:AUSWERTUNGPRO_AI_ENABLED = "1"
 $env:AUSWERTUNGPRO_MULTIMODEL_ENABLED = "1"
 $env:AUSWERTUNGPRO_PIPELINE_MODE = "multimodel"
 $env:AUSWERTUNGPRO_AI_TIMEOUT_MIN = "60"
 $env:AUSWERTUNGPRO_AI_VISION_MODEL = "qwen3-vl:8b"
-$env:AUSWERTUNGPRO_AI_TEXT_MODEL = "qwen2.5:7b"
+$env:AUSWERTUNGPRO_AI_TEXT_MODEL = "qwen3-vl:8b"
 $env:AUSWERTUNGPRO_AI_EMBED_MODEL = "nomic-embed-text"
 
-# Kontext-Groesse: 8K statt 32K = weniger VRAM pro Slot, mehr parallele Slots
+# Kontext-Groesse: 8K fuer maximale Prompt-Qualitaet (Few-Shot + Vision-Tokens)
 $env:SEWERSTUDIO_OLLAMA_NUM_CTX = "8192"
 
+# Batch-Nachtbetrieb Parallelisierung (Max Quality)
+$env:SEWERSTUDIO_GPU_CONCURRENCY = "6"                         # Parallele Ollama-GPU-Requests (= NUM_PARALLEL)
+$env:SEWERSTUDIO_SELFTRAIN_CASE_PARALLELISM = "6"              # 6 Haltungen gleichzeitig
+$env:SEWERSTUDIO_SELFTRAIN_PREEXTRACT_PARALLELISM = "20"       # 20 CPU-Kerne fuer PDF-Vorladen
+
 # Recall-first Schwellenwerte fuer maximale Erkennungsabdeckung
-$env:AUSWERTUNGPRO_YOLO_CONFIDENCE = "0.15"
-$env:AUSWERTUNGPRO_DINO_BOX_THRESHOLD = "0.20"
+$env:AUSWERTUNGPRO_YOLO_CONFIDENCE = "0.10"
+$env:AUSWERTUNGPRO_DINO_BOX_THRESHOLD = "0.15"
 $env:AUSWERTUNGPRO_DINO_TEXT_THRESHOLD = "0.15"
 $env:AUSWERTUNGPRO_SIDECAR_TIMEOUT_SEC = "180"
+# Eskalation: 32B permanent hybrid GPU/CPU (num_gpu=10, ~13s pro Frame, kein Swap)
+$env:AUSWERTUNGPRO_AI_REFERENCE_MODEL = "qwen2.5vl:32b"
 
 # Ollama VRAM Keep-Alive (verhindert Modell-Eviction zwischen Requests)
 $env:AUSWERTUNGPRO_OLLAMA_KEEP_ALIVE = "24h"
@@ -47,6 +55,9 @@ $env:SEWER_SIDECAR_YOLO_DEVICE = "cuda:0"     # 5090: YOLO auf GPU (genug VRAM)
 $env:SEWER_SIDECAR_DINO_DEVICE = "cuda:0"
 $env:SEWER_SIDECAR_SAM_DEVICE = "cuda:0"
 $env:SEWER_SIDECAR_YOLO_MODEL_NAME = "yolo26m.pt"
+$env:SEWER_SIDECAR_VIDEO_WORKER_COUNT = "8"    # NVDEC + YOLO parallel (Producer-Consumer)
+$env:SEWER_SIDECAR_VIDEO_QUEUE_MAXSIZE = "32"  # Groesserer Puffer fuer GPU-Vorlauf
+$env:SEWER_SIDECAR_CPU_THREADS = "16"          # Torch CPU-Threads (16 von 24 Kernen)
 $env:SEWER_SIDECAR_YOLO_CONFIDENCE = $env:AUSWERTUNGPRO_YOLO_CONFIDENCE
 $env:SEWER_SIDECAR_DINO_BOX_THRESHOLD = $env:AUSWERTUNGPRO_DINO_BOX_THRESHOLD
 $env:SEWER_SIDECAR_DINO_TEXT_THRESHOLD = $env:AUSWERTUNGPRO_DINO_TEXT_THRESHOLD
@@ -72,6 +83,11 @@ Write-Host "    Ollama Keep-Alive: $env:AUSWERTUNGPRO_OLLAMA_KEEP_ALIVE"
 Write-Host "    YOLO Conf:         $env:AUSWERTUNGPRO_YOLO_CONFIDENCE"
 Write-Host "    DINO Box/Text:     $env:AUSWERTUNGPRO_DINO_BOX_THRESHOLD / $env:AUSWERTUNGPRO_DINO_TEXT_THRESHOLD"
 Write-Host ""
+Write-Host "  Batch-Training:" -ForegroundColor White
+Write-Host "    GPU Concurrency:   $env:SEWERSTUDIO_GPU_CONCURRENCY"
+Write-Host "    Case Parallelism:  $env:SEWERSTUDIO_SELFTRAIN_CASE_PARALLELISM"
+Write-Host "    CPU PreExtract:    $env:SEWERSTUDIO_SELFTRAIN_PREEXTRACT_PARALLELISM"
+Write-Host ""
 Write-Host "  Sidecar:" -ForegroundColor White
 Write-Host "    GPU Device:        $env:SEWER_SIDECAR_GPU_DEVICE"
 Write-Host "    YOLO Device:       $env:SEWER_SIDECAR_YOLO_DEVICE"
@@ -79,6 +95,9 @@ Write-Host "    DINO Device:       $env:SEWER_SIDECAR_DINO_DEVICE"
 Write-Host "    SAM Device:        $env:SEWER_SIDECAR_SAM_DEVICE"
 Write-Host "    YOLO Model:        $env:SEWER_SIDECAR_YOLO_MODEL_NAME"
 Write-Host "    Require Custom:    $env:SEWER_SIDECAR_REQUIRE_CUSTOM_YOLO"
+Write-Host "    Video Workers:     $env:SEWER_SIDECAR_VIDEO_WORKER_COUNT"
+Write-Host "    Video Queue:       $env:SEWER_SIDECAR_VIDEO_QUEUE_MAXSIZE"
+Write-Host "    CPU Threads:       $env:SEWER_SIDECAR_CPU_THREADS"
 Write-Host "    Models Dir:        $env:SEWER_SIDECAR_MODELS_DIR"
 Write-Host ""
 
@@ -97,6 +116,6 @@ else {
 
 Write-Host ""
 Write-Host "  Preset ist fuer diese PowerShell-Session aktiv." -ForegroundColor Green
-Write-Host "  RTX 5090: 6 parallele Ollama-Slots, YOLO auf GPU, Flash Attention." -ForegroundColor DarkGray
+Write-Host "  V4.1: 8B×6 Slots (8K ctx), Batch-Pipeline, YOLO+DINO+SAM+Florence-2 perm., Flash Attention." -ForegroundColor DarkGray
 Write-Host "  Starte jetzt AuswertungPro aus derselben Session oder ueber deine IDE." -ForegroundColor DarkGray
 Write-Host ""
