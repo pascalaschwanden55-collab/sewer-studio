@@ -78,3 +78,49 @@ class YoloClassifyPrediction(BaseModel):
 class YoloClassifyResponse(BaseModel):
     predictions: list[YoloClassifyPrediction] = []
     inference_time_ms: float = 0.0
+
+
+# ── YOLO Batch ─────────────────────────────────────────────────────────
+
+class YoloBatchItem(BaseModel):
+    image_base64: str
+    frame_id: str = ""
+
+
+class YoloBatchRequest(BaseModel):
+    items: list[YoloBatchItem] = Field(..., min_length=1, max_length=16)
+    confidence_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
+
+
+class YoloBatchResultItem(BaseModel):
+    frame_id: str = ""
+    result: YoloResponse
+
+
+class YoloBatchResponse(BaseModel):
+    results: list[YoloBatchResultItem] = []
+    total_inference_time_ms: float = 0.0
+
+
+# ── DINO Batch ─────────────────────────────────────────────────────────
+
+class DinoBatchItem(BaseModel):
+    image_base64: str
+    frame_id: str = ""
+    text_prompt: str | None = None
+
+
+class DinoBatchRequest(BaseModel):
+    items: list[DinoBatchItem] = Field(..., min_length=1, max_length=16)
+    box_threshold: float = Field(default=0.30, ge=0.0, le=1.0)
+    text_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
+
+
+class DinoBatchResultItem(BaseModel):
+    frame_id: str = ""
+    result: DinoResponse
+
+
+class DinoBatchResponse(BaseModel):
+    results: list[DinoBatchResultItem] = []
+    total_inference_time_ms: float = 0.0
