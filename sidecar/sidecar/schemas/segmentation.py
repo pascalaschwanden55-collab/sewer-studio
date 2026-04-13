@@ -198,3 +198,26 @@ class LoraDeployResponse(BaseModel):
     status: str = "ok"
     model_name: str = ""
     message: str = ""
+
+
+# ── SAM Batch ──────────────────────────────────────────────────────────
+
+class SamBatchItem(BaseModel):
+    image_base64: str
+    bounding_boxes: list[BoundingBox] = []
+    frame_id: str = ""
+    pipe_diameter_mm: int | None = None
+
+
+class SamBatchRequest(BaseModel):
+    items: list[SamBatchItem] = Field(..., min_length=1, max_length=16)
+
+
+class SamBatchResultItem(BaseModel):
+    frame_id: str = ""
+    result: SamResponse
+
+
+class SamBatchResponse(BaseModel):
+    results: list[SamBatchResultItem] = []
+    total_inference_time_ms: float = 0.0
