@@ -103,7 +103,7 @@ BBG  Sichtbarer Wasseraustritt
 BBH  Tiere (BBHA=Ratte, BBHB=Kakerlake)
 
 === BC: BESTANDSAUFNAHME (severity=1, MUESSEN gemeldet werden!) ===
-BCA  Anschluss (BCAAA=Formstueck, BCABA=Sattel gebohrt, BCACA=eingespitzt, BCADA=gebohrt) — Uhrlage + Durchmesser mm
+BCA  Anschluss (BCAAA=Formstueck, BCABA=Sattel gebohrt, BCACA=Sattel eingespitzt, BCADA=gebohrt, BCAEA=eingespitzt, BCAFA=Spezial, BCAGA=unbekannt) — Uhrlage + Durchmesser mm
 BCB  Reparatur (BCBA=Rohr ausgetauscht, BCBB=Innenauskleidung, BCBZ=grabenlos)
 BCC  Bogen/Kurve (BCCA=links, BCCB=rechts, BCCY=vertikal) — Richtung
 BCD  Rohranfang — immer bei Meter 0.0
@@ -131,7 +131,7 @@ BACB (Loch) vs BCD (Rohranfang) vs BCA (Anschluss) — WICHTIGSTE UNTERSCHEIDUNG
   Das Bild zeigt den kompletten Rohrquerschnitt von vorne. severity=1.
   MERKE: Wenn du am ANFANG einer Haltung bist (Meter ~0.0) und eine grosse runde Oeffnung siehst = BCD!
 - BCA (Anschluss): SEITLICHE Oeffnung in der Rohrwand. KLEINER als Hauptkanal. Rund/oval.
-  Fuehrt zu einem Abzweig. severity=1. Code: BCAAA (Formstueck) oder BCAEA (eingespitzt).
+  Fuehrt zu einem Abzweig. severity=1. Code: BCAAA (Formstueck), BCABA (Sattel geb.), BCADA (gebohrt), BCAEA (eingespitzt), BCAGA (unbekannt).
 - BACB (Loch): UNRUNDE, UNREGELMAESSIGE Form. SCHARFE, GEZACKTE, GEBROCHENE Raender.
   Material FEHLT. Rohr ist BESCHAEDIGT. severity=3-4.
   ENTSCHEIDUNGSREGEL:
@@ -178,18 +178,21 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
     private readonly string _model;
     private readonly string? _referenceModel;
     private readonly int _numCtx;
-    // 2 parallele Eskalationen erlauben (RTX 5090: genug VRAM fuer 32B + 8B)
-    private readonly SemaphoreSlim _escalationLock = new(2, 2);
-    private int _escalationCount;
-    // Telemetrie: Eskalationsgruende einzeln zaehlen fuer datenbasierte Schwellen-Justierung
-    private int _escalationAllCodesNull;
-    private int _escalationHighSeverity;
-    private int _escalationPoorQuality;
+    // Retry-Throttle: max 2 gleichzeitige Retries (kein VRAM-Risiko mehr, nur CPU/GPU-Contention)
+    private readonly SemaphoreSlim _retryThrottle = new(2, 2);
+    private int _retryCount;
+    // Telemetrie: Retry-Gruende einzeln zaehlen fuer datenbasierte Schwellen-Justierung
+    private int _retryAllCodesNull;
+    private int _retryHighSeverity;
+    private int _retryPoorQuality;
+    private int _swap32bCount;
+    // Backward-Compat: alte Telemetrie-Namen als Aliases
+    private int _escalationCount => _retryCount;
     private FewShotExampleStore? _fewShotStore;
     private readonly object _fewShotLock = new();
     private IReadOnlyList<(FewShotExample Example, string Base64)>? _cachedFewShot;
 
-    public EnhancedVisionAnalysisService(OllamaClient client, string model, string? referenceModel = null, int numCtx = 4096)
+    public EnhancedVisionAnalysisService(OllamaClient client, string model, string? referenceModel = null, int numCtx = 8192)
     {
         _client = client;
         _model = model;
@@ -202,14 +205,16 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
     /// <summary>Name des primaeren Vision-Modells.</summary>
     public string ModelName => _model;
 
-    /// <summary>Anzahl erfolgreicher Eskalationen (Telemetrie).</summary>
-    public int EscalationCount => _escalationCount;
-    /// <summary>Eskalationen wegen fehlender VSA-Codes (alle Findings ohne Code).</summary>
-    public int EscalationAllCodesNull => _escalationAllCodesNull;
-    /// <summary>Eskalationen wegen hohem Schweregrad (Severity >= 4).</summary>
-    public int EscalationHighSeverity => _escalationHighSeverity;
-    /// <summary>Eskalationen wegen schlechter Bildqualitaet mit Findings.</summary>
-    public int EscalationPoorQuality => _escalationPoorQuality;
+    /// <summary>Anzahl erfolgreicher Retries mit erweitertem Prompt (Telemetrie).</summary>
+    public int EscalationCount => _retryCount;
+    /// <summary>Retries wegen fehlender VSA-Codes (alle Findings ohne Code).</summary>
+    public int EscalationAllCodesNull => _retryAllCodesNull;
+    /// <summary>Retries wegen hohem Schweregrad (Severity >= 4).</summary>
+    public int EscalationHighSeverity => _retryHighSeverity;
+    /// <summary>Retries wegen schlechter Bildqualitaet mit Findings.</summary>
+    public int EscalationPoorQuality => _retryPoorQuality;
+    /// <summary>Anzahl 32B Swap-Eskalationen (Telemetrie).</summary>
+    public int Swap32bCount => _swap32bCount;
 
     /// <summary>
     /// Aktiviert Few-Shot Learning: Beispielbilder werden in den Prompt injiziert.
@@ -634,9 +639,9 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
     }
 
     /// <summary>
-    /// Analysiert mit dem schnellen 8B-Modell. Wenn die Erkennung unsicher ist
-    /// und ein Reference-Modell (32B) konfiguriert ist, wird eskaliert.
-    /// VRAM-Sicherheit: Primary entladen, Reference laden, danach zurueck.
+    /// Analysiert mit 8B. Wenn die Erkennung unsicher ist (Yellow/Red),
+    /// wird ein Same-Model-Retry mit erweitertem Prompt durchgefuehrt.
+    /// Kein Modellwechsel, kein VRAM-Swap — alles im gleichen 8B-Slot.
     /// </summary>
     public async Task<(EnhancedFrameAnalysis Result, bool Escalated)> AnalyzeWithEscalationAsync(
         string framePngBase64,
@@ -644,74 +649,153 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         int pipeDiameterMm = 300,
         CancellationToken ct = default)
     {
-        // 1. Schnelle Analyse mit 8B
-        var fast = context != null
+        // 1. Analyse mit 8B (einziges Modell, kein Modellwechsel)
+        var first = context != null
             ? await AnalyzeWithContextAsync(framePngBase64, context, pipeDiameterMm, ct).ConfigureAwait(false)
             : await AnalyzeAsync(framePngBase64, ct).ConfigureAwait(false);
 
-        var reason = GetEscalationReason(fast);
-        if (_referenceModel == null || reason == EscalationReason.None)
-            return (fast, false);
+        var reason = GetEscalationReason(first);
+        if (reason == EscalationReason.None)
+            return (first, false);
 
-        // Telemetrie: Eskalationsgrund zaehlen (vor dem Lock, damit auch Timeouts erfasst werden)
+        // Telemetrie: Retry-Grund zaehlen
         switch (reason)
         {
-            case EscalationReason.AllCodesNull: Interlocked.Increment(ref _escalationAllCodesNull); break;
-            case EscalationReason.HighSeverity: Interlocked.Increment(ref _escalationHighSeverity); break;
-            case EscalationReason.PoorQuality: Interlocked.Increment(ref _escalationPoorQuality); break;
+            case EscalationReason.AllCodesNull: Interlocked.Increment(ref _retryAllCodesNull); break;
+            case EscalationReason.HighSeverity: Interlocked.Increment(ref _retryHighSeverity); break;
+            case EscalationReason.PoorQuality: Interlocked.Increment(ref _retryPoorQuality); break;
         }
 
-        // 2. Eskalation mit 32B — SemaphoreSlim verhindert parallele Modellwechsel
-        //    Timeout 120s: wenn Lock nicht verfuegbar → Graceful Degradation (8B-Ergebnis)
-        if (!await _escalationLock.WaitAsync(TimeSpan.FromSeconds(120), ct).ConfigureAwait(false))
+        // 2. Same-Model-Retry mit erweitertem Prompt (kein VRAM-Swap noetig!)
+        //    Throttle: max 2 gleichzeitige Retries um GPU-Contention zu begrenzen
+        if (!await _retryThrottle.WaitAsync(TimeSpan.FromSeconds(30), ct).ConfigureAwait(false))
         {
             System.Diagnostics.Debug.WriteLine(
-                "[EnhancedVision] Eskalation uebersprungen — Lock-Timeout (andere Eskalation laeuft)");
-            return (fast, false);
+                "[EnhancedVision] Retry uebersprungen — Throttle-Timeout (zu viele parallele Retries)");
+            return (first, false);
         }
         try
         {
-            // Primary entladen um VRAM frei zu machen
-            await _client.UnloadModelAsync(_model, ct).ConfigureAwait(false);
-            await Task.Delay(500, ct).ConfigureAwait(false); // GPU-Treiber VRAM-Freigabe
+            // Erweiterter Retry: gleicher 8B-Slot, aber mit expliziterem Prompt
+            var retryResult = await RetryWithEnhancedPromptAsync(
+                framePngBase64, first, context, pipeDiameterMm, reason, ct).ConfigureAwait(false);
 
-            try
-            {
-                // Reference-Modell (32B) fuer Re-Analyse nutzen
-                var result = context != null
-                    ? await AnalyzeWithModelAsync(_referenceModel, framePngBase64, context, pipeDiameterMm, ct)
-                        .ConfigureAwait(false)
-                    : await AnalyzeWithModelAsync(_referenceModel, framePngBase64, ct)
-                        .ConfigureAwait(false);
+            Interlocked.Increment(ref _retryCount);
+            System.Diagnostics.Debug.WriteLine(
+                $"[EnhancedVision] Retry #{_retryCount} ({reason}): " +
+                $"{retryResult.Findings.Count} Findings, Quality={retryResult.ImageQuality}");
 
-                Interlocked.Increment(ref _escalationCount);
-                System.Diagnostics.Debug.WriteLine(
-                    $"[EnhancedVision] Eskalation #{_escalationCount} zu {_referenceModel}: " +
-                    $"{result.Findings.Count} Findings, Quality={result.ImageQuality}");
+            // 3. Optional: 32B Swap-Eskalation wenn Same-Model-Retry nicht gereicht hat
+            if (!string.IsNullOrEmpty(_referenceModel)
+                && !string.Equals(_referenceModel, _model, StringComparison.OrdinalIgnoreCase))
+            {
+                var retryReason = GetEscalationReason(retryResult);
+                if (retryReason is EscalationReason.AllCodesNull or EscalationReason.HighSeverity)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[EnhancedVision] Same-Model-Retry unzureichend ({retryReason}) — starte 32B Swap-Eskalation");
+                    try
+                    {
+                        var swapResult = await AnalyzeWithModelAsync(_referenceModel, framePngBase64, ct)
+                            .ConfigureAwait(false);
+                        Interlocked.Increment(ref _swap32bCount);
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[EnhancedVision] 32B Swap #{_swap32bCount}: {swapResult.Findings.Count} Findings");
+                        return (swapResult, true);
+                    }
+                    catch (Exception ex32b)
+                    {
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[EnhancedVision] 32B Swap fehlgeschlagen: {ex32b.Message} — verwende Retry-Ergebnis");
+                    }
+                }
+            }
 
-                return (result, true);
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
-            {
-                // OOM oder anderer Fehler beim 32B-Aufruf → 8B-Ergebnis als Fallback
-                System.Diagnostics.Debug.WriteLine(
-                    $"[EnhancedVision] Eskalation fehlgeschlagen ({ex.GetType().Name}): {ex.Message} — verwende 8B-Ergebnis");
-                return (fast, false);
-            }
-            finally
-            {
-                // IMMER: Reference entladen, Primary wieder laden
-                await _client.UnloadModelAsync(_referenceModel, CancellationToken.None)
-                    .ConfigureAwait(false);
-                await _client.WarmupModelAsync(_model, _numCtx, CancellationToken.None)
-                    .ConfigureAwait(false);
-            }
+            return (retryResult, true);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            // Retry fehlgeschlagen → Erst-Ergebnis als Fallback
+            System.Diagnostics.Debug.WriteLine(
+                $"[EnhancedVision] Retry fehlgeschlagen ({ex.GetType().Name}): {ex.Message} — verwende Erst-Ergebnis");
+            return (first, false);
         }
         finally
         {
-            _escalationLock.Release();
+            _retryThrottle.Release();
         }
+    }
+
+    /// <summary>
+    /// Same-Model-Retry: gleicher 8B-Slot, erweiterter Prompt je nach Fehlergrund.
+    /// Nutzt 8192-Kontext um mehr Few-Shots und explizitere Anweisungen zu packen.
+    /// </summary>
+    private async Task<EnhancedFrameAnalysis> RetryWithEnhancedPromptAsync(
+        string framePngBase64,
+        EnhancedFrameAnalysis firstResult,
+        MultiModelFrameResult? context,
+        int pipeDiameterMm,
+        EscalationReason reason,
+        CancellationToken ct)
+    {
+        var messages = new List<OllamaClient.ChatMessage>();
+
+        // Few-Shot Beispiele injizieren (8192 ctx erlaubt mehr Beispiele)
+        var fewShot = _cachedFewShot;
+        if (fewShot is { Count: > 0 })
+        {
+            foreach (var (example, b64) in fewShot)
+            {
+                var exPrompt = $"Analysiere dieses Kanalbild. " +
+                    $"Hinweis: Dieses Bild zeigt {example.Description}" +
+                    (example.ClockPosition != null ? $" bei {example.ClockPosition}" : "") +
+                    $" (VSA-Code: {example.VsaCode}).";
+
+                messages.Add(new OllamaClient.ChatMessage(
+                    Role: "user", Content: exPrompt, ImagesBase64: [b64]));
+                messages.Add(new OllamaClient.ChatMessage(
+                    Role: "assistant", Content: BuildFewShotResponse(example)));
+            }
+        }
+
+        // Erweiterter Prompt basierend auf dem Fehlergrund
+        var enhancedHint = reason switch
+        {
+            EscalationReason.AllCodesNull =>
+                "\nWICHTIG: Der erste Versuch konnte keinen VSA-Code zuordnen. " +
+                "Pruefe NOCHMAL sorgfaeltig: Rohranfang (BCD), Rohrende (BCE), Anschluss (BCA), " +
+                "Bogen (BCC), Riss (BAB), Bruch (BAC), Wurzeln (BBA), Ablagerungen (BBC). " +
+                "JEDER Befund MUSS einen gültigen VSA-Code haben.",
+            EscalationReason.HighSeverity =>
+                "\nWICHTIG: Hoher Schweregrad erkannt. Pruefe NOCHMAL sorgfaeltig: " +
+                "Ist es wirklich severity 4-5? Verwechslung mit Rohranfang (BCD, severity=1) ausschliessen. " +
+                "Quantifiziere GENAU: Ausdehnung %, Querschnittsverringerung %, Uhrlage.",
+            EscalationReason.PoorQuality =>
+                "\nWICHTIG: Schlechte Bildqualitaet. Beschreibe NUR was SICHER erkennbar ist. " +
+                "Im Zweifel: severity NICHT uebertreiben, lieber konservativ bewerten.",
+            _ => ""
+        };
+
+        var prompt = BuildPrompt() + enhancedHint;
+
+        // Context von YOLO/DINO mitgeben falls vorhanden
+        if (context != null)
+        {
+            var contextPrompt = BuildContextPrompt(context, pipeDiameterMm);
+            prompt = contextPrompt + "\n\n" + prompt;
+        }
+
+        messages.Add(new OllamaClient.ChatMessage(
+            Role: "user", Content: prompt, ImagesBase64: [framePngBase64]));
+
+        var dto = await _client.ChatStructuredAsync<EnhancedVisionDto>(
+            model: _model,
+            messages: messages,
+            formatSchema: EnhancedVisionSchema,
+            ct: ct).ConfigureAwait(false);
+
+        return MapToAnalysis(dto);
     }
 
     /// <summary>Grund fuer die Eskalation (fuer Telemetrie).</summary>
