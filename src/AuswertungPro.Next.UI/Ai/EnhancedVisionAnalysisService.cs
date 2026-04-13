@@ -826,7 +826,8 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
     }
 
     /// <summary>
-    /// Analysiert mit einem spezifischen Modell (fuer Eskalation).
+    /// Analysiert mit dem Reference-Modell (32B, hybrid GPU/CPU mit num_gpu=10).
+    /// Kein VRAM-Swap noetig — 32B laeuft permanent neben 8B.
     /// </summary>
     private async Task<EnhancedFrameAnalysis> AnalyzeWithModelAsync(
         string model,
@@ -836,10 +837,14 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         var messages = BuildMessages(framePngBase64);
         try
         {
-            var dto = await _client.ChatStructuredAsync<EnhancedVisionDto>(
+            // num_gpu=10: 32B-Modell laeuft hybrid (10 Layers GPU, Rest CPU).
+            // Braucht kein VRAM-Swap — 32B bleibt permanent neben 8B geladen.
+            var referenceOptions = new Dictionary<string, object> { ["num_gpu"] = 10 };
+            var dto = await _client.ChatStructuredWithOptionsAsync<EnhancedVisionDto>(
                 model: model,
                 messages: messages,
                 formatSchema: EnhancedVisionSchema,
+                options: referenceOptions,
                 ct: ct).ConfigureAwait(false);
             return MapToAnalysis(dto);
         }
