@@ -494,6 +494,79 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
     return detect_image(decode_image(image_base64), confidence_threshold)
 
 
+def detect_batch(
+    images_b64: list[str],
+    confidence_threshold: float,
+    frame_ids: list[str] | None = None,
+) -> list[tuple[str, YoloResponse]]:
+    """Batch-YOLO: mehrere Bilder in einem Forward Pass.
+    Gibt Liste von (frame_id, YoloResponse) zurueck.
+    """
+    if frame_ids is None:
+        frame_ids = [str(i) for i in range(len(images_b64))]
+
+    images = [decode_image(b64) for b64 in images_b64]
+
+    with _inference_guard():
+        model = _get_yolo_model()
+        t0 = time.perf_counter()
+
+        # Qualitaetscheck pro Bild — unbrauchbare Frames ueberspringen
+        usable_indices = []
+        usable_images = []
+        results_out: list[tuple[str, YoloResponse]] = [None] * len(images)  # type: ignore
+
+        for i, img in enumerate(images):
+            ok, reason = _is_frame_usable(img)
+            if ok:
+                usable_indices.append(i)
+                usable_images.append(np.array(img))
+            else:
+                results_out[i] = (frame_ids[i], YoloResponse(
+                    is_relevant=False, detections=[], frame_class=reason, inference_time_ms=0.0))
+
+        if usable_images:
+            # Batch-Predict: ultralytics unterstuetzt Liste als source
+            batch_results = model.predict(source=usable_images, conf=confidence_threshold, verbose=False)
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+
+            for batch_idx, orig_idx in enumerate(usable_indices):
+                result = batch_results[batch_idx]
+                detections: list[YoloDetection] = []
+                frame_class = "empty"
+
+                boxes = result.boxes
+                if boxes is not None and len(boxes) > 0:
+                    frame_class = "relevant"
+                    all_xyxy = boxes.xyxy.cpu().numpy()
+                    all_cls = boxes.cls.cpu().numpy().astype(int)
+                    all_conf = boxes.conf.cpu().numpy()
+
+                    for j in range(len(boxes)):
+                        cls_id = int(all_cls[j])
+                        conf = float(all_conf[j])
+                        cls_name = result.names.get(cls_id, str(cls_id))
+                        detections.append(YoloDetection(
+                            x1=float(all_xyxy[j, 0]), y1=float(all_xyxy[j, 1]),
+                            x2=float(all_xyxy[j, 2]), y2=float(all_xyxy[j, 3]),
+                            class_name=cls_name, confidence=conf))
+
+                if _using_custom_weights:
+                    is_relevant = len(detections) > 0
+                else:
+                    is_relevant = True
+                    frame_class = "pipe_content" if frame_class == "empty" else frame_class
+
+                results_out[orig_idx] = (frame_ids[orig_idx], YoloResponse(
+                    is_relevant=is_relevant, detections=detections,
+                    frame_class=frame_class,
+                    inference_time_ms=round(elapsed_ms / len(usable_images), 1)))
+        else:
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+
+        return results_out
+
+
 # YOLO classify (whole-frame classifier)
 _cls_model = None
 _cls_lock = threading.Lock()
