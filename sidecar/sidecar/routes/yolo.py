@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 from ..schemas.detection import (
     YoloRequest, YoloResponse,
     YoloClassifyRequest, YoloClassifyResponse, YoloClassifyPrediction,
+    YoloBatchRequest, YoloBatchResponse, YoloBatchResultItem,
 )
 from ..models import yolo_wrapper
 
@@ -40,4 +41,28 @@ async def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
     return YoloClassifyResponse(
         predictions=predictions,
         inference_time_ms=round(elapsed_ms, 1),
+    )
+
+
+@router.post("/detect/yolo/batch", response_model=YoloBatchResponse)
+async def detect_yolo_batch(req: YoloBatchRequest) -> YoloBatchResponse:
+    """Batch-YOLO: mehrere Bilder in einem Forward Pass."""
+    import time
+    t0 = time.perf_counter()
+    try:
+        results = yolo_wrapper.detect_batch(
+            images_b64=[item.image_base64 for item in req.items],
+            confidence_threshold=req.confidence_threshold,
+            frame_ids=[item.frame_id for item in req.items],
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    total_ms = (time.perf_counter() - t0) * 1000
+    return YoloBatchResponse(
+        results=[
+            YoloBatchResultItem(frame_id=fid, result=resp)
+            for fid, resp in results
+        ],
+        total_inference_time_ms=round(total_ms, 1),
     )
