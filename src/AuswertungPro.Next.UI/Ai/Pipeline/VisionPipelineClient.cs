@@ -83,6 +83,18 @@ public sealed class VisionPipelineClient
         return await PostAsync<YoloClassifyRequest, YoloClassifyResponse>("/classify/yolo", request, ct).ConfigureAwait(false);
     }
 
+    /// <summary>Batch-YOLO: mehrere Bilder in einem Forward Pass.</summary>
+    public async Task<YoloBatchResponseDto> DetectYoloBatchAsync(YoloBatchRequestDto request, CancellationToken ct = default)
+        => await PostAsync<YoloBatchRequestDto, YoloBatchResponseDto>("/detect/yolo/batch", request, ct).ConfigureAwait(false);
+
+    /// <summary>Batch-DINO: mehrere Bilder grounding.</summary>
+    public async Task<DinoBatchResponseDto> DetectDinoBatchAsync(DinoBatchRequestDto request, CancellationToken ct = default)
+        => await PostAsync<DinoBatchRequestDto, DinoBatchResponseDto>("/detect/dino/batch", request, ct).ConfigureAwait(false);
+
+    /// <summary>Batch-SAM: mehrere Bilder mit gebatchten Boxen segmentieren.</summary>
+    public async Task<SamBatchResponseDto> SegmentSamBatchAsync(SamBatchRequestDto request, CancellationToken ct = default)
+        => await PostAsync<SamBatchRequestDto, SamBatchResponseDto>("/segment/sam/batch", request, ct).ConfigureAwait(false);
+
     /// <summary>
     /// Export training data to YOLO format.
     /// </summary>

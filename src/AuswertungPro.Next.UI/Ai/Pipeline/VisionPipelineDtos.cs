@@ -437,3 +437,74 @@ public sealed record ParsePdfTableResponse(
     [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs,
     [property: JsonPropertyName("model_used")] string ModelUsed
 );
+
+// ── Batch-DTOs (YOLO / DINO / SAM) ──────────────────────────────────────────
+
+// ── YOLO Batch ──
+
+public sealed record YoloBatchItemDto(
+    [property: JsonPropertyName("image_base64")] string ImageBase64,
+    [property: JsonPropertyName("frame_id")]     string FrameId = ""
+);
+
+public sealed record YoloBatchRequestDto(
+    [property: JsonPropertyName("items")]                List<YoloBatchItemDto> Items,
+    [property: JsonPropertyName("confidence_threshold")] double ConfidenceThreshold = 0.25
+);
+
+public sealed record YoloBatchResultItemDto(
+    [property: JsonPropertyName("frame_id")] string FrameId,
+    [property: JsonPropertyName("result")]   YoloResponse Result
+);
+
+public sealed record YoloBatchResponseDto(
+    [property: JsonPropertyName("results")]                 List<YoloBatchResultItemDto> Results,
+    [property: JsonPropertyName("total_inference_time_ms")] double TotalInferenceTimeMs
+);
+
+// ── DINO Batch ──
+
+public sealed record DinoBatchItemDto(
+    [property: JsonPropertyName("image_base64")] string  ImageBase64,
+    [property: JsonPropertyName("frame_id")]     string  FrameId    = "",
+    [property: JsonPropertyName("text_prompt")]  string? TextPrompt = null
+);
+
+public sealed record DinoBatchRequestDto(
+    [property: JsonPropertyName("items")]          List<DinoBatchItemDto> Items,
+    [property: JsonPropertyName("box_threshold")]  double BoxThreshold  = 0.30,
+    [property: JsonPropertyName("text_threshold")] double TextThreshold = 0.25
+);
+
+public sealed record DinoBatchResultItemDto(
+    [property: JsonPropertyName("frame_id")] string FrameId,
+    [property: JsonPropertyName("result")]   DinoResponse Result
+);
+
+public sealed record DinoBatchResponseDto(
+    [property: JsonPropertyName("results")]                 List<DinoBatchResultItemDto> Results,
+    [property: JsonPropertyName("total_inference_time_ms")] double TotalInferenceTimeMs
+);
+
+// ── SAM Batch ──
+
+public sealed record SamBatchItemDto(
+    [property: JsonPropertyName("image_base64")]   string ImageBase64,
+    [property: JsonPropertyName("bounding_boxes")] List<SamBoundingBox> BoundingBoxes,
+    [property: JsonPropertyName("frame_id")]        string FrameId       = "",
+    [property: JsonPropertyName("pipe_diameter_mm")] int? PipeDiameterMm = null
+);
+
+public sealed record SamBatchRequestDto(
+    [property: JsonPropertyName("items")] List<SamBatchItemDto> Items
+);
+
+public sealed record SamBatchResultItemDto(
+    [property: JsonPropertyName("frame_id")] string FrameId,
+    [property: JsonPropertyName("result")]   SamResponse Result
+);
+
+public sealed record SamBatchResponseDto(
+    [property: JsonPropertyName("results")]                 List<SamBatchResultItemDto> Results,
+    [property: JsonPropertyName("total_inference_time_ms")] double TotalInferenceTimeMs
+);
