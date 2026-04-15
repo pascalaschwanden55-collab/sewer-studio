@@ -6837,42 +6837,39 @@ public partial class PlayerWindow : Window
 
                 if (!mmResult.IsRelevant || !mmResult.HasDetections)
                 {
-                    SetCodingAiState("Kein Schaden erkannt", Color.FromRgb(0x22, 0xC5, 0x5E),
-                        $"YOLO {mmResult.YoloTimeMs:F0}ms | {mmResult.DinoDetections.Count} Detektionen");
+                    // Multi-Model hat nichts gefunden → Qwen-Fallback
                     Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+                    // Weiter zum Qwen-Pfad unten (kein return)
+                }
+                else
+                {
+                    // Multi-Model hat Befunde → rendern und zurueck
+                    SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
+                        $"Schritt 3 von 4: SAM-Masken ({mmResult.DinoDetections.Count} Befunde)", pulse: true);
+
+                    var acceptedIndices = AddMultiModelFindingsAsEvents(mmResult, captureTimestampSec);
+                    ShowMultiModelResults(mmResult, acceptedIndices);
+
+                    int nearCount = _currentMmResult?.QuantifiedMasks.Count ?? 0;
+                    int farCount = _previewMmResult?.QuantifiedMasks.Count ?? 0;
+                    var vtInfo = mmResult.ViewType != null ? $" | Aufnahme: {mmResult.ViewType}" : "";
+                    SetCodingAiState(
+                        nearCount > 0
+                            ? $"{nearCount} Befunde erkannt" + (farCount > 0 ? $" ({farCount} in Tiefe)" : "")
+                            : "Kein Schaden in Reichweite" + (farCount > 0 ? $" ({farCount} in Tiefe)" : ""),
+                        nearCount > 0 ? Color.FromRgb(0x22, 0xC5, 0x5E) : Color.FromRgb(0x94, 0xA3, 0xB8),
+                        $"YOLO {mmResult.YoloTimeMs:F0}ms | DINO {mmResult.DinoTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms{vtInfo}");
+
+                    if (BtnCodingPauseMode.IsChecked == true && nearCount > 0)
+                    {
+                        _player?.SetPause(true);
+                        SetCodingAiState(
+                            $"{nearCount} Befunde — pausiert zum Pruefen",
+                            Color.FromRgb(0x38, 0xBD, 0xF8),
+                            "Delete = Befund loeschen | O = OK | Leertaste = weiter");
+                    }
                     return;
                 }
-
-                SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
-                    $"Schritt 3 von 4: SAM-Masken ({mmResult.DinoDetections.Count} Befunde)", pulse: true);
-
-                // ── Zentrale Filterung: EIN Ort fuer alle Entscheidungen ──
-                // 1. Events erstellen (filtert: VSA-Code, Sperrliste, Kunststoff, Dedup, Zone)
-                // 2. acceptedIndices = nur Masken die ein Event bekommen haben
-                // 3. Rendering: akzeptierte farbig, Rest grau (Vorschau)
-                var acceptedIndices = AddMultiModelFindingsAsEvents(mmResult, captureTimestampSec);
-                ShowMultiModelResults(mmResult, acceptedIndices);
-
-                int nearCount = _currentMmResult?.QuantifiedMasks.Count ?? 0;
-                int farCount = _previewMmResult?.QuantifiedMasks.Count ?? 0;
-                var vtInfo = mmResult.ViewType != null ? $" | Aufnahme: {mmResult.ViewType}" : "";
-                SetCodingAiState(
-                    nearCount > 0
-                        ? $"{nearCount} Befunde erkannt" + (farCount > 0 ? $" ({farCount} in Tiefe)" : "")
-                        : "Kein Schaden in Reichweite" + (farCount > 0 ? $" ({farCount} in Tiefe)" : ""),
-                    nearCount > 0 ? Color.FromRgb(0x22, 0xC5, 0x5E) : Color.FromRgb(0x94, 0xA3, 0xB8),
-                    $"YOLO {mmResult.YoloTimeMs:F0}ms | DINO {mmResult.DinoTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms{vtInfo}");
-
-                // Pausenmodus: nur wenn tatsaechlich nahe Befunde erkannt
-                if (BtnCodingPauseMode.IsChecked == true && nearCount > 0)
-                {
-                    _player?.SetPause(true);
-                    SetCodingAiState(
-                        $"{nearCount} Befunde — pausiert zum Pruefen",
-                        Color.FromRgb(0x38, 0xBD, 0xF8),
-                        "Delete = Befund loeschen | O = OK | Leertaste = weiter");
-                }
-                return;
             }
 
             // ── Qwen-only Fallback-Pfad ──
