@@ -62,9 +62,14 @@ public sealed class EnhancedVisionAnalysisService
           "type": "string",
           "enum": ["gut", "mittel", "schlecht"]
         },
-        "is_empty_frame": { "type": "boolean" }
+        "is_empty_frame": { "type": "boolean" },
+        "view_type": {
+          "type": "string",
+          "enum": ["axial", "nahaufnahme", "schwenk", "schacht"],
+          "description": "Aufnahmetyp: axial=Axialsicht (normal), nahaufnahme=Kamera nah am Schaden, schwenk=Kamera schwenkt, schacht=Schachtaufnahme"
+        }
       },
-      "required": ["meter", "findings", "image_quality", "is_empty_frame"]
+      "required": ["meter", "findings", "image_quality", "is_empty_frame", "view_type"]
     }
     """).RootElement.Clone();
 
@@ -73,6 +78,84 @@ public sealed class EnhancedVisionAnalysisService
     private static readonly string DamageClassesPrompt = """
 VSA/EN 13508-2 CODES fuer Kanalinspektion (Haltungen).
 Melde ALLES was du siehst. Jeder Befund braucht vsa_code_hint, severity, position_clock.
+
+=== AUFNAHMETECHNIK — Bildtyp erkennen (ZUERST pruefen!) ===
+Bestimme ZUERST den view_type, BEVOR du Schaeden codierst:
+
+AXIALSICHT (view_type="axial") — Normalbild fuer Codierung:
+- Kamera blickt GERADEAUS in Rohrachse (Fluchtpunkt in Bildmitte)
+- Rohrwand ringfoermig um Bildrand sichtbar
+- OSD-Meterstand ist KORREKT und entspricht der Kameraposition
+- → Schaeden CODIEREN, dies ist das massgebende Bild
+
+NAHAUFNAHME (view_type="nahaufnahme") — Zusatzbild, NICHT codieren:
+- Kamera ist NAH an der Rohrwand herangefahren oder geschwenkt
+- Schaden fuellt GROSSFLÄCHIG das Bild (>50% der Bildflaeche)
+- Rohrquerschnitt NICHT mehr ringfoermig sichtbar
+- OSD-Meterstand stimmt NICHT mit der Schadensposition ueberein
+- → findings=[], is_empty_frame=true (Nahaufnahme ist NUR ergaenzend)
+
+SCHWENK (view_type="schwenk") — Kamera dreht, NICHT codieren:
+- Bild ist VERZERRT oder schraeg, Rohr nicht in Achse
+- Kamerabewegung sichtbar (Verwischung, schraeger Blickwinkel)
+- Rohrwand nur auf einer Seite sichtbar, andere Seite fehlt
+- → findings=[], is_empty_frame=true (waehrend Schwenk NICHT codieren)
+
+SCHACHTAUFNAHME (view_type="schacht") — Kamera noch im Schacht, NICHT Rohr codieren:
+- Schachtwand oder Schachtbauwerk sichtbar (Mauerwerk, Beton, Leiter, Gerinne)
+- Typisch am ANFANG der Inspektion: Kamera faehrt durch Schacht ins Rohr
+- Verbindung Rohr-Schacht sichtbar, Rohroeffnung als dunkler/heller Kreis
+- WICHTIG: Was du hier siehst ist SCHACHT, nicht Rohr!
+  → Schachtmauerwerk ist KEIN Oberflaechenschaden (BAF)!
+  → Schachtwasser ist KEINE Infiltration (BBF)!
+  → Schachtstufen/Leiter sind KEIN Hindernis (BBE)!
+- → NUR BCD (Rohranfang) oder BCE (Rohrende) codieren, sonst findings=[]
+- Die Kamera ist erst IM ROHR wenn:
+  → Rohrwand RINGFOERMIG das Bild umgibt
+  → Fahrwagen/Kamera KOMPLETT im Rohr ist
+  → OSD-Meterstand bei ~0.00m oder hoeher steht
+
+INSPEKTIONS-SEQUENZ (typischer Ablauf):
+1. Kamera im Schacht → view_type="schacht", BCD bei 0.00m
+2. Kamera faehrt ins Rohr → view_type="axial", Schaeden codieren
+3. Bei Schaden: Axialsicht-Foto, dann evtl. Nahaufnahme → view_type="nahaufnahme"
+4. Weiterfahrt in Axialsicht → view_type="axial"
+5. Rohrende erreicht → view_type="schacht", BCE codieren
+
+TIEFENFILTER — Was die KI NICHT codieren darf:
+- Die Kamera sieht 5-10m voraus im Rohr
+- Schaeden am FLUCHTPUNKT (Rohrmitte im Bild, weit weg) sind NICHT codierbar
+- NUR Schaeden im NAHBEREICH analysieren (Rohrwand nahe der Kamera)
+- Der Inspekteur codiert erst wenn er VOR ORT ist, nicht aus der Ferne
+
+STRECKENSCHADEN (ueber >1 Meter):
+- Gleicher Schaden ueber mehrere aufeinanderfolgende Frames = EIN Streckenschaden
+- NICHT als separate Punktschaeden codieren
+- Typische Streckenschaeden: Korrosion (BAFCE), Ablagerung (BBC), Infiltration (BBFA), Verformung (BAA)
+
+ROHRVERBINDUNGEN:
+- Schaeden die an einer Muffe/Rohrverbindung auftreten: Char2="A" setzen
+- BAJ (Verschobene Rohrverbindung): Uhrlage = Versatzrichtung
+  BAJA=breit (Abstand mm), BAJB=versetzt (Versatz mm), BAJC=Knick (Winkel °)
+  Breite Rohrverbindungen <15mm NICHT aufzeichnen
+- BAJC + BDD = Sank/Unterbogen als Streckenfeststellung
+
+BAA VERFORMUNG — Quantifizierung:
+- Prozentuale Reduzierung gegenueber Ursprungsabmessung
+- Beispiel: DN300, lichte Hoehe 240mm → Deformation = 20%
+- BAAA=vertikal deformiert, BAAB=horizontal deformiert
+- Bei biegeweichen Rohren (PE/PVC): zuerst Risse SEPARAT beschreiben
+- Druckstellen bei biegeweichen Rohren → BAFK
+
+ABBRUCH-CODIERUNG (BDC):
+- BDCAA = Hindernis, Inspektionsziel erreicht
+- BDCAB = Hindernis, Auftraggeber verzichtet auf weitere Untersuchung
+- BDCAZ = Abbruch Inspektion: Hindernis
+- BDCAC = Hindernis, Gegenseite erreicht
+- BDCAD = Hindernis, Gegenseite nicht erreicht
+- BDB B = Inspektion erst nach Reinigung moeglich
+- BDB C = Inspektion erfolgt zu einem spaeteren Zeitpunkt
+- BDB F = Inspektion erfolgt von der Gegenseite
 
 === BA: BAULICHE SCHAEDEN (severity 2-5) ===
 BAA  Deformation (BAAA=vertikal, BAAB=horizontal) — Uhrlage + Querschnittsverringerung %
@@ -489,8 +572,14 @@ WICHTIG: Das label-Feld ist IMMER ein VSA-Code, z.B.:
 - Bogen nach links → label="BCCAY"
 
 Antworte AUSSCHLIESSLICH auf Deutsch mit gueltigem JSON gemaess Schema.
-Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
-Wenn du einen Schaden siehst, gib IMMER mindestens einen Finding-Eintrag zurueck.
+Falls kein Schaden UND kein Steuercode erkennbar: findings=[], is_empty_frame=true.
+
+PFLICHT-MELDUNGEN (IMMER melden wenn sichtbar, auch ohne Schaden!):
+- Rohroeffnung von vorne sichtbar (rundes Loch, Rohr dahinter) → label="BCD", severity=1
+- Rohrende erreicht (Schacht sichtbar am Ende) → label="BCE", severity=1
+- Richtungsaenderung/Bogen im Rohr → label="BCC", severity=1
+- Seitliche Oeffnung in der Rohrwand → label="BCA", severity=1
+Diese BC-Codes sind KEINE Schaeden, muessen aber IMMER gemeldet werden!
 """;
     }
 
@@ -499,13 +588,15 @@ Wenn du einen Schaden siehst, gib IMMER mindestens einen Finding-Eintrag zurueck
         return $"""
 Du analysierst einen Frame aus einem Kanalinspektion-Video (TV-Inspektion Abwasserkanal).
 
-AUFGABEN:
-1. Lies den METERSTAND aus dem OSD (On-Screen Display) – typisch oben oder unten im Bild (z.B. "18.40 m").
-2. Erkenne das ROHRMATERIAL und den DURCHMESSER falls sichtbar.
-3. Erkenne ALLE sichtbaren Schäden/Anomalien mit Schweregrad 1-5 (1=kaum, 5=sehr schwer).
-4. Gib für jeden Schaden die Uhrzeitlage an (z.B. "12:00" = Scheitel, "6:00" = Sohle).
-5. Beurteile die Bildqualität.
-6. Schätze, wenn erkennbar, Schadensmaße: Höhe (mm), Breite (mm), Einragungsgrad (%), Querschnittsverringerung (%), Durchmesserverringerung (mm).
+AUFGABEN (in dieser Reihenfolge!):
+1. Bestimme den AUFNAHMETYP (view_type): axial, nahaufnahme, schwenk oder schacht.
+   Bei nahaufnahme oder schwenk: findings=[], is_empty_frame=true (NICHT codieren!).
+2. Lies den METERSTAND aus dem OSD (On-Screen Display) – typisch oben oder unten im Bild (z.B. "18.40 m").
+3. Erkenne das ROHRMATERIAL und den DURCHMESSER falls sichtbar.
+4. Erkenne ALLE sichtbaren Schäden/Anomalien mit Schweregrad 1-5 (1=kaum, 5=sehr schwer).
+5. Gib für jeden Schaden die Uhrzeitlage an (z.B. "12:00" = Scheitel, "6:00" = Sohle).
+6. Beurteile die Bildqualität.
+7. Schätze, wenn erkennbar, Schadensmaße: Höhe (mm), Breite (mm), Einragungsgrad (%), Querschnittsverringerung (%), Durchmesserverringerung (mm).
 
 {DamageClassesPrompt}
 
@@ -517,7 +608,15 @@ SCHWEREGRAD-SKALA (entspricht VSA Zustandsklasse):
 5 = Kritischer Schaden, Sofortmassnahme
 WICHTIG: Das label-Feld ist IMMER ein VSA-Code (z.B. "BABBA", "BCAAA", "BBFA"). KEIN Freitext.
 Antworte AUSSCHLIESSLICH auf Deutsch mit gueltigem JSON gemaess Schema.
-Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
+
+KRITISCH — PFLICHT-MELDUNGEN (IMMER melden, severity=1):
+- Runde Rohroeffnung sichtbar → label="BCD" (Rohranfang)
+- Rohrende/Schacht am Ende → label="BCE" (Rohrende)
+- Richtungsaenderung/Kurve → label="BCC" (Bogen)
+- Seitliche Oeffnung in Rohrwand → label="BCA" (Anschluss)
+Diese sind KEINE Schaeden, muessen aber IMMER als Finding gemeldet werden!
+Nur wenn WIRKLICH nichts sichtbar ist: findings=[], is_empty_frame=true.
+WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findings verworfen.
 """;
     }
 
@@ -574,14 +673,42 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
             })
             .ToList();
 
+        // Aufnahmetyp normalisieren
+        var viewType = (dto.ViewType ?? "axial").ToLowerInvariant() switch
+        {
+            "nahaufnahme" => "nahaufnahme",
+            "schwenk" => "schwenk",
+            "schacht" => "schacht",
+            _ => "axial"
+        };
+
+        // Bei Nahaufnahme/Schwenk: Findings verwerfen (nicht codierbar)
+        if (viewType is "nahaufnahme" or "schwenk")
+        {
+            findings = new List<EnhancedFinding>();
+        }
+
+        // Bei Schachtaufnahme: nur Steuercodes (BCD, BCE, BDB) durchlassen
+        if (viewType is "schacht")
+        {
+            findings = findings
+                .Where(f =>
+                {
+                    var code = (f.VsaCodeHint ?? f.Label).ToUpperInvariant();
+                    return code.StartsWith("BCD") || code.StartsWith("BCE") || code.StartsWith("BDB");
+                })
+                .ToList();
+        }
+
         return new EnhancedFrameAnalysis(
             Meter: dto.Meter,
             PipeMaterial: dto.PipeMaterial ?? "unbekannt",
             PipeDiameterMm: dto.PipeDiameterMm,
             Findings: findings,
             ImageQuality: dto.ImageQuality ?? "mittel",
-            IsEmptyFrame: dto.IsEmptyFrame,
-            Error: null);
+            IsEmptyFrame: dto.IsEmptyFrame || viewType is "nahaufnahme" or "schwenk",
+            Error: null,
+            ViewType: viewType);
     }
 
     /// <summary>
@@ -826,8 +953,8 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
     }
 
     /// <summary>
-    /// Analysiert mit dem Reference-Modell (32B, hybrid GPU/CPU mit num_gpu=10).
-    /// Kein VRAM-Swap noetig — 32B laeuft permanent neben 8B.
+    /// Analysiert mit dem Reference-Modell (32B, komplett RAM mit num_gpu=0).
+    /// Kein VRAM-Konflikt — 32B laeuft permanent im RAM neben 8B auf GPU.
     /// </summary>
     private async Task<EnhancedFrameAnalysis> AnalyzeWithModelAsync(
         string model,
@@ -837,8 +964,7 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         var messages = BuildMessages(framePngBase64);
         try
         {
-            // num_gpu=10: 32B-Modell laeuft hybrid (10 Layers GPU, Rest CPU).
-            // Braucht kein VRAM-Swap — 32B bleibt permanent neben 8B geladen.
+            // num_gpu=10: hybrid GPU/RAM (~9s statt 28s, CPU-Last sinkt deutlich)
             var referenceOptions = new Dictionary<string, object> { ["num_gpu"] = 10 };
             var dto = await _client.ChatStructuredWithOptionsAsync<EnhancedVisionDto>(
                 model: model,
@@ -941,7 +1067,8 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         [property: JsonPropertyName("pipe_diameter_mm")] int? PipeDiameterMm,
         [property: JsonPropertyName("findings")] IReadOnlyList<EnhancedFindingDto>? Findings,
         [property: JsonPropertyName("image_quality")] string? ImageQuality,
-        [property: JsonPropertyName("is_empty_frame")] bool IsEmptyFrame);
+        [property: JsonPropertyName("is_empty_frame")] bool IsEmptyFrame,
+        [property: JsonPropertyName("view_type")] string? ViewType);
 
     private sealed record EnhancedFindingDto(
         [property: JsonPropertyName("label")] string Label,
@@ -966,13 +1093,20 @@ public sealed record EnhancedFrameAnalysis(
     IReadOnlyList<EnhancedFinding> Findings,
     string ImageQuality,
     bool IsEmptyFrame,
-    string? Error)
+    string? Error,
+    string ViewType = "axial")
 {
     public bool HasFindings => Findings.Count > 0;
 
+    /// <summary>True wenn Axialsicht — nur dann sind Findings codierbar.</summary>
+    public bool IsAxialView => ViewType == "axial" || ViewType == "schacht";
+
+    /// <summary>True wenn Nahaufnahme oder Schwenk — Findings ignorieren.</summary>
+    public bool IsNonCodableView => ViewType == "nahaufnahme" || ViewType == "schwenk";
+
     public static EnhancedFrameAnalysis Empty(string? error = null) =>
         new(null, "unbekannt", null,
-            Array.Empty<EnhancedFinding>(), "schlecht", true, error);
+            Array.Empty<EnhancedFinding>(), "schlecht", true, error, "axial");
 }
 
 public sealed record EnhancedFinding(
