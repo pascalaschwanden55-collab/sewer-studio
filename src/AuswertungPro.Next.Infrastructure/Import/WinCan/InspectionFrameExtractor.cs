@@ -10,8 +10,8 @@ namespace AuswertungPro.Next.Infrastructure.Import.WinCan;
 /// </summary>
 public static class InspectionFrameExtractor
 {
-    // Offset-Reihe fuer das Kontextfenster um jeden Event
-    private static readonly int[] KontextOffsets = [-2, -1, 0, +1, +2];
+    // Offset-Reihe fuer das Kontextfenster um jeden Event (t-2s, t, t+2s)
+    private static readonly int[] KontextOffsets = [-2, 0, +2];
 
     /// <summary>
     /// Extrahiert alle Trainings-Frames fuer ein InspectionProfile.
