@@ -4000,6 +4000,8 @@ public partial class PlayerWindow : Window
                          (tag == "tool_badge" ||
                           tag == "overlay_preview" ||
                           tag == "overlay_measure" ||
+                          tag.StartsWith("SamMask_") ||
+                          tag.StartsWith("SamLabel_") ||
                           (clearManualOverlay && tag == "overlay_manual")))
             .ToList();
 
