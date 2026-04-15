@@ -6834,17 +6834,6 @@ public partial class PlayerWindow : Window
                     return;
                 }
 
-                // ViewType-Modell hat Schacht erkannt → uebersprungen
-                if (mmResult.ViewType == "schacht")
-                {
-                    SetCodingAiState("Schacht erkannt — uebersprungen",
-                        Color.FromRgb(0x94, 0xA3, 0xB8),
-                        "Aufnahmetechnik-KI: Kamera im Schacht");
-                    Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
-                    DetectionCanvas.Children.Clear();
-                    return;
-                }
-
                 if (!mmResult.IsRelevant || !mmResult.HasDetections)
                 {
                     SetCodingAiState("Kein Schaden erkannt", Color.FromRgb(0x22, 0xC5, 0x5E),
@@ -6865,12 +6854,13 @@ public partial class PlayerWindow : Window
 
                 int nearCount = _currentMmResult?.QuantifiedMasks.Count ?? 0;
                 int farCount = _previewMmResult?.QuantifiedMasks.Count ?? 0;
+                var vtInfo = mmResult.ViewType != null ? $" | Aufnahme: {mmResult.ViewType}" : "";
                 SetCodingAiState(
                     nearCount > 0
                         ? $"{nearCount} Befunde erkannt" + (farCount > 0 ? $" ({farCount} in Tiefe)" : "")
                         : "Kein Schaden in Reichweite" + (farCount > 0 ? $" ({farCount} in Tiefe)" : ""),
                     nearCount > 0 ? Color.FromRgb(0x22, 0xC5, 0x5E) : Color.FromRgb(0x94, 0xA3, 0xB8),
-                    $"YOLO {mmResult.YoloTimeMs:F0}ms | DINO {mmResult.DinoTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms");
+                    $"YOLO {mmResult.YoloTimeMs:F0}ms | DINO {mmResult.DinoTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms{vtInfo}");
 
                 // Pausenmodus: nur wenn tatsaechlich nahe Befunde erkannt
                 if (BtnCodingPauseMode.IsChecked == true && nearCount > 0)

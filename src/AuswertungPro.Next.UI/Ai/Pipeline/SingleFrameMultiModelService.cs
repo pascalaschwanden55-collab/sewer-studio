@@ -70,24 +70,16 @@ public sealed class SingleFrameMultiModelService
         }
         catch { /* Sidecar nicht verfuegbar → weiter ohne Rohrkreis */ }
 
-        // Aufnahmetechnik-Klassifikation (~0.1ms) — schacht/uebergang ueberspringen
+        // Aufnahmetechnik-Klassifikation (~0.1ms) — ViewType als Info mitgeben
+        string? detectedViewType = null;
         try
         {
             var vtResp = await _client.ClassifyViewTypeAsync(new ViewTypeRequest(b64), ct);
             var vt = vtResp.Prediction;
-            if (vt.ViewType is "schacht" && vt.Confidence > 0.7)
-            {
-                return new SingleFrameResult(
-                    IsRelevant: false,
-                    DinoDetections: Array.Empty<DinoDetectionDto>(),
-                    SamResponse: null,
-                    QuantifiedMasks: Array.Empty<MaskQuantificationService.QuantifiedMask>(),
-                    YoloTimeMs: 0, DinoTimeMs: 0, SamTimeMs: 0,
-                    Error: null)
-                { ViewType = "schacht" };
-            }
+            if (vt.Confidence > 0.7)
+                detectedViewType = vt.ViewType;
         }
-        catch { /* ViewType-Modell nicht verfuegbar → weiter ohne Check */ }
+        catch { /* ViewType-Modell nicht verfuegbar → weiter ohne */ }
 
         try
         {
@@ -104,7 +96,8 @@ public sealed class SingleFrameMultiModelService
                     SamResponse: null,
                     QuantifiedMasks: Array.Empty<MaskQuantificationService.QuantifiedMask>(),
                     YoloTimeMs: yoloMs, DinoTimeMs: 0, SamTimeMs: 0,
-                    Error: null);
+                    Error: null)
+                { ViewType = detectedViewType };
             }
 
             // 2. Florence-2 Open-Vocabulary Detection
@@ -125,7 +118,8 @@ public sealed class SingleFrameMultiModelService
                     SamResponse: null,
                     QuantifiedMasks: Array.Empty<MaskQuantificationService.QuantifiedMask>(),
                     YoloTimeMs: yoloMs, DinoTimeMs: dinoMs, SamTimeMs: 0,
-                    Error: null);
+                    Error: null)
+                { ViewType = detectedViewType };
             }
 
             // 3. SAM 2 Segmentation (nur Nahbereich-Boxen)
@@ -152,7 +146,8 @@ public sealed class SingleFrameMultiModelService
                 SamResponse: samResp,
                 QuantifiedMasks: quantified,
                 YoloTimeMs: yoloMs, DinoTimeMs: dinoMs, SamTimeMs: samMs,
-                Error: null);
+                Error: null)
+            { ViewType = detectedViewType };
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
