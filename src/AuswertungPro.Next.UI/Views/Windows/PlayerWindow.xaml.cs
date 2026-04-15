@@ -2114,12 +2114,11 @@ public partial class PlayerWindow : Window
             double maxX = overlay.Points.Max(p => p.X) * imgW;
             double maxY = overlay.Points.Max(p => p.Y) * imgH;
 
-            // Punkt-Prompt (Mittelpunkt der Markierung) + BBox als Hint
-            var pointPrompts = new[] { new Ai.Pipeline.SamPointPrompt(normX * imgW, normY * imgH, 1) };
+            // Nur BBox als Prompt — kein Punkt-Prompt, damit SAM innerhalb der Box bleibt
             var boxes = new[] { new Ai.Pipeline.SamBoundingBox(minX, minY, maxX, maxY, "mark", 1.0) };
 
             int dn = _codingOverlayService?.Calibration?.NominalDiameterMm ?? 300;
-            var samReq = new Ai.Pipeline.SamRequest(b64, boxes, pointPrompts, dn);
+            var samReq = new Ai.Pipeline.SamRequest(b64, boxes, PipeDiameterMm: dn);
             var samResp = await _codingVisionClient.SegmentSamAsync(samReq);
 
             if (samResp?.Masks.Count > 0)
