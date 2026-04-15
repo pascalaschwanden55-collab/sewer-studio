@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using AuswertungPro.Next.Infrastructure.Import.WinCan;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
@@ -366,5 +367,51 @@ public class InspectionProfileExtractorTests
         Assert.False(flags.NonMonotonicTime);
         Assert.False(flags.MissingVideo);
         Assert.False(flags.FewEvents);
+    }
+
+    // =========================================================================
+    // Integrationstest — echte DB3 (nur lokal, Skip auf CI)
+    // =========================================================================
+
+    private const string TestDb3 = @"G:\GEP_Altdorf_2025_Zone_1.15_29261_925_Export\GEP_Altdorf_2025_Zone_1.15_29261_925_Export\DISK1\Projects\GEP_Altdorf_2025_Zone_1.15_29261_925\DB\GEP_Altdorf_2025_Zone_1.15_29261_925.db3";
+
+    [Fact]
+    public void Integration_ExtractFromDb3_EchterExport()
+    {
+        if (!System.IO.File.Exists(TestDb3))
+        {
+            // Skip auf CI / anderer Rechner
+            return;
+        }
+
+        var profiles = InspectionProfileExtractor.ExtractFromDb3(TestDb3);
+
+        // Mindestens 30 Profile (92 Haltungen, nicht alle haben TimeCtr)
+        Assert.True(profiles.Count >= 30, $"Nur {profiles.Count} Profile extrahiert");
+
+        // Bekannte Haltung pruefen
+        var p = profiles.FirstOrDefault(x => x.HaltungKey == "80638-80631")
+             ?? profiles[0]; // Fallback
+        Assert.True(p.Ereignisse.Count >= 2, $"Nur {p.Ereignisse.Count} Events");
+        Assert.True(p.Segmente.Count >= 1, $"Keine Segmente");
+        Assert.NotNull(p.Statistik.FahrgeschwindigkeitMS);
+        Assert.True(p.Statistik.FahrgeschwindigkeitMS > 0);
+
+        // BCD muss dabei sein
+        Assert.Contains(p.Ereignisse, e => e.CodeMain == "BCD");
+
+        // Profile speichern
+        var outDir = @"C:\KI_BRAIN\inspection_profiles";
+        InspectionProfileExtractor.SaveProfiles(profiles, outDir);
+        Assert.True(System.IO.Directory.Exists(outDir));
+
+        // Aggregieren
+        var patterns = InspectionPatternAggregator.Aggregate(profiles);
+        InspectionPatternAggregator.SavePatterns(patterns, @"C:\KI_BRAIN\inspection_patterns.json");
+
+        Assert.True(patterns.AnzahlHaltungen >= 30);
+        Assert.True(patterns.MedianFahrgeschwindigkeit > 0);
+        Assert.True(patterns.UebergangsMatrix.Count > 0);
+        Assert.True(patterns.SequenzRegeln.Count >= 2);
     }
 }
