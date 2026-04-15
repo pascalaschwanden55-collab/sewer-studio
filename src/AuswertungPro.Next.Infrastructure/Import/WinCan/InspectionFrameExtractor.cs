@@ -208,6 +208,10 @@ public static class InspectionFrameExtractor
         // Frame bereits vorhanden → ueberspringen
         if (File.Exists(outputPng)) return true;
 
+        // Ausgabe-Ordner sicherstellen
+        var dir = Path.GetDirectoryName(outputPng);
+        if (dir != null) Directory.CreateDirectory(dir);
+
         try
         {
             var args = $"-ss {sekunden.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)} " +
@@ -225,7 +229,23 @@ public static class InspectionFrameExtractor
             using var prozess = Process.Start(psi);
             if (prozess == null) return false;
 
-            await prozess.WaitForExitAsync(ct);
+            // stderr drainieren damit ffmpeg nicht blockiert
+            _ = prozess.StandardError.ReadToEndAsync();
+            _ = prozess.StandardOutput.ReadToEndAsync();
+
+            // Timeout: 30s pro Frame
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
+            try
+            {
+                await prozess.WaitForExitAsync(linked.Token);
+            }
+            catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+            {
+                try { prozess.Kill(); } catch { }
+                return false;
+            }
+
             return prozess.ExitCode == 0 && File.Exists(outputPng);
         }
         catch (OperationCanceledException)
