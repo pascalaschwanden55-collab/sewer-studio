@@ -6835,9 +6835,9 @@ public partial class PlayerWindow : Window
                     return;
                 }
 
-                if (!mmResult.IsRelevant || !mmResult.HasDetections)
+                if (!mmResult.HasDetections)
                 {
-                    // Multi-Model hat nichts gefunden → Qwen-Fallback
+                    // DINO hat nichts gefunden → Qwen-Fallback mit SAM-Nachsegmentierung
                     Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
                     // Weiter zum Qwen-Pfad unten (kein return)
                 }
@@ -6904,6 +6904,66 @@ public partial class PlayerWindow : Window
                 }
 
                 ShowCodingAiResults(result);
+
+                // SAM-Nachsegmentierung: Qwen hat Findings → SAM fuer Masken aufrufen
+                if (result.Findings.Count > 0 && _codingVisionClient != null && pngBytes != null)
+                {
+                    try
+                    {
+                        var samB64 = Convert.ToBase64String(pngBytes);
+                        int imgW = 640, imgH = 480;
+
+                        // Findings mit BBox oder Uhrlage → SAM-Boxen
+                        var samBoxes = new List<Ai.Pipeline.SamBoundingBox>();
+                        foreach (var f in result.Findings)
+                        {
+                            if (f.BboxX1.HasValue && f.BboxY1.HasValue && f.BboxX2.HasValue && f.BboxY2.HasValue)
+                            {
+                                // Normalisierte BBox → Pixel
+                                samBoxes.Add(new Ai.Pipeline.SamBoundingBox(
+                                    f.BboxX1.Value * imgW, f.BboxY1.Value * imgH,
+                                    f.BboxX2.Value * imgW, f.BboxY2.Value * imgH,
+                                    f.Label, 0.8));
+                            }
+                            else
+                            {
+                                // Keine BBox → zentrierte Box (50% des Bildes)
+                                samBoxes.Add(new Ai.Pipeline.SamBoundingBox(
+                                    imgW * 0.15, imgH * 0.15,
+                                    imgW * 0.85, imgH * 0.85,
+                                    f.Label, 0.5));
+                            }
+                        }
+
+                        if (samBoxes.Count > 0)
+                        {
+                            int dn = _codingOverlayService?.Calibration?.NominalDiameterMm ?? 300;
+                            var samReq = new Ai.Pipeline.SamRequest(samB64, samBoxes, PipeDiameterMm: dn);
+                            var samResp = await _codingVisionClient.SegmentSamAsync(samReq);
+
+                            if (samResp?.Masks.Count > 0)
+                            {
+                                Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+                                var quantified = new List<Ai.Pipeline.MaskQuantificationService.QuantifiedMask>();
+                                var cal = _codingOverlayService?.Calibration;
+                                foreach (var mask in samResp.Masks)
+                                {
+                                    var q = cal != null
+                                        ? Ai.Pipeline.MaskQuantificationService.Quantify(mask, samResp.ImageWidth, samResp.ImageHeight, dn, cal)
+                                        : Ai.Pipeline.MaskQuantificationService.Quantify(mask, samResp.ImageWidth, samResp.ImageHeight, dn);
+                                    quantified.Add(q);
+                                }
+                                Ai.Pipeline.SamMaskRenderer.RenderMasks(
+                                    CodingOverlayCanvas, samResp, quantified,
+                                    CodingOverlayCanvas.ActualWidth, CodingOverlayCanvas.ActualHeight);
+                            }
+                        }
+                    }
+                    catch (Exception samEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Qwen→SAM] {samEx.Message}");
+                    }
+                }
             }
         }
         catch (OperationCanceledException) { }
