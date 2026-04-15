@@ -65,8 +65,9 @@ def detect_dino(image_b64: str) -> list[dict]:
     """DINO Open-Vocabulary Detection ueber Sidecar."""
     resp = requests.post(f"{SIDECAR_URL}/detect/dino", json={
         "image_base64": image_b64,
-        "box_threshold": 0.25,
-        "text_threshold": 0.20,
+        "text_prompt": "crack. fracture. root. deposit. infiltration. joint. deformation. corrosion. connection. obstruction. damage.",
+        "box_threshold": 0.20,
+        "text_threshold": 0.15,
     }, timeout=30)
     resp.raise_for_status()
     return resp.json().get("detections", [])
