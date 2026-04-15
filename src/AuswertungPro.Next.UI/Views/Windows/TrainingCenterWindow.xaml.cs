@@ -1102,10 +1102,32 @@ public partial class TrainingCenterWindow : Window
             }
         }
 
-        // Frame-Index speichern
+        // Frame-Index kumulieren (bestehende laden + neue dazufuegen)
         var indexPath = System.IO.Path.Combine(framesDir, "_frame_index.json");
+        var existingFrames = new List<Infrastructure.Import.WinCan.ExtractedFrame>();
+        if (System.IO.File.Exists(indexPath))
+        {
+            try
+            {
+                var json = await System.IO.File.ReadAllTextAsync(indexPath);
+                var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                existingFrames = System.Text.Json.JsonSerializer.Deserialize<List<Infrastructure.Import.WinCan.ExtractedFrame>>(json, opts)
+                    ?? new();
+            }
+            catch { /* Korrupter Index → neu erstellen */ }
+        }
+
+        // Duplikate entfernen (gleicher Pfad = gleicher Frame)
+        var existingPaths = new HashSet<string>(existingFrames.Select(f => f.PngPfad), StringComparer.OrdinalIgnoreCase);
+        var newFrames = allFrames.Where(f => !existingPaths.Contains(f.PngPfad)).ToList();
+        existingFrames.AddRange(newFrames);
+
+        Vm.AppendToLogText($"  Index: {newFrames.Count} neue + {existingPaths.Count} bestehende = {existingFrames.Count} total\n");
+
         await System.Threading.Tasks.Task.Run(() =>
-            Infrastructure.Import.WinCan.InspectionFrameExtractor.SaveFrameIndex(allFrames, indexPath));
+            Infrastructure.Import.WinCan.InspectionFrameExtractor.SaveFrameIndex(existingFrames, indexPath));
+
+        allFrames = existingFrames;
 
         // Zusammenfassung
         int refFrames = allFrames.Count(f => f.IsReferenceFrame);
