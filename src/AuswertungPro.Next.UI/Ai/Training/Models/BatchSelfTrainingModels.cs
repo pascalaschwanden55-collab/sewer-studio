@@ -1,6 +1,7 @@
 // AuswertungPro – Video-Selbsttraining: Voll-automatischer Batch-Betrieb
 using System;
 using System.Collections.Generic;
+using AuswertungPro.Next.UI.Ai.Shared;
 
 namespace AuswertungPro.Next.UI.Ai.Training.Models;
 
@@ -14,16 +15,16 @@ public sealed class BatchSelfTrainingRequest
     public bool RecurseSubdirectories { get; init; } = true;
 
     /// <summary>Frame-Abstand in Sekunden fuer den Blinddurchlauf.
-    /// 3.0s = guter Kompromiss (Kamera bewegt sich ~1.5m in 3s, Schaeden sind laenger sichtbar).
-    /// 1.5s = genauer aber doppelt so lang.</summary>
-    public double FrameStepSeconds { get; init; } = 3.0;
+    /// 2.0s = erhoehter Durchsatz bei ausreichend GPU-Leistung (RTX 5090).
+    /// Bei 0.055 m/s Fahrgeschwindigkeit: alle ~11cm ein Frame.</summary>
+    public double FrameStepSeconds { get; init; } = 2.0;
 
     /// <summary>
     /// Meter-Toleranz fuer Zuordnung KI ↔ Protokoll.
     /// In realen Kanalvideos ist die OSD-/Meter-Zuordnung oft verrauscht, daher
     /// konservativ grosszuegiger als beim Benchmark.
     /// </summary>
-    public double MeterTolerance { get; init; } = 1.5;
+    public double MeterTolerance { get; init; } = MeterTolerances.BatchProcessing;
 
     /// <summary>
     /// Treffer (KI + Protokoll stimmen ueberein) automatisch in KB uebernehmen?
@@ -33,9 +34,10 @@ public sealed class BatchSelfTrainingRequest
 
     /// <summary>
     /// Protokoll-Korrekturen (KI lag falsch, Protokoll hat recht) automatisch in KB?
-    /// Default: true — das Protokoll ist die Ground-Truth.
+    /// Default: false — PDF-OCR hat ~5-8% Fehler, blindes Uebernehmen vergiftet die KB.
+    /// Korrekturen muessen manuell im Review bestaetigt werden.
     /// </summary>
-    public bool AutoApproveCorrections { get; init; } = true;
+    public bool AutoApproveCorrections { get; init; } = false;
 
     /// <summary>
     /// False Positives (KI meldet etwas das nicht im Protokoll steht) verwerfen?
@@ -54,6 +56,14 @@ public sealed class BatchSelfTrainingRequest
 
     /// <summary>Maximale Anzahl Haltungen (0 = unbegrenzt). Fuer Tests nützlich.</summary>
     public int MaxHaltungen { get; init; } = 0;
+
+    /// <summary>
+    /// Anzahl parallel verarbeiteter Haltungen.
+    /// Jede Haltung bekommt ihre eigene Pipeline-Instanz (Thread-Safe).
+    /// Default: aus TrainingCenterSettings.CaseParallelism (VRAM-adaptiv).
+    /// Env: SEWERSTUDIO_SELFTRAIN_CASE_PARALLELISM
+    /// </summary>
+    public int MaxParallelHaltungen { get; init; } = new TrainingCenterSettings().CaseParallelism;
 }
 
 /// <summary>Fortschrittsmeldung waehrend des Batch-Durchlaufs.</summary>

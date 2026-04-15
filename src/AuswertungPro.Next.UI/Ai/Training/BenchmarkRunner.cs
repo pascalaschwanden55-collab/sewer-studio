@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.UI.Ai.Shared;
 using AuswertungPro.Next.UI.Ai.Training.Models;
 using Microsoft.Extensions.Logging;
 
@@ -79,8 +80,8 @@ public sealed class BenchmarkRunner
                     ProtocolSourceType = h.SourceType,
                     Rohrmaterial = h.Rohrmaterial,
                     NennweiteMm = h.NennweiteMm,
-                    FrameStepSeconds = 1.5,
-                    MeterTolerance = 0.5
+                    FrameStepSeconds = 2.0,
+                    MeterTolerance = MeterTolerances.Benchmark
                 };
 
                 var result = await _orchestrator.RunAsync(request, protocol, ct: ct).ConfigureAwait(false);

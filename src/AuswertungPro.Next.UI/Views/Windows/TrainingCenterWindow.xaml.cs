@@ -13,6 +13,7 @@ using AuswertungPro.Next.UI.Ai.Teacher;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
+using Infrastructure = AuswertungPro.Next.Infrastructure;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -581,6 +582,19 @@ public partial class TrainingCenterWindow : Window
         var metricsStore = new BenchmarkMetricsStore();
         var meterTimeline = new Ai.Training.MeterTimelineService(cfg);
         var orchestrator = new Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
+
+        // V4.1: Batch-Pipeline (YOLO Batch → Filter → Qwen ×6 parallel)
+        if (sp.Sidecar.IsAvailable)
+        {
+            var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+            var sidecarClient = new Ai.Pipeline.VisionPipelineClient(sp.PipelineCfg.SidecarUrl, sidecarHttp);
+            var ollamaClient = cfg.CreateOllamaClient();
+            var qwenVision = new Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
+            orchestrator.BatchPipeline = new Ai.Pipeline.BatchPipelineService(
+                sidecarClient, qwenVision, sp.PipelineCfg,
+                cfg.FfmpegPath ?? Ai.Shared.FfmpegLocator.ResolveFfmpeg());
+        }
+
         var runner = new BenchmarkRunner(setStore, metricsStore, orchestrator, protocolLoader.LoadProtocolAsync);
         var vm = new BenchmarkViewModel(setStore, runner, metricsStore, protocolLoader);
         new BenchmarkWindow(vm) { Owner = this }.Show();
@@ -613,6 +627,18 @@ public partial class TrainingCenterWindow : Window
         var meterTimeline = new Ai.Training.MeterTimelineService(cfg);
         var videoOrch = new Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
 
+        // V4.1: Batch-Pipeline fuer den initialen Orchestrator
+        if (sp.Sidecar.IsAvailable)
+        {
+            var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+            var sidecarClient = new Ai.Pipeline.VisionPipelineClient(sp.PipelineCfg.SidecarUrl, sidecarHttp);
+            var ollamaClient = cfg.CreateOllamaClient();
+            var qwenVision = new Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
+            videoOrch.BatchPipeline = new Ai.Pipeline.BatchPipelineService(
+                sidecarClient, qwenVision, sp.PipelineCfg,
+                cfg.FfmpegPath ?? Ai.Shared.FfmpegLocator.ResolveFfmpeg());
+        }
+
         Ai.KnowledgeBase.KbEnrichmentService enrichment;
         try
         {
@@ -631,8 +657,33 @@ public partial class TrainingCenterWindow : Window
         var sidecarDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "sidecar");
         if (!System.IO.Directory.Exists(sidecarDir))
             sidecarDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "sidecar");
+        // Factory fuer parallele Pipeline-Instanzen: Jede Haltung bekommt ihren eigenen
+        // HttpClient + Pipeline + Orchestrator (VideoSelfTrainingOrchestrator hat internen State)
+        Func<Ai.Training.VideoSelfTrainingOrchestrator> orchestratorFactory = () =>
+        {
+            var pHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(30) };
+            var pPipeline = sp.CreateVideoAnalysisPipeline(cfg, plausibility, pHttp);
+            var pTimeline = new Ai.Training.MeterTimelineService(cfg);
+            var orch = new Ai.Training.VideoSelfTrainingOrchestrator(pPipeline, pTimeline);
+
+            // V4.1: Batch-Pipeline (YOLO Batch → Filter → Qwen ×6 parallel)
+            if (sp.Sidecar.IsAvailable)
+            {
+                var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+                var sidecarClient = new Ai.Pipeline.VisionPipelineClient(sp.PipelineCfg.SidecarUrl, sidecarHttp);
+                var ollamaClient = cfg.CreateOllamaClient();
+                var qwenVision = new Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
+                orch.BatchPipeline = new Ai.Pipeline.BatchPipelineService(
+                    sidecarClient, qwenVision, sp.PipelineCfg,
+                    cfg.FfmpegPath ?? Ai.Shared.FfmpegLocator.ResolveFfmpeg());
+            }
+
+            return orch;
+        };
+
         var batchOrch = new Ai.Training.BatchSelfTrainingOrchestrator(
-            videoOrch, protocolLoader, enrichment, sidecarDir: sidecarDir);
+            videoOrch, protocolLoader, enrichment, sidecarDir: sidecarDir,
+            orchestratorFactory: orchestratorFactory);
         var request = new Ai.Training.Models.BatchSelfTrainingRequest { ExportRootPath = dlg.FolderName };
 
         var btnBatch = this.FindName("BtnBatchNight") as System.Windows.Controls.Button;
@@ -900,6 +951,78 @@ public partial class TrainingCenterWindow : Window
         {
             info = ex.Message;
             return false;
+        }
+    }
+
+    // ── Inspektions-Profile extrahieren ──────────────────────────────────
+
+    private async void ExtractProfiles_Click(object sender, RoutedEventArgs e)
+    {
+        // DB3-Datei waehlen
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "WinCan DB3 waehlen",
+            Filter = "WinCan DB3|*.db3|Alle Dateien|*.*",
+            Multiselect = false
+        };
+        if (dlg.ShowDialog() != true) return;
+
+        var db3Path = dlg.FileName;
+        var outputDir = System.IO.Path.Combine(@"C:\KI_BRAIN", "inspection_profiles");
+        var patternsPath = System.IO.Path.Combine(@"C:\KI_BRAIN", "inspection_patterns.json");
+
+        BtnExtractProfiles.IsEnabled = false;
+        Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Profile extrahieren: {System.IO.Path.GetFileName(db3Path)}...\n");
+
+        try
+        {
+            var profiles = await System.Threading.Tasks.Task.Run(() =>
+                Infrastructure.Import.WinCan.InspectionProfileExtractor.ExtractFromDb3(db3Path));
+
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] {profiles.Count} Profile extrahiert\n");
+
+            // Profile speichern
+            await System.Threading.Tasks.Task.Run(() =>
+                Infrastructure.Import.WinCan.InspectionProfileExtractor.SaveProfiles(profiles, outputDir));
+
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Profile gespeichert: {outputDir}\n");
+
+            // Muster aggregieren
+            var patterns = Infrastructure.Import.WinCan.InspectionPatternAggregator.Aggregate(profiles);
+            await System.Threading.Tasks.Task.Run(() =>
+                Infrastructure.Import.WinCan.InspectionPatternAggregator.SavePatterns(patterns, patternsPath));
+
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Muster aggregiert:\n");
+            Vm.AppendToLogText($"  Haltungen: {patterns.AnzahlHaltungen}, Beobachtungen: {patterns.AnzahlBeobachtungen}\n");
+            Vm.AppendToLogText($"  Median Geschwindigkeit: {patterns.MedianFahrgeschwindigkeit:F3} m/s\n");
+            Vm.AppendToLogText($"  Median Codierungen/m: {patterns.MedianCodierungenProMeter:F2}\n");
+            Vm.AppendToLogText($"  Median Luecke: {patterns.MedianLueckeMeter:F1}m\n");
+            foreach (var r in patterns.SequenzRegeln)
+                Vm.AppendToLogText($"  Regel: {r.Regel} (Support: {r.Support:P0}, Ausnahmen: {r.Ausnahmen})\n");
+
+            // QualityFlags zusammenfassen
+            int warnCount = profiles.Count(p => p.QualityFlags.Warnings.Count > 0);
+            int noBcd = profiles.Count(p => p.QualityFlags.MissingBcd);
+            int noBce = profiles.Count(p => p.QualityFlags.MissingBce);
+            Vm.AppendToLogText($"  Warnungen: {warnCount} Profile, fehlendes BCD: {noBcd}, fehlendes BCE: {noBce}\n");
+
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Fertig. Gespeichert nach {outputDir}\n");
+
+            MessageBox.Show(
+                $"{profiles.Count} Profile extrahiert und aggregiert.\n\n" +
+                $"Geschwindigkeit: {patterns.MedianFahrgeschwindigkeit:F3} m/s\n" +
+                $"Codierungen/m: {patterns.MedianCodierungenProMeter:F2}\n" +
+                $"Gespeichert: {outputDir}",
+                "Profile extrahiert", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] FEHLER: {ex.Message}\n");
+            MessageBox.Show($"Fehler: {ex.Message}", "Profile extrahieren", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            BtnExtractProfiles.IsEnabled = true;
         }
     }
 }

@@ -36,6 +36,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="Ordner:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <TextBox Grid.Column="1" Text="{Binding RootFolder}" IsReadOnly="True"
@@ -57,7 +58,11 @@
                 <Button Grid.Column="7" Content="KB prüfen" Command="{Binding CheckKnowledgeBaseCommand}"
                         ToolTip="Liest Samples, Embeddings, Versionen und Top-Codes aus der Knowledge Base"
                         Margin="0,0,8,0"/>
-                <Button Grid.Column="8" Content="Abbrechen" Command="{Binding CancelBatchCommand}"
+                <Button Grid.Column="8" x:Name="BtnExtractProfiles" Content="Profile extrahieren"
+                        Click="ExtractProfiles_Click"
+                        ToolTip="WinCan DB3 einlesen: Inspektions-Profile, Muster und Trainings-Frames extrahieren"
+                        Margin="0,0,8,0"/>
+                <Button Grid.Column="9" Content="Abbrechen" Command="{Binding CancelBatchCommand}"
                         ToolTip="Laufenden Batch-Vorgang sofort abbrechen und zum letzten Speicherpunkt zurueckkehren"
                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
             </Grid>
@@ -655,21 +660,25 @@
 
                     <!-- ═══ Row 8: Klappbares Echtzeit-Log ═══ -->
                     <Expander Grid.Row="8" Header="Echtzeit-Log" IsExpanded="False"
-                              FontSize="11">
-                        <TextBox x:Name="SelfTrainingLogList"
-                                 Text="{Binding EchtzeitLogText, Mode=OneWay}"
-                                 IsReadOnly="True"
-                                 MaxHeight="150"
-                                 VerticalScrollBarVisibility="Auto"
-                                 HorizontalScrollBarVisibility="Auto"
-                                 TextWrapping="NoWrap" AcceptsReturn="True"
-                                 BorderThickness="0"
-                                 Background="#0F172A"
-                                 Foreground="White"
-                                 CaretBrush="White"
-                                 FontFamily="Consolas"
-                                 FontSize="10">
-                        </TextBox>
+                              FontSize="12">
+                        <Border Background="{DynamicResource CardBrush}" CornerRadius="4"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <TextBox x:Name="SelfTrainingLogList"
+                                     Text="{Binding EchtzeitLogText, Mode=OneWay}"
+                                     IsReadOnly="True"
+                                     MinHeight="120" MaxHeight="350"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     TextWrapping="NoWrap" AcceptsReturn="True"
+                                     BorderThickness="0"
+                                     Background="{DynamicResource CardBrush}"
+                                     Foreground="{DynamicResource TextBrush}"
+                                     CaretBrush="{DynamicResource TextBrush}"
+                                     FontFamily="Consolas"
+                                     FontSize="12"
+                                     Padding="8,6">
+                            </TextBox>
+                        </Border>
                     </Expander>
                 </Grid>
             </TabItem>
@@ -845,7 +854,11 @@
                                                        RenderOptions.BitmapScalingMode="HighQuality"/>
                                                 <TextBlock Text="{Binding VsaCode}" FontWeight="Bold"
                                                            FontSize="13" HorizontalAlignment="Center" Margin="0,4,0,0"/>
-                                                <TextBlock FontSize="11" Foreground="{StaticResource MutedBrush}"
+                                                <TextBlock Text="{Binding Beschreibung}" FontSize="10"
+                                                           Foreground="{StaticResource MutedBrush}"
+                                                           HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                           MaxWidth="130" ToolTip="{Binding Beschreibung}"/>
+                                                <TextBlock FontSize="10" Foreground="{StaticResource MutedBrush}"
                                                            HorizontalAlignment="Center">
                                                     <Run Text="{Binding MeterPosition, StringFormat={}{0:F1}m}"/>
                                                 </TextBlock>
