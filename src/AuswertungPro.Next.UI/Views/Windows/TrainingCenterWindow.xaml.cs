@@ -1006,14 +1006,46 @@ public partial class TrainingCenterWindow : Window
             int noBce = profiles.Count(p => p.QualityFlags.MissingBce);
             Vm.AppendToLogText($"  Warnungen: {warnCount} Profile, fehlendes BCD: {noBcd}, fehlendes BCE: {noBce}\n");
 
-            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Fertig. Gespeichert nach {outputDir}\n");
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Profile fertig. Gespeichert nach {outputDir}\n");
 
-            MessageBox.Show(
-                $"{profiles.Count} Profile extrahiert und aggregiert.\n\n" +
+            // Fragen ob Frames extrahiert werden sollen
+            var exportRoot = System.IO.Path.GetDirectoryName(db3Path) ?? "";
+            // WinCan-Export-Root: 2 Ebenen hoch von DB-Ordner (DB → Project → DISK1)
+            var disk1Root = exportRoot;
+            for (int up = 0; up < 3; up++)
+            {
+                var parent = System.IO.Path.GetDirectoryName(disk1Root);
+                if (parent != null) disk1Root = parent;
+            }
+
+            // Profile mit Video zaehlen
+            int mitVideo = 0;
+            foreach (var p in profiles)
+            {
+                if (string.IsNullOrEmpty(p.VideoPfad)) continue;
+                var resolved = Infrastructure.Import.WinCan.VideoResolver.Resolve(
+                    p.HaltungKey, disk1Root,
+                    string.IsNullOrEmpty(p.VideoPfad) ? null : new List<string> { p.VideoPfad });
+                if (resolved != null) mitVideo++;
+            }
+
+            var framesDir = System.IO.Path.Combine(@"C:\KI_BRAIN", "training_frames");
+            int geschaetzteFrames = profiles.Sum(p => p.Ereignisse.Count * 5 + p.Luecken.Count(l => (l.DistanzM ?? 0) > 3) + 2);
+
+            var extractFrames = MessageBox.Show(
+                $"{profiles.Count} Profile extrahiert.\n" +
+                $"{mitVideo} davon haben ein Video.\n\n" +
                 $"Geschwindigkeit: {patterns.MedianFahrgeschwindigkeit:F3} m/s\n" +
-                $"Codierungen/m: {patterns.MedianCodierungenProMeter:F2}\n" +
-                $"Gespeichert: {outputDir}",
-                "Profile extrahiert", MessageBoxButton.OK, MessageBoxImage.Information);
+                $"Codierungen/m: {patterns.MedianCodierungenProMeter:F2}\n\n" +
+                $"Jetzt ~{geschaetzteFrames} Trainings-Frames aus den Videos extrahieren?\n" +
+                $"(5 Frames pro Codierung + Negativ-Beispiele + Aufnahmetechnik)\n" +
+                $"Geschaetzte Dauer: ~{mitVideo * 30 / 60} Minuten",
+                "Frames extrahieren?", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (extractFrames == MessageBoxResult.Yes && mitVideo > 0)
+            {
+                await ExtractFramesFromProfiles(profiles, disk1Root, framesDir);
+            }
         }
         catch (Exception ex)
         {
@@ -1024,6 +1056,77 @@ public partial class TrainingCenterWindow : Window
         {
             BtnExtractProfiles.IsEnabled = true;
         }
+    }
+
+    /// <summary>Extrahiert Trainings-Frames aus Videos fuer alle Profile mit Video-Zuordnung.</summary>
+    private async System.Threading.Tasks.Task ExtractFramesFromProfiles(
+        List<Infrastructure.Import.WinCan.InspectionProfile> profiles,
+        string exportRoot,
+        string framesDir)
+    {
+        var allFrames = new List<Infrastructure.Import.WinCan.ExtractedFrame>();
+        int done = 0;
+        int total = profiles.Count;
+        var cts = new System.Threading.CancellationTokenSource();
+
+        Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Frame-Extraktion gestartet ({total} Haltungen)...\n");
+
+        foreach (var profile in profiles)
+        {
+            done++;
+
+            // Video finden
+            var dbFiles = string.IsNullOrEmpty(profile.VideoPfad) ? null : new List<string> { profile.VideoPfad };
+            var videoMatch = Infrastructure.Import.WinCan.VideoResolver.Resolve(
+                profile.HaltungKey, exportRoot, dbFiles);
+
+            if (videoMatch == null)
+            {
+                Vm.AppendToLogText($"  [{done}/{total}] {profile.HaltungKey}: Kein Video gefunden — uebersprungen\n");
+                continue;
+            }
+
+            Vm.AppendToLogText($"  [{done}/{total}] {profile.HaltungKey}: {profile.Ereignisse.Count} Events, Video: {System.IO.Path.GetFileName(videoMatch.FilePath)} (Conf: {videoMatch.Confidence:F2})\n");
+
+            try
+            {
+                var frames = await Infrastructure.Import.WinCan.InspectionFrameExtractor.ExtractFramesAsync(
+                    profile, videoMatch.FilePath, framesDir, cts.Token);
+
+                allFrames.AddRange(frames);
+                Vm.AppendToLogText($"    → {frames.Count} Frames extrahiert\n");
+            }
+            catch (Exception ex)
+            {
+                Vm.AppendToLogText($"    → FEHLER: {ex.Message}\n");
+            }
+        }
+
+        // Frame-Index speichern
+        var indexPath = System.IO.Path.Combine(framesDir, "_frame_index.json");
+        await System.Threading.Tasks.Task.Run(() =>
+            Infrastructure.Import.WinCan.InspectionFrameExtractor.SaveFrameIndex(allFrames, indexPath));
+
+        // Zusammenfassung
+        int refFrames = allFrames.Count(f => f.IsReferenceFrame);
+        int negFrames = allFrames.Count(f => f.FrameTyp.Contains("negativ"));
+        int techFrames = allFrames.Count(f => f.Quelle == "aufnahmetechnik");
+
+        Vm.AppendToLogText($"\n[{DateTime.Now:HH:mm:ss}] Frame-Extraktion abgeschlossen:\n");
+        Vm.AppendToLogText($"  Total: {allFrames.Count} Frames\n");
+        Vm.AppendToLogText($"  Referenz-Frames (Codierungen): {refFrames}\n");
+        Vm.AppendToLogText($"  Negativ-Beispiele: {negFrames}\n");
+        Vm.AppendToLogText($"  Aufnahmetechnik: {techFrames}\n");
+        Vm.AppendToLogText($"  Gespeichert: {framesDir}\n");
+        Vm.AppendToLogText($"  Index: {indexPath}\n");
+
+        MessageBox.Show(
+            $"{allFrames.Count} Frames extrahiert!\n\n" +
+            $"Referenz: {refFrames}\n" +
+            $"Negativ: {negFrames}\n" +
+            $"Aufnahmetechnik: {techFrames}\n\n" +
+            $"Gespeichert: {framesDir}",
+            "Frame-Extraktion", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }
 
