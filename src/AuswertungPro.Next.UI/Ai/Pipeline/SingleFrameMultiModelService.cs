@@ -24,6 +24,9 @@ public sealed class SingleFrameMultiModelService
     /// </summary>
     public bool RunDinoFallbackOnIrrelevantFrames { get; set; } = true;
 
+    /// <summary>Min Confidence fuer Rohrkreis-Erkennung im Tiefenfilter.</summary>
+    private const double MinPipeAxisConfidence = 0.4;
+
     public SingleFrameMultiModelService(
         VisionPipelineClient client,
         double yoloConfidence = 0.25,
@@ -55,6 +58,37 @@ public sealed class SingleFrameMultiModelService
         var b64 = Convert.ToBase64String(pngBytes);
         double yoloMs = 0, dinoMs = 0, samMs = 0;
 
+        // Bildgroesse aus PNG-Header lesen
+        var (imgWidth, imgHeight) = ReadPngDimensions(pngBytes);
+
+        // Rohrkreis fuer Tiefenfilter ermitteln (pipe_axis, ~5ms)
+        PipeAxisResult? pipeAxis = null;
+        try
+        {
+            pipeAxis = await _client.AnalyzePipeAxisAsync(
+                new PipeAxisRequest(b64, pipeDiameterMm > 0 ? pipeDiameterMm : null), ct);
+        }
+        catch { /* Sidecar nicht verfuegbar → weiter ohne Rohrkreis */ }
+
+        // Aufnahmetechnik-Klassifikation (~0.1ms) — schacht/uebergang ueberspringen
+        try
+        {
+            var vtResp = await _client.ClassifyViewTypeAsync(new ViewTypeRequest(b64), ct);
+            var vt = vtResp.Prediction;
+            if (vt.ViewType is "schacht" && vt.Confidence > 0.7)
+            {
+                return new SingleFrameResult(
+                    IsRelevant: false,
+                    DinoDetections: Array.Empty<DinoDetectionDto>(),
+                    SamResponse: null,
+                    QuantifiedMasks: Array.Empty<MaskQuantificationService.QuantifiedMask>(),
+                    YoloTimeMs: 0, DinoTimeMs: 0, SamTimeMs: 0,
+                    Error: null)
+                { ViewType = "schacht" };
+            }
+        }
+        catch { /* ViewType-Modell nicht verfuegbar → weiter ohne Check */ }
+
         try
         {
             // 1. YOLO Pre-Screening
@@ -78,7 +112,12 @@ public sealed class SingleFrameMultiModelService
             var dinoResp = await _client.DetectDinoAsync(dinoReq, ct);
             dinoMs = dinoResp.InferenceTimeMs;
 
-            if (dinoResp.Detections.Count == 0)
+            // Tiefenfilter: Boxen die komplett INNERHALB des Rohrkreises liegen = in der Tiefe
+            var nearDetections = dinoResp.Detections
+                .Where(d => !IsInsidePipeCircle(d.X1, d.Y1, d.X2, d.Y2, pipeAxis, imgWidth, imgHeight))
+                .ToList();
+
+            if (nearDetections.Count == 0)
             {
                 return new SingleFrameResult(
                     IsRelevant: yoloResp.IsRelevant,
@@ -89,8 +128,8 @@ public sealed class SingleFrameMultiModelService
                     Error: null);
             }
 
-            // 3. SAM 2 Segmentation (Florence-2 Boxes als Input)
-            var samBoxes = dinoResp.Detections.Select(d => new SamBoundingBox(
+            // 3. SAM 2 Segmentation (nur Nahbereich-Boxen)
+            var samBoxes = nearDetections.Select(d => new SamBoundingBox(
                 d.X1, d.Y1, d.X2, d.Y2, d.Label, d.Confidence)).ToList();
 
             var samReq = new SamRequest(b64, samBoxes, PipeDiameterMm: pipeDiameterMm > 0 ? pipeDiameterMm : null);
@@ -108,8 +147,8 @@ public sealed class SingleFrameMultiModelService
             }
 
             return new SingleFrameResult(
-                IsRelevant: yoloResp.IsRelevant || dinoResp.Detections.Count > 0,
-                DinoDetections: dinoResp.Detections,
+                IsRelevant: yoloResp.IsRelevant || nearDetections.Count > 0,
+                DinoDetections: nearDetections,
                 SamResponse: samResp,
                 QuantifiedMasks: quantified,
                 YoloTimeMs: yoloMs, DinoTimeMs: dinoMs, SamTimeMs: samMs,
@@ -119,6 +158,84 @@ public sealed class SingleFrameMultiModelService
         catch (Exception ex)
         {
             return SingleFrameResult.Empty($"Multi-Model Fehler: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Tiefenfilter: Prueft ob eine DINO-Box komplett INNERHALB des Rohrkreises liegt.
+    /// Wenn ja → Box zeigt etwas in der Rohrtiefe, nicht an der Rohrwand → verwerfen.
+    /// Echte Schaeden beruehren die Rohrwand = mindestens eine Ecke liegt AUSSERHALB oder
+    /// AM RAND des Rohrkreises.
+    /// Nutzt den erkannten Rohrkreis (PipeCenter + PipeRadius) vom pipe_axis-Endpoint.
+    /// Fallback wenn kein pipe_axis: Bildmitte + 35% Radius.
+    /// </summary>
+    private static bool IsInsidePipeCircle(
+        double x1, double y1, double x2, double y2,
+        PipeAxisResult? pipeAxis, int imgW, int imgH)
+    {
+        if (imgW <= 0 || imgH <= 0) return false;
+
+        // Rohrkreis: Mittelpunkt und Radius (normalisiert)
+        double cx, cy, rx, ry;
+        if (pipeAxis != null && pipeAxis.Confidence >= MinPipeAxisConfidence)
+        {
+            // Vom Sidecar erkannter Rohrkreis
+            cx = pipeAxis.PipeCenterX / imgW;
+            cy = pipeAxis.PipeCenterY / imgH;
+            rx = pipeAxis.PipeRadiusX / imgW;
+            ry = pipeAxis.PipeRadiusY / imgH;
+        }
+        else
+        {
+            // Fallback: Bildmitte, 35% Radius
+            cx = 0.5;
+            cy = 0.5;
+            rx = 0.35;
+            ry = 0.35;
+        }
+
+        // Innerer Rohrkreis = 50% des vollen Radius (Tiefenzone)
+        // Alles innerhalb von 50% des Rohrradius ist "in der Tiefe"
+        // Zwischen 50-100% ist der Nahbereich (Rohrwand, echte Schaeden)
+        double innerRx = rx * 0.50;
+        double innerRy = ry * 0.50;
+
+        // Pruefe ob ALLE 4 Ecken der Box innerhalb der Tiefen-Ellipse liegen
+        bool AllCornersInside()
+        {
+            double[] xs = { x1 / imgW, x2 / imgW };
+            double[] ys = { y1 / imgH, y2 / imgH };
+
+            foreach (var bx in xs)
+            foreach (var by in ys)
+            {
+                double dx = (bx - cx) / innerRx;
+                double dy = (by - cy) / innerRy;
+                if (dx * dx + dy * dy > 1.0)
+                    return false; // Ecke liegt ausserhalb → Box ist nah
+            }
+            return true; // Alle Ecken innerhalb → Box ist in der Tiefe
+        }
+
+        return AllCornersInside();
+    }
+
+    /// <summary>
+    /// Liest Bildbreite und -hoehe aus dem PNG-Header (IHDR-Chunk, Bytes 16-23).
+    /// </summary>
+    private static (int Width, int Height) ReadPngDimensions(byte[] pngBytes)
+    {
+        // PNG-Header: 8 Bytes Signatur, dann IHDR-Chunk mit Breite (4 Bytes BE) und Hoehe (4 Bytes BE)
+        if (pngBytes.Length < 24) return (720, 576);
+        try
+        {
+            int w = (pngBytes[16] << 24) | (pngBytes[17] << 16) | (pngBytes[18] << 8) | pngBytes[19];
+            int h = (pngBytes[20] << 24) | (pngBytes[21] << 16) | (pngBytes[22] << 8) | pngBytes[23];
+            return (w > 0 && h > 0) ? (w, h) : (720, 576);
+        }
+        catch
+        {
+            return (720, 576);
         }
     }
 }
@@ -139,6 +256,9 @@ public sealed record SingleFrameResult(
     public bool HasDetections => DinoDetections.Count > 0;
     public bool HasMasks => SamResponse?.Masks.Count > 0;
     public double TotalTimeMs => YoloTimeMs + DinoTimeMs + SamTimeMs;
+
+    /// <summary>Erkannter Aufnahmetyp: "axial", "schwenk", "unklar". Null = nicht geprueft.</summary>
+    public string? ViewType { get; init; }
 
     public static SingleFrameResult Empty(string? error = null) => new(
         false, Array.Empty<DinoDetectionDto>(), null,

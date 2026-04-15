@@ -1,4 +1,4 @@
-"""YOLO pre-screening and classification endpoints."""
+"""YOLO pre-screening, classification and viewtype endpoints."""
 
 from fastapi import APIRouter, HTTPException
 from ..schemas.detection import (
@@ -7,6 +7,7 @@ from ..schemas.detection import (
     YoloBatchRequest, YoloBatchResponse, YoloBatchResultItem,
 )
 from ..models import yolo_wrapper
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -65,4 +66,77 @@ async def detect_yolo_batch(req: YoloBatchRequest) -> YoloBatchResponse:
             for fid, resp in results
         ],
         total_inference_time_ms=round(total_ms, 1),
+    )
+
+
+# ── Aufnahmetechnik-Klassifikator (viewtype) ─────────────────────────────
+
+class ViewTypeRequest(BaseModel):
+    image_base64: str
+
+class ViewTypePrediction(BaseModel):
+    view_type: str        # "axial", "schacht", "uebergang"
+    confidence: float
+    all_scores: dict[str, float]
+
+class ViewTypeResponse(BaseModel):
+    prediction: ViewTypePrediction
+    inference_time_ms: float
+
+# Modell lazy laden (nur beim ersten Aufruf)
+_viewtype_model = None
+
+def _get_viewtype_model():
+    """Laedt das Aufnahmetechnik-Modell (3MB, einmalig)."""
+    global _viewtype_model
+    if _viewtype_model is None:
+        from pathlib import Path
+        model_path = Path(r"C:\KI_BRAIN\yolo_viewtype_runs\viewtype_v1\weights\best.pt")
+        if not model_path.exists():
+            raise FileNotFoundError(f"Viewtype-Modell nicht gefunden: {model_path}")
+        from ultralytics import YOLO
+        _viewtype_model = YOLO(str(model_path))
+    return _viewtype_model
+
+
+@router.post("/classify/viewtype", response_model=ViewTypeResponse)
+async def classify_viewtype(req: ViewTypeRequest) -> ViewTypeResponse:
+    """Aufnahmetechnik-Klassifikation: axial / schacht / uebergang."""
+    import time
+    import base64
+    import numpy as np
+    from PIL import Image
+    import io
+
+    t0 = time.perf_counter()
+    try:
+        model = _get_viewtype_model()
+        img_bytes = base64.b64decode(req.image_base64)
+        img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+
+        results = model.predict(img, verbose=False)
+        probs = results[0].probs
+
+        # Top-Klasse
+        top_idx = int(probs.top1)
+        top_conf = float(probs.top1conf)
+        class_name = model.names[top_idx]
+
+        # Alle Scores
+        all_scores = {model.names[i]: round(float(probs.data[i]), 4) for i in range(len(model.names))}
+
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    elapsed_ms = (time.perf_counter() - t0) * 1000
+
+    return ViewTypeResponse(
+        prediction=ViewTypePrediction(
+            view_type=class_name,
+            confidence=round(top_conf, 4),
+            all_scores=all_scores,
+        ),
+        inference_time_ms=round(elapsed_ms, 1),
     )

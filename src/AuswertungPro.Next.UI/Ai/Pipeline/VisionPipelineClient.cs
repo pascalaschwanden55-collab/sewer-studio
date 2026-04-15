@@ -83,6 +83,12 @@ public sealed class VisionPipelineClient
         return await PostAsync<YoloClassifyRequest, YoloClassifyResponse>("/classify/yolo", request, ct).ConfigureAwait(false);
     }
 
+    /// <summary>Aufnahmetechnik-Klassifikation: axial/schacht/uebergang (~0.1ms).</summary>
+    public async Task<ViewTypeResponse> ClassifyViewTypeAsync(ViewTypeRequest request, CancellationToken ct = default)
+    {
+        return await PostAsync<ViewTypeRequest, ViewTypeResponse>("/classify/viewtype", request, ct).ConfigureAwait(false);
+    }
+
     /// <summary>Batch-YOLO: mehrere Bilder in einem Forward Pass.</summary>
     public async Task<YoloBatchResponseDto> DetectYoloBatchAsync(YoloBatchRequestDto request, CancellationToken ct = default)
         => await PostAsync<YoloBatchRequestDto, YoloBatchResponseDto>("/detect/yolo/batch", request, ct).ConfigureAwait(false);

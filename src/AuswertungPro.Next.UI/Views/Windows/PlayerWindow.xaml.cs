@@ -6482,6 +6482,24 @@ public partial class PlayerWindow : Window
                     $"Sidecar offline → {CompactModelName(_codingAiModelName)}");
             }
             SetYoloStatus("Bereit", Color.FromRgb(0x22, 0xC5, 0x5E), CompactModelName(_codingAiModelName));
+
+            // Few-Shot-Beispiele laden — ohne diese findet die KI drastisch weniger (Audit-Fix)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    if (_codingEnhancedVision == null) return;
+                    var store = new Ai.Training.FewShotExampleStore();
+                    await _codingEnhancedVision.EnableFewShotAsync(store);
+                    Dispatcher.Invoke(() =>
+                        SetCodingAiState("Kuenstliche Intelligenz bereit (Few-Shot)", Color.FromRgb(0x22, 0xC5, 0x5E),
+                            $"{CompactModelName(_codingAiModelName)} + Beispiele"));
+                }
+                catch (Exception fex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Player] Few-Shot laden fehlgeschlagen: {fex.Message}");
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -6813,6 +6831,17 @@ public partial class PlayerWindow : Window
                 {
                     SetCodingAiState($"Fehler: {mmResult.Error}", Color.FromRgb(0xEF, 0x44, 0x44),
                         "Multi-Model");
+                    return;
+                }
+
+                // ViewType-Modell hat Schacht erkannt → uebersprungen
+                if (mmResult.ViewType == "schacht")
+                {
+                    SetCodingAiState("Schacht erkannt — uebersprungen",
+                        Color.FromRgb(0x94, 0xA3, 0xB8),
+                        "Aufnahmetechnik-KI: Kamera im Schacht");
+                    Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+                    DetectionCanvas.Children.Clear();
                     return;
                 }
 
@@ -8152,8 +8181,8 @@ public partial class PlayerWindow : Window
            || code.StartsWith("BAI", StringComparison.OrdinalIgnoreCase) // Einragendes Dichtungsmaterial
            || code.StartsWith("BAJ", StringComparison.OrdinalIgnoreCase) // Versatz
            // Betriebliche Stoerungen (BB-Gruppe)
-           || code.StartsWith("BBA", StringComparison.OrdinalIgnoreCase) // Wurzeleinwuchs
-           || code.StartsWith("BBB", StringComparison.OrdinalIgnoreCase) // Inkrustation / Anhaftungen
+           || code.StartsWith("BBA", StringComparison.OrdinalIgnoreCase) // Wurzeln
+           || code.StartsWith("BBB", StringComparison.OrdinalIgnoreCase) // Anhaftende Stoffe (Inkrustation)
            || code.StartsWith("BBD", StringComparison.OrdinalIgnoreCase) // Eindringender Boden
            || code.StartsWith("BBF", StringComparison.OrdinalIgnoreCase); // Infiltration
 

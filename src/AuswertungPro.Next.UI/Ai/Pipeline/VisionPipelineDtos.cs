@@ -73,6 +73,20 @@ public sealed record YoloClassifyResponse(
     [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs
 );
 
+// ── ViewType Classify (Aufnahmetechnik) ───────────────────────────────────
+
+public sealed record ViewTypeRequest(
+    [property: JsonPropertyName("image_base64")] string ImageBase64);
+
+public sealed record ViewTypePrediction(
+    [property: JsonPropertyName("view_type")] string ViewType,
+    [property: JsonPropertyName("confidence")] double Confidence,
+    [property: JsonPropertyName("all_scores")] Dictionary<string, double> AllScores);
+
+public sealed record ViewTypeResponse(
+    [property: JsonPropertyName("prediction")] ViewTypePrediction Prediction,
+    [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs);
+
 // ── Florence-2 (Open-Vocabulary Detection, Slot: DINO) ────────────────────
 
 public sealed record DinoRequest(
