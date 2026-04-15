@@ -105,8 +105,19 @@ public sealed class SingleFrameMultiModelService
             var dinoResp = await _client.DetectDinoAsync(dinoReq, ct);
             dinoMs = dinoResp.InferenceTimeMs;
 
+            // Fallback: Wenn DINO nichts findet, YOLO-Boxen als DINO-Detektionen nutzen
+            IReadOnlyList<DinoDetectionDto> effectiveDetections = dinoResp.Detections;
+            if (dinoResp.Detections.Count == 0 && yoloResp.Detections.Count > 0)
+            {
+                effectiveDetections = yoloResp.Detections.Select(d => new DinoDetectionDto(
+                    d.X1, d.Y1, d.X2, d.Y2,
+                    Label: d.ClassName,
+                    Confidence: d.Confidence,
+                    Phrase: d.ClassName)).ToList();
+            }
+
             // Tiefenfilter: Boxen die komplett INNERHALB des Rohrkreises liegen = in der Tiefe
-            var nearDetections = dinoResp.Detections
+            var nearDetections = effectiveDetections
                 .Where(d => !IsInsidePipeCircle(d.X1, d.Y1, d.X2, d.Y2, pipeAxis, imgWidth, imgHeight))
                 .ToList();
 
