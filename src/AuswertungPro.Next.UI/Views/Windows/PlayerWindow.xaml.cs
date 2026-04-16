@@ -2671,6 +2671,15 @@ public partial class PlayerWindow : Window
     // KI Live-Analyse
     private LiveDetectionService? _codingLiveDetection;
     private EnhancedVisionAnalysisService? _codingEnhancedVision;
+
+    /// <summary>
+    /// Kandidaten-Tracker: Schaeden die in der Tiefe erkannt wurden, aber noch
+    /// nicht bestaetigt sind. Erst wenn die Kamera naeher kommt (Box wird groesser)
+    /// wird der Kandidat zum Befund.
+    /// Key: YOLO-Klassenname, Value: (erster Frame-Zeitpunkt, Box-Flaeche-Norm, Confidence)
+    /// </summary>
+    private readonly Dictionary<string, (double TimeSec, double AreaNorm, double Confidence, string Label)>
+        _codingDepthCandidates = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource? _codingAnalysisCts;
     private bool _codingIsAnalyzing;
     private string _codingAiModelName = string.Empty;
@@ -6819,42 +6828,100 @@ public partial class PlayerWindow : Window
                 var b64 = Convert.ToBase64String(pngBytes);
                 int dn = _codingOverlayService?.Calibration?.NominalDiameterMm ?? 300;
 
-                // ── Schritt 1: YOLO26l-seg Primaer-Erkennung (2ms) ──
+                // ── Schritt 1: YOLO26l-seg Erkennung (2ms) + Kandidaten-Tracking ──
                 LiveDetection? result = null;
                 bool yoloHadFindings = false;
 
-                if (_codingVisionClient != null)
+                if (_codingVisionClient != null && _codingMultiModel != null)
                 {
                     try
                     {
                         SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
-                            "Schritt 2: YOLO Detection + SAM Segmentierung", pulse: true);
+                            "YOLO Detection...", pulse: true);
 
-                        var mmResult = await _codingMultiModel!.AnalyzeFrameAsync(
+                        var mmResult = await _codingMultiModel.AnalyzeFrameAsync(
                             pngBytes, dn, _codingOverlayService?.Calibration,
                             _codingAnalysisCts.Token);
 
-                        if (mmResult.HasDetections)
+                        if (mmResult.HasDetections && mmResult.SamResponse != null)
                         {
-                            yoloHadFindings = true;
+                            int imgW = mmResult.SamResponse.ImageWidth;
+                            int imgH = mmResult.SamResponse.ImageHeight;
 
-                            // YOLO-Findings als Events + SAM-Masken rendern
-                            var acceptedIndices = AddMultiModelFindingsAsEvents(mmResult, captureTimestampSec);
-                            ShowMultiModelResults(mmResult, acceptedIndices);
+                            // Jede Detektion klassifizieren: Nahbereich oder Tiefe?
+                            var nearIndices = new HashSet<int>();
+                            var depthLabels = new List<string>();
 
-                            int nearCount = _currentMmResult?.QuantifiedMasks.Count ?? 0;
-                            SetCodingAiState(
-                                nearCount > 0 ? $"{nearCount} Befunde erkannt (YOLO)" : "Kein Schaden in Reichweite",
-                                nearCount > 0 ? Color.FromRgb(0x22, 0xC5, 0x5E) : Color.FromRgb(0x94, 0xA3, 0xB8),
-                                $"YOLO {mmResult.YoloTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms");
-
-                            if (BtnCodingPauseMode.IsChecked == true && nearCount > 0)
+                            for (int i = 0; i < mmResult.DinoDetections.Count; i++)
                             {
-                                _player?.SetPause(true);
+                                var d = mmResult.DinoDetections[i];
+                                double nArea = ((d.X2 - d.X1) * (d.Y2 - d.Y1)) / (imgW * (double)imgH);
+                                double ncx = ((d.X1 + d.X2) / 2.0) / imgW;
+                                double ncy = ((d.Y1 + d.Y2) / 2.0) / imgH;
+
+                                bool inCenter = ncx > 0.30 && ncx < 0.70 && ncy > 0.30 && ncy < 0.70;
+                                bool isSmall = nArea < 0.15;
+
+                                if (inCenter && isSmall)
+                                {
+                                    // In der Tiefe → Kandidat merken (noch nicht protokollieren)
+                                    _codingDepthCandidates[d.Label] = (captureTimestampSec, nArea, d.Confidence, d.Label);
+                                    depthLabels.Add(d.Label);
+                                }
+                                else
+                                {
+                                    // Nahbereich → als Befund akzeptieren
+                                    nearIndices.Add(i);
+
+                                    // War das ein vorheriger Kandidat der jetzt nah ist? → bestaetigt!
+                                    if (_codingDepthCandidates.Remove(d.Label))
+                                        System.Diagnostics.Debug.WriteLine(
+                                            $"[Kandidat→Befund] {d.Label} wurde bestaetigt (von Tiefe zu Nah)");
+                                }
+                            }
+
+                            if (nearIndices.Count > 0)
+                            {
+                                yoloHadFindings = true;
+
+                                // Nur Nahbereich-Detektionen als Events + SAM-Masken
+                                var acceptedIndices = AddMultiModelFindingsAsEvents(mmResult, captureTimestampSec);
+                                // Nur nahe Masken rendern
+                                var nearAccepted = acceptedIndices != null
+                                    ? new HashSet<int>(acceptedIndices.Where(i => nearIndices.Contains(i)))
+                                    : nearIndices;
+                                ShowMultiModelResults(mmResult, nearAccepted);
+
+                                int nearCount = _currentMmResult?.QuantifiedMasks.Count ?? 0;
+                                var depthInfo = depthLabels.Count > 0
+                                    ? $" | Tiefe: {string.Join(", ", depthLabels)}"
+                                    : "";
                                 SetCodingAiState(
-                                    $"{nearCount} Befunde — pausiert zum Pruefen",
-                                    Color.FromRgb(0x38, 0xBD, 0xF8),
-                                    "Delete = Befund loeschen | O = OK | Leertaste = weiter");
+                                    $"{nearCount} Befunde (YOLO){depthInfo}",
+                                    Color.FromRgb(0x22, 0xC5, 0x5E),
+                                    $"YOLO {mmResult.YoloTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms");
+
+                                if (BtnCodingPauseMode.IsChecked == true && nearCount > 0)
+                                {
+                                    _player?.SetPause(true);
+                                    SetCodingAiState(
+                                        $"{nearCount} Befunde — pausiert{depthInfo}",
+                                        Color.FromRgb(0x38, 0xBD, 0xF8),
+                                        "Delete = loeschen | O = OK | Leertaste = weiter");
+                                }
+                            }
+                            else if (depthLabels.Count > 0)
+                            {
+                                // Nur Tiefen-Kandidaten → anzeigen als Vorschau
+                                Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+                                SetCodingAiState(
+                                    $"Vorschau: {string.Join(", ", depthLabels)} (in Tiefe)",
+                                    Color.FromRgb(0x94, 0xA3, 0xB8),
+                                    "Kamera muss naeher — wird bestaetigt wenn im Nahbereich");
+                            }
+                            else
+                            {
+                                Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
                             }
                         }
                         else
