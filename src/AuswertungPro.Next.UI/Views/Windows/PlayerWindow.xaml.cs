@@ -8418,7 +8418,8 @@ public partial class PlayerWindow : Window
     {
         if (BtnCodingLiveAi.IsChecked == true)
         {
-            _codingLiveAiTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            // 8s Intervall: Qwen braucht ~3s Inferenz + 1s Capture + Puffer
+            _codingLiveAiTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
             _codingLiveAiTimer.Tick += CodingLiveAiTimer_Tick;
             _codingLiveAiTimer.Start();
 

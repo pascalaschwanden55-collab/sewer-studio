@@ -335,13 +335,14 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
         _fewShotStore = store;
         await store.LoadAsync(ct);
 
-        // Adaptives Few-Shot-Budget: mehr Context → mehr Beispiele
+        // Few-Shot-Budget: weniger Beispiele = schnellere Inferenz
+        // 2 diverse Beispiele reichen — mehr fuellt den Kontext und verlangsamt Qwen
         int maxExamples = _numCtx switch
         {
-            <= 2048  => 2,
-            <= 8192  => 4,
-            <= 16384 => 6,
-            _        => 10
+            <= 2048  => 1,
+            <= 8192  => 2,
+            <= 16384 => 4,
+            _        => 6
         };
         // Diverse Auswahl: Erst 1 pro Hauptgruppe (BA/BB/BC), dann auffuellen pro Code
         var allExamples = await store.GetBestExamplesAsync(maxExamples * 5, maxPerMainGroup: 10, ct: ct);
