@@ -523,30 +523,12 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
     {
         var messages = new List<OllamaClient.ChatMessage>();
 
-        // Few-Shot Beispiele als User/Assistant-Paare injizieren
-        var fewShot = _cachedFewShot;
-        if (fewShot is { Count: > 0 })
-        {
-            foreach (var (example, b64) in fewShot)
-            {
-                // User zeigt Beispielbild mit Kontext
-                var exPrompt = $"Analysiere dieses Kanalbild. " +
-                    $"Hinweis: Dieses Bild zeigt {example.Description}" +
-                    (example.ClockPosition != null ? $" bei {example.ClockPosition}" : "") +
-                    $" (VSA-Code: {example.VsaCode}).";
-
-                messages.Add(new OllamaClient.ChatMessage(
-                    Role: "user",
-                    Content: exPrompt,
-                    ImagesBase64: [b64]));
-
-                // Assistant antwortet mit korrekter Klassifizierung
-                var exResponse = BuildFewShotResponse(example);
-                messages.Add(new OllamaClient.ChatMessage(
-                    Role: "assistant",
-                    Content: exResponse));
-            }
-        }
+        // Few-Shot DEAKTIVIERT: Tests zeigen dass Few-Shot-Bilder die Erkennung VERSCHLECHTERN.
+        // Mit Few-Shot: findings=[] (Qwen denkt "schon gesehen"). Ohne: korrekte Erkennung.
+        // Rohoutput-Tests: Test2 (nur Prompt) erkennt BCD, Test3 (Prompt+FewShot) erkennt NICHTS.
+        // TODO: Few-Shot-Format ueberarbeiten wenn Qwen3-VL oder groesseres Modell verfuegbar.
+        // var fewShot = _cachedFewShot;
+        // Few-Shots werden geladen aber NICHT in die Messages injiziert.
 
         // Eigentliche Analyse-Anfrage
         messages.Add(new OllamaClient.ChatMessage(
