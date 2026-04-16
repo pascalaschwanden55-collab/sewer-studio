@@ -6859,10 +6859,17 @@ public partial class PlayerWindow : Window
                                 double ncx = ((d.X1 + d.X2) / 2.0) / imgW;
                                 double ncy = ((d.Y1 + d.Y2) / 2.0) / imgH;
 
-                                bool inCenter = ncx > 0.30 && ncx < 0.70 && ncy > 0.30 && ncy < 0.70;
-                                bool isSmall = nArea < 0.15;
+                                // Tiefe-Erkennung: Box-Mittelpunkt nahe Bildmitte = Fluchtpunkt = weit weg
+                                // Unabhaengig von Box-Groesse (YOLO liefert grosse Boxen wegen Training)
+                                double distFromCenter = Math.Sqrt(Math.Pow(ncx - 0.5, 2) + Math.Pow(ncy - 0.5, 2));
+                                // Box beruehrt den Bildrand? → definitiv nah
+                                double margin = 0.05;
+                                bool touchesEdge = d.X1 / imgW < margin || d.Y1 / imgH < margin
+                                               || d.X2 / imgW > (1 - margin) || d.Y2 / imgH > (1 - margin);
+                                // Nah = Box beruehrt Rand ODER Mittelpunkt weit von Bildmitte
+                                bool isNear = touchesEdge || distFromCenter > 0.25;
 
-                                if (inCenter && isSmall)
+                                if (!isNear)
                                 {
                                     // In der Tiefe → Kandidat merken (noch nicht protokollieren)
                                     _codingDepthCandidates[d.Label] = (captureTimestampSec, nArea, d.Confidence, d.Label);
