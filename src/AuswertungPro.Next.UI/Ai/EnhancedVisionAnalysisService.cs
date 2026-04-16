@@ -78,31 +78,27 @@ public sealed class EnhancedVisionAnalysisService
     // Voller Prompt fuer Batch/Video-Pipeline (DamageClassesPromptFull)
     // Fuer den Codier-Modus wird der kurze Prompt (DamageClassesPrompt) verwendet.
     private static readonly string DamageClassesPrompt = """
-Kanalinspektion: Melde JEDEN sichtbaren Befund mit VSA-Code, severity (1-5), Uhrlage.
+Kanalinspektion-Frame analysieren. Erkenne ALLE sichtbaren Befunde.
 
-PFLICHT (IMMER melden, severity=1):
-BCD = Rohranfang (runde Oeffnung, Rohr dahinter sichtbar)
-BCE = Rohrende (Schacht/Ende sichtbar)
-BCC = Bogen/Kurve (Richtungsaenderung im Rohr)
-BCA = Anschluss (seitliche Oeffnung in Rohrwand)
+JEDER Befund kommt in das "findings" Array mit: label (VSA-Code), severity (1-5), position_clock.
+view_type ist NUR: "axial", "nahaufnahme", "schwenk" oder "schacht". KEIN VSA-Code in view_type!
 
-SCHAEDEN (severity 2-5):
-BAB = Riss (BABBA=laengs, BABBB=radial, BABC=klaffend)
-BAC = Bruch/Loch (BACB=Loch mit gezackten Kanten)
-BAF = Oberflaechenschaden/Korrosion (BAFCE=Zuschlag sichtbar)
-BAJ = Rohrverbindung verschoben (BAJA=breit, BAJB=versetzt, BAJC=Knick)
-BAI = Dichtung einragend
-BAA = Verformung (BAAA=vertikal, BAAB=horizontal)
-BBA = Wurzeleinwuchs
-BBB = Inkrustation/Kalk
-BBC = Ablagerung (BBCA=Sand, BBCC=hart)
-BBF = Infiltration (BBFA=Schwitzen, BBFC=fliesst)
+BEFUNDE (in findings[], severity=1):
+BCD = Rohranfang (runde Oeffnung)
+BCE = Rohrende
+BCC = Bogen/Kurve
+BCA = Anschluss (seitliche Oeffnung)
 
-REGELN:
-- label = VSA-Code (z.B. "BABBA", "BCC", "BCAAA"), KEIN Freitext
-- position_clock = Uhrlage ("12"=oben, "6"=unten, "3"=rechts, "9"=links)
-- BACB (Loch): gezackte Kanten. BCD (Rohranfang): glatte runde Oeffnung. NICHT verwechseln!
-- Wenn NICHTS sichtbar: findings=[], is_empty_frame=true
+SCHAEDEN (in findings[], severity 2-5):
+BAB = Riss, BAC = Bruch, BAF = Korrosion, BAJ = Rohrverbindung
+BAI = Dichtung, BAA = Verformung, BBA = Wurzeln, BBB = Kalk
+BBC = Ablagerung, BBF = Infiltration
+
+WICHTIG:
+- findings[] enthaelt ALLE erkannten VSA-Codes
+- view_type beschreibt NUR den Kamerawinkel (axial/nahaufnahme/schwenk/schacht)
+- label ist ein VSA-Code wie "BCC" oder "BABBA", KEIN Freitext
+- image_quality ist "gut", "mittel" oder "schlecht" (deutsch!)
 """;
 
     // Voller Prompt mit Aufnahmetechnik (fuer Batch/Video-Pipeline, ~1500 Woerter)
