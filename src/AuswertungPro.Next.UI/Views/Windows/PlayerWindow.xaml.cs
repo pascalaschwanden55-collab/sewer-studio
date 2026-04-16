@@ -7812,13 +7812,27 @@ public partial class PlayerWindow : Window
 
         // ── Ab hier: Frame ist bereit fuer Analyse ──
 
-        // OSD-Meterstand uebernehmen (Defense-in-Depth: nochmals Plausibilitaet pruefen)
+        // OSD-Meterstand uebernehmen (Plausibilitaet: nicht rueckwaerts springen)
         if (result.MeterReading.HasValue && result.MeterReading.Value <= 500 && _codingVm != null)
         {
-            _codingLastOsdMeter = result.MeterReading.Value;
-            _codingSessionService?.MoveToMeter(result.MeterReading.Value);
-            OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"{result.MeterReading.Value:F2}m (OSD)";
+            var newMeter = result.MeterReading.Value;
+            var prevMeter = _codingLastOsdMeter ?? 0;
+
+            // Nur vorwaerts aktualisieren (Kamera faehrt nicht rueckwaerts)
+            // Ausnahme: erster Meter-Wert (currentMeter == 0) darf immer gesetzt werden
+            if (newMeter >= prevMeter || prevMeter == 0)
+            {
+                _codingLastOsdMeter = newMeter;
+                _codingSessionService?.MoveToMeter(newMeter);
+                OsdMeterBadge.Visibility = Visibility.Visible;
+                TxtOsdMeter.Text = $"{newMeter:F2}m (OSD)";
+            }
+            else
+            {
+                // Qwen hat kleineren Meter gelesen → ignorieren (wahrscheinlich OSD-Fehler)
+                System.Diagnostics.Debug.WriteLine(
+                    $"[OSD] Meter-Ruecksprung ignoriert: {newMeter:F2}m < {prevMeter:F2}m");
+            }
         }
 
         // ── Findings filtern: VSA-Validierung + Deduplizierung ──
