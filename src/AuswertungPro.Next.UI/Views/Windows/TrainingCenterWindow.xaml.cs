@@ -70,6 +70,7 @@ public partial class TrainingCenterWindow : Window
     // Debounce-Timer fuer Auto-Scroll (verhindert Layout-Kollaps bei schnellen Batch-Updates)
     private System.Windows.Threading.DispatcherTimer? _scrollDebounceResults;
     private System.Windows.Threading.DispatcherTimer? _scrollDebounceLog;
+    private bool _logAutoScrollEnabled = true;
 
     private void SetupAutoScroll()
     {
@@ -96,8 +97,21 @@ public partial class TrainingCenterWindow : Window
         _scrollDebounceLog.Tick += (_, _) =>
         {
             _scrollDebounceLog.Stop();
-            SelfTrainingLogList.ScrollToEnd();
+            // Nur auto-scrollen wenn User am Ende ist (nicht wenn manuell hochgescrollt)
+            if (_logAutoScrollEnabled)
+                SelfTrainingLogList.ScrollToEnd();
         };
+        // Auto-Scroll deaktivieren wenn User manuell scrollt
+        SelfTrainingLogList.AddHandler(System.Windows.Controls.Primitives.ScrollBar.ScrollEvent,
+            new System.Windows.Controls.Primitives.ScrollEventHandler((_, se) =>
+            {
+                // Wenn User manuell scrollt → Auto-Scroll aus
+                // Wenn User ganz nach unten scrollt → Auto-Scroll wieder an
+                if (SelfTrainingLogList is System.Windows.Controls.TextBox tb)
+                {
+                    _logAutoScrollEnabled = tb.VerticalOffset >= tb.ExtentHeight - tb.ViewportHeight - 20;
+                }
+            }), handledEventsToo: true);
 
         // EchtzeitLogText wird vom ViewModel aktualisiert — Auto-Scroll via PropertyChanged
         Vm.PropertyChanged += (_, e) =>
