@@ -6804,106 +6804,100 @@ public partial class PlayerWindow : Window
             // Zeitstempel VOR dem Capture festhalten (CaptureSnapshotAsync wartet bis zu 1s)
             var captureTimestampSec = _player.Time / 1000.0;
 
-            // ── Codier-Modus: Direkt Qwen (DINO versagt bei Kanalbildern konsistent) ──
-            // Multi-Model (YOLO→DINO→SAM) wird nur fuer Nachtbatch/Video-Pipeline genutzt.
-            // SAM wird nach Qwen-Erkennung fuer Nachsegmentierung aufgerufen.
+            // ── YOLO-first Live-Analyse: YOLO26l-seg → SAM → optional Qwen-Eskalation ──
             SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
-                "Schritt 1 von 3: Snapshot", pulse: true);
+                "Schritt 1: Snapshot", pulse: true);
 
             {
                 var pngBytes = await CaptureSnapshotAsync();
                 if (pngBytes == null || pngBytes.Length == 0)
                 {
-                    SetCodingAiState("Frame nicht extrahierbar", Color.FromRgb(0xEF, 0x44, 0x44),
-                        $"Modell: {CompactModelName(_codingAiModelName)}");
+                    SetCodingAiState("Frame nicht extrahierbar", Color.FromRgb(0xEF, 0x44, 0x44));
                     return;
                 }
 
-                SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
-                    $"Schritt 2 von 3: Inferenz ({CompactModelName(_codingAiModelName)})", pulse: true);
+                var b64 = Convert.ToBase64String(pngBytes);
+                int dn = _codingOverlayService?.Calibration?.NominalDiameterMm ?? 300;
 
-                LiveDetection result;
-                if (_codingEnhancedVision != null)
-                {
-                    var b64 = Convert.ToBase64String(pngBytes);
-                    var importContext = GatherImportContext();
-                    var enhanced = await _codingEnhancedVision.AnalyzeAsync(
-                        b64, _codingAnalysisCts.Token);
-                    result = Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, captureTimestampSec);
+                // ── Schritt 1: YOLO26l-seg Primaer-Erkennung (2ms) ──
+                LiveDetection? result = null;
+                bool yoloHadFindings = false;
 
-                    // Diagnostik in Debug-Output (sichtbar in VS Output-Fenster)
-                    if (_codingEnhancedVision.LastRawOutput != null)
-                        System.Diagnostics.Debug.WriteLine(_codingEnhancedVision.LastRawOutput);
-                    if (_codingEnhancedVision.LastFilterLog != null)
-                        System.Diagnostics.Debug.WriteLine(_codingEnhancedVision.LastFilterLog);
-                    if (Ai.EnhancedVisionAnalysisService.LastSuppressedLog != null)
-                        System.Diagnostics.Debug.WriteLine(Ai.EnhancedVisionAnalysisService.LastSuppressedLog);
-                }
-                else
-                {
-                    result = await _codingLiveDetection!.AnalyzeFrameAsync(
-                        pngBytes, captureTimestampSec, _codingAnalysisCts.Token);
-                }
-
-                ShowCodingAiResults(result);
-
-                // SAM-Nachsegmentierung: Qwen hat Findings → SAM fuer Masken aufrufen
-                if (result.Findings.Count > 0 && _codingVisionClient != null && pngBytes != null)
+                if (_codingVisionClient != null)
                 {
                     try
                     {
-                        var samB64 = Convert.ToBase64String(pngBytes);
-                        int imgW = 640, imgH = 480;
+                        SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
+                            "Schritt 2: YOLO Detection + SAM Segmentierung", pulse: true);
 
-                        // Findings → SAM-Boxen aus BBox oder Uhrlage
-                        var samBoxes = new List<Ai.Pipeline.SamBoundingBox>();
-                        foreach (var f in result.Findings)
+                        var mmResult = await _codingMultiModel!.AnalyzeFrameAsync(
+                            pngBytes, dn, _codingOverlayService?.Calibration,
+                            _codingAnalysisCts.Token);
+
+                        if (mmResult.HasDetections)
                         {
-                            if (f.BboxX1.HasValue && f.BboxY1.HasValue && f.BboxX2.HasValue && f.BboxY2.HasValue)
+                            yoloHadFindings = true;
+
+                            // YOLO-Findings als Events + SAM-Masken rendern
+                            var acceptedIndices = AddMultiModelFindingsAsEvents(mmResult, captureTimestampSec);
+                            ShowMultiModelResults(mmResult, acceptedIndices);
+
+                            int nearCount = _currentMmResult?.QuantifiedMasks.Count ?? 0;
+                            SetCodingAiState(
+                                nearCount > 0 ? $"{nearCount} Befunde erkannt (YOLO)" : "Kein Schaden in Reichweite",
+                                nearCount > 0 ? Color.FromRgb(0x22, 0xC5, 0x5E) : Color.FromRgb(0x94, 0xA3, 0xB8),
+                                $"YOLO {mmResult.YoloTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms");
+
+                            if (BtnCodingPauseMode.IsChecked == true && nearCount > 0)
                             {
-                                samBoxes.Add(new Ai.Pipeline.SamBoundingBox(
-                                    f.BboxX1.Value * imgW, f.BboxY1.Value * imgH,
-                                    f.BboxX2.Value * imgW, f.BboxY2.Value * imgH,
-                                    f.Label, 0.8));
-                            }
-                            else
-                            {
-                                // Box aus Uhrlage ableiten (Rohr = Kreis, Uhrlage = Position)
-                                var box = ClockPositionToBox(f.PositionClock, imgW, imgH);
-                                samBoxes.Add(new Ai.Pipeline.SamBoundingBox(
-                                    box.x1, box.y1, box.x2, box.y2,
-                                    f.Label, 0.6));
+                                _player?.SetPause(true);
+                                SetCodingAiState(
+                                    $"{nearCount} Befunde — pausiert zum Pruefen",
+                                    Color.FromRgb(0x38, 0xBD, 0xF8),
+                                    "Delete = Befund loeschen | O = OK | Leertaste = weiter");
                             }
                         }
-
-                        if (samBoxes.Count > 0)
+                        else
                         {
-                            int dn = _codingOverlayService?.Calibration?.NominalDiameterMm ?? 300;
-                            var samReq = new Ai.Pipeline.SamRequest(samB64, samBoxes, PipeDiameterMm: dn);
-                            var samResp = await _codingVisionClient.SegmentSamAsync(samReq);
-
-                            if (samResp?.Masks.Count > 0)
-                            {
-                                Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
-                                var quantified = new List<Ai.Pipeline.MaskQuantificationService.QuantifiedMask>();
-                                var cal = _codingOverlayService?.Calibration;
-                                foreach (var mask in samResp.Masks)
-                                {
-                                    var q = cal != null
-                                        ? Ai.Pipeline.MaskQuantificationService.Quantify(mask, samResp.ImageWidth, samResp.ImageHeight, dn, cal)
-                                        : Ai.Pipeline.MaskQuantificationService.Quantify(mask, samResp.ImageWidth, samResp.ImageHeight, dn);
-                                    quantified.Add(q);
-                                }
-                                Ai.Pipeline.SamMaskRenderer.RenderMasks(
-                                    CodingOverlayCanvas, samResp, quantified,
-                                    CodingOverlayCanvas.ActualWidth, CodingOverlayCanvas.ActualHeight);
-                            }
+                            Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
                         }
                     }
-                    catch (Exception samEx)
+                    catch (Exception yoloEx)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[Qwen→SAM] {samEx.Message}");
+                        System.Diagnostics.Debug.WriteLine($"[YOLO-Live] {yoloEx.Message}");
                     }
+                }
+
+                // ── Schritt 2: Qwen-Fallback wenn YOLO nichts findet ODER Sidecar offline ──
+                if (!yoloHadFindings && _codingEnhancedVision != null)
+                {
+                    try
+                    {
+                        SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
+                            $"Qwen-Fallback: {CompactModelName(_codingAiModelName)}", pulse: true);
+
+                        var enhanced = await _codingEnhancedVision.AnalyzeAsync(
+                            b64, _codingAnalysisCts.Token);
+                        result = Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, captureTimestampSec);
+
+                        System.Diagnostics.Debug.WriteLine(
+                            _codingEnhancedVision.LastRawOutput ?? "[Qwen] keine Rohdaten");
+
+                        ShowCodingAiResults(result);
+                    }
+                    catch (Exception qwenEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Qwen-Fallback] {qwenEx.Message}");
+                        SetCodingAiState("Analyse fehlgeschlagen",
+                            Color.FromRgb(0xEF, 0x44, 0x44), qwenEx.Message);
+                    }
+                }
+
+                // Wenn weder YOLO noch Qwen etwas gefunden haben
+                if (!yoloHadFindings && (result == null || result.Findings.Count == 0))
+                {
+                    SetCodingAiState("Kein Schaden erkannt",
+                        Color.FromRgb(0x94, 0xA3, 0xB8), "YOLO + Qwen");
                 }
             }
         }
