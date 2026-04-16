@@ -343,7 +343,35 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
             <= 16384 => 6,
             _        => 10
         };
-        var examples = await store.GetBestExamplesAsync(maxExamples, ct: ct);
+        // Diverse Auswahl: Erst 1 pro Hauptgruppe (BA/BB/BC), dann auffuellen pro Code
+        var allExamples = await store.GetBestExamplesAsync(maxExamples * 5, maxPerMainGroup: 10, ct: ct);
+        var diverseExamples = new List<Training.FewShotExample>();
+        var usedGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var usedCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // Runde 1: 1 Beispiel pro Hauptgruppe (BA, BB, BC)
+        foreach (var ex in allExamples)
+        {
+            if (diverseExamples.Count >= maxExamples) break;
+            var group = (ex.VsaCode ?? "").Length >= 2 ? ex.VsaCode![..2] : "";
+            if (!string.IsNullOrEmpty(group) && usedGroups.Add(group))
+            {
+                var code3 = ex.VsaCode!.Length >= 3 ? ex.VsaCode[..3] : ex.VsaCode;
+                usedCodes.Add(code3);
+                diverseExamples.Add(ex);
+            }
+        }
+
+        // Runde 2: Auffuellen mit 1 pro 3-Buchstaben Code (z.B. BCC neben BCD)
+        foreach (var ex in allExamples)
+        {
+            if (diverseExamples.Count >= maxExamples) break;
+            var code3 = (ex.VsaCode ?? "").Length >= 3 ? ex.VsaCode![..3] : ex.VsaCode ?? "";
+            if (!string.IsNullOrEmpty(code3) && usedCodes.Add(code3))
+                diverseExamples.Add(ex);
+        }
+
+        var examples = (IReadOnlyList<Training.FewShotExample>)diverseExamples;
 
         // Bilder vorladen und als Base64 cachen (einmal laden, bei jeder Analyse verwenden)
         var loaded = new List<(FewShotExample, string)>();
