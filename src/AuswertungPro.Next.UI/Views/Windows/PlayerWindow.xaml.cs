@@ -2692,7 +2692,6 @@ public partial class PlayerWindow : Window
     // Multi-Model Pipeline (YOLO → DINO → SAM) fuer Einzelframe-Analyse
     private Ai.Pipeline.SingleFrameMultiModelService? _codingMultiModel;
     private Ai.Pipeline.VisionPipelineClient? _codingVisionClient;
-    private bool _codingUseMultiModel;
 
     // Import-Beobachtungen (Referenz-Spalte, nur-lesen)
     private readonly ObservableCollection<CodingEvent> _codingImportEvents = new();
@@ -6465,22 +6464,20 @@ public partial class PlayerWindow : Window
                 if (health != null)
                 {
                     _codingMultiModel = new Ai.Pipeline.SingleFrameMultiModelService(_codingVisionClient);
-                    _codingUseMultiModel = true;
-                    SetCodingAiState("Kuenstliche Intelligenz bereit (Multi-Model)", Color.FromRgb(0x22, 0xC5, 0x5E),
-                        $"YOLO+DINO+SAM + {CompactModelName(_codingAiModelName)}");
+                    // Codier-Modus: Direkt Qwen, Sidecar nur fuer SAM-Nachsegmentierung
+                    SetCodingAiState("Kuenstliche Intelligenz bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
+                        $"{CompactModelName(_codingAiModelName)} + SAM-Segmentierung");
                 }
                 else
                 {
-                    _codingUseMultiModel = false;
-                    SetCodingAiState("Kuenstliche Intelligenz bereit (Qwen)", Color.FromRgb(0x22, 0xC5, 0x5E),
-                        $"Sidecar offline → {CompactModelName(_codingAiModelName)}");
+                    SetCodingAiState("Kuenstliche Intelligenz bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
+                        $"{CompactModelName(_codingAiModelName)} (ohne SAM)");
                 }
             }
             catch
             {
-                _codingUseMultiModel = false;
-                SetCodingAiState("Kuenstliche Intelligenz bereit (Qwen)", Color.FromRgb(0x22, 0xC5, 0x5E),
-                    $"Sidecar offline → {CompactModelName(_codingAiModelName)}");
+                SetCodingAiState("Kuenstliche Intelligenz bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
+                    $"{CompactModelName(_codingAiModelName)} (ohne SAM)");
             }
             SetYoloStatus("Bereit", Color.FromRgb(0x22, 0xC5, 0x5E), CompactModelName(_codingAiModelName));
 
