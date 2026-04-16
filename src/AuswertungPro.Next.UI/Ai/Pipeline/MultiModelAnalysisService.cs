@@ -39,7 +39,7 @@ public sealed class MultiModelAnalysisService
 
     public double FrameStepSeconds { get; set; } = 1.5;
     public int DedupWindowFrames { get; set; } = 3;
-    public TimeSpan QwenFrameTimeout { get; set; } = TimeSpan.FromSeconds(45);
+    public TimeSpan QwenFrameTimeout { get; set; } = TimeSpan.FromSeconds(90);
 
     /// <summary>Maximale Zeit pro Frame (YOLO+DINO+SAM+Qwen zusammen). Ueberschrittene Frames werden uebersprungen.</summary>
     public TimeSpan PerFrameTimeout { get; set; } = TimeSpan.FromSeconds(90);
@@ -61,7 +61,7 @@ public sealed class MultiModelAnalysisService
     /// <summary>
     /// Jeder N-te YOLO-irrelevante Frame wird dennoch an DINO weitergeleitet.
     /// </summary>
-    public int DinoFallbackEveryNIrrelevantFrames { get; set; } = 2;
+    public int DinoFallbackEveryNIrrelevantFrames { get; set; } = 5;
 
     /// <summary>
     /// Startzeit fuer Recall-Fallbacks nach der OSD-Phase.
@@ -132,6 +132,11 @@ public sealed class MultiModelAnalysisService
         // Pipe diameter: from config override or default 300mm
         int pipeDiameterMm = _config.PipeDiameterMmOverride ?? 300;
 
+        // Auto-Kalibrierung: Rohrdurchmesser aus erstem brauchbaren Frame messen
+        // Ersetzt das hardcoded PipeImageWidthRatio=0.70 mit echten Pixel-Messungen
+        Domain.Models.PipeCalibration? pipeCalibration = null;
+        bool calibrationAttempted = false;
+
         // Material-Voting: Qwen erkennt Material visuell/OSD, Mehrheitsentscheid
         var materialVotes = new System.Collections.Concurrent.ConcurrentDictionary<string, int>(
             StringComparer.OrdinalIgnoreCase);
@@ -173,6 +178,35 @@ public sealed class MultiModelAnalysisService
 
             var frameBase64 = Convert.ToBase64String(frameBytes);
 
+            // Auto-Kalibrierung: beim ersten brauchbaren Frame Rohrdurchmesser messen
+            if (!calibrationAttempted && frameBytes.Length > 1000)
+            {
+                calibrationAttempted = true;
+                try
+                {
+                    using var ms = new MemoryStream(frameBytes);
+                    var decoder = System.Windows.Media.Imaging.BitmapDecoder.Create(
+                        ms, System.Windows.Media.Imaging.BitmapCreateOptions.None,
+                        System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+                    var bmp = decoder.Frames[0];
+                    pipeCalibration = AutoCalibrationService.TryAutoCalibrate(bmp, pipeDiameterMm);
+                    if (pipeCalibration != null)
+                    {
+                        _logger.LogInformation(
+                            "Auto-Kalibrierung: NormalizedDiameter={Ratio:F3} (statt 0.700), Pixel={Px}",
+                            pipeCalibration.NormalizedDiameter, pipeCalibration.PipePixelDiameter);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("Auto-Kalibrierung fehlgeschlagen — verwende Default 0.70");
+                    }
+                }
+                catch (Exception exCal)
+                {
+                    _logger.LogDebug(exCal, "Auto-Kalibrierung Exception — verwende Default 0.70");
+                }
+            }
+
             try // Per-Frame-Timeout: Haengende Frames uebersprungen
             {
 
@@ -184,8 +218,8 @@ public sealed class MultiModelAnalysisService
             bool isAfterOsd = t > DinoFallbackStartSeconds; // OSD-Einblendung 10-20 Sekunden je nach Operateur
             bool isBcdZone = isAfterOsd && estimatedMeter < 1.5 && frameIndex <= 10;
             bool isBceZone = duration > 10 && t > (duration - FrameStepSeconds * 2);
-            // Jeden 2. Frame immer analysieren (Recall-optimierter Bestandsaufnahme-Sweep)
-            bool isPeriodicSweep = isAfterOsd && (frameIndex % 2 == 0);
+            // Jeden 5. Frame immer analysieren (Balance: Recall vs. Geschwindigkeit)
+            bool isPeriodicSweep = isAfterOsd && (frameIndex % 5 == 0);
             bool telemetryBypass = isBcdZone || isBceZone || isPeriodicSweep;
 
             // ── Step 1: YOLO Pre-Screening ──
@@ -273,6 +307,48 @@ public sealed class MultiModelAnalysisService
                         {
                             Detections = filtered,
                             IsRelevant = filtered.Count > 0
+                        };
+                    }
+
+                    // Tiefenfilter: Boxen die zu nahe am Rohrmittelpunkt liegen ignorieren.
+                    // Die Kamera sieht 5-10m voraus, aber relevante Schaeden sind nur im
+                    // Nahbereich (~30-40cm). Boxen nahe dem Fluchtpunkt (Bildmitte) = weit weg.
+                    if (yoloResult.Detections.Count > 0 && frameBytes is { Length: > 0 })
+                    {
+                        // Bildmitte = Fluchtpunkt (ungefaehr)
+                        double imgCx = 0.5, imgCy = 0.5;
+                        // Mindestabstand vom Mittelpunkt: 30% des Bildes
+                        // (alles innerhalb von 30% vom Zentrum ist zu weit weg)
+                        const double MinDistFromCenter = 0.30;
+
+                        var nearbyOnly = yoloResult.Detections
+                            .Where(d =>
+                            {
+                                // Box-Mittelpunkt normiert (0-1)
+                                double bx = ((d.X1 + d.X2) / 2.0);
+                                double by = ((d.Y1 + d.Y2) / 2.0);
+                                // Normieren: Bildgroesse aus den max-Koordinaten schaetzen
+                                double maxX = yoloResult.Detections.Max(dd => dd.X2);
+                                double maxY = yoloResult.Detections.Max(dd => dd.Y2);
+                                double imgW = Math.Max(maxX * 1.1, 640);
+                                double imgH = Math.Max(maxY * 1.1, 480);
+                                double nx = bx / imgW;
+                                double ny = by / imgH;
+                                double dist = Math.Sqrt(Math.Pow(nx - imgCx, 2) + Math.Pow(ny - imgCy, 2));
+                                return dist >= MinDistFromCenter;
+                            })
+                            .ToList();
+
+                        if (nearbyOnly.Count < yoloResult.Detections.Count)
+                        {
+                            var removed = yoloResult.Detections.Count - nearbyOnly.Count;
+                            _logger.LogDebug("Frame {Frame}: {Removed} Fern-Detektionen gefiltert (Tiefenfilter)", frameIndex, removed);
+                        }
+
+                        yoloResult = yoloResult with
+                        {
+                            Detections = nearbyOnly,
+                            IsRelevant = nearbyOnly.Count > 0
                         };
                     }
                 }
@@ -462,7 +538,7 @@ public sealed class MultiModelAnalysisService
             var samMs = phaseSw.ElapsedMilliseconds;
 
             // ── Step 4: Quantification ──
-            var quantified = MaskQuantificationService.QuantifyAll(samResult, pipeDiameterMm);
+            var quantified = MaskQuantificationService.QuantifyAll(samResult, pipeDiameterMm, pipeCalibration);
             var meter = EstimateMeter(t, duration, ref lastMeter);
 
             // Capture max DINO confidence for EvidenceVector (nach Tiefenfilter)
@@ -515,12 +591,21 @@ public sealed class MultiModelAnalysisService
                 FrameCount: 1
             );
 
-            // ── Step 5: Qwen VSA-Code enrichment (optional) ──
+            // ── Step 5: Qwen VSA-Code enrichment (nur bei Eskalation) ──
+            // YOLO26l-seg erkennt Klassen direkt. Qwen nur bei:
+            // - Telemetrie-Bypass (BCD/BCE → OSD-Meter lesen)
+            // - Niedriger Confidence (<50%)
+            // - Keine Findings (Fallback)
             long qwenMs = 0;
-            if (_qwenVision is not null && findings.Count > 0)
+            // DINO-Confidence als Indikator: niedrig = YOLO/DINO unsicher → Qwen fragen
+            bool lowConfidence = maxDinoConf < 0.40;
+            bool needsQwen = telemetryBypass
+                || lowConfidence
+                || findings.Count == 0;
+            if (_qwenVision is not null && needsQwen)
             {
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                    $"Frame {frameIndex}/{totalFrames} – Qwen VSA-Code-Mapping...",
+                    $"Frame {frameIndex}/{totalFrames} – Qwen Eskalation...",
                     FramePreviewPng: frameBytes));
 
                 phaseSw.Restart();
@@ -1223,12 +1308,16 @@ public sealed class MultiModelAnalysisService
                 FrameCount: 1
             );
 
-            // ── Step 5: Qwen VSA-Code enrichment (optional) ──
+            // ── Step 5: Qwen VSA-Code enrichment (nur bei Eskalation, NVDEC) ──
+            // YOLO26l-seg erkennt Klassen direkt. Qwen nur bei niedriger Confidence.
             long qwenMs = 0;
-            if (_qwenVision is not null && findings.Count > 0)
+            bool lowConfNvdec = maxDinoConf < 0.40;
+            bool needsQwenNvdec = lowConfNvdec
+                || findings.Count == 0;
+            if (_qwenVision is not null && needsQwenNvdec)
             {
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                    $"Frame {frameIndex}/{totalFrames} – Qwen VSA-Code-Mapping (NVDEC)...",
+                    $"Frame {frameIndex}/{totalFrames} – Qwen Eskalation (NVDEC)...",
                     FramePreviewPng: frameBytes));
 
                 phaseSw.Restart();
