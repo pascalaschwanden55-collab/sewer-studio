@@ -219,23 +219,58 @@ public sealed class BatchPipelineService
                 using var frameCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 frameCts.CancelAfter(TimeSpan.FromSeconds(45));
 
-                // Mit DINO/SAM-Kontext wenn verfuegbar (bessere Erkennung)
+                // YOLO-first: Wenn YOLO Detektionen hat, Qwen ueberspringen
+                // YOLO erkennt Klassen direkt → Qwen nur als Fallback wenn nichts gefunden
                 EnhancedFrameAnalysis analysis;
-                if (frameContexts.TryGetValue(frame.Index, out var ctx))
+                bool hasYoloFindings = frame.Yolo.Detections.Count > 0 && frame.Yolo.IsRelevant;
+                bool hasDinoContext = frameContexts.ContainsKey(frame.Index);
+
+                if (hasYoloFindings && hasDinoContext)
                 {
+                    // YOLO + DINO/SAM Kontext vorhanden → kein Qwen noetig
+                    // Erstelle minimale Analyse aus YOLO-Daten
+                    var yoloFindings = frame.Yolo.Detections.Select(d => new EnhancedFinding(
+                        Label: d.ClassName,
+                        VsaCodeHint: d.ClassName,
+                        Severity: d.Confidence > 0.7 ? 2 : 1,
+                        PositionClock: null,
+                        ExtentPercent: null,
+                        HeightMm: null, WidthMm: null,
+                        IntrusionPercent: null,
+                        CrossSectionReductionPercent: null,
+                        DiameterReductionMm: null,
+                        Notes: $"YOLO direct (conf={d.Confidence:F2})"
+                    )).ToList();
+
+                    analysis = new EnhancedFrameAnalysis(
+                        Meter: null,
+                        PipeMaterial: "unbekannt",
+                        PipeDiameterMm: null,
+                        Findings: yoloFindings,
+                        ImageQuality: "mittel",
+                        IsEmptyFrame: false,
+                        Error: null,
+                        ViewType: "axial");
+                }
+                else if (frameContexts.TryGetValue(frame.Index, out var ctx))
+                {
+                    // DINO/SAM Kontext aber kein YOLO → Qwen fragen
                     analysis = await _qwen.AnalyzeWithContextAsync(
                         frame.Base64, ctx, pipeDiameterMm, frameCts.Token)
                         .ConfigureAwait(false);
                 }
                 else
                 {
+                    // Kein Kontext → Qwen als Fallback
                     analysis = await _qwen.AnalyzeAsync(frame.Base64, frameCts.Token)
                         .ConfigureAwait(false);
                 }
                 var done = Interlocked.Increment(ref qwenDone);
                 progress?.Report(new BatchPipelineProgress(
                     done, relevantFrames.Count,
-                    $"Qwen: {done}/{relevantFrames.Count} Frames analysiert"));
+                    hasYoloFindings && hasDinoContext
+                        ? $"YOLO direct: {done}/{relevantFrames.Count}"
+                        : $"Qwen: {done}/{relevantFrames.Count} Frames analysiert"));
 
                 analysisResults[i] = new BatchFrameAnalysis(
                     frame.Index, frame.Timestamp, analysis,
