@@ -460,6 +460,19 @@ public sealed class MultiModelAnalysisService
             }
             var dinoMs = phaseSw.ElapsedMilliseconds;
 
+            // YOLO-Fallback: Wenn DINO nichts findet, YOLO-Detektionen als Ersatz
+            if (dinoResult.Detections.Count == 0 && yoloResult.Detections.Count > 0)
+            {
+                var yoloDinos = yoloResult.Detections.Select(d => new DinoDetectionDto(
+                    d.X1, d.Y1, d.X2, d.Y2,
+                    Label: d.ClassName,
+                    Confidence: d.Confidence,
+                    Phrase: d.ClassName)).ToList();
+                dinoResult = new DinoResponse(yoloDinos, dinoResult.InferenceTimeMs);
+                _logger.LogDebug("Frame {Frame}: DINO leer → {Count} YOLO-Boxen als Fallback",
+                    frameIndex, yoloDinos.Count);
+            }
+
             if (dinoResult.Detections.Count == 0)
             {
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, 0, 0, frameSw.ElapsedMilliseconds, Skipped: false));
@@ -1220,6 +1233,7 @@ public sealed class MultiModelAnalysisService
             }
             var dinoMs = phaseSw.ElapsedMilliseconds;
 
+            // NVDEC: YOLO-Batch hat keine Box-Daten im item → kein Fallback moeglich
             if (dinoResult.Detections.Count == 0)
             {
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, 0, yoloMs, dinoMs, 0, 0, frameSw.ElapsedMilliseconds, Skipped: false));
