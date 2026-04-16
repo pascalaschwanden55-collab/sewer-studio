@@ -33,6 +33,7 @@ namespace AuswertungPro.Next.UI.Ai.Training;
 public sealed class BatchSelfTrainingOrchestrator
 {
     private readonly VideoSelfTrainingOrchestrator _videoOrchestrator;
+    private readonly Func<VideoSelfTrainingOrchestrator>? _orchestratorFactory;
     private readonly ProtocolLoaderFactory _protocolLoader;
     private readonly KbEnrichmentService _enrichment;
     private readonly ILogger? _log;
@@ -57,7 +58,8 @@ public sealed class BatchSelfTrainingOrchestrator
         KbEnrichmentService enrichment,
         ILogger? log = null,
         string? sidecarDir = null,
-        YoloRetrainOrchestrator? yoloRetrain = null)
+        YoloRetrainOrchestrator? yoloRetrain = null,
+        Func<VideoSelfTrainingOrchestrator>? orchestratorFactory = null)
     {
         _videoOrchestrator = videoOrchestrator ?? throw new ArgumentNullException(nameof(videoOrchestrator));
         _protocolLoader = protocolLoader ?? throw new ArgumentNullException(nameof(protocolLoader));
@@ -65,6 +67,7 @@ public sealed class BatchSelfTrainingOrchestrator
         _log = log;
         _sidecarDir = sidecarDir;
         _yoloRetrain = yoloRetrain;
+        _orchestratorFactory = orchestratorFactory;
     }
 
     /// <summary>
@@ -140,115 +143,256 @@ public sealed class BatchSelfTrainingOrchestrator
                 LearnFromMissed = request.LearnFromMissed
             };
 
+            // ── PDF-Vorlade-Phase: Alle Protokolle parallel auf CPU parsen ──
+            // So wartet die GPU nie auf PDF-Parsing.
+            progress?.Report(new BatchSelfTrainingProgress
+            {
+                TotalHaltungen = total,
+                Phase = "Vorbereitung",
+                Status = $"Protokolle vorladen ({total} Haltungen)...",
+                RunningStats = stats
+            });
+
+            var preloadedProtocols = new System.Collections.Concurrent.ConcurrentDictionary<string, PreloadedProtocol>();
+            var preloadSw = Stopwatch.StartNew();
+
+            var cpuParallelism = new TrainingCenterSettings().CpuPreExtractParallelism;
+            await Task.Run(() =>
+            {
+                Parallel.For(0, total, new ParallelOptions { MaxDegreeOfParallelism = cpuParallelism },
+                    i =>
+                    {
+                        var h = haltungen[i];
+                        try
+                        {
+                            var (protocol, record) = _protocolLoader.LoadProtocolWithRecord(
+                                h.ProtocolSource, h.SourceType, h.HaltungId);
+                            preloadedProtocols[h.HaltungId] = new PreloadedProtocol(protocol, record);
+                        }
+                        catch (Exception ex)
+                        {
+                            _log?.LogWarning(ex, "Batch: Protokoll-Vorladen fehlgeschlagen fuer {Id}", h.HaltungId);
+                            preloadedProtocols[h.HaltungId] = new PreloadedProtocol(null, null, ex.Message);
+                        }
+                    });
+            }, ct).ConfigureAwait(false);
+
+            preloadSw.Stop();
+            _log?.LogInformation("Batch: {Count} Protokolle in {Sec:F1}s vorgeladen",
+                preloadedProtocols.Count, preloadSw.Elapsed.TotalSeconds);
+
+            progress?.Report(new BatchSelfTrainingProgress
+            {
+                TotalHaltungen = total,
+                Phase = "Vorbereitung",
+                Status = $"{preloadedProtocols.Count} Protokolle in {preloadSw.Elapsed.TotalSeconds:F0}s vorgeladen",
+                RunningStats = stats
+            });
+
             // Zeitmessung fuer Restzeit-Schaetzung
             var haltungTimes = new List<double>();
+            var parallelism = Math.Max(1, request.MaxParallelHaltungen);
 
-            // 2. Haltung fuer Haltung verarbeiten
-            for (int i = 0; i < total; i++)
+            // Lock fuer thread-sichere Statistik-Updates bei paralleler Verarbeitung
+            var statsLock = new object();
+
+            // 2. Haltungen verarbeiten (parallel wenn MaxParallelHaltungen > 1)
+            if (parallelism <= 1)
             {
-                if (_isCancelled || ct.IsCancellationRequested) break;
-                await CheckPauseAsync(ct).ConfigureAwait(false);
-
-                var h = haltungen[i];
-                var hSw = Stopwatch.StartNew();
-
-                // Restzeit schaetzen
-                TimeSpan? estimatedRemaining = null;
-                if (haltungTimes.Count >= 2)
+                // Sequentieller Pfad (unveraendert, bewaehrt)
+                for (int i = 0; i < total; i++)
                 {
-                    var avg = haltungTimes.Average();
-                    estimatedRemaining = TimeSpan.FromSeconds(avg * (total - i));
-                }
+                    if (_isCancelled || ct.IsCancellationRequested) break;
+                    await CheckPauseAsync(ct).ConfigureAwait(false);
 
-                progress?.Report(new BatchSelfTrainingProgress
-                {
-                    CurrentIndex = i + 1,
-                    TotalHaltungen = total,
-                    HaltungId = h.HaltungId,
-                    Phase = "Start",
-                    Status = $"Haltung {i + 1}/{total}: {h.HaltungId}",
-                    EstimatedRemaining = estimatedRemaining,
-                    RunningStats = stats
-                });
+                    var h = haltungen[i];
+                    var hSw = Stopwatch.StartNew();
 
-                // Sidecar Auto-Restart: Vor jeder Haltung pruefen ob Sidecar lebt
-                await EnsureSidecarRunningAsync(progress, i + 1, total, h.HaltungId, stats, ct)
-                    .ConfigureAwait(false);
-
-                try
-                {
-                    var hSw2 = Stopwatch.StartNew();
-                    var result = await ProcessSingleHaltungAsync(
-                        h, request, policy, stats, progress, i + 1, total, ct)
-                        .ConfigureAwait(false);
-                    hSw2.Stop();
-
-                    // IMMER in Datei loggen — Debug/Progress kann verloren gehen
-                    LogToFile($"[{i+1}/{total}] {h.HaltungId}: Success={result.Success}, " +
-                        $"TP={result.TruePositives}, FN={result.FalseNegatives}, FP={result.FalsePositives}, " +
-                        $"KB=+{result.KbIndexed}, Error={result.Error}, Dauer={hSw2.Elapsed.TotalSeconds:F1}s");
-
-                    haltungResults.Add(result);
-
-                    if (result.Success)
+                    TimeSpan? estimatedRemaining = null;
+                    if (haltungTimes.Count >= 2)
                     {
-                        // Nur erfolgreiche Haltungen als verarbeitet markieren.
-                        await AppendBatchHistoryAsync(BuildHistoryKey(h)).ConfigureAwait(false);
-                        processed++;
-                        // Ergebnis anzeigen
-                        progress?.Report(new BatchSelfTrainingProgress
-                        {
-                            CurrentIndex = i + 1,
-                            TotalHaltungen = total,
-                            HaltungId = h.HaltungId,
-                            Phase = "Ergebnis",
-                            Status = $"✓ {h.HaltungId}: TP:{result.TruePositives} FN:{result.FalseNegatives} FP:{result.FalsePositives} MM:{result.CodeMismatches} | KB:+{result.KbIndexed} | {result.Duration.TotalSeconds:F0}s",
-                            RunningStats = stats
-                        });
+                        var avg = haltungTimes.Average();
+                        estimatedRemaining = TimeSpan.FromSeconds(avg * (total - i));
                     }
-                    else
-                    {
-                        failed++;
-                        // Fehler anzeigen
-                        progress?.Report(new BatchSelfTrainingProgress
-                        {
-                            CurrentIndex = i + 1,
-                            TotalHaltungen = total,
-                            HaltungId = h.HaltungId,
-                            Phase = "Ergebnis",
-                            Status = $"✗ {h.HaltungId}: {result.Error ?? "unbekannter Fehler"} | {result.Duration.TotalSeconds:F0}s",
-                            RunningStats = stats
-                        });
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    failed++;
-                    var errMsg = $"{ex.GetType().Name}: {ex.Message}";
-                    LogToFile($"[{i+1}/{total}] {h.HaltungId}: EXCEPTION {errMsg}");
+
                     progress?.Report(new BatchSelfTrainingProgress
                     {
-                        CurrentIndex = i + 1, TotalHaltungen = total,
-                        HaltungId = h.HaltungId, Phase = "Ergebnis",
-                        Status = $"✗ {h.HaltungId}: EXCEPTION {errMsg}",
+                        CurrentIndex = i + 1,
+                        TotalHaltungen = total,
+                        HaltungId = h.HaltungId,
+                        Phase = "Start",
+                        Status = $"Haltung {i + 1}/{total}: {h.HaltungId}",
+                        EstimatedRemaining = estimatedRemaining,
                         RunningStats = stats
                     });
-                    haltungResults.Add(new BatchHaltungResult
-                    {
-                        HaltungId = h.HaltungId,
-                        VideoPath = h.VideoPath,
-                        Success = false,
-                        Error = errMsg,
-                        Duration = hSw.Elapsed
-                    });
-                }
 
-                hSw.Stop();
-                haltungTimes.Add(hSw.Elapsed.TotalSeconds);
+                    await EnsureSidecarRunningAsync(progress, i + 1, total, h.HaltungId, stats, ct)
+                        .ConfigureAwait(false);
+
+                    try
+                    {
+                        var hSw2 = Stopwatch.StartNew();
+                        var result = await ProcessSingleHaltungAsync(
+                            h, request, policy, stats, progress, i + 1, total, ct,
+                            preloaded: preloadedProtocols).ConfigureAwait(false);
+                        hSw2.Stop();
+
+                        LogToFile($"[{i+1}/{total}] {h.HaltungId}: Success={result.Success}, " +
+                            $"TP={result.TruePositives}, FN={result.FalseNegatives}, FP={result.FalsePositives}, " +
+                            $"KB=+{result.KbIndexed}, Error={result.Error}, Dauer={hSw2.Elapsed.TotalSeconds:F1}s");
+
+                        haltungResults.Add(result);
+
+                        if (result.Success)
+                        {
+                            await AppendBatchHistoryAsync(BuildHistoryKey(h)).ConfigureAwait(false);
+                            processed++;
+                            progress?.Report(new BatchSelfTrainingProgress
+                            {
+                                CurrentIndex = i + 1,
+                                TotalHaltungen = total,
+                                HaltungId = h.HaltungId,
+                                Phase = "Ergebnis",
+                                Status = $"✓ {h.HaltungId}: TP:{result.TruePositives} FN:{result.FalseNegatives} FP:{result.FalsePositives} MM:{result.CodeMismatches} | KB:+{result.KbIndexed} | {result.Duration.TotalSeconds:F0}s",
+                                RunningStats = stats
+                            });
+                        }
+                        else
+                        {
+                            failed++;
+                            progress?.Report(new BatchSelfTrainingProgress
+                            {
+                                CurrentIndex = i + 1,
+                                TotalHaltungen = total,
+                                HaltungId = h.HaltungId,
+                                Phase = "Ergebnis",
+                                Status = $"✗ {h.HaltungId}: {result.Error ?? "unbekannter Fehler"} | {result.Duration.TotalSeconds:F0}s",
+                                RunningStats = stats
+                            });
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        failed++;
+                        var errMsg = $"{ex.GetType().Name}: {ex.Message}";
+                        LogToFile($"[{i+1}/{total}] {h.HaltungId}: EXCEPTION {errMsg}");
+                        progress?.Report(new BatchSelfTrainingProgress
+                        {
+                            CurrentIndex = i + 1, TotalHaltungen = total,
+                            HaltungId = h.HaltungId, Phase = "Ergebnis",
+                            Status = $"✗ {h.HaltungId}: EXCEPTION {errMsg}",
+                            RunningStats = stats
+                        });
+                        haltungResults.Add(new BatchHaltungResult
+                        {
+                            HaltungId = h.HaltungId,
+                            VideoPath = h.VideoPath,
+                            Success = false,
+                            Error = errMsg,
+                            Duration = hSw.Elapsed
+                        });
+                    }
+
+                    hSw.Stop();
+                    haltungTimes.Add(hSw.Elapsed.TotalSeconds);
+                }
+            }
+            else
+            {
+                // Paralleler Pfad: N Haltungen gleichzeitig, jede mit eigener Pipeline-Instanz.
+                // Die Ollama-Slots (OLLAMA_NUM_PARALLEL) werden so tatsaechlich ausgelastet.
+                _log?.LogInformation("Batch: Paralleler Modus mit {N} gleichzeitigen Haltungen", parallelism);
+
+                // Index-Zaehler fuer Fortschritts-Tracking (thread-safe)
+                int completedCount = 0;
+
+                await Parallel.ForEachAsync(
+                    Enumerable.Range(0, total),
+                    new ParallelOptions { MaxDegreeOfParallelism = parallelism, CancellationToken = ct },
+                    async (i, token) =>
+                    {
+                        if (_isCancelled) return;
+                        await CheckPauseAsync(token).ConfigureAwait(false);
+
+                        var h = haltungen[i];
+                        var hSw = Stopwatch.StartNew();
+
+                        // Jede parallele Haltung braucht ihren eigenen Orchestrator
+                        // (VideoSelfTrainingOrchestrator hat internen State pro Video)
+                        var localOrch = _orchestratorFactory?.Invoke() ?? _videoOrchestrator;
+
+                        progress?.Report(new BatchSelfTrainingProgress
+                        {
+                            CurrentIndex = Interlocked.Increment(ref completedCount),
+                            TotalHaltungen = total,
+                            HaltungId = h.HaltungId,
+                            Phase = "Start",
+                            Status = $"[P{parallelism}] Haltung {i + 1}/{total}: {h.HaltungId}",
+                            RunningStats = stats
+                        });
+
+                        try
+                        {
+                            var result = await ProcessSingleHaltungParallelAsync(
+                                h, request, policy, stats, statsLock, localOrch,
+                                progress, i + 1, total, parallelism, token,
+                                preloaded: preloadedProtocols).ConfigureAwait(false);
+
+                            LogToFile($"[{i+1}/{total}] {h.HaltungId}: Success={result.Success}, " +
+                                $"TP={result.TruePositives}, FN={result.FalseNegatives}, FP={result.FalsePositives}, " +
+                                $"KB=+{result.KbIndexed}, Error={result.Error}, Dauer={result.Duration.TotalSeconds:F1}s");
+
+                            lock (statsLock)
+                            {
+                                haltungResults.Add(result);
+                                haltungTimes.Add(hSw.Elapsed.TotalSeconds);
+
+                                if (result.Success)
+                                    processed++;
+                                else
+                                    failed++;
+                            }
+
+                            if (result.Success)
+                                await AppendBatchHistoryAsync(BuildHistoryKey(h)).ConfigureAwait(false);
+
+                            var icon = result.Success ? "✓" : "✗";
+                            var detail = result.Success
+                                ? $"TP:{result.TruePositives} FN:{result.FalseNegatives} FP:{result.FalsePositives} MM:{result.CodeMismatches} | KB:+{result.KbIndexed} | {result.Duration.TotalSeconds:F0}s"
+                                : $"{result.Error ?? "unbekannter Fehler"} | {result.Duration.TotalSeconds:F0}s";
+                            progress?.Report(new BatchSelfTrainingProgress
+                            {
+                                CurrentIndex = i + 1,
+                                TotalHaltungen = total,
+                                HaltungId = h.HaltungId,
+                                Phase = "Ergebnis",
+                                Status = $"{icon} {h.HaltungId}: {detail}",
+                                RunningStats = stats
+                            });
+                        }
+                        catch (OperationCanceledException) { /* Abbruch */ }
+                        catch (Exception ex)
+                        {
+                            var errMsg = $"{ex.GetType().Name}: {ex.Message}";
+                            LogToFile($"[{i+1}/{total}] {h.HaltungId}: EXCEPTION {errMsg}");
+                            lock (statsLock)
+                            {
+                                failed++;
+                                haltungResults.Add(new BatchHaltungResult
+                                {
+                                    HaltungId = h.HaltungId,
+                                    VideoPath = h.VideoPath,
+                                    Success = false,
+                                    Error = errMsg,
+                                    Duration = hSw.Elapsed
+                                });
+                            }
+                        }
+                    }).ConfigureAwait(false);
             }
 
             sw.Stop();
@@ -316,21 +460,39 @@ public sealed class BatchSelfTrainingOrchestrator
         IProgress<BatchSelfTrainingProgress>? progress,
         int currentIndex,
         int total,
-        CancellationToken ct)
+        CancellationToken ct,
+        System.Collections.Concurrent.ConcurrentDictionary<string, PreloadedProtocol>? preloaded = null)
     {
         var hSw = Stopwatch.StartNew();
 
-        // Phase 1: Protokoll laden
-        progress?.Report(new BatchSelfTrainingProgress
-        {
-            CurrentIndex = currentIndex, TotalHaltungen = total,
-            HaltungId = h.HaltungId, Phase = "Import",
-            Status = $"{h.HaltungId}: Protokoll importieren...",
-            RunningStats = stats
-        });
+        // Phase 1: Protokoll aus Vorladen-Cache oder frisch laden
+        Domain.Protocol.ProtocolDocument? protocol;
+        Domain.Models.HaltungRecord? record;
 
-        var (protocol, record) = _protocolLoader.LoadProtocolWithRecord(
-            h.ProtocolSource, h.SourceType, h.HaltungId);
+        if (preloaded is not null && preloaded.TryGetValue(h.HaltungId, out var cached))
+        {
+            if (cached.Error is not null)
+                return new BatchHaltungResult
+                {
+                    HaltungId = h.HaltungId, VideoPath = h.VideoPath,
+                    Success = false, Error = cached.Error,
+                    Duration = hSw.Elapsed
+                };
+            protocol = cached.Protocol;
+            record = cached.Record;
+        }
+        else
+        {
+            progress?.Report(new BatchSelfTrainingProgress
+            {
+                CurrentIndex = currentIndex, TotalHaltungen = total,
+                HaltungId = h.HaltungId, Phase = "Import",
+                Status = $"{h.HaltungId}: Protokoll importieren...",
+                RunningStats = stats
+            });
+            (protocol, record) = _protocolLoader.LoadProtocolWithRecord(
+                h.ProtocolSource, h.SourceType, h.HaltungId);
+        }
 
         if (protocol is null || protocol.Original.Entries.Count == 0)
         {
@@ -420,6 +582,226 @@ public sealed class BatchSelfTrainingOrchestrator
         stats.KbDeduplicated += enrichResult.Deduplicated;
         stats.KbSkipped += enrichResult.Skipped;
         stats.Errors += enrichResult.Errors;
+
+        // Phase 4: YOLO-Trainingskandidaten generieren
+        try
+        {
+            var yoloOutputDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "KI_BRAIN", "yolo_training_candidates", h.HaltungId.Replace("/", "_"));
+
+            var candidates = new List<Infrastructure.Import.WinCan.YoloTrainingDataGenerator.TrainingCandidate>();
+            foreach (var entry in report.Entries)
+            {
+                if (string.IsNullOrEmpty(entry.FramePath) || !File.Exists(entry.FramePath))
+                    continue;
+
+                var opCode = entry.ProtocolEntry?.VsaCode ?? entry.KiDetection?.VsaCode ?? "";
+                if (string.IsNullOrEmpty(opCode)) continue;
+
+                var yoloClassId = Infrastructure.Import.WinCan.YoloTrainingDataGenerator.GetYoloClassId(opCode);
+                var kiLabel = entry.KiDetection?.VsaCode ?? entry.KiDetection?.Label ?? "";
+                var kiConf = entry.KiDetection?.Confidence ?? 0;
+
+                // Nachbar-Frame-Konsistenz: vereinfacht — wenn TP dann stabil
+                bool neighborMatch = entry.Category == Models.DifferenceCategory.TruePositive;
+
+                var quality = Infrastructure.Import.WinCan.YoloTrainingDataGenerator.ClassifyQuality(
+                    opCode, kiLabel, kiConf, boxAreaNorm: 0.3, neighborMatch);
+
+                // BBox aus KI-Detection (wenn vorhanden)
+                double bx1 = entry.KiDetection?.BboxX1 ?? 0.1;
+                double by1 = entry.KiDetection?.BboxY1 ?? 0.1;
+                double bx2 = entry.KiDetection?.BboxX2 ?? 0.9;
+                double by2 = entry.KiDetection?.BboxY2 ?? 0.9;
+
+                // FP → Negativ-Beispiel (leeres Label)
+                if (entry.Category == Models.DifferenceCategory.FalsePositive)
+                {
+                    yoloClassId = -1;
+                    quality = "green"; // FP-Frames sind wertvolle Negativ-Beispiele
+                }
+
+                candidates.Add(new Infrastructure.Import.WinCan.YoloTrainingDataGenerator.TrainingCandidate(
+                    FramePath: entry.FramePath,
+                    Quality: quality,
+                    OperatorCode: opCode,
+                    YoloClassId: yoloClassId,
+                    YoloLabel: kiLabel,
+                    YoloConfidence: kiConf,
+                    BoxX1: bx1 * 640, BoxY1: by1 * 480,
+                    BoxX2: bx2 * 640, BoxY2: by2 * 480,
+                    ImgWidth: 640, ImgHeight: 480,
+                    Reason: $"{entry.Category}: op={opCode} ki={kiLabel} conf={kiConf:F2}"));
+            }
+
+            if (candidates.Count > 0)
+            {
+                var genStats = Infrastructure.Import.WinCan.YoloTrainingDataGenerator.SaveCandidates(
+                    candidates, yoloOutputDir);
+                _log?.LogInformation(
+                    "Batch [{I}/{T}] {Id}: YOLO-Training G={G} Y={Y} R={R} Neg={N}",
+                    currentIndex, total, h.HaltungId,
+                    genStats.Green, genStats.Yellow, genStats.Red, genStats.Negatives);
+            }
+        }
+        catch (Exception yoloGenEx)
+        {
+            _log?.LogWarning(yoloGenEx, "Batch [{I}/{T}] {Id}: YOLO-Kandidaten Fehler",
+                currentIndex, total, h.HaltungId);
+        }
+
+        hSw.Stop();
+
+        _log?.LogInformation(
+            "Batch [{I}/{T}] {Id}: TP={TP} FN={FN} FP={FP} MM={MM}, KB +{KB} (Dedup {DD}) in {Dur:F0}s",
+            currentIndex, total, h.HaltungId,
+            report.TruePositiveCount, report.FalseNegativeCount,
+            report.FalsePositiveCount, report.CodeMismatchCount,
+            enrichResult.Indexed, enrichResult.Deduplicated,
+            hSw.Elapsed.TotalSeconds);
+
+        return new BatchHaltungResult
+        {
+            HaltungId = h.HaltungId,
+            VideoPath = h.VideoPath,
+            Success = true,
+            ProtocolEntries = protocol.Original.Entries.Count,
+            KiDetections = report.TruePositiveCount + report.FalsePositiveCount + report.CodeMismatchCount,
+            TruePositives = report.TruePositiveCount,
+            FalseNegatives = report.FalseNegativeCount,
+            FalsePositives = report.FalsePositiveCount,
+            CodeMismatches = report.CodeMismatchCount,
+            KbIndexed = enrichResult.Indexed,
+            KbDeduplicated = enrichResult.Deduplicated,
+            Duration = hSw.Elapsed
+        };
+    }
+
+    /// <summary>
+    /// Parallele Variante: Verarbeitet eine Haltung mit eigenem Orchestrator.
+    /// Stats werden thread-safe via Lock aktualisiert.
+    /// </summary>
+    private async Task<BatchHaltungResult> ProcessSingleHaltungParallelAsync(
+        DiscoveredHaltung h,
+        BatchSelfTrainingRequest request,
+        BatchAutoApprovePolicy policy,
+        BatchKbStats stats,
+        object statsLock,
+        VideoSelfTrainingOrchestrator localOrch,
+        IProgress<BatchSelfTrainingProgress>? progress,
+        int currentIndex,
+        int total,
+        int parallelism,
+        CancellationToken ct,
+        System.Collections.Concurrent.ConcurrentDictionary<string, PreloadedProtocol>? preloaded = null)
+    {
+        var hSw = Stopwatch.StartNew();
+
+        // Phase 1: Protokoll aus Vorladen-Cache oder frisch laden
+        Domain.Protocol.ProtocolDocument? protocol;
+        Domain.Models.HaltungRecord? record;
+
+        if (preloaded is not null && preloaded.TryGetValue(h.HaltungId, out var cached))
+        {
+            if (cached.Error is not null)
+                return new BatchHaltungResult
+                {
+                    HaltungId = h.HaltungId, VideoPath = h.VideoPath,
+                    Success = false, Error = cached.Error,
+                    Duration = hSw.Elapsed
+                };
+            protocol = cached.Protocol;
+            record = cached.Record;
+        }
+        else
+        {
+            (protocol, record) = _protocolLoader.LoadProtocolWithRecord(
+                h.ProtocolSource, h.SourceType, h.HaltungId);
+        }
+
+        if (protocol is null || protocol.Original.Entries.Count == 0)
+        {
+            var reason = protocol is null
+                ? "PDF konnte nicht gelesen werden"
+                : "PDF gelesen aber keine Protokoll-Eintraege gefunden";
+            _log?.LogWarning("Batch: {Id}: {Reason} (PDF: {Pdf})",
+                h.HaltungId, reason, Path.GetFileName(h.ProtocolSource));
+            return new BatchHaltungResult
+            {
+                HaltungId = h.HaltungId, VideoPath = h.VideoPath,
+                Success = false, Error = reason,
+                Duration = hSw.Elapsed
+            };
+        }
+
+        var rohrmaterial = record?.GetFieldValue("Rohrmaterial");
+        var dnText = record?.GetFieldValue("DN_mm");
+        int? dn = int.TryParse(dnText, out var d) ? d : null;
+        var hlText = record?.GetFieldValue("Haltungslaenge_m");
+        double? inspLength = double.TryParse(
+            hlText?.Replace(',', '.'),
+            System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var hl) ? hl : null;
+
+        // Phase 2: Video-Blinddurchlauf (mit eigenem Orchestrator)
+        progress?.Report(new BatchSelfTrainingProgress
+        {
+            CurrentIndex = currentIndex, TotalHaltungen = total,
+            HaltungId = h.HaltungId, Phase = "KI-Analyse",
+            Status = $"[P{parallelism}] {h.HaltungId}: Video wird analysiert...",
+            RunningStats = stats
+        });
+
+        var trainingRequest = new VideoTrainingRequest
+        {
+            VideoPath = h.VideoPath,
+            ProtocolSource = h.ProtocolSource,
+            ProtocolSourceType = h.SourceType,
+            Rohrmaterial = rohrmaterial,
+            NennweiteMm = dn,
+            InspektionslaengeMeter = inspLength,
+            FrameStepSeconds = request.FrameStepSeconds,
+            MeterTolerance = request.MeterTolerance
+        };
+
+        // Frame-Fortschritt an Batch-Progress weiterleiten
+        var frameProgress = progress is not null
+            ? new Progress<VideoTrainingProgress>(fp =>
+                progress.Report(new BatchSelfTrainingProgress
+                {
+                    CurrentIndex = currentIndex, TotalHaltungen = total,
+                    HaltungId = h.HaltungId, Phase = fp.Phase,
+                    Status = $"[P{parallelism}] {h.HaltungId}: {fp.Status} ({fp.Current}/{fp.Total})",
+                    RunningStats = stats
+                }))
+            : null;
+
+        var trainingResult = await localOrch.RunAsync(
+            trainingRequest, protocol, frameProgress, ct).ConfigureAwait(false);
+
+        var report = trainingResult.Report;
+
+        // Thread-sichere Statistik-Updates
+        lock (statsLock)
+        {
+            stats.TruePositives += report.TruePositiveCount;
+            stats.FalseNegatives += report.FalseNegativeCount;
+            stats.FalsePositives += report.FalsePositiveCount;
+            stats.CodeMismatches += report.CodeMismatchCount;
+        }
+
+        // Phase 3: KB-Anreicherung (KbEnrichmentService ist thread-safe dank SQLite-Transaktion)
+        var enrichResult = await _enrichment.AutoEnrichFromReportAsync(
+            report, rohrmaterial, dn, policy, ct, haltungId: h.HaltungId).ConfigureAwait(false);
+
+        lock (statsLock)
+        {
+            stats.KbIndexed += enrichResult.Indexed;
+            stats.KbDeduplicated += enrichResult.Deduplicated;
+            stats.KbSkipped += enrichResult.Skipped;
+            stats.Errors += enrichResult.Errors;
+        }
 
         hSw.Stop();
 
@@ -727,6 +1109,12 @@ public sealed class BatchSelfTrainingOrchestrator
     }
 
     /// <summary>Intern: Eine entdeckte Haltung mit Video + Protokoll-Quelle.</summary>
+    /// <summary>Vorgeladenes Protokoll aus der CPU-Vorlade-Phase.</summary>
+    private sealed record PreloadedProtocol(
+        AuswertungPro.Next.Domain.Protocol.ProtocolDocument? Protocol,
+        AuswertungPro.Next.Domain.Models.HaltungRecord? Record,
+        string? Error = null);
+
     private sealed class DiscoveredHaltung
     {
         public required string HaltungId { get; init; }
