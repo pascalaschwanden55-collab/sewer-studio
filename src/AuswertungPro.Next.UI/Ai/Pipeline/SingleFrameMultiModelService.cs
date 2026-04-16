@@ -100,15 +100,36 @@ public sealed class SingleFrameMultiModelService
                 { ViewType = detectedViewType };
             }
 
-            // 2. Florence-2 Open-Vocabulary Detection
-            var dinoReq = new DinoRequest(b64, null, _dinoBoxThreshold, _dinoTextThreshold);
-            var dinoResp = await _client.DetectDinoAsync(dinoReq, ct);
-            dinoMs = dinoResp.InferenceTimeMs;
-
-            // Tiefenfilter: Boxen die komplett INNERHALB des Rohrkreises liegen = in der Tiefe
-            var nearDetections = dinoResp.Detections
-                .Where(d => !IsInsidePipeCircle(d.X1, d.Y1, d.X2, d.Y2, pipeAxis, imgWidth, imgHeight))
+            // 2. YOLO-Detektionen als Boxen nutzen (DINO versagt bei Kanalbildern)
+            // Tiefenfilter: Nur Boxen im Nahbereich durchlassen (nicht in der Rohrtiefe)
+            var yoloAsDetections = yoloResp.Detections
+                .Where(d => !IsNearCenter(d.X1, d.Y1, d.X2, d.Y2, imgWidth, imgHeight))
+                .Select(d => new DinoDetectionDto(
+                    d.X1, d.Y1, d.X2, d.Y2,
+                    Label: d.ClassName,
+                    Confidence: d.Confidence,
+                    Phrase: d.ClassName))
                 .ToList();
+
+            // Optional: DINO als Ergaenzung (wenn es mal etwas findet)
+            IReadOnlyList<DinoDetectionDto> nearDetections = yoloAsDetections;
+            try
+            {
+                var dinoReq = new DinoRequest(b64, null, _dinoBoxThreshold, _dinoTextThreshold);
+                var dinoResp = await _client.DetectDinoAsync(dinoReq, ct);
+                dinoMs = dinoResp.InferenceTimeMs;
+                if (dinoResp.Detections.Count > 0)
+                {
+                    // DINO hat etwas gefunden — DINO-Boxen bevorzugen (praeziser)
+                    nearDetections = dinoResp.Detections
+                        .Where(d => !IsInsidePipeCircle(d.X1, d.Y1, d.X2, d.Y2, pipeAxis, imgWidth, imgHeight))
+                        .ToList();
+                    // Wenn DINO-Filter alles wegfiltert, YOLO-Boxen als Fallback
+                    if (nearDetections.Count == 0)
+                        nearDetections = yoloAsDetections;
+                }
+            }
+            catch { /* DINO optional — wenn es fehlt, reichen YOLO-Boxen */ }
 
             if (nearDetections.Count == 0)
             {
@@ -213,6 +234,31 @@ public sealed class SingleFrameMultiModelService
         }
 
         return AllCornersInside();
+    }
+
+    /// <summary>
+    /// Tiefenfilter fuer YOLO-Boxen: Prueft ob die Box im Zentrum des Bildes liegt
+    /// UND klein ist = in der Rohrtiefe = nicht codierbar.
+    /// Nur Boxen die am Bildrand liegen (Rohrwand, nah) werden durchgelassen.
+    /// </summary>
+    private static bool IsNearCenter(double x1, double y1, double x2, double y2, int imgW, int imgH)
+    {
+        if (imgW <= 0 || imgH <= 0) return false;
+
+        // Normalisierte Box
+        double nx1 = x1 / imgW, ny1 = y1 / imgH;
+        double nx2 = x2 / imgW, ny2 = y2 / imgH;
+        double ncx = (nx1 + nx2) / 2.0;
+        double ncy = (ny1 + ny2) / 2.0;
+        double nArea = (nx2 - nx1) * (ny2 - ny1);
+
+        // Box ist "in der Tiefe" wenn:
+        // 1. Mittelpunkt im inneren 40% des Bildes (30%-70% horizontal und vertikal)
+        // 2. Box-Flaeche < 15% des Bildes (kleine Boxen = weit weg)
+        bool centerInCore = ncx > 0.30 && ncx < 0.70 && ncy > 0.30 && ncy < 0.70;
+        bool smallBox = nArea < 0.15;
+
+        return centerInCore && smallBox;
     }
 
     /// <summary>
