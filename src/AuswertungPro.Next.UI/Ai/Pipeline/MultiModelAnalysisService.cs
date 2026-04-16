@@ -592,16 +592,13 @@ public sealed class MultiModelAnalysisService
             );
 
             // ── Step 5: Qwen VSA-Code enrichment (nur bei Eskalation) ──
-            // YOLO26l-seg erkennt Klassen direkt. Qwen nur bei:
+            // YOLO26l-seg erkennt Klassen direkt. Qwen nur wenn:
             // - Telemetrie-Bypass (BCD/BCE → OSD-Meter lesen)
-            // - Niedriger Confidence (<50%)
-            // - Keine Findings (Fallback)
+            // - YOLO hat NICHTS gefunden (findings leer)
+            // Wenn YOLO Findings hat → Qwen NICHT aufrufen (spart 3s/Frame)
             long qwenMs = 0;
-            // DINO-Confidence als Indikator: niedrig = YOLO/DINO unsicher → Qwen fragen
-            bool lowConfidence = maxDinoConf < 0.40;
-            bool needsQwen = telemetryBypass
-                || lowConfidence
-                || findings.Count == 0;
+            bool yoloFoundSomething = findings.Count > 0;
+            bool needsQwen = !yoloFoundSomething || telemetryBypass;
             if (_qwenVision is not null && needsQwen)
             {
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
@@ -1311,9 +1308,8 @@ public sealed class MultiModelAnalysisService
             // ── Step 5: Qwen VSA-Code enrichment (nur bei Eskalation, NVDEC) ──
             // YOLO26l-seg erkennt Klassen direkt. Qwen nur bei niedriger Confidence.
             long qwenMs = 0;
-            bool lowConfNvdec = maxDinoConf < 0.40;
-            bool needsQwenNvdec = lowConfNvdec
-                || findings.Count == 0;
+            bool yoloFoundNvdec = findings.Count > 0;
+            bool needsQwenNvdec = !yoloFoundNvdec;
             if (_qwenVision is not null && needsQwenNvdec)
             {
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
