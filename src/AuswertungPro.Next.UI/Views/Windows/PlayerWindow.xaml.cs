@@ -6489,9 +6489,10 @@ public partial class PlayerWindow : Window
                     if (_codingEnhancedVision == null) return;
                     var store = new Ai.Training.FewShotExampleStore();
                     await _codingEnhancedVision.EnableFewShotAsync(store);
+                    var fsDiag = _codingEnhancedVision.FewShotDiagnostics ?? "keine";
                     Dispatcher.Invoke(() =>
                         SetCodingAiState("Kuenstliche Intelligenz bereit (Few-Shot)", Color.FromRgb(0x22, 0xC5, 0x5E),
-                            $"{CompactModelName(_codingAiModelName)} + Beispiele"));
+                            $"{CompactModelName(_codingAiModelName)} | {fsDiag}"));
                 }
                 catch (Exception fex)
                 {
@@ -6829,6 +6830,14 @@ public partial class PlayerWindow : Window
                     var enhanced = await _codingEnhancedVision.AnalyzeAsync(
                         b64, _codingAnalysisCts.Token);
                     result = Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, captureTimestampSec);
+
+                    // Diagnostik in Debug-Output (sichtbar in VS Output-Fenster)
+                    if (_codingEnhancedVision.LastRawOutput != null)
+                        System.Diagnostics.Debug.WriteLine(_codingEnhancedVision.LastRawOutput);
+                    if (_codingEnhancedVision.LastFilterLog != null)
+                        System.Diagnostics.Debug.WriteLine(_codingEnhancedVision.LastFilterLog);
+                    if (Ai.EnhancedVisionAnalysisService.LastSuppressedLog != null)
+                        System.Diagnostics.Debug.WriteLine(Ai.EnhancedVisionAnalysisService.LastSuppressedLog);
                 }
                 else
                 {

@@ -356,10 +356,15 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
 
         lock (_fewShotLock) { _cachedFewShot = loaded; }
 
-        System.Diagnostics.Debug.WriteLine(
-            $"[EnhancedVision] Few-Shot aktiviert: {loaded.Count} Beispiele geladen " +
-            $"({string.Join(", ", loaded.Select(l => l.Item1.VsaCode))})");
+        // Instrumentation: Few-Shot-Inhalt sichtbar machen
+        var fewShotCodes = string.Join(", ", loaded.Select(l => l.Item1.VsaCode));
+        var fewShotLog = $"[FewShot] {loaded.Count}/{maxExamples} Beispiele geladen: {fewShotCodes}";
+        System.Diagnostics.Debug.WriteLine(fewShotLog);
+        FewShotDiagnostics = fewShotLog;
     }
+
+    /// <summary>Diagnostik: Welche Few-Shot-Beispiele sind geladen (fuer UI/Logging).</summary>
+    public string? FewShotDiagnostics { get; private set; }
 
     public async Task<EnhancedFrameAnalysis> AnalyzeAsync(
         string framePngBase64,
@@ -384,8 +389,45 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
             return EnhancedFrameAnalysis.Empty(ex.Message);
         }
 
-        return MapToAnalysis(dto);
+        // Rohoutput-Logging: Qwen-Antwort VOR allen Filtern speichern
+        var rawFindingsCount = dto.Findings?.Count ?? 0;
+        var rawViewType = dto.ViewType ?? "null";
+        LastRawOutput = $"[RawQwen] meter={dto.Meter}, view_type={rawViewType}, " +
+            $"findings={rawFindingsCount}, quality={dto.ImageQuality}, empty={dto.IsEmptyFrame}";
+        if (rawFindingsCount > 0)
+        {
+            var rawCodes = string.Join(", ", dto.Findings!.Select(f =>
+                $"{f.Label}(s{f.Severity})"));
+            LastRawOutput += $" | codes: {rawCodes}";
+        }
+        System.Diagnostics.Debug.WriteLine(LastRawOutput);
+
+        var result = MapToAnalysis(dto);
+
+        // Post-Filter-Logging: Was wurde gefiltert?
+        var filteredCount = result.Findings.Count;
+        if (filteredCount != rawFindingsCount)
+        {
+            var filterLog = $"[PostFilter] {rawFindingsCount} roh → {filteredCount} nach Filter (view_type={result.ViewType})";
+            LastFilterLog = filterLog;
+            System.Diagnostics.Debug.WriteLine(filterLog);
+        }
+        else
+        {
+            LastFilterLog = null;
+        }
+
+        return result;
     }
+
+    /// <summary>Diagnostik: Letzte Qwen-Rohantwort (vor Filtern).</summary>
+    public string? LastRawOutput { get; private set; }
+
+    /// <summary>Diagnostik: Was wurde durch Filter entfernt?</summary>
+    public string? LastFilterLog { get; private set; }
+
+    /// <summary>Diagnostik: Welche Findings wurden wegen ViewType unterdrueckt?</summary>
+    public static string? LastSuppressedLog { get; private set; }
 
     /// <summary>
     /// Analysiert ein Foto aus einem PDF-Bildbericht (KEIN Video-Frame).
@@ -709,22 +751,45 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
             _ => "axial"
         };
 
-        // Bei Nahaufnahme/Schwenk: Findings verwerfen (nicht codierbar)
+        // Soft-Filter: Bei Nahaufnahme/Schwenk Severity abstufen statt loeschen
+        // Audit-Trail: Unterdrueckte Findings werden in SuppressedFindings gespeichert
+        var suppressedFindings = new List<EnhancedFinding>();
+
         if (viewType is "nahaufnahme" or "schwenk")
         {
-            findings = new List<EnhancedFinding>();
+            // Soft-Filter: Severity auf 1 setzen + Notes ergaenzen (statt loeschen)
+            suppressedFindings.AddRange(findings);
+            findings = findings.Select(f => f with
+            {
+                Notes = $"[Unterdrueckt: view_type={viewType}] {f.Notes ?? ""}"
+            }).ToList();
         }
 
-        // Bei Schachtaufnahme: nur Steuercodes (BCD, BCE, BDB) durchlassen
+        // Bei Schachtaufnahme: nur Steuercodes durchlassen, Rest als unterdrueckt markieren
         if (viewType is "schacht")
         {
-            findings = findings
-                .Where(f =>
-                {
-                    var code = (f.VsaCodeHint ?? f.Label).ToUpperInvariant();
-                    return code.StartsWith("BCD") || code.StartsWith("BCE") || code.StartsWith("BDB");
-                })
-                .ToList();
+            var kept = new List<EnhancedFinding>();
+            foreach (var f in findings)
+            {
+                var code = (f.VsaCodeHint ?? f.Label).ToUpperInvariant();
+                if (code.StartsWith("BCD") || code.StartsWith("BCE") || code.StartsWith("BDB"))
+                    kept.Add(f);
+                else
+                    suppressedFindings.Add(f);
+            }
+            findings = kept;
+        }
+
+        // Audit-Logging fuer unterdrueckte Findings
+        if (suppressedFindings.Count > 0)
+        {
+            var suppressedCodes = string.Join(", ", suppressedFindings.Select(f => f.VsaCodeHint ?? f.Label));
+            LastSuppressedLog = $"[Suppressed] {suppressedFindings.Count} Findings unterdrueckt (view_type={viewType}): {suppressedCodes}";
+            System.Diagnostics.Debug.WriteLine(LastSuppressedLog);
+        }
+        else
+        {
+            LastSuppressedLog = null;
         }
 
         return new EnhancedFrameAnalysis(
@@ -733,7 +798,7 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
             PipeDiameterMm: dto.PipeDiameterMm,
             Findings: findings,
             ImageQuality: dto.ImageQuality ?? "mittel",
-            IsEmptyFrame: dto.IsEmptyFrame || viewType is "nahaufnahme" or "schwenk",
+            IsEmptyFrame: dto.IsEmptyFrame && findings.Count == 0,
             Error: null,
             ViewType: viewType);
     }

@@ -264,10 +264,12 @@ if (viewType is "schacht")
 
 ### P6: Few-Shot-Beispiele ohne BCC-Boegen
 
-**Status:** Pruefen
+**Status:** Instrumentiert (16.04.2026)
 **Symptom:** Boegen werden trotz 65 BCC-Beispielen nicht erkannt
-**Moegliche Ursache:** Few-Shots werden nicht geladen, oder Kontext-Fenster zu klein
-**Naechster Schritt:** Debug-Logging in EnableFewShotAsync einbauen
+**Root Cause:** Nur 4 Few-Shot-Beispiele werden geladen (maxExamples=4 bei 8192 ctx).
+`GetBestExamplesAsync` waehlt die "besten" = haeufigsten Codes = BCD, BCE. BCC kommt nie dran.
+**Fix:** FewShotDiagnostics Property zeigt jetzt welche Codes geladen sind.
+**Naechster Schritt:** GetBestExamplesAsync muss diverser waehlen (1 pro Code-Gruppe).
 
 ---
 
@@ -383,12 +385,76 @@ Keine Fehlermatrix fuer: Timeout, invalides JSON, leerer Snapshot, Sidecar-Ausfa
 
 **Regel: Nicht weiter am Prompt feilen, bevor Instrumentation steht.**
 
-| Prio | Aktion | Aufwand |
-|------|--------|---------|
-| 1 | Few-Shot-Instrumentation (was geht an Qwen?) | 2h |
-| 2 | Rohoutput-Logging (Qwen-Antwort vor Filtern speichern) | 2h |
-| 3 | ViewType-Hardfilter → Soft-Filter + Audit-Trail | 3h |
-| 4 | Gate-Semantik im Codier-Modus klaeren | 1h |
-| 5 | Fehler-/Timeout-Matrix dokumentieren | 1h |
-| 6 | Duplikatlogik (IsAlreadyCovered) dokumentieren | 1h |
-| 7 | Modellversion exakt im Code referenzieren | 0.5h |
+| Prio | Aktion | Status |
+|------|--------|--------|
+| 1 | Few-Shot-Instrumentation | ✅ `FewShotDiagnostics` Property, Codes in Statuszeile |
+| 2 | Rohoutput-Logging | ✅ `LastRawOutput` + `LastFilterLog` Properties, Debug.WriteLine |
+| 3 | ViewType Soft-Filter + Audit | ✅ Severity abstufen statt loeschen, `LastSuppressedLog` |
+| 4 | Gate-Semantik klaeren | ✅ Siehe unten |
+| 5 | Fehler-/Timeout-Matrix | ✅ Siehe unten |
+| 6 | Duplikatlogik dokumentieren | ✅ Siehe unten |
+| 7 | Modellversion referenzieren | ✅ Siehe unten |
+
+---
+
+## 11. Gate-Semantik im Codier-Modus (Aktion 4)
+
+Im Codier-Modus gibt es **kein formales Green/Yellow/Red QualityGate** wie im Nachtbatch.
+Stattdessen:
+- `FilterValidFindings()` prueft VSA-Code-Gueltigkeit + Duplikate
+- `IsAlreadyCovered()` verhindert doppelte Events
+- `FrameReadinessGate` erkennt OSD-Einblendungen (3 Frames warten)
+- **Kein Min-Confidence-Gate** — alle Findings werden durchgelassen
+
+**Empfehlung:** Confidence-Gate als optionalen Filter einbauen (z.B. Severity >= 2 fuer Auto-Events).
+
+---
+
+## 12. Fehler-/Timeout-Matrix (Aktion 5)
+
+| Fehler | Wo | Behandlung | Symptom |
+|--------|-----|-----------|---------|
+| Qwen Timeout | AnalyzeAsync, ChatStructuredAsync | OperationCanceledException → leer | "Frame nicht analysiert" |
+| Qwen invalides JSON | ChatStructuredAsync | Exception → EnhancedFrameAnalysis.Empty | "KI-Fehler" in Status |
+| Leerer Snapshot | CaptureSnapshotAsync | pngBytes == null → return | "Frame nicht extrahierbar" |
+| Sidecar offline | SegmentSamAsync | catch → kein SAM-Overlay | Findings ohne Masken |
+| Sidecar Timeout (SAM) | SegmentSamAsync | catch → Debug.WriteLine | Findings ohne Masken |
+| Ollama nicht erreichbar | ChatStructuredAsync | HttpRequestException → Empty | "KI-Fehler: Connection refused" |
+| VRAM voll (OOM) | ChatStructuredAsync | Exception → Empty | "KI-Fehler: CUDA out of memory" |
+| Video nicht ladbar | CaptureSnapshotAsync | null → return | Kein Analyse-Button |
+
+---
+
+## 13. Duplikatlogik: IsAlreadyCovered (Aktion 6)
+
+```
+IsAlreadyCovered(existingEvent, newMeter, newFinding):
+│
+├─ Einmal-Codes (BCD, BCE, BDC):
+│  └─ IMMER Duplikat (egal welcher Meter)
+│
+├─ Streckenschaden (MeterStart ≠ MeterEnd):
+│  └─ newMeter im Bereich [MeterStart, MeterEnd]? → Duplikat
+│
+├─ Akzeptierter Punktschaden (Decision = Accepted):
+│  └─ Gleicher VSA-Code + Meter ±1.0m → Duplikat
+│
+└─ Sonst:
+   └─ Gleicher Code + Meter ±0.3m → Duplikat
+```
+
+**Bekannte Schwaeche:** Wenn der User einen Fund ablehnt (Decision != Accepted), wird er bei der naechsten Analyse nochmal gemeldet. Das ist gewollt (zweite Chance), kann aber bei Auto-Analyse stoerend sein.
+
+---
+
+## 14. Modellversionen (Aktion 7)
+
+| Komponente | Modell | Version | Kontext |
+|------------|--------|---------|---------|
+| Qwen (Codier-Modus) | qwen3-vl:8b-q8 | Q8_0, 8192 ctx | Via Ollama |
+| Qwen (Eskalation) | qwen3-vl:32b | Q4_K_M, num_gpu=10 | Via Ollama, on-demand |
+| YOLO (Sidecar) | yolo26l-seg.pt | 28.0M fused | TensorRT FP16, eigene Klassen |
+| SAM (Sidecar) | sam2.1_hiera_l | SAM 2.1 Large | Persistent GPU |
+| DINO (Sidecar) | groundingdino_swint_ogc.pth | Grounding DINO 1.5 | Nur Nachtbatch |
+| Embeddings | nomic-embed-text | Latest | Via Ollama, 0.6GB |
+| ViewType-Classify | viewtype_v2/best.pt | YOLOv8n-cls, 89% | Nur Info, nicht blockierend |
