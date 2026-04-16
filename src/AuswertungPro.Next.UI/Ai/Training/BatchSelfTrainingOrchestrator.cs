@@ -411,8 +411,12 @@ public sealed class BatchSelfTrainingOrchestrator
                 "Batch abgeschlossen: {Processed}/{Total} OK, {Failed} Fehler, KB +{Indexed} (Dedup {Dedup}), F1={F1:P1}",
                 processed, total, failed, stats.KbIndexed, stats.KbDeduplicated, stats.F1);
 
-            // ── YOLO-Retraining pruefen wenn genug neue Samples ──
-            if (_yoloRetrain != null && processed > 0)
+            // ── YOLO-Retraining PAUSIERT bis Eval-Set steht ──
+            // Grund: 98.9% der Labels sind nicht menschlich verifiziert (Confirmation Bias Risiko).
+            // Auto-Retrain ohne eingefrorenes Eval-Set ist ein Confirmation-Bias-Generator.
+            // Reaktivieren wenn: 120+ manuell gelabelte Eval-Frames, Baseline-mAP gemessen, Gates definiert.
+            bool autoRetrainEnabled = false; // ← HIER AKTIVIEREN wenn Eval-Set bereit
+            if (autoRetrainEnabled && _yoloRetrain != null && processed > 0)
             {
                 try
                 {
