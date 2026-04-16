@@ -1,4 +1,4 @@
-# SewerStudio Codier-Modus — KI-Pipeline Dokumentation
+/moder# SewerStudio Codier-Modus — KI-Pipeline Dokumentation
 
 **Stand:** 16. April 2026
 **Zweck:** Komplette Dokumentation des KI-Analyse-Pfads im Codier-Modus fuer Review und Fehlersuche.
@@ -345,10 +345,50 @@ sidecar/models/
 
 ---
 
-## 9. Naechste Schritte
+## 9. Kritik und offene Punkte (nach externem Review, 16.04.2026)
 
-1. **Prompt-Optimierung:** Qwen muss BC-Codes (Bogen, Anschluss) zuverlaessig erkennen
-2. **YOLO26l-seg verbessern:** Mehr Trainingsdaten (echte Masken statt Box-Polygone)
-3. **Few-Shot-Debug:** Pruefen ob BCC-Beispiele tatsaechlich an Qwen geschickt werden
-4. **SAM3 als Annotation-Tool:** Exemplar-Prompts fuer schnelleres KB-Labeling
-5. **Stammdaten im Prompt:** DN/Material aus DB3 als Kontext fuer Qwen
+### K1: Fehlende Beobachtbarkeit (HOCH)
+
+Die Doku trennt nicht scharf zwischen Rohbefund (was Qwen liefert), gefiltertem Befund (nach MapToAnalysis/ViewType/Duplikat) und finaler UI-Anzeige. Ohne diese Trennung bleibt Fehlersuche diffus: Erkennt Qwen falsch? Mappt der Mapper falsch? Filtert die Pipeline zu aggressiv? Zeigt die UI nur einen Teil?
+
+**Aktion:** Rohoutput-Logging — Qwen-Response VOR allen Filtern speichern.
+
+### K2: Few-Shot-Instrumentation fehlt (HOCH)
+
+65 BCC-Beispiele in der KB, aber Boegen werden nicht erkannt. Unklar ob Few-Shots ueberhaupt an Qwen geschickt werden. Wenn Few-Shots nicht greifen, steht die Begruendung "Qwen statt YOLO" auf wackligem Fundament.
+
+**Aktion:** Debug-Logging: Welche Beispiele geladen? Welche an Qwen geschickt? Token-Verbrauch?
+
+### K3: ViewType-Hardfilter ist riskant (HOCH)
+
+`if (viewType is "nahaufnahme" or "schwenk") findings = [];` — unsicheres Signal (89% Accuracy) mit endgueltiger Loeschwirkung. Keine Moeglichkeit zu sehen was verworfen wurde.
+
+**Aktion:** Soft-Filter + `suppressed_findings[]` Audit-Trail + UI-Anzeige.
+
+### K4: Post-Processing als eigene Fehlerklasse (MITTEL)
+
+Nach Qwen: MapToAnalysis → OSD-Meter → FilterValidFindings → Duplikat → Event → Pause. Jede Stufe kann Befunde veraendern oder verwerfen. Nicht dokumentiert welche Stufe was tut.
+
+### K5: Fehlerpfade nicht dokumentiert (MITTEL)
+
+Keine Fehlermatrix fuer: Timeout, invalides JSON, leerer Snapshot, Sidecar-Ausfall.
+
+### K6: Pipeline-Beschreibung missverstaendlich (MITTEL)
+
+"Nutzt NICHT YOLO→DINO→SAM" ist zu absolut — SAM wird fuer Nachsegmentierung genutzt. Korrekt: "Qwen fuer Erkennung + optional SAM fuer Segmentierung."
+
+---
+
+## 10. Priorisierte naechste Schritte
+
+**Regel: Nicht weiter am Prompt feilen, bevor Instrumentation steht.**
+
+| Prio | Aktion | Aufwand |
+|------|--------|---------|
+| 1 | Few-Shot-Instrumentation (was geht an Qwen?) | 2h |
+| 2 | Rohoutput-Logging (Qwen-Antwort vor Filtern speichern) | 2h |
+| 3 | ViewType-Hardfilter → Soft-Filter + Audit-Trail | 3h |
+| 4 | Gate-Semantik im Codier-Modus klaeren | 1h |
+| 5 | Fehler-/Timeout-Matrix dokumentieren | 1h |
+| 6 | Duplikatlogik (IsAlreadyCovered) dokumentieren | 1h |
+| 7 | Modellversion exakt im Code referenzieren | 0.5h |
