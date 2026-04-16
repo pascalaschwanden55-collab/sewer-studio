@@ -458,3 +458,42 @@ IsAlreadyCovered(existingEvent, newMeter, newFinding):
 | DINO (Sidecar) | groundingdino_swint_ogc.pth | Grounding DINO 1.5 | Nur Nachtbatch |
 | Embeddings | nomic-embed-text | Latest | Via Ollama, 0.6GB |
 | ViewType-Classify | viewtype_v2/best.pt | YOLOv8n-cls, 89% | Nur Info, nicht blockierend |
+
+---
+
+## 15. Status-Notiz: YOLO-first im Nachtbatch (16.04.2026)
+
+### Problem
+YOLO26l-seg liefert auf den meisten Frames `detections=0, is_relevant=false`.
+Der YOLO-Skip-Code funktioniert logisch korrekt, aber die Voraussetzung
+(`hasYoloFindings = true`) tritt fast nie ein.
+
+### Ursache
+- YOLO26l-seg wurde mit 828 Ganz-Bild-Polygonen trainiert (keine echten BBoxen)
+- Das Modell hat nie gelernt WO Schaeden sitzen, nur welche Klasse im Bild ist
+- Bei 25.5% mAP50 erkennt es auf den meisten Frames nichts
+- DINO findet bei Kanalbildern konsistent 0 Detektionen
+- Ohne YOLO-Findings und ohne DINO-Findings = Qwen ist der einzige Pfad
+
+### Sofortmassnahme
+- Nachtbatch laeuft weiter mit Qwen (korrekt, nur langsam)
+- YOLO-Trainingskandidaten werden automatisch generiert (Phase 4)
+- Auto-Retrain ist pausiert bis Eval-Set steht
+- yolo26m als Pre-Screener zurueckgesetzt (Hot-Swap)
+
+### Aktuelle Architektur (ehrlich)
+
+    Codier-Modus:    YOLO26l-seg → SAM → Qwen Fallback (funktioniert teilweise)
+    Nachtbatch:      yolo26m Pre-Screen → DINO (leer) → Qwen pro Frame (langsam, ~28 Min/Haltung)
+
+### Zielarchitektur
+
+    Codier-Modus:    YOLO26l-seg (praezise) → SAM → Qwen nur Eskalation
+    Nachtbatch:      yolo26m (Pre-Screener) + YOLO26l-seg (Detektor) → SAM → Qwen nur Eskalation
+
+### Voraussetzungen fuer Zielarchitektur
+1. YOLO26l-seg mit echten BBoxen trainieren (nicht Ganz-Bild-Polygone)
+2. Eval-Set mit 120 manuell annotierten Frames
+3. Baseline-mAP messen und Deployment-Gates definieren
+4. Pre-Screener (yolo26m) und Detektor (yolo26l-seg) funktional trennen
+5. Nicht weiter Micro-Fixes an der Qwen-Skip-Logik machen
