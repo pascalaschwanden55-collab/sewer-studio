@@ -6806,73 +6806,9 @@ public partial class PlayerWindow : Window
             // Zeitstempel VOR dem Capture festhalten (CaptureSnapshotAsync wartet bis zu 1s)
             var captureTimestampSec = _player.Time / 1000.0;
 
-            // ── Multi-Model Pfad: YOLO → DINO → SAM ──
-            if (_codingUseMultiModel && _codingMultiModel != null)
-            {
-                SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
-                    "Schritt 1 von 4: Snapshot", pulse: true);
-
-                var pngBytes = await CaptureSnapshotAsync();
-                if (pngBytes == null || pngBytes.Length == 0)
-                {
-                    SetCodingAiState("Frame nicht extrahierbar", Color.FromRgb(0xEF, 0x44, 0x44),
-                        "Multi-Model");
-                    return;
-                }
-
-                SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
-                    "Schritt 2 von 4: YOLO und DINO", pulse: true);
-
-                int dn = _codingOverlayService?.Calibration?.NominalDiameterMm ?? 300;
-                var mmResult = await _codingMultiModel.AnalyzeFrameAsync(
-                    pngBytes, dn, _codingOverlayService?.Calibration,
-                    _codingAnalysisCts.Token);
-
-                if (mmResult.Error != null)
-                {
-                    SetCodingAiState($"Fehler: {mmResult.Error}", Color.FromRgb(0xEF, 0x44, 0x44),
-                        "Multi-Model");
-                    return;
-                }
-
-                if (!mmResult.HasDetections)
-                {
-                    // DINO hat nichts gefunden → Qwen-Fallback mit SAM-Nachsegmentierung
-                    Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
-                    // Weiter zum Qwen-Pfad unten (kein return)
-                }
-                else
-                {
-                    // Multi-Model hat Befunde → rendern und zurueck
-                    SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
-                        $"Schritt 3 von 4: SAM-Masken ({mmResult.DinoDetections.Count} Befunde)", pulse: true);
-
-                    var acceptedIndices = AddMultiModelFindingsAsEvents(mmResult, captureTimestampSec);
-                    ShowMultiModelResults(mmResult, acceptedIndices);
-
-                    int nearCount = _currentMmResult?.QuantifiedMasks.Count ?? 0;
-                    int farCount = _previewMmResult?.QuantifiedMasks.Count ?? 0;
-                    var vtInfo = mmResult.ViewType != null ? $" | Aufnahme: {mmResult.ViewType}" : "";
-                    SetCodingAiState(
-                        nearCount > 0
-                            ? $"{nearCount} Befunde erkannt" + (farCount > 0 ? $" ({farCount} in Tiefe)" : "")
-                            : "Kein Schaden in Reichweite" + (farCount > 0 ? $" ({farCount} in Tiefe)" : ""),
-                        nearCount > 0 ? Color.FromRgb(0x22, 0xC5, 0x5E) : Color.FromRgb(0x94, 0xA3, 0xB8),
-                        $"YOLO {mmResult.YoloTimeMs:F0}ms | DINO {mmResult.DinoTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms{vtInfo}");
-
-                    if (BtnCodingPauseMode.IsChecked == true && nearCount > 0)
-                    {
-                        _player?.SetPause(true);
-                        SetCodingAiState(
-                            $"{nearCount} Befunde — pausiert zum Pruefen",
-                            Color.FromRgb(0x38, 0xBD, 0xF8),
-                            "Delete = Befund loeschen | O = OK | Leertaste = weiter");
-                    }
-                    return;
-                }
-            }
-
-            // ── Qwen-only Fallback-Pfad ──
+            // ── Codier-Modus: Direkt Qwen (DINO versagt bei Kanalbildern konsistent) ──
+            // Multi-Model (YOLO→DINO→SAM) wird nur fuer Nachtbatch/Video-Pipeline genutzt.
+            // SAM wird nach Qwen-Erkennung fuer Nachsegmentierung aufgerufen.
             SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
                 "Schritt 1 von 3: Snapshot", pulse: true);
 
@@ -6913,13 +6849,12 @@ public partial class PlayerWindow : Window
                         var samB64 = Convert.ToBase64String(pngBytes);
                         int imgW = 640, imgH = 480;
 
-                        // Findings mit BBox oder Uhrlage → SAM-Boxen
+                        // Findings → SAM-Boxen aus BBox oder Uhrlage
                         var samBoxes = new List<Ai.Pipeline.SamBoundingBox>();
                         foreach (var f in result.Findings)
                         {
                             if (f.BboxX1.HasValue && f.BboxY1.HasValue && f.BboxX2.HasValue && f.BboxY2.HasValue)
                             {
-                                // Normalisierte BBox → Pixel
                                 samBoxes.Add(new Ai.Pipeline.SamBoundingBox(
                                     f.BboxX1.Value * imgW, f.BboxY1.Value * imgH,
                                     f.BboxX2.Value * imgW, f.BboxY2.Value * imgH,
@@ -6927,11 +6862,11 @@ public partial class PlayerWindow : Window
                             }
                             else
                             {
-                                // Keine BBox → zentrierte Box (50% des Bildes)
+                                // Box aus Uhrlage ableiten (Rohr = Kreis, Uhrlage = Position)
+                                var box = ClockPositionToBox(f.PositionClock, imgW, imgH);
                                 samBoxes.Add(new Ai.Pipeline.SamBoundingBox(
-                                    imgW * 0.15, imgH * 0.15,
-                                    imgW * 0.85, imgH * 0.85,
-                                    f.Label, 0.5));
+                                    box.x1, box.y1, box.x2, box.y2,
+                                    f.Label, 0.6));
                             }
                         }
 
@@ -7434,6 +7369,43 @@ public partial class PlayerWindow : Window
 
         // AUSSERHALB des Rohrkreises = nah an der Wand = zuverlaessig erkennbar
         return dist > pipeRadius;
+    }
+
+    /// <summary>
+    /// Berechnet eine SAM-Box aus der Uhrlage (Clock-Position).
+    /// Rohrquerschnitt als Kreis: 12=oben, 3=rechts, 6=unten, 9=links.
+    /// Gibt eine Box zurueck die ~30% des Bildes im entsprechenden Quadranten abdeckt.
+    /// </summary>
+    private static (double x1, double y1, double x2, double y2) ClockPositionToBox(
+        string? clockStr, int imgW, int imgH)
+    {
+        // Fallback: obere Haelfte (wo die meisten Schaeden sind)
+        if (string.IsNullOrEmpty(clockStr) || !int.TryParse(clockStr.Split(':')[0], out int hour))
+            return (imgW * 0.10, imgH * 0.10, imgW * 0.90, imgH * 0.50);
+
+        hour = ((hour % 12) + 12) % 12; // 0-11
+
+        // Rohr-Zentrum = Bildmitte, Radius = 40% der Bildhoehe
+        double cx = imgW * 0.5;
+        double cy = imgH * 0.5;
+        double r = imgH * 0.35;
+        double boxSize = imgH * 0.25; // Box-Groesse
+
+        // Winkel: 12 Uhr = -90°, 3 Uhr = 0°, 6 Uhr = 90°, 9 Uhr = 180°
+        double angleDeg = (hour * 30.0) - 90.0;
+        double angleRad = angleDeg * Math.PI / 180.0;
+
+        // Mittelpunkt der Box auf dem Rohrrand
+        double bx = cx + r * Math.Cos(angleRad);
+        double by = cy + r * Math.Sin(angleRad);
+
+        // Box um den Punkt
+        double x1 = Math.Max(0, bx - boxSize);
+        double y1 = Math.Max(0, by - boxSize);
+        double x2 = Math.Min(imgW, bx + boxSize);
+        double y2 = Math.Min(imgH, by + boxSize);
+
+        return (x1, y1, x2, y2);
     }
 
     /// <summary>
