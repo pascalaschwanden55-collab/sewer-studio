@@ -220,12 +220,11 @@ public sealed class BatchPipelineService
                 frameCts.CancelAfter(TimeSpan.FromSeconds(45));
 
                 // YOLO-first: Wenn YOLO Detektionen hat, Qwen ueberspringen
-                // YOLO erkennt Klassen direkt → Qwen nur als Fallback wenn nichts gefunden
+                // DINO findet bei Kanalbildern nichts → DINO-Context nicht als Bedingung
                 EnhancedFrameAnalysis analysis;
                 bool hasYoloFindings = frame.Yolo.Detections.Count > 0 && frame.Yolo.IsRelevant;
-                bool hasDinoContext = frameContexts.ContainsKey(frame.Index);
 
-                if (hasYoloFindings && hasDinoContext)
+                if (hasYoloFindings)
                 {
                     // YOLO + DINO/SAM Kontext vorhanden → kein Qwen noetig
                     // Erstelle minimale Analyse aus YOLO-Daten
@@ -252,7 +251,7 @@ public sealed class BatchPipelineService
                         Error: null,
                         ViewType: "axial");
                 }
-                else if (frameContexts.TryGetValue(frame.Index, out var ctx))
+                else if (!hasYoloFindings && frameContexts.TryGetValue(frame.Index, out var ctx))
                 {
                     // DINO/SAM Kontext aber kein YOLO → Qwen fragen
                     analysis = await _qwen.AnalyzeWithContextAsync(
@@ -268,9 +267,9 @@ public sealed class BatchPipelineService
                 var done = Interlocked.Increment(ref qwenDone);
                 progress?.Report(new BatchPipelineProgress(
                     done, relevantFrames.Count,
-                    hasYoloFindings && hasDinoContext
+                    hasYoloFindings
                         ? $"YOLO direct: {done}/{relevantFrames.Count}"
-                        : $"Qwen: {done}/{relevantFrames.Count} Frames analysiert"));
+                        : $"Qwen Fallback: {done}/{relevantFrames.Count}"));
 
                 analysisResults[i] = new BatchFrameAnalysis(
                     frame.Index, frame.Timestamp, analysis,
