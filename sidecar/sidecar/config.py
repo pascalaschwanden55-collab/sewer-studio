@@ -42,7 +42,7 @@ class SidecarSettings(BaseSettings):
 
     # YOLO
     yolo_confidence: float = 0.25
-    yolo_model_name: str = "yolo26m.pt"
+    yolo_model_name: str = "yolo26l-seg.pt"
     require_custom_yolo: bool = False
 
     # TensorRT-Beschleunigung fuer YOLO

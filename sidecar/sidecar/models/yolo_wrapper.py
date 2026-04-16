@@ -47,11 +47,17 @@ def _resolve_path(path_like: str, *, base: Path | None = None) -> Path:
 
 
 def _yolo_dir() -> Path:
-    return Path(settings.models_dir) / "yolo26m"
+    # Ordner basierend auf Modellname: "yolo26l-seg.pt" → "yolo26l-seg/"
+    model_stem = Path(settings.yolo_model_name).stem
+    model_dir = Path(settings.models_dir) / model_stem
+    # Fallback auf yolo26m wenn Ordner nicht existiert
+    if not model_dir.exists():
+        model_dir = Path(settings.models_dir) / "yolo26m"
+    return model_dir
 
 
 def _resolve_active_model_from_file() -> Path | None:
-    """Read active model pointer from models/yolo26m/active.json if present."""
+    """Read active model pointer from models/<yolo_dir>/active.json if present."""
     active_file = _yolo_dir() / "active.json"
     if not active_file.exists():
         return None
@@ -467,6 +473,29 @@ def detect_image(image: Image.Image | np.ndarray, confidence_threshold: float) -
         )
 
 
+_rejection_stats: dict[str, int] = {
+    "too_dark": 0, "too_bright": 0, "too_uniform": 0, "too_blurry": 0, "ok": 0
+}
+
+
+def get_rejection_stats() -> dict[str, int]:
+    """Verwerfungs-Statistik fuer Telemetrie (z.B. /health Endpunkt)."""
+    total = sum(_rejection_stats.values())
+    rejected = total - _rejection_stats["ok"]
+    return {
+        **_rejection_stats,
+        "total_frames": total,
+        "rejected_frames": rejected,
+        "rejection_rate_pct": round(rejected / total * 100, 1) if total > 0 else 0.0,
+    }
+
+
+def reset_rejection_stats() -> None:
+    """Statistik zuruecksetzen (z.B. bei neuem Video)."""
+    for k in _rejection_stats:
+        _rejection_stats[k] = 0
+
+
 def _is_frame_usable(img: Image.Image) -> tuple[bool, str]:
     """Check if a frame is usable for analysis using quality heuristics."""
     arr = np.array(img, dtype=np.float32)
@@ -475,17 +504,28 @@ def _is_frame_usable(img: Image.Image) -> tuple[bool, str]:
     std_brightness = gray.std()
 
     if mean_brightness < 5:
+        _rejection_stats["too_dark"] += 1
+        logger.debug("Frame verworfen: zu dunkel (brightness=%.1f)", mean_brightness)
         return False, "too_dark"
     if mean_brightness > 245:
+        _rejection_stats["too_bright"] += 1
+        logger.debug("Frame verworfen: zu hell (brightness=%.1f)", mean_brightness)
         return False, "too_bright"
     if std_brightness < 3:
+        _rejection_stats["too_uniform"] += 1
+        logger.debug("Frame verworfen: zu gleichfoermig (std=%.1f)", std_brightness)
         return False, "too_uniform"
 
     from scipy.ndimage import laplace
 
     edges = laplace(gray)
-    if edges.var() < 3:
+    edge_var = edges.var()
+    if edge_var < 3:
+        _rejection_stats["too_blurry"] += 1
+        logger.debug("Frame verworfen: zu unscharf (edge_var=%.1f)", edge_var)
         return False, "too_blurry"
+
+    _rejection_stats["ok"] += 1
     return True, "ok"
 
 
