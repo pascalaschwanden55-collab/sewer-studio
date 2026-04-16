@@ -75,11 +75,38 @@ public sealed class EnhancedVisionAnalysisService
 
     // Vollständige Schadensklassen nach DIN EN 13508-2 / VSA-DSS
     // Gruppiert für besseren Prompt
+    // Voller Prompt fuer Batch/Video-Pipeline (DamageClassesPromptFull)
+    // Fuer den Codier-Modus wird der kurze Prompt (DamageClassesPrompt) verwendet.
     private static readonly string DamageClassesPrompt = """
-VSA/EN 13508-2 CODES fuer Kanalinspektion (Haltungen).
-Melde ALLES was du siehst. Jeder Befund braucht vsa_code_hint, severity, position_clock.
+Kanalinspektion: Melde JEDEN sichtbaren Befund mit VSA-Code, severity (1-5), Uhrlage.
 
-=== AUFNAHMETECHNIK — Bildtyp erkennen (ZUERST pruefen!) ===
+PFLICHT (IMMER melden, severity=1):
+BCD = Rohranfang (runde Oeffnung, Rohr dahinter sichtbar)
+BCE = Rohrende (Schacht/Ende sichtbar)
+BCC = Bogen/Kurve (Richtungsaenderung im Rohr)
+BCA = Anschluss (seitliche Oeffnung in Rohrwand)
+
+SCHAEDEN (severity 2-5):
+BAB = Riss (BABBA=laengs, BABBB=radial, BABC=klaffend)
+BAC = Bruch/Loch (BACB=Loch mit gezackten Kanten)
+BAF = Oberflaechenschaden/Korrosion (BAFCE=Zuschlag sichtbar)
+BAJ = Rohrverbindung verschoben (BAJA=breit, BAJB=versetzt, BAJC=Knick)
+BAI = Dichtung einragend
+BAA = Verformung (BAAA=vertikal, BAAB=horizontal)
+BBA = Wurzeleinwuchs
+BBB = Inkrustation/Kalk
+BBC = Ablagerung (BBCA=Sand, BBCC=hart)
+BBF = Infiltration (BBFA=Schwitzen, BBFC=fliesst)
+
+REGELN:
+- label = VSA-Code (z.B. "BABBA", "BCC", "BCAAA"), KEIN Freitext
+- position_clock = Uhrlage ("12"=oben, "6"=unten, "3"=rechts, "9"=links)
+- BACB (Loch): gezackte Kanten. BCD (Rohranfang): glatte runde Oeffnung. NICHT verwechseln!
+- Wenn NICHTS sichtbar: findings=[], is_empty_frame=true
+""";
+
+    // Voller Prompt mit Aufnahmetechnik (fuer Batch/Video-Pipeline, ~1500 Woerter)
+    private static readonly string DamageClassesPromptFull = """
 Bestimme ZUERST den view_type, BEVOR du Schaeden codierst:
 
 AXIALSICHT (view_type="axial") — Normalbild fuer Codierung:
