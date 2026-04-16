@@ -208,6 +208,10 @@ public sealed class BatchPipelineService
         var qwenSw = Stopwatch.StartNew();
         var semaphore = new SemaphoreSlim(3, 3);
         int qwenDone = 0;
+        int yoloOnlyCount = 0;
+        int qwenFallbackCount = 0;
+        int yoloZeroDetections = 0;
+        int yoloNotRelevant = 0;
         var analysisResults = new BatchFrameAnalysis[relevantFrames.Count];
 
         var qwenTasks = relevantFrames.Select(async (frame, i) =>
@@ -223,6 +227,12 @@ public sealed class BatchPipelineService
                 // DINO findet bei Kanalbildern nichts → DINO-Context nicht als Bedingung
                 EnhancedFrameAnalysis analysis;
                 bool hasYoloFindings = frame.Yolo.Detections.Count > 0 && frame.Yolo.IsRelevant;
+
+                // Kennzahlen zaehlen
+                if (frame.Yolo.Detections.Count == 0) Interlocked.Increment(ref yoloZeroDetections);
+                if (!frame.Yolo.IsRelevant) Interlocked.Increment(ref yoloNotRelevant);
+                if (hasYoloFindings) Interlocked.Increment(ref yoloOnlyCount);
+                else Interlocked.Increment(ref qwenFallbackCount);
 
                 if (hasYoloFindings)
                 {
@@ -303,9 +313,17 @@ public sealed class BatchPipelineService
             allAnalyses.Count, sw.Elapsed.TotalSeconds,
             yoloSw.ElapsedMilliseconds, qwenSw.ElapsedMilliseconds);
 
+        _logger.LogInformation(
+            "BatchPipeline Kennzahlen: YOLO-only={YoloOnly}/{Total} | Qwen-Fallback={QwenFB}/{Total} | " +
+            "YOLO-zero-detections={ZeroDet}/{Total} | YOLO-not-relevant={NotRel}/{Total}",
+            yoloOnlyCount, relevantFrames.Count,
+            qwenFallbackCount, relevantFrames.Count,
+            yoloZeroDetections, relevantFrames.Count,
+            yoloNotRelevant, relevantFrames.Count);
+
         progress?.Report(new BatchPipelineProgress(
             relevantFrames.Count, relevantFrames.Count,
-            $"Fertig: {allAnalyses.Count} Analysen in {sw.Elapsed.TotalSeconds:F0}s"));
+            $"Fertig: {allAnalyses.Count} Analysen | YOLO-only:{yoloOnlyCount} Qwen:{qwenFallbackCount} in {sw.Elapsed.TotalSeconds:F0}s"));
 
         return new BatchPipelineResult(
             allAnalyses,
