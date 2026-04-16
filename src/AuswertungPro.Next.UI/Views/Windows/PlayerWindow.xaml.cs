@@ -8435,7 +8435,8 @@ public partial class PlayerWindow : Window
         try
         {
             // Nicht analysieren wenn: bereits analysierend, Video pausiert, WaitingForUserInput
-            if (_codingLiveDetection == null) return;
+            // Mindestens ein Analyse-Service muss verfuegbar sein
+            if (_codingEnhancedVision == null && _codingLiveDetection == null) return;
             if (_codingSessionService?.ActiveSession?.State == CodingSessionState.WaitingForUserInput) return;
 
             // Nur analysieren wenn Video tatsaechlich laeuft
