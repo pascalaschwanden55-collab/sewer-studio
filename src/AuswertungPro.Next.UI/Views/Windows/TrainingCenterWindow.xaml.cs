@@ -1150,6 +1150,110 @@ public partial class TrainingCenterWindow : Window
             $"Gespeichert: {framesDir}",
             "Frame-Extraktion", MessageBoxButton.OK, MessageBoxImage.Information);
     }
+
+    // ── Eval-Set generieren ──────────────────────────────────────────
+
+    private async void GenerateEvalSet_Click(object sender, RoutedEventArgs e)
+    {
+        // DB3-Datei waehlen (gleich wie Profile extrahieren)
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "WinCan DB3 waehlen fuer Eval-Set",
+            Filter = "WinCan DB3|*.db3|Alle Dateien|*.*",
+            Multiselect = false
+        };
+        if (dlg.ShowDialog() != true) return;
+
+        var db3Path = dlg.FileName;
+        var framesDir = System.IO.Path.Combine(@"C:\KI_BRAIN", "training_frames");
+        var evalDir = System.IO.Path.Combine(@"C:\KI_BRAIN", "eval_set");
+        var candidatesPath = System.IO.Path.Combine(evalDir, "_candidates.json");
+
+        BtnGenerateEvalSet.IsEnabled = false;
+        Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Eval-Set generieren aus {System.IO.Path.GetFileName(db3Path)}...\n");
+
+        try
+        {
+            // Profile extrahieren
+            var profiles = await System.Threading.Tasks.Task.Run(() =>
+                Infrastructure.Import.WinCan.InspectionProfileExtractor.ExtractFromDb3(db3Path));
+
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] {profiles.Count} Profile geladen\n");
+
+            // Eval-Kandidaten generieren (120 diverse Frames)
+            var candidates = Infrastructure.Import.WinCan.EvalSetGenerator.GenerateCandidates(
+                profiles, framesDir, targetCount: 120);
+
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] {candidates.Count} Eval-Kandidaten generiert:\n");
+
+            // Statistik
+            var byKategorie = candidates.GroupBy(c => c.Kategorie)
+                .Select(g => $"  {g.Key}: {g.Count()}")
+                .ToList();
+            foreach (var line in byKategorie)
+                Vm.AppendToLogText($"{line}\n");
+
+            var byCodes = candidates.GroupBy(c => c.CodeMain)
+                .OrderByDescending(g => g.Count())
+                .Select(g => $"  {g.Key}: {g.Count()}")
+                .ToList();
+            Vm.AppendToLogText($"  Codes:\n");
+            foreach (var line in byCodes)
+                Vm.AppendToLogText($"  {line}\n");
+
+            // Speichern
+            Infrastructure.Import.WinCan.EvalSetGenerator.SaveCandidates(candidates, candidatesPath);
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Kandidaten gespeichert: {candidatesPath}\n");
+
+            // Fragen ob sofort exportieren (alle als approved)
+            var result = MessageBox.Show(
+                $"{candidates.Count} Eval-Kandidaten generiert.\n\n" +
+                $"Du kannst jetzt:\n" +
+                $"• JA: Alle als 'approved' markieren und Eval-Set exportieren\n" +
+                $"  (Schnell, aber ohne manuelle Pruefung)\n\n" +
+                $"• NEIN: Kandidaten-Datei manuell pruefen und spaeter exportieren\n" +
+                $"  (Sauberer, du pruefst jeden Frame)\n\n" +
+                $"Kandidaten: {candidatesPath}",
+                "Eval-Set exportieren?", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                // Alle als approved markieren
+                var approved = candidates.Select(c => c with { Status = "approved" }).ToList();
+                Infrastructure.Import.WinCan.EvalSetGenerator.SaveCandidates(approved, candidatesPath);
+
+                var exported = Infrastructure.Import.WinCan.EvalSetGenerator.ExportFrozenEvalSet(
+                    approved, evalDir);
+
+                Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Eval-Set exportiert: {exported} Frames\n");
+                Vm.AppendToLogText($"  Pfad: {evalDir}\n");
+                Vm.AppendToLogText($"  WICHTIG: Dieses Set wird NIE vom Training beruehrt!\n");
+
+                MessageBox.Show(
+                    $"{exported} Frames als Eval-Set exportiert.\n\n" +
+                    $"Pfad: {evalDir}\n\n" +
+                    $"WICHTIG: Dieses Set ist eingefroren.\n" +
+                    $"Die KI darf daraus nie lernen — nur geprueft werden.",
+                    "Eval-Set bereit", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Kandidaten gespeichert. Bitte manuell pruefen:\n");
+                Vm.AppendToLogText($"  {candidatesPath}\n");
+                Vm.AppendToLogText($"  Status pro Frame auf 'approved' / 'rejected' / 'corrected' setzen\n");
+                Vm.AppendToLogText($"  Dann 'Eval-Set' nochmals klicken zum Exportieren\n");
+            }
+        }
+        catch (Exception ex)
+        {
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] FEHLER: {ex.Message}\n");
+            MessageBox.Show($"Fehler: {ex.Message}", "Eval-Set", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            BtnGenerateEvalSet.IsEnabled = true;
+        }
+    }
 }
 
 /// <summary>Converter: non-null → true, null → false.</summary>

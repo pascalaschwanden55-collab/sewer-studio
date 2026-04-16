@@ -37,6 +37,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="Ordner:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <TextBox Grid.Column="1" Text="{Binding RootFolder}" IsReadOnly="True"
@@ -62,7 +63,11 @@
                         Click="ExtractProfiles_Click"
                         ToolTip="WinCan DB3 einlesen: Inspektions-Profile, Muster und Trainings-Frames extrahieren"
                         Margin="0,0,8,0"/>
-                <Button Grid.Column="9" Content="Abbrechen" Command="{Binding CancelBatchCommand}"
+                <Button Grid.Column="9" x:Name="BtnGenerateEvalSet" Content="Eval-Set"
+                        Click="GenerateEvalSet_Click"
+                        ToolTip="120 Pruefungs-Frames aus Operateur-Codierungen generieren (fuer KI-Qualitaetsmessung)"
+                        Margin="0,0,8,0"/>
+                <Button Grid.Column="10" Content="Abbrechen" Command="{Binding CancelBatchCommand}"
                         ToolTip="Laufenden Batch-Vorgang sofort abbrechen und zum letzten Speicherpunkt zurueckkehren"
                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
             </Grid>
