@@ -762,13 +762,15 @@
                         <Button Content="Akzeptieren" x:Name="ReviewApproveBtn"
                                 Click="ReviewApprove_Click"
                                 Padding="12,4" Margin="0,0,8,0"
-                                ToolTip="KI-Vorschlag bestaetigen und als korrektes Trainingsbeispiel in die Knowledge Base uebernehmen"
-                                IsEnabled="{Binding SelectedReviewItem, Converter={StaticResource NotNullToBool}, FallbackValue=False}"/>
-                        <Button Content="Ablehnen + Korrektur" x:Name="ReviewRejectBtn"
+                                ToolTip="KI-Vorschlag bestaetigen und als korrektes Trainingsbeispiel uebernehmen"/>
+                        <Button Content="Ablehnen" x:Name="ReviewRejectBtn"
                                 Click="ReviewReject_Click"
+                                Padding="12,4" Margin="0,0,8,0"
+                                ToolTip="KI-Vorschlag verwerfen und aus der Review-Queue entfernen"/>
+                        <Button Content="Korrigieren + Speichern" x:Name="ReviewCorrectBtn"
+                                Click="ReviewCorrect_Click"
                                 Padding="12,4"
-                                ToolTip="KI-Vorschlag ablehnen und korrekten VSA-Code manuell eingeben fuer besseres Training"
-                                IsEnabled="{Binding SelectedReviewItem, Converter={StaticResource NotNullToBool}, FallbackValue=False}"/>
+                                ToolTip="Frame im Bildtraining-Fenster oeffnen und korrekten VSA-Code markieren/speichern"/>
                     </StackPanel>
                 </Grid>
             </TabItem>

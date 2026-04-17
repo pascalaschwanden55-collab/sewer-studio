@@ -253,25 +253,113 @@ public partial class TrainingCenterWindow : Window
         }
     }
 
-    private async void ReviewReject_Click(object sender, RoutedEventArgs e)
+    /// <summary>Ablehnen ohne Korrektur — verwirft KI-Vorschlag, entfernt aus Queue.</summary>
+    private void ReviewReject_Click(object sender, RoutedEventArgs e)
     {
-        if (Vm.SelectedReviewItem is null) return;
-        var code = Microsoft.VisualBasic.Interaction.InputBox(
-            "Korrekter VSA-Code:", "Korrektur",
-            Vm.SelectedReviewItem.SuggestedCode ?? "");
-        if (string.IsNullOrWhiteSpace(code)) return;
+        if (Vm.SelectedReviewItem is null)
+        {
+            MessageBox.Show("Kein Item ausgewaehlt.", "Review",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var item = Vm.SelectedReviewItem;
         _reviewQueueService ??= new Ai.SelfImproving.ReviewQueueService();
+        _reviewQueueService.Remove(item.Id);
+        Vm.ReviewQueue.Remove(item);
+        Vm.ReviewQueueCount = Vm.ReviewQueue.Count;
+        Vm.ReviewStatusText = $"Abgelehnt: {item.SuggestedCode} | {Vm.ReviewQueueCount} verbleibend";
+        Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Review abgelehnt: {item.Label}\n");
+    }
+
+    /// <summary>Korrigieren + Speichern — Bildtraining-Fenster mit vorgeladenem Frame.</summary>
+    private async void ReviewCorrect_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm.SelectedReviewItem is null)
+        {
+            MessageBox.Show("Kein Item ausgewaehlt.", "Review",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var item = Vm.SelectedReviewItem;
+        var framePath = item.SelfTrainingFramePath;
+        if (string.IsNullOrWhiteSpace(framePath) || !System.IO.File.Exists(framePath))
+        {
+            MessageBox.Show("Kein Frame-Bild fuer dieses Item vorhanden.", "Review",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        // V4.2 Nachbesserung: Korrektur im ImageAnnotationWindow (analog Bildtraining).
+        // Pascal kann dort Code waehlen + BBox zeichnen wie beim manuellen Annotieren.
+        // Trick: Wir kopieren den Frame in einen temporaeren 1-Bild-Ordner und laden
+        // das ImageAnnotationViewModel mit diesem Ordner. Nach Fenster-Close wird das
+        // Review-Item aus der Queue entfernt.
+        string? tempDir = null;
         try
         {
-            using var db = new Ai.KnowledgeBase.KnowledgeBaseContext();
-            var feedback = CreateFeedbackService(db);
-            await Vm.RejectReviewItemAsync(Vm.SelectedReviewItem, code, feedback, _reviewQueueService);
+            tempDir = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(),
+                "SewerStudio", "review_correction",
+                Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(tempDir);
+            var copyPath = System.IO.Path.Combine(tempDir, System.IO.Path.GetFileName(framePath));
+            System.IO.File.Copy(framePath, copyPath, true);
+
+            Ai.KnowledgeBase.KnowledgeBaseManager? kbManager = null;
+            Ai.KnowledgeBase.KbDeduplicationService? dedup = null;
+            try
+            {
+                var kbCtx = new Ai.KnowledgeBase.KnowledgeBaseContext();
+                var ollamaConfig = Ai.Ollama.OllamaConfig.Load();
+                var http = new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
+                var embedder = new Ai.KnowledgeBase.EmbeddingService(http, ollamaConfig);
+                kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(kbCtx, embedder);
+                var retrieval = new Ai.KnowledgeBase.RetrievalService(kbCtx, embedder);
+                dedup = new Ai.KnowledgeBase.KbDeduplicationService(embedder, retrieval);
+            }
+            catch { /* KB optional — Annotation wird trotzdem gespeichert */ }
+
+            Ai.Pipeline.VisionPipelineClient? sidecar = null;
+            if (App.Services is ServiceProvider sp && sp.Sidecar.IsAvailable)
+            {
+                var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+                sidecar = new Ai.Pipeline.VisionPipelineClient(sp.PipelineCfg.SidecarUrl, sidecarHttp);
+            }
+
+            var vm = new ImageAnnotationViewModel(kbManager, dedup, sidecar);
+            vm.LoadFolder(tempDir);
+            if (!string.IsNullOrWhiteSpace(item.SuggestedCode))
+                vm.VsaCode = item.SuggestedCode;
+            vm.HaltungName = item.SelfTrainingCaseId ?? "Review";
+
+            var win = new ImageAnnotationWindow(vm) { Owner = this };
+            win.ShowDialog();
+
+            // Nach Annotation: Item aus Queue entfernen (als reviewed).
+            _reviewQueueService ??= new Ai.SelfImproving.ReviewQueueService();
+            _reviewQueueService.Remove(item.Id);
+            Vm.ReviewQueue.Remove(item);
+            Vm.ReviewQueueCount = Vm.ReviewQueue.Count;
+            Vm.ReviewStatusText = $"Korrigiert im Bildtraining | {Vm.ReviewQueueCount} verbleibend";
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Fehler beim Ablehnen: {ex.Message}",
+            MessageBox.Show($"Fehler beim Oeffnen der Korrektur: {ex.Message}",
                 "Review", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
+        finally
+        {
+            // Temp-Ordner nach 1 Stunde aufraeumen — Annotationen werden ohnehin
+            // im Knowledge-Ordner persistiert, nicht im Temp.
+            if (tempDir is not null)
+            {
+                try { System.IO.Directory.Delete(tempDir, recursive: true); } catch { }
+            }
+        }
+
+        await Task.CompletedTask;
     }
 
     // ── Lehrer-Annotationen Tab Event Handlers ──
