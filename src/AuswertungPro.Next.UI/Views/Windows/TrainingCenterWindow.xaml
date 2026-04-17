@@ -337,6 +337,11 @@
                                     Background="#7C3AED" Foreground="White" FontWeight="SemiBold"
                                     Padding="12,5" Margin="0,0,6,0" Cursor="Hand"
                                     ToolTip="Benchmark-Suite: Mehrere Haltungen automatisch testen und Metriken vergleichen"/>
+                            <Button x:Name="BtnEvalRun" Content="📏 Eval-Set laufen"
+                                    Click="RunEvalSet_Click"
+                                    Background="#0369A1" Foreground="White" FontWeight="SemiBold"
+                                    Padding="12,5" Margin="0,0,6,0" Cursor="Hand"
+                                    ToolTip="Frozen Eval-Set durch Qwen laufen lassen und F1 pro VSA-Code messen (Regressions-Check nach Commits)"/>
                             <Button x:Name="BtnBatchNight" Content="🌙 Batch-Nachtbetrieb"
                                     Click="StartBatchNightRun_Click"
                                     Background="#0D9488" Foreground="White" FontWeight="SemiBold"

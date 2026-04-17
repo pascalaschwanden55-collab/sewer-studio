@@ -668,6 +668,80 @@ public partial class TrainingCenterWindow : Window
         new VideoTrainingReviewWindow(vm) { Owner = this }.Show();
     }
 
+    /// <summary>V4.2 Qualitaetshebel: Frozen Eval-Set durch Qwen laufen, F1/Precision/Recall pro Code loggen.</summary>
+    private async void RunEvalSet_Click(object sender, RoutedEventArgs e)
+    {
+        if (App.Services is not ServiceProvider sp) return;
+        var cfg = Ai.AiRuntimeConfig.Load();
+        if (!cfg.Enabled)
+        {
+            MessageBox.Show("KI ist deaktiviert.", "Eval-Set");
+            return;
+        }
+
+        var evalDir = System.IO.Path.Combine(@"C:\KI_BRAIN", "eval_set");
+        if (!System.IO.Directory.Exists(System.IO.Path.Combine(evalDir, "images")))
+        {
+            MessageBox.Show(
+                $"Eval-Set nicht gefunden: {evalDir}\n\n" +
+                "Erzeuge es zuerst via Profile extrahieren → Eval-Set.",
+                "Eval-Set", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var btn = sender as System.Windows.Controls.Button;
+        if (btn is not null) { btn.IsEnabled = false; btn.Content = "\U0001F4CF Eval laeuft..."; }
+
+        try
+        {
+            var ollamaClient = cfg.CreateOllamaClient();
+            var qwen = new Ai.EnhancedVisionAnalysisService(
+                ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
+            var runner = new Ai.Training.EvalRunnerService(qwen);
+
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [Eval] Start Eval-Set-Lauf...\n");
+
+            var result = await Task.Run(() => runner.RunAsync(evalDir,
+                progress: (done, total, msg) =>
+                {
+                    // UI-Thread: Log jeder 5. Schritt
+                    if (done % 5 == 0 || done == total)
+                    {
+                        Dispatcher.Invoke(() =>
+                            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [Eval] {msg}\n"));
+                    }
+                }));
+
+            Vm.AppendToLogText(
+                $"[{DateTime.Now:HH:mm:ss}] [Eval] Fertig — " +
+                $"{result.CorrectPredictions}/{result.TotalFrames} richtig | " +
+                $"Precision={result.OverallPrecision:P1} " +
+                $"Recall={result.OverallRecall:P1} " +
+                $"F1={result.OverallF1:P1}\n" +
+                $"[{DateTime.Now:HH:mm:ss}] [Eval] CSV: {result.CsvPath}\n");
+
+            MessageBox.Show(
+                $"Eval-Set fertig\n\n" +
+                $"Frames: {result.TotalFrames}\n" +
+                $"Richtig: {result.CorrectPredictions}\n" +
+                $"F1: {result.OverallF1:P1}\n" +
+                $"Precision: {result.OverallPrecision:P1}\n" +
+                $"Recall: {result.OverallRecall:P1}\n\n" +
+                $"CSV: {result.CsvPath}",
+                "Eval-Set", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Eval-Set Fehler: {ex.Message}", "Eval-Set",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [Eval] Fehler: {ex.Message}\n");
+        }
+        finally
+        {
+            if (btn is not null) { btn.IsEnabled = true; btn.Content = "\U0001F4CF Eval-Set laufen"; }
+        }
+    }
+
     private void OpenBenchmark_Click(object sender, RoutedEventArgs e)
     {
         if (App.Services is not ServiceProvider sp) return;

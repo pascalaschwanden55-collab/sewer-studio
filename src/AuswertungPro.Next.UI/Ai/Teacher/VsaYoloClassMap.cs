@@ -42,8 +42,8 @@ public static class VsaYoloClassMap
 
         // Oberflaechenschaeden
         ["BAJ"] = 9,   // Korrosion / Ausbrueche
-        ["BBB"] = 10,  // Wurzeleinwuchs / Bewuchs
-        ["BBA"] = 11,  // Inkrustation / Kalkablagerung
+        ["BBB"] = 10,  // Anhaftende Stoffe (Inkrustation, Fett, Faeulnis)
+        ["BBA"] = 11,  // Wurzeln (Pfahl, fein, komplex)
 
         // Betriebliche Stoerungen
         ["BBC"] = 12,  // Ablagerung Sohle
@@ -77,6 +77,23 @@ public static class VsaYoloClassMap
             _map[category] = nextId;
             SaveSync();
             return nextId;
+        }
+    }
+
+    /// <summary>
+    /// V4.2: Umgekehrte Zuordnung class_id → VSA-Code (fuer EvalRunner + Report).
+    /// Gibt ersten passenden Code zurueck, oder null wenn classId nicht im Mapping.
+    /// </summary>
+    public static string? GetVsaCodeForClassId(int classId)
+    {
+        lock (_lock)
+        {
+            EnsureLoaded();
+            foreach (var kv in _map!)
+            {
+                if (kv.Value == classId) return kv.Key;
+            }
+            return null;
         }
     }
 
