@@ -1,8 +1,9 @@
 // AuswertungPro – Video-Selbsttraining: PDF-Protokolltabellen-Parser
 // Liest Inspektionsprotokolle aus WinCan/IBAK-PDF-Exporten.
-// Erkennt zwei Formate:
-//   Format 1 (Fretz/IBAK):  "Meter  Code  Beschreibung  MPEG  Foto  Stufe"
-//   Format 2 (Abwasser Uri): "POSITION [m] SK CODE  BEOBACHTUNG  VIDEO  FOTO"
+// Erkennt drei Formate:
+//   Format 1 (Fretz/IBAK):       "Meter  Code  Beschreibung  MPEG  Foto  Stufe"
+//   Format 2 (Abwasser Uri):     "POSITION [m] SK CODE  BEOBACHTUNG  VIDEO  FOTO"
+//   Format 3 (IBAK direkt):      "Station  Zeit  Code  Strecke  Langtext  Uhr  Foto"
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -26,8 +27,26 @@ public static class PdfProtocolTableParser
     // ═══ Regex-Patterns ═════════════════════════════════════════════════
 
     // Meter am Zeilenanfang: "  0.00", "  28.40", "  142.49", "    250.61"
+    // Auch: "Fliessrichtung  4.7 ..." (IBAK direkt: Text vor Meter)
+    // V4.2: Meter mit oder ohne Einrueckung — Fretz-PDFs (ab 2023) haben keine Einrueckung.
+    // Negative lookahead (?!\d|\.\d) verhindert Match auf Datums-Strings wie "23.04.2023".
     private static readonly Regex MeterRegex = new(
-        @"^\s{2,}(\d{1,4}[.,]\d{1,2})\s",
+        @"^\s*(\d{1,4}[.,]\d{1,2})(?!\d|\.\d)(?:\s|$)",
+        RegexOptions.Compiled);
+
+    // V4.2: Zeile mit NUR einem VSA-Code (column-stacked Layout).
+    private static readonly Regex CodeOnlyLineRegex = new(
+        @"^\s*((?:B[A-Z]{2,5}[A-Z]?)|(?:AE[A-Z]{1,4}))\s*$",
+        RegexOptions.Compiled);
+
+    // IBAK direkt: "Fliessrichtung  4.7 00:03:24 BAAA" — Text vor Meter
+    private static readonly Regex IbakMeterRegex = new(
+        @"^[A-Za-z\u00C0-\u00FF]+\s+(\d{1,4}[.,]\d{1,2})\s",
+        RegexOptions.Compiled);
+
+    // IBAK direkt: Zeile ohne Meter aber mit Zeitcode + Code: "  00:00:00 BDB"
+    private static readonly Regex TimeThenCodeRegex = new(
+        @"^\s+(\d{1,2}:\d{2}:\d{2})\s+((?:B[A-Z]{2,5}[A-Z]?)|(?:AE[A-Z]{1,4}))\b",
         RegexOptions.Compiled);
 
     // VSA-Code: B-Codes (BAB, BBFA, BCAEA etc.) und AE-Codes (AEF, AECXC, AEDXP etc.)
@@ -40,9 +59,9 @@ public static class PdfProtocolTableParser
         @"\b(\d{1,2}:\d{2}:\d{2})\b",
         RegexOptions.Compiled);
 
-    // Zustandsstufe am Zeilenende: einzelne Ziffer 1-4
+    // Zustandsstufe am Zeilenende: einzelne Ziffer 1-5 (Stufe 5 = Sofortmassnahme, Audit T2)
     private static readonly Regex StufeRegex = new(
-        @"\s([1-4])\s*$",
+        @"\s([1-5])\s*$",
         RegexOptions.Compiled);
 
     // Uhrlage: "bei 3 Uhr", "von 12 Uhr bis 6 Uhr", "bei 9 Uhr"
@@ -50,15 +69,77 @@ public static class PdfProtocolTableParser
         @"(?:bei|von)\s+(\d{1,2})\s*Uhr",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    // Stammdaten-Header die wir ueberspringen
+    // Stammdaten-Header die wir ueberspringen (und Tabellen-Start erkennen)
     private static readonly Regex HeaderRegex = new(
-        @"Haltungsinspektion|Inspektionsbericht|Haltungsbilder|Fotos|Seite\s*:|POSITION \[m\]|m\+\s+.*Zustand|m\+\s+OP",
+        @"Haltungsinspektion|Inspektionsbericht|Haltungsbilder|Fotos|Seite\s*:|POSITION \[m\]|m\+\s+.*Zustand|m\+\s+OP|Station\s+Zeit\s+Code",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     // Schachtnummer (am Anfang einer Beobachtungsgruppe)
     private static readonly Regex SchachtRegex = new(
         @"^\s{2,}(\d{2,}\.\d+|\d{5,})\s*$",
         RegexOptions.Compiled);
+
+    // Fretz/Klartext → VSA-Code Mapping (fuer PDFs die Klartext statt Codes verwenden)
+    private static readonly Dictionary<string, string> KlartextToCode = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // BC Bestandsaufnahme
+        { "Rohranfang", "BCD" },
+        { "Rohrende", "BCE" },
+        { "Bogen", "BCC" },
+        { "Kurve", "BCC" },
+        { "Bogen nach links", "BCCA" },
+        { "Bogen links", "BCCA" },
+        { "Bogen nach rechts", "BCCB" },
+        { "Bogen rechts", "BCCB" },
+        { "Anschluss", "BCA" },
+        { "Seitlicher Anschluss", "BCA" },
+        { "Formst\u00FCck", "BCAAA" },
+        { "Reparatur", "BCB" },
+        { "Innenauskleidung", "BCBB" },
+
+        // BA Bauliche Schaeden
+        { "Riss", "BAB" },
+        { "L\u00E4ngsriss", "BABA" },
+        { "Querriss", "BABB" },
+        { "Rissbildung", "BAB" },
+        { "Bruch", "BAC" },
+        { "Scherbe", "BACB" },
+        { "Einsturz", "BACC" },
+        { "Deformation", "BAA" },
+        { "Verformung", "BAA" },
+        { "Versatz", "BAJ" },
+        { "Rohrverbindung", "BAJ" },
+        { "Dichtring", "BAIA" },
+        { "Oberfl\u00E4chenschaden", "BAF" },
+        { "Korrosion", "BAFJ" },
+        { "korrodiert", "BAFJ" },
+        { "Abplatzung", "BAFB" },
+        { "einragend", "BAG" },
+        { "Anschluss einragend", "BAG" },
+
+        // BB Betriebliche Stoerungen
+        { "Wurzel", "BBA" },
+        { "Wurzeleinwuchs", "BBA" },
+        { "Inkrustation", "BBBA" },
+        { "Kalk", "BBBA" },
+        { "Fett", "BBBB" },
+        { "Ablagerung", "BBC" },
+        { "Ablagerungen", "BBC" },
+        { "Sand", "BBCA" },
+        { "Infiltration", "BBF" },
+        { "Wasser fliesst", "BBFC" },
+        { "Wasser tropft", "BBFB" },
+        { "Hindernis", "BBE" },
+
+        // AE Aenderungen
+        { "Rohrmaterialwechsel", "AED" },
+        { "Neue L\u00E4nge", "AEF" },
+        { "Rohrprofilwechsel", "AECXC" },
+
+        // BD Weitere
+        { "Wasserspiegel", "BDD" },
+        { "Allgemeinzustand", "BDA" },
+    };
 
     // ═══ Hauptmethode ═══════════════════════════════════════════════════
 
@@ -79,6 +160,10 @@ public static class PdfProtocolTableParser
         var text = ExtractText(pdfPath);
         if (string.IsNullOrWhiteSpace(text))
             return PdfProtocolParseResult.Empty($"PDF-Text leer — pdftotext nicht gefunden oder fehlgeschlagen. Pfad: {ResolvePdfToTextPath()}");
+
+        // V4.2 Nachbesserung: Caesar-Decoder fuer IKAS-PDFs mit Custom-Font-Encoding.
+        // Wirkt nur wenn Text verschoben ist (Check auf bekannte Wortmuster, sonst Identity).
+        text = PdfProtocolExtractor.TryDecodeShiftedText(text);
 
         var lines = text.Split('\n');
         var entries = new List<ProtocolEntry>();
@@ -121,6 +206,35 @@ public static class PdfProtocolTableParser
 
             // Versuche Meter am Zeilenanfang zu finden
             var meterMatch = MeterRegex.Match(line);
+
+            // IBAK direkt: "Fliessrichtung  4.7 00:03:24 BAAA" — Text vor Meter
+            if (!meterMatch.Success)
+                meterMatch = IbakMeterRegex.Match(line);
+
+            // IBAK direkt: Zeile ohne Meter aber mit "00:00:00 BDB" — nutze letzten Meter
+            if (!meterMatch.Success && inObservationTable)
+            {
+                var timeThenCode = TimeThenCodeRegex.Match(line);
+                if (timeThenCode.Success)
+                {
+                    // Vorherigen Eintrag abschliessen
+                    if (currentCode is not null)
+                        entries.Add(BuildEntry(currentMeter, currentCode, descAccumulator, currentMpeg, currentStufe));
+
+                    // Neuen Eintrag mit dem letzten Meter (oder null)
+                    currentCode = timeThenCode.Groups[2].Value;
+                    currentMpeg = timeThenCode.Groups[1].Value;
+                    descAccumulator = line.Substring(timeThenCode.Index + timeThenCode.Length).Trim();
+                    currentStufe = null;
+
+                    var stufeMatch = StufeRegex.Match(line);
+                    if (stufeMatch.Success && int.TryParse(stufeMatch.Groups[1].Value, out var s))
+                        currentStufe = s;
+
+                    continue;
+                }
+            }
+
             if (meterMatch.Success)
             {
                 inObservationTable = true;
@@ -128,9 +242,20 @@ public static class PdfProtocolTableParser
                 var rest = line.Substring(meterMatch.Index + meterMatch.Length);
                 var newMeter = ParseMeter(meterMatch.Groups[1].Value);
 
-                // FIX: Pruefe ob die Zeile auch einen Code hat.
-                // Zeilen mit NUR Meter (kein Code) sind Folgezeilen — kein neuer Eintrag starten.
+                // Pruefe ob die Zeile einen Code hat (VSA-Code oder Klartext-Mapping).
                 var hasCodeInRest = CodeRegex.IsMatch(rest);
+
+                // Klartext-Fallback: Fretz AG u.a. schreiben Klartext statt VSA-Codes
+                if (!hasCodeInRest)
+                {
+                    var mappedCode = TryMapKlartext(rest);
+                    if (mappedCode is not null)
+                    {
+                        hasCodeInRest = true;
+                        // Klartext-Code in die Zeile injizieren (fuer ParseLineContent)
+                        rest = mappedCode + " " + rest;
+                    }
+                }
 
                 if (hasCodeInRest)
                 {
@@ -164,6 +289,15 @@ public static class PdfProtocolTableParser
             }
             else if (inObservationTable)
             {
+                // V4.2: Column-stacked Layout — Code steht alleine auf eigener Zeile
+                // nach einer Meter-Zeile. Startet neuen Eintrag.
+                var codeOnly = CodeOnlyLineRegex.Match(line);
+                if (codeOnly.Success && currentMeter.HasValue && currentCode is null)
+                {
+                    currentCode = codeOnly.Groups[1].Value;
+                    continue;
+                }
+
                 // Fortsetzungszeile (kein Meter am Anfang)
                 // Koennte Code, Beschreibung oder MPEG enthalten
                 ParseLineContent(line, ref currentCode, ref descAccumulator, ref currentMpeg, ref currentStufe);
@@ -377,6 +511,30 @@ public static class PdfProtocolTableParser
 
     // ═══ Hilfsmethoden ═══════════════════════════════════════════════════
 
+    /// <summary>Versucht Klartext (z.B. "Rohranfang") in einen VSA-Code zu uebersetzen.</summary>
+    private static string? TryMapKlartext(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+
+        var trimmed = text.Trim();
+
+        // Exakter Match zuerst
+        if (KlartextToCode.TryGetValue(trimmed, out var code))
+            return code;
+
+        // Teilstring-Match: "Infiltration, Wasser fliesst" → "Infiltration" matcht
+        foreach (var (key, val) in KlartextToCode)
+        {
+            if (trimmed.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+                return val;
+            if (trimmed.Contains(key, StringComparison.OrdinalIgnoreCase))
+                return val;
+        }
+
+        return null;
+    }
+
     private static double? ParseMeter(string raw)
     {
         var cleaned = raw.Replace(',', '.').Trim();
@@ -389,7 +547,7 @@ public static class PdfProtocolTableParser
         return TimeSpan.TryParse(mpeg, out var ts) ? ts : null;
     }
 
-    /// <summary>Loest den Pfad zu pdftotext.exe auf.</summary>
+    /// <summary>Loest den Pfad zu pdftotext.exe auf. V4.2: Erweitert um bekannte Installationspfade.</summary>
     private static string ResolvePdfToTextPath()
     {
         // 1. Explizit gesetzter Pfad (aus AppSettings)
@@ -402,7 +560,32 @@ public static class PdfProtocolTableParser
         if (File.Exists(toolsPath))
             return toolsPath;
 
-        // 3. Im PATH
+        // 3. V4.2: Bekannte Installationspfade auf Windows durchsuchen.
+        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var candidates = new[]
+        {
+            Path.Combine(programFiles, "Git", "mingw64", "bin", "pdftotext.exe"),
+            Path.Combine(programFilesX86, "Git", "mingw64", "bin", "pdftotext.exe"),
+            Path.Combine(programFiles, "poppler", "bin", "pdftotext.exe"),
+            Path.Combine(programFiles, "poppler", "Library", "bin", "pdftotext.exe"),
+            Path.Combine(programFilesX86, "poppler", "bin", "pdftotext.exe"),
+            Path.Combine(localAppData, "Programs", "poppler", "bin", "pdftotext.exe"),
+            // Chocolatey
+            @"C:\ProgramData\chocolatey\bin\pdftotext.exe",
+        };
+        foreach (var c in candidates)
+        {
+            if (!string.IsNullOrEmpty(c) && File.Exists(c))
+            {
+                // Cachen damit nicht jeder Parse-Call das Filesystem scanned.
+                PdfToTextExePath = c;
+                return c;
+            }
+        }
+
+        // 4. Im PATH (Process.Start sucht dort).
         return "pdftotext";
     }
 

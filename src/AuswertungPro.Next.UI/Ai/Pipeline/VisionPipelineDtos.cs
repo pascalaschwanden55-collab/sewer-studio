@@ -87,6 +87,31 @@ public sealed record ViewTypeResponse(
     [property: JsonPropertyName("prediction")] ViewTypePrediction Prediction,
     [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs);
 
+// ── V4.2 Phase 3: DINOv2 Foundation-Encoder + Linear-Heads ───────────────
+
+public sealed record DinoV2Request(
+    [property: JsonPropertyName("image_base64")] string ImageBase64,
+    [property: JsonPropertyName("target_codes")] IReadOnlyList<string>? TargetCodes = null
+);
+
+public sealed record DinoV2Prediction(
+    [property: JsonPropertyName("vsa_code")] string VsaCode,
+    [property: JsonPropertyName("severity_class")] string SeverityClass,
+    [property: JsonPropertyName("confidence")] double Confidence,
+    [property: JsonPropertyName("scores")] Dictionary<string, double> Scores
+);
+
+public sealed record DinoV2Response(
+    [property: JsonPropertyName("predictions")] IReadOnlyList<DinoV2Prediction> Predictions,
+    [property: JsonPropertyName("heads_loaded")] IReadOnlyList<string> HeadsLoaded,
+    [property: JsonPropertyName("encoder_inference_time_ms")] double EncoderInferenceTimeMs,
+    [property: JsonPropertyName("heads_inference_time_ms")] double HeadsInferenceTimeMs,
+    [property: JsonPropertyName("total_time_ms")] double TotalTimeMs,
+    // V4.2 Nachbesserung B: Versionierung fuer Ursachenanalyse.
+    [property: JsonPropertyName("encoder_version")] string EncoderVersion = "",
+    [property: JsonPropertyName("heads_manifest_hash")] string HeadsManifestHash = ""
+);
+
 // ── Florence-2 (Open-Vocabulary Detection, Slot: DINO) ────────────────────
 
 public sealed record DinoRequest(

@@ -705,21 +705,58 @@
                         <TextBlock Text="{Binding ReviewStatusText}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
 
-                    <DataGrid Grid.Row="2"
-                              ItemsSource="{Binding ReviewQueue}"
-                              SelectedItem="{Binding SelectedReviewItem}"
-                              AutoGenerateColumns="False"
-                              IsReadOnly="True"
-                              SelectionMode="Single"
-                              CanUserSortColumns="True"
-                              HeadersVisibility="Column">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Priorität" Binding="{Binding PriorityLabel}" Width="80"/>
-                            <DataGridTextColumn Header="Befund" Binding="{Binding Label}" Width="*"/>
-                            <DataGridTextColumn Header="Vorgeschlagen" Binding="{Binding SuggestedCode}" Width="100"/>
-                            <DataGridTextColumn Header="Konfidenz" Binding="{Binding Confidence, StringFormat=P0}" Width="80"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="3*" MinWidth="400"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="2*" MinWidth="280"/>
+                        </Grid.ColumnDefinitions>
+
+                        <DataGrid Grid.Column="0"
+                                  ItemsSource="{Binding ReviewQueue}"
+                                  SelectedItem="{Binding SelectedReviewItem}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  SelectionMode="Single"
+                                  CanUserSortColumns="True"
+                                  HeadersVisibility="Column">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Priorität" Binding="{Binding PriorityLabel}" Width="80"/>
+                                <DataGridTextColumn Header="Befund" Binding="{Binding Label}" Width="*"/>
+                                <DataGridTextColumn Header="Vorgeschlagen" Binding="{Binding SuggestedCode}" Width="100"/>
+                                <DataGridTextColumn Header="Konfidenz" Binding="{Binding Confidence, StringFormat=P0}" Width="80"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <!-- V4.2 Phase 1.5: Frame-Viewer + Metadaten rechts -->
+                        <Border Grid.Column="2"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                Padding="8" Background="{DynamicResource SurfaceBrush}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Image Grid.Row="0"
+                                       Source="{Binding SelectedReviewFramePath, TargetNullValue={x:Null}}"
+                                       Stretch="Uniform"
+                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                       Margin="0,0,0,6"/>
+
+                                <StackPanel Grid.Row="1">
+                                    <TextBlock Text="{Binding SelectedReviewItem.Label, TargetNullValue='Kein Item ausgewaehlt'}"
+                                               FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                    <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource MutedBrush}">
+                                        <Run Text="Vorschlag: "/>
+                                        <Run Text="{Binding SelectedReviewItem.SuggestedCode, TargetNullValue='—'}" FontWeight="SemiBold"/>
+                                        <Run Text="  ·  Prio: "/>
+                                        <Run Text="{Binding SelectedReviewItem.PriorityLabel, TargetNullValue='—'}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
 
                     <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Content="Akzeptieren" x:Name="ReviewApproveBtn"

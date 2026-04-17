@@ -125,7 +125,8 @@ public static class DifferenceAnalyzer
                 ProtocolEntry = gt,
                 KiDetection = best,
                 FramePath = best.FramePath,
-                Explanation = explanation
+                Explanation = explanation,
+                MatchConfidenceScore = score
             });
         }
 

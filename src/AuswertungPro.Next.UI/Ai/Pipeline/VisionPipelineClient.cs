@@ -89,6 +89,16 @@ public sealed class VisionPipelineClient
         return await PostAsync<ViewTypeRequest, ViewTypeResponse>("/classify/viewtype", request, ct).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// V4.2 Phase 3: DINOv2 Foundation-Encoder + Linear-Heads Klassifikation.
+    /// Ersetzt die tote Grounding-DINO-Kaskade im Codier-Modus.
+    /// Antwortet mit leerer predictions-Liste wenn keine Heads trainiert sind → Fallback auf Qwen.
+    /// </summary>
+    public async Task<DinoV2Response> ClassifyDinoV2Async(DinoV2Request request, CancellationToken ct = default)
+    {
+        return await PostAsync<DinoV2Request, DinoV2Response>("/classify/dinov2", request, ct).ConfigureAwait(false);
+    }
+
     /// <summary>Batch-YOLO: mehrere Bilder in einem Forward Pass.</summary>
     public async Task<YoloBatchResponseDto> DetectYoloBatchAsync(YoloBatchRequestDto request, CancellationToken ct = default)
         => await PostAsync<YoloBatchRequestDto, YoloBatchResponseDto>("/detect/yolo/batch", request, ct).ConfigureAwait(false);

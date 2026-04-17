@@ -91,6 +91,21 @@ public partial class TrainingCenterViewModel : ObservableObject
     [ObservableProperty] private int _reviewQueueCount;
     [ObservableProperty] private string _reviewStatusText = "";
 
+    /// <summary>V4.2 Phase 1.5: Pfad zum Frame des aktuell ausgewaehlten Review-Items (fuer Image-Binding).</summary>
+    public string? SelectedReviewFramePath
+    {
+        get
+        {
+            var path = SelectedReviewItem?.SelfTrainingFramePath;
+            return !string.IsNullOrWhiteSpace(path) && System.IO.File.Exists(path) ? path : null;
+        }
+    }
+
+    partial void OnSelectedReviewItemChanged(Ai.SelfImproving.ReviewQueueItem? value)
+    {
+        OnPropertyChanged(nameof(SelectedReviewFramePath));
+    }
+
     // ── Selbsttraining-Visualisierungen ──
     public ObservableCollection<SelfTrainingEntryResult> SelfTrainingResults { get; } = new();
     public ObservableCollection<CodeDistributionEntry> CodeDistribution { get; } = new();
@@ -301,6 +316,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             SelfTrainingLogEntries.Add($"{ts} {message}");
             while (SelfTrainingLogEntries.Count > 100)
                 SelfTrainingLogEntries.RemoveAt(0);
+            EchtzeitLogText = string.Join("\n", SelfTrainingLogEntries);
         }
         if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
             d.Invoke(Apply);
@@ -897,7 +913,8 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         var list = await TrainingSamplesStore.LoadAsync();
         Samples.Clear();
-        foreach (var s in list)
+        // Rejected-Samples ausblenden — nur New + Approved anzeigen
+        foreach (var s in list.Where(s => s.Status != TrainingSampleStatus.Rejected))
             Samples.Add(s);
     }
 
@@ -973,18 +990,32 @@ public partial class TrainingCenterViewModel : ObservableObject
     private async Task ApproveSampleAsync()
     {
         if (SelectedSample is null) return;
-        SelectedSample.Status = TrainingSampleStatus.Approved;
-        StatusText = $"Approved: {SelectedSample.SampleId}";
-        await PersistSamplesAsync(SelectedSample);
+        var current = SelectedSample;
+        var idx = Samples.IndexOf(current);
+        current.Status = TrainingSampleStatus.Approved;
+        StatusText = $"Approved: {current.Code} @ {current.MeterStart:F1}m";
+        await PersistSamplesAsync(current);
+
+        // Zum naechsten Sample springen
+        Samples.Remove(current);
+        if (Samples.Count > 0)
+            SelectedSample = Samples[Math.Min(idx, Samples.Count - 1)];
     }
 
     [RelayCommand(CanExecute = nameof(HasSampleSelection))]
     private async Task RejectSampleAsync()
     {
         if (SelectedSample is null) return;
-        SelectedSample.Status = TrainingSampleStatus.Rejected;
-        StatusText = $"Rejected: {SelectedSample.SampleId}";
+        var current = SelectedSample;
+        var idx = Samples.IndexOf(current);
+        current.Status = TrainingSampleStatus.Rejected;
+        StatusText = $"Rejected: {current.Code} @ {current.MeterStart:F1}m";
         await PersistSamplesAsync();
+
+        // Eintrag entfernen und zum naechsten springen
+        Samples.Remove(current);
+        if (Samples.Count > 0)
+            SelectedSample = Samples[Math.Min(idx, Samples.Count - 1)];
     }
 
     [RelayCommand]
@@ -1954,6 +1985,9 @@ public partial class TrainingCenterViewModel : ObservableObject
                 item.SelfTrainingMeter ?? 0, approved: true, correctedCode: null,
                 sampleId: item.SelfTrainingSampleId, ct: ct);
         }
+        // V4.2 Phase 1.5: TeacherAnnotation anhaengen fuer zukuenftiges Training.
+        await TryAppendTeacherAnnotationAsync(item, item.SuggestedCode ?? item.SelfTrainingVsaCode ?? "", "approved");
+
         queueService.Remove(item.Id);
         ReviewQueue.Remove(item);
         ReviewQueueCount = ReviewQueue.Count;
@@ -1982,11 +2016,45 @@ public partial class TrainingCenterViewModel : ObservableObject
                 item.SelfTrainingMeter ?? 0, approved: false, correctedCode: correctedCode,
                 sampleId: item.SelfTrainingSampleId, ct: ct);
         }
+        // V4.2 Phase 1.5: TeacherAnnotation mit korrigiertem Code — besonders wertvoll!
+        await TryAppendTeacherAnnotationAsync(item, correctedCode, "corrected");
+
         queueService.Remove(item.Id);
         ReviewQueue.Remove(item);
         ReviewQueueCount = ReviewQueue.Count;
         ReviewStatusText = $"Rejected: {item.SuggestedCode} → {correctedCode} | {ReviewQueueCount} verbleibend";
         Log($"Review Rejected: {item.Label} → {item.SuggestedCode} korrigiert zu {correctedCode}");
+    }
+
+    /// <summary>
+    /// V4.2 Phase 1.5: Haengt eine TeacherAnnotation an den append-only Store, wenn Frame vorhanden.
+    /// Review-Entscheidungen werden so zum Gold-Standard fuer zukuenftiges Training (inkl. DINOv2-Heads in Phase 3.2).
+    /// </summary>
+    private static async Task TryAppendTeacherAnnotationAsync(
+        Ai.SelfImproving.ReviewQueueItem item,
+        string vsaCode,
+        string reviewKind)
+    {
+        if (string.IsNullOrWhiteSpace(vsaCode)) return;
+        var framePath = item.SelfTrainingFramePath;
+        if (string.IsNullOrWhiteSpace(framePath) || !System.IO.File.Exists(framePath)) return;
+
+        try
+        {
+            var annotation = new Ai.Teacher.TeacherAnnotation
+            {
+                VsaCode = vsaCode.Trim().ToUpperInvariant(),
+                Beschreibung = $"Review-{reviewKind}: {item.Label}",
+                MeterPosition = item.SelfTrainingMeter ?? 0.0,
+                HaltungName = item.SelfTrainingCaseId,
+                FullFramePath = framePath
+            };
+            await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+        }
+        catch
+        {
+            // TeacherAnnotation ist optionale Anreicherung — Review-Flow darf nicht an IO-Fehlern scheitern.
+        }
     }
 
     /// <summary>

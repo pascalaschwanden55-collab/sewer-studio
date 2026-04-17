@@ -36,6 +36,7 @@ public sealed class BatchSelfTrainingOrchestrator
     private readonly Func<VideoSelfTrainingOrchestrator>? _orchestratorFactory;
     private readonly ProtocolLoaderFactory _protocolLoader;
     private readonly KbEnrichmentService _enrichment;
+    private readonly SelfImproving.UncertaintySamplingService? _uncertaintySampler;
     private readonly ILogger? _log;
 
     // YOLO-Retraining nach Batch-Durchlauf (optional)
@@ -59,7 +60,8 @@ public sealed class BatchSelfTrainingOrchestrator
         ILogger? log = null,
         string? sidecarDir = null,
         YoloRetrainOrchestrator? yoloRetrain = null,
-        Func<VideoSelfTrainingOrchestrator>? orchestratorFactory = null)
+        Func<VideoSelfTrainingOrchestrator>? orchestratorFactory = null,
+        SelfImproving.UncertaintySamplingService? uncertaintySampler = null)
     {
         _videoOrchestrator = videoOrchestrator ?? throw new ArgumentNullException(nameof(videoOrchestrator));
         _protocolLoader = protocolLoader ?? throw new ArgumentNullException(nameof(protocolLoader));
@@ -68,6 +70,7 @@ public sealed class BatchSelfTrainingOrchestrator
         _sidecarDir = sidecarDir;
         _yoloRetrain = yoloRetrain;
         _orchestratorFactory = orchestratorFactory;
+        _uncertaintySampler = uncertaintySampler;
     }
 
     /// <summary>
@@ -140,7 +143,8 @@ public sealed class BatchSelfTrainingOrchestrator
             {
                 ApproveMatches = request.AutoApproveMatches,
                 ApproveCorrections = request.AutoApproveCorrections,
-                LearnFromMissed = request.LearnFromMissed
+                LearnFromMissed = request.LearnFromMissed,
+                MinDetectionConfidence = request.MinDetectionConfidence
             };
 
             // ── PDF-Vorlade-Phase: Alle Protokolle parallel auf CPU parsen ──
@@ -325,6 +329,12 @@ public sealed class BatchSelfTrainingOrchestrator
                         // (VideoSelfTrainingOrchestrator hat internen State pro Video)
                         var localOrch = _orchestratorFactory?.Invoke() ?? _videoOrchestrator;
 
+                        // V4.2 Phase 2: Protokoll-First-Modus auf lokalen Orchestrator uebertragen.
+                        localOrch.UseProtocolFirst = request.UseProtocolFirst;
+                        localOrch.ProtocolFirstMeterTolerance = request.ProtocolFirstMeterTolerance;
+                        localOrch.EnableSurpriseGapsPass = request.EnableSurpriseGapsPass;
+                        localOrch.SurpriseGapsFrameStep = request.SurpriseGapsFrameStep;
+
                         progress?.Report(new BatchSelfTrainingProgress
                         {
                             CurrentIndex = Interlocked.Increment(ref completedCount),
@@ -377,8 +387,18 @@ public sealed class BatchSelfTrainingOrchestrator
                         catch (OperationCanceledException) { /* Abbruch */ }
                         catch (Exception ex)
                         {
+                            // V4.2 Nachbesserung: Exception-Details auch ins Live-Log,
+                            // damit crashes nicht stumm verschluckt werden.
                             var errMsg = $"{ex.GetType().Name}: {ex.Message}";
-                            LogToFile($"[{i+1}/{total}] {h.HaltungId}: EXCEPTION {errMsg}");
+                            var stackHead = ex.StackTrace?.Split('\n').FirstOrDefault()?.Trim() ?? "";
+                            LogToFile($"[{i+1}/{total}] {h.HaltungId}: EXCEPTION {errMsg}\n{ex.StackTrace}");
+                            progress?.Report(new BatchSelfTrainingProgress
+                            {
+                                CurrentIndex = i + 1, TotalHaltungen = total,
+                                HaltungId = h.HaltungId, Phase = "EXCEPTION",
+                                Status = $"✗ {h.HaltungId}: {errMsg} | {stackHead}",
+                                RunningStats = stats
+                            });
                             lock (statsLock)
                             {
                                 failed++;
@@ -500,9 +520,16 @@ public sealed class BatchSelfTrainingOrchestrator
 
         if (protocol is null || protocol.Original.Entries.Count == 0)
         {
-            var reason = protocol is null
+            var baseReason = protocol is null
                 ? "PDF konnte nicht gelesen werden"
                 : "PDF gelesen aber keine Protokoll-Eintraege gefunden";
+
+            // V4.2 Nachbesserung: Diagnose anhaengen damit User im UI sieht warum.
+            string diagnostic;
+            try { diagnostic = Services.ProtocolLoaderFactory.DiagnosePdf(h.ProtocolSource); }
+            catch (Exception ex) { diagnostic = $"Diag-Exception: {ex.Message}"; }
+
+            var reason = $"{baseReason} — {diagnostic}";
             _log?.LogWarning("Batch: {Id}: {Reason} (PDF: {Pdf})",
                 h.HaltungId, reason, Path.GetFileName(h.ProtocolSource));
             return new BatchHaltungResult
@@ -559,6 +586,12 @@ public sealed class BatchSelfTrainingOrchestrator
             })
             : null;
 
+        // V4.2 Phase 2: Protokoll-First-Modus auch fuer den sequentiellen Pfad durchreichen.
+        _videoOrchestrator.UseProtocolFirst = request.UseProtocolFirst;
+        _videoOrchestrator.ProtocolFirstMeterTolerance = request.ProtocolFirstMeterTolerance;
+        _videoOrchestrator.EnableSurpriseGapsPass = request.EnableSurpriseGapsPass;
+        _videoOrchestrator.SurpriseGapsFrameStep = request.SurpriseGapsFrameStep;
+
         var trainingResult = await _videoOrchestrator.RunAsync(
             trainingRequest, protocol, videoProgress, ct).ConfigureAwait(false);
 
@@ -586,6 +619,24 @@ public sealed class BatchSelfTrainingOrchestrator
         stats.KbDeduplicated += enrichResult.Deduplicated;
         stats.KbSkipped += enrichResult.Skipped;
         stats.Errors += enrichResult.Errors;
+
+        // V4.2 Phase 1.4: Unsicherste Items in Review-Queue fuer manuelles Labeln.
+        var samplingResult = _uncertaintySampler?.EnqueueTopUncertain(h.HaltungId, report);
+
+        // V4.2 Nachbesserung A: Strukturiertes Haltungs-Telemetrie-Log.
+        _log?.LogInformation(
+            "Haltung {Id} Telemetry | auto_approved={Auto} queued={Q} rejected_by_gate={Gate} " +
+            "dedup={Dd} errors={Err} tp={TP} fn={FN} fp={FP} mm={MM} mean_prio={Mean:F3} max_prio={Max:F3}",
+            h.HaltungId,
+            enrichResult.Indexed,
+            samplingResult?.Enqueued ?? 0,
+            enrichResult.Skipped,
+            enrichResult.Deduplicated,
+            enrichResult.Errors,
+            report.TruePositiveCount, report.FalseNegativeCount,
+            report.FalsePositiveCount, report.CodeMismatchCount,
+            samplingResult?.MeanPriority ?? 0.0,
+            samplingResult?.MaxPriority ?? 0.0);
 
         // Phase 4: YOLO-Trainingskandidaten generieren
         try
@@ -726,9 +777,16 @@ public sealed class BatchSelfTrainingOrchestrator
 
         if (protocol is null || protocol.Original.Entries.Count == 0)
         {
-            var reason = protocol is null
+            var baseReason = protocol is null
                 ? "PDF konnte nicht gelesen werden"
                 : "PDF gelesen aber keine Protokoll-Eintraege gefunden";
+
+            // V4.2 Nachbesserung: Diagnose anhaengen damit User im UI sieht warum.
+            string diagnostic;
+            try { diagnostic = Services.ProtocolLoaderFactory.DiagnosePdf(h.ProtocolSource); }
+            catch (Exception ex) { diagnostic = $"Diag-Exception: {ex.Message}"; }
+
+            var reason = $"{baseReason} — {diagnostic}";
             _log?.LogWarning("Batch: {Id}: {Reason} (PDF: {Pdf})",
                 h.HaltungId, reason, Path.GetFileName(h.ProtocolSource));
             return new BatchHaltungResult
@@ -806,6 +864,24 @@ public sealed class BatchSelfTrainingOrchestrator
             stats.KbSkipped += enrichResult.Skipped;
             stats.Errors += enrichResult.Errors;
         }
+
+        // V4.2 Phase 1.4: Unsicherste Items in Review-Queue fuer manuelles Labeln.
+        var samplingResult = _uncertaintySampler?.EnqueueTopUncertain(h.HaltungId, report);
+
+        // V4.2 Nachbesserung A: Strukturiertes Haltungs-Telemetrie-Log.
+        _log?.LogInformation(
+            "Haltung {Id} Telemetry | auto_approved={Auto} queued={Q} rejected_by_gate={Gate} " +
+            "dedup={Dd} errors={Err} tp={TP} fn={FN} fp={FP} mm={MM} mean_prio={Mean:F3} max_prio={Max:F3}",
+            h.HaltungId,
+            enrichResult.Indexed,
+            samplingResult?.Enqueued ?? 0,
+            enrichResult.Skipped,
+            enrichResult.Deduplicated,
+            enrichResult.Errors,
+            report.TruePositiveCount, report.FalseNegativeCount,
+            report.FalsePositiveCount, report.CodeMismatchCount,
+            samplingResult?.MeanPriority ?? 0.0,
+            samplingResult?.MaxPriority ?? 0.0);
 
         hSw.Stop();
 

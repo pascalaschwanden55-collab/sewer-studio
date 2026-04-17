@@ -13,6 +13,9 @@ scipy>=1.10
 groundingdino-py>=0.4
 transformers>=4.38,<5
 
+# V4.2 Phase 3: DINOv2 Foundation-Encoder + Linear-Heads (ueber transformers)
+# Keine zusaetzliche Dependency noetig — DINOv2 wird via AutoModel geladen.
+
 # SAM (pixel-precise segmentation)
 segment-anything>=1.0
 

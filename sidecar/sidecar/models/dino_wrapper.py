@@ -119,6 +119,17 @@ def _load_dino_on(device: str):
 
     config_path, weights_path = _find_dino_files()
     model = load_model(config_path, weights_path, device=device)
+
+    # Blackwell-Optimierungen: channels_last + torch.compile
+    try:
+        import torch
+        if device.startswith("cuda"):
+            model = model.to(memory_format=torch.channels_last)
+            model = torch.compile(model, mode="reduce-overhead")
+            logger.info("DINO: torch.compile + channels_last aktiviert")
+    except Exception as exc:
+        logger.warning("DINO: torch.compile fehlgeschlagen (kein Problem): %s", exc)
+
     return model, None
 
 

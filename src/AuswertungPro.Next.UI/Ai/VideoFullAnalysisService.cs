@@ -662,6 +662,8 @@ public sealed record RawVideoDetection(
     int? CrossSectionReductionPercent = null,
     int? DiameterReductionMm = null,
     QualityGate.EvidenceVector? Evidence = null,
+    // V4.2: Persistierter Frame-Pfad fuer Review-Queue-Anzeige.
+    string? FramePath = null,
     double? BboxX1 = null,
     double? BboxY1 = null,
     double? BboxX2 = null,

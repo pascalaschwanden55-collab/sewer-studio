@@ -266,6 +266,65 @@ public sealed class ProtocolLoaderFactory
         return (protocol, record);
     }
 
+    // ═══ V4.2 Nachbesserung: PDF-Diagnose ════════════════════════════════
+
+    /// <summary>
+    /// Diagnostiziert warum ein PDF von den Parsern nicht erkannt wird.
+    /// Wird bei Load-Fehlern aufgerufen und in den User-facing Error gehaengt,
+    /// damit im Training-Center-Log sichtbar wird welche Parser-Stufe scheitert.
+    /// </summary>
+    public static string DiagnosePdf(string pdfPath)
+    {
+        var sb = new System.Text.StringBuilder();
+
+        if (!File.Exists(pdfPath))
+            return $"Datei existiert nicht: {pdfPath}";
+
+        try
+        {
+            var fi = new FileInfo(pdfPath);
+            sb.Append($"[{fi.Length / 1024} KB] ");
+        }
+        catch { /* Groesse nicht lesbar — weiter */ }
+
+        // Stufe 1: PdfProtocolTableParser (pdftotext)
+        try
+        {
+            var result = PdfProtocolTableParser.Parse(pdfPath);
+            if (result.HasEntries)
+            {
+                sb.Append($"P1(pdftotext)={result.Entries.Count} Eintraege; ");
+            }
+            else if (!string.IsNullOrEmpty(result.Error))
+            {
+                var err = result.Error.Length > 120 ? result.Error[..120] + "..." : result.Error;
+                sb.Append($"P1=ERR[{err}]; ");
+            }
+            else
+            {
+                sb.Append("P1=0 (Text da, Format nicht erkannt); ");
+            }
+        }
+        catch (Exception ex)
+        {
+            sb.Append($"P1=EXC[{ex.GetType().Name}: {ex.Message}]; ");
+        }
+
+        // Stufe 2: PdfProtocolExtractor (PdfPig)
+        try
+        {
+            var extractor = new PdfProtocolExtractor();
+            var entries = extractor.ExtractAsync(pdfPath).GetAwaiter().GetResult();
+            sb.Append($"P2(PdfPig)={entries.Count} Eintraege");
+        }
+        catch (Exception ex)
+        {
+            sb.Append($"P2=EXC[{ex.GetType().Name}: {ex.Message}]");
+        }
+
+        return sb.ToString();
+    }
+
     // ═══ SourceType erkennen ═════════════════════════════════════════════
 
     /// <summary>

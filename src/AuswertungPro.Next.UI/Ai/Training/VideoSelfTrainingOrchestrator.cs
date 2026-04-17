@@ -34,6 +34,30 @@ public sealed class VideoSelfTrainingOrchestrator
 
     public bool IsPaused => _isPaused;
 
+    /// <summary>Optionale Batch-Pipeline (V4.1). YOLO Batch → Filter → Qwen sequentiell mit Timeout.</summary>
+    public Ai.Pipeline.BatchPipelineService? BatchPipeline { get; set; }
+    private bool UseBatchPipeline => BatchPipeline is not null;
+
+    /// <summary>
+    /// V4.2 Phase 2: Protokoll-First-Modus. Wenn aktiv, wird die Pipeline nur noch gezielt auf
+    /// die Protokoll-Fundstellen fokussiert. Qwen bekommt geschlossene Yes/No-Fragen statt
+    /// Open-Set-Klassifikation. Default: false (opt-in). Erfordert BatchPipeline.
+    /// </summary>
+    public bool UseProtocolFirst { get; set; } = false;
+
+    /// <summary>Meter-Toleranz um jeden Protokoll-Eintrag im Protokoll-First-Modus (Default 1.0m).</summary>
+    public double ProtocolFirstMeterTolerance { get; set; } = 1.0;
+
+    /// <summary>
+    /// V4.2 Phase 2.4: Ueberraschungsfund-Pass. Nach dem Protokoll-First-Pass ein zweiter
+    /// langsamer Durchlauf auf den Luecken zwischen Protokoll-Zonen — faengt Schaeden ein,
+    /// die der Operateur uebersehen hat. Nur mit UseProtocolFirst=true wirksam.
+    /// </summary>
+    public bool EnableSurpriseGapsPass { get; set; } = false;
+
+    /// <summary>Frame-Step (Sekunden) fuer den Ueberraschungsfund-Pass. Default 10s (5x langsamer als Haupt-Pass).</summary>
+    public double SurpriseGapsFrameStep { get; set; } = 10.0;
+
     public VideoSelfTrainingOrchestrator(
         IVideoAnalysisPipelineService pipeline,
         MeterTimelineService meterTimeline,
@@ -90,6 +114,32 @@ public sealed class VideoSelfTrainingOrchestrator
             frameMappings.Count,
             frameMappings.Count(m => m.Source == MeterMappingSource.OSD));
 
+        // V4.2 Nachbesserung: Multi-Inspektion-Filter.
+        // PDFs enthalten manchmal mehrere Inspektionen derselben Haltung (z.B. "In Fliessrichtung"
+        // + "Gegen Fliessrichtung"). Das gewaehlte Video deckt aber nur EINE Inspektion ab.
+        // Wenn der OSD-Max deutlich kleiner als die Protokoll-Gesamt-Laenge ist, filtern wir
+        // Protokoll-Eintraege jenseits des OSD-Bereichs raus — sonst landen Frames aus dem
+        // falschen Inspektions-Kontext im Review.
+        var osdMappings = frameMappings.Where(m => m.Source == MeterMappingSource.OSD).ToList();
+        if (osdMappings.Count >= 3)  // mindestens 3 OSD-Stuetzpunkte fuer vertrauenswuerdigen Max
+        {
+            var maxOsdMeter = osdMappings.Max(m => m.Entry.MeterStart);
+            if (maxOsdMeter > 0 && maxOsdMeter < inspLength * 0.5)
+            {
+                var toleranz = 2.0;
+                var cutoff = maxOsdMeter + toleranz;
+                var beforeCount = groundTruths.Count;
+                groundTruths = groundTruths.Where(gt => gt.MeterStart <= cutoff).ToList();
+                frameMappings = frameMappings.Where(m => m.Entry.MeterStart <= cutoff).ToList();
+                _log?.LogInformation(
+                    "V4.2 Multi-Inspektion-Filter aktiv: OSD-Max={MaxOsd:F1}m vs InspLength={Insp:F1}m " +
+                    "→ {Before} → {After} Protokoll-Eintraege (Cutoff={Cut:F1}m)",
+                    maxOsdMeter, inspLength, beforeCount, groundTruths.Count, cutoff);
+                progress?.Report(new VideoTrainingProgress("Meter-Mapping", 1, 1,
+                    $"Multi-Inspektion: {beforeCount}→{groundTruths.Count} Eintraege (Video nur {maxOsdMeter:F1}m)"));
+            }
+        }
+
         progress?.Report(new VideoTrainingProgress("Meter-Mapping", 1, 1,
             $"{frameMappings.Count} Frames zugeordnet"));
 
@@ -122,8 +172,134 @@ public sealed class VideoSelfTrainingOrchestrator
         PipelineResult pipelineResult;
         try
         {
-            pipelineResult = await _pipeline.RunAsync(
-                pipelineRequest, pipelineProgress, ct).ConfigureAwait(false);
+            if (UseBatchPipeline && BatchPipeline is not null)
+            {
+                // V4.1 Batch-Pipeline: YOLO Batch → Filter → Qwen ×6 parallel
+                _log?.LogInformation("BatchPipeline aktiv — verwende Batch-Modus");
+                BatchPipeline.FrameStepSeconds = request.FrameStepSeconds;
+
+                var batchProgress = progress is not null
+                    ? new Progress<Ai.Pipeline.BatchPipelineProgress>(p =>
+                        progress.Report(new VideoTrainingProgress(
+                            "KI-Analyse", p.Done, p.Total, p.Status)))
+                    : null;
+
+                // V4.2 Phase 2: Protokoll-First-Kontext aus GroundTruths bauen, wenn aktiviert.
+                Ai.Pipeline.ProtocolFirstContext? protocolContext = null;
+                if (UseProtocolFirst && groundTruths.Count > 0)
+                {
+                    var targets = groundTruths
+                        .Select(gt => new Ai.Pipeline.ProtocolTarget(
+                            VsaCode: gt.VsaCode,
+                            MeterStart: gt.MeterStart,
+                            MeterEnd: gt.MeterEnd,
+                            Description: gt.Text,
+                            ClockPosition: gt.ClockPosition))
+                        .ToList();
+                    protocolContext = new Ai.Pipeline.ProtocolFirstContext
+                    {
+                        Targets = targets,
+                        VideoDurationSeconds = videoDuration,
+                        InspektionslaengeMeter = inspLength,
+                        MeterTolerance = ProtocolFirstMeterTolerance
+                    };
+                    _log?.LogInformation(
+                        "Protokoll-First aktiv: {Targets} Ziele, Toleranz +-{Tol:F1}m",
+                        targets.Count, ProtocolFirstMeterTolerance);
+                }
+
+                // V4.2: Frames persistieren fuer Review-Queue-Anzeige.
+                var reviewFramesDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "AuswertungPro", "review_frames",
+                    Path.GetFileNameWithoutExtension(request.VideoPath));
+
+                var batchResult = await BatchPipeline.AnalyzeVideoAsync(
+                    request.VideoPath, request.NennweiteMm ?? 300, batchProgress, ct,
+                    protocolContext, reviewFramesDir)
+                    .ConfigureAwait(false);
+
+                // BatchPipelineResult → PipelineResult konvertieren
+                static RawVideoDetection ConvertFinding(Ai.Pipeline.BatchFrameAnalysis a, Ai.EnhancedFinding f,
+                    double videoDuration, double inspLength)
+                {
+                    var meter = a.QwenResult.Meter ?? (a.TimestampSeconds / videoDuration * inspLength);
+                    return new RawVideoDetection(
+                        FindingLabel: f.Label,
+                        MeterStart: meter,
+                        MeterEnd: meter,
+                        Severity: f.Severity.ToString(),
+                        VsaCodeHint: f.VsaCodeHint,
+                        PositionClock: f.PositionClock,
+                        ExtentPercent: f.ExtentPercent,
+                        HeightMm: f.HeightMm,
+                        WidthMm: f.WidthMm,
+                        IntrusionPercent: f.IntrusionPercent,
+                        CrossSectionReductionPercent: f.CrossSectionReductionPercent,
+                        DiameterReductionMm: f.DiameterReductionMm,
+                        FramePath: a.FramePath);
+                }
+
+                var detections = batchResult.Analyses
+                    .Where(a => a.QwenResult.HasFindings)
+                    .SelectMany(a => a.QwenResult.Findings.Select(f => ConvertFinding(a, f, videoDuration, inspLength)))
+                    .ToList();
+
+                // V4.2 Phase 2.4: Ueberraschungsfund-Pass — zweiter langsamer Durchlauf auf den Luecken.
+                if (EnableSurpriseGapsPass && protocolContext is not null)
+                {
+                    var gapsContext = new Ai.Pipeline.ProtocolFirstContext
+                    {
+                        Targets = protocolContext.Targets,
+                        VideoDurationSeconds = videoDuration,
+                        InspektionslaengeMeter = inspLength,
+                        MeterTolerance = ProtocolFirstMeterTolerance,
+                        InverseGapsMode = true
+                    };
+
+                    var originalStep = BatchPipeline.FrameStepSeconds;
+                    BatchPipeline.FrameStepSeconds = SurpriseGapsFrameStep;
+                    try
+                    {
+                        _log?.LogInformation(
+                            "Ueberraschungsfund-Pass: Luecken mit FrameStep {Step}s",
+                            SurpriseGapsFrameStep);
+
+                        var gapsResult = await BatchPipeline.AnalyzeVideoAsync(
+                            request.VideoPath, request.NennweiteMm ?? 300, batchProgress, ct,
+                            gapsContext)
+                            .ConfigureAwait(false);
+
+                        var surpriseDetections = gapsResult.Analyses
+                            .Where(a => a.QwenResult.HasFindings)
+                            .SelectMany(a => a.QwenResult.Findings.Select(f => ConvertFinding(a, f, videoDuration, inspLength)))
+                            .ToList();
+
+                        _log?.LogInformation(
+                            "Ueberraschungsfund-Pass: {Count} Detektionen aus {Frames} Luecken-Frames",
+                            surpriseDetections.Count, gapsResult.RelevantFrames);
+
+                        detections.AddRange(surpriseDetections);
+                    }
+                    finally
+                    {
+                        BatchPipeline.FrameStepSeconds = originalStep;
+                    }
+                }
+
+                pipelineResult = new PipelineResult(
+                    null, detections, Array.Empty<MappedProtocolEntry>(),
+                    null, Array.Empty<string>(), null);
+                _log?.LogInformation(
+                    "BatchPipeline: {Detections} Detektionen aus {Frames} Frames in {Duration:F0}s",
+                    detections.Count, batchResult.TotalFrames, batchResult.Duration.TotalSeconds);
+            }
+            else
+            {
+                // Sequentielle Pipeline (Fallback)
+                pipelineResult = await _pipeline.RunAsync(
+                    pipelineRequest, pipelineProgress, ct).ConfigureAwait(false);
+            }
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -158,7 +334,11 @@ public sealed class VideoSelfTrainingOrchestrator
 
         // Frame-Pfade aus Phase 2 auf DifferenceEntries uebertragen
         // (FrameMapping hat fuer jeden Protokolleintrag einen Frame extrahiert)
-        var frameByEntry = frameMappings.ToDictionary(m => m.Entry, m => m);
+        // V4.2: Protokolle koennen legitim identische Eintraege haben (z.B. mehrere
+        // "Neue Laenge einzelnes Rohr"-Eintraege) — GroupBy statt ToDictionary, erstes wins.
+        var frameByEntry = frameMappings
+            .GroupBy(m => m.Entry)
+            .ToDictionary(g => g.Key, g => g.First());
 
         foreach (var entry in report.Entries)
         {
@@ -257,7 +437,7 @@ public sealed class VideoSelfTrainingOrchestrator
             Severity = ParseSeverity(d.Severity),
             ClockPosition = d.PositionClock,
             Confidence = 0.5, // EvidenceVector hat keinen Einzel-Score — Pauschalwert
-            FramePath = null, // Frames sind im Pipeline-Output nicht gespeichert
+            FramePath = d.FramePath, // V4.2: Pfad aus Batch-Pipeline (Review-Queue-Anzeige)
             BboxX1 = d.BboxX1,
             BboxY1 = d.BboxY1,
             BboxX2 = d.BboxX2,

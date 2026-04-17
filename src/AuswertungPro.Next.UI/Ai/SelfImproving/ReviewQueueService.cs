@@ -50,10 +50,12 @@ public sealed class ReviewQueueService
     public void EnqueueFromSelfTraining(
         string caseId, string vsaCode, string suggestedCode,
         double meter, string framePath, string matchLevel,
-        string sampleId)
+        string sampleId,
+        double? priorityOverride = null)
     {
-        // Priority: Mismatch > PartialMatch > andere
-        double priority = matchLevel switch
+        // V4.2 Phase 1.4: Optionaler Priority-Override vom UncertaintySamplingService.
+        // Sonst Fallback auf MatchLevel-basierte Heuristik.
+        double priority = priorityOverride ?? matchLevel switch
         {
             MatchLevelNames.Mismatch => 0.9,
             MatchLevelNames.PartialMatch => 0.6,

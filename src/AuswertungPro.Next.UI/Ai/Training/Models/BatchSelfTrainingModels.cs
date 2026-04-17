@@ -28,9 +28,9 @@ public sealed class BatchSelfTrainingRequest
 
     /// <summary>
     /// Treffer (KI + Protokoll stimmen ueberein) automatisch in KB uebernehmen?
-    /// Default: true — sichere Treffer brauchen kein manuelles Review.
+    /// V4.2: Default false — KB-Vergiftung stoppen. Opt-in mit Confidence-Gate.
     /// </summary>
-    public bool AutoApproveMatches { get; init; } = true;
+    public bool AutoApproveMatches { get; init; } = false;
 
     /// <summary>
     /// Protokoll-Korrekturen (KI lag falsch, Protokoll hat recht) automatisch in KB?
@@ -47,9 +47,38 @@ public sealed class BatchSelfTrainingRequest
 
     /// <summary>
     /// Uebersehene Schaeden (im Protokoll, KI hat nichts): Frame extrahieren und als Beispiel speichern?
-    /// Default: true — "So sieht ein Schaden aus den du verpasst hast."
+    /// V4.2: Default false — OSD-Frame-Mapping kann falsch sein, Schaden auf Frame nicht garantiert sichtbar.
     /// </summary>
-    public bool LearnFromMissed { get; init; } = true;
+    public bool LearnFromMissed { get; init; } = false;
+
+    /// <summary>
+    /// V4.2: Minimale KI-Detection-Confidence fuer Auto-Approve (0.0 - 1.0).
+    /// Unter diesem Wert wird das Sample nicht automatisch indexiert (skip → Review-Queue in Phase 1.4).
+    /// </summary>
+    public double MinDetectionConfidence { get; init; } = 0.85;
+
+    /// <summary>
+    /// V4.2 Phase 2: Protokoll-First-Modus aktivieren.
+    /// Pipeline analysiert nur gezielt Protokoll-Fundstellen, Qwen bekommt Yes/No-Fragen.
+    /// V4.2 Nachbesserung: Default true — reduziert Qwen-Calls drastisch und verhindert
+    /// Open-Set-Halluzination (BCC-Kollaps). Opt-out moeglich via false.
+    /// </summary>
+    public bool UseProtocolFirst { get; init; } = true;
+
+    /// <summary>Meter-Toleranz um Protokoll-Eintraege im Protokoll-First-Modus (Default 1.0m).</summary>
+    public double ProtocolFirstMeterTolerance { get; init; } = 1.0;
+
+    /// <summary>
+    /// V4.2 Phase 2.4: Ueberraschungsfund-Pass aktivieren.
+    /// Zweiter langsamer Durchlauf auf den Luecken zwischen Protokoll-Zonen —
+    /// faengt Schaeden ein, die der Operateur uebersehen hat.
+    /// Treffer landen in der Review-Queue, nicht direkt in KB.
+    /// Default false (opt-in). Wirkt nur zusammen mit UseProtocolFirst.
+    /// </summary>
+    public bool EnableSurpriseGapsPass { get; init; } = false;
+
+    /// <summary>Frame-Step (Sekunden) fuer den Ueberraschungsfund-Pass. Default 10s.</summary>
+    public double SurpriseGapsFrameStep { get; init; } = 10.0;
 
     /// <summary>Bereits verarbeitete Haltungen ueberspringen? (anhand Historie)</summary>
     public bool SkipAlreadyProcessed { get; init; } = true;

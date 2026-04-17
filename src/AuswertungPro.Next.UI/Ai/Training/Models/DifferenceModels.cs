@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AuswertungPro.Next.UI.Ai.Shared;
 using AuswertungPro.Next.UI.Ai.Training.Services;
 
 namespace AuswertungPro.Next.UI.Ai.Training.Models;
@@ -27,11 +28,11 @@ public sealed record VideoTrainingRequest
     /// <summary>Haltungslaenge in Metern (fuer lineare Interpolation).</summary>
     public double? InspektionslaengeMeter { get; init; }
 
-    /// <summary>Frame-Abstand in Sekunden (Default: 1.5s — hoeher als Pipeline-Default fuer Vollanalyse).</summary>
-    public double FrameStepSeconds { get; init; } = 1.5;
+    /// <summary>Frame-Abstand in Sekunden (Default: 1.0s — feinere Abtastung fuer maximale Analyse-Qualitaet).</summary>
+    public double FrameStepSeconds { get; init; } = 1.0;
 
     /// <summary>Meter-Toleranz fuer Zuordnung KI ↔ Protokoll (Default: ±0.5m).</summary>
-    public double MeterTolerance { get; init; } = 0.5;
+    public double MeterTolerance { get; init; } = Shared.MeterTolerances.SingleTraining;
 
     /// <summary>
     /// Zentrierungs-Offset in Metern: Der Frame wird leicht nach vorn versetzt extrahiert,
@@ -119,6 +120,14 @@ public sealed class DifferenceEntry
 
     /// <summary>Erklaerungstext (z.B. "Code BAB erwartet, KI erkannte BCA").</summary>
     public string? Explanation { get; init; }
+
+    /// <summary>
+    /// V4.2 Phase 1.3: Match-Score aus <c>DifferenceAnalyzer.ScoreMatch</c> (0.0 - 1.0).
+    /// Gewichtung: Code 0.40, Meter 0.30, Severity 0.15, Clock 0.15.
+    /// Null bei FalseNegative ohne Kandidaten. Wird vom UncertaintySamplingService
+    /// (Phase 1.4) fuer Review-Priorisierung genutzt: niedriger Score = unsicherer.
+    /// </summary>
+    public double? MatchConfidenceScore { get; init; }
 
     /// <summary>Review-Entscheidung (wird in der UI gesetzt).</summary>
     public ReviewDecision Decision { get; set; } = ReviewDecision.Pending;

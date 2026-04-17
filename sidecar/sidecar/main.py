@@ -25,7 +25,7 @@ except ImportError:
 
 from .config import settings
 from .gpu_manager import gpu_manager, ModelSlot
-from .routes import health, yolo, dino, sam, training, lora_training, pipe_axis, parse, changenet
+from .routes import health, yolo, dino, sam, training, lora_training, pipe_axis, parse, changenet, dinov2
 
 logging.basicConfig(
     level=logging.INFO,
@@ -60,6 +60,20 @@ def _prewarm_sam() -> None:
         logger.info("SAM 2 pre-warmed on %s", device)
     except Exception as e:
         logger.warning("SAM 2 pre-warm fehlgeschlagen: %s — wird lazy geladen", e)
+
+
+def _prewarm_yolo() -> None:
+    """Laedt YOLO beim Start in den VRAM (persistent).
+    Inkl. TensorRT-Export falls noetig (dauert 2-5 Min beim ersten Mal)."""
+    try:
+        from .models.yolo_wrapper import _load_yolo_on
+        device = settings.effective_yolo_device
+        gpu_manager.ensure_loaded(
+            ModelSlot.YOLO, device,
+            lambda: _load_yolo_on(device))
+        logger.info("YOLO pre-warmed on %s", device)
+    except Exception as e:
+        logger.warning("YOLO pre-warm fehlgeschlagen: %s — wird lazy geladen", e)
 
 
 _VRAM_MONITOR_INTERVAL_SEC = int(os.environ.get("SEWER_SIDECAR_VRAM_MONITOR_INTERVAL", "30"))
@@ -115,13 +129,19 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Torch CPU-Thread-Konfiguration fehlgeschlagen: %s", exc)
 
-    # ── Always-On Pre-Warm: DINO + SAM sofort laden ──
-    # YOLO wird beim ersten Request via TensorRT geladen (Auto-Export dauert)
+    # ── Always-On Pre-Warm: YOLO + SAM sofort laden ──
+    # V4.2 Phase 3.4: DINO 1.5 nicht mehr im Pre-Warm (tot bei Kanalbildern, spart 1.5 GB VRAM).
+    # Opt-in via SEWER_SIDECAR_PREWARM_DINO=1 fuer Nachtbatch-Ueberraschungs-Pass.
     t0 = time.perf_counter()
-    _prewarm_dino()
+    _prewarm_yolo()
+    if os.environ.get("SEWER_SIDECAR_PREWARM_DINO", "0") == "1":
+        _prewarm_dino()
+        logger.info("DINO 1.5 Pre-Warm aktiviert (SEWER_SIDECAR_PREWARM_DINO=1)")
+    else:
+        logger.info("DINO 1.5 im Lazy-Mode (V4.2 Default) — wird bei erstem Request geladen")
     _prewarm_sam()
     elapsed = time.perf_counter() - t0
-    logger.info("Pre-warm abgeschlossen in %.1fs", elapsed)
+    logger.info("Pre-warm abgeschlossen in %.1fs (YOLO+SAM, DINO lazy)", elapsed)
 
     # ── VRAM-Watermark Monitor starten ──
     monitor_task = asyncio.create_task(_vram_monitor_loop())
@@ -180,6 +200,7 @@ app.include_router(lora_training.router, tags=["lora-training"])
 app.include_router(pipe_axis.router, tags=["pipe-axis"])
 app.include_router(parse.router, tags=["parse"])
 app.include_router(changenet.router, tags=["changenet"])
+app.include_router(dinov2.router, tags=["dinov2"])
 
 # Video + Enhance Endpoints (Phase 2/3)
 try:

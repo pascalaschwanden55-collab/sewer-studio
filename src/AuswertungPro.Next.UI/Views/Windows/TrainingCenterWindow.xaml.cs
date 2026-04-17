@@ -632,6 +632,20 @@ public partial class TrainingCenterWindow : Window
             "Batch-Nachtbetrieb", MessageBoxButton.OKCancel, MessageBoxImage.Question);
         if (confirm != MessageBoxResult.OK) return;
 
+        // V4.2 Nachbesserung: Test-Cap fuer begrenzte Laeufe.
+        var limitInput = Microsoft.VisualBasic.Interaction.InputBox(
+            "Wie viele Haltungen verarbeiten?\n\n" +
+            "  0 = alle Haltungen im Ordner (voller Batch)\n" +
+            "  2 = empfohlen fuer ersten V4.2-Testlauf\n",
+            "Batch-Umfang",
+            "2");
+        if (string.IsNullOrWhiteSpace(limitInput)) return;
+        if (!int.TryParse(limitInput, out var maxHaltungen) || maxHaltungen < 0)
+        {
+            MessageBox.Show("Ungueltige Zahl — Abbruch.", "Batch-Nachtbetrieb");
+            return;
+        }
+
         var allowedSet = new System.Collections.Generic.HashSet<string>(
             sp.CodeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
         var plausibility = new Ai.RuleBasedAiSuggestionPlausibilityService(allowedSet);
@@ -695,10 +709,19 @@ public partial class TrainingCenterWindow : Window
             return orch;
         };
 
+        // V4.2 Phase 1.4: UncertaintySamplingService auf den Fenster-lokalen ReviewQueueService mappen.
+        _reviewQueueService ??= new Ai.SelfImproving.ReviewQueueService();
+        var uncertaintySampler = new Ai.SelfImproving.UncertaintySamplingService(_reviewQueueService);
+
         var batchOrch = new Ai.Training.BatchSelfTrainingOrchestrator(
             videoOrch, protocolLoader, enrichment, sidecarDir: sidecarDir,
-            orchestratorFactory: orchestratorFactory);
-        var request = new Ai.Training.Models.BatchSelfTrainingRequest { ExportRootPath = dlg.FolderName };
+            orchestratorFactory: orchestratorFactory,
+            uncertaintySampler: uncertaintySampler);
+        var request = new Ai.Training.Models.BatchSelfTrainingRequest
+        {
+            ExportRootPath = dlg.FolderName,
+            MaxHaltungen = maxHaltungen
+        };
 
         var btnBatch = this.FindName("BtnBatchNight") as System.Windows.Controls.Button;
         if (btnBatch is not null) { btnBatch.IsEnabled = false; btnBatch.Content = "Batch laeuft..."; }
@@ -757,6 +780,13 @@ public partial class TrainingCenterWindow : Window
         try
         {
             var result = await Task.Run(() => batchOrch.RunAsync(request, progress, _batchCts!.Token));
+
+            // V4.2 Nachbesserung: Review-Queue nach Batch neu laden + Counter-Log ins UI.
+            var queueCountBefore = Vm.ReviewQueueCount;
+            Vm.LoadReviewQueue(_reviewQueueService);
+            var queueDelta = Vm.ReviewQueueCount - queueCountBefore;
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [V4.2] Review-Queue: {queueDelta:+#;-#;0} Items, total {Vm.ReviewQueueCount}\n");
+
             var s = result.FinalStats;
             string retrainSummary;
             var trainingCountAfter = trainingCountBefore;
@@ -802,41 +832,52 @@ public partial class TrainingCenterWindow : Window
             }
 
             // ── Phase 3: LoRA-Training (nach YOLO-Retrain) ──
+            // V4.2: LoRA-Auto-Training default DEAKTIVIERT wegen OOM-Problem bei >9000 Samples.
+            // Opt-in via Umgebungsvariable SEWERSTUDIO_ENABLE_LORA_AUTOTRAIN=1.
             string loraSummary;
-            try
+            var loraEnabled = Environment.GetEnvironmentVariable("SEWERSTUDIO_ENABLE_LORA_AUTOTRAIN") == "1";
+            if (!loraEnabled)
             {
-                Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [LoRA] Qwen LoRA-Training Pruefung...\n");
-
-                using var loraHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(120) };
-                var loraClient = new Ai.Pipeline.VisionPipelineClient(sp.PipelineCfg.SidecarUrl, loraHttp);
-                var ollamaConfig = Ai.Ollama.OllamaConfig.Load();
-
-                var loraBenchmarkSetStore = new Ai.Training.BenchmarkSetStore();
-                var loraBenchmarkMetricsStore = new Ai.Training.BenchmarkMetricsStore();
-                var loraBenchmarkRunner = new Ai.Training.BenchmarkRunner(
-                    loraBenchmarkSetStore,
-                    loraBenchmarkMetricsStore,
-                    videoOrch,
-                    protocolLoader.LoadProtocolAsync);
-
-                using var kbCtx = new Ai.KnowledgeBase.KnowledgeBaseContext();
-                var loraOrchestrator = new Ai.Training.QwenLoraOrchestrator(
-                    loraClient,
-                    kbCtx,
-                    ollamaConfig,
-                    loraBenchmarkRunner,
-                    loraBenchmarkMetricsStore,
-                    msg => Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [LoRA] {msg}\n"));
-
-                var loraResult = await loraOrchestrator.RunIfEligibleAsync(ct: _batchCts!.Token);
-                loraSummary = loraResult.Deployed
-                    ? $"Deploy OK ({loraResult.ActiveModelName}, F1={loraResult.BenchmarkF1:P1})"
-                    : loraResult.StatusText;
-            }
-            catch (Exception loraEx)
-            {
-                loraSummary = $"LoRA Fehler: {loraEx.Message}";
+                loraSummary = "LoRA-Auto-Training deaktiviert (SEWERSTUDIO_ENABLE_LORA_AUTOTRAIN nicht gesetzt)";
                 Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [LoRA] {loraSummary}\n");
+            }
+            else
+            {
+                try
+                {
+                    Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [LoRA] Qwen LoRA-Training Pruefung...\n");
+
+                    using var loraHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(120) };
+                    var loraClient = new Ai.Pipeline.VisionPipelineClient(sp.PipelineCfg.SidecarUrl, loraHttp);
+                    var ollamaConfig = Ai.Ollama.OllamaConfig.Load();
+
+                    var loraBenchmarkSetStore = new Ai.Training.BenchmarkSetStore();
+                    var loraBenchmarkMetricsStore = new Ai.Training.BenchmarkMetricsStore();
+                    var loraBenchmarkRunner = new Ai.Training.BenchmarkRunner(
+                        loraBenchmarkSetStore,
+                        loraBenchmarkMetricsStore,
+                        videoOrch,
+                        protocolLoader.LoadProtocolAsync);
+
+                    using var kbCtx = new Ai.KnowledgeBase.KnowledgeBaseContext();
+                    var loraOrchestrator = new Ai.Training.QwenLoraOrchestrator(
+                        loraClient,
+                        kbCtx,
+                        ollamaConfig,
+                        loraBenchmarkRunner,
+                        loraBenchmarkMetricsStore,
+                        msg => Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [LoRA] {msg}\n"));
+
+                    var loraResult = await loraOrchestrator.RunIfEligibleAsync(ct: _batchCts!.Token);
+                    loraSummary = loraResult.Deployed
+                        ? $"Deploy OK ({loraResult.ActiveModelName}, F1={loraResult.BenchmarkF1:P1})"
+                        : loraResult.StatusText;
+                }
+                catch (Exception loraEx)
+                {
+                    loraSummary = $"LoRA Fehler: {loraEx.Message}";
+                    Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [LoRA] {loraSummary}\n");
+                }
             }
 
             try

@@ -21,6 +21,7 @@ public sealed class KbEnrichmentService
 {
     private readonly KnowledgeBaseManager _kbManager;
     private readonly KbDeduplicationService _dedup;
+    private readonly SampleQualityGateService _qualityGate;
     private readonly ILogger? _log;
 
     public KbEnrichmentService(
@@ -30,6 +31,7 @@ public sealed class KbEnrichmentService
     {
         _kbManager = kbManager ?? throw new ArgumentNullException(nameof(kbManager));
         _dedup = dedup ?? throw new ArgumentNullException(nameof(dedup));
+        _qualityGate = new SampleQualityGateService();
         _log = log;
     }
 
@@ -61,6 +63,19 @@ public sealed class KbEnrichmentService
                 var sample = BuildTrainingSample(entry, rohrmaterial, nennweiteMm);
                 if (sample is null)
                 {
+                    skipped++;
+                    continue;
+                }
+
+                // QualityGate bewerten — Red wird abgewiesen, Green/Yellow in KB
+                var qgResult = _qualityGate.Evaluate(sample);
+                sample.QualityGateLevel = qgResult.Grade.ToString();
+
+                if (qgResult.Grade == Training.SampleQualityGrade.Red)
+                {
+                    _log?.LogDebug(
+                        "QualityGate Red fuer {Code}: {Issues}",
+                        sample.Code, string.Join("; ", qgResult.Issues));
                     skipped++;
                     continue;
                 }
@@ -135,6 +150,19 @@ public sealed class KbEnrichmentService
             var sample = BuildSampleFromDifference(entry, rohrmaterial, nennweiteMm, policy, haltungId);
             if (sample is null)
             {
+                skipped++;
+                continue;
+            }
+
+            // QualityGate bewerten — Red wird abgewiesen, Green/Yellow in KB
+            var qgResult = _qualityGate.Evaluate(sample);
+            sample.QualityGateLevel = qgResult.Grade.ToString();
+
+            if (qgResult.Grade == Training.SampleQualityGrade.Red)
+            {
+                _log?.LogDebug(
+                    "QualityGate Red fuer {Code}: {Issues}",
+                    sample.Code, string.Join("; ", qgResult.Issues));
                 skipped++;
                 continue;
             }
@@ -265,6 +293,22 @@ public sealed class KbEnrichmentService
         }
 
         if (string.IsNullOrWhiteSpace(code)) return null;
+
+        // V4.2 Phase 1.1: Confidence-Gate.
+        // Nur TruePositive/CodeMismatch haben eine KI-Detection mit Confidence.
+        // FalseNegative hat keine — dort schuetzt LearnFromMissed=false (Default V4.2).
+        if (entry.Category is DifferenceCategory.TruePositive or DifferenceCategory.CodeMismatch)
+        {
+            var detConf = entry.KiDetection?.Confidence ?? 0.0;
+            if (detConf < policy.MinDetectionConfidence)
+            {
+                // Sample hat zu geringe Confidence — skip Auto-Approve.
+                // TODO Phase 1.4: Statt skip → ReviewQueueService.Enqueue
+                System.Diagnostics.Debug.WriteLine(
+                    $"[KbEnrichment] V4.2 Gate: {code} @ {meterStart:F1}m conf={detConf:F2} < {policy.MinDetectionConfidence:F2} → skip");
+                return null;
+            }
+        }
 
         var effectiveCaseId = haltungId ?? $"batch-auto-{DateTime.UtcNow:yyyyMMdd}";
         var signature = TrainingSample.BuildCanonicalSignature(
@@ -398,17 +442,40 @@ public sealed class KbEnrichmentService
 /// <summary>Policy fuer voll-automatische KB-Anreicherung im Batch-Betrieb.</summary>
 public sealed class BatchAutoApprovePolicy
 {
-    /// <summary>Treffer (KI + Protokoll stimmen ueberein) automatisch in KB.</summary>
-    public bool ApproveMatches { get; init; } = true;
+    /// <summary>Treffer (KI + Protokoll stimmen ueberein) automatisch in KB.
+    /// V4.2: Default false — stoppt KB-Vergiftung. Aktivierung nur mit Confidence-Gate.</summary>
+    public bool ApproveMatches { get; init; } = false;
 
-    /// <summary>Korrekturen (KI falsch, Protokoll richtig) automatisch in KB.</summary>
-    public bool ApproveCorrections { get; init; } = true;
+    /// <summary>Korrekturen (KI falsch, Protokoll richtig) NICHT automatisch in KB.
+    /// PDF-OCR hat ~5-8% Fehler — blindes Uebernehmen vergiftet die KB.</summary>
+    public bool ApproveCorrections { get; init; } = false;
 
-    /// <summary>Uebersehene Schaeden (Frame extrahieren, als Beispiel speichern).</summary>
-    public bool LearnFromMissed { get; init; } = true;
+    /// <summary>Uebersehene Schaeden (Frame extrahieren, als Beispiel speichern).
+    /// V4.2: Default false — OSD-Frame-Mapping kann falsch sein, Schaden auf Frame nicht garantiert sichtbar.</summary>
+    public bool LearnFromMissed { get; init; } = false;
 
-    /// <summary>Standard-Policy: Alles automatisch ausser False Positives.</summary>
+    /// <summary>Minimale KI-Detection-Confidence fuer Auto-Approve (0.0 - 1.0).
+    /// V4.2: Unter diesem Wert wird das Sample NICHT automatisch indexiert —
+    /// geht stattdessen in Review-Queue (Phase 1.4). Aus BlindDetection.Confidence gelesen.</summary>
+    public double MinDetectionConfidence { get; init; } = 0.85;
+
+    /// <summary>
+    /// V4.2 Standard-Policy: Nichts automatisch. Stoppt KB-Vergiftung.
+    /// Opt-in fuer Auto-Approve nur mit explizitem Flag + Confidence-Gate.
+    /// </summary>
     public static BatchAutoApprovePolicy Default => new();
+
+    /// <summary>
+    /// Legacy V4.1 Policy: Alles automatisch ausser False Positives / Korrekturen.
+    /// Nur fuer Rueckwaerts-Kompatibilitaet bei Migrationen — NICHT fuer neue Runs nutzen.
+    /// </summary>
+    public static BatchAutoApprovePolicy LegacyAutoApprove => new()
+    {
+        ApproveMatches = true,
+        ApproveCorrections = false,
+        LearnFromMissed = true,
+        MinDetectionConfidence = 0.0
+    };
 }
 
 /// <summary>Ergebnis der KB-Anreicherung.</summary>

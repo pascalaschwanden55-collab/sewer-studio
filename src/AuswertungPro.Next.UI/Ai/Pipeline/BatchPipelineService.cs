@@ -56,7 +56,9 @@ public sealed class BatchPipelineService
         string videoPath,
         int pipeDiameterMm = 300,
         IProgress<BatchPipelineProgress>? progress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        ProtocolFirstContext? protocolContext = null,
+        string? frameOutputDir = null)
     {
         var sw = Stopwatch.StartNew();
         var allAnalyses = new List<BatchFrameAnalysis>();
@@ -126,12 +128,18 @@ public sealed class BatchPipelineService
                 var original = chunk.First(f => f.Index == idx);
 
                 // BCD/BCE-Zonen und periodischer Sweep immer durchlassen
-                var estimatedMeter = original.Timestamp / duration * 100; // grobe Schaetzung
+                var estimatedMeter = original.Timestamp / duration *
+                    (protocolContext?.InspektionslaengeMeter ?? 100); // besser wenn Laenge bekannt
                 bool isBcdZone = original.Timestamp < 10 && original.Index <= 5;
                 bool isBceZone = original.Timestamp > duration - FrameStepSeconds * 2;
                 bool isPeriodicSweep = original.Index % 5 == 0;
 
-                if (item.Result.IsRelevant || isBcdZone || isBceZone || isPeriodicSweep)
+                // V4.2 Phase 2: Wenn Protokoll-Kontext → gezielte Frame-Auswahl.
+                // Nur Frames innerhalb Target-Zonen + BCD/BCE werden weitergegeben.
+                bool inProtocolWindow = protocolContext is null
+                    || protocolContext.ContainsMeter(estimatedMeter);
+
+                if ((item.Result.IsRelevant || isBcdZone || isBceZone || isPeriodicSweep) && inProtocolWindow)
                 {
                     relevantFrames.Add((original.Index, original.Timestamp, original.Base64, item.Result));
                 }
@@ -214,6 +222,31 @@ public sealed class BatchPipelineService
         int yoloNotRelevant = 0;
         var analysisResults = new BatchFrameAnalysis[relevantFrames.Count];
 
+        // V4.2 Nachbesserung: Pro Target EINMAL verifizieren statt pro naheliegendem Frame.
+        // Vorberechnung: Fuer jedes Target den Frame mit dem geringsten Meter-Abstand finden.
+        // Nur diese Frame-Indizes werden im Protokoll-First-Modus verifiziert.
+        HashSet<int>? verifyFrameIndices = null;
+        if (protocolContext is not null && !protocolContext.InverseGapsMode)
+        {
+            var bestIdxPerTarget = new Dictionary<ProtocolTarget, (int Idx, double Dist)>();
+            for (int i = 0; i < relevantFrames.Count; i++)
+            {
+                var f = relevantFrames[i];
+                var em = f.Timestamp / duration *
+                    (protocolContext.InspektionslaengeMeter ?? 100);
+                var target = protocolContext.FindClosestTarget(em);
+                if (target is null) continue;
+                var center = (target.MeterStart + target.MeterEnd) / 2.0;
+                var dist = Math.Abs(em - center);
+                if (!bestIdxPerTarget.TryGetValue(target, out var prev) || dist < prev.Dist)
+                    bestIdxPerTarget[target] = (i, dist);
+            }
+            verifyFrameIndices = new HashSet<int>(bestIdxPerTarget.Values.Select(v => v.Idx));
+            _logger.LogInformation(
+                "Protokoll-First: {Targets} Targets → {Frames} Verify-Frames (statt {All} roh)",
+                bestIdxPerTarget.Count, verifyFrameIndices.Count, relevantFrames.Count);
+        }
+
         var qwenTasks = relevantFrames.Select(async (frame, i) =>
         {
             await semaphore.WaitAsync(ct).ConfigureAwait(false);
@@ -233,6 +266,72 @@ public sealed class BatchPipelineService
                 if (!frame.Yolo.IsRelevant) Interlocked.Increment(ref yoloNotRelevant);
                 if (hasYoloFindings) Interlocked.Increment(ref yoloOnlyCount);
                 else Interlocked.Increment(ref qwenFallbackCount);
+
+                // V4.2 Phase 2: Protokoll-First-Pfad.
+                // Statt Open-Set-Klassifikation fragt Qwen gezielt: "Ist Code X bei Meter Y sichtbar?"
+                // Im InverseGapsMode (Ueberraschungsfund-Pass) bleibt der Voll-Open-Set-Pfad aktiv.
+                if (protocolContext is not null && !protocolContext.InverseGapsMode)
+                {
+                    // V4.2 Nachbesserung: Nur bestpassender Frame pro Target wird verifiziert.
+                    if (verifyFrameIndices is null || !verifyFrameIndices.Contains(i))
+                    {
+                        Interlocked.Increment(ref qwenDone);
+                        return;
+                    }
+
+                    var estimatedMeter = frame.Timestamp / duration *
+                        (protocolContext.InspektionslaengeMeter ?? 100);
+                    var target = protocolContext.FindClosestTarget(estimatedMeter);
+                    if (target is null)
+                    {
+                        Interlocked.Increment(ref qwenDone);
+                        return;
+                    }
+
+                    var verify = await _qwen.VerifyCodeAsync(
+                        frame.Base64, target.VsaCode, target.MeterStart, target.Description, frameCts.Token)
+                        .ConfigureAwait(false);
+
+                    var findings = verify.Visible
+                        ? new List<EnhancedFinding>
+                        {
+                            new(
+                                Label: target.VsaCode,
+                                VsaCodeHint: target.VsaCode,
+                                Severity: verify.Severity ?? 3,
+                                PositionClock: target.ClockPosition,
+                                ExtentPercent: null,
+                                HeightMm: null, WidthMm: null,
+                                IntrusionPercent: null,
+                                CrossSectionReductionPercent: null,
+                                DiameterReductionMm: null,
+                                Notes: $"verify:{verify.Confidence:F2} {verify.Notes}")
+                        }
+                        : new List<EnhancedFinding>();
+
+                    analysis = new EnhancedFrameAnalysis(
+                        Meter: estimatedMeter,
+                        PipeMaterial: "unbekannt",
+                        PipeDiameterMm: null,
+                        Findings: findings,
+                        ImageQuality: "mittel",
+                        IsEmptyFrame: !verify.Visible,
+                        Error: null,
+                        ViewType: "axial");
+
+                    var verifyDone = Interlocked.Increment(ref qwenDone);
+                    progress?.Report(new BatchPipelineProgress(
+                        verifyDone, relevantFrames.Count,
+                        $"Verify {target.VsaCode}@{target.MeterStart:F1}m: " +
+                        (verify.Visible ? "bestaetigt" : "nicht sichtbar")));
+
+                    var persistedPath = PersistFrameIfFindings(
+                        frameOutputDir, frame.Index, frame.Base64, analysis);
+                    analysisResults[i] = new BatchFrameAnalysis(
+                        frame.Index, frame.Timestamp, analysis,
+                        frame.Yolo.Detections.Count, persistedPath);
+                    return;
+                }
 
                 if (hasYoloFindings)
                 {
@@ -281,9 +380,11 @@ public sealed class BatchPipelineService
                         ? $"YOLO direct: {done}/{relevantFrames.Count}"
                         : $"Qwen Fallback: {done}/{relevantFrames.Count}"));
 
+                var persistedPath2 = PersistFrameIfFindings(
+                    frameOutputDir, frame.Index, frame.Base64, analysis);
                 analysisResults[i] = new BatchFrameAnalysis(
                     frame.Index, frame.Timestamp, analysis,
-                    frame.Yolo.Detections.Count);
+                    frame.Yolo.Detections.Count, persistedPath2);
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
@@ -333,6 +434,31 @@ public sealed class BatchPipelineService
             skippedFrames);
     }
 
+    /// <summary>
+    /// V4.2: Persistiert einen Frame als PNG, wenn Findings vorhanden sind.
+    /// Damit bekommt die Review-Queue echte Bilder zum Anzeigen.
+    /// </summary>
+    private string? PersistFrameIfFindings(
+        string? frameOutputDir, int frameIndex, string base64Png,
+        EnhancedFrameAnalysis analysis)
+    {
+        if (string.IsNullOrEmpty(frameOutputDir)) return null;
+        if (!analysis.HasFindings) return null;
+        if (string.IsNullOrEmpty(base64Png)) return null;
+        try
+        {
+            Directory.CreateDirectory(frameOutputDir);
+            var outPath = Path.Combine(frameOutputDir, $"frame_{frameIndex:D6}.png");
+            File.WriteAllBytes(outPath, Convert.FromBase64String(base64Png));
+            return outPath;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Frame-Persistierung fehlgeschlagen fuer Frame {F}", frameIndex);
+            return null;
+        }
+    }
+
     private async Task<double> GetDurationAsync(string videoPath, CancellationToken ct)
     {
         try
@@ -372,10 +498,105 @@ public sealed record BatchFrameAnalysis(
     int FrameIndex,
     double TimestampSeconds,
     EnhancedFrameAnalysis QwenResult,
-    int YoloDetectionCount);
+    int YoloDetectionCount,
+    // V4.2: Persistierter Frame-Pfad (PNG), gesetzt wenn Findings vorhanden und frameOutputDir gegeben.
+    string? FramePath = null);
 
 /// <summary>Fortschritt der Batch-Pipeline.</summary>
 public sealed record BatchPipelineProgress(
     int Done,
     int Total,
     string Status);
+
+/// <summary>
+/// V4.2 Phase 2: Protokoll-First-Kontext — das PDF-Protokoll als Ground-Truth-Fahrplan.
+/// Pipeline analysiert nur noch gezielt die im Protokoll genannten Fundstellen,
+/// statt blind alle 500 Frames zu raten.
+/// </summary>
+public sealed class ProtocolFirstContext
+{
+    /// <summary>Erwartete Fundstellen aus dem Protokoll.</summary>
+    public required IReadOnlyList<ProtocolTarget> Targets { get; init; }
+
+    /// <summary>Video-Dauer in Sekunden (fuer Meter-Schaetzung).</summary>
+    public required double VideoDurationSeconds { get; init; }
+
+    /// <summary>Geschaetzte Inspektionslaenge in Metern (fuer Linear-Mapping).</summary>
+    public double? InspektionslaengeMeter { get; init; }
+
+    /// <summary>Meter-Toleranz um jedes Target (Default 1.0m).</summary>
+    public double MeterTolerance { get; init; } = 1.0;
+
+    /// <summary>
+    /// V4.2 Phase 2.4: Im Inverse-Modus liefert <see cref="ContainsMeter"/> das Gegenteil —
+    /// nur Frames in den Luecken zwischen Protokoll-Zonen werden durchgelassen.
+    /// Zusammen mit einem hoeheren FrameStep (z.B. 10s) ergibt das den Ueberraschungsfund-Pass.
+    /// </summary>
+    public bool InverseGapsMode { get; init; } = false;
+
+    /// <summary>
+    /// Prueft ob ein geschaetzter Meterstand in einer der Target-Zonen liegt.
+    /// Im InverseGapsMode ist die Logik invertiert (nur Luecken bestehen den Check).
+    /// </summary>
+    public bool ContainsMeter(double estimatedMeter)
+    {
+        bool inTarget = false;
+        foreach (var t in Targets)
+        {
+            if (estimatedMeter >= t.MeterStart - MeterTolerance &&
+                estimatedMeter <= t.MeterEnd + MeterTolerance)
+            {
+                inTarget = true;
+                break;
+            }
+        }
+        return InverseGapsMode ? !inTarget : inTarget;
+    }
+
+    /// <summary>
+    /// Findet das Target, das am besten zu einem Meterstand passt (naechster).
+    /// </summary>
+    public ProtocolTarget? FindClosestTarget(double estimatedMeter)
+    {
+        ProtocolTarget? best = null;
+        double bestDist = double.MaxValue;
+        foreach (var t in Targets)
+        {
+            var center = (t.MeterStart + t.MeterEnd) / 2.0;
+            var dist = Math.Abs(center - estimatedMeter);
+            if (dist < bestDist && dist <= MeterTolerance)
+            {
+                bestDist = dist;
+                best = t;
+            }
+        }
+        return best;
+    }
+}
+
+/// <summary>
+/// Ein einzelner Protokoll-Eintrag, auf den sich die Pipeline fokussieren soll.
+/// </summary>
+public sealed record ProtocolTarget(
+    string VsaCode,
+    double MeterStart,
+    double MeterEnd,
+    string? Description = null,
+    string? ClockPosition = null);
+
+/// <summary>
+/// V4.2 Phase 2.3: Ergebnis einer gerichteten Verifikation durch Qwen.
+/// "Ist Code X bei Meter Y im Frame sichtbar?" — Ja/Nein + Schweregrad.
+/// </summary>
+public sealed record DamageVerification(
+    bool Visible,
+    int? Severity,
+    double Confidence,
+    string? Notes)
+{
+    /// <summary>V4.2 Nachbesserung B: Pipeline-Version fuer Ursachenanalyse.</summary>
+    public string PipelineVersion { get; init; } = PipelineVersions.Pipeline;
+
+    /// <summary>V4.2 Nachbesserung B: Prompt-Version (VerifyPrompt).</summary>
+    public string PromptVersion { get; init; } = PipelineVersions.VerifyPrompt;
+}

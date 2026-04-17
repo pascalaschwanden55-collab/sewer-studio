@@ -21,6 +21,8 @@ class ModelSlot(str, enum.Enum):
     VSR = "vsr"
     PARSE = "parse"
     CHANGENET = "changenet"
+    # V4.2 Phase 3: DINOv2 Foundation-Encoder als Ersatz fuer die tote Grounding-DINO-Kaskade.
+    DINOV2 = "dinov2"
 
 
 @dataclass
@@ -47,6 +49,7 @@ class GpuModelManager:
             ModelSlot.DINO: threading.Lock(),
             ModelSlot.SAM: threading.Lock(),
             ModelSlot.VSR: threading.Lock(),
+            ModelSlot.DINOV2: threading.Lock(),
         }
         self._global_lock = threading.Lock()
 

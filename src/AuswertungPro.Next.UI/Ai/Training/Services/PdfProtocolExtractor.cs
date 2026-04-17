@@ -80,6 +80,13 @@ public sealed class PdfProtocolExtractor
         @"(?<val>\d+(?:[.,]\d+)?)\s*(?<unit>mm|cm|%|Stück|Stueck)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    // Fretz-Klartext: Meter + Klartext (kein VSA-Code) + optionaler Timestamp + optionale Fotonummer
+    // Beispiel: "              0.00             Rohranfang                                    00:00:20      1"
+    // Beispiel: "              0.20             Infiltration, Wasser fliesst, von 10 Uhr      00:00:41      2"
+    private static readonly Regex KlartextLinePattern = new(
+        @"^[ \t]*(?<meter>\d{1,4}[.,]\d{1,3})[ \t]{2,}(?<text>[A-ZÄÖÜ].{3,}?)(?:[ \t]{2,}(?<time>\d{2}:\d{2}:\d{2}))?[ \t]*(?:\d{1,5})?\s*$",
+        RegexOptions.Compiled | RegexOptions.Multiline);
+
     // ── Öffentliche API ─────────────────────────────────────────────────────
 
     /// <param name="filePath">Pfad zur Protokoll-Datei (PDF oder JSON).</param>
@@ -167,7 +174,10 @@ public sealed class PdfProtocolExtractor
     /// <summary>Dateinamen-Muster die KEINE Inspektionsprotokolle sind.</summary>
     private static readonly string[] NonProtocolKeywords =
         ["faktura", "rechnung", "offerte", "angebot", "lieferschein",
-         "quittung", "mahnung", "vertrag", "auftrag", "kostenvor"];
+         "quittung", "mahnung", "vertrag", "auftrag", "kostenvor",
+         "linerdatenblatt", "linerbestellung", "aush\u00E4rtungsprotokoll",
+         "einbauprotokoll", "injektion", "situation", "lageplan",
+         "schlussrechnung", "bestellung", "datenblatt"];
 
     private static IReadOnlyList<GroundTruthEntry> ExtractFromPdf(string path, string? framesDir)
     {
@@ -178,11 +188,26 @@ public sealed class PdfProtocolExtractor
             if (NonProtocolKeywords.Any(kw => fileName.Contains(kw)))
                 return Array.Empty<GroundTruthEntry>();
 
-            using var doc = UglyToad.PdfPig.PdfDocument.Open(path);
+            // Primaer: pdftotext -layout (bewahrt Tabellenstruktur, viel besser als PdfPig)
+            var text = ExtractTextViaPdfToText(path);
 
-            var text = ExtractTextFromPdfDoc(doc);
+            // Fallback: PdfPig wenn pdftotext nicht verfuegbar
+            UglyToad.PdfPig.PdfDocument? doc = null;
             if (string.IsNullOrWhiteSpace(text))
+            {
+                doc = UglyToad.PdfPig.PdfDocument.Open(path);
+                text = ExtractTextFromPdfDoc(doc);
+            }
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                doc?.Dispose();
                 return Array.Empty<GroundTruthEntry>();
+            }
+
+            // V4.2 Nachbesserung: Caesar-Decoder auch auf pdftotext-Output anwenden.
+            // IKAS-PDFs mit Custom-Font-Encoding liefern verschluesselten Text (nicht leer),
+            // der Decoder wurde bisher nur beim PdfPig-Fallback aktiv.
+            text = TryDecodeShiftedText(text);
 
             // Diagnose: extrahierten Text speichern
             try
@@ -203,14 +228,59 @@ public sealed class PdfProtocolExtractor
             // Fotos aus PDF-Bildbericht extrahieren und Einträgen zuordnen
             if (entries.Count > 0 && !string.IsNullOrWhiteSpace(framesDir))
             {
+                doc ??= UglyToad.PdfPig.PdfDocument.Open(path);
                 entries = ExtractAndAssignPdfImages(doc, entries, path, framesDir);
             }
 
+            doc?.Dispose();
             return entries;
         }
         catch
         {
             return Array.Empty<GroundTruthEntry>();
+        }
+    }
+
+    /// <summary>Extrahiert Text via pdftotext -layout (bewahrt Tabellenstruktur).</summary>
+    private static string ExtractTextViaPdfToText(string pdfPath)
+    {
+        try
+        {
+            // pdftotext-Pfad: 1) AppSettings 2) tools-Ordner 3) PATH
+            var exePath = PdfProtocolTableParser.PdfToTextExePath;
+            if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
+            {
+                var toolsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools", "pdftotext.exe");
+                exePath = File.Exists(toolsPath) ? toolsPath : "pdftotext";
+            }
+
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = exePath,
+                Arguments = $"-layout \"{pdfPath}\" -",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var proc = System.Diagnostics.Process.Start(psi);
+            if (proc is null) return "";
+
+            var stderrTask = proc.StandardError.ReadToEndAsync();
+            var text = proc.StandardOutput.ReadToEnd();
+
+            if (!proc.WaitForExit(30000))
+            {
+                try { proc.Kill(); } catch { }
+                return "";
+            }
+
+            return text;
+        }
+        catch
+        {
+            return "";
         }
     }
 
@@ -280,8 +350,9 @@ public sealed class PdfProtocolExtractor
     /// und korrigiert den Text automatisch. Manche PDF-Generatoren (z.B. IKAS)
     /// verwenden Schriften, bei denen alle Zeichen um einen festen Offset
     /// verschoben sind. PdfPig kann diese nicht korrekt decodieren.
+    /// V4.2: Public damit PdfProtocolTableParser und andere den Decoder nutzen koennen.
     /// </summary>
-    private static string TryDecodeShiftedText(string text)
+    public static string TryDecodeShiftedText(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
             return text;
@@ -790,6 +861,31 @@ public sealed class PdfProtocolExtractor
         if (results.Count > 0)
             goto fretzFallback;
 
+        // Strategie 2b: Fretz-Klartext (Meter + Klartext, kein VSA-Code)
+        // Format: "  0.00  Rohranfang  00:00:20  1"
+        // Der Klartext wird via VsaCodeTree.ReverseLookup in VSA-Codes uebersetzt.
+        foreach (Match m in KlartextLinePattern.Matches(text))
+        {
+            var langtext = m.Groups["text"].Value.Trim();
+            var resolvedCode = TryResolveFromLangtext(langtext);
+            if (resolvedCode is null)
+                continue;
+
+            var entry = BuildEntry(
+                m.Groups["meter"].Value,
+                "",
+                resolvedCode,
+                "",
+                langtext,
+                m.Groups["time"].Success ? ParseTimestamp(m.Groups["time"].Value) : null);
+
+            if (entry is not null && seen.Add(Sig(entry)))
+                results.Add(entry);
+        }
+
+        if (results.Count > 0)
+            goto fretzFallback;
+
         // Strategie 3: Standard-Tabellenformat (Zeit NACH Beschreibung, z.B. WinCan)
         // Format: "2.24  BCCBA  Beschreibung...  00:01:07"
         foreach (Match m in TableRowPattern.Matches(text))
@@ -893,6 +989,19 @@ public sealed class PdfProtocolExtractor
                         meterStr = mMatch.Groups["meter"].Value;
                         code = cMatch.Groups["code"].Value;
                         textLineStart = i + 2;
+                    }
+                    else
+                    {
+                        // Variante C: Meter allein, Klartext auf naechster Zeile (Fretz-Format)
+                        // z.B. "0.00" gefolgt von "Rohranfang" → ReverseLookup → "BCD"
+                        var nextLine = lines[i + 1].Trim();
+                        var resolved = TryResolveFromLangtext(nextLine);
+                        if (resolved is not null)
+                        {
+                            meterStr = mMatch.Groups["meter"].Value;
+                            code = resolved;
+                            textLineStart = i + 1; // Text IST die Klartext-Zeile
+                        }
                     }
                 }
             }
@@ -1234,7 +1343,7 @@ public sealed class PdfProtocolExtractor
             _ when upper.StartsWith("AE", StringComparison.Ordinal) => upper,
 
             // BD-Codes: Administrative (BDBA=Beginn TV, BDBB=Ende TV, BDBC=Inspektion spaeter)
-            // BDA=Allgemeinzustand und BDB=Kamera nicht einsetzbar behalten (visuell erkennbar)
+            // BDA=Allgemeinzustand und BDB=Allgemeine Anmerkung behalten (BDBG-J=Kamera nicht einsetzbar)
             "BDBA" or "BDBB" or "BDBC" or "BDBD" or "BDBE" => null,
 
             // Unbekannter Code → Reverse-Lookup: Langtext → VSA-Code

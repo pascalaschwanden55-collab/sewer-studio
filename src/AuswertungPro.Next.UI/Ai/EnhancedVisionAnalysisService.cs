@@ -1181,6 +1181,85 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
         [property: JsonPropertyName("cross_section_reduction_percent")] int? CrossSectionReductionPercent,
         [property: JsonPropertyName("diameter_reduction_mm")] int? DiameterReductionMm,
         [property: JsonPropertyName("notes")] string? Notes);
+
+    // ── V4.2 Phase 2.3: Protokoll-First Verifikation ─────────────────────────
+
+    /// <summary>
+    /// Minimales JSON-Schema fuer gerichtete Verifikation (Yes/No-Aufgabe).
+    /// Drei Felder statt zwanzig — Qwen kann nicht mehr auf BCC kollabieren.
+    /// </summary>
+    private static readonly JsonElement VerificationSchema = JsonDocument.Parse("""
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "visible": { "type": "boolean" },
+        "severity": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 },
+        "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "notes": { "type": ["string", "null"] }
+      },
+      "required": ["visible", "confidence"]
+    }
+    """).RootElement.Clone();
+
+    private sealed record VerificationDto(
+        [property: JsonPropertyName("visible")] bool Visible,
+        [property: JsonPropertyName("severity")] int? Severity,
+        [property: JsonPropertyName("confidence")] double Confidence,
+        [property: JsonPropertyName("notes")] string? Notes);
+
+    /// <summary>
+    /// V4.2 Phase 2: Gerichtete Verifikation eines einzelnen Protokoll-Eintrags.
+    /// Fragt Qwen: "Ist VSA-Code {code} bei Meter {meter} in diesem Frame sichtbar?"
+    /// Geschlossene Ja/Nein-Frage verhindert den BCC-Kollaps der Open-Set-Klassifikation.
+    /// </summary>
+    public async Task<Pipeline.DamageVerification> VerifyCodeAsync(
+        string framePngBase64,
+        string vsaCode,
+        double meter,
+        string? description = null,
+        CancellationToken ct = default)
+    {
+        var prompt =
+            $"Kanalinspektion-Frame: Pruefe gezielt, ob der VSA-Code {vsaCode} bei ca. Meter {meter:F1} im Bild sichtbar ist.\n" +
+            (string.IsNullOrWhiteSpace(description) ? "" : $"Hinweis aus Protokoll: {description}\n") +
+            "\nAntworte NUR in JSON:\n" +
+            "{\n" +
+            "  \"visible\": true/false,\n" +
+            "  \"severity\": 1-5 (oder null wenn nicht sichtbar),\n" +
+            "  \"confidence\": 0.0-1.0 (deine Sicherheit),\n" +
+            "  \"notes\": kurze Begruendung auf Deutsch\n" +
+            "}\n" +
+            "\nBewerte NUR diese eine Frage. Gib keine anderen Codes zurueck.";
+
+        try
+        {
+            var dto = await _client.ChatStructuredAsync<VerificationDto>(
+                model: _model,
+                messages:
+                [
+                    new OllamaClient.ChatMessage(
+                        Role: "user",
+                        Content: prompt,
+                        ImagesBase64: [framePngBase64])
+                ],
+                formatSchema: VerificationSchema,
+                ct: ct).ConfigureAwait(false);
+
+            return new Pipeline.DamageVerification(
+                Visible: dto.Visible,
+                Severity: dto.Severity,
+                Confidence: Math.Clamp(dto.Confidence, 0.0, 1.0),
+                Notes: dto.Notes);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[VerifyCode] Fehler fuer {vsaCode}@{meter:F1}m: {ex.Message}");
+            return new Pipeline.DamageVerification(false, null, 0.0, $"error: {ex.Message}");
+        }
+    }
 }
 
 // ── Analysis result types ─────────────────────────────────────────────────────
