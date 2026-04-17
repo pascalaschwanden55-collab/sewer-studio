@@ -200,7 +200,8 @@ public sealed class CodingSessionService : ICodingSessionService
             if (approved.Count == 0) return;
 
             var cfg = Ai.Ollama.OllamaConfig.Load();
-            var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
+            // V4.2 Fix: HttpClient disposen (Socket-Exhaustion bei vielen Samples).
+            using var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
             var embedder = new KnowledgeBase.EmbeddingService(http, cfg);
 
             using var db = new KnowledgeBase.KnowledgeBaseContext();

@@ -804,7 +804,8 @@ public partial class TrainingCenterWindow : Window
         var batchOrch = new Ai.Training.BatchSelfTrainingOrchestrator(
             videoOrch, protocolLoader, enrichment, sidecarDir: sidecarDir,
             orchestratorFactory: orchestratorFactory,
-            uncertaintySampler: uncertaintySampler);
+            uncertaintySampler: uncertaintySampler,
+            sidecarUrl: sp.PipelineCfg.SidecarUrl);
         var request = new Ai.Training.Models.BatchSelfTrainingRequest
         {
             ExportRootPath = dlg.FolderName,

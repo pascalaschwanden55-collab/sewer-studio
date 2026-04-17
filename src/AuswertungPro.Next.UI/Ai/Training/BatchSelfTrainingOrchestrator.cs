@@ -50,6 +50,9 @@ public sealed class BatchSelfTrainingOrchestrator
     // Sidecar Auto-Restart: Pfad zum Sidecar-Verzeichnis
     private readonly string? _sidecarDir;
 
+    // V4.2 Fix: Sidecar-URL aus Config statt hardcoded.
+    private readonly string _sidecarUrl;
+
     public bool IsPaused => _isPaused;
     public bool IsRunning { get; private set; }
 
@@ -61,7 +64,8 @@ public sealed class BatchSelfTrainingOrchestrator
         string? sidecarDir = null,
         YoloRetrainOrchestrator? yoloRetrain = null,
         Func<VideoSelfTrainingOrchestrator>? orchestratorFactory = null,
-        SelfImproving.UncertaintySamplingService? uncertaintySampler = null)
+        SelfImproving.UncertaintySamplingService? uncertaintySampler = null,
+        string? sidecarUrl = null)
     {
         _videoOrchestrator = videoOrchestrator ?? throw new ArgumentNullException(nameof(videoOrchestrator));
         _protocolLoader = protocolLoader ?? throw new ArgumentNullException(nameof(protocolLoader));
@@ -71,6 +75,10 @@ public sealed class BatchSelfTrainingOrchestrator
         _yoloRetrain = yoloRetrain;
         _orchestratorFactory = orchestratorFactory;
         _uncertaintySampler = uncertaintySampler;
+        // V4.2 Fix: URL aus Config > Env > Default.
+        _sidecarUrl = sidecarUrl
+            ?? Environment.GetEnvironmentVariable("SEWERSTUDIO_SIDECAR_URL")
+            ?? "http://localhost:8100";
     }
 
     /// <summary>
@@ -1067,7 +1075,8 @@ public sealed class BatchSelfTrainingOrchestrator
         try
         {
             using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(3) };
-            var resp = await http.GetAsync("http://localhost:8100/health", ct).ConfigureAwait(false);
+            var healthUrlCheck = _sidecarUrl.TrimEnd('/') + "/health";
+            var resp = await http.GetAsync(healthUrlCheck, ct).ConfigureAwait(false);
             if (resp.IsSuccessStatusCode) return; // Sidecar laeuft → weiter
         }
         catch { /* Sidecar nicht erreichbar */ }
@@ -1106,7 +1115,8 @@ public sealed class BatchSelfTrainingOrchestrator
                 RedirectStandardError = true
             };
 
-            var proc = Process.Start(psi);
+            // V4.2 Fix: Process-Object disposen (Subprozess laeuft weiter, nur Management-Handles werden freigegeben).
+            using var proc = Process.Start(psi);
             if (proc is null)
             {
                 _log?.LogWarning("Batch: Sidecar-Prozess konnte nicht gestartet werden");
@@ -1119,6 +1129,9 @@ public sealed class BatchSelfTrainingOrchestrator
 
             _log?.LogInformation("Batch: Sidecar-Prozess gestartet (PID={Pid})", proc.Id);
 
+            // V4.2 Fix: Sidecar-URL aus Config statt hardcoded (_sidecarUrl wird im Ctor gesetzt).
+            var healthUrl = _sidecarUrl.TrimEnd('/') + "/health";
+
             // Warten bis Health-Check antwortet (max 45s)
             using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(3) };
             for (int attempt = 0; attempt < 15; attempt++)
@@ -1126,7 +1139,7 @@ public sealed class BatchSelfTrainingOrchestrator
                 await Task.Delay(3000, ct).ConfigureAwait(false);
                 try
                 {
-                    var resp = await http.GetAsync("http://localhost:8100/health", ct).ConfigureAwait(false);
+                    var resp = await http.GetAsync(healthUrl, ct).ConfigureAwait(false);
                     if (resp.IsSuccessStatusCode)
                     {
                         _log?.LogInformation("Batch: Sidecar neu gestartet und bereit");

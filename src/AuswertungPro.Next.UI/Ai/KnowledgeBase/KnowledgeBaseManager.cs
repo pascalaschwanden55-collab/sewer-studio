@@ -23,6 +23,37 @@ public sealed class KnowledgeBaseManager(
     // Schuetzt vor gleichzeitigem Rebuild + Index (Datenverlust vermeiden)
     private static readonly SemaphoreSlim RebuildGuard = new(1, 1);
 
+    // V4.2 Fix: Disk-Full-Guard — warnt wenn weniger als 1 GB frei auf KB-Laufwerk.
+    private const long MinFreeBytes = 1024L * 1024L * 1024L; // 1 GB
+    private static DateTime _lastDiskWarning = DateTime.MinValue;
+
+    private static bool CheckDiskSpace(string dbPath)
+    {
+        try
+        {
+            var root = System.IO.Path.GetPathRoot(System.IO.Path.GetFullPath(dbPath));
+            if (string.IsNullOrEmpty(root)) return true;
+            var drive = new System.IO.DriveInfo(root);
+            if (!drive.IsReady) return true;
+            if (drive.AvailableFreeSpace < MinFreeBytes)
+            {
+                // Max 1 Log-Zeile pro Minute (nicht fluten).
+                if ((DateTime.UtcNow - _lastDiskWarning).TotalMinutes > 1)
+                {
+                    _lastDiskWarning = DateTime.UtcNow;
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[KB] WARNUNG: Nur {drive.AvailableFreeSpace / 1024 / 1024} MB frei auf {root} — KB-Writes werden ausgesetzt");
+                }
+                return false;
+            }
+            return true;
+        }
+        catch
+        {
+            return true; // bei Fehler nicht blockieren
+        }
+    }
+
     // ── Öffentliche API ───────────────────────────────────────────────────
 
     /// <summary>
@@ -34,6 +65,13 @@ public sealed class KnowledgeBaseManager(
         TrainingSample sample,
         CancellationToken ct = default)
     {
+        // V4.2 Fix: Disk-Full-Guard — verhindert KB-Corruption bei voller Platte.
+        // KB-Root wird aus KnowledgeRoot gezogen (C:\KI_BRAIN), Fallback: aktuelles Laufwerk.
+        var checkPath = Environment.GetEnvironmentVariable("SEWERSTUDIO_KB_ROOT")
+                     ?? @"C:\KI_BRAIN";
+        if (!CheckDiskSpace(checkPath))
+            return false;
+
         // Warten falls gerade ein Rebuild laeuft (verhindert Datenverlust)
         await RebuildGuard.WaitAsync(ct).ConfigureAwait(false);
         try
@@ -379,6 +417,75 @@ public sealed class KnowledgeBaseManager(
     }
 
     // ── Quality Gate ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Bewertet alle bestehenden Samples ohne QualityGateLevel nachtraeglich.
+    /// Liest jedes Sample, evaluiert es mit SampleQualityGateService und
+    /// schreibt das Ergebnis (Green/Yellow/Red) per UPDATE zurueck.
+    /// Kann ohne EmbeddingService aufgerufen werden (statisch, eigener DB-Zugriff).
+    /// </summary>
+    public static int BackfillQualityGateLevels()
+    {
+        var gate = new Training.SampleQualityGateService();
+        var samples = new List<(string Id, string Level)>();
+
+        using var ctx = new KnowledgeBaseContext();
+
+        // Alle Samples ohne QualityGateLevel laden
+        using (var cmd = ctx.Connection.CreateCommand())
+        {
+            cmd.CommandText = """
+                SELECT SampleId, CaseId, VsaCode, Beschreibung, MeterStart, MeterEnd,
+                       IsStreck, FramePath, SourceType, Rohrmaterial, NennweiteMm,
+                       IsKorrigiert
+                FROM Samples
+                WHERE QualityGateLevel IS NULL
+                """;
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var sample = new Training.TrainingSample
+                {
+                    SampleId = reader.GetString(0),
+                    CaseId = reader.IsDBNull(1) ? "" : reader.GetString(1),
+                    Code = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                    Beschreibung = reader.IsDBNull(3) ? "" : reader.GetString(3),
+                    MeterStart = reader.IsDBNull(4) ? 0 : reader.GetDouble(4),
+                    MeterEnd = reader.IsDBNull(5) ? 0 : reader.GetDouble(5),
+                    IsStreckenschaden = !reader.IsDBNull(6) && reader.GetInt64(6) == 1,
+                    FramePath = reader.IsDBNull(7) ? "" : reader.GetString(7),
+                    SourceType = reader.IsDBNull(8) ? "" : reader.GetString(8),
+                    Rohrmaterial = reader.IsDBNull(9) ? null : reader.GetString(9),
+                    NennweiteMm = reader.IsDBNull(10) ? null : (int?)reader.GetInt64(10),
+                    IsKorrigiert = !reader.IsDBNull(11) && reader.GetInt64(11) == 1
+                };
+
+                var result = gate.Evaluate(sample);
+                samples.Add((sample.SampleId, result.Grade.ToString()));
+            }
+        }
+
+        if (samples.Count == 0) return 0;
+
+        // Batch-Update in einer Transaktion
+        using var tx = ctx.Connection.BeginTransaction();
+        using var updateCmd = ctx.Connection.CreateCommand();
+        updateCmd.CommandText = "UPDATE Samples SET QualityGateLevel = $qg WHERE SampleId = $id";
+        var pQg = updateCmd.Parameters.Add("$qg", Microsoft.Data.Sqlite.SqliteType.Text);
+        var pId = updateCmd.Parameters.Add("$id", Microsoft.Data.Sqlite.SqliteType.Text);
+
+        foreach (var (id, level) in samples)
+        {
+            pId.Value = id;
+            pQg.Value = level;
+            updateCmd.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+        Debug.WriteLine($"[KnowledgeBaseManager] QualityGate-Backfill: {samples.Count} Samples bewertet");
+        return samples.Count;
+    }
 
     // ── Embedding-Text ─────────────────────────────────────────────────
 
