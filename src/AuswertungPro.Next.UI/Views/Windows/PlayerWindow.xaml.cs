@@ -270,6 +270,29 @@ public partial class PlayerWindow : Window
 
         Closed += (_, __) =>
         {
+            // Doppelter Schutz: falls WPF in einem Edge-Case Application.MainWindow
+            // auf diese PlayerWindow umgebogen hat (z.B. durch Owner-Chain mit
+            // Topmost-Kindern), beim Schliessen wieder auf die echte MainWindow
+            // zurueckpointen — sonst koennte OnMainWindowClose-Mode die App killen.
+            // Greift auch bei alten Builds die noch kein OnExplicitShutdown haben.
+            try
+            {
+                var app = System.Windows.Application.Current;
+                if (app != null && ReferenceEquals(app.MainWindow, this))
+                {
+                    // Erstes anderes Top-Level-Fenster suchen (typ. die echte MainWindow)
+                    foreach (Window w in app.Windows)
+                    {
+                        if (!ReferenceEquals(w, this))
+                        {
+                            app.MainWindow = w;
+                            break;
+                        }
+                    }
+                }
+            }
+            catch { /* best-effort, niemals blockieren */ }
+
             if (ReferenceEquals(_lastOpened, this))
                 _lastOpened = null;
 
