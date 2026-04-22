@@ -91,7 +91,9 @@ public class ArchitectureLayerGuardTests
         var violations = new List<string>();
         foreach (var pyFile in pyFiles)
         {
-            var content = File.ReadAllText(pyFile);
+            // Kommentare + Docstrings entfernen — Thin-AI-Prinzip gilt fuer ausfuehrbaren Code,
+            // dokumentarische Erwaehnungen von Codes/Begriffen sind erlaubt (s. „Kommentare OK").
+            var content = StripPythonCommentsAndDocstrings(File.ReadAllText(pyFile));
             foreach (var pattern in verbotenePatterns)
             {
                 if (Regex.IsMatch(content, pattern, RegexOptions.IgnoreCase))
@@ -104,6 +106,20 @@ public class ArchitectureLayerGuardTests
 
         Assert.True(violations.Count == 0,
             $"Thin-AI-Verletzung im Sidecar:\n{string.Join("\n", violations)}");
+    }
+
+    /// <summary>
+    /// Entfernt Python-Docstrings ("""...""" und '''...''') und Zeilenkommentare (#...)
+    /// aus dem Quelltext, damit Pattern-Checks nur noch Code treffen.
+    /// </summary>
+    private static string StripPythonCommentsAndDocstrings(string src)
+    {
+        // Triple-quoted Strings (inkl. mehrzeilig) entfernen.
+        src = Regex.Replace(src, @"""""""[\s\S]*?""""""", "", RegexOptions.Multiline);
+        src = Regex.Replace(src, @"'''[\s\S]*?'''", "", RegexOptions.Multiline);
+        // Zeilenkommentare (robust genug fuer Sidecar-Files: keine # in Strings dort).
+        src = Regex.Replace(src, @"#[^\n]*", "", RegexOptions.Multiline);
+        return src;
     }
 
     // ── QualityGate-Replay Smoke-Test ────────────────────────────
