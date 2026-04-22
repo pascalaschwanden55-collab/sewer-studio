@@ -24,7 +24,8 @@ public sealed class ReviewQueueTests
     [Fact]
     public void OnlyYellowItems_AreEnqueued()
     {
-        var svc = new ReviewQueueService();
+        // persistEnabled:false — Tests sollen NIEMALS C:\KI_BRAIN\review_queue.json beruehren.
+        var svc = new ReviewQueueService(persistEnabled: false);
         svc.Enqueue(CreateEntry(0.50, TrafficLight.Yellow));
         svc.Enqueue(CreateEntry(0.90, TrafficLight.Green));
         svc.Enqueue(CreateEntry(0.20, TrafficLight.Red));
@@ -35,7 +36,8 @@ public sealed class ReviewQueueTests
     [Fact]
     public void Queue_IsSortedByPriority()
     {
-        var svc = new ReviewQueueService();
+        // persistEnabled:false — Tests sollen NIEMALS C:\KI_BRAIN\review_queue.json beruehren.
+        var svc = new ReviewQueueService(persistEnabled: false);
         svc.Enqueue(CreateEntry(0.70, TrafficLight.Yellow, epistemic: 0.10));
         svc.Enqueue(CreateEntry(0.50, TrafficLight.Yellow, epistemic: 0.80));
         svc.Enqueue(CreateEntry(0.60, TrafficLight.Yellow, epistemic: 0.40));
@@ -50,7 +52,8 @@ public sealed class ReviewQueueTests
     [Fact]
     public void Remove_DecreasesCount()
     {
-        var svc = new ReviewQueueService();
+        // persistEnabled:false — Tests sollen NIEMALS C:\KI_BRAIN\review_queue.json beruehren.
+        var svc = new ReviewQueueService(persistEnabled: false);
         svc.Enqueue(CreateEntry(0.55, TrafficLight.Yellow));
         var id = svc.GetAll().First().Id;
 
