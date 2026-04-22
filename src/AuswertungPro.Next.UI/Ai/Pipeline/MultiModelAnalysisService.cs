@@ -1060,6 +1060,11 @@ public sealed class MultiModelAnalysisService
 
         int pipeDiameterMm = _config.PipeDiameterMmOverride ?? 300;
 
+        // K3: Auto-Kalibrierung einmalig pro Video (analog FFmpeg-Pfad).
+        // Messungen nutzen calibration.NormalizedDiameter statt hardcoded 0.70.
+        Domain.Models.PipeCalibration? pipeCalibrationNvdec = null;
+        bool calibrationAttemptedNvdec = false;
+
         var request = new VideoProcessRequest(
             VideoPath: videoPath,
             StepSeconds: FrameStepSeconds,
@@ -1208,6 +1213,35 @@ public sealed class MultiModelAnalysisService
             }
             catch { /* preview optional */ }
 
+            // K3: Auto-Kalibrierung beim ersten brauchbaren Frame (einmalig pro Video).
+            if (!calibrationAttemptedNvdec && frameBytes != null && frameBytes.Length > 1000)
+            {
+                calibrationAttemptedNvdec = true;
+                try
+                {
+                    using var calMs = new MemoryStream(frameBytes);
+                    var decoder = System.Windows.Media.Imaging.BitmapDecoder.Create(
+                        calMs, System.Windows.Media.Imaging.BitmapCreateOptions.None,
+                        System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+                    var bmp = decoder.Frames[0];
+                    pipeCalibrationNvdec = AutoCalibrationService.TryAutoCalibrate(bmp, pipeDiameterMm);
+                    if (pipeCalibrationNvdec != null)
+                    {
+                        _logger.LogInformation(
+                            "NVDEC Auto-Kalibrierung: NormalizedDiameter={Ratio:F3} (statt 0.700), Pixel={Px}",
+                            pipeCalibrationNvdec.NormalizedDiameter, pipeCalibrationNvdec.PipePixelDiameter);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("NVDEC Auto-Kalibrierung fehlgeschlagen — verwende Default 0.70");
+                    }
+                }
+                catch (Exception exCal)
+                {
+                    _logger.LogDebug(exCal, "NVDEC Auto-Kalibrierung Exception");
+                }
+            }
+
             progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                 $"Frame {frameIndex}/{totalFrames} – DINO Detection (NVDEC)...",
                 FramePreviewPng: frameBytes));
@@ -1267,7 +1301,9 @@ public sealed class MultiModelAnalysisService
             var samMs = phaseSw.ElapsedMilliseconds;
 
             // ── Step 4: Quantification ──
-            var quantified = MaskQuantificationService.QuantifyAll(samResult, pipeDiameterMm);
+            // K3: pipeCalibrationNvdec (einmalig am Video-Anfang bestimmt) wird hier
+            //     durchgereicht — ersetzt hardcoded PipeImageWidthRatio=0.70.
+            var quantified = MaskQuantificationService.QuantifyAll(samResult, pipeDiameterMm, pipeCalibrationNvdec);
             var meter = EstimateMeter(t, duration > 0 ? duration : 300, ref lastMeter);
 
             var maxDinoConf = dinoResult.Detections.Count > 0
@@ -1494,16 +1530,21 @@ public sealed class MultiModelAnalysisService
     /// </summary>
     public static EnhancedFrameAnalysis ToEnhancedAnalysis(
         MultiModelFrameResult result,
-        int pipeDiameterMm)
+        int pipeDiameterMm,
+        Domain.Models.PipeCalibration? calibration = null)
     {
         if (!result.IsRelevant)
             return EnhancedFrameAnalysis.Empty();
 
+        // K3: optionale Kalibrierung — falls uebergeben, nutzt QuantifyWithRatio statt 0.70.
         var quantified = new List<MaskQuantificationService.QuantifiedMask>();
         foreach (var mask in result.SamMasks)
         {
-            quantified.Add(MaskQuantificationService.Quantify(
-                mask, result.ImageWidth, result.ImageHeight, pipeDiameterMm));
+            quantified.Add(calibration != null
+                ? MaskQuantificationService.Quantify(
+                    mask, result.ImageWidth, result.ImageHeight, pipeDiameterMm, calibration)
+                : MaskQuantificationService.Quantify(
+                    mask, result.ImageWidth, result.ImageHeight, pipeDiameterMm));
         }
 
         var findings = new List<EnhancedFinding>(quantified.Count);
