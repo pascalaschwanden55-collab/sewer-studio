@@ -57,7 +57,7 @@ public partial class StartupSplashWindow : Window
         Width = SystemParameters.PrimaryScreenWidth;
         Height = SystemParameters.PrimaryScreenHeight;
 
-        _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1100) };
+        _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2200) };
         _statusTimer.Tick += OnStatusTick;
 
         _pulseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
@@ -70,7 +70,7 @@ public partial class StartupSplashWindow : Window
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         // Fenster einblenden
-        var windowFade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
+        var windowFade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(1000))
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
@@ -79,20 +79,20 @@ public partial class StartupSplashWindow : Window
         // Neuronales Netz zeichnen (Pipeline-Stages)
         BuildNeuralNetwork();
 
-        // Animationen starten
+        // Animationen starten — Timings doppelt so lang (10s minSplashDuration)
         AnimateNetworkFadeIn();
-        RevealTitle(1600);
-        FadeIn(SubText, 2000, 600);
-        FadeIn(VersionText, 2200, 400);
-        FadeIn(StatusText, 600, 350);
-        FadeIn(StatusDot, 600, 350);
+        RevealTitle(3200);
+        FadeIn(SubText, 4000, 1200);
+        FadeIn(VersionText, 4400, 800);
+        FadeIn(StatusText, 1200, 700);
+        FadeIn(StatusDot, 1200, 700);
         StartProgressBar();
 
         _statusTimer.Start();
 
         // Datenpulse mit Verzoegerung starten
         _pulseTimer.IsEnabled = false;
-        var pulseDelay = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+        var pulseDelay = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(3000) };
         pulseDelay.Tick += (_, _) =>
         {
             pulseDelay.Stop();
@@ -230,8 +230,9 @@ public partial class StartupSplashWindow : Window
     {
         // Stage-fuer-Stage einblenden: zuerst Label der Stage, dann Knoten,
         // dann die Verbindungen zur naechsten Stage — wie Pipeline-Bau
-        int baseDelay = 300;
-        int stepMs = 280;
+        // Timings verdoppelt fuer 10s-Splash.
+        int baseDelay = 600;
+        int stepMs = 560;
 
         for (int s = 0; s < _nodesByStage.Count; s++)
         {
@@ -239,18 +240,18 @@ public partial class StartupSplashWindow : Window
 
             // Stage-Labels (je Stage 2: Haupt + Sub) einblenden
             // Index im _labels: s*2 = Haupt, s*2+1 = Sub
-            if (s * 2 < _labels.Count) FadeIn(_labels[s * 2], stageDelay, 350);
-            if (s * 2 + 1 < _labels.Count) FadeIn(_labels[s * 2 + 1], stageDelay + 80, 350);
+            if (s * 2 < _labels.Count) FadeIn(_labels[s * 2], stageDelay, 700);
+            if (s * 2 + 1 < _labels.Count) FadeIn(_labels[s * 2 + 1], stageDelay + 160, 700);
 
             // Knoten der Stage
             foreach (var node in _nodesByStage[s])
-                FadeIn(node, stageDelay + 50, 350);
+                FadeIn(node, stageDelay + 100, 700);
 
             // Verbindungen von dieser Stage zur naechsten (falls vorhanden)
             if (s < _connectionsByStage.Count)
             {
                 foreach (var line in _connectionsByStage[s])
-                    FadeIn(line, stageDelay + 150, 400);
+                    FadeIn(line, stageDelay + 300, 800);
             }
         }
     }
@@ -312,17 +313,17 @@ public partial class StartupSplashWindow : Window
 
     private void RevealTitle(int startMs)
     {
-        FadeIn(TitleText, startMs, 600);
+        FadeIn(TitleText, startMs, 1200);
 
-        // Slide von rechts
-        var slide = new DoubleAnimation(30, 0, TimeSpan.FromMilliseconds(600))
+        // Slide von rechts (verdoppelt)
+        var slide = new DoubleAnimation(30, 0, TimeSpan.FromMilliseconds(1200))
         {
             BeginTime = TimeSpan.FromMilliseconds(startMs),
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
         TitleSlide.BeginAnimation(TranslateTransform.XProperty, slide);
 
-        // Subtiler Glitch-Effekt
+        // Subtiler Glitch-Effekt (Rhythmus bleibt, nur spaeter ausgeloest)
         var glitch = new ThicknessAnimation
         {
             From = new Thickness(0),
@@ -330,7 +331,7 @@ public partial class StartupSplashWindow : Window
             Duration = TimeSpan.FromMilliseconds(35),
             AutoReverse = true,
             RepeatBehavior = new RepeatBehavior(4),
-            BeginTime = TimeSpan.FromMilliseconds(startMs + 100)
+            BeginTime = TimeSpan.FromMilliseconds(startMs + 200)
         };
         TitleText.BeginAnimation(MarginProperty, glitch);
     }
@@ -340,9 +341,10 @@ public partial class StartupSplashWindow : Window
     private void StartProgressBar()
     {
         // Langsam wachsende Fortschrittsleiste (920px = volle Breite minus Margins)
-        var grow = new DoubleAnimation(0, 920, TimeSpan.FromMilliseconds(5500))
+        // Dauer verdoppelt fuer 10s-Splash.
+        var grow = new DoubleAnimation(0, 920, TimeSpan.FromMilliseconds(11000))
         {
-            BeginTime = TimeSpan.FromMilliseconds(500),
+            BeginTime = TimeSpan.FromMilliseconds(1000),
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
         };
         ProgressBar.BeginAnimation(WidthProperty, grow);
