@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.UI.Ai.SelfImproving;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.UI.ViewModels.Windows;
@@ -22,16 +23,19 @@ public sealed class KbEnrichmentService
     private readonly KnowledgeBaseManager _kbManager;
     private readonly KbDeduplicationService _dedup;
     private readonly SampleQualityGateService _qualityGate;
+    private readonly ReviewQueueService? _reviewQueue;
     private readonly ILogger? _log;
 
     public KbEnrichmentService(
         KnowledgeBaseManager kbManager,
         KbDeduplicationService dedup,
-        ILogger? log = null)
+        ILogger? log = null,
+        ReviewQueueService? reviewQueue = null)
     {
         _kbManager = kbManager ?? throw new ArgumentNullException(nameof(kbManager));
         _dedup = dedup ?? throw new ArgumentNullException(nameof(dedup));
         _qualityGate = new SampleQualityGateService();
+        _reviewQueue = reviewQueue;
         _log = log;
     }
 
@@ -139,12 +143,37 @@ public sealed class KbEnrichmentService
         CancellationToken ct = default,
         string? haltungId = null)
     {
-        int indexed = 0, skipped = 0, deduplicated = 0, errors = 0;
+        int indexed = 0, skipped = 0, deduplicated = 0, errors = 0, queuedForReview = 0;
         var samplesForStore = new List<TrainingSample>();
 
         foreach (var entry in report.Entries)
         {
             ct.ThrowIfCancellationRequested();
+
+            // H3: Confidence-Staffel — entscheidet vor dem Sample-Bau, ob das Item
+            //   a) Auto-Approve (conf >= MinDetectionConfidence)        → weiter im Flow
+            //   b) Review-Queue (MinConfidenceForReview <= conf < MinDetectionConfidence)
+            //   c) Verwerfen    (conf < MinConfidenceForReview)
+            // Gilt nur fuer TP/CodeMismatch (die haben eine KI-Detection mit Confidence).
+            if (entry.Category is DifferenceCategory.TruePositive or DifferenceCategory.CodeMismatch
+                && entry.KiDetection is not null)
+            {
+                var conf = entry.KiDetection.Confidence;
+                if (conf < policy.MinConfidenceForReview)
+                {
+                    // Zu unsicher — verwerfen (wie bisher).
+                    skipped++;
+                    continue;
+                }
+                if (conf < policy.MinDetectionConfidence)
+                {
+                    // Unsicher, aber nicht hoffnungslos — menschliches Review.
+                    TryEnqueueForReview(entry, haltungId);
+                    queuedForReview++;
+                    continue;
+                }
+                // conf >= MinDetectionConfidence → normaler Auto-Approve-Pfad.
+            }
 
             // Entscheide automatisch basierend auf Kategorie + Policy
             var sample = BuildSampleFromDifference(entry, rohrmaterial, nennweiteMm, policy, haltungId);
@@ -223,7 +252,48 @@ public sealed class KbEnrichmentService
             }
         }
 
-        return new KbEnrichmentResult(indexed, skipped, deduplicated, errors);
+        return new KbEnrichmentResult(indexed, skipped, deduplicated, errors)
+        {
+            QueuedForReview = queuedForReview
+        };
+    }
+
+    /// <summary>
+    /// H3: Schiebt einen Mittel-Confidence-DifferenceEntry in die Review-Queue.
+    /// Wenn kein ReviewQueueService injiziert ist, wird der Eintrag nur geloggt.
+    /// </summary>
+    private void TryEnqueueForReview(DifferenceEntry entry, string? haltungId)
+    {
+        if (_reviewQueue is null)
+        {
+            _log?.LogDebug(
+                "Confidence-Review: kein ReviewQueueService injiziert, Eintrag {Code} verworfen",
+                entry.ProtocolEntry?.VsaCode ?? entry.KiDetection?.Label ?? "?");
+            return;
+        }
+
+        var caseId = haltungId ?? $"batch-review-{DateTime.UtcNow:yyyyMMdd_HHmmss}";
+        var protocolCode = entry.ProtocolEntry?.VsaCode ?? "";
+        var suggestedCode = entry.KiDetection?.Label ?? protocolCode;
+        var meter = entry.ProtocolEntry?.MeterStart ?? entry.KiDetection?.Meter ?? 0.0;
+        var framePath = entry.FramePath ?? entry.KiDetection?.FramePath ?? "";
+        var matchLevel = entry.Category == DifferenceCategory.CodeMismatch
+            ? MatchLevelNames.Mismatch
+            : MatchLevelNames.PartialMatch;
+
+        // Deterministische SampleId: gleiches Item (Haltung+Code+Meter) wird nicht doppelt enqueued.
+        var sampleId = $"{caseId}|{protocolCode}|{meter:F2}";
+
+        try
+        {
+            _reviewQueue.EnqueueFromSelfTraining(
+                caseId, protocolCode, suggestedCode,
+                meter, framePath, matchLevel, sampleId);
+        }
+        catch (Exception ex)
+        {
+            _log?.LogWarning(ex, "Review-Queue Enqueue fehlgeschlagen fuer {Code}", protocolCode);
+        }
     }
 
     /// <summary>
@@ -296,21 +366,9 @@ public sealed class KbEnrichmentService
 
         if (string.IsNullOrWhiteSpace(code)) return null;
 
-        // V4.2 Phase 1.1: Confidence-Gate.
-        // Nur TruePositive/CodeMismatch haben eine KI-Detection mit Confidence.
-        // FalseNegative hat keine — dort schuetzt LearnFromMissed=false (Default V4.2).
-        if (entry.Category is DifferenceCategory.TruePositive or DifferenceCategory.CodeMismatch)
-        {
-            var detConf = entry.KiDetection?.Confidence ?? 0.0;
-            if (detConf < policy.MinDetectionConfidence)
-            {
-                // Sample hat zu geringe Confidence — skip Auto-Approve.
-                // TODO Phase 1.4: Statt skip → ReviewQueueService.Enqueue
-                System.Diagnostics.Debug.WriteLine(
-                    $"[KbEnrichment] V4.2 Gate: {code} @ {meterStart:F1}m conf={detConf:F2} < {policy.MinDetectionConfidence:F2} → skip");
-                return null;
-            }
-        }
+        // H3: Confidence-Gating ist nach AutoEnrichFromReportAsync verlagert (Staffel
+        // Auto-Approve / Review-Queue / Verwerfen). BuildSample bekommt nur noch Items,
+        // die bereits als Auto-Approve-faehig eingestuft wurden.
 
         // M10: Sekunden-Granularitaet verhindert Kollision bei mehreren Batches am selben Tag.
         var effectiveCaseId = haltungId ?? $"batch-auto-{DateTime.UtcNow:yyyyMMdd_HHmmss}";
@@ -458,9 +516,16 @@ public sealed class BatchAutoApprovePolicy
     public bool LearnFromMissed { get; init; } = false;
 
     /// <summary>Minimale KI-Detection-Confidence fuer Auto-Approve (0.0 - 1.0).
-    /// V4.2: Unter diesem Wert wird das Sample NICHT automatisch indexiert —
-    /// geht stattdessen in Review-Queue (Phase 1.4). Aus BlindDetection.Confidence gelesen.</summary>
+    /// V4.2: Ab diesem Wert wird das Sample automatisch in die KB indexiert.
+    /// Darunter: siehe MinConfidenceForReview. Aus BlindDetection.Confidence gelesen.</summary>
     public double MinDetectionConfidence { get; init; } = 0.85;
+
+    /// <summary>H3: Unter-Schwelle fuer Review-Queue.
+    /// conf in [MinConfidenceForReview, MinDetectionConfidence) → Review-Queue.
+    /// conf &lt; MinConfidenceForReview → verwerfen.
+    /// Default 0.65: Qwen-Ensemble liefert typisch 0.5-0.7; bei 0.65 stehen Chance:Risiko
+    /// noch gut genug fuer menschliches Review.</summary>
+    public double MinConfidenceForReview { get; init; } = 0.65;
 
     /// <summary>
     /// V4.2 Standard-Policy: Nichts automatisch. Stoppt KB-Vergiftung.
@@ -488,5 +553,8 @@ public sealed record KbEnrichmentResult(
     int Deduplicated,
     int Errors)
 {
-    public int Total => Indexed + Skipped + Deduplicated + Errors;
+    /// <summary>H3: Items mit mittlerer Confidence, in Review-Queue verschoben.</summary>
+    public int QueuedForReview { get; init; }
+
+    public int Total => Indexed + Skipped + Deduplicated + Errors + QueuedForReview;
 }

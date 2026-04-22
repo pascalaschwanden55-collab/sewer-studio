@@ -839,7 +839,10 @@ public partial class TrainingCenterWindow : Window
             var retrieval = new Ai.KnowledgeBase.RetrievalService(kbCtx, embedder);
             var kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(kbCtx, embedder);
             var dedup = new Ai.KnowledgeBase.KbDeduplicationService(embedder, retrieval);
-            enrichment = new Ai.KnowledgeBase.KbEnrichmentService(kbManager, dedup);
+            // H3: Review-Queue fuer Mittel-Confidence-Samples (0.65 <= conf < 0.85).
+            _reviewQueueService ??= new Ai.SelfImproving.ReviewQueueService();
+            enrichment = new Ai.KnowledgeBase.KbEnrichmentService(
+                kbManager, dedup, log: null, reviewQueue: _reviewQueueService);
         }
         catch (Exception ex) { MessageBox.Show($"KB-Fehler: {ex.Message}"); return; }
 
@@ -879,11 +882,14 @@ public partial class TrainingCenterWindow : Window
             videoOrch, protocolLoader, enrichment, sidecarDir: sidecarDir,
             orchestratorFactory: orchestratorFactory,
             uncertaintySampler: uncertaintySampler,
-            sidecarUrl: sp.PipelineCfg.SidecarUrl);
+            sidecarUrl: sp.PipelineCfg.SidecarUrl.ToString());
         var request = new Ai.Training.Models.BatchSelfTrainingRequest
         {
             ExportRootPath = dlg.FolderName,
-            MaxHaltungen = maxHaltungen
+            MaxHaltungen = maxHaltungen,
+            // V4.3: Checkbox "Alle erneut durchlaufen" (oben beim Selbsttraining-Button) gilt auch hier.
+            // Wenn aktiv → bereits verarbeitete Haltungen nochmals durchlaufen.
+            SkipAlreadyProcessed = !Vm.ForceRerunAll
         };
 
         var btnBatch = this.FindName("BtnBatchNight") as System.Windows.Controls.Button;
@@ -1176,16 +1182,53 @@ public partial class TrainingCenterWindow : Window
 
     private async void ExtractProfiles_Click(object sender, RoutedEventArgs e)
     {
-        // DB3-Datei waehlen
+        // WinCan-Datenbank waehlen: DB3 (SQLite), SDF (SQL Server Compact) oder SQLite
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "WinCan DB3 waehlen",
-            Filter = "WinCan DB3|*.db3|Alle Dateien|*.*",
+            Title = "WinCan-Datenbank waehlen (DB3 / SDF / SQLite)",
+            Filter = "WinCan-Datenbanken|*.db3;*.sdf;*.sqlite|DB3 (SQLite)|*.db3|SDF (SQL Server Compact)|*.sdf|SQLite|*.sqlite|Alle Dateien|*.*",
             Multiselect = false
         };
         if (dlg.ShowDialog() != true) return;
 
-        var db3Path = dlg.FileName;
+        var selectedPath = dlg.FileName;
+        string db3Path;
+
+        // Bei SDF automatisch in SQLite konvertieren bevor der Extractor drauf zugreift.
+        if (selectedPath.EndsWith(".sdf", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!Infrastructure.Import.WinCan.SdfToSqliteConverter.IsSsceAvailable())
+            {
+                MessageBox.Show(
+                    "SDF-Konvertierung nicht moeglich: SQL Server Compact 4.0 Runtime fehlt.\n\n" +
+                    "Installieren via 'Microsoft SQL Server Compact 4.0 SP1' " +
+                    "(download.microsoft.com, SSCERuntime_x64-ENU.exe).",
+                    "SDF nicht unterstuetzt",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            BtnExtractProfiles.IsEnabled = false;
+            Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] SDF wird nach SQLite konvertiert: {System.IO.Path.GetFileName(selectedPath)}...\n");
+            try
+            {
+                db3Path = await System.Threading.Tasks.Task.Run(() =>
+                    Infrastructure.Import.WinCan.SdfToSqliteConverter.Convert(selectedPath));
+                Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Konvertierung fertig: {db3Path}\n");
+            }
+            catch (Exception ex)
+            {
+                Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] SDF-Konvertierung FEHLGESCHLAGEN: {ex.Message}\n");
+                MessageBox.Show($"SDF-Konvertierung fehlgeschlagen:\n\n{ex.Message}",
+                    "SDF-Konvertierung", MessageBoxButton.OK, MessageBoxImage.Error);
+                BtnExtractProfiles.IsEnabled = true;
+                return;
+            }
+        }
+        else
+        {
+            db3Path = selectedPath;
+        }
         var outputDir = System.IO.Path.Combine(@"C:\KI_BRAIN", "inspection_profiles");
         var patternsPath = System.IO.Path.Combine(@"C:\KI_BRAIN", "inspection_patterns.json");
 
@@ -1226,8 +1269,11 @@ public partial class TrainingCenterWindow : Window
 
             Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Profile fertig. Gespeichert nach {outputDir}\n");
 
-            // Fragen ob Frames extrahiert werden sollen
-            var exportRoot = System.IO.Path.GetDirectoryName(db3Path) ?? "";
+            // Fragen ob Frames extrahiert werden sollen.
+            // Bei SDF-Quelle verwenden wir den Original-SDF-Pfad fuer die Video-Suche —
+            // die konvertierte .db3 liegt in C:\KI_BRAIN\sdf_converted\, dort sind keine Videos.
+            var rootBaseForVideos = selectedPath;
+            var exportRoot = System.IO.Path.GetDirectoryName(rootBaseForVideos) ?? "";
             // WinCan-Export-Root: 2 Ebenen hoch von DB-Ordner (DB → Project → DISK1)
             var disk1Root = exportRoot;
             for (int up = 0; up < 3; up++)
