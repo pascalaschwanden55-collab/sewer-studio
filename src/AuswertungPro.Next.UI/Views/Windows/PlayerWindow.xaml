@@ -267,6 +267,8 @@
                 <ColumnDefinition Width="*"/>
                 <!-- Coding-Seitenpanel (nur sichtbar im Codier-Modus) -->
                 <ColumnDefinition x:Name="CodingSidePanelColumn" Width="0"/>
+                <!-- Trainings-Seitenpanel (nur sichtbar im Trainings-Modus) -->
+                <ColumnDefinition x:Name="TrainingSidePanelColumn" Width="0"/>
             </Grid.ColumnDefinitions>
 
             <!-- Video + Overlays: Geschwister-Pattern (wie CodingModeWindow) -->
@@ -298,6 +300,27 @@
                             MouseMove="CodingCanvas_MouseMove"
                             MouseLeftButtonUp="CodingCanvas_MouseLeftButtonUp"
                             MouseWheel="CodingCanvas_MouseWheel"/>
+                </Popup>
+
+                <!-- Training Overlay als Popup: BBox-Zeichnen fuer KB-Trainingssamples -->
+                <Popup x:Name="TrainingOverlayPopup"
+                       PlacementTarget="{Binding ElementName=VideoView}"
+                       Placement="Relative"
+                       HorizontalOffset="0"
+                       VerticalOffset="0"
+                       AllowsTransparency="True"
+                       StaysOpen="True"
+                       IsOpen="False">
+                    <Canvas x:Name="TrainingOverlayCanvas"
+                            Width="1"
+                            Height="1"
+                            Background="#01000000"
+                            ClipToBounds="True"
+                            IsHitTestVisible="True"
+                            Cursor="Cross"
+                            MouseLeftButtonDown="TrainingCanvas_MouseLeftButtonDown"
+                            MouseMove="TrainingCanvas_MouseMove"
+                            MouseLeftButtonUp="TrainingCanvas_MouseLeftButtonUp"/>
                 </Popup>
 
                 <!-- Detection overlay layer (hidden by default) -->
@@ -1038,6 +1061,101 @@
                     </StackPanel>
                 </ScrollViewer>
             </Border>
+
+            <!-- TRAININGS-SEITENPANEL (nur im Trainings-Modus sichtbar) -->
+            <Border x:Name="TrainingSidePanel" Grid.Column="2"
+                    Visibility="Collapsed"
+                    Margin="8,0,0,0"
+                    Background="{DynamicResource CardGlassBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    CornerRadius="10" Padding="10"
+                    BorderThickness="1">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Width="260">
+                        <TextBlock Text="TRAININGS-MODUS"
+                                   FontSize="12" FontWeight="Bold"
+                                   Foreground="{DynamicResource NeonCyanBrush}"
+                                   Margin="0,0,0,8"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="11"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,0,0,10">
+                            Video pausieren (Leertaste) &#x2192; Rechteck um Schaden ziehen &#x2192; "Speichern" oeffnet VSA-Code-Auswahl. Sample landet als Trainingsbeispiel in der Knowledge-Base.
+                        </TextBlock>
+
+                        <Border Background="{DynamicResource HeaderBrush}" CornerRadius="8"
+                                Padding="10,8" Margin="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Text="STATUS" Style="{StaticResource SectionLabel}"/>
+                                <TextBlock x:Name="TxtTrainingStatus"
+                                           Text="Bereit. Rechteck ziehen."
+                                           FontSize="12" Foreground="{DynamicResource TextBrush}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock x:Name="TxtTrainingCount"
+                                           Text="0 Samples in dieser Sitzung"
+                                           FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="METER (optional)" Style="{StaticResource SectionLabel}"/>
+                        <TextBox x:Name="TxtTrainingMeter"
+                                 FontSize="12" Padding="6,4"
+                                 Margin="0,0,0,8"
+                                 ToolTip="Meterstand des Schadens (leer = aus Video-Zeit abgeleitet)"/>
+
+                        <TextBlock Text="SCHWEREGRAD" Style="{StaticResource SectionLabel}"/>
+                        <ComboBox x:Name="CmbTrainingSeverity"
+                                  FontSize="12"
+                                  Margin="0,0,0,8"
+                                  SelectedIndex="2">
+                            <ComboBoxItem Content="1 - Optisch"/>
+                            <ComboBoxItem Content="2 - Leicht"/>
+                            <ComboBoxItem Content="3 - Mittel"/>
+                            <ComboBoxItem Content="4 - Schwer"/>
+                            <ComboBoxItem Content="5 - Kritisch"/>
+                        </ComboBox>
+
+                        <StackPanel Orientation="Vertical" Margin="0,0,0,8">
+                            <Button x:Name="BtnTrainingSave"
+                                    Content="&#x1F4BE; Speichern (Code waehlen)"
+                                    Style="{StaticResource PlayerPrimaryButton}"
+                                    Click="TrainingSave_Click"
+                                    Margin="0,0,0,4"
+                                    IsEnabled="False"
+                                    ToolTip="Aktuelles Rechteck mit VSA-Code verknuepfen und als Trainingsbeispiel speichern"/>
+                            <Button x:Name="BtnTrainingClear"
+                                    Content="&#x2716; Rechteck loeschen"
+                                    Style="{StaticResource PlayerButton}"
+                                    Click="TrainingClear_Click"
+                                    Margin="0,0,0,4"
+                                    IsEnabled="False"/>
+                            <Button x:Name="BtnTrainingNegativ"
+                                    Content="&#x229B; Negativ-Beispiel speichern"
+                                    Style="{StaticResource PlayerButton}"
+                                    Click="TrainingNegativ_Click"
+                                    ToolTip="Aktuellen Frame als Negativ-Beispiel (kein Schaden) speichern"/>
+                        </StackPanel>
+
+                        <Border Background="{DynamicResource HeaderBrush}" CornerRadius="8"
+                                Padding="10,8" Margin="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Text="HINWEISE" Style="{StaticResource SectionLabel}"/>
+                                <TextBlock TextWrapping="Wrap" FontSize="10"
+                                           Foreground="{DynamicResource TextSecondaryBrush}">
+                                    &#x2022; Leertaste: Video pausieren/weiter&#x0A;&#x2022; Rechteck: Ziehen mit gedrueckter Maustaste&#x0A;&#x2022; Code-Auswahl oeffnet sich nach "Speichern"&#x0A;&#x2022; Frame wird automatisch als PNG exportiert&#x0A;&#x2022; KB indexiert das Sample wenn Ollama laeuft
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+
+                        <Button x:Name="BtnTrainingExit"
+                                Content="Trainings-Modus beenden"
+                                Style="{StaticResource PlayerButton}"
+                                Click="TrainingExit_Click"
+                                Margin="0,8,0,0"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
         </Grid>
 
         <!-- â•â•â•â•â•â•â• CODING-WERKZEUGE (nur im Codier-Modus sichtbar) â•â•â•â•â•â•â• -->
@@ -1499,6 +1617,24 @@
                             <TextBlock Text="Codier-Modus" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+
+                    <ToggleButton x:Name="TrainingModeButton"
+                                  Margin="6,0,0,0"
+                                  MinHeight="36"
+                                  Padding="14,7"
+                                  FontSize="12"
+                                  Background="{DynamicResource HeaderBrush}"
+                                  Foreground="{DynamicResource TextBrush}"
+                                  BorderBrush="{DynamicResource NeonCyanBrush}"
+                                  BorderThickness="1"
+                                  Cursor="Hand"
+                                  Click="TrainingMode_Click"
+                                  ToolTip="Trainings-Modus: Schaeden im laufenden Video markieren und als KB-Trainingsbeispiele speichern">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#x1F3AF;" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Trainings-Modus" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ToggleButton>
 
                     <TextBlock x:Name="LiveDetectionStatusText"
                                VerticalAlignment="Center"

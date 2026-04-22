@@ -264,6 +264,9 @@ public partial class PlayerWindow : Window
         VideoView.SizeChanged += (_, __) => UpdateCodingOverlayViewport();
         SizeChanged += (_, __) => UpdateCodingOverlayViewport();
         LocationChanged += (_, __) => UpdateCodingOverlayViewport();
+        // Training-Overlay folgt ebenfalls Fenster-/Video-Resize
+        SizeChanged += (_, __) => { if (_isTrainingMode) UpdateTrainingOverlayViewport(); };
+        LocationChanged += (_, __) => { if (_isTrainingMode) UpdateTrainingOverlayViewport(); };
 
         Closed += (_, __) =>
         {
@@ -282,6 +285,16 @@ public partial class PlayerWindow : Window
 
             _quickScanCts?.Cancel();
             StopLiveDetection();
+
+            // Trainings-Modus sauber beenden (HttpClient + KB-Context disposen)
+            _isTrainingMode = false;
+            try { _trainingKbCtx?.Dispose(); } catch { }
+            try { _trainingHttp?.Dispose(); } catch { }
+            _trainingKbCtx = null;
+            _trainingKbManager = null;
+            _trainingEmbedder = null;
+            _trainingHttp = null;
+
             Cleanup();
 
             // Hauptfenster sichtbar machen und aktivieren
@@ -2722,6 +2735,14 @@ public partial class PlayerWindow : Window
             MessageBox.Show(
                 "Codier-Modus benoetigt eine Haltung.\n" +
                 "Bitte das Video ueber die Datenseite mit einer Haltung oeffnen.",
+                "Codier-Modus", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (_isTrainingMode)
+        {
+            MessageBox.Show(
+                "Bitte zuerst den Trainings-Modus beenden.",
                 "Codier-Modus", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
