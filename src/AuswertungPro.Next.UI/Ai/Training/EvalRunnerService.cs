@@ -128,7 +128,7 @@ public sealed class EvalRunnerService
 
     // ── Hilfsfunktionen ──
 
-    private static string? LoadExpectedCode(string labelPath)
+    internal static string? LoadExpectedCode(string labelPath)
     {
         if (!File.Exists(labelPath)) return null;
         var line = File.ReadAllLines(labelPath).FirstOrDefault();
@@ -139,7 +139,7 @@ public sealed class EvalRunnerService
         return VsaYoloClassMap.GetVsaCodeForClassId(classId);
     }
 
-    private static string? ExtractMainCode(string? raw)
+    internal static string? ExtractMainCode(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
         var code = raw.Trim().ToUpperInvariant();
@@ -148,7 +148,7 @@ public sealed class EvalRunnerService
         return code[..3];
     }
 
-    private static Dictionary<string, PerCodeMetrics> ComputePerCodeMetrics(List<EvalSample> samples)
+    internal static Dictionary<string, PerCodeMetrics> ComputePerCodeMetrics(List<EvalSample> samples)
     {
         var codes = samples
             .Select(s => s.ExpectedCode)
@@ -182,7 +182,7 @@ public sealed class EvalRunnerService
         return result;
     }
 
-    private static (double precision, double recall, double f1) ComputeOverallMetrics(List<EvalSample> samples)
+    internal static (double precision, double recall, double f1) ComputeOverallMetrics(List<EvalSample> samples)
     {
         int tp = samples.Count(s => s.IsCorrect && !string.IsNullOrEmpty(s.ExpectedCode));
         int fp = samples.Count(s =>
@@ -199,7 +199,7 @@ public sealed class EvalRunnerService
         return (p, r, f);
     }
 
-    private static void WriteCsv(string path, List<EvalSample> samples,
+    internal static void WriteCsv(string path, List<EvalSample> samples,
         Dictionary<string, PerCodeMetrics> perCode, string? commit)
     {
         var sb = new StringBuilder();
@@ -230,7 +230,7 @@ public sealed class EvalRunnerService
         File.WriteAllText(path, sb.ToString());
     }
 
-    private static string? TryGetGitCommit()
+    internal static string? TryGetGitCommit()
     {
         try
         {
@@ -264,7 +264,7 @@ public sealed class EvalRunnerService
 
     // ── DTOs ──
 
-    private sealed class EvalSample
+    internal sealed class EvalSample
     {
         public string ImagePath { get; }
         public string? ExpectedCode { get; }
