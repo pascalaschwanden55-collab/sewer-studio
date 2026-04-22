@@ -11,6 +11,7 @@ using IOPath = System.IO.Path;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.Ollama;
+using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Teacher;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Application.Ai;
@@ -39,6 +40,11 @@ public partial class PlayerWindow
     private KnowledgeBaseContext? _trainingKbCtx;
     private EmbeddingService? _trainingEmbedder;
     private System.Net.Http.HttpClient? _trainingHttp;
+
+    // SAM state (lazy init) — fuer Box-Prompt-Segmentierung analog ImageAnnotationWindow
+    private VisionPipelineClient? _trainingSidecar;
+    private SamResponse? _trainingLastSamResult;
+    private System.Threading.CancellationTokenSource? _trainingSamCts;
 
     private int _trainingSessionCount;
 
@@ -92,11 +98,9 @@ public partial class PlayerWindow
         VideoView.SizeChanged -= TrainingVideoView_SizeChanged;
         VideoView.SizeChanged += TrainingVideoView_SizeChanged;
 
-        // Popup soll nicht ueber andere Anwendungen liegen, wenn PlayerWindow nicht fokussiert ist
-        Deactivated -= TrainingWindow_Deactivated;
-        Activated -= TrainingWindow_Activated;
-        Deactivated += TrainingWindow_Deactivated;
-        Activated += TrainingWindow_Activated;
+        // Kein Deactivated-Handler mehr: Popup muss auch bei Snipping-Tool/Screenshot
+        // sichtbar bleiben. Der fruehere Airspace-Schutz war zu aggressiv und hat
+        // das BBox-Overlay beim Wechsel zu jedem System-Fenster ausgeblendet.
     }
 
     private void ExitTrainingMode()
@@ -112,26 +116,6 @@ public partial class PlayerWindow
         TrainingSidePanelColumn.Width = new GridLength(0);
 
         VideoView.SizeChanged -= TrainingVideoView_SizeChanged;
-        Deactivated -= TrainingWindow_Deactivated;
-        Activated -= TrainingWindow_Activated;
-    }
-
-    // Popup ausblenden waehrend PlayerWindow inaktiv ist — sonst liegt das
-    // AllowsTransparency-Overlay ueber anderen Desktop-Apps (Claude, Browser etc.)
-    private void TrainingWindow_Deactivated(object? sender, EventArgs e)
-    {
-        if (_isTrainingMode && TrainingOverlayPopup.IsOpen)
-            TrainingOverlayPopup.IsOpen = false;
-    }
-
-    private void TrainingWindow_Activated(object? sender, EventArgs e)
-    {
-        if (_isTrainingMode && !TrainingOverlayPopup.IsOpen)
-        {
-            TrainingOverlayPopup.IsOpen = true;
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded,
-                new Action(UpdateTrainingOverlayViewport));
-        }
     }
 
     private void TrainingVideoView_SizeChanged(object? sender, SizeChangedEventArgs e)
@@ -249,6 +233,100 @@ public partial class PlayerWindow
         TxtTrainingStatus.Text = "Rechteck fertig. 'Speichern' klicken, Code waehlen.";
         BtnTrainingSave.IsEnabled = true;
         BtnTrainingClear.IsEnabled = true;
+
+        // SAM asynchron anstossen — Maske als Overlay visualisiert was erkannt wurde
+        _ = RunTrainingSamAsync(_trainingCurrentRect.Value);
+    }
+
+    // --- SAM-Integration (Box-Prompt analog ImageAnnotationWindow) ---
+
+    private async Task RunTrainingSamAsync(Rect rectPx)
+    {
+        try
+        {
+            _trainingSamCts?.Cancel();
+            _trainingSamCts = new System.Threading.CancellationTokenSource();
+            var ct = _trainingSamCts.Token;
+
+            if (_trainingSidecar is null)
+            {
+                var url = Environment.GetEnvironmentVariable("SEWERSTUDIO_SIDECAR_URL")
+                          ?? "http://localhost:8100";
+                _trainingSidecar = new VisionPipelineClient(new Uri(url));
+                var health = await _trainingSidecar.HealthCheckAsync().ConfigureAwait(true);
+                if (health is null)
+                {
+                    TxtTrainingStatus.Text = "SAM offline — nur Rechteck wird gespeichert.";
+                    _trainingSidecar = null;
+                    return;
+                }
+            }
+
+            var frameBytes = await CaptureCurrentFrameAsync().ConfigureAwait(true);
+            if (frameBytes is null || frameBytes.Length == 0)
+            {
+                TxtTrainingStatus.Text = "Frame-Capture fehlgeschlagen — SAM ueberspringen.";
+                return;
+            }
+
+            // Rechteck-Pixel (Canvas-Koordinaten) → Bild-Pixel skalieren
+            // Frame-Bytes kommen vom Snapshot mit voller Aufloesung,
+            // Canvas hat VideoView-Darstellungs-Groesse. Wir normalisieren.
+            var cw = Math.Max(1, TrainingOverlayCanvas.ActualWidth);
+            var ch = Math.Max(1, TrainingOverlayCanvas.ActualHeight);
+            int imgW, imgH;
+            try
+            {
+                using var ms = new MemoryStream(frameBytes);
+                var dec = System.Windows.Media.Imaging.BitmapDecoder.Create(
+                    ms, System.Windows.Media.Imaging.BitmapCreateOptions.None,
+                    System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+                imgW = dec.Frames[0].PixelWidth;
+                imgH = dec.Frames[0].PixelHeight;
+            }
+            catch { imgW = 640; imgH = 480; }
+
+            double sx = imgW / cw;
+            double sy = imgH / ch;
+            double x1 = rectPx.X * sx;
+            double y1 = rectPx.Y * sy;
+            double x2 = (rectPx.X + rectPx.Width) * sx;
+            double y2 = (rectPx.Y + rectPx.Height) * sy;
+
+            var b64 = Convert.ToBase64String(frameBytes);
+            var req = new SamRequest(b64, new[] { new SamBoundingBox(x1, y1, x2, y2, "training", 1.0) });
+
+            TxtTrainingStatus.Text = "SAM segmentiert...";
+            var resp = await _trainingSidecar.SegmentSamAsync(req, ct).ConfigureAwait(true);
+            if (ct.IsCancellationRequested) return;
+
+            _trainingLastSamResult = resp;
+
+            if (resp?.Masks is { Count: > 0 })
+            {
+                // Masken-Overlay auf den TrainingCanvas zeichnen
+                var quantified = resp.Masks
+                    .Select(m => MaskQuantificationService.Quantify(m, resp.ImageWidth, resp.ImageHeight, 300))
+                    .ToList();
+                SamMaskRenderer.ClearMasks(TrainingOverlayCanvas);
+                SamMaskRenderer.RenderMasks(
+                    TrainingOverlayCanvas,
+                    resp,
+                    quantified,
+                    TrainingOverlayCanvas.ActualWidth,
+                    TrainingOverlayCanvas.ActualHeight);
+                TxtTrainingStatus.Text = $"SAM: {resp.Masks.Count} Maske(n) ({resp.InferenceTimeMs:F0}ms). Speichern druecken.";
+            }
+            else
+            {
+                TxtTrainingStatus.Text = "SAM: keine Maske — nur Rechteck wird gespeichert.";
+            }
+        }
+        catch (OperationCanceledException) { /* neues Rechteck hat altes abgebrochen */ }
+        catch (Exception ex)
+        {
+            TxtTrainingStatus.Text = $"SAM Fehler: {ex.Message} — nur Rechteck wird gespeichert.";
+        }
     }
 
     private void TrainingClear_Click(object sender, RoutedEventArgs e)
@@ -262,6 +340,9 @@ public partial class PlayerWindow
         RemoveTrainingRectShape();
         _trainingCurrentRect = null;
         _trainingIsDragging = false;
+        _trainingLastSamResult = null;
+        _trainingSamCts?.Cancel();
+        SamMaskRenderer.ClearMasks(TrainingOverlayCanvas);
         BtnTrainingSave.IsEnabled = false;
         BtnTrainingClear.IsEnabled = false;
     }
@@ -377,6 +458,15 @@ public partial class PlayerWindow
                 CroppedRegionPath = exportResult.CroppedRegionPath,
                 YoloAnnotationPath = exportResult.YoloAnnotationPath
             };
+
+            // SAM-Maske mitspeichern, falls vorhanden (bester Mask wird genommen)
+            if (_trainingLastSamResult is { Masks.Count: > 0 })
+            {
+                var best = _trainingLastSamResult.Masks[0];
+                annotation.MaskRle = best.MaskRle;
+                annotation.MaskWidth = _trainingLastSamResult.ImageWidth;
+                annotation.MaskHeight = _trainingLastSamResult.ImageHeight;
+            }
 
             await TeacherAnnotationStore.AppendAsync(annotation);
 

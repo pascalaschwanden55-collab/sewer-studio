@@ -286,14 +286,18 @@ public partial class PlayerWindow : Window
             _quickScanCts?.Cancel();
             StopLiveDetection();
 
-            // Trainings-Modus sauber beenden (HttpClient + KB-Context disposen)
+            // Trainings-Modus sauber beenden (HttpClient + KB-Context + SAM disposen)
             _isTrainingMode = false;
+            try { _trainingSamCts?.Cancel(); _trainingSamCts?.Dispose(); } catch { }
             try { _trainingKbCtx?.Dispose(); } catch { }
             try { _trainingHttp?.Dispose(); } catch { }
             _trainingKbCtx = null;
             _trainingKbManager = null;
             _trainingEmbedder = null;
             _trainingHttp = null;
+            _trainingSamCts = null;
+            _trainingSidecar = null;
+            _trainingLastSamResult = null;
 
             Cleanup();
 
