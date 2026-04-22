@@ -14,7 +14,7 @@ packages/
 # Rider / JetBrains
 .idea/
 
-# Claude session data
+# Claude session data (inkl. .claude/worktrees/ — temporaere Arbeitskopien, nie committen)
 .claude/
 
 # OS
