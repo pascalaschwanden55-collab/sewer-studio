@@ -701,11 +701,41 @@ public partial class PlayerWindow : Window
 
     private void Cleanup()
     {
-        _timer.Stop();
-        _scrubTimer.Stop();
-        VideoView.MediaPlayer = null;
-        _player.Dispose();
-        _libVlc.Dispose();
+        // Defensives VLC-Cleanup: Race mit HwndHost vermeiden indem wir zuerst
+        // stoppen + detachen, dann den nativen Disposal asynchron nachziehen.
+        // Direktes Dispose auf dem UI-Thread kann AccessViolation ausloesen
+        // (sichtbar als „App schliesst sich nach ein paar Sekunden", ohne Log).
+        try { _timer.Stop(); } catch { }
+        try { _scrubTimer.Stop(); } catch { }
+
+        try
+        {
+            if (_player != null)
+            {
+                if (_player.IsPlaying)
+                    _player.Stop();
+                VideoView.MediaPlayer = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PlayerWindow] MediaPlayer-Detach Fehler: {ex.Message}");
+        }
+
+        // Native Disposal auf den naechsten Dispatcher-Cycle verlagern — gibt
+        // HwndHost Zeit seine Referenzen freizugeben, bevor LibVLC native-side
+        // Speicher freigibt.
+        var playerRef = _player;
+        var libVlcRef = _libVlc;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            try { playerRef?.Dispose(); } catch (Exception ex) {
+                System.Diagnostics.Debug.WriteLine($"[PlayerWindow] player.Dispose Fehler: {ex.Message}");
+            }
+            try { libVlcRef?.Dispose(); } catch (Exception ex) {
+                System.Diagnostics.Debug.WriteLine($"[PlayerWindow] libVlc.Dispose Fehler: {ex.Message}");
+            }
+        }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
     }
 
     private void UpdateUi()
