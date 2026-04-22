@@ -31,63 +31,12 @@
                 </Border.Effect>
             </Border>
 
-            <!-- Neural Network Canvas (Knoten + Verbindungen werden im Code-Behind gezeichnet) -->
+            <!-- Neural Network Canvas — Pipeline-Stages: Input → YOLO → DINO → SAM → Qwen → Output -->
+            <!-- Canvas wird im Code-Behind mit benannten Schichten + gestaffelter Datenfluss-Animation gefuellt -->
             <Canvas x:Name="NeuralCanvas" ClipToBounds="True" Margin="20"/>
 
-            <!-- Zentraler Glow-Ring (KI-Kern) -->
-            <Grid HorizontalAlignment="Left" VerticalAlignment="Center" Margin="100,0,0,0">
-                <!-- Aeusserer Glow -->
-                <Ellipse Width="220" Height="220" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Ellipse.Fill>
-                        <RadialGradientBrush>
-                            <GradientStop Color="#2000B4FF" Offset="0.3"/>
-                            <GradientStop Color="#0000B4FF" Offset="1"/>
-                        </RadialGradientBrush>
-                    </Ellipse.Fill>
-                </Ellipse>
-
-                <!-- Animierter Ring -->
-                <Ellipse x:Name="GlowRing"
-                         Width="160" Height="160"
-                         HorizontalAlignment="Center" VerticalAlignment="Center"
-                         Stroke="#00B4FF" StrokeThickness="3"
-                         Opacity="0.8"
-                         StrokeDashArray="2 3">
-                    <Ellipse.Effect>
-                        <DropShadowEffect BlurRadius="30" ShadowDepth="0" Color="#00B4FF" Opacity="0.7"/>
-                    </Ellipse.Effect>
-                    <Ellipse.RenderTransform>
-                        <TransformGroup>
-                            <ScaleTransform x:Name="RingScale" ScaleX="0.1" ScaleY="0.1" CenterX="80" CenterY="80"/>
-                            <RotateTransform x:Name="RingRotation" CenterX="80" CenterY="80"/>
-                        </TransformGroup>
-                    </Ellipse.RenderTransform>
-                </Ellipse>
-
-                <!-- Innerer Ring -->
-                <Ellipse x:Name="InnerRing"
-                         Width="90" Height="90"
-                         HorizontalAlignment="Center" VerticalAlignment="Center"
-                         Stroke="#0066CC" StrokeThickness="1.5"
-                         Opacity="0" StrokeDashArray="1 2">
-                    <Ellipse.RenderTransform>
-                        <RotateTransform x:Name="InnerRotation" CenterX="45" CenterY="45"/>
-                    </Ellipse.RenderTransform>
-                </Ellipse>
-
-                <!-- Kernpunkt -->
-                <Ellipse x:Name="CoreDot"
-                         Width="12" Height="12"
-                         HorizontalAlignment="Center" VerticalAlignment="Center"
-                         Opacity="0">
-                    <Ellipse.Fill>
-                        <RadialGradientBrush>
-                            <GradientStop Color="#FF00D4FF" Offset="0"/>
-                            <GradientStop Color="#0000D4FF" Offset="1"/>
-                        </RadialGradientBrush>
-                    </Ellipse.Fill>
-                </Ellipse>
-            </Grid>
+            <!-- Ehem. Glow-Ring wurde entfernt — die Pipeline-Visualisierung
+                 auf dem NeuralCanvas ist jetzt das zentrale KI-Symbol. -->
 
             <!-- Text rechts -->
             <StackPanel HorizontalAlignment="Left" Margin="440,0,0,0" VerticalAlignment="Center">
@@ -119,8 +68,8 @@
 
                 <!-- Versions-Info -->
                 <TextBlock x:Name="VersionText"
-                           Text="v3.1"
-                           Foreground="#40FFFFFF"
+                           Text="v4.2  ·  Qwen3-VL + YOLO26m + DINO 1.5 + SAM 2"
+                           Foreground="#80FFFFFF"
                            FontSize="12"
                            FontFamily="Consolas"
                            Margin="2,4,0,0"
@@ -132,7 +81,7 @@
                              Fill="#0088FF" Margin="0,3,8,0" Opacity="0"/>
                     <TextBlock x:Name="StatusText"
                                Text="Initialisiere Anwendung..."
-                               Foreground="#FF5A6577"
+                               Foreground="#FF8B9BB5"
                                FontSize="13"
                                FontFamily="Segoe UI"
                                Opacity="0"/>
