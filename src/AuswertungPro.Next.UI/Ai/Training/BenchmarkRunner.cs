@@ -113,7 +113,8 @@ public sealed class BenchmarkRunner
                 Recall = report.Recall,
                 PerCodeMetrics = perCode
             },
-            history);
+            history,
+            _log);
 
         var runResult = new BenchmarkRunResult
         {

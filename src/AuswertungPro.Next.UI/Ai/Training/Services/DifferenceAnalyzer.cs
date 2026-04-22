@@ -45,9 +45,15 @@ public static class DifferenceAnalyzer
             // — sie sind Steuercodes, keine Schaeden. Wenn kein Match → kein FN.
             var isGrundgeruest = IsGrundgeruestCode(gt.VsaCode);
 
+            // H2: Bei Streckenschaeden ist die PDF-Meter-Unsicherheit typisch hoeher
+            // (OCR, Scan-PDFs ±0.5m). Effektive Toleranz daher verdoppelt (mind. 1.0m).
+            var effectiveTolerance = gt.IsStreckenschaden
+                ? Math.Max(meterTolerance * 2.0, 1.0)
+                : meterTolerance;
+
             // Kandidaten: Alle nicht-zugeordneten Detektionen innerhalb der Meter-Toleranz
             var candidates = availableDetections
-                .Where(d => !d.IsAssigned && Math.Abs(GetDetectionMeter(d) - GetTruthMeter(gt)) <= meterTolerance)
+                .Where(d => !d.IsAssigned && Math.Abs(GetDetectionMeter(d) - GetTruthMeter(gt)) <= effectiveTolerance)
                 .ToList();
 
             if (candidates.Count == 0)

@@ -141,7 +141,7 @@ public static class VsaCodeResolver
         if (Has(text, "versatz") || Has(text, "verschobene rohrverbindung") || HasWord(text, "offset")
             || Has(text, "displaced") || HasWord(text, "joint") || Has(text, "knick"))
             return "BAJ";
-        // BAK: Schadhafte Innenauskleidung
+        // BAK: Feststellung der Innenauskleidung
         if (Has(text, "innenauskleidung") || Has(text, "liner") || Has(text, "auskleidung schadhaft"))
             return "BAK";
         // BAL: Schadhafte Reparatur
@@ -226,12 +226,16 @@ public static class VsaCodeResolver
 
         var text = raw.Trim().ToLowerInvariant();
 
-        if (text.Contains("oben") || text.Contains("scheitel") || text.Contains("krone"))
+        // H4: Englische Kurzwoerter mit Word-Boundary, damit "brightness" oder "righter"
+        // nicht faelschlich matchen. Deutsche Begriffe sind spezifisch genug fuer Contains.
+        if (text.Contains("oben") || text.Contains("scheitel") || text.Contains("krone")
+            || Regex.IsMatch(text, @"\b(top|crown)\b"))
             return "12:00";
-        if (text.Contains("unten") || text.Contains("sohle"))
+        if (text.Contains("unten") || text.Contains("sohle")
+            || Regex.IsMatch(text, @"\b(bottom|invert)\b"))
             return "6:00";
-        if (text.Contains("rechts")) return "3:00";
-        if (text.Contains("links")) return "9:00";
+        if (text.Contains("rechts") || Regex.IsMatch(text, @"\bright\b")) return "3:00";
+        if (text.Contains("links") || Regex.IsMatch(text, @"\bleft\b")) return "9:00";
 
         var m = Regex.Match(raw, @"\b(1[0-2]|0?[1-9])\b");
         if (m.Success && int.TryParse(m.Groups[1].Value, NumberStyles.Integer,

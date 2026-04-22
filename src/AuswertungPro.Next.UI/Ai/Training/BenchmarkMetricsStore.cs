@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai;
+using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
@@ -82,7 +83,8 @@ public sealed class BenchmarkMetricsStore
     /// </summary>
     public static RegressionCheck CheckForRegression(
         BenchmarkRunResult current,
-        IReadOnlyList<BenchmarkRunResult> history)
+        IReadOnlyList<BenchmarkRunResult> history,
+        ILogger? logger = null)
     {
         if (history.Count < 2)
             return new RegressionCheck(false, 0, 0, 0, null, []);
@@ -97,9 +99,15 @@ public sealed class BenchmarkMetricsStore
         var avgPrecision = recent.Average(r => r.Precision);
         var avgRecall = recent.Average(r => r.Recall);
 
-        // H16-Fix: Bei avgF1 <= 0 keine sinnvolle Regression moeglich
+        // M11: Bei avgF1 <= 0 keine sinnvolle Regression moeglich — sichtbar machen
         if (avgF1 <= 0)
+        {
+            logger?.LogWarning(
+                "Regressions-Check uebersprungen: historischer F1-Schnitt=0 ueber {Count} Laeufe " +
+                "(neue Serie oder vollstaendiges Modell-Versagen). Aktueller F1={CurF1:F3}",
+                recent.Count, current.F1);
             return new RegressionCheck(false, 0, 0, 0, null, []);
+        }
 
         var f1Delta = current.F1 - avgF1;
         var precisionDelta = current.Precision - avgPrecision;

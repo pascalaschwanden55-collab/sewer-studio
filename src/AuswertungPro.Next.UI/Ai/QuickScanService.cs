@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai.Shared;
+using AuswertungPro.Next.UI.Ai.Training.Services;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -50,6 +51,10 @@ public sealed class QuickScanService
     private readonly OllamaClient _client;
     private readonly string _visionModel;
     private readonly string _ffmpegPath;
+    private readonly FrameQualityFilter _qualityFilter = new(
+        minLaplacianVariance: 80.0, // Etwas toleranter als Pipeline (100.0) — QuickScan soll robust sein
+        minLuminance: 25.0,
+        maxLuminance: 245.0);
 
     public QuickScanService(OllamaClient client, string visionModel, string ffmpegPath)
     {
@@ -63,6 +68,10 @@ public sealed class QuickScanService
         IProgress<QuickScanProgress>? progress,
         CancellationToken ct)
     {
+        // K5: Hash-Carry-Over zwischen Videos verhindern (vorheriges Video koennte
+        // sonst als Duplikat-Baseline fuer das neue dienen und Frames verwerfen).
+        _qualityFilter.Reset();
+
         var duration = await GetVideoDurationAsync(videoPath, ct).ConfigureAwait(false);
         if (duration <= 0)
             return new QuickScanResult(Array.Empty<QuickScanSegment>(), 0, 0,
@@ -80,6 +89,16 @@ public sealed class QuickScanService
         await foreach (var frame in stream.ReadFramesAsync(ct).ConfigureAwait(false))
         {
             ct.ThrowIfCancellationRequested();
+
+            // Qualitaetsfilter VOR Qwen-Inferenz — spart 50-70% Rechenzeit (Audit N5)
+            if (!_qualityFilter.IsAcceptable(frame.PngBytes))
+            {
+                segments.Add(new QuickScanSegment(frame.TimestampSeconds, false, 0, null, null));
+                done++;
+                progress?.Report(new QuickScanProgress(done, totalFrames,
+                    $"Frame {done}/{totalFrames} (uebersprungen)", null));
+                continue;
+            }
 
             var segment = await AnalyzeFrameAsync(frame, ct).ConfigureAwait(false);
             segments.Add(segment);
@@ -105,7 +124,7 @@ public sealed class QuickScanService
                 new OllamaClient.ChatMessage("user", Prompt, new[] { b64 })
             };
 
-            // Use plain /api/chat (qwen2.5vl does not support structured format)
+            // Use plain /api/chat (qwen3-vl does not support structured format)
             var raw = await _client.ChatAsync(
                 _visionModel, messages, frameCts.Token).ConfigureAwait(false);
 

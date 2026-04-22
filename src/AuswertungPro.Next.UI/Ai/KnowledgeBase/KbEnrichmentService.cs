@@ -184,7 +184,9 @@ public sealed class KbEnrichmentService
 
                 if (dedupResult.IsAlreadyCovered)
                 {
-                    sample.KbIndexState = KbIndexState.Indexed;
+                    // Kein eigener KB-Eintrag — Sample ist von einem anderen abgedeckt.
+                    // FRUEHER: KbIndexState = Indexed (gelogen, hat zu Inkonsistenz gefuehrt).
+                    sample.KbIndexState = KbIndexState.Deduplicated;
                     deduplicated++;
                     continue;
                 }
@@ -310,7 +312,8 @@ public sealed class KbEnrichmentService
             }
         }
 
-        var effectiveCaseId = haltungId ?? $"batch-auto-{DateTime.UtcNow:yyyyMMdd}";
+        // M10: Sekunden-Granularitaet verhindert Kollision bei mehreren Batches am selben Tag.
+        var effectiveCaseId = haltungId ?? $"batch-auto-{DateTime.UtcNow:yyyyMMdd_HHmmss}";
         var signature = TrainingSample.BuildCanonicalSignature(
             effectiveCaseId,
             code,

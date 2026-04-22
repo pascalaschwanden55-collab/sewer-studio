@@ -128,10 +128,9 @@ namespace AuswertungPro.Next.UI
             // AI/CodeCatalog Init (AiLocalPack)
             var cfg = aiPlatform.ToRuntimeConfig();
 
-            // Startup-Warmup: 8B Vision + Embed permanent vorladen
-            // V4.1: 8B×6 Slots (8192 ctx) + nomic — VRAM: ~8.1 + 0.6 = ~9 GB (Flash Attn)
-            // Sidecar (YOLO+DINO+SAM+Florence-2): ~10 GB → Total ~20 GB, ~12 GB Reserve
-            // 32B Eskalation: on-demand Swap bei Yellow/Red (~30-60s)
+            // Startup-Warmup: 8B-Q8 + nomic + 32B (RAM) permanent vorladen
+            // V4.1 Final: 8B-Q8 (11.7 GB GPU) + nomic (0.6 GB GPU) + 32B (22.8 GB RAM, num_gpu=0)
+            // Sidecar (YOLO+DINO+SAM): ~6 GB GPU → Total GPU ~20 GB, ~12 GB frei
             if (cfg.Enabled)
             {
                 _ = Task.Run(async () =>
@@ -142,33 +141,36 @@ namespace AuswertungPro.Next.UI
 
                         // 1. VisionModel (8B) permanent vorladen — 4 parallele Slots
                         await warmupClient.WarmupModelAsync(cfg.VisionModel, cfg.OllamaNumCtx);
-                        System.Diagnostics.Debug.WriteLine(
-                            $"[Startup] VisionModel {cfg.VisionModel} vorgeladen (NUM_PARALLEL={Environment.GetEnvironmentVariable("OLLAMA_NUM_PARALLEL") ?? "?"}, ctx={cfg.OllamaNumCtx})");
+                        Logger.LogInformation(
+                            "[Startup] VisionModel {Model} vorgeladen (NUM_PARALLEL={Parallel}, ctx={Ctx})",
+                            cfg.VisionModel,
+                            Environment.GetEnvironmentVariable("OLLAMA_NUM_PARALLEL") ?? "?",
+                            cfg.OllamaNumCtx);
 
                         // 2. EmbedModel (nomic-embed-text) vorladen
                         if (!string.IsNullOrEmpty(cfg.EmbedModel))
                         {
                             await warmupClient.WarmupModelAsync(cfg.EmbedModel, 0);
-                            System.Diagnostics.Debug.WriteLine(
-                                $"[Startup] EmbedModel {cfg.EmbedModel} vorgeladen");
+                            Logger.LogInformation(
+                                "[Startup] EmbedModel {Model} vorgeladen", cfg.EmbedModel);
                         }
 
-                        // 3. ReferenceModel (32B) permanent vorladen — hybrid GPU/CPU mit num_gpu=10
+                        // 3. ReferenceModel (32B) permanent in RAM vorladen — num_gpu=0, kein VRAM
                         if (!string.IsNullOrEmpty(cfg.ReferenceVisionModel)
                             && !string.Equals(cfg.ReferenceVisionModel, cfg.VisionModel, StringComparison.OrdinalIgnoreCase))
                         {
                             try
                             {
-                                using var warmupHttp = new HttpClient { BaseAddress = cfg.OllamaBaseUri, Timeout = TimeSpan.FromMinutes(5) };
+                                using var warmupHttp = new HttpClient { BaseAddress = cfg.OllamaBaseUri, Timeout = TimeSpan.FromMinutes(10) };
                                 var payload = new Dictionary<string, object?>
                                 {
                                     ["model"] = cfg.ReferenceVisionModel,
                                     ["prompt"] = "",
                                     ["stream"] = false,
-                                    ["keep_alive"] = "-1",
+                                    ["keep_alive"] = "8760h",
                                     ["options"] = new Dictionary<string, object>
                                     {
-                                        ["num_gpu"] = 10,
+                                        ["num_gpu"] = 10,  // hybrid: 10 Layers GPU + Rest RAM (~9s statt 28s)
                                         ["num_ctx"] = cfg.OllamaNumCtx > 0 ? Math.Min(cfg.OllamaNumCtx, 4096) : 4096
                                     }
                                 };
@@ -178,20 +180,21 @@ namespace AuswertungPro.Next.UI
                                     Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
                                 };
                                 using var resp = await warmupHttp.SendAsync(req).ConfigureAwait(false);
-                                System.Diagnostics.Debug.WriteLine(
-                                    $"[Startup] ReferenceModel {cfg.ReferenceVisionModel} vorgeladen (num_gpu=10, hybrid GPU/CPU)");
+                                Logger.LogInformation(
+                                    "[Startup] ReferenceModel {Model} vorgeladen (num_gpu=10 hybrid, komplett RAM)",
+                                    cfg.ReferenceVisionModel);
                             }
                             catch (Exception exRef)
                             {
-                                System.Diagnostics.Debug.WriteLine(
-                                    $"[Startup] ReferenceModel {cfg.ReferenceVisionModel} Warmup fehlgeschlagen: {exRef.Message}");
+                                Logger.LogWarning(exRef,
+                                    "[Startup] ReferenceModel {Model} Warmup fehlgeschlagen",
+                                    cfg.ReferenceVisionModel);
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine(
-                            $"[Startup] Modell-Warmup fehlgeschlagen: {ex.Message}");
+                        Logger.LogWarning(ex, "[Startup] Modell-Warmup fehlgeschlagen");
                     }
                 });
             }

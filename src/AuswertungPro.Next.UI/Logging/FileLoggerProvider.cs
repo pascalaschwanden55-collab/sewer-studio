@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Logging;
+using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace AuswertungPro.Next.UI;
@@ -37,9 +39,20 @@ public sealed class FileLoggerProvider : ILoggerProvider
             if (exception is not null)
                 line += Environment.NewLine + exception;
 
+            // M7: Logging darf nie die App crashen — I/O-Fehler (Disk voll,
+            // Permission-Denied, gesperrte Datei) schlucken und in Debug-Output
+            // umleiten, damit der Fehler nicht weiter oben landet.
             lock (_lock)
             {
-                File.AppendAllText(_path, line + Environment.NewLine);
+                try
+                {
+                    File.AppendAllText(_path, line + Environment.NewLine);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[FileLogger] AppendAllText fehlgeschlagen ({ex.GetType().Name}): {ex.Message}");
+                    Debug.WriteLine(line);
+                }
             }
         }
     }
