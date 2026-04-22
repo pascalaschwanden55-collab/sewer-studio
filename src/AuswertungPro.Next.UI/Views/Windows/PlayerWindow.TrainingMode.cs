@@ -456,8 +456,13 @@ public partial class PlayerWindow
             }
 
             var annotationId = Guid.NewGuid().ToString("N")[..12];
-            var tempFrame = IOPath.Combine(IOPath.GetTempPath(), $"sewer_training_neg_{annotationId}.png");
-            await File.WriteAllBytesAsync(tempFrame, frameBytes);
+
+            // Frame in permanentes Teacher-Images-Verzeichnis schreiben (NICHT in %TEMP% —
+            // sonst wird der Pfad in der TeacherAnnotation spaeter vom Windows-Cleanup invalidiert).
+            var imagesDir = TeacherAnnotationStore.GetImagesDir();
+            System.IO.Directory.CreateDirectory(imagesDir);
+            var framePath = IOPath.Combine(imagesDir, $"negativ_{annotationId}.png");
+            await File.WriteAllBytesAsync(framePath, frameBytes);
 
             // Negativ-Beispiel als TeacherAnnotation ohne BBox
             var videoTime = TimeSpan.FromMilliseconds(Math.Max(0, _player.Time));
@@ -471,7 +476,7 @@ public partial class PlayerWindow
                 VideoTimestamp = videoTime,
                 HaltungName = _haltungRecord?.GetFieldValue("Haltungsname") ?? "",
                 ToolType = OverlayToolType.None,
-                FullFramePath = tempFrame
+                FullFramePath = framePath
             };
             await TeacherAnnotationStore.AppendAsync(annotation);
 
