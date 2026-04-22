@@ -14,7 +14,7 @@ Write-Host ""
 # Diese Variablen muessen gesetzt sein BEVOR Ollama startet.
 # Bei bereits laufendem Ollama: Dienst neu starten nach Aenderung.
 $env:OLLAMA_NUM_PARALLEL = "6"           # 6 parallele Inference-Slots fuer 8B (Flash Attention)
-$env:OLLAMA_MAX_LOADED_MODELS = "2"      # 8B + nomic-embed-text
+$env:OLLAMA_MAX_LOADED_MODELS = "3"      # 8B + 32B (hybrid) + nomic-embed-text
 $env:OLLAMA_FLASH_ATTENTION = "1"        # Flash Attention fuer schnellere Inference
 
 # ── App / Ollama Client ──────────────────────────────────────────────────
