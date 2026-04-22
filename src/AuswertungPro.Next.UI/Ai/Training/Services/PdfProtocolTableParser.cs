@@ -13,6 +13,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai.Shared;
+using AuswertungPro.Next.UI.Services.CodeCatalog;
 using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.UI.Ai.Training.Services;
@@ -77,6 +78,53 @@ public static class PdfProtocolTableParser
     // Schachtnummer (am Anfang einer Beobachtungsgruppe)
     private static readonly Regex SchachtRegex = new(
         @"^\s{2,}(\d{2,}\.\d+|\d{5,})\s*$",
+        RegexOptions.Compiled);
+
+    // V4.3: Standalone Meter mit "m"-Suffix aus OCR-Output: "9.76m", "0.00m", "30.32m"
+    // Wird zu reinem Meter normalisiert damit MeterRegex greift.
+    private static readonly Regex StandaloneMeterWithUnitRegex = new(
+        @"^(\s*\d{1,4}[.,]\d{1,2})\s*m\s*$",
+        RegexOptions.Compiled);
+
+    // V4.3: OCR liest "0" gerne als Buchstabe "O" wenn es allein in einer Meter-Zahl steht.
+    // Beispiel: "O.OOm" statt "0.00m". Nur in Meter-Kontext korrigieren um Klartext nicht zu zerstoeren.
+    private static readonly Regex OcrMeterZeroFixRegex = new(
+        @"\bO(\.|,)O+\s*m\b",
+        RegexOptions.Compiled);
+
+    // V4.3: Bildbericht-Format (IBAK Caesar): "Foto: ...", "Video: HH:MM:SS", "Position: X,XX m", "CODE, Beschreibung", "Lage: X Uhr"
+    private static readonly Regex BildberichtFotoRegex = new(
+        @"^\s*Foto:\s*(\S+)",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex BildberichtVideoRegex = new(
+        @"^\s*Video:\s*(\d{1,2}:\d{2}:\d{2})",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex BildberichtPositionRegex = new(
+        @"^\s*Position:\s*(\d{1,4}[.,]\d{1,2}|\d{1,4})\s*m\b",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex BildberichtCodeLineRegex = new(
+        @"^\s*((?:B[A-Z]{2,5}[A-Z]?)|(?:AE[A-Z]{1,4}))\s*[,\-]\s*(.*)$",
+        RegexOptions.Compiled);
+    private static readonly Regex BildberichtLageRegex = new(
+        @"^\s*Lage:\s*(\d{1,2})?\s*(?:Uhr)?",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    // V4.3: Column-stacked Zustandsbericht (IBAK Caesar):
+    //   "  (24,13 m)   BCD"     <- distance remaining + code
+    //   "    0,00 m"            <- actual meter (next line)
+    // Description steht typisch eine Zeile DAVOR (Klartext).
+    private static readonly Regex StackedRemainingMeterCodeRegex = new(
+        @"^\s*\(\s*\d{1,4}[.,]\d{1,2}\s*m?\s*\)\s*((?:B[A-Z]{2,5}[A-Z]?)|(?:AE[A-Z]{1,4}))\s*$",
+        RegexOptions.Compiled);
+    private static readonly Regex StackedActualMeterRegex = new(
+        @"^\s*(\d{1,4}[.,]\d{1,2})\s*m?\s*$",
+        RegexOptions.Compiled);
+
+    // V4.3: Haltungsbilder-Format (Fretz Foto-Galerie):
+    //   "[name].jpg, HH:MM:SS, X.XXm" auf einer Zeile (oder zwei nebeneinander),
+    //   gefolgt von Klartext-Beschreibung auf der naechsten Zeile.
+    private static readonly Regex HaltungsbilderImageRegex = new(
+        @"\b(\d{1,2}:\d{2}:\d{2}),\s*(\d{1,4}[.,]\d{1,2})\s*m\b",
         RegexOptions.Compiled);
 
     // Fretz/Klartext → VSA-Code Mapping (fuer PDFs die Klartext statt Codes verwenden)
@@ -157,13 +205,120 @@ public static class PdfProtocolTableParser
         if (!File.Exists(pdfPath))
             return PdfProtocolParseResult.Empty($"PDF nicht gefunden: {pdfPath}");
 
+        // V4.3: Dichtheitspruefungen, Plaene etc. ueberspringen (kein Inspektionsprotokoll).
+        // Filter teilt sich die Liste mit PdfProtocolExtractor damit nichts duplizieren.
+        var fileName = Path.GetFileNameWithoutExtension(pdfPath).ToLowerInvariant();
+        if (PdfProtocolExtractor.NonProtocolKeywords.Any(kw => fileName.Contains(kw)))
+            return PdfProtocolParseResult.Empty("Kein Inspektionsprotokoll (Filename-Filter)");
+
         var text = ExtractText(pdfPath);
+        bool textFromOcr = false;
+
+        // V4.3: Content-Check — DP-PDFs ohne klares Filename-Muster trotzdem skippen.
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            var textLower = text.ToLowerInvariant();
+            if (PdfProtocolExtractor.NonProtocolTextMarkers.Any(m => textLower.Contains(m)))
+                return PdfProtocolParseResult.Empty("Kein Inspektionsprotokoll (Dichtheitspruefung erkannt)");
+        }
+
+        // V4.3: Wenn pdftotext gar nichts liefert (ERR oder leer), OCR probieren
+        // bevor wir aufgeben. Scan-PDFs haben keinen Text-Layer.
+        if (string.IsNullOrWhiteSpace(text)
+            && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041))
+        {
+            try
+            {
+                text = OcrPdfFallbackService
+                    .ExtractTextAsync(pdfPath, maxPages: 5)
+                    .GetAwaiter().GetResult();
+                textFromOcr = !string.IsNullOrWhiteSpace(text);
+            }
+            catch { /* best-effort */ }
+        }
+
         if (string.IsNullOrWhiteSpace(text))
             return PdfProtocolParseResult.Empty($"PDF-Text leer — pdftotext nicht gefunden oder fehlgeschlagen. Pfad: {ResolvePdfToTextPath()}");
+
+        var result = ParseFromText(text, pdfPath, log);
+
+        // V4.3: Wenn pdftotext Text lieferte aber Parser 0 Eintraege findet
+        // (typisch bei IKAS-Caesar wo Meter-Zahlen nicht im Text-Layer sind),
+        // einmal OCR probieren. OCR rendert die Seite und liest ALLE sichtbaren Zeichen.
+        if (result.Entries.Count == 0
+            && !textFromOcr
+            && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041))
+        {
+            DebugLog($"[OCR] Starte OCR-Fallback fuer {Path.GetFileName(pdfPath)}");
+            try
+            {
+                var ocrSw = Stopwatch.StartNew();
+                var ocrText = OcrPdfFallbackService
+                    .ExtractTextAsync(pdfPath, maxPages: 5)
+                    .GetAwaiter().GetResult();
+                ocrSw.Stop();
+                DebugLog($"[OCR] {Path.GetFileName(pdfPath)}: {(ocrText?.Length ?? 0)} Zeichen in {ocrSw.Elapsed.TotalSeconds:F1}s");
+                if (!string.IsNullOrWhiteSpace(ocrText))
+                {
+                    // V4.3: OCR-Text zur Analyse speichern
+                    DumpOcrText(pdfPath, ocrText);
+                    var ocrResult = ParseFromText(ocrText, pdfPath, log);
+                    DebugLog($"[OCR] {Path.GetFileName(pdfPath)}: {ocrResult.Entries.Count} Eintraege aus OCR");
+                    if (ocrResult.Entries.Count > 0) result = ocrResult;
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLog($"[OCR] {Path.GetFileName(pdfPath)}: FEHLER {ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
+        return result;
+    }
+
+    private static void DumpOcrText(string pdfPath, string ocrText)
+    {
+        try
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "SewerStudio", "logs", "ocr_dumps");
+            Directory.CreateDirectory(dir);
+            var safeName = Regex.Replace(Path.GetFileNameWithoutExtension(pdfPath), @"[^\w\-]", "_");
+            File.WriteAllText(Path.Combine(dir, $"{safeName}.txt"), ocrText);
+        }
+        catch { }
+    }
+
+    private static readonly object _debugLogLock = new();
+    private static void DebugLog(string line)
+    {
+        try
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "SewerStudio", "logs");
+            Directory.CreateDirectory(dir);
+            var file = Path.Combine(dir, "ocr_debug.log");
+            lock (_debugLogLock)
+                File.AppendAllText(file, $"{DateTime.Now:HH:mm:ss.fff} {line}{Environment.NewLine}");
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// V4.3: Innerer Parse-Körper, damit sowohl pdftotext- als auch OCR-Text
+    /// durch dieselbe Logik laufen können.
+    /// </summary>
+    private static PdfProtocolParseResult ParseFromText(string text, string pdfPath, ILogger? log)
+    {
 
         // V4.2 Nachbesserung: Caesar-Decoder fuer IKAS-PDFs mit Custom-Font-Encoding.
         // Wirkt nur wenn Text verschoben ist (Check auf bekannte Wortmuster, sonst Identity).
         text = PdfProtocolExtractor.TryDecodeShiftedText(text);
+
+        // V4.3: OCR-Korrekturen: "O.OOm" → "0.00m" (Buchstabe O als Null-OCR-Fehler in Meter-Kontext)
+        text = OcrMeterZeroFixRegex.Replace(text, m => m.Value.Replace('O', '0'));
 
         var lines = text.Split('\n');
         var entries = new List<ProtocolEntry>();
@@ -180,6 +335,11 @@ public static class PdfProtocolTableParser
         foreach (var rawLine in lines)
         {
             var line = rawLine.TrimEnd();
+
+            // V4.3: Standalone "9.76m" zu "9.76" normalisieren (MeterRegex erwartet keinen Buchstabe danach).
+            var standaloneMeter = StandaloneMeterWithUnitRegex.Match(line);
+            if (standaloneMeter.Success)
+                line = standaloneMeter.Groups[1].Value;
 
             // Header/Seitenumbruch ueberspringen
             if (HeaderRegex.IsMatch(line) || string.IsNullOrWhiteSpace(line))
@@ -298,6 +458,19 @@ public static class PdfProtocolTableParser
                     continue;
                 }
 
+                // V4.3: Klartext-Mapping auch im column-stacked Layout
+                // (typisch bei OCR-Output: "9.76m" auf einer Zeile, "Allgemeinzustand" auf der naechsten).
+                if (currentMeter.HasValue && currentCode is null)
+                {
+                    var mappedCode = TryMapKlartext(line.Trim());
+                    if (mappedCode is not null)
+                    {
+                        currentCode = mappedCode;
+                        descAccumulator = line.Trim();
+                        continue;
+                    }
+                }
+
                 // Fortsetzungszeile (kein Meter am Anfang)
                 // Koennte Code, Beschreibung oder MPEG enthalten
                 ParseLineContent(line, ref currentCode, ref descAccumulator, ref currentMpeg, ref currentStufe);
@@ -310,6 +483,30 @@ public static class PdfProtocolTableParser
             entries.Add(BuildEntry(currentMeter, currentCode, descAccumulator, currentMpeg, currentStufe));
         }
 
+        // V4.3: Wenn der Standard-Parser nichts findet, versuche IBAK-Bildbericht-Format.
+        if (entries.Count == 0)
+        {
+            entries = TryParseBildbericht(lines);
+            if (entries.Count > 0)
+                log?.LogInformation("PDF-Protokoll via Bildbericht-Format geparst.");
+        }
+
+        // V4.3: Column-stacked Zustandsbericht (3-Zeilen-Format).
+        if (entries.Count == 0)
+        {
+            entries = TryParseColumnStackedReport(lines);
+            if (entries.Count > 0)
+                log?.LogInformation("PDF-Protokoll via Column-Stacked Zustandsbericht geparst.");
+        }
+
+        // V4.3: Letzte Chance — Fretz Haltungsbilder-Galerie (jpg + Klartext).
+        if (entries.Count == 0)
+        {
+            entries = TryParseHaltungsbilder(lines);
+            if (entries.Count > 0)
+                log?.LogInformation("PDF-Protokoll via Haltungsbilder-Format geparst.");
+        }
+
         log?.LogInformation("PDF-Protokoll geparst: {Count} Eintraege aus {Path}",
             entries.Count, Path.GetFileName(pdfPath));
 
@@ -319,6 +516,258 @@ public static class PdfProtocolTableParser
             Stammdaten = stammdaten,
             SourcePath = pdfPath
         };
+    }
+
+    // ═══ Bildbericht-Format (IBAK Caesar) ═══════════════════════════════
+    /// <summary>
+    /// Parst das IBAK-Bildbericht-Format: "Foto:/Video:/Position:/CODE, Text/Lage:" Bloecke.
+    /// Wird verwendet wenn die Zustandsbericht-Tabelle nicht parsebar ist.
+    /// </summary>
+    private static List<ProtocolEntry> TryParseBildbericht(string[] lines)
+    {
+        var entries = new List<ProtocolEntry>();
+
+        double? meter = null;
+        string? mpeg = null;
+        string? code = null;
+        var desc = new System.Text.StringBuilder();
+        string? lage = null;
+
+        void Flush()
+        {
+            if (code is null) return;
+            var entry = new ProtocolEntry
+            {
+                Code = code.Replace(".", "").Trim().ToUpperInvariant(),
+                Beschreibung = desc.ToString().Trim(),
+                MeterStart = meter,
+                MeterEnd = meter,
+                IsStreckenschaden = false,
+                Mpeg = mpeg,
+                Zeit = ParseMpeg(mpeg),
+                Source = ProtocolEntrySource.Imported
+            };
+            if (lage is not null)
+            {
+                entry.CodeMeta = new ProtocolEntryCodeMeta
+                {
+                    Code = entry.Code,
+                    Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["ClockPos1"] = lage
+                    }
+                };
+            }
+            entries.Add(entry);
+
+            // Reset (Position kann fuer naechsten Block uebernommen werden, wird aber meist neu gesetzt)
+            code = null;
+            desc.Clear();
+            lage = null;
+            mpeg = null;
+        }
+
+        foreach (var raw in lines)
+        {
+            var line = raw.TrimEnd();
+            if (string.IsNullOrWhiteSpace(line)) continue;
+
+            // Neue Foto: -Zeile → vorherigen Block abschliessen
+            if (BildberichtFotoRegex.IsMatch(line))
+            {
+                Flush();
+                meter = null; mpeg = null; code = null; desc.Clear(); lage = null;
+                continue;
+            }
+
+            var vMatch = BildberichtVideoRegex.Match(line);
+            if (vMatch.Success) { mpeg = vMatch.Groups[1].Value; continue; }
+
+            var pMatch = BildberichtPositionRegex.Match(line);
+            if (pMatch.Success) { meter = ParseMeter(pMatch.Groups[1].Value); continue; }
+
+            var cMatch = BildberichtCodeLineRegex.Match(line);
+            if (cMatch.Success && code is null)
+            {
+                code = cMatch.Groups[1].Value;
+                var rest = cMatch.Groups[2].Value.Trim();
+                if (!string.IsNullOrEmpty(rest)) desc.Append(rest);
+                continue;
+            }
+
+            var lMatch = BildberichtLageRegex.Match(line);
+            if (lMatch.Success)
+            {
+                if (lMatch.Groups[1].Success) lage = lMatch.Groups[1].Value;
+                // Lage: ist die letzte Zeile eines Bildbericht-Eintrags → flush
+                Flush();
+                meter = null; mpeg = null; code = null; desc.Clear(); lage = null;
+                continue;
+            }
+
+            // Tabellen-Header (Zustandsbericht, Von-Punkt) markiert das Ende des Bildberichts
+            if (line.Contains("Von-Punkt", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("Zustandsbericht", StringComparison.OrdinalIgnoreCase))
+            {
+                Flush();
+                break;
+            }
+
+            // Fortsetzungszeile der Beschreibung
+            if (code is not null
+                && !line.Contains("Seite", StringComparison.OrdinalIgnoreCase)
+                && !line.Contains("Haltung ", StringComparison.OrdinalIgnoreCase)
+                && !HeaderRegex.IsMatch(line))
+            {
+                if (desc.Length > 0) desc.Append(' ');
+                desc.Append(line.Trim());
+            }
+        }
+
+        Flush();
+        return entries;
+    }
+
+    // ═══ Column-Stacked Zustandsbericht (IBAK Caesar) ════════════════════
+    /// <summary>
+    /// Parst das column-stacked Format wo Beschreibung, Code-mit-Restmeter und Ist-Meter
+    /// auf drei aufeinanderfolgenden Zeilen stehen:
+    ///   "Rohranfang"
+    ///   "(24,18 m)  BCD"
+    ///   "0,00 m"
+    /// </summary>
+    private static List<ProtocolEntry> TryParseColumnStackedReport(string[] lines)
+    {
+        var entries = new List<ProtocolEntry>();
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var codeMatch = StackedRemainingMeterCodeRegex.Match(lines[i].TrimEnd());
+            if (!codeMatch.Success) continue;
+
+            var code = codeMatch.Groups[1].Value;
+
+            // Beschreibung: davor (max 3 Zeilen rueckwaerts, ueberspringt Leerzeilen)
+            string desc = "";
+            for (int back = 1; back <= 3 && i - back >= 0; back++)
+            {
+                var prev = lines[i - back].Trim();
+                if (string.IsNullOrWhiteSpace(prev)) continue;
+                if (HeaderRegex.IsMatch(prev)) continue;
+                if (StackedRemainingMeterCodeRegex.IsMatch(prev)) break;
+                if (StackedActualMeterRegex.IsMatch(prev)) break;
+                if (prev.Contains("Position", StringComparison.OrdinalIgnoreCase)
+                    && prev.Contains("Kürzel", StringComparison.OrdinalIgnoreCase)) break;
+                desc = prev;
+                break;
+            }
+
+            // Meter: danach (max 3 Zeilen vorwaerts)
+            double? meter = null;
+            for (int fwd = 1; fwd <= 3 && i + fwd < lines.Length; fwd++)
+            {
+                var next = lines[i + fwd].Trim();
+                if (string.IsNullOrWhiteSpace(next)) continue;
+                var meterMatch = StackedActualMeterRegex.Match(next);
+                if (meterMatch.Success)
+                {
+                    meter = ParseMeter(meterMatch.Groups[1].Value);
+                    break;
+                }
+                // Andere Zeilen abbrechen
+                break;
+            }
+
+            entries.Add(new ProtocolEntry
+            {
+                Code = code.ToUpperInvariant(),
+                Beschreibung = desc,
+                MeterStart = meter,
+                MeterEnd = meter,
+                IsStreckenschaden = false,
+                Source = ProtocolEntrySource.Imported
+            });
+        }
+        return entries;
+    }
+
+    // ═══ Haltungsbilder-Format (Fretz Foto-Galerie) ═════════════════════
+    /// <summary>
+    /// Parst Fretz "Haltungsbilder"-Foto-Galerien.
+    /// Format: "[name].jpg, HH:MM:SS, X.XXm" + naechste Zeile = Klartext.
+    /// Da pro Seite mehrere Bilder nebeneinander stehen koennen, sammeln wir
+    /// alle (Zeit, Meter)-Tupel pro Zeile und ordnen sie der unmittelbar
+    /// folgenden Klartext-Zeile zu (oder zwei wenn auch zweispaltig).
+    /// </summary>
+    private static List<ProtocolEntry> TryParseHaltungsbilder(string[] lines)
+    {
+        var entries = new List<ProtocolEntry>();
+        var pendingMeters = new List<(double Meter, string Mpeg)>();
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i].TrimEnd();
+            if (string.IsNullOrWhiteSpace(line)) { pendingMeters.Clear(); continue; }
+
+            // Bilderzeilen sammeln (eine Zeile, ein oder zwei Bilder)
+            var matches = HaltungsbilderImageRegex.Matches(line);
+            if (matches.Count > 0)
+            {
+                foreach (Match m in matches)
+                    pendingMeters.Add((ParseMeter(m.Groups[2].Value) ?? 0, m.Groups[1].Value));
+                continue;
+            }
+
+            // Klartext-Zeile direkt nach Bilderzeile?
+            if (pendingMeters.Count == 0) continue;
+
+            var trimmed = line.Trim();
+            if (HeaderRegex.IsMatch(trimmed)) { pendingMeters.Clear(); continue; }
+            if (trimmed.StartsWith("Seite", StringComparison.OrdinalIgnoreCase)) { pendingMeters.Clear(); continue; }
+
+            // Zwei Klartext-Texte koennten in einer Zeile durch viele Spaces getrennt sein.
+            var parts = Regex.Split(trimmed, @"\s{4,}")
+                             .Where(p => !string.IsNullOrWhiteSpace(p))
+                             .ToList();
+
+            for (int p = 0; p < pendingMeters.Count && p < parts.Count; p++)
+            {
+                var klartext = parts[p].Trim();
+                var code = TryMapKlartext(klartext);
+                if (code is null) continue;
+
+                var (meter, mpeg) = pendingMeters[p];
+                var entry = new ProtocolEntry
+                {
+                    Code = code,
+                    Beschreibung = klartext,
+                    MeterStart = meter,
+                    MeterEnd = meter,
+                    IsStreckenschaden = false,
+                    Mpeg = mpeg,
+                    Zeit = ParseMpeg(mpeg),
+                    Source = ProtocolEntrySource.Imported
+                };
+
+                var clockMatch = ClockRegex.Match(klartext);
+                if (clockMatch.Success)
+                {
+                    entry.CodeMeta = new ProtocolEntryCodeMeta
+                    {
+                        Code = entry.Code,
+                        Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            ["ClockPos1"] = clockMatch.Groups[1].Value
+                        }
+                    };
+                }
+
+                entries.Add(entry);
+            }
+
+            pendingMeters.Clear();
+        }
+
+        return entries;
     }
 
     // ═══ Zeileninhalt parsen ═════════════════════════════════════════════
@@ -511,6 +960,11 @@ public static class PdfProtocolTableParser
 
     // ═══ Hilfsmethoden ═══════════════════════════════════════════════════
 
+    // Nach Key-Laenge absteigend sortiert, damit laengste Treffer zuerst matchen.
+    // Sonst wuerde "Rohrende mit Korrosion" je nach Dict-Reihenfolge BCE oder BAFJ liefern.
+    private static readonly KeyValuePair<string, string>[] KlartextToCodeByLength
+        = KlartextToCode.OrderByDescending(kv => kv.Key.Length).ToArray();
+
     /// <summary>Versucht Klartext (z.B. "Rohranfang") in einen VSA-Code zu uebersetzen.</summary>
     private static string? TryMapKlartext(string text)
     {
@@ -523,14 +977,21 @@ public static class PdfProtocolTableParser
         if (KlartextToCode.TryGetValue(trimmed, out var code))
             return code;
 
-        // Teilstring-Match: "Infiltration, Wasser fliesst" → "Infiltration" matcht
-        foreach (var (key, val) in KlartextToCode)
+        // Teilstring-Match ueber laengenabsteigend sortierte Keys: "Rohrende mit Korrosion" matcht BCE vor BAFJ.
+        foreach (var (key, val) in KlartextToCodeByLength)
         {
             if (trimmed.StartsWith(key, StringComparison.OrdinalIgnoreCase))
                 return val;
             if (trimmed.Contains(key, StringComparison.OrdinalIgnoreCase))
                 return val;
         }
+
+        // H1: Fallback auf VsaCodeTree.ReverseLookup — generiert Mappings automatisch
+        // aus dem VSA-KEK-Katalog (inkl. Char1/Char2-Kombinationen). Deckt viele
+        // Fretz/KIT/Uri-Vokabeln ab, die oben nicht hartkodiert sind.
+        var fromTree = VsaCodeTree.ReverseLookup(trimmed);
+        if (!string.IsNullOrWhiteSpace(fromTree))
+            return fromTree;
 
         return null;
     }
