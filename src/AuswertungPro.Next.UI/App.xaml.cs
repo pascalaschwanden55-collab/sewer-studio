@@ -30,6 +30,7 @@ namespace AuswertungPro.Next.UI
 {
     public partial class App : System.Windows.Application
     {
+    
 
         private static ServiceProvider? _services;
         private static int _handlingException;
@@ -112,6 +113,18 @@ namespace AuswertungPro.Next.UI
 
                 logger.LogInformation("App startup complete. LogPath={LogPath}", logPath);
 
+                // Einmal-Migration: bestehende KB-Samples ohne QualityGateLevel nachtraeglich bewerten
+                try
+                {
+                    var backfilled = Ai.KnowledgeBase.KnowledgeBaseManager.BackfillQualityGateLevels();
+                    if (backfilled > 0)
+                        logger.LogInformation("QualityGate-Backfill: {Count} Samples nachtraeglich bewertet", backfilled);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "QualityGate-Backfill fehlgeschlagen (nicht kritisch)");
+                }
+
 #if DEBUG
                 // Optional self-test: only in Debug and explicitly enabled to avoid startup side effects.
                 if (string.Equals(
@@ -133,7 +146,7 @@ namespace AuswertungPro.Next.UI
                 MainWindow = mainWindow;
                 mainWindow.Show();
 
-                var minSplashDuration = TimeSpan.FromMilliseconds(5000);
+                var minSplashDuration = TimeSpan.FromMilliseconds(10000);
                 var elapsed = DateTime.UtcNow - splashStart;
                 if (elapsed < minSplashDuration)
                     await splash.WaitAsync(minSplashDuration - elapsed);
@@ -142,7 +155,14 @@ namespace AuswertungPro.Next.UI
                     AnimateOpacityAsync(mainWindow, to: 1, duration: TimeSpan.FromMilliseconds(500), EasingMode.EaseOut),
                     splash.FadeOutAndCloseAsync(TimeSpan.FromMilliseconds(500)));
 
-                ShutdownMode = ShutdownMode.OnMainWindowClose;
+                // WICHTIG: OnExplicitShutdown statt OnMainWindowClose.
+                // MainWindow.Closing ruft Application.Current.Shutdown() explizit auf
+                // (MainWindow.xaml.cs:46). OnMainWindowClose fuehrte dazu, dass bei
+                // Owner-Chain-Edge-Cases (z.B. VsaCodeExplorerWindow Topmost innerhalb
+                // Trainings-Modus) das Schliessen des PlayerWindow die App beendete,
+                // weil WPF-Application.MainWindow in diesen Faellen versehentlich auf
+                // das PlayerWindow zeigen kann.
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             }
             catch (Exception ex)

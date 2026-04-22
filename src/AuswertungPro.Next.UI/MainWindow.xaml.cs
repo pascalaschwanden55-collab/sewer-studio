@@ -17,33 +17,41 @@ public partial class MainWindow : Window
 
     private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
     {
-        if (DataContext is ShellViewModel vm && vm.Project.Dirty)
+        try
         {
-            var result = MessageBox.Show(
-                "Es gibt ungespeicherte Aenderungen. Jetzt speichern?",
-                "Projekt speichern",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Warning);
-
-            if (result == MessageBoxResult.Cancel)
+            if (DataContext is ShellViewModel vm && vm.Project.Dirty)
             {
-                e.Cancel = true;
-                return;
-            }
+                var result = MessageBox.Show(
+                    "Es gibt ungespeicherte Aenderungen. Jetzt speichern?",
+                    "Projekt speichern",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Warning);
 
-            if (result == MessageBoxResult.Yes)
-            {
-                vm.TrySaveProject();
-                if (vm.Project.Dirty)
+                if (result == MessageBoxResult.Cancel)
                 {
                     e.Cancel = true;
                     return;
                 }
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    vm.TrySaveProject();
+                    if (vm.Project.Dirty)
+                    {
+                        e.Cancel = true;
+                        return;
+                    }
+                }
             }
         }
-
-        // App explizit beenden (ShutdownMode = OnExplicitShutdown)
-        System.Windows.Application.Current.Shutdown();
+        finally
+        {
+            // App explizit beenden (ShutdownMode = OnExplicitShutdown).
+            // In try/finally, damit eine Exception im Save-Dialog nicht die App
+            // als Zombie ohne MainWindow zuruecklaesst.
+            if (!e.Cancel)
+                System.Windows.Application.Current.Shutdown();
+        }
     }
 
     private void Exit_Click(object sender, RoutedEventArgs e)
