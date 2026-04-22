@@ -470,50 +470,57 @@ public partial class PlayerWindow
 
             await TeacherAnnotationStore.AppendAsync(annotation);
 
-            // 7. KB-Sample erzeugen + indexieren
+            // 7. TrainingSample erzeugen — IMMER persistieren, KB-Indexierung ist optional
+            // (Sample-Store ist die Retrain/Review-Quelle. KB-Indexierung braucht Ollama
+            // und darf nicht den Sample-Write blockieren.)
+            var sample = new TrainingSample
+            {
+                SampleId = Guid.NewGuid().ToString("N"),
+                CaseId = _haltungId ?? $"video-{DateTime.UtcNow:yyyyMMdd}",
+                Code = code,
+                Beschreibung = annotation.Beschreibung,
+                MeterStart = meterPos,
+                MeterEnd = meterPos,
+                FramePath = annotation.FullFramePath ?? "",
+                Status = TrainingSampleStatus.Approved,
+                MatchLevel = MatchLevelNames.TeacherAnnotation,
+                SourceType = SourceTypeNames.TeacherAnnotation,
+                IsKorrigiert = false,
+                TimeSeconds = videoTime.TotalSeconds,
+                BboxXCenter = bbox.XCenter,
+                BboxYCenter = bbox.YCenter,
+                BboxWidth = bbox.Width,
+                BboxHeight = bbox.Height,
+                KbIndexState = KbIndexState.Pending,
+                ExportedUtc = DateTime.UtcNow
+            };
+
+            // KB-Indexierung best-effort
             bool kbIndexed = false;
             try
             {
                 await EnsureTrainingKbManagerAsync();
-                if (_trainingKbManager != null)
+                if (_trainingKbManager != null && KnowledgeBaseManager.IsIndexWorthy(sample))
                 {
-                    var sample = new TrainingSample
-                    {
-                        SampleId = Guid.NewGuid().ToString("N"),
-                        CaseId = _haltungId ?? $"video-{DateTime.UtcNow:yyyyMMdd}",
-                        Code = code,
-                        Beschreibung = annotation.Beschreibung,
-                        MeterStart = meterPos,
-                        MeterEnd = meterPos,
-                        FramePath = annotation.FullFramePath ?? "",
-                        Status = TrainingSampleStatus.Approved,
-                        MatchLevel = MatchLevelNames.TeacherAnnotation,
-                        SourceType = SourceTypeNames.TeacherAnnotation,
-                        IsKorrigiert = false,
-                        TimeSeconds = videoTime.TotalSeconds,
-                        BboxXCenter = bbox.XCenter,
-                        BboxYCenter = bbox.YCenter,
-                        BboxWidth = bbox.Width,
-                        BboxHeight = bbox.Height,
-                        KbIndexState = KbIndexState.Pending,
-                        ExportedUtc = DateTime.UtcNow
-                    };
-
-                    if (KnowledgeBaseManager.IsIndexWorthy(sample))
-                    {
-                        kbIndexed = await _trainingKbManager.IndexSampleAsync(sample);
-                        if (kbIndexed)
-                            sample.KbIndexState = KbIndexState.Indexed;
-                    }
-
-                    // Auch im TrainingSamplesStore persistieren (fuer spaetere Review/Retrain)
-                    await TrainingSamplesStore.MergeOrUpdateAsync(new[] { sample });
+                    kbIndexed = await _trainingKbManager.IndexSampleAsync(sample);
+                    if (kbIndexed)
+                        sample.KbIndexState = KbIndexState.Indexed;
                 }
             }
             catch (Exception kbEx)
             {
                 System.Diagnostics.Debug.WriteLine($"[TrainingMode] KB-Indexierung fehlgeschlagen: {kbEx.Message}");
                 kbIndexed = false;
+            }
+
+            // Sample-Store-Persist IMMER ausfuehren (auch wenn KB offline/Error)
+            try
+            {
+                await TrainingSamplesStore.MergeOrUpdateAsync(new[] { sample });
+            }
+            catch (Exception storeEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TrainingMode] TrainingSamplesStore-Write fehlgeschlagen: {storeEx.Message}");
             }
 
             _trainingSessionCount++;
@@ -556,19 +563,50 @@ public partial class PlayerWindow
 
             // Negativ-Beispiel als TeacherAnnotation ohne BBox
             var videoTime = TimeSpan.FromMilliseconds(Math.Max(0, _player.Time));
+            double negMeter = GetTrainingMeterValue() ?? GetMeterFromVideoPosition() ?? 0.0;
             var annotation = new TeacherAnnotation
             {
                 AnnotationId = annotationId,
                 VsaCode = "NEGATIV",
                 Beschreibung = "Kein Schaden",
                 Severity = 0,
-                MeterPosition = GetTrainingMeterValue() ?? GetMeterFromVideoPosition() ?? 0.0,
+                MeterPosition = negMeter,
                 VideoTimestamp = videoTime,
                 HaltungName = _haltungRecord?.GetFieldValue("Haltungsname") ?? "",
                 ToolType = OverlayToolType.None,
                 FullFramePath = framePath
             };
             await TeacherAnnotationStore.AppendAsync(annotation);
+
+            // Auch Negativ-Samples im TrainingSamplesStore persistieren — sie sind
+            // wichtig fuer den YOLO-Retrain (reduziert False-Positives).
+            // KB-Indexierung von NEGATIV-Samples ist NICHT sinnvoll (kein Schaden zum Embedden).
+            try
+            {
+                var negSample = new TrainingSample
+                {
+                    SampleId = Guid.NewGuid().ToString("N"),
+                    CaseId = _haltungId ?? $"video-{DateTime.UtcNow:yyyyMMdd}",
+                    Code = "NEGATIV",
+                    Beschreibung = "Kein Schaden",
+                    MeterStart = negMeter,
+                    MeterEnd = negMeter,
+                    FramePath = framePath,
+                    Status = TrainingSampleStatus.Approved,
+                    MatchLevel = MatchLevelNames.TeacherAnnotation,
+                    SourceType = SourceTypeNames.TeacherAnnotation,
+                    IsKorrigiert = false,
+                    TimeSeconds = videoTime.TotalSeconds,
+                    // Keine BBox fuer Negativ
+                    KbIndexState = KbIndexState.None,
+                    ExportedUtc = DateTime.UtcNow
+                };
+                await TrainingSamplesStore.MergeOrUpdateAsync(new[] { negSample });
+            }
+            catch (Exception storeEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TrainingMode] Negativ-Sample-Store fehlgeschlagen: {storeEx.Message}");
+            }
 
             _trainingSessionCount++;
             TxtTrainingCount.Text = $"{_trainingSessionCount} Sample(s) in dieser Sitzung";
