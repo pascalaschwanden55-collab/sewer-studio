@@ -97,6 +97,8 @@ public static class ProjectPathResolver
     /// <summary>
     /// Entfernt ungueltige Dateinamen-Zeichen aus einem Pfadsegment (z.B. Haltungsname).
     /// Gibt "UNKNOWN" zurueck wenn der Wert null/leer ist.
+    /// Schuetzt gegen Path-Traversal ueber "." / ".." in Haltungs-IDs aus externen
+    /// Quellen (z.B. manipulierte WinCan-DB oder Import-XML).
     /// </summary>
     public static string SanitizePathSegment(string? value)
     {
@@ -113,6 +115,18 @@ public static class ProjectPathResolver
                 sb.Append(ch);
         }
         var cleaned = sb.ToString().Trim();
-        return string.IsNullOrWhiteSpace(cleaned) ? "UNKNOWN" : cleaned;
+        if (string.IsNullOrWhiteSpace(cleaned))
+            return "UNKNOWN";
+
+        // Path-Traversal-Schutz: "." und ".." sind gueltige Dateinamen-Zeichen,
+        // aber gefaehrlich als Ordnernamen — Path.Combine wuerde daraus eine Ebene
+        // ausserhalb des Zielordners machen. Auch eingebettetes ".." (z.B. "foo..bar")
+        // neutralisieren. Trimming von Trailing-Dots verhindert Windows-"foo." = "foo" Aliases.
+        cleaned = cleaned.TrimEnd('.', ' ');
+        if (string.IsNullOrWhiteSpace(cleaned) || cleaned == "." || cleaned == "..")
+            return "UNKNOWN";
+        if (cleaned.Contains(".."))
+            cleaned = cleaned.Replace("..", "_");
+        return cleaned;
     }
 }

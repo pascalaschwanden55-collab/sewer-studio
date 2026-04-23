@@ -214,31 +214,43 @@ public static class InspectionFrameExtractor
 
         try
         {
-            var args = $"-ss {sekunden.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)} " +
-                       $"-i \"{videoPath}\" " +
-                       $"-frames:v 1 -q:v 2 \"{outputPng}\" -y";
-
-            var psi = new ProcessStartInfo("ffmpeg", args)
+            // ArgumentList.Add statt Arguments-String: ein Pfad mit Anfuehrungszeichen
+            // wuerde sonst ffmpeg-Parameter ueberschreiben koennen (Command-Injection).
+            var psi = new ProcessStartInfo
             {
+                FileName = "ffmpeg",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+            psi.ArgumentList.Add("-ss");
+            psi.ArgumentList.Add(sekunden.ToString("F3", System.Globalization.CultureInfo.InvariantCulture));
+            psi.ArgumentList.Add("-i");
+            psi.ArgumentList.Add(videoPath);
+            psi.ArgumentList.Add("-frames:v");
+            psi.ArgumentList.Add("1");
+            psi.ArgumentList.Add("-q:v");
+            psi.ArgumentList.Add("2");
+            psi.ArgumentList.Add(outputPng);
+            psi.ArgumentList.Add("-y");
 
             using var prozess = Process.Start(psi);
             if (prozess == null) return false;
 
-            // stderr drainieren damit ffmpeg nicht blockiert
-            _ = prozess.StandardError.ReadToEndAsync();
-            _ = prozess.StandardOutput.ReadToEndAsync();
-
             // Timeout: 30s pro Frame
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
+
+            // stdout/stderr MUSS awaited werden — nicht fire-and-forget. Ein voller
+            // 64 KB-Pipe-Buffer blockiert sonst ffmpeg → Timeout → Frame-Verlust
+            // (1-3 % im 3000-Video-Batch). Siehe QuickScanService als Referenz.
+            var stdoutTask = prozess.StandardOutput.ReadToEndAsync(linked.Token);
+            var stderrTask = prozess.StandardError.ReadToEndAsync(linked.Token);
+
             try
             {
-                await prozess.WaitForExitAsync(linked.Token);
+                await Task.WhenAll(stdoutTask, stderrTask, prozess.WaitForExitAsync(linked.Token));
             }
             catch (OperationCanceledException) when (timeout.IsCancellationRequested)
             {

@@ -26,18 +26,29 @@ public static class VideoFrameExtractor
 
         var outPng = Path.Combine(Path.GetTempPath(), $"auswertungpro_frame_{Guid.NewGuid():N}.png");
 
-        // -ss vor -i ist schneller
-        var args = $"-hide_banner -loglevel error -ss {at.TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)} -i \"{videoPath}\" -frames:v 1 -vf scale='min(1280,iw)':-2 -y \"{outPng}\"";
-
+        // -ss vor -i ist schneller. ArgumentList.Add statt Arguments-String:
+        // verhindert Command-Injection bei Pfaden mit Anfuehrungszeichen.
         var psi = new ProcessStartInfo
         {
             FileName = ffmpegPath,
-            Arguments = args,
             UseShellExecute = false,
             RedirectStandardError = true,
             RedirectStandardOutput = true,
             CreateNoWindow = true
         };
+        psi.ArgumentList.Add("-hide_banner");
+        psi.ArgumentList.Add("-loglevel");
+        psi.ArgumentList.Add("error");
+        psi.ArgumentList.Add("-ss");
+        psi.ArgumentList.Add(at.TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        psi.ArgumentList.Add("-i");
+        psi.ArgumentList.Add(videoPath);
+        psi.ArgumentList.Add("-frames:v");
+        psi.ArgumentList.Add("1");
+        psi.ArgumentList.Add("-vf");
+        psi.ArgumentList.Add("scale='min(1280,iw)':-2");
+        psi.ArgumentList.Add("-y");
+        psi.ArgumentList.Add(outPng);
 
         try
         {

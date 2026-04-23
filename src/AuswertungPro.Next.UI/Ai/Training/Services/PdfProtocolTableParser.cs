@@ -1056,15 +1056,18 @@ public static class PdfProtocolTableParser
         try
         {
             var exePath = ResolvePdfToTextPath();
+            // ArgumentList.Add statt Arguments-String: Command-Injection-Schutz.
             var psi = new ProcessStartInfo
             {
                 FileName = exePath,
-                Arguments = $"-layout \"{pdfPath}\" -",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+            psi.ArgumentList.Add("-layout");
+            psi.ArgumentList.Add(pdfPath);
+            psi.ArgumentList.Add("-");
 
             using var proc = Process.Start(psi);
             if (proc is null) return "";

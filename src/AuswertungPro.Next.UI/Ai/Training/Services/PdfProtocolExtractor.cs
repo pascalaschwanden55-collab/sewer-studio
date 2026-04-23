@@ -83,9 +83,11 @@ public sealed class PdfProtocolExtractor
     // Fretz-Klartext: Meter + Klartext (kein VSA-Code) + optionaler Timestamp + optionale Fotonummer
     // Beispiel: "              0.00             Rohranfang                                    00:00:20      1"
     // Beispiel: "              0.20             Infiltration, Wasser fliesst, von 10 Uhr      00:00:41      2"
+    // Timeout schuetzt vor Catastrophic-Backtracking bei OCR-Muell (viele Tabs, kein Timestamp).
     private static readonly Regex KlartextLinePattern = new(
         @"^[ \t]*(?<meter>\d{1,4}[.,]\d{1,3})[ \t]{2,}(?<text>[A-ZÄÖÜ].{3,}?)(?:[ \t]{2,}(?<time>\d{2}:\d{2}:\d{2}))?[ \t]*(?:\d{1,5})?\s*$",
-        RegexOptions.Compiled | RegexOptions.Multiline);
+        RegexOptions.Compiled | RegexOptions.Multiline,
+        TimeSpan.FromSeconds(2));
 
     // ── Öffentliche API ─────────────────────────────────────────────────────
 
@@ -172,12 +174,23 @@ public sealed class PdfProtocolExtractor
     // ── PDF ─────────────────────────────────────────────────────────────────
 
     /// <summary>Dateinamen-Muster die KEINE Inspektionsprotokolle sind.</summary>
-    private static readonly string[] NonProtocolKeywords =
+    /// <remarks>internal: wird auch von PdfProtocolTableParser geteilt (V4.3).</remarks>
+    internal static readonly string[] NonProtocolKeywords =
         ["faktura", "rechnung", "offerte", "angebot", "lieferschein",
          "quittung", "mahnung", "vertrag", "auftrag", "kostenvor",
          "linerdatenblatt", "linerbestellung", "aush\u00E4rtungsprotokoll",
          "einbauprotokoll", "injektion", "situation", "lageplan",
-         "schlussrechnung", "bestellung", "datenblatt"];
+         "schlussrechnung", "bestellung", "datenblatt",
+         // V4.3: Dichtheitspruefungen (DP) sind keine Inspektionsprotokolle.
+         // Filename-Varianten: "_dp", " dp", "-dp", "dichtheit", "luftpr".
+         "_dp", " dp", "-dp", "dichtheit", "luftpr"];
+
+    /// <summary>Text-Marker die zeigen dass das PDF keine Inspektion sondern eine Pruefung ist.</summary>
+    /// <remarks>internal: wird auch von PdfProtocolTableParser geteilt (V4.3).</remarks>
+    internal static readonly string[] NonProtocolTextMarkers =
+        ["dichtheitspr\u00FCfung", "dichtheitspruefung", "sia190", "sia 190",
+         "rohrleitungspr\u00FCfung", "luftpr\u00FCfung", "luftpruefung",
+         "pr\u00FCfdruck", "pr\u00FCfresultat"];
 
     private static IReadOnlyList<GroundTruthEntry> ExtractFromPdf(string path, string? framesDir)
     {
@@ -195,10 +208,38 @@ public sealed class PdfProtocolExtractor
             UglyToad.PdfPig.PdfDocument? doc = null;
             if (string.IsNullOrWhiteSpace(text))
             {
-                doc = UglyToad.PdfPig.PdfDocument.Open(path);
-                text = ExtractTextFromPdfDoc(doc);
+                try
+                {
+                    doc = UglyToad.PdfPig.PdfDocument.Open(path);
+                    text = ExtractTextFromPdfDoc(doc);
+                }
+                catch { /* PdfPig darf scheitern — OCR-Fallback versucht's gleich */ }
             }
+
+            // V4.3: OCR-Fallback BEVOR wir aufgeben. Bei Scan-PDFs liefern weder
+            // pdftotext noch PdfPig Text. Windows OCR kann sie trotzdem lesen.
+            if (string.IsNullOrWhiteSpace(text)
+                && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041))
+            {
+                try
+                {
+                    text = OcrPdfFallbackService
+                        .ExtractTextAsync(path, maxPages: 5)
+                        .GetAwaiter().GetResult();
+                }
+                catch { /* OCR ist best-effort */ }
+            }
+
             if (string.IsNullOrWhiteSpace(text))
+            {
+                doc?.Dispose();
+                return Array.Empty<GroundTruthEntry>();
+            }
+
+            // V4.3: Content-Check nach Textextraktion — DP-PDFs ohne klares Filename-Muster
+            // (z.B. wenn Filename nur Datum/Haltung ist) trotzdem skippen.
+            var textLower = text.ToLowerInvariant();
+            if (NonProtocolTextMarkers.Any(m => textLower.Contains(m)))
             {
                 doc?.Dispose();
                 return Array.Empty<GroundTruthEntry>();
@@ -224,6 +265,30 @@ public sealed class PdfProtocolExtractor
             catch { /* Diagnose ist optional */ }
 
             var entries = ParseEntriesFromText(text);
+
+            // V4.3: OCR-Fallback wenn weder pdftotext noch PdfPig brauchbare Eintraege liefern.
+            // Typische Faelle: gescannte PDFs (kein Text-Layer) + IKAS-Caesar-PDFs bei denen
+            // der Byte-Shift die Meter-Zahlen zerstoert. OCR haengt ~3-5s pro PDF, aber nur
+            // wenn regulaerer Weg nichts liefert.
+            if (entries.Count == 0 && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041))
+            {
+                try
+                {
+                    var ocrText = OcrPdfFallbackService
+                        .ExtractTextAsync(path, maxPages: 5)
+                        .GetAwaiter().GetResult();
+                    if (!string.IsNullOrWhiteSpace(ocrText))
+                    {
+                        var ocrEntries = ParseEntriesFromText(ocrText);
+                        if (ocrEntries.Count > 0)
+                        {
+                            entries = ocrEntries;
+                            text = ocrText;
+                        }
+                    }
+                }
+                catch { /* OCR ist best-effort Fallback */ }
+            }
 
             // Fotos aus PDF-Bildbericht extrahieren und Einträgen zuordnen
             if (entries.Count > 0 && !string.IsNullOrWhiteSpace(framesDir))
@@ -646,15 +711,21 @@ public sealed class PdfProtocolExtractor
                 return Array.Empty<string>();
             }
 
+            // ArgumentList.Add statt Arguments-String: Command-Injection-Schutz
+            // bei PDF-Pfaden mit Anfuehrungszeichen/Shell-Metazeichen.
             var psi = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = "python",
-                Arguments = $"\"{scriptPath}\" \"{pdfPath}\" \"{framesDir}\" {MinPhotoWidth} {MinPhotoHeight}",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+            psi.ArgumentList.Add(scriptPath);
+            psi.ArgumentList.Add(pdfPath);
+            psi.ArgumentList.Add(framesDir);
+            psi.ArgumentList.Add(MinPhotoWidth.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            psi.ArgumentList.Add(MinPhotoHeight.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
             using var p = System.Diagnostics.Process.Start(psi);
             if (p == null) return Array.Empty<string>();

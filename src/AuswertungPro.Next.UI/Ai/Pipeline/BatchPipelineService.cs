@@ -464,14 +464,21 @@ public sealed class BatchPipelineService
         try
         {
             var ffprobe = Shared.FfmpegLocator.ResolveFfprobe();
+            // ArgumentList.Add statt Arguments-String: Command-Injection-Schutz.
             var psi = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = ffprobe,
-                Arguments = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{videoPath}\"",
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+            psi.ArgumentList.Add("-v");
+            psi.ArgumentList.Add("error");
+            psi.ArgumentList.Add("-show_entries");
+            psi.ArgumentList.Add("format=duration");
+            psi.ArgumentList.Add("-of");
+            psi.ArgumentList.Add("default=noprint_wrappers=1:nokey=1");
+            psi.ArgumentList.Add(videoPath);
             using var proc = System.Diagnostics.Process.Start(psi);
             if (proc is null) return 600;
             var output = await proc.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
