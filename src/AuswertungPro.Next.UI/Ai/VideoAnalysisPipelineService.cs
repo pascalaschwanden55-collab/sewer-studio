@@ -54,7 +54,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 FramesDone: 0, FramesTotal: 0));
 
             var preloadClient = _cfg.CreateOllamaClient(null);
-            await preloadClient.EnsureModelLoadedAsync(_cfg.VisionModel, 0, ct).ConfigureAwait(false);
+            await preloadClient.EnsureModelLoadedAsync(_cfg.VisionModel, 0, ct: ct).ConfigureAwait(false);
             preloadClient.Dispose();
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -121,21 +121,32 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             videoService.FrameStepSeconds = request.FrameStepSeconds;
             videoService.DedupWindowFrames = request.DedupWindowFrames;
 
-            // Knick-Erkennung (BAG) einhaengen wenn Sidecar verfuegbar
+            // Knick-Erkennung (BAG) einhaengen wenn Sidecar verfuegbar.
+            // WICHTIG: knickHttp darf NICHT via `using` im if-Scope leben — der
+            // KnickDetectionService nutzt ihn bei jedem Frame waehrend AnalyzeAsync.
+            // Dispose erst nach AnalyzeAsync im finally.
+            System.Net.Http.HttpClient? knickHttp = null;
             try
             {
                 var (_, sidecarCfg) = await ShouldUseMultiModelAsync(ct).ConfigureAwait(false);
                 if (sidecarCfg is not null)
                 {
-                    using var knickHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                    knickHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(10) };
                     var knickClient = new VisionPipelineClient(sidecarCfg.SidecarUrl, knickHttp);
                     videoService.KnickDetection = new KnickDetectionService(knickClient);
                 }
             }
             catch { /* Knick-Erkennung optional */ }
 
-            videoResult = await videoService.AnalyzeAsync(
-                request.VideoPath, analysisProgress, ct).ConfigureAwait(false);
+            try
+            {
+                videoResult = await videoService.AnalyzeAsync(
+                    request.VideoPath, analysisProgress, ct).ConfigureAwait(false);
+            }
+            finally
+            {
+                knickHttp?.Dispose();
+            }
         }
 
         var resultLabel = videoResult.IsSuccess

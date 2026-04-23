@@ -7610,6 +7610,13 @@ public partial class PlayerWindow : Window
         }
     }
 
+    // Shared HttpClient fuer Feedback-Ingest: vorher wurde bei JEDEM Accept/Reject
+    // ein neuer HttpClient erzeugt und nicht disposed → 1-2 GB Socket-Pool-Leak
+    // und TIME_WAIT-Port-Erschoepfung bei langen Codier-Sessions. 2 Minuten Timeout
+    // deckt den Embedding-Call auf Ollama ab.
+    private static readonly System.Net.Http.HttpClient _feedbackHttpClient =
+        new() { Timeout = TimeSpan.FromMinutes(2) };
+
     /// <summary>Erzeugt FeedbackIngestionService mit optionalem KbManager fuer KB-Re-Indexierung.</summary>
     private static Ai.SelfImproving.FeedbackIngestionService CreateFeedbackService(
         Ai.KnowledgeBase.KnowledgeBaseContext db)
@@ -7622,8 +7629,7 @@ public partial class PlayerWindow : Window
         try
         {
             var cfg = Ai.Ollama.OllamaConfig.Load();
-            var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
-            var embedder = new Ai.KnowledgeBase.EmbeddingService(http, cfg);
+            var embedder = new Ai.KnowledgeBase.EmbeddingService(_feedbackHttpClient, cfg);
             kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(db, embedder);
         }
         catch { /* Ollama nicht verfuegbar - Feedback wird geloggt, KB-Update uebersprungen */ }
@@ -7688,6 +7694,12 @@ public partial class PlayerWindow : Window
         }
     }
 
+    // Schuetzt die JSONL-Append-Writes gegen parallele Task.Run-Calls (mehrere
+    // User-Aktionen gleichzeitig wuerden sonst verschraenkte halb-geschriebene
+    // Zeilen in die Feedback-Dateien schreiben).
+    private static readonly SemaphoreSlim _positiveFeedbackLock = new(1, 1);
+    private static readonly SemaphoreSlim _negativeFeedbackLock = new(1, 1);
+
     /// <summary>Positiv-Feedback: KI hat richtig erkannt.</summary>
     private static async Task SavePositiveFeedbackAsync(string label, string? vsaCode, double meter)
     {
@@ -7706,7 +7718,15 @@ public partial class PlayerWindow : Window
             };
 
             var json = System.Text.Json.JsonSerializer.Serialize(entry);
-            await System.IO.File.AppendAllTextAsync(feedbackPath, json + Environment.NewLine);
+            await _positiveFeedbackLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await System.IO.File.AppendAllTextAsync(feedbackPath, json + Environment.NewLine).ConfigureAwait(false);
+            }
+            finally
+            {
+                _positiveFeedbackLock.Release();
+            }
             await IngestFeedbackAsync(label, vsaCode, meter, accepted: true).ConfigureAwait(false);
             Services.KnowledgeMirrorService.Current?.NotifyChanged();
         }
@@ -7739,7 +7759,15 @@ public partial class PlayerWindow : Window
             };
 
             var json = System.Text.Json.JsonSerializer.Serialize(entry);
-            await System.IO.File.AppendAllTextAsync(feedbackPath, json + Environment.NewLine);
+            await _negativeFeedbackLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await System.IO.File.AppendAllTextAsync(feedbackPath, json + Environment.NewLine).ConfigureAwait(false);
+            }
+            finally
+            {
+                _negativeFeedbackLock.Release();
+            }
             await IngestFeedbackAsync(label, vsaCode, meter, accepted: false).ConfigureAwait(false);
             Services.KnowledgeMirrorService.Current?.NotifyChanged();
         }

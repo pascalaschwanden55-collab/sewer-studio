@@ -215,6 +215,11 @@ public partial class TrainingCenterWindow : Window
 
     // ── Review Queue Event Handlers ──
 
+    // Shared HttpClient — verhindert Socket-Leak bei vielen Review-Aktionen (siehe
+    // denselben Fix in PlayerWindow.xaml.cs).
+    private static readonly System.Net.Http.HttpClient _feedbackHttpClient =
+        new() { Timeout = TimeSpan.FromMinutes(2) };
+
     /// <summary>Erzeugt FeedbackIngestionService mit optionalem KbManager fuer KB-Re-Indexierung.</summary>
     private static Ai.SelfImproving.FeedbackIngestionService CreateFeedbackService(
         Ai.KnowledgeBase.KnowledgeBaseContext db)
@@ -227,8 +232,7 @@ public partial class TrainingCenterWindow : Window
         try
         {
             var cfg = Ai.Ollama.OllamaConfig.Load();
-            var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
-            var embedder = new Ai.KnowledgeBase.EmbeddingService(http, cfg);
+            var embedder = new Ai.KnowledgeBase.EmbeddingService(_feedbackHttpClient, cfg);
             kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(db, embedder);
         }
         catch { /* Ollama nicht verfuegbar — Feedback wird geloggt, KB-Update uebersprungen */ }

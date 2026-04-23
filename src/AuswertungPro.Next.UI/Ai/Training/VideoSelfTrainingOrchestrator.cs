@@ -31,6 +31,9 @@ public sealed class VideoSelfTrainingOrchestrator
     // Pause/Resume
     private readonly SemaphoreSlim _pauseGate = new(1, 1);
     private volatile bool _isPaused;
+    // Pause/Resume muessen gegen Race-Conditions (Doppelklick) geschuetzt werden —
+    // sonst Wait() zweimal auf Semaphor(1) = UI-Deadlock.
+    private readonly object _pauseSync = new();
 
     public bool IsPaused => _isPaused;
 
@@ -367,8 +370,9 @@ public sealed class VideoSelfTrainingOrchestrator
 
     public void Pause()
     {
-        if (!_isPaused)
+        lock (_pauseSync)
         {
+            if (_isPaused) return;
             _isPaused = true;
             _pauseGate.Wait();
         }
@@ -376,8 +380,9 @@ public sealed class VideoSelfTrainingOrchestrator
 
     public void Resume()
     {
-        if (_isPaused)
+        lock (_pauseSync)
         {
+            if (!_isPaused) return;
             _isPaused = false;
             _pauseGate.Release();
         }
@@ -473,14 +478,21 @@ public sealed class VideoSelfTrainingOrchestrator
         try
         {
             var ffprobe = Shared.FfmpegLocator.ResolveFfprobe();
+            // ArgumentList.Add statt Arguments-String: Command-Injection-Schutz.
             var psi = new ProcessStartInfo
             {
                 FileName = ffprobe,
-                Arguments = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{videoPath}\"",
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+            psi.ArgumentList.Add("-v");
+            psi.ArgumentList.Add("error");
+            psi.ArgumentList.Add("-show_entries");
+            psi.ArgumentList.Add("format=duration");
+            psi.ArgumentList.Add("-of");
+            psi.ArgumentList.Add("default=noprint_wrappers=1:nokey=1");
+            psi.ArgumentList.Add(videoPath);
 
             using var proc = Process.Start(psi);
             if (proc is null) return 600; // Fallback 10 Minuten

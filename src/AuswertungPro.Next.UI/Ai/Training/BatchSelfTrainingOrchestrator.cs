@@ -46,6 +46,9 @@ public sealed class BatchSelfTrainingOrchestrator
     private volatile bool _isPaused;
     private volatile bool _isCancelled;
     private readonly SemaphoreSlim _pauseGate = new(1, 1);
+    // Pause/Resume/Cancel muessen gegen Race-Conditions (Doppelklick) geschuetzt
+    // werden — sonst Wait() zweimal auf Semaphor(1) = UI-Deadlock.
+    private readonly object _pauseSync = new();
 
     // Sidecar Auto-Restart: Pfad zum Sidecar-Verzeichnis
     private readonly string? _sidecarDir;
@@ -932,6 +935,58 @@ public sealed class BatchSelfTrainingOrchestrator
     ///
     /// Sekundaer: WinCan-Ordner (DB3) und IBAK-Ordner (Daten.txt).
     /// </summary>
+    /// <summary>
+    /// Windows-System-/Hidden-Ordner die beim Laufwerk-Scan Berechtigungsfehler werfen.
+    /// Case-insensitive Match auf den Ordnernamen (nicht auf den ganzen Pfad).
+    /// </summary>
+    private static readonly HashSet<string> SystemFolderNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "System Volume Information",
+        "$RECYCLE.BIN",
+        "Recovery",
+        "Config.Msi",
+        "MSOCache",
+        ".git",
+        "node_modules",
+        "__pycache__",
+        ".venv",
+        "venv"
+    };
+
+    /// <summary>
+    /// Rekursiver Verzeichnis-Scan der System-Ordner ueberspringt und UnauthorizedAccessException pro Ordner
+    /// einzeln abfaengt. Vermeidet Crash beim Scan von Laufwerk-Roots (C:, E:, etc.).
+    /// </summary>
+    private void SafeRecursiveDirectoryScan(string root, List<string> accumulator)
+    {
+        try
+        {
+            foreach (var dir in Directory.EnumerateDirectories(root))
+            {
+                var name = Path.GetFileName(dir);
+                if (SystemFolderNames.Contains(name)) continue;
+
+                // Hidden/System-Attribut ueberspringen
+                try
+                {
+                    var attr = File.GetAttributes(dir);
+                    if ((attr & (FileAttributes.System | FileAttributes.Hidden)) == (FileAttributes.System | FileAttributes.Hidden))
+                        continue;
+                }
+                catch { /* Attribut nicht lesbar → trotzdem versuchen */ }
+
+                accumulator.Add(dir);
+                SafeRecursiveDirectoryScan(dir, accumulator);
+            }
+        }
+        catch (UnauthorizedAccessException) { /* Ordner ueberspringen */ }
+        catch (System.IO.DirectoryNotFoundException) { /* geloescht waehrend Scan */ }
+        catch (Exception ex)
+        {
+            _log?.LogDebug(ex, "Discovery: {Root} uebersprungen", root);
+        }
+    }
+
     private List<DiscoveredHaltung> DiscoverHaltungen(BatchSelfTrainingRequest request)
     {
         var root = request.ExportRootPath;
@@ -941,16 +996,18 @@ public sealed class BatchSelfTrainingOrchestrator
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         var scanDirs = new List<string> { root };
-        var searchOption = request.RecurseSubdirectories
-            ? SearchOption.AllDirectories
-            : SearchOption.TopDirectoryOnly;
-        try
+        if (request.RecurseSubdirectories)
+            SafeRecursiveDirectoryScan(root, scanDirs);
+        else
         {
-            scanDirs.AddRange(Directory.GetDirectories(root, "*", searchOption));
-        }
-        catch (Exception ex)
-        {
-            _log?.LogWarning(ex, "Discovery: Unterordner konnten nicht vollstaendig gelesen werden");
+            try
+            {
+                scanDirs.AddRange(Directory.GetDirectories(root, "*", SearchOption.TopDirectoryOnly));
+            }
+            catch (Exception ex)
+            {
+                _log?.LogWarning(ex, "Discovery: Top-Level-Unterordner nicht vollstaendig gelesen");
+            }
         }
 
         // Hauptstrategie: Ordner-pro-Haltung mit PDF + Video (D:\Haltungen-Struktur)
@@ -1033,8 +1090,9 @@ public sealed class BatchSelfTrainingOrchestrator
 
     public void Pause()
     {
-        if (!_isPaused)
+        lock (_pauseSync)
         {
+            if (_isPaused) return;
             _isPaused = true;
             _pauseGate.Wait();
         }
@@ -1042,14 +1100,28 @@ public sealed class BatchSelfTrainingOrchestrator
 
     public void Resume()
     {
-        if (_isPaused)
+        lock (_pauseSync)
         {
+            if (!_isPaused) return;
             _isPaused = false;
             _pauseGate.Release();
         }
     }
 
-    public void Cancel() => _isCancelled = true;
+    public void Cancel()
+    {
+        _isCancelled = true;
+        // Wenn gerade pausiert: Gate freigeben, damit die Worker aus CheckPauseAsync
+        // herauskommen und dank _isCancelled den Batch sauber beenden koennen.
+        lock (_pauseSync)
+        {
+            if (_isPaused)
+            {
+                _isPaused = false;
+                _pauseGate.Release();
+            }
+        }
+    }
 
     private async Task CheckPauseAsync(CancellationToken ct)
     {
@@ -1241,13 +1313,27 @@ public sealed class BatchSelfTrainingOrchestrator
             StringComparer.OrdinalIgnoreCase);
     }
 
+    // Schuetzt Parallel-Append an batch_processed.txt. Bei MaxParallelHaltungen>1
+    // wuerde ohne Lock `File.AppendAllTextAsync` verschraenkte Zeilen schreiben
+    // koennen — mit Folge: Haltungen doppelt verarbeitet oder faelschlich als
+    // "erledigt" markiert.
+    private static readonly SemaphoreSlim _batchHistoryLock = new(1, 1);
+
     /// <summary>Fuegt einen Batch-History-Key hinzu (append, kein volles Neuschreiben).</summary>
     private static async Task AppendBatchHistoryAsync(string historyKey)
     {
         var path = GetBatchHistoryPath();
         var dir = Path.GetDirectoryName(path);
         if (dir is not null) Directory.CreateDirectory(dir);
-        await File.AppendAllTextAsync(path, historyKey + Environment.NewLine).ConfigureAwait(false);
+        await _batchHistoryLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await File.AppendAllTextAsync(path, historyKey + Environment.NewLine).ConfigureAwait(false);
+        }
+        finally
+        {
+            _batchHistoryLock.Release();
+        }
 
         // Rotation: aelteste Eintraege entfernen wenn Datei zu gross wird
         await RotateBatchHistoryIfNeededAsync(path).ConfigureAwait(false);
