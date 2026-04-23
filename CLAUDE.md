@@ -7,31 +7,39 @@
 - **Entwickler:** Solo, kein kommerzielles Ziel
 - **Hardware:** Intel Core Ultra 9 285K · ASUS RTX 5090 32GB · 64GB DDR5
 
-## AI-Pipeline (lokal, Workstation-Mode)
-- YOLO26m-seg         → permanent GPU, ~1.5GB VRAM
-- Qwen3-VL-8B         → FastModel GPU, ~10GB VRAM (via Ollama, keep_alive=-1 permanent)
-- Qwen3-VL-32B        → ReferenceModel GPU, ~22GB VRAM (via Ollama, on-demand bei Eskalation)
-- Grounding DINO 1.5  → pre-warmed, persistent im VRAM (~2GB)
-- SAM 3               → pre-warmed, persistent im VRAM (~2.5GB)
+## AI-Pipeline (lokal, Workstation-Mode) — Stand 2026-04-23
+- YOLO26l-seg         → permanent GPU (TensorRT), ~1.5 GB VRAM
+- Qwen3-VL-8B-Q8      → FastModel GPU, ~11 GB VRAM (via Ollama, keep_alive permanent,
+                        num_gpu=999 erzwungen — sonst CPU-Fallback bei RTX 5090 mit fehlender CUDA-Runtime)
+- Qwen3-VL-32B        → ReferenceModel HYBRID (num_gpu=10): ~2 GB VRAM + ~20 GB RAM,
+                        kein Swap mit 8B — beide laufen parallel (CLAUDE.md-V1-Logik deprecated)
+- Grounding DINO 1.5  → **lazy** (V4.2 Phase 3.4) — wird bei erstem Request geladen,
+                        ausser SEWER_SIDECAR_PREWARM_DINO=1 gesetzt
+- SAM 3               → pre-warmed, persistent im VRAM (~2.5 GB)
 - ByteTrack/OC-SORT   → CPU, immer aktiv
+
+VRAM-Budget Soll-Stand: YOLO(1.5) + SAM(2.5) + Qwen-8B(11) + 32B-hybrid(2) + nomic(0.6) ≈ 17.6 GB.
+Freie Reserve: ~14 GB fuer DINO (wenn on-demand geladen) + Puffer.
 
 ## Architektur-Prinzipien (NICHT brechen)
 - Thin-AI: C# fuer alle Geschaeftslogik, LLM nur fuer Textgenerierung
+  (HINWEIS: In der Praxis lebt die KI-Logik aktuell in `src/AuswertungPro.Next.UI/Ai/**` —
+  Migration nach Application/Infrastructure ist im Audit 2026-04-23 als CRITICAL-Task
+  dokumentiert, siehe docs/AUDIT_SEWERSTUDIO_2026-04-23.md)
 - Kein grosses Refactoring ohne explizite Diskussion
 - Laptop-Mode / Workstation-Mode Hardware-Abstraktion erhalten
-- VRAM-Budget: max 29GB stabil, niemals alle Modelle gleichzeitig
+- VRAM-Budget: max 29 GB stabil, niemals alle Modelle gleichzeitig
 - QualityGate Green/Yellow/Red muss immer durchlaufen
 
-## Inference-Orchestrator Zustaende
+## Inference-Orchestrator Zustaende (implementiert in `MultiModelAnalysisService`)
 1. DETECT   → GPU: YOLO | CPU: Tracker + Aggregator
-2. SEGMENT  → GPU: YOLO + SAM | Qwen: entladen
-3. CLASSIFY → GPU: YOLO + Qwen-8B | SAM/DINO: entladen
-4. ESCALATE → GPU: YOLO + Qwen-32B | 8B entladen, nur bei Eskalation
-   - Trigger: allCodesNull || severity>=4 || poorQuality (in EnhancedVisionAnalysisService)
-   - FastModel (8B) entladen → ReferenceModel (32B) laden → Re-Analyse → 32B entladen → 8B wieder laden
-   - SemaphoreSlim(1) schuetzt vor parallelen Modellwechseln
-   - VRAM Normal: 8B(10)+YOLO(1.5)+DINO(3)+SAM(3)=17.5GB
-   - VRAM Eskalation: 32B(22)+YOLO(1.5)+DINO(3)+SAM(3)=29.5GB (kurzzeitig)
+2. SEGMENT  → GPU: YOLO + SAM | Qwen: nicht erforderlich
+3. CLASSIFY → GPU: YOLO + Qwen-8B | SAM: optional
+4. ESCALATE → GPU: YOLO + Qwen-8B + 32B-hybrid | nur bei Eskalation
+   - Trigger: allCodesNull || severity>=4 || poorQuality (in `EnhancedVisionAnalysisService`)
+   - 32B wird hybrid mit num_gpu=10 geladen (CPU/RAM-Mehrheit) — kein Swap mit 8B mehr.
+   - Laufzeit 32B-hybrid: ~9 s pro Request (statt 28 s bei num_gpu=0)
+   - SemaphoreSlim(1) schuetzt vor parallelen 32B-Anfragen
 
 ## Build & Test
 ```bash
@@ -39,13 +47,18 @@ dotnet build AuswertungPro.sln
 dotnet test --filter Category=Recommendation
 ```
 
-## Wichtige Klassen
-- `InferenceOrchestratorService` → Zustandssteuerung GPU
-- `DetectionAggregator`          → Temporal Voting
-- `QualityGateService`           → Green/Yellow/Red
-- `MeasurementService`           → deterministisch, KEIN LLM
-- `ClassificationService`        → Qwen-Wrapper
-- `ReportGenerator`              → EN 13508-2 Output
+## Wichtige Klassen (Pfade relativ zu `src/`)
+- `AuswertungPro.Next.UI/Ai/Pipeline/MultiModelAnalysisService.cs` → GPU-State-Automat (Orchestrator)
+- `AuswertungPro.Next.UI/Ai/EnhancedVisionAnalysisService.cs`      → Qwen-Wrapper mit Eskalation
+- `AuswertungPro.Next.UI/Ai/Pipeline/DetectionAggregator.cs`       → Temporal Voting
+- `AuswertungPro.Next.UI/Ai/Pipeline/QualityGateService.cs`        → Green/Yellow/Red
+- `AuswertungPro.Next.UI/Ai/Pipeline/BatchPipelineService.cs`      → Batch-Pipeline mit Frame-Persistierung
+- `AuswertungPro.Next.UI/Ai/VideoAnalysisPipelineService.cs`       → Video-End-to-End-Flow
+- `AuswertungPro.Next.Application/Reports/ProtocolPdfExporter.cs`  → EN 13508-2 Output
+- `AuswertungPro.Next.Infrastructure/Reports/HaltungsDossierPdfBuilder.cs` → Haltungs-Dossier-PDF
+- `AuswertungPro.Next.UI/Ai/OllamaClient.cs`                       → Ollama-HTTP mit Polly Retry + Circuit Breaker
+- `AuswertungPro.Next.UI/Ai/PythonSidecarService.cs`               → Sidecar-Lifecycle auf :8100
+- `AuswertungPro.Next.UI/ServiceProvider.cs`                       → Manueller DI-Container (Warmup, Config)
 
 ## Fachdomaene Kanalinspektion
 
