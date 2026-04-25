@@ -17,18 +17,34 @@ public sealed class VisionPipelineClient
 {
     private readonly HttpClient _http;
     private readonly Uri _baseUri;
+    private readonly string? _authToken;
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         PropertyNameCaseInsensitive = true,
     };
 
-    public VisionPipelineClient(Uri baseUri, HttpClient? httpClient = null)
+    public VisionPipelineClient(Uri baseUri, HttpClient? httpClient = null, string? authToken = null)
     {
         _baseUri = baseUri;
         _http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
+        // Auth-Token (Audit 2026-04-25 SEC-H5): wird beim Sidecar-Start vom
+        // PythonSidecarService generiert. Wenn nicht explizit uebergeben, holen
+        // wir uns das aktive Token aus dem singleton-Slot — so muessen die ~6
+        // Aufrufer im Code es nicht alle einzeln durchreichen.
+        var effective = string.IsNullOrWhiteSpace(authToken) ? PythonSidecarService.CurrentAuthToken : authToken;
+        _authToken = string.IsNullOrWhiteSpace(effective) ? null : effective;
         // BaseAddress NICHT setzen — wir verwenden _baseUri + BuildUri() fuer jeden Request.
         // Verhindert InvalidOperationException wenn HttpClient wiederverwendet wird.
+    }
+
+    /// <summary>
+    /// Fuegt Auth-Header (X-Sidecar-Token) zur Request hinzu, falls Token gesetzt.
+    /// </summary>
+    private void AddAuthHeader(HttpRequestMessage req)
+    {
+        if (_authToken is not null)
+            req.Headers.TryAddWithoutValidation("X-Sidecar-Token", _authToken);
     }
 
     /// <summary>
@@ -186,6 +202,7 @@ public sealed class VisionPipelineClient
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
+        AddAuthHeader(req);
 
         // HttpCompletionOption.ResponseHeadersRead ermoeglicht streaming ohne vollstaendiges Puffern
         using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct)
@@ -247,6 +264,7 @@ public sealed class VisionPipelineClient
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
+        AddAuthHeader(req);
         using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
 
         var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
@@ -262,6 +280,7 @@ public sealed class VisionPipelineClient
     private async Task<TResponse> GetAsync<TResponse>(string endpoint, CancellationToken ct)
     {
         using var req = new HttpRequestMessage(HttpMethod.Get, BuildUri(endpoint));
+        AddAuthHeader(req);
         using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
 
         var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);

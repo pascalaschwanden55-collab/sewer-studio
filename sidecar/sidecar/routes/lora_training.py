@@ -353,9 +353,14 @@ async def get_lora_job(job_id: str) -> LoraTrainJobStatusResponse:
 async def deploy_lora(req: LoraDeployRequest) -> LoraDeployResponse:
     """Deploy LoRA adapter via Ollama Modelfile."""
     adapter_path = Path(req.adapter_path).resolve()
-    # S1 Fix: Path Traversal verhindern — nur Pfade innerhalb des Sidecar-Verzeichnisses erlauben
+    # S1 Fix + Audit 2026-04-25 L2: Path Traversal verhindern.
+    # str.startswith() ist prefix-bypassbar (z.B. allowed=sidecar, target=sidecar_evil
+    # passt). Path.relative_to() loest beide Pfade auf und wirft ValueError wenn
+    # adapter_path nicht echter Nachfahre von allowed_root ist — sicher.
     allowed_root = Path(__file__).resolve().parent.parent.parent  # sidecar/
-    if not str(adapter_path).startswith(str(allowed_root)):
+    try:
+        adapter_path.relative_to(allowed_root)
+    except ValueError:
         raise HTTPException(
             status_code=403,
             detail=f"Adapter-Pfad ausserhalb des erlaubten Verzeichnisses: {adapter_path}",

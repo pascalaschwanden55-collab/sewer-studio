@@ -29,12 +29,31 @@ public sealed class PythonSidecarService : IDisposable
     /// <summary>True wenn der Sidecar erreichbar ist (egal ob selbst gestartet oder extern).</summary>
     public bool IsAvailable { get; private set; }
 
+    /// <summary>
+    /// Bearer-Token fuer Sidecar-Auth (Audit 2026-04-25, SEC-H5).
+    /// Bei jedem App-Start neu generiert und an den Sidecar-Subprozess uebergeben.
+    /// HTTP-Clients muessen den Header `X-Sidecar-Token: {Token}` senden, sonst 401.
+    /// Public weil die Vision-Pipeline-Clients ihn beim Request-Bau lesen muessen.
+    /// </summary>
+    public string AuthToken { get; }
+
+    /// <summary>
+    /// Singleton-Slot: aktuell aktives Token, damit VisionPipelineClient-Stellen
+    /// ohne explizite Token-Uebergabe automatisch authentifizieren. Pro Prozess
+    /// gibt es genau einen Sidecar, daher static akzeptabel.
+    /// </summary>
+    public static string? CurrentAuthToken { get; private set; }
+
     public PythonSidecarService(ILogger logger, string sidecarDir, string host = "127.0.0.1", int port = 8100)
     {
         _log = logger;
         _sidecarDir = sidecarDir;
         _host = host;
         _port = port;
+        // Kryptografisch zufaelliges Token (Guid hat 122 zufaellige Bits, OK fuer
+        // localhost-Auth gegen lokale Prozesse/Browser-Angriffe).
+        AuthToken = Guid.NewGuid().ToString("N");
+        CurrentAuthToken = AuthToken;
     }
 
     /// <summary>
@@ -67,18 +86,42 @@ public sealed class PythonSidecarService : IDisposable
         }
 
         // 3. Prozess starten
+        // Host/Port werden validiert um zusaetzliche uvicorn-Argumente
+        // ueber Stringeinschleusung zu verhindern (Audit 2026-04-25 H4).
+        if (!IsValidHost(_host))
+        {
+            _log.LogError("[Sidecar] Ungueltiger Host '{Host}' — Start abgebrochen", _host);
+            return;
+        }
+        if (_port < 1 || _port > 65535)
+        {
+            _log.LogError("[Sidecar] Ungueltiger Port {Port} — Start abgebrochen", _port);
+            return;
+        }
+
         try
         {
             var psi = new ProcessStartInfo
             {
                 FileName = venvPython,
-                Arguments = "-m uvicorn sidecar.main:app --host " + _host + " --port " + _port,
                 WorkingDirectory = _sidecarDir,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true
             };
+            // ArgumentList statt Arguments-String: keine Shell-Interpretation,
+            // keine Argument-Injection ueber manipulierte Host/Port-Werte.
+            psi.ArgumentList.Add("-m");
+            psi.ArgumentList.Add("uvicorn");
+            psi.ArgumentList.Add("sidecar.main:app");
+            psi.ArgumentList.Add("--host");
+            psi.ArgumentList.Add(_host);
+            psi.ArgumentList.Add("--port");
+            psi.ArgumentList.Add(_port.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+            // Bearer-Token an den Sidecar-Prozess uebergeben (SEC-H5).
+            psi.EnvironmentVariables["SEWER_SIDECAR_TOKEN"] = AuthToken;
 
             _process = new Process { StartInfo = psi, EnableRaisingEvents = true };
             _ownsProcess = true;
@@ -153,6 +196,29 @@ public sealed class PythonSidecarService : IDisposable
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// Validiert Host-String fuer uvicorn (IPv4/IPv6/Hostname).
+    /// Verhindert Argument-Injection durch manipulierte Host-Werte.
+    /// </summary>
+    private static bool IsValidHost(string host)
+    {
+        if (string.IsNullOrWhiteSpace(host)) return false;
+        // Keine Whitespace, keine Argument-Trenner
+        foreach (var ch in host)
+        {
+            if (char.IsWhiteSpace(ch)) return false;
+            if (ch == '"' || ch == '\'' || ch == '`') return false;
+        }
+        // Try IP-Parse (IPv4/IPv6) oder DNS-Hostname-Pattern
+        if (System.Net.IPAddress.TryParse(host, out _)) return true;
+        // Hostname: nur a-z, 0-9, Punkt, Bindestrich
+        foreach (var ch in host)
+        {
+            if (!(char.IsLetterOrDigit(ch) || ch == '.' || ch == '-')) return false;
+        }
+        return host.Length > 0 && host.Length <= 253;
     }
 
     private async Task<bool> IsPortInUseAsync()

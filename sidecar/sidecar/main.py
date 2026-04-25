@@ -190,6 +190,48 @@ async def vram_guard_middleware(request: Request, call_next):
     return await call_next(request)
 
 
+# ── Auth-Middleware (Audit 2026-04-25, SEC-H5) ─────────────────────────
+# Lokales Bearer-Token schuetzt administrative Endpunkte vor:
+#   - Browser-CSRF/SSRF auf localhost:8100
+#   - Anderen lokalen Prozessen (Malware) die den Sidecar ansprechen
+#   - Insbesondere: /admin/reload_model laed beliebige .pt-Dateien =
+#     PyTorch-Pickle-Deserialisierung = beliebige Code-Ausfuehrung
+#
+# Token wird beim C#-Sidecar-Start als ENV SEWER_SIDECAR_TOKEN gesetzt.
+# Wenn ENV leer ist (Dev/Manual-Start), bleibt Auth deaktiviert mit Warnung.
+SIDECAR_TOKEN = os.environ.get("SEWER_SIDECAR_TOKEN", "").strip()
+
+# Endpunkte, die ohne Token erreichbar bleiben (read-only Health/Status)
+_PUBLIC_PATHS = ("/health", "/docs", "/openapi.json", "/redoc")
+
+if not SIDECAR_TOKEN:
+    logger.warning(
+        "[Auth] SEWER_SIDECAR_TOKEN ist nicht gesetzt — administrative Endpunkte "
+        "OHNE Authentisierung erreichbar. Nur fuer Dev/Test akzeptabel."
+    )
+else:
+    logger.info("[Auth] Bearer-Token aktiv (Header: X-Sidecar-Token)")
+
+
+@app.middleware("http")
+async def token_auth_middleware(request: Request, call_next):
+    """Pruefen X-Sidecar-Token fuer alle nicht-Health-Endpunkte."""
+    if not SIDECAR_TOKEN:
+        return await call_next(request)
+
+    path = request.url.path
+    if any(path.startswith(p) for p in _PUBLIC_PATHS):
+        return await call_next(request)
+
+    provided = request.headers.get("X-Sidecar-Token", "").strip()
+    if provided != SIDECAR_TOKEN:
+        return JSONResponse(
+            status_code=401,
+            content={"error": "Unauthorized: missing or invalid X-Sidecar-Token"},
+        )
+    return await call_next(request)
+
+
 # Register routes
 app.include_router(health.router, tags=["health"])
 app.include_router(yolo.router, tags=["yolo"])
