@@ -82,29 +82,19 @@ public static class PdfTextExtractor
 
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = pdftotext,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardError = true,
-                RedirectStandardOutput = true
-            };
-            psi.ArgumentList.Add("-enc");
-            psi.ArgumentList.Add("UTF-8");
-            psi.ArgumentList.Add("-layout");
-            psi.ArgumentList.Add(pdfPath);
-            psi.ArgumentList.Add(tempOut);
+            // Zentraler ProcessRunner: asynchroner Drain + harter Timeout statt
+            // synchronem ReadToEnd ohne Timeout (Audit STAB-H1).
+            var args = new[] { "-enc", "UTF-8", "-layout", pdfPath, tempOut };
+            var result = AuswertungPro.Next.Application.Common.ProcessRunner
+                .RunAsync(pdftotext, args, timeout: TimeSpan.FromMinutes(2))
+                .GetAwaiter().GetResult();
 
-            using var proc = Process.Start(psi);
-            if (proc is null)
+            if (result.StartFailed)
                 throw new InvalidOperationException("pdftotext Prozess konnte nicht gestartet werden.");
-
-            var stderr = proc.StandardError.ReadToEnd();
-            proc.WaitForExit();
-
-            if (proc.ExitCode != 0)
-                throw new InvalidOperationException($"pdftotext fehlgeschlagen (ExitCode {proc.ExitCode}). {stderr}".Trim());
+            if (result.TimedOut)
+                throw new InvalidOperationException($"pdftotext Timeout nach {result.Duration.TotalSeconds:F0}s.");
+            if (result.ExitCode != 0)
+                throw new InvalidOperationException($"pdftotext fehlgeschlagen (ExitCode {result.ExitCode}). {result.Stderr}".Trim());
 
             var content = File.ReadAllText(tempOut, Encoding.UTF8);
             content = (content ?? "").Replace("\r\n", "\n");

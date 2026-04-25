@@ -166,34 +166,26 @@ internal static class PdfOcrExtractor
 
     private static ProcessRunResult RunProcess(string exePath, string[] args, int timeoutMs)
     {
-        var psi = new ProcessStartInfo
-        {
-            FileName = exePath,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8
-        };
-        foreach (var a in args) psi.ArgumentList.Add(a);
+        // Asynchrone Drain + Timeout via zentralem ProcessRunner (Audit STAB-H1).
+        // Vorher: synchron stdout/stderr lesen vor WaitForExit → Pipe-Deadlock bei
+        // grossen Outputs, Timeout greift nicht zuverlaessig.
+        var task = AuswertungPro.Next.Application.Common.ProcessRunner.RunAsync(
+            fileName: exePath,
+            arguments: args,
+            timeout: TimeSpan.FromMilliseconds(timeoutMs));
+        var result = task.GetAwaiter().GetResult();
 
-        using var process = Process.Start(psi);
-        if (process is null)
+        if (result.StartFailed)
             return new ProcessRunResult(false, "Failed to start process", string.Empty);
+        if (result.TimedOut)
+            return new ProcessRunResult(false, "Timeout", result.Stdout);
+        if (result.ExitCode != 0)
+            return new ProcessRunResult(
+                false,
+                string.IsNullOrWhiteSpace(result.Stderr) ? $"ExitCode {result.ExitCode}" : result.Stderr.Trim(),
+                result.Stdout);
 
-        var stdOut = process.StandardOutput.ReadToEnd();
-        var stdErr = process.StandardError.ReadToEnd();
-        if (!process.WaitForExit(timeoutMs))
-        {
-            try { process.Kill(entireProcessTree: true); } catch { }
-            return new ProcessRunResult(false, "Timeout", stdOut);
-        }
-
-        if (process.ExitCode != 0)
-            return new ProcessRunResult(false, string.IsNullOrWhiteSpace(stdErr) ? $"ExitCode {process.ExitCode}" : stdErr.Trim(), stdOut);
-
-        return new ProcessRunResult(true, null, stdOut);
+        return new ProcessRunResult(true, null, result.Stdout);
     }
 
     private sealed record ProcessRunResult(bool Success, string? Message, string StdOut);

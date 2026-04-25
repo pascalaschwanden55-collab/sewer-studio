@@ -91,63 +91,54 @@ public static class SdfToSqliteConverter
 
     private static string RunPowerShell(string scriptPath, string sdfPath)
     {
-        // ArgumentList.Add statt String-Interpolation: Pfade mit Anfuehrungszeichen
-        // oder Shell-Metazeichen koennen sonst Kommandozeilen-Injection ausloesen.
-        var psi = new ProcessStartInfo
+        // Zentraler ProcessRunner mit asynchronem Drain + Timeout (Audit STAB-H1).
+        var args = new[]
         {
-            FileName = "powershell.exe",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
+            "-NoProfile", "-ExecutionPolicy", "Bypass",
+            "-File", scriptPath, "-SdfPath", sdfPath
         };
-        psi.ArgumentList.Add("-NoProfile");
-        psi.ArgumentList.Add("-ExecutionPolicy");
-        psi.ArgumentList.Add("Bypass");
-        psi.ArgumentList.Add("-File");
-        psi.ArgumentList.Add(scriptPath);
-        psi.ArgumentList.Add("-SdfPath");
-        psi.ArgumentList.Add(sdfPath);
-        using var p = Process.Start(psi)
-            ?? throw new InvalidOperationException("powershell.exe konnte nicht gestartet werden");
-        var stdout = p.StandardOutput.ReadToEnd();
-        var stderr = p.StandardError.ReadToEnd();
-        p.WaitForExit();
-        if (p.ExitCode != 0)
-            throw new InvalidOperationException($"PowerShell-Exit {p.ExitCode}: {stderr}");
+        var result = AuswertungPro.Next.Application.Common.ProcessRunner
+            .RunAsync("powershell.exe", args, timeout: TimeSpan.FromMinutes(15))
+            .GetAwaiter().GetResult();
+
+        if (result.StartFailed)
+            throw new InvalidOperationException("powershell.exe konnte nicht gestartet werden");
+        if (result.TimedOut)
+            throw new InvalidOperationException(
+                $"PowerShell-Timeout nach {result.Duration.TotalSeconds:F0}s. stderr: {result.Stderr}");
+        if (result.ExitCode != 0)
+            throw new InvalidOperationException($"PowerShell-Exit {result.ExitCode}: {result.Stderr}");
 
         // Script gibt den JSON-Pfad als LETZTE non-empty Zeile aus
-        var lines = stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        var lines = result.Stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         for (int i = lines.Length - 1; i >= 0; i--)
         {
             var line = lines[i].Trim();
             if (line.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
                 return line;
         }
-        return stdout.Trim();
+        return result.Stdout.Trim();
     }
 
     private static void RunPython(string scriptPath, string jsonPath, string outDb3)
     {
-        var psi = new ProcessStartInfo
+        // Zentraler ProcessRunner mit asynchronem Drain + Timeout (Audit STAB-H1).
+        var args = new[] { scriptPath, jsonPath, outDb3 };
+        var env = new System.Collections.Generic.Dictionary<string, string>
         {
-            FileName = "python",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
+            ["PYTHONIOENCODING"] = "utf-8"
         };
-        psi.ArgumentList.Add(scriptPath);
-        psi.ArgumentList.Add(jsonPath);
-        psi.ArgumentList.Add(outDb3);
-        psi.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
-        using var p = Process.Start(psi)
-            ?? throw new InvalidOperationException("python konnte nicht gestartet werden");
-        var stdout = p.StandardOutput.ReadToEnd();
-        var stderr = p.StandardError.ReadToEnd();
-        p.WaitForExit();
-        if (p.ExitCode != 0)
+        var result = AuswertungPro.Next.Application.Common.ProcessRunner
+            .RunAsync("python", args, timeout: TimeSpan.FromMinutes(15), environment: env)
+            .GetAwaiter().GetResult();
+
+        if (result.StartFailed)
+            throw new InvalidOperationException("python konnte nicht gestartet werden");
+        if (result.TimedOut)
             throw new InvalidOperationException(
-                $"Python-Exit {p.ExitCode}: {stderr}\nstdout: {stdout}");
+                $"Python-Timeout nach {result.Duration.TotalSeconds:F0}s. stderr: {result.Stderr}");
+        if (result.ExitCode != 0)
+            throw new InvalidOperationException(
+                $"Python-Exit {result.ExitCode}: {result.Stderr}\nstdout: {result.Stdout}");
     }
 }
