@@ -526,6 +526,10 @@ public partial class PlayerWindow : Window
         }
     }
 
+    // Audit R-C3 2026-04-25: Doppel-ESC innerhalb 1.5s als Notbremse fuer
+    // den Codier-Modus, falls Overlay-Canvas in unerwarteten Zustand klemmt.
+    private DateTime _lastEscapePress = DateTime.MinValue;
+
     private void PlayerWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         // ESC im Trainings-Modus = Notausstieg. Ohne diese Zeile fing das Popup-
@@ -538,6 +542,31 @@ public partial class PlayerWindow : Window
                 TrainingModeButton.IsChecked = false;
             e.Handled = true;
             return;
+        }
+
+        // Doppel-ESC innerhalb 1.5s: harter Codier-Modus-Notausstieg
+        // (R-C3). Tritt zur Wirkung wenn der normale CancelDraw nicht mehr
+        // klappt weil Overlay-Service korrupt ist.
+        if (e.Key == Key.Escape && _isCodingMode)
+        {
+            var now = DateTime.UtcNow;
+            if ((now - _lastEscapePress).TotalSeconds < 1.5)
+            {
+                try
+                {
+                    ExitCodingMode();
+                    System.Diagnostics.Debug.WriteLine("[PlayerWindow] Doppel-ESC: CodingMode hart beendet.");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PlayerWindow] Doppel-ESC ExitCodingMode: {ex.Message}");
+                }
+                _lastEscapePress = DateTime.MinValue;
+                e.Handled = true;
+                return;
+            }
+            _lastEscapePress = now;
+            // weiterreichen an normalen Cancel-Pfad unten
         }
 
         if (e.Key == Key.Escape && _codingOverlayService != null)
@@ -2246,14 +2275,41 @@ public partial class PlayerWindow : Window
                 System.Diagnostics.Debug.WriteLine($"[SAM] Bild-Decode fehlgeschlagen, nutze Default {imgW}x{imgH}: {decEx.Message}");
             }
 
-            // BBox aus Overlay berechnen (normiert → Pixel)
-            double minX = overlay.Points.Min(p => p.X) * imgW;
-            double minY = overlay.Points.Min(p => p.Y) * imgH;
-            double maxX = overlay.Points.Max(p => p.X) * imgW;
-            double maxY = overlay.Points.Max(p => p.Y) * imgH;
+            // BBox-Berechnung analog zum Trainingsmodus (PlayerWindow.TrainingMode.cs:289-294):
+            // overlay.Points sind normiert zum CodingOverlayCanvas. Wenn das Canvas-
+            // Aspect-Ratio nicht zum Frame-Aspect passt (Letterbox-Bars wegen
+            // Window-Resizing), wuerde die direkte Normalisierung overlay.Points * imgW
+            // die BBox verschieben. Stattdessen ueber Canvas-Pixel + sx/sy-Skalierung,
+            // das macht der Trainingsmodus auch und es funktioniert dort zuverlaessig.
+            double cw = Math.Max(1, CodingOverlayCanvas.ActualWidth);
+            double ch = Math.Max(1, CodingOverlayCanvas.ActualHeight);
+            double sx = imgW / cw;
+            double sy = imgH / ch;
+
+            double minNormX = overlay.Points.Min(p => p.X);
+            double minNormY = overlay.Points.Min(p => p.Y);
+            double maxNormX = overlay.Points.Max(p => p.X);
+            double maxNormY = overlay.Points.Max(p => p.Y);
+
+            // Normiert -> Canvas-Pixel -> Image-Pixel
+            double minX = (minNormX * cw) * sx;
+            double minY = (minNormY * ch) * sy;
+            double maxX = (maxNormX * cw) * sx;
+            double maxY = (maxNormY * ch) * sy;
+
+            // Sanity-Check: BBox muss > 0 Pixel haben
+            if ((maxX - minX) < 4 || (maxY - minY) < 4)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SAM] BBox zu klein: {maxX - minX:F0}x{maxY - minY:F0} px");
+                SetCodingAiState("SAM: BBox zu klein", Color.FromRgb(0xF5, 0x9E, 0x0B),
+                    "Mindestens 4x4 Pixel ziehen");
+                return;
+            }
 
             System.Diagnostics.Debug.WriteLine(
-                $"[SAM] Anfrage: img={imgW}x{imgH}, bbox=({minX:F0},{minY:F0})-({maxX:F0},{maxY:F0}), b64={b64.Length} bytes");
+                $"[SAM] Anfrage: img={imgW}x{imgH}, canvas={cw:F0}x{ch:F0}, " +
+                $"bbox=({minX:F0},{minY:F0})-({maxX:F0},{maxY:F0}) " +
+                $"({maxX-minX:F0}x{maxY-minY:F0}px), b64={b64.Length} bytes");
 
             // Nur BBox als Prompt — kein Punkt-Prompt, damit SAM innerhalb der Box bleibt
             var boxes = new[] { new Ai.Pipeline.SamBoundingBox(minX, minY, maxX, maxY, "mark", 1.0) };
