@@ -4,6 +4,12 @@
 **Methode:** Drei parallele Audit-Agents, konsolidiert und priorisiert.
 **Ziel-Projekt:** `c:\Sewer-Studio_KI_4.2` · Branch `feature/pdf-import-beobachtungen`
 
+> **Update 2026-04-25 — Erweiterung durch externen Zweitaudit:** Vier weitere
+> Befunde aufgenommen (SEC-C1 UI-Pfad-Containment, SEC-H5 Sidecar-Auth,
+> erweiterte H1-Liste mit Pdf*-Extractors + SdfToSqliteConverter-Drain,
+> STAB-M9 Tests-auf-absolute-Pfade). Roadmap um die Sofort-PRs 1-4 ergaenzt.
+> Siehe Anhang am Ende des Dokuments.
+
 ---
 
 ## Executive Summary
@@ -285,3 +291,110 @@ Drei parallele Agent-Instanzen mit scharfen Scopes:
 Alle drei Agents: read-only, keine Code-Aenderungen, strukturierte Output mit Severity + Datei:Zeile + Fix-Empfehlung.
 
 Konsolidierung durch Deduplikation (z.B. PlayerWindow-Groesse taucht in Stability + Architecture auf), Priorisierung nach tatsaechlichem Betriebsrisiko (nicht Schweregrad-Dogmatik), Fahrplan-Erstellung nach Aufwand/Nutzen-Verhaeltnis.
+
+---
+
+## Anhang: Erweiterung durch Zweitaudit 2026-04-25
+
+Externer Zweitaudit hat vier Befunde aufgedeckt, die im Erst-Audit fehlten oder
+zu schwach gewichtet waren. Hier konsolidiert mit den im Sprint-1 bereits
+gefixten Punkten.
+
+### Neu aufgenommen
+
+#### [SEC-C1] UI-Pfade loesen Projektdatei-Pfade ohne Containment-Check auf
+- **Dateien:**
+  - `src/AuswertungPro.Next.UI/ViewModels/Pages/DataPageViewModel.cs:1435-1438`
+  - `src/AuswertungPro.Next.UI/ViewModels/Pages/DataPageViewModel.cs:2321-2328` (`ResolveDossierPhotoPath`)
+  - `src/AuswertungPro.Next.UI/ViewModels/Pages/DataPageViewModel.cs:2348-2375` (`AddResolvedPdf`)
+  - `src/AuswertungPro.Next.UI/ViewModels/Pages/DataPageViewModel.cs:2443-2460` (`ResolveExistingPath`)
+- **Problem:** `Path.GetFullPath(Path.Combine(projectDir, path))` ohne Pruefung
+  ob der finale Pfad noch im Projekt-Root liegt. Absolute Pfade werden direkt
+  akzeptiert. Eine manipulierte Projektdatei (z.B. via Mail-Anhang oder
+  Filesharing geoeffnet) kann beliebige lokale Dateien als
+  Dossier-Foto/PDF/Frame referenzieren.
+- **Folge:** Lokale Dateien (z.B. `C:\Users\...\Dokumente\...`) landen in PDF-Exporten.
+  Bei zukuenftigem File-Sharing-Feature: Datenleck.
+- **Fix:** Eine zentrale `ProjectFilePathPolicy` einfuehren, die `ProjectPathResolver`
+  als Backend nutzt. Alle UI-Aufloesungen darauf umstellen. Absolute Pfade
+  ablehnen, ausser explizit als `ExternalFileReference` modelliert.
+
+#### [SEC-H5] Sidecar-Endpunkte ohne Authentisierung — eskaliert von SEC-M2
+- **Dateien:**
+  - `sidecar/sidecar/main.py:166-190` (App-Aufbau, keine Auth)
+  - `sidecar/sidecar/routes/training.py:359-431` (`/training/export-yolo`)
+  - `sidecar/sidecar/models/yolo_wrapper.py:76-84` und `:378-385` (`reload_model`)
+  - `sidecar/sidecar/routes/lora_training.py:352-399` (LoRA-Deploy)
+- **Problem:** Lokales Listening auf 127.0.0.1 ist by-design akzeptiert, **aber:**
+  - Browser-CSRF/SSRF-Angriffe auf `localhost:8100` sind moeglich (Browser
+    sendet automatisch Cookies/Origin-Requests von beliebigen Tabs).
+  - `/admin/reload_model` mit beliebigem `.pt`-Pfad = **PyTorch-RCE-Vektor** (das
+    `.pt`-Format ist Pickle-basiert, kann beliebigen Code ausfuehren).
+  - Andere lokale Prozesse (Malware) erreichen den Sidecar trivial.
+- **Folge:** Wer auch immer lokal Code ausfuehren kann, kann den Sidecar dazu
+  bringen, beliebige `.pt`-Dateien zu laden = beliebigen Python-Code ausfuehren.
+- **Fix:** Lokales Bearer-Token, beim ServiceProvider-Start generiert (z.B.
+  GUID), als `OLLAMA_SIDECAR_TOKEN` env-var an Sidecar uebergeben. Alle
+  Endpunkte ausser `/health` pruefen Header `X-Sidecar-Token`.
+- **Bonus:** `model_path` nur aus Whitelist-Verzeichnissen (`models/`, `runs/train/`).
+
+#### [STAB-H1-erweitert] Pipe-Drain-Bugs in weiteren Process.Start-Stellen
+Sprint 1 hat 4 Stellen behoben (Commit 764533e3). Der Zweitaudit zeigt **fuenf
+weitere** Stellen mit demselben Muster:
+
+- `src/AuswertungPro.Next.Infrastructure/Import/Pdf/PdfOcrExtractor.cs:181-190`
+- `src/AuswertungPro.Next.Infrastructure/Import/Pdf/PdfTextExtractor.cs:85-104`
+- `src/AuswertungPro.Next.UI/Ai/Training/Services/PdfProtocolExtractor.cs:322-340` (pdftotext)
+- `src/AuswertungPro.Next.UI/Ai/Training/Services/PdfProtocolExtractor.cs:730-740` (PyMuPDF — Kommentar luegt, Code drained synchron)
+- `src/AuswertungPro.Next.Infrastructure/Import/WinCan/SdfToSqliteConverter.cs:92-151` (PowerShell + Python — `ReadToEnd()` synchron vor `WaitForExit()`)
+- **Fix:** Zentraler `ProcessRunner` (siehe Roadmap PR3), der ArgumentList +
+  asynchroner stdout/stderr-Drain + harter Timeout + Tree-Kill kapselt. Alle
+  obigen Stellen darauf umstellen.
+
+#### [STAB-H7] YOLO-Export-Base64-Bombe (entdeckt in Session 23.04, gefixt 23.04-spaet)
+- **Datei:** `src/AuswertungPro.Next.UI/ViewModels/Windows/TrainingCenterViewModel.cs:1284-1394`
+- **Problem:** `ExportYoloAsync` laedt **alle** Samples gleichzeitig als
+  Base64-Strings in eine `List<TrainingExportSample>`, serialisiert sie als
+  **ein** riesiges JSON, sendet das in einem HTTP-Request. Bei 10'000+ Samples
+  → 10+ GB Peak-Memory → OOM.
+- **Folge:** `Insufficient memory to continue the execution` bei Datasets > ein paar tausend Samples.
+- **Fix (bereits angewandt, uncommitted in TrainingCenterViewModel.cs):**
+  Sidecar-Pfad deaktiviert, immer lokaler `File.Copy`-Pfad. Bestaetigt durch
+  erfolgreichen Lauf mit 12'667 Samples bei stabilem RAM (27 % statt 77 %).
+- **Nachholen:** Code-Aenderung als Commit nachholen. Langfristig: Sidecar-Pfad
+  korrekt batched implementieren oder ganz entfernen.
+
+#### [STAB-M9] Pipeline-Tests schreiben auf absolute Maschinenpfade
+- **Dateien:**
+  - `tests/AuswertungPro.Next.Pipeline.Tests/QwenModelComparisonTest.cs:36, 133, 240`
+  - `tests/AuswertungPro.Next.Pipeline.Tests/SdfProfileExtractionTest.cs:26-32`
+- **Problem:** Tests schreiben nach `C:\KI_BRAIN\...` — `dotnet test` schlaegt
+  auf Maschinen ohne dieses Verzeichnis fehl (3 Tests rot in CI).
+- **Fix:** GPU-/Eval-Tests mit `[Trait("Category", "GpuEval")]` markieren.
+  Andere Tests auf `Path.GetTempPath()` oder `Environment.GetEnvironmentVariable("KI_BRAIN_ROOT")`
+  umstellen mit Skip wenn nicht gesetzt.
+
+### Eskalation bestehender Befunde
+
+- **SEC-M2 → SEC-H5:** Sidecar-Auth war zu niedrig gewichtet. Eskaliert auf HIGH wegen PyTorch-RCE-Vektor.
+- **STAB-H4 (Sidecar-Kill) bestaetigt:** Audit 25.04 nennt zusaetzlich den `Arguments`-String-Concat in `PythonSidecarService.cs:72-80`. Wird gemeinsam in PR3 mit ProcessRunner gefixt.
+
+### Aktualisierte Roadmap
+
+**Sprint 2 = die vier PRs aus Audit 25.04:**
+
+| PR | Inhalt | Dauer | Befunde |
+|---|---|---|---|
+| **PR1** | Zentrale Projektpfad-Policy + UI-Aufloesungen haerten | 2-3 h | SEC-C1 |
+| **PR2** | Sidecar Bearer-Token-Auth + Path-Root-Hardening | 3-4 h | SEC-H5, SEC-L2 |
+| **PR3** | Zentraler `ProcessRunner` + alle Pdf*/SdfConverter/SidecarStart umstellen | 4-5 h | STAB-H1-erweitert, STAB-H4 |
+| **PR4** | Tests auf relative/Temp-Pfade + GpuEval-Trait | 1-2 h | STAB-M9 |
+
+Sprint 2 = ~12 h Arbeit, beseitigt alle vom Zweitaudit aufgedeckten Risiken.
+
+### Was vom Zweitaudit ueberinterpretiert ist
+
+- **L1 Mojibake:** Die Schreibweise `ae/oe/ue` in C#-Kommentaren ist **bewusste
+  Konvention** aus CLAUDE.md (Cross-Encoding-Lesbarkeit fuer git-bash, Editor
+  ohne UTF-8). Kein Bug, keine Aktion. Echte Mojibake (`ã±`, `Ã¼` etc.) waere
+  zu fixen — solche existieren im Repo nicht.
