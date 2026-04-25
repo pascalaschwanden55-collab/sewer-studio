@@ -44,6 +44,22 @@ public sealed class VideoSearchTool
         var holdingDirs = _index.FindHoldingDirectories(tokens);
         if (holdingDirs.Count == 0)
         {
+            // Fallback fuer LightViewer/Flat-Export-Layout: keine Sec/<HaltungsId>/-
+            // Unterordner, sondern Videos direkt im root als <HaltungsId>_<Seq>.mp4.
+            // WinCan ersetzt Sonderzeichen im Dateinamen durch Underscore, deshalb
+            // tolerieren wir Punkt vs Underscore beim Match.
+            var flatMatch = TryResolveFlatLayout(holdingRaw, tokens);
+            if (flatMatch != null)
+            {
+                return new VideoResolveResult(
+                    true,
+                    "OK (flat layout)",
+                    holdingRaw,
+                    null,
+                    null,
+                    flatMatch);
+            }
+
             return new VideoResolveResult(
                 false,
                 $"Haltungsordner nicht gefunden (root: {_root}).",
@@ -130,6 +146,77 @@ public sealed class VideoSearchTool
         .Where(t => !string.IsNullOrWhiteSpace(t))
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToList();
+    }
+
+    /// <summary>
+    /// Fallback fuer LightViewer/Flat-Export-Layout: Videos liegen flach im root
+    /// als <HaltungsId>_<Seq>.mp4 (z.B. "7_420-408_0001.mp4" fuer Haltung "7.420-408").
+    /// WinCan-Light ersetzt Sonderzeichen wie '.' und '/' im Dateinamen durch '_'.
+    /// Match-Strategie: Token in unterschiedlichen Schreibweisen mit dem Dateistamm
+    /// vergleichen. Wenn alle Knotennummern aus dem HaltungsKey im Dateinamen
+    /// vorkommen, ist es ein Treffer.
+    /// </summary>
+    private string? TryResolveFlatLayout(string holdingRaw, IReadOnlyList<string> tokens)
+    {
+        if (!Directory.Exists(_root)) return null;
+
+        // Alle Video-Dateien im _root (rekursiv) ohne Holding-Filterung
+        var videoExt = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { ".mpg", ".mpeg", ".avi", ".mp4", ".wmv", ".mov", ".mkv" };
+        IEnumerable<string> AllVideos()
+        {
+            try
+            {
+                foreach (var f in Directory.EnumerateFiles(_root, "*", SearchOption.AllDirectories))
+                {
+                    if (videoExt.Contains(Path.GetExtension(f))) yield return f;
+                }
+            }
+            finally { /* exception caller-handled */ }
+        }
+
+        // Knotennummern aus Haltungsname extrahieren ("7.420-408" -> ["7","420","408"])
+        var nums = Regex.Matches(holdingRaw, @"\d+")
+            .Select(m => m.Value)
+            .Where(s => s.Length >= 1)
+            .Distinct()
+            .ToList();
+        if (nums.Count == 0) return null;
+
+        // Tokens in beiden Schreibweisen vorbereiten (Punkt + Underscore)
+        var tokenVariants = tokens
+            .SelectMany(t => new[] { t, t.Replace('.', '_'), t.Replace('-', '_') })
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var matches = new List<(string Path, int Score)>();
+        foreach (var v in AllVideos())
+        {
+            var stem = Path.GetFileNameWithoutExtension(v);
+            int score = 0;
+
+            // Token-Match: ein vollstaendiges Token im Stem = starkes Signal
+            foreach (var t in tokenVariants)
+            {
+                if (stem.IndexOf(t, StringComparison.OrdinalIgnoreCase) >= 0)
+                    score += 100;
+            }
+
+            // Knotennummern-Match: alle Nummern muessen vorkommen
+            int numHits = nums.Count(n => Regex.IsMatch(stem, $@"(?<![0-9]){Regex.Escape(n)}(?![0-9])"));
+            if (numHits == nums.Count) score += 50;
+            else if (numHits >= 2) score += 25;
+
+            if (score > 0) matches.Add((v, score));
+        }
+
+        if (matches.Count == 0) return null;
+
+        // Bestes Match: hoechster Score, bei Gleichstand kuerzester Pfad (spezifischer)
+        return matches
+            .OrderByDescending(m => m.Score)
+            .ThenBy(m => m.Path.Length)
+            .First().Path;
     }
 
     private string? FindPdf(string holdingDir, IReadOnlyList<string> tokens)

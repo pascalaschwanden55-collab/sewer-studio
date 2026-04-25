@@ -536,6 +536,8 @@
                         <MenuItem Header="Beobachtungen..." Click="BeobachtungenMenu_Click" />
                         <Separator/>
                         <MenuItem Header="Play" Click="PlayMenu_Click" />
+                        <MenuItem Header="Video manuell zuordnen..." Click="RelinkMenu_Click"
+                                  ToolTip="Beliebige Videodatei per Datei-Dialog auswaehlen und der Haltung als Link hinterlegen (umgeht Auto-Resolve)"/>
                         <MenuItem Header="Haltungsprotokoll AWU drucken..." Click="PrintAwuHaltungsprotokollMenu_Click" />
                         <MenuItem Header="Haltungsprotokoll Original (PDF) oeffnen..." Click="OpenOriginalPdfMenu_Click" />
                         <MenuItem Header="Sanierungsmassnahmen..." Click="CostsMenu_Click" />
