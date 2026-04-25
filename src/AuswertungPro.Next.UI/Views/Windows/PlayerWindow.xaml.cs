@@ -4153,6 +4153,20 @@ public partial class PlayerWindow : Window
             UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
             BtnCodingCreateEvent.IsEnabled = true;
 
+            // User-Klage 2026-04-25: "Im Trainingsmodus wird gruen segmentiert,
+            // im Codiermodus nicht — muss ich KI zusaetzlich aktivieren?"
+            // Antwort: Nein, SAM laeuft jetzt automatisch bei jeder BBox/Rechteck-
+            // Markierung — analog zum Trainingsmodus. Vorher war SAM nur bei
+            // Mark-Tool-Modus aktiv, das setzte einen separaten Toggle voraus.
+            if (_codingVm.CurrentOverlay.ToolType == OverlayToolType.Rectangle
+                && _codingVisionClient != null)
+            {
+                var ov = _codingVm.CurrentOverlay;
+                double avgX = ov.Points.Count > 0 ? ov.Points.Average(p => p.X) : 0.5;
+                double avgY = ov.Points.Count > 0 ? ov.Points.Average(p => p.Y) : 0.5;
+                _ = ShowSamPreviewAtMarkAsync(ov, avgX, avgY);
+            }
+
             // Wenn Auto-KI aktiv: Overlay-Zeichnung -> KI analysiert markierte Stelle
             if (BtnCodingLiveAi.IsChecked == true)
                 _ = AnalyzeWithOverlayHintAsync(_codingVm.CurrentOverlay);
