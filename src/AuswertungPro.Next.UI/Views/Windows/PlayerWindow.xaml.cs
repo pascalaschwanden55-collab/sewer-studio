@@ -270,17 +270,28 @@ public partial class PlayerWindow : Window
 
         Closed += (_, __) =>
         {
-            // Doppelter Schutz: falls WPF in einem Edge-Case Application.MainWindow
-            // auf diese PlayerWindow umgebogen hat (z.B. durch Owner-Chain mit
-            // Topmost-Kindern), beim Schliessen wieder auf die echte MainWindow
-            // zurueckpointen — sonst koennte OnMainWindowClose-Mode die App killen.
-            // Greift auch bei alten Builds die noch kein OnExplicitShutdown haben.
-            try
+            // KRITISCH: Closed-Handler darf NIE eine Exception nach aussen
+            // propagieren. Sonst kommt sie als DispatcherUnhandledException hoch
+            // und kann (je nach Race mit MainWindow-Restore) die ganze App killen.
+            // User-Klage 2026-04-25: "Codierfenster geschlossen -> ganze App zu".
+            //
+            // Strategie: jeder einzelne Cleanup-Schritt in einen lokalen try/catch.
+            // Failures werden geloggt, niemals geworfen.
+            void Safe(string step, Action a)
+            {
+                try { a(); }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PlayerWindow.Closed] {step}: {ex.GetType().Name}: {ex.Message}");
+                }
+            }
+
+            // 1. MainWindow-Reparatur (falls WPF auf this umgebogen)
+            Safe("MainWindow-Restore", () =>
             {
                 var app = System.Windows.Application.Current;
                 if (app != null && ReferenceEquals(app.MainWindow, this))
                 {
-                    // Erstes anderes Top-Level-Fenster suchen (typ. die echte MainWindow)
                     foreach (Window w in app.Windows)
                     {
                         if (!ReferenceEquals(w, this))
@@ -290,48 +301,60 @@ public partial class PlayerWindow : Window
                         }
                     }
                 }
-            }
-            catch { /* best-effort, niemals blockieren */ }
+            });
 
-            if (ReferenceEquals(_lastOpened, this))
-                _lastOpened = null;
-
-            // Codier-Modus sauber beenden: Timer + Hintergrund-Tasks stoppen
-            // MUSS vor Cleanup() passieren, da sonst Timer auf disposed VLC zugreifen
-            _isCodingMode = false;
-            StopCodingOsdTimer();
-            _codingAnalysisCts?.Cancel();
-            _codingAnalysisCts?.Dispose();
-            _codingAnalysisCts = null;
-            _codingLiveDetection = null;
-            StopCodingAiPulse();
-
-            _quickScanCts?.Cancel();
-            StopLiveDetection();
-
-            // Trainings-Modus sauber beenden (HttpClient + KB-Context + SAM disposen)
-            _isTrainingMode = false;
-            try { _trainingSamCts?.Cancel(); _trainingSamCts?.Dispose(); } catch { }
-            try { _trainingKbCtx?.Dispose(); } catch { }
-            try { _trainingHttp?.Dispose(); } catch { }
-            _trainingKbCtx = null;
-            _trainingKbManager = null;
-            _trainingEmbedder = null;
-            _trainingHttp = null;
-            _trainingSamCts = null;
-            _trainingSidecar = null;
-            _trainingLastSamResult = null;
-
-            Cleanup();
-
-            // Hauptfenster sichtbar machen und aktivieren
-            var main = System.Windows.Application.Current?.MainWindow;
-            if (main != null && !ReferenceEquals(main, this))
+            Safe("LastOpened-Reset", () =>
             {
-                if (main.WindowState == WindowState.Minimized)
-                    main.WindowState = WindowState.Normal;
-                main.Activate();
-            }
+                if (ReferenceEquals(_lastOpened, this))
+                    _lastOpened = null;
+            });
+
+            // 2. Codier-Modus sauber beenden (Timer + CTS stoppen vor VLC-Dispose)
+            Safe("Coding-Mode-Cleanup", () =>
+            {
+                _isCodingMode = false;
+                StopCodingOsdTimer();
+                _codingAnalysisCts?.Cancel();
+                _codingAnalysisCts?.Dispose();
+                _codingAnalysisCts = null;
+                _codingLiveDetection = null;
+                StopCodingAiPulse();
+            });
+
+            Safe("QuickScan-Cancel", () => _quickScanCts?.Cancel());
+            Safe("LiveDetection-Stop", () => StopLiveDetection());
+
+            // 3. Trainings-Modus + zugehoerige Ressourcen
+            Safe("Training-Mode-Cleanup", () =>
+            {
+                _isTrainingMode = false;
+                _trainingSamCts?.Cancel();
+                _trainingSamCts?.Dispose();
+                _trainingKbCtx?.Dispose();
+                _trainingHttp?.Dispose();
+                _trainingKbCtx = null;
+                _trainingKbManager = null;
+                _trainingEmbedder = null;
+                _trainingHttp = null;
+                _trainingSamCts = null;
+                _trainingSidecar = null;
+                _trainingLastSamResult = null;
+            });
+
+            // 4. VLC + Player Cleanup
+            Safe("VLC-Cleanup", () => Cleanup());
+
+            // 5. Hauptfenster wieder aktivieren
+            Safe("MainWindow-Activate", () =>
+            {
+                var main = System.Windows.Application.Current?.MainWindow;
+                if (main != null && !ReferenceEquals(main, this))
+                {
+                    if (main.WindowState == WindowState.Minimized)
+                        main.WindowState = WindowState.Normal;
+                    main.Activate();
+                }
+            });
         };
 
         AddHandler(Keyboard.PreviewKeyDownEvent, new KeyEventHandler(PlayerWindow_PreviewKeyDown), true);
