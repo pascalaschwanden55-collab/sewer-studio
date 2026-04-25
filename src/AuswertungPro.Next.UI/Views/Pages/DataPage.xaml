@@ -2,6 +2,10 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages">
+    <UserControl.InputBindings>
+        <!-- Strg+S = Speichern (User-Wunsch 2026-04-25) -->
+        <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}"/>
+    </UserControl.InputBindings>
     <UserControl.Resources>
         <local:CountToMarkConverter x:Key="Foto1Mark" MinCount="1"/>
         <local:CountToMarkConverter x:Key="Foto2Mark" MinCount="2"/>

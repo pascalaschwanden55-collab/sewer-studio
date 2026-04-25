@@ -3143,93 +3143,133 @@ public partial class PlayerWindow : Window
         if (!_isCodingMode) return;
         _isCodingMode = false;
 
-        // Beim Verlassen: IMMER offene Streckenschaeden schliessen
-        // (egal ob Rohrende, Abbruch oder einfacher Exit)
-        if (_codingVm != null && _codingVm.Events.Count > 0)
+        // User-Klage 2026-04-25: "Wenn ich nach dem Codieren das Fenster schliesse,
+        // schliesst es das ganze Programm." Ursache: Dieser 90-Zeilen-Cleanup ohne
+        // globalen Schutz. CloseOpenStreckenschaeden zeigt einen Dialog, der bei
+        // Window-Close-Race werfen kann. EnsureRohrendeExists schreibt in
+        // Datenstrukturen die schon disposed sein koennen. Jede dieser Exceptions
+        // eskaliert ueber DispatcherUnhandledException und kann die App killen.
+        // Fix: jeder Block einzeln in try/catch via Safe()-Helper.
+        void Safe(string step, Action a)
         {
-            var endMeter = _codingLastOsdMeter ?? _codingVm.EndMeter;
-            if (!CloseOpenStreckenschaeden(endMeter))
+            try { a(); }
+            catch (Exception ex)
             {
-                // User hat "Abbrechen" geklickt → Exit abbrechen, weiter codieren
-                _isCodingMode = true;
-                return;
-            }
-
-            // Ende-Code nur einfuegen wenn weder BCE (Rohrende) noch BDC (Abbruch) vorhanden
-            bool hasEndCode = _codingVm.Events.Any(e =>
-                string.Equals(e.Entry.Code, "BCE", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(e.Entry.Code, "BDC", StringComparison.OrdinalIgnoreCase));
-            if (!hasEndCode)
-            {
-                var endTime = TimeSpan.FromMilliseconds(_player?.Length ?? 0);
-                EnsureRohrendeExists(_codingVm.EndMeter, endTime);
+                System.Diagnostics.Debug.WriteLine($"[ExitCodingMode] {step}: {ex.GetType().Name}: {ex.Message}");
             }
         }
 
-        // Timer stoppen
-        StopCodingOsdTimer();
-        _codingLiveAiTimer?.Stop();
-        _codingLiveAiTimer = null;
-        StopCodingAiPulse();
+        // Beim Verlassen: IMMER offene Streckenschaeden schliessen
+        // (egal ob Rohrende, Abbruch oder einfacher Exit)
+        bool exitAborted = false;
+        Safe("Streckenschaeden+Endcode", () =>
+        {
+            if (_codingVm != null && _codingVm.Events.Count > 0)
+            {
+                var endMeter = _codingLastOsdMeter ?? _codingVm.EndMeter;
+                if (!CloseOpenStreckenschaeden(endMeter))
+                {
+                    // User hat "Abbrechen" geklickt → Exit abbrechen, weiter codieren
+                    _isCodingMode = true;
+                    exitAborted = true;
+                    return;
+                }
 
-        _codingAnalysisCts?.Cancel();
-        _codingAnalysisCts?.Dispose();
-        _codingAnalysisCts = null;
+                // Ende-Code nur einfuegen wenn weder BCE (Rohrende) noch BDC (Abbruch) vorhanden
+                bool hasEndCode = _codingVm.Events.Any(e =>
+                    string.Equals(e.Entry.Code, "BCE", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(e.Entry.Code, "BDC", StringComparison.OrdinalIgnoreCase));
+                if (!hasEndCode)
+                {
+                    var endTime = TimeSpan.FromMilliseconds(_player?.Length ?? 0);
+                    EnsureRohrendeExists(_codingVm.EndMeter, endTime);
+                }
+            }
+        });
+        if (exitAborted) return;
 
-        // Import-Referenzliste leeren
-        _codingImportEvents.Clear();
-        LstImportEvents.ItemsSource = null;
+        Safe("Timer-Stop", () =>
+        {
+            StopCodingOsdTimer();
+            _codingLiveAiTimer?.Stop();
+            _codingLiveAiTimer = null;
+            StopCodingAiPulse();
+        });
 
-        // Bestaetigungs-Panel und Detection-Overlays schliessen
-        CodingConfirmationPanel.Visibility = Visibility.Collapsed;
-        DetectionConfirmationPanel.Visibility = Visibility.Collapsed;
-        _codingPendingConfirmEvent = null;
-        _codingPendingGateResult = null;
-        _detectionPendingFindings = null;
-        _detectionPendingFrameBytes = null;
-        _detectionPendingTimestampSec = null;
-        DetectionCanvas.Children.Clear();
-        if (!_isDetecting)
-            DetectionOverlayGrid.Visibility = Visibility.Collapsed;
+        Safe("AnalysisCts", () =>
+        {
+            _codingAnalysisCts?.Cancel();
+            _codingAnalysisCts?.Dispose();
+            _codingAnalysisCts = null;
+        });
 
-        // UI ausblenden
-        if (CodingOverlayCanvas.IsMouseCaptured)
-            CodingOverlayCanvas.ReleaseMouseCapture();
-        CodingOverlayPopup.IsOpen = false;
-        CodingOverlayCanvas.Children.Clear();
-        CodingOverlayCanvas.IsHitTestVisible = false;
-        CodingOverlayCanvas.Cursor = Cursors.Arrow;
-        CodingSidePanel.Visibility = Visibility.Collapsed;
-        CodingSidePanelColumn.Width = new GridLength(0);
-        CodingToolbar.Visibility = Visibility.Collapsed;
-        CodingTimelinePanel.Visibility = Visibility.Collapsed;
-        CodingDefectDetailPanel.Visibility = Visibility.Collapsed;
-        CodingCalibrationHint.Visibility = Visibility.Collapsed;
-        CodingMeasurementPanel.Visibility = Visibility.Collapsed;
-        OsdMeterBadge.Visibility = Visibility.Collapsed;
-        LiveDetectionButton.Visibility = Visibility.Visible;
-        LiveDetectionStatusText.Visibility = _isDetecting ? Visibility.Visible : Visibility.Collapsed;
+        Safe("ImportEvents-Clear", () =>
+        {
+            _codingImportEvents.Clear();
+            LstImportEvents.ItemsSource = null;
+        });
 
-        // Tool-State zuruecksetzen
-        _activeCodingToolName = null;
-        TxtActiveToolLabel.Text = "";
-        BtnCodingLiveAi.IsChecked = false;
-        TxtCodingAiStage.Text = string.Empty;
+        Safe("ConfirmationPanels-Hide", () =>
+        {
+            CodingConfirmationPanel.Visibility = Visibility.Collapsed;
+            DetectionConfirmationPanel.Visibility = Visibility.Collapsed;
+            _codingPendingConfirmEvent = null;
+            _codingPendingGateResult = null;
+            _detectionPendingFindings = null;
+            _detectionPendingFrameBytes = null;
+            _detectionPendingTimestampSec = null;
+            DetectionCanvas.Children.Clear();
+            if (!_isDetecting)
+                DetectionOverlayGrid.Visibility = Visibility.Collapsed;
+        });
 
-        _codingSchemaManager.Cancel();
-        _codingSchemaType = null;
+        Safe("OverlayCanvas-Cleanup", () =>
+        {
+            if (CodingOverlayCanvas.IsMouseCaptured)
+                CodingOverlayCanvas.ReleaseMouseCapture();
+            CodingOverlayPopup.IsOpen = false;
+            CodingOverlayCanvas.Children.Clear();
+            CodingOverlayCanvas.IsHitTestVisible = false;
+            CodingOverlayCanvas.Cursor = Cursors.Arrow;
+        });
 
-        // Event-Handler abmelden (Memory Leak verhindern)
-        if (_codingVm != null)
-            _codingVm.PropertyChanged -= CodingVm_PropertyChanged;
-        _codingVm = null;
-        _codingSessionService = null;
-        _codingOverlayService = null;
-        _codingIsCalibrating = false;
-        _codingCalibStart = null;
-        ResetFrameReadiness(); // setzt auch _codingLastOsdMeter = null
-        _codingOverlaySuspendDepth = 0;
-        _codingOverlayWasOpenBeforeSuspend = false;
+        Safe("UI-Hide", () =>
+        {
+            CodingSidePanel.Visibility = Visibility.Collapsed;
+            CodingSidePanelColumn.Width = new GridLength(0);
+            CodingToolbar.Visibility = Visibility.Collapsed;
+            CodingTimelinePanel.Visibility = Visibility.Collapsed;
+            CodingDefectDetailPanel.Visibility = Visibility.Collapsed;
+            CodingCalibrationHint.Visibility = Visibility.Collapsed;
+            CodingMeasurementPanel.Visibility = Visibility.Collapsed;
+            OsdMeterBadge.Visibility = Visibility.Collapsed;
+            LiveDetectionButton.Visibility = Visibility.Visible;
+            LiveDetectionStatusText.Visibility = _isDetecting ? Visibility.Visible : Visibility.Collapsed;
+        });
+
+        Safe("Tool-State-Reset", () =>
+        {
+            _activeCodingToolName = null;
+            TxtActiveToolLabel.Text = "";
+            BtnCodingLiveAi.IsChecked = false;
+            TxtCodingAiStage.Text = string.Empty;
+            _codingSchemaManager.Cancel();
+            _codingSchemaType = null;
+        });
+
+        Safe("VM-Unsubscribe+Null", () =>
+        {
+            if (_codingVm != null)
+                _codingVm.PropertyChanged -= CodingVm_PropertyChanged;
+            _codingVm = null;
+            _codingSessionService = null;
+            _codingOverlayService = null;
+            _codingIsCalibrating = false;
+            _codingCalibStart = null;
+            ResetFrameReadiness(); // setzt auch _codingLastOsdMeter = null
+            _codingOverlaySuspendDepth = 0;
+            _codingOverlayWasOpenBeforeSuspend = false;
+        });
     }
 
     private void CodingApply_Click(object sender, RoutedEventArgs e)
