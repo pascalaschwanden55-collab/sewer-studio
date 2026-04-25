@@ -1900,29 +1900,57 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void FloatingGridWindow_Closed(object? sender, EventArgs e)
     {
-        // Wenn das Floating-Fenster geschlossen wird (X-Button), Grid zurueck docken
+        // Audit R-H2 2026-04-25: Try/finally — UI muss IMMER in einen
+        // benutzbaren Zustand zurueck. Frueher konnte ein Wurf in
+        // RemoveGridContent oder Settings.Save den User in einem UI-Trap
+        // lassen (Platzhalter sichtbar, Undock-Button disabled, kein Weg
+        // ohne App-Restart).
         if (_floatingGridWindow is null)
             return;
 
-        var settings = (App.Services as ServiceProvider)?.Settings;
-        if (settings is not null)
+        try
         {
-            settings.FloatingGridBounds = _floatingGridWindow.GetBoundsString();
-            settings.IsGridFloating = false;
+            var settings = (App.Services as ServiceProvider)?.Settings;
+            if (settings is not null)
+            {
+                try
+                {
+                    settings.FloatingGridBounds = _floatingGridWindow.GetBoundsString();
+                    settings.IsGridFloating = false;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[FloatingGridWindow_Closed] Settings: {ex.Message}");
+                }
+            }
+
+            object? grid = null;
+            try { grid = _floatingGridWindow.RemoveGridContent(); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[FloatingGridWindow_Closed] RemoveGridContent: {ex.Message}"); }
+
+            try { _floatingGridWindow.DockBackRequested -= DockGridBack; }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[FloatingGridWindow_Closed] Unsubscribe: {ex.Message}"); }
+
+            if (grid is DataGrid dg)
+            {
+                try
+                {
+                    GridHost.Children.Add(dg);
+                    dg.Visibility = Visibility.Visible;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[FloatingGridWindow_Closed] Re-Dock: {ex.Message}");
+                }
+            }
         }
-
-        var grid = _floatingGridWindow.RemoveGridContent();
-        _floatingGridWindow.DockBackRequested -= DockGridBack;
-        _floatingGridWindow = null;
-
-        if (grid is DataGrid dg)
+        finally
         {
-            GridHost.Children.Add(dg);
-            dg.Visibility = Visibility.Visible;
+            // Diese drei Zeilen MUESSEN ausgefuehrt werden, sonst UI-Trap.
+            _floatingGridWindow = null;
+            try { UndockedPlaceholder.Visibility = Visibility.Collapsed; } catch { }
+            try { UndockButton.IsEnabled = true; } catch { }
         }
-
-        UndockedPlaceholder.Visibility = Visibility.Collapsed;
-        UndockButton.IsEnabled = true;
     }
 
     private void UpdateFloatingWindowInfo()

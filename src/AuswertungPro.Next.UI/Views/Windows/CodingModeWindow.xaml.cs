@@ -192,6 +192,9 @@ public partial class CodingModeWindow : Window
         // KI Live-Detection initialisieren
         InitAiOverlay();
 
+        // Tastenkuerzel: O = Akzeptieren, Delete = Verwerfen (auf selektierten Befund)
+        PreviewKeyDown += CodingMode_PreviewKeyDown;
+
         // ViewModel-Events fuer KI-Training
         _vm.DefectJumpRequested += (_, ev) =>
         {
@@ -208,19 +211,33 @@ public partial class CodingModeWindow : Window
 
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
-        // Event-Handler abmelden (Memory Leak verhindern)
-        _vm.PropertyChanged -= Vm_PropertyChanged;
-        _vm.Events.CollectionChanged -= VmEvents_CollectionChanged;
-        _vm.SessionCompleted -= OnSessionCompleted;
+        // Audit R-C2 2026-04-25: Jeder Cleanup-Schritt einzeln in try/catch.
+        // Vorher konnte z.B. eine LibVLC-AccessViolation oder ein bereits
+        // disposed _analysisCts den Handler abbrechen — die Exception wurde
+        // nach aussen propagiert und konnte die App killen.
+        void Safe(string step, Action a)
+        {
+            try { a(); }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[CodingModeWindow.OnClosing] {step}: {ex.GetType().Name}: {ex.Message}");
+            }
+        }
 
-        _analysisCts?.Cancel();
-        _analysisCts?.Dispose();
-        StopAiStatusPulse();
-        _ollamaClient?.Dispose();
-        _player?.Stop();
-        _player?.Dispose();
-        _libVlc?.Dispose();
-        _vm.Dispose();
+        Safe("VM-Unsubscribe", () =>
+        {
+            _vm.PropertyChanged -= Vm_PropertyChanged;
+            _vm.Events.CollectionChanged -= VmEvents_CollectionChanged;
+            _vm.SessionCompleted -= OnSessionCompleted;
+        });
+        Safe("AnalysisCts-Cancel", () => _analysisCts?.Cancel());
+        Safe("AnalysisCts-Dispose", () => _analysisCts?.Dispose());
+        Safe("AiStatusPulse-Stop", () => StopAiStatusPulse());
+        Safe("OllamaClient-Dispose", () => _ollamaClient?.Dispose());
+        Safe("Player-Stop", () => _player?.Stop());
+        Safe("Player-Dispose", () => _player?.Dispose());
+        Safe("LibVlc-Dispose", () => _libVlc?.Dispose());
+        Safe("Vm-Dispose", () => _vm.Dispose());
     }
 
     // Benannte Event-Handler (fuer sauberes Cleanup via -=)
@@ -2011,6 +2028,59 @@ public partial class CodingModeWindow : Window
             _vm.SetScanModeCommand.Execute(mode);
     }
 
+    /// <summary>Selektiert das erste Event mit passendem VSA-Code (fuer BBox-Klick).</summary>
+    private void SelectEventByCode(string code)
+    {
+        if (_vm?.Events == null) return;
+        var match = _vm.Events.FirstOrDefault(ev =>
+            string.Equals(ev.Entry.Code, code, StringComparison.OrdinalIgnoreCase));
+        if (match != null)
+        {
+            _vm.SelectedDefect = match;
+            LstEvents.SelectedItem = match;
+            LstEvents.ScrollIntoView(match);
+            UpdateDefectDetailPanel(match);
+        }
+    }
+
+    private void CodingMode_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        // Nicht abfangen wenn ein TextBox fokussiert ist
+        if (e.OriginalSource is System.Windows.Controls.TextBox) return;
+
+        switch (e.Key)
+        {
+            case System.Windows.Input.Key.Escape:
+                // Audit R-H6 2026-04-25: ESC als universeller Notausstieg.
+                // Kalibrierungs-Modus wird verlassen wenn aktiv. Verhindert
+                // den UI-Trap bei Layout-Glitch (Toggle-Button unklickbar).
+                if (_isCalibrating)
+                {
+                    try
+                    {
+                        if (BtnCalibrate != null)
+                            BtnCalibrate.IsChecked = false;
+                        _isCalibrating = false;
+                        ClearAllDrawingShapes();
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[CodingMode ESC] Calibration-Exit: {ex.Message}");
+                    }
+                    e.Handled = true;
+                }
+                break;
+            case System.Windows.Input.Key.O:
+                BtnAcceptDefect_Click(sender, e);
+                e.Handled = true;
+                break;
+            case System.Windows.Input.Key.Delete:
+                BtnRejectDefect_Click(sender, e);
+                e.Handled = true;
+                break;
+        }
+    }
+
     private void BtnAcceptDefect_Click(object sender, RoutedEventArgs e)
     {
         var selected = _vm.SelectedDefect ?? LstEvents.SelectedItem as CodingEvent;
@@ -2090,11 +2160,36 @@ public partial class CodingModeWindow : Window
                             entry.FotoPaths[0] = photoWin.Result.OverlayPhotoPath;
                         if (photoWin.Result.UpdatedCalibration != null)
                             _overlayService.SetCalibration(photoWin.Result.UpdatedCalibration);
+
+                        // V4.3: Mess-Metadaten (Value + Einheit + Tool + Subject) in CodeMeta.Parameters
+                        // schreiben, damit Protokoll/Report/Export sie lesen koennen.
+                        CopyMeasurementMetadata(entry, photoWin.Result);
+
                         _sessionService.UpdateEvent(ev.EventId, entry, ev.Overlay);
                     }
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// V4.3 — kopiert Werkzeug-Metadaten aus PhotoMeasurementResult in die ProtocolEntry.CodeMeta.Parameters.
+    /// Keys: Q1/Q1_Unit/Q2/Q2_Unit/MeasurementTool/MeasurementSubject.
+    /// </summary>
+    private static void CopyMeasurementMetadata(
+        AuswertungPro.Next.Domain.Protocol.ProtocolEntry entry,
+        AuswertungPro.Next.Domain.Models.PhotoMeasurementResult r)
+    {
+        if (r is null) return;
+        entry.CodeMeta ??= new AuswertungPro.Next.Domain.Protocol.ProtocolEntryCodeMeta { Code = entry.Code };
+        var p = entry.CodeMeta.Parameters;
+        if (!string.IsNullOrWhiteSpace(r.Value1)) p["Q1"] = r.Value1!;
+        if (!string.IsNullOrWhiteSpace(r.Unit1))  p["Q1_Unit"] = r.Unit1!;
+        if (!string.IsNullOrWhiteSpace(r.Value2)) p["Q2"] = r.Value2!;
+        if (!string.IsNullOrWhiteSpace(r.Unit2))  p["Q2_Unit"] = r.Unit2!;
+        if (!string.IsNullOrWhiteSpace(r.MeasurementTool))    p["MeasurementTool"] = r.MeasurementTool!;
+        if (!string.IsNullOrWhiteSpace(r.MeasurementSubject)) p["MeasurementSubject"] = r.MeasurementSubject!;
+        entry.CodeMeta.UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     private void BtnDeleteDefect_Click(object sender, RoutedEventArgs e)
@@ -2329,12 +2424,32 @@ public partial class CodingModeWindow : Window
             _enhancedVision = new EnhancedVisionAnalysisService(_ollamaClient, _aiConfig.VisionModel, _aiConfig.ReferenceVisionModel);
             SetAiStatus("Bereit", "#22C55E",
                 $"Qwen aktiv ({CompactModelName(_aiModelName)})");
+
+            // Few-Shot-Beispiele laden — ohne diese findet die KI drastisch weniger (Audit-Fix)
+            _ = LoadFewShotAsync();
         }
         catch (Exception ex)
         {
             SetAiStatus($"Fehler: {ex.Message}", "#EF4444",
                 $"Modell: {CompactModelName(_aiModelName)}", error: true);
             BtnAnalyzeFrame.IsEnabled = false;
+        }
+    }
+
+    private async Task LoadFewShotAsync()
+    {
+        try
+        {
+            if (_enhancedVision == null) return;
+            var store = new Ai.Training.FewShotExampleStore();
+            await _enhancedVision.EnableFewShotAsync(store);
+            Dispatcher.Invoke(() =>
+                SetAiStatus("Bereit (Few-Shot geladen)", "#22C55E",
+                    $"Qwen aktiv ({CompactModelName(_aiModelName)})"));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CodingMode] Few-Shot laden fehlgeschlagen: {ex.Message}");
         }
     }
 
@@ -2638,8 +2753,12 @@ public partial class CodingModeWindow : Window
             Width = Math.Abs(x2 - x1), Height = Math.Abs(y2 - y1),
             Stroke = stroke, StrokeThickness = 2,
             StrokeDashArray = new DoubleCollection { 4, 2 },
-            Fill = fill, Tag = "ai_overlay"
+            Fill = fill, Tag = "ai_overlay",
+            Cursor = System.Windows.Input.Cursors.Hand
         };
+        // Klick auf BBox selektiert den zugehoerigen Befund in der Event-Liste
+        var code = overlay.VsaCodeHint ?? overlay.Label;
+        rect.MouseLeftButtonDown += (_, _) => SelectEventByCode(code);
         Canvas.SetLeft(rect, Math.Min(x1, x2));
         Canvas.SetTop(rect, Math.Min(y1, y2));
         AiOverlayCanvas.Children.Add(rect);

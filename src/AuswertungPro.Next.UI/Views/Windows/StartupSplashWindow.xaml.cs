@@ -64,7 +64,14 @@ public partial class StartupSplashWindow : Window
         _pulseTimer.Tick += OnPulseTick;
 
         Loaded += OnLoaded;
-        Closed += (_, _) => { _statusTimer.Stop(); _pulseTimer.Stop(); };
+        Closed += (_, _) =>
+        {
+            // Audit R-M2: Splash-Crash darf App-Startup nicht killen.
+            try { _statusTimer.Stop(); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Splash.Closed] StatusTimer: {ex.Message}"); }
+            try { _pulseTimer.Stop(); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Splash.Closed] PulseTimer: {ex.Message}"); }
+        };
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)

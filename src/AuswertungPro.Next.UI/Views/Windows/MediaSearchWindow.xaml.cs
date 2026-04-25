@@ -45,7 +45,13 @@ public partial class MediaSearchWindow : Window
         if (!string.IsNullOrWhiteSpace(_initialFolder))
             FolderBox.Text = _initialFolder;
 
-        Closed += (_, _) => _cts?.Cancel();
+        // Audit R-M1: ObjectDisposedException moeglich bei Race
+        // (Cancel-Click + Window-Close gleichzeitig).
+        Closed += (_, _) =>
+        {
+            try { _cts?.Cancel(); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[MediaSearchWindow.Closed] {ex.Message}"); }
+        };
         Loaded += (_, _) => EnsureVisibleOnScreen();
     }
 

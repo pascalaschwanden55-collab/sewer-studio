@@ -18,8 +18,29 @@ public static class WindowStateManager
     public static void Track(Window window)
     {
         var key = window.GetType().Name;
-        RestoreBounds(window, key);
-        window.Closing += (_, _) => SaveBounds(window, key);
+        // Restore in try/catch — fehlerhafte Settings duerfen das Fenster
+        // nicht am Oeffnen hindern.
+        try { RestoreBounds(window, key); }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[WindowStateManager] RestoreBounds {key}: {ex.Message}");
+        }
+
+        // KRITISCH (Audit R-C1, 2026-04-25): SaveBounds ruft settings.Save(),
+        // das bei IO-Fehler (Disk voll, AV-Lock, Profile-Roaming-Snapshot)
+        // werfen kann. Eine Exception aus diesem Closing-Hook eskaliert ueber
+        // DispatcherUnhandledException und kann je nach Race mit MainWindow-
+        // Ownership die ganze App killen — genau das vom User berichtete
+        // "Fenster zu -> App weg"-Symptom. 28 Fenster nutzen diesen Track-
+        // Aufruf, ein zentraler try/catch schuetzt sie alle.
+        window.Closing += (_, _) =>
+        {
+            try { SaveBounds(window, key); }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[WindowStateManager] SaveBounds {key}: {ex.Message}");
+            }
+        };
     }
 
     private static AppSettings? GetSettings()

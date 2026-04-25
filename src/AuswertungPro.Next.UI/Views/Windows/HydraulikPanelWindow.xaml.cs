@@ -54,7 +54,12 @@ public partial class HydraulikPanelWindow : Window
         DataContext = vm;
         vm.PropertyChanged += Vm_PropertyChanged;
         Loaded += (_, _) => UpdateAll(vm);
-        Closed += (_, _) => vm.PropertyChanged -= Vm_PropertyChanged;
+        Closed += (_, _) =>
+        {
+            // Audit R-M3: Closed darf nichts werfen.
+            try { vm.PropertyChanged -= Vm_PropertyChanged; }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[HydraulikPanelWindow.Closed] {ex.Message}"); }
+        };
     }
 
     private void Vm_PropertyChanged(object? sender, PropertyChangedEventArgs e)

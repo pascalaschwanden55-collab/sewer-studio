@@ -58,7 +58,23 @@ public partial class TrainingCenterWindow : Window
         };
 
         Vm.PropertyChanged += OnVmPropertyChanged;
-        Closed += (_, _) => Vm.PropertyChanged -= OnVmPropertyChanged;
+        // Audit R-H3 2026-04-25: Batch-CTS muss beim Schliessen gecancelt
+        // werden, sonst arbeitet die Pipeline mit Refs auf disposed UI weiter
+        // (Dispatcher.Invoke auf nicht mehr gebundene Vm-Properties → spaeter
+        // Race-Crash). Plus Debounce-Timer abschalten, sonst feuern sie auf
+        // disposed Listen.
+        Closed += (_, _) =>
+        {
+            void Safe(string step, Action a)
+            {
+                try { a(); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TrainingCenterWindow.Closed] {step}: {ex.Message}"); }
+            }
+            Safe("BatchCts-Cancel", () => _batchCts?.Cancel());
+            Safe("ScrollDebounce-Results", () => _scrollDebounceResults?.Stop());
+            Safe("ScrollDebounce-Log", () => _scrollDebounceLog?.Stop());
+            Safe("Vm-Unsubscribe", () => Vm.PropertyChanged -= OnVmPropertyChanged);
+        };
     }
 
     private void SetupPipelineElements()

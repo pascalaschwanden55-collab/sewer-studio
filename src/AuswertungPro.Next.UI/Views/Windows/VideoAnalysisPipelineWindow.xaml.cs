@@ -54,9 +54,15 @@ public partial class VideoAnalysisPipelineWindow : Window
 
         Closed += (_, __) =>
         {
-            _cts.Cancel();
-            Vm.Detections.CollectionChanged -= OnDetectionsChanged;
-            CloseLiveFrameWindow();
+            // Audit R-H1 2026-04-25: Cleanup darf keine Exception werfen.
+            void Safe(string step, Action a)
+            {
+                try { a(); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[VideoAnalysisPipelineWindow.Closed] {step}: {ex.Message}"); }
+            }
+            Safe("Cts-Cancel", () => _cts.Cancel());
+            Safe("Detections-Unsubscribe", () => Vm.Detections.CollectionChanged -= OnDetectionsChanged);
+            Safe("LiveFrame-Close", () => CloseLiveFrameWindow());
         };
     }
 
