@@ -44,16 +44,68 @@ public sealed class PythonSidecarService : IDisposable
     /// </summary>
     public static string? CurrentAuthToken { get; private set; }
 
+    /// <summary>
+    /// Pfad zur Token-Datei, die App und Sidecar gemeinsam lesen
+    /// (siehe sidecar/sidecar/main.py _resolve_sidecar_token).
+    /// </summary>
+    public static string TokenFilePath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "SewerStudio", ".sidecar_token");
+
+    /// <summary>
+    /// True wenn ENV SEWER_SIDECAR_AUTH=disabled gesetzt ist. Dann sendet
+    /// VisionPipelineClient kein Token und der Sidecar prueft auch keins.
+    /// </summary>
+    public static bool AuthDisabled =>
+        string.Equals(Environment.GetEnvironmentVariable("SEWER_SIDECAR_AUTH"),
+                      "disabled", StringComparison.OrdinalIgnoreCase);
+
     public PythonSidecarService(ILogger logger, string sidecarDir, string host = "127.0.0.1", int port = 8100)
     {
         _log = logger;
         _sidecarDir = sidecarDir;
         _host = host;
         _port = port;
-        // Kryptografisch zufaelliges Token (Guid hat 122 zufaellige Bits, OK fuer
-        // localhost-Auth gegen lokale Prozesse/Browser-Angriffe).
-        AuthToken = Guid.NewGuid().ToString("N");
-        CurrentAuthToken = AuthToken;
+
+        if (AuthDisabled)
+        {
+            // Dev-Modus: kein Token verwenden, Sidecar muss auch ohne starten
+            AuthToken = "";
+            CurrentAuthToken = null;
+            _log.LogWarning("[Sidecar-Auth] SEWER_SIDECAR_AUTH=disabled — kein Token, keine Auth.");
+            return;
+        }
+
+        // Token-Datei lesen wenn vorhanden, sonst neues Token generieren+schreiben.
+        // So koennen App und manuell gestarteter Sidecar dasselbe Token nutzen.
+        try
+        {
+            if (File.Exists(TokenFilePath))
+            {
+                var existing = File.ReadAllText(TokenFilePath).Trim();
+                if (!string.IsNullOrWhiteSpace(existing) && existing.Length >= 16)
+                {
+                    AuthToken = existing;
+                    CurrentAuthToken = AuthToken;
+                    _log.LogInformation("[Sidecar-Auth] Token aus {Path} geladen.", TokenFilePath);
+                    return;
+                }
+            }
+
+            // Datei fehlt oder ungueltig -> neu generieren und persistieren
+            AuthToken = Guid.NewGuid().ToString("N");
+            CurrentAuthToken = AuthToken;
+            var dir = Path.GetDirectoryName(TokenFilePath);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            File.WriteAllText(TokenFilePath, AuthToken);
+            _log.LogInformation("[Sidecar-Auth] Neues Token in {Path} geschrieben.", TokenFilePath);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "[Sidecar-Auth] Token-Datei nicht nutzbar — fallback auf In-Memory-Token.");
+            AuthToken = Guid.NewGuid().ToString("N");
+            CurrentAuthToken = AuthToken;
+        }
     }
 
     /// <summary>

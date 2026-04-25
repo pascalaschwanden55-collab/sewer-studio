@@ -190,27 +190,61 @@ async def vram_guard_middleware(request: Request, call_next):
     return await call_next(request)
 
 
-# ── Auth-Middleware (Audit 2026-04-25, SEC-H5) ─────────────────────────
+# ── Auth-Middleware (Audit 2026-04-25, SEC-H5; erweitert 2026-04-25 abends) ──
 # Lokales Bearer-Token schuetzt administrative Endpunkte vor:
 #   - Browser-CSRF/SSRF auf localhost:8100
 #   - Anderen lokalen Prozessen (Malware) die den Sidecar ansprechen
 #   - Insbesondere: /admin/reload_model laed beliebige .pt-Dateien =
 #     PyTorch-Pickle-Deserialisierung = beliebige Code-Ausfuehrung
 #
-# Token wird beim C#-Sidecar-Start als ENV SEWER_SIDECAR_TOKEN gesetzt.
-# Wenn ENV leer ist (Dev/Manual-Start), bleibt Auth deaktiviert mit Warnung.
-SIDECAR_TOKEN = os.environ.get("SEWER_SIDECAR_TOKEN", "").strip()
+# Token-Quellen (Prioritaet absteigend):
+#   1. ENV SEWER_SIDECAR_AUTH=disabled  -> Auth komplett aus (Dev-Modus)
+#   2. ENV SEWER_SIDECAR_TOKEN          -> direkt verwenden (App-Start)
+#   3. Token-Datei                       -> %LOCALAPPDATA%/SewerStudio/.sidecar_token
+#                                          (geteilte Quelle App + manueller Start)
+#
+# Wenn keine Quelle Token liefert, bleibt Auth deaktiviert (Dev/Test).
+
+def _resolve_sidecar_token() -> str:
+    auth_mode = os.environ.get("SEWER_SIDECAR_AUTH", "").strip().lower()
+    if auth_mode == "disabled":
+        logger.warning("[Auth] SEWER_SIDECAR_AUTH=disabled — Auth komplett deaktiviert.")
+        return ""
+
+    env_token = os.environ.get("SEWER_SIDECAR_TOKEN", "").strip()
+    if env_token:
+        return env_token
+
+    # Token-Datei: app + sidecar lesen aus derselben Quelle
+    try:
+        local_app = os.environ.get("LOCALAPPDATA", "")
+        if local_app:
+            token_file = os.path.join(local_app, "SewerStudio", ".sidecar_token")
+            if os.path.isfile(token_file):
+                with open(token_file, "r", encoding="utf-8") as f:
+                    file_token = f.read().strip()
+                if file_token:
+                    logger.info("[Auth] Token aus %s geladen.", token_file)
+                    return file_token
+    except Exception as ex:
+        logger.warning("[Auth] Token-Datei-Lesen fehlgeschlagen: %s", ex)
+
+    return ""
+
+
+SIDECAR_TOKEN = _resolve_sidecar_token()
 
 # Endpunkte, die ohne Token erreichbar bleiben (read-only Health/Status)
 _PUBLIC_PATHS = ("/health", "/docs", "/openapi.json", "/redoc")
 
 if not SIDECAR_TOKEN:
     logger.warning(
-        "[Auth] SEWER_SIDECAR_TOKEN ist nicht gesetzt — administrative Endpunkte "
-        "OHNE Authentisierung erreichbar. Nur fuer Dev/Test akzeptabel."
+        "[Auth] Kein Token verfuegbar — administrative Endpunkte OHNE Authentisierung "
+        "erreichbar. Setze SEWER_SIDECAR_TOKEN, lege %LOCALAPPDATA%/SewerStudio/.sidecar_token "
+        "an oder akzeptiere Dev-Modus."
     )
 else:
-    logger.info("[Auth] Bearer-Token aktiv (Header: X-Sidecar-Token)")
+    logger.info("[Auth] Bearer-Token aktiv (Header: X-Sidecar-Token, Laenge=%d)", len(SIDECAR_TOKEN))
 
 
 @app.middleware("http")
