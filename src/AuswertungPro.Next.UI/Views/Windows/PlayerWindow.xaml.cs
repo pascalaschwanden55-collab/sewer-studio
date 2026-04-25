@@ -505,6 +505,18 @@ public partial class PlayerWindow : Window
 
     private void PlayerWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        // ESC im Trainings-Modus = Notausstieg. Ohne diese Zeile fing das Popup-
+        // Fadenkreuz alle Mausklicks ab und der Toggle-Button war nicht mehr
+        // erreichbar (UI-Trap).
+        if (e.Key == Key.Escape && _isTrainingMode)
+        {
+            ExitTrainingMode();
+            if (TrainingModeButton != null)
+                TrainingModeButton.IsChecked = false;
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.Escape && _codingOverlayService != null)
         {
             _codingOverlayService.CancelDraw();
@@ -2135,9 +2147,12 @@ public partial class PlayerWindow : Window
             // Training speichern: Frame + YOLO-Export + TeacherAnnotation + CodingEvent
             bool saved = await SaveMarkAsTrainingAsync(overlay, timestampSec, clockPos);
 
-            // Overlay entfernen und Canvas neu zeichnen
+            // Overlay entfernen und Canvas neu zeichnen.
+            // WICHTIG: preserveSamMasks=true — sonst werden die gerade von
+            // ShowSamPreviewAtMarkAsync gerenderten Masken durch
+            // ClearTransientCodingCanvas sofort wieder geloescht.
             if (_codingVm != null) _codingVm.CurrentOverlay = null;
-            RedrawCodingCanvas(includeManualOverlay: false);
+            RedrawCodingCanvas(includeManualOverlay: false, preserveSamMasks: true);
 
             if (saved)
             {
@@ -2164,19 +2179,49 @@ public partial class PlayerWindow : Window
     /// </summary>
     private async Task ShowSamPreviewAtMarkAsync(OverlayGeometry overlay, double normX, double normY)
     {
-        if (_codingVisionClient == null) return;
+        if (_codingVisionClient == null)
+        {
+            System.Diagnostics.Debug.WriteLine("[SAM] Abbruch: _codingVisionClient ist null (Sidecar nicht initialisiert)");
+            SetCodingAiState("SAM nicht verfuegbar", Color.FromRgb(0xEF, 0x44, 0x44),
+                "Sidecar-Client nicht initialisiert");
+            return;
+        }
 
         try
         {
             // Snapshot fuer SAM
             var pngBytes = await CaptureSnapshotAsync();
-            if (pngBytes == null || pngBytes.Length == 0) return;
+            if (pngBytes == null || pngBytes.Length == 0)
+            {
+                System.Diagnostics.Debug.WriteLine("[SAM] Abbruch: Snapshot leer/null");
+                SetCodingAiState("SAM: kein Frame", Color.FromRgb(0xEF, 0x44, 0x44),
+                    "Snapshot fehlgeschlagen");
+                return;
+            }
 
             var b64 = Convert.ToBase64String(pngBytes);
 
-            // Bild-Aufloesung schaetzen (SAM braucht Pixel-Koordinaten)
-            // Standardmaessig 640x480, wird vom Sidecar sowieso skaliert
-            int imgW = 640, imgH = 480;
+            // Bild-Aufloesung dynamisch aus dem Snapshot lesen (vorher hartkodiert
+            // 640x480 -> falsche Pixel-Koordinaten bei 1920x1080-Frames -> SAM
+            // bekam BBox an falscher Stelle und lieferte 0 Masken).
+            int imgW = 1920, imgH = 1080; // Sicherer Default fuer typische Inspektionsvideos
+            try
+            {
+                using var ms = new System.IO.MemoryStream(pngBytes);
+                var decoder = System.Windows.Media.Imaging.BitmapDecoder.Create(
+                    ms,
+                    System.Windows.Media.Imaging.BitmapCreateOptions.PreservePixelFormat,
+                    System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+                if (decoder.Frames.Count > 0)
+                {
+                    imgW = decoder.Frames[0].PixelWidth;
+                    imgH = decoder.Frames[0].PixelHeight;
+                }
+            }
+            catch (Exception decEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SAM] Bild-Decode fehlgeschlagen, nutze Default {imgW}x{imgH}: {decEx.Message}");
+            }
 
             // BBox aus Overlay berechnen (normiert → Pixel)
             double minX = overlay.Points.Min(p => p.X) * imgW;
@@ -2184,40 +2229,75 @@ public partial class PlayerWindow : Window
             double maxX = overlay.Points.Max(p => p.X) * imgW;
             double maxY = overlay.Points.Max(p => p.Y) * imgH;
 
+            System.Diagnostics.Debug.WriteLine(
+                $"[SAM] Anfrage: img={imgW}x{imgH}, bbox=({minX:F0},{minY:F0})-({maxX:F0},{maxY:F0}), b64={b64.Length} bytes");
+
             // Nur BBox als Prompt — kein Punkt-Prompt, damit SAM innerhalb der Box bleibt
             var boxes = new[] { new Ai.Pipeline.SamBoundingBox(minX, minY, maxX, maxY, "mark", 1.0) };
 
             int dn = _codingOverlayService?.Calibration?.NominalDiameterMm ?? 300;
             var samReq = new Ai.Pipeline.SamRequest(b64, boxes, PipeDiameterMm: dn);
-            var samResp = await _codingVisionClient.SegmentSamAsync(samReq);
 
-            if (samResp?.Masks.Count > 0)
+            Ai.Pipeline.SamResponse? samResp;
+            try
             {
-                // Alte Masken entfernen, SAM-Vorschau rendern (Cyan = manuell markiert)
-                Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
-
-                // Quantifizierung fuer Label-Anzeige
-                var quantified = new List<Ai.Pipeline.MaskQuantificationService.QuantifiedMask>();
-                var cal = _codingOverlayService?.Calibration;
-                foreach (var mask in samResp.Masks)
-                {
-                    var q = cal != null
-                        ? Ai.Pipeline.MaskQuantificationService.Quantify(mask, samResp.ImageWidth, samResp.ImageHeight, dn, cal)
-                        : Ai.Pipeline.MaskQuantificationService.Quantify(mask, samResp.ImageWidth, samResp.ImageHeight, dn);
-                    quantified.Add(q);
-                }
-
-                Ai.Pipeline.SamMaskRenderer.RenderMasks(
-                    CodingOverlayCanvas,
-                    samResp,
-                    quantified,
-                    CodingOverlayCanvas.ActualWidth,
-                    CodingOverlayCanvas.ActualHeight);
+                samResp = await _codingVisionClient.SegmentSamAsync(samReq);
             }
+            catch (Exception apiEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SAM] API-Fehler: {apiEx.Message}");
+                SetCodingAiState("SAM Fehler", Color.FromRgb(0xEF, 0x44, 0x44),
+                    apiEx.Message.Length > 80 ? apiEx.Message[..80] : apiEx.Message);
+                return;
+            }
+
+            if (samResp == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[SAM] Antwort null (Sidecar nicht erreichbar oder 401/500)");
+                SetCodingAiState("SAM keine Antwort", Color.FromRgb(0xEF, 0x44, 0x44),
+                    "Sidecar antwortet nicht — Auth-Token oder Service down?");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine(
+                $"[SAM] Antwort: {samResp.Masks.Count} Masken, img={samResp.ImageWidth}x{samResp.ImageHeight}, t={samResp.InferenceTimeMs}ms");
+
+            if (samResp.Masks.Count == 0)
+            {
+                SetCodingAiState("SAM: keine Maske gefunden", Color.FromRgb(0xF5, 0x9E, 0x0B),
+                    "BBox war zu klein/zu gross oder Sidecar-Modell konnte nichts segmentieren");
+                return;
+            }
+
+            // Alte Masken entfernen, SAM-Vorschau rendern (Cyan = manuell markiert)
+            Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+
+            // Quantifizierung fuer Label-Anzeige
+            var quantified = new List<Ai.Pipeline.MaskQuantificationService.QuantifiedMask>();
+            var cal = _codingOverlayService?.Calibration;
+            foreach (var mask in samResp.Masks)
+            {
+                var q = cal != null
+                    ? Ai.Pipeline.MaskQuantificationService.Quantify(mask, samResp.ImageWidth, samResp.ImageHeight, dn, cal)
+                    : Ai.Pipeline.MaskQuantificationService.Quantify(mask, samResp.ImageWidth, samResp.ImageHeight, dn);
+                quantified.Add(q);
+            }
+
+            Ai.Pipeline.SamMaskRenderer.RenderMasks(
+                CodingOverlayCanvas,
+                samResp,
+                quantified,
+                CodingOverlayCanvas.ActualWidth,
+                CodingOverlayCanvas.ActualHeight);
+
+            SetCodingAiState($"SAM: {samResp.Masks.Count} Maske(n) gerendert",
+                Color.FromRgb(0x22, 0xC5, 0x5E),
+                $"Bild {samResp.ImageWidth}x{samResp.ImageHeight}, {samResp.InferenceTimeMs}ms");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[PlayerWindow] SAM-Vorschau Fehler: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[SAM] Unerwarteter Fehler: {ex}");
+            SetCodingAiState("SAM Exception", Color.FromRgb(0xEF, 0x44, 0x44), ex.Message);
         }
     }
 
@@ -4077,16 +4157,21 @@ public partial class PlayerWindow : Window
     private Point CodingNormToPixel(NormalizedPoint norm)
         => new(norm.X * CodingOverlayCanvas.ActualWidth, norm.Y * CodingOverlayCanvas.ActualHeight);
 
-    private void ClearTransientCodingCanvas(bool clearManualOverlay)
+    private void ClearTransientCodingCanvas(bool clearManualOverlay, bool clearSamMasks = true)
     {
+        // SAM-Mask-Tag heisst tatsaechlich "sam_mask_<idx>" (Kleinschreibung,
+        // siehe SamMaskRenderer.MaskTag = "sam_mask"). Frueher gefilterten Strings
+        // "SamMask_"/"SamLabel_" matchten gar nichts — die Masken wurden also
+        // nicht durch ClearTransientCodingCanvas geloescht, sondern blieben bis
+        // zum naechsten ClearMasks(...) Aufruf bestehen. Dieser Fix loescht sie
+        // jetzt korrekt wenn clearSamMasks=true.
         var remove = CodingOverlayCanvas.Children
             .OfType<FrameworkElement>()
             .Where(el => el.Tag is string tag &&
                          (tag == "tool_badge" ||
                           tag == "overlay_preview" ||
                           tag == "overlay_measure" ||
-                          tag.StartsWith("SamMask_") ||
-                          tag.StartsWith("SamLabel_") ||
+                          (clearSamMasks && tag.StartsWith(Ai.Pipeline.SamMaskRenderer.MaskTag, StringComparison.Ordinal)) ||
                           (clearManualOverlay && tag == "overlay_manual")))
             .ToList();
 
@@ -4094,10 +4179,14 @@ public partial class PlayerWindow : Window
             CodingOverlayCanvas.Children.Remove(el);
     }
 
-    private void RedrawCodingCanvas(bool includeManualOverlay)
+    private void RedrawCodingCanvas(bool includeManualOverlay, bool preserveSamMasks = false)
     {
+        // preserveSamMasks=true: SAM-Mask-Overlay (Cyan-Konturen nach BBox-Markierung)
+        // bleibt erhalten. Notwendig nach ShowSamPreviewAtMarkAsync, sonst werden
+        // die gerade gerenderten Masken durch nachfolgendes RedrawCodingCanvas
+        // sofort wieder geloescht (User-Beschwerde "wird nicht segmentiert").
         UpdateCodingOverlayViewport();
-        ClearTransientCodingCanvas(clearManualOverlay: true);
+        ClearTransientCodingCanvas(clearManualOverlay: true, clearSamMasks: !preserveSamMasks);
         RenderAiOverlays();
         RenderReferenceDn();
 
@@ -8851,6 +8940,18 @@ public partial class PlayerWindow : Window
         foreach (var el in toRemove)
             CodingOverlayCanvas.Children.Remove(el);
 
+        // User-Wunsch: nach dem Codieren+Speichern eines Befundes sollen nicht
+        // alle bisherigen Events erneut auf dem Live-Canvas erscheinen. Frueher
+        // hat diese Methode bei jedem RedrawCodingCanvas-Aufruf alle Events
+        // aus _codingVm.Events erneut gezeichnet — das war als "Sammeluebersicht"
+        // gedacht, fuehrte aber zu staendigem Wieder-Erscheinen alter Befunde.
+        // Die codierten Events bleiben in der Befundliste/DataGrid sichtbar.
+        // Das aktuell aktive Overlay (CurrentOverlay) wird weiterhin via
+        // RedrawCodingCanvas(includeManualOverlay: true) -> RenderOverlayGeometry
+        // gerendert und ist davon nicht betroffen.
+        return;
+
+#pragma warning disable CS0162 // Sammeluebersicht-Pfad bewusst stillgelegt
         var amber = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
         var amberFill = new SolidColorBrush(Color.FromArgb(30, 0xF5, 0x9E, 0x0B));
         var aiGlow = new System.Windows.Media.Effects.DropShadowEffect
@@ -9056,7 +9157,7 @@ public partial class PlayerWindow : Window
                     break;
             }
         }
-
+#pragma warning restore CS0162
     }
 
     // --- Dateneinblendung-Erkennung: Zustandsautomat ---
