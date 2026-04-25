@@ -103,10 +103,76 @@ public sealed class CodingSessionService : ICodingSessionService
         StateChanged?.Invoke(this, _session.State);
     }
 
+    /// <summary>
+    /// Liefert alle offenen Streckenschaeden in der laufenden Session:
+    /// Events mit IsStreckenschaden=true die noch kein passendes End-Event
+    /// haben (MeterEnd nicht gesetzt oder == MeterStart).
+    /// VSA-KEK: Streckenschaden hat Anfang (Char1=A) und Ende (Char1=B) —
+    /// ohne Ende ist die Codierung unvollstaendig.
+    /// </summary>
+    public IReadOnlyList<CodingEvent> GetOpenStreckenschaeden()
+    {
+        EnsureSession();
+        return _session!.Events
+            .Where(IsOpenStreckenschaden)
+            .OrderBy(e => e.MeterAtCapture)
+            .ToList();
+    }
+
+    private static bool IsOpenStreckenschaden(CodingEvent ev)
+    {
+        var entry = ev.Entry;
+        if (!entry.IsStreckenschaden) return false;
+        if (entry.IsDeleted) return false;
+        // Offen: kein MeterEnd gesetzt, oder Ende identisch mit Anfang
+        // (= nur Anfang erfasst, Ende fehlt noch).
+        if (!entry.MeterEnd.HasValue) return true;
+        if (entry.MeterStart.HasValue && entry.MeterEnd.Value <= entry.MeterStart.Value)
+            return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Schliesst einen offenen Streckenschaden mit explizitem End-Meter.
+    /// Wirft wenn das Event nicht in der Session existiert oder nicht offen ist.
+    /// </summary>
+    public void CloseStreckenschaden(Guid eventId, double endMeter)
+    {
+        EnsureSession();
+        var ev = _session!.Events.FirstOrDefault(e => e.EventId == eventId);
+        if (ev is null)
+            throw new InvalidOperationException($"Event {eventId} ist nicht in der Session.");
+        if (!IsOpenStreckenschaden(ev))
+            throw new InvalidOperationException("Event ist kein offener Streckenschaden.");
+        if (ev.Entry.MeterStart.HasValue && endMeter <= ev.Entry.MeterStart.Value)
+            throw new ArgumentException(
+                $"Streckenschaden-Ende ({endMeter:F2}m) muss groesser als Anfang ({ev.Entry.MeterStart:F2}m) sein.",
+                nameof(endMeter));
+
+        ev.Entry.MeterEnd = endMeter;
+    }
+
     public ProtocolDocument CompleteSession()
     {
         EnsureSession();
-        _session!.State = CodingSessionState.Completed;
+
+        // VALIDIERUNG: Codierung darf nicht abgeschlossen werden solange
+        // Streckenschaeden ohne Ende offen sind. User-Klage 2026-04-25:
+        // "wenn ich einen streckenschaden anfan protokolliert hab ist das
+        //  a1 und der muss geschlossen werden bevor die codierung zu ende ist"
+        var open = _session!.Events.Where(IsOpenStreckenschaden).ToList();
+        if (open.Count > 0)
+        {
+            var liste = string.Join(
+                ", ",
+                open.Select(e =>
+                    $"{e.Entry.Code} bei {e.Entry.MeterStart:F2}m"));
+            throw new InvalidOperationException(
+                $"Codierung kann nicht abgeschlossen werden: {open.Count} offene(r) Streckenschaden " +
+                $"ohne End-Meter ({liste}). Bitte mit 'Streckenschaden schliessen' abschliessen oder Event loeschen.");
+        }
+
+        _session.State = CodingSessionState.Completed;
         _session.CompletedAt = DateTimeOffset.UtcNow;
 
         // Protokoll aus gesammelten Events generieren

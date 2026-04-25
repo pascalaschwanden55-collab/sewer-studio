@@ -30,8 +30,25 @@ public interface ICodingSessionService
     /// <summary>Session abbrechen (mit Begruendung).</summary>
     void AbortSession(string reason);
 
-    /// <summary>Session abschliessen → Protokoll generieren.</summary>
+    /// <summary>
+    /// Session abschliessen → Protokoll generieren.
+    /// Wirft InvalidOperationException wenn offene Streckenschaeden existieren —
+    /// erst alle Streckenschaden-Ereignisse mit MeterEnd schliessen.
+    /// </summary>
     ProtocolDocument CompleteSession();
+
+    /// <summary>
+    /// Liefert offene Streckenschaeden (IsStreckenschaden=true ohne MeterEnd).
+    /// Leere Liste = Codierung kann sauber abgeschlossen werden.
+    /// </summary>
+    IReadOnlyList<CodingEvent> GetOpenStreckenschaeden();
+
+    /// <summary>
+    /// Setzt MeterEnd auf einem zuvor offenen Streckenschaden-Event.
+    /// Wirft wenn Event nicht existiert, kein offener Streckenschaden ist
+    /// oder endMeter &lt;= MeterStart.
+    /// </summary>
+    void CloseStreckenschaden(Guid eventId, double endMeter);
 
     // --- Navigation ---
 
