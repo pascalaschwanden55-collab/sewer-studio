@@ -72,6 +72,56 @@ public static class ProjectPathResolver
     }
 
     /// <summary>
+    /// Loest einen Pfad zu einer Datei auf, die zwingend INNERHALB des
+    /// Projektordners liegen muss (Containment-Check gegen Path-Traversal und
+    /// gegen referenzierte externe Dateien aus manipulierten Projektdateien).
+    ///
+    /// - relative Pfade werden gegen <paramref name="projectFolder"/> aufgeloest
+    /// - absolute Pfade werden NUR akzeptiert, wenn sie im Projektordner liegen
+    /// - alle Pfade muessen via Path.GetFullPath aufgeloest werden, sodass ".."
+    ///   nicht aus dem Projekt herausspringt
+    ///
+    /// Gibt null zurueck wenn Pfad ausserhalb, ungueltig oder nicht existent.
+    /// </summary>
+    public static string? ResolveContainedFile(string? rawPath, string? projectFolder)
+    {
+        var path = rawPath?.Trim();
+        if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(projectFolder))
+            return null;
+
+        try
+        {
+            var fullProjectFolder = Path.GetFullPath(projectFolder);
+            // Trailing-Separator anhaengen, damit "C:\proj" nicht "C:\project_other" matcht
+            var rootWithSep = fullProjectFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                              + Path.DirectorySeparatorChar;
+
+            // Forward-Slashes normalisieren (Cross-Plattform-JSON-Speicherung)
+            var normalizedRaw = path.Replace('/', Path.DirectorySeparatorChar);
+
+            string fullPath;
+            if (Path.IsPathRooted(normalizedRaw))
+            {
+                fullPath = Path.GetFullPath(normalizedRaw);
+            }
+            else
+            {
+                fullPath = Path.GetFullPath(Path.Combine(fullProjectFolder, normalizedRaw));
+            }
+
+            // Containment: aufgeloester Pfad muss unterhalb des Projektordners liegen
+            if (!fullPath.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            return File.Exists(fullPath) ? fullPath : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Wandelt einen absoluten Pfad in einen relativen Pfad (zum Projektordner) um.
     /// Verwendet Forward-Slashes fuer plattformunabhaengige JSON-Speicherung.
     /// </summary>

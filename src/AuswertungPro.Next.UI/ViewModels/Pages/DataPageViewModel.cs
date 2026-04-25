@@ -2315,17 +2315,11 @@ public sealed partial class DataPageViewModel : ObservableObject
 
     private static string? ResolveDossierPhotoPath(string? raw, string projectFolder)
     {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var normalized = raw.Replace('/', Path.DirectorySeparatorChar);
-        if (Path.IsPathRooted(normalized))
-            return normalized;
-
-        if (string.IsNullOrWhiteSpace(projectFolder))
-            return null;
-
-        return Path.GetFullPath(Path.Combine(projectFolder, normalized));
+        // Containment-Check: Dossier-Foto muss IM Projektordner liegen.
+        // Verhindert dass eine manipulierte Projektdatei (extern geoeffnet)
+        // beliebige lokale Bilder ins Dossier-PDF einbettet.
+        return AuswertungPro.Next.Application.Common.ProjectPathResolver
+            .ResolveContainedFile(raw, projectFolder);
     }
 
     private static void ResolveSchachtPdfPaths(SchachtRecord schacht, string projectFolder, List<string> paths)
@@ -2343,40 +2337,25 @@ public sealed partial class DataPageViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(raw))
             return;
 
-        var normalized = raw.Replace('/', Path.DirectorySeparatorChar);
-
-        // Absoluter Pfad
-        if (Path.IsPathRooted(normalized))
+        // Containment-Check: PDFs aus Projektdateien duerfen nur AUF Dateien
+        // im Projektordner zeigen. Blockiert manipulierte Projektdateien, die
+        // willkuerliche lokale PDFs (z.B. C:\Users\...) ins Dossier einbinden.
+        var contained = AuswertungPro.Next.Application.Common.ProjectPathResolver
+            .ResolveContainedFile(raw, projectFolder);
+        if (contained != null)
         {
-            if (File.Exists(normalized))
-            {
-                if (!paths.Contains(normalized, StringComparer.OrdinalIgnoreCase))
-                    paths.Add(normalized);
-                return;
-            }
-
-            // Fallback: absoluter Pfad existiert nicht (Laufwerk nicht gemountet) → Dateinamen im Projektordner suchen
-            if (!string.IsNullOrWhiteSpace(projectFolder))
-            {
-                var fallback = TryFindPdfInProject(Path.GetFileName(normalized), projectFolder);
-                if (fallback != null && !paths.Contains(fallback, StringComparer.OrdinalIgnoreCase))
-                    paths.Add(fallback);
-            }
+            if (!paths.Contains(contained, StringComparer.OrdinalIgnoreCase))
+                paths.Add(contained);
             return;
         }
 
-        // Relativer Pfad
+        // Fallback: nur Dateinamen im Projektordner suchen (Pfad selbst war
+        // ausserhalb / nicht-existent). Das ist sicher, weil TryFindPdfInProject
+        // ausschliesslich innerhalb projectFolder/Haltungen/Misc/Docu/PDF/...
+        // sucht.
         if (!string.IsNullOrWhiteSpace(projectFolder))
         {
-            var combined = Path.GetFullPath(Path.Combine(projectFolder, normalized));
-            if (File.Exists(combined))
-            {
-                if (!paths.Contains(combined, StringComparer.OrdinalIgnoreCase))
-                    paths.Add(combined);
-                return;
-            }
-
-            // Fallback: relativer Pfad nicht aufloesbar → Dateinamen im Projektordner suchen
+            var normalized = raw.Replace('/', Path.DirectorySeparatorChar);
             var fallback = TryFindPdfInProject(Path.GetFileName(normalized), projectFolder);
             if (fallback != null && !paths.Contains(fallback, StringComparer.OrdinalIgnoreCase))
                 paths.Add(fallback);
