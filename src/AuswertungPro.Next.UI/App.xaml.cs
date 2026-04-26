@@ -93,8 +93,30 @@ namespace AuswertungPro.Next.UI
                 }
 
                 // Global exception handling (after services initialized, but before first window).
+                // 2026-04-26: Direkt-Crash-Logger zusaetzlich zum normalen Logger.
+                // Wenn die App durch native Exception oder IsTerminating=true killt,
+                // hat der FileLoggerProvider keine Zeit zu flushen — direkt-sync-write
+                // garantiert dass die Crash-Info auf der Platte landet.
+                var crashLogPath = Path.Combine(AppSettings.AppDataDir, "logs", $"crash-{DateTime.Now:yyyyMMdd_HHmmss}.log");
+                void LogCrashSync(string source, Exception ex, bool isTerminating)
+                {
+                    try
+                    {
+                        var line =
+                            $"=== {DateTimeOffset.Now:O} ===" + Environment.NewLine +
+                            $"Source: {source}" + Environment.NewLine +
+                            $"IsTerminating: {isTerminating}" + Environment.NewLine +
+                            $"Type: {ex.GetType().FullName}" + Environment.NewLine +
+                            $"Message: {ex.Message}" + Environment.NewLine +
+                            $"Stack:{Environment.NewLine}{ex}" + Environment.NewLine + Environment.NewLine;
+                        File.AppendAllText(crashLogPath, line);
+                    }
+                    catch { /* niemals werfen aus dem Crash-Logger */ }
+                }
+
                 DispatcherUnhandledException += (_, exArgs) =>
                 {
+                    LogCrashSync("UI.DispatcherUnhandledException", exArgs.Exception, false);
                     exArgs.Handled = true;
                     HandleException(exArgs.Exception, "UI.DispatcherUnhandledException");
                 };
@@ -102,11 +124,15 @@ namespace AuswertungPro.Next.UI
                 AppDomain.CurrentDomain.UnhandledException += (_, exArgs) =>
                 {
                     if (exArgs.ExceptionObject is Exception ex)
+                    {
+                        LogCrashSync("AppDomain.UnhandledException", ex, exArgs.IsTerminating);
                         HandleException(ex, "AppDomain.UnhandledException");
+                    }
                 };
 
                 TaskScheduler.UnobservedTaskException += (_, exArgs) =>
                 {
+                    LogCrashSync("TaskScheduler.UnobservedTaskException", exArgs.Exception, false);
                     exArgs.SetObserved();
                     HandleException(exArgs.Exception, "TaskScheduler.UnobservedTaskException");
                 };

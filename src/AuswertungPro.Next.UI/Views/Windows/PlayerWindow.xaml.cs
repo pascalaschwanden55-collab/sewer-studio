@@ -109,6 +109,11 @@ public partial class PlayerWindow : Window
     private DispatcherTimer? _detectionTimer;
     private CancellationTokenSource? _detectionCts;
     private bool _isDetecting;
+
+    // 2026-04-26: Window-Lifecycle-Flag. Wird im Closed-Handler auf true
+    // gesetzt. Alle Timer-Ticks und fire-and-forget-Tasks pruefen das,
+    // damit sie nicht auf disposed Felder zugreifen und die App killen.
+    private volatile bool _isWindowClosed;
     private bool _isDetectionInFlight;
     private bool _isManualMarkMode;
     private double _lastDetectionTimestamp;
@@ -270,6 +275,11 @@ public partial class PlayerWindow : Window
 
         Closed += (_, __) =>
         {
+            // SOFORT als erstes setzen: alle Timer-Ticks und fire-and-forget-
+            // Tasks die jetzt noch in der Pipeline sind sehen das Flag und
+            // brechen ab, bevor sie auf disposed Felder zugreifen.
+            _isWindowClosed = true;
+
             // KRITISCH: Closed-Handler darf NIE eine Exception nach aussen
             // propagieren. Sonst kommt sie als DispatcherUnhandledException hoch
             // und kann (je nach Race mit MainWindow-Restore) die ganze App killen.
@@ -753,6 +763,9 @@ public partial class PlayerWindow : Window
 
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        // SOFORT: Lifecycle-Flag setzen damit Background-Tasks ab jetzt
+        // sofort returnen und nicht auf gleich disposed Felder zugreifen.
+        _isWindowClosed = true;
         try
         {
             Cleanup();
@@ -1609,6 +1622,9 @@ public partial class PlayerWindow : Window
 
     private async void DetectionTimer_Tick(object? sender, EventArgs e)
     {
+        // Window bereits geschlossen waehrend Tick im Flug: sofort raus,
+        // sonst greift RunDetectionAsync auf disposed _player/Canvas zu.
+        if (_isWindowClosed) return;
         try
         {
             await RunDetectionAsync();
@@ -2169,6 +2185,8 @@ public partial class PlayerWindow : Window
     /// </summary>
     private async void HandleMarkDrawingComplete()
     {
+        // Window-Lifecycle-Guard fuer async-void-Methode
+        if (_isWindowClosed) return;
         try
         {
             var overlay = _codingVm?.CurrentOverlay;
@@ -2231,6 +2249,7 @@ public partial class PlayerWindow : Window
     /// </summary>
     private async Task ShowSamPreviewAtMarkAsync(OverlayGeometry overlay, double normX, double normY)
     {
+        if (_isWindowClosed) return;
         if (_codingVisionClient == null)
         {
             System.Diagnostics.Debug.WriteLine("[SAM] Abbruch: _codingVisionClient ist null (Sidecar nicht initialisiert)");
@@ -8850,6 +8869,10 @@ public partial class PlayerWindow : Window
 
     private async void CodingLiveAiTimer_Tick(object? sender, EventArgs e)
     {
+        // 2026-04-26: Window-Lifecycle-Guard. async-void darf bei IsClosed
+        // nicht weiterlaufen — sonst greift RunCodingAnalysisAsync auf
+        // disposed _player/_codingVisionClient zu (App-Crash).
+        if (_isWindowClosed) return;
         try
         {
             // Nicht analysieren wenn: bereits analysierend, Video pausiert, WaitingForUserInput
