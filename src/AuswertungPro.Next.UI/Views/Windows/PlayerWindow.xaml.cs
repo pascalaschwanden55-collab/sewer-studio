@@ -804,14 +804,32 @@ public partial class PlayerWindow : Window
         // Speicher freigibt.
         var playerRef = _player;
         var libVlcRef = _libVlc;
+        // KRITISCH 2026-04-26: _libVlc.Dispose() loest einen native AccessViolation
+        // (0xc0000005) in LibVLCLogUnset aus, der die App killt — Windows-Event-Log
+        // hat genau das nachgewiesen:
+        //   "Description: The process was terminated due to an unhandled exception.
+        //    at LibVLCSharp.Shared.LibVLC+Native.LibVLCLogUnset(IntPtr)
+        //    at LibVLCSharp.Shared.LibVLC.Dispose(Boolean)"
+        // C# try/catch faengt KEINE native AVs ohne legacy-Konfiguration.
+        // Loesung: _libVlc NICHT mehr disposen. LibVLC ist eine Singleton-artige
+        // Native-Lib (cVLC-Engine), die ohnehin nur einmal pro Prozess existiert
+        // und beim Prozess-Exit vom OS aufgeraeumt wird. Der "Leak" ist 0 Byte
+        // praktisch — derselbe Native-Speicher den der naechste PlayerWindow
+        // sowieso wieder nutzen wuerde.
+        // playerRef.Dispose() bleibt — der MediaPlayer hat keinen native-Crash-Pfad.
+        // Felder sind readonly — GC raeumt die C#-Wrapper bei Window-Dispose,
+        // wir muessen sie hier nicht null setzen.
         Dispatcher.BeginInvoke(new Action(() =>
         {
-            try { playerRef?.Dispose(); } catch (Exception ex) {
+            try { playerRef?.Dispose(); }
+            catch (Exception ex)
+            {
                 System.Diagnostics.Debug.WriteLine($"[PlayerWindow] player.Dispose Fehler: {ex.Message}");
             }
-            try { libVlcRef?.Dispose(); } catch (Exception ex) {
-                System.Diagnostics.Debug.WriteLine($"[PlayerWindow] libVlc.Dispose Fehler: {ex.Message}");
-            }
+            // libVlcRef BEWUSST nicht disposed — siehe Kommentar oben.
+            // GC.KeepAlive verhindert nur dass der Wrapper waehrend playerRef.Dispose
+            // schon collected wird (damit das letzte Native-Handle gueltig bleibt).
+            GC.KeepAlive(libVlcRef);
         }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
     }
 
