@@ -4183,8 +4183,20 @@ public partial class PlayerWindow : Window
         {
             RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: false);
 
-            // Mark-Modus: direkt VsaCodeExplorer oeffnen + Training speichern
-            if (_markToolType != OverlayToolType.None)
+            // Mark-Modus ODER Rectangle-Overlay: direkt VsaCodeExplorer oeffnen
+            // + SAM + Training speichern via HandleMarkDrawingComplete.
+            //
+            // User-Wunsch 2026-04-26: "Im Codiermodus, waere es gut wenn ich
+            // markiere BBox das Fenster zum Codieren jedesmal aufgeht."
+            // Vorher: Rectangle-Overlay rief nur SAM auf, User musste manuell
+            // auf "Befund erstellen"-Button klicken UND vorher Code waehlen.
+            // Jetzt: Rectangle-Overlay = sofort VsaCodeExplorer wie im Mark-Modus.
+            //
+            // Andere Geometrien (Linie/Bogen/Stretch/Punkt/Level/PipeBend) bleiben
+            // manuell — fuer Streckenschaeden/Bogenwinkel etc. ist der zweistufige
+            // Workflow korrekt (zuerst messen, dann Code).
+            if (_markToolType != OverlayToolType.None
+                || _codingVm.CurrentOverlay.ToolType == OverlayToolType.Rectangle)
             {
                 HandleMarkDrawingComplete();
                 return;
@@ -4192,20 +4204,6 @@ public partial class PlayerWindow : Window
 
             UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
             BtnCodingCreateEvent.IsEnabled = true;
-
-            // User-Klage 2026-04-25: "Im Trainingsmodus wird gruen segmentiert,
-            // im Codiermodus nicht — muss ich KI zusaetzlich aktivieren?"
-            // Antwort: Nein, SAM laeuft jetzt automatisch bei jeder BBox/Rechteck-
-            // Markierung — analog zum Trainingsmodus. Vorher war SAM nur bei
-            // Mark-Tool-Modus aktiv, das setzte einen separaten Toggle voraus.
-            if (_codingVm.CurrentOverlay.ToolType == OverlayToolType.Rectangle
-                && _codingVisionClient != null)
-            {
-                var ov = _codingVm.CurrentOverlay;
-                double avgX = ov.Points.Count > 0 ? ov.Points.Average(p => p.X) : 0.5;
-                double avgY = ov.Points.Count > 0 ? ov.Points.Average(p => p.Y) : 0.5;
-                _ = ShowSamPreviewAtMarkAsync(ov, avgX, avgY);
-            }
 
             // Wenn Auto-KI aktiv: Overlay-Zeichnung -> KI analysiert markierte Stelle
             if (BtnCodingLiveAi.IsChecked == true)
