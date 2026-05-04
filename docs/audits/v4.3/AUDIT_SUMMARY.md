@@ -201,7 +201,7 @@ Diese 5 Punkte haben **alle drei** Audits unabhängig genannt — sie sind unbes
 ### Phase 6 — Monat 3+ (Langfrist)
 | # | Aufgabe | Konsens | Aufwand |
 |---|---|---|---|
-| 6.1 | PlayerWindow.xaml.cs in Partials zerlegen (9856 Zeilen) | A2 (3/3) | 1 Woche |
+| 6.1 | ~~PlayerWindow.xaml.cs in Partials zerlegen (9856 Zeilen)~~ — Inventar: heute 9.860 Zeilen, ~185 Methoden, ~47 Felder. 8 Verantwortlichkeits-Cluster (VideoPlayback, CodingMode, AiDetection, Feedback, Snapshot, UiState, TrainingMode, Helpers). 9-Partials-Vorschlag (~5-7 Tage). Praezedenzfall: PlayerWindow.TrainingMode.cs schon ausgelagert. Reihenfolge: 5.3 → 6.1 → 6.2. Bericht: `PHASE_6.1_PLAYERWINDOW_INVENTAR.md`. ⏸️ Migration in Mehr-Tages-Session. | A2 (3/3) | 1 Woche (geplant) / Inventar+Bericht (effektiv) |
 | 6.2 | TrainingCenterViewModel zerlegen → BatchOrchestrator + Repo + Writer | A2 (3/3) | 1 Woche |
 | 6.3 | KI-Schicht komplett aus UI ausziehen (144 Dateien) | A1 (3/3) | langfristig |
 | 6.4 | UI-Redesign: Fluent-WPF / WPF-UI 3 als Design-Basis | A6 (3/3) | 2 Wochen |
