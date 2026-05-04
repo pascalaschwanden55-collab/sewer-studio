@@ -2001,11 +2001,12 @@ public sealed partial class DataPageViewModel : ObservableObject
             return;
         }
 
-        // Show print options dialog
-        var dialog = new HydraulikPrintDialog();
+        // Phase 1.4 Followup: Generischer PrintOptionsDialog ersetzt HydraulikPrintDialog.
+        var dialog = new PrintOptionsDialog(PrintDialogFactory.CreateHydraulikConfig());
         dialog.Owner = System.Windows.Application.Current?.MainWindow;
-        if (dialog.ShowDialog() != true || dialog.SelectedOptions is null)
+        if (dialog.ShowDialog() != true)
             return;
+        var hydraulikOpts = PrintDialogFactory.ToHydraulikOptions(dialog.GetSelectedOptions());
 
         // SaveFile dialog
         var holding = record.GetFieldValue("Haltungsname") ?? "Haltung";
@@ -2021,7 +2022,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         try
         {
             var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
-            var options = dialog.SelectedOptions with
+            var options = hydraulikOpts with
             {
                 LogoPathAbs = File.Exists(logoPath) ? logoPath : null
             };
