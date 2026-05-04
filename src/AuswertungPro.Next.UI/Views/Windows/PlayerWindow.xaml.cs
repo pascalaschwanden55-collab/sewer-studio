@@ -1327,10 +1327,10 @@ public partial class PlayerWindow : Window
         };
 
         var tip = segment.HasDamage
-            ? $"Schaden: {segment.Label ?? "?"} (Schwere {segment.Severity})"
+            ? $"Befund: {segment.Label ?? "?"} (Schwere {segment.Severity})"
               + (segment.Clock != null ? $"\nUhr: {segment.Clock}" : "")
               + $"\n@ {segment.TimestampSeconds:0.0}s"
-            : $"Kein Schaden @ {segment.TimestampSeconds:0.0}s";
+            : $"Kein Befund @ {segment.TimestampSeconds:0.0}s";
         rect.ToolTip = tip;
 
         var timestampSec = segment.TimestampSeconds;
@@ -1770,8 +1770,8 @@ public partial class PlayerWindow : Window
 
         var count = result.Findings.Count;
         LiveDetectionStatusText.Text = count > 0
-            ? $"{count} Schaden erkannt @ {result.TimestampSeconds:0.0}s"
-            : $"Kein Schaden @ {result.TimestampSeconds:0.0}s";
+            ? $"{count} Befund(e) erkannt @ {result.TimestampSeconds:0.0}s"
+            : $"Kein Befund @ {result.TimestampSeconds:0.0}s";
 
         if (count > 0)
         {
@@ -2232,6 +2232,12 @@ public partial class PlayerWindow : Window
             // SAM-Segmentierung an der markierten Stelle anzeigen
             await ShowSamPreviewAtMarkAsync(overlay, avgX, avgY);
 
+            // Der VSA-Picker ist modal und liegt ueber dem CodingOverlayPopup.
+            // Deshalb kurz warten, damit die erfolgreich gerenderte SAM-Maske sichtbar ist,
+            // bevor der Picker automatisch aufgeht.
+            if (!_isWindowClosed && overlay.ToolType == OverlayToolType.Rectangle && CodingOverlayPopup.IsOpen)
+                await Task.Delay(TimeSpan.FromMilliseconds(1200));
+
             // Training speichern: Frame + YOLO-Export + TeacherAnnotation + CodingEvent
             bool saved = await SaveMarkAsTrainingAsync(overlay, timestampSec, clockPos);
 
@@ -2271,20 +2277,27 @@ public partial class PlayerWindow : Window
         if (_codingVisionClient == null)
         {
             System.Diagnostics.Debug.WriteLine("[SAM] Abbruch: _codingVisionClient ist null (Sidecar nicht initialisiert)");
-            SetCodingAiState("SAM nicht verfuegbar", Color.FromRgb(0xEF, 0x44, 0x44),
-                "Sidecar-Client nicht initialisiert");
+            SetCodingAiState("SAM: Sidecar-Client nicht initialisiert", Color.FromRgb(0xEF, 0x44, 0x44));
             return;
         }
 
         try
         {
+            Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+
+            if (overlay.Points.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine("[SAM] Abbruch: BBox-Punkte fehlen");
+                SetCodingAiState("SAM: BBox-Punkte fehlen", Color.FromRgb(0xEF, 0x44, 0x44));
+                return;
+            }
+
             // Snapshot fuer SAM
             var pngBytes = await CaptureSnapshotAsync();
             if (pngBytes == null || pngBytes.Length == 0)
             {
                 System.Diagnostics.Debug.WriteLine("[SAM] Abbruch: Snapshot leer/null");
-                SetCodingAiState("SAM: kein Frame", Color.FromRgb(0xEF, 0x44, 0x44),
-                    "Snapshot fehlgeschlagen");
+                SetCodingAiState("SAM: Frame-Capture leer (Video pausiert?)", Color.FromRgb(0xEF, 0x44, 0x44));
                 return;
             }
 
@@ -2318,8 +2331,7 @@ public partial class PlayerWindow : Window
             // Window-Resizing), wuerde die direkte Normalisierung overlay.Points * imgW
             // die BBox verschieben. Stattdessen ueber Canvas-Pixel + sx/sy-Skalierung,
             // das macht der Trainingsmodus auch und es funktioniert dort zuverlaessig.
-            double cw = Math.Max(1, CodingOverlayCanvas.ActualWidth);
-            double ch = Math.Max(1, CodingOverlayCanvas.ActualHeight);
+            var (cw, ch) = GetCodingOverlayRenderSize();
             double sx = imgW / cw;
             double sy = imgH / ch;
 
@@ -2338,8 +2350,7 @@ public partial class PlayerWindow : Window
             if ((maxX - minX) < 4 || (maxY - minY) < 4)
             {
                 System.Diagnostics.Debug.WriteLine($"[SAM] BBox zu klein: {maxX - minX:F0}x{maxY - minY:F0} px");
-                SetCodingAiState("SAM: BBox zu klein", Color.FromRgb(0xF5, 0x9E, 0x0B),
-                    "Mindestens 4x4 Pixel ziehen");
+                SetCodingAiState($"SAM: BBox zu klein ({maxX - minX:F0}x{maxY - minY:F0} px)", Color.FromRgb(0xF5, 0x9E, 0x0B));
                 return;
             }
 
@@ -2355,23 +2366,27 @@ public partial class PlayerWindow : Window
             var samReq = new Ai.Pipeline.SamRequest(b64, boxes, PipeDiameterMm: dn);
 
             Ai.Pipeline.SamResponse? samResp;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
+                SetCodingAiState("SAM: laeuft...", Color.FromRgb(0xF5, 0x9E, 0x0B), pulse: true);
                 samResp = await _codingVisionClient.SegmentSamAsync(samReq);
             }
             catch (Exception apiEx)
             {
                 System.Diagnostics.Debug.WriteLine($"[SAM] API-Fehler: {apiEx.Message}");
-                SetCodingAiState("SAM Fehler", Color.FromRgb(0xEF, 0x44, 0x44),
-                    apiEx.Message.Length > 80 ? apiEx.Message[..80] : apiEx.Message);
+                SetCodingAiState($"SAM-Fehler: {TrimStatus(apiEx.Message)}", Color.FromRgb(0xEF, 0x44, 0x44));
                 return;
+            }
+            finally
+            {
+                sw.Stop();
             }
 
             if (samResp == null)
             {
                 System.Diagnostics.Debug.WriteLine("[SAM] Antwort null (Sidecar nicht erreichbar oder 401/500)");
-                SetCodingAiState("SAM keine Antwort", Color.FromRgb(0xEF, 0x44, 0x44),
-                    "Sidecar antwortet nicht — Auth-Token oder Service down?");
+                SetCodingAiState("SAM-Fehler: Sidecar antwortet nicht", Color.FromRgb(0xEF, 0x44, 0x44));
                 return;
             }
 
@@ -2380,13 +2395,16 @@ public partial class PlayerWindow : Window
 
             if (samResp.Masks.Count == 0)
             {
-                SetCodingAiState("SAM: keine Maske gefunden", Color.FromRgb(0xF5, 0x9E, 0x0B),
-                    "BBox war zu klein/zu gross oder Sidecar-Modell konnte nichts segmentieren");
+                SetCodingAiState("SAM: Keine Maske gefunden (leeres Ergebnis vom Sidecar)", Color.FromRgb(0xF5, 0x9E, 0x0B));
                 return;
             }
 
             // Alte Masken entfernen, SAM-Vorschau rendern (Cyan = manuell markiert)
             Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+            CodingOverlayPopup.IsOpen = true;
+            UpdateCodingOverlayViewport();
+            var (renderW, renderH) = GetCodingOverlayRenderSize();
+            RenderSamPromptBox(minNormX, minNormY, maxNormX, maxNormY, renderW, renderH);
 
             // Quantifizierung fuer Label-Anzeige
             var quantified = new List<Ai.Pipeline.MaskQuantificationService.QuantifiedMask>();
@@ -2403,18 +2421,61 @@ public partial class PlayerWindow : Window
                 CodingOverlayCanvas,
                 samResp,
                 quantified,
-                CodingOverlayCanvas.ActualWidth,
-                CodingOverlayCanvas.ActualHeight);
+                renderW,
+                renderH);
 
-            SetCodingAiState($"SAM: {samResp.Masks.Count} Maske(n) gerendert",
+            var visibleSamElements = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
+                .Count(e => (e.Tag as string)?.StartsWith(Ai.Pipeline.SamMaskRenderer.MaskTag, StringComparison.Ordinal) == true);
+
+            SetCodingAiState($"SAM-Maske: {samResp.Masks.Count} Region(en) in {sw.ElapsedMilliseconds} ms",
                 Color.FromRgb(0x22, 0xC5, 0x5E),
-                $"Bild {samResp.ImageWidth}x{samResp.ImageHeight}, {samResp.InferenceTimeMs}ms");
+                $"Overlay-Elemente: {visibleSamElements}");
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[SAM] Unerwarteter Fehler: {ex}");
-            SetCodingAiState("SAM Exception", Color.FromRgb(0xEF, 0x44, 0x44), ex.Message);
+            SetCodingAiState($"SAM-Fehler: {TrimStatus(ex.Message)}", Color.FromRgb(0xEF, 0x44, 0x44));
         }
+    }
+
+    private (double Width, double Height) GetCodingOverlayRenderSize()
+    {
+        UpdateCodingOverlayViewport();
+
+        double w = CodingOverlayCanvas.ActualWidth;
+        double h = CodingOverlayCanvas.ActualHeight;
+        if (double.IsNaN(w) || w <= 1) w = CodingOverlayCanvas.Width;
+        if (double.IsNaN(h) || h <= 1) h = CodingOverlayCanvas.Height;
+        if (double.IsNaN(w) || w <= 1) w = VideoView.ActualWidth;
+        if (double.IsNaN(h) || h <= 1) h = VideoView.ActualHeight;
+
+        return (Math.Max(1, w), Math.Max(1, h));
+    }
+
+    private void RenderSamPromptBox(double minNormX, double minNormY, double maxNormX, double maxNormY, double canvasW, double canvasH)
+    {
+        var rect = new Rectangle
+        {
+            Width = Math.Max(1, (maxNormX - minNormX) * canvasW),
+            Height = Math.Max(1, (maxNormY - minNormY) * canvasH),
+            Stroke = new SolidColorBrush(Color.FromRgb(0x38, 0xBD, 0xF8)),
+            StrokeThickness = 2,
+            StrokeDashArray = new DoubleCollection { 6, 4 },
+            Fill = new SolidColorBrush(Color.FromArgb(20, 0x38, 0xBD, 0xF8)),
+            IsHitTestVisible = false,
+            Tag = $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_prompt"
+        };
+
+        Canvas.SetLeft(rect, minNormX * canvasW);
+        Canvas.SetTop(rect, minNormY * canvasH);
+        CodingOverlayCanvas.Children.Add(rect);
+    }
+
+    private static string TrimStatus(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message)) return "Unbekannter Fehler";
+        message = message.Replace(Environment.NewLine, " ").Trim();
+        return message.Length > 120 ? message[..120] : message;
     }
 
     /// <summary>
@@ -4244,7 +4305,7 @@ public partial class PlayerWindow : Window
 
             // Wenn Auto-KI aktiv: Overlay-Zeichnung -> KI analysiert markierte Stelle
             if (BtnCodingLiveAi.IsChecked == true)
-                _ = AnalyzeWithOverlayHintAsync(_codingVm.CurrentOverlay);
+                AnalyzeWithOverlayHintAsync(_codingVm.CurrentOverlay).SafeFireAndForget("OverlayHintAutoAi");
         }
         else
         {
@@ -6365,7 +6426,8 @@ public partial class PlayerWindow : Window
 
             // Positiv-Feedback speichern (gleich wie O auf Maske)
             var label = ev.AiContext?.Reason ?? ev.Entry.Code ?? "";
-            _ = Task.Run(() => SavePositiveFeedbackAsync(label, ev.Entry.Code, ev.MeterAtCapture));
+            Task.Run(() => SavePositiveFeedbackAsync(label, ev.Entry.Code, ev.MeterAtCapture))
+                .SafeFireAndForget("PositiveFeedbackEntry");
 
             UpdateCodingDefectDetailPanel(ev);
             RefreshCodingEventsList();
@@ -6446,7 +6508,8 @@ public partial class PlayerWindow : Window
 
         // Negativ-Feedback speichern (gleich wie Delete auf Maske)
         var label = ev.AiContext?.Reason ?? ev.Entry.Code ?? "";
-        _ = Task.Run(() => SaveNegativeFeedbackAsync(label, ev.Entry.Code, ev.MeterAtCapture));
+        Task.Run(() => SaveNegativeFeedbackAsync(label, ev.Entry.Code, ev.MeterAtCapture))
+            .SafeFireAndForget("NegativeFeedbackEntry");
 
         // Ablehnen = Eintrag komplett entfernen (nicht nur Status setzen)
         _codingSessionService?.RemoveEvent(ev.EventId);
@@ -7305,7 +7368,7 @@ public partial class PlayerWindow : Window
                 // Wenn weder YOLO noch Qwen etwas gefunden haben
                 if (!yoloHadFindings && (result == null || result.Findings.Count == 0))
                 {
-                    SetCodingAiState("Kein Schaden erkannt",
+                    SetCodingAiState("Kein Befund erkannt",
                         Color.FromRgb(0x94, 0xA3, 0xB8), "YOLO + Qwen");
                 }
             }
@@ -7634,7 +7697,8 @@ public partial class PlayerWindow : Window
             CodingOverlayCanvas, $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{maskIndex}");
 
         // Negativ-Feedback speichern
-        _ = Task.Run(() => SaveNegativeFeedbackAsync(quant.Label, vsaCode, meter));
+        Task.Run(() => SaveNegativeFeedbackAsync(quant.Label, vsaCode, meter))
+            .SafeFireAndForget("NegativeFeedbackMask");
 
         _selectedMaskIndex = -1;
         RefreshCodingEventsList();
@@ -7698,7 +7762,8 @@ public partial class PlayerWindow : Window
             CodingOverlayCanvas, $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{maskIndex}");
 
         // Positiv-Feedback speichern
-        _ = Task.Run(() => SavePositiveFeedbackAsync(quant.Label, vsaCode, meter));
+        Task.Run(() => SavePositiveFeedbackAsync(quant.Label, vsaCode, meter))
+            .SafeFireAndForget("PositiveFeedbackMask");
 
         _selectedMaskIndex = -1;
         RefreshCodingEventsList();
@@ -7859,11 +7924,11 @@ public partial class PlayerWindow : Window
             _player.SetPause(false);
             SetCodingAiState("Weiter...", Color.FromRgb(0x22, 0xC5, 0x5E),
                 "KI-Analyse mit Pause aktiv");
-            _ = Task.Run(async () =>
+            Task.Run(async () =>
             {
                 await Task.Delay(2000);
                 _codingIsAnalyzing = false;
-            });
+            }).SafeFireAndForget("CodingPauseCooldown");
         }
     }
 
@@ -8274,8 +8339,8 @@ public partial class PlayerWindow : Window
         if (validFindings.Count == 0)
         {
             var noDamageText = result.MeterReading.HasValue
-                ? $"OSD {result.MeterReading.Value:F2}m \u2013 Kein Schaden"
-                : "Kein Schaden";
+                ? $"OSD {result.MeterReading.Value:F2}m \u2013 Kein Befund"
+                : "Kein Befund";
             SetCodingAiState(noDamageText, Color.FromRgb(0x22, 0xC5, 0x5E), "Schritt 3 von 3: Overlay aktualisiert");
             CodingFindingsList.ItemsSource = null;
             DetectionCanvas.Children.Clear();
