@@ -164,15 +164,14 @@
 
             <Button Content="Speichern" Command="{Binding SaveCommand}" Margin="0,18,0,0" Width="160" ToolTip="Alle Einstellungen dauerhaft speichern"/>
 
-        <!-- ═══════════════════════════════════════════════════════════════════
-             PROGRAMM-ANLEITUNG — 20 Sektionen, vollstaendig
-             ═══════════════════════════════════════════════════════════════════ -->
-        <Border Margin="0,32,0,0" Padding="0,0,0,4"
-                BorderThickness="0,0,0,2" BorderBrush="{StaticResource NeonCyanBrush}">
-            <TextBlock Text="Programm-Anleitung  SewerStudio"
-                       FontSize="20" FontWeight="Bold"
-                       Foreground="{StaticResource NeonCyanBrush}"/>
-        </Border>
+        <!-- Phase 3.5: Anleitungstexte aus Settings ausgeblendet — User kann sie
+             via Expander einklappen. Default eingeklappt: Settings-UI bleibt
+             schlank, Anleitung bleibt fuer Bedarfsfall zugaenglich. Audit:
+             Anleitungstexte aus Settings in eigene Hilfe-Seite (UI-Aufraeumen). -->
+        <Expander Margin="0,32,0,0"
+                  IsExpanded="False"
+                  Header="Programm-Anleitung — SewerStudio (20 Module, KI-Pipeline, Workflows)">
+            <StackPanel Margin="0,12,0,0">
 
         <TextBlock Text="Vollstaendige Dokumentation aller 20 Module, KI-Pipeline, Workflows und Konfiguration."
                    Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,20" FontSize="12"/>
@@ -696,6 +695,9 @@
                 SewerStudio — Professionelle Kanalinspektion und KI-Analyse — 20 Module dokumentiert
             </TextBlock>
         </Border>
+
+            </StackPanel>
+        </Expander>
 
         </StackPanel>
     </ScrollViewer>
