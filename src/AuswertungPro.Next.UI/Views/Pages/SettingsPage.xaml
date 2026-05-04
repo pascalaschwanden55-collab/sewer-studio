@@ -1,13 +1,16 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.SettingsPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Views.Controls">
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled"
                   CanContentScroll="True"
                   Padding="0,0,8,0">
         <StackPanel>
-            <!-- Phase 3.2: Typography-Token TypeH4 (16) — vorher Inline FontSize="{StaticResource TypeH4}". -->
-            <TextBlock Text="Einstellungen" FontSize="{StaticResource TypeH4}" FontWeight="SemiBold" Margin="0,0,0,12"/>
+            <!-- Phase 3.3: PageHeader-Control statt Inline-Title. -->
+            <ctrl:PageHeader Title="Einstellungen"
+                             Subtitle="Theme, Diagnose, Expertenmodus, Backups, Anleitung"
+                             Margin="0,0,0,12"/>
 
         <TextBlock Text="Design" Margin="0,0,0,6" Foreground="{StaticResource MutedBrush}"/>
         <DockPanel>
