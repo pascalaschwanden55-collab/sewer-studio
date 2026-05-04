@@ -18,10 +18,15 @@ namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
 /// </summary>
 public sealed class KnowledgeBaseManager(
     KnowledgeBaseContext db,
-    EmbeddingService embedder)
+    EmbeddingService embedder,
+    KnowledgeBaseWriter? writer = null)
 {
     // Schuetzt vor gleichzeitigem Rebuild + Index (Datenverlust vermeiden)
     private static readonly SemaphoreSlim RebuildGuard = new(1, 1);
+
+    // Phase 2.2: Zentraler Writer serialisiert alle SQLite-Schreibvorgaenge.
+    // Wenn nicht injiziert, lokal erzeugt (default-Verhalten — abwaerts-kompatibel).
+    private readonly KnowledgeBaseWriter _writer = writer ?? new KnowledgeBaseWriter(db);
 
     // V4.2 Fix: Disk-Full-Guard — warnt wenn weniger als 1 GB frei auf KB-Laufwerk.
     private const long MinFreeBytes = 1024L * 1024L * 1024L; // 1 GB
@@ -111,20 +116,14 @@ public sealed class KnowledgeBaseManager(
 
         // Atomar: Sample + Embedding in einer Transaction (kein Zustand ohne Embedding)
         var versionId = GetOrCreateCurrentVersionId();
-        using var tx = db.Connection.BeginTransaction();
-        try
+        // Phase 2.2: Writer serialisiert + handhabt Commit/Rollback.
+        _writer.ExecuteInTransaction((_, _) =>
         {
             UpsertSample(sample, versionId);
             UpsertEmbedding(sample.SampleId, vector);
-            tx.Commit();
-            KnowledgeMirrorService.Current?.NotifyChanged();
-            return true;
-        }
-        catch
-        {
-            tx.Rollback();
-            throw;
-        }
+        });
+        KnowledgeMirrorService.Current?.NotifyChanged();
+        return true;
     }
 
     /// <summary>
@@ -151,23 +150,24 @@ public sealed class KnowledgeBaseManager(
 
         if (ready.Count == 0) return [];
 
-        // Phase 2: Eine Transaktion fuer alle UPSERTs
+        // Phase 2: Eine Transaktion fuer alle UPSERTs (Phase 2.2: via Writer-Lock)
         var versionId = GetOrCreateCurrentVersionId();
-        using var tx = db.Connection.BeginTransaction();
         try
         {
-            foreach (var (sample, vec) in ready)
+            _writer.ExecuteInTransaction((_, _) =>
             {
-                UpsertSample(sample, versionId);
-                UpsertEmbedding(sample.SampleId, vec);
-            }
-            tx.Commit();
+                foreach (var (sample, vec) in ready)
+                {
+                    UpsertSample(sample, versionId);
+                    UpsertEmbedding(sample.SampleId, vec);
+                }
+            });
             KnowledgeMirrorService.Current?.NotifyChanged();
             return ready.Select(r => r.Sample.SampleId).ToList();
         }
         catch
         {
-            tx.Rollback();
+            // Phase 2.2: Rollback bereits durch ExecuteInTransaction.
             throw;
         }
     }
@@ -271,27 +271,28 @@ public sealed class KnowledgeBaseManager(
             Debug.WriteLine($"[KnowledgeBaseManager] WARNUNG: {errors} Embedding-Fehler von {samples.Count} Samples");
         }
 
-        // Phase 2: Loeschen + Neuaufbau in einer Transaktion
+        // Phase 2: Loeschen + Neuaufbau in einer Transaktion (Phase 2.2: via Writer-Lock)
         lock (_versionLock) { _currentVersionId = null; }
-        using var tx = db.Connection.BeginTransaction();
+        var indexed = 0;
         try
         {
-            ExecuteNonQuery("DELETE FROM Embeddings");
-            ExecuteNonQuery("DELETE FROM Samples");
-            ExecuteNonQuery("DELETE FROM Versions");
-
-            var versionId = GetOrCreateCurrentVersionId();
-            var indexed = 0;
-            for (var i = 0; i < samples.Count; i++)
+            _writer.ExecuteInTransaction((_, _) =>
             {
-                if (!embeddings.TryGetValue(i, out var vec)) continue;
-                UpsertSample(samples[i], versionId);
-                UpsertEmbedding(samples[i].SampleId, vec);
-                indexed++;
-            }
+                ExecuteNonQuery("DELETE FROM Embeddings");
+                ExecuteNonQuery("DELETE FROM Samples");
+                ExecuteNonQuery("DELETE FROM Versions");
 
-            FinalizeCurrentVersion(indexed);
-            tx.Commit();
+                var versionId = GetOrCreateCurrentVersionId();
+                for (var i = 0; i < samples.Count; i++)
+                {
+                    if (!embeddings.TryGetValue(i, out var vec)) continue;
+                    UpsertSample(samples[i], versionId);
+                    UpsertEmbedding(samples[i].SampleId, vec);
+                    indexed++;
+                }
+
+                FinalizeCurrentVersion(indexed);
+            });
 
             Debug.WriteLine($"[KnowledgeBaseManager] KB-Rebuild erfolgreich: {indexed}/{samples.Count} Samples indiziert");
             KnowledgeMirrorService.Current?.NotifyChanged();
@@ -299,7 +300,7 @@ public sealed class KnowledgeBaseManager(
         }
         catch
         {
-            tx.Rollback();
+            // Phase 2.2: Rollback bereits durch ExecuteInTransaction.
             throw;
         }
     }

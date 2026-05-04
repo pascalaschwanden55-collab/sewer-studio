@@ -47,6 +47,14 @@ public sealed class KnowledgeBaseContext : IDisposable
         // Definitionen sonst (Default ist OFF).
         ExecuteNonQuery("PRAGMA foreign_keys=ON;");
 
+        // Phase 2.2: Robustheits-PRAGMAs.
+        // - busy_timeout: 5s warten bei "database is locked" statt sofort
+        //   zu werfen (parallele Writes/Reads in der KI-Pipeline).
+        // - synchronous=NORMAL: sicher in Verbindung mit WAL, deutlich
+        //   schneller als FULL — Default fuer eingebettete SQLite-Anwendungen.
+        ExecuteNonQuery("PRAGMA busy_timeout=5000;");
+        ExecuteNonQuery("PRAGMA synchronous=NORMAL;");
+
         ExecuteNonQuery("""
             CREATE TABLE IF NOT EXISTS Samples (
                 SampleId     TEXT    PRIMARY KEY,
