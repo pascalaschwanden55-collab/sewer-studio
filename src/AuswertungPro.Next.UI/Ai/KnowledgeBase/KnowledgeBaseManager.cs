@@ -48,9 +48,20 @@ public sealed class KnowledgeBaseManager(
             }
             return true;
         }
-        catch
+        catch (Exception ex)
         {
-            return true; // bei Fehler nicht blockieren
+            // Nicht stumm schlucken: bei DriveInfo-Fehlern (Berechtigungen,
+            // ungueltiger Pfad, abgemeldetes Laufwerk) loggen — sonst denkt
+            // der Aufrufer faelschlich, der Speicherplatz sei in Ordnung.
+            // 'true' bleibt das Default damit ein Log-Failure nicht alle
+            // Writes blockiert.
+            if ((DateTime.UtcNow - _lastDiskWarning).TotalMinutes > 1)
+            {
+                _lastDiskWarning = DateTime.UtcNow;
+                System.Diagnostics.Debug.WriteLine(
+                    $"[KB] CheckDiskSpace fehlgeschlagen ({dbPath}): {ex.GetType().Name}: {ex.Message}");
+            }
+            return true;
         }
     }
 
@@ -397,14 +408,19 @@ public sealed class KnowledgeBaseManager(
 
     private void UpsertEmbedding(string sampleId, float[] vector)
     {
+        // Phase 2.1: ModelVersion-Spalte mitschreiben.
+        // Bis EmbeddingService einen echten Modell-Tag liefert (z.B. via
+        // Ollama /api/show), bleibt ModelVersion leer. Default '' im Schema
+        // erlaubt das, ohne FK/NOT NULL zu brechen.
         ExecuteNonQuery("""
-            INSERT OR REPLACE INTO Embeddings(SampleId, Model, Vector, CreatedAt)
-            VALUES ($id, $model, $vec, $at)
+            INSERT OR REPLACE INTO Embeddings(SampleId, Model, ModelVersion, Vector, CreatedAt)
+            VALUES ($id, $model, $modelVersion, $vec, $at)
             """,
-            ("$id",    sampleId),
-            ("$model", embedder.ModelName),
-            ("$vec",   EmbeddingService.ToBlob(vector)),
-            ("$at",    DateTime.UtcNow.ToString("O")));
+            ("$id",           (object?)sampleId),
+            ("$model",        (object?)embedder.ModelName),
+            ("$modelVersion", (object?)embedder.ModelVersion),
+            ("$vec",          (object?)EmbeddingService.ToBlob(vector)),
+            ("$at",           (object?)DateTime.UtcNow.ToString("O")));
     }
 
     private void ExecuteNonQuery(string sql, params (string Name, object? Value)[] parameters)

@@ -28,6 +28,13 @@ public sealed class EmbeddingService(HttpClient http, OllamaConfig config)
     public string ModelName => config.EmbedModel;
 
     /// <summary>
+    /// Phase 2.1: Versions-/Quantisierungs-Tag des Embedding-Modells (z.B. "F16", "v1.5").
+    /// Aktuell leer — kann spaeter via Ollama /api/show gesetzt werden, um
+    /// Embedding-Migration bei Modell-Upgrade nachvollziehbar zu machen.
+    /// </summary>
+    public string ModelVersion => "";
+
+    /// <summary>
     /// B7 Fix: Prueft ob das Embedding-Modell in Ollama verfuegbar ist.
     /// Wird beim ersten EmbedAsync-Aufruf automatisch geprueft.
     /// </summary>
