@@ -169,7 +169,7 @@ Diese 5 Punkte haben **alle drei** Audits unabhängig genannt — sie sind unbes
 | 2.1 | ~~KnowledgeBase: FK Embeddings→Samples + Embedding.ModelVersion~~ — Schema, Runtime-PRAGMA, defensive 4-Schritt-Migration mit Orphan-Archivierung. 8 neue Tests. ✅ 2026-05-04 | B4 (2/3) | 4 h (geplant) / ~1 h (effektiv) |
 | 2.2 | ~~KnowledgeBaseWriter (zentral, busy_timeout, foreign_keys, WAL)~~ — Writer-Klasse mit SemaphoreSlim, ExecuteInTransaction-Helper. busy_timeout=5000 + synchronous=NORMAL ergaenzt. KnowledgeBaseManager 3 Hot-Paths umgestellt. 10 neue Tests (PRAGMAs, Lock-Serialisierung, Stress, FK). ✅ 2026-05-04 | B3 (2/3) | 1 Tag (geplant) / ~1.5 h (effektiv) |
 | 2.3 | ~~Channel<T>-Pipeline für Training (Pre→KI→Gate→KB-Writer→UI)~~ — KbIngestionPipeline mit 4 Stages, Bounded Channels, Cancellation, 8 neue Tests. KEIN Aufrufer-Eingriff (Folge-Phase). ✅ 2026-05-04 | B3 (2/3) | 2 Tage (geplant) / ~1 h (effektiv) |
-| 2.4 | Pipeline-Tests von GPU/Langzeit trennen (Trait Categories) | C-Codex | 4 h |
+| 2.4 | ~~Pipeline-Tests von GPU/Langzeit trennen (Trait Categories)~~ — Tagging-Stand vollstaendig (15 Traits sinnvoll verteilt). Echte Laufzeit-Messung: 645 Tests in 13 s parallel — keine LongRunning-Kandidaten. Phase 0.1b-Trennschema reicht aus. Bericht: `PHASE_2.4_TEST_TRAIT_SWEEP_INVENTAR.md`. ✅ 2026-05-04 | C-Codex | 4 h (geplant) / Inventar+Messung (effektiv) |
 | 2.5 | ~~RehabilitationRulesEngine: Hardcode raus, nur YAML~~ — JSON-Schema erweitert (damage_groups_by_vsa_code + damage_matrix), Engine liest primaer JSON-Spiegel, Hardcode wird Fallback. YAML bleibt menschliche Pflege-Quelle, JSON ist maschinenlesbare Laufzeitquelle (kein direktes YAML-Parsing — wuerde NuGet erfordern). 11 neue Tests. ✅ 2026-05-04 | A7 (3/3) | 1 Tag (geplant) / ~1 h (effektiv) |
 
 ### Phase 3 — 2. Woche (UI Quick-Wins)
@@ -212,15 +212,15 @@ Diese 5 Punkte haben **alle drei** Audits unabhängig genannt — sie sind unbes
 
 Diese drei Punkte tauchen im konsolidierten Audit (`audit_konsolidiert_2026-05-04.md`) erstmals explizit auf — wertvoll, aber kein Konsens-Status.
 
-### D2.1. WindowStateManager.Save() bleibt synchron im Closing-Hook
+### D2.1. WindowStateManager.Save() bleibt synchron im Closing-Hook ✅ erledigt 2026-05-04
 - **Befund 2.5 (konsolidiert):** try/catch ist im Closing-Hook ergaenzt (gut), aber `settings.Save()` laeuft synchron. Bei Antivirus-Lock oder langsamer Platte kann Fensterschliessen kurz blockieren. `GetSettings()` schluckt Fehler ohne Log.
-- **Empfehlung:** Save entkoppeln (Debouncer) oder mind. Logging in `GetSettings()` ergaenzen.
-- **Aufwand:** ~30 min
+- **Fix 2026-05-04:** `settings.Save()` laeuft in `Task.Run` (ThreadPool) statt synchron. AV-Lock blockiert Closing nicht mehr. `GetSettings()` catch ergaenzt um `Debug.WriteLine`.
+- **Aufwand:** ~30 min (geplant) / ~10 min (effektiv)
 
-### D2.2. RotateGenCts() validiert frueheren April-Fix
+### D2.2. RotateGenCts() validiert frueheren April-Fix ✅ erledigt 2026-05-04
 - **Befund 2.6 (konsolidiert):** Das fruehere CTS-Race-Pattern `Cancel(); Dispose(); new()` in `TrainingCenterViewModel` wurde durch `RotateGenCts()` ersetzt. **Audit-Bestaetigung, dass der Fix haelt.**
-- **Empfehlung:** Pattern beibehalten. Restliche `CancellationTokenSource`-Stellen im Repo nach demselben Muster pruefen.
-- **Aufwand:** Sweep ~2 h
+- **Sweep 2026-05-04:** Eine weitere Anti-Pattern-Stelle gefunden und behoben: `_selfTrainingCts` in `TrainingCenterViewModel.cs:2597` → neuer Helper `RotateSelfTrainingCts()`. 4 weitere Cancel+Dispose-Stellen in PlayerWindow.xaml.cs verifiziert (alle Window-Closing-Cleanups, kein Race-Risiko). Bericht: `PHASE_D2.2_CTS_SWEEP_INVENTAR.md`.
+- **Aufwand:** Sweep ~2 h (geplant) / ~30 min (effektiv)
 
 ### D2.3. ProcessRunner ist verbessert, aber Stil noch uneinheitlich
 - **Befund 2.3 (konsolidiert):** `ProcessRunner.cs` (Application/Common) nutzt jetzt `ArgumentList`, async stdout/stderr-Drain, Timeout. `PdfProtocolExtractor.cs` nutzt `ArgumentList` fuer pdftotext + Python. **Aber:** Direkte `ProcessStartInfo.Arguments = ...` existieren weiterhin fuer Explorer, PowerShell, nvidia-smi, Playwright und Sidecar. Manche kontrolliert, aber Stil uneinheitlich.
