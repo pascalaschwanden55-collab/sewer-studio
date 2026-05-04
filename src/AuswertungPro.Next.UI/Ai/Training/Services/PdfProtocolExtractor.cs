@@ -1,6 +1,7 @@
 // AuswertungPro – KI Videoanalyse Modul
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -319,15 +320,20 @@ public sealed class PdfProtocolExtractor
                 exePath = File.Exists(toolsPath) ? toolsPath : "pdftotext";
             }
 
+            // ArgumentList statt Arguments-String: das BS uebernimmt das
+            // Quoten/Escapen automatisch und korrekt. Vermeidet Argument-
+            // Parsing-Bugs bei Pfaden mit Leerzeichen oder Sonderzeichen.
             var psi = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = exePath,
-                Arguments = $"-layout \"{pdfPath}\" -",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+            psi.ArgumentList.Add("-layout");
+            psi.ArgumentList.Add(pdfPath);
+            psi.ArgumentList.Add("-");
 
             using var proc = System.Diagnostics.Process.Start(psi);
             if (proc is null) return "";
@@ -810,7 +816,12 @@ public sealed class PdfProtocolExtractor
                         photoBytes = raw.ToArray();
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    // Phase 1.2: Empty-catch-Sweep — Fallback-Pfad probiert TryGetPng,
+                    // aber Photo-Extraktions-Bugs sollen sichtbar sein.
+                    Debug.WriteLine($"[PdfProtocolExtractor] RawBytes-JPG-Probe fehlgeschlagen: {ex.GetType().Name}: {ex.Message}");
+                }
 
                 if (photoBytes == null && img.TryGetPng(out var pngBytes) && pngBytes.Length >= MinPhotoBytes)
                 {

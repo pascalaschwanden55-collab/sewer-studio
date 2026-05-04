@@ -3,6 +3,7 @@
 // und speichert sie als kuratierte Beispiele.
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -430,7 +431,11 @@ public sealed class FewShotExampleBuilder
 
                 results.Add((dir, bestPdf));
             }
-            catch { }
+            catch (Exception ex)
+            {
+                // Phase 1.2: Empty-catch-Sweep — Debug-Log statt stilles Schlucken.
+                Debug.WriteLine($"[FewShotExampleBuilder] PDF-Scan {dir}: {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         return results;

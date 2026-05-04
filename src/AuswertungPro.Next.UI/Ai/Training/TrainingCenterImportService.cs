@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -102,7 +103,12 @@ public sealed class TrainingCenterImportService
                     CreatedUtc = DateTime.UtcNow
                 });
             }
-            catch { }
+            catch (Exception ex)
+            {
+                // Phase 1.2: Empty-catch-Sweep — Debug-Log statt stilles Schlucken.
+                // Bei Import-Fehler wird der Case sonst stillschweigend uebergangen.
+                Debug.WriteLine($"[TrainingCenterImport] Case-Import {folder}: {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         cases = cases.OrderBy(c => c.CaseId, StringComparer.OrdinalIgnoreCase).ToList();
@@ -152,8 +158,10 @@ public sealed class TrainingCenterImportService
         ["protokoll", "haltung", "inspektion", "zustandsbericht", "bericht"];
 
     // Dateinamen-Muster die KEINE Inspektionsprotokolle sind
+    // V4.3: " dp" und "-dp" zusaetzlich zu "_dp" wegen Filename-Varianten ("X DP.pdf" mit Space).
     private static readonly string[] NonProtocolKeywords =
-        ["plan", "situationsplan", "_dp", "lageplan", "uebersicht", "übersicht"];
+        ["plan", "situationsplan", "_dp", " dp", "-dp", "dichtheit", "luftpr",
+         "lageplan", "uebersicht", "übersicht"];
 
     // Video-Dateinamen die ausgeschlossen werden (Grafik-Videos, Uebersichten)
     // Hinweis: Matching auf Dateiname MIT Extension (ToLowerInvariant)

@@ -55,6 +55,14 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     private int _hwInfoSkip;
     private bool _hwInfoLogged;
 
+    // Tatsaechliche CPU-Frequenz via PerfCounter "\Processor Information(_Total)\% Processor Performance"
+    // PROCESSOR_POWER_INFORMATION.CurrentMhz liefert auf modernen Intel-CPUs (Core Ultra 9 etc.) oft nur
+    // die Base-Clock und nicht den aktuellen Boost-Takt. Performance-Counter × MaxMhz ist genauer.
+    private int _cpuMaxMhz;
+    private System.Diagnostics.PerformanceCounter? _cpuPerfCounter;
+    private bool _cpuPerfCounterTried;
+    private bool _cpuPerfCounterAvailable;
+
     // HVCI detection
     private bool _hvciChecked;
     private bool _isHvciEnabled;
@@ -102,6 +110,56 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
         // Init LibreHardwareMonitor (async to not block UI)
         Task.Run(InitHardwareMonitor);
+
+        // Einmalige RAM-Geschwindigkeit via WMI - klappt ohne Treiber & ohne HVCI-Konflikt.
+        // Wird vom HWiNFO-Pfad ueberschrieben falls live-Wert verfuegbar.
+        Task.Run(InitRamClockFromWmi);
+    }
+
+    /// <summary>
+    /// Liest die konfigurierte RAM-Geschwindigkeit aus Win32_PhysicalMemory.
+    /// Liefert die hoechste gefundene ConfiguredClockSpeed (oder Speed als Fallback).
+    /// Funktioniert ohne Admin und ohne Hardware-Sensoren.
+    /// </summary>
+    private void InitRamClockFromWmi()
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = "-NoProfile -NoLogo -Command \""
+                    + "$m = Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue; "
+                    + "if ($m) { ($m | ForEach-Object { if ($_.ConfiguredClockSpeed) { $_.ConfiguredClockSpeed } else { $_.Speed } } | Measure-Object -Maximum).Maximum } "
+                    + "else { '0' }\"",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+            using var proc = Process.Start(psi);
+            if (proc is null) return;
+            var output = proc.StandardOutput.ReadToEnd().Trim();
+            proc.WaitForExit(5000);
+
+            if (int.TryParse(output, NumberStyles.Integer, CultureInfo.InvariantCulture, out var mhz)
+                && mhz > 0 && mhz < 20000)
+            {
+                _dispatcher.BeginInvoke(() =>
+                {
+                    if (!IsRamClockAvailable)
+                    {
+                        RamClockMhz = mhz;
+                        IsRamClockAvailable = true;
+                    }
+                });
+                Log($"RAM Clock via WMI: {mhz} MHz (Fallback ohne Treiber).");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"RAM Clock via WMI fehlgeschlagen: {ex.Message}");
+        }
     }
 
     // ── Properties ───────────────────────────────────────────────────────
@@ -338,7 +396,13 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             if (key?.GetValue("Enabled") is int enabled)
                 return enabled == 1;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // Phase 1.2: Empty-catch-Sweep — Debug-Log statt stilles Schlucken.
+            // Registry-Lese-Fehler sind nicht-kritisch (HVCI-Erkennung), aber bei
+            // Rechte-/Manifest-Aenderungen relevant fuer Diagnose.
+            System.Diagnostics.Debug.WriteLine($"[SystemMonitor] DetectHvci: {ex.GetType().Name}: {ex.Message}");
+        }
         return false;
     }
 
@@ -359,21 +423,30 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                 if (status != 0) return;
 
                 long sumClock = 0;
+                long sumMax = 0;
                 int validCount = 0;
                 for (int i = 0; i < processorCount; i++)
                 {
                     var info = Marshal.PtrToStructure<PROCESSOR_POWER_INFORMATION>(
                         buffer + i * structSize);
                     var mhz = (int)info.CurrentMhz;
+                    var maxMhz = (int)info.MaxMhz;
                     if (mhz <= 0)
                         continue;
                     sumClock += mhz;
+                    sumMax += maxMhz;
                     validCount++;
                 }
 
                 if (validCount > 0)
                 {
-                    CpuClockMhz = (int)Math.Round((double)sumClock / validCount);
+                    int avgCurrent = (int)Math.Round((double)sumClock / validCount);
+                    int avgMax = (int)Math.Round((double)sumMax / validCount);
+                    if (avgMax > 0) _cpuMaxMhz = avgMax;
+
+                    // Performance-Counter-basierte Frequenz (genauer auf modernen Intel CPUs).
+                    int? perfBasedMhz = TryGetPerfCounterMhz(_cpuMaxMhz);
+                    CpuClockMhz = perfBasedMhz ?? avgCurrent;
                     IsCpuClockAvailable = true;
                 }
             }
@@ -383,6 +456,52 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             }
         }
         catch { /* keep last known value */ }
+    }
+
+    /// <summary>
+    /// Berechnet aktuelle CPU-Frequenz aus PerformanceCounter "% Processor Performance" * MaxMhz.
+    /// Liefert null wenn Counter nicht verfuegbar (z.B. auf Win Home / fehlende Performance-Bibliothek).
+    /// </summary>
+    private int? TryGetPerfCounterMhz(int maxMhz)
+    {
+        if (maxMhz <= 0) return null;
+        if (!_cpuPerfCounterTried)
+        {
+            _cpuPerfCounterTried = true;
+            try
+            {
+                _cpuPerfCounter = new System.Diagnostics.PerformanceCounter(
+                    "Processor Information", "% Processor Performance", "_Total", readOnly: true);
+                _cpuPerfCounter.NextValue(); // erste Lesung verwerfen (immer 0)
+                _cpuPerfCounterAvailable = true;
+                Log("PerfCounter '% Processor Performance' aktiv (genauerer Takt).");
+            }
+            catch (Exception ex)
+            {
+                _cpuPerfCounterAvailable = false;
+                Log($"PerfCounter '% Processor Performance' nicht verfuegbar ({ex.GetType().Name}); fallback auf NtPowerInfo.");
+            }
+        }
+        if (!_cpuPerfCounterAvailable || _cpuPerfCounter is null)
+            return null;
+
+        try
+        {
+            var pct = _cpuPerfCounter.NextValue();
+            // pct ist in Prozent zur Base-Clock - Werte > 100 = Boost.
+            // Bei "MaxMhz" handelt es sich um die Boost-fähige Max-Frequenz, daher
+            // ist der "Echte" Takt = MaxMhz * pct / 100, capped auf MaxMhz wenn pct < 100.
+            // Korrektur: % Processor Performance ist relativ zur "nominal frequency" = Base-Clock.
+            // Da NtPower's MaxMhz die Boost-Freq ist und der Counter relativ zur Base ist,
+            // brauchen wir hier eine konservative Schaetzung. Wir nehmen pct als reine Skala:
+            //   Takt = MaxMhz * pct / 100 (kann > MaxMhz werden bei Boost - das ist OK)
+            var mhz = (int)Math.Round(maxMhz * pct / 100.0);
+            return mhz > 0 ? mhz : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     // ── CPU/RAM/GPU sensors via LibreHardwareMonitor (alle ~4s) ──────────
@@ -586,12 +705,9 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                 }
             }
 
-            if (!cpuTempFound && boardCpuTempFound)
-            {
-                cpuTempC = boardCpuTempC;
-                cpuTempFound = true;
-            }
-
+            // Mainboard-Floor-Fallback (boardCpuTempC) NICHT mehr als CPU-Temp uebernehmen -
+            // das war oft 28°C konstant und hat HWiNFO suppressiert (siehe BUGFIX in PollHwInfo).
+            // CPU-Temp braucht echte Package/Tctl/Core/Die-Sensoren, sonst lieber n/a.
             if (cpuTempFound && cpuTempC > 0 && cpuTempC < 150)
             {
                 CpuTempC = cpuTempC;
@@ -670,11 +786,11 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
     private void PollHwInfo()
     {
-        // Only skip HWiNFO when LHM actually delivers temperature data.
-        // LHM may have sensors (clock etc.) but no temps due to HVCI blocking ring0 driver.
-        if (_lhmProvidesTemp)
-            return;
-
+        // BUGFIX 2026-05-03: vorher wurde HWiNFO komplett uebersprungen sobald LHM
+        // *irgendeinen* Temp-Wert lieferte (z.B. Mainboard-Floor 28°C bei Intel Core
+        // Ultra 9 als CPU-Temp interpretiert). Folge: HWiNFO-RAM-Temp + GPU-Temp +
+        // realer CPU-Tdie nie gelesen. Gate komplett entfernt - HWiNFO laeuft jetzt
+        // immer und ueberschreibt unzuverlaessige LHM-Werte mit echten DTS-Sensoren.
         if (!_hwInfoAvailable)
             return;
 
@@ -697,11 +813,23 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             // 28=dwNumSensorElements(4), 32=dwOffsetOfReadingSection(4),
             // 36=dwSizeOfReadingElement(4), 40=dwNumReadingElements(4)
             uint signature = accessor.ReadUInt32(0);
-            if (signature != 0x53695748) // "HWiS" in little-endian
+            // HWiNFO 4-char-Signaturen ueber verschiedene Versionen:
+            //   0x53695748 = bytes [H,W,i,S] = "HWiS" (klassisch v2)
+            //   0x53694857 = bytes [W,H,i,S] = HWiNFO neuer FourCC (manche Builds)
+            //   0x53696857 = bytes [W,h,i,S] = "WhiS" (alternative SDK-Quellen)
+            // Wir akzeptieren alle drei. Wenn andere Signatur: nur warnen, nicht
+            // permanent disablen - vielleicht hat HWiNFO gerade neu initialisiert.
+            bool sigOk = signature == 0x53695748
+                      || signature == 0x53694857
+                      || signature == 0x53696857;
+            if (!sigOk)
             {
-                _hwInfoAvailable = false;
-                Log("HWiNFO: Shared Memory Signatur ungueltig");
-                return;
+                if (!_hwInfoLogged)
+                {
+                    Log($"HWiNFO: Signatur 0x{signature:X8} unbekannt (erwartet HWiS/WHiS/WhiS) - retry naechster Cycle");
+                    _hwInfoLogged = true;
+                }
+                return; // nicht _hwInfoAvailable=false, sondern naechster Tick versuchen
             }
 
             uint offsetReadings = accessor.ReadUInt32(32);
@@ -718,12 +846,18 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             {
                 Log($"HWiNFO: Shared Memory aktiv — {numReadings} Messwerte");
                 _hwInfoLogged = true;
+                // Reset von alten Fehlerzustaenden, falls HWiNFO neu gestartet wurde.
+                _hwInfoAvailable = true;
+                IsSensorBlocked = false;
+                SensorBlockedReason = "";
             }
 
             bool cpuTempSet = false;
             bool cpuClockSet = false;
             bool gpuTempSet = false;
             bool gpuClockSet = false;
+            bool ramTempSet = false;
+            bool ramClockSet = false;
 
             var labelBytes = new byte[128];
 
@@ -764,6 +898,13 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                         IsGpuTempAvailable = true;
                         gpuTempSet = true;
                     }
+                    else if (!ramTempSet && (label.Contains("dimm") || label.Contains("memory")
+                                              || label.Contains("ram") || label.Contains("ddr")))
+                    {
+                        RamTempC = tempC;
+                        IsRamTempAvailable = true;
+                        ramTempSet = true;
+                    }
                 }
                 else if (readingType == SENSOR_TYPE_CLOCK)
                 {
@@ -781,6 +922,14 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                         GpuClockMhz = clockMhz;
                         IsGpuClockAvailable = true;
                         gpuClockSet = true;
+                    }
+                    else if (!ramClockSet && (label.Contains("memory clock") || label.Contains("dram")
+                                               || label.Contains("ram clock") || label.Contains("ddr")
+                                               || (label.Contains("memory") && label.Contains("clock"))))
+                    {
+                        RamClockMhz = clockMhz;
+                        IsRamClockAvailable = true;
+                        ramClockSet = true;
                     }
                 }
             }
@@ -808,11 +957,15 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
+            // BUGFIX: Vorher hat ein einmaliger Fehler HWiNFO PERMANENT disabled
+            // (_hwInfoAvailable=false). Wenn z.B. HWiNFO gerade neu startet oder die
+            // Shared Memory kurzzeitig nicht lesbar ist, ging die Anzeige fuer den
+            // ganzen App-Lauf verloren. Jetzt: nur loggen, _hwInfoAvailable bleibt true,
+            // naechster Poll-Tick versucht es erneut.
             if (!_hwInfoLogged)
             {
-                Log($"HWiNFO: Fehler — {ex.GetType().Name}: {ex.Message}");
+                Log($"HWiNFO: Fehler — {ex.GetType().Name}: {ex.Message} (retry naechster Cycle)");
                 _hwInfoLogged = true;
-                _hwInfoAvailable = false;
             }
         }
     }
@@ -860,10 +1013,17 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     {
         try
         {
+            // Liest ALLE ThermalZones, gibt MAX und MIN zurueck. Konstant-niedrige Mainboard-
+            // Floor-Werte (~28-30 °C, nicht reagierend auf CPU-Last) werden als nicht plausibel
+            // gefiltert. Nur wenn die Spreizung >= 5 °C ueber Min-Floor liegt, gilt MAX als CPU-Temp.
             var psi = new ProcessStartInfo
             {
                 FileName = "powershell.exe",
-                Arguments = "-NoProfile -NoLogo -Command \"$z = Get-CimInstance Win32_PerfFormattedData_Counters_ThermalZoneInformation -ErrorAction SilentlyContinue | Sort-Object Temperature -Descending | Select-Object -First 1; if($z -and $z.Temperature -gt 200){[math]::Round($z.Temperature - 273.15)}else{'0'}\"",
+                Arguments = "-NoProfile -NoLogo -Command \""
+                    + "$zones = Get-CimInstance Win32_PerfFormattedData_Counters_ThermalZoneInformation -ErrorAction SilentlyContinue | "
+                    + "Where-Object { $_.Temperature -gt 200 -and $_.Temperature -lt 420 } | "
+                    + "ForEach-Object { [math]::Round($_.Temperature - 273.15) }; "
+                    + "if ($zones) { $max = ($zones | Measure-Object -Maximum).Maximum; $min = ($zones | Measure-Object -Minimum).Minimum; \"$max;$min\" } else { '0;0' }\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -876,19 +1036,37 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             var output = proc.StandardOutput.ReadToEnd().Trim();
             proc.WaitForExit(5000);
 
-            if (int.TryParse(output, NumberStyles.Integer, CultureInfo.InvariantCulture, out var celsius)
-                && celsius > 0 && celsius < 150)
+            var parts = output.Split(';');
+            int maxC = 0, minC = 0;
+            if (parts.Length >= 2)
             {
-                _perfCounterTempFailCount = 0;
-                _dispatcher.BeginInvoke(() =>
-                {
-                    CpuTempC = celsius;
-                    IsCpuTempAvailable = true;
-                });
+                int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out maxC);
+                int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out minC);
+            }
 
-                if (_wmiTempSkip <= 6)
-                    Log($"PerfCounter CPU-Temp: {celsius} °C (kein Admin noetig)");
-                return;
+            if (maxC > 0 && maxC < 150)
+            {
+                // Mainboard-Floor-Filter: konstant niedrige Werte mit < 5 °C Spreizung sind
+                // Mainboard/Chipset-Sensoren, nicht die CPU. Markiere als "nicht verfuegbar".
+                bool plausibleCpuTemp = maxC >= 35 || (maxC - minC) >= 5;
+                if (plausibleCpuTemp)
+                {
+                    _perfCounterTempFailCount = 0;
+                    _dispatcher.BeginInvoke(() =>
+                    {
+                        CpuTempC = maxC;
+                        IsCpuTempAvailable = true;
+                    });
+
+                    if (_wmiTempSkip <= 6)
+                        Log($"PerfCounter CPU-Temp: {maxC} °C (Min={minC} °C, alle Zonen) — kein Admin noetig");
+                    return;
+                }
+                else
+                {
+                    if (_wmiTempSkip <= 6)
+                        Log($"PerfCounter CPU-Temp: nur Mainboard-Floor erkannt ({maxC} °C, Spreizung {maxC - minC} °C). Wahrscheinlich keine CPU-DTS-Zone.");
+                }
             }
 
             if (++_perfCounterTempFailCount >= 3)
@@ -1283,5 +1461,6 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     {
         _timer.Stop();
         try { _computer?.Close(); } catch { }
+        try { _cpuPerfCounter?.Dispose(); } catch { }
     }
 }

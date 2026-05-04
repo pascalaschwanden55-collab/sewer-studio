@@ -275,7 +275,11 @@ public sealed class KnowledgeMirrorService : IDisposable
                 File.Copy(srcFile, dstFile, overwrite: false);
                 fileCount++;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                // Phase 1.2: Empty-catch-Sweep — Debug-Log statt stilles Schlucken.
+                Debug.WriteLine($"[KnowledgeMirror] File.Copy {srcFile} -> {dstFile}: {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         foreach (var srcDir in Directory.GetDirectories(source))
