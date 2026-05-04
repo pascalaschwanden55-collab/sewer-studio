@@ -202,9 +202,9 @@ Diese 5 Punkte haben **alle drei** Audits unabhängig genannt — sie sind unbes
 | # | Aufgabe | Konsens | Aufwand |
 |---|---|---|---|
 | 6.1 | ~~PlayerWindow.xaml.cs in Partials zerlegen (9856 Zeilen)~~ — Inventar: heute 9.860 Zeilen, ~185 Methoden, ~47 Felder. 8 Verantwortlichkeits-Cluster (VideoPlayback, CodingMode, AiDetection, Feedback, Snapshot, UiState, TrainingMode, Helpers). 9-Partials-Vorschlag (~5-7 Tage). Praezedenzfall: PlayerWindow.TrainingMode.cs schon ausgelagert. Reihenfolge: 5.3 → 6.1 → 6.2. Bericht: `PHASE_6.1_PLAYERWINDOW_INVENTAR.md`. ⏸️ Migration in Mehr-Tages-Session. | A2 (3/3) | 1 Woche (geplant) / Inventar+Bericht (effektiv) |
-| 6.2 | TrainingCenterViewModel zerlegen → BatchOrchestrator + Repo + Writer | A2 (3/3) | 1 Woche |
-| 6.3 | KI-Schicht komplett aus UI ausziehen (144 Dateien) | A1 (3/3) | langfristig |
-| 6.4 | UI-Redesign: Fluent-WPF / WPF-UI 3 als Design-Basis | A6 (3/3) | 2 Wochen |
+| 6.2 | ~~TrainingCenterViewModel zerlegen → BatchOrchestrator + Repo + Writer~~ — Inventar: 2.964 Zeilen, ~59 Methoden, 8 Cluster. 7-Module-Vorschlag (BatchOrchestrator + Repo + ProgressModel + TabController + KbWriter[vorhanden] + ImportService[vorhanden]). ~5-7 Tage. Bericht: `PHASE_6.2_TRAININGCENTER_INVENTAR.md`. ⏸️ Migration in Mehr-Tages-Session. | A2 (3/3) | 1 Woche (geplant) / Inventar+Bericht (effektiv) |
+| 6.3 | ~~KI-Schicht komplett aus UI (144 Dateien)~~ — Endzustand-Inventar: Akzeptanz wenn `UI/Ai/` <15 Files (heute 147) und keine WPF-Referenz in Pipeline-Tests. Erreicht durch Phase 5.3 + 6.1 + 6.2. Bericht: `PHASE_6.3_KI_KOMPLETT_AUS_UI_INVENTAR.md`. ⏸️ Wartungs-Endzustand. | A1 (3/3) | langfristig (geplant) / Inventar+Bericht (effektiv) |
+| 6.4 | ~~UI-Redesign: Fluent-WPF / WPF-UI 3 als Design-Basis~~ — Inventar: 7 Sub-Phasen (~2 Wochen), 3 Varianten (A: voll WPF-UI 3, B: gezielt einzelne Controls, C: Custom-Theme-Refresh ohne NuGet). Voraussetzungen: 5.3+6.1+6.2 erledigt + NuGet-Freigabe. Bericht: `PHASE_6.4_UI_REDESIGN_INVENTAR.md`. ⏸️ Groesster UI-Eingriff, eigene Session. | A6 (3/3) | 2 Wochen (geplant) / Inventar+Bericht (effektiv) |
 
 ---
 
