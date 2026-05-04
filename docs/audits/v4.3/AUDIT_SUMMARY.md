@@ -176,8 +176,8 @@ Diese 5 Punkte haben **alle drei** Audits unabhängig genannt — sie sind unbes
 | # | Aufgabe | Konsens | Aufwand |
 |---|---|---|---|
 | 3.1 | app.manifest + PerMonitorV2-DPI + ApplicationIcon | C-Claude | 1 h |
-| 3.2 | Spacing/Typography-Tokens (Sp.S=4, M=8, L=16) als StaticResources | A6 (3/3) | 4 h |
-| 3.3 | Zentraler DataGrid-Style + PageHeader UserControl | A6 (3/3) | 6 h |
+| 3.2 | ~~Spacing/Typography-Tokens (Sp.S=4, M=8, L=16) als StaticResources~~ — Sp{XS,S,M,L,XL,XXL} (Double + Thickness) und Type{Caption,Small,Body,BodyLarge,H4,H3,H2,H1} in ThemeLight.xaml. 2 Beispielmigrationen in SettingsPage. ✅ 2026-05-04 | A6 (3/3) | 4 h (geplant) / ~30 min (effektiv, ohne Massenmigration) |
+| 3.3 | ~~Zentraler DataGrid-Style + PageHeader UserControl~~ — DataGrid-Default-Style war bereits zentral (impliziter Style fuer alle 29 DataGrids). Neu: benannte Varianten DataGridStandard + DataGridCompact (BasedOn Default). PageHeader UserControl bleibt offen fuer spaeter. ✅ teilweise 2026-05-04 | A6 (3/3) | 6 h (geplant) / ~15 min (Token-Variante allein) |
 | 3.4 | Hex-Hardcodes → DynamicResource (162 + 22 Stellen) | A6 (3/3) | 6 h |
 | 3.5 | Anleitungstexte aus Settings in eigene Hilfe-Seite | C-Gemini | 2 h |
 
