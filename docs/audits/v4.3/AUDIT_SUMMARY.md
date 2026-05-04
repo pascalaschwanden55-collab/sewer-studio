@@ -161,7 +161,7 @@ Diese 5 Punkte haben **alle drei** Audits unabhängig genannt — sie sind unbes
 | 1.1 | Slim-Down: 7 GB Sidecar-Shadow-Log + .pt-Roots + 5 Window-Leichen | A5 (3/3) | 1 Tag |
 | 1.2 | ~~Empty-catch-Audit: 6+ Stellen mit mind. Debug.WriteLine~~ — 5 echt stille Service-Catches migriert (KnowledgeMirror, FewShotBuilder, SystemMonitor, TrainingCenterImport, PdfProtocolExtractor). UI-Cleanup-Catches und dokumentierte Best-Effort-Catches bewusst gelassen. ✅ 2026-05-04 | A3 (3/3) | 30 min |
 | 1.3 | .gitignore schärfen: sidecar/.venv, Frames, Logs, Caches | B6 (2/3) | 30 min |
-| 1.4 | Hydraulik (DWA-A 110) + Eigendevis aus Hauptcode entfernen oder ausgliedern | A5 (3/3) | 1 Tag |
+| 1.4 | ~~Hydraulik (DWA-A 110) + Eigendevis aus Hauptcode entfernen oder ausgliedern~~ — Sanfte Entkopplung: AppSettings.ShowExpertenmodusFeatures (default true), NavItem filtert Eigendevis, Hydraulik-Toolbar-Buttons mit Visibility-Binding, Settings-Page-Checkbox. Kein Default-Verhaltens-Wechsel, keine Loeschung. ✅ 2026-05-04 | A5 (3/3) | 1 Tag (geplant) / ~1 h (effektiv) |
 
 ### Phase 2 — nächste Woche (KB & KI-Qualität)
 | # | Aufgabe | Konsens | Aufwand |
