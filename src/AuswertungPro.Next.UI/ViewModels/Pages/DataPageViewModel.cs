@@ -99,6 +99,11 @@ public sealed partial class DataPageViewModel : ObservableObject
     public IRelayCommand<HaltungRecord?> PrintHydraulikCommand { get; }
     public IRelayCommand<HaltungRecord?> PrintDossierCommand { get; }
 
+    /// <summary>Phase 1.4: Steuert Sichtbarkeit der Hydraulik-Toolbar-Buttons.
+    /// Default = true (alles sichtbar wie heute).</summary>
+    public bool ShowExpertenmodusFeatures => App.Services is ServiceProvider sp
+        && sp.Settings.ShowExpertenmodusFeatures;
+
     public IReadOnlyList<string> Columns => FieldCatalog.ColumnOrder;
     public ObservableCollection<HaltungRecord> Records => _shell.Project.Data;
     public Project Project => _shell.Project;
@@ -2181,11 +2186,44 @@ public sealed partial class DataPageViewModel : ObservableObject
             }
 
             var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+
+            // Historische Vergleichsreferenz: Profil-Lookup aus Buerglen 2024-2026 Auswertungen
+            Application.Reports.HistorischeReferenz? histRef = null;
+            if (dialog.SelectedOptions.IncludeKostenschaetzung)
+            {
+                try
+                {
+                    var dnVal = double.TryParse(record.GetFieldValue("DN_mm"), out var d) ? d : 0;
+                    var matVal = record.GetFieldValue("Rohrmaterial");
+                    var nutzVal = record.GetFieldValue("Nutzungsart");
+                    var profile = _sp.HistorischeSanierungen.FindMatchingProfile(dnVal, matVal, nutzVal);
+                    if (profile is { AnzahlFaelle: >= 3 })
+                    {
+                        histRef = new Application.Reports.HistorischeReferenz
+                        {
+                            ProfilLabel = $"{profile.DnKlasse}, {profile.Material}, {profile.Nutzungsart}",
+                            AnzahlFaelle = profile.AnzahlFaelle,
+                            KostenProMMedianChf = (decimal?)profile.KostenProMMedianChf,
+                            KostenProMMinChf = (decimal?)profile.KostenProMMinChf,
+                            KostenProMMaxChf = (decimal?)profile.KostenProMMaxChf,
+                            KostenProHaltungMedianChf = (decimal?)profile.KostenProHaltungMedianChf,
+                            TypischeMassnahmen = profile.TypischeMassnahmen,
+                            Quelle = "Auswertungen Bürglen 2024-2026",
+                        };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[Dossier] Historische Referenz nicht ermittelbar: {ex.Message}");
+                }
+            }
+
             var options = dialog.SelectedOptions with
             {
                 LogoPathAbs = File.Exists(logoPath) ? logoPath : null,
                 HoldingCost = dialog.SelectedOptions.IncludeKostenschaetzung ? holdingCost : null,
                 OriginalPdfPaths = dialog.SelectedOptions.IncludeOriginalProtokolle ? originalPdfPaths : null,
+                HistorischeReferenz = histRef,
             };
 
             var hasDossierBaseSection =

@@ -60,7 +60,11 @@ public sealed partial class ShellViewModel : ObservableObject
         _guideSteps = BuildGuideSteps();
         EnableCollectionSync(_project);
 
-        NavItems = new List<NavItem>
+        // Phase 1.4: Expertenmodus-Toggle bestimmt ob Eigendevis im Hauptmenue
+        // sichtbar ist. Default = sichtbar (kein Default-Verhaltens-Wechsel).
+        var showExperten = _sp.Settings.ShowExpertenmodusFeatures;
+
+        var items = new List<NavItem>
         {
             new("\uE80F", "Uebersicht", () => new Pages.OverviewPageViewModel(this, _sp)),
             new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this)),
@@ -72,10 +76,14 @@ public sealed partial class ShellViewModel : ObservableObject
             new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(this, _sp)),
             new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(this)),
             new("\uE128", "VSA", () => new Pages.VsaPageViewModel(this, _sp)),
-            new("\uE8A1", "Eigendevis", () => new Pages.EigendevisPageViewModel(this, _sp)),
-            new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(_sp)),
-            new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(_sp))
         };
+        if (showExperten)
+        {
+            items.Add(new("\uE8A1", "Eigendevis", () => new Pages.EigendevisPageViewModel(this, _sp)));
+        }
+        items.Add(new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(_sp)));
+        items.Add(new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(_sp)));
+        NavItems = items;
 
         SaveCommand = new RelayCommand(SaveProject);
         NewProjectCommand = new RelayCommand(NewProject);

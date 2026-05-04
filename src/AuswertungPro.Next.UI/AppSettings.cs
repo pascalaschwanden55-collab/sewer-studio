@@ -108,6 +108,11 @@ public sealed class AppSettings
     // Hydraulik-Panel letzte Eingaben
     public HydraulikPanelSettings HydraulikPanel { get; set; } = new();
 
+    // Phase 1.4: Expertenmodus-Toggle. Default = true (alles sichtbar wie heute).
+    // Bei false: Eigendevis-Page aus Hauptnavigation, Hydraulik-Toolbar-Buttons
+    // ausgeblendet. Reversibel via Settings-Page.
+    public bool ShowExpertenmodusFeatures { get; set; } = true;
+
     public static string AppDataDir =>
         TestAppDataDirOverride
         ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.ProductName);

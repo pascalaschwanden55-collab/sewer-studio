@@ -57,6 +57,12 @@
 
         <CheckBox Content="Diagnose aktiv (Fehlercodes anzeigen)" IsChecked="{Binding EnableDiagnostics}"/>
 
+        <!-- Phase 1.4: Expertenmodus-Toggle. Default = aktiv (alles sichtbar wie heute). -->
+        <CheckBox Content="Expertenmodus: Eigendevis + Hydraulik im Hauptmenue/Toolbar"
+                  IsChecked="{Binding ShowExpertenmodusFeatures}"
+                  ToolTip="Bei aus: Eigendevis-Page wird aus dem Hauptmenue ausgeblendet, Hydraulik-Toolbar-Buttons in der Haltungen-Page werden versteckt. Aenderung greift nach Neustart."
+                  Margin="0,8,0,0"/>
+
         <TextBlock Text="pdftotext.exe Pfad" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
         <DockPanel>
             <TextBox Text="{Binding PdfToTextPath}" MinWidth="400" />
@@ -538,6 +544,52 @@
                     Devis-Mappings ordnen Haltungsdaten den Positionen zu. Formeln nutzen Variablen
                     wie Laenge, DN, Anschlussanzahl (z.B. "Laenge * Einheitspreis + 50"). Excel-Export.
                 </TextBlock>
+            </StackPanel>
+        </Border>
+
+        <!-- ── 16a. KI-Sanierungsregeln (Hard-Constraints) ──────────── -->
+        <Border Margin="0,0,0,16" Padding="14,12"
+                BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
+                Background="{StaticResource CardBrush}" CornerRadius="6">
+            <StackPanel>
+                <TextBlock Text="16a. KI-Sanierungsregeln (Leitplanken)" FontSize="15" FontWeight="Bold"
+                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,6">
+                    Pflege Hard-Constraints fuer die KI: Welche Verfahren sind bei welchen Bedingungen
+                    technisch ausgeschlossen? Beispiel: "WENN Bogen >= 15 Grad DANN GFK-Liner ausschliessen
+                    WEIL nicht bogengaengig". Die KI darf ausgeschlossene Verfahren niemals empfehlen.
+                </TextBlock>
+                <TextBlock x:Name="SanierungRulesStatusText" TextWrapping="Wrap"
+                           Foreground="{StaticResource TextSecondaryBrush}" FontSize="11"
+                           FontFamily="Consolas" Margin="0,4,0,8"/>
+                <Button x:Name="OpenSanierungRulesButton" Content="Regeln verwalten ..."
+                        Click="OpenSanierungRules_Click" HorizontalAlignment="Left"
+                        Padding="14,6" FontWeight="SemiBold"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ── 16b. Marktdaten-Import (Submission Buerglen 2026) ─────── -->
+        <Border Margin="0,0,0,16" Padding="14,12"
+                BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
+                Background="{StaticResource CardBrush}" CornerRadius="6">
+            <StackPanel>
+                <TextBlock Text="16b. Marktdaten-Import" FontSize="15" FontWeight="Bold"
+                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,6">
+                    Aktualisiert die Marktpreis- und Sanierungs-Referenzdaten aus realen Anbieter-Submissions
+                    und historischen Auswertungen. Quelle: D:\Offertenvergleich\* (Excel) → via Python-Reparser
+                    nach Knowledge\sanierung\ → diese Karte importiert die fertigen JSONs nach Config\.
+                </TextBlock>
+                <TextBlock x:Name="MarktdatenStatusText" TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}"
+                           FontSize="11" FontFamily="Consolas" Margin="0,4,0,8"/>
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="MarktdatenPreviewButton" Content="Quelle waehlen + Vorschau"
+                            Click="MarktdatenPreview_Click" Margin="0,0,8,0" Padding="10,4"/>
+                    <Button x:Name="MarktdatenImportButton" Content="JSONs importieren"
+                            Click="MarktdatenImport_Click" IsEnabled="False" Margin="0,0,8,0" Padding="10,4"/>
+                    <Button x:Name="MarktdatenReloadButton" Content="Cache invalidieren"
+                            Click="MarktdatenReload_Click" Padding="10,4"/>
+                </StackPanel>
             </StackPanel>
         </Border>
 

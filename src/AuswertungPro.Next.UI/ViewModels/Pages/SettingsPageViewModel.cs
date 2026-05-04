@@ -19,6 +19,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty] private string? _videoFolder;
     [ObservableProperty] private AutoSaveMode _dataAutoSaveMode;
     [ObservableProperty] private bool _enableRestorePoints;
+    // Phase 1.4: Steuert Sichtbarkeit Eigendevis-NavItem + Hydraulik-Toolbar.
+    [ObservableProperty] private bool _showExpertenmodusFeatures;
     [ObservableProperty] private bool _videoHwDecoding;
     [ObservableProperty] private bool _videoDropLateFrames;
     [ObservableProperty] private bool _videoSkipFrames;
@@ -88,6 +90,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         VideoFolder = _sp.Settings.LastVideoSourceFolder ?? _sp.Settings.LastVideoFolder;
         DataAutoSaveMode = _sp.Settings.DataAutoSaveMode.Normalize();
         EnableRestorePoints = _sp.Settings.EnableRestorePoints;
+        ShowExpertenmodusFeatures = _sp.Settings.ShowExpertenmodusFeatures;
         VideoHwDecoding = _sp.Settings.VideoHwDecoding;
         VideoDropLateFrames = _sp.Settings.VideoDropLateFrames;
         VideoSkipFrames = _sp.Settings.VideoSkipFrames;
@@ -220,6 +223,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         _sp.Settings.LastVideoFolder = VideoFolder; // legacy compatibility
         _sp.Settings.DataAutoSaveMode = DataAutoSaveMode.Normalize();
         _sp.Settings.EnableRestorePoints = EnableRestorePoints;
+        _sp.Settings.ShowExpertenmodusFeatures = ShowExpertenmodusFeatures;
         _sp.Settings.VideoHwDecoding = VideoHwDecoding;
         _sp.Settings.VideoDropLateFrames = VideoDropLateFrames;
         _sp.Settings.VideoSkipFrames = VideoSkipFrames;

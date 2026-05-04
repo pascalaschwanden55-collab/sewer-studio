@@ -7,6 +7,7 @@
         <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}"/>
     </UserControl.InputBindings>
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <local:CountToMarkConverter x:Key="Foto1Mark" MinCount="1"/>
         <local:CountToMarkConverter x:Key="Foto2Mark" MinCount="2"/>
         <local:StringNotEmptyToMarkConverter x:Key="FilmMark"/>
@@ -247,8 +248,10 @@
                         </StackPanel>
                     </Button>
 
+                    <!-- Phase 1.4: Visibility an Expertenmodus-Toggle gebunden (default = sichtbar). -->
                     <Button x:Name="HydraulikButton" Click="HydraulikMenu_Click"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
+                            Visibility="{Binding ShowExpertenmodusFeatures, Converter={StaticResource BoolToVis}}"
                             ToolTip="Hydraulik-Berechnung nach DWA-A 110 (Kreisquerschnitt)">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#x1F4A7;" FontFamily="Segoe UI Emoji" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -258,6 +261,7 @@
 
                     <Button x:Name="HydraulikPrintButton" Click="HydraulikPrint_Click"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
+                            Visibility="{Binding ShowExpertenmodusFeatures, Converter={StaticResource BoolToVis}}"
                             ToolTip="Hydraulik-Bericht als PDF drucken">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE749;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
