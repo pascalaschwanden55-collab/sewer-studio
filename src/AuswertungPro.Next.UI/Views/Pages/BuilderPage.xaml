@@ -27,6 +27,23 @@
                 <StackPanel DockPanel.Dock="Right"
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
+                    <!-- Fix 2026-05-04: Druck-Buttons zusaetzlich oben sichtbar
+                         (auch wenn Fenster zu klein und Row 4 unten unsichtbar ist). -->
+                    <Button Content="PDF oeffnen"
+                            Command="{Binding OpenLastExportedPdfCommand}"
+                            Style="{StaticResource SecondaryButton}"
+                            Margin="0,0,8,0"
+                            ToolTip="Zuletzt exportierte PDF-Datei im Standard-Viewer oeffnen"/>
+                    <Button Content="PDF ausdrucken"
+                            Command="{Binding PrintPdfCommand}"
+                            Style="{StaticResource SecondaryButton}"
+                            Margin="0,0,8,0"
+                            ToolTip="Zuletzt exportierte PDF an den Drucker senden"/>
+                    <Button Content="PDF exportieren"
+                            Command="{Binding ExportPdfCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            Margin="0,0,16,0"
+                            ToolTip="Kostenzusammenstellung als PDF-Datei generieren und speichern"/>
                     <Button Content="Aktualisieren"
                             Command="{Binding RefreshCommand}"
                             Style="{StaticResource SecondaryButton}"
