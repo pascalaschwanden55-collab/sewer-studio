@@ -22,6 +22,10 @@ Thumbs.db
 desktop.ini
 .DS_Store
 
+# Python (global) — vorher nur unter sidecar/, jetzt auch tools/, scripts/, etc.
+**/__pycache__/
+**/*.pyc
+
 # Build artifacts
 artifacts/
 
@@ -40,8 +44,20 @@ sidecar/models/**/*.pth
 sidecar/models/**/*.bin
 sidecar/models/**/*.onnx
 sidecar/models/**/*.safetensors
+sidecar/models/**/*.engine
 sidecar/test_export_tmp/
 sidecar/training_export/
+
+# Sidecar Florence-2 Shadow-Log (281 Frame-JPGs, 6.6 GB) — generiert zur Laufzeit
+sidecar/florence2_shadow_log/
+
+# Sidecar Root-Modelle (analog zu Knowledge/-Frames-Ignore)
+sidecar/*.pt
+sidecar/*.engine
+sidecar/*.onnx
+sidecar/*.safetensors
+sidecar/*.pth
+sidecar/*.bin
 
 # Lokale SDK/Runtime-Kopien (gross)
 .dotnet/
@@ -71,5 +87,45 @@ yolo_cls_runs/
 # WPF Temp-Projektdateien (Build-Artefakte)
 *_wpftmp.csproj
 
+# VS / dotnet generierter Build-Cache pro csproj
+*.csproj.lscache
+
 # Tools
 tools/PdfImageAnalyzer/
+
+# ── Audit-Fix 2026-04: Reproduzierbarkeit ───────────────────────────────
+# Knowledge-Subverzeichnisse die regenerierbar / generiert sind und
+# nicht ins Repo gehoeren. Verhindert, dass git status 100k+ Files zeigt.
+
+# Generierte Frames + Few-Shot-Bilder (regenerierbar aus Videos)
+Knowledge/fewshot_images/
+Knowledge/frames/
+Knowledge/frames_extracted/
+Knowledge/frames_temp/
+Knowledge/teacher_images/
+
+# Trainings- und Lerndaten (regenerierbar / mit Backup-Mirror)
+Knowledge/training_samples.json
+Knowledge/teacher_annotations.json
+Knowledge/measures_learning.json
+Knowledge/measures-model.zip
+Knowledge/yolo_runs/
+Knowledge/florence2_shadow_log/
+Knowledge/batch_processed.txt
+
+# Generierte Markt-/Sanierungs-JSONs (kommen aus Python-Reparser, Quelle in Sanddisk)
+Knowledge/sanierung/marktpreise_*.json
+Knowledge/sanierung/historische_sanierungen.json
+
+# JSON-Backups mit Zeitstempel (alle .bak_<timestamp>)
+**/*.bak_*.json
+**/*.bak_*.csv
+
+# Test-Ausgaben
+tests/**/TestResults/
+
+# YOLO-Datasets im Repo-Root (gehoeren auf D:/yolo_sewer_v*)
+yolo_sewer_v*/
+
+# Config-Backups
+src/**/Config/*.bak_*.json
