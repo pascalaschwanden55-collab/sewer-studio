@@ -249,6 +249,16 @@ namespace AuswertungPro.Next.UI
 
             try
             {
+                // Phase 0.2: ServiceProvider disposed sein eigenen kbHttp (HttpClient).
+                (_services as ServiceProvider)?.Dispose();
+            }
+            catch
+            {
+                // best effort service-provider shutdown
+            }
+
+            try
+            {
                 AppSettings.FlushPendingSave();
             }
             catch

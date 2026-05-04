@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
+using AuswertungPro.Next.UI.Helpers;
 
 namespace AuswertungPro.Next.UI.Services;
 
@@ -138,7 +139,7 @@ public sealed class KnowledgeMirrorService : IDisposable
 
     private void OnDebounceElapsed(object? state)
     {
-        _ = SyncNowAsync();
+        SyncNowAsync().SafeFireAndForget("KnowledgeMirrorDebounceSync");
     }
 
     /// <summary>
@@ -159,6 +160,58 @@ public sealed class KnowledgeMirrorService : IDisposable
             Debug.WriteLine($"[BrainMirror] Sync: {synced} Dateien aktualisiert → {target}");
     }
 
+    // Audit-Fix: Whitelist + Verzeichnis-Skipliste statt rekursiver Vollkopie.
+    // Bei 80 GB / 118k Dateien skaliert ungefilterte Mirror-Strategie nicht mehr.
+    private static readonly string[] SkipDirNames =
+    {
+        "frames",            // Video-Frame-Cache, regenerierbar
+        "frames_extracted",
+        "frames_temp",
+        "tmp",
+        "temp",
+        "_archive",          // Alte Snapshots
+        ".git",
+        "obj", "bin",        // Build-Artefakte (defensiv)
+        "yolo_runs",         // Trainings-Output, lokal regenerierbar
+        "florence2_shadow_log",
+    };
+
+    private static readonly string[] SkipFileExtensions =
+    {
+        ".tmp", ".temp", ".log", ".trace",
+        ".pyc",                          // Python-Cache
+        ".lock", ".lscache",
+        // Ungewuenschte Build-Artefakte falls direkt im Knowledge-Tree liegen
+    };
+
+    private static bool ShouldSkipDirectory(string dirName)
+    {
+        foreach (var skip in SkipDirNames)
+            if (string.Equals(dirName, skip, StringComparison.OrdinalIgnoreCase))
+                return true;
+        // Backup-Dirs mit Datums-Suffix (.bak_YYYYMMDD)
+        if (dirName.Contains(".bak_", StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+
+    private static bool ShouldSkipFile(string fileName)
+    {
+        // WAL/SHM (SQLite-Internals)
+        if (fileName.EndsWith("-wal", StringComparison.OrdinalIgnoreCase) ||
+            fileName.EndsWith("-shm", StringComparison.OrdinalIgnoreCase))
+            return true;
+        // Backup-Dateien mit Zeitstempel
+        if (fileName.Contains(".bak_", StringComparison.OrdinalIgnoreCase))
+            return true;
+        // Extension-basiertes Skip
+        var ext = Path.GetExtension(fileName);
+        foreach (var skipExt in SkipFileExtensions)
+            if (string.Equals(ext, skipExt, StringComparison.OrdinalIgnoreCase))
+                return true;
+        return false;
+    }
+
     private static void SyncDirectoryRecursive(string source, string target, ref int syncCount)
     {
         Directory.CreateDirectory(target);
@@ -166,10 +219,7 @@ public sealed class KnowledgeMirrorService : IDisposable
         foreach (var srcFile in Directory.GetFiles(source))
         {
             var fileName = Path.GetFileName(srcFile);
-
-            // WAL/SHM nicht separat kopieren (DB-Checkpoint erledigt das)
-            if (fileName.EndsWith("-wal", StringComparison.OrdinalIgnoreCase) ||
-                fileName.EndsWith("-shm", StringComparison.OrdinalIgnoreCase))
+            if (ShouldSkipFile(fileName))
                 continue;
 
             var dstFile = Path.Combine(target, fileName);
@@ -191,6 +241,8 @@ public sealed class KnowledgeMirrorService : IDisposable
         foreach (var srcDir in Directory.GetDirectories(source))
         {
             var dirName = Path.GetFileName(srcDir);
+            if (ShouldSkipDirectory(dirName))
+                continue;
             var dstDir = Path.Combine(target, dirName);
             SyncDirectoryRecursive(srcDir, dstDir, ref syncCount);
         }
@@ -214,9 +266,7 @@ public sealed class KnowledgeMirrorService : IDisposable
         foreach (var srcFile in Directory.GetFiles(source))
         {
             var fileName = Path.GetFileName(srcFile);
-            // WAL/SHM nicht kopieren beim Restore
-            if (fileName.EndsWith("-wal", StringComparison.OrdinalIgnoreCase) ||
-                fileName.EndsWith("-shm", StringComparison.OrdinalIgnoreCase))
+            if (ShouldSkipFile(fileName))
                 continue;
 
             var dstFile = Path.Combine(target, fileName);
@@ -231,6 +281,8 @@ public sealed class KnowledgeMirrorService : IDisposable
         foreach (var srcDir in Directory.GetDirectories(source))
         {
             var dirName = Path.GetFileName(srcDir);
+            if (ShouldSkipDirectory(dirName))
+                continue;
             CopyDirectoryRecursive(srcDir, Path.Combine(target, dirName), ref fileCount);
         }
     }

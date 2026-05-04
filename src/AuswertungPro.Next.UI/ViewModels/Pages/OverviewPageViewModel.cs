@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using AuswertungPro.Next.UI.Helpers;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages
 {
@@ -51,10 +52,10 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             OpenCommand = new RelayCommand(OpenProject);
             OpenSelectedCommand = new RelayCommand(OpenSelectedProject, () => SelectedProjectEntry is not null);
             ContinueCommand = new RelayCommand(OpenLastProject, () => HasLastProject);
-            RefreshCommand = new RelayCommand(() => _ = LoadAllProjectsAsync());
+            RefreshCommand = new RelayCommand(() => LoadAllProjectsAsync().SafeFireAndForget("OverviewRefresh"));
             DeleteSelectedCommand = new RelayCommand(DeleteSelectedProject, () => SelectedProjectEntry is not null);
 
-            _ = LoadAllProjectsAsync();
+            LoadAllProjectsAsync().SafeFireAndForget("OverviewLoadProjects");
 
             _shell.PropertyChanged += (_, e) =>
             {
@@ -66,7 +67,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                     ProjectStatus = BuildProjectStatus();
                     LastProjectPath = _sp.Settings.LastProjectPath;
                     if (e.PropertyName == nameof(ShellViewModel.IsProjectReady))
-                        _ = LoadAllProjectsAsync();
+                        LoadAllProjectsAsync().SafeFireAndForget("OverviewLoadProjects");
                 }
             };
         }
@@ -202,7 +203,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         _shell.NewProject();
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
-        _ = LoadAllProjectsAsync();
+        LoadAllProjectsAsync().SafeFireAndForget("OverviewLoadProjects");
         _shell.NavigateTo("Projekt");
     }
 
@@ -212,7 +213,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             return;
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
-        _ = LoadAllProjectsAsync();
+        LoadAllProjectsAsync().SafeFireAndForget("OverviewLoadProjects");
         _shell.NavigateTo("Projekt");
     }
 
@@ -227,7 +228,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         _sp.Settings.Save();
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
-        _ = LoadAllProjectsAsync();
+        LoadAllProjectsAsync().SafeFireAndForget("OverviewLoadProjects");
         _shell.NavigateTo("Projekt");
     }
 
@@ -259,7 +260,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 _shell.NewProject();
             }
 
-            _ = LoadAllProjectsAsync();
+            LoadAllProjectsAsync().SafeFireAndForget("OverviewLoadProjects");
         }
         catch (Exception ex)
         {
@@ -275,7 +276,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             return;
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
-        _ = LoadAllProjectsAsync();
+        LoadAllProjectsAsync().SafeFireAndForget("OverviewLoadProjects");
         _shell.NavigateTo("Projekt");
     }
 
