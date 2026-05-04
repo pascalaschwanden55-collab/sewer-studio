@@ -1,0 +1,236 @@
+{
+  "_meta": {
+    "title": "Sanierungsverfahren-Matrix (extrahiert aus rehabilitation_methods.yaml)",
+    "schema_version": "1.1",
+    "source": "Knowledge/sanierung/rehabilitation_methods.yaml",
+    "verwendung": "Wird von RehabilitationRulesEngine geladen wenn vorhanden, sonst Fallback auf hartcodierte Liste.",
+    "phase": "2.5 - YAML als fuehrende Quelle: damage_groups_by_vsa_code + damage_matrix ergaenzt; vorher hardcoded in Engine."
+  },
+  "damage_groups_by_vsa_code": {
+    "BAA": "deformation",
+    "BAB": "cracks",
+    "BAC": "breaks",
+    "BAE": "corrosion",
+    "BAF": "corrosion",
+    "BAG": "laterals",
+    "BAH": "laterals",
+    "BAI": "obstructions",
+    "BAJ": "joints",
+    "BBA": "obstructions",
+    "BBB": "obstructions",
+    "BBC": "obstructions",
+    "BBD": "obstructions",
+    "BBE": "obstructions",
+    "BBF": "infiltration",
+    "BBG": "exfiltration",
+    "BCA": "laterals"
+  },
+  "damage_matrix": {
+    "cipp_inliner": {
+      "cracks": "eligible",
+      "joints": "eligible",
+      "infiltration": "eligible",
+      "exfiltration": "eligible",
+      "laterals": "conditional",
+      "obstructions": "excluded",
+      "deformation": "conditional",
+      "breaks": "excluded",
+      "corrosion": "eligible"
+    },
+    "short_liner": {
+      "cracks": "eligible",
+      "joints": "eligible",
+      "infiltration": "eligible",
+      "exfiltration": "eligible",
+      "laterals": "eligible",
+      "obstructions": "excluded",
+      "deformation": "excluded",
+      "breaks": "conditional",
+      "corrosion": "conditional"
+    },
+    "robotic_milling": {
+      "obstructions": "eligible",
+      "laterals": "eligible"
+    },
+    "robotic_repair": {
+      "cracks": "conditional",
+      "joints": "conditional",
+      "infiltration": "conditional",
+      "exfiltration": "conditional",
+      "laterals": "eligible",
+      "corrosion": "conditional"
+    },
+    "mechanical_sleeve": {
+      "joints": "eligible",
+      "cracks": "conditional",
+      "infiltration": "eligible",
+      "exfiltration": "eligible",
+      "laterals": "conditional",
+      "breaks": "conditional",
+      "corrosion": "conditional"
+    },
+    "berstlining": {
+      "cracks": "eligible",
+      "joints": "eligible",
+      "breaks": "eligible",
+      "deformation": "eligible",
+      "corrosion": "eligible",
+      "laterals": "conditional",
+      "infiltration": "eligible",
+      "exfiltration": "eligible"
+    },
+    "close_fit_lining": {
+      "cracks": "eligible",
+      "joints": "eligible",
+      "infiltration": "eligible",
+      "exfiltration": "eligible",
+      "corrosion": "eligible",
+      "deformation": "conditional",
+      "laterals": "conditional"
+    },
+    "injection_grouting": {
+      "infiltration": "eligible",
+      "cracks": "conditional",
+      "joints": "conditional",
+      "exfiltration": "conditional"
+    },
+    "open_excavation": {
+      "cracks": "eligible",
+      "joints": "eligible",
+      "infiltration": "eligible",
+      "exfiltration": "eligible",
+      "laterals": "eligible",
+      "obstructions": "eligible",
+      "deformation": "eligible",
+      "breaks": "eligible",
+      "corrosion": "eligible"
+    },
+    "shaft_rehabilitation": {
+      "corrosion": "eligible",
+      "cracks": "conditional",
+      "infiltration": "eligible"
+    }
+  },
+  "procedures": [
+    {
+      "id": "cipp_inliner",
+      "name": "CIPP-Schlauchlining (Inliner)",
+      "category": "Renovierung",
+      "dn_min": 100,
+      "dn_max": 2000,
+      "az_compatible": true,
+      "gfk_compatible": true,
+      "steel_compatible": true,
+      "bend_capable": false,
+      "max_bend_degrees": 15
+    },
+    {
+      "id": "short_liner",
+      "name": "Kurzliner / Hutprofil / Partliner",
+      "category": "Reparatur",
+      "dn_min": 100,
+      "dn_max": 800,
+      "az_compatible": true,
+      "gfk_compatible": true,
+      "steel_compatible": true,
+      "bend_capable": true,
+      "max_bend_degrees": 90
+    },
+    {
+      "id": "robotic_milling",
+      "name": "Roboter-Fraesung (Vorbereitung)",
+      "category": "Vorbereitung",
+      "dn_min": 100,
+      "dn_max": 800,
+      "az_compatible": false,
+      "gfk_compatible": true,
+      "steel_compatible": true,
+      "bend_capable": true,
+      "max_bend_degrees": 30
+    },
+    {
+      "id": "robotic_repair",
+      "name": "Roboter-Spachtelung",
+      "category": "Reparatur",
+      "dn_min": 150,
+      "dn_max": 800,
+      "az_compatible": false,
+      "gfk_compatible": true,
+      "steel_compatible": true,
+      "bend_capable": true,
+      "max_bend_degrees": 30
+    },
+    {
+      "id": "mechanical_sleeve",
+      "name": "Edelstahl-Manschette (Quick-Lock)",
+      "category": "Reparatur",
+      "dn_min": 100,
+      "dn_max": 3000,
+      "az_compatible": true,
+      "gfk_compatible": true,
+      "steel_compatible": true,
+      "bend_capable": false,
+      "max_bend_degrees": 0
+    },
+    {
+      "id": "berstlining",
+      "name": "Berstlining (Pipe Bursting)",
+      "category": "Erneuerung",
+      "dn_min": 100,
+      "dn_max": 500,
+      "az_compatible": false,
+      "gfk_compatible": false,
+      "steel_compatible": false,
+      "bend_capable": false,
+      "max_bend_degrees": 0
+    },
+    {
+      "id": "close_fit_lining",
+      "name": "Close-Fit-Lining (PE/PVC)",
+      "category": "Renovierung",
+      "dn_min": 100,
+      "dn_max": 500,
+      "az_compatible": true,
+      "gfk_compatible": true,
+      "steel_compatible": true,
+      "bend_capable": false,
+      "max_bend_degrees": 15
+    },
+    {
+      "id": "injection_grouting",
+      "name": "Injektion / Verpressung",
+      "category": "Reparatur",
+      "dn_min": 100,
+      "dn_max": 3000,
+      "az_compatible": true,
+      "gfk_compatible": true,
+      "steel_compatible": true,
+      "bend_capable": true,
+      "max_bend_degrees": 90
+    },
+    {
+      "id": "open_excavation",
+      "name": "Offene Bauweise (Erneuerung Neubau)",
+      "category": "Erneuerung",
+      "dn_min": 100,
+      "dn_max": 3000,
+      "az_compatible": true,
+      "gfk_compatible": true,
+      "steel_compatible": true,
+      "bend_capable": true,
+      "max_bend_degrees": 90
+    },
+    {
+      "id": "shaft_rehabilitation",
+      "name": "Schachtsanierung",
+      "category": "Renovierung",
+      "dn_min": 800,
+      "dn_max": 2000,
+      "az_compatible": true,
+      "gfk_compatible": true,
+      "steel_compatible": true,
+      "bend_capable": true,
+      "max_bend_degrees": 0
+    }
+  ]
+}
