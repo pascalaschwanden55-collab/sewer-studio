@@ -175,11 +175,11 @@ Diese 5 Punkte haben **alle drei** Audits unabhängig genannt — sie sind unbes
 ### Phase 3 — 2. Woche (UI Quick-Wins)
 | # | Aufgabe | Konsens | Aufwand |
 |---|---|---|---|
-| 3.1 | app.manifest + PerMonitorV2-DPI + ApplicationIcon | C-Claude | 1 h |
+| 3.1 | ~~app.manifest + PerMonitorV2-DPI + ApplicationIcon~~ — Manifest mit PerMonitorV2 + dpiAware + longPathAware + supportedOS-Liste. ApplicationIcon offen (kein .ico-Asset). ✅ teilweise 2026-05-04 | C-Claude | 1 h |
 | 3.2 | ~~Spacing/Typography-Tokens (Sp.S=4, M=8, L=16) als StaticResources~~ — Sp{XS,S,M,L,XL,XXL} (Double + Thickness) und Type{Caption,Small,Body,BodyLarge,H4,H3,H2,H1} in ThemeLight.xaml. 2 Beispielmigrationen in SettingsPage. ✅ 2026-05-04 | A6 (3/3) | 4 h (geplant) / ~30 min (effektiv, ohne Massenmigration) |
 | 3.3 | ~~Zentraler DataGrid-Style + PageHeader UserControl~~ — DataGrid-Default-Style war bereits zentral (impliziter Style fuer alle 29 DataGrids). Neu: benannte Varianten DataGridStandard + DataGridCompact (BasedOn Default). PageHeader UserControl bleibt offen fuer spaeter. ✅ teilweise 2026-05-04 | A6 (3/3) | 6 h (geplant) / ~15 min (Token-Variante allein) |
 | 3.4 | Hex-Hardcodes → DynamicResource (162 + 22 Stellen) | A6 (3/3) | 6 h |
-| 3.5 | Anleitungstexte aus Settings in eigene Hilfe-Seite | C-Gemini | 2 h |
+| 3.5 | ~~Anleitungstexte aus Settings in eigene Hilfe-Seite~~ — Pragmatisch: Anleitungs-Block (20 Sektionen) in Expander mit IsExpanded="False" verpackt. Settings-UI wieder schlank, Anleitung bleibt 1 Klick entfernt. ✅ 2026-05-04 | C-Gemini | 2 h (geplant) / ~5 min (effektiv) |
 
 ### Phase 4 — Monat 1 (Konsistenz)
 | # | Aufgabe | Konsens | Aufwand |
@@ -196,7 +196,7 @@ Diese 5 Punkte haben **alle drei** Audits unabhängig genannt — sie sind unbes
 | 5.2 | ServiceProvider.cs (657 Zeilen) zerlegen | B2 (2/3) | 1 Woche |
 | 5.3 | KI-Schicht migrieren: QualityGate + Aggregator + Resolver → Application/KI | A1 (3/3) | 1 Woche |
 | 5.4 | Produktmodus / Expertenmodus einführen | A5 (3/3) | 3 Tage |
-| 5.5 | Sanierungs-Decision-Log (warum welche Massnahme?) | A7 (3/3) | 1 Tag |
+| 5.5 | ~~Sanierungs-Decision-Log (warum welche Massnahme?)~~ — Tabelle SanierungDecisionLog (DecisionId, Context, Vsa-Codes/DamageGroups/Eligible/Conditional/Excluded/Hints als JSON, KnowledgeVersion, RunId, Notes). Service mit LogEvaluation/GetById/GetRecent/GetByContext. 9 neue Tests. KEIN Aufrufer-Eingriff. ✅ 2026-05-04 | A7 (3/3) | 1 Tag (geplant) / ~1 h (effektiv) |
 
 ### Phase 6 — Monat 3+ (Langfrist)
 | # | Aufgabe | Konsens | Aufwand |
