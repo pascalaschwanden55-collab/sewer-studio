@@ -4,8 +4,10 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -38,9 +40,19 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     public ObservableCollection<TrainingCase> Cases { get; } = new();
     public ObservableCollection<TrainingSample> Samples { get; } = new();
+    public ObservableCollection<WeakSpotItem> WeakSpots { get; } = new();
+
+    /// <summary>Gefilterte View auf Samples (fuer Bulk-Review). Filter via SampleCodeFilter + SampleStatusFilter.</summary>
+    public ICollectionView SamplesView { get; }
 
     [ObservableProperty] private TrainingCase? _selectedCase;
     [ObservableProperty] private TrainingSample? _selectedSample;
+    [ObservableProperty] private string _sampleCodeFilter = "";   // Leer = alle
+    [ObservableProperty] private string _sampleStatusFilter = "Pending"; // Pending / Approved / Rejected / Alle
+    [ObservableProperty] private int _sampleVisibleCount;
+    [ObservableProperty] private WeakSpotItem? _selectedWeakSpot;
+    [ObservableProperty] private string _weakSpotSummary = "Noch nicht berechnet.";
+    [ObservableProperty] private int _weakSpotCount;
     [ObservableProperty] private string _rootFolder = "";
     [ObservableProperty] private string _statusText = "";
     [ObservableProperty] private bool _isBusy;
@@ -303,6 +315,51 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     private readonly List<string> _rootFolders = new();
     private CancellationTokenSource? _genCts;
+
+    /// <summary>
+    /// Wechselt _genCts atomar gegen eine neue Source. Die alte wird gecancelt
+    /// und nach kurzer Verzoegerung disposed — das gibt laufenden Tasks Zeit,
+    /// die OperationCanceledException sauber zu propagieren statt eine
+    /// ObjectDisposedException auf einem bereits disposeten Token zu werfen.
+    /// Das alte Pattern (Cancel(); Dispose(); new();) hatte hier eine Race
+    /// zwischen Dispose und ct-Registrierungen in noch laufenden Tasks.
+    /// </summary>
+    private CancellationToken RotateGenCts()
+    {
+        var old = System.Threading.Interlocked.Exchange(
+            ref _genCts, new CancellationTokenSource());
+        if (old is not null)
+        {
+            try { old.Cancel(); } catch { /* race: already disposed by anderer Pfad */ }
+            // Delayed Dispose: laufende Tasks koennen ihre Cancellation noch
+            // sauber durchziehen, bevor das Source-Objekt weg ist.
+            _ = System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ =>
+            {
+                try { old.Dispose(); } catch { }
+            });
+        }
+        return _genCts!.Token;
+    }
+
+    /// <summary>
+    /// Selbsttraining-CTS-Rotation (Audit D2.2): atomarer Tausch + delayed Dispose,
+    /// gleiches Pattern wie RotateGenCts. Loest die Race zwischen Dispose und
+    /// Token-Registrierungen in noch laufenden Self-Training-Tasks.
+    /// </summary>
+    private CancellationToken RotateSelfTrainingCts()
+    {
+        var old = System.Threading.Interlocked.Exchange(
+            ref _selfTrainingCts, new CancellationTokenSource());
+        if (old is not null)
+        {
+            try { old.Cancel(); } catch { /* race: bereits disposed */ }
+            _ = System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ =>
+            {
+                try { old.Dispose(); } catch { }
+            });
+        }
+        return _selfTrainingCts!.Token;
+    }
 
     /// <summary>Fügt eine Zeile zum Log hinzu (Thread-safe via Dispatcher).</summary>
     private void Log(string message)
@@ -582,7 +639,89 @@ public partial class TrainingCenterViewModel : ObservableObject
             // Fallback ohne Code-Katalog (nur Struktur-Checks)
             _sampleQualityGate = new SampleQualityGateService();
         }
+
+        // Gefilterte Sample-View fuer Bulk-Review
+        SamplesView = CollectionViewSource.GetDefaultView(Samples);
+        SamplesView.Filter = SamplePassesFilter;
+        Samples.CollectionChanged += (_, _) => RefreshSamplesView();
     }
+
+    private bool SamplePassesFilter(object? obj)
+    {
+        if (obj is not TrainingSample s) return false;
+
+        // Status-Filter
+        var statusOk = SampleStatusFilter switch
+        {
+            "Pending" => s.Status == TrainingSampleStatus.New,
+            "Approved" => s.Status == TrainingSampleStatus.Approved,
+            "Rejected" => s.Status == TrainingSampleStatus.Rejected,
+            _ => true
+        };
+        if (!statusOk) return false;
+
+        // Code-Filter (Praefix-Match, case-insensitive)
+        if (!string.IsNullOrWhiteSpace(SampleCodeFilter)
+            && (s.Code is null
+                || !s.Code.StartsWith(SampleCodeFilter, StringComparison.OrdinalIgnoreCase)))
+            return false;
+
+        return true;
+    }
+
+    private void RefreshSamplesView()
+    {
+        SamplesView?.Refresh();
+        SampleVisibleCount = SamplesView?.Cast<TrainingSample>().Count() ?? 0;
+    }
+
+    partial void OnSampleCodeFilterChanged(string value) => RefreshSamplesView();
+    partial void OnSampleStatusFilterChanged(string value) => RefreshSamplesView();
+
+    [RelayCommand]
+    private async Task RefreshWeakSpotsAsync()
+    {
+        try
+        {
+            var curator = new WeakSpotCurator();
+            var report = await curator.BuildAsync();
+
+            void Apply()
+            {
+                WeakSpots.Clear();
+                foreach (var item in report.Items)
+                    WeakSpots.Add(item);
+
+                WeakSpotSummary = report.Summary;
+                WeakSpotCount = WeakSpots.Count;
+            }
+
+            if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
+                d.Invoke(Apply);
+            else
+                Apply();
+        }
+        catch (Exception ex)
+        {
+            WeakSpotSummary = $"Schwachstellen konnten nicht berechnet werden: {ex.Message}";
+            WeakSpotCount = 0;
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelectedWeakSpot))]
+    private void ShowWeakSpotSamples()
+    {
+        if (SelectedWeakSpot is null) return;
+
+        SampleCodeFilter = SelectedWeakSpot.ExpectedCode;
+        SampleStatusFilter = "Alle";
+        StatusText = $"Samples gefiltert nach Schwachstelle {SelectedWeakSpot.ConfusionLabel}.";
+    }
+
+    private bool HasSelectedWeakSpot() => SelectedWeakSpot is not null;
+
+    partial void OnSelectedWeakSpotChanged(WeakSpotItem? value)
+        => ShowWeakSpotSamplesCommand.NotifyCanExecuteChanged();
 
     // ── Cases ────────────────────────────────────────────────────────────────
 
@@ -609,6 +748,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 
         await LoadSamplesInternalAsync();
         await RefreshKbStatusAsync();
+        await RefreshWeakSpotsAsync();
         await LoadLastMatchRateAsync();
     }
 
@@ -923,10 +1063,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         if (SelectedCase is null || IsBusy) return;
 
-        _genCts?.Cancel();
-        _genCts?.Dispose();
-        _genCts = new CancellationTokenSource();
-        var ct = _genCts.Token;
+        var ct = RotateGenCts();
 
         using var _aiToken = AiTrack.Begin("Training Center");
         try
@@ -1019,12 +1156,158 @@ public partial class TrainingCenterViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task RejectAllVisibleAsync()
+        => await BulkChangeVisibleStatusAsync(TrainingSampleStatus.Rejected, "Reject", "#DC2626");
+
+    /// <summary>
+    /// Setzt alle in der DataGrid markierten Samples auf Approved.
+    /// SelectedItems wird via CommandParameter aus dem View uebergeben.
+    /// </summary>
+    [RelayCommand]
+    private async Task ApproveSelectedAsync(System.Collections.IList? selected)
+    {
+        if (IsBusy || selected is null) return;
+        var list = selected.Cast<TrainingSample>().ToList();
+        if (list.Count == 0) { StatusText = "Keine Zeilen markiert."; return; }
+        try
+        {
+            IsBusy = true;
+            foreach (var s in list)
+            {
+                if (s.Status == TrainingSampleStatus.Approved) continue;
+                s.Status = TrainingSampleStatus.Approved;
+                if (s.KbIndexState != KbIndexState.Indexed
+                    && s.KbIndexState != KbIndexState.Deduplicated)
+                {
+                    s.KbIndexState = KbIndexState.Pending;
+                }
+            }
+            await PersistSamplesAsync();
+            RefreshSamplesView();
+            StatusText = $"{list.Count} markierte Samples approved.";
+            Log($"Selection-Approve: {list.Count} Samples");
+        }
+        finally { IsBusy = false; }
+    }
+
+    /// <summary>
+    /// Loescht alle in der DataGrid markierten Samples HART aus dem JSON.
+    /// Konfirmation Pflicht — destruktiv, kein Undo.
+    /// </summary>
+    [RelayCommand]
+    private async Task DeleteSelectedAsync(System.Collections.IList? selected)
+    {
+        if (IsBusy || selected is null) return;
+        var list = selected.Cast<TrainingSample>().ToList();
+        if (list.Count == 0) { StatusText = "Keine Zeilen markiert."; return; }
+
+        var confirm = System.Windows.MessageBox.Show(
+            $"{list.Count} Samples werden ENDGUELTIG aus dem Training-Store geloescht.\n\n" +
+            $"Frame-Dateien bleiben auf Disk. KB-Eintraege werden NICHT geloescht.\n\nFortfahren?",
+            "Markierte Samples loeschen",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning,
+            System.Windows.MessageBoxResult.No);
+        if (confirm != System.Windows.MessageBoxResult.Yes) return;
+
+        try
+        {
+            IsBusy = true;
+            var idsToRemove = new HashSet<string>(list.Select(s => s.SampleId));
+            foreach (var s in list)
+                Samples.Remove(s);
+
+            await TrainingSamplesStore.RemoveByIdsAsync(idsToRemove);
+            RefreshSamplesView();
+            StatusText = $"{list.Count} markierte Samples geloescht.";
+            Log($"Selection-Delete: {list.Count} Samples hart aus JSON entfernt");
+        }
+        finally { IsBusy = false; }
+    }
+
+    /// <summary>
+    /// Bulk-Approve: alle Samples die aktuell durch den Filter (Code + Status) sichtbar sind
+    /// werden auf Approved gesetzt. Mit Konfirmations-Dialog wegen Massenwirkung.
+    /// </summary>
+    [RelayCommand]
+    private async Task ApproveAllVisibleAsync()
+        => await BulkChangeVisibleStatusAsync(TrainingSampleStatus.Approved, "Approve", "#16A34A");
+
+    /// <summary>
+    /// Setzt alle aktuell durch den Filter sichtbaren Pending-Samples auf den gewaehlten Status.
+    /// Konfirmations-Dialog mit Top-3-Code-Summary.
+    /// </summary>
+    private async Task BulkChangeVisibleStatusAsync(
+        TrainingSampleStatus newStatus, string actionLabel, string colorHint)
+    {
+        if (IsBusy) return;
+        var visible = SamplesView?.Cast<TrainingSample>().ToList() ?? new();
+        var pendingOnly = visible.Where(s => s.Status == TrainingSampleStatus.New).ToList();
+        if (pendingOnly.Count == 0)
+        {
+            StatusText = "Keine Pending-Samples im aktuellen Filter sichtbar.";
+            return;
+        }
+
+        var topCodes = pendingOnly
+            .GroupBy(s => s.Code ?? "")
+            .OrderByDescending(g => g.Count())
+            .Take(3)
+            .Select(g => $"{g.Key}: {g.Count()}");
+        var codeSummary = string.Join(", ", topCodes);
+
+        var confirm = System.Windows.MessageBox.Show(
+            $"{pendingOnly.Count} Pending-Samples werden auf {newStatus} gesetzt.\n\n" +
+            $"Top-Codes: {codeSummary}\n\n" +
+            $"Stichprobe vorher pruefen!\n\nFortfahren?",
+            $"Bulk-{actionLabel}",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Question,
+            System.Windows.MessageBoxResult.No);
+
+        if (confirm != System.Windows.MessageBoxResult.Yes) return;
+
+        try
+        {
+            IsBusy = true;
+            StatusText = $"Bulk-{actionLabel} laeuft: {pendingOnly.Count} Samples...";
+
+            foreach (var s in pendingOnly)
+            {
+                s.Status = newStatus;
+                // KbIndexState nur setzen wenn noch nicht indexiert — sonst ueberschreiben wir
+                // einen bereits erfolgreichen KB-Eintrag und machen die JSON-Statistik unwahr.
+                if (newStatus == TrainingSampleStatus.Approved
+                    && s.KbIndexState != KbIndexState.Indexed
+                    && s.KbIndexState != KbIndexState.Deduplicated)
+                {
+                    s.KbIndexState = KbIndexState.Pending;
+                }
+            }
+            await PersistSamplesAsync();
+
+            RefreshSamplesView();
+            var hint = newStatus == TrainingSampleStatus.Approved
+                ? " Klicke 'KB nachindexieren' um sie in die KB zu schreiben."
+                : "";
+            StatusText = $"Bulk-{actionLabel} fertig: {pendingOnly.Count} Samples auf {newStatus} gesetzt.{hint}";
+            Log($"Bulk-{actionLabel}: {pendingOnly.Count} Samples (Codes: {codeSummary})");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
     private async Task ExportApprovedAsync()
     {
         if (IsBusy) return;
         try
         {
             IsBusy = true;
+            StatusText = "Protokoll-Training: zaehle Samples...";
+
             var approved = Samples
                 .Where(s => s.Status == TrainingSampleStatus.Approved && s.ExportedUtc is null)
                 .ToList();
@@ -1035,28 +1318,49 @@ public partial class TrainingCenterViewModel : ObservableObject
                 return;
             }
 
+            StatusText = $"Protokoll-Training: exportiere {approved.Count} Samples (kann 30-60 Sek dauern)...";
+
+            // Schwere I/O-Arbeit off-UI ausfuehren damit das Fenster nicht einfriert.
+            var items = approved
+                .Select(s => (
+                    Entry: new AuswertungPro.Next.Domain.Protocol.ProtocolEntry
+                    {
+                        Code = s.Code,
+                        Beschreibung = s.Beschreibung,
+                        MeterStart = s.MeterStart,
+                        MeterEnd = s.MeterEnd,
+                        IsStreckenschaden = s.IsStreckenschaden
+                    },
+                    HaltungId: (string?)s.CaseId))
+                .ToList();
+
+            var added = await Task.Run(() => ProtocolTrainingStore.AddSamples(items));
+
+            var now = DateTime.UtcNow;
             foreach (var s in approved)
-            {
-                var entry = new AuswertungPro.Next.Domain.Protocol.ProtocolEntry
-                {
-                    Code = s.Code,
-                    Beschreibung = s.Beschreibung,
-                    MeterStart = s.MeterStart,
-                    MeterEnd = s.MeterEnd,
-                    IsStreckenschaden = s.IsStreckenschaden
-                };
-                ProtocolTrainingStore.AddSample(entry, s.CaseId);
-                s.ExportedUtc = DateTime.UtcNow;
-            }
+                s.ExportedUtc = now;
 
             await PersistSamplesAsync();
 
             var codes = approved.Select(s => s.Code).Distinct().OrderBy(c => c).ToList();
-            Log($"Protokoll-Training: {approved.Count} Samples als Few-Shot-Beispiele gespeichert.");
-            Log($"  Codes: {string.Join(", ", codes)}");
+            Log($"Protokoll-Training: {added} neu gespeichert (von {approved.Count} geprueft, Rest war Duplikat).");
+            Log($"  Codes: {codes.Count} verschiedene");
             Log($"  Ziel: {Path.Combine(AppSettings.AppDataDir, "data", "protocol_training.json")}");
-            Log("  Wirkung: Qwen nutzt diese Beispiele bei zukünftigen Protokoll-Generierungen.");
-            StatusText = $"Protokoll-Training: {approved.Count} Samples als Few-Shot-Beispiele gespeichert ({codes.Count} Codes).";
+            StatusText = $"Protokoll-Training fertig: {added} neu, {approved.Count - added} Duplikate, {codes.Count} Codes.";
+
+            System.Windows.MessageBox.Show(
+                $"Protokoll-Training fertig.\n\n" +
+                $"Neu hinzugefuegt: {added}\n" +
+                $"Duplikate uebersprungen: {approved.Count - added}\n" +
+                $"Verschiedene Codes: {codes.Count}",
+                "Protokoll-Training",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            Log($"Protokoll-Training FEHLER: {ex.GetType().Name}: {ex.Message}");
+            StatusText = $"Protokoll-Training fehlgeschlagen: {ex.Message}";
         }
         finally
         {
@@ -1093,10 +1397,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 
         var outputDir = dlg.FolderName;
 
-        _genCts?.Cancel();
-        _genCts?.Dispose();
-        _genCts = new CancellationTokenSource();
-        var ct = _genCts.Token;
+        var ct = RotateGenCts();
 
         try
         {
@@ -1104,6 +1405,18 @@ public partial class TrainingCenterViewModel : ObservableObject
             Log($"YOLO-Export: {approved.Count} Samples → {outputDir}");
             StatusText = $"YOLO-Export: {approved.Count} Samples werden vorbereitet...";
 
+            // Sidecar-Pfad (Base64-Upload) ist deaktiviert, weil er bei vielen
+            // Samples den RAM sprengt (alle Bilder als Base64-Strings in einer
+            // Liste + JSON-Serialisierung in einen HTTP-Request → 10+ GB
+            // Peak-Memory, OOM bei 31 GB App-Baseline).
+            // Der lokale Pfad (File.Copy + kleine Label-Writes) ist
+            // RAM-schonend und liefert dasselbe Dataset-Layout.
+            // Siehe docs/AUDIT_SEWERSTUDIO_2026-04-23.md — STAB-H7.
+            Log("YOLO-Export: lokaler Pfad (RAM-schonend via File.Copy)...");
+            await ExportYoloLocalAsync(approved, outputDir, ct).ConfigureAwait(false);
+            return;
+
+#pragma warning disable CS0162 // Unreachable code — Sidecar-Upload-Pfad absichtlich
             // Sidecar-Verbindung prüfen
             var pipelineCfg = PipelineConfig.Load();
             var client = new VisionPipelineClient(pipelineCfg.SidecarUrl);
@@ -1164,6 +1477,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             Log($"  data.yaml: {response.DataYamlPath}");
             Log($"  Klassen: {string.Join(", ", response.ClassesUsed)}");
             StatusText = msg;
+#pragma warning restore CS0162
         }
         catch (OperationCanceledException)
         {
@@ -1338,10 +1652,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             return;
         }
 
-        _genCts?.Cancel();
-        _genCts?.Dispose();
-        _genCts = new CancellationTokenSource();
-        var ct = _genCts.Token;
+        var ct = RotateGenCts();
 
         using var _aiToken = AiTrack.Begin("Training Center");
         try
@@ -1818,6 +2129,63 @@ public partial class TrainingCenterViewModel : ObservableObject
         StatusText = "Abbruch angefordert...";
     }
 
+    /// <summary>
+    /// V4.3: Indexiert alle Approved-Samples nachtraeglich in die KB,
+    /// die noch nicht indexiert sind (KbIndexState != Indexed).
+    /// Faengt verlorene Approve-Aktionen auf wenn Ollama temporaer down war.
+    /// </summary>
+    [RelayCommand]
+    private async Task ReindexPendingSamplesAsync()
+    {
+        if (IsBusy) return;
+        try
+        {
+            IsBusy = true;
+            StatusText = "Lade ausstehende Samples...";
+
+            var allSamples = await TrainingSamplesStore.LoadAsync();
+            var pending = allSamples
+                .Where(s => s.Status == TrainingSampleStatus.Approved
+                            && s.KbIndexState != KbIndexState.Indexed
+                            && s.KbIndexState != KbIndexState.Deduplicated)
+                .ToList();
+
+            if (pending.Count == 0)
+            {
+                StatusText = "Keine ausstehenden Samples — alles bereits indexiert.";
+                Log("Re-Index: Nichts zu tun, alle Approved-Samples sind bereits in der KB.");
+                return;
+            }
+
+            Log($"Re-Index: {pending.Count} Approved-Samples werden indexiert...");
+            StatusText = $"Re-Index laeuft: {pending.Count} Samples...";
+
+            var indexed = await IncrementalKbUpdateAsync(pending, CancellationToken.None);
+
+            foreach (var s in pending)
+            {
+                s.KbIndexState = indexed.Contains(s.SampleId)
+                    ? KbIndexState.Indexed
+                    : KbIndexState.Error;
+            }
+            await TrainingSamplesStore.MergeOrUpdateAsync(pending);
+
+            Log($"Re-Index fertig: {indexed.Count} von {pending.Count} Samples indexiert.");
+            StatusText = $"Re-Index fertig: {indexed.Count}/{pending.Count} Samples in KB.";
+
+            await RefreshKbStatusAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Re-Index Fehler: {ex.Message}";
+            Log($"Re-Index FEHLER: {ex.GetType().Name}: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     [RelayCommand]
     private async Task CheckKnowledgeBaseAsync()
     {
@@ -1875,6 +2243,22 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         ApproveSampleCommand.NotifyCanExecuteChanged();
         RejectSampleCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(SelectedSampleCodeLabel));
+    }
+
+    /// <summary>
+    /// VSA-Code mit Klartext fuer die Sample-Details-Anzeige.
+    /// Beispiel: "BBCC — Ablagerung verfestigt".
+    /// </summary>
+    public string SelectedSampleCodeLabel
+    {
+        get
+        {
+            var code = SelectedSample?.Code;
+            if (string.IsNullOrWhiteSpace(code)) return "";
+            var label = Ai.VsaCodeResolver.LookupLabel(code);
+            return string.IsNullOrWhiteSpace(label) ? code : $"{code} — {label}";
+        }
     }
 
     /// <summary>
@@ -1916,23 +2300,33 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         // Immer Merge/Update statt Voll-Save — verhindert Ueberschreiben
         // von parallel geschriebenen Samples (Batch-Import, Self-Training).
-        if (changedSample != null)
-            await TrainingSamplesStore.MergeOrUpdateAsync(new List<TrainingSample> { changedSample });
-        else
-            await TrainingSamplesStore.MergeOrUpdateAsync(Samples.ToList());
-
-        // Approved Sample sofort in KB indexieren ("sofort in die Datenbank")
-        if (changedSample?.Status == TrainingSampleStatus.Approved)
+        // V4.3: komplette Persistenz-Kette in try/catch — ein Lock-Fehler in
+        // TrainingSamplesStore darf die App nicht abstuerzen lassen.
+        try
         {
-            changedSample.KbIndexState = KbIndexState.Pending;
-            await TrainingSamplesStore.MergeOrUpdateAsync(new List<TrainingSample> { changedSample });
-            var indexedIds = await IncrementalKbUpdateAsync(
-                new List<TrainingSample> { changedSample },
-                CancellationToken.None);
-            changedSample.KbIndexState = indexedIds.Contains(changedSample.SampleId)
-                ? KbIndexState.Indexed
-                : KbIndexState.Error;
-            await TrainingSamplesStore.MergeOrUpdateAsync(new List<TrainingSample> { changedSample });
+            if (changedSample != null)
+                await TrainingSamplesStore.MergeOrUpdateAsync(new List<TrainingSample> { changedSample });
+            else
+                await TrainingSamplesStore.MergeOrUpdateAsync(Samples.ToList());
+
+            // Approved Sample sofort in KB indexieren ("sofort in die Datenbank")
+            if (changedSample?.Status == TrainingSampleStatus.Approved)
+            {
+                changedSample.KbIndexState = KbIndexState.Pending;
+                await TrainingSamplesStore.MergeOrUpdateAsync(new List<TrainingSample> { changedSample });
+                var indexedIds = await IncrementalKbUpdateAsync(
+                    new List<TrainingSample> { changedSample },
+                    CancellationToken.None);
+                changedSample.KbIndexState = indexedIds.Contains(changedSample.SampleId)
+                    ? KbIndexState.Indexed
+                    : KbIndexState.Error;
+                await TrainingSamplesStore.MergeOrUpdateAsync(new List<TrainingSample> { changedSample });
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Speichern fehlgeschlagen: {ex.Message}";
+            Log($"[Persist] FEHLER: {ex.GetType().Name}: {ex.Message}");
         }
     }
 
@@ -2036,8 +2430,12 @@ public partial class TrainingCenterViewModel : ObservableObject
         string reviewKind)
     {
         if (string.IsNullOrWhiteSpace(vsaCode)) return;
+
+        // V4.3 Fix: Frame-Path darf null/leer sein — NoFindings-Items haben oft kein Frame,
+        // und die Review-Entscheidung waere sonst verloren. TeacherAnnotation speichert dann
+        // nur Code+Meter+Haltung als textueller Gold-Standard fuer FN-Reduktion.
         var framePath = item.SelfTrainingFramePath;
-        if (string.IsNullOrWhiteSpace(framePath) || !System.IO.File.Exists(framePath)) return;
+        var frameExists = !string.IsNullOrWhiteSpace(framePath) && System.IO.File.Exists(framePath);
 
         try
         {
@@ -2047,7 +2445,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 Beschreibung = $"Review-{reviewKind}: {item.Label}",
                 MeterPosition = item.SelfTrainingMeter ?? 0.0,
                 HaltungName = item.SelfTrainingCaseId,
-                FullFramePath = framePath
+                FullFramePath = frameExists ? framePath : null
             };
             await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
         }
@@ -2080,7 +2478,10 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             if (match is null)
             {
-                Log($"Self-Training Review: Sample nicht gefunden ({caseId}/{vsaCode}@{meter:F1}m)");
+                // V4.3: Fuer NoFindings-Items existiert kein TrainingSample (KI hat nichts erkannt).
+                // Das ist KEIN Fehler — die Review-Entscheidung wird trotzdem als TeacherAnnotation
+                // (siehe TryAppendTeacherAnnotationAsync) persistiert.
+                Log($"Self-Training Review: Kein KI-Sample zu aktualisieren ({caseId}/{vsaCode}@{meter:F1}m) — als TeacherAnnotation gespeichert");
                 return;
             }
 
@@ -2213,10 +2614,10 @@ public partial class TrainingCenterViewModel : ObservableObject
             return;
         }
 
-        _selfTrainingCts?.Cancel();
-        _selfTrainingCts?.Dispose();
-        _selfTrainingCts = new CancellationTokenSource();
-        var ct = _selfTrainingCts.Token;
+        // Rotation analog zu RotateGenCts (Audit D2.2 / April-Race-Fix):
+        // Atomarer Tausch + delayed Dispose. Verhindert die Race zwischen
+        // Dispose und Token-Registrierungen in noch laufenden Self-Training-Tasks.
+        var ct = RotateSelfTrainingCts();
 
         using var _aiToken = AiTrack.Begin("Selbsttraining");
         try
