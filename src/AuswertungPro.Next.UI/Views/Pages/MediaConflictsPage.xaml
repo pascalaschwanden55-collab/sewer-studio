@@ -1,6 +1,7 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.MediaConflictsPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Views.Controls">
     <UserControl.Resources>
         <Style x:Key="MetricCardStyle" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource HeaderBrush}"/>
@@ -44,12 +45,12 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
+                <!-- Phase 3.3: PageHeader-Control. SummaryText bleibt als
+                     separater TextBlock unter dem Header. -->
                 <StackPanel>
-                    <TextBlock Text="Medienkonflikte" FontSize="24" FontWeight="SemiBold"/>
-                    <TextBlock Text="Fehlende oder mehrdeutige Videozuordnungen zentral pruefen, oeffnen und direkt aufloesen."
-                               Margin="0,4,0,0"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               TextWrapping="Wrap"/>
+                    <ctrl:PageHeader Title="Medienkonflikte"
+                                     Subtitle="Fehlende oder mehrdeutige Videozuordnungen zentral pruefen, oeffnen und direkt aufloesen."
+                                     Margin="-14,-14,-14,-14"/>
                     <TextBlock Text="{Binding SummaryText}"
                                Margin="0,10,0,0"
                                Foreground="{StaticResource MutedBrush}"
