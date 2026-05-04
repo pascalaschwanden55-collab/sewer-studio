@@ -170,7 +170,7 @@ Diese 5 Punkte haben **alle drei** Audits unabhängig genannt — sie sind unbes
 | 2.2 | ~~KnowledgeBaseWriter (zentral, busy_timeout, foreign_keys, WAL)~~ — Writer-Klasse mit SemaphoreSlim, ExecuteInTransaction-Helper. busy_timeout=5000 + synchronous=NORMAL ergaenzt. KnowledgeBaseManager 3 Hot-Paths umgestellt. 10 neue Tests (PRAGMAs, Lock-Serialisierung, Stress, FK). ✅ 2026-05-04 | B3 (2/3) | 1 Tag (geplant) / ~1.5 h (effektiv) |
 | 2.3 | Channel<T>-Pipeline für Training (Pre→KI→Gate→KB-Writer→UI) | B3 (2/3) | 2 Tage |
 | 2.4 | Pipeline-Tests von GPU/Langzeit trennen (Trait Categories) | C-Codex | 4 h |
-| 2.5 | ~~RehabilitationRulesEngine: Hardcode raus, nur YAML~~ — JSON-Schema erweitert (damage_groups_by_vsa_code + damage_matrix), Engine liest primaer JSON, Hardcode wird Fallback. YAML bleibt menschliche Pflege-Quelle. 11 neue Tests. ✅ 2026-05-04 | A7 (3/3) | 1 Tag (geplant) / ~1 h (effektiv) |
+| 2.5 | ~~RehabilitationRulesEngine: Hardcode raus, nur YAML~~ — JSON-Schema erweitert (damage_groups_by_vsa_code + damage_matrix), Engine liest primaer JSON-Spiegel, Hardcode wird Fallback. YAML bleibt menschliche Pflege-Quelle, JSON ist maschinenlesbare Laufzeitquelle (kein direktes YAML-Parsing — wuerde NuGet erfordern). 11 neue Tests. ✅ 2026-05-04 | A7 (3/3) | 1 Tag (geplant) / ~1 h (effektiv) |
 
 ### Phase 3 — 2. Woche (UI Quick-Wins)
 | # | Aufgabe | Konsens | Aufwand |

@@ -232,8 +232,57 @@ Phase 0 ist abgeschlossen. Phasen 1-6 sind im `AUDIT_SUMMARY.md` priorisiert.
 
 ---
 
-## Branch-Lage
+## Branch-Lage (Stand Phase 0 Ende)
 
 - Branch `feature/pdf-import-beobachtungen` ist **224 Commits ahead** von `origin/feature/pdf-import-beobachtungen`
 - **Nicht gepusht** (laut Sicherheitsregel)
 - 91 modifizierte und 56 untracked Files entstammen der laufenden Branch-Arbeit, nicht dieser Session
+
+---
+
+## Update 2026-05-04 — Phasen 1.2 / 1.4 / 2.1 / 2.2 / 2.5 ergaenzt
+
+Nach Phase 0 wurden in derselben Session weitere Phasen abgearbeitet:
+
+### Erledigte Phasen (chronologisch)
+
+| Phase | Konsens | Hash | Inhalt |
+|---|:---:|---|---|
+| **1.2** Empty-catch-Sweep | 3/3 | `c444689f` | 5 echt stille Service-Catches mit `Debug.WriteLine` |
+| **1.4** Inventar | – | `55f28dae` | Analyse-Bericht Hydraulik / Eigendevis |
+| **1.4** Toggle-Infrastruktur | 3/3 | `a5fed618` | `ShowExpertenmodusFeatures` (default true) |
+| **1.4** Followup | – | `ca356d7d` | `HydraulikPrintDialog` ersetzt + geloescht |
+| **2.1** KB-Schema | 2/3 | `77557bd1` | FK + ModelVersion + defensive Migration + 8 Tests |
+| **2.2** KB-Writer | 2/3 | `250fdabc` | `KnowledgeBaseWriter` + PRAGMAs + 10 Tests |
+| **2.5** Sanierungs-Engine | 3/3 | `8a9d7b0f` | JSON-Spiegel aus YAML + Hardcode-Fallback + 11 Tests |
+
+### Endstand der Session (kombiniert mit Phase 0)
+
+- **24 Commits** seit `ef91ad88` (15 Kern-/Phasen-Commits + 9 Audit-/Summary-Commits)
+- **Build:** 0 Fehler bei sequenziellem Build (`dotnet build AuswertungPro.sln -m:1` oder Test-getrennt). Paralleler Build mit gleichzeitig laufendem `dotnet test` triggert noch den bekannten WPF-`.g.cs`-Race aus Phase 0 — **das ist erwartetes Verhalten**, sequenziell oder via runsettings sauber.
+- **Tests gesamt:** **616 bestanden + 1 uebersprungen**
+  - Pipeline-Tests: 481 bestanden, 0 uebersprungen, ~13 s
+  - Infrastructure-Tests: 135 bestanden, 1 uebersprungen, ~13 s
+- **+29 neue Tests in dieser Session**: 8 (KB-Schema) + 10 (KB-Writer) + 11 (RehabRulesEngine)
+
+### Wichtige Praezisierung zu Phase 2.5
+
+"YAML-only" ist sprachlich nicht praezise. Korrekt:
+- **YAML** (`Knowledge/sanierung/rehabilitation_methods.yaml`) bleibt **menschliche Pflege-Quelle** (Kommentare, Quellen-Hinweise, lesbare Struktur)
+- **JSON** (`src/AuswertungPro.Next.UI/Config/rehabilitation_methods.json`) ist die **maschinen-lesbare Laufzeit-Quelle** — wird vom Code direkt geladen
+- Der **Hardcode in `RehabilitationRulesEngine.cs`** ist nur noch defensiver Fallback bei kaputtem/fehlendem JSON
+
+Direktes YAML-Lesen wuerde `YamlDotNet` als NuGet erfordern — laut CLAUDE.md "keine NuGet-Pakete ohne Rueckfrage". Daher die JSON-Spiegel-Loesung.
+
+### Code-Review-Bestaetigung 2026-05-04 nach Phase 2.5
+
+- Commit `8a9d7b0f` ist atomar (Engine + JSON + Tests zusammen)
+- `RehabilitationRulesEngine` liest primaer `rehabilitation_methods.json`
+- Hardcode bleibt als defensiver Fallback
+- `ServiceProvider` uebergibt korrekt `Config/rehabilitation_methods.json`
+- 11 neue Tests bestanden, 0 Fehler
+- Sequenzieller Build: 0 Fehler, 0 Warnungen
+- Pipeline-Tests: 481 bestanden, 12 s
+- Infrastructure-Tests: 135 bestanden, 1 uebersprungen, 13 s
+
+Hinweis: ein paralleler Build/Test-Lauf triggert den WPF-`.g.cs`-Race (siehe Phase 0 Befund). Sequenziell oder via runsettings sauber.
