@@ -167,7 +167,7 @@ Diese 5 Punkte haben **alle drei** Audits unabhängig genannt — sie sind unbes
 | # | Aufgabe | Konsens | Aufwand |
 |---|---|---|---|
 | 2.1 | ~~KnowledgeBase: FK Embeddings→Samples + Embedding.ModelVersion~~ — Schema, Runtime-PRAGMA, defensive 4-Schritt-Migration mit Orphan-Archivierung. 8 neue Tests. ✅ 2026-05-04 | B4 (2/3) | 4 h (geplant) / ~1 h (effektiv) |
-| 2.2 | KnowledgeBaseWriter (zentral, busy_timeout, foreign_keys, WAL) | B3 (2/3) | 1 Tag |
+| 2.2 | ~~KnowledgeBaseWriter (zentral, busy_timeout, foreign_keys, WAL)~~ — Writer-Klasse mit SemaphoreSlim, ExecuteInTransaction-Helper. busy_timeout=5000 + synchronous=NORMAL ergaenzt. KnowledgeBaseManager 3 Hot-Paths umgestellt. 10 neue Tests (PRAGMAs, Lock-Serialisierung, Stress, FK). ✅ 2026-05-04 | B3 (2/3) | 1 Tag (geplant) / ~1.5 h (effektiv) |
 | 2.3 | Channel<T>-Pipeline für Training (Pre→KI→Gate→KB-Writer→UI) | B3 (2/3) | 2 Tage |
 | 2.4 | Pipeline-Tests von GPU/Langzeit trennen (Trait Categories) | C-Codex | 4 h |
 | 2.5 | RehabilitationRulesEngine: Hardcode raus, nur YAML | A7 (3/3) | 1 Tag |
