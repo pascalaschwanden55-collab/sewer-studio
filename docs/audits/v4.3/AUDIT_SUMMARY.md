@@ -185,7 +185,7 @@ Diese 5 Punkte haben **alle drei** Audits unabhängig genannt — sie sind unbes
 | # | Aufgabe | Konsens | Aufwand |
 |---|---|---|---|
 | 4.1 | IDialogService erzwingen (51 ViewModel-Verstöße) | C-Claude | 10 h |
-| 4.2 | ffmpeg-Konsolidierung (15 Stellen → ProcessRunner) | C-Claude | 1 Tag |
+| 4.2 | ~~ffmpeg-Konsolidierung (15 Stellen → ProcessRunner)~~ — Inventar + Empfehlung dokumentiert. STAB-H1/SEC-H1..H3 sind aus April-Audit bereits erledigt. Konsistenz-Sweep ist gestaffelt: C1 (5 triviale Files) → C2 (5 mittlere) → C3 (5 komplexe Streaming). Pro Stufe Live-Test gegen Video-Material noetig. Bericht: `PHASE_4.2_FFMPEG_INVENTAR.md`. ⏸️ teilweise (April-Sicherheits-Fixes erledigt, Konsistenz-Sweep offen) | C-Claude | 1 Tag (geplant) / Inventar+Bericht (effektiv) |
 | 4.3 | ~~Empty-catch-Sweep komplett (Logging-Pflicht)~~ — Inventar verifiziert: keine weiteren echt-stillen Catches. Verbleibende 98 Stellen sind alle by design (Cleanup-Pattern ~50, UI-Logging-Wrapper ~34, Typed-Exception-Filter ~10, Lifecycle-Race-Filter ~3). Phase 1.2 hat alle echt-stillen erfasst. Bericht: `PHASE_4.3_EMPTY_CATCH_INVENTAR.md`. ✅ 2026-05-04 | A3 (3/3) | 4 h (geplant) / Inventar+Bericht (effektiv) |
 | 4.4 | ~~Trainings-Provenance: TrainingRuns-Tabelle + RunId~~ — Schema, Migration, BeginRun/EndRun/GetActiveRunId-API. UpsertSample schreibt RunId mit. 12 neue Tests. ✅ 2026-05-04 | B10 (2/3) | 1 Tag (geplant) / ~1 h (effektiv, ohne Aufrufer-Migration) |
 
