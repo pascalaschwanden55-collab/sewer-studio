@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 
@@ -46,7 +47,11 @@ public static class WindowStateManager
     private static AppSettings? GetSettings()
     {
         try { return (App.Services as ServiceProvider)?.Settings; }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[WindowStateManager] GetSettings: {ex.Message}");
+            return null;
+        }
     }
 
     private static void RestoreBounds(Window window, string key)
@@ -98,7 +103,17 @@ public static class WindowStateManager
             IsMaximized = window.WindowState == WindowState.Maximized
         };
 
-        settings.Save();
+        // settings.Save() entkoppelt: Disk-IO laeuft auf ThreadPool, damit ein
+        // AV-Lock oder Profile-Roaming-Snapshot das Fensterschliessen nicht blockiert.
+        // Ein Save-Fehler ist nicht UI-relevant, deshalb intern geloggt statt rethrow.
+        Task.Run(() =>
+        {
+            try { settings.Save(); }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[WindowStateManager] settings.Save: {ex.Message}");
+            }
+        });
     }
 
     // --- Multi-Monitor visibility check via Win32 ---
