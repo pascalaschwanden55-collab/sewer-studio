@@ -101,7 +101,9 @@ WICHTIG:
 - image_quality ist "gut", "mittel" oder "schlecht" (deutsch!)
 """;
 
-    // Voller Prompt mit Aufnahmetechnik (fuer Batch/Video-Pipeline, ~1500 Woerter)
+    // Voller Prompt mit Aufnahmetechnik (fuer Batch/Video-Pipeline, ~1500 Woerter).
+    // Phase 0.4: Aktiviert via Konstruktor-Parameter useFullDamagePrompt=true.
+    // Siehe docs/CODIER-MODUS-PIPELINE.md Abschnitt 4.2.
     private static readonly string DamageClassesPromptFull = """
 Bestimme ZUERST den view_type, BEVOR du Schaeden codierst:
 
@@ -284,6 +286,10 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
     private readonly string _model;
     private readonly string? _referenceModel;
     private readonly int _numCtx;
+    // Phase 0.4: Wenn true wird DamageClassesPromptFull (mit Aufnahmetechnik
+    // axial/nahaufnahme/schwenk/schacht-Erkennung) verwendet — fuer
+    // Batch-/Video-Pipelines. Codier-Modus bleibt auf der kuerzeren Variante.
+    private readonly bool _useFullDamagePrompt;
     // Retry-Throttle: max 2 gleichzeitige Retries (kein VRAM-Risiko mehr, nur CPU/GPU-Contention)
     private readonly SemaphoreSlim _retryThrottle = new(2, 2);
     private int _retryCount;
@@ -298,13 +304,17 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
     private readonly object _fewShotLock = new();
     private IReadOnlyList<(FewShotExample Example, string Base64)>? _cachedFewShot;
 
-    public EnhancedVisionAnalysisService(OllamaClient client, string model, string? referenceModel = null, int numCtx = 8192)
+    public EnhancedVisionAnalysisService(OllamaClient client, string model, string? referenceModel = null, int numCtx = 8192, bool useFullDamagePrompt = false)
     {
         _client = client;
         _model = model;
         _referenceModel = referenceModel;
         _numCtx = numCtx;
+        _useFullDamagePrompt = useFullDamagePrompt;
     }
+
+    /// <summary>Phase 0.4: gibt den aktuell aktiven Damage-Klassen-Prompt zurueck (kurz oder voll).</summary>
+    private string ActiveDamageClassesPrompt => _useFullDamagePrompt ? DamageClassesPromptFull : DamageClassesPrompt;
 
     /// <summary>Zugriff auf den OllamaClient (fuer Modell-Vorladen).</summary>
     public OllamaClient Client => _client;
@@ -395,6 +405,7 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
         string framePngBase64,
         CancellationToken ct = default)
     {
+        LastPipelineWarning = null;
         var messages = BuildMessages(framePngBase64);
 
         EnhancedVisionDto dto;
@@ -409,9 +420,7 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"[EnhancedVision] KI-Fehler ({_model}): {ex.GetType().Name}: {ex.Message}");
-            return EnhancedFrameAnalysis.Empty(ex.Message);
+            return FailAnalysis("Frame-Analyse", _model, ex);
         }
 
         // Rohoutput-Logging: Qwen-Antwort VOR allen Filtern speichern
@@ -448,11 +457,53 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
     /// <summary>Diagnostik: Letzte Qwen-Rohantwort (vor Filtern).</summary>
     public string? LastRawOutput { get; private set; }
 
+    /// <summary>Letzte nicht-fatale Pipeline-Warnung, z.B. fehlgeschlagener Retry/Fallback.</summary>
+    public string? LastPipelineWarning { get; private set; }
+
     /// <summary>Diagnostik: Was wurde durch Filter entfernt?</summary>
     public string? LastFilterLog { get; private set; }
 
     /// <summary>Diagnostik: Welche Findings wurden wegen ViewType unterdrueckt?</summary>
     public static string? LastSuppressedLog { get; private set; }
+
+    /// <summary>
+    /// Globales Event fuer alle Pipeline-Fehler. Wird von ALLEN Failure-Pfaden im
+    /// EnhancedVisionAnalysisService gefeuert (Frame-Analyse, PDF-Foto, Kontext-Analyse,
+    /// Modell-Eskalation, 32B-Swap, VerifyCode). Konsumenten (z.B. CodingModeWindow,
+    /// PlayerWindow) koennen subscriben um die User-sichtbare Fehlermeldung zu zeigen.
+    /// </summary>
+    public static event EventHandler<PipelineFailureEvent>? PipelineFailure;
+
+    public sealed record PipelineFailureEvent(
+        string Stage,
+        string Model,
+        string ExceptionType,
+        string Message,
+        DateTimeOffset At);
+
+    private EnhancedFrameAnalysis FailAnalysis(string stage, string model, Exception ex)
+    {
+        LastPipelineWarning = null;
+        var message = $"{stage} ({model}) fehlgeschlagen: {ex.GetType().Name}: {ex.Message}";
+        System.Diagnostics.Debug.WriteLine($"[EnhancedVision] {message}");
+        try
+        {
+            PipelineFailure?.Invoke(this, new PipelineFailureEvent(
+                Stage: stage,
+                Model: model,
+                ExceptionType: ex.GetType().Name,
+                Message: ex.Message,
+                At: DateTimeOffset.Now));
+        }
+        catch { /* Event-Handler-Fehler nicht propagieren */ }
+        return EnhancedFrameAnalysis.Empty(message);
+    }
+
+    private void SetPipelineWarning(string message)
+    {
+        LastPipelineWarning = message;
+        System.Diagnostics.Debug.WriteLine($"[EnhancedVision] {message}");
+    }
 
     /// <summary>
     /// Analysiert ein Foto aus einem PDF-Bildbericht (KEIN Video-Frame).
@@ -462,6 +513,7 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
         string framePngBase64,
         CancellationToken ct = default)
     {
+        LastPipelineWarning = null;
         var messages = new List<OllamaClient.ChatMessage>();
 
         // Few-Shot Beispiele auch fuer PDF-Fotos nutzen
@@ -504,9 +556,7 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"[EnhancedVision] PDF-Foto KI-Fehler ({_model}): {ex.GetType().Name}: {ex.Message}");
-            return EnhancedFrameAnalysis.Empty(ex.Message);
+            return FailAnalysis("PDF-Foto-Analyse", _model, ex);
         }
 
         return MapToAnalysis(dto);
@@ -625,7 +675,7 @@ AUFGABEN:
 5. Beurteile die Bildqualität.
 6. Schätze, wenn erkennbar, Schadensmaße: Höhe (mm), Breite (mm), Ausdehnung (%), Querschnittsverringerung (%).
 
-{DamageClassesPrompt}
+{ActiveDamageClassesPrompt}
 
 SCHWEREGRAD-SKALA (entspricht VSA Zustandsklasse):
 1 = Optische Auffälligkeit, kein Handlungsbedarf
@@ -674,7 +724,7 @@ AUFGABEN (in dieser Reihenfolge!):
 6. Beurteile die Bildqualität.
 7. Schätze, wenn erkennbar, Schadensmaße: Höhe (mm), Breite (mm), Einragungsgrad (%), Querschnittsverringerung (%), Durchmesserverringerung (mm).
 
-{DamageClassesPrompt}
+{ActiveDamageClassesPrompt}
 
 SCHWEREGRAD-SKALA (entspricht VSA Zustandsklasse):
 1 = Optische Auffälligkeit, kein Handlungsbedarf
@@ -764,11 +814,14 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
 
         if (viewType is "nahaufnahme" or "schwenk")
         {
-            // Soft-Filter: Severity auf 1 setzen + Notes ergaenzen (statt loeschen)
+            // Soft-Filter: Severity hart auf 1 (= optisch/Beobachtung) abstufen
+            // und Audit-Notes ergaenzen. Findings bleiben in der Liste, koennen aber
+            // QualityGate nicht mehr triggern.
             suppressedFindings.AddRange(findings);
             findings = findings.Select(f => f with
             {
-                Notes = $"[Unterdrueckt: view_type={viewType}] {f.Notes ?? ""}"
+                Severity = 1,
+                Notes = $"[Soft-Suppress: view_type={viewType} -> Severity 1] {f.Notes ?? ""}"
             }).ToList();
         }
 
@@ -820,6 +873,7 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
         int pipeDiameterMm = 300,
         CancellationToken ct = default)
     {
+        LastPipelineWarning = null;
         var contextPrompt = BuildContextPrompt(multiModelContext, pipeDiameterMm);
         var prompt = contextPrompt + "\n\n" + BuildPrompt();
 
@@ -841,7 +895,7 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            return EnhancedFrameAnalysis.Empty(ex.Message);
+            return FailAnalysis("Kontextanalyse", _model, ex);
         }
 
         return MapToAnalysis(dto);
@@ -887,6 +941,7 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
         // Telemetrie: Retry-Grund zaehlen
         switch (reason)
         {
+            case EscalationReason.NoFindings: Interlocked.Increment(ref _retryAllCodesNull); break;
             case EscalationReason.AllCodesNull: Interlocked.Increment(ref _retryAllCodesNull); break;
             case EscalationReason.HighSeverity: Interlocked.Increment(ref _retryHighSeverity); break;
             case EscalationReason.PoorQuality: Interlocked.Increment(ref _retryPoorQuality); break;
@@ -916,7 +971,7 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
                 && !string.Equals(_referenceModel, _model, StringComparison.OrdinalIgnoreCase))
             {
                 var retryReason = GetEscalationReason(retryResult);
-                if (retryReason is EscalationReason.AllCodesNull or EscalationReason.HighSeverity)
+                if (retryReason is EscalationReason.NoFindings or EscalationReason.AllCodesNull or EscalationReason.HighSeverity)
                 {
                     System.Diagnostics.Debug.WriteLine(
                         $"[EnhancedVision] Same-Model-Retry unzureichend ({retryReason}) — starte 32B Swap-Eskalation");
@@ -931,8 +986,11 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
                     }
                     catch (Exception ex32b)
                     {
-                        System.Diagnostics.Debug.WriteLine(
-                            $"[EnhancedVision] 32B Swap fehlgeschlagen: {ex32b.Message} — verwende Retry-Ergebnis");
+                        SetPipelineWarning(
+                            $"32B Swap fehlgeschlagen ({_referenceModel}): {ex32b.GetType().Name}: {ex32b.Message} - verwende Retry-Ergebnis");
+                        try { PipelineFailure?.Invoke(this, new PipelineFailureEvent(
+                            "32B-Eskalation", _referenceModel,
+                            ex32b.GetType().Name, ex32b.Message, DateTimeOffset.Now)); } catch { }
                     }
                 }
             }
@@ -943,8 +1001,8 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
         catch (Exception ex)
         {
             // Retry fehlgeschlagen → Erst-Ergebnis als Fallback
-            System.Diagnostics.Debug.WriteLine(
-                $"[EnhancedVision] Retry fehlgeschlagen ({ex.GetType().Name}): {ex.Message} — verwende Erst-Ergebnis");
+            SetPipelineWarning(
+                $"Retry fehlgeschlagen ({ex.GetType().Name}): {ex.Message} - verwende Erst-Ergebnis");
             return (first, false);
         }
         finally
@@ -1025,7 +1083,7 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
     }
 
     /// <summary>Grund fuer die Eskalation (fuer Telemetrie).</summary>
-    private enum EscalationReason { None, AllCodesNull, HighSeverity, PoorQuality }
+    private enum EscalationReason { None, NoFindings, AllCodesNull, HighSeverity, PoorQuality }
 
     /// <summary>
     /// Prueft ob eine Eskalation zum Reference-Modell noetig ist.
@@ -1033,7 +1091,10 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
     /// </summary>
     private static EscalationReason GetEscalationReason(EnhancedFrameAnalysis fast)
     {
-        if (fast.IsEmptyFrame || !fast.HasFindings) return EscalationReason.None;
+        if (fast.IsEmptyFrame) return EscalationReason.None;
+
+        // Kein leerer Frame, aber keine Findings: fuer BBox-/Einzelframe-Analyse kritisch.
+        if (!fast.HasFindings) return EscalationReason.NoFindings;
 
         // Alle Findings ohne VSA-Code → 8B hat keine Zuordnung gefunden
         if (fast.Findings.All(f => string.IsNullOrEmpty(f.VsaCodeHint)))
@@ -1076,9 +1137,7 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"[EnhancedVision] Eskalation fehlgeschlagen ({model}): {ex.Message}");
-            return EnhancedFrameAnalysis.Empty(ex.Message);
+            return FailAnalysis("Modell-Eskalation", model, ex);
         }
     }
 
@@ -1112,9 +1171,7 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"[EnhancedVision] Eskalation mit Kontext fehlgeschlagen ({model}): {ex.Message}");
-            return EnhancedFrameAnalysis.Empty(ex.Message);
+            return FailAnalysis("Modell-Eskalation mit Kontext", model, ex);
         }
     }
 

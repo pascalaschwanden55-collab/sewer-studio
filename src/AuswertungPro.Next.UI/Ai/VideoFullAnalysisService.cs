@@ -51,7 +51,8 @@ public sealed class VideoFullAnalysisService
         string visionModel,
         string? referenceModel = null,
         string ffmpegPath = "ffmpeg")
-        => new(new EnhancedVisionAnalysisService(client, visionModel, referenceModel), ffmpegPath);
+        // Phase 0.4: Batch/Video nutzt vollen Damage-Prompt (mit Aufnahmetechnik).
+        => new(new EnhancedVisionAnalysisService(client, visionModel, referenceModel, useFullDamagePrompt: true), ffmpegPath);
 
     public async Task<VideoAnalysisResult> AnalyzeAsync(
         string videoPath,

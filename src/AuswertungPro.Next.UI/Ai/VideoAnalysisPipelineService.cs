@@ -95,7 +95,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 
             // Create Qwen vision service for VSA-Code enrichment
             var ollamaClient = _cfg.CreateOllamaClient(_httpClient);
-            var qwenVision = new EnhancedVisionAnalysisService(ollamaClient, _cfg.VisionModel, _cfg.ReferenceVisionModel);
+            // Phase 0.4: Video-Pipeline nutzt vollen Damage-Prompt (mit Aufnahmetechnik).
+            var qwenVision = new EnhancedVisionAnalysisService(ollamaClient, _cfg.VisionModel, _cfg.ReferenceVisionModel, useFullDamagePrompt: true);
             await EnableFewShotIfAvailableAsync(qwenVision, ct).ConfigureAwait(false);
 
             var multiModel = new MultiModelAnalysisService(
@@ -112,7 +113,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         {
             // ── Ollama-Only Path (existing behavior) ──
             var client = _cfg.CreateOllamaClient(_httpClient);
-            var ollamaVision = new EnhancedVisionAnalysisService(client, _cfg.VisionModel, _cfg.ReferenceVisionModel);
+            // Phase 0.4: Video-Pipeline nutzt vollen Damage-Prompt (mit Aufnahmetechnik).
+            var ollamaVision = new EnhancedVisionAnalysisService(client, _cfg.VisionModel, _cfg.ReferenceVisionModel, useFullDamagePrompt: true);
             await EnableFewShotIfAvailableAsync(ollamaVision, ct).ConfigureAwait(false);
             var videoService = new VideoFullAnalysisService(
                 vision: ollamaVision,
@@ -121,19 +123,25 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             videoService.FrameStepSeconds = request.FrameStepSeconds;
             videoService.DedupWindowFrames = request.DedupWindowFrames;
 
-            // Knick-Erkennung (BAG) einhaengen wenn Sidecar verfuegbar.
-            // WICHTIG: knickHttp darf NICHT via `using` im if-Scope leben — der
-            // KnickDetectionService nutzt ihn bei jedem Frame waehrend AnalyzeAsync.
-            // Dispose erst nach AnalyzeAsync im finally.
+            // Knick-Erkennung (BAG) einhaengen NUR wenn Sidecar wirklich aktiv ist.
+            // Wichtig: Bisheriger Code pruefte `sidecarCfg is not null`, aber PipelineConfig.Load()
+            // gibt nie null zurueck -> Knick-HTTP lief auch im OllamaOnly-Modus mit Timeouts pro Frame.
+            // Jetzt: nur wenn ShouldUseMultiModel wirklich Sidecar-Modus signalisiert.
+            // knickHttp darf NICHT via `using` im if-Scope leben — Dispose erst nach AnalyzeAsync.
             System.Net.Http.HttpClient? knickHttp = null;
             try
             {
-                var (_, sidecarCfg) = await ShouldUseMultiModelAsync(ct).ConfigureAwait(false);
-                if (sidecarCfg is not null)
+                var (sidecarActive, sidecarCfg) = await ShouldUseMultiModelAsync(ct).ConfigureAwait(false);
+                if (sidecarActive && sidecarCfg is not null)
                 {
                     knickHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(10) };
                     var knickClient = new VisionPipelineClient(sidecarCfg.SidecarUrl, knickHttp);
                     videoService.KnickDetection = new KnickDetectionService(knickClient);
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        "[Pipeline] Knick-Erkennung deaktiviert (Sidecar nicht aktiv im aktuellen Modus).");
                 }
             }
             catch { /* Knick-Erkennung optional */ }
