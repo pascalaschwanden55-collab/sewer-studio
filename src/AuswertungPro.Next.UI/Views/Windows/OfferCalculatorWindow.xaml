@@ -1,4 +1,4 @@
-<Window x:Class="AuswertungPro.Next.UI.Views.Windows.OfferCalculatorWindow"
+﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.OfferCalculatorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -105,7 +105,7 @@
                             <Border Background="{StaticResource AccentBrush}" Padding="6,3"
                                     Margin="0,0,4,0" CornerRadius="3">
                                 <TextBlock Text="{Binding Name}" Foreground="White"
-                                           FontWeight="SemiBold" FontSize="12"/>
+                                           FontWeight="SemiBold" FontSize="{StaticResource TypeSmall}"/>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -236,7 +236,7 @@
                             HorizontalAlignment="Right" Visibility="Visible">
                     <TextBlock Text="{Binding SubTotalText}" Foreground="{StaticResource TextBrush}"/>
                     <TextBlock Text="{Binding MwstText}" Foreground="{StaticResource TextBrush}"/>
-                    <TextBlock Text="{Binding TotalText}" FontWeight="Bold" FontSize="14"
+                    <TextBlock Text="{Binding TotalText}" FontWeight="Bold" FontSize="{StaticResource TypeBodyLarge}"
                                Foreground="{StaticResource AccentBrush}"/>
                 </StackPanel>
 
@@ -248,7 +248,7 @@
                     <TextBlock Text="{Binding SkontoText}" Foreground="{StaticResource TextBrush}"/>
                     <TextBlock Text="{Binding TotalNettoText}" Foreground="{StaticResource TextBrush}"/>
                     <TextBlock Text="{Binding MwstText}" Foreground="{StaticResource TextBrush}"/>
-                    <TextBlock Text="{Binding TotalBruttoText}" FontWeight="Bold" FontSize="14"
+                    <TextBlock Text="{Binding TotalBruttoText}" FontWeight="Bold" FontSize="{StaticResource TypeBodyLarge}"
                                Foreground="{StaticResource AccentBrush}"/>
                 </StackPanel>
             </Grid>

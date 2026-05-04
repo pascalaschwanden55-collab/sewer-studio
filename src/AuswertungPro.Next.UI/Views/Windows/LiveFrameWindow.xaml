@@ -1,4 +1,4 @@
-<Window x:Class="AuswertungPro.Next.UI.Views.Windows.LiveFrameWindow"
+﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.LiveFrameWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Live-Frame Vorschau"
@@ -22,11 +22,11 @@
             <DockPanel>
                 <TextBlock DockPanel.Dock="Left"
                            Text="LIVE-FRAME / ANALYSE"
-                           FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"
+                           FontSize="{StaticResource TypeCaption}" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"
                            VerticalAlignment="Center"/>
                 <TextBlock DockPanel.Dock="Right"
                            Text="{Binding LiveFrameInfo}"
-                           FontSize="11" Foreground="{StaticResource MutedBrush}"
+                           FontSize="{StaticResource TypeCaption}" Foreground="{StaticResource MutedBrush}"
                            VerticalAlignment="Center" HorizontalAlignment="Right"/>
             </DockPanel>
         </Border>
@@ -47,7 +47,7 @@
                         IsHitTestVisible="False"/>
                 <TextBlock Text="Warte auf Frame..."
                            Foreground="{StaticResource MutedBrush}"
-                           FontSize="14"
+                           FontSize="{StaticResource TypeBodyLarge}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            x:Name="PlaceholderText"/>
@@ -60,12 +60,12 @@
             <DockPanel>
                 <TextBlock DockPanel.Dock="Left"
                            x:Name="StatusText"
-                           FontSize="11" Foreground="{StaticResource AccentBrush}"
+                           FontSize="{StaticResource TypeCaption}" Foreground="{StaticResource AccentBrush}"
                            VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis"/>
                 <TextBlock DockPanel.Dock="Right"
                            x:Name="QuantText"
-                           FontSize="10" Foreground="{StaticResource MutedBrush}"
+                           FontSize="{StaticResource TypeMicro}" Foreground="{StaticResource MutedBrush}"
                            VerticalAlignment="Center" HorizontalAlignment="Right"
                            TextTrimming="CharacterEllipsis"
                            MaxWidth="400"/>

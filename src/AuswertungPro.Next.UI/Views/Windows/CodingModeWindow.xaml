@@ -1,4 +1,4 @@
-<Window x:Class="AuswertungPro.Next.UI.Views.Windows.CodingModeWindow"
+﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.CodingModeWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
@@ -479,19 +479,19 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" FontSize="10"
+                                                <TextBlock Grid.Column="0" FontSize="{StaticResource TypeMicro}"
                                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                                            Margin="0,0,12,0">
                                                     <Run Text="&#x1F4CD;"/>
                                                     <Run Text="{Binding MeterAtCapture, StringFormat='{}{0:F2}m', Mode=OneWay}"/>
                                                 </TextBlock>
-                                                <TextBlock Grid.Column="1" FontSize="10"
+                                                <TextBlock Grid.Column="1" FontSize="{StaticResource TypeMicro}"
                                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                                            Margin="0,0,12,0">
                                                     <Run Text="{Binding PhotoIndicator, Mode=OneWay}"/>
                                                 </TextBlock>
                                                 <TextBlock Grid.Column="2" x:Name="TxtConfidence"
-                                                           FontSize="10" FontWeight="SemiBold"
+                                                           FontSize="{StaticResource TypeMicro}" FontWeight="SemiBold"
                                                            HorizontalAlignment="Right"/>
                                             </Grid>
                                         </StackPanel>
@@ -620,7 +620,7 @@
                                         Click="BtnFoto2_Click"
                                         IsEnabled="False"/>
                             </Grid>
-                            <TextBlock x:Name="TxtFotoStatus" FontSize="10"
+                            <TextBlock x:Name="TxtFotoStatus" FontSize="{StaticResource TypeMicro}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        TextWrapping="Wrap" Margin="0,4,0,0"/>
                         </StackPanel>
@@ -644,37 +644,37 @@
 
                                 <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource StatTile}">
                                     <StackPanel>
-                                        <TextBlock Text="Auto-Akzeptiert" FontSize="10"
+                                        <TextBlock Text="Auto-Akzeptiert" FontSize="{StaticResource TypeMicro}"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                                         <TextBlock x:Name="TxtStatAutoAccepted"
-                                                   Text="0" FontSize="20" FontWeight="Bold"
+                                                   Text="0" FontSize="{StaticResource TypeIcon}" FontWeight="Bold"
                                                    Foreground="#22C55E"/>
                                     </StackPanel>
                                 </Border>
                                 <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource StatTile}">
                                     <StackPanel>
-                                        <TextBlock Text="Pending Review" FontSize="10"
+                                        <TextBlock Text="Pending Review" FontSize="{StaticResource TypeMicro}"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                                         <TextBlock x:Name="TxtStatPending"
-                                                   Text="0" FontSize="20" FontWeight="Bold"
+                                                   Text="0" FontSize="{StaticResource TypeIcon}" FontWeight="Bold"
                                                    Foreground="#F59E0B"/>
                                     </StackPanel>
                                 </Border>
                                 <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource StatTile}">
                                     <StackPanel>
-                                        <TextBlock Text="Manuell erforderlich" FontSize="10"
+                                        <TextBlock Text="Manuell erforderlich" FontSize="{StaticResource TypeMicro}"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                                         <TextBlock x:Name="TxtStatReviewRequired"
-                                                   Text="0" FontSize="20" FontWeight="Bold"
+                                                   Text="0" FontSize="{StaticResource TypeIcon}" FontWeight="Bold"
                                                    Foreground="#EF4444"/>
                                     </StackPanel>
                                 </Border>
                                 <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource StatTile}">
                                     <StackPanel>
-                                        <TextBlock Text="Avg. Konfidenz" FontSize="10"
+                                        <TextBlock Text="Avg. Konfidenz" FontSize="{StaticResource TypeMicro}"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                                         <TextBlock x:Name="TxtStatAvgConfidence"
-                                                   Text="–" FontSize="20" FontWeight="Bold"
+                                                   Text="–" FontSize="{StaticResource TypeIcon}" FontWeight="Bold"
                                                    Foreground="{DynamicResource AccentBrush}"/>
                                     </StackPanel>
                                 </Border>
@@ -713,7 +713,7 @@
                                    Foreground="{DynamicResource TextBrush}"
                                    Text="Bereit" VerticalAlignment="Center"
                                    Margin="0,0,8,0"/>
-                        <TextBlock x:Name="TxtAiModel" FontSize="10"
+                        <TextBlock x:Name="TxtAiModel" FontSize="{StaticResource TypeMicro}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
@@ -769,7 +769,7 @@
                                             <Run Text="{Binding VsaCode, StringFormat='[{0}]', Mode=OneWay}"
                                                  Foreground="{DynamicResource AccentBrush}"/>
                                         </TextBlock>
-                                        <TextBlock Text="{Binding DetailText}" FontSize="10"
+                                        <TextBlock Text="{Binding DetailText}" FontSize="{StaticResource TypeMicro}"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
                                         <TextBlock Text="{Binding SeverityText}" FontSize="{StaticResource TypeBody}" FontWeight="Bold"
@@ -787,7 +787,7 @@
 
                 <!-- Zeile 2: Overlay-Werkzeuge -->
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="WERKZEUGE" FontSize="10" FontWeight="Bold"
+                    <TextBlock Text="WERKZEUGE" FontSize="{StaticResource TypeMicro}" FontWeight="Bold"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                VerticalAlignment="Center" Margin="0,0,12,0"/>
                     <!-- Kalibrieren: DN-Referenzlinie -->
@@ -795,7 +795,7 @@
                                   ToolTip="Kalibrieren: Linie ueber Rohrdurchmesser zeichnen"
                                   Checked="BtnCalibrate_Checked" Unchecked="BtnCalibrate_Unchecked">
                         <StackPanel>
-                            <TextBlock Text="&#x2295;" FontSize="18" HorizontalAlignment="Center"/>
+                            <TextBlock Text="&#x2295;" FontSize="{StaticResource TypeH3}" HorizontalAlignment="Center"/>
                             <TextBlock Text="Kalib." FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
                         </StackPanel>
                     </ToggleButton>
@@ -805,7 +805,7 @@
                                   ToolTip="Rechteck: Bereich markieren fuer KI-Analyse"
                                   Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
                         <StackPanel>
-                            <TextBlock Text="&#x25A2;" FontSize="18" HorizontalAlignment="Center"/>
+                            <TextBlock Text="&#x25A2;" FontSize="{StaticResource TypeH3}" HorizontalAlignment="Center"/>
                             <TextBlock Text="Markieren" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
                         </StackPanel>
                     </ToggleButton>

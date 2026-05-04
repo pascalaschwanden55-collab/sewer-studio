@@ -1,4 +1,4 @@
-<Window x:Class="AuswertungPro.Next.UI.Views.Windows.FloatingGridWindow"
+﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.FloatingGridWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Haltungen"
@@ -21,10 +21,10 @@
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="&#xE80A;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                    <TextBlock Text="&#xE80A;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeH4}"
                                Foreground="{DynamicResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBlock x:Name="TitleText" Text="Haltungen (abgedockt)"
-                               FontSize="13" FontWeight="SemiBold"
+                               FontSize="{StaticResource TypeBody}" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
@@ -32,7 +32,7 @@
                             Style="{DynamicResource ToolbarButton}" Margin="0,0,4,0"
                             ToolTip="Zurueck ins Hauptfenster andocken">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE89F;" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                            <TextBlock Text="&#xE89F;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBody}"
                                        Foreground="{DynamicResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Andocken" VerticalAlignment="Center"/>
                         </StackPanel>
@@ -49,10 +49,10 @@
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Left" x:Name="RecordCountText"
-                           FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                           FontSize="{StaticResource TypeCaption}" Foreground="{DynamicResource TextSecondaryBrush}"
                            VerticalAlignment="Center"/>
                 <TextBlock DockPanel.Dock="Right" x:Name="SelectedInfoText"
-                           FontSize="11" Foreground="{DynamicResource NeonCyanBrush}"
+                           FontSize="{StaticResource TypeCaption}" Foreground="{DynamicResource NeonCyanBrush}"
                            VerticalAlignment="Center" HorizontalAlignment="Right"/>
             </DockPanel>
         </Border>

@@ -1,4 +1,4 @@
-<Window x:Class="AuswertungPro.Next.UI.Views.Windows.BeobachtungenWindow"
+﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.BeobachtungenWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:pages="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
@@ -71,7 +71,7 @@
                            Foreground="{StaticResource TextBrush}"
                            VerticalAlignment="Center"
                            FontWeight="SemiBold"
-                           FontSize="14"
+                           FontSize="{StaticResource TypeBodyLarge}"
                            Margin="0,0,12,0"
                            DockPanel.Dock="Left"/>
 

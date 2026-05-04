@@ -1,4 +1,4 @@
-<Window x:Class="AuswertungPro.Next.UI.Views.Windows.HydraulikPanelWindow"
+﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.HydraulikPanelWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
@@ -156,13 +156,13 @@
                             <GradientStop Color="{DynamicResource ColorAccent}" Offset="1"/>
                         </LinearGradientBrush>
                     </Border.Background>
-                    <TextBlock Text="&#x1F4A7;" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <TextBlock Text="&#x1F4A7;" FontSize="{StaticResource TypeH3}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="SewerStudio — Hydraulik-Panel"
-                               FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource HTextPrimary}"/>
+                               FontSize="{StaticResource TypeH3}" FontWeight="SemiBold" Foreground="{StaticResource HTextPrimary}"/>
                     <TextBlock Text="DWA-A 110 · Kreisquerschnitt · Normalabfluss bei Teilfüllung"
-                               FontSize="12" Foreground="{StaticResource HTextDim}"/>
+                               FontSize="{StaticResource TypeSmall}" Foreground="{StaticResource HTextDim}"/>
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -188,7 +188,7 @@
                                 <!-- DN -->
                                 <DockPanel Margin="0,4">
                                     <TextBlock Style="{StaticResource InputLabel}" Text="Nennweite DN"/>
-                                    <TextBlock Foreground="{StaticResource HTextDim}" FontSize="11"
+                                    <TextBlock Foreground="{StaticResource HTextDim}" FontSize="{StaticResource TypeCaption}"
                                                DockPanel.Dock="Right" VerticalAlignment="Center" Width="40"
                                                TextAlignment="Right" Text="mm"/>
                                     <TextBox Style="{StaticResource HInput}"
@@ -219,7 +219,7 @@
                                 <!-- Gefälle -->
                                 <DockPanel Margin="0,4">
                                     <TextBlock Style="{StaticResource InputLabel}" Text="Gefälle"/>
-                                    <TextBlock Foreground="{StaticResource HTextDim}" FontSize="11"
+                                    <TextBlock Foreground="{StaticResource HTextDim}" FontSize="{StaticResource TypeCaption}"
                                                DockPanel.Dock="Right" VerticalAlignment="Center" Width="40"
                                                TextAlignment="Right" Text="{Binding GefaelleUnitLabel}"/>
                                     <TextBox Style="{StaticResource HInput}"
@@ -241,7 +241,7 @@
                                 <!-- Wasserstand -->
                                 <DockPanel Margin="0,4">
                                     <TextBlock Style="{StaticResource InputLabel}" Text="Wasserstand"/>
-                                    <TextBlock Foreground="{StaticResource HTextDim}" FontSize="11"
+                                    <TextBlock Foreground="{StaticResource HTextDim}" FontSize="{StaticResource TypeCaption}"
                                                DockPanel.Dock="Right" VerticalAlignment="Center" Width="40"
                                                TextAlignment="Right" Text="mm"/>
                                     <TextBox Style="{StaticResource HInput}"
@@ -263,7 +263,7 @@
                                 <!-- Temperatur -->
                                 <DockPanel Margin="0,4">
                                     <TextBlock Style="{StaticResource InputLabel}" Text="Temperatur"/>
-                                    <TextBlock Foreground="{StaticResource HTextDim}" FontSize="11"
+                                    <TextBlock Foreground="{StaticResource HTextDim}" FontSize="{StaticResource TypeCaption}"
                                                DockPanel.Dock="Right" VerticalAlignment="Center" Width="40"
                                                TextAlignment="Right" Text="°C"/>
                                     <TextBox Style="{StaticResource HInput}"
@@ -280,7 +280,7 @@
                             <Canvas x:Name="PipeCrossSection" Width="180" Height="180"
                                     ClipToBounds="True"/>
                             <TextBlock HorizontalAlignment="Center" Margin="0,6,0,0"
-                                       FontSize="11" Foreground="{StaticResource HTextDim}">
+                                       FontSize="{StaticResource TypeCaption}" Foreground="{StaticResource HTextDim}">
                                 <Run Text="Auslastung: "/>
                                 <Run x:Name="AuslastungRun" Text="{Binding AuslastungDisplay}"
                                      FontWeight="SemiBold"/>
@@ -291,7 +291,7 @@
                     <!-- Info-Hinweis -->
                     <Border Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,8">
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource HAccent}"
+                        <TextBlock TextWrapping="Wrap" FontSize="{StaticResource TypeCaption}" Foreground="{StaticResource HAccent}"
                                    LineHeight="17">
                             <Run FontWeight="Bold" Text="Integration:"/>
                             <Run Text=" DN, Material und Wasserstand können direkt aus dem WinCan/IBAK-Protokoll geladen werden. Gefälle aus GEP-Kataster oder Sohlhöhen (Δh / L)."/>
@@ -308,7 +308,7 @@
                             BorderThickness="1" CornerRadius="10" Padding="40"
                             Visibility="{Binding HasResult, Converter={StaticResource InvertBoolToVis}}">
                         <TextBlock Text="Bitte alle Eingabewerte ausfüllen"
-                                   Foreground="{StaticResource HTextDim}" FontSize="13"
+                                   Foreground="{StaticResource HTextDim}" FontSize="{StaticResource TypeBody}"
                                    HorizontalAlignment="Center"/>
                     </Border>
 
@@ -441,7 +441,7 @@
                                 <!-- Ablagerung verdict -->
                                 <Border x:Name="AblagerungVerdict" Padding="10,8" CornerRadius="0,0,10,10">
                                     <TextBlock x:Name="AblagerungVerdictText" Text="{Binding AblagerungText}"
-                                               FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                               FontSize="{StaticResource TypeSmall}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                                 </Border>
                             </StackPanel>
                         </Border>
@@ -450,29 +450,29 @@
                         <Border Background="{StaticResource HCard}" BorderBrush="{StaticResource HBorder}"
                                 BorderThickness="1" CornerRadius="10" Padding="14,12">
                             <StackPanel>
-                                <TextBlock Text="Hydraulische Bewertung (VSA)" FontSize="13"
+                                <TextBlock Text="Hydraulische Bewertung (VSA)" FontSize="{StaticResource TypeBody}"
                                            FontWeight="SemiBold" Foreground="{StaticResource HTextPrimary}"
                                            Margin="0,0,0,10"/>
                                 <UniformGrid Columns="2" Rows="2">
                                     <StackPanel Orientation="Horizontal" Margin="0,4">
                                         <Ellipse x:Name="IndV" Width="12" Height="12" Margin="0,0,6,0"/>
                                         <TextBlock Text="v ≥ 0.5 m/s (Selbstreinigung)"
-                                                   FontSize="12" Foreground="{StaticResource HTextSecondary}"/>
+                                                   FontSize="{StaticResource TypeSmall}" Foreground="{StaticResource HTextSecondary}"/>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="0,4">
                                         <Ellipse x:Name="IndTau" Width="12" Height="12" Margin="0,0,6,0"/>
                                         <TextBlock Text="τ ≥ 2.5 N/m² (Mindest-Schub)"
-                                                   FontSize="12" Foreground="{StaticResource HTextSecondary}"/>
+                                                   FontSize="{StaticResource TypeSmall}" Foreground="{StaticResource HTextSecondary}"/>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="0,4">
                                         <Ellipse x:Name="IndAbl" Width="12" Height="12" Margin="0,0,6,0"/>
                                         <TextBlock Text="Ablagerungsfrei nach DWA-A 110"
-                                                   FontSize="12" Foreground="{StaticResource HTextSecondary}"/>
+                                                   FontSize="{StaticResource TypeSmall}" Foreground="{StaticResource HTextSecondary}"/>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="0,4">
                                         <Ellipse x:Name="IndFr" Width="12" Height="12" Margin="0,0,6,0"/>
                                         <TextBlock Text="Fr ≤ 1 (strömend, kein Schiessen)"
-                                                   FontSize="12" Foreground="{StaticResource HTextSecondary}"/>
+                                                   FontSize="{StaticResource TypeSmall}" Foreground="{StaticResource HTextSecondary}"/>
                                     </StackPanel>
                                 </UniformGrid>
                             </StackPanel>

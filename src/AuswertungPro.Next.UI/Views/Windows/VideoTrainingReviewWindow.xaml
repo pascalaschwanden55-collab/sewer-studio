@@ -1,4 +1,4 @@
-<Window x:Class="AuswertungPro.Next.UI.Views.Windows.VideoTrainingReviewWindow"
+﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.VideoTrainingReviewWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Video-Selbsttraining — Differenz-Review"
@@ -101,7 +101,7 @@
                   GridLinesVisibility="Horizontal"
                   HeadersVisibility="Column"
                   CanUserSortColumns="True"
-                  FontSize="13"
+                  FontSize="{StaticResource TypeBody}"
                   Margin="0,0,0,4">
 
             <DataGrid.RowStyle>
@@ -180,7 +180,7 @@
                         MouseMove="AnnotationCanvas_MouseMove"
                         MouseLeftButtonUp="AnnotationCanvas_MouseUp"/>
 
-                <TextBlock Text="Kein Frame verfuegbar" FontSize="14"
+                <TextBlock Text="Kein Frame verfuegbar" FontSize="{StaticResource TypeBodyLarge}"
                            HorizontalAlignment="Center" VerticalAlignment="Center"
                            Foreground="{DynamicResource MutedBrush}">
                     <TextBlock.Style>

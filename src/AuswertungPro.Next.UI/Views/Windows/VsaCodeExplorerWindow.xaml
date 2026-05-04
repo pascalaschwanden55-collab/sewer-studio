@@ -1,4 +1,4 @@
-<Window x:Class="AuswertungPro.Next.UI.Views.Windows.VsaCodeExplorerWindow"
+﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.VsaCodeExplorerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
@@ -34,7 +34,7 @@
                                FontSize="15" FontWeight="Bold"
                                Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
                     <TextBlock Text="EN 13508-2 · VSA-KEK 2023"
-                               FontSize="10" Foreground="{StaticResource MutedBrush}"
+                               FontSize="{StaticResource TypeMicro}" Foreground="{StaticResource MutedBrush}"
                                VerticalAlignment="Center" Margin="12,0,0,0"/>
                     <Button x:Name="ResetButton" Content="Reset" HorizontalAlignment="Right"
                             Style="{StaticResource ToolbarButton}" MinWidth="50" Padding="8,3"
@@ -105,10 +105,10 @@
                             <SolidColorBrush Color="{StaticResource ColorHeader}"/>
                         </Border.Background>
                         <DockPanel>
-                            <TextBlock Text="1" FontSize="10" FontWeight="Bold" FontFamily="Consolas"
+                            <TextBlock Text="1" FontSize="{StaticResource TypeMicro}" FontWeight="Bold" FontFamily="Consolas"
                                        Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
                                        Margin="0,0,6,0" Opacity="0.5"/>
-                            <TextBlock Text="GRUPPE" FontSize="10" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="GRUPPE" FontSize="{StaticResource TypeMicro}" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                         </DockPanel>
                     </Border>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
@@ -132,10 +132,10 @@
                             <SolidColorBrush Color="{StaticResource ColorHeader}"/>
                         </Border.Background>
                         <DockPanel>
-                            <TextBlock Text="2" FontSize="10" FontWeight="Bold" FontFamily="Consolas"
+                            <TextBlock Text="2" FontSize="{StaticResource TypeMicro}" FontWeight="Bold" FontFamily="Consolas"
                                        Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
                                        Margin="0,0,6,0" Opacity="0.5"/>
-                            <TextBlock Text="HAUPTCODE" FontSize="10" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="HAUPTCODE" FontSize="{StaticResource TypeMicro}" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                         </DockPanel>
                     </Border>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
@@ -159,10 +159,10 @@
                             <SolidColorBrush Color="{StaticResource ColorHeader}"/>
                         </Border.Background>
                         <DockPanel>
-                            <TextBlock Text="3" FontSize="10" FontWeight="Bold" FontFamily="Consolas"
+                            <TextBlock Text="3" FontSize="{StaticResource TypeMicro}" FontWeight="Bold" FontFamily="Consolas"
                                        Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
                                        Margin="0,0,6,0" Opacity="0.5"/>
-                            <TextBlock Text="CHARAKT. 1" FontSize="10" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="CHARAKT. 1" FontSize="{StaticResource TypeMicro}" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                         </DockPanel>
                     </Border>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
@@ -186,10 +186,10 @@
                             <SolidColorBrush Color="{StaticResource ColorHeader}"/>
                         </Border.Background>
                         <DockPanel>
-                            <TextBlock Text="4" FontSize="10" FontWeight="Bold" FontFamily="Consolas"
+                            <TextBlock Text="4" FontSize="{StaticResource TypeMicro}" FontWeight="Bold" FontFamily="Consolas"
                                        Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
                                        Margin="0,0,6,0" Opacity="0.5"/>
-                            <TextBlock Text="CHARAKT. 2" FontSize="10" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="CHARAKT. 2" FontSize="{StaticResource TypeMicro}" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                         </DockPanel>
                     </Border>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
@@ -221,7 +221,7 @@
                                     <TextBlock x:Name="TxtFinalLabel" FontSize="{StaticResource TypeSmall}"
                                                Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"
                                                TextWrapping="Wrap"/>
-                                    <TextBlock x:Name="TxtWarn" FontSize="10" Foreground="{StaticResource DangerBrush}"
+                                    <TextBlock x:Name="TxtWarn" FontSize="{StaticResource TypeMicro}" Foreground="{StaticResource DangerBrush}"
                                                Margin="0,4,0,0" Visibility="Collapsed"/>
                                 </StackPanel>
                             </Border>
@@ -283,7 +283,7 @@
                                     </StackPanel>
 
                                     <!-- Keine Quantifizierung -->
-                                    <TextBlock x:Name="TxtNoQuant" Text="Keine Quantifizierung" FontSize="10"
+                                    <TextBlock x:Name="TxtNoQuant" Text="Keine Quantifizierung" FontSize="{StaticResource TypeMicro}"
                                                Foreground="{StaticResource MutedBrush}" Visibility="Collapsed"/>
                                 </StackPanel>
                             </Border>
@@ -395,7 +395,7 @@
                                            Foreground="{StaticResource MutedBrush}"
                                            HorizontalAlignment="Center" Margin="0,4,0,4"/>
                                 <TextBlock Text="Gruppe &#x2192; Hauptcode &#x2192; Charakterisierung"
-                                           FontSize="10" Foreground="{StaticResource MutedBrush}"
+                                           FontSize="{StaticResource TypeMicro}" Foreground="{StaticResource MutedBrush}"
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
@@ -478,7 +478,7 @@
 
                                     <!-- Foto 1 -->
                                     <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Foto 1" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,3"/>
+                                        <TextBlock Text="Foto 1" FontSize="{StaticResource TypeMicro}" FontWeight="SemiBold" Margin="0,0,0,3"/>
                                         <Border Height="90" CornerRadius="4" BorderThickness="1"
                                                 BorderBrush="{StaticResource BorderBrush}"
                                                 Background="{StaticResource BgLightBrush}">
@@ -487,22 +487,22 @@
                                                        RenderOptions.BitmapScalingMode="HighQuality"/>
                                                 <TextBlock x:Name="Foto1Placeholder" Text="Kein Foto"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                           Foreground="{StaticResource MutedBrush}" FontSize="10"/>
+                                                           Foreground="{StaticResource MutedBrush}" FontSize="{StaticResource TypeMicro}"/>
                                             </Grid>
                                         </Border>
                                         <Button x:Name="BtnCaptureFoto1" Content="Aus Video"
                                                 Style="{StaticResource ToolbarButton}"
                                                 HorizontalAlignment="Stretch" Padding="4,3" Margin="0,3,0,0"
-                                                FontSize="10"
+                                                FontSize="{StaticResource TypeMicro}"
                                                 ToolTip="Aktuelles Videobild als Foto 1 fuer diesen Schaden aufnehmen"/>
                                         <Button x:Name="BtnMeasureFoto1" Content="&#x2316; Vermessen"
                                                 Style="{StaticResource ToolbarButton}"
                                                 HorizontalAlignment="Stretch" Padding="4,3" Margin="0,2,0,0"
-                                                FontSize="10"
+                                                FontSize="{StaticResource TypeMicro}"
                                                 ToolTip="Foto 1 im Vermessungsfenster oeffnen und Schadenausdehnung messen"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Foto 2" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,3"/>
+                                        <TextBlock Text="Foto 2" FontSize="{StaticResource TypeMicro}" FontWeight="SemiBold" Margin="0,0,0,3"/>
                                         <Border Height="90" CornerRadius="4" BorderThickness="1"
                                                 BorderBrush="{StaticResource BorderBrush}"
                                                 Background="{StaticResource BgLightBrush}">
@@ -511,18 +511,18 @@
                                                        RenderOptions.BitmapScalingMode="HighQuality"/>
                                                 <TextBlock x:Name="Foto2Placeholder" Text="Kein Foto"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                           Foreground="{StaticResource MutedBrush}" FontSize="10"/>
+                                                           Foreground="{StaticResource MutedBrush}" FontSize="{StaticResource TypeMicro}"/>
                                             </Grid>
                                         </Border>
                                         <Button x:Name="BtnCaptureFoto2" Content="Aus Video"
                                                 Style="{StaticResource ToolbarButton}"
                                                 HorizontalAlignment="Stretch" Padding="4,3" Margin="0,3,0,0"
-                                                FontSize="10"
+                                                FontSize="{StaticResource TypeMicro}"
                                                 ToolTip="Aktuelles Videobild als Foto 2 fuer diesen Schaden aufnehmen"/>
                                         <Button x:Name="BtnMeasureFoto2" Content="&#x2316; Vermessen"
                                                 Style="{StaticResource ToolbarButton}"
                                                 HorizontalAlignment="Stretch" Padding="4,3" Margin="0,2,0,0"
-                                                FontSize="10"
+                                                FontSize="{StaticResource TypeMicro}"
                                                 ToolTip="Foto 2 im Vermessungsfenster oeffnen und Schadenausdehnung messen"/>
                                     </StackPanel>
                                 </Grid>
@@ -553,7 +553,7 @@
 
                 <!-- Buttons rechts -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
-                    <TextBlock x:Name="TxtValidation" FontSize="10"
+                    <TextBlock x:Name="TxtValidation" FontSize="{StaticResource TypeMicro}"
                                Foreground="{StaticResource DangerBrush}"
                                VerticalAlignment="Center" Margin="0,0,12,0"
                                MaxWidth="300" TextWrapping="Wrap"/>

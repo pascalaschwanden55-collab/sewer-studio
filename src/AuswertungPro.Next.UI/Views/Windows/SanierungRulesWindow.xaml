@@ -1,4 +1,4 @@
-<Window x:Class="AuswertungPro.Next.UI.Views.Windows.SanierungRulesWindow"
+﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.SanierungRulesWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="KI-Sanierungsregeln verwalten"
@@ -14,10 +14,10 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Text="KI-Sanierungsregeln (Hard-Constraints)"
-                   FontSize="18" FontWeight="Bold"
+                   FontSize="{StaticResource TypeH3}" FontWeight="Bold"
                    Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,4"/>
         <TextBlock Grid.Row="1" TextWrapping="Wrap"
-                   Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,12">
+                   Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,12">
             Diese Regeln werden VOR jeder KI-Anfrage ausgewertet und schliessen technisch unzulaessige Verfahren aus.
             Beispiel: "WENN Bogen >= 15 Grad DANN GFK-Liner ausschliessen WEIL nicht bogengaengig".
             Die KI darf ausgeschlossene Verfahren niemals empfehlen.

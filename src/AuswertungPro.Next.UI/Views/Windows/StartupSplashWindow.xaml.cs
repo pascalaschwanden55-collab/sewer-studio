@@ -13,40 +13,96 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class StartupSplashWindow : Window
 {
+    private const double CanvasCenterX = 210;
+    private const double CanvasCenterY = 260;
+    private const double ProjectionScale = 130;
+    private const double CameraDistance = 4.3;
+
     private readonly DispatcherTimer _statusTimer;
     private readonly DispatcherTimer _pulseTimer;
+    private readonly DispatcherTimer _frameTimer;
+    private readonly Random _rng = new(43);
+    private readonly List<NeuralNode> _nodes = new();
+    private readonly List<List<int>> _layers = new();
+    private readonly List<NeuralConnection> _connections = new();
+    private readonly List<ActivePulse> _activePulses = new();
+    private readonly double[] _screenX = new double[64];
+    private readonly double[] _screenY = new double[64];
+    private readonly double[] _screenDepth = new double[64];
+
+    private Ellipse? _volumeGlow;
+    private Ellipse? _volumeShell;
+    private Ellipse? _backPlane;
     private int _statusIndex;
-    private readonly Random _rng = new(42);
-    private readonly List<Ellipse> _nodes = new();
-    private readonly List<List<Ellipse>> _nodesByStage = new();
-    private readonly List<Line> _connections = new();
-    private readonly List<List<Line>> _connectionsByStage = new();
-    private int _pulseStageIndex;
+    private int _pulseCursor;
+    private double _rotationY = -0.52;
+    private double _rotationX = 0.18;
+    private double _breathPhase;
 
-    // V4.2 Pipeline-Stages (aktualisiert 2026-05-01):
-    //   Frame -> YOLO26l-seg -> DINO 1.5 -> SAM 2.1 -> Qwen3-VL (8B+32B) -> nomic-embed -> VSA-KEK
-    // 7 Stages mit dichterem Netz fuer Hightech-Look. Hellere Akzentfarben + staerker Glow.
-    private sealed record StageDef(string Label, string SubLabel, int Count, double X, Color Color);
+    private static readonly Color PrimaryAccent = Color.FromRgb(0x7E, 0xA7, 0xC9);
+    private static readonly Color SecondaryAccent = Color.FromRgb(0x8B, 0xC2, 0xB6);
+    private static readonly Color LineAccent = Color.FromRgb(0x7A, 0x91, 0xAA);
+    private static readonly Color NodeCore = Color.FromRgb(0xE5, 0xEC, 0xF3);
+    private static readonly Color ReadyAccent = Color.FromRgb(0x8B, 0xC2, 0xB6);
 
-    // X-Positionen: 7 Stages × 60px Spacing auf x=40..400.
-    private static readonly StageDef[] Stages =
-    [
-        new("FRAME",  "1920x1080",     1,  40, Color.FromRgb(0xCF, 0xD8, 0xE3)), // hellgrau
-        new("YOLO",   "26l-seg TRT",   5,  98, Color.FromRgb(0x39, 0xFF, 0x14)), // neon-gruen
-        new("DINO",   "1.5 lazy",      5, 156, Color.FromRgb(0xC8, 0x6E, 0xFF)), // violett
-        new("SAM",    "2.1 Hiera-L",   5, 214, Color.FromRgb(0xFF, 0xB8, 0x00)), // orange
-        new("QWEN",   "3-VL 8b+32b",   8, 272, Color.FromRgb(0x00, 0xE5, 0xFF)), // cyan
-        new("EMBED",  "nomic-embed",   4, 330, Color.FromRgb(0xFF, 0x4D, 0xC9)), // magenta
-        new("VSA",    "KEK 2023",      1, 400, Color.FromRgb(0xFF, 0xE5, 0x3A)), // gold
-    ];
+    private sealed class NeuralNode
+    {
+        public NeuralNode(double x, double y, double z, int layer, Ellipse visual)
+        {
+            X = x;
+            Y = y;
+            Z = z;
+            Layer = layer;
+            Visual = visual;
+        }
+
+        public double X { get; }
+        public double Y { get; }
+        public double Z { get; }
+        public int Layer { get; }
+        public Ellipse Visual { get; }
+        public double Activation { get; set; }
+    }
+
+    private sealed class NeuralConnection
+    {
+        public NeuralConnection(int a, int b, Line visual)
+        {
+            A = a;
+            B = b;
+            Visual = visual;
+        }
+
+        public int A { get; }
+        public int B { get; }
+        public Line Visual { get; }
+        public double Activation { get; set; }
+    }
+
+    private sealed class ActivePulse
+    {
+        public ActivePulse(int connectionIndex, Ellipse visual, Color color, double speed)
+        {
+            ConnectionIndex = connectionIndex;
+            Visual = visual;
+            Color = color;
+            Speed = speed;
+        }
+
+        public int ConnectionIndex { get; }
+        public Ellipse Visual { get; }
+        public Color Color { get; }
+        public double T { get; set; }
+        public double Speed { get; }
+    }
 
     private static readonly string[] StatusMessages =
     [
         "Initialisiere Anwendung...",
-        "YOLO26l-seg (TensorRT) + DINO 1.5 + SAM 2.1 laden...",
-        "Qwen3-VL aktivieren (8b-q8 + 32b-hybrid)...",
-        "nomic-embed + KnowledgeBase verbinden...",
-        "KI-Pipeline bereit"
+        "Lokale KI-Modelle vorbereiten...",
+        "3D-Neuralnetz synchronisieren...",
+        "VSA-Kataloge und Wissensbasis verbinden...",
+        "SewerStudio v4.3 bereit"
     ];
 
     public StartupSplashWindow()
@@ -58,49 +114,52 @@ public partial class StartupSplashWindow : Window
         Width = SystemParameters.PrimaryScreenWidth;
         Height = SystemParameters.PrimaryScreenHeight;
 
-        _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2200) };
+        _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1900) };
         _statusTimer.Tick += OnStatusTick;
 
-        _pulseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
+        _pulseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(620) };
         _pulseTimer.Tick += OnPulseTick;
+
+        _frameTimer = new DispatcherTimer(DispatcherPriority.Render)
+        {
+            Interval = TimeSpan.FromMilliseconds(33)
+        };
+        _frameTimer.Tick += OnFrameTick;
 
         Loaded += OnLoaded;
         Closed += (_, _) =>
         {
-            // Audit R-M2: Splash-Crash darf App-Startup nicht killen.
             try { _statusTimer.Stop(); }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Splash.Closed] StatusTimer: {ex.Message}"); }
             try { _pulseTimer.Stop(); }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Splash.Closed] PulseTimer: {ex.Message}"); }
+            try { _frameTimer.Stop(); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Splash.Closed] FrameTimer: {ex.Message}"); }
         };
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // Fenster einblenden
-        var windowFade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(1000))
+        var windowFade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(900))
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
         BeginAnimation(OpacityProperty, windowFade);
 
-        // Neuronales Netz zeichnen (Pipeline-Stages)
         BuildNeuralNetwork();
-
-        // Animationen starten — Timings doppelt so lang (10s minSplashDuration)
+        RenderFrame();
         AnimateNetworkFadeIn();
-        RevealTitle(3200);
-        FadeIn(SubText, 4000, 1200);
-        FadeIn(VersionText, 4400, 800);
-        FadeIn(StatusText, 1200, 700);
-        FadeIn(StatusDot, 1200, 700);
+        RevealTitle(2400);
+        FadeIn(SubText, 3000, 900);
+        FadeIn(VersionText, 3350, 700);
+        FadeIn(StatusText, 1100, 650);
+        FadeIn(StatusDot, 1100, 650);
         StartProgressBar();
 
+        _frameTimer.Start();
         _statusTimer.Start();
 
-        // Datenpulse mit Verzoegerung starten
-        _pulseTimer.IsEnabled = false;
-        var pulseDelay = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(3000) };
+        var pulseDelay = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2100) };
         pulseDelay.Tick += (_, _) =>
         {
             pulseDelay.Stop();
@@ -109,308 +168,460 @@ public partial class StartupSplashWindow : Window
         pulseDelay.Start();
     }
 
-    // ── Neuronales Netz aufbauen — Pipeline-Visualisierung ─────────────
-
     private void BuildNeuralNetwork()
     {
-        // Vertikale Positionen pro Stage berechnen (gleichmaessig verteilt)
-        // Canvas-Hoehe: ~520 (560 - 2*20 Margin). Y-Zentrum bei ~260.
-        double topY = 80, bottomY = 440;
-        var yPositions = Stages.Select(s => ComputeYPositions(s.Count, topY, bottomY)).ToArray();
+        NeuralCanvas.Children.Clear();
+        _nodes.Clear();
+        _layers.Clear();
+        _connections.Clear();
+        _activePulses.Clear();
 
-        // 1. Verbindungen zwischen aufeinanderfolgenden Stages (hinter den Knoten)
-        for (int s = 0; s < Stages.Length - 1; s++)
+        AddVolumeShell();
+
+        AddLayer(-1.45, 10, 0);
+        AddLayer(-0.48, 15, 1);
+        AddLayer(0.48, 15, 2);
+        AddLayer(1.45, 9, 3);
+
+        for (int i = 0; i < _layers.Count - 1; i++)
+            ConnectAdjacentLayers(_layers[i], _layers[i + 1], 4);
+
+        ConnectSkipLayer(_layers[0], _layers[2], 5);
+        ConnectSkipLayer(_layers[1], _layers[3], 5);
+    }
+
+    private void AddVolumeShell()
+    {
+        _volumeGlow = new Ellipse
         {
-            var stageConnections = new List<Line>();
-            for (int i = 0; i < Stages[s].Count; i++)
+            Width = 420,
+            Height = 350,
+            Opacity = 0,
+            Fill = new RadialGradientBrush
             {
-                for (int j = 0; j < Stages[s + 1].Count; j++)
+                Center = new Point(0.5, 0.5),
+                GradientOrigin = new Point(0.46, 0.42),
+                RadiusX = 0.58,
+                RadiusY = 0.58,
+                GradientStops =
                 {
-                    // Hightech-Look: dichteres Netz (~92%) mit feinen, leuchtenden Linien.
-                    if (_rng.NextDouble() > 0.92) continue;
-
-                    var line = new Line
-                    {
-                        X1 = Stages[s].X,
-                        Y1 = yPositions[s][i],
-                        X2 = Stages[s + 1].X,
-                        Y2 = yPositions[s + 1][j],
-                        Stroke = new SolidColorBrush(Color.FromArgb(34, 120, 220, 255)),
-                        StrokeThickness = 0.9,
-                        Opacity = 0
-                    };
-                    NeuralCanvas.Children.Add(line);
-                    _connections.Add(line);
-                    stageConnections.Add(line);
+                    new GradientStop(Color.FromArgb(34, PrimaryAccent.R, PrimaryAccent.G, PrimaryAccent.B), 0.0),
+                    new GradientStop(Color.FromArgb(12, SecondaryAccent.R, SecondaryAccent.G, SecondaryAccent.B), 0.55),
+                    new GradientStop(Color.FromArgb(0, PrimaryAccent.R, PrimaryAccent.G, PrimaryAccent.B), 1.0)
                 }
-            }
-            _connectionsByStage.Add(stageConnections);
-        }
-
-        // 2. Knoten pro Stage zeichnen (gefaerbt nach Stage)
-        for (int s = 0; s < Stages.Length; s++)
-        {
-            var stageNodes = new List<Ellipse>();
-            var color = Stages[s].Color;
-            bool isEdgeStage = s == 0 || s == Stages.Length - 1;
-            double size = isEdgeStage ? 16.0 : 10.0;
-
-            for (int i = 0; i < Stages[s].Count; i++)
-            {
-                var node = new Ellipse
-                {
-                    Width = size,
-                    Height = size,
-                    Opacity = 0,
-                    Fill = new RadialGradientBrush(
-                        Color.FromArgb(255, color.R, color.G, color.B),
-                        Color.FromArgb(40, color.R, color.G, color.B)),
-                    Stroke = new SolidColorBrush(Color.FromArgb(220, color.R, color.G, color.B)),
-                    StrokeThickness = 1.4,
-                    Effect = new DropShadowEffect
-                    {
-                        BlurRadius = 18,
-                        ShadowDepth = 0,
-                        Color = color,
-                        Opacity = 0.85
-                    }
-                };
-                Canvas.SetLeft(node, Stages[s].X - size / 2);
-                Canvas.SetTop(node, yPositions[s][i] - size / 2);
-                NeuralCanvas.Children.Add(node);
-                _nodes.Add(node);
-                stageNodes.Add(node);
-            }
-            _nodesByStage.Add(stageNodes);
-
-            // 3. Label ueber/unter der Stage
-            AddStageLabels(Stages[s], topY - 40, bottomY + 14);
-        }
-    }
-
-    private static double[] ComputeYPositions(int count, double top, double bottom)
-    {
-        if (count <= 0) return Array.Empty<double>();
-        if (count == 1) return [(top + bottom) / 2.0];
-        double step = (bottom - top) / (count - 1);
-        var result = new double[count];
-        for (int i = 0; i < count; i++) result[i] = top + step * i;
-        return result;
-    }
-
-    private void AddStageLabels(StageDef stage, double labelY, double subLabelY)
-    {
-        // Hauptlabel ueber der Stage (Modellname)
-        var mainLabel = new TextBlock
-        {
-            Text = stage.Label,
-            FontSize = 11,
-            FontWeight = FontWeights.Bold,
-            FontFamily = new FontFamily("Consolas"),
-            Foreground = new SolidColorBrush(Color.FromArgb(240, stage.Color.R, stage.Color.G, stage.Color.B)),
-            Opacity = 0
-        };
-        mainLabel.Measure(new Size(200, 50));
-        Canvas.SetLeft(mainLabel, stage.X - mainLabel.DesiredSize.Width / 2);
-        Canvas.SetTop(mainLabel, labelY);
-        NeuralCanvas.Children.Add(mainLabel);
-        _labels.Add(mainLabel);
-
-        // Sublabel unter der Stage (Variante/Detail)
-        var subLabel = new TextBlock
-        {
-            Text = stage.SubLabel,
-            FontSize = 9,
-            FontFamily = new FontFamily("Consolas"),
-            Foreground = new SolidColorBrush(Color.FromArgb(140, 200, 210, 230)),
-            Opacity = 0
-        };
-        subLabel.Measure(new Size(200, 50));
-        Canvas.SetLeft(subLabel, stage.X - subLabel.DesiredSize.Width / 2);
-        Canvas.SetTop(subLabel, subLabelY);
-        NeuralCanvas.Children.Add(subLabel);
-        _labels.Add(subLabel);
-    }
-
-    private readonly List<TextBlock> _labels = new();
-
-    private void AnimateNetworkFadeIn()
-    {
-        // Stage-fuer-Stage einblenden: zuerst Label der Stage, dann Knoten,
-        // dann die Verbindungen zur naechsten Stage — wie Pipeline-Bau
-        // Timings verdoppelt fuer 10s-Splash.
-        int baseDelay = 600;
-        int stepMs = 560;
-
-        for (int s = 0; s < _nodesByStage.Count; s++)
-        {
-            int stageDelay = baseDelay + s * stepMs;
-
-            // Stage-Labels (je Stage 2: Haupt + Sub) einblenden
-            // Index im _labels: s*2 = Haupt, s*2+1 = Sub
-            if (s * 2 < _labels.Count) FadeIn(_labels[s * 2], stageDelay, 700);
-            if (s * 2 + 1 < _labels.Count) FadeIn(_labels[s * 2 + 1], stageDelay + 160, 700);
-
-            // Knoten der Stage
-            foreach (var node in _nodesByStage[s])
-                FadeIn(node, stageDelay + 100, 700);
-
-            // Verbindungen von dieser Stage zur naechsten (falls vorhanden)
-            if (s < _connectionsByStage.Count)
-            {
-                foreach (var line in _connectionsByStage[s])
-                    FadeIn(line, stageDelay + 300, 800);
-            }
-        }
-    }
-
-    // ── Datenpulse durch das Netzwerk — sequentiell Stage fuer Stage ───
-
-    private void OnPulseTick(object? sender, EventArgs e)
-    {
-        if (_connectionsByStage.Count == 0) return;
-
-        // Pulse wandert Stage fuer Stage — wie echter Datenfluss Frame -> Code
-        int stageIdx = _pulseStageIndex % _connectionsByStage.Count;
-        _pulseStageIndex++;
-
-        var stage = Stages[stageIdx];
-        var nextStageColor = Stages[stageIdx + 1].Color;
-        PulseStage(_connectionsByStage[stageIdx], _nodesByStage[stageIdx + 1], nextStageColor);
-    }
-
-    private void PulseStage(List<Line> connections, List<Ellipse> targetNodes, Color color)
-    {
-        // Alle Verbindungen dieser Stage gleichzeitig aufleuchten — kraeftiger Hightech-Pulse.
-        foreach (var line in connections)
-        {
-            var originalBrush = new SolidColorBrush(Color.FromArgb(34, 120, 220, 255));
-            var pulseBrush = new SolidColorBrush(Color.FromArgb(240, color.R, color.G, color.B));
-
-            line.Stroke = pulseBrush;
-            line.StrokeThickness = 2.2;
-
-            var fadeBack = new ColorAnimation(
-                Color.FromArgb(240, color.R, color.G, color.B),
-                Color.FromArgb(34, 120, 220, 255),
-                TimeSpan.FromMilliseconds(700))
-            {
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-            };
-            fadeBack.Completed += (_, _) =>
-            {
-                line.Stroke = originalBrush;
-                line.StrokeThickness = 0.9;
-            };
-            pulseBrush.BeginAnimation(SolidColorBrush.ColorProperty, fadeBack);
-
-            // Hightech-Akzent: fliegende Particle entlang der Verbindung
-            SpawnDataParticle(line, color);
-        }
-
-        // Zielknoten der Stage aufleuchten lassen (Datenpaket kommt an)
-        foreach (var node in targetNodes)
-        {
-            var bounce = new DoubleAnimation(1.0, 0.45, TimeSpan.FromMilliseconds(450))
-            {
-                AutoReverse = true,
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-            };
-            node.BeginAnimation(OpacityProperty, bounce);
-        }
-    }
-
-    /// <summary>
-    /// Hightech-Akzent: ein kleines, leuchtendes Particle wandert vom Start- zum Endpunkt
-    /// einer Verbindung, simuliert sichtbaren Datenfluss zwischen den Stages.
-    /// </summary>
-    private void SpawnDataParticle(Line line, Color color)
-    {
-        var particle = new Ellipse
-        {
-            Width = 5, Height = 5,
-            Fill = new SolidColorBrush(Color.FromArgb(255, color.R, color.G, color.B)),
-            Effect = new DropShadowEffect
-            {
-                BlurRadius = 14,
-                ShadowDepth = 0,
-                Color = color,
-                Opacity = 1.0
             },
             IsHitTestVisible = false
         };
-        Canvas.SetLeft(particle, line.X1 - 2.5);
-        Canvas.SetTop(particle, line.Y1 - 2.5);
-        NeuralCanvas.Children.Add(particle);
+        Canvas.SetLeft(_volumeGlow, CanvasCenterX - 210);
+        Canvas.SetTop(_volumeGlow, CanvasCenterY - 175);
+        Panel.SetZIndex(_volumeGlow, 0);
+        NeuralCanvas.Children.Add(_volumeGlow);
 
-        var dx = line.X2 - line.X1;
-        var dy = line.Y2 - line.Y1;
-        var moveX = new DoubleAnimation
+        _backPlane = new Ellipse
         {
-            From = line.X1 - 2.5,
-            To = line.X2 - 2.5,
-            Duration = TimeSpan.FromMilliseconds(520),
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+            Width = 330,
+            Height = 236,
+            Opacity = 0,
+            Fill = Brushes.Transparent,
+            Stroke = new SolidColorBrush(Color.FromArgb(34, PrimaryAccent.R, PrimaryAccent.G, PrimaryAccent.B)),
+            StrokeThickness = 0.8,
+            StrokeDashArray = [8, 14],
+            RenderTransformOrigin = new Point(0.5, 0.5),
+            RenderTransform = new SkewTransform(-14, 0),
+            IsHitTestVisible = false
         };
-        var moveY = new DoubleAnimation
+        Canvas.SetLeft(_backPlane, CanvasCenterX - 165);
+        Canvas.SetTop(_backPlane, CanvasCenterY - 118);
+        Panel.SetZIndex(_backPlane, 0);
+        NeuralCanvas.Children.Add(_backPlane);
+
+        _volumeShell = new Ellipse
         {
-            From = line.Y1 - 2.5,
-            To = line.Y2 - 2.5,
-            Duration = TimeSpan.FromMilliseconds(520),
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+            Width = 368,
+            Height = 294,
+            Opacity = 0,
+            Fill = new RadialGradientBrush
+            {
+                Center = new Point(0.42, 0.38),
+                GradientOrigin = new Point(0.32, 0.28),
+                RadiusX = 0.9,
+                RadiusY = 0.85,
+                GradientStops =
+                {
+                    new GradientStop(Color.FromArgb(18, NodeCore.R, NodeCore.G, NodeCore.B), 0.0),
+                    new GradientStop(Color.FromArgb(7, PrimaryAccent.R, PrimaryAccent.G, PrimaryAccent.B), 0.55),
+                    new GradientStop(Color.FromArgb(0, PrimaryAccent.R, PrimaryAccent.G, PrimaryAccent.B), 1.0)
+                }
+            },
+            Stroke = new SolidColorBrush(Color.FromArgb(54, PrimaryAccent.R, PrimaryAccent.G, PrimaryAccent.B)),
+            StrokeThickness = 0.9,
+            Effect = new DropShadowEffect
+            {
+                BlurRadius = 20,
+                ShadowDepth = 0,
+                Color = PrimaryAccent,
+                Opacity = 0.18
+            },
+            IsHitTestVisible = false
         };
-        var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(520))
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
-        };
-        fadeOut.Completed += (_, _) => NeuralCanvas.Children.Remove(particle);
-        particle.BeginAnimation(Canvas.LeftProperty, moveX);
-        particle.BeginAnimation(Canvas.TopProperty, moveY);
-        particle.BeginAnimation(OpacityProperty, fadeOut);
+        Canvas.SetLeft(_volumeShell, CanvasCenterX - 184);
+        Canvas.SetTop(_volumeShell, CanvasCenterY - 147);
+        Panel.SetZIndex(_volumeShell, 0);
+        NeuralCanvas.Children.Add(_volumeShell);
     }
 
-    // ── Titel-Animation ───────────────────────────────────────────────
+    private void AddLayer(double x, int count, int layer)
+    {
+        var indices = new List<int>(count + 2);
+        var angleOffset = -Math.PI / 2 + layer * 0.22;
+        var yRadius = 0.98 - layer * 0.035;
+        var zRadius = 0.56 + layer * 0.035;
+
+        for (int i = 0; i < count; i++)
+        {
+            var angle = angleOffset + i * Math.PI * 2 / count;
+            var y = Math.Sin(angle) * yRadius;
+            var z = Math.Cos(angle) * zRadius;
+            indices.Add(AddNode(x, y, z, layer, i % 5 == 0 ? 7.0 : 5.7));
+        }
+
+        indices.Add(AddNode(x, 0, 0, layer, 6.8));
+        if (layer is 1 or 2)
+        {
+            indices.Add(AddNode(x, -0.36, 0.16, layer, 5.8));
+            indices.Add(AddNode(x, 0.36, -0.16, layer, 5.8));
+        }
+
+        _layers.Add(indices);
+    }
+
+    private int AddNode(double x, double y, double z, int layer, double baseSize)
+    {
+        var accent = layer is 1 or 2 ? PrimaryAccent : SecondaryAccent;
+        var node = new Ellipse
+        {
+            Width = baseSize,
+            Height = baseSize,
+            Opacity = 0,
+            Fill = new RadialGradientBrush
+            {
+                Center = new Point(0.44, 0.42),
+                GradientOrigin = new Point(0.34, 0.30),
+                RadiusX = 0.7,
+                RadiusY = 0.7,
+                GradientStops =
+                {
+                    new GradientStop(Color.FromArgb(245, NodeCore.R, NodeCore.G, NodeCore.B), 0.0),
+                    new GradientStop(Color.FromArgb(180, accent.R, accent.G, accent.B), 0.62),
+                    new GradientStop(Color.FromArgb(52, accent.R, accent.G, accent.B), 1.0)
+                }
+            },
+            Stroke = new SolidColorBrush(Color.FromArgb(160, accent.R, accent.G, accent.B)),
+            StrokeThickness = 0.7,
+            Effect = new DropShadowEffect
+            {
+                BlurRadius = 10,
+                ShadowDepth = 0,
+                Color = accent,
+                Opacity = 0.32
+            },
+            IsHitTestVisible = false
+        };
+
+        Panel.SetZIndex(node, 30);
+        NeuralCanvas.Children.Add(node);
+        _nodes.Add(new NeuralNode(x, y, z, layer, node));
+        return _nodes.Count - 1;
+    }
+
+    private void ConnectAdjacentLayers(List<int> left, List<int> right, int nearestCount)
+    {
+        for (int i = 0; i < left.Count; i++)
+        {
+            var distances = new List<(double Distance, int Index)>(right.Count);
+            var source = _nodes[left[i]];
+
+            for (int j = 0; j < right.Count; j++)
+            {
+                var target = _nodes[right[j]];
+                var dy = source.Y - target.Y;
+                var dz = source.Z - target.Z;
+                distances.Add((dy * dy + dz * dz, right[j]));
+            }
+
+            distances.Sort((a, b) => a.Distance.CompareTo(b.Distance));
+            var links = Math.Min(nearestCount, distances.Count);
+            for (int j = 0; j < links; j++)
+                AddConnection(left[i], distances[j].Index, j == 0 ? (byte)44 : (byte)25, j == 0 ? 0.86 : 0.62);
+        }
+    }
+
+    private void ConnectSkipLayer(List<int> left, List<int> right, int count)
+    {
+        if (left.Count == 0 || right.Count == 0)
+            return;
+
+        for (int i = 0; i < count; i++)
+        {
+            var a = left[(i * 3 + 1) % left.Count];
+            var b = right[(i * 5 + 2) % right.Count];
+            AddConnection(a, b, 14, 0.52);
+        }
+    }
+
+    private void AddConnection(int a, int b, byte alpha, double thickness)
+    {
+        var line = new Line
+        {
+            Stroke = new SolidColorBrush(Color.FromArgb(alpha, LineAccent.R, LineAccent.G, LineAccent.B)),
+            StrokeThickness = thickness,
+            Opacity = 0,
+            IsHitTestVisible = false
+        };
+
+        Panel.SetZIndex(line, 10);
+        NeuralCanvas.Children.Add(line);
+        _connections.Add(new NeuralConnection(a, b, line));
+    }
+
+    private void AnimateNetworkFadeIn()
+    {
+        if (_volumeGlow is not null)
+            FadeIn(_volumeGlow, 500, 1000);
+        if (_backPlane is not null)
+            FadeIn(_backPlane, 720, 1000);
+        if (_volumeShell is not null)
+            FadeIn(_volumeShell, 820, 1000);
+
+        for (int i = 0; i < _connections.Count; i++)
+            FadeIn(_connections[i].Visual, 900 + (i % 32) * 16, 900);
+
+        for (int i = 0; i < _nodes.Count; i++)
+            FadeIn(_nodes[i].Visual, 1100 + (i % 22) * 34, 760);
+    }
+
+    private void OnFrameTick(object? sender, EventArgs e)
+    {
+        _rotationY += 0.008;
+        _rotationX = 0.18 + Math.Sin(_rotationY * 0.7) * 0.045;
+        _breathPhase += 0.035;
+
+        foreach (var node in _nodes)
+            node.Activation = Math.Max(0, node.Activation - 0.035);
+
+        foreach (var connection in _connections)
+            connection.Activation = Math.Max(0, connection.Activation - 0.045);
+
+        for (int i = _activePulses.Count - 1; i >= 0; i--)
+        {
+            var pulse = _activePulses[i];
+            pulse.T += pulse.Speed;
+            if (pulse.T >= 1.0)
+            {
+                NeuralCanvas.Children.Remove(pulse.Visual);
+                _activePulses.RemoveAt(i);
+            }
+        }
+
+        RenderFrame();
+    }
+
+    private void RenderFrame()
+    {
+        if (_nodes.Count == 0)
+            return;
+
+        var cosY = Math.Cos(_rotationY);
+        var sinY = Math.Sin(_rotationY);
+        var cosX = Math.Cos(_rotationX);
+        var sinX = Math.Sin(_rotationX);
+
+        for (int i = 0; i < _nodes.Count; i++)
+        {
+            var node = _nodes[i];
+            Project(node.X, node.Y, node.Z, cosY, sinY, cosX, sinX, out var px, out var py, out var depth, out var perspective);
+
+            _screenX[i] = px;
+            _screenY[i] = py;
+            _screenDepth[i] = depth;
+
+            var depth01 = Clamp01((depth + 1.95) / 3.9);
+            var size = (4.6 + perspective * 4.2 + depth01 * 3.2) * (1.0 + node.Activation * 0.45);
+            var alpha = (byte)Math.Clamp(72 + depth01 * 155 + node.Activation * 28, 0, 255);
+            var color = Blend(PrimaryAccent, NodeCore, 0.32 + depth01 * 0.52 + node.Activation * 0.18);
+
+            node.Visual.Width = size;
+            node.Visual.Height = size;
+            node.Visual.Opacity = 0.46 + depth01 * 0.46 + node.Activation * 0.14;
+            node.Visual.Fill = CreateNodeBrush(color, alpha);
+            node.Visual.Stroke = new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B));
+            Canvas.SetLeft(node.Visual, px - size / 2);
+            Canvas.SetTop(node.Visual, py - size / 2);
+            Panel.SetZIndex(node.Visual, 30 + (int)(depth01 * 40));
+        }
+
+        foreach (var connection in _connections)
+        {
+            var a = connection.A;
+            var b = connection.B;
+            var depth01 = Clamp01((_screenDepth[a] + _screenDepth[b] + 3.9) / 7.8);
+            var alpha = (byte)Math.Clamp(16 + depth01 * 70 + connection.Activation * 132, 0, 220);
+            var color = Blend(LineAccent, SecondaryAccent, connection.Activation * 0.72 + depth01 * 0.18);
+
+            connection.Visual.X1 = _screenX[a];
+            connection.Visual.Y1 = _screenY[a];
+            connection.Visual.X2 = _screenX[b];
+            connection.Visual.Y2 = _screenY[b];
+            connection.Visual.StrokeThickness = 0.45 + depth01 * 0.72 + connection.Activation * 1.35;
+            connection.Visual.Stroke = new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B));
+            Panel.SetZIndex(connection.Visual, 8 + (int)(depth01 * 12));
+        }
+
+        UpdateActivePulseVisuals();
+        UpdateVolumeShell();
+    }
+
+    private static void Project(
+        double x,
+        double y,
+        double z,
+        double cosY,
+        double sinY,
+        double cosX,
+        double sinX,
+        out double px,
+        out double py,
+        out double depth,
+        out double perspective)
+    {
+        var x1 = x * cosY + z * sinY;
+        var z1 = -x * sinY + z * cosY;
+        var y1 = y * cosX - z1 * sinX;
+        var z2 = y * sinX + z1 * cosX;
+
+        perspective = CameraDistance / (CameraDistance - z2);
+        px = CanvasCenterX + x1 * ProjectionScale * perspective;
+        py = CanvasCenterY + y1 * ProjectionScale * perspective;
+        depth = z2;
+    }
+
+    private void UpdateActivePulseVisuals()
+    {
+        foreach (var pulse in _activePulses)
+        {
+            if (pulse.ConnectionIndex < 0 || pulse.ConnectionIndex >= _connections.Count)
+                continue;
+
+            var connection = _connections[pulse.ConnectionIndex];
+            var a = connection.A;
+            var b = connection.B;
+            var t = pulse.T;
+            var px = _screenX[a] + (_screenX[b] - _screenX[a]) * t;
+            var py = _screenY[a] + (_screenY[b] - _screenY[a]) * t;
+            var depth = _screenDepth[a] + (_screenDepth[b] - _screenDepth[a]) * t;
+            var depth01 = Clamp01((depth + 1.95) / 3.9);
+            var size = 3.6 + depth01 * 4.5;
+
+            pulse.Visual.Width = size;
+            pulse.Visual.Height = size;
+            pulse.Visual.Opacity = Math.Max(0, 1.0 - Math.Abs(t - 0.5) * 1.65);
+            Canvas.SetLeft(pulse.Visual, px - size / 2);
+            Canvas.SetTop(pulse.Visual, py - size / 2);
+            Panel.SetZIndex(pulse.Visual, 80 + (int)(depth01 * 30));
+        }
+    }
+
+    private void UpdateVolumeShell()
+    {
+        var breath = 0.5 + 0.5 * Math.Sin(_breathPhase);
+
+        if (_volumeShell is not null)
+            _volumeShell.Opacity = 0.34 + breath * 0.08;
+
+        if (_volumeGlow is not null)
+            _volumeGlow.Opacity = 0.52 + breath * 0.13;
+
+        if (_backPlane?.RenderTransform is SkewTransform skew)
+            skew.AngleX = -14 + Math.Sin(_rotationY) * 5.5;
+    }
+
+    private static RadialGradientBrush CreateNodeBrush(Color color, byte alpha)
+    {
+        return new RadialGradientBrush
+        {
+            Center = new Point(0.44, 0.42),
+            GradientOrigin = new Point(0.32, 0.28),
+            RadiusX = 0.72,
+            RadiusY = 0.72,
+            GradientStops =
+            {
+                new GradientStop(Color.FromArgb(245, NodeCore.R, NodeCore.G, NodeCore.B), 0.0),
+                new GradientStop(Color.FromArgb(alpha, color.R, color.G, color.B), 0.62),
+                new GradientStop(Color.FromArgb(42, color.R, color.G, color.B), 1.0)
+            }
+        };
+    }
+
+    private void OnPulseTick(object? sender, EventArgs e)
+    {
+        if (_connections.Count == 0)
+            return;
+
+        for (int i = 0; i < 5; i++)
+        {
+            _pulseCursor = (_pulseCursor + 9 + _rng.Next(17)) % _connections.Count;
+            FirePulse(_pulseCursor, i % 2 == 0 ? SecondaryAccent : PrimaryAccent);
+        }
+    }
+
+    private void FirePulse(int connectionIndex, Color color)
+    {
+        var connection = _connections[connectionIndex];
+        connection.Activation = 1.0;
+        _nodes[connection.A].Activation = Math.Max(_nodes[connection.A].Activation, 0.72);
+        _nodes[connection.B].Activation = 1.0;
+
+        var particle = new Ellipse
+        {
+            Width = 5,
+            Height = 5,
+            Opacity = 0.96,
+            Fill = new SolidColorBrush(Color.FromArgb(235, color.R, color.G, color.B)),
+            Effect = new DropShadowEffect
+            {
+                BlurRadius = 12,
+                ShadowDepth = 0,
+                Color = color,
+                Opacity = 0.72
+            },
+            IsHitTestVisible = false
+        };
+
+        NeuralCanvas.Children.Add(particle);
+        _activePulses.Add(new ActivePulse(connectionIndex, particle, color, 0.045 + _rng.NextDouble() * 0.018));
+    }
 
     private void RevealTitle(int startMs)
     {
-        FadeIn(TitleText, startMs, 1200);
+        FadeIn(TitleText, startMs, 1000);
 
-        // Slide von rechts (verdoppelt)
-        var slide = new DoubleAnimation(30, 0, TimeSpan.FromMilliseconds(1200))
+        var slide = new DoubleAnimation(24, 0, TimeSpan.FromMilliseconds(1000))
         {
             BeginTime = TimeSpan.FromMilliseconds(startMs),
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
         TitleSlide.BeginAnimation(TranslateTransform.XProperty, slide);
-
-        // Subtiler Glitch-Effekt (Rhythmus bleibt, nur spaeter ausgeloest)
-        var glitch = new ThicknessAnimation
-        {
-            From = new Thickness(0),
-            To = new Thickness(4, 0, 0, 0),
-            Duration = TimeSpan.FromMilliseconds(35),
-            AutoReverse = true,
-            RepeatBehavior = new RepeatBehavior(4),
-            BeginTime = TimeSpan.FromMilliseconds(startMs + 200)
-        };
-        TitleText.BeginAnimation(MarginProperty, glitch);
     }
-
-    // ── Fortschrittsleiste ────────────────────────────────────────────
 
     private void StartProgressBar()
     {
-        // Langsam wachsende Fortschrittsleiste (920px = volle Breite minus Margins)
-        // Dauer verdoppelt fuer 10s-Splash.
-        var grow = new DoubleAnimation(0, 920, TimeSpan.FromMilliseconds(11000))
+        var grow = new DoubleAnimation(0, 920, TimeSpan.FromMilliseconds(10500))
         {
-            BeginTime = TimeSpan.FromMilliseconds(1000),
+            BeginTime = TimeSpan.FromMilliseconds(900),
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
         };
         ProgressBar.BeginAnimation(WidthProperty, grow);
     }
-
-    // ── Status-Timer ──────────────────────────────────────────────────
 
     private void OnStatusTick(object? sender, EventArgs e)
     {
@@ -423,22 +634,22 @@ public partial class StartupSplashWindow : Window
 
         StatusText.Text = StatusMessages[_statusIndex];
 
-        // StatusDot Farbe je nach Phase
-        if (_statusIndex <= 2)
+        if (_statusIndex == StatusMessages.Length - 1)
         {
-            StatusDot.Fill = new SolidColorBrush(Color.FromRgb(0, 136, 255)); // Blau
-        }
-        else if (_statusIndex == StatusMessages.Length - 1)
-        {
-            // Bereit → Gruen
-            StatusText.Foreground = new SolidColorBrush(Color.FromRgb(0, 210, 160));
-            StatusDot.Fill = new SolidColorBrush(Color.FromRgb(0, 210, 160));
+            StatusText.Foreground = new SolidColorBrush(ReadyAccent);
+            StatusDot.Fill = new SolidColorBrush(ReadyAccent);
             _statusTimer.Stop();
             _pulseTimer.Stop();
         }
+        else if (_statusIndex >= 2)
+        {
+            StatusDot.Fill = new SolidColorBrush(SecondaryAccent);
+        }
+        else
+        {
+            StatusDot.Fill = new SolidColorBrush(PrimaryAccent);
+        }
     }
-
-    // ── Hilfs-Animationen ─────────────────────────────────────────────
 
     private static void FadeIn(UIElement element, int startMs, int durMs)
     {
@@ -450,7 +661,23 @@ public partial class StartupSplashWindow : Window
         element.BeginAnimation(UIElement.OpacityProperty, animation);
     }
 
-    // ── Oeffentliche API (unveraendert) ───────────────────────────────
+    private static Color Blend(Color from, Color to, double amount)
+    {
+        amount = Clamp01(amount);
+        return Color.FromRgb(
+            (byte)(from.R + (to.R - from.R) * amount),
+            (byte)(from.G + (to.G - from.G) * amount),
+            (byte)(from.B + (to.B - from.B) * amount));
+    }
+
+    private static double Clamp01(double value)
+    {
+        if (value < 0)
+            return 0;
+        if (value > 1)
+            return 1;
+        return value;
+    }
 
     public Task WaitAsync(TimeSpan duration)
     {
@@ -463,6 +690,7 @@ public partial class StartupSplashWindow : Window
     {
         _statusTimer.Stop();
         _pulseTimer.Stop();
+        _frameTimer.Stop();
 
         var tcs = new TaskCompletionSource<object?>();
 

@@ -1,4 +1,4 @@
-<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.BuilderPage"
+﻿<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.BuilderPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Views.Controls">
@@ -156,7 +156,7 @@
                         <TextBlock Text="Haltungen (gesamt)"
                                    Foreground="{StaticResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding TotalRows}"
-                                   FontSize="18"
+                                   FontSize="{StaticResource TypeH3}"
                                    FontWeight="SemiBold"/>
                     </StackPanel>
 
@@ -166,7 +166,7 @@
                         <TextBlock Text="Haltungen (Filter)"
                                    Foreground="{StaticResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding FilteredRowsCount}"
-                                   FontSize="18"
+                                   FontSize="{StaticResource TypeH3}"
                                    FontWeight="SemiBold"/>
                     </StackPanel>
 
@@ -176,7 +176,7 @@
                         <TextBlock Text="Netto total"
                                    Foreground="{StaticResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding NetTotalText}"
-                                   FontSize="18"
+                                   FontSize="{StaticResource TypeH3}"
                                    FontWeight="SemiBold"
                                    Foreground="{StaticResource NeonCyanBrush}"/>
                     </StackPanel>
@@ -186,7 +186,7 @@
                         <TextBlock Text="Mit Positionsdetails"
                                    Foreground="{StaticResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding RowsWithDetailedCosts}"
-                                   FontSize="16"
+                                   FontSize="{StaticResource TypeH4}"
                                    FontWeight="SemiBold"/>
                     </StackPanel>
 
@@ -195,7 +195,7 @@
                         <TextBlock Text="Ohne Kosten"
                                    Foreground="{StaticResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding RowsWithoutCosts}"
-                                   FontSize="16"
+                                   FontSize="{StaticResource TypeH4}"
                                    FontWeight="SemiBold"/>
                     </StackPanel>
 
@@ -204,7 +204,7 @@
                         <TextBlock Text="Ohne Eigentuemer"
                                    Foreground="{StaticResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding RowsWithoutOwner}"
-                                   FontSize="16"
+                                   FontSize="{StaticResource TypeH4}"
                                    FontWeight="SemiBold"/>
                     </StackPanel>
                 </Grid>

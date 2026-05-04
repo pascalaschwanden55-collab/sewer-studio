@@ -161,12 +161,14 @@
            TypeH2         = 22  Page-Header
            TypeH1         = 28  Window-Header / Hero
          ═══════════════════════════════════════════════════════════ -->
+    <system:Double x:Key="TypeMicro"      xmlns:system="clr-namespace:System;assembly=mscorlib">10</system:Double>
     <system:Double x:Key="TypeCaption"    xmlns:system="clr-namespace:System;assembly=mscorlib">11</system:Double>
     <system:Double x:Key="TypeSmall"      xmlns:system="clr-namespace:System;assembly=mscorlib">12</system:Double>
     <system:Double x:Key="TypeBody"       xmlns:system="clr-namespace:System;assembly=mscorlib">13</system:Double>
     <system:Double x:Key="TypeBodyLarge"  xmlns:system="clr-namespace:System;assembly=mscorlib">14</system:Double>
     <system:Double x:Key="TypeH4"         xmlns:system="clr-namespace:System;assembly=mscorlib">16</system:Double>
     <system:Double x:Key="TypeH3"         xmlns:system="clr-namespace:System;assembly=mscorlib">18</system:Double>
+    <system:Double x:Key="TypeIcon"       xmlns:system="clr-namespace:System;assembly=mscorlib">20</system:Double>
     <system:Double x:Key="TypeH2"         xmlns:system="clr-namespace:System;assembly=mscorlib">22</system:Double>
     <system:Double x:Key="TypeH1"         xmlns:system="clr-namespace:System;assembly=mscorlib">28</system:Double>
 

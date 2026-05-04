@@ -1,4 +1,4 @@
-<Window x:Class="AuswertungPro.Next.UI.Views.Windows.ObservationCatalogWindow"
+﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.ObservationCatalogWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
@@ -76,7 +76,7 @@
         <!-- Oben Mitte: Code-Titel und Beschreibung (wie WinCan-Original) -->
         <StackPanel Grid.Column="1" Grid.Row="0" Grid.ColumnSpan="2" Margin="4,0,0,0">
             <TextBlock Text="Beobachtung" FontWeight="SemiBold" Margin="0,2,0,4"/>
-            <TextBlock Text="{Binding CodeTitle}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
+            <TextBlock Text="{Binding CodeTitle}" FontSize="{StaticResource TypeH3}" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
                        Margin="0,0,0,4" TextWrapping="Wrap"/>
             <TextBlock Text="{Binding CodeDescription}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"
                        Margin="0,0,0,6" MaxHeight="40"/>

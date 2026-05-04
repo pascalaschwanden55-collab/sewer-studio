@@ -235,7 +235,7 @@
                                Margin="0,4,0,0"
                                Text="Video"
                                Foreground="{DynamicResource TextBrush}"
-                               FontSize="20"
+                               FontSize="{StaticResource TypeIcon}"
                                FontWeight="SemiBold"
                                TextTrimming="CharacterEllipsis"/>
                     <TextBlock x:Name="VideoPathText"
@@ -463,7 +463,7 @@
                                 <Ellipse Width="6" Height="6" Fill="#F59E0B" Margin="0,0,5,0"
                                          VerticalAlignment="Center"/>
                                 <TextBlock x:Name="TxtScanStatus" Text="KI scannt..."
-                                           Foreground="#F59E0B" FontSize="10" FontWeight="SemiBold"/>
+                                           Foreground="#F59E0B" FontSize="{StaticResource TypeMicro}" FontWeight="SemiBold"/>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -525,7 +525,7 @@
                             <Border Grid.Column="0" Style="{StaticResource PlayerCard}">
                                 <DockPanel>
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                                        <TextBlock Style="{StaticResource SectionLabel}" Margin="0" FontSize="10">
+                                        <TextBlock Style="{StaticResource SectionLabel}" Margin="0" FontSize="{StaticResource TypeMicro}">
                                             <Run Text="KI-BEFUNDE ("/>
                                             <Run x:Name="RunCodingDefectCount" Text="0"/>
                                             <Run Text=")"/>
@@ -619,7 +619,7 @@
                                                                    Margin="0,0,4,0"/>
                                                         <TextBlock Grid.Column="2"
                                                                    Text="{Binding Entry.Beschreibung}"
-                                                                   FontSize="10"
+                                                                   FontSize="{StaticResource TypeMicro}"
                                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                                    TextTrimming="CharacterEllipsis"
                                                                    VerticalAlignment="Center"/>
@@ -664,7 +664,7 @@
                                                FontFamily="Consolas" FontSize="{StaticResource TypeH4}" FontWeight="Bold"
                                                Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                                     <TextBlock x:Name="TxtInlineDetailDesc"
-                                               FontSize="10" TextWrapping="Wrap"
+                                               FontSize="{StaticResource TypeMicro}" TextWrapping="Wrap"
                                                Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
 
                                     <!-- Distanz + Position + Konfidenz -->
@@ -689,7 +689,7 @@
                                     </Grid>
 
                                     <!-- Status -->
-                                    <TextBlock x:Name="TxtInlineDetailStatus" FontSize="10"
+                                    <TextBlock x:Name="TxtInlineDetailStatus" FontSize="{StaticResource TypeMicro}"
                                                Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
 
                                     <!-- Aktionsbuttons vertikal -->
@@ -699,21 +699,21 @@
                                                 Background="#16A34A" Margin="0,0,0,4"
                                                 Click="CodingAcceptDefect_Click"
                                                 ToolTip="Ausgewaehlten KI-Befund akzeptieren und ins Protokoll uebernehmen">
-                                            <TextBlock Text="&#x2713; Akzeptieren" FontSize="10"/>
+                                            <TextBlock Text="&#x2713; Akzeptieren" FontSize="{StaticResource TypeMicro}"/>
                                         </Button>
                                         <Button x:Name="BtnInlineEdit"
                                                 Style="{StaticResource DefectActionBtn}"
                                                 Background="#D97706" Margin="0,0,0,4"
                                                 Click="CodingEditDefect_Click"
                                                 ToolTip="Befund-Details wie Code, Schweregrad oder Beschreibung bearbeiten">
-                                            <TextBlock Text="&#x2699; Bearbeiten" FontSize="10"/>
+                                            <TextBlock Text="&#x2699; Bearbeiten" FontSize="{StaticResource TypeMicro}"/>
                                         </Button>
                                         <Button x:Name="BtnInlineReject"
                                                 Style="{StaticResource DefectActionBtn}"
                                                 Background="#DC2626"
                                                 Click="CodingRejectDefect_Click"
                                                 ToolTip="Befund ablehnen und aus der KI-Befundliste entfernen">
-                                            <TextBlock Text="&#x2717; Ablehnen" FontSize="10"/>
+                                            <TextBlock Text="&#x2717; Ablehnen" FontSize="{StaticResource TypeMicro}"/>
                                         </Button>
                                     </StackPanel>
                                 </StackPanel>
@@ -723,7 +723,7 @@
                             <Border Grid.Column="4" Style="{StaticResource PlayerCard}">
                                 <DockPanel>
                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                                        <TextBlock Style="{StaticResource SectionLabel}" Margin="0" FontSize="10">
+                                        <TextBlock Style="{StaticResource SectionLabel}" Margin="0" FontSize="{StaticResource TypeMicro}">
                                             <Run Text="IMPORT ("/>
                                             <Run x:Name="RunImportDefectCount" Text="0"/>
                                             <Run Text=")"/>
@@ -795,7 +795,7 @@
                                                                    Margin="0,0,4,0"/>
                                                         <TextBlock Grid.Column="2"
                                                                    Text="{Binding Entry.Beschreibung}"
-                                                                   FontSize="10"
+                                                                   FontSize="{StaticResource TypeMicro}"
                                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                                    TextTrimming="CharacterEllipsis"
                                                                    VerticalAlignment="Center"/>
@@ -839,7 +839,7 @@
                                     </Grid.ColumnDefinitions>
                                     <Border Grid.Column="0" Style="{StaticResource StatTile}">
                                         <StackPanel>
-                                            <TextBlock Text="EN 13508-2 Code" FontSize="10"
+                                            <TextBlock Text="EN 13508-2 Code" FontSize="{StaticResource TypeMicro}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingDetailCode"
                                                        FontFamily="Consolas" FontSize="{StaticResource TypeH3}" FontWeight="Bold"
@@ -848,7 +848,7 @@
                                     </Border>
                                     <Border Grid.Column="2" Style="{StaticResource StatTile}">
                                         <StackPanel>
-                                            <TextBlock Text="Schweregrad" FontSize="10"
+                                            <TextBlock Text="Schweregrad" FontSize="{StaticResource TypeMicro}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingDetailSeverity"
                                                        FontSize="{StaticResource TypeH3}" FontWeight="Bold"
@@ -860,7 +860,7 @@
                                 <!-- Beschreibung -->
                                 <Border Style="{StaticResource StatTile}" Margin="0,0,0,6">
                                     <StackPanel>
-                                        <TextBlock Text="Beschreibung" FontSize="10"
+                                        <TextBlock Text="Beschreibung" FontSize="{StaticResource TypeMicro}"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                                         <TextBlock x:Name="TxtCodingDetailDescription"
                                                    FontSize="{StaticResource TypeSmall}" TextWrapping="Wrap"
@@ -967,14 +967,14 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0">
                                     <TextBlock Text="KALIB." FontSize="8" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                    <TextBlock x:Name="TxtCodingCalibDn" FontSize="10" Foreground="{DynamicResource TextBrush}" Text="DN: &#x2014;"/>
+                                    <TextBlock x:Name="TxtCodingCalibDn" FontSize="{StaticResource TypeMicro}" Foreground="{DynamicResource TextBrush}" Text="DN: &#x2014;"/>
                                     <TextBlock x:Name="TxtCodingCalibStatus" FontSize="9" Foreground="{DynamicResource TextSecondaryBrush}" Text="&#x2014;"/>
                                 </StackPanel>
                                 <WrapPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock x:Name="TxtCodingQ1" FontSize="10" Foreground="{DynamicResource TextBrush}" Text="Q1:&#x2014;" Margin="0,0,8,0"/>
-                                    <TextBlock x:Name="TxtCodingQ2" FontSize="10" Foreground="{DynamicResource TextBrush}" Text="Q2:&#x2014;" Margin="0,0,8,0"/>
-                                    <TextBlock x:Name="TxtCodingClock" FontSize="10" Foreground="{DynamicResource TextBrush}" Text="Uhr:&#x2014;" Margin="0,0,8,0"/>
-                                    <TextBlock x:Name="TxtCodingArc" FontSize="10" Foreground="{DynamicResource TextBrush}" Text="Bogen:&#x2014;"/>
+                                    <TextBlock x:Name="TxtCodingQ1" FontSize="{StaticResource TypeMicro}" Foreground="{DynamicResource TextBrush}" Text="Q1:&#x2014;" Margin="0,0,8,0"/>
+                                    <TextBlock x:Name="TxtCodingQ2" FontSize="{StaticResource TypeMicro}" Foreground="{DynamicResource TextBrush}" Text="Q2:&#x2014;" Margin="0,0,8,0"/>
+                                    <TextBlock x:Name="TxtCodingClock" FontSize="{StaticResource TypeMicro}" Foreground="{DynamicResource TextBrush}" Text="Uhr:&#x2014;" Margin="0,0,8,0"/>
+                                    <TextBlock x:Name="TxtCodingArc" FontSize="{StaticResource TypeMicro}" Foreground="{DynamicResource TextBrush}" Text="Bogen:&#x2014;"/>
                                 </WrapPanel>
                             </Grid>
                         </Border>
@@ -1020,37 +1020,37 @@
 
                                     <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource StatTile}">
                                         <StackPanel>
-                                            <TextBlock Text="Auto-Akzeptiert" FontSize="10"
+                                            <TextBlock Text="Auto-Akzeptiert" FontSize="{StaticResource TypeMicro}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatAutoAccepted"
-                                                       Text="0" FontSize="20" FontWeight="Bold"
+                                                       Text="0" FontSize="{StaticResource TypeIcon}" FontWeight="Bold"
                                                        Foreground="#22C55E"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource StatTile}">
                                         <StackPanel>
-                                            <TextBlock Text="Pending Review" FontSize="10"
+                                            <TextBlock Text="Pending Review" FontSize="{StaticResource TypeMicro}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatPending"
-                                                       Text="0" FontSize="20" FontWeight="Bold"
+                                                       Text="0" FontSize="{StaticResource TypeIcon}" FontWeight="Bold"
                                                        Foreground="#F59E0B"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource StatTile}">
                                         <StackPanel>
-                                            <TextBlock Text="Manuell erforderlich" FontSize="10"
+                                            <TextBlock Text="Manuell erforderlich" FontSize="{StaticResource TypeMicro}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatReviewRequired"
-                                                       Text="0" FontSize="20" FontWeight="Bold"
+                                                       Text="0" FontSize="{StaticResource TypeIcon}" FontWeight="Bold"
                                                        Foreground="#EF4444"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource StatTile}">
                                         <StackPanel>
-                                            <TextBlock Text="Avg. Konfidenz" FontSize="10"
+                                            <TextBlock Text="Avg. Konfidenz" FontSize="{StaticResource TypeMicro}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatAvgConfidence"
-                                                       Text="&#x2014;" FontSize="20" FontWeight="Bold"
+                                                       Text="&#x2014;" FontSize="{StaticResource TypeIcon}" FontWeight="Bold"
                                                        Foreground="{DynamicResource AccentBrush}"/>
                                         </StackPanel>
                                     </Border>
@@ -1093,7 +1093,7 @@
                                            TextWrapping="Wrap"/>
                                 <TextBlock x:Name="TxtTrainingCount"
                                            Text="0 Samples in dieser Sitzung"
-                                           FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontSize="{StaticResource TypeMicro}" Foreground="{DynamicResource TextSecondaryBrush}"
                                            Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
@@ -1141,7 +1141,7 @@
                                 Padding="10,8" Margin="0,0,0,8">
                             <StackPanel>
                                 <TextBlock Text="HINWEISE" Style="{StaticResource SectionLabel}"/>
-                                <TextBlock TextWrapping="Wrap" FontSize="10"
+                                <TextBlock TextWrapping="Wrap" FontSize="{StaticResource TypeMicro}"
                                            Foreground="{DynamicResource TextSecondaryBrush}">
                                     &#x2022; Leertaste: Video pausieren/weiter&#x0A;&#x2022; Rechteck: Ziehen mit gedrueckter Maustaste&#x0A;&#x2022; Code-Auswahl oeffnet sich nach "Speichern"&#x0A;&#x2022; Frame wird automatisch als PNG exportiert&#x0A;&#x2022; KB indexiert das Sample wenn Ollama laeuft
                                 </TextBlock>
@@ -1193,7 +1193,7 @@
                     <Border Width="1" Height="28" Background="{DynamicResource BorderBrush}" Margin="0,0,8,0"/>
 
                     <!-- Aktives Werkzeug Label -->
-                    <TextBlock x:Name="TxtActiveToolLabel" Text="" FontSize="10" FontWeight="SemiBold"
+                    <TextBlock x:Name="TxtActiveToolLabel" Text="" FontSize="{StaticResource TypeMicro}" FontWeight="SemiBold"
                                Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"
                                Margin="0,0,6,0"/>
 
@@ -1277,7 +1277,7 @@
                                 Cursor="Hand"
                                 Click="CodingClearOverlays_Click"
                                 ToolTip="Alle Einblendungen/Markierungen vom Video entfernen">
-                            <TextBlock Text="&#x2716; Overlays aus" FontSize="10"/>
+                            <TextBlock Text="&#x2716; Overlays aus" FontSize="{StaticResource TypeMicro}"/>
                         </Button>
                         <ToggleButton x:Name="BtnEingabemarker" Style="{StaticResource SpeedToggleButton}"
                                       IsChecked="False" Margin="0,0,0,0"
@@ -1377,12 +1377,12 @@
                                                    VerticalAlignment="Center" Margin="6,0,0,0"
                                                    Text="{Binding Description, Mode=OneWay}"/>
                                         <!-- Meter + Uhr (wenn vorhanden) -->
-                                        <TextBlock FontSize="10"
+                                        <TextBlock FontSize="{StaticResource TypeMicro}"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                    VerticalAlignment="Center" Margin="8,0,0,0"
                                                    Text="{Binding PositionText, Mode=OneWay}"/>
                                         <!-- Confidence -->
-                                        <TextBlock FontSize="10" FontWeight="SemiBold"
+                                        <TextBlock FontSize="{StaticResource TypeMicro}" FontWeight="SemiBold"
                                                    Foreground="{Binding ConfidenceBrush}"
                                                    VerticalAlignment="Center" Margin="6,0,0,0"
                                                    Text="{Binding ConfidenceText, Mode=OneWay}"/>
@@ -1426,7 +1426,7 @@
                                FontSize="{StaticResource TypeCaption}" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
                     <TextBlock x:Name="TxtYoloModel" Text=""
-                               FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="{StaticResource TypeMicro}" Foreground="{DynamicResource TextSecondaryBrush}"
                                Margin="8,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
             </Border>

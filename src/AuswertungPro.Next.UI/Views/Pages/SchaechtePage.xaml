@@ -55,19 +55,19 @@
                 <StackPanel Orientation="Horizontal">
                     <Button Command="{Binding SaveCommand}" Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBody}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Speichern" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding AddCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource NeonGreenBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBody}" Foreground="{StaticResource NeonGreenBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Neu" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding RemoveCommand}" Style="{StaticResource ToolbarButtonDanger}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBody}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Löschen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -76,13 +76,13 @@
 
                     <Button Command="{Binding MoveUpCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74A;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE74A;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBody}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Hoch" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding MoveDownCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74B;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE74B;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBody}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Runter" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -112,7 +112,7 @@
                                  TextChanged="SearchBox_TextChanged"/>
                         <Button Margin="4,0,0,0" Style="{StaticResource IconButton}"
                                 Command="{Binding ClearSearchCommand}" ToolTip="Suche zurücksetzen">
-                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeSmall}"/>
                         </Button>
 
                         <TextBlock Text="{Binding SearchResultInfo}" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>

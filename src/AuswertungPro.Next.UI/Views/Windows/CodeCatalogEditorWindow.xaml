@@ -1,4 +1,4 @@
-<Window x:Class="AuswertungPro.Next.UI.Views.Windows.CodeCatalogEditorWindow"
+﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.CodeCatalogEditorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Code-Katalog"
@@ -44,7 +44,7 @@
 
         <Border Grid.Row="1" Grid.Column="1" Padding="12" BorderThickness="1" CornerRadius="8">
             <StackPanel>
-                <TextBlock Text="Detail" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
+                <TextBlock Text="Detail" FontSize="{StaticResource TypeH4}" FontWeight="SemiBold" Margin="0,0,0,10" />
                 <TextBlock Text="Code" />
                 <TextBox Margin="0,2,0,8"
                          Text="{Binding SelectedCode.Code, UpdateSourceTrigger=PropertyChanged}" />
