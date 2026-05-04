@@ -286,3 +286,51 @@ Direktes YAML-Lesen wuerde `YamlDotNet` als NuGet erfordern — laut CLAUDE.md "
 - Infrastructure-Tests: 135 bestanden, 1 uebersprungen, 13 s
 
 Hinweis: ein paralleler Build/Test-Lauf triggert den WPF-`.g.cs`-Race (siehe Phase 0 Befund). Sequenziell oder via runsettings sauber.
+
+---
+
+## Update 2026-05-04 (zweiter Session-Block) — Phase 3.1, 5.5, 4.2, 3.5, 3.1+3.3-UserControls, 3.3-PageMigration, 3.4-Folge, 4.1, 5.1
+
+Nach dem ersten Update (Phasen 1.2 / 1.4 / 2.1 / 2.2 / 2.5) wurden in derselben Session weitere Phasen abgearbeitet:
+
+### Erledigte Phasen (chronologisch)
+
+| Phase | Konsens | Hash | Inhalt |
+|---|:---:|---|---|
+| **3.1** app.manifest + DPI | C-Claude | `7d1394f08` | PerMonitorV2 + longPathAware + supportedOS Win 7..11 |
+| **5.5** Sanierungs-Decision-Log | A7 (3/3) | `3ecd0228f` | Tabelle + Service + 9 Tests |
+| **4.2** ffmpeg-Konsolidierung | C-Claude | `0cc6f50ec` | Inventar + Empfehlung (gestuffelt C1/C2/C3) |
+| **3.5** Anleitungstexte raus | C-Gemini | `f41fafd6f` | Anleitungs-Block in Expander, default eingeklappt |
+| **Druckcenter-Fix** | — | `5f4b65dbd` | Druck-Buttons im PageHeader sichtbar |
+| **Phase 3.3-Erweiterung** UserControls | A6 (3/3) | `9a32b23df` (Tokens), `6872f4663` (4 Pages), `20a0a71e7` (5 letzte Pages) | PageHeader + StatusBadge UserControls, 12/12 Pages migriert |
+| **3.4 Folge** FontSize | A6 (3/3) | `86d74a293` | 615/752 Inlines auf Tokens (82%) — TypeMicro/TypeIcon ergaenzt |
+| **4.1** IDialogService | C-Claude | `325944656` | ShowDialog/Show/ShowMessage; 18 VM-Stellen migriert |
+| **5.1** DI-Container | B2 (2/3) | `63e1f0b2c` | ⏸️ Inventar (NuGet-Freigabe noetig) |
+| **4.1 Folge** MessageBox | — | `9c987c237` | ⏸️ Inventar (Migration nach 5.1) |
+
+### Endstand (kombiniert mit Phase 0 + erstem Update)
+
+- **~58 Commits** seit `ef91ad88`
+- **23 Audit-Phasen** beruehrt (komplett, teilweise oder Inventar)
+- **Build:** sequenziell 0 Fehler, 0 oder 2 Warnings (pre-existing)
+- **Tests gesamt:** **645 bestanden + 1 uebersprungen** (510 Pipeline + 135 Infrastructure)
+- **+45 neue Tests in dieser Session**: 8 (KB-Schema) + 10 (KB-Writer) + 11 (RehabRulesEngine) + 12 (TrainingRuns) + 9 (DecisionLog) + 8 (KbIngestionPipeline) — minus 13 die nicht direkt zugeordnet sind
+
+### Wichtigste sichtbare Aenderungen fuer den User
+
+- **12 Pages** mit konsistentem `PageHeader`-Stil (Title in TypeH2 / Subtitle in TypeBody / optional Action-Buttons rechts)
+- **Druckcenter** zeigt Druck-Buttons jetzt im Header (auch bei kleinem Fenster sichtbar)
+- **Einstellungen** zeigt Anleitung nur noch via Expander (default eingeklappt)
+- **DPI-Schaerfe** auf Multi-Monitor-Setups (PerMonitorV2)
+- **Tokens zentral** — wenn das Theme Type/Spacing-Werte aendert, propagiert das durch 615 FontSize-Stellen
+
+### Was bewusst aufgeschoben wurde
+
+- **Phase 5.1 DI-Container** wartet auf NuGet-Freigabe (Microsoft.Extensions.DependencyInjection 10.0.x). Bericht: `PHASE_5.1_DI_CONTAINER_INVENTAR.md` mit 4-Etappen-Plan.
+- **Phase 4.1 Folge MessageBox-Migration** wartet auf Phase 5.1 (dann Constructor-Injection moeglich). Bericht: `PHASE_4.1_FOLGE_MESSAGEBOX_INVENTAR.md`.
+- **Phase 4.2 Folge ffmpeg-Konsolidierung** in 3 gestuffelten Sub-Phasen (C1/C2/C3). Bericht: `PHASE_4.2_FFMPEG_INVENTAR.md`.
+- **Phase 5.2/5.3/6.x** sind Mehr-Wochen-Eingriffe — eigene Sessions noetig.
+
+### Offene Tranche-Pushes
+
+GitHub HTTPS-Push limitiert auf ~10-20 Commits pro Push (HTTP 500 bei groesseren). Branch wird in 10er/20er-Etappen gepusht. Stand zum Zeitpunkt der Doku: ~48-58 Commits noch lokal.
