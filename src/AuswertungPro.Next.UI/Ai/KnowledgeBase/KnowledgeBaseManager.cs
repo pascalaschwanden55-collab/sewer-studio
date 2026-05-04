@@ -382,13 +382,15 @@ public sealed class KnowledgeBaseManager(
 
     private void UpsertSample(TrainingSample s, string versionId)
     {
+        // Phase 4.4: aktuelle RunId mitschreiben falls Run aktiv (sonst NULL).
+        var runId = GetActiveRunId();
         ExecuteNonQuery("""
             INSERT OR REPLACE INTO Samples
                 (SampleId, CaseId, VsaCode, Beschreibung, MeterStart, MeterEnd,
                  IsStreck, FramePath, ExportedUtc, VersionId, SourceType,
-                 Rohrmaterial, NennweiteMm, IsKorrigiert, QualityGateLevel)
+                 Rohrmaterial, NennweiteMm, IsKorrigiert, QualityGateLevel, RunId)
             VALUES ($id, $caseId, $code, $desc, $ms, $me, $streck, $frame, $exp, $ver, $source,
-                    $rm, $dn, $korr, $qg)
+                    $rm, $dn, $korr, $qg, $run)
             """,
             ("$id",     s.SampleId),
             ("$caseId", s.CaseId),
@@ -404,7 +406,111 @@ public sealed class KnowledgeBaseManager(
             ("$rm",     s.Rohrmaterial),
             ("$dn",     s.NennweiteMm),
             ("$korr",   s.IsKorrigiert ? 1 : 0),
-            ("$qg",     s.QualityGateLevel));
+            ("$qg",     s.QualityGateLevel),
+            ("$run",    (object?)runId ?? DBNull.Value));
+    }
+
+    // ── Phase 4.4: TrainingRuns / Provenance ────────────────────────────
+
+    private string? _activeRunId;
+    private readonly object _runLock = new();
+
+    /// <summary>
+    /// Phase 4.4: Aktuelle Run-Id (falls ein Run aktiv ist) — wird automatisch
+    /// von UpsertSample mitgeschrieben. Wenn null, bekommen Samples RunId=NULL.
+    /// </summary>
+    public string? GetActiveRunId()
+    {
+        lock (_runLock) { return _activeRunId; }
+    }
+
+    /// <summary>
+    /// Phase 4.4: Startet einen neuen Trainings-/Indexierungs-Run mit
+    /// Provenance-Metadaten. Gibt die generierte RunId zurueck. Aktiver Run
+    /// wird automatisch von UpsertSample fuer alle nachfolgenden Inserts
+    /// uebernommen, bis EndRun aufgerufen wird.
+    /// </summary>
+    /// <param name="modelName">Embed-/Vision-Modell (z.B. "nomic-embed-text").</param>
+    /// <param name="modelVersion">Versions-Tag (z.B. "v1.5", "F16"). Leer erlaubt.</param>
+    /// <param name="promptVersion">Prompt-Version aus PipelineVersions. Leer erlaubt.</param>
+    /// <param name="pipelineVersion">Pipeline-Version. Leer erlaubt.</param>
+    /// <param name="notes">Freitext zur Beschreibung des Runs.</param>
+    public string BeginRun(
+        string modelName,
+        string modelVersion = "",
+        string promptVersion = "",
+        string pipelineVersion = "",
+        string notes = "")
+    {
+        var runId = Guid.NewGuid().ToString("N");
+        var startedUtc = DateTime.UtcNow.ToString("O");
+
+        _writer.Execute(_ =>
+        {
+            ExecuteNonQuery("""
+                INSERT INTO TrainingRuns
+                    (RunId, StartedUtc, EndedUtc, ModelName, ModelVersion,
+                     PromptVersion, PipelineVersion, Status, SampleCount, Notes)
+                VALUES ($id, $start, NULL, $mn, $mv, $pv, $piv, 'in_progress', 0, $notes)
+                """,
+                ("$id",    (object?)runId),
+                ("$start", (object?)startedUtc),
+                ("$mn",    (object?)modelName),
+                ("$mv",    (object?)modelVersion),
+                ("$pv",    (object?)promptVersion),
+                ("$piv",   (object?)pipelineVersion),
+                ("$notes", (object?)notes));
+        });
+
+        lock (_runLock) { _activeRunId = runId; }
+        return runId;
+    }
+
+    /// <summary>
+    /// Phase 4.4: Beendet einen Run. Setzt EndedUtc, Status und Notes.
+    /// SampleCount wird nicht gesetzt — kann via SQL-COUNT-Query nachvollzogen
+    /// werden (Samples WHERE RunId=...). EndRun ist idempotent gegen RunId-Wiederholung.
+    /// </summary>
+    /// <param name="runId">RunId aus BeginRun.</param>
+    /// <param name="status">"completed", "failed", "cancelled". Default: completed.</param>
+    /// <param name="finalNotes">Wenn nicht null: ueberschreibt Notes-Feld.</param>
+    public void EndRun(string runId, string status = "completed", string? finalNotes = null)
+    {
+        if (string.IsNullOrWhiteSpace(runId)) return;
+        var endedUtc = DateTime.UtcNow.ToString("O");
+
+        _writer.Execute(_ =>
+        {
+            if (finalNotes is null)
+            {
+                ExecuteNonQuery("""
+                    UPDATE TrainingRuns
+                       SET EndedUtc = $end, Status = $st
+                     WHERE RunId = $id
+                    """,
+                    ("$id",  (object?)runId),
+                    ("$end", (object?)endedUtc),
+                    ("$st",  (object?)status));
+            }
+            else
+            {
+                ExecuteNonQuery("""
+                    UPDATE TrainingRuns
+                       SET EndedUtc = $end, Status = $st, Notes = $notes
+                     WHERE RunId = $id
+                    """,
+                    ("$id",    (object?)runId),
+                    ("$end",   (object?)endedUtc),
+                    ("$st",    (object?)status),
+                    ("$notes", (object?)finalNotes));
+            }
+        });
+
+        lock (_runLock)
+        {
+            if (string.Equals(_activeRunId, runId, StringComparison.OrdinalIgnoreCase))
+                _activeRunId = null;
+        }
     }
 
     private void UpsertEmbedding(string sampleId, float[] vector)

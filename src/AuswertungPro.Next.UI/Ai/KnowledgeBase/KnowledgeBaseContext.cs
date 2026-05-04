@@ -112,6 +112,38 @@ public sealed class KnowledgeBaseContext : IDisposable
         MigrateAddColumn("Samples", "IsKorrigiert", "INTEGER NOT NULL DEFAULT 0");
         MigrateAddColumn("Samples", "QualityGateLevel", "TEXT DEFAULT NULL");
 
+        // Phase 4.4: TrainingRuns-Tabelle fuer Provenance-Tracking.
+        // Jeder Trainings-/Indexierungs-Lauf bekommt eine RunId. Modell-, Prompt-
+        // und Pipeline-Versionen werden persistiert, damit nachvollziehbar bleibt
+        // mit welchem Stack ein Sample erzeugt wurde — wichtig bei Modell-Upgrade,
+        // Prompt-Aenderung oder Pipeline-Refactor.
+        // Versions-Tabelle (oben) bleibt fuer KB-Snapshot-Identitaet erhalten,
+        // TrainingRuns ist die feiner granulare Provenance-Schicht.
+        ExecuteNonQuery("""
+            CREATE TABLE IF NOT EXISTS TrainingRuns (
+                RunId           TEXT PRIMARY KEY,
+                StartedUtc      TEXT NOT NULL,
+                EndedUtc        TEXT NULL,
+                ModelName       TEXT NOT NULL DEFAULT '',
+                ModelVersion    TEXT NOT NULL DEFAULT '',
+                PromptVersion   TEXT NOT NULL DEFAULT '',
+                PipelineVersion TEXT NOT NULL DEFAULT '',
+                Status          TEXT NOT NULL DEFAULT 'in_progress',
+                SampleCount     INTEGER NOT NULL DEFAULT 0,
+                Notes           TEXT NOT NULL DEFAULT ''
+            );
+            """);
+        ExecuteNonQuery("""
+            CREATE INDEX IF NOT EXISTS idx_training_runs_started
+                ON TrainingRuns(StartedUtc DESC);
+            """);
+
+        // Phase 4.4: Samples.RunId — optionaler Verweis auf TrainingRuns.RunId.
+        // NULL erlaubt fuer Samples aus Pre-4.4-DBs oder ohne aktiven Run.
+        // Kein FK-Constraint (TrainingRuns kann theoretisch geloescht werden,
+        // ohne dass Samples wegfallen sollen). Nachvollziehbarkeit > Strenge.
+        MigrateAddColumn("Samples", "RunId", "TEXT NULL");
+
         // Index für schnelle Code-Suche
         ExecuteNonQuery("""
             CREATE INDEX IF NOT EXISTS idx_samples_code
