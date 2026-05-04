@@ -148,7 +148,7 @@ Diese 5 Punkte haben **alle drei** Audits unabhängig genannt — sie sind unbes
 | # | Aufgabe | Konsens | Aufwand | Status |
 |---|---|---|---|---|
 | 0.1 | ~~Build reparieren (140 XAML-Fehler in DataPage / ClockPicker / Schaechte)~~ | B1 (2/3) | 1 Zeile (statt 1 Tag) | ✅ 2026-05-04 |
-| 0.1b | **Pipeline-Tests trennen** (Trait Categories: Unit / Integration / GpuEval / LongRunning) — sonst bleibt `dotnet test` unbenutzbar | C-Codex + B2.2-konsolidiert (2/3) | 4 h | offen |
+| 0.1b | ~~**Pipeline-Tests trennen** (Default-Filter)~~ — `.runsettings` mit `Category!=GpuEval&LongRunning` als Default. 452 Tests, 14 s. Manueller GPU-Lauf via `.runsettings.gpu`. Trait-Sweep fuer untraitierte Tests bleibt offen. | C-Codex + B2.2-konsolidiert (2/3) | 1 h (statt 4) | ✅ 2026-05-04 |
 | 0.2 | kbHttp-Leak fixen (ServiceProvider.cs:230) | B9 (2/3) | 1 h | offen |
 | 0.3 | SafeFireAndForget überall einsetzen (Helper existiert) | A4 (3/3) | 1 h | offen |
 | 0.4 | DamageClassesPromptFull aktivieren | C-Claude | 30 min | offen |
@@ -246,7 +246,7 @@ Diese drei Punkte tauchen im konsolidierten Audit (`audit_konsolidiert_2026-05-0
 Wenn nur 10 Dinge gemacht werden, dann diese:
 
 1. ~~**Build reparieren** (Phase 0.1)~~ — ✅ erledigt 2026-05-04 (1 Zeile, siehe B1).
-   **Neu auf #1:** **Pipeline-Tests von GPU/Langzeit trennen** (Trait Categories) — ohne das bleibt `dotnet test` unbenutzbar (Codex C-Punkt + konsolidierter Audit Befund 2.2 = Konsens 2/3).
+   ~~**Neu auf #1:** Pipeline-Tests von GPU/Langzeit trennen~~ — ✅ erledigt 2026-05-04 (`.runsettings`-Default, 452 Tests in 14 s).
 2. **7-22 GB Repo-Ballast löschen** (Phase 1.1) — Codex/konsolidiert: 22.9 GB sidecar, Claude: 7 GB sidecar/florence2_shadow_log + .pt-Roots
 3. **Empty-catch-Sweep** (Phase 1.2 + 4.3)
 4. **Hydraulik/Eigendevis raus oder optional** (Phase 1.4)
