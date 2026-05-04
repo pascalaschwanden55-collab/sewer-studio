@@ -151,7 +151,9 @@ Diese 5 Punkte haben **alle drei** Audits unabhängig genannt — sie sind unbes
 | 0.1b | ~~**Pipeline-Tests trennen** (Default-Filter)~~ — `.runsettings` mit `Category!=GpuEval&LongRunning` als Default. 452 Tests, 14 s. Manueller GPU-Lauf via `.runsettings.gpu`. Trait-Sweep fuer untraitierte Tests bleibt offen. | C-Codex + B2.2-konsolidiert (2/3) | 1 h (statt 4) | ✅ 2026-05-04 |
 | 0.2 | ~~kbHttp-Leak fixen (ServiceProvider.cs:230)~~ — Field statt local var, ServiceProvider : IDisposable, catch-Block disposed explizit. Caller-Side Dispose() ist optional (App.OnExit-Hook offen). | B9 (2/3) | 1 h | ✅ 2026-05-04 |
 | 0.3 | ~~SafeFireAndForget überall einsetzen (Helper existiert)~~ — 6 Stellen in PlayerWindow.xaml.cs migriert (4 Audit-genannt + 2 dasselbe Pattern). 1 Stelle bewusst nicht migriert (eigenes try/catch). | A4 (3/3) | 1 h | ✅ 2026-05-04 |
-| 0.4 | DamageClassesPromptFull aktivieren | C-Claude | 30 min | offen |
+| 0.4 | ~~DamageClassesPromptFull aktivieren~~ — Konstruktor-Parameter `useFullDamagePrompt`, 3 Batch/Video-Aufrufer umgestellt, Pragma weg. Codier-Modus unveraendert. | C-Claude | 30 min | ✅ 2026-05-04 |
+| 0.5 | ~~Caller-Side `ServiceProvider.Dispose()` in `App.OnExit`~~ — Hook ergaenzt (Folge von 0.2). | (Folge 0.2) | 5 min | ✅ 2026-05-04 |
+| 0.6 | ~~SafeFireAndForget-Sweep ausserhalb PlayerWindow~~ — 9 Stellen migriert (OverviewPage 8x, KnowledgeMirror 1x). UI-Klick-Handler bewusst nicht migriert (kein Stabilitaetsrisiko). | (Folge A4) | 30 min | ✅ 2026-05-04 |
 
 ### Phase 1 — diese Woche (Quick-Wins)
 | # | Aufgabe | Konsens | Aufwand |
