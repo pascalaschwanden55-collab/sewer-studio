@@ -1,0 +1,24 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Views.Controls.StatusBadge"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="StatusBadgeRoot">
+    <!-- Phase 3.3: Zentraler StatusBadge fuer Quality-Gate-/Status-Anzeige.
+         Vorgegebene Variants: Success (Green), Warning (Yellow), Danger (Red),
+         Info (Accent), Muted (grau). Variant-Property steuert Farben.
+
+         Verwendung:
+           <ctrl:StatusBadge Text="OK" Variant="Success"/>
+           <ctrl:StatusBadge Text="Pruefen" Variant="Warning"/>
+           <ctrl:StatusBadge Text="Kritisch" Variant="Danger"/>
+    -->
+    <Border CornerRadius="3"
+            Padding="8,2"
+            Background="{Binding BackgroundBrush, ElementName=StatusBadgeRoot}"
+            BorderBrush="{Binding BorderBrushColor, ElementName=StatusBadgeRoot}"
+            BorderThickness="1">
+        <TextBlock Text="{Binding Text, ElementName=StatusBadgeRoot}"
+                   FontSize="{StaticResource TypeCaption}"
+                   FontWeight="SemiBold"
+                   Foreground="{Binding ForegroundBrush, ElementName=StatusBadgeRoot}"/>
+    </Border>
+</UserControl>
