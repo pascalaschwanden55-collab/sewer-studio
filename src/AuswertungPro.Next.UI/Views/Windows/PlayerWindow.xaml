@@ -229,7 +229,7 @@
                 <StackPanel Grid.Column="1">
                     <TextBlock Text="Videoplayer"
                                Foreground="{DynamicResource NeonCyanBrush}"
-                               FontSize="12"
+                               FontSize="{StaticResource TypeSmall}"
                                FontWeight="SemiBold"/>
                     <TextBlock x:Name="VideoNameText"
                                Margin="0,4,0,0"
@@ -254,7 +254,7 @@
                                    HorizontalAlignment="Right"/>
                         <TextBlock Text="Space Pause, Pfeile +/-5s, +/- Geschwindigkeit"
                                    Foreground="{DynamicResource TextBrush}"
-                                   FontSize="12"
+                                   FontSize="{StaticResource TypeSmall}"
                                    TextAlignment="Right"/>
                     </StackPanel>
                 </Border>
@@ -345,7 +345,7 @@
                             <Ellipse x:Name="AiStatusDot" Width="8" Height="8"
                                      Fill="#22C55E" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock x:Name="AiStatusText" Text="KI aktiv"
-                                       Foreground="White" FontSize="11" VerticalAlignment="Center"/>
+                                       Foreground="White" FontSize="{StaticResource TypeCaption}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
@@ -353,7 +353,7 @@
                             HorizontalAlignment="Stretch" VerticalAlignment="Bottom"
                             Background="#CC111318" Padding="12,8" Visibility="Collapsed">
                         <TextBlock x:Name="FindingSummaryText"
-                                   Foreground="White" FontSize="12" TextWrapping="Wrap"/>
+                                   Foreground="White" FontSize="{StaticResource TypeSmall}" TextWrapping="Wrap"/>
                     </Border>
                 </Grid>
 
@@ -363,9 +363,9 @@
                         Margin="0,8,0,0" Background="#DD000000" CornerRadius="8"
                         Padding="16,8" Visibility="Collapsed">
                     <StackPanel>
-                        <TextBlock Text="KALIBRIERUNG" FontSize="12" FontWeight="Bold"
+                        <TextBlock Text="KALIBRIERUNG" FontSize="{StaticResource TypeSmall}" FontWeight="Bold"
                                    Foreground="{DynamicResource NeonCyanBrush}" Margin="0,0,0,4"/>
-                        <TextBlock x:Name="TxtCodingCalibHint" FontSize="12" Foreground="White"
+                        <TextBlock x:Name="TxtCodingCalibHint" FontSize="{StaticResource TypeSmall}" Foreground="White"
                                    TextWrapping="Wrap" MaxWidth="300"/>
                     </StackPanel>
                 </Border>
@@ -380,14 +380,14 @@
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                             <Ellipse x:Name="ConfirmAmpel" Width="16" Height="16" Margin="0,0,8,0"
                                      VerticalAlignment="Center"/>
-                            <TextBlock x:Name="TxtConfirmCode" FontSize="16" FontWeight="Bold"
+                            <TextBlock x:Name="TxtConfirmCode" FontSize="{StaticResource TypeH4}" FontWeight="Bold"
                                        Foreground="{DynamicResource NeonCyanBrush}" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="TxtConfirmConfidence" FontSize="12" Margin="8,0,0,0"
+                            <TextBlock x:Name="TxtConfirmConfidence" FontSize="{StaticResource TypeSmall}" Margin="8,0,0,0"
                                        Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock x:Name="TxtConfirmDescription" Foreground="White" FontSize="13"
+                        <TextBlock x:Name="TxtConfirmDescription" Foreground="White" FontSize="{StaticResource TypeBody}"
                                    TextWrapping="Wrap" Margin="0,0,0,4"/>
-                        <TextBlock x:Name="TxtConfirmDetail" Foreground="{StaticResource MutedBrush}" FontSize="11"
+                        <TextBlock x:Name="TxtConfirmDetail" Foreground="{StaticResource MutedBrush}" FontSize="{StaticResource TypeCaption}"
                                    TextWrapping="Wrap" Margin="0,0,0,12"/>
 
                         <!-- Aktionen -->
@@ -414,10 +414,10 @@
                         Padding="20,12" BorderBrush="#F59E0B" BorderThickness="1.5"
                         Panel.ZIndex="30">
                     <StackPanel MaxWidth="480">
-                        <TextBlock x:Name="TxtDetectionFinding" FontSize="14" FontWeight="Bold"
+                        <TextBlock x:Name="TxtDetectionFinding" FontSize="{StaticResource TypeBodyLarge}" FontWeight="Bold"
                                    Foreground="#F59E0B" TextAlignment="Center" TextWrapping="Wrap"
                                    Margin="0,0,0,4"/>
-                        <TextBlock x:Name="TxtDetectionDetail" FontSize="12"
+                        <TextBlock x:Name="TxtDetectionDetail" FontSize="{StaticResource TypeSmall}"
                                    Foreground="{StaticResource MutedBrush}" TextAlignment="Center" TextWrapping="Wrap"
                                    Margin="0,0,0,10"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -441,7 +441,7 @@
                         Margin="0,0,0,8" Background="#CC000000" CornerRadius="8"
                         Padding="12,6" Visibility="Collapsed">
                     <TextBlock x:Name="TxtCodingMeasurement"
-                               Foreground="White" FontSize="13"
+                               Foreground="White" FontSize="{StaticResource TypeBody}"
                                FontFamily="Consolas, Cascadia Mono" HorizontalAlignment="Center"/>
                 </Border>
 
@@ -483,7 +483,7 @@
                     <TextBlock x:Name="TxtOsdMeter"
                                Foreground="{DynamicResource NeonCyanBrush}"
                                FontFamily="Consolas, Cascadia Mono"
-                               FontSize="14" FontWeight="Bold"/>
+                               FontSize="{StaticResource TypeBodyLarge}" FontWeight="Bold"/>
                 </Border>
             </Grid>
 
@@ -548,7 +548,7 @@
                                     <ListBox x:Name="LstCodingEvents"
                                              Background="Transparent"
                                              BorderThickness="0"
-                                             FontSize="11"
+                                             FontSize="{StaticResource TypeCaption}"
                                              Foreground="{DynamicResource TextBrush}"
                                              MaxHeight="400"
                                              PreviewMouseRightButtonDown="CodingEvents_PreviewMouseRightButtonDown"
@@ -614,7 +614,7 @@
                                                         <TextBlock Grid.Column="1"
                                                                    Text="{Binding Entry.Code}"
                                                                    FontFamily="Consolas"
-                                                                   FontWeight="Bold" FontSize="11"
+                                                                   FontWeight="Bold" FontSize="{StaticResource TypeCaption}"
                                                                    VerticalAlignment="Center"
                                                                    Margin="0,0,4,0"/>
                                                         <TextBlock Grid.Column="2"
@@ -624,7 +624,7 @@
                                                                    TextTrimming="CharacterEllipsis"
                                                                    VerticalAlignment="Center"/>
                                                         <TextBlock Grid.Column="3" x:Name="TxtStatusIcon"
-                                                                   FontSize="11" Margin="2,0,0,0"
+                                                                   FontSize="{StaticResource TypeCaption}" Margin="2,0,0,0"
                                                                    VerticalAlignment="Center"/>
                                                     </Grid>
                                                     <Grid Margin="11,1,0,0">
@@ -661,7 +661,7 @@
                                 <StackPanel>
                                     <!-- Kompakte Details: Code + Konfidenz -->
                                     <TextBlock x:Name="TxtInlineDetailCode"
-                                               FontFamily="Consolas" FontSize="16" FontWeight="Bold"
+                                               FontFamily="Consolas" FontSize="{StaticResource TypeH4}" FontWeight="Bold"
                                                Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                                     <TextBlock x:Name="TxtInlineDetailDesc"
                                                FontSize="10" TextWrapping="Wrap"
@@ -677,14 +677,14 @@
                                             <TextBlock Text="Distanz" FontSize="8"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtInlineDetailDistance"
-                                                       FontFamily="Consolas" FontSize="11"
+                                                       FontFamily="Consolas" FontSize="{StaticResource TypeCaption}"
                                                        Foreground="{DynamicResource TextBrush}"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="1">
                                             <TextBlock Text="Konfidenz" FontSize="8"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtInlineDetailConfidence"
-                                                       FontFamily="Consolas" FontSize="11" FontWeight="Bold"/>
+                                                       FontFamily="Consolas" FontSize="{StaticResource TypeCaption}" FontWeight="Bold"/>
                                         </StackPanel>
                                     </Grid>
 
@@ -733,7 +733,7 @@
                                     <ListBox x:Name="LstImportEvents"
                                              Background="Transparent"
                                              BorderThickness="0"
-                                             FontSize="11"
+                                             FontSize="{StaticResource TypeCaption}"
                                              Foreground="{DynamicResource TextBrush}"
                                              MaxHeight="400"
                                              IsHitTestVisible="True"
@@ -790,7 +790,7 @@
                                                         <TextBlock Grid.Column="1"
                                                                    Text="{Binding Entry.Code}"
                                                                    FontFamily="Consolas"
-                                                                   FontWeight="Bold" FontSize="11"
+                                                                   FontWeight="Bold" FontSize="{StaticResource TypeCaption}"
                                                                    VerticalAlignment="Center"
                                                                    Margin="0,0,4,0"/>
                                                         <TextBlock Grid.Column="2"
@@ -824,7 +824,7 @@
                             </Border.BorderThickness>
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                    <TextBlock Text="&#x25B6;" FontSize="11" Margin="0,0,6,0"
+                                    <TextBlock Text="&#x25B6;" FontSize="{StaticResource TypeCaption}" Margin="0,0,6,0"
                                                Foreground="{DynamicResource TextSecondaryBrush}"
                                                VerticalAlignment="Center"/>
                                     <TextBlock Text="DEFEKT DETAILS" Style="{StaticResource SectionLabel}" Margin="0"/>
@@ -842,7 +842,7 @@
                                             <TextBlock Text="EN 13508-2 Code" FontSize="10"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingDetailCode"
-                                                       FontFamily="Consolas" FontSize="18" FontWeight="Bold"
+                                                       FontFamily="Consolas" FontSize="{StaticResource TypeH3}" FontWeight="Bold"
                                                        Foreground="{DynamicResource TextBrush}"/>
                                         </StackPanel>
                                     </Border>
@@ -851,7 +851,7 @@
                                             <TextBlock Text="Schweregrad" FontSize="10"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingDetailSeverity"
-                                                       FontSize="18" FontWeight="Bold"
+                                                       FontSize="{StaticResource TypeH3}" FontWeight="Bold"
                                                        Foreground="{DynamicResource TextBrush}"/>
                                         </StackPanel>
                                     </Border>
@@ -863,7 +863,7 @@
                                         <TextBlock Text="Beschreibung" FontSize="10"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                                         <TextBlock x:Name="TxtCodingDetailDescription"
-                                                   FontSize="12" TextWrapping="Wrap"
+                                                   FontSize="{StaticResource TypeSmall}" TextWrapping="Wrap"
                                                    Foreground="{DynamicResource TextBrush}"/>
                                     </StackPanel>
                                 </Border>
@@ -883,7 +883,7 @@
                                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                                        HorizontalAlignment="Center"/>
                                             <TextBlock x:Name="TxtCodingDetailDistance"
-                                                       FontFamily="Consolas" FontSize="12"
+                                                       FontFamily="Consolas" FontSize="{StaticResource TypeSmall}"
                                                        Foreground="{DynamicResource TextBrush}"
                                                        HorizontalAlignment="Center"/>
                                         </StackPanel>
@@ -894,7 +894,7 @@
                                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                                        HorizontalAlignment="Center"/>
                                             <TextBlock x:Name="TxtCodingDetailClock"
-                                                       FontFamily="Consolas" FontSize="12"
+                                                       FontFamily="Consolas" FontSize="{StaticResource TypeSmall}"
                                                        Foreground="{DynamicResource TextBrush}"
                                                        HorizontalAlignment="Center"/>
                                         </StackPanel>
@@ -905,14 +905,14 @@
                                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                                        HorizontalAlignment="Center"/>
                                             <TextBlock x:Name="TxtCodingDetailConfidence"
-                                                       FontFamily="Consolas" FontSize="12" FontWeight="Bold"
+                                                       FontFamily="Consolas" FontSize="{StaticResource TypeSmall}" FontWeight="Bold"
                                                        HorizontalAlignment="Center"/>
                                         </StackPanel>
                                     </Border>
                                 </Grid>
 
                                 <!-- Status-Anzeige -->
-                                <TextBlock x:Name="TxtCodingDetailStatus" FontSize="11"
+                                <TextBlock x:Name="TxtCodingDetailStatus" FontSize="{StaticResource TypeCaption}"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            Margin="0,0,0,6"/>
 
@@ -951,7 +951,7 @@
                                             MinWidth="40"
                                             Click="CodingRejectDefect_Click"
                                             ToolTip="Defekt verwerfen und aus der Befundliste entfernen">
-                                        <TextBlock Text="&#x2717;" FontSize="14"/>
+                                        <TextBlock Text="&#x2717;" FontSize="{StaticResource TypeBodyLarge}"/>
                                     </Button>
                                 </Grid>
                             </StackPanel>
@@ -986,11 +986,11 @@
                                 <Button x:Name="BtnCodingSelectCode"
                                         Style="{StaticResource PlayerPrimaryButton}"
                                         Content="Neues Ereignis erfassen"
-                                        Padding="8,6" FontSize="12"
+                                        Padding="8,6" FontSize="{StaticResource TypeSmall}"
                                         Click="CodingSelectCode_Click"
                                         ToolTip="Oeffnet Editor mit Code-Auswahl, Fotos und VSA-Feldern"/>
                                 <TextBlock x:Name="TxtCodingSelectedCode"
-                                           FontSize="11"
+                                           FontSize="{StaticResource TypeCaption}"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            Margin="0,4,0,0" TextWrapping="Wrap"/>
                                 <!-- Unsichtbar aber vorhanden fuer Kompatibilitaet -->
@@ -1074,10 +1074,10 @@
                               HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Width="260">
                         <TextBlock Text="TRAININGS-MODUS"
-                                   FontSize="12" FontWeight="Bold"
+                                   FontSize="{StaticResource TypeSmall}" FontWeight="Bold"
                                    Foreground="{DynamicResource NeonCyanBrush}"
                                    Margin="0,0,0,8"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="11"
+                        <TextBlock TextWrapping="Wrap" FontSize="{StaticResource TypeCaption}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,10">
                             Video pausieren (Leertaste) &#x2192; Rechteck um Schaden ziehen &#x2192; "Speichern" oeffnet VSA-Code-Auswahl. Sample landet als Trainingsbeispiel in der Knowledge-Base.
@@ -1089,7 +1089,7 @@
                                 <TextBlock Text="STATUS" Style="{StaticResource SectionLabel}"/>
                                 <TextBlock x:Name="TxtTrainingStatus"
                                            Text="Bereit. Rechteck ziehen."
-                                           FontSize="12" Foreground="{DynamicResource TextBrush}"
+                                           FontSize="{StaticResource TypeSmall}" Foreground="{DynamicResource TextBrush}"
                                            TextWrapping="Wrap"/>
                                 <TextBlock x:Name="TxtTrainingCount"
                                            Text="0 Samples in dieser Sitzung"
@@ -1100,13 +1100,13 @@
 
                         <TextBlock Text="METER (optional)" Style="{StaticResource SectionLabel}"/>
                         <TextBox x:Name="TxtTrainingMeter"
-                                 FontSize="12" Padding="6,4"
+                                 FontSize="{StaticResource TypeSmall}" Padding="6,4"
                                  Margin="0,0,0,8"
                                  ToolTip="Meterstand des Schadens (leer = aus Video-Zeit abgeleitet)"/>
 
                         <TextBlock Text="SCHWEREGRAD" Style="{StaticResource SectionLabel}"/>
                         <ComboBox x:Name="CmbTrainingSeverity"
-                                  FontSize="12"
+                                  FontSize="{StaticResource TypeSmall}"
                                   Margin="0,0,0,8"
                                   SelectedIndex="2">
                             <ComboBoxItem Content="1 - Optisch"/>
@@ -1134,7 +1134,7 @@
                                     Content="&#x229B; Negativ-Beispiel speichern"
                                     Style="{StaticResource PlayerButton}"
                                     Click="TrainingNegativ_Click"
-                                    ToolTip="Aktuellen Frame als Negativ-Beispiel (kein Schaden) speichern"/>
+                                    ToolTip="Aktuellen Frame als Negativ-Beispiel (kein Befund) speichern"/>
                         </StackPanel>
 
                         <Border Background="{DynamicResource HeaderBrush}" CornerRadius="8"
@@ -1184,11 +1184,11 @@
                     <Button Style="{StaticResource PlayerButton}" Content="&#x25B6;" Padding="8,6"
                             Click="CodingNext_Click" ToolTip="Einen Schritt vorwaerts zum naechsten Meterstand in der Haltung"/>
                     <TextBlock x:Name="TxtCodingRange"
-                               FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="{StaticResource TypeCaption}" Foreground="{DynamicResource TextSecondaryBrush}"
                                VerticalAlignment="Center" Margin="8,0,0,0"/>
                 </StackPanel>
 
-                <!-- Werkzeuge: Ein Dropdown-Button fuer alle Tools -->
+                <!-- Direkte Werkzeug-Buttons (Dropdown entfernt - "Werkzeuge"-Untermenue weg) -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
                     <Border Width="1" Height="28" Background="{DynamicResource BorderBrush}" Margin="0,0,8,0"/>
 
@@ -1197,56 +1197,35 @@
                                Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"
                                Margin="0,0,6,0"/>
 
-                    <!-- Werkzeuge-Dropdown -->
-                    <Button x:Name="BtnToolsDropdown"
-                            Style="{StaticResource PlayerButton}" Padding="8,5"
-                            Click="ToolsDropdown_Click"
-                            ToolTip="Werkzeuge (Messen, Markieren, Vermessen)">
+                    <!-- Markieren: direkt als Button (vorher im Werkzeuge-Untermenue) -->
+                    <Button x:Name="BtnCodingRect" Style="{StaticResource PlayerButton}" Padding="8,5"
+                            Click="CodingToolRect_Click" Margin="0,0,6,0"
+                            ToolTip="Rechteckigen Bereich im Frame markieren fuer gezielte KI-Analyse">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                       VerticalAlignment="Center" Margin="0,0,4,0"/>
-                            <TextBlock Text="Werkzeuge" FontSize="11" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="8"
-                                       VerticalAlignment="Center" Margin="4,0,0,0"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <TextBlock Text="&#x25A2;" FontSize="{StaticResource TypeSmall}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBlock Text="Markieren" FontSize="{StaticResource TypeCaption}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                    <Popup x:Name="ToolsDropdownPopup" StaysOpen="False" Placement="Top"
-                           PlacementTarget="{Binding ElementName=BtnToolsDropdown}">
-                        <Border Background="{DynamicResource BgLightBrush}"
-                                BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1" CornerRadius="8" Padding="8">
-                            <StackPanel>
-                                <!-- Kalibrieren -->
-                                <Button x:Name="BtnCodingCalibrate" Style="{StaticResource MarkToolPopupButton}"
-                                        Content="&#x2295;  Rohr kalibrieren (DN)"
-                                        Click="CodingCalibrate_Click"
-                                        ToolTip="Rohrdurchmesser im Video kalibrieren fuer praezise Vermessungen"/>
-                                <!-- Markieren fuer KI -->
-                                <Button x:Name="BtnCodingRect" Style="{StaticResource MarkToolPopupButton}"
-                                        Content="&#x25A2;  Bereich markieren"
-                                        Click="CodingToolRect_Click"
-                                        ToolTip="Rechteckigen Bereich im Frame markieren fuer gezielte KI-Analyse"/>
-                                <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="4,6"/>
-                                <!-- Messwerkzeuge -->
-                                <Button x:Name="BtnCodingBend" Style="{StaticResource MarkToolPopupButton}"
-                                        Content="&#x2312;  Bogen projizieren (Wurm)"
-                                        Click="CodingToolBend_Click"
-                                        ToolTip="Rohrbogen als Ring-Wurm markieren: 2 Rohrverbindungen setzen und Ellipsen justieren"/>
-                                <Button x:Name="BtnCodingLevel" Style="{StaticResource MarkToolPopupButton}"
-                                        Content="&#x2261;  Fuellgrad messen"
-                                        Click="CodingToolLevel_Click"
-                                        ToolTip="Fuellgrad/Wasserstand im Rohr bestimmen (Wasserlinie zeichnen)"/>
-                                <Button x:Name="BtnCodingIntrusion" Style="{StaticResource MarkToolPopupButton}"
-                                        Content="&#x25B2;  Einragung messen"
-                                        Click="CodingToolIntrusion_Click"
-                                        ToolTip="Einragenden Stutzen oder Hindernis vermessen"/>
-                            </StackPanel>
-                        </Border>
-                    </Popup>
-                    <!-- Altes CodingMarkToolPopup entfernt, Markieren ist jetzt im Dropdown -->
-                    <Popup x:Name="CodingMarkToolPopup" StaysOpen="False" Placement="Top"
-                           PlacementTarget="{Binding ElementName=BtnToolsDropdown}" IsOpen="False"/>
+
+                    <!-- Kalibrieren: direkt als Button -->
+                    <Button x:Name="BtnCodingCalibrate" Style="{StaticResource PlayerButton}" Padding="8,5"
+                            Click="CodingCalibrate_Click"
+                            ToolTip="Rohrdurchmesser im Video kalibrieren fuer praezise Vermessungen">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#x2295;" FontSize="{StaticResource TypeSmall}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBlock Text="Kalibrieren" FontSize="{StaticResource TypeCaption}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Legacy: Dropdown-Button + Popups als unsichtbare Stubs - rueckwaertskompatibel
+                         (existierende Code-Behind-Referenzen ToolsDropdown_Click + CodingMarkToolPopup
+                         bleiben damit gueltig, ohne dass der Nutzer sie sieht). -->
+                    <Button x:Name="BtnToolsDropdown" Visibility="Collapsed"
+                            Click="ToolsDropdown_Click"/>
+                    <Popup x:Name="ToolsDropdownPopup" StaysOpen="False" IsOpen="False"
+                           PlacementTarget="{Binding ElementName=BtnToolsDropdown}"/>
+                    <Popup x:Name="CodingMarkToolPopup" StaysOpen="False" IsOpen="False"
+                           PlacementTarget="{Binding ElementName=BtnToolsDropdown}"/>
                 </StackPanel>
 
                 <!-- KI-Status + Analyse (zwei Zeilen) -->
@@ -1264,7 +1243,7 @@
                             </Ellipse>
                             <Ellipse x:Name="CodingAiDot" Width="10" Height="10" Fill="{StaticResource MutedBrush}"/>
                         </Grid>
-                        <TextBlock x:Name="TxtCodingAiStatus" FontSize="11"
+                        <TextBlock x:Name="TxtCodingAiStatus" FontSize="{StaticResource TypeCaption}"
                                    Foreground="{DynamicResource TextBrush}"
                                    Text="Kuenstliche Intelligenz bereit" VerticalAlignment="Center" Margin="0,0,4,0"/>
                         <TextBlock x:Name="TxtCodingAiStage" FontSize="9"
@@ -1273,11 +1252,11 @@
                         <ToggleButton x:Name="BtnCodingLiveAi" Style="{StaticResource SpeedToggleButton}"
                                       IsChecked="False" Margin="0,0,6,0"
                                       ToolTip="Automatische KI-Analyse im Codiermodus an/aus (alle 5s)" Click="CodingLiveAi_Click">
-                            <TextBlock Text="Automatische KI-Analyse" FontSize="11"/>
+                            <TextBlock Text="Automatische KI-Analyse" FontSize="{StaticResource TypeCaption}"/>
                         </ToggleButton>
                         <Button x:Name="BtnCodingAnalyze"
                                 Style="{StaticResource PlayerPrimaryButton}"
-                                Padding="10,5" FontSize="11"
+                                Padding="10,5" FontSize="{StaticResource TypeCaption}"
                                 Click="CodingAnalyzeFrame_Click"
                                 ToolTip="Aktuellen Frame einmalig per KI analysieren">
                             <TextBlock Text="Aktuellen Frame analysieren"/>
@@ -1289,10 +1268,10 @@
                                       IsChecked="False" Margin="0,0,6,0"
                                       ToolTip="Pausenmodus: Video pausiert bei jedem KI-Befund — Zeit zum Korrigieren oder Bestaetigen"
                                       Click="CodingPauseMode_Click">
-                            <TextBlock Text="KI-Analyse mit Pause" FontSize="11"/>
+                            <TextBlock Text="KI-Analyse mit Pause" FontSize="{StaticResource TypeCaption}"/>
                         </ToggleButton>
                         <Button x:Name="BtnCodingClearOverlays"
-                                Padding="8,5" FontSize="11" Margin="0,0,6,0"
+                                Padding="8,5" FontSize="{StaticResource TypeCaption}" Margin="0,0,6,0"
                                 Background="{StaticResource CardBrush}" Foreground="{StaticResource MutedBrush}"
                                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                                 Cursor="Hand"
@@ -1305,8 +1284,8 @@
                                       ToolTip="Eingabemarker: Video pausiert, Stelle markieren, Stichwort eingeben → KI bestimmt Code"
                                       Click="Eingabemarker_Click">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#x1F4CD;" FontSize="14" Margin="0,0,4,0"/>
-                                <TextBlock Text="Eingabemarker" FontSize="11"/>
+                                <TextBlock Text="&#x1F4CD;" FontSize="{StaticResource TypeBodyLarge}" Margin="0,0,4,0"/>
+                                <TextBlock Text="Eingabemarker" FontSize="{StaticResource TypeCaption}"/>
                             </StackPanel>
                         </ToggleButton>
                     </StackPanel>
@@ -1320,7 +1299,7 @@
                         <StackPanel Orientation="Horizontal">
                             <!-- Freitext-Eingabe (primaer) -->
                             <TextBox x:Name="TxtEingabemarker"
-                                     FontSize="12" Width="220"
+                                     FontSize="{StaticResource TypeSmall}" Width="220"
                                      Background="{StaticResource CardBrush}" Foreground="{StaticResource TextBrush}"
                                      BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                                      Padding="4,3" VerticalContentAlignment="Center"
@@ -1335,7 +1314,7 @@
                             </TextBox>
                             <!-- Schnellauswahl (Dropdown) -->
                             <ComboBox x:Name="CmbEingabemarker"
-                                      FontSize="11" Width="130" Margin="4,0,0,0"
+                                      FontSize="{StaticResource TypeCaption}" Width="130" Margin="4,0,0,0"
                                       Background="{StaticResource CardBrush}" Foreground="{StaticResource TextBrush}"
                                       BorderBrush="{StaticResource BorderBrush}"
                                       SelectionChanged="CmbEingabemarker_SelectionChanged">
@@ -1368,7 +1347,7 @@
                             Background="{DynamicResource HeaderBrush}" CornerRadius="8"
                             Padding="8,3" Margin="0,0,8,0" Visibility="Collapsed">
                         <TextBlock x:Name="TxtCodingCurrentCode"
-                                   FontSize="11" FontWeight="SemiBold"
+                                   FontSize="{StaticResource TypeCaption}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource NeonCyanBrush}"/>
                     </Border>
 
@@ -1388,12 +1367,12 @@
                                         <Ellipse Width="8" Height="8" Fill="{Binding SeverityBrush}"
                                                  VerticalAlignment="Center" Margin="0,0,6,0"/>
                                         <!-- VSA-Code fett -->
-                                        <TextBlock FontSize="11" FontWeight="Bold"
+                                        <TextBlock FontSize="{StaticResource TypeCaption}" FontWeight="Bold"
                                                    Foreground="{DynamicResource NeonCyanBrush}"
                                                    VerticalAlignment="Center"
                                                    Text="{Binding VsaCode, Mode=OneWay}"/>
                                         <!-- Klartext-Beschreibung -->
-                                        <TextBlock FontSize="11" FontWeight="Normal"
+                                        <TextBlock FontSize="{StaticResource TypeCaption}" FontWeight="Normal"
                                                    Foreground="{DynamicResource TextBrush}"
                                                    VerticalAlignment="Center" Margin="6,0,0,0"
                                                    Text="{Binding Description, Mode=OneWay}"/>
@@ -1420,13 +1399,13 @@
                             Padding="10,5"
                             Click="CodingApply_Click"
                             ToolTip="Codierung in Primaere Schaeden uebernehmen">
-                        <TextBlock Text="Uebernehmen" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock Text="Uebernehmen" FontSize="{StaticResource TypeCaption}" FontWeight="SemiBold"/>
                     </Button>
                     <Button Style="{StaticResource PlayerButton}"
                             Foreground="#EF4444" Margin="6,0,0,0"
                             Click="CodingModeExit_Click"
                             ToolTip="Codier-Modus beenden ohne Uebernahme">
-                        <TextBlock Text="Beenden" FontSize="11"/>
+                        <TextBlock Text="Beenden" FontSize="{StaticResource TypeCaption}"/>
                     </Button>
                 </StackPanel>
             </Grid>
@@ -1444,7 +1423,7 @@
                     <Ellipse x:Name="YoloDot" Width="8" Height="8"
                              Fill="{StaticResource MutedBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                     <TextBlock x:Name="TxtYoloStatus" Text="YOLO: Bereit"
-                               FontSize="11" FontWeight="SemiBold"
+                               FontSize="{StaticResource TypeCaption}" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
                     <TextBlock x:Name="TxtYoloModel" Text=""
                                FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"
@@ -1539,73 +1518,21 @@
                     <Border Width="1" Height="24" Margin="8,0"
                             Background="{DynamicResource BorderBrush}"/>
 
-                    <ToggleButton x:Name="QuickScanButton"
-                                  Style="{StaticResource SpeedToggleButton}"
-                                  Margin="0,0,6,0"
-                                  Click="QuickScan_Click"
-                                  ToolTip="Schnell-Scan: KI-Heatmap auf der Timeline erzeugen">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Schnell-Scan" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ToggleButton>
-
-                    <TextBlock x:Name="QuickScanStatusText"
-                               VerticalAlignment="Center"
-                               FontSize="11"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               Visibility="Collapsed"/>
-
-                    <Border Width="1" Height="24" Margin="8,0"
-                            Background="{DynamicResource BorderBrush}"/>
-
-                    <ToggleButton x:Name="LiveDetectionButton"
-                                  Style="{StaticResource SpeedToggleButton}"
-                                  Margin="0,0,6,0"
-                                  Click="LiveDetection_Click"
-                                  ToolTip="Live-KI: Echtzeit-Schadenserkennung waehrend Wiedergabe (D)">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE945;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Live-KI" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ToggleButton>
-
-                    <StackPanel Orientation="Horizontal" Margin="0,0,6,0">
-                        <Button x:Name="ManualMarkButton"
-                                Style="{StaticResource PlayerButton}"
-                                Click="ManualMark_Click"
-                                ToolTip="Markieren: Werkzeug waehlen (M)">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE7C8;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="TxtMarkToolName" Text="Markieren" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Popup x:Name="MarkToolPopup" StaysOpen="False" Placement="Top"
-                               PlacementTarget="{Binding ElementName=ManualMarkButton}">
-                            <Border Background="{DynamicResource BgLightBrush}"
-                                    BorderBrush="{DynamicResource BorderBrush}"
-                                    BorderThickness="1" CornerRadius="8" Padding="6">
-                                <StackPanel>
-                                    <Button Click="MarkTool_Punkt_Click"
-                                            Content="&#x25CF; Punkt (Klick)" Padding="12,6"
-                                            Style="{StaticResource MarkToolPopupButton}"
-                                            ToolTip="Punktschaden manuell im aktuellen Frame per Klick markieren"/>
-                                    <Button Click="MarkTool_Ellipse_Click"
-                                            Content="&#x2B2D; Ellipse" Padding="12,6"
-                                            Style="{StaticResource MarkToolPopupButton}"
-                                            ToolTip="Ellipsenfoermigen Bereich um Schadensstelle zeichnen"/>
-                                    <Button Click="MarkTool_Freihand_Click"
-                                            Content="&#x270E; Freihand" Padding="12,6"
-                                            Style="{StaticResource MarkToolPopupButton}"
-                                            ToolTip="Freihandlinie zeichnen um unregelmaessige Schadensformen zu markieren"/>
-                                    <Button Click="MarkTool_Rechteck_Click"
-                                            Content="&#x25A2; Rechteck" Padding="12,6"
-                                            Style="{StaticResource MarkToolPopupButton}"
-                                            ToolTip="Rechteckige Markierung um Schadensstelle im Frame aufziehen"/>
-                                </StackPanel>
-                            </Border>
-                        </Popup>
-                    </StackPanel>
+                    <!-- Schnell-Scan, Live-KI, Markieren, Trainings-Modus aus dem normalen
+                         Player-Modus entfernt. KI-Funktionalitaet lebt jetzt nur noch im
+                         Codier-Modus. Buttons + Popups bleiben als unsichtbare Stubs damit
+                         existing Code-Behind-Referenzen (Hotkeys M/D, etc.) nicht crashen. -->
+                    <ToggleButton x:Name="QuickScanButton" Visibility="Collapsed"
+                                  Click="QuickScan_Click"/>
+                    <TextBlock x:Name="QuickScanStatusText" Visibility="Collapsed"/>
+                    <ToggleButton x:Name="LiveDetectionButton" Visibility="Collapsed"
+                                  Click="LiveDetection_Click"/>
+                    <Button x:Name="ManualMarkButton" Visibility="Collapsed"
+                            Click="ManualMark_Click">
+                        <TextBlock x:Name="TxtMarkToolName" Text="Markieren"/>
+                    </Button>
+                    <Popup x:Name="MarkToolPopup" StaysOpen="False" IsOpen="False"
+                           PlacementTarget="{Binding ElementName=ManualMarkButton}"/>
 
                     <Button x:Name="CodingModeButton"
                             Style="{StaticResource PlayerPrimaryButton}"
@@ -1618,29 +1545,10 @@
                         </StackPanel>
                     </Button>
 
-                    <ToggleButton x:Name="TrainingModeButton"
-                                  Margin="6,0,0,0"
-                                  MinHeight="36"
-                                  Padding="14,7"
-                                  FontSize="12"
-                                  Background="{DynamicResource HeaderBrush}"
-                                  Foreground="{DynamicResource TextBrush}"
-                                  BorderBrush="{DynamicResource NeonCyanBrush}"
-                                  BorderThickness="1"
-                                  Cursor="Hand"
-                                  Click="TrainingMode_Click"
-                                  ToolTip="Trainings-Modus: Schaeden im laufenden Video markieren und als KB-Trainingsbeispiele speichern">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#x1F3AF;" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Trainings-Modus" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ToggleButton>
+                    <ToggleButton x:Name="TrainingModeButton" Visibility="Collapsed"
+                                  Click="TrainingMode_Click"/>
 
-                    <TextBlock x:Name="LiveDetectionStatusText"
-                               VerticalAlignment="Center"
-                               FontSize="11"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               Visibility="Collapsed"/>
+                    <TextBlock x:Name="LiveDetectionStatusText" Visibility="Collapsed"/>
                 </WrapPanel>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -1672,7 +1580,7 @@
                                    HorizontalAlignment="Right"/>
                         <TextBlock x:Name="RateText"
                                    Foreground="{DynamicResource TextBrush}"
-                                   FontSize="18"
+                                   FontSize="{StaticResource TypeH3}"
                                    FontWeight="SemiBold"
                                    HorizontalAlignment="Right"
                                    Text="1.00x"/>

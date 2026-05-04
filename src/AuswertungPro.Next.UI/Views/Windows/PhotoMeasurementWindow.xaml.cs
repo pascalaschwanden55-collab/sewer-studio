@@ -27,6 +27,9 @@ public partial class PhotoMeasurementWindow : Window
     private PhotoTool _activeTool = PhotoTool.None;
     private LevelMode _activeLevelMode = LevelMode.Water;
 
+    /// <summary>V4.3 — Subject-Auswahl fuer Querschnitt-Werkzeug (Wurzel/Abplatzung/Fehlstelle/Sonstige).</summary>
+    private string? _crossSectionSubject;
+
     // Canvas-Tags fuer selektives Loeschen
     private const string TagPipeCircle = "pipe";
     private const string TagOverlay = "overlay";
@@ -40,6 +43,9 @@ public partial class PhotoMeasurementWindow : Window
     private static readonly Brush LateralFillBrush = FreezeBrush(new SolidColorBrush(Color.FromArgb(50, 255, 0, 0)));
     private static readonly Brush PolygonFillBrush = FreezeBrush(new SolidColorBrush(Color.FromArgb(80, 147, 112, 219)));
     private static readonly Brush LabelBgBrush = FreezeBrush(new SolidColorBrush(Color.FromArgb(180, 0, 0, 0)));
+    private static readonly Brush RulerBrush = FreezeBrush(new SolidColorBrush(Color.FromRgb(0, 255, 0)));
+    private static readonly Brush CrackBrush = FreezeBrush(new SolidColorBrush(Color.FromRgb(255, 51, 51)));
+    private static readonly Brush JointOffsetBrush = FreezeBrush(new SolidColorBrush(Color.FromRgb(255, 105, 180)));
     private static Brush FreezeBrush(Brush b) { b.Freeze(); return b; }
 
     // Drag-Zustand
@@ -186,9 +192,11 @@ public partial class PhotoMeasurementWindow : Window
     private IEnumerable<ToggleButton> GetToolButtons() => new ToggleButton[]
     {
         BtnToolCalib, BtnToolMarkRect, BtnToolRuler,
+        BtnToolPipeSurface, BtnToolCrack, BtnToolJointOffset,
         BtnToolWater, BtnToolDeposit, BtnToolObstacle,
         BtnToolDeform, BtnToolCrossSection,
-        BtnToolLateral, BtnToolBend, BtnToolConnection
+        BtnToolLateral, BtnToolBend, BtnToolConnection,
+        BtnToolRingBBox
     };
 
     private void ToolButton_Checked(object sender, RoutedEventArgs e)
@@ -215,10 +223,14 @@ public partial class PhotoMeasurementWindow : Window
             var b when b == BtnToolObstacle => PhotoTool.LevelObstacle,
             var b when b == BtnToolDeform => PhotoTool.Deformation,
             var b when b == BtnToolRuler => PhotoTool.Ruler,
+            var b when b == BtnToolPipeSurface => PhotoTool.PipeSurface,
+            var b when b == BtnToolCrack => PhotoTool.CrackWidth,
+            var b when b == BtnToolJointOffset => PhotoTool.JointOffset,
             var b when b == BtnToolCrossSection => PhotoTool.CrossSection,
             var b when b == BtnToolLateral => PhotoTool.Lateral,
             var b when b == BtnToolBend => PhotoTool.Bend,
             var b when b == BtnToolConnection => PhotoTool.Connection,
+            var b when b == BtnToolRingBBox => PhotoTool.RingBBox,
             _ => PhotoTool.None
         };
 
@@ -245,7 +257,8 @@ public partial class PhotoMeasurementWindow : Window
         BtnDelete.Visibility = _activeTool != PhotoTool.None ? Visibility.Visible : Visibility.Collapsed;
 
         // OK-Button: bei mm-Werkzeugen nur wenn kalibriert
-        bool needsCalib = _activeTool is PhotoTool.Ruler or PhotoTool.Connection;
+        bool needsCalib = _activeTool is PhotoTool.Ruler or PhotoTool.PipeSurface
+            or PhotoTool.CrackWidth or PhotoTool.JointOffset or PhotoTool.Connection;
         BtnOk.IsEnabled = !needsCalib || _calibration.IsCalibrated;
 
         // Cursor
@@ -255,6 +268,16 @@ public partial class PhotoMeasurementWindow : Window
             PhotoTool.Deformation or PhotoTool.CrossSection => Cursors.Cross,
             _ => Cursors.Cross
         };
+
+        // Foto-Assistent: drei Werkzeuge (Deformation/Bend/Connection als Mondsichel-Anschluss)
+        var paTool = _activeTool switch
+        {
+            PhotoTool.Deformation => PaTool.Deformation,
+            PhotoTool.Bend => PaTool.BendAngle,
+            PhotoTool.Connection => PaTool.Lateral,
+            _ => PaTool.None
+        };
+        SetActivePhotoAssistantTool(paTool);
 
         // Rohrkreis zeichnen
         DrawPipeCircle();
@@ -271,7 +294,10 @@ public partial class PhotoMeasurementWindow : Window
         {
             SliderPosition.Value = 0;
             SliderAngle.Value = 45;
-            UpdateAngleOverlay();
+            // Foto-Assistent (PaTool.BendAngle/Lateral) rendert eigene Geometrie -
+            // dann Legacy unterdruecken um Doppel-Overlay zu vermeiden.
+            if (!IsPhotoAssistantActive)
+                UpdateAngleOverlay();
         }
 
         UpdateStatus();
@@ -300,6 +326,8 @@ public partial class PhotoMeasurementWindow : Window
 
     private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        // Foto-Assistent-Modus: spezielle Drag/Handle-Logik vorrangig
+        if (PaHandleMouseDown(e)) return;
         if (_activeTool == PhotoTool.None) return;
         var pos = e.GetPosition(OverlayCanvas);
         if (!IsInsideImage(pos.X, pos.Y)) return;
@@ -331,6 +359,9 @@ public partial class PhotoMeasurementWindow : Window
             case PhotoTool.Calibration:
             case PhotoTool.MarkRect:
             case PhotoTool.Ruler:
+            case PhotoTool.PipeSurface:
+            case PhotoTool.CrackWidth:
+            case PhotoTool.JointOffset:
             case PhotoTool.Connection:
                 _isDragging = true;
                 _dragStart = pos;
@@ -347,14 +378,118 @@ public partial class PhotoMeasurementWindow : Window
                     AddPolygonPoint(new NormalizedPoint(norm.X, norm.Y));
                 break;
 
+            case PhotoTool.RingBBox:
+                HandleRingBBoxClick(new NormalizedPoint(norm.X, norm.Y));
+                break;
+
             // Level/Lateral/Bend: kein Klick-Aktion (nur Slider + Pipe-Drag)
             default:
                 break;
         }
     }
 
+    // ═══════════════════════════════════════════════
+    // Ring-BBox (V4.3): 2 Klicks → 12 BBoxes entlang Umfang
+    // ═══════════════════════════════════════════════
+
+    /// <summary>1. Klick: Mittelpunkt. 2. Klick: Punkt auf Ring (definiert Radius).</summary>
+    private NormalizedPoint? _ringCenter;
+
+    private void HandleRingBBoxClick(NormalizedPoint p)
+    {
+        if (_ringCenter is null)
+        {
+            _ringCenter = p;
+            ClearByTag(TagOverlay);
+            // Marker fuer Center
+            var canvas = NormToCanvas(p.X, p.Y);
+            var marker = new Ellipse
+            {
+                Width = 10, Height = 10,
+                Fill = Brushes.HotPink,
+                Stroke = Brushes.White, StrokeThickness = 1,
+                Tag = TagOverlay
+            };
+            Canvas.SetLeft(marker, canvas.X - 5);
+            Canvas.SetTop(marker, canvas.Y - 5);
+            OverlayCanvas.Children.Add(marker);
+            TxtStatus.Text = "Ringriss: jetzt einen Punkt AUF dem Riss klicken (definiert den Radius).";
+        }
+        else
+        {
+            FinalizeRingBBox(_ringCenter, p);
+            _ringCenter = null;
+        }
+    }
+
+    private void FinalizeRingBBox(NormalizedPoint center, NormalizedPoint ringPt)
+    {
+        double dx = ringPt.X - center.X;
+        double dy = ringPt.Y - center.Y;
+        double radius = Math.Sqrt(dx*dx + dy*dy);
+        if (radius < 0.05) { TxtStatus.Text = "Radius zu klein, nochmal klicken."; return; }
+
+        // 12 BBoxes entlang des Umfangs (alle 30°)
+        const int BBOX_COUNT = 12;
+        const double BBOX_REL_SIZE = 0.12; // 12% des Radius als BBox-Kantenlaenge
+        double bboxSize = radius * BBOX_REL_SIZE;
+
+        var points = new List<NormalizedPoint>();
+        ClearByTag(TagOverlay);
+
+        // Ring-Umriss als gestrichelter Kreis (optisch)
+        var rImg = GetImageRenderedRect(PhotoImage);
+        double refMin = Math.Min(rImg.Width, rImg.Height);
+        var centerCanvas = NormToCanvas(center.X, center.Y);
+        double radiusCanvas = radius * refMin;
+        var circle = new Ellipse
+        {
+            Width = radiusCanvas * 2, Height = radiusCanvas * 2,
+            Stroke = Brushes.HotPink, StrokeThickness = 1.5,
+            StrokeDashArray = new DoubleCollection { 4, 2 },
+            Tag = TagOverlay
+        };
+        Canvas.SetLeft(circle, centerCanvas.X - radiusCanvas);
+        Canvas.SetTop(circle, centerCanvas.Y - radiusCanvas);
+        OverlayCanvas.Children.Add(circle);
+
+        for (int i = 0; i < BBOX_COUNT; i++)
+        {
+            double angle = 2 * Math.PI * i / BBOX_COUNT - Math.PI / 2; // Start bei 12 Uhr
+            double cx = center.X + Math.Cos(angle) * radius;
+            double cy = center.Y + Math.Sin(angle) * radius;
+            points.Add(new NormalizedPoint(cx, cy));
+
+            // BBox-Rechteck zeichnen
+            var canvas = NormToCanvas(cx, cy);
+            double sizePx = bboxSize * refMin;
+            var rect = new System.Windows.Shapes.Rectangle
+            {
+                Width = sizePx, Height = sizePx,
+                Stroke = Brushes.HotPink, StrokeThickness = 2,
+                Fill = new SolidColorBrush(Color.FromArgb(60, 244, 114, 182)),
+                Tag = TagOverlay
+            };
+            Canvas.SetLeft(rect, canvas.X - sizePx / 2);
+            Canvas.SetTop(rect, canvas.Y - sizePx / 2);
+            OverlayCanvas.Children.Add(rect);
+        }
+
+        _currentGeometry = new OverlayGeometry
+        {
+            ToolType = OverlayToolType.RingBBoxes,
+            Points = points,
+            // Radius als FillPercent (% des Rohrquerschnitts fuer spaetere Auswertung)
+            FillPercent = Math.Round(radius * 100, 1)
+        };
+
+        TxtMeasureInfo.Text = $"Ring: {BBOX_COUNT} BBoxes";
+        TxtStatus.Text = $"Ringriss: {BBOX_COUNT} BBoxes generiert (Radius {radius:F2} norm).";
+    }
+
     private void Canvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
+        if (PaHandleMouseUp(e)) return;
         if (_isDraggingPipe)
         {
             _isDraggingPipe = false;
@@ -386,6 +521,9 @@ public partial class PhotoMeasurementWindow : Window
                 break;
 
             case PhotoTool.Ruler:
+            case PhotoTool.PipeSurface:
+            case PhotoTool.CrackWidth:
+            case PhotoTool.JointOffset:
             case PhotoTool.Connection:
                 FinalizeLine(
                     new NormalizedPoint(_dragStartNorm.X, _dragStartNorm.Y),
@@ -396,6 +534,7 @@ public partial class PhotoMeasurementWindow : Window
 
     private void Canvas_MouseMove(object sender, MouseEventArgs e)
     {
+        if (PaHandleMouseMove(e)) return;
         var pos = e.GetPosition(OverlayCanvas);
 
         if (_isDraggingPipe)
@@ -407,7 +546,10 @@ public partial class PhotoMeasurementWindow : Window
             // Aktives Overlay aktualisieren (egal welches Tool)
             bool isLevel = _activeTool is PhotoTool.LevelWater or PhotoTool.LevelDeposit or PhotoTool.LevelObstacle;
             if (isLevel) UpdateLevelOverlay();
-            bool isAngle = _activeTool is PhotoTool.Lateral or PhotoTool.Bend;
+            // Wenn Foto-Assistent (PaTool) aktiv ist, unterdrueckt seine eigene Render-
+            // Methode das Legacy-UpdateAngleOverlay - sonst sieht der User zwei Overlays
+            // gleichzeitig (linke alte Krempel + rechte neue Schablone).
+            bool isAngle = (_activeTool is PhotoTool.Lateral or PhotoTool.Bend) && !IsPhotoAssistantActive;
             if (isAngle) UpdateAngleOverlay();
             return;
         }
@@ -467,6 +609,8 @@ public partial class PhotoMeasurementWindow : Window
 
     private void Canvas_MouseWheel(object sender, MouseWheelEventArgs e)
     {
+        // Foto-Assistent: Mausrad mit Faktor 1.08
+        if (PaHandleMouseWheel(e)) return;
         // Mausrad: Rohrkreis-Groesse aendern (bei Level, Deformation, Querschnitt)
         if (_activeTool == PhotoTool.None || _activeTool == PhotoTool.Calibration) return;
 
@@ -478,7 +622,7 @@ public partial class PhotoMeasurementWindow : Window
         bool isLevel = _activeTool is PhotoTool.LevelWater or PhotoTool.LevelDeposit or PhotoTool.LevelObstacle;
         if (isLevel) UpdateLevelOverlay();
 
-        bool isAngle = _activeTool is PhotoTool.Lateral or PhotoTool.Bend;
+        bool isAngle = (_activeTool is PhotoTool.Lateral or PhotoTool.Bend) && !IsPhotoAssistantActive;
         if (isAngle) UpdateAngleOverlay();
     }
 
@@ -573,11 +717,181 @@ public partial class PhotoMeasurementWindow : Window
         OverlayCanvas.Children.Add(rect);
 
         TxtMeasureInfo.Text = "Markiert";
-        TxtStatus.Text = "Bereich markiert. OK = uebernehmen.";
+        TxtStatus.Text = "Bereich markiert. SAM + Qwen werden gestartet...";
+
+        // SAM + Qwen-Klassifikation auf das markierte Region (asynchron, blockiert UI nicht).
+        // PhotoAssistant nutzt das Foto-File direkt - kein VLC-Airspace-Problem wie im Codiermodus.
+        _ = AnalyzeMarkRectAsync(minX, minY, maxX, maxY);
+    }
+
+    /// <summary>
+    /// Schickt die markierte BBox-Region an SAM + Qwen und rendert das Ergebnis
+    /// als gruene Maske + Klassifikations-Label. Funktioniert weil das Foto eine
+    /// statische Datei ist (anders als im Codiermodus mit laufendem VLC-Video).
+    /// </summary>
+    private async Task AnalyzeMarkRectAsync(double normX1, double normY1, double normX2, double normY2)
+    {
+        if (string.IsNullOrWhiteSpace(_photoPath) || !File.Exists(_photoPath))
+        {
+            TxtStatus.Text = "Foto-Datei nicht gefunden - SAM uebersprungen.";
+            return;
+        }
+
+        try
+        {
+            byte[] pngBytes = await File.ReadAllBytesAsync(_photoPath);
+
+            // Bild-Aufloesung ermitteln
+            int imgW = 1920, imgH = 1080;
+            try
+            {
+                using var ms = new System.IO.MemoryStream(pngBytes);
+                var dec = System.Windows.Media.Imaging.BitmapDecoder.Create(
+                    ms,
+                    System.Windows.Media.Imaging.BitmapCreateOptions.PreservePixelFormat,
+                    System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+                if (dec.Frames.Count > 0)
+                {
+                    imgW = dec.Frames[0].PixelWidth;
+                    imgH = dec.Frames[0].PixelHeight;
+                }
+            }
+            catch { }
+
+            // BBox-Pixel in Image-Koordinaten
+            double pxX1 = normX1 * imgW, pxY1 = normY1 * imgH;
+            double pxX2 = normX2 * imgW, pxY2 = normY2 * imgH;
+
+            // Sidecar lazy initialisieren
+            var sidecarUrl = Environment.GetEnvironmentVariable("SEWERSTUDIO_SIDECAR_URL")
+                ?? "http://localhost:8100";
+            var sidecar = new Ai.Pipeline.VisionPipelineClient(new Uri(sidecarUrl));
+
+            var samBox = new Ai.Pipeline.SamBoundingBox(pxX1, pxY1, pxX2, pxY2, "manual", 1.0);
+            var samReq = new Ai.Pipeline.SamRequest(Convert.ToBase64String(pngBytes), [samBox]);
+
+            Ai.Pipeline.SamResponse samResp;
+            try
+            {
+                samResp = await sidecar.SegmentSamAsync(samReq);
+            }
+            catch (Exception ex)
+            {
+                TxtStatus.Text = $"SAM-Fehler: {ex.Message}";
+                return;
+            }
+
+            if (samResp is null || samResp.Masks.Count == 0)
+            {
+                TxtStatus.Text = "SAM lieferte keine Maske - BBox bleibt aktiv.";
+                return;
+            }
+
+            // Maske rendern - sicheres OverlayCanvas-Render (kein VLC, daher kein Airspace-Problem)
+            var firstMask = samResp.Masks[0];
+            await Dispatcher.InvokeAsync(() => RenderSamMaskOnPhoto(samResp, firstMask, imgW, imgH));
+
+            TxtStatus.Text = $"SAM-Maske: {firstMask.MaskAreaPixels} px in {samResp.InferenceTimeMs:F0} ms";
+        }
+        catch (Exception ex)
+        {
+            TxtStatus.Text = $"SAM-Pipeline-Fehler: {ex.Message}";
+        }
+    }
+
+    private void RenderSamMaskOnPhoto(Ai.Pipeline.SamResponse samResp,
+        Ai.Pipeline.SamMaskResult mask, int imgW, int imgH)
+    {
+        double cw = OverlayCanvas.ActualWidth;
+        double ch = OverlayCanvas.ActualHeight;
+        if (cw <= 0 || ch <= 0) return;
+
+        try
+        {
+            var decoded = Ai.Pipeline.SamMaskRenderer.DecodeRle(mask.MaskRle, imgW, imgH);
+
+            // Fuellung
+            var fillGeom = Ai.Pipeline.SamMaskRenderer.ExtractFillGeometry(decoded, imgW, imgH, cw, ch, targetWidth: 720);
+            var fill = new System.Windows.Shapes.Path
+            {
+                Data = fillGeom,
+                Fill = new SolidColorBrush(Color.FromArgb(140, 57, 255, 20)),
+                Tag = "sam_photo_mask",
+                IsHitTestVisible = false
+            };
+            OverlayCanvas.Children.Add(fill);
+
+            // Konturlinien (Moore-Trace)
+            var polylines = Ai.Pipeline.SamMaskRenderer.ExtractContourPolylines(decoded, imgW, imgH, cw, ch);
+            int contoursDrawn = 0;
+            foreach (var poly in polylines)
+            {
+                if (poly.Count < 3) continue;
+                contoursDrawn++;
+                var outer = new System.Windows.Shapes.Polyline
+                {
+                    Stroke = Brushes.White, StrokeThickness = 5,
+                    Tag = "sam_photo_mask", IsHitTestVisible = false
+                };
+                foreach (var p in poly) outer.Points.Add(p);
+                outer.Points.Add(poly[0]);
+                OverlayCanvas.Children.Add(outer);
+
+                var inner = new System.Windows.Shapes.Polyline
+                {
+                    Stroke = new SolidColorBrush(Color.FromRgb(0, 255, 0)),
+                    StrokeThickness = 3,
+                    Tag = "sam_photo_mask", IsHitTestVisible = false,
+                    Effect = new System.Windows.Media.Effects.DropShadowEffect
+                    {
+                        BlurRadius = 16, ShadowDepth = 0,
+                        Color = Color.FromRgb(0, 255, 0), Opacity = 0.95
+                    }
+                };
+                foreach (var p in poly) inner.Points.Add(p);
+                inner.Points.Add(poly[0]);
+                OverlayCanvas.Children.Add(inner);
+            }
+
+            // Fallback wenn keine Polylines: alte Treppen-Kontur
+            if (contoursDrawn == 0)
+            {
+                var fb = Ai.Pipeline.SamMaskRenderer.ExtractContourGeometry(decoded, imgW, imgH, cw, ch);
+                OverlayCanvas.Children.Add(new System.Windows.Shapes.Path
+                {
+                    Data = fb,
+                    Stroke = new SolidColorBrush(Color.FromRgb(0, 255, 0)),
+                    StrokeThickness = 3,
+                    Tag = "sam_photo_mask", IsHitTestVisible = false
+                });
+            }
+
+            // Centroid-Label
+            double labelX = mask.CentroidX / imgW * cw;
+            double labelY = mask.CentroidY / imgH * ch;
+            var label = new TextBlock
+            {
+                Text = $"SAM · {mask.MaskAreaPixels} px · Konf {mask.Confidence:P0}",
+                Foreground = Brushes.Black,
+                Background = new SolidColorBrush(Color.FromRgb(57, 255, 20)),
+                FontSize = 11,
+                FontWeight = FontWeights.Bold,
+                Padding = new Thickness(4, 1, 4, 1),
+                Tag = "sam_photo_mask",
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(label, Math.Max(0, labelX - 80));
+            Canvas.SetTop(label, Math.Max(0, labelY - 18));
+            OverlayCanvas.Children.Add(label);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PhotoAssistant SAM] Render-Fehler: {ex.Message}");
+        }
     }
 
     // ═══════════════════════════════════════════════
-    // Lineal / Anschluss (Drag-Linie)
+    // Lineal / WinCan-PhotoAssistant 2-Punkt-Werkzeuge (Drag-Linie)
     // ═══════════════════════════════════════════════
 
     private void FinalizeLine(NormalizedPoint start, NormalizedPoint end)
@@ -585,17 +899,27 @@ public partial class PhotoMeasurementWindow : Window
         double normLen = PipeCalibration.AspectCorrectedDistance(start, end, _imageAspect);
         if (normLen < 0.005) return;
 
-        double mm = _calibration.NormToMm(normLen);
+        var measurement = BuildLineMeasurement(normLen);
 
-        _currentGeometry = new OverlayGeometry
+        var geometry = new OverlayGeometry
         {
-            ToolType = _activeTool == PhotoTool.Connection
-                ? OverlayToolType.Line : OverlayToolType.Ruler,
+            ToolType = _activeTool is PhotoTool.Ruler or PhotoTool.PipeSurface
+                ? OverlayToolType.Ruler : OverlayToolType.Line,
             Points = new List<NormalizedPoint> { start, end },
-            Q1Mm = Math.Round(mm, 1),
+            Q1Mm = Math.Round(measurement.PrimaryMm, 1),
             ClockFrom = _calibration.PointToClockHour(start),
             ClockTo = _calibration.PointToClockHour(end)
         };
+        if (_activeTool == PhotoTool.JointOffset && measurement.SecondaryValue.HasValue)
+        {
+            geometry.FillPercent = Math.Round(measurement.SecondaryValue.Value, 1);
+        }
+        else if (measurement.SecondaryValue.HasValue)
+        {
+            geometry.Q2Mm = Math.Round(measurement.SecondaryValue.Value, 1);
+        }
+
+        _currentGeometry = geometry;
 
         // Overlay zeichnen
         ClearByTag(TagOverlay);
@@ -605,17 +929,57 @@ public partial class PhotoMeasurementWindow : Window
         var line = new Line
         {
             X1 = p1.X, Y1 = p1.Y, X2 = p2.X, Y2 = p2.Y,
-            Stroke = Brushes.Lime, StrokeThickness = 2,
+            Stroke = measurement.Stroke, StrokeThickness = 3,
             Tag = TagOverlay
         };
         OverlayCanvas.Children.Add(line);
+        AddHandle(p1, measurement.Stroke, TagOverlay);
+        AddHandle(p2, measurement.Stroke, TagOverlay);
 
         // Label
-        AddCanvasLabel($"{mm:F1} mm", (p1.X + p2.X) / 2, (p1.Y + p2.Y) / 2 - 16, TagOverlay);
+        AddCanvasLabel(measurement.Label, (p1.X + p2.X) / 2, (p1.Y + p2.Y) / 2 - 16, TagOverlay);
 
-        TxtMeasureInfo.Text = $"{mm:F1} mm";
-        TxtStatus.Text = _activeTool == PhotoTool.Connection
-            ? $"Anschluss: {mm:F1} mm" : $"Distanz: {mm:F1} mm";
+        TxtMeasureInfo.Text = measurement.Label;
+        TxtStatus.Text = measurement.Status;
+    }
+
+    private LineMeasurement BuildLineMeasurement(double normLen)
+    {
+        double mm = _calibration.NormToMm(normLen);
+        return _activeTool switch
+        {
+            PhotoTool.PipeSurface => BuildPipeSurfaceMeasurement(mm),
+            PhotoTool.CrackWidth => new LineMeasurement(mm, null, $"Rissbreite: {mm:F1} mm", $"Rissbreite: {mm:F1} mm", CrackBrush),
+            PhotoTool.JointOffset => BuildJointOffsetMeasurement(mm),
+            PhotoTool.Connection => new LineMeasurement(mm, null, $"{mm:F1} mm", $"Anschluss: {mm:F1} mm", RulerBrush),
+            _ => new LineMeasurement(mm, null, $"{mm:F1} mm", $"Distanz: {mm:F1} mm", RulerBrush)
+        };
+    }
+
+    private LineMeasurement BuildPipeSurfaceMeasurement(double chordMm)
+    {
+        double pipeDiameterMm = Math.Max(_calibration.NormToMm(_calibration.NormalizedDiameter), 0.001);
+        double radiusMm = pipeDiameterMm / 2.0;
+        double clampedChord = Math.Min(Math.Max(chordMm, 0), radiusMm * 2.0);
+        double arcMm = 2.0 * radiusMm * Math.Asin(clampedChord / (2.0 * radiusMm));
+        return new LineMeasurement(
+            arcMm,
+            chordMm,
+            $"Distanz: {arcMm:F1} mm (Oberflaeche)",
+            $"Rohroberflaeche: {arcMm:F1} mm",
+            RulerBrush);
+    }
+
+    private LineMeasurement BuildJointOffsetMeasurement(double mm)
+    {
+        double pipeDiameterMm = Math.Max(_calibration.NormToMm(_calibration.NormalizedDiameter), 0.001);
+        double percent = mm / pipeDiameterMm * 100.0;
+        return new LineMeasurement(
+            mm,
+            percent,
+            $"Versatz: {mm:F1} mm ({percent:F1}%)",
+            $"Muffenversatz: {mm:F1} mm ({percent:F1}%)",
+            JointOffsetBrush);
     }
 
     // ═══════════════════════════════════════════════
@@ -631,6 +995,8 @@ public partial class PhotoMeasurementWindow : Window
 
     private void SliderCamera_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        // Foto-Assistent: Bend/Lateral re-rendern auf Camera-Hoehe
+        if (IsPhotoAssistantActive) { PaOnCameraChanged(); return; }
         if (_activeTool is not (PhotoTool.LevelWater or PhotoTool.LevelDeposit or PhotoTool.LevelObstacle))
             return;
         UpdateLevelOverlay();
@@ -659,11 +1025,13 @@ public partial class PhotoMeasurementWindow : Window
         // Guard: Kein negativer/leerer Radius (tritt auf wenn Kalibrierung fehlt oder Zoom=0)
         if (pipeR <= 0) return;
 
-        // Kamerahoehe-Korrektur
-        double camRatio = (CameraHeightPercent - 50.0) / 100.0;
+        // Bugfix: Kamerahoehe-Korrektur darf den Fuell-Mittelpunkt NICHT verschieben,
+        // sonst leckt das Fuell-Polygon nach unten/oben aus dem sichtbaren Rohrkreis
+        // (Clipping-Ellipse versetzt vs. visuelles Rohr). Die Kameraperspektive wird
+        // ueber die Verschiebung des Sohle/Scheitel-Bezugs gehandhabt - separat in
+        // BuildLevelGeometryFromSlider.
         double normCx = _calibration.PipeCenter.X;
-        double normCy = _calibration.PipeCenter.Y + camRatio * (normDiam / 2.0) * 0.3;
-
+        double normCy = _calibration.PipeCenter.Y;
         var center = NormToCanvas(normCx, normCy);
 
         // Fuellfarbe (statisch gefroren, keine Allokation)
@@ -960,6 +1328,58 @@ public partial class PhotoMeasurementWindow : Window
 
         TxtMeasureInfo.Text = $"Quersch: {reductionPct:F1}%";
         TxtStatus.Text = $"Querschnittsverminderung: {reductionPct:F1}%";
+
+        // V4.3: Subject-Auswahl fuer VsaFinding.MeasurementSubject
+        _crossSectionSubject = AskCrossSectionSubject();
+        if (_crossSectionSubject is not null)
+            TxtStatus.Text = $"Querschnittsverminderung: {reductionPct:F1}% — {_crossSectionSubject}";
+    }
+
+    /// <summary>
+    /// V4.3 — Fragt nach Polygon-Schluss welche Art von Querschnitts-Reduktion gemeint ist.
+    /// Kleines Dialog-Fenster mit 4 Buttons (Wurzel/Abplatzung/Fehlstelle/Sonstige).
+    /// </summary>
+    private string? AskCrossSectionSubject()
+    {
+        var dlg = new Window
+        {
+            Title = "Querschnitt — Art auswaehlen",
+            Width = 360,
+            SizeToContent = SizeToContent.Height,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Owner = this,
+            ResizeMode = ResizeMode.NoResize,
+            WindowStyle = WindowStyle.ToolWindow
+        };
+        var stack = new StackPanel { Margin = new Thickness(12) };
+        stack.Children.Add(new TextBlock
+        {
+            Text = "Was wird hier vermessen?",
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 10)
+        });
+
+        string? selected = "Sonstige";
+        void AddButton(string label, string value)
+        {
+            var b = new Button
+            {
+                Content = label,
+                Padding = new Thickness(12, 6, 12, 6),
+                Margin = new Thickness(0, 0, 0, 6),
+                HorizontalContentAlignment = HorizontalAlignment.Left
+            };
+            b.Click += (_, _) => { selected = value; dlg.DialogResult = true; };
+            stack.Children.Add(b);
+        }
+        AddButton("Wurzel", "Wurzel");
+        AddButton("Abplatzung", "Abplatzung");
+        AddButton("Fehlstelle", "Fehlstelle");
+        AddButton("Sonstige Querschnittsreduktion", "Sonstige");
+
+        dlg.Content = stack;
+        dlg.ShowDialog();
+        return selected;
     }
 
     // ═══════════════════════════════════════════════
@@ -970,11 +1390,31 @@ public partial class PhotoMeasurementWindow : Window
     {
         if (_activeTool is not (PhotoTool.Lateral or PhotoTool.Bend)) return;
         TxtPosition.Text = $"{SliderPosition.Value:F0}°";
+        // Bei aktivem Foto-Assistenten: nur dessen Render aufrufen, nicht die Legacy-Geometrie.
+        if (IsPhotoAssistantActive)
+        {
+            // Position-Slider als Richtung verwenden:
+            //  - PaTool.Lateral: Stunde 1..12 fuer Sichel-Position
+            //  - PaTool.BendAngle: Richtung in Grad (0=oben, 90=rechts, 180=unten, 270=links)
+            //    → komplett stufenlos in alle Richtungen
+            int hour = ((int)Math.Round(SliderPosition.Value / 30.0)) % 12;
+            if (hour == 0) hour = 12;
+            PaOnHourSelected(hour);
+            PaOnBendDirectionChanged(SliderPosition.Value);
+            return;
+        }
         UpdateAngleOverlay();
     }
 
     private void SliderAngle_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        // Foto-Assistent (Bend / Lateral) hat Vorrang ueber den klassischen Pfad.
+        if (IsPhotoAssistantActive)
+        {
+            TxtAngle.Text = $"{SliderAngle.Value:F0}°";
+            PaOnSliderAngleChanged(SliderAngle.Value);
+            return;
+        }
         if (_activeTool is not (PhotoTool.Lateral or PhotoTool.Bend)) return;
         TxtAngle.Text = $"{SliderAngle.Value:F0}°";
         UpdateAngleOverlay();
@@ -983,7 +1423,16 @@ public partial class PhotoMeasurementWindow : Window
     private void PositionPreset_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.Tag is string tag && double.TryParse(tag, out double deg))
+        {
             SliderPosition.Value = deg;
+            // Foto-Assistent: deg → hour (1..12)
+            if (_paActive == PaTool.Lateral)
+            {
+                int hour = ((int)Math.Round(deg / 30.0)) % 12;
+                if (hour == 0) hour = 12;
+                PaOnHourSelected(hour);
+            }
+        }
     }
 
     private void AnglePreset_Click(object sender, RoutedEventArgs e)
@@ -1179,6 +1628,12 @@ public partial class PhotoMeasurementWindow : Window
             or PhotoTool.Calibration or PhotoTool.Ruler or PhotoTool.Connection)
             return;
 
+        // Foto-Assistent (PaTool.BendAngle/Lateral/Deformation) bringt seine eigene
+        // 3D-Schablone mit - der statische Pipe-Kreis stoert nur (siehe linker
+        // Phantom-Kreis im Bend-Tool). Daher unterdruecken wenn PaTool aktiv.
+        if (IsPhotoAssistantActive)
+            return;
+
         var r = GetImageRenderedRect(PhotoImage);
         if (r.Width <= 0 || r.Height <= 0) return;
 
@@ -1263,6 +1718,22 @@ public partial class PhotoMeasurementWindow : Window
         Canvas.SetTop(border, y);
         OverlayCanvas.Children.Add(border);
         return tb;
+    }
+
+    private void AddHandle(Point center, Brush stroke, string tag)
+    {
+        var handle = new System.Windows.Shapes.Rectangle
+        {
+            Width = 8,
+            Height = 8,
+            Fill = Brushes.White,
+            Stroke = stroke,
+            StrokeThickness = 1.5,
+            Tag = tag
+        };
+        Canvas.SetLeft(handle, center.X - 4);
+        Canvas.SetTop(handle, center.Y - 4);
+        OverlayCanvas.Children.Add(handle);
     }
 
     private void DrawArc(double cx, double cy, double radius,
@@ -1353,6 +1824,13 @@ public partial class PhotoMeasurementWindow : Window
 
     private void BtnOk_Click(object sender, RoutedEventArgs e)
     {
+        // Foto-Assistent: Geometrie/Parameters/VSA-Code aus den drei neuen Werkzeugen ableiten
+        if (IsPhotoAssistantActive)
+        {
+            _currentGeometry ??= new OverlayGeometry();
+            ApplyPhotoAssistantToOverlay(_currentGeometry);
+        }
+
         string? overlayPath = null;
         if (_currentGeometry != null)
         {
@@ -1367,6 +1845,18 @@ public partial class PhotoMeasurementWindow : Window
             }
         }
 
+        // Foto-Assistent: zusaetzliches Schablonen-PNG fuer FotoPaths
+        if (IsPhotoAssistantActive)
+        {
+            try
+            {
+                var measuredPath = CapturePhotoWithOverlay(_photoPath);
+                if (!string.IsNullOrWhiteSpace(measuredPath) && string.IsNullOrWhiteSpace(overlayPath))
+                    overlayPath = measuredPath;
+            }
+            catch { /* best-effort */ }
+        }
+
         Result = new PhotoMeasurementResult
         {
             Geometry = _currentGeometry,
@@ -1374,8 +1864,173 @@ public partial class PhotoMeasurementWindow : Window
             Confirmed = true,
             UpdatedCalibration = _calibration
         };
+        // V4.3: Werkzeug-Metadaten (Value, Einheit, Tool, Subject) fuer VsaFinding-Schreibpfad
+        PopulateResultMetadata(Result);
+
+        // Foto-Assistent: VSA-Code-Vorschlag + Parameters in Result einbetten
+        if (IsPhotoAssistantActive)
+        {
+            var (code, descr, parameters) = GetPhotoAssistantSuggestion();
+            Result.MeasurementTool ??= _paActive switch
+            {
+                PaTool.Deformation => "Deformation",
+                PaTool.BendAngle => "Bogen/Knick",
+                PaTool.Lateral => "Anschluss",
+                _ => Result.MeasurementTool
+            };
+            Result.SuggestedVsaCode = code;
+            Result.SuggestedVsaDescription = descr;
+            Result.PhotoAssistantParameters = parameters;
+        }
+
         DialogResult = true;
         Close();
+    }
+
+    /// <summary>
+    /// V4.3 — befuellt PhotoMeasurementResult mit Werkzeug-Herkunft und Einheit,
+    /// damit der Consumer (CodingModeWindow etc.) die Werte in VsaFinding schreiben kann.
+    /// </summary>
+    private void PopulateResultMetadata(PhotoMeasurementResult r)
+    {
+        switch (_activeTool)
+        {
+            case PhotoTool.Ruler:
+                r.MeasurementTool = "Lineal";
+                if (_currentGeometry?.Q1Mm is double ruler)
+                {
+                    r.Value1 = ruler.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                    r.Unit1 = "mm";
+                }
+                break;
+
+            case PhotoTool.PipeSurface:
+                r.MeasurementTool = "Rohroberflaeche";
+                if (_currentGeometry?.Q1Mm is double surface)
+                {
+                    r.Value1 = surface.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                    r.Unit1 = "mm";
+                }
+                if (_currentGeometry?.Q2Mm is double chord)
+                {
+                    r.Value2 = chord.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                    r.Unit2 = "mm Sehne";
+                }
+                break;
+
+            case PhotoTool.CrackWidth:
+                r.MeasurementTool = "Rissbreite";
+                if (_currentGeometry?.Q1Mm is double crack)
+                {
+                    r.Value1 = crack.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                    r.Unit1 = "mm";
+                }
+                break;
+
+            case PhotoTool.JointOffset:
+                r.MeasurementTool = "Muffenversatz";
+                if (_currentGeometry?.Q1Mm is double joint)
+                {
+                    r.Value1 = joint.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                    r.Unit1 = "mm";
+                }
+                if (_currentGeometry?.FillPercent is double jointPct)
+                {
+                    r.Value2 = jointPct.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                    r.Unit2 = "%";
+                }
+                break;
+
+            case PhotoTool.Connection:
+                // Anschluss: Linie wird als H x B interpretiert — aktuell nur 1 Wert
+                // (die 2. Dimension wird im CodingModeWindow ergaenzt falls vorhanden).
+                r.MeasurementTool = "Anschluss";
+                if (_currentGeometry?.Q1Mm is double conn)
+                {
+                    r.Value1 = conn.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                    r.Unit1 = "mm";
+                }
+                break;
+
+            case PhotoTool.LevelWater:
+                r.MeasurementTool = "Wasserstand";
+                if (_currentGeometry?.FillPercent is double w)
+                {
+                    r.Value1 = w.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                    r.Unit1 = "%";
+                }
+                break;
+
+            case PhotoTool.LevelDeposit:
+                r.MeasurementTool = "Ablagerung";
+                if (_currentGeometry?.FillPercent is double d)
+                {
+                    r.Value1 = d.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                    r.Unit1 = "%";
+                }
+                break;
+
+            case PhotoTool.LevelObstacle:
+                r.MeasurementTool = "Hindernis";
+                if (_currentGeometry?.FillPercent is double o)
+                {
+                    r.Value1 = o.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                    r.Unit1 = "%";
+                }
+                break;
+
+            case PhotoTool.Deformation:
+                r.MeasurementTool = "Deformation";
+                if (_currentGeometry?.FillPercent is double def)
+                {
+                    r.Value1 = def.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                    r.Unit1 = "%";
+                }
+                break;
+
+            case PhotoTool.CrossSection:
+                r.MeasurementTool = "Querschnitt";
+                r.MeasurementSubject = _crossSectionSubject ?? "Sonstige";
+                if (_currentGeometry?.FillPercent is double cs)
+                {
+                    r.Value1 = cs.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                    r.Unit1 = "%";
+                }
+                break;
+
+            case PhotoTool.Lateral:
+                r.MeasurementTool = "Abzweig";
+                if (_currentGeometry?.ArcDegrees is double lat)
+                {
+                    r.Value1 = lat.ToString("F0", System.Globalization.CultureInfo.InvariantCulture);
+                    r.Unit1 = "\u00B0"; // °
+                }
+                break;
+
+            case PhotoTool.Bend:
+                r.MeasurementTool = "Bogen";
+                if (_currentGeometry?.ArcDegrees is double bend)
+                {
+                    r.Value1 = bend.ToString("F0", System.Globalization.CultureInfo.InvariantCulture);
+                    r.Unit1 = "\u00B0";
+                }
+                break;
+
+            case PhotoTool.RingBBox:
+                r.MeasurementTool = "Ringriss";
+                // Value1 = Anzahl generierter BBoxes (12); Einheit = "BBoxes" fuer Klarheit
+                if (_currentGeometry?.Points is { Count: > 0 } pts)
+                {
+                    r.Value1 = pts.Count.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    r.Unit1 = "BBoxes";
+                }
+                break;
+
+            case PhotoTool.Calibration:
+            case PhotoTool.MarkRect:
+                // Kein Messwert — Kalibrierung ist interne Skala, MarkRect ist KI-Training-BBox
+                break;
+        }
     }
 
     private void BtnCancel_Click(object sender, RoutedEventArgs e)
@@ -1449,7 +2104,7 @@ public partial class PhotoMeasurementWindow : Window
         bool isLevel = _activeTool is PhotoTool.LevelWater or PhotoTool.LevelDeposit or PhotoTool.LevelObstacle;
         if (isLevel) UpdateLevelOverlay();
 
-        bool isAngle = _activeTool is PhotoTool.Lateral or PhotoTool.Bend;
+        bool isAngle = (_activeTool is PhotoTool.Lateral or PhotoTool.Bend) && !IsPhotoAssistantActive;
         if (isAngle) UpdateAngleOverlay();
 
         // Klick-Punkte (Deformation/Polygon) neu positionieren
@@ -1536,6 +2191,9 @@ public partial class PhotoMeasurementWindow : Window
             PhotoTool.LevelObstacle => "Hindernis: Slider links | Mausrad: Kreis-Groesse | Drag: Position",
             PhotoTool.Deformation => "4 Punkte auf Rohrwand klicken: Oben → Unten → Links → Rechts",
             PhotoTool.Ruler => "Linie ziehen fuer Distanzmessung (Kalibrierung noetig).",
+            PhotoTool.PipeSurface => "2 Punkte auf der Rohroberflaeche ziehen (Bogenlaenge korrigiert).",
+            PhotoTool.CrackWidth => "2 Punkte quer ueber den Riss ziehen.",
+            PhotoTool.JointOffset => "2 Punkte zwischen alter und neuer Muffenkante ziehen.",
             PhotoTool.CrossSection => "Polygon-Punkte klicken, Doppelklick = schliessen.",
             PhotoTool.Lateral => "Position + Winkel per Slider einstellen.",
             PhotoTool.Bend => "Position + Winkel per Slider einstellen.",
@@ -1556,8 +2214,19 @@ internal enum PhotoTool
     LevelObstacle,
     Deformation,
     Ruler,
+    PipeSurface,
+    CrackWidth,
+    JointOffset,
     CrossSection,
     Lateral,
     Bend,
-    Connection
+    Connection,
+    RingBBox   // V4.3: 12 BBoxes entlang Ring-Umfang fuer Ringrisse (BABBB)
 }
+
+internal sealed record LineMeasurement(
+    double PrimaryMm,
+    double? SecondaryValue,
+    string Label,
+    string Status,
+    Brush Stroke);

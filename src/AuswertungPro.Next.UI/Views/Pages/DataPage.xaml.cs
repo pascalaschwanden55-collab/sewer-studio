@@ -1350,14 +1350,65 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private string BuildPrimaryDamagePreviewContent(HaltungRecord record)
     {
         var sp = App.Services as ServiceProvider;
-        var lines = BuildPrimaryDamageLinesFromFindings(record, sp);
-        if (lines.Count == 0)
-            lines = BuildPrimaryDamageLinesFromRaw(record.GetFieldValue("Primaere_Schaeden"), sp);
 
-        if (lines.Count == 0)
-            return record.GetFieldValue("Primaere_Schaeden");
+        // Audit-Fix 2026-04: Beide Quellen verbinden (UNION statt Exklusiv-Fallback).
+        // Vorher: nur VsaFindings ODER Primaere_Schaeden — wenn der User einen Code aus PDF
+        // codiert (-> 1 VsaFinding), wurden die anderen 7 Codes aus Primaere_Schaeden unsichtbar.
+        var fromFindings = BuildPrimaryDamageLinesFromFindings(record, sp);
+        var fromRaw = BuildPrimaryDamageLinesFromRaw(record.GetFieldValue("Primaere_Schaeden"), sp);
 
-        return string.Join("\n", lines);
+        // Deduplizieren ueber (Meter+Code)-Praefix der Zeile.
+        // Format: "0.00m BCD ..." -> Schluessel "0.00|BCD"
+        var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var merged = new List<string>();
+
+        static string KeyOf(string line)
+        {
+            var trimmed = line.Trim();
+            // Erste 2 Tokens (Meter + Code) als Schluessel
+            var parts = trimmed.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length >= 2 ? $"{parts[0]}|{parts[1]}" : trimmed;
+        }
+
+        // VsaFindings haben Vorrang, weil sie Quantifizierung/Title strukturierter haben
+        foreach (var line in fromFindings)
+        {
+            if (seenKeys.Add(KeyOf(line)))
+                merged.Add(line);
+        }
+        // Raw-Lines die nicht via Code+Meter abgedeckt sind ergaenzen
+        foreach (var line in fromRaw)
+        {
+            if (seenKeys.Add(KeyOf(line)))
+                merged.Add(line);
+        }
+
+        if (merged.Count == 0)
+            return record.GetFieldValue("Primaere_Schaeden") ?? string.Empty;
+
+        // Nach Meter sortieren (numerisch) damit die Reihenfolge stabil ist
+        merged.Sort((a, b) => CompareByMeter(a, b));
+        return string.Join("\n", merged);
+    }
+
+    /// <summary>Sortiert Preview-Zeilen nach dem fuehrenden Meter-Wert (z.B. "0.79m ...").</summary>
+    private static int CompareByMeter(string a, string b)
+    {
+        static double? Meter(string line)
+        {
+            var trimmed = line.Trim();
+            var space = trimmed.IndexOf(' ');
+            if (space <= 0) return null;
+            var first = trimmed.Substring(0, space).TrimEnd('m', 'M');
+            return double.TryParse(first, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : null;
+        }
+        var ma = Meter(a);
+        var mb = Meter(b);
+        if (ma.HasValue && mb.HasValue) return ma.Value.CompareTo(mb.Value);
+        if (ma.HasValue) return -1;
+        if (mb.HasValue) return 1;
+        return string.CompareOrdinal(a, b);
     }
 
     private static List<string> BuildPrimaryDamageLinesFromFindings(HaltungRecord record, ServiceProvider? sp)

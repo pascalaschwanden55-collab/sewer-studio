@@ -1,11 +1,228 @@
-using System.Windows.Controls;
+using System;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Windows;
+using Microsoft.Win32;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
 public partial class SettingsPage : System.Windows.Controls.UserControl
 {
+    private string? _previewedSourceDir;
+
     public SettingsPage()
     {
         InitializeComponent();
+        UpdateMarktdatenStatus();
+        UpdateSanierungRulesStatus();
+    }
+
+    private void UpdateSanierungRulesStatus()
+    {
+        try
+        {
+            var sp = (UI.ServiceProvider)App.Services;
+            var file = sp.SanierungUserRules.Load();
+            var active = file.Rules.Count(r => r.Enabled);
+            SanierungRulesStatusText.Text =
+                $"{file.Rules.Count} Regeln gesamt ({active} aktiv)  -  zuletzt: {file.LastUpdated:dd.MM.yyyy HH:mm}";
+        }
+        catch (Exception ex)
+        {
+            SanierungRulesStatusText.Text = $"Status nicht ermittelbar: {ex.Message}";
+        }
+    }
+
+    private void OpenSanierungRules_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var sp = (UI.ServiceProvider)App.Services;
+            var win = new Views.Windows.SanierungRulesWindow(sp.SanierungUserRules, sp.RehabRulesEngine)
+            {
+                Owner = Window.GetWindow(this),
+            };
+            win.ShowDialog();
+            UpdateSanierungRulesStatus();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Konnte Regelverwaltung nicht oeffnen:\n{ex.Message}",
+                "Sanierungsregeln", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void UpdateMarktdatenStatus()
+    {
+        try
+        {
+            var sp = (UI.ServiceProvider)App.Services;
+            var subPath = sp.SubmissionsPositions.FilePath;
+            var histPath = sp.HistorischeSanierungen.FilePath;
+            var hist = sp.HistorischeSanierungen.LoadData();
+            var anzahlHaltungen = hist.Haltungen.Count;
+            var anzahlProfile = hist.ProfileAggregat.Count;
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"Aktiv: submission_positionen.json  ({(File.Exists(subPath) ? "✓" : "fehlt")})");
+            sb.AppendLine($"       historische_sanierungen.json ({(File.Exists(histPath) ? "✓" : "fehlt")}, "
+                + $"{anzahlHaltungen} Haltungen, {anzahlProfile} Profile)");
+            if (hist.Meta is { } m)
+                sb.Append($"Stand: {m.Stand} - {m.Quelle}");
+            MarktdatenStatusText.Text = sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            MarktdatenStatusText.Text = $"Status nicht ermittelbar: {ex.Message}";
+        }
+    }
+
+    private void MarktdatenPreview_Click(object sender, RoutedEventArgs e)
+    {
+        // Datei-Dialog: User waehlt eine der erwarteten JSONs - der Quellordner ist dann das Parent-Dir
+        var dlg = new OpenFileDialog
+        {
+            Title = "submission_positionen.json oder historische_sanierungen.json auswaehlen",
+            Filter = "JSON-Marktdaten|submission_positionen.json;historische_sanierungen.json|JSON|*.json",
+            CheckFileExists = true,
+        };
+        // Default: Knowledge\sanierung im Repo-Root
+        var defaultDir = ResolveDefaultKnowledgeDir();
+        if (defaultDir is not null)
+            dlg.InitialDirectory = defaultDir;
+
+        if (dlg.ShowDialog() != true) return;
+
+        var sourceDir = Path.GetDirectoryName(dlg.FileName);
+        if (string.IsNullOrWhiteSpace(sourceDir)) return;
+
+        try
+        {
+            var sp = (UI.ServiceProvider)App.Services;
+            var preview = sp.MarktdatenImport.PreviewImport(sourceDir);
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"Quelle: {preview.SourceDir}");
+            sb.AppendLine();
+            sb.AppendLine("Verfuegbar:");
+            foreach (var f in preview.AvailableFiles)
+            {
+                var size = preview.FileInfos.TryGetValue(f, out var fi) ? $"{fi.Length / 1024} KB, {fi.LastWriteTime:dd.MM.yyyy HH:mm}" : "";
+                var count = preview.RecordCounts.TryGetValue(f, out var c) ? $", {c} Records" : "";
+                sb.AppendLine($"  ✓ {f}  ({size}{count})");
+            }
+            if (preview.MissingFiles.Count > 0)
+            {
+                sb.AppendLine("Fehlend:");
+                foreach (var f in preview.MissingFiles)
+                    sb.AppendLine($"  ✗ {f}");
+            }
+            MarktdatenStatusText.Text = sb.ToString();
+
+            _previewedSourceDir = sourceDir;
+            MarktdatenImportButton.IsEnabled = preview.AvailableFiles.Any(f => f != "marktpreise_burglen_2026.json");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Fehler bei Vorschau:\n{ex.Message}", "Marktdaten-Import",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void MarktdatenImport_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_previewedSourceDir))
+        {
+            MessageBox.Show("Bitte zuerst eine Quelle waehlen (Vorschau).", "Marktdaten-Import",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var confirm = MessageBox.Show(
+            $"Marktdaten-JSONs aus folgendem Verzeichnis importieren?\n\n{_previewedSourceDir}\n\n" +
+            "Bestehende Config-Dateien werden gesichert (.bak).",
+            "Marktdaten-Import",
+            MessageBoxButton.OKCancel, MessageBoxImage.Question);
+        if (confirm != MessageBoxResult.OK) return;
+
+        try
+        {
+            var sp = (UI.ServiceProvider)App.Services;
+            var result = sp.MarktdatenImport.Import(_previewedSourceDir);
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"Importiert: {result.ImportedFiles.Count} Datei(en)");
+            foreach (var f in result.ImportedFiles)
+                sb.AppendLine($"  ✓ {f}");
+            if (result.SkippedFiles.Count > 0)
+            {
+                sb.AppendLine($"Uebersprungen: {result.SkippedFiles.Count}");
+                foreach (var f in result.SkippedFiles)
+                    sb.AppendLine($"  · {f}");
+            }
+            if (result.BackupFiles.Count > 0)
+            {
+                sb.AppendLine($"Backups: {result.BackupFiles.Count}");
+                foreach (var f in result.BackupFiles)
+                    sb.AppendLine($"  ↻ {f}");
+            }
+            if (result.Errors.Count > 0)
+            {
+                sb.AppendLine("Fehler:");
+                foreach (var err in result.Errors)
+                    sb.AppendLine($"  ✗ {err}");
+            }
+            sb.Append(result.CachesInvalidated
+                ? "Service-Caches invalidiert. Naechste Devis-/KI-Anfrage liest die neuen Daten."
+                : "Caches NICHT invalidiert.");
+
+            MessageBox.Show(sb.ToString(), "Marktdaten-Import abgeschlossen",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+
+            UpdateMarktdatenStatus();
+            MarktdatenImportButton.IsEnabled = false;
+            _previewedSourceDir = null;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Fehler beim Import:\n{ex.Message}", "Marktdaten-Import",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void MarktdatenReload_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var sp = (UI.ServiceProvider)App.Services;
+            sp.SubmissionsPositions.Invalidate();
+            sp.HistorischeSanierungen.Invalidate();
+            UpdateMarktdatenStatus();
+            MessageBox.Show(
+                "Caches invalidiert. Naechste Devis-/KI-Anfrage liest die JSONs neu vom Datentraeger.",
+                "Marktdaten", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Fehler:\n{ex.Message}", "Marktdaten",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private static string? ResolveDefaultKnowledgeDir()
+    {
+        // Heuristik: Suche Knowledge/sanierung relativ vom Build-Output nach oben
+        var dir = AppContext.BaseDirectory;
+        for (int i = 0; i < 8; i++)
+        {
+            var candidate = Path.Combine(dir, "Knowledge", "sanierung");
+            if (Directory.Exists(candidate))
+                return candidate;
+            var parent = Path.GetDirectoryName(dir);
+            if (string.IsNullOrEmpty(parent) || parent == dir) break;
+            dir = parent;
+        }
+        return null;
     }
 }

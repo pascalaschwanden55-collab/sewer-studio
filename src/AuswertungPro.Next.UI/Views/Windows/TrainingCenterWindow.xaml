@@ -38,6 +38,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="Ordner:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <TextBox Grid.Column="1" Text="{Binding RootFolder}" IsReadOnly="True"
@@ -59,15 +60,18 @@
                 <Button Grid.Column="7" Content="KB prüfen" Command="{Binding CheckKnowledgeBaseCommand}"
                         ToolTip="Liest Samples, Embeddings, Versionen und Top-Codes aus der Knowledge Base"
                         Margin="0,0,8,0"/>
-                <Button Grid.Column="8" x:Name="BtnExtractProfiles" Content="Profile extrahieren"
+                <Button Grid.Column="8" Content="KB nachindexieren" Command="{Binding ReindexPendingSamplesCommand}"
+                        ToolTip="Indexiert alle Approved-Samples die noch nicht in der KB sind (z.B. wenn Ollama temporaer offline war)"
+                        Margin="0,0,8,0"/>
+                <Button Grid.Column="9" x:Name="BtnExtractProfiles" Content="Profile extrahieren"
                         Click="ExtractProfiles_Click"
                         ToolTip="WinCan DB3 einlesen: Inspektions-Profile, Muster und Trainings-Frames extrahieren"
                         Margin="0,0,8,0"/>
-                <Button Grid.Column="9" x:Name="BtnGenerateEvalSet" Content="Eval-Set"
+                <Button Grid.Column="10" x:Name="BtnGenerateEvalSet" Content="Eval-Set"
                         Click="GenerateEvalSet_Click"
                         ToolTip="120 Pruefungs-Frames aus Operateur-Codierungen generieren (fuer KI-Qualitaetsmessung)"
                         Margin="0,0,8,0"/>
-                <Button Grid.Column="10" Content="Abbrechen" Command="{Binding CancelBatchCommand}"
+                <Button Grid.Column="11" Content="Abbrechen" Command="{Binding CancelBatchCommand}"
                         ToolTip="Laufenden Batch-Vorgang sofort abbrechen und zum letzten Speicherpunkt zurueckkehren"
                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
             </Grid>
@@ -96,9 +100,9 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,16,0">
                     <TextBlock Foreground="{StaticResource MutedBrush}" Text="Samples: "/>
                     <TextBlock Foreground="{StaticResource TextBrush}" Text="{Binding KbSampleCount}" FontWeight="Bold"/>
-                    <TextBlock Foreground="#FBBF24" FontSize="11"
+                    <TextBlock Foreground="#FBBF24" FontSize="{StaticResource TypeCaption}"
                                Text="{Binding KbErrorCount, StringFormat=' ({0}⚠'}"/>
-                    <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="11"
+                    <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="{StaticResource TypeCaption}"
                                Text="{Binding KbNewCount, StringFormat=' {0} neu)'}"/>
                     <TextBlock Foreground="{StaticResource MutedBrush}" Text="  |  Codes: "/>
                     <TextBlock Foreground="{StaticResource TextBrush}" Text="{Binding KbCodesCovered}" FontWeight="Bold"/>
@@ -157,7 +161,7 @@
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <TextBlock Text="Ausgewählter Fall" FontWeight="SemiBold" FontSize="14"/>
+                            <TextBlock Text="Ausgewählter Fall" FontWeight="SemiBold" FontSize="{StaticResource TypeBodyLarge}"/>
                             <TextBlock Grid.Row="1" Text="{Binding SelectedCase.CaseId}" Margin="0,8,0,0" TextWrapping="Wrap"/>
                             <TextBlock Grid.Row="2" Text="{Binding SelectedCase.FolderPath}" Margin="0,6,0,0" TextWrapping="Wrap"/>
                             <TextBlock Grid.Row="3" Text="{Binding SelectedCase.VideoPath}" Margin="0,6,0,0" TextWrapping="Wrap"/>
@@ -186,19 +190,74 @@
             <TabItem Header="Samples">
                 <Grid Margin="0,8,0,0">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <Grid Grid.Row="0">
+                    <!-- Filter-Leiste fuer Bulk-Review -->
+                    <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" CornerRadius="6"
+                            Padding="10,6" Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Status:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ComboBox Width="110" SelectedValue="{Binding SampleStatusFilter, Mode=TwoWay}"
+                                      SelectedValuePath="Content" Margin="0,0,16,0"
+                                      ToolTip="Filtert nach Sample-Status">
+                                <ComboBoxItem Content="Pending" IsSelected="True"/>
+                                <ComboBoxItem Content="Approved"/>
+                                <ComboBoxItem Content="Rejected"/>
+                                <ComboBoxItem Content="Alle"/>
+                            </ComboBox>
+
+                            <TextBlock Text="Code-Praefix:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBox Width="120" Text="{Binding SampleCodeFilter, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="z.B. 'BA' filtert alle BA-Codes, 'AEF' nur AEF" Margin="0,0,16,0"/>
+
+                            <TextBlock VerticalAlignment="Center" Margin="0,0,16,0">
+                                <Run Text="Sichtbar: " Foreground="{DynamicResource MutedBrush}"/>
+                                <Run Text="{Binding SampleVisibleCount, Mode=OneWay}" FontWeight="Bold"/>
+                            </TextBlock>
+
+                            <Button Content="Alle Sichtbaren approven"
+                                    Command="{Binding ApproveAllVisibleCommand}"
+                                    Background="#16A34A" Foreground="White"
+                                    Padding="14,4" FontWeight="SemiBold" Margin="0,0,8,0"
+                                    ToolTip="Setzt alle aktuell durch den Filter sichtbaren Pending-Samples auf Approved (mit Konfirmation)"/>
+                            <Button Content="Alle Sichtbaren rejecten"
+                                    Command="{Binding RejectAllVisibleCommand}"
+                                    Background="#DC2626" Foreground="White"
+                                    Padding="14,4" FontWeight="SemiBold" Margin="0,0,16,0"
+                                    ToolTip="Setzt alle aktuell durch den Filter sichtbaren Pending-Samples auf Rejected (mit Konfirmation)"/>
+
+                            <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="0,2,16,2"/>
+
+                            <Button Content="Markierte approven"
+                                    Command="{Binding ApproveSelectedCommand}"
+                                    CommandParameter="{Binding SelectedItems, ElementName=SamplesGrid}"
+                                    Background="#16A34A" Foreground="White"
+                                    Padding="14,4" FontWeight="SemiBold" Margin="0,0,8,0"
+                                    ToolTip="Setzt nur die per Strg+Klick / Shift+Klick markierten Zeilen auf Approved"/>
+                            <Button Content="Markierte loeschen"
+                                    Command="{Binding DeleteSelectedCommand}"
+                                    CommandParameter="{Binding SelectedItems, ElementName=SamplesGrid}"
+                                    Background="#7C2D12" Foreground="White"
+                                    Padding="14,4" FontWeight="SemiBold"
+                                    ToolTip="Loescht die markierten Zeilen ENDGUELTIG aus dem Training-Store (Konfirmation)"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="3*"/>
                             <ColumnDefinition Width="2*"/>
                         </Grid.ColumnDefinitions>
 
                         <DataGrid Grid.Column="0"
-                                  ItemsSource="{Binding Samples}"
+                                  x:Name="SamplesGrid"
+                                  ItemsSource="{Binding SamplesView}"
                                   SelectedItem="{Binding SelectedSample, Mode=TwoWay}"
+                                  SelectionMode="Extended"
+                                  SelectionUnit="FullRow"
                                   AutoGenerateColumns="False"
                                   CanUserAddRows="False"
                                   IsReadOnly="True">
@@ -227,11 +286,11 @@
                                     <RowDefinition Height="*"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
-                                <TextBlock Text="Sample-Details" FontWeight="SemiBold" FontSize="14"/>
+                                <TextBlock Text="Sample-Details" FontWeight="SemiBold" FontSize="{StaticResource TypeBodyLarge}"/>
                                 <StackPanel Grid.Row="1" Margin="0,8,0,0">
                                     <TextBlock>
                                         <Run Text="Code: "/>
-                                        <Run Text="{Binding SelectedSample.Code}"/>
+                                        <Run Text="{Binding SelectedSampleCodeLabel, Mode=OneWay}" FontWeight="SemiBold"/>
                                     </TextBlock>
                                     <TextBlock Margin="0,4,0,0">
                                         <Run Text="Beschreibung: "/>
@@ -263,7 +322,7 @@
                         </Border>
                     </Grid>
 
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,0">
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
                         <Button Content="Neu laden" Command="{Binding LoadSamplesCommand}" Margin="0,0,8,0"
                                 ToolTip="Sample-Liste vom Speicher neu einlesen und aktualisierten Status anzeigen"/>
                         <Button Content="YOLO Export..."
@@ -303,7 +362,7 @@
                                     ToolTip="Selbsttraining starten — KI analysiert alle Haltungen und vergleicht mit Protokollen"/>
                             <CheckBox Content="Alle erneut durchlaufen"
                                      IsChecked="{Binding ForceRerunAll}"
-                                     Foreground="White" FontSize="11"
+                                     Foreground="White" FontSize="{StaticResource TypeCaption}"
                                      VerticalAlignment="Center" Margin="0,0,12,0"
                                      ToolTip="Bereits verarbeitete Haltungen nochmals analysieren (KI lernt mit mehr Wissen)"/>
                             <Button Content="⏸ Pause / Fortsetzen"
@@ -361,37 +420,37 @@
                             <!-- Stage 0: Timeline -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage0">
                                 <Ellipse Width="12" Height="12" x:Name="Dot0" Fill="{StaticResource MutedBrush}"/>
-                                <TextBlock Text="OSD-Scan" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
+                                <TextBlock Text="OSD-Scan" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="{StaticResource TypeCaption}"/>
                             </StackPanel>
-                            <TextBlock Text=" → " Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" FontSize="11"/>
+                            <TextBlock Text=" → " Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" FontSize="{StaticResource TypeCaption}"/>
                             <!-- Stage 1: Frame -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage1">
                                 <Ellipse Width="12" Height="12" x:Name="Dot1" Fill="{StaticResource MutedBrush}"/>
-                                <TextBlock Text="Frame" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
+                                <TextBlock Text="Frame" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="{StaticResource TypeCaption}"/>
                             </StackPanel>
-                            <TextBlock Text=" → " Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" FontSize="11"/>
+                            <TextBlock Text=" → " Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" FontSize="{StaticResource TypeCaption}"/>
                             <!-- Stage 2: KI -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage2">
                                 <Ellipse Width="12" Height="12" x:Name="Dot2" Fill="{StaticResource MutedBrush}"/>
-                                <TextBlock Text="KI-Analyse" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
+                                <TextBlock Text="KI-Analyse" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="{StaticResource TypeCaption}"/>
                             </StackPanel>
-                            <TextBlock Text=" → " Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" FontSize="11"/>
+                            <TextBlock Text=" → " Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" FontSize="{StaticResource TypeCaption}"/>
                             <!-- Stage 3: Vergleich -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage3">
                                 <Ellipse Width="12" Height="12" x:Name="Dot3" Fill="{StaticResource MutedBrush}"/>
-                                <TextBlock Text="Vergleich" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
+                                <TextBlock Text="Vergleich" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="{StaticResource TypeCaption}"/>
                             </StackPanel>
-                            <TextBlock Text=" → " Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" FontSize="11"/>
+                            <TextBlock Text=" → " Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" FontSize="{StaticResource TypeCaption}"/>
                             <!-- Stage 4: Technik -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage4">
                                 <Ellipse Width="12" Height="12" x:Name="Dot4" Fill="{StaticResource MutedBrush}"/>
-                                <TextBlock Text="Technik" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
+                                <TextBlock Text="Technik" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="{StaticResource TypeCaption}"/>
                             </StackPanel>
-                            <TextBlock Text=" → " Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" FontSize="11"/>
+                            <TextBlock Text=" → " Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" FontSize="{StaticResource TypeCaption}"/>
                             <!-- Stage 5: Fertig -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage5">
                                 <Ellipse Width="12" Height="12" x:Name="Dot5" Fill="{StaticResource MutedBrush}"/>
-                                <TextBlock Text="Fertig" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11"/>
+                                <TextBlock Text="Fertig" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="{StaticResource TypeCaption}"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -428,13 +487,13 @@
                                 <StackPanel Orientation="Horizontal">
                                     <Ellipse Width="8" Height="8" x:Name="ModelPulse" Fill="{StaticResource MutedBrush}" Margin="0,0,5,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="{Binding ActiveModelName, Mode=OneWay}" x:Name="ModelNameText"
-                                               Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                               Foreground="{StaticResource MutedBrush}" FontSize="{StaticResource TypeCaption}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
 
                             <!-- Aktueller Eintrag -->
                             <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Center">
-                                <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="12">
+                                <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="{StaticResource TypeSmall}">
                                     <Run Text="Code: "/><Run Text="{Binding CurrentEntryCode, Mode=OneWay}" Foreground="{StaticResource TextBrush}" FontWeight="Bold"/>
                                     <Run Text="  |  Meter: "/><Run Text="{Binding CurrentEntryMeter, Mode=OneWay, StringFormat=F1}" Foreground="{StaticResource TextBrush}"/>
                                     <Run Text=" m"/>
@@ -443,9 +502,9 @@
 
                             <!-- Technik-Note -->
                             <StackPanel Grid.Column="3" Orientation="Horizontal">
-                                <TextBlock Text="Technik: " Foreground="{StaticResource MutedBrush}" FontSize="11" VerticalAlignment="Center"/>
+                                <TextBlock Text="Technik: " Foreground="{StaticResource MutedBrush}" FontSize="{StaticResource TypeCaption}" VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding CurrentTechniqueGrade, Mode=OneWay}" Foreground="#FBBF24"
-                                           FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
+                                           FontWeight="Bold" FontSize="{StaticResource TypeBody}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -593,7 +652,7 @@
                                                         </Grid.ColumnDefinitions>
                                                         <TextBlock Text="{Binding Index}" Foreground="{StaticResource MutedBrush}" FontSize="10" VerticalAlignment="Center"/>
                                                         <TextBlock Grid.Column="1" Text="{Binding VsaCode}" Foreground="{StaticResource TextBrush}"
-                                                                   FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center"/>
+                                                                   FontWeight="SemiBold" FontSize="{StaticResource TypeCaption}" VerticalAlignment="Center"/>
                                                         <TextBlock Grid.Column="2" Text="{Binding Meter, StringFormat=F1}" Foreground="{StaticResource MutedBrush}"
                                                                    FontSize="10" VerticalAlignment="Center"/>
                                                         <!-- Farbiger Level-Indikator -->
@@ -670,7 +729,7 @@
 
                     <!-- ═══ Row 8: Klappbares Echtzeit-Log ═══ -->
                     <Expander Grid.Row="8" Header="Echtzeit-Log" IsExpanded="False"
-                              FontSize="12">
+                              FontSize="{StaticResource TypeSmall}">
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="4"
                                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                             <TextBox x:Name="SelfTrainingLogList"
@@ -685,7 +744,7 @@
                                      Foreground="{DynamicResource TextBrush}"
                                      CaretBrush="{DynamicResource TextBrush}"
                                      FontFamily="Consolas"
-                                     FontSize="12"
+                                     FontSize="{StaticResource TypeSmall}"
                                      Padding="8,6">
                             </TextBox>
                         </Border>
@@ -726,10 +785,10 @@
                                   CanUserSortColumns="True"
                                   HeadersVisibility="Column">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Priorität" Binding="{Binding PriorityLabel}" Width="80"/>
-                                <DataGridTextColumn Header="Befund" Binding="{Binding Label}" Width="*"/>
-                                <DataGridTextColumn Header="Vorgeschlagen" Binding="{Binding SuggestedCode}" Width="100"/>
-                                <DataGridTextColumn Header="Konfidenz" Binding="{Binding Confidence, StringFormat=P0}" Width="80"/>
+                                <DataGridTextColumn Header="Priorität" Binding="{Binding PriorityLabel}" Width="70"/>
+                                <DataGridTextColumn Header="Befund (Code — Klartext)" Binding="{Binding Label}" Width="2*" MinWidth="260"/>
+                                <DataGridTextColumn Header="Vorgeschlagen" Binding="{Binding SuggestedCode}" Width="*" MinWidth="140"/>
+                                <DataGridTextColumn Header="Konfidenz" Binding="{Binding Confidence, StringFormat=P0}" Width="75"/>
                             </DataGrid.Columns>
                         </DataGrid>
 
@@ -780,6 +839,90 @@
                 </Grid>
             </TabItem>
 
+            <TabItem Header="Schwachstellen">
+                <Grid Margin="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="8"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="8"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Grid.Row="0">
+                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                            <Button Content="Aktualisieren"
+                                    Command="{Binding RefreshWeakSpotsCommand}"
+                                    Padding="10,4" Margin="0,0,8,0"
+                                    ToolTip="Berechnet Schwachstellen aus Benchmark-Metriken, Rejected-Samples und offener Review neu"/>
+                            <Button Content="Samples anzeigen"
+                                    Command="{Binding ShowWeakSpotSamplesCommand}"
+                                    Padding="10,4"
+                                    ToolTip="Filtert den Samples-Tab auf den Code der ausgewaehlten Schwachstelle"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Priorisiert:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="{Binding WeakSpotCount}" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                            <TextBlock Text="{Binding WeakSpotSummary}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="3*" MinWidth="520"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="2*" MinWidth="320"/>
+                        </Grid.ColumnDefinitions>
+
+                        <DataGrid Grid.Column="0"
+                                  ItemsSource="{Binding WeakSpots}"
+                                  SelectedItem="{Binding SelectedWeakSpot}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  SelectionMode="Single"
+                                  CanUserSortColumns="True"
+                                  HeadersVisibility="Column">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Prio" Binding="{Binding Priority, StringFormat=F1}" Width="60"/>
+                                <DataGridTextColumn Header="Quelle" Binding="{Binding Source}" Width="100"/>
+                                <DataGridTextColumn Header="Code" Binding="{Binding ConfusionLabel}" Width="130"/>
+                                <DataGridTextColumn Header="F1" Binding="{Binding F1, StringFormat=F2, TargetNullValue=--}" Width="60"/>
+                                <DataGridTextColumn Header="P" Binding="{Binding Precision, StringFormat=F2, TargetNullValue=--}" Width="55"/>
+                                <DataGridTextColumn Header="R" Binding="{Binding Recall, StringFormat=F2, TargetNullValue=--}" Width="55"/>
+                                <DataGridTextColumn Header="FP" Binding="{Binding FalsePositives}" Width="50"/>
+                                <DataGridTextColumn Header="FN" Binding="{Binding FalseNegatives}" Width="50"/>
+                                <DataGridTextColumn Header="Rejected" Binding="{Binding RejectedCount}" Width="75"/>
+                                <DataGridTextColumn Header="Grund" Binding="{Binding Reason}" Width="*" MinWidth="220"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <Border Grid.Column="2"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                Padding="10" Background="{DynamicResource SurfaceBrush}">
+                            <StackPanel>
+                                <TextBlock Text="{Binding SelectedWeakSpot.ConfusionLabel, TargetNullValue='Keine Schwachstelle ausgewaehlt'}"
+                                           FontWeight="SemiBold" FontSize="{StaticResource TypeBodyLarge}" TextWrapping="Wrap"/>
+                                <TextBlock Margin="0,8,0,0" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap">
+                                    <Run Text="Quelle: "/>
+                                    <Run Text="{Binding SelectedWeakSpot.Source, TargetNullValue=--}"/>
+                                    <Run Text="  |  Prio: "/>
+                                    <Run Text="{Binding SelectedWeakSpot.Priority, StringFormat=F1, TargetNullValue=--}"/>
+                                </TextBlock>
+                                <TextBlock Margin="0,10,0,0" Text="{Binding SelectedWeakSpot.Reason, TargetNullValue=--}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Margin="0,12,0,0" Foreground="{DynamicResource MutedBrush}"
+                                           Text="Empfohlene Aktion" FontWeight="SemiBold"/>
+                                <TextBlock Margin="0,4,0,0" Text="{Binding SelectedWeakSpot.SuggestedAction, TargetNullValue=--}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <TextBlock Grid.Row="4" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"
+                               Text="Die Liste veraendert keine Trainingsdaten. Sie zeigt Codes und Verwechslungen, die fuer Review, Teacher-Annotation oder gezielte neue Beispiele priorisiert werden sollten."/>
+                </Grid>
+            </TabItem>
+
             <!-- KB Qualitaet Tab -->
             <TabItem Header="KB Qualit&#228;t">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -788,13 +931,13 @@
                         <!-- Coverage-Analyse -->
                         <Border Background="{StaticResource CardBrush}" CornerRadius="6" Padding="10" Margin="0,0,0,8">
                             <StackPanel>
-                                <TextBlock Text="Coverage-Analyse" Foreground="{StaticResource TextBrush}" FontWeight="SemiBold" FontSize="13"/>
-                                <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,4,0,0">
+                                <TextBlock Text="Coverage-Analyse" Foreground="{StaticResource TextBrush}" FontWeight="SemiBold" FontSize="{StaticResource TypeBody}"/>
+                                <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="{StaticResource TypeCaption}" Margin="0,4,0,0">
                                     <Run Text="Codes mit weniger als 3 KB-Samples: "/>
                                     <Run Text="{Binding KbCoverageGapsCount, Mode=OneWay}" Foreground="#FBBF24" FontWeight="Bold"/>
                                 </TextBlock>
                                 <TextBlock Text="{Binding KbCoverageGapsText, Mode=OneWay}"
-                                           FontFamily="Consolas" FontSize="11" Foreground="{StaticResource TextBrush}"
+                                           FontFamily="Consolas" FontSize="{StaticResource TypeCaption}" Foreground="{StaticResource TextBrush}"
                                            TextWrapping="Wrap" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
@@ -802,11 +945,11 @@
                         <!-- Genauigkeit pro Code -->
                         <Border Background="{StaticResource CardBrush}" CornerRadius="6" Padding="10" Margin="0,0,0,8">
                             <StackPanel>
-                                <TextBlock Text="Genauigkeit pro Code (Top 8)" Foreground="{StaticResource TextBrush}" FontWeight="SemiBold" FontSize="13"/>
+                                <TextBlock Text="Genauigkeit pro Code (Top 8)" Foreground="{StaticResource TextBrush}" FontWeight="SemiBold" FontSize="{StaticResource TypeBody}"/>
                                 <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="10" Margin="0,2,0,4"
                                            Text="F1 = Gesamtgenauigkeit, P = Precision, R = Recall"/>
                                 <TextBlock Text="{Binding KbAccuracyText, Mode=OneWay}"
-                                           FontFamily="Consolas" FontSize="11" Foreground="{StaticResource TextBrush}"
+                                           FontFamily="Consolas" FontSize="{StaticResource TypeCaption}" Foreground="{StaticResource TextBrush}"
                                            TextWrapping="NoWrap" Margin="0,0,0,0"/>
                             </StackPanel>
                         </Border>
@@ -814,9 +957,9 @@
                         <!-- Problematische KB-Samples -->
                         <Border Background="{StaticResource CardBrush}" CornerRadius="6" Padding="10" Margin="0,0,0,8">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Problematische KB-Samples: " Foreground="{StaticResource TextBrush}" FontSize="13"/>
+                                <TextBlock Text="Problematische KB-Samples: " Foreground="{StaticResource TextBrush}" FontSize="{StaticResource TypeBody}"/>
                                 <TextBlock Text="{Binding KbStaleSampleCount, Mode=OneWay}"
-                                           Foreground="#F87171" FontWeight="Bold" FontSize="13"/>
+                                           Foreground="#F87171" FontWeight="Bold" FontSize="{StaticResource TypeBody}"/>
                             </StackPanel>
                         </Border>
 
@@ -824,12 +967,12 @@
                         <Border Background="{StaticResource CardBrush}" CornerRadius="6" Padding="10">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Match-Rate Trend (letzte Laeufe)" Foreground="{StaticResource TextBrush}" FontWeight="SemiBold" FontSize="13"/>
+                                    <TextBlock Text="Match-Rate Trend (letzte Laeufe)" Foreground="{StaticResource TextBrush}" FontWeight="SemiBold" FontSize="{StaticResource TypeBody}"/>
                                     <TextBlock Text="{Binding KbTrendDirection, Mode=OneWay}"
-                                               Foreground="#4ADE80" FontSize="16" FontWeight="Bold" Margin="8,0,0,0"/>
+                                               Foreground="#4ADE80" FontSize="{StaticResource TypeH4}" FontWeight="Bold" Margin="8,0,0,0"/>
                                 </StackPanel>
                                 <TextBlock Text="{Binding KbTrendText, Mode=OneWay}"
-                                           FontFamily="Consolas" FontSize="11" Foreground="{StaticResource TextBrush}"
+                                           FontFamily="Consolas" FontSize="{StaticResource TypeCaption}" Foreground="{StaticResource TextBrush}"
                                            TextWrapping="NoWrap" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
@@ -863,15 +1006,15 @@
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
                                 <Button x:Name="BtnTeacherRefresh" Content="🔄 Aktualisieren"
                                         Click="TeacherRefresh_Click" Margin="0,0,8,0"
-                                        Padding="8,4" FontSize="12"
+                                        Padding="8,4" FontSize="{StaticResource TypeSmall}"
                                         ToolTip="Lehrer-Annotationen aus dem Speicher neu laden und Galerie aktualisieren"/>
                                 <Button x:Name="BtnTeacherAddFewShot" Content="📚 → FewShot"
                                         Click="TeacherAddToFewShot_Click" Margin="0,0,8,0"
-                                        Padding="8,4" FontSize="12" IsEnabled="False"
+                                        Padding="8,4" FontSize="{StaticResource TypeSmall}" IsEnabled="False"
                                         ToolTip="Ausgewaehlte Annotation als Few-Shot-Beispiel fuer Qwen-Protokollgenerierung speichern"/>
                                 <Button x:Name="BtnTeacherDelete" Content="🗑 Loeschen"
                                         Click="TeacherDelete_Click"
-                                        Padding="8,4" FontSize="12" IsEnabled="False"
+                                        Padding="8,4" FontSize="{StaticResource TypeSmall}" IsEnabled="False"
                                         Foreground="#EF4444"
                                         ToolTip="Ausgewaehlte Lehrer-Annotation dauerhaft loeschen — kann nicht rueckgaengig gemacht werden"/>
                             </StackPanel>
@@ -902,7 +1045,7 @@
                                                        Width="120" Height="90" Stretch="Uniform"
                                                        RenderOptions.BitmapScalingMode="HighQuality"/>
                                                 <TextBlock Text="{Binding VsaCode}" FontWeight="Bold"
-                                                           FontSize="13" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                                           FontSize="{StaticResource TypeBody}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                                                 <TextBlock Text="{Binding Beschreibung}" FontSize="10"
                                                            Foreground="{StaticResource MutedBrush}"
                                                            HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
@@ -940,15 +1083,15 @@
 
                             <!-- Metadaten -->
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock x:Name="TeacherDetailCode" FontSize="18" FontWeight="Bold"/>
-                                <TextBlock x:Name="TeacherDetailBeschreibung" FontSize="12"
+                                <TextBlock x:Name="TeacherDetailCode" FontSize="{StaticResource TypeH3}" FontWeight="Bold"/>
+                                <TextBlock x:Name="TeacherDetailBeschreibung" FontSize="{StaticResource TypeSmall}"
                                            Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,4,0,8"/>
-                                <TextBlock x:Name="TeacherDetailMeter" FontSize="13"/>
-                                <TextBlock x:Name="TeacherDetailClock" FontSize="13"/>
-                                <TextBlock x:Name="TeacherDetailTool" FontSize="13"/>
-                                <TextBlock x:Name="TeacherDetailDate" FontSize="12"
+                                <TextBlock x:Name="TeacherDetailMeter" FontSize="{StaticResource TypeBody}"/>
+                                <TextBlock x:Name="TeacherDetailClock" FontSize="{StaticResource TypeBody}"/>
+                                <TextBlock x:Name="TeacherDetailTool" FontSize="{StaticResource TypeBody}"/>
+                                <TextBlock x:Name="TeacherDetailDate" FontSize="{StaticResource TypeSmall}"
                                            Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/>
-                                <TextBlock x:Name="TeacherDetailId" FontSize="11"
+                                <TextBlock x:Name="TeacherDetailId" FontSize="{StaticResource TypeCaption}"
                                            Foreground="{StaticResource MutedBrush}" FontFamily="Consolas" Margin="0,2,0,0"/>
                             </StackPanel>
                         </Grid>
@@ -964,7 +1107,7 @@
                          Maximum="{Binding ProgressMax}"
                          Value="{Binding ProgressValue}"/>
             <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
-                       FontSize="11">
+                       FontSize="{StaticResource TypeCaption}">
                 <Run Text="{Binding ProgressValue, Mode=OneWay}"/>
                 <Run Text="/"/>
                 <Run Text="{Binding ProgressMax, Mode=OneWay}"/>

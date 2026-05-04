@@ -68,7 +68,7 @@
 
                 <!-- Versions-Info -->
                 <TextBlock x:Name="VersionText"
-                           Text="v4.2  ·  Qwen3-VL + YOLO26m + DINO 1.5 + SAM 2"
+                           Text="v4.2  ·  Qwen3-VL 8b+32b · YOLO26l-seg · DINO 1.5 · SAM 2.1 · nomic-embed"
                            Foreground="#80FFFFFF"
                            FontSize="12"
                            FontFamily="Consolas"

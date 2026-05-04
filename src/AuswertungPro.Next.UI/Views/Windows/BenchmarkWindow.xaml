@@ -4,9 +4,14 @@
         xmlns:vm="clr-namespace:AuswertungPro.Next.UI.ViewModels.Windows"
         Title="Benchmark — KI-Fortschrittsmessung"
         Width="1100" Height="750"
-        WindowStartupLocation="CenterScreen"
-        Background="#1E1E1E"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgBrush}"
+        Foreground="{DynamicResource TextBrush}"
         Loaded="Window_Loaded">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </Window.Resources>
 
     <Grid Margin="12">
         <Grid.RowDefinitions>
@@ -18,40 +23,63 @@
         </Grid.RowDefinitions>
 
         <!-- Zeile 0: Steuerung -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
-            <Button Content="Benchmark starten" Command="{Binding RunBenchmarkCommand}"
-                    Background="#0078D4" Foreground="White" Padding="16,6" Margin="0,0,8,0"/>
-            <Button Content="Abbrechen" Command="{Binding CancelBenchmarkCommand}"
-                    Background="#555" Foreground="White" Padding="12,6" Margin="0,0,16,0"/>
-            <Button Content="Haltung hinzufuegen" Command="{Binding AddHaltungCommand}"
-                    Background="#2E7D32" Foreground="White" Padding="12,6" Margin="0,0,8,0"/>
-            <Button Content="Haltung entfernen" Command="{Binding RemoveHaltungCommand}"
-                    Background="#C62828" Foreground="White" Padding="12,6"/>
-        </StackPanel>
+        <Border Grid.Row="0" Background="{DynamicResource CardBrush}" CornerRadius="6"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                Padding="12,8" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="Benchmark starten" Command="{Binding RunBenchmarkCommand}"
+                        Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"/>
+                <Button Content="Abbrechen" Command="{Binding CancelBenchmarkCommand}"
+                        Padding="12,6" Margin="0,0,16,0"/>
+                <Button Content="Haltung hinzufuegen" Command="{Binding AddHaltungCommand}"
+                        Background="{DynamicResource SuccessBrush}" Foreground="White"
+                        Padding="12,6" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                <Button Content="Haltung entfernen" Command="{Binding RemoveHaltungCommand}"
+                        Style="{StaticResource ToolbarButtonDanger}" Padding="12,6"/>
+            </StackPanel>
+        </Border>
 
         <!-- Zeile 1: Benchmark-Set -->
-        <GroupBox Grid.Row="1" Header="Benchmark-Haltungen" Foreground="#CCC"
-                  BorderBrush="#3E3E3E" Background="#252526">
-            <ListBox ItemsSource="{Binding Haltungen}"
-                     SelectedItem="{Binding SelectedHaltung}"
-                     Background="#252526" Foreground="#CCC"
-                     BorderBrush="#3E3E3E">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding HaltungId}" FontWeight="Bold" Width="200"/>
-                            <TextBlock Text="{Binding Rohrmaterial}" Width="80" Foreground="#999"/>
-                            <TextBlock Foreground="#999">
-                                <Run Text="DN"/><Run Text="{Binding NennweiteMm, Mode=OneWay}"/>
-                            </TextBlock>
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </GroupBox>
+        <Border Grid.Row="1" Background="{DynamicResource CardBrush}" CornerRadius="6"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                Padding="0" Margin="0,0,0,4">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}"
+                        CornerRadius="6,6,0,0" Padding="12,6">
+                    <TextBlock Text="Benchmark-Haltungen" FontWeight="SemiBold" FontSize="13"
+                               Foreground="{DynamicResource TextBrush}"/>
+                </Border>
+
+                <ListBox Grid.Row="1" ItemsSource="{Binding Haltungen}"
+                         SelectedItem="{Binding SelectedHaltung}"
+                         Background="Transparent" BorderThickness="0"
+                         Foreground="{DynamicResource TextBrush}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="4,2">
+                                <TextBlock Text="{Binding HaltungId}" FontWeight="Bold" Width="200"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                                <TextBlock Text="{Binding Rohrmaterial}" Width="100"
+                                           Foreground="{DynamicResource MutedBrush}"/>
+                                <TextBlock Foreground="{DynamicResource MutedBrush}">
+                                    <Run Text="DN"/><Run Text="{Binding NennweiteMm, Mode=OneWay}"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
 
         <!-- Zeile 2: Metriken-Zusammenfassung -->
-        <Border Grid.Row="2" Background="#2D2D2D" Padding="12,8" Margin="0,4">
+        <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" CornerRadius="6"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                Padding="12,8" Margin="0,4">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -59,19 +87,23 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <TextBlock Foreground="#CCC" FontSize="15" Margin="0,0,24,0">
+                    <TextBlock FontSize="15" Margin="0,0,24,0"
+                               Foreground="{DynamicResource TextBrush}">
                         <Run Text="Precision: "/><Run Text="{Binding PrecisionText, Mode=OneWay}" FontWeight="Bold"/>
                     </TextBlock>
-                    <TextBlock Foreground="#CCC" FontSize="15" Margin="0,0,24,0">
+                    <TextBlock FontSize="15" Margin="0,0,24,0"
+                               Foreground="{DynamicResource TextBrush}">
                         <Run Text="Recall: "/><Run Text="{Binding RecallText, Mode=OneWay}" FontWeight="Bold"/>
                     </TextBlock>
-                    <TextBlock Foreground="#0078D4" FontSize="18" FontWeight="Bold">
+                    <TextBlock FontSize="18" FontWeight="Bold"
+                               Foreground="{DynamicResource AccentBrush}">
                         <Run Text="F1: "/><Run Text="{Binding F1Text, Mode=OneWay}"/>
                     </TextBlock>
                 </StackPanel>
 
                 <!-- Regressions-Alarm -->
-                <Border Grid.Column="1" Background="#C62828" CornerRadius="4" Padding="12,4">
+                <Border Grid.Column="1" Background="{DynamicResource DangerBrush}"
+                        CornerRadius="4" Padding="12,4">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -88,43 +120,49 @@
         </Border>
 
         <!-- Zeile 3: Per-Code Metriken -->
-        <DataGrid Grid.Row="3"
-                  ItemsSource="{Binding PerCodeMetrics}"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  Background="#252526" Foreground="#CCC"
-                  RowBackground="#252526" AlternatingRowBackground="#2D2D2D"
-                  GridLinesVisibility="Horizontal"
-                  HorizontalGridLinesBrush="#3E3E3E"
-                  BorderBrush="#3E3E3E"
-                  HeadersVisibility="Column"
-                  FontSize="13">
+        <Border Grid.Row="3" Background="{DynamicResource CardBrush}" CornerRadius="6"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                Padding="0" Margin="0,4,0,0">
+            <DataGrid ItemsSource="{Binding PerCodeMetrics}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      SelectionMode="Single"
+                      HeadersVisibility="Column"
+                      GridLinesVisibility="Horizontal"
+                      BorderThickness="0"
+                      FontSize="13">
 
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="VSA-Code" Binding="{Binding VsaCodePrefix}" Width="100"/>
-                <DataGridTextColumn Header="TP" Binding="{Binding TP}" Width="60"/>
-                <DataGridTextColumn Header="FP" Binding="{Binding FP}" Width="60"/>
-                <DataGridTextColumn Header="FN" Binding="{Binding FN}" Width="60"/>
-                <DataGridTextColumn Header="Precision" Binding="{Binding Precision, StringFormat=P1}" Width="90"/>
-                <DataGridTextColumn Header="Recall" Binding="{Binding Recall, StringFormat=P1}" Width="90"/>
-                <DataGridTextColumn Header="F1" Binding="{Binding F1, StringFormat=P1}" Width="90"/>
-            </DataGrid.Columns>
-        </DataGrid>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="VSA-Code" Binding="{Binding VsaCodePrefix}" Width="100"/>
+                    <DataGridTextColumn Header="TP" Binding="{Binding TP}" Width="60"/>
+                    <DataGridTextColumn Header="FP" Binding="{Binding FP}" Width="60"/>
+                    <DataGridTextColumn Header="FN" Binding="{Binding FN}" Width="60"/>
+                    <DataGridTextColumn Header="Precision" Binding="{Binding Precision, StringFormat=P1}" Width="90"/>
+                    <DataGridTextColumn Header="Recall" Binding="{Binding Recall, StringFormat=P1}" Width="90"/>
+                    <DataGridTextColumn Header="F1" Binding="{Binding F1, StringFormat=P1}" Width="90"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
 
         <!-- Zeile 4: Status -->
-        <Grid Grid.Row="4" Margin="0,4,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+        <Border Grid.Row="4" Background="{DynamicResource HeaderBrush}" CornerRadius="6"
+                Padding="12,6" Margin="0,4,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <ProgressBar Grid.Column="0" Height="4"
-                         Minimum="0" Maximum="{Binding ProgressMax}"
-                         Value="{Binding ProgressValue}"
-                         Foreground="#0078D4" Background="#3E3E3E"/>
+                <ProgressBar Grid.Column="0" Height="4"
+                             Minimum="0" Maximum="{Binding ProgressMax}"
+                             Value="{Binding ProgressValue}"
+                             Foreground="{DynamicResource AccentBrush}"
+                             Background="{DynamicResource BorderLightBrush}"/>
 
-            <TextBlock Grid.Column="1" Text="{Binding StatusText}" Foreground="#999"
-                       Margin="12,0,0,0" VerticalAlignment="Center"/>
-        </Grid>
+                <TextBlock Grid.Column="1" Text="{Binding StatusText}"
+                           Foreground="{DynamicResource MutedBrush}"
+                           Margin="12,0,0,0" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

@@ -23,28 +23,29 @@ public partial class StartupSplashWindow : Window
     private readonly List<List<Line>> _connectionsByStage = new();
     private int _pulseStageIndex;
 
-    // V4.2 Pipeline-Stages: Frame -> YOLO -> DINO -> SAM -> Qwen -> Code
-    // Jede Stage hat Label, eigene Farbe, eigene Knoten-Anzahl — statt generischem Blob
+    // V4.2 Pipeline-Stages (aktualisiert 2026-05-01):
+    //   Frame -> YOLO26l-seg -> DINO 1.5 -> SAM 2.1 -> Qwen3-VL (8B+32B) -> nomic-embed -> VSA-KEK
+    // 7 Stages mit dichterem Netz fuer Hightech-Look. Hellere Akzentfarben + staerker Glow.
     private sealed record StageDef(string Label, string SubLabel, int Count, double X, Color Color);
 
-    // X-Positionen so gewaehlt, dass die Pipeline links vom Titel-Block sitzt
-    // (Titel ab Canvas-x=420). 6 Stages × 72px Spacing auf x=40..400.
+    // X-Positionen: 7 Stages × 60px Spacing auf x=40..400.
     private static readonly StageDef[] Stages =
     [
-        new("FRAME",  "1920x1080",  1,  40, Color.FromRgb(0xBB, 0xBB, 0xBB)),
-        new("YOLO",   "26m-seg",    4, 112, Color.FromRgb(0x22, 0xC5, 0x5E)), // gruen
-        new("DINO",   "1.5",        4, 184, Color.FromRgb(0xA0, 0x78, 0xFF)), // violett
-        new("SAM",    "2",          4, 256, Color.FromRgb(0xF5, 0x9E, 0x0B)), // orange
-        new("QWEN",   "3-VL 8b+32b", 5, 328, Color.FromRgb(0x00, 0xBB, 0xFF)), // cyan
-        new("CODE",   "VSA-KEK",    1, 400, Color.FromRgb(0xFF, 0xD7, 0x00)), // gold
+        new("FRAME",  "1920x1080",     1,  40, Color.FromRgb(0xCF, 0xD8, 0xE3)), // hellgrau
+        new("YOLO",   "26l-seg TRT",   5,  98, Color.FromRgb(0x39, 0xFF, 0x14)), // neon-gruen
+        new("DINO",   "1.5 lazy",      5, 156, Color.FromRgb(0xC8, 0x6E, 0xFF)), // violett
+        new("SAM",    "2.1 Hiera-L",   5, 214, Color.FromRgb(0xFF, 0xB8, 0x00)), // orange
+        new("QWEN",   "3-VL 8b+32b",   8, 272, Color.FromRgb(0x00, 0xE5, 0xFF)), // cyan
+        new("EMBED",  "nomic-embed",   4, 330, Color.FromRgb(0xFF, 0x4D, 0xC9)), // magenta
+        new("VSA",    "KEK 2023",      1, 400, Color.FromRgb(0xFF, 0xE5, 0x3A)), // gold
     ];
 
     private static readonly string[] StatusMessages =
     [
         "Initialisiere Anwendung...",
-        "YOLO26m-seg + DINO 1.5 + SAM 2 laden...",
+        "YOLO26l-seg (TensorRT) + DINO 1.5 + SAM 2.1 laden...",
         "Qwen3-VL aktivieren (8b-q8 + 32b-hybrid)...",
-        "KnowledgeBase + nomic-embed verbinden...",
+        "nomic-embed + KnowledgeBase verbinden...",
         "KI-Pipeline bereit"
     ];
 
@@ -125,8 +126,8 @@ public partial class StartupSplashWindow : Window
             {
                 for (int j = 0; j < Stages[s + 1].Count; j++)
                 {
-                    // Dichter vernetzt als vorher (~80%) — aber nur innerhalb benachbarter Stages
-                    if (_rng.NextDouble() > 0.8) continue;
+                    // Hightech-Look: dichteres Netz (~92%) mit feinen, leuchtenden Linien.
+                    if (_rng.NextDouble() > 0.92) continue;
 
                     var line = new Line
                     {
@@ -134,8 +135,8 @@ public partial class StartupSplashWindow : Window
                         Y1 = yPositions[s][i],
                         X2 = Stages[s + 1].X,
                         Y2 = yPositions[s + 1][j],
-                        Stroke = new SolidColorBrush(Color.FromArgb(22, 140, 200, 255)),
-                        StrokeThickness = 1,
+                        Stroke = new SolidColorBrush(Color.FromArgb(34, 120, 220, 255)),
+                        StrokeThickness = 0.9,
                         Opacity = 0
                     };
                     NeuralCanvas.Children.Add(line);
@@ -152,7 +153,7 @@ public partial class StartupSplashWindow : Window
             var stageNodes = new List<Ellipse>();
             var color = Stages[s].Color;
             bool isEdgeStage = s == 0 || s == Stages.Length - 1;
-            double size = isEdgeStage ? 14.0 : 9.0;
+            double size = isEdgeStage ? 16.0 : 10.0;
 
             for (int i = 0; i < Stages[s].Count; i++)
             {
@@ -162,16 +163,16 @@ public partial class StartupSplashWindow : Window
                     Height = size,
                     Opacity = 0,
                     Fill = new RadialGradientBrush(
-                        Color.FromArgb(230, color.R, color.G, color.B),
-                        Color.FromArgb(50, color.R, color.G, color.B)),
-                    Stroke = new SolidColorBrush(Color.FromArgb(200, color.R, color.G, color.B)),
-                    StrokeThickness = 1.2,
+                        Color.FromArgb(255, color.R, color.G, color.B),
+                        Color.FromArgb(40, color.R, color.G, color.B)),
+                    Stroke = new SolidColorBrush(Color.FromArgb(220, color.R, color.G, color.B)),
+                    StrokeThickness = 1.4,
                     Effect = new DropShadowEffect
                     {
-                        BlurRadius = 12,
+                        BlurRadius = 18,
                         ShadowDepth = 0,
                         Color = color,
-                        Opacity = 0.6
+                        Opacity = 0.85
                     }
                 };
                 Canvas.SetLeft(node, Stages[s].X - size / 2);
@@ -280,18 +281,18 @@ public partial class StartupSplashWindow : Window
 
     private void PulseStage(List<Line> connections, List<Ellipse> targetNodes, Color color)
     {
-        // Alle Verbindungen dieser Stage gleichzeitig aufleuchten
+        // Alle Verbindungen dieser Stage gleichzeitig aufleuchten — kraeftiger Hightech-Pulse.
         foreach (var line in connections)
         {
-            var originalBrush = new SolidColorBrush(Color.FromArgb(22, 140, 200, 255));
-            var pulseBrush = new SolidColorBrush(Color.FromArgb(200, color.R, color.G, color.B));
+            var originalBrush = new SolidColorBrush(Color.FromArgb(34, 120, 220, 255));
+            var pulseBrush = new SolidColorBrush(Color.FromArgb(240, color.R, color.G, color.B));
 
             line.Stroke = pulseBrush;
-            line.StrokeThickness = 1.8;
+            line.StrokeThickness = 2.2;
 
             var fadeBack = new ColorAnimation(
-                Color.FromArgb(200, color.R, color.G, color.B),
-                Color.FromArgb(22, 140, 200, 255),
+                Color.FromArgb(240, color.R, color.G, color.B),
+                Color.FromArgb(34, 120, 220, 255),
                 TimeSpan.FromMilliseconds(700))
             {
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
@@ -299,21 +300,73 @@ public partial class StartupSplashWindow : Window
             fadeBack.Completed += (_, _) =>
             {
                 line.Stroke = originalBrush;
-                line.StrokeThickness = 1;
+                line.StrokeThickness = 0.9;
             };
             pulseBrush.BeginAnimation(SolidColorBrush.ColorProperty, fadeBack);
+
+            // Hightech-Akzent: fliegende Particle entlang der Verbindung
+            SpawnDataParticle(line, color);
         }
 
         // Zielknoten der Stage aufleuchten lassen (Datenpaket kommt an)
         foreach (var node in targetNodes)
         {
-            var bounce = new DoubleAnimation(1.0, 0.5, TimeSpan.FromMilliseconds(500))
+            var bounce = new DoubleAnimation(1.0, 0.45, TimeSpan.FromMilliseconds(450))
             {
                 AutoReverse = true,
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
             };
             node.BeginAnimation(OpacityProperty, bounce);
         }
+    }
+
+    /// <summary>
+    /// Hightech-Akzent: ein kleines, leuchtendes Particle wandert vom Start- zum Endpunkt
+    /// einer Verbindung, simuliert sichtbaren Datenfluss zwischen den Stages.
+    /// </summary>
+    private void SpawnDataParticle(Line line, Color color)
+    {
+        var particle = new Ellipse
+        {
+            Width = 5, Height = 5,
+            Fill = new SolidColorBrush(Color.FromArgb(255, color.R, color.G, color.B)),
+            Effect = new DropShadowEffect
+            {
+                BlurRadius = 14,
+                ShadowDepth = 0,
+                Color = color,
+                Opacity = 1.0
+            },
+            IsHitTestVisible = false
+        };
+        Canvas.SetLeft(particle, line.X1 - 2.5);
+        Canvas.SetTop(particle, line.Y1 - 2.5);
+        NeuralCanvas.Children.Add(particle);
+
+        var dx = line.X2 - line.X1;
+        var dy = line.Y2 - line.Y1;
+        var moveX = new DoubleAnimation
+        {
+            From = line.X1 - 2.5,
+            To = line.X2 - 2.5,
+            Duration = TimeSpan.FromMilliseconds(520),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+        };
+        var moveY = new DoubleAnimation
+        {
+            From = line.Y1 - 2.5,
+            To = line.Y2 - 2.5,
+            Duration = TimeSpan.FromMilliseconds(520),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+        };
+        var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(520))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+        };
+        fadeOut.Completed += (_, _) => NeuralCanvas.Children.Remove(particle);
+        particle.BeginAnimation(Canvas.LeftProperty, moveX);
+        particle.BeginAnimation(Canvas.TopProperty, moveY);
+        particle.BeginAnimation(OpacityProperty, fadeOut);
     }
 
     // ── Titel-Animation ───────────────────────────────────────────────

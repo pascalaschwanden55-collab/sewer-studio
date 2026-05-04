@@ -568,7 +568,7 @@ public partial class PlayerWindow
             {
                 AnnotationId = annotationId,
                 VsaCode = "NEGATIV",
-                Beschreibung = "Kein Schaden",
+                Beschreibung = "Kein Befund",
                 Severity = 0,
                 MeterPosition = negMeter,
                 VideoTimestamp = videoTime,
@@ -588,7 +588,7 @@ public partial class PlayerWindow
                     SampleId = Guid.NewGuid().ToString("N"),
                     CaseId = _haltungId ?? $"video-{DateTime.UtcNow:yyyyMMdd}",
                     Code = "NEGATIV",
-                    Beschreibung = "Kein Schaden",
+                    Beschreibung = "Kein Befund",
                     MeterStart = negMeter,
                     MeterEnd = negMeter,
                     FramePath = framePath,

@@ -33,7 +33,7 @@
                     <TextBlock Text="VSA Schadencodierung — Leitungen"
                                FontSize="15" FontWeight="Bold"
                                Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
-                    <TextBlock Text="EN 13508-2 · VSA-KEK 2018"
+                    <TextBlock Text="EN 13508-2 · VSA-KEK 2023"
                                FontSize="10" Foreground="{StaticResource MutedBrush}"
                                VerticalAlignment="Center" Margin="12,0,0,0"/>
                     <Button x:Name="ResetButton" Content="Reset" HorizontalAlignment="Right"
@@ -218,7 +218,7 @@
                                 <StackPanel>
                                     <TextBlock x:Name="TxtFinalCode" FontFamily="Consolas" FontSize="24"
                                                FontWeight="Bold" Foreground="{StaticResource AccentBrush}"/>
-                                    <TextBlock x:Name="TxtFinalLabel" FontSize="12"
+                                    <TextBlock x:Name="TxtFinalLabel" FontSize="{StaticResource TypeSmall}"
                                                Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"
                                                TextWrapping="Wrap"/>
                                     <TextBlock x:Name="TxtWarn" FontSize="10" Foreground="{StaticResource DangerBrush}"
@@ -238,7 +238,7 @@
                                     <!-- Q1 -->
                                     <StackPanel x:Name="Q1Panel" Margin="0,0,0,8">
                                         <DockPanel Margin="0,0,0,3">
-                                            <TextBlock x:Name="TxtQ1Label" FontSize="11" FontWeight="SemiBold"
+                                            <TextBlock x:Name="TxtQ1Label" FontSize="{StaticResource TypeCaption}" FontWeight="SemiBold"
                                                        Foreground="{StaticResource TextBrush}"/>
                                             <Border x:Name="BadgeQ1Pflicht" CornerRadius="2" Padding="4,1"
                                                     Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
@@ -247,7 +247,7 @@
                                         </DockPanel>
                                         <DockPanel>
                                             <TextBox x:Name="TxtQ1Value" Width="100" DockPanel.Dock="Left"/>
-                                            <TextBlock x:Name="TxtQ1Unit" FontSize="12" FontWeight="Bold"
+                                            <TextBlock x:Name="TxtQ1Unit" FontSize="{StaticResource TypeSmall}" FontWeight="Bold"
                                                        Foreground="{StaticResource AccentBrush}" Margin="8,0,0,0"
                                                        VerticalAlignment="Center" FontFamily="Consolas"/>
                                             <TextBlock x:Name="TxtQ1Range" FontSize="9"
@@ -261,7 +261,7 @@
                                     <!-- Q2 -->
                                     <StackPanel x:Name="Q2Panel" Margin="0,0,0,0" Visibility="Collapsed">
                                         <DockPanel Margin="0,0,0,3">
-                                            <TextBlock x:Name="TxtQ2Label" FontSize="11" FontWeight="SemiBold"
+                                            <TextBlock x:Name="TxtQ2Label" FontSize="{StaticResource TypeCaption}" FontWeight="SemiBold"
                                                        Foreground="{StaticResource TextBrush}"/>
                                             <Border CornerRadius="2" Padding="4,1" Margin="6,0,0,0"
                                                     VerticalAlignment="Center">
@@ -274,7 +274,7 @@
                                         </DockPanel>
                                         <DockPanel>
                                             <TextBox x:Name="TxtQ2Value" Width="100" DockPanel.Dock="Left"/>
-                                            <TextBlock x:Name="TxtQ2Unit" FontSize="12" FontWeight="Bold"
+                                            <TextBlock x:Name="TxtQ2Unit" FontSize="{StaticResource TypeSmall}" FontWeight="Bold"
                                                        Foreground="{StaticResource AccentBrush}" Margin="8,0,0,0"
                                                        VerticalAlignment="Center" FontFamily="Consolas"/>
                                         </DockPanel>
@@ -359,16 +359,16 @@
                                                 <StackPanel Grid.Column="0">
                                                     <TextBlock Text="VON" FontSize="8" Foreground="{StaticResource MutedBrush}"/>
                                                     <TextBox x:Name="TxtClockVon" Width="45" FontFamily="Consolas"
-                                                             FontSize="14" FontWeight="Bold" Padding="3,3"/>
+                                                             FontSize="{StaticResource TypeBodyLarge}" FontWeight="Bold" Padding="3,3"/>
                                                 </StackPanel>
-                                                <TextBlock Grid.Column="1" Text="&#x2192;" FontSize="14"
+                                                <TextBlock Grid.Column="1" Text="&#x2192;" FontSize="{StaticResource TypeBodyLarge}"
                                                            Foreground="{StaticResource MutedBrush}"
                                                            HorizontalAlignment="Center" VerticalAlignment="Bottom"
                                                            Margin="0,0,0,4"/>
                                                 <StackPanel Grid.Column="2">
                                                     <TextBlock Text="BIS" FontSize="8" Foreground="{StaticResource MutedBrush}"/>
                                                     <TextBox x:Name="TxtClockBis" Width="45" FontFamily="Consolas"
-                                                             FontSize="14" FontWeight="Bold" Padding="3,3"/>
+                                                             FontSize="{StaticResource TypeBodyLarge}" FontWeight="Bold" Padding="3,3"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="3" x:Name="TxtClockTransfer"
                                                            FontSize="9" Foreground="{StaticResource MutedBrush}"
@@ -391,7 +391,7 @@
                                 BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
                                 Background="{StaticResource BgLightBrush}">
                             <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="&#x2190; Code links waehlen" FontSize="13"
+                                <TextBlock Text="&#x2190; Code links waehlen" FontSize="{StaticResource TypeBody}"
                                            Foreground="{StaticResource MutedBrush}"
                                            HorizontalAlignment="Center" Margin="0,4,0,4"/>
                                 <TextBlock Text="Gruppe &#x2192; Hauptcode &#x2192; Charakterisierung"
@@ -414,12 +414,12 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Meter Start (m)" FontSize="11" FontWeight="SemiBold"
+                                        <TextBlock Text="Meter Start (m)" FontSize="{StaticResource TypeCaption}" FontWeight="SemiBold"
                                                    Margin="0,0,0,3"/>
                                         <TextBox x:Name="TxtMeterStart"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Meter Ende (m)" FontSize="11" FontWeight="SemiBold"
+                                        <TextBlock Text="Meter Ende (m)" FontSize="{StaticResource TypeCaption}" FontWeight="SemiBold"
                                                    Margin="0,0,0,3"/>
                                         <TextBox x:Name="TxtMeterEnd"/>
                                     </StackPanel>
@@ -442,7 +442,7 @@
                                           Margin="0,8,0,0"/>
 
                                 <StackPanel Margin="0,8,0,0">
-                                    <TextBlock Text="Videozeit (mm:ss)" FontSize="11" FontWeight="SemiBold"
+                                    <TextBlock Text="Videozeit (mm:ss)" FontSize="{StaticResource TypeCaption}" FontWeight="SemiBold"
                                                Margin="0,0,0,3"/>
                                     <TextBox x:Name="TxtZeit" Width="120" HorizontalAlignment="Left"/>
                                 </StackPanel>
@@ -544,9 +544,9 @@
             <DockPanel>
                 <!-- Code-Vorschau links -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Code:" FontSize="12" Foreground="{StaticResource MutedBrush}"
+                    <TextBlock Text="Code:" FontSize="{StaticResource TypeSmall}" Foreground="{StaticResource MutedBrush}"
                                VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <TextBlock x:Name="TxtCodePreview" FontFamily="Consolas" FontSize="16"
+                    <TextBlock x:Name="TxtCodePreview" FontFamily="Consolas" FontSize="{StaticResource TypeH4}"
                                FontWeight="Bold" Foreground="{StaticResource AccentBrush}"
                                VerticalAlignment="Center"/>
                 </StackPanel>

@@ -65,6 +65,14 @@ public partial class CodingModeWindow : Window
     private string _aiModelName = string.Empty;
     private bool _aiStatusPulseRunning;
 
+    // SAM-Segmentierung nach BBox (Audit-Fix 2026-04: bisher nur PlayerWindow)
+    // Wird beim Loaded() initialisiert und beim BBox-MouseUp aufgerufen.
+    private Ai.Pipeline.VisionPipelineClient? _sidecarClient;
+    private Ai.Pipeline.SamResponse? _lastSamResult;
+    /// <summary>Tight-BBox aus letzter SAM-Maske (in normierten Koordinaten 0..1).
+    /// Wird beim Trainings-Export verwendet statt der grossen User-BBox.</summary>
+    private Application.Ai.NormalizedBoundingBox? _lastSamTightBbox;
+
     public CodingModeWindow(HaltungRecord haltung, string? videoPath)
     {
         InitializeComponent();
@@ -192,6 +200,41 @@ public partial class CodingModeWindow : Window
         // KI Live-Detection initialisieren
         InitAiOverlay();
 
+        // Audit-Fix 2026-04: SAM-Segmentierung nach BBox-Zeichnung. Sidecar-Client lazy
+        // initialisieren - bei Sidecar-Down faellt der Codiermodus auf Rechteck-only zurueck.
+        try
+        {
+            var sidecarUrl = Environment.GetEnvironmentVariable("SEWERSTUDIO_SIDECAR_URL")
+                ?? "http://localhost:8100";
+            _sidecarClient = new Ai.Pipeline.VisionPipelineClient(new Uri(sidecarUrl));
+            // Pre-Flight: sofort einen Health-Check senden, damit der User erfaehrt
+            // ob der Sidecar erreichbar ist - vorher: stille Faulheit bis zum ersten BBox.
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var healthCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                    var hc = await _sidecarClient.HealthCheckAsync(healthCts.Token);
+                    SetStatusSafe(hc != null
+                        ? $"Sidecar OK (status={hc.Status}, YOLO/DINO/SAM erreichbar)"
+                        : $"Sidecar nicht bereit: {_sidecarClient.LastHealthError ?? "keine Antwort von /health"}");
+                }
+                catch (OperationCanceledException)
+                {
+                    SetStatusSafe("Sidecar-Health-Timeout: /health antwortet nicht innerhalb von 3s");
+                }
+                catch (Exception ex)
+                {
+                    SetStatusSafe($"Sidecar-Health-Fehler: {ex.Message}");
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            SetStatusSafe($"Sidecar-Init fehlgeschlagen: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[CodingMode SAM] Sidecar-Client-Init fehlgeschlagen: {ex.Message}");
+        }
+
         // Tastenkuerzel: O = Akzeptieren, Delete = Verwerfen (auf selektierten Befund)
         PreviewKeyDown += CodingMode_PreviewKeyDown;
 
@@ -233,6 +276,8 @@ public partial class CodingModeWindow : Window
         Safe("AnalysisCts-Cancel", () => _analysisCts?.Cancel());
         Safe("AnalysisCts-Dispose", () => _analysisCts?.Dispose());
         Safe("AiStatusPulse-Stop", () => StopAiStatusPulse());
+        Safe("PipelineFailure-Unsubscribe", () =>
+            Ai.EnhancedVisionAnalysisService.PipelineFailure -= OnPipelineFailure);
         Safe("OllamaClient-Dispose", () => _ollamaClient?.Dispose());
         Safe("Player-Stop", () => _player?.Stop());
         Safe("Player-Dispose", () => _player?.Dispose());
@@ -597,10 +642,40 @@ public partial class CodingModeWindow : Window
             BtnCreateEvent.IsEnabled = true;
                 BtnSaveAsTraining.IsEnabled = true;
 
-            // Overlay nach 3 Sekunden automatisch ausblenden
+            // Audit-Fix 2026-04: SAM-Segmentierung im Hintergrund starten (nur fuer Rechtecke).
+            // Maske wird ueber das Rechteck gerendert und liefert tight-BBox fuer Trainings-Export.
+            if (_vm.CurrentOverlay.ToolType == OverlayToolType.Rectangle)
+            {
+                // KRITISCH: Video pausieren - sonst ueberschreibt das laufende VLC-HwndHost
+                // das WPF-Overlay sofort (Airspace-Problem). Im Bildtraining funktioniert die
+                // Segmentierung weil dort statische Bilder ueber <Image> gezeigt werden.
+                try
+                {
+                    if (_player != null && _player.IsPlaying)
+                    {
+                        _player.SetPause(true);
+                        SetStatusSafe("Video pausiert fuer SAM-Segmentierung...");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[CodingMode] Pause-Fehler: {ex.Message}");
+                }
+
+                SetStatusSafe("BBox erkannt - SAM wird gestartet...");
+                _ = SegmentBboxWithSamAsync(_vm.CurrentOverlay);
+            }
+            else
+            {
+                SetStatusSafe($"BBox-Tool: {_vm.CurrentOverlay.ToolType} (SAM nur fuer Rechteck)");
+            }
+
+            // Overlay nach 8 Sekunden automatisch ausblenden (vorher 3s - zu kurz fuer SAM,
+            // der Async-Lauf braucht ~300ms und der User muss die Maske auch sehen koennen).
+            // SAM-Maske (Tag "sam_manual_mask") bleibt durch ClearAllDrawingShapes unberuehrt.
             var fadeTimer = new System.Windows.Threading.DispatcherTimer
             {
-                Interval = TimeSpan.FromSeconds(3)
+                Interval = TimeSpan.FromSeconds(8)
             };
             fadeTimer.Tick += (_, _) =>
             {
@@ -1441,12 +1516,15 @@ public partial class CodingModeWindow : Window
     private IEnumerable<ToggleButton> ToolButtons()
     {
         yield return BtnToolRect;
+        yield return BtnCalibrate;
     }
 
     private void ToolButton_Checked(object sender, RoutedEventArgs e)
     {
         // Falls Kalibrierung aktiv war: beim Werkzeugwechsel sauber beenden.
-        if (_isCalibrating || BtnCalibrate.IsChecked == true)
+        // Ausnahme: wenn der Sender BtnCalibrate selbst ist (gerade aktiviert).
+        if (!ReferenceEquals(sender, BtnCalibrate)
+            && (_isCalibrating || BtnCalibrate.IsChecked == true))
         {
             _isCalibrating = false;
             _calibStart = null;
@@ -1454,12 +1532,23 @@ public partial class CodingModeWindow : Window
             CalibrationHint.Visibility = Visibility.Collapsed;
         }
 
-        // Alle anderen Buttons unchecken
+        // Alle anderen Buttons unchecken (mutual exclusion ueber alle Tools)
         foreach (var tb in ToolButtons())
         {
             if (!ReferenceEquals(tb, sender))
                 tb.IsChecked = false;
         }
+
+        // Beim Tool-Wechsel ALLE Overlay-Reste (manuell, preview, SAM-Maske, AI-Overlay)
+        // wegputzen - sonst kombinieren sich Geometrien aus vorigen Werkzeugen.
+        ClearAllDrawingShapes(includeCalibration: false);
+        try
+        {
+            var samElements = OverlayCanvas.Children.OfType<FrameworkElement>()
+                .Where(el => (el.Tag as string) == "sam_manual_mask").ToList();
+            foreach (var el in samElements) OverlayCanvas.Children.Remove(el);
+        }
+        catch { }
 
         OverlayToolType tool;
         if (sender == BtnToolRect) tool = OverlayToolType.Rectangle;
@@ -1476,6 +1565,10 @@ public partial class CodingModeWindow : Window
         if (!anyChecked)
             _overlayService.ActiveTool = OverlayToolType.None;
     }
+
+    // Foto-Assistent-Tools (Stundenlinien, Drehen, Entzerren, Screenshot, DisplayStyle,
+    // Fliessrichtungs-Bogen) wurden aus dem Codier-Modus entfernt - sie leben jetzt nur noch
+    // im PhotoMeasurementWindow. Der Codier-Modus bleibt so schlank wie moeglich.
 
     private void BtnPipeBendSnap_Checked(object sender, RoutedEventArgs e)
         => _overlayService.PipeBendSnapEnabled = true;
@@ -1752,7 +1845,12 @@ public partial class CodingModeWindow : Window
             await System.IO.File.WriteAllBytesAsync(tempFrame, pngBytes);
 
             // 3. BoundingBox berechnen + Validierung
-            var bbox = Application.Ai.NormalizedBoundingBox.FromPoints(_vm.CurrentOverlay.Points);
+            //    Audit-Fix 2026-04: SAM-tight-BBox bevorzugen wenn vorhanden -> bessere YOLO-Labels.
+            //    User zeichnet ein grosses Rechteck, SAM liefert pixelgenaue Maske, daraus wird
+            //    eine engere BBox abgeleitet. So lernt YOLO "wo genau" statt "wo ungefaehr".
+            var bbox = _lastSamTightBbox is { } tight && tight.Width > 0.005 && tight.Height > 0.005
+                ? tight
+                : Application.Ai.NormalizedBoundingBox.FromPoints(_vm.CurrentOverlay.Points);
             const double MinBboxDimension = 0.01; // Mindestgroesse 1% des Frames
             if (bbox.Width < MinBboxDimension || bbox.Height < MinBboxDimension)
             {
@@ -2422,6 +2520,10 @@ public partial class CodingModeWindow : Window
             _ollamaClient = _aiConfig.CreateOllamaClient();
             _liveDetection = new LiveDetectionService(_ollamaClient, _aiConfig.VisionModel);
             _enhancedVision = new EnhancedVisionAnalysisService(_ollamaClient, _aiConfig.VisionModel, _aiConfig.ReferenceVisionModel);
+
+            // Pipeline-Failure-Event abfangen - alle stillen Failures landen jetzt im Result-Panel
+            EnhancedVisionAnalysisService.PipelineFailure += OnPipelineFailure;
+
             SetAiStatus("Bereit", "#22C55E",
                 $"Qwen aktiv ({CompactModelName(_aiModelName)})");
 
@@ -2545,7 +2647,32 @@ public partial class CodingModeWindow : Window
 
     private async void BtnAnalyzeFrame_Click(object sender, RoutedEventArgs e)
     {
-        if (_liveDetection == null || _player == null || _isAnalyzing) return;
+        // Guards mit sichtbarem Feedback - vorher: stille Returns, deshalb dachte der User
+        // "es passiert nichts" wenn z.B. _isAnalyzing haengen geblieben ist.
+        if (_liveDetection == null)
+        {
+            SetAiStatus("KI nicht initialisiert (Ollama down?)", "#EF4444",
+                $"Modell: {CompactModelName(_aiModelName)}", error: true);
+            return;
+        }
+        if (_player == null)
+        {
+            SetAiStatus("Player nicht bereit", "#EF4444", "VLC fehlt", error: true);
+            return;
+        }
+        if (_isAnalyzing)
+        {
+            // Reset-Notbremse: wenn Flag mehr als 30s gesetzt ist → freischalten,
+            // damit der Button nicht ewig blockiert bleibt nach einem Crash/Hang.
+            SetAiStatus("Analyse laeuft schon - Stop in 1s", "#F59E0B", "Reset...", busy: true);
+            await Task.Delay(1000);
+            if (_isAnalyzing)
+            {
+                _isAnalyzing = false;
+                _analysisCts?.Cancel();
+                SetAiStatus("Analyse-Lock gebrochen, neuer Versuch...", "#F59E0B", "Reset");
+            }
+        }
         await AnalyzeCurrentFrameAsync();
     }
 
@@ -2585,8 +2712,32 @@ public partial class CodingModeWindow : Window
             if (_enhancedVision != null)
             {
                 var b64 = Convert.ToBase64String(pngBytes);
-                var enhanced = await _enhancedVision.AnalyzeAsync(b64, _analysisCts.Token);
+                var (enhanced, _) = await _enhancedVision.AnalyzeWithEscalationAsync(
+                    b64, context: null, ct: _analysisCts.Token);
                 result = Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, timestampSec);
+
+                // Sichtbares Panel fuer User - vorher: Result war oft nur in der Liste
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    var sb = new System.Text.StringBuilder();
+                    sb.AppendLine($"Bildqualitaet: {enhanced.ImageQuality}");
+                    sb.AppendLine($"Material: {enhanced.PipeMaterial}");
+                    if (enhanced.PipeDiameterMm.HasValue)
+                        sb.AppendLine($"DN geschaetzt: {enhanced.PipeDiameterMm} mm");
+                    sb.AppendLine($"Findings: {enhanced.Findings.Count}");
+                    foreach (var f in enhanced.Findings.Take(3))
+                    {
+                        sb.AppendLine($"• {f.Label}");
+                        if (!string.IsNullOrEmpty(f.VsaCodeHint))
+                            sb.AppendLine($"  Code: {f.VsaCodeHint}  | Sev: {f.Severity}");
+                    }
+                    if (!string.IsNullOrWhiteSpace(_enhancedVision.LastPipelineWarning))
+                        sb.AppendLine($"Warnung: {_enhancedVision.LastPipelineWarning}");
+                    if (string.IsNullOrEmpty(enhanced.Error))
+                        ShowBboxResultPanel("Frame-Analyse", sb.ToString(), isError: false);
+                    else
+                        ShowBboxResultPanel("Analyse-Fehler", enhanced.Error, isError: true);
+                });
             }
             else
             {
@@ -2636,7 +2787,7 @@ public partial class CodingModeWindow : Window
 
         if (result.Findings.Count == 0)
         {
-            SetAiStatus("Kein Schaden erkannt", "#22C55E", "3/3 Overlay aktualisiert");
+            SetAiStatus("Kein Befund erkannt", "#22C55E", "3/3 Overlay aktualisiert");
             AiFindingsList.ItemsSource = null;
             AiOverlayCanvas.Children.Clear();
             DetectionCanvas.Children.Clear();
@@ -2957,38 +3108,693 @@ public partial class CodingModeWindow : Window
     /// </summary>
     private async Task<byte[]?> CaptureCurrentFrameAsync()
     {
-        // Snapshot geht auch bei pausiertem Video, solange Dauer bekannt
-        if (_player == null || !_videoReady)
-            return null;
+        // 1. Versuch: VLC TakeSnapshot (echter Source-Frame, beste Qualitaet).
+        //    Funktioniert nur bei bereitem Player; scheitert oft still bei laufendem Video
+        //    auf manchen VLC-Versionen, deshalb robuster Fallback weiter unten.
+        if (_player != null && _videoReady)
+        {
+            var tmpDir = System.IO.Path.GetTempPath();
+            var snapFile = System.IO.Path.Combine(tmpDir, $"sewerstudio_snap_{Guid.NewGuid():N}.png");
+            try
+            {
+                _player.TakeSnapshot(0, snapFile, 0, 0);
+                // Warten bis Datei geschrieben (max ~1.5s)
+                for (int i = 0; i < 30; i++)
+                {
+                    await Task.Delay(50);
+                    if (System.IO.File.Exists(snapFile) &&
+                        new System.IO.FileInfo(snapFile).Length > 100)
+                        break;
+                }
+                if (System.IO.File.Exists(snapFile)
+                    && new System.IO.FileInfo(snapFile).Length > 100)
+                {
+                    var bytes = await System.IO.File.ReadAllBytesAsync(snapFile);
+                    try { System.IO.File.Delete(snapFile); } catch { }
+                    return bytes;
+                }
+                try { if (System.IO.File.Exists(snapFile)) System.IO.File.Delete(snapFile); } catch { }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[CodingMode Capture] VLC-Snapshot Fehler: {ex.Message}");
+                try { if (System.IO.File.Exists(snapFile)) System.IO.File.Delete(snapFile); } catch { }
+            }
+        }
 
-        // VLC-Snapshot in temporaere Datei
-        var tmpDir = System.IO.Path.GetTempPath();
-        var snapFile = System.IO.Path.Combine(tmpDir, $"sewerstudio_snap_{Guid.NewGuid():N}.png");
+        // 2. Fallback: RenderTargetBitmap auf VideoView. Ergibt das was der User sieht
+        //    (nicht den Original-Frame, aber identische BBox-Koordinaten - das reicht
+        //    fuer SAM/Qwen-Klassifikation). Dasselbe Verfahren wie ImageAnnotation,
+        //    nur direkt aus dem WPF-Visual-Tree.
+        try
+        {
+            var fallback = await Dispatcher.InvokeAsync(() => RenderVideoViewToPng());
+            if (fallback != null && fallback.Length > 100)
+                return fallback;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CodingMode Capture] WPF-Render-Fallback fehlgeschlagen: {ex.Message}");
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Rendert das aktuelle VideoView (oder den umgebenden Container) als PNG-Byte-Array.
+    /// Nutzt RenderTargetBitmap - liefert das, was WPF anzeigt (inkl. Letterbox).
+    /// Bei VLC-HwndHost liefert das oft schwarz, dann ist der OverlayCanvas-Container
+    /// der bessere Capture-Punkt.
+    /// </summary>
+    private byte[]? RenderVideoViewToPng()
+    {
+        // Wir rendern den ueberordneten Container der OverlayCanvas - das umfasst
+        // sowohl das Video-Layer als auch die Overlays. Bei VLC-HwndHost-Pixeln
+        // (die WPF nicht sieht) bleibt der Hintergrund schwarz, aber die OverlayCanvas
+        // (bbox + UI) ist enthalten.
+        FrameworkElement? target = null;
+        try
+        {
+            target = OverlayCanvas?.Parent as FrameworkElement;
+            if (target == null) target = OverlayCanvas;
+            if (target == null) return null;
+
+            int w = (int)Math.Max(target.ActualWidth, 1);
+            int h = (int)Math.Max(target.ActualHeight, 1);
+            var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                w, h, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtb.Render(target);
+
+            var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+            using var ms = new System.IO.MemoryStream();
+            enc.Save(ms);
+            return ms.ToArray();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    // ── Audit-Fix 2026-04: SAM-Segmentierung nach BBox ────────────────────
+    // Vorher hatte der Codiermodus keinen SAM-Aufruf - User sah nur das Rechteck,
+    // keine Umrisse. PlayerWindow ruft SAM seit c3c6ad60, dieses Window war der Nachzuegler.
+    // Effekt fuer Training: tight-BBox aus Maske statt User-BBox -> bessere YOLO-Labels.
+
+    /// <summary>
+    /// Sendet die gezeichnete BBox an SAM, rendert die zurueckgegebene Maske
+    /// auf das OverlayCanvas und merkt sich die enge BBox fuer den Trainings-Export.
+    /// Bei Sidecar-Fehler oder leerer Antwort: kein Render, kein Throw - User behaelt das Rechteck.
+    /// </summary>
+    /// <summary>
+    /// Empfaengt Pipeline-Failure-Events vom EnhancedVisionAnalysisService und macht sie
+    /// im Result-Panel sichtbar (vorher: Debug.WriteLine only, fuer User unsichtbar).
+    /// </summary>
+    private void OnPipelineFailure(object? sender, Ai.EnhancedVisionAnalysisService.PipelineFailureEvent ev)
+    {
+        try
+        {
+            var msg = $"{ev.Stage} ({ev.Model}): {ev.ExceptionType}\n{ev.Message}";
+            if (Dispatcher.CheckAccess())
+                ShowBboxResultPanel($"Pipeline-Fehler {ev.At:HH:mm:ss}", msg, isError: true);
+            else
+                Dispatcher.BeginInvoke(() => ShowBboxResultPanel($"Pipeline-Fehler {ev.At:HH:mm:ss}", msg, isError: true));
+            SetStatusSafe($"Pipeline: {ev.Stage} fehlgeschlagen");
+        }
+        catch { /* Event-Handler-Fehler nicht propagieren */ }
+    }
+
+    /// <summary>Setzt Statustext thread-sicher; ignoriert Fehler bei laufendem Shutdown.</summary>
+    private void SetStatusSafe(string text)
+    {
+        try
+        {
+            if (Dispatcher.CheckAccess())
+            {
+                if (TxtStatus != null) TxtStatus.Text = text;
+            }
+            else
+            {
+                Dispatcher.BeginInvoke(() => { if (TxtStatus != null) TxtStatus.Text = text; });
+            }
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// Rendert die SAM-Maske mit MAXIMAL deutlichem Highlight - bewusst gar nicht subtil.
+    /// Konturlinie: pulsierend weiss + 4px, Fuellung: 50% magenta-gelb, plus eine dicke
+    /// gelbe Tight-BBox damit unmissverstaendlich erkennbar ist dass SAM gelaufen ist.
+    /// </summary>
+    private void RenderManualSamMaskHighlight(Ai.Pipeline.SamResponse samResp, Ai.Pipeline.SamMaskResult mask)
+    {
+        if (samResp is null || mask is null) return;
+        var imgW = Math.Max(1, samResp.ImageWidth);
+        var imgH = Math.Max(1, samResp.ImageHeight);
+        var cw = OverlayCanvas.ActualWidth;
+        var ch = OverlayCanvas.ActualHeight;
+        if (cw <= 0 || ch <= 0) return;
+
+        // Diagnose-Counter, damit wir wissen welche Stufe gerendert wurde.
+        int polylineCount = 0;
+        bool fillRendered = false;
+        bool contourRectRendered = false;
+
+        // 1. Maske dekodieren - faengt RLE-Probleme ab.
+        bool[,]? decoded = null;
+        try { decoded = Ai.Pipeline.SamMaskRenderer.DecodeRle(mask.MaskRle, imgW, imgH); }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CodingMode SAM] RLE-Decode Fehler: {ex.Message}");
+            SetStatusSafe($"SAM-Render: RLE-Decode fehlgeschlagen ({ex.Message})");
+        }
+
+        // 2. Gefuellte Maske (immer versuchen, semi-transparent gruen)
+        if (decoded != null)
+        {
+            try
+            {
+                var fillGeom = Ai.Pipeline.SamMaskRenderer.ExtractFillGeometry(decoded, imgW, imgH, cw, ch, targetWidth: 720);
+                var fillPath = new System.Windows.Shapes.Path
+                {
+                    Data = fillGeom,
+                    Fill = new SolidColorBrush(Color.FromArgb(140, 57, 255, 20)),
+                    Tag = "sam_manual_mask",
+                    IsHitTestVisible = false
+                };
+                Panel.SetZIndex(fillPath, 100);
+                OverlayCanvas.Children.Add(fillPath);
+                fillRendered = true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[CodingMode SAM] Fill-Geom Fehler: {ex.Message}");
+            }
+        }
+
+        // 3. Glatte Konturen via Moore-Boundary-Trace (kann leer sein)
+        if (decoded != null)
+        {
+            try
+            {
+                var polylines = Ai.Pipeline.SamMaskRenderer.ExtractContourPolylines(decoded, imgW, imgH, cw, ch);
+                foreach (var poly in polylines)
+                {
+                    if (poly.Count < 3) continue;
+                    polylineCount++;
+
+                    var outer = new System.Windows.Shapes.Polyline
+                    {
+                        Stroke = Brushes.White,
+                        StrokeThickness = 5,
+                        StrokeLineJoin = PenLineJoin.Round,
+                        Tag = "sam_manual_mask",
+                        IsHitTestVisible = false
+                    };
+                    foreach (var p in poly) outer.Points.Add(p);
+                    outer.Points.Add(poly[0]);
+                    Panel.SetZIndex(outer, 101);
+                    OverlayCanvas.Children.Add(outer);
+
+                    var inner = new System.Windows.Shapes.Polyline
+                    {
+                        Stroke = new SolidColorBrush(Color.FromRgb(0, 255, 0)),
+                        StrokeThickness = 3,
+                        StrokeLineJoin = PenLineJoin.Round,
+                        Tag = "sam_manual_mask",
+                        IsHitTestVisible = false,
+                        Effect = new System.Windows.Media.Effects.DropShadowEffect
+                        {
+                            BlurRadius = 16, ShadowDepth = 0,
+                            Color = Color.FromRgb(0, 255, 0), Opacity = 0.95
+                        }
+                    };
+                    foreach (var p in poly) inner.Points.Add(p);
+                    inner.Points.Add(poly[0]);
+                    Panel.SetZIndex(inner, 102);
+                    OverlayCanvas.Children.Add(inner);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[CodingMode SAM] Polyline-Trace Fehler: {ex.Message}");
+            }
+        }
+
+        // 4. Fallback wenn keine Polylinie produziert: alte ExtractContourGeometry
+        // (zaun-aehnliche Treppen-Linien, dafuer sicher sichtbar).
+        if (polylineCount == 0 && decoded != null)
+        {
+            try
+            {
+                var fallbackContour = Ai.Pipeline.SamMaskRenderer.ExtractContourGeometry(decoded, imgW, imgH, cw, ch);
+                var fallbackPath = new System.Windows.Shapes.Path
+                {
+                    Data = fallbackContour,
+                    Stroke = new SolidColorBrush(Color.FromRgb(0, 255, 0)),
+                    StrokeThickness = 3,
+                    Tag = "sam_manual_mask",
+                    IsHitTestVisible = false,
+                    Effect = new System.Windows.Media.Effects.DropShadowEffect
+                    {
+                        BlurRadius = 14, ShadowDepth = 0,
+                        Color = Color.FromRgb(0, 255, 0), Opacity = 1.0
+                    }
+                };
+                Panel.SetZIndex(fallbackPath, 102);
+                OverlayCanvas.Children.Add(fallbackPath);
+                contourRectRendered = true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[CodingMode SAM] Fallback-Kontur Fehler: {ex.Message}");
+            }
+        }
+
+        SetStatusSafe($"SAM rendered: {polylineCount} Konturen, Fill={fillRendered}, FallbackKontur={contourRectRendered}");
+
+        // 2. Tight-BBox als zusaetzlicher gruener Rahmen - garantiert sichtbar selbst wenn
+        // die Polygon-Fuellung leer ist (Edge-Case bei sehr kleinen Masken).
+        if (mask.Bbox is { Count: 4 } b)
+        {
+            double bx1 = b[0] / imgW * cw;
+            double by1 = b[1] / imgH * ch;
+            double bx2 = b[2] / imgW * cw;
+            double by2 = b[3] / imgH * ch;
+
+            var rect = new System.Windows.Shapes.Rectangle
+            {
+                Width = Math.Max(2, bx2 - bx1),
+                Height = Math.Max(2, by2 - by1),
+                Stroke = new SolidColorBrush(Color.FromRgb(57, 255, 20)),
+                StrokeThickness = 3,
+                StrokeDashArray = new DoubleCollection(new double[] { 6, 3 }),
+                Fill = Brushes.Transparent,
+                Tag = "sam_manual_mask",
+                IsHitTestVisible = false,
+                Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    BlurRadius = 10, ShadowDepth = 0,
+                    Color = Color.FromRgb(57, 255, 20), Opacity = 0.9
+                }
+            };
+            Canvas.SetLeft(rect, bx1);
+            Canvas.SetTop(rect, by1);
+            Panel.SetZIndex(rect, 103);
+            OverlayCanvas.Children.Add(rect);
+
+            // Funktional aussagekraefiges Label DIREKT am Maskenzentrum:
+            //   Zeile 1: was SAM erkannt hat (Label oder fallback "Region")
+            //   Zeile 2: Pixel-Anzahl + Bildanteil + Konfidenz
+            // Wird spaeter durch Qwen-Klassifikation um den VSA-Code ergaenzt
+            // (siehe AppendToBboxResultPanel im Qwen-Pfad).
+            var detectedClass = string.IsNullOrWhiteSpace(mask.Label) || mask.Label == "manual"
+                ? "Region"
+                : mask.Label;
+            var imageAreaPct = mask.MaskAreaPixels * 100.0 / Math.Max(1, mask.ImageAreaPixels);
+
+            var labelStack = new StackPanel
+            {
+                Tag = "sam_manual_mask",
+                IsHitTestVisible = false
+            };
+            labelStack.Children.Add(new TextBlock
+            {
+                Text = detectedClass,
+                Foreground = Brushes.White,
+                Background = new SolidColorBrush(Color.FromArgb(220, 0, 0, 0)),
+                FontSize = 13,
+                FontWeight = FontWeights.Bold,
+                Padding = new Thickness(6, 2, 6, 2)
+            });
+            labelStack.Children.Add(new TextBlock
+            {
+                Text = $"{mask.MaskAreaPixels} px ({imageAreaPct:F1}%) · Konf {mask.Confidence:P0}",
+                Foreground = Brushes.Black,
+                Background = new SolidColorBrush(Color.FromRgb(57, 255, 20)),
+                FontSize = 10,
+                FontWeight = FontWeights.SemiBold,
+                Padding = new Thickness(6, 1, 6, 1)
+            });
+
+            // Position am Centroid - dort wo SAM den Schwerpunkt sieht
+            double cxLabel = mask.CentroidX / imgW * cw;
+            double cyLabel = mask.CentroidY / imgH * ch;
+            Canvas.SetLeft(labelStack, Math.Max(0, cxLabel - 60));
+            Canvas.SetTop(labelStack, Math.Max(0, cyLabel - 24));
+            Panel.SetZIndex(labelStack, 104);
+            OverlayCanvas.Children.Add(labelStack);
+        }
+
+        // 3. Pulsierende Aufmerksamkeits-Animation auf der Kontur (1.0 → 0.45 → 1.0, 2x)
+        var pulseAnim = new System.Windows.Media.Animation.DoubleAnimation
+        {
+            From = 1.0, To = 0.45,
+            Duration = TimeSpan.FromMilliseconds(380),
+            AutoReverse = true,
+            RepeatBehavior = new System.Windows.Media.Animation.RepeatBehavior(2)
+        };
+        foreach (var el in OverlayCanvas.Children.OfType<UIElement>()
+            .Where(c => c is FrameworkElement fe && (fe.Tag as string) == "sam_manual_mask"))
+        {
+            el.BeginAnimation(UIElement.OpacityProperty, pulseAnim);
+        }
+    }
+
+    private async Task SegmentBboxWithSamAsync(OverlayGeometry overlay)
+    {
+        // Vorherige manuelle SAM-Maske entfernen (Tag-basiert) bevor wir neu anfangen.
+        try
+        {
+            var prev = OverlayCanvas.Children.OfType<FrameworkElement>()
+                .Where(el => (el.Tag as string) == "sam_manual_mask").ToList();
+            foreach (var el in prev) OverlayCanvas.Children.Remove(el);
+        }
+        catch { }
+
+        if (_sidecarClient is null)
+        {
+            SetStatusSafe("SAM: Sidecar-Client nicht initialisiert");
+            return;
+        }
+        if (overlay.Points is null || overlay.Points.Count < 2)
+        {
+            SetStatusSafe("SAM: BBox-Punkte fehlen");
+            return;
+        }
+
+        SetStatusSafe("SAM: laeuft...");
 
         try
         {
-            // VLC TakeSnapshot: (streamIndex, path, width, height) → 0 = auto
-            _player.TakeSnapshot(0, snapFile, 0, 0);
-
-            // Warten bis Datei geschrieben
-            for (int i = 0; i < 20; i++)
+            var pngBytes = await CaptureCurrentFrameAsync();
+            if (pngBytes is null || pngBytes.Length == 0)
             {
-                await Task.Delay(50);
-                if (System.IO.File.Exists(snapFile) &&
-                    new System.IO.FileInfo(snapFile).Length > 100)
-                    break;
+                SetStatusSafe("SAM: Frame-Capture leer (Video pausiert?)");
+                return;
             }
 
-            if (!System.IO.File.Exists(snapFile))
-                return null;
+            // Bild-Aufloesung dynamisch ermitteln
+            int imgW = 1920, imgH = 1080;
+            try
+            {
+                using var ms = new System.IO.MemoryStream(pngBytes);
+                var decoder = System.Windows.Media.Imaging.BitmapDecoder.Create(
+                    ms,
+                    System.Windows.Media.Imaging.BitmapCreateOptions.PreservePixelFormat,
+                    System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+                if (decoder.Frames.Count > 0)
+                {
+                    imgW = decoder.Frames[0].PixelWidth;
+                    imgH = decoder.Frames[0].PixelHeight;
+                }
+            }
+            catch { /* nutze Default */ }
 
-            return await System.IO.File.ReadAllBytesAsync(snapFile);
+            // BBox-Koordinaten umrechnen (Canvas-normiert -> Image-Pixel) analog PlayerWindow.
+            double cw = Math.Max(1, OverlayCanvas.ActualWidth);
+            double ch = Math.Max(1, OverlayCanvas.ActualHeight);
+            double sx = imgW / cw;
+            double sy = imgH / ch;
+
+            double minNormX = overlay.Points.Min(p => p.X);
+            double minNormY = overlay.Points.Min(p => p.Y);
+            double maxNormX = overlay.Points.Max(p => p.X);
+            double maxNormY = overlay.Points.Max(p => p.Y);
+
+            double minX = (minNormX * cw) * sx;
+            double minY = (minNormY * ch) * sy;
+            double maxX = (maxNormX * cw) * sx;
+            double maxY = (maxNormY * ch) * sy;
+
+            if ((maxX - minX) < 4 || (maxY - minY) < 4)
+            {
+                SetStatusSafe($"SAM: BBox zu klein ({maxX - minX:F0}×{maxY - minY:F0} px)");
+                System.Diagnostics.Debug.WriteLine($"[CodingMode SAM] BBox zu klein: {maxX - minX:F0}x{maxY - minY:F0}");
+                return;
+            }
+
+            var b64 = Convert.ToBase64String(pngBytes);
+            var boxes = new[] { new Ai.Pipeline.SamBoundingBox(minX, minY, maxX, maxY, "manual", 1.0) };
+            int dn = 300;
+            var samReq = new Ai.Pipeline.SamRequest(b64, boxes, PipeDiameterMm: dn);
+
+            Ai.Pipeline.SamResponse? samResp;
+            try
+            {
+                samResp = await _sidecarClient.SegmentSamAsync(samReq);
+            }
+            catch (Exception ex)
+            {
+                SetStatusSafe($"SAM-Fehler: {ex.Message}");
+                await Dispatcher.InvokeAsync(() =>
+                    ShowBboxResultPanel("SAM-Fehler", ex.Message, isError: true));
+                System.Diagnostics.Debug.WriteLine($"[CodingMode SAM] Sidecar-Fehler: {ex.Message}");
+
+                // Trotzdem Qwen aufrufen, damit der User wenigstens eine Klassifikation erhaelt.
+                _ = ClassifyBboxWithQwenAsync(pngBytes,
+                    (int)Math.Round(minX), (int)Math.Round(minY),
+                    (int)Math.Round(maxX), (int)Math.Round(maxY),
+                    imgW, imgH);
+                return;
+            }
+
+            if (samResp is null || samResp.Masks.Count == 0)
+            {
+                SetStatusSafe("SAM: Keine Maske gefunden (leeres Ergebnis vom Sidecar)");
+                await Dispatcher.InvokeAsync(() =>
+                    ShowBboxResultPanel("SAM: keine Maske", "Sidecar lieferte 0 Regionen.\nQwen wird trotzdem versucht...", isError: true));
+                _ = ClassifyBboxWithQwenAsync(pngBytes,
+                    (int)Math.Round(minX), (int)Math.Round(minY),
+                    (int)Math.Round(maxX), (int)Math.Round(maxY),
+                    imgW, imgH);
+                return;
+            }
+
+            _lastSamResult = samResp;
+
+            // Tight-BBox aus erster Maske ableiten - in normierten Koordinaten 0..1.
+            // SamMaskResult.Bbox ist IReadOnlyList<double> = [x1, y1, x2, y2] in Pixeln.
+            var firstMask = samResp.Masks[0];
+            if (firstMask.Bbox is { Count: 4 } b)
+            {
+                double tx1 = b[0] / Math.Max(1, samResp.ImageWidth);
+                double ty1 = b[1] / Math.Max(1, samResp.ImageHeight);
+                double tx2 = b[2] / Math.Max(1, samResp.ImageWidth);
+                double ty2 = b[3] / Math.Max(1, samResp.ImageHeight);
+                _lastSamTightBbox = new NormalizedBoundingBox
+                {
+                    XCenter = (tx1 + tx2) / 2.0,
+                    YCenter = (ty1 + ty2) / 2.0,
+                    Width = Math.Max(0, tx2 - tx1),
+                    Height = Math.Max(0, ty2 - ty1),
+                };
+            }
+
+            // Maske rendern - eigene, sehr deutliche Darstellung fuer manuelle BBox
+            // (nicht den Live-AI-Renderer, der zu transparent ist und schwer zu sehen).
+            await Dispatcher.InvokeAsync(() =>
+            {
+                Ai.Pipeline.SamMaskRenderer.ClearMasks(OverlayCanvas);
+                RenderManualSamMaskHighlight(samResp, firstMask);
+            });
+
+            // Status-Text setzen, damit der Nutzer weiss dass SAM gelaufen ist.
+            SetStatusSafe($"SAM-Maske: {samResp.Masks.Count} Region(en) in {samResp.InferenceTimeMs:F0} ms");
+
+            System.Diagnostics.Debug.WriteLine(
+                $"[CodingMode SAM] OK: {samResp.Masks.Count} Maske(n), {samResp.InferenceTimeMs:F0}ms");
+
+            // Sichtbares Result-Panel mit SAM-Info anzeigen (am Bbox).
+            await Dispatcher.InvokeAsync(() =>
+            {
+                ShowBboxResultPanel(
+                    title: "SAM erkannt",
+                    body: $"Region: {firstMask.MaskAreaPixels} px ({firstMask.MaskAreaPixels * 100.0 / Math.Max(1, firstMask.ImageAreaPixels):F1}% Bild)\n"
+                        + $"Position: {firstMask.CentroidX:F0},{firstMask.CentroidY:F0}\n"
+                        + $"Confidence: {firstMask.Confidence:P0}\n"
+                        + $"SAM-Latenz: {samResp.InferenceTimeMs:F0} ms\n"
+                        + "Qwen-Klassifikation laeuft...",
+                    isError: false);
+            });
+
+            // Sofort danach Qwen aufrufen damit der User weiss WAS in der BBox ist.
+            _ = ClassifyBboxWithQwenAsync(pngBytes,
+                (int)Math.Round(minX), (int)Math.Round(minY),
+                (int)Math.Round(maxX), (int)Math.Round(maxY),
+                imgW, imgH);
         }
-        finally
+        catch (Exception ex)
         {
-            try { if (System.IO.File.Exists(snapFile)) System.IO.File.Delete(snapFile); }
-            catch { /* cleanup best-effort */ }
+            SetStatusSafe($"SAM unerwarteter Fehler: {ex.Message}");
+            await Dispatcher.InvokeAsync(() =>
+                ShowBboxResultPanel("SAM-Fehler", ex.Message, isError: true));
+            System.Diagnostics.Debug.WriteLine($"[CodingMode SAM] Unerwarteter Fehler: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Klassifiziert den BBox-Inhalt mit Qwen-VL (was ist drin?). Schreibt das Ergebnis
+    /// als VSA-Code + Klartext in das BBox-Result-Panel.
+    /// </summary>
+    private async Task ClassifyBboxWithQwenAsync(
+        byte[] framePngBytes, int x1, int y1, int x2, int y2, int imgW, int imgH)
+    {
+        if (_enhancedVision is null)
+        {
+            await Dispatcher.InvokeAsync(() =>
+                AppendToBboxResultPanel("Qwen nicht initialisiert (Ollama down?)", isError: true));
+            return;
+        }
+        try
+        {
+            // BBox-Region aus dem Frame croppen
+            var cropped = CropPngToBbox(framePngBytes, x1, y1, x2, y2, imgW, imgH);
+            if (cropped is null)
+            {
+                await Dispatcher.InvokeAsync(() =>
+                    AppendToBboxResultPanel("BBox-Crop fehlgeschlagen", isError: true));
+                return;
+            }
+
+            var b64 = Convert.ToBase64String(cropped);
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var (analysis, _) = await _enhancedVision.AnalyzeWithEscalationAsync(
+                b64, context: null);
+            sw.Stop();
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (!string.IsNullOrEmpty(analysis.Error))
+                {
+                    AppendToBboxResultPanel($"Qwen-Fehler: {analysis.Error}", isError: true);
+                    return;
+                }
+
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine();
+                sb.AppendLine($"── Qwen ({sw.ElapsedMilliseconds} ms) ──");
+                if (analysis.Findings.Count == 0)
+                {
+                    sb.AppendLine("Keine Schadensmerkmale erkannt.");
+                    sb.AppendLine($"Bildqualitaet: {analysis.ImageQuality}");
+                    sb.AppendLine($"Material: {analysis.PipeMaterial}");
+                    if (analysis.PipeDiameterMm.HasValue)
+                        sb.AppendLine($"DN geschaetzt: {analysis.PipeDiameterMm} mm");
+                }
+                else
+                {
+                    foreach (var f in analysis.Findings.Take(3))
+                    {
+                        sb.AppendLine($"• {f.Label}");
+                        if (!string.IsNullOrEmpty(f.VsaCodeHint))
+                            sb.AppendLine($"  Code: {f.VsaCodeHint}  | Sev: {f.Severity}");
+                        if (!string.IsNullOrEmpty(f.PositionClock))
+                            sb.AppendLine($"  Uhr: {f.PositionClock}");
+                        if (f.WidthMm.HasValue || f.HeightMm.HasValue)
+                            sb.AppendLine($"  Maße: {f.WidthMm}×{f.HeightMm} mm");
+                    }
+                }
+                if (!string.IsNullOrWhiteSpace(_enhancedVision.LastPipelineWarning))
+                    sb.AppendLine($"Warnung: {_enhancedVision.LastPipelineWarning}");
+                AppendToBboxResultPanel(sb.ToString(), isError: false);
+            });
+        }
+        catch (Exception ex)
+        {
+            await Dispatcher.InvokeAsync(() =>
+                AppendToBboxResultPanel($"Qwen-Klassifikation Fehler: {ex.Message}", isError: true));
+        }
+    }
+
+    /// <summary>Croppt einen PNG-Frame auf die BBox-Region und liefert das neue PNG zurueck.</summary>
+    private byte[]? CropPngToBbox(byte[] pngBytes, int x1, int y1, int x2, int y2, int imgW, int imgH)
+    {
+        try
+        {
+            using var ms = new System.IO.MemoryStream(pngBytes);
+            var decoder = System.Windows.Media.Imaging.BitmapDecoder.Create(
+                ms,
+                System.Windows.Media.Imaging.BitmapCreateOptions.PreservePixelFormat,
+                System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+            if (decoder.Frames.Count == 0) return null;
+            var src = decoder.Frames[0];
+
+            x1 = Math.Clamp(x1, 0, imgW - 1);
+            y1 = Math.Clamp(y1, 0, imgH - 1);
+            x2 = Math.Clamp(x2, x1 + 1, imgW);
+            y2 = Math.Clamp(y2, y1 + 1, imgH);
+            var rect = new System.Windows.Int32Rect(x1, y1, x2 - x1, y2 - y1);
+            var crop = new System.Windows.Media.Imaging.CroppedBitmap(src, rect);
+
+            var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(crop));
+            using var outMs = new System.IO.MemoryStream();
+            enc.Save(outMs);
+            return outMs.ToArray();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CodingMode] CropPngToBbox: {ex.Message}");
+            return null;
+        }
+    }
+
+    // ── Sichtbares Result-Panel ueber dem BBox ─────────────────────────────
+
+    private System.Windows.Controls.Border? _bboxResultPanel;
+    private TextBlock? _bboxResultText;
+
+    private void ShowBboxResultPanel(string title, string body, bool isError)
+    {
+        // Bestehendes Panel entfernen
+        if (_bboxResultPanel != null && OverlayCanvas.Children.Contains(_bboxResultPanel))
+            OverlayCanvas.Children.Remove(_bboxResultPanel);
+
+        _bboxResultText = new TextBlock
+        {
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 12,
+            Foreground = Brushes.White,
+            Text = $"{title}\n{body}",
+            TextWrapping = TextWrapping.Wrap,
+            MaxWidth = 360
+        };
+
+        _bboxResultPanel = new System.Windows.Controls.Border
+        {
+            Background = isError
+                ? new SolidColorBrush(Color.FromArgb(240, 180, 30, 30))
+                : new SolidColorBrush(Color.FromArgb(240, 20, 30, 50)),
+            BorderBrush = new SolidColorBrush(isError
+                ? Color.FromRgb(255, 100, 100)
+                : Color.FromRgb(0, 220, 200)),
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(10, 6, 10, 6),
+            Child = _bboxResultText,
+            Effect = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                BlurRadius = 12, ShadowDepth = 0,
+                Color = isError ? Colors.Red : Color.FromRgb(0, 220, 200),
+                Opacity = 0.7
+            },
+            Tag = "sam_manual_mask",
+            IsHitTestVisible = false
+        };
+        // Position: oben rechts auf Canvas
+        Canvas.SetLeft(_bboxResultPanel, OverlayCanvas.ActualWidth - 380);
+        Canvas.SetTop(_bboxResultPanel, 12);
+        OverlayCanvas.Children.Add(_bboxResultPanel);
+    }
+
+    private void AppendToBboxResultPanel(string moreText, bool isError)
+    {
+        if (_bboxResultText == null) return;
+        _bboxResultText.Text += "\n" + moreText;
+        if (isError && _bboxResultPanel != null)
+            _bboxResultPanel.BorderBrush = new SolidColorBrush(Color.FromRgb(255, 100, 100));
     }
 
 }

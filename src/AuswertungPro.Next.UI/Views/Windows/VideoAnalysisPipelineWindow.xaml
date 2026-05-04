@@ -166,7 +166,7 @@
                     <Border Width="4" Height="28" CornerRadius="2" Margin="0,0,10,0"
                             Background="{StaticResource AccentBrush}"/>
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="S E W E R  S T U D I O" FontWeight="Bold" FontSize="11"
+                        <TextBlock Text="S E W E R  S T U D I O" FontWeight="Bold" FontSize="{StaticResource TypeCaption}"
                                    FontFamily="Consolas" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,1"/>
                         <TextBlock Text="PIPELINE ANALYSIS" FontSize="8" FontWeight="SemiBold"
                                    FontFamily="Consolas" Foreground="{StaticResource MutedBrush}"/>
@@ -177,11 +177,11 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal"
                             VerticalAlignment="Center" HorizontalAlignment="Center">
                     <TextBlock Text="{Binding PhaseLabel}"
-                               FontSize="13" FontWeight="SemiBold"
+                               FontSize="{StaticResource TypeBody}" FontWeight="SemiBold"
                                FontFamily="Consolas" Foreground="{StaticResource MutedBrush}"/>
-                    <TextBlock Text="  //  " Foreground="{StaticResource BorderBrush}" FontSize="13" FontFamily="Consolas"/>
+                    <TextBlock Text="  //  " Foreground="{StaticResource BorderBrush}" FontSize="{StaticResource TypeBody}" FontFamily="Consolas"/>
                     <TextBlock Text="{Binding StatusText}"
-                               FontSize="12" Foreground="{StaticResource MutedBrush}" FontFamily="Consolas"
+                               FontSize="{StaticResource TypeSmall}" Foreground="{StaticResource MutedBrush}" FontFamily="Consolas"
                                MaxWidth="400" TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center"/>
                 </StackPanel>
@@ -214,7 +214,7 @@
                                        VerticalAlignment="Center"
                                        Visibility="{Binding VideoPhaseActive,
                                            Converter={StaticResource BoolToVis}}"/>
-                            <TextBlock FontFamily="Consolas" FontSize="12"
+                            <TextBlock FontFamily="Consolas" FontSize="{StaticResource TypeSmall}"
                                        Foreground="{StaticResource AccentBrush}">
                                 <Run Text="Meter "/>
                                 <Run Text="{Binding CurrentMeter}" FontWeight="Bold"/>
@@ -390,7 +390,7 @@
                                           Foreground="{StaticResource AccentBrush}"
                                           BorderBrush="{StaticResource BorderBrush}"
                                           BorderThickness="1"
-                                          FontSize="11"
+                                          FontSize="{StaticResource TypeCaption}"
                                           FontWeight="SemiBold"
                                           FontFamily="Consolas">
                                     <ComboBoxItem Content="x1" Tag="1" Foreground="{StaticResource TextBrush}"/>
@@ -401,7 +401,7 @@
                                 <Button x:Name="StartButton"
                                         Content="▶ Start"
                                         Margin="8,0,0,0"
-                                        FontSize="11"
+                                        FontSize="{StaticResource TypeCaption}"
                                         FontWeight="SemiBold"
                                         Foreground="White"
                                         Padding="12,2"
@@ -502,7 +502,7 @@
                         Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                     <DockPanel>
                         <!-- Status rechts -->
-                        <TextBlock DockPanel.Dock="Right" FontSize="12" FontWeight="SemiBold"
+                        <TextBlock DockPanel.Dock="Right" FontSize="{StaticResource TypeSmall}" FontWeight="SemiBold"
                                    VerticalAlignment="Center">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -523,14 +523,14 @@
                         </TextBlock>
                         <!-- Stats inline -->
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,0,4,0" Text="Frames"/>
-                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="{StaticResource TextBrush}"
+                            <TextBlock FontSize="{StaticResource TypeCaption}" Foreground="{StaticResource MutedBrush}" Margin="0,0,4,0" Text="Frames"/>
+                            <TextBlock FontSize="{StaticResource TypeBody}" FontWeight="Bold" Foreground="{StaticResource TextBrush}"
                                        Margin="0,0,16,0" Text="{Binding FramesAnalyzed}"/>
-                            <TextBlock FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,0,4,0" Text="Schäden"/>
-                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"
+                            <TextBlock FontSize="{StaticResource TypeCaption}" Foreground="{StaticResource MutedBrush}" Margin="0,0,4,0" Text="Schäden"/>
+                            <TextBlock FontSize="{StaticResource TypeBody}" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"
                                        Margin="0,0,16,0" Text="{Binding DetectionCount}"/>
-                            <TextBlock FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,0,4,0" Text="Hohe Konf."/>
-                            <TextBlock FontSize="13" FontWeight="Bold" Foreground="#16A34A"
+                            <TextBlock FontSize="{StaticResource TypeCaption}" Foreground="{StaticResource MutedBrush}" Margin="0,0,4,0" Text="Hohe Konf."/>
+                            <TextBlock FontSize="{StaticResource TypeBody}" FontWeight="Bold" Foreground="#16A34A"
                                        Text="{Binding HighConfidenceCount}"/>
                         </StackPanel>
                     </DockPanel>
@@ -594,7 +594,7 @@
                                         IsHitTestVisible="False"/>
                                 <TextBlock Text="Noch kein Frame verfügbar"
                                            Foreground="{StaticResource MutedBrush}"
-                                           FontSize="12"
+                                           FontSize="{StaticResource TypeSmall}"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center">
                                     <TextBlock.Style>
@@ -613,7 +613,7 @@
 
                         <StackPanel Grid.Row="4">
                             <TextBlock Text="{Binding LiveFrameStatus}"
-                                       FontSize="11"
+                                       FontSize="{StaticResource TypeCaption}"
                                        Foreground="{StaticResource AccentBrush}"
                                        TextWrapping="Wrap"/>
                             <TextBlock Text="{Binding LiveFrameInfo}"
@@ -633,7 +633,7 @@
                 <Border Grid.Row="5" CornerRadius="8" Padding="12,8" Margin="0,4,0,0"
                         Background="#DC262610" BorderBrush="#DC262630" BorderThickness="1"
                         Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
-                    <TextBlock Foreground="#F87171" FontSize="12"
+                    <TextBlock Foreground="#F87171" FontSize="{StaticResource TypeSmall}"
                                Text="{Binding ErrorText}" TextWrapping="Wrap"/>
                 </Border>
             </Grid>
@@ -665,14 +665,14 @@
                                       Foreground="{StaticResource TextBrush}"
                                       BorderBrush="{StaticResource BorderBrush}"
                                       BorderThickness="1"
-                                      FontSize="11">
+                                      FontSize="{StaticResource TypeCaption}">
                                 <ComboBoxItem Content="Kompakt" Foreground="{StaticResource TextBrush}"/>
                                 <ComboBoxItem Content="Detail" Foreground="{StaticResource TextBrush}"/>
                             </ComboBox>
 
                             <Border CornerRadius="10" Padding="6,1"
                                     Background="#2563EB15">
-                                <TextBlock FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"
+                                <TextBlock FontSize="{StaticResource TypeCaption}" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"
                                            Text="{Binding DetectionCount}"/>
                             </Border>
                         </StackPanel>
@@ -693,7 +693,7 @@
                                        VerticalAlignment="Center"
                                        HorizontalAlignment="Center"
                                        Foreground="{StaticResource MutedBrush}"
-                                       FontSize="11"
+                                       FontSize="{StaticResource TypeCaption}"
                                        Text="Noch keine Erkennungen"
                                        Visibility="Collapsed"
                                        Opacity="0.8"/>
@@ -737,7 +737,7 @@
                                                 </Ellipse.Fill>
                                             </Ellipse>
                                             <TextBlock Text="{Binding Label}"
-                                                       FontSize="12" FontWeight="SemiBold"
+                                                       FontSize="{StaticResource TypeSmall}" FontWeight="SemiBold"
                                                        Foreground="{StaticResource TextBrush}"
                                                        TextTrimming="CharacterEllipsis"
                                                        MaxWidth="160"/>
@@ -811,7 +811,7 @@
                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
             <Grid Margin="16,0">
                 <!-- Stats links -->
-                <TextBlock VerticalAlignment="Center" FontSize="11"
+                <TextBlock VerticalAlignment="Center" FontSize="{StaticResource TypeCaption}"
                            Foreground="{StaticResource MutedBrush}" FontFamily="Consolas"
                            Text="{Binding StatsText}"/>
 

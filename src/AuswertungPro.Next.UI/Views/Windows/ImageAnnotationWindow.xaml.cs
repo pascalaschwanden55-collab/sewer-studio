@@ -389,17 +389,32 @@ public partial class ImageAnnotationWindow : Window
 
         if (vm.CurrentSamResult is { Masks.Count: > 0 })
         {
-            // Vorherige Ring-Klick-Marker entfernen (nicht den Ring selbst)
+            // V4.3 Ring-Fix: im Ring-Modus NICHT die vorherigen Masken loeschen,
+            // damit der User mehrere Ring-Klicks visuell sieht. Klick-Marker (Punkte+Vorschau)
+            // entfernen wir schon, aber die fixierten SAM-Masken bleiben.
             var oldClicks = DisplayCanvas.Children.OfType<FrameworkElement>()
                 .Where(e => "ring_click".Equals(e.Tag)).ToList();
             foreach (var c in oldClicks) DisplayCanvas.Children.Remove(c);
 
-            SamMaskRenderer.ClearMasks(DisplayCanvas);
+            // NEU: Masken nicht mehr loeschen — sie sollen alle sichtbar bleiben
             SamMaskRenderer.RenderMasks(
                 DisplayCanvas, vm.CurrentSamResult, [],
                 DisplayCanvas.ActualWidth, DisplayCanvas.ActualHeight);
-            vm.StatusText = $"Segment gefunden ({vm.CurrentSamResult.InferenceTimeMs:F0}ms) — " +
-                            "weiterer Klick = naechster Schaden, Enter = speichern";
+
+            // V4.3: Auto-Save pro Ring-Klick wenn VSA-Code gesetzt.
+            // So kann der User klick-klick-klick fuer alle Schaeden im Ring machen.
+            if (!string.IsNullOrWhiteSpace(vm.VsaCode))
+            {
+                vm.PreserveCodeAfterSave = true;
+                try { await vm.SaveAnnotationCommand.ExecuteAsync(null); }
+                finally { vm.PreserveCodeAfterSave = false; }
+                vm.StatusText = $"Ring-Schaden {vm.AnnotatedCount} gespeichert — weiterer Klick = naechster Schaden (gleicher Code), Esc = Ring-Modus beenden";
+            }
+            else
+            {
+                vm.StatusText = $"Segment gefunden ({vm.CurrentSamResult.InferenceTimeMs:F0}ms) — " +
+                                "VSA-Code eingeben dann Enter (oder weiter klicken nach Code-Eingabe)";
+            }
         }
         else
         {

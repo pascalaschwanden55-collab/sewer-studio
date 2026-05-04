@@ -167,7 +167,7 @@
                     <Button Content="Kein Fund (N)"
                             Command="{Binding MarkNoFindingCommand}"
                             Padding="12,5" Margin="0,0,8,0"
-                            ToolTip="Bild als Negativ-Beispiel speichern (kein Schaden sichtbar)"/>
+                            ToolTip="Bild als Negativ-Beispiel speichern (kein Befund sichtbar)"/>
 
                     <Button Content="Skip (S)"
                             Command="{Binding SkipImageCommand}"

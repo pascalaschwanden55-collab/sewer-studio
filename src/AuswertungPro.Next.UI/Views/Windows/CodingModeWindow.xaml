@@ -176,7 +176,7 @@
                 <TextBlock DockPanel.Dock="Left" Margin="20,0,0,0"
                            x:Name="TxtHaltungInfo"
                            Text="Keine Haltung geladen"
-                           FontSize="13"
+                           FontSize="{StaticResource TypeBody}"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            VerticalAlignment="Center"/>
 
@@ -216,12 +216,12 @@
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
                     <TextBlock x:Name="TxtStatus"
                                Text="Bereit"
-                               FontSize="12"
+                               FontSize="{StaticResource TypeSmall}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                VerticalAlignment="Center" Margin="0,0,12,0"/>
                     <TextBlock x:Name="TxtEventCount"
                                Text="0 Ereignisse"
-                               FontSize="12" FontWeight="SemiBold"
+                               FontSize="{StaticResource TypeSmall}" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}"
                                VerticalAlignment="Center"/>
                 </StackPanel>
@@ -279,9 +279,9 @@
                             Padding="16,8" Visibility="Collapsed"
                             IsHitTestVisible="False">
                         <StackPanel>
-                            <TextBlock Text="KALIBRIERUNG" FontSize="12" FontWeight="Bold"
+                            <TextBlock Text="KALIBRIERUNG" FontSize="{StaticResource TypeSmall}" FontWeight="Bold"
                                        Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
-                            <TextBlock x:Name="TxtCalibrationHint" FontSize="12" Foreground="White"
+                            <TextBlock x:Name="TxtCalibrationHint" FontSize="{StaticResource TypeSmall}" Foreground="White"
                                        Text="Linie ueber den sichtbaren Rohrdurchmesser zeichnen"
                                        TextWrapping="Wrap" MaxWidth="300"/>
                         </StackPanel>
@@ -295,7 +295,7 @@
                             Padding="12,6" Visibility="Collapsed"
                             IsHitTestVisible="False">
                         <TextBlock x:Name="TxtMeasurement"
-                                   Foreground="White" FontSize="13"
+                                   Foreground="White" FontSize="{StaticResource TypeBody}"
                                    FontFamily="Consolas, Cascadia Mono"
                                    HorizontalAlignment="Center"/>
                     </Border>
@@ -310,12 +310,12 @@
                                        Text="0.00m"
                                        Foreground="#22C55E"
                                        FontFamily="Consolas, Cascadia Mono"
-                                       FontSize="14" FontWeight="Bold"/>
+                                       FontSize="{StaticResource TypeBodyLarge}" FontWeight="Bold"/>
                             <TextBlock x:Name="TxtVideoTime"
                                        Text="00:00"
                                        Foreground="{StaticResource MutedBrush}"
                                        FontFamily="Consolas, Cascadia Mono"
-                                       FontSize="12" Margin="12,1,0,0"
+                                       FontSize="{StaticResource TypeSmall}" Margin="12,1,0,0"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -352,7 +352,7 @@
                     <Border Style="{StaticResource CodingCard}" Margin="0,0,0,8">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                <TextBlock Text="&#x2699;" FontSize="13" Margin="0,0,6,0"
+                                <TextBlock Text="&#x2699;" FontSize="{StaticResource TypeBody}" Margin="0,0,6,0"
                                            VerticalAlignment="Center"
                                            Foreground="{DynamicResource TextSecondaryBrush}"/>
                                 <TextBlock Text="QUALITYGATE ZONEN" Style="{StaticResource SectionLabel}"
@@ -362,19 +362,19 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,2">
                                     <Border Width="12" Height="12" CornerRadius="3"
                                             Background="#22C55E" Margin="0,0,8,0"/>
-                                    <TextBlock Text="Green (>=85%): Auto-Accept" FontSize="11"
+                                    <TextBlock Text="Green (>=85%): Auto-Accept" FontSize="{StaticResource TypeCaption}"
                                                Foreground="{DynamicResource TextSecondaryBrush}"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,2">
                                     <Border Width="12" Height="12" CornerRadius="3"
                                             Background="#F59E0B" Margin="0,0,8,0"/>
-                                    <TextBlock Text="Yellow (60-85%): Review empfohlen" FontSize="11"
+                                    <TextBlock Text="Yellow (60-85%): Review empfohlen" FontSize="{StaticResource TypeCaption}"
                                                Foreground="{DynamicResource TextSecondaryBrush}"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,2">
                                     <Border Width="12" Height="12" CornerRadius="3"
                                             Background="#EF4444" Margin="0,0,8,0"/>
-                                    <TextBlock Text="Red (&lt;60%): Manuell erforderlich" FontSize="11"
+                                    <TextBlock Text="Red (&lt;60%): Manuell erforderlich" FontSize="{StaticResource TypeCaption}"
                                                Foreground="{DynamicResource TextSecondaryBrush}"/>
                                 </StackPanel>
                             </StackPanel>
@@ -391,7 +391,7 @@
                                     <Run Text=")"/>
                                 </TextBlock>
                                 <TextBlock DockPanel.Dock="Right" HorizontalAlignment="Right"
-                                           FontSize="11"
+                                           FontSize="{StaticResource TypeCaption}"
                                            Foreground="{DynamicResource TextSecondaryBrush}">
                                     <Run x:Name="RunOpenCount" Text="0"/>
                                     <Run Text=" offen"/>
@@ -400,7 +400,7 @@
                             <ListBox x:Name="LstEvents"
                                      Background="Transparent"
                                      BorderThickness="0"
-                                     FontSize="12"
+                                     FontSize="{StaticResource TypeSmall}"
                                      Foreground="{DynamicResource TextBrush}"
                                      MaxHeight="260"
                                      MouseDoubleClick="LstEvents_MouseDoubleClick"
@@ -459,17 +459,17 @@
                                                 <TextBlock Grid.Column="1"
                                                            Text="{Binding Entry.Code}"
                                                            FontFamily="Consolas"
-                                                           FontWeight="Bold" FontSize="12"
+                                                           FontWeight="Bold" FontSize="{StaticResource TypeSmall}"
                                                            VerticalAlignment="Center"
                                                            Margin="0,0,6,0"/>
                                                 <TextBlock Grid.Column="2"
                                                            Text="{Binding Entry.Beschreibung}"
-                                                           FontSize="11"
+                                                           FontSize="{StaticResource TypeCaption}"
                                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                                            TextTrimming="CharacterEllipsis"
                                                            VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="3" x:Name="TxtStatusIcon"
-                                                           FontSize="12" Margin="4,0,0,0"
+                                                           FontSize="{StaticResource TypeSmall}" Margin="4,0,0,0"
                                                            VerticalAlignment="Center"/>
                                             </Grid>
                                             <!-- Zeile 2: Distanz + Uhr + Konfidenz -->
@@ -518,7 +518,7 @@
                                     Background="#16A34A" Padding="8,3" Margin="0,0,4,0"
                                     ToolTip="KI-Erkennung akzeptieren und ins Protokoll uebernehmen"
                                     Click="BtnAcceptDefect_Click">
-                                <TextBlock Text="&#x2713; Akzeptieren" FontSize="11"/>
+                                <TextBlock Text="&#x2713; Akzeptieren" FontSize="{StaticResource TypeCaption}"/>
                             </Button>
                             <!-- Ablehnen -->
                             <Button Grid.Column="1" x:Name="BtnRejectDefect"
@@ -526,7 +526,7 @@
                                     Background="#DC2626" Padding="8,3" Margin="0,0,4,0"
                                     ToolTip="KI-Erkennung ablehnen und aus der Beobachtungsliste entfernen"
                                     Click="BtnRejectDefect_Click">
-                                <TextBlock Text="&#x2717; Ablehnen" FontSize="11"/>
+                                <TextBlock Text="&#x2717; Ablehnen" FontSize="{StaticResource TypeCaption}"/>
                             </Button>
                             <!-- Spacer -->
                             <Border Grid.Column="2"/>
@@ -536,7 +536,7 @@
                                     Background="#D97706" Padding="8,3" Margin="0,0,4,0"
                                     ToolTip="Ausgewaehlte Beobachtung im Detail-Editor bearbeiten"
                                     Click="BtnEditDefect_Click">
-                                <TextBlock Text="&#x2699; Bearbeiten" FontSize="11"/>
+                                <TextBlock Text="&#x2699; Bearbeiten" FontSize="{StaticResource TypeCaption}"/>
                             </Button>
                             <!-- Loeschen -->
                             <Button Grid.Column="4" x:Name="BtnDeleteDefect"
@@ -544,7 +544,7 @@
                                     Background="#DC2626" Padding="8,3"
                                     ToolTip="Ausgewaehlte Beobachtung endgueltig aus dem Protokoll loeschen"
                                     Click="BtnDeleteDefect_Click">
-                                <TextBlock Text="&#x2716;" FontSize="11"/>
+                                <TextBlock Text="&#x2716;" FontSize="{StaticResource TypeCaption}"/>
                             </Button>
                         </Grid>
                     </Border>
@@ -553,17 +553,17 @@
                     <Border Style="{StaticResource CodingCard}" Margin="0,0,0,8">
                         <StackPanel>
                             <TextBlock Text="KALIBRIERUNG" Style="{StaticResource SectionLabel}"/>
-                            <TextBlock x:Name="TxtCalibrationDn" FontSize="12"
+                            <TextBlock x:Name="TxtCalibrationDn" FontSize="{StaticResource TypeSmall}"
                                        Foreground="{DynamicResource TextBrush}" Text="DN: –"/>
-                            <TextBlock x:Name="TxtCalibrationStatus" FontSize="12"
+                            <TextBlock x:Name="TxtCalibrationStatus" FontSize="{StaticResource TypeSmall}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        Text="Nicht kalibriert" Margin="0,0,0,6"/>
 
                             <TextBlock Text="MESSUNG" Style="{StaticResource SectionLabel}"/>
-                            <TextBlock x:Name="TxtOverlayQ1" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Q1: –"/>
-                            <TextBlock x:Name="TxtOverlayQ2" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Q2: –"/>
-                            <TextBlock x:Name="TxtOverlayClock" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Uhr: –"/>
-                            <TextBlock x:Name="TxtOverlayArc" FontSize="12" Foreground="{DynamicResource TextBrush}" Text="Bogen: –"/>
+                            <TextBlock x:Name="TxtOverlayQ1" FontSize="{StaticResource TypeSmall}" Foreground="{DynamicResource TextBrush}" Text="Q1: –"/>
+                            <TextBlock x:Name="TxtOverlayQ2" FontSize="{StaticResource TypeSmall}" Foreground="{DynamicResource TextBrush}" Text="Q2: –"/>
+                            <TextBlock x:Name="TxtOverlayClock" FontSize="{StaticResource TypeSmall}" Foreground="{DynamicResource TextBrush}" Text="Uhr: –"/>
+                            <TextBlock x:Name="TxtOverlayArc" FontSize="{StaticResource TypeSmall}" Foreground="{DynamicResource TextBrush}" Text="Bogen: –"/>
                         </StackPanel>
                     </Border>
 
@@ -579,7 +579,7 @@
                                     Click="BtnSelectCode_Click"/>
 
                             <TextBlock x:Name="TxtSelectedCode"
-                                       FontSize="13" FontWeight="SemiBold"
+                                       FontSize="{StaticResource TypeBody}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource AccentBrush}"
                                        Margin="0,0,0,6"/>
 
@@ -706,10 +706,10 @@
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
                         <Ellipse x:Name="AiStatusDot" Width="10" Height="10"
                                  Fill="{StaticResource MutedBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="KI" FontSize="11" FontWeight="Bold"
+                        <TextBlock Text="KI" FontSize="{StaticResource TypeCaption}" FontWeight="Bold"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock x:Name="TxtAiStatus" FontSize="11"
+                        <TextBlock x:Name="TxtAiStatus" FontSize="{StaticResource TypeCaption}"
                                    Foreground="{DynamicResource TextBrush}"
                                    Text="Bereit" VerticalAlignment="Center"
                                    Margin="0,0,8,0"/>
@@ -723,7 +723,7 @@
                             Padding="12,5" Margin="0,0,16,0"
                             VerticalAlignment="Center"
                             Background="{DynamicResource AccentBrush}"
-                            Foreground="White" FontSize="11" FontWeight="SemiBold"
+                            Foreground="White" FontSize="{StaticResource TypeCaption}" FontWeight="SemiBold"
                             ToolTip="Aktuelles Videoframe mit KI-Pipeline analysieren und Schaeden erkennen"
                             Cursor="Hand" Click="BtnAnalyzeFrame_Click">
                         <Button.Template>
@@ -762,7 +762,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <Ellipse Width="8" Height="8" Fill="{Binding SeverityBrush}"
                                                  VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                        <TextBlock FontSize="11" FontWeight="SemiBold"
+                                        <TextBlock FontSize="{StaticResource TypeCaption}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource TextBrush}"
                                                    VerticalAlignment="Center">
                                             <Run Text="{Binding Label, Mode=OneWay}"/>
@@ -772,7 +772,7 @@
                                         <TextBlock Text="{Binding DetailText}" FontSize="10"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
-                                        <TextBlock Text="{Binding SeverityText}" FontSize="13" FontWeight="Bold"
+                                        <TextBlock Text="{Binding SeverityText}" FontSize="{StaticResource TypeBody}" FontWeight="Bold"
                                                    Foreground="{Binding SeverityBrush}"
                                                    VerticalAlignment="Center" Margin="8,0,0,0"/>
                                     </StackPanel>
@@ -809,7 +809,10 @@
                             <TextBlock Text="Markieren" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
                         </StackPanel>
                     </ToggleButton>
-                    <!-- Alle Messwerkzeuge im PhotoAssistant (Foto vermessen) -->
+                    <!-- Foto-Assistent-Werkzeuge (Stundenlinien, Bild drehen, Entzerren,
+                         Screenshot, Einblendstil, Fliessrichtungs-Bogen) leben jetzt nur noch
+                         im PhotoMeasurementWindow (Photo-Modus). Im Codier-Modus entfernt -
+                         der Codier-Modus bleibt schlank und auf VSA-Codes konzentriert. -->
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -826,7 +829,7 @@
                                Margin="12,0" VerticalAlignment="Center"
                                Text="0.00m"/>
                     <TextBlock x:Name="TxtStepSize"
-                               Text="0.50m" FontSize="11"
+                               Text="0.50m" FontSize="{StaticResource TypeCaption}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                VerticalAlignment="Center" Margin="0,0,12,0"/>
                     <Button x:Name="BtnNext" Style="{StaticResource CodingBtn}"
@@ -850,7 +853,7 @@
 
                 <!-- Mitte: Fortschritt -->
                 <TextBlock x:Name="TxtProgress" HorizontalAlignment="Center" VerticalAlignment="Center"
-                           FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                           FontSize="{StaticResource TypeBody}" Foreground="{DynamicResource TextSecondaryBrush}"/>
             </DockPanel>
         </Border>
     </Grid>
