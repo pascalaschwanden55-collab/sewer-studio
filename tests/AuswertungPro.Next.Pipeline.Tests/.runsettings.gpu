@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Manueller GPU-/Langzeit-Test-Runner.
+  Verwendung:
+    dotnet test tests/AuswertungPro.Next.Pipeline.Tests/AuswertungPro.Next.Pipeline.Tests.csproj -settings tests/AuswertungPro.Next.Pipeline.Tests/.runsettings.gpu -filter "Category=GpuEval"
+
+  Erfordert:
+    - lokaler Ollama-Server auf 11434
+    - GPU mit geladenem Modell (QwenModelComparison: ~100 min)
+    - ggf. Sidecar auf 8100
+-->
+<RunSettings>
+  <RunConfiguration>
+    <TestCaseFilter></TestCaseFilter>
+  </RunConfiguration>
+</RunSettings>

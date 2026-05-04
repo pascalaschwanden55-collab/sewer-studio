@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Phase 0.1b: Default-Test-Filter.
+  Verhindert, dass GPU- oder Langzeit-Tests bei normalen dotnet-test-Lauefen
+  starten. GpuEval-Tests benoetigen lokalen Ollama-Server, RTX 5090, geladene
+  Modelle (QwenModelComparisonTest dauert etwa 100 min).
+
+  WICHTIG: vstest kombiniert diesen TestCaseFilter mit jedem CLI -filter per
+  UND, nicht per Ersatz. Um GPU-Tests zu starten, muss der Default ueberschrieben
+  werden. Zwei Wege:
+
+    1) Eigene Settings-Datei ohne Filter mitgeben:
+         dotnet test -settings tests/AuswertungPro.Next.Pipeline.Tests/.runsettings.gpu
+
+    2) Property RunSettingsFilePath leer setzen plus -filter:
+         dotnet test /p:RunSettingsFilePath= -filter "Category=GpuEval"
+-->
+<RunSettings>
+  <RunConfiguration>
+    <TestCaseFilter>Category!=GpuEval&amp;Category!=LongRunning</TestCaseFilter>
+  </RunConfiguration>
+</RunSettings>

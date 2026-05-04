@@ -4,6 +4,8 @@
     <UseWPF>true</UseWPF>
     <IsPackable>false</IsPackable>
     <Nullable>enable</Nullable>
+    <!-- Phase 0.1b: GPU-/Langzeit-Tests standardmaessig ausschliessen -->
+    <RunSettingsFilePath>$(MSBuildThisFileDirectory).runsettings</RunSettingsFilePath>
   </PropertyGroup>
 
   <ItemGroup>
