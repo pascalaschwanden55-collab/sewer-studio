@@ -6,7 +6,8 @@
                   CanContentScroll="True"
                   Padding="0,0,8,0">
         <StackPanel>
-            <TextBlock Text="Einstellungen" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+            <!-- Phase 3.2: Typography-Token TypeH4 (16) — vorher Inline FontSize="16". -->
+            <TextBlock Text="Einstellungen" FontSize="{StaticResource TypeH4}" FontWeight="SemiBold" Margin="0,0,0,12"/>
 
         <TextBlock Text="Design" Margin="0,0,0,6" Foreground="{StaticResource MutedBrush}"/>
         <DockPanel>
@@ -50,10 +51,11 @@
                     Width="150"
                     ToolTip="Gewaehltes Farbschema (Hell/Dunkel) sofort anwenden"/>
         </DockPanel>
+        <!-- Phase 3.2: Typography-Token TypeCaption (11) — vorher Inline FontSize="11". -->
         <TextBlock Text="Hinweis: fuer volle Umstellung ist ein Neustart noetig."
                    Margin="0,4,0,0"
                    Foreground="{StaticResource MutedBrush}"
-                   FontSize="11"/>
+                   FontSize="{StaticResource TypeCaption}"/>
 
         <CheckBox Content="Diagnose aktiv (Fehlercodes anzeigen)" IsChecked="{Binding EnableDiagnostics}"/>
 

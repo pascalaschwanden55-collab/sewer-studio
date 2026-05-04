@@ -123,6 +123,54 @@
     </LinearGradientBrush>
 
     <!-- ═══════════════════════════════════════════════════════════
+         PHASE 3.2 — SPACING-TOKENS
+         Konsistente Abstaende fuer Margin/Padding. Multiples von 4
+         (Material-Style 4-pt-Grid). Statt FontSize="..." Margin="8,4"
+         direkt im View neue Aufrufe via {StaticResource SpM} etc.
+
+         WPF-Bindings fuer Margin/Padding/Spacing nehmen Thickness oder
+         double — daher liefern wir beide Varianten:
+           Sp* = double (z.B. fuer Setter Property="Padding")
+           Sp*Margin = Thickness symmetrisch (z.B. Margin="{StaticResource SpMMargin}")
+         ═══════════════════════════════════════════════════════════ -->
+    <system:Double x:Key="SpXS" xmlns:system="clr-namespace:System;assembly=mscorlib">2</system:Double>
+    <system:Double x:Key="SpS"  xmlns:system="clr-namespace:System;assembly=mscorlib">4</system:Double>
+    <system:Double x:Key="SpM"  xmlns:system="clr-namespace:System;assembly=mscorlib">8</system:Double>
+    <system:Double x:Key="SpL"  xmlns:system="clr-namespace:System;assembly=mscorlib">16</system:Double>
+    <system:Double x:Key="SpXL" xmlns:system="clr-namespace:System;assembly=mscorlib">24</system:Double>
+    <system:Double x:Key="SpXXL" xmlns:system="clr-namespace:System;assembly=mscorlib">32</system:Double>
+
+    <Thickness x:Key="SpXSMargin">2</Thickness>
+    <Thickness x:Key="SpSMargin">4</Thickness>
+    <Thickness x:Key="SpMMargin">8</Thickness>
+    <Thickness x:Key="SpLMargin">16</Thickness>
+    <Thickness x:Key="SpXLMargin">24</Thickness>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PHASE 3.2 — TYPOGRAPHY-TOKENS
+         Konsistente Schriftgroessen fuer das ganze UI.
+         Statt FontSize="13" direkt in Views: FontSize="{StaticResource TypeBody}".
+
+         Skala (Stand 2026-05-04):
+           TypeCaption    = 11  Hilfsinfo, Footer, kleine Labels
+           TypeSmall      = 12  DataGrid-Cells, dichte Tabellen
+           TypeBody       = 13  Standard-Text, Buttons, Toolbar
+           TypeBodyLarge  = 14  Default-Window-FontSize, prominente Texte
+           TypeH4         = 16  Sub-Section-Header
+           TypeH3         = 18  Section-Header
+           TypeH2         = 22  Page-Header
+           TypeH1         = 28  Window-Header / Hero
+         ═══════════════════════════════════════════════════════════ -->
+    <system:Double x:Key="TypeCaption"    xmlns:system="clr-namespace:System;assembly=mscorlib">11</system:Double>
+    <system:Double x:Key="TypeSmall"      xmlns:system="clr-namespace:System;assembly=mscorlib">12</system:Double>
+    <system:Double x:Key="TypeBody"       xmlns:system="clr-namespace:System;assembly=mscorlib">13</system:Double>
+    <system:Double x:Key="TypeBodyLarge"  xmlns:system="clr-namespace:System;assembly=mscorlib">14</system:Double>
+    <system:Double x:Key="TypeH4"         xmlns:system="clr-namespace:System;assembly=mscorlib">16</system:Double>
+    <system:Double x:Key="TypeH3"         xmlns:system="clr-namespace:System;assembly=mscorlib">18</system:Double>
+    <system:Double x:Key="TypeH2"         xmlns:system="clr-namespace:System;assembly=mscorlib">22</system:Double>
+    <system:Double x:Key="TypeH1"         xmlns:system="clr-namespace:System;assembly=mscorlib">28</system:Double>
+
+    <!-- ═══════════════════════════════════════════════════════════
          WINDOW
          ═══════════════════════════════════════════════════════════ -->
     <Style TargetType="{x:Type Window}">
@@ -516,6 +564,25 @@
         <Setter Property="SnapsToDevicePixels" Value="True"/>
         <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
         <Setter Property="TextOptions.TextRenderingMode" Value="Grayscale"/>
+    </Style>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PHASE 3.3 — BENANNTE DATAGRID-STYLE-VARIANTEN
+         Der Default-Style oben (kein x:Key) wird automatisch von allen
+         29 DataGrids im UI uebernommen. Diese benannten Varianten sind
+         optional fuer explizite Verwendung via Style="{StaticResource ...}".
+
+         DataGridStandard  identisch mit Default — explizit fuer neue Views
+         DataGridCompact   kompakter (FontSize=12, kleinere Padding) fuer
+                           Sub-Tabellen und dichte Auflistungen
+         ═══════════════════════════════════════════════════════════ -->
+    <Style x:Key="DataGridStandard" TargetType="{x:Type DataGrid}"
+           BasedOn="{StaticResource {x:Type DataGrid}}"/>
+
+    <Style x:Key="DataGridCompact" TargetType="{x:Type DataGrid}"
+           BasedOn="{StaticResource {x:Type DataGrid}}">
+        <Setter Property="FontSize" Value="{StaticResource TypeSmall}"/>
+        <Setter Property="RowHeight" Value="22"/>
     </Style>
 
     <!-- DataGrid Header — Steel-blue tinted -->
