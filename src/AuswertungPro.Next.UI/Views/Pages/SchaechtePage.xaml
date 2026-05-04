@@ -1,6 +1,7 @@
 ﻿<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.SchaechtePage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Views.Controls">
     <UserControl.Resources>
         <Style x:Key="AlignToggleButtonStyle" TargetType="ToggleButton">
             <Setter Property="Width" Value="30"/>
@@ -35,14 +36,20 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid>
+    <Grid Margin="16">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,0,0,12">
+        <!-- Phase 3.3: PageHeader-Control. -->
+        <ctrl:PageHeader Grid.Row="0"
+                         Title="Schaechte"
+                         Subtitle="Schachtdaten erfassen, Verbindungen zu Haltungen pflegen, Anzeige verteilen."/>
+
+        <StackPanel Grid.Row="1" Orientation="Vertical" Margin="0,0,0,12">
             <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                     Padding="4,3" CornerRadius="8">
                 <StackPanel Orientation="Horizontal">
@@ -207,7 +214,7 @@
         </StackPanel>
 
         <DataGrid x:Name="Grid"
-                  Grid.Row="1"
+                  Grid.Row="2"
                   ItemsSource="{Binding Records}"
                   SelectedItem="{Binding Selected, Mode=TwoWay}"
                   AutoGenerateColumns="False"
@@ -250,7 +257,7 @@
             </DataGrid.ContextMenu>
         </DataGrid>
 
-        <TextBlock Grid.Row="2"
+        <TextBlock Grid.Row="3"
                    Text="{Binding LastResult}"
                    Margin="0,10,0,0"
                    Foreground="{StaticResource MutedBrush}"/>

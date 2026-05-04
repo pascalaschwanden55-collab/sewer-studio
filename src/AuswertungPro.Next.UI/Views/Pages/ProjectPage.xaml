@@ -1,27 +1,36 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.ProjectPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid>
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Views.Controls">
+    <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Grid Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Orientation="Horizontal" Grid.Column="0">
-                <Button Content="Neues Projekt" Command="{Binding NewCommand}" ToolTip="Neues leeres Projekt erstellen und vorheriges schliessen"/>
-                <Button Content="Oeffnen" Command="{Binding OpenCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}" ToolTip="Bestehendes Projekt aus JSON-Datei oeffnen"/>
-                <Button Content="Speichern unter" Command="{Binding SaveAsCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}" ToolTip="Projekt unter neuem Dateinamen speichern"/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Grid.Column="1" HorizontalAlignment="Right">
-                <Button Content="Projekt speichern" Command="{Binding SaveCommand}" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" Margin="0,0,8,0" ToolTip="Aktuelle Projektdaten in die vorhandene Datei speichern"/>
-                <Button Content="Programm schliessen" Click="CloseButton_Click" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" ToolTip="SewerStudio beenden und alle offenen Fenster schliessen"/>
-            </StackPanel>
-        </Grid>
+        <!-- Phase 3.3: PageHeader-Control mit Action-Buttons rechts. -->
+        <ctrl:PageHeader Title="Projekt"
+                         Subtitle="Projekt-Datei verwalten: Neu, Oeffnen, Speichern, Schliessen.">
+            <ctrl:PageHeader.Actions>
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Neues Projekt" Command="{Binding NewCommand}"
+                            Style="{StaticResource PrimaryButton}" Padding="16,8"
+                            ToolTip="Neues leeres Projekt erstellen und vorheriges schliessen"/>
+                    <Button Content="Oeffnen" Command="{Binding OpenCommand}"
+                            Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"
+                            ToolTip="Bestehendes Projekt aus JSON-Datei oeffnen"/>
+                    <Button Content="Speichern unter" Command="{Binding SaveAsCommand}"
+                            Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"
+                            ToolTip="Projekt unter neuem Dateinamen speichern"/>
+                    <Button Content="Projekt speichern" Command="{Binding SaveCommand}"
+                            Margin="16,0,8,0" Style="{StaticResource SecondaryButton}"
+                            ToolTip="Aktuelle Projektdaten in die vorhandene Datei speichern"/>
+                    <Button Content="Programm schliessen" Click="CloseButton_Click"
+                            Style="{StaticResource SecondaryButton}"
+                            ToolTip="SewerStudio beenden und alle offenen Fenster schliessen"/>
+                </StackPanel>
+            </ctrl:PageHeader.Actions>
+        </ctrl:PageHeader>
 
         <Border Grid.Row="1" Style="{StaticResource Card}" Background="{StaticResource CardBrush}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
