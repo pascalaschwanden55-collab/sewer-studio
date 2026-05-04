@@ -45,8 +45,14 @@ namespace AuswertungPro.Next.UI
     /// <summary>
     /// Minimaler DI-Container (damit kein extra Hosting-Paket nötig ist).
     /// </summary>
-    public sealed class ServiceProvider : IServiceProvider
+    public sealed class ServiceProvider : IServiceProvider, IDisposable
     {
+        // Phase 0.2: KB-HttpClient als Feld halten — verhindert Socket-Leak im
+        // catch-Pfad (vorher local var ohne Dispose) und ermoeglicht Cleanup
+        // bei App-Shutdown via IDisposable. Audit B9 / Claude-CRITICAL.
+        private HttpClient? _kbHttp;
+        private bool _disposed;
+
         public AppSettings Settings { get; }
         public DiagnosticsOptions Diagnostics { get; }
         public ILogger Logger { get; }
@@ -137,22 +143,33 @@ namespace AuswertungPro.Next.UI
                 {
                     try
                     {
+                        // 0. Auf Sidecar warten (max 60s) — verhindert parallelen VRAM-Kampf,
+                        // bei dem Ollama bei knappen VRAM-Budgets auf CPU zurueckfaellt.
+                        // Sidecar laedt YOLO+SAM (~3-4 GB) zuerst, erst dann kommt Qwen.
+                        for (int i = 0; i < 60 && !Sidecar.IsAvailable; i++)
+                            await System.Threading.Tasks.Task.Delay(1000);
+                        if (!Sidecar.IsAvailable)
+                            Logger.LogWarning(
+                                "[Startup] Sidecar nach 60s nicht verfuegbar — Qwen-Warmup laeuft trotzdem");
+
                         using var warmupClient = cfg.CreateOllamaClient();
 
-                        // 1. VisionModel (8B) permanent vorladen — 4 parallele Slots
-                        await warmupClient.WarmupModelAsync(cfg.VisionModel, cfg.OllamaNumCtx);
+                        // 1. VisionModel (8B) permanent vorladen — num_gpu=-1 zwingt GPU
+                        // (default -1 wird in OllamaClient zu num_gpu=999 uebersetzt =
+                        // "so viele Layer wie moeglich auf GPU", verhindert CPU-Fallback).
+                        await warmupClient.WarmupModelAsync(cfg.VisionModel, cfg.OllamaNumCtx, numGpu: -1);
                         Logger.LogInformation(
-                            "[Startup] VisionModel {Model} vorgeladen (NUM_PARALLEL={Parallel}, ctx={Ctx})",
+                            "[Startup] VisionModel {Model} vorgeladen (num_gpu=all, NUM_PARALLEL={Parallel}, ctx={Ctx})",
                             cfg.VisionModel,
                             Environment.GetEnvironmentVariable("OLLAMA_NUM_PARALLEL") ?? "?",
                             cfg.OllamaNumCtx);
 
-                        // 2. EmbedModel (nomic-embed-text) vorladen
+                        // 2. EmbedModel (nomic-embed-text) vorladen — klein, immer auf GPU
                         if (!string.IsNullOrEmpty(cfg.EmbedModel))
                         {
-                            await warmupClient.WarmupModelAsync(cfg.EmbedModel, 0);
+                            await warmupClient.WarmupModelAsync(cfg.EmbedModel, 0, numGpu: -1);
                             Logger.LogInformation(
-                                "[Startup] EmbedModel {Model} vorgeladen", cfg.EmbedModel);
+                                "[Startup] EmbedModel {Model} vorgeladen (num_gpu=all)", cfg.EmbedModel);
                         }
 
                         // 3. ReferenceModel (32B) permanent in RAM vorladen — num_gpu=0, kein VRAM
@@ -191,6 +208,11 @@ namespace AuswertungPro.Next.UI
                                     cfg.ReferenceVisionModel);
                             }
                         }
+
+                        // 4. Verifikation: pruefen ob Qwen-8B auch wirklich im VRAM ist.
+                        // Wenn size_vram==0 → Ollama hat trotz num_gpu auf CPU gewechselt
+                        // (passiert bei VRAM-OOM oder wenn das Modell groesser ist als frei).
+                        await VerifyModelInVramAsync(cfg.OllamaBaseUri, cfg.VisionModel);
                     }
                     catch (Exception ex)
                     {
@@ -211,9 +233,9 @@ namespace AuswertungPro.Next.UI
             try
             {
                 var ollamaConfig = aiPlatform.ToOllamaConfig();
-                var kbHttp = new HttpClient { Timeout = ollamaConfig.RequestTimeout };
+                _kbHttp = new HttpClient { Timeout = ollamaConfig.RequestTimeout };
                 var kbCtx = new KnowledgeBaseContext();
-                var embedder = new EmbeddingService(kbHttp, ollamaConfig);
+                var embedder = new EmbeddingService(_kbHttp, ollamaConfig);
                 retrieval = new RetrievalService(kbCtx, embedder, Settings);
                 retrieval.CheckModelConsistency();
                 if (retrieval.HasModelMismatch)
@@ -223,6 +245,9 @@ namespace AuswertungPro.Next.UI
             }
             catch (Exception ex)
             {
+                // Phase 0.2: HttpClient bei Init-Fehler explizit freigeben.
+                _kbHttp?.Dispose();
+                _kbHttp = null;
                 Logger.LogWarning(ex, "KnowledgeBase-Retrieval konnte nicht initialisiert werden. KI läuft ohne KB-Kontext.");
             }
 
@@ -266,12 +291,38 @@ namespace AuswertungPro.Next.UI
                 Ai.KnowledgeRoot.GetMeasuresLearningPath(),
                 Ai.KnowledgeRoot.GetMeasuresModelPath());
 
-            // Eigendevis
+            // Eigendevis - mit Submissions-Positionskatalog (Markt-Referenzpreise aus Buerglen 2026)
             var devisMappingPath = Path.Combine(AppContext.BaseDirectory, "Config", "devis_mappings.json");
             var devisMappingService = new DevisMappingService(devisMappingPath);
+            var submissionsCatalogPath = Path.Combine(AppContext.BaseDirectory, "Config", "submission_positionen.json");
+            SubmissionsPositions = new Infrastructure.Devis.SubmissionsPositionService(submissionsCatalogPath);
+
+            // Historische Sanierungs-Referenzen (Buerglen 2024-2026, ~217 Haltungen)
+            var histPath = Path.Combine(AppContext.BaseDirectory, "Config", "historische_sanierungen.json");
+            HistorischeSanierungen = new Infrastructure.Devis.HistorischeSanierungenService(histPath);
+
+            // Marktdaten-Import-Service (User kann neue JSONs aus Knowledge/sanierung/ einlesen)
+            var configDir = Path.Combine(AppContext.BaseDirectory, "Config");
+            MarktdatenImport = new Infrastructure.Devis.MarktdatenImportService(
+                configDir, SubmissionsPositions, HistorischeSanierungen);
+
+            // Hard-Constraint-RulesEngine fuer Sanierungsverfahren (vor KI-Anfrage)
+            // Quelle: Knowledge/sanierung/rehabilitation_methods.yaml + products_and_manufacturers.yaml
+            // + User-Regeln aus Config/sanierung_user_rules.json (im UI editierbar)
+            var userRulesPath = Path.Combine(AppContext.BaseDirectory, "Config", "sanierung_user_rules.json");
+            SanierungUserRules = new Infrastructure.Sanierung.SanierungUserRulesService(userRulesPath);
+            var rehabMethodsPath = Path.Combine(AppContext.BaseDirectory, "Config", "rehabilitation_methods.json");
+            RehabRulesEngine = new Infrastructure.Sanierung.RehabilitationRulesEngine(SanierungUserRules, rehabMethodsPath);
+
             DevisGenerator = new Infrastructure.Devis.DevisGenerator(devisMappingService);
             DevisExcelExporter = new DevisExcelExporter();
         }
+
+        public Infrastructure.Devis.SubmissionsPositionService SubmissionsPositions { get; private set; } = null!;
+        public Infrastructure.Devis.HistorischeSanierungenService HistorischeSanierungen { get; private set; } = null!;
+        public Infrastructure.Devis.MarktdatenImportService MarktdatenImport { get; private set; } = null!;
+        public Infrastructure.Sanierung.RehabilitationRulesEngine RehabRulesEngine { get; private set; } = null!;
+        public Infrastructure.Sanierung.SanierungUserRulesService SanierungUserRules { get; private set; } = null!;
 
         public IVideoAnalysisPipelineService CreateVideoAnalysisPipeline(
             AiRuntimeConfig cfg,
@@ -542,6 +593,60 @@ namespace AuswertungPro.Next.UI
             }
         }
 
+        /// <summary>
+        /// Prueft nach dem Warmup via /api/ps ob das Modell im VRAM liegt.
+        /// Falls size_vram == 0 → Ollama hat auf CPU zurueckgefallen (VRAM zu knapp).
+        /// Loggt Warnung, wirft nicht — der Warmup hat trotzdem "geklappt".
+        /// </summary>
+        private async System.Threading.Tasks.Task VerifyModelInVramAsync(Uri ollamaBaseUri, string model)
+        {
+            try
+            {
+                using var http = new HttpClient { BaseAddress = ollamaBaseUri, Timeout = TimeSpan.FromSeconds(5) };
+                using var resp = await http.GetAsync("/api/ps").ConfigureAwait(false);
+                if (!resp.IsSuccessStatusCode) return;
+
+                var body = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+                using var doc = System.Text.Json.JsonDocument.Parse(body);
+                if (!doc.RootElement.TryGetProperty("models", out var models)) return;
+
+                var modelPrefix = model.Split(':')[0];
+                foreach (var m in models.EnumerateArray())
+                {
+                    var name = m.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                    if (!name.Equals(model, StringComparison.OrdinalIgnoreCase)
+                        && !name.StartsWith(modelPrefix, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    long sizeVram = m.TryGetProperty("size_vram", out var v) ? v.GetInt64() : 0;
+                    long sizeTotal = m.TryGetProperty("size", out var s) ? s.GetInt64() : 0;
+                    double vramGb = sizeVram / 1_073_741_824.0;
+                    double totalGb = sizeTotal / 1_073_741_824.0;
+
+                    if (sizeVram == 0)
+                    {
+                        Logger.LogWarning(
+                            "[Startup] Modell {Model} laeuft auf CPU (size_vram=0, total={Total:F1}GB) — "
+                            + "VRAM zu knapp oder Ollama konnte nicht auf GPU laden. Prueffe nvidia-smi und andere VRAM-Nutzer.",
+                            name, totalGb);
+                    }
+                    else
+                    {
+                        Logger.LogInformation(
+                            "[Startup] Modell {Model} im VRAM: {Vram:F1}GB von {Total:F1}GB",
+                            name, vramGb, totalGb);
+                    }
+                    return;
+                }
+
+                Logger.LogWarning("[Startup] Modell {Model} nicht in /api/ps gefunden nach Warmup", model);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "[Startup] VRAM-Verifikation fehlgeschlagen (nicht kritisch)");
+            }
+        }
+
         public object? GetService(Type serviceType)
         {
             if (serviceType == typeof(IProjectRepository)) return Projects;
@@ -556,6 +661,18 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ILogger)) return Logger;
             if (serviceType == typeof(ILoggerFactory)) return LoggerFactory;
             return null;
+        }
+
+        // Phase 0.2: Cleanup beim App-Shutdown (Audit B9 / kbHttp-Leak).
+        // Caller (App.OnExit) sollte Dispose aufrufen — HttpClient bleibt
+        // sonst bis Prozessende, was bei normalem Exit ok ist, aber bei
+        // mehrfacher ServiceProvider-Erzeugung Sockets leakt.
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _kbHttp?.Dispose();
+            _kbHttp = null;
         }
     }
 }
