@@ -1,5 +1,7 @@
 using Microsoft.Win32;
+using System;
 using System.IO;
+using System.Windows;
 
 namespace AuswertungPro.Next.UI;
 
@@ -48,5 +50,59 @@ public sealed class DialogService : IDialogService
             return null;
         var folder = Path.GetDirectoryName(dlg.FileName);
         return string.IsNullOrWhiteSpace(folder) ? null : folder;
+    }
+
+    // ── Phase 4.1: Window-Show ───────────────────────────────────────────
+
+    /// <summary>
+    /// Setzt das Owner-Property auf das aktuelle MainWindow (sofern vorhanden),
+    /// damit modale Dialoge ueber dem Hauptfenster zentriert erscheinen und nicht
+    /// unter ihm verschwinden.
+    /// </summary>
+    private static void TryAttachOwner(Window window)
+    {
+        try
+        {
+            var owner = System.Windows.Application.Current?.MainWindow;
+            if (owner is not null && !ReferenceEquals(owner, window))
+                window.Owner = owner;
+        }
+        catch
+        {
+            // best effort — Owner-Verkabelung darf den Dialog-Aufruf nicht crashen
+        }
+    }
+
+    public bool? ShowDialog(Window window)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+        TryAttachOwner(window);
+        return window.ShowDialog();
+    }
+
+    public bool? ShowDialog(Func<Window> windowFactory)
+    {
+        ArgumentNullException.ThrowIfNull(windowFactory);
+        var window = windowFactory();
+        return ShowDialog(window);
+    }
+
+    public void Show(Window window)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+        TryAttachOwner(window);
+        window.Show();
+    }
+
+    public MessageBoxResult ShowMessage(
+        string text,
+        string title,
+        MessageBoxButton buttons = MessageBoxButton.OK,
+        MessageBoxImage image = MessageBoxImage.Information)
+    {
+        var owner = System.Windows.Application.Current?.MainWindow;
+        return owner is not null
+            ? MessageBox.Show(owner, text, title, buttons, image)
+            : MessageBox.Show(text, title, buttons, image);
     }
 }

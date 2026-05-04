@@ -279,7 +279,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         {
             Owner = System.Windows.Application.Current.MainWindow
         };
-        return win.ShowDialog() == true;
+        return _sp.Dialogs.ShowDialog(win) == true;
     }
 
     // ──── Import Methods ────

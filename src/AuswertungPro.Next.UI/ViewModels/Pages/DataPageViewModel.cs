@@ -832,11 +832,8 @@ public sealed partial class DataPageViewModel : ObservableObject
                 damageOverlay: damageOverlay,
                 serviceProvider: _sp,
                 haltungId: record.Id.ToString(),
-                haltungRecord: record)
-            {
-                Owner = System.Windows.Application.Current?.MainWindow
-            };
-            window.Show();
+                haltungRecord: record);
+            _sp.Dialogs.Show(window);
         }
         catch (Exception ex)
         {
@@ -874,7 +871,7 @@ public sealed partial class DataPageViewModel : ObservableObject
                 ScheduleAutoSave();
             });
         dlg.Owner = System.Windows.Application.Current?.MainWindow;
-        dlg.ShowDialog();
+        _sp.Dialogs.ShowDialog(dlg);
 
         // Protokoll-Änderungen in die Haltungsfelder zurückschreiben.
         SyncObservationsToHoldingFields(record);
@@ -1162,7 +1159,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             Owner = System.Windows.Application.Current?.MainWindow
         };
 
-        var ok = win.ShowDialog() == true;
+        var ok = _sp.Dialogs.ShowDialog(win) == true;
 
         if (ok && win.Result?.IsSuccess == true && win.Result.Document is not null)
         {
@@ -1772,7 +1769,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         {
             Owner = System.Windows.Application.Current?.MainWindow
         };
-        win.ShowDialog();
+        _sp.Dialogs.ShowDialog(win);
     }
 
     private void ShowModelStatus()
@@ -1872,7 +1869,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         var win = new MediaSearchWindow(Records.ToList(), initial);
         win.Owner = System.Windows.Application.Current?.MainWindow;
 
-        if (win.ShowDialog() == true && win.Applied)
+        if (_sp.Dialogs.ShowDialog(win) == true && win.Applied)
         {
             _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
             _shell.Project.Dirty = true;
@@ -1894,7 +1891,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         var win = new HydraulikPanelWindow(vm);
         win.Owner = System.Windows.Application.Current?.MainWindow;
-        win.ShowDialog();
+        _sp.Dialogs.ShowDialog(win);
     }
 
     private void PrintAwuHaltungsprotokollPdf(HaltungRecord? record)
@@ -2004,7 +2001,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         // Phase 1.4 Followup: Generischer PrintOptionsDialog ersetzt HydraulikPrintDialog.
         var dialog = new PrintOptionsDialog(PrintDialogFactory.CreateHydraulikConfig());
         dialog.Owner = System.Windows.Application.Current?.MainWindow;
-        if (dialog.ShowDialog() != true)
+        if (_sp.Dialogs.ShowDialog(dialog) != true)
             return;
         var hydraulikOpts = PrintDialogFactory.ToHydraulikOptions(dialog.GetSelectedOptions());
 
@@ -2126,7 +2123,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             kostenAvailable,
             originalPdfPaths.Count);
 
-        if (dialog.ShowDialog() != true || dialog.SelectedOptions is null)
+        if (_sp.Dialogs.ShowDialog(dialog) != true || dialog.SelectedOptions is null)
             return;
 
         // SaveFileDialog
@@ -2672,7 +2669,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(SanierenOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
+        if (_sp.Dialogs.ShowDialog(dlg) == true)
         {
             SanierenOptions.Clear();
             foreach (var item in vm.Items)
@@ -2705,7 +2702,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(EigentuemerOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
+        if (_sp.Dialogs.ShowDialog(dlg) == true)
         {
             EigentuemerOptions.Clear();
             foreach (var item in vm.Items)
@@ -2738,7 +2735,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(PruefungsresultatOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
+        if (_sp.Dialogs.ShowDialog(dlg) == true)
         {
             PruefungsresultatOptions.Clear();
             foreach (var item in vm.Items)
@@ -2777,7 +2774,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(ReferenzpruefungOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
+        if (_sp.Dialogs.ShowDialog(dlg) == true)
         {
             ReferenzpruefungOptions.Clear();
             foreach (var item in vm.Items)
@@ -2811,7 +2808,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(EmpfohleneSanierungsmassnahmenOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
+        if (_sp.Dialogs.ShowDialog(dlg) == true)
         {
             EmpfohleneSanierungsmassnahmenOptions.Clear();
             foreach (var item in vm.Items)

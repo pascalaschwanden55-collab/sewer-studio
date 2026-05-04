@@ -357,7 +357,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(SanierenOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
+        if (_sp.Dialogs.ShowDialog(dlg) == true)
         {
             SanierenOptions.Clear();
             foreach (var item in vm.Items)
@@ -387,7 +387,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(EigentuemerOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
+        if (_sp.Dialogs.ShowDialog(dlg) == true)
         {
             EigentuemerOptions.Clear();
             foreach (var item in vm.Items)
@@ -427,7 +427,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(PruefungsresultatOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
+        if (_sp.Dialogs.ShowDialog(dlg) == true)
         {
             PruefungsresultatOptions.Clear();
             foreach (var item in vm.Items)
@@ -463,7 +463,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(ReferenzpruefungOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
+        if (_sp.Dialogs.ShowDialog(dlg) == true)
         {
             ReferenzpruefungOptions.Clear();
             foreach (var item in vm.Items)
