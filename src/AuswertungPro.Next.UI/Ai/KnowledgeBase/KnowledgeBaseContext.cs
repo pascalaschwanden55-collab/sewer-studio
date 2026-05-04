@@ -144,6 +144,36 @@ public sealed class KnowledgeBaseContext : IDisposable
         // ohne dass Samples wegfallen sollen). Nachvollziehbarkeit > Strenge.
         MigrateAddColumn("Samples", "RunId", "TEXT NULL");
 
+        // Phase 5.5: SanierungDecisionLog — Provenance fuer jede Sanierungs-
+        // Entscheidung. Speichert Eingaben (VSA-Codes, Damage-Groups), Resultat
+        // (Eligible/Conditional/Excluded mit Grund), KnowledgeVersion und
+        // optionalen RunId-Verweis (Phase 4.4). Listen werden als JSON
+        // gespeichert (TEXT) — keine zusaetzliche Tabelle, gut fuer Audit-Trail.
+        ExecuteNonQuery("""
+            CREATE TABLE IF NOT EXISTS SanierungDecisionLog (
+                DecisionId       TEXT PRIMARY KEY,
+                CreatedUtc       TEXT NOT NULL,
+                Context          TEXT NOT NULL DEFAULT '',
+                VsaCodesJson     TEXT NOT NULL DEFAULT '[]',
+                DamageGroupsJson TEXT NOT NULL DEFAULT '[]',
+                EligibleJson     TEXT NOT NULL DEFAULT '[]',
+                ConditionalJson  TEXT NOT NULL DEFAULT '[]',
+                ExcludedJson     TEXT NOT NULL DEFAULT '[]',
+                PromptHintsJson  TEXT NOT NULL DEFAULT '[]',
+                KnowledgeVersion TEXT NOT NULL DEFAULT '',
+                RunId            TEXT NULL,
+                Notes            TEXT NOT NULL DEFAULT ''
+            );
+            """);
+        ExecuteNonQuery("""
+            CREATE INDEX IF NOT EXISTS idx_decision_log_created
+                ON SanierungDecisionLog(CreatedUtc DESC);
+            """);
+        ExecuteNonQuery("""
+            CREATE INDEX IF NOT EXISTS idx_decision_log_context
+                ON SanierungDecisionLog(Context);
+            """);
+
         // Index für schnelle Code-Suche
         ExecuteNonQuery("""
             CREATE INDEX IF NOT EXISTS idx_samples_code
