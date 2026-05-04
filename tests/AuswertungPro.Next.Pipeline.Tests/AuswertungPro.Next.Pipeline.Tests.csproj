@@ -1,14 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF>
     <IsPackable>false</IsPackable>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\AuswertungPro.Next.UI\AuswertungPro.Next.UI.csproj"
-                      AdditionalProperties="BaseOutputPath=$(MSBuildThisFileDirectory)bin\ProjectRefs\;UseAppHost=false" />
+    <ProjectReference Include="..\..\src\AuswertungPro.Next.UI\AuswertungPro.Next.UI.csproj" />
   </ItemGroup>
 
   <ItemGroup>
