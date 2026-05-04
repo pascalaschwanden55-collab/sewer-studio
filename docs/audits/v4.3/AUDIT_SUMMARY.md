@@ -192,7 +192,7 @@ Diese 5 Punkte haben **alle drei** Audits unabhängig genannt — sie sind unbes
 ### Phase 5 — Monat 2 (Architektur-Sanierung)
 | # | Aufgabe | Konsens | Aufwand |
 |---|---|---|---|
-| 5.1 | DI-Container: Microsoft.Extensions.DependencyInjection | B2 (2/3) | 2 Tage |
+| 5.1 | ~~DI-Container: Microsoft.Extensions.DependencyInjection~~ — Inventar: ServiceProvider 678 Zeilen, 22 Files mit App.Services-Direktzugriff. NuGet-Freigabe noetig. 4-Etappen-Migrationspfad dokumentiert. Bericht: `PHASE_5.1_DI_CONTAINER_INVENTAR.md`. ⏸️ Migration in eigener Session mit NuGet-Freigabe. | B2 (2/3) | 2 Tage (geplant) / Inventar+Bericht (effektiv) |
 | 5.2 | ServiceProvider.cs (657 Zeilen) zerlegen | B2 (2/3) | 1 Woche |
 | 5.3 | KI-Schicht migrieren: QualityGate + Aggregator + Resolver → Application/KI | A1 (3/3) | 1 Woche |
 | 5.4 | Produktmodus / Expertenmodus einführen | A5 (3/3) | 3 Tage |
