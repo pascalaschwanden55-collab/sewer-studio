@@ -10,7 +10,8 @@ namespace AuswertungPro.Next.UI.ViewModels;
 
 public sealed partial class ShellViewModel : ObservableObject
 {
-    private readonly ServiceProvider _sp = (ServiceProvider)App.Services;
+    // Phase 5.1.B Etappe 4 Sub-D: ServiceProvider-Pass-through entfernt — Page-VMs ziehen
+    // ihre Services nun direkt via App.Resolve<T>() aus dem DI-Container.
     private readonly List<GuideStep> _guideSteps;
 
     [ObservableProperty] private string _title = "SewerStudio";
@@ -66,23 +67,23 @@ public sealed partial class ShellViewModel : ObservableObject
 
         var items = new List<NavItem>
         {
-            new("\uE80F", "Uebersicht", () => new Pages.OverviewPageViewModel(this, _sp)),
+            new("\uE80F", "Uebersicht", () => new Pages.OverviewPageViewModel(this)),
             new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this)),
             new("\uE8FD", "Haltungen", () => new Pages.DataPageViewModel(this)),
             new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(this)),
             // Segoe MDL2: Import = Download, Export = Upload
-            new("\uE896", "Import", () => new Pages.ImportPageViewModel(this, _sp)),
-            new("\uE898", "Export", () => new Pages.ExportPageViewModel(this, _sp)),
-            new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(this, _sp)),
+            new("\uE896", "Import", () => new Pages.ImportPageViewModel(this)),
+            new("\uE898", "Export", () => new Pages.ExportPageViewModel(this)),
+            new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(this)),
             new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(this)),
-            new("\uE128", "VSA", () => new Pages.VsaPageViewModel(this, _sp)),
+            new("\uE128", "VSA", () => new Pages.VsaPageViewModel(this)),
         };
         if (showExperten)
         {
-            items.Add(new("\uE8A1", "Eigendevis", () => new Pages.EigendevisPageViewModel(this, _sp)));
+            items.Add(new("\uE8A1", "Eigendevis", () => new Pages.EigendevisPageViewModel(this)));
         }
-        items.Add(new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(_sp)));
-        items.Add(new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(_sp)));
+        items.Add(new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel()));
+        items.Add(new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel()));
         NavItems = items;
 
         SaveCommand = new RelayCommand(SaveProject);

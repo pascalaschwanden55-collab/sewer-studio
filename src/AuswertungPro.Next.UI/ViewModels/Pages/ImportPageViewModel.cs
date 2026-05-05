@@ -12,6 +12,11 @@ using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.Diagnostics;
+using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Application.Vsa;
+using AuswertungPro.Next.UI.Modules;
+using AuswertungPro.Next.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -20,7 +25,17 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 public sealed partial class ImportPageViewModel : ObservableObject
 {
     private readonly ShellViewModel _shell;
-    private readonly ServiceProvider _sp;
+    private readonly AppSettings _settings;
+    private readonly DiagnosticsOptions _diagnostics;
+    private readonly IDialogService _dialogs;
+    private readonly IPdfImportService _pdfImport;
+    private readonly IXtfImportService _xtfImport;
+    private readonly IWinCanDbImportService _winCanImport;
+    private readonly IIbakImportService _ibakImport;
+    private readonly IKinsImportService _kinsImport;
+    private readonly IVsaEvaluationService _vsa;
+    private readonly ICodeCatalogProvider _codeCatalog;
+    private readonly string? _vsaCatalogResolvedPath;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _summaryText = "";
@@ -49,10 +64,23 @@ public sealed partial class ImportPageViewModel : ObservableObject
     public IRelayCommand OpenLastReportCommand { get; }
     public IRelayCommand OpenReportFolderCommand { get; }
 
-    public ImportPageViewModel(ShellViewModel shell, ServiceProvider sp)
+    // Phase 5.1.B Etappe 4 Sub-C: ServiceProvider-Bundle entfernt, konkrete Services injiziert.
+    public ImportPageViewModel(ShellViewModel shell)
     {
         _shell = shell;
-        _sp = sp;
+        _settings = App.Resolve<AppSettings>();
+        _diagnostics = App.Resolve<DiagnosticsOptions>();
+        _dialogs = App.Resolve<IDialogService>();
+        _pdfImport = App.Resolve<IPdfImportService>();
+        _xtfImport = App.Resolve<IXtfImportService>();
+        _winCanImport = App.Resolve<IWinCanDbImportService>();
+        _ibakImport = App.Resolve<IIbakImportService>();
+        _kinsImport = App.Resolve<IKinsImportService>();
+        _vsa = App.Resolve<IVsaEvaluationService>();
+        _codeCatalog = App.Resolve<ICodeCatalogProvider>();
+        // VSA-Katalog-Pfad aus AppSettings ermitteln (gleiche Logik wie ServiceCollectionConfigurator).
+        var nodPath = VsaCatalogResolver.ResolveNodPath(_settings);
+        _vsaCatalogResolvedPath = nodPath ?? VsaCatalogResolver.ResolveSecPath(_settings);
 
         ImportPdfCommand = new AsyncRelayCommand(ImportPdfAsync, CanStartImport);
         ImportXtfCommand = new AsyncRelayCommand(ImportXtfAsync, CanStartImport);
@@ -128,7 +156,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private string? GetReportDir()
     {
-        var projectPath = _sp.Settings.LastProjectPath;
+        var projectPath = _settings.LastProjectPath;
         var projectDir = string.IsNullOrWhiteSpace(projectPath) ? null : Path.GetDirectoryName(projectPath);
         return string.IsNullOrWhiteSpace(projectDir) ? null : Path.Combine(projectDir, "__IMPORT_REPORTS");
     }
@@ -279,14 +307,14 @@ public sealed partial class ImportPageViewModel : ObservableObject
         {
             Owner = System.Windows.Application.Current.MainWindow
         };
-        return _sp.Dialogs.ShowDialog(win) == true;
+        return _dialogs.ShowDialog(win) == true;
     }
 
     // ──── Import Methods ────
 
     private async Task ImportPdfAsync()
     {
-        var paths = _sp.Dialogs.OpenFiles("PDF importieren", "PDF (*.pdf)|*.pdf");
+        var paths = _dialogs.OpenFiles("PDF importieren", "PDF (*.pdf)|*.pdf");
         if (paths.Length == 0) return;
 
         if (ShowPreviewFirst)
@@ -316,7 +344,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
                 "PDF lesen", i + 1, paths.Length,
                 $"PDF {i + 1}/{paths.Length}: {Path.GetFileName(path)}", Path.GetFileName(path)));
 
-            var res = _sp.PdfImport.ImportPdf(path, project, _sp.Diagnostics.ExplicitPdfToTextPath, FillMissingOnly, ctx);
+            var res = _pdfImport.ImportPdf(path, project, _diagnostics.ExplicitPdfToTextPath, FillMissingOnly, ctx);
             if (!res.Ok || res.Value is null)
             {
                 totalErrors++;
@@ -350,7 +378,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private async Task ImportXtfAsync()
     {
-        var paths = _sp.Dialogs.OpenFiles(
+        var paths = _dialogs.OpenFiles(
             "Daten importieren (XTF/M150/MDB)",
             "Daten (*.xtf;*.m150;*.mdb;*.xml)|*.xtf;*.m150;*.mdb;*.xml|XTF (*.xtf)|*.xtf|M150/XML (*.m150;*.xml)|*.m150;*.xml|MDB (*.mdb)|*.mdb|Alle Dateien|*.*");
         if (paths.Length == 0) return;
@@ -367,7 +395,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private Result<ImportStats> ImportXtfCore(string[] paths, Project project, ImportRunContext ctx)
     {
-        return _sp.XtfImport.ImportXtfFiles(paths, project, ctx);
+        return _xtfImport.ImportXtfFiles(paths, project, ctx);
     }
 
     private Task PostImportXtfAsync(string[] paths, ImportRunContext ctx)
@@ -384,7 +412,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private async Task ImportWinCanAsync()
     {
-        var folder = _sp.Dialogs.SelectFolder("WinCan-Projektordner waehlen");
+        var folder = _dialogs.SelectFolder("WinCan-Projektordner waehlen");
         if (string.IsNullOrWhiteSpace(folder)) return;
 
         if (ShowPreviewFirst)
@@ -392,7 +420,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
             await RunImportAsync(
                 "WinCan",
                 folder,
-                ImportFolderCore(_sp.WinCanImport.ImportWinCanExport),
+                ImportFolderCore(_winCanImport.ImportWinCanExport),
                 dryRun: true,
                 postImportAsync: PostImportFolderAsync,
                 saveProjectAfterCommit: true);
@@ -402,7 +430,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
             await RunImportAsync(
                 "WinCan",
                 folder,
-                ImportFolderCore(_sp.WinCanImport.ImportWinCanExport),
+                ImportFolderCore(_winCanImport.ImportWinCanExport),
                 postImportAsync: PostImportFolderAsync,
                 saveProjectAfterCommit: true);
         }
@@ -410,7 +438,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private async Task ImportIbakAsync()
     {
-        var folder = _sp.Dialogs.SelectFolder("IBAK-Projektordner waehlen");
+        var folder = _dialogs.SelectFolder("IBAK-Projektordner waehlen");
         if (string.IsNullOrWhiteSpace(folder)) return;
 
         if (ShowPreviewFirst)
@@ -418,7 +446,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
             await RunImportAsync(
                 "IBAK",
                 folder,
-                ImportFolderCore(_sp.IbakImport.ImportIbakExport),
+                ImportFolderCore(_ibakImport.ImportIbakExport),
                 dryRun: true,
                 postImportAsync: PostImportFolderAsync,
                 saveProjectAfterCommit: true);
@@ -428,7 +456,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
             await RunImportAsync(
                 "IBAK",
                 folder,
-                ImportFolderCore(_sp.IbakImport.ImportIbakExport),
+                ImportFolderCore(_ibakImport.ImportIbakExport),
                 postImportAsync: PostImportFolderAsync,
                 saveProjectAfterCommit: true);
         }
@@ -436,7 +464,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private async Task ImportKinsAsync()
     {
-        var folder = _sp.Dialogs.SelectFolder("KINS-Projektordner waehlen");
+        var folder = _dialogs.SelectFolder("KINS-Projektordner waehlen");
         if (string.IsNullOrWhiteSpace(folder)) return;
 
         if (ShowPreviewFirst)
@@ -444,7 +472,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
             await RunImportAsync(
                 "KINS",
                 folder,
-                ImportFolderCore(_sp.KinsImport.ImportKinsExport),
+                ImportFolderCore(_kinsImport.ImportKinsExport),
                 dryRun: true,
                 postImportAsync: PostImportFolderAsync,
                 saveProjectAfterCommit: true);
@@ -454,7 +482,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
             await RunImportAsync(
                 "KINS",
                 folder,
-                ImportFolderCore(_sp.KinsImport.ImportKinsExport),
+                ImportFolderCore(_kinsImport.ImportKinsExport),
                 postImportAsync: PostImportFolderAsync,
                 saveProjectAfterCommit: true);
         }
@@ -529,7 +557,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
                     $"PDF {i + 1}/{pdfFiles.Length}", Path.GetFileName(path)));
                 try
                 {
-                    var res = _sp.PdfImport.ImportPdf(path, _shell.Project, _sp.Diagnostics.ExplicitPdfToTextPath, FillMissingOnly, ctx);
+                    var res = _pdfImport.ImportPdf(path, _shell.Project, _diagnostics.ExplicitPdfToTextPath, FillMissingOnly, ctx);
                     if (res.Ok && res.Value is not null)
                     {
                         found += res.Value.Found;
@@ -598,7 +626,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     {
         ImportProgress = $"{sourceLabel}: VSA-Zustandsbewertung wird berechnet...";
 
-        var vsaResult = await Task.Run(() => _sp.Vsa.Evaluate(_shell.Project));
+        var vsaResult = await Task.Run(() => _vsa.Evaluate(_shell.Project));
 
         if (vsaResult.Ok)
         {
@@ -614,9 +642,9 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private void UpdateCatalogStatus()
     {
-        var configured = _sp.Settings.VsaCatalogSecXmlPath;
-        var configuredNod = _sp.Settings.VsaCatalogNodXmlPath;
-        var resolved = _sp.VsaCatalogResolvedPath;
+        var configured = _settings.VsaCatalogSecXmlPath;
+        var configuredNod = _settings.VsaCatalogNodXmlPath;
+        var resolved = _vsaCatalogResolvedPath;
         var isNod = !string.IsNullOrWhiteSpace(resolved)
                     && resolved.Contains("_NOD", StringComparison.OrdinalIgnoreCase);
 
@@ -642,7 +670,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         }
 
         // JSON-Fallback aktiv? Dann ist der Katalog funktional, nur nicht via XML konfiguriert.
-        if (_sp.CodeCatalog is AuswertungPro.Next.Application.Protocol.JsonCodeCatalogProvider jsonProvider)
+        if (_codeCatalog is AuswertungPro.Next.Application.Protocol.JsonCodeCatalogProvider jsonProvider)
         {
             var codeCount = jsonProvider.AllowedCodes().Count;
             var noiseInfo = jsonProvider.FilteredNoiseCount > 0
@@ -661,7 +689,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     {
         try
         {
-            switch (_sp.CodeCatalog)
+            switch (_codeCatalog)
             {
                 case AuswertungPro.Next.Application.Protocol.XmlCodeCatalogProvider xml:
                     xml.Reload();
@@ -709,7 +737,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         summary.XtfFiles = xtfFiles.Length;
         if (xtfFiles.Length > 0)
         {
-            var res = _sp.XtfImport.ImportXtfFiles(xtfFiles, _shell.Project);
+            var res = _xtfImport.ImportXtfFiles(xtfFiles, _shell.Project);
             if (!res.Ok || res.Value is null)
             {
                 summary.XtfErrors++;
@@ -742,7 +770,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         {
             foreach (var path in pdfFiles)
             {
-                var res = _sp.PdfImport.ImportPdf(path, _shell.Project, _sp.Diagnostics.ExplicitPdfToTextPath, FillMissingOnly);
+                var res = _pdfImport.ImportPdf(path, _shell.Project, _diagnostics.ExplicitPdfToTextPath, FillMissingOnly);
                 if (!res.Ok || res.Value is null)
                 {
                     summary.PdfErrors++;
@@ -827,7 +855,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private void ExportImportSummary()
     {
-        var projectPath = _sp.Settings.LastProjectPath;
+        var projectPath = _settings.LastProjectPath;
         var projectDir = string.IsNullOrWhiteSpace(projectPath) ? null : Path.GetDirectoryName(projectPath);
         if (string.IsNullOrWhiteSpace(projectDir))
         {
@@ -892,7 +920,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private void StoreXtfFiles(string[] paths)
     {
-        var projectPath = _sp.Settings.LastProjectPath;
+        var projectPath = _settings.LastProjectPath;
         if (string.IsNullOrWhiteSpace(projectPath))
         {
             LastResult += "\nHinweis: Projekt bitte speichern, um XTF-Dateien im Projekt abzulegen.";
@@ -945,7 +973,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private void StorePdfFiles(string[] paths)
     {
-        var projectPath = _sp.Settings.LastProjectPath;
+        var projectPath = _settings.LastProjectPath;
         if (string.IsNullOrWhiteSpace(projectPath))
         {
             LastResult += "\nHinweis: Projekt bitte speichern, um PDF-Dateien im Projekt abzulegen.";
@@ -998,7 +1026,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private void StoreTxtFiles(string[] paths)
     {
-        var projectPath = _sp.Settings.LastProjectPath;
+        var projectPath = _settings.LastProjectPath;
         if (string.IsNullOrWhiteSpace(projectPath))
         {
             LastResult += "\nHinweis: Projekt bitte speichern, um TXT-Dateien im Projekt abzulegen.";

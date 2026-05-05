@@ -16,8 +16,7 @@ namespace AuswertungPro.Next.UI.Views;
 
 public partial class ProtocolEntryEditorDialog : Window
 {
-    // Phase 5.1.B Etappe 3.M: ServiceProvider-Field durch DI-aufgeloeste Services ersetzt.
-    // ServiceProvider-Param im Konstruktor bleibt fuer API-Kompatibilitaet (wird ignoriert).
+    // Phase 5.1.B Etappe 4 Sub-D: ServiceProvider-Param entfernt, Services via DI.
     private readonly AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider? _codeCatalog;
     private readonly IProtocolAiService? _protocolAi;
     private readonly AppSettings? _settings;
@@ -30,13 +29,12 @@ public partial class ProtocolEntryEditorDialog : Window
     private bool _isNormalizingCode;
 
     public ProtocolEntryEditorDialog()
-        : this(new ProtocolEntryVM(new ProtocolEntry()), App.Services as ServiceProvider, null, null, null)
+        : this(new ProtocolEntryVM(new ProtocolEntry()), null, null, null)
     {
     }
 
     public ProtocolEntryEditorDialog(
         ProtocolEntryVM entryVm,
-        ServiceProvider? sp = null,
         string? haltungId = null,
         string? videoPath = null,
         string? projectFolder = null)
@@ -45,7 +43,6 @@ public partial class ProtocolEntryEditorDialog : Window
         WindowStateManager.Track(this);
 
         _entryVm = entryVm;
-        // Phase 5.1.B Etappe 3.M: Services via DI-Container aufloesen, sp-Param ignoriert.
         try { _codeCatalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>(); } catch { }
         try { _protocolAi = App.Resolve<IProtocolAiService>(); } catch { }
         try { _settings = App.Resolve<AppSettings>(); } catch { }

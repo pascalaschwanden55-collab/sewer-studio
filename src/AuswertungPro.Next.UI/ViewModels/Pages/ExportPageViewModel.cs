@@ -9,6 +9,8 @@ using System.Windows;
 using System.Windows.Threading;
 using AuswertungPro.Next.Infrastructure;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.Export;
+using AuswertungPro.Next.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -17,7 +19,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 public sealed partial class ExportPageViewModel : ObservableObject
 {
     private readonly ShellViewModel _shell;
-    private readonly ServiceProvider _sp;
+    private readonly AppSettings _settings;
+    private readonly IDialogService _dialogs;
+    private readonly IExcelExportService _excelExport;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _distributionProgress = "";
@@ -32,10 +36,13 @@ public sealed partial class ExportPageViewModel : ObservableObject
     public IAsyncRelayCommand DistributeShaftsCommand { get; }
     public IAsyncRelayCommand DistributeDichtheitCommand { get; }
 
-    public ExportPageViewModel(ShellViewModel shell, ServiceProvider sp)
+    // Phase 5.1.B Etappe 4 Sub-C: ServiceProvider-Bundle entfernt, Services injiziert.
+    public ExportPageViewModel(ShellViewModel shell)
     {
         _shell = shell;
-        _sp = sp;
+        _settings = App.Resolve<AppSettings>();
+        _dialogs = App.Resolve<IDialogService>();
+        _excelExport = App.Resolve<IExcelExportService>();
         ExportCommand = new AsyncRelayCommand(ExportAsync, CanRunProjectExportCommands);
         ExportSchaechteCommand = new AsyncRelayCommand(ExportSchaechteAsync, CanRunProjectExportCommands);
         DistributeHoldingsCommand = new AsyncRelayCommand(DistributeHoldingsAsync, CanRunDistributeCommands);
@@ -72,7 +79,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task ExportAsync()
     {
-        var outPath = _sp.Dialogs.SaveFile("Export (Haltungen.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
+        var outPath = _dialogs.SaveFile("Export (Haltungen.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
         if (outPath is null) return;
 
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage", "Haltungen.xlsx");
@@ -80,7 +87,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         {
             IsPageBusy = true;
             var res = await Task.Run(() =>
-                _sp.ExcelExport.ExportToTemplate(_shell.Project, templatePath, outPath, headerRow: 11, startRow: 12));
+                _excelExport.ExportToTemplate(_shell.Project, templatePath, outPath, headerRow: 11, startRow: 12));
             LastResult = res.Ok ? $"Exportiert: {outPath}" : $"Fehler: {res.ErrorMessage}";
             _shell.SetStatus(res.Ok ? "Exportiert" : "Export fehlgeschlagen");
         }
@@ -92,7 +99,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task ExportSchaechteAsync()
     {
-        var outPath = _sp.Dialogs.SaveFile("Export (Schaechte.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
+        var outPath = _dialogs.SaveFile("Export (Schaechte.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
         if (outPath is null) return;
 
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage", "Schächte.xlsx");
@@ -107,7 +114,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         {
             IsPageBusy = true;
             var res = await Task.Run(() =>
-                _sp.ExcelExport.ExportSchaechteToTemplate(_shell.Project, templatePath, outPath, headerRow: 12, startRow: 13));
+                _excelExport.ExportSchaechteToTemplate(_shell.Project, templatePath, outPath, headerRow: 12, startRow: 13));
             LastResult = res.Ok ? $"Exportiert: {outPath}" : $"Fehler: {res.ErrorMessage}";
             _shell.SetStatus(res.Ok ? "Exportiert" : "Export fehlgeschlagen");
         }
@@ -148,13 +155,13 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
             if (mode == MessageBoxResult.Yes)
             {
-                selectedPdfFiles = _sp.Dialogs.OpenFiles("PDF-Protokolle auswaehlen", "PDF (*.pdf)|*.pdf");
+                selectedPdfFiles = _dialogs.OpenFiles("PDF-Protokolle auswaehlen", "PDF (*.pdf)|*.pdf");
                 if (selectedPdfFiles.Length == 0)
                     return;
             }
             else
             {
-                pdfFolder = _sp.Dialogs.SelectFolder("PDF-Ordner mit Protokollen waehlen");
+                pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Protokollen waehlen");
                 if (string.IsNullOrWhiteSpace(pdfFolder))
                     return;
             }
@@ -171,22 +178,22 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
             if (mode == MessageBoxResult.Yes)
             {
-                selectedTxtFiles = _sp.Dialogs.OpenFiles("TXT-Dateien auswaehlen", "TXT (*.txt)|*.txt");
+                selectedTxtFiles = _dialogs.OpenFiles("TXT-Dateien auswaehlen", "TXT (*.txt)|*.txt");
                 if (selectedTxtFiles.Length == 0)
                     return;
             }
             else
             {
-                txtFolder = _sp.Dialogs.SelectFolder("TXT-Ordner waehlen (z.B. mit kiDVDaten.txt)");
+                txtFolder = _dialogs.SelectFolder("TXT-Ordner waehlen (z.B. mit kiDVDaten.txt)");
                 if (string.IsNullOrWhiteSpace(txtFolder))
                     return;
             }
         }
 
-        var videoFolder = _sp.Dialogs.SelectFolder("Video-Ordner mit Rohvideos waehlen");
+        var videoFolder = _dialogs.SelectFolder("Video-Ordner mit Rohvideos waehlen");
         if (string.IsNullOrWhiteSpace(videoFolder)) return;
 
-        var destFolder = _sp.Dialogs.SelectFolder("Zielordner (Gemeinde) waehlen");
+        var destFolder = _dialogs.SelectFolder("Zielordner (Gemeinde) waehlen");
         if (string.IsNullOrWhiteSpace(destFolder)) return;
 
         try
@@ -280,13 +287,14 @@ public sealed partial class ExportPageViewModel : ObservableObject
             var ok = importResults.Count(r => r.Success);
             var failed = importResults.Count - ok;
             var matched = importResults.Count(r => r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.Matched);
+            var matchedNoDate = importResults.Count(r => r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.MatchedWithoutDate);
             var missing = importResults.Count(r => r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.NotFound);
             var ambiguous = importResults.Count(r => r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.Ambiguous);
 
             var sb = new StringBuilder();
             sb.AppendLine($"Modus: {(useTxtImport ? "TXT-Import" : "PDF-Import")}");
             sb.AppendLine($"Verarbeitet: {importResults.Count} | OK: {ok} | Fehler: {failed}");
-            sb.AppendLine($"Video: Matched {matched}, Missing {missing}, Ambiguous {ambiguous}");
+            sb.AppendLine($"Video: Matched {matched}, MatchedWithoutDate {matchedNoDate}, Missing {missing}, Ambiguous {ambiguous}");
             if (sidecarResults.Count > 0)
             {
                 var sidecarOk = sidecarResults.Count(r => r.Success);
@@ -303,7 +311,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
             sb.AppendLine("Matched (Top 20):");
             foreach (var r in importResults
-                         .Where(r => r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.Matched)
+                         .Where(r => r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.Matched
+                                  || r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.MatchedWithoutDate)
                          .OrderByDescending(r => r.Success)
                          .Take(20))
                 sb.AppendLine($"{(r.Success ? "OK" : "FAIL")} - {r.Message} - {r.SourcePdfPath}");
@@ -332,10 +341,10 @@ public sealed partial class ExportPageViewModel : ObservableObject
             if (useTxtImport && selectedTxtFiles.Length > 0)
                 StoreTxtFiles(selectedTxtFiles);
 
-            _sp.Settings.LastVideoSourceFolder = videoFolder;
-            _sp.Settings.LastDistributionTargetFolder = destFolder;
-            _sp.Settings.LastVideoFolder = videoFolder;
-            _sp.Settings.Save();
+            _settings.LastVideoSourceFolder = videoFolder;
+            _settings.LastDistributionTargetFolder = destFolder;
+            _settings.LastVideoFolder = videoFolder;
+            _settings.Save();
         }
         finally
         {
@@ -363,18 +372,18 @@ public sealed partial class ExportPageViewModel : ObservableObject
         string[] selectedPdfFiles = Array.Empty<string>();
         if (mode == MessageBoxResult.Yes)
         {
-            selectedPdfFiles = _sp.Dialogs.OpenFiles("Schacht-PDFs auswaehlen", "PDF (*.pdf)|*.pdf");
+            selectedPdfFiles = _dialogs.OpenFiles("Schacht-PDFs auswaehlen", "PDF (*.pdf)|*.pdf");
             if (selectedPdfFiles.Length == 0)
                 return;
         }
         else
         {
-            pdfFolder = _sp.Dialogs.SelectFolder("PDF-Ordner mit Schachtprotokollen waehlen");
+            pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Schachtprotokollen waehlen");
             if (string.IsNullOrWhiteSpace(pdfFolder))
                 return;
         }
 
-        var destFolder = _sp.Dialogs.SelectFolder("Zielordner (Gemeinde) waehlen");
+        var destFolder = _dialogs.SelectFolder("Zielordner (Gemeinde) waehlen");
         if (string.IsNullOrWhiteSpace(destFolder)) return;
 
         try
@@ -461,18 +470,18 @@ public sealed partial class ExportPageViewModel : ObservableObject
         string[] selectedPdfFiles = Array.Empty<string>();
         if (mode == MessageBoxResult.Yes)
         {
-            selectedPdfFiles = _sp.Dialogs.OpenFiles("Dichtheitsprüfungs-PDFs auswaehlen", "PDF (*.pdf)|*.pdf");
+            selectedPdfFiles = _dialogs.OpenFiles("Dichtheitsprüfungs-PDFs auswaehlen", "PDF (*.pdf)|*.pdf");
             if (selectedPdfFiles.Length == 0)
                 return;
         }
         else
         {
-            pdfFolder = _sp.Dialogs.SelectFolder("PDF-Ordner mit Dichtheitsprüfungsprotokollen waehlen");
+            pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Dichtheitsprüfungsprotokollen waehlen");
             if (string.IsNullOrWhiteSpace(pdfFolder))
                 return;
         }
 
-        var destFolder = _sp.Dialogs.SelectFolder("Zielordner (Gemeinde) waehlen");
+        var destFolder = _dialogs.SelectFolder("Zielordner (Gemeinde) waehlen");
         if (string.IsNullOrWhiteSpace(destFolder)) return;
 
         try
@@ -576,7 +585,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private void StorePdfFiles(string[] paths)
     {
-        var projectPath = _sp.Settings.LastProjectPath;
+        var projectPath = _settings.LastProjectPath;
         if (string.IsNullOrWhiteSpace(projectPath))
             return;
 
@@ -626,7 +635,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private void StoreTxtFiles(string[] paths)
     {
-        var projectPath = _sp.Settings.LastProjectPath;
+        var projectPath = _settings.LastProjectPath;
         if (string.IsNullOrWhiteSpace(projectPath))
             return;
 

@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using System.IO;
@@ -19,7 +19,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         [ObservableProperty]
         private ProjectOverviewEntry? _selectedProjectEntry;
         private readonly ShellViewModel _shell;
-        private readonly ServiceProvider _sp;
+        private readonly AppSettings _settings;
 
         public Project Project => _shell.Project;
         public bool IsProjectReady => _shell.IsProjectReady;
@@ -40,12 +40,13 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         public IRelayCommand DeleteSelectedCommand { get; }
         public bool HasLastProject => !string.IsNullOrWhiteSpace(LastProjectPath) && File.Exists(LastProjectPath);
 
-        public OverviewPageViewModel(ShellViewModel shell, ServiceProvider sp)
+        // Phase 5.1.B Etappe 4 Sub-A: ServiceProvider-Bundle entfernt, AppSettings injiziert.
+        public OverviewPageViewModel(ShellViewModel shell)
         {
             _shell = shell;
-            _sp = sp;
+            _settings = App.Resolve<AppSettings>();
 
-            LastProjectPath = _sp.Settings.LastProjectPath;
+            LastProjectPath = _settings.LastProjectPath;
             ProjectStatus = BuildProjectStatus();
 
             NewCommand = new RelayCommand(NewProject);
@@ -65,7 +66,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                     OnPropertyChanged(nameof(Project));
                     OnPropertyChanged(nameof(IsProjectReady));
                     ProjectStatus = BuildProjectStatus();
-                    LastProjectPath = _sp.Settings.LastProjectPath;
+                    LastProjectPath = _settings.LastProjectPath;
                     if (e.PropertyName == nameof(ShellViewModel.IsProjectReady))
                         LoadAllProjectsAsync().SafeFireAndForget("OverviewLoadProjects");
                 }
@@ -96,7 +97,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
         var lastProjectPath = LastProjectPath;
         var hasLastProject = HasLastProject && !string.IsNullOrWhiteSpace(lastProjectPath);
-        var recentPaths = _sp.Settings.RecentProjectPaths.ToList();
+        var recentPaths = _settings.RecentProjectPaths.ToList();
         var loadRevision = Interlocked.Increment(ref _loadRevision);
 
         var entries = await Task.Run(() => CollectProjectEntries(lastProjectPath, hasLastProject, recentPaths));
@@ -201,7 +202,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
     private void NewProject()
     {
         _shell.NewProject();
-        LastProjectPath = _sp.Settings.LastProjectPath;
+        LastProjectPath = _settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
         LoadAllProjectsAsync().SafeFireAndForget("OverviewLoadProjects");
         _shell.NavigateTo("Projekt");
@@ -211,7 +212,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
     {
         if (!_shell.TryOpenProjectWithDialog())
             return;
-        LastProjectPath = _sp.Settings.LastProjectPath;
+        LastProjectPath = _settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
         LoadAllProjectsAsync().SafeFireAndForget("OverviewLoadProjects");
         _shell.NavigateTo("Projekt");
@@ -224,9 +225,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             return;
         if (!_shell.TryOpenProject(path))
             return;
-        _sp.Settings.AddRecentProject(path);
-        _sp.Settings.Save();
-        LastProjectPath = _sp.Settings.LastProjectPath;
+        _settings.AddRecentProject(path);
+        _settings.Save();
+        LastProjectPath = _settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
         LoadAllProjectsAsync().SafeFireAndForget("OverviewLoadProjects");
         _shell.NavigateTo("Projekt");
@@ -242,8 +243,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
         var fileName = Path.GetFileName(entry.Path);
         var result = MessageBox.Show(
-            $"Projekt wirklich löschen?\n\n{fileName}\n{entry.Path}",
-            "Projekt löschen",
+            $"Projekt wirklich lÃ¶schen?\n\n{fileName}\n{entry.Path}",
+            "Projekt lÃ¶schen",
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning);
         if (result != MessageBoxResult.Yes)
@@ -253,10 +254,10 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         {
             File.Delete(entry.Path);
 
-            if (string.Equals(_sp.Settings.LastProjectPath, entry.Path, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(_settings.LastProjectPath, entry.Path, StringComparison.OrdinalIgnoreCase))
             {
-                _sp.Settings.LastProjectPath = null;
-                _sp.Settings.Save();
+                _settings.LastProjectPath = null;
+                _settings.Save();
                 _shell.NewProject();
             }
 
@@ -264,7 +265,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Löschen fehlgeschlagen: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"LÃ¶schen fehlgeschlagen: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -274,7 +275,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             return;
         if (!_shell.TryOpenProject(LastProjectPath))
             return;
-        LastProjectPath = _sp.Settings.LastProjectPath;
+        LastProjectPath = _settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
         LoadAllProjectsAsync().SafeFireAndForget("OverviewLoadProjects");
         _shell.NavigateTo("Projekt");
@@ -322,3 +323,4 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         public string StatsText => RecordCount > 0 ? $"{RecordCount} Haltungen" : "Leer";
     }
 }
+

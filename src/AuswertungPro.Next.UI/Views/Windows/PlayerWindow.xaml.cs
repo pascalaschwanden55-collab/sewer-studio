@@ -120,7 +120,8 @@ public partial class PlayerWindow : Window, IVlcSurface
     private string _liveDetectionModelName = string.Empty;
 
     // Ã¢"â‚¬Ã¢"â‚¬ Protocol integration (optional, passed by caller) Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
-    private readonly ServiceProvider? _serviceProvider;
+    // Phase 5.1.B Etappe 4 Sub-D: ServiceProvider-Pass-through entfernt — ProtocolObservationsWindow
+    // zieht ihre Services nun selbst aus dem DI-Container.
     private readonly string? _haltungId;
     private readonly Action<ProtocolEntry>? _onEntryCreated;
     private readonly HaltungRecord? _haltungRecord;
@@ -132,7 +133,6 @@ public partial class PlayerWindow : Window, IVlcSurface
         PlayerWindowOptions? options = null,
         string? initialOverlayText = null,
         PlayerDamageOverlayData? damageOverlay = null,
-        ServiceProvider? serviceProvider = null,
         string? haltungId = null,
         Action<ProtocolEntry>? onEntryCreated = null,
         HaltungRecord? haltungRecord = null)
@@ -143,7 +143,6 @@ public partial class PlayerWindow : Window, IVlcSurface
         _videoPath = videoPath;
         _damageOverlay = damageOverlay;
         _options = PlayerWindowOptions.Normalize(options);
-        _serviceProvider = serviceProvider;
         _haltungId = haltungId;
         _onEntryCreated = onEntryCreated;
         _haltungRecord = haltungRecord;
@@ -4622,7 +4621,7 @@ public partial class PlayerWindow : Window, IVlcSurface
 
     private void ShowCodingProtocolPreview(ProtocolDocument doc)
     {
-        if (_haltungRecord == null || _serviceProvider == null) return;
+        if (_haltungRecord == null) return;
 
         var result = MessageBox.Show(
             $"{doc.Current.Entries.Count} Beobachtungen protokolliert.\n\n" +
@@ -4641,7 +4640,7 @@ public partial class PlayerWindow : Window, IVlcSurface
             : null;
 
         var dlg = new Views.ProtocolObservationsWindow(
-            _haltungRecord, project, _serviceProvider, _videoPath, projectFolder,
+            _haltungRecord, project, _videoPath, projectFolder,
             markDirty: () =>
             {
                 _haltungRecord.ModifiedAtUtc = DateTime.UtcNow;

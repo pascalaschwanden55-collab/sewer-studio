@@ -5,13 +5,17 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Devis;
 using AuswertungPro.Next.Domain.Models.Devis;
+using AuswertungPro.Next.Infrastructure.Devis;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class EigendevisPageViewModel : ObservableObject
 {
     private readonly ShellViewModel _shell;
-    private readonly ServiceProvider _sp;
+    private readonly IDevisGenerator _devisGenerator;
+    private readonly DevisExcelExporter _devisExcelExporter;
+    private readonly IDialogService _dialogs;
 
     [ObservableProperty] private string _summary = "Noch kein Eigendevis berechnet.";
     [ObservableProperty] private int _selectedTabIndex;
@@ -29,10 +33,13 @@ public sealed partial class EigendevisPageViewModel : ObservableObject
     public IRelayCommand ExportOhnePreisCommand { get; }
     public IRelayCommand ExportMitKVCommand { get; }
 
-    public EigendevisPageViewModel(ShellViewModel shell, ServiceProvider sp)
+    // Phase 5.1.B Etappe 4 Sub-B: ServiceProvider-Bundle entfernt, Devis-Services + Dialogs injiziert.
+    public EigendevisPageViewModel(ShellViewModel shell)
     {
         _shell = shell;
-        _sp = sp;
+        _devisGenerator = App.Resolve<IDevisGenerator>();
+        _devisExcelExporter = App.Resolve<DevisExcelExporter>();
+        _dialogs = App.Resolve<IDialogService>();
         GenerateCommand = new RelayCommand(Generate);
         ExportOhnePreisCommand = new RelayCommand(ExportOhnePreis, () => _ergebnis is not null);
         ExportMitKVCommand = new RelayCommand(ExportMitKV, () => _ergebnis is not null);
@@ -51,7 +58,7 @@ public sealed partial class EigendevisPageViewModel : ObservableObject
         var baustelle = _shell.Project.Name ?? "Sanierungsprojekt";
         var zone = _shell.Project.Metadata.TryGetValue("Zone", out var z) ? z : "";
 
-        var ergebnis = _sp.DevisGenerator.Generate(baustelle, zone, haltungen);
+        var ergebnis = _devisGenerator.Generate(baustelle, zone, haltungen);
         _ergebnis = ergebnis;
 
         TotalBaumeister = FormatChf(ergebnis.Baumeister.GesamttotalInklMwst);
@@ -90,7 +97,7 @@ public sealed partial class EigendevisPageViewModel : ObservableObject
 
         var suffix = showPreise ? "mit_KV" : "ohne_Preis";
         var defaultName = $"Eigendevis_{suffix}";
-        var path = _sp.Dialogs.SaveFile($"Eigendevis exportieren ({suffix})", "Excel (*.xlsx)|*.xlsx", ".xlsx", defaultName);
+        var path = _dialogs.SaveFile($"Eigendevis exportieren ({suffix})", "Excel (*.xlsx)|*.xlsx", ".xlsx", defaultName);
         if (path is null) return;
 
         try
@@ -102,8 +109,8 @@ public sealed partial class EigendevisPageViewModel : ObservableObject
             var bmPath = Path.Combine(dir, $"{baseName}_Baumeister.xlsx");
             var rlPath = Path.Combine(dir, $"{baseName}_Rohrleitungsbau.xlsx");
 
-            _sp.DevisExcelExporter.Export(_ergebnis.Baumeister, bmPath);
-            _sp.DevisExcelExporter.Export(_ergebnis.Rohrleitungsbau, rlPath);
+            _devisExcelExporter.Export(_ergebnis.Baumeister, bmPath);
+            _devisExcelExporter.Export(_ergebnis.Rohrleitungsbau, rlPath);
 
             _shell.SetStatus($"Eigendevis exportiert: {bmPath}");
         }

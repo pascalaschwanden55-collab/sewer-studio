@@ -6,15 +6,13 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class DiagnosticsPageViewModel : ObservableObject
 {
-    private readonly ServiceProvider _sp;
-
     [ObservableProperty] private string _logTail = "";
 
     public IRelayCommand RefreshCommand { get; }
 
-    public DiagnosticsPageViewModel(ServiceProvider sp)
+    // Phase 5.1.B Etappe 4 Sub-A: Bundle-ctor entfernt — _sp war tot.
+    public DiagnosticsPageViewModel()
     {
-        _sp = sp;
         RefreshCommand = new RelayCommand(Refresh);
         Refresh();
     }

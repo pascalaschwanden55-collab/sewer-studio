@@ -46,10 +46,9 @@ public sealed partial class DataPageViewModel : ObservableObject
             Records[i].SetFieldValue("NR", (i + 1).ToString(), FieldSource.Manual, true);
         }
     }
-    // Phase 5.1.B Etappe 3.L: _sp wird nur noch fuer 2 Bundle-Aufrufe genutzt
-    // (PlayerWindow-ctor + ProtocolEntryEditorDialog-ctor erwarten ServiceProvider).
-    // Alle anderen Zugriffe gehen ueber App.Resolve<T>().
-    private readonly ServiceProvider _sp = (ServiceProvider)App.Services;
+    // Phase 5.1.B Etappe 4 Sub-D: ServiceProvider-Field entfernt — alle Bundle-Aufrufer
+    // (PlayerWindow, ProtocolEntryEditorDialog, ProtocolObservationsWindow) ziehen
+    // ihre Services nun selbst via App.Resolve<T>() aus dem DI-Container.
     private readonly ShellViewModel _shell;
     private readonly DispatcherTimer _saveBannerTimer;
     private readonly DispatcherTimer _autoSaveTimer;
@@ -104,8 +103,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
     /// <summary>Phase 1.4: Steuert Sichtbarkeit der Hydraulik-Toolbar-Buttons.
     /// Default = true (alles sichtbar wie heute).</summary>
-    public bool ShowExpertenmodusFeatures => App.Services is ServiceProvider sp
-        && sp.Settings.ShowExpertenmodusFeatures;
+    public bool ShowExpertenmodusFeatures => App.Resolve<AppSettings>().ShowExpertenmodusFeatures;
 
     public IReadOnlyList<string> Columns => FieldCatalog.ColumnOrder;
     public ObservableCollection<HaltungRecord> Records => _shell.Project.Data;
@@ -833,7 +831,6 @@ public sealed partial class DataPageViewModel : ObservableObject
 
             var window = new PlayerWindow(path, options,
                 damageOverlay: damageOverlay,
-                serviceProvider: _sp,
                 haltungId: record.Id.ToString(),
                 haltungRecord: record);
             App.Resolve<IDialogService>().Show(window);
@@ -864,7 +861,6 @@ public sealed partial class DataPageViewModel : ObservableObject
         var dlg = new AuswertungPro.Next.UI.Views.ProtocolObservationsWindow(
             record,
             _shell.Project,
-            _sp,
             resolvedVideoPath,
             projectFolder,
             markDirty: () =>

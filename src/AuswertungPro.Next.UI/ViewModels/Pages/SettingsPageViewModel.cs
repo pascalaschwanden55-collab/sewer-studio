@@ -6,12 +6,15 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.Application.Diagnostics;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class SettingsPageViewModel : ObservableObject
 {
-    private readonly ServiceProvider _sp;
+    private readonly AppSettings _settings;
+    private readonly DiagnosticsOptions _diagnostics;
+    private readonly IDialogService _dialogs;
 
     [ObservableProperty] private bool _enableDiagnostics;
     [ObservableProperty] private string? _pdfToTextPath;
@@ -81,24 +84,27 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     public IAsyncRelayCommand ExportBackupCommand { get; }
     public IAsyncRelayCommand ImportBackupCommand { get; }
 
-    public SettingsPageViewModel(ServiceProvider sp)
+    // Phase 5.1.B Etappe 4 Sub-C: ServiceProvider-Bundle entfernt, Services injiziert.
+    public SettingsPageViewModel()
     {
-        _sp = sp;
-        EnableDiagnostics = _sp.Settings.EnableDiagnostics;
-        PdfToTextPath = _sp.Settings.PdfToTextPath;
-        ProjectPath = _sp.Settings.LastProjectPath;
-        VideoFolder = _sp.Settings.LastVideoSourceFolder ?? _sp.Settings.LastVideoFolder;
-        DataAutoSaveMode = _sp.Settings.DataAutoSaveMode.Normalize();
-        EnableRestorePoints = _sp.Settings.EnableRestorePoints;
-        ShowExpertenmodusFeatures = _sp.Settings.ShowExpertenmodusFeatures;
-        VideoHwDecoding = _sp.Settings.VideoHwDecoding;
-        VideoDropLateFrames = _sp.Settings.VideoDropLateFrames;
-        VideoSkipFrames = _sp.Settings.VideoSkipFrames;
-        VideoFileCachingMs = ClampCaching(_sp.Settings.VideoFileCachingMs);
-        VideoNetworkCachingMs = ClampCaching(_sp.Settings.VideoNetworkCachingMs);
-        VideoCodecThreads = ClampCodecThreads(_sp.Settings.VideoCodecThreads);
-        VideoOutput = NormalizeVideoOutput(_sp.Settings.VideoOutput);
-        UiTheme = ThemeManager.NormalizeTheme(_sp.Settings.UiTheme);
+        _settings = App.Resolve<AppSettings>();
+        _diagnostics = App.Resolve<DiagnosticsOptions>();
+        _dialogs = App.Resolve<IDialogService>();
+        EnableDiagnostics = _settings.EnableDiagnostics;
+        PdfToTextPath = _settings.PdfToTextPath;
+        ProjectPath = _settings.LastProjectPath;
+        VideoFolder = _settings.LastVideoSourceFolder ?? _settings.LastVideoFolder;
+        DataAutoSaveMode = _settings.DataAutoSaveMode.Normalize();
+        EnableRestorePoints = _settings.EnableRestorePoints;
+        ShowExpertenmodusFeatures = _settings.ShowExpertenmodusFeatures;
+        VideoHwDecoding = _settings.VideoHwDecoding;
+        VideoDropLateFrames = _settings.VideoDropLateFrames;
+        VideoSkipFrames = _settings.VideoSkipFrames;
+        VideoFileCachingMs = ClampCaching(_settings.VideoFileCachingMs);
+        VideoNetworkCachingMs = ClampCaching(_settings.VideoNetworkCachingMs);
+        VideoCodecThreads = ClampCodecThreads(_settings.VideoCodecThreads);
+        VideoOutput = NormalizeVideoOutput(_settings.VideoOutput);
+        UiTheme = ThemeManager.NormalizeTheme(_settings.UiTheme);
         IsDarkTheme = string.Equals(UiTheme, ThemeManager.Dark, StringComparison.Ordinal);
 
         DataFolderPath = AppSettings.AppDataDir;
@@ -189,7 +195,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
 
     private void BrowsePdfToText()
     {
-        var p = _sp.Dialogs.OpenFile("pdftotext.exe waehlen", "pdftotext.exe|pdftotext.exe|Alle Dateien|*.*");
+        var p = _dialogs.OpenFile("pdftotext.exe waehlen", "pdftotext.exe|pdftotext.exe|Alle Dateien|*.*");
         if (p is null) return;
         PdfToTextPath = p;
     }
@@ -200,7 +206,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             ? "Projekt"
             : Path.GetFileNameWithoutExtension(ProjectPath);
 
-        var p = _sp.Dialogs.SaveFile("Projektpfad waehlen", "Projekt (*.json)|*.json", ".json", currentName);
+        var p = _dialogs.SaveFile("Projektpfad waehlen", "Projekt (*.json)|*.json", ".json", currentName);
         if (p is null)
             return;
 
@@ -209,39 +215,39 @@ public sealed partial class SettingsPageViewModel : ObservableObject
 
     private void BrowseVideoFolder()
     {
-        var p = _sp.Dialogs.SelectFolder("Video-Ordner (Haltungen) waehlen", VideoFolder);
+        var p = _dialogs.SelectFolder("Video-Ordner (Haltungen) waehlen", VideoFolder);
         if (p is null) return;
         VideoFolder = p;
     }
 
     private void Save()
     {
-        _sp.Settings.EnableDiagnostics = EnableDiagnostics;
-        _sp.Settings.PdfToTextPath = PdfToTextPath;
-        _sp.Settings.LastProjectPath = NormalizeProjectPath(ProjectPath);
-        _sp.Settings.LastVideoSourceFolder = VideoFolder;
-        _sp.Settings.LastVideoFolder = VideoFolder; // legacy compatibility
-        _sp.Settings.DataAutoSaveMode = DataAutoSaveMode.Normalize();
-        _sp.Settings.EnableRestorePoints = EnableRestorePoints;
-        _sp.Settings.ShowExpertenmodusFeatures = ShowExpertenmodusFeatures;
-        _sp.Settings.VideoHwDecoding = VideoHwDecoding;
-        _sp.Settings.VideoDropLateFrames = VideoDropLateFrames;
-        _sp.Settings.VideoSkipFrames = VideoSkipFrames;
-        _sp.Settings.VideoFileCachingMs = ClampCaching(VideoFileCachingMs);
-        _sp.Settings.VideoNetworkCachingMs = ClampCaching(VideoNetworkCachingMs);
-        _sp.Settings.VideoCodecThreads = ClampCodecThreads(VideoCodecThreads);
-        _sp.Settings.VideoOutput = NormalizeVideoOutput(VideoOutput);
-        _sp.Settings.UiTheme = ThemeManager.NormalizeTheme(UiTheme);
-        _sp.Settings.Save();
+        _settings.EnableDiagnostics = EnableDiagnostics;
+        _settings.PdfToTextPath = PdfToTextPath;
+        _settings.LastProjectPath = NormalizeProjectPath(ProjectPath);
+        _settings.LastVideoSourceFolder = VideoFolder;
+        _settings.LastVideoFolder = VideoFolder; // legacy compatibility
+        _settings.DataAutoSaveMode = DataAutoSaveMode.Normalize();
+        _settings.EnableRestorePoints = EnableRestorePoints;
+        _settings.ShowExpertenmodusFeatures = ShowExpertenmodusFeatures;
+        _settings.VideoHwDecoding = VideoHwDecoding;
+        _settings.VideoDropLateFrames = VideoDropLateFrames;
+        _settings.VideoSkipFrames = VideoSkipFrames;
+        _settings.VideoFileCachingMs = ClampCaching(VideoFileCachingMs);
+        _settings.VideoNetworkCachingMs = ClampCaching(VideoNetworkCachingMs);
+        _settings.VideoCodecThreads = ClampCodecThreads(VideoCodecThreads);
+        _settings.VideoOutput = NormalizeVideoOutput(VideoOutput);
+        _settings.UiTheme = ThemeManager.NormalizeTheme(UiTheme);
+        _settings.Save();
 
-        _sp.Diagnostics.EnableDiagnostics = EnableDiagnostics;
-        _sp.Diagnostics.ExplicitPdfToTextPath = PdfToTextPath;
+        _diagnostics.EnableDiagnostics = EnableDiagnostics;
+        _diagnostics.ExplicitPdfToTextPath = PdfToTextPath;
     }
 
     private void ApplyTheme()
     {
-        _sp.Settings.UiTheme = ThemeManager.NormalizeTheme(UiTheme);
-        _sp.Settings.SaveImmediate();
+        _settings.UiTheme = ThemeManager.NormalizeTheme(UiTheme);
+        _settings.SaveImmediate();
 
         var restart = MessageBox.Show(
             "Design gespeichert.\n\nJetzt neu starten, damit das Theme vollstaendig angewendet wird?",
@@ -302,7 +308,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     private async Task ExportBackupAsync()
     {
         var defaultName = $"SewerStudio_KI_Backup_{DateTime.Now:yyyy-MM-dd}";
-        var path = _sp.Dialogs.SaveFile(
+        var path = _dialogs.SaveFile(
             "KI-Wissen exportieren",
             "ZIP-Archiv (*.zip)|*.zip",
             ".zip",
@@ -341,7 +347,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
 
     private async Task ImportBackupAsync()
     {
-        var path = _sp.Dialogs.OpenFile(
+        var path = _dialogs.OpenFile(
             "KI-Wissen importieren",
             "ZIP-Archiv (*.zip)|*.zip");
         if (path is null) return;

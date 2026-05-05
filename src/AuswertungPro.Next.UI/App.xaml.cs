@@ -9,20 +9,11 @@ using System.Windows.Media.Animation;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Diagnostics;
-using AuswertungPro.Next.Application.Export;
-using AuswertungPro.Next.Application.Import;
-using AuswertungPro.Next.Application.Projects;
-using AuswertungPro.Next.Application.Vsa;
-using AuswertungPro.Next.Infrastructure.Export;
-using AuswertungPro.Next.Infrastructure.Export.Excel;
-using AuswertungPro.Next.Infrastructure.Import.Pdf;
-using AuswertungPro.Next.Infrastructure.Import.Xtf;
-using AuswertungPro.Next.Infrastructure.Projects;
-using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.Application.Protocol;
-using AuswertungPro.Next.Application.Media;
-using AuswertungPro.Next.Application.Reports;
+using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Composition;
 using AuswertungPro.Next.UI.Views.Windows;
 using AuswertungPro.Next.UI.Services;
@@ -34,26 +25,18 @@ namespace AuswertungPro.Next.UI
     {
     
 
-        private static ServiceProvider? _services;
+        // Phase 5.1.B Etappe 4 Sub-E: Legacy-ServiceProvider entfernt — nur noch DI-Container.
         private static System.IServiceProvider? _diServices;
         private static int _handlingException;
 
-        public static IServiceProvider Services
-            => _services ?? throw new InvalidOperationException("Services are not initialized.");
-
         /// <summary>
-        /// Phase 5.1.B Etappe 3.A: Paralleler DI-Container (Microsoft.Extensions.DependencyInjection).
-        /// Aktuell von keinem Aufrufer benutzt — Migration laeuft in Etappe 3.B-D pro VM/Window.
-        /// Background-Tasks (Warmup + BrainMirror) werden NICHT von diesem Container gestartet,
-        /// weil der Legacy-ServiceProvider sie bereits triggert (Doppel-Start vermeiden).
+        /// Microsoft.Extensions.DependencyInjection-Container. Disposed in OnExit.
+        /// Background-Tasks (Warmup + BrainMirror) werden ueber StartBackgroundServices() gestartet.
         /// </summary>
         public static System.IServiceProvider DiServices
             => _diServices ?? throw new InvalidOperationException("DI services are not initialized.");
 
-        /// <summary>
-        /// Phase 5.1.B Etappe 3.C: Convenience-Helper fuer Aufrufer-Migration.
-        /// Aequivalent zu App.DiServices.GetRequiredService&lt;T&gt;().
-        /// </summary>
+        /// <summary>Convenience-Helper: <c>App.DiServices.GetRequiredService&lt;T&gt;()</c>.</summary>
         public static T Resolve<T>() where T : notnull
             => ServiceProviderServiceExtensions.GetRequiredService<T>(DiServices);
 
@@ -93,26 +76,25 @@ namespace AuswertungPro.Next.UI
                     ExplicitPdfToTextPath = settings.PdfToTextPath
                 };
 
-                _services = new ServiceProvider(settings, diagnostics, logger, loggerFactory);
-
-                // Phase 5.1.B Etappe 3.A: Paralleler DI-Container. Bewusst KEIN
-                // StartBackgroundServices() — die Warmup/BrainMirror-Tasks werden
-                // bereits durch den Legacy-ServiceProvider-Konstruktor angestossen,
-                // ein zweiter Start wuerde Doppel-Warmup + Doppel-BrainMirror-Sync ausloesen.
+                // Phase 5.1.B Etappe 4 Sub-E: Nur noch DI-Container — Legacy-ServiceProvider entfernt.
                 var diCollection = new ServiceCollection();
                 diCollection.AddSewerStudioInfrastructure(settings, diagnostics, logger, loggerFactory);
                 diCollection.AddSewerStudioCoreServices();
                 diCollection.AddSewerStudioAiServices();
                 _diServices = diCollection.BuildServiceProvider();
 
-                // Sidecar (YOLO/Florence-2/SAM 2) im Hintergrund starten
+                // Background-Tasks (Modell-Warmup + BrainMirror-Sync) starten.
+                ServiceCollectionConfigurator.StartBackgroundServices(_diServices);
+
+                // Sidecar (YOLO/Florence-2/SAM 2) im Hintergrund starten.
                 if (settings.SidecarAutoStart != false)
                 {
+                    var sidecar = Resolve<PythonSidecarService>();
                     _ = Task.Run(async () =>
                     {
                         try
                         {
-                            await _services.Sidecar.StartAsync();
+                            await sidecar.StartAsync();
                         }
                         catch (Exception ex)
                         {
@@ -187,7 +169,7 @@ namespace AuswertungPro.Next.UI
                         "1",
                         StringComparison.Ordinal))
                 {
-                    var codeCatalog = ((ServiceProvider)_services!).CodeCatalog;
+                    var codeCatalog = Resolve<ICodeCatalogProvider>();
                     AuswertungPro.Next.UI.ViewModels.Protocol.CodeCatalogProviderTest.RunTest(codeCatalog);
                 }
 #endif
@@ -269,28 +251,8 @@ namespace AuswertungPro.Next.UI
         {
             try
             {
-                (_services as ServiceProvider)?.Sidecar.Dispose();
-            }
-            catch
-            {
-                // best effort sidecar shutdown
-            }
-
-            try
-            {
-                // Phase 0.2: ServiceProvider disposed sein eigenen kbHttp (HttpClient).
-                (_services as ServiceProvider)?.Dispose();
-            }
-            catch
-            {
-                // best effort service-provider shutdown
-            }
-
-            try
-            {
-                // Phase 5.1.B Etappe 3.A: DI-Container disposen — disposed alle
-                // Singleton-Services die IDisposable implementieren (KbHttp via
-                // KnowledgeBaseModule.Services-record).
+                // DI-Container disposed alle Singleton-Services die IDisposable implementieren
+                // (Sidecar, KbHttp via KnowledgeBaseModule.Services-record, etc.).
                 (_diServices as IDisposable)?.Dispose();
             }
             catch
@@ -338,17 +300,18 @@ namespace AuswertungPro.Next.UI
 
             try
             {
-                if (_services is not ServiceProvider realSp)
+                if (_diServices is null)
                     return;
 
-                var gen = realSp.ErrorCodes;
+                var gen = Resolve<ErrorCodeGenerator>();
                 var code = gen.GenerateForException("APP", ex, context);
 
-                realSp.Logger.LogError(ex, "Unhandled exception {Code} {Context}", code, context);
+                Resolve<Microsoft.Extensions.Logging.ILogger>()
+                    .LogError(ex, "Unhandled exception {Code} {Context}", code, context);
 
                 try
                 {
-                    if (realSp.Diagnostics.EnableDiagnostics)
+                    if (Resolve<DiagnosticsOptions>().EnableDiagnostics)
                     {
                         MessageBox.Show(
                             $"Es ist ein Fehler aufgetreten.\n\nCode: {code}\n{ex.Message}\n\nDetails: siehe Log-Datei",

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -6,6 +6,10 @@ using System.Text;
 using System.Text.Json;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Diagnostics;
+using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.Vsa;
+using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -14,23 +18,34 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 public sealed partial class VsaPageViewModel : ObservableObject
 {
     private readonly ShellViewModel _shell;
-    private readonly ServiceProvider _sp;
+    private readonly AppSettings _settings;
+    private readonly DiagnosticsOptions _diagnostics;
+    private readonly IXtfImportService _xtfImport;
+    private readonly IPdfImportService _pdfImport;
+    private readonly IVsaEvaluationService _vsa;
+    private readonly IMeasureRecommendationService _measureRecommendation;
 
     [ObservableProperty] private string _summary = "Noch keine Berechnung.";
 
     public IRelayCommand RunCommand { get; }
 
-    public VsaPageViewModel(ShellViewModel shell, ServiceProvider sp)
+    // Phase 5.1.B Etappe 4 Sub-B: ServiceProvider-Bundle entfernt, konkrete Services injiziert.
+    public VsaPageViewModel(ShellViewModel shell)
     {
         _shell = shell;
-        _sp = sp;
+        _settings = App.Resolve<AppSettings>();
+        _diagnostics = App.Resolve<DiagnosticsOptions>();
+        _xtfImport = App.Resolve<IXtfImportService>();
+        _pdfImport = App.Resolve<IPdfImportService>();
+        _vsa = App.Resolve<IVsaEvaluationService>();
+        _measureRecommendation = App.Resolve<IMeasureRecommendationService>();
         RunCommand = new RelayCommand(Run);
     }
 
     private void Run()
     {
         // Import-Reihenfolge: XTF/M150/MDB primaer, PDF sekundaer
-        var xtfFiles = LoadStoredXtfFiles(_sp.Settings.LastProjectPath);
+        var xtfFiles = LoadStoredXtfFiles(_settings.LastProjectPath);
         var importSb = new StringBuilder();
         importSb.AppendLine($"Import-Quellen: XTF/M150/MDB={xtfFiles.Count}");
 
@@ -42,7 +57,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
 
         if (xtfFiles.Count > 0)
         {
-            var resImport = _sp.XtfImport.ImportXtfFiles(xtfFiles, _shell.Project);
+            var resImport = _xtfImport.ImportXtfFiles(xtfFiles, _shell.Project);
             if (!resImport.Ok || resImport.Value is null)
             {
                 Summary = $"Fehler: {resImport.ErrorMessage}";
@@ -57,7 +72,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
             xtfErrors += resImport.Value.Errors;
         }
 
-        var pdfFiles = LoadStoredPdfFiles(_sp.Settings.LastProjectPath);
+        var pdfFiles = LoadStoredPdfFiles(_settings.LastProjectPath);
         importSb.AppendLine($"Import-Quellen: PDF={pdfFiles.Count}");
 
         var pdfFound = 0;
@@ -70,7 +85,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
         {
             foreach (var pdf in pdfFiles)
             {
-                var resPdf = _sp.PdfImport.ImportPdf(pdf, _shell.Project, _sp.Diagnostics.ExplicitPdfToTextPath, fillMissingOnly: true);
+                var resPdf = _pdfImport.ImportPdf(pdf, _shell.Project, _diagnostics.ExplicitPdfToTextPath, fillMissingOnly: true);
                 if (!resPdf.Ok || resPdf.Value is null)
                 {
                     Summary = $"Fehler: {resPdf.ErrorMessage}";
@@ -91,7 +106,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
         if (pdfFiles.Count > 0)
             importSb.AppendLine($"PDF Stats: Found={pdfFound}, Created={pdfCreated}, Updated={pdfUpdated}, Uncertain={pdfUncertain}, Errors={pdfErrors}");
 
-        var res = _sp.Vsa.Evaluate(_shell.Project);
+        var res = _vsa.Evaluate(_shell.Project);
         if (!res.Ok || res.Value is null)
         {
             Summary = importSb.ToString() + $"\nFehler: {res.ErrorMessage}";
@@ -113,7 +128,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
             ? $"\nSanierungsmassnahmen: {measureResult.Filled} Haltungen befuellt, {measureResult.Skipped} uebersprungen."
             : "";
         Summary = importSb.ToString() +
-                  $"\nBerechnet für {count} Records. Ø Zustandsnote D: {avgD:0.00}.\n" +
+                  $"\nBerechnet fuer {count} Records. Avg Zustandsnote D: {avgD:0.00}.\n" +
                   (string.IsNullOrWhiteSpace(diag) ? "" : (diag + "\n")) +
                   measureInfo +
                   "\nHinweis: Klassifizierungstabellen sind im Skeleton nur beispielhaft.";
@@ -182,7 +197,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
 
     private MeasureBatchResult SuggestMeasuresForAll()
     {
-        var service = _sp.MeasureRecommendation;
+        var service = _measureRecommendation;
         var filled = 0;
         var skipped = 0;
         var noSuggestion = 0;

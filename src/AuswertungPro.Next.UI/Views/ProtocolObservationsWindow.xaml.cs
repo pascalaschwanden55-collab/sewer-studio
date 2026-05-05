@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Windows;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -20,7 +21,12 @@ public partial class ProtocolObservationsWindow : Window
 {
     private readonly HaltungRecord _record;
     private readonly Project _project;
-    private readonly ServiceProvider _sp;
+    private readonly AppSettings _settings;
+    private readonly IDialogService _dialogs;
+    private readonly IProtocolService _protocols;
+    private readonly ICodeCatalogProvider _codeCatalog;
+    private readonly IProtocolAiService _protocolAi;
+    private readonly ProtocolPdfExporter _protocolPdfExporter;
     private readonly string? _videoPath;
     private readonly string? _projectFolder;
     private readonly ProtocolDocument _doc;
@@ -29,10 +35,10 @@ public partial class ProtocolObservationsWindow : Window
     private bool _isOpeningDialog;
     private bool _isRefreshingEntries;
 
+    // Phase 5.1.B Etappe 4 Sub-D: ServiceProvider-Bundle entfernt, konkrete Services injiziert.
     public ProtocolObservationsWindow(
         HaltungRecord record,
         Project project,
-        ServiceProvider sp,
         string? videoPath,
         string? projectFolder,
         Action markDirty)
@@ -42,7 +48,12 @@ public partial class ProtocolObservationsWindow : Window
 
         _record = record;
         _project = project;
-        _sp = sp;
+        _settings = App.Resolve<AppSettings>();
+        _dialogs = App.Resolve<IDialogService>();
+        _protocols = App.Resolve<IProtocolService>();
+        _codeCatalog = App.Resolve<ICodeCatalogProvider>();
+        _protocolAi = App.Resolve<IProtocolAiService>();
+        _protocolPdfExporter = App.Resolve<ProtocolPdfExporter>();
         _videoPath = videoPath;
         _projectFolder = projectFolder;
         _markDirty = markDirty;
@@ -80,7 +91,7 @@ public partial class ProtocolObservationsWindow : Window
                 && record.VsaFindings is { Count: > 0 })
             {
                 var imported = BuildImportedEntries(record);
-                record.Protocol = _sp.Protocols.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", imported, null);
+                record.Protocol = _protocols.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", imported, null);
             }
 
             return record.Protocol;
@@ -89,7 +100,7 @@ public partial class ProtocolObservationsWindow : Window
         var entries = record.VsaFindings is { Count: > 0 }
             ? BuildImportedEntries(record)
             : Array.Empty<ProtocolEntry>();
-        var doc = _sp.Protocols.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
+        var doc = _protocols.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
         record.Protocol = doc;
         return doc;
     }
@@ -207,7 +218,7 @@ public partial class ProtocolObservationsWindow : Window
 
     private bool OpenObservationDialog(ProtocolEntry entry)
     {
-        if (_sp.CodeCatalog is null)
+        if (_codeCatalog is null)
         {
             MessageBox.Show("Code-Katalog ist nicht verfuegbar.", "Protokoll", MessageBoxButton.OK, MessageBoxImage.Information);
             return false;
@@ -217,9 +228,9 @@ public partial class ProtocolObservationsWindow : Window
         try
         {
             var vm = new ObservationCatalogViewModel(
-                _sp.CodeCatalog,
+                _codeCatalog,
                 entry,
-                _sp.ProtocolAi,
+                _protocolAi,
                 _record.GetFieldValue("Haltungsname"),
                 _videoPath,
                 _projectFolder);
@@ -256,13 +267,13 @@ public partial class ProtocolObservationsWindow : Window
             try
             {
                 var options = new PlayerWindowOptions(
-                    EnableHardwareDecoding: _sp.Settings.VideoHwDecoding,
-                    DropLateFrames: _sp.Settings.VideoDropLateFrames,
-                    SkipFrames: _sp.Settings.VideoSkipFrames,
-                    FileCachingMs: _sp.Settings.VideoFileCachingMs,
-                    NetworkCachingMs: _sp.Settings.VideoNetworkCachingMs,
-                    CodecThreads: _sp.Settings.VideoCodecThreads,
-                    VideoOutput: _sp.Settings.VideoOutput);
+                    EnableHardwareDecoding: _settings.VideoHwDecoding,
+                    DropLateFrames: _settings.VideoDropLateFrames,
+                    SkipFrames: _settings.VideoSkipFrames,
+                    FileCachingMs: _settings.VideoFileCachingMs,
+                    NetworkCachingMs: _settings.VideoNetworkCachingMs,
+                    CodecThreads: _settings.VideoCodecThreads,
+                    VideoOutput: _settings.VideoOutput);
                 var window = new PlayerWindow(_videoPath!, options, overlayText);
                 window.Owner = this;
                 window.Show();
@@ -277,7 +288,7 @@ public partial class ProtocolObservationsWindow : Window
     private void StartNachprotokoll()
     {
         var comment = "Nachprotokoll";
-        _sp.Protocols.StartNachprotokoll(_doc, user: null, comment: comment);
+        _protocols.StartNachprotokoll(_doc, user: null, comment: comment);
         LoadEntries();
         EntriesGrid.Items.Refresh();
         MarkDirty();
@@ -287,7 +298,7 @@ public partial class ProtocolObservationsWindow : Window
     private void StartNeuProtokoll()
     {
         var comment = "Neu protokolliert (leer)";
-        _sp.Protocols.StartNeuProtokoll(_doc, user: null, comment: comment);
+        _protocols.StartNeuProtokoll(_doc, user: null, comment: comment);
         LoadEntries();
         EntriesGrid.Items.Refresh();
         MarkDirty();
@@ -301,7 +312,7 @@ public partial class ProtocolObservationsWindow : Window
         if (confirm != MessageBoxResult.Yes)
             return;
 
-        _sp.Protocols.RestoreOriginal(_doc, user: null);
+        _protocols.RestoreOriginal(_doc, user: null);
         LoadEntries();
         EntriesGrid.Items.Refresh();
         MarkDirty();
@@ -310,7 +321,7 @@ public partial class ProtocolObservationsWindow : Window
 
     private void ShowHistory()
     {
-        var dlg = new ProtocolHistoryWindow(_doc, _sp.Protocols, () =>
+        var dlg = new ProtocolHistoryWindow(_doc, _protocols, () =>
         {
             LoadEntries();
             EntriesGrid.Items.Refresh();
@@ -338,7 +349,7 @@ public partial class ProtocolObservationsWindow : Window
     {
         var holding = _record.GetFieldValue("Haltungsname");
         var defaultName = $"Haltungsprotokoll_{SanitizeFilePart(holding)}_{DateTime.Now:yyyyMMdd}.pdf";
-        var output = _sp.Dialogs.SaveFile(
+        var output = _dialogs.SaveFile(
             "Haltungsprotokoll als PDF speichern",
             "PDF (*.pdf)|*.pdf",
             defaultExt: "pdf",
@@ -355,10 +366,10 @@ public partial class ProtocolObservationsWindow : Window
             };
 
             var root = _projectFolder;
-            if (string.IsNullOrWhiteSpace(root) && !string.IsNullOrWhiteSpace(_sp.Settings.LastProjectPath))
-                root = Path.GetDirectoryName(_sp.Settings.LastProjectPath);
+            if (string.IsNullOrWhiteSpace(root) && !string.IsNullOrWhiteSpace(_settings.LastProjectPath))
+                root = Path.GetDirectoryName(_settings.LastProjectPath);
             root ??= "";
-            var pdf = _sp.ProtocolPdfExporter.BuildHaltungsprotokollPdf(_project, _record, _doc, root, options);
+            var pdf = _protocolPdfExporter.BuildHaltungsprotokollPdf(_project, _record, _doc, root, options);
             File.WriteAllBytes(output, pdf);
 
             MessageBox.Show($"PDF wurde erstellt:\n{output}", "PDF", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -571,7 +582,7 @@ public partial class ProtocolObservationsWindow : Window
             // Beschreibung aus dem VSA-Katalog auflösen, wenn Raw leer oder nur Kuerzel
             if ((string.IsNullOrWhiteSpace(beschreibung) || beschreibung.Length <= 3) &&
                 !string.IsNullOrWhiteSpace(code) &&
-                _sp.CodeCatalog.TryGet(code, out var codeDef) &&
+                _codeCatalog.TryGet(code, out var codeDef) &&
                 !string.IsNullOrWhiteSpace(codeDef.Title))
             {
                 beschreibung = codeDef.Title;

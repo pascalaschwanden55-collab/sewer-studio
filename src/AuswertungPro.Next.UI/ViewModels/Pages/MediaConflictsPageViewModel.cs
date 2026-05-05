@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using AuswertungPro.Next.Infrastructure.Media;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Views.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -101,7 +102,8 @@ public sealed partial class MediaConflictRowViewModel : ObservableObject
 public sealed partial class MediaConflictsPageViewModel : ObservableObject
 {
     private readonly ShellViewModel _shell;
-    private readonly ServiceProvider _sp;
+    private readonly AppSettings _settings;
+    private readonly IDialogService _dialogs;
     private readonly MediaConflictCenterService _service = new();
 
     [ObservableProperty] private MediaConflictRowViewModel? _selectedConflict;
@@ -128,10 +130,12 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
     public IRelayCommand PlaySelectedCandidateCommand { get; }
     public IRelayCommand PlaySuggestedSourceCommand { get; }
 
-    public MediaConflictsPageViewModel(ShellViewModel shell, ServiceProvider sp)
+    // Phase 5.1.B Etappe 4 Sub-B: ServiceProvider-Bundle entfernt, Settings + Dialogs injiziert.
+    public MediaConflictsPageViewModel(ShellViewModel shell)
     {
         _shell = shell;
-        _sp = sp;
+        _settings = App.Resolve<AppSettings>();
+        _dialogs = App.Resolve<IDialogService>();
 
         RefreshCommand = new RelayCommand(Refresh);
         ResolveFromCandidateCommand = new RelayCommand(ResolveFromCandidate);
@@ -175,7 +179,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
                 SuggestedSourcePath = _service.TryResolveLearnedSourcePath(
                     _shell.Project,
                     conflict,
-                    _sp.Settings.LastVideoSourceFolder)
+                    _settings.LastVideoSourceFolder)
             };
 
             Conflicts.Add(row);
@@ -207,11 +211,11 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         if (SelectedConflict is null)
             return;
 
-        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
-            ? _sp.Settings.LastVideoSourceFolder
+        var initial = !string.IsNullOrWhiteSpace(_settings.LastVideoSourceFolder)
+            ? _settings.LastVideoSourceFolder
             : SelectedConflict.Conflict.HoldingFolder;
 
-        var source = _sp.Dialogs.OpenFile(
+        var source = _dialogs.OpenFile(
             "Video fuer Konflikt auswaehlen",
             MediaFileTypes.VideoDialogFilter,
             initial);
@@ -222,9 +226,9 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         var selectedDir = Path.GetDirectoryName(source);
         if (!string.IsNullOrWhiteSpace(selectedDir))
         {
-            _sp.Settings.LastVideoSourceFolder = selectedDir;
-            _sp.Settings.LastVideoFolder = selectedDir;
-            _sp.Settings.Save();
+            _settings.LastVideoSourceFolder = selectedDir;
+            _settings.LastVideoFolder = selectedDir;
+            _settings.Save();
         }
 
         ResolveSelected(source, setUserEdited: true);
@@ -286,7 +290,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         var result = _service.AutoResolveLearned(
             _shell.Project,
             projectFolder,
-            _sp.Settings.LastVideoSourceFolder,
+            _settings.LastVideoSourceFolder,
             setUserEdited: false);
 
         Refresh();
@@ -379,16 +383,16 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         try
         {
             var options = new PlayerWindowOptions(
-                EnableHardwareDecoding: _sp.Settings.VideoHwDecoding,
-                DropLateFrames: _sp.Settings.VideoDropLateFrames,
-                SkipFrames: _sp.Settings.VideoSkipFrames,
-                FileCachingMs: _sp.Settings.VideoFileCachingMs,
-                NetworkCachingMs: _sp.Settings.VideoNetworkCachingMs,
-                CodecThreads: _sp.Settings.VideoCodecThreads,
-                VideoOutput: _sp.Settings.VideoOutput);
+                EnableHardwareDecoding: _settings.VideoHwDecoding,
+                DropLateFrames: _settings.VideoDropLateFrames,
+                SkipFrames: _settings.VideoSkipFrames,
+                FileCachingMs: _settings.VideoFileCachingMs,
+                NetworkCachingMs: _settings.VideoNetworkCachingMs,
+                CodecThreads: _settings.VideoCodecThreads,
+                VideoOutput: _settings.VideoOutput);
 
             var window = new PlayerWindow(path, options);
-            _sp.Dialogs.Show(window);
+            _dialogs.Show(window);
         }
         catch (Exception ex)
         {
