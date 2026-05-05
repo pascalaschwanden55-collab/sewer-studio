@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
@@ -1701,5 +1702,331 @@ public partial class PlayerWindow
         {
             return null;
         }
+    }
+    // === Sub-I: KI-Filter-Pfad — FilterValidFindings + Code-Resolver + AddAiFindings ===
+
+    /// <summary>
+    /// Filtert und normalisiert KI-Findings.
+    /// Nach diesem Schritt gilt fuer jedes Finding:
+    ///   - VsaCodeHint ist ein gueltiger VSA-Code (validiert) oder das Finding wurde verworfen
+    ///   - Keine "???"-Codes, keine ungeprueften Hint-Werte
+    /// </summary>
+    private IReadOnlyList<LiveFrameFinding> FilterValidFindings(IReadOnlyList<LiveFrameFinding> raw, double currentMeter)
+    {
+        var filtered = new List<LiveFrameFinding>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var f in raw)
+        {
+            // Einzige Code-Aufloesung — ResolveFindingCodeForCoding gibt validen Code oder null
+            var code = ResolveFindingCodeForCoding(f, currentMeter);
+
+            // BCD/BCE: Live-Check bei JEDEM Finding (nicht gecacht!).
+            // Wichtig weil zwischen Analyse-Start und diesem Punkt der Eingabemarker
+            // bereits ein BCD erzeugt haben kann (async Timing).
+            if (code != null
+                && (string.Equals(code, "BCD", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(code, "BCE", StringComparison.OrdinalIgnoreCase)))
+            {
+                bool alreadyExists =
+                    _codingSessionService?.ActiveSession?.Events.Any(e =>
+                        string.Equals(e.Entry.Code, code, StringComparison.OrdinalIgnoreCase)) == true
+                    || _codingVm?.Events.Any(e =>
+                        string.Equals(e.Entry.Code, code, StringComparison.OrdinalIgnoreCase)) == true;
+                if (alreadyExists)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[KI-Filter] {code} uebersprungen (bereits vorhanden, live-check)");
+                    continue;
+                }
+            }
+
+            System.Diagnostics.Debug.WriteLine(
+                $"[KI-Filter] Label='{f.Label}' VsaCodeHint='{f.VsaCodeHint}' → Code='{code ?? "(null)"}'");
+
+            if (code == null)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[KI-Filter] Verworfen: Label='{f.Label}' (kein VSA-Code ableitbar)");
+                continue;
+            }
+
+            // Sperrliste: vom Benutzer abgelehnte Befunde nicht erneut einfuegen
+            if (_rejectedFindings.Contains(MakeRejectionKey(code, currentMeter)))
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[KI-Filter] Gesperrt: {code} @ {currentMeter:F1}m (vom Benutzer geloescht)");
+                continue;
+            }
+
+            // VsaCodeHint konsequent auf den validierten Code setzen.
+            // Alte ungueltige Werte werden NICHT beibehalten.
+            var normalizedFinding = string.Equals(code, f.VsaCodeHint, StringComparison.OrdinalIgnoreCase)
+                ? f
+                : f with { VsaCodeHint = code };
+
+            // Deduplizierung: code + raeumliche Position
+            string dedupeKey;
+            if (normalizedFinding.BboxX1.HasValue && normalizedFinding.BboxY1.HasValue
+                && normalizedFinding.BboxX2.HasValue && normalizedFinding.BboxY2.HasValue)
+            {
+                var cx = Math.Round((normalizedFinding.BboxX1.Value + normalizedFinding.BboxX2.Value) / 2, 1);
+                var cy = Math.Round((normalizedFinding.BboxY1.Value + normalizedFinding.BboxY2.Value) / 2, 1);
+                dedupeKey = $"{code}@{cx:F1},{cy:F1}";
+            }
+            else
+            {
+                dedupeKey = $"{code}@{NormalizeClockPosition(normalizedFinding.PositionClock) ?? "?"}";
+            }
+
+            if (!seen.Add(dedupeKey)) continue;
+
+            filtered.Add(normalizedFinding);
+        }
+
+        return filtered;
+    }
+
+    /// <summary>
+    /// Klartext-Lookup fuer einen VSA-Code mit Fallback-Kette:
+    /// Voller Code → 3-Zeichen-Hauptcode → 2-Zeichen-Gruppe → null.
+    /// </summary>
+    // Phase 6.1.C: LookupVsaLabel + ApplyQuantificationToEntry +
+    // EstimateSeverityFromQuantification + NormalizeClockPosition
+    // nach PlayerWindow.Helpers.cs migriert.
+
+    /// <summary>
+    /// Einzige Quelle fuer VSA-Code-Aufloesung eines KI-Findings.
+    /// Delegiert an VsaCodeResolver (zentrale Utility) + Import-Verfeinerung.
+    /// Gibt validen VSA-Code oder null zurueck — nie "???".
+    /// </summary>
+    private string? ResolveFindingCodeForCoding(LiveFrameFinding finding, double currentMeter)
+    {
+        // 1. VsaCodeHint normalisieren
+        var hinted = Ai.VsaCodeResolver.NormalizeFindingCode(finding.VsaCodeHint);
+        if (hinted != null)
+            return RefineGenericCodeFromImport(hinted, currentMeter) ?? hinted;
+
+        // 2. Label-Heuristik
+        var coarse = Ai.VsaCodeResolver.InferCodeFromLabel(finding.Label);
+        if (coarse != null)
+            return RefineGenericCodeFromImport(coarse, currentMeter) ?? coarse;
+
+        // 3. Konservativer Import-Fallback fuer Grundgeruest-Codes am aktuellen Meter
+        var importFallback = TryResolveImportFallbackCode(currentMeter);
+        if (importFallback != null)
+            return importFallback;
+
+        // 4. Kein Code ableitbar
+        return null;
+    }
+
+    /// <summary>
+    private string? RefineGenericCodeFromImport(string genericCode, double currentMeter)
+    {
+        if (_codingImportEvents.Count == 0 || string.IsNullOrWhiteSpace(genericCode))
+            return null;
+
+        var family = genericCode.Trim().ToUpperInvariant();
+        var candidate = _codingImportEvents
+            .Where(ev =>
+                !string.IsNullOrWhiteSpace(ev.Entry?.Code) &&
+                ev.Entry.Code.StartsWith(family, StringComparison.OrdinalIgnoreCase))
+            .Select(ev => new
+            {
+                Code = ev.Entry.Code!.Trim().ToUpperInvariant(),
+                Distance = Math.Abs(ev.MeterAtCapture - currentMeter)
+            })
+            .Where(x => x.Distance <= 2.0)
+            .OrderBy(x => x.Distance)
+            .ThenByDescending(x => x.Code.Length)
+            .FirstOrDefault();
+
+        return candidate?.Code;
+    }
+
+    private string? TryResolveImportFallbackCode(double currentMeter)
+    {
+        if (_codingImportEvents.Count == 0)
+            return null;
+
+        var candidate = _codingImportEvents
+            .Where(ev => !string.IsNullOrWhiteSpace(ev.Entry?.Code))
+            .Select(ev => new
+            {
+                Code = ev.Entry!.Code.Trim().ToUpperInvariant(),
+                Distance = Math.Abs(ev.MeterAtCapture - currentMeter)
+            })
+            .Where(x => x.Distance <= 2.0 && IsAllowedImportFallbackCode(x.Code))
+            .OrderBy(x => x.Distance)
+            .ThenByDescending(x => x.Code.Length)
+            .FirstOrDefault();
+
+        return candidate?.Code;
+    }
+
+    /// <summary>
+    /// KI-Befunde als CodingEvents eintragen — mit QualityGate-Ampelsystem.
+    /// Erwartet bereits gefilterte Findings (aus FilterValidFindings).
+    /// </summary>
+    private void AddAiFindingsAsEvents(LiveDetection result, IReadOnlyList<LiveFrameFinding> validFindings)
+    {
+        if (_codingVm == null || _codingSessionService == null) return;
+
+        double meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
+        var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
+        bool anyAdded = false;
+        CodingEvent? firstUnsure = null;
+        QualityGateResult? firstUnsureGate = null;
+
+        // BCD wird NICHT mehr automatisch erzeugt — nur durch Eingabemarker oder Qwen-Erkennung.
+        // EnsureRohranfangExists(meter, videoTime, ref anyAdded);
+
+        if (validFindings.Count == 0)
+        {
+            if (anyAdded) RefreshCodingEventsList();
+            return;
+        }
+
+        foreach (var finding in validFindings)
+        {
+            // FilterValidFindings garantiert: VsaCodeHint ist ein gueltiger VSA-Code.
+            // Kein zweiter Inferenzpfad hier — nur uebernehmen.
+            string code = finding.VsaCodeHint!;
+
+            // BCD/BCE existieren pro Haltung nur EINMAL — Meterstand-unabhaengige Dedup.
+            // Primaer gegen session.Events pruefen (wird nie gecleared, im Gegensatz zu _codingVm.Events).
+            if ((string.Equals(code, "BCD", StringComparison.OrdinalIgnoreCase)
+                 || string.Equals(code, "BCE", StringComparison.OrdinalIgnoreCase))
+                && (_codingSessionService?.ActiveSession?.Events.Any(e =>
+                        CodesMatchForDedup(e.Entry.Code, code)) == true
+                    || _codingVm.Events.Any(e => CodesMatchForDedup(e.Entry.Code, code))))
+            {
+                System.Diagnostics.Debug.WriteLine($"[BCD-Dedup] AddFindings: {code} uebersprungen (bereits vorhanden)");
+                continue;
+            }
+
+            // Klartext aufloesen (voller Code → Hauptcode → Gruppe)
+            var officialLabel = LookupVsaLabel(code);
+
+            // Duplikat-Check: gleicher Code (oder gleicher Hauptcode) bereits vorhanden?
+            // Hauptcode-Match: BCAEB vs BCA = gleiche Schadensgruppe → Duplikat.
+            // 1. Punktschaden: code + meter ±0.3m + gleiche Position
+            // 2. Streckenschaden: code faellt in den MeterStart..MeterEnd Bereich
+            // 3. Bereits akzeptierter/bearbeiteter Code: nicht nochmal melden
+            var coveringEvent = _codingVm.Events.FirstOrDefault(e =>
+                CodesMatchForDedup(e.Entry.Code, code) &&
+                IsAlreadyCovered(e, meter, finding));
+            if (coveringEvent != null)
+            {
+                // Offener Streckenschaden: letzte Sichtung merken (fuer automatisches Schliessen)
+                // MeterEnd bleibt null (= offen) — wird beim Exit via CloseOpenStreckenschaeden gesetzt
+                if (coveringEvent.Entry.IsStreckenschaden)
+                    coveringEvent.MeterAtCapture = Math.Max(coveringEvent.MeterAtCapture, meter);
+                continue;
+            }
+
+            // QualityGate: Severity -> EvidenceVector -> Ampel
+            var evidence = new EvidenceVector(
+                QwenVisionConf: finding.Severity / 5.0,
+                PlausibilityScore: 0.6
+            );
+            var gateResult = _codingQualityGate?.Evaluate(evidence)
+                ?? new QualityGateResult(
+                    finding.Severity / 5.0,
+                    finding.Severity >= 4 ? TrafficLight.Green : TrafficLight.Yellow,
+                    new Dictionary<string, double>(), "Fallback")!;
+
+            // officialLabel wurde oben bereits per LookupLabel geholt und validiert
+
+            // Streckenschaden-Erkennung: Codes die typischerweise ueber eine Strecke auftreten
+            // (z.B. Wasserrueckstau, Wurzeleinwuchs, Ablagerung, Korrosion)
+            bool isStrecke = Services.CodeCatalog.VsaCodeTree.IsStreckenschadenCode(code);
+
+            var entry = new ProtocolEntry
+            {
+                Source = ProtocolEntrySource.Ai,
+                Code = code,
+                Beschreibung = officialLabel ?? finding.Label,
+                MeterStart = meter,
+                IsStreckenschaden = isStrecke,
+                // MeterEnd bleibt null (offen) — wird beim naechsten Tick
+                // oder beim Exit automatisch geschlossen
+                Zeit = videoTime
+            };
+
+            if (!string.IsNullOrWhiteSpace(finding.PositionClock))
+            {
+                entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
+                entry.CodeMeta.Parameters["vsa.uhr.von"] = finding.PositionClock!;
+            }
+            if (finding.CrossSectionReductionPercent is > 0)
+            {
+                entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
+                entry.CodeMeta.Parameters["vsa.querschnitt.prozent"] = finding.CrossSectionReductionPercent.Value.ToString(CultureInfo.InvariantCulture);
+            }
+            else if (finding.IntrusionPercent is > 0)
+            {
+                entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
+                entry.CodeMeta.Parameters["vsa.querschnitt.prozent"] = finding.IntrusionPercent.Value.ToString(CultureInfo.InvariantCulture);
+            }
+
+            // Foto 1: Automatischer Snapshot vom Erkennungsframe
+            var fotoPath = CodingCaptureSnapshot(entry);
+            if (fotoPath != null)
+                entry.FotoPaths.Add(fotoPath);
+
+            var codingEvent = _codingSessionService?.AddEvent(entry);
+            if (codingEvent is not null)
+                codingEvent.AiContext = new CodingEventAiContext
+                {
+                    SuggestedCode = code,
+                    Confidence = gateResult.CompositeConfidence,
+                    Reason = finding.Label,
+                    Decision = gateResult.IsGreen
+                        ? CodingUserDecision.Accepted
+                        : CodingUserDecision.Ignored
+                };
+
+            // Bbox → OverlayGeometry (Rectangle) fuer Kontur-Rendering auf CodingOverlayCanvas
+            if (finding.BboxX1.HasValue && finding.BboxY1.HasValue
+                && finding.BboxX2.HasValue && finding.BboxY2.HasValue)
+            {
+                var x1 = finding.BboxX1.Value;
+                var y1 = finding.BboxY1.Value;
+                var x2 = finding.BboxX2.Value;
+                var y2 = finding.BboxY2.Value;
+                if (codingEvent is not null) codingEvent.Overlay = new OverlayGeometry
+                {
+                    ToolType = OverlayToolType.Rectangle,
+                    Points = new List<NormalizedPoint>
+                    {
+                        new(Math.Min(x1, x2), Math.Min(y1, y2)),
+                        new(Math.Max(x1, x2), Math.Min(y1, y2)),
+                        new(Math.Max(x1, x2), Math.Max(y1, y2)),
+                        new(Math.Min(x1, x2), Math.Max(y1, y2))
+                    }
+                };
+            }
+
+            anyAdded = true;
+
+            if (!gateResult.IsGreen && firstUnsure == null)
+            {
+                firstUnsure = codingEvent;
+                firstUnsureGate = gateResult;
+            }
+        }
+
+        if (anyAdded)
+        {
+            RefreshCodingEventsList();
+            RenderAiOverlays();
+            if (_codingVm.CurrentOverlay != null)
+                RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: false);
+            UpdateToolBadge();
+        }
+
+        if (firstUnsure != null && firstUnsureGate != null)
+            PauseAndAskConfirmation(firstUnsure, firstUnsureGate);
     }
 }
