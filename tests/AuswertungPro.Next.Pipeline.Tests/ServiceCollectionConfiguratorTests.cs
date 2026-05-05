@@ -1,15 +1,26 @@
 using System.IO;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Devis;
+using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.Projects;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Reports;
+using AuswertungPro.Next.Application.Vsa;
 using AuswertungPro.Next.Infrastructure.Devis;
 using AuswertungPro.Next.Infrastructure.Sanierung;
+using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Composition;
+using AuswertungPro.Next.UI.Modules;
+using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.UI.ViewModels.Protocol;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
@@ -70,6 +81,84 @@ public sealed class ServiceCollectionConfiguratorTests
         var firstDevis = provider.GetRequiredService<IDevisGenerator>();
         var secondDevis = provider.GetRequiredService<IDevisGenerator>();
         Assert.Same(firstDevis, secondDevis);
+    }
+
+    [Fact]
+    public void AddSewerStudioAiServices_ResolvesFullStack()
+    {
+        EnsureConfigDirectory();
+        EnsureDataFiles();
+
+        var services = BuildFullServiceCollection();
+        using var provider = services.BuildServiceProvider();
+
+        // KI-Plattform
+        Assert.NotNull(provider.GetRequiredService<AiPlatformConfig>());
+        Assert.NotNull(provider.GetRequiredService<PipelineConfig>());
+        Assert.NotNull(provider.GetRequiredService<AiRuntimeConfig>());
+
+        // Sidecar
+        Assert.NotNull(provider.GetRequiredService<PythonSidecarService>());
+
+        // CodeCatalog + VSA-Evaluation
+        Assert.NotNull(provider.GetRequiredService<ICodeCatalogProvider>());
+        Assert.NotNull(provider.GetRequiredService<IVsaEvaluationService>());
+
+        // KnowledgeBase Services-record
+        var kb = provider.GetRequiredService<KnowledgeBaseModule.Services>();
+        Assert.NotNull(kb);
+
+        // ProtocolAi (Noop weil cfg.Enabled meist false ohne AppSettings.AiEnabled=true)
+        Assert.NotNull(provider.GetRequiredService<IProtocolAiService>());
+
+        // Plausibility + MeasureRecommendation + Playwright
+        Assert.NotNull(provider.GetRequiredService<IAiSuggestionPlausibilityService>());
+        Assert.NotNull(provider.GetRequiredService<IMeasureRecommendationService>());
+        Assert.NotNull(provider.GetRequiredService<IPlaywrightInstallService>());
+    }
+
+    [Fact]
+    public void AddSewerStudioAiServices_PipelineConfigIsSingletonProjection()
+    {
+        EnsureConfigDirectory();
+        EnsureDataFiles();
+
+        var services = BuildFullServiceCollection();
+        using var provider = services.BuildServiceProvider();
+
+        var first = provider.GetRequiredService<PipelineConfig>();
+        var second = provider.GetRequiredService<PipelineConfig>();
+        Assert.Same(first, second);
+
+        var platform = provider.GetRequiredService<AiPlatformConfig>();
+        Assert.NotNull(platform);
+    }
+
+    private static IServiceCollection BuildFullServiceCollection()
+    {
+        var settings = AppSettings.Load();
+        var diagnostics = new DiagnosticsOptions();
+        var loggerFactory = NullLoggerFactory.Instance;
+        var logger = loggerFactory.CreateLogger("Test");
+
+        var services = new ServiceCollection();
+        services.AddSewerStudioInfrastructure(settings, diagnostics, logger, loggerFactory);
+        services.AddSewerStudioCoreServices();
+        services.AddSewerStudioAiServices();
+        return services;
+    }
+
+    /// <summary>
+    /// AddSewerStudioAiServices liest neben den DevisSanierung-JSONs auch
+    /// klassifikations- und VSA-Code-Dateien aus AppContext.BaseDirectory/Data.
+    /// </summary>
+    private static void EnsureDataFiles()
+    {
+        var dataDir = Path.Combine(System.AppContext.BaseDirectory, "Data");
+        Directory.CreateDirectory(dataDir);
+        EnsureFile(Path.Combine(dataDir, "vsa_codes.json"), "{}");
+        EnsureFile(Path.Combine(dataDir, "classification_channels.json"), "{}");
+        EnsureFile(Path.Combine(dataDir, "classification_manholes.json"), "{}");
     }
 
     /// <summary>
