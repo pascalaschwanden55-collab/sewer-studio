@@ -11,6 +11,7 @@ using System.Windows.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.QualityGate;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -907,5 +908,286 @@ public partial class PlayerWindow
             _codingOverlaySuspendDepth = 0;
             _codingOverlayWasOpenBeforeSuspend = false;
         });
+    }
+    // === Sub-F: KI-Pfad — InitCodingAi + RunCodingAnalysisAsync ===
+
+    // --- Coding KI-Analyse ---
+
+    private async void InitCodingAi()
+    {
+        try
+        {
+            var config = AiRuntimeConfig.Load();
+            _codingAiModelName = config.VisionModel;
+            if (!config.Enabled)
+            {
+                SetCodingAiState("Kuenstliche Intelligenz deaktiviert", Color.FromRgb(0x94, 0xA3, 0xB8), "Modell: aus");
+                BtnCodingAnalyze.IsEnabled = false;
+                return;
+            }
+
+            var client = config.CreateOllamaClient();
+            _codingLiveDetection = new LiveDetectionService(client, config.VisionModel);
+            _codingEnhancedVision = new EnhancedVisionAnalysisService(client, config.VisionModel, config.ReferenceVisionModel);
+            _codingQualityGate = new QualityGateService();
+
+            // Multi-Model Pipeline (YOLO → DINO → SAM) initialisieren
+            try
+            {
+                var sidecarUrl = Environment.GetEnvironmentVariable("SEWERSTUDIO_SIDECAR_URL")
+                    ?? "http://localhost:8100";
+                _codingVisionClient = new Ai.Pipeline.VisionPipelineClient(new Uri(sidecarUrl));
+                var health = await _codingVisionClient.HealthCheckAsync();
+                if (health != null)
+                {
+                    _codingMultiModel = new Ai.Pipeline.SingleFrameMultiModelService(_codingVisionClient);
+                    // Codier-Modus: Direkt Qwen, Sidecar nur fuer SAM-Nachsegmentierung
+                    SetCodingAiState("Kuenstliche Intelligenz bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
+                        $"{CompactModelName(_codingAiModelName)} + SAM-Segmentierung");
+                }
+                else
+                {
+                    SetCodingAiState("Kuenstliche Intelligenz bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
+                        $"{CompactModelName(_codingAiModelName)} (ohne SAM)");
+                }
+            }
+            catch
+            {
+                SetCodingAiState("Kuenstliche Intelligenz bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
+                    $"{CompactModelName(_codingAiModelName)} (ohne SAM)");
+            }
+            SetYoloStatus("Bereit", Color.FromRgb(0x22, 0xC5, 0x5E), CompactModelName(_codingAiModelName));
+
+            // Few-Shot-Beispiele laden — ohne diese findet die KI drastisch weniger (Audit-Fix)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    if (_codingEnhancedVision == null) return;
+                    var store = new Ai.Training.FewShotExampleStore();
+                    await _codingEnhancedVision.EnableFewShotAsync(store);
+                    var fsDiag = _codingEnhancedVision.FewShotDiagnostics ?? "keine";
+                    Dispatcher.Invoke(() =>
+                        SetCodingAiState("Kuenstliche Intelligenz bereit (Few-Shot)", Color.FromRgb(0x22, 0xC5, 0x5E),
+                            $"{CompactModelName(_codingAiModelName)} | {fsDiag}"));
+                }
+                catch (Exception fex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Player] Few-Shot laden fehlgeschlagen: {fex.Message}");
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            SetCodingAiState($"Fehler: {ex.Message}", Color.FromRgb(0xEF, 0x44, 0x44),
+                $"Modell: {CompactModelName(_codingAiModelName)}");
+            BtnCodingAnalyze.IsEnabled = false;
+        }
+    }
+
+    private async void CodingAnalyzeFrame_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await RunCodingAnalysisAsync("Aktuellen Frame analysieren...", disableAnalyzeButton: true);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PlayerWindow] CodingAnalyzeFrame_Click error: {ex.Message}");
+        }
+    }
+
+    private async Task RunCodingAnalysisAsync(string activityText, bool disableAnalyzeButton = false,
+        string? keywordHint = null, string? codeHint = null)
+    {
+        if ((_codingEnhancedVision == null && _codingLiveDetection == null && _codingMultiModel == null)
+            || _codingIsAnalyzing) return;
+
+        _codingIsAnalyzing = true;
+        _codingAnalysisCts?.Cancel();
+        _codingAnalysisCts = new CancellationTokenSource();
+
+        try
+        {
+            if (disableAnalyzeButton)
+                BtnCodingAnalyze.IsEnabled = false;
+
+            // Zeitstempel VOR dem Capture festhalten (CaptureSnapshotAsync wartet bis zu 1s)
+            var captureTimestampSec = _player.Time / 1000.0;
+
+            // ── YOLO-first Live-Analyse: YOLO26l-seg → SAM → optional Qwen-Eskalation ──
+            SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
+                "Schritt 1: Snapshot", pulse: true);
+
+            {
+                var pngBytes = await CaptureSnapshotAsync();
+                if (pngBytes == null || pngBytes.Length == 0)
+                {
+                    SetCodingAiState("Frame nicht extrahierbar", Color.FromRgb(0xEF, 0x44, 0x44));
+                    return;
+                }
+
+                var b64 = Convert.ToBase64String(pngBytes);
+                int dn = _codingOverlayService?.Calibration?.NominalDiameterMm ?? 300;
+
+                // ── Schritt 1: YOLO26l-seg Erkennung (2ms) + Kandidaten-Tracking ──
+                LiveDetection? result = null;
+                bool yoloHadFindings = false;
+
+                if (_codingVisionClient != null && _codingMultiModel != null)
+                {
+                    try
+                    {
+                        SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
+                            "YOLO Detection...", pulse: true);
+
+                        var mmResult = await _codingMultiModel.AnalyzeFrameAsync(
+                            pngBytes, dn, _codingOverlayService?.Calibration,
+                            _codingAnalysisCts.Token);
+
+                        if (mmResult.HasDetections && mmResult.SamResponse != null)
+                        {
+                            int imgW = mmResult.SamResponse.ImageWidth;
+                            int imgH = mmResult.SamResponse.ImageHeight;
+
+                            // Jede Detektion klassifizieren: Nahbereich oder Tiefe?
+                            var nearIndices = new HashSet<int>();
+                            var depthLabels = new List<string>();
+
+                            for (int i = 0; i < mmResult.DinoDetections.Count; i++)
+                            {
+                                var d = mmResult.DinoDetections[i];
+                                double nArea = ((d.X2 - d.X1) * (d.Y2 - d.Y1)) / (imgW * (double)imgH);
+                                double ncx = ((d.X1 + d.X2) / 2.0) / imgW;
+                                double ncy = ((d.Y1 + d.Y2) / 2.0) / imgH;
+
+                                // Tiefe-Erkennung: Box-Mittelpunkt nahe Bildmitte = Fluchtpunkt = weit weg
+                                // Unabhaengig von Box-Groesse (YOLO liefert grosse Boxen wegen Training)
+                                double distFromCenter = Math.Sqrt(Math.Pow(ncx - 0.5, 2) + Math.Pow(ncy - 0.5, 2));
+                                // Box beruehrt den Bildrand? → definitiv nah
+                                double margin = 0.05;
+                                bool touchesEdge = d.X1 / imgW < margin || d.Y1 / imgH < margin
+                                               || d.X2 / imgW > (1 - margin) || d.Y2 / imgH > (1 - margin);
+                                // Nah = Box beruehrt Rand ODER Mittelpunkt weit von Bildmitte
+                                bool isNear = touchesEdge || distFromCenter > 0.25;
+
+                                if (!isNear)
+                                {
+                                    // In der Tiefe → Kandidat merken (noch nicht protokollieren)
+                                    _codingDepthCandidates[d.Label] = (captureTimestampSec, nArea, d.Confidence, d.Label);
+                                    depthLabels.Add(d.Label);
+                                }
+                                else
+                                {
+                                    // Nahbereich → als Befund akzeptieren
+                                    nearIndices.Add(i);
+
+                                    // War das ein vorheriger Kandidat der jetzt nah ist? → bestaetigt!
+                                    if (_codingDepthCandidates.Remove(d.Label))
+                                        System.Diagnostics.Debug.WriteLine(
+                                            $"[Kandidat→Befund] {d.Label} wurde bestaetigt (von Tiefe zu Nah)");
+                                }
+                            }
+
+                            if (nearIndices.Count > 0)
+                            {
+                                yoloHadFindings = true;
+
+                                // Nur Nahbereich-Detektionen als Events + SAM-Masken
+                                var acceptedIndices = AddMultiModelFindingsAsEvents(mmResult, captureTimestampSec);
+                                // Nur nahe Masken rendern
+                                var nearAccepted = acceptedIndices != null
+                                    ? new HashSet<int>(acceptedIndices.Where(i => nearIndices.Contains(i)))
+                                    : nearIndices;
+                                ShowMultiModelResults(mmResult, nearAccepted);
+
+                                int nearCount = _currentMmResult?.QuantifiedMasks.Count ?? 0;
+                                var depthInfo = depthLabels.Count > 0
+                                    ? $" | Tiefe: {string.Join(", ", depthLabels)}"
+                                    : "";
+                                SetCodingAiState(
+                                    $"{nearCount} Befunde (YOLO){depthInfo}",
+                                    Color.FromRgb(0x22, 0xC5, 0x5E),
+                                    $"YOLO {mmResult.YoloTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms");
+
+                                if (BtnCodingPauseMode.IsChecked == true && nearCount > 0)
+                                {
+                                    _player?.SetPause(true);
+                                    SetCodingAiState(
+                                        $"{nearCount} Befunde — pausiert{depthInfo}",
+                                        Color.FromRgb(0x38, 0xBD, 0xF8),
+                                        "Delete = loeschen | O = OK | Leertaste = weiter");
+                                }
+                            }
+                            else if (depthLabels.Count > 0)
+                            {
+                                // Nur Tiefen-Kandidaten → anzeigen als Vorschau
+                                Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+                                SetCodingAiState(
+                                    $"Vorschau: {string.Join(", ", depthLabels)} (in Tiefe)",
+                                    Color.FromRgb(0x94, 0xA3, 0xB8),
+                                    "Kamera muss naeher — wird bestaetigt wenn im Nahbereich");
+                            }
+                            else
+                            {
+                                Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+                            }
+                        }
+                        else
+                        {
+                            Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+                        }
+                    }
+                    catch (Exception yoloEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[YOLO-Live] {yoloEx.Message}");
+                    }
+                }
+
+                // ── Schritt 2: Qwen-Fallback wenn YOLO nichts findet ODER Sidecar offline ──
+                if (!yoloHadFindings && _codingEnhancedVision != null)
+                {
+                    try
+                    {
+                        SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
+                            $"Qwen-Fallback: {CompactModelName(_codingAiModelName)}", pulse: true);
+
+                        var enhanced = await _codingEnhancedVision.AnalyzeAsync(
+                            b64, _codingAnalysisCts.Token);
+                        result = Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, captureTimestampSec);
+
+                        System.Diagnostics.Debug.WriteLine(
+                            _codingEnhancedVision.LastRawOutput ?? "[Qwen] keine Rohdaten");
+
+                        ShowCodingAiResults(result);
+                    }
+                    catch (Exception qwenEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Qwen-Fallback] {qwenEx.Message}");
+                        SetCodingAiState("Analyse fehlgeschlagen",
+                            Color.FromRgb(0xEF, 0x44, 0x44), qwenEx.Message);
+                    }
+                }
+
+                // Wenn weder YOLO noch Qwen etwas gefunden haben
+                if (!yoloHadFindings && (result == null || result.Findings.Count == 0))
+                {
+                    SetCodingAiState("Kein Befund erkannt",
+                        Color.FromRgb(0x94, 0xA3, 0xB8), "YOLO + Qwen");
+                }
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            SetCodingAiState($"Fehler: {ex.Message}", Color.FromRgb(0xEF, 0x44, 0x44),
+                $"Modell: {CompactModelName(_codingAiModelName)}");
+        }
+        finally
+        {
+            _codingIsAnalyzing = false;
+            if (disableAnalyzeButton)
+                BtnCodingAnalyze.IsEnabled = true;
+        }
     }
 }
