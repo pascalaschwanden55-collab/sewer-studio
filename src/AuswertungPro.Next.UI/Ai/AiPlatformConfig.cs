@@ -188,8 +188,8 @@ public sealed record AiPlatformConfig(
             ["BAB"] = 0.20,   // Riss: sensibel halten, aber nicht so aggressiv wie 0.15
             ["BAA"] = 0.25,   // Verformung
             ["BAC"] = 0.28,   // Bruch/Einsturz
-            ["BBA"] = 0.25,   // Wurzeln/Inkrustation
-            ["BBB"] = 0.28,   // Bewuchs
+            ["BBA"] = 0.25,   // Wurzeln
+            ["BBB"] = 0.28,   // Anhaftende Stoffe (Inkrustation)
             ["BBC"] = 0.28,   // Ablagerungen
             ["BCA"] = 0.35,   // Anschluss: sehr markant
             ["BCC"] = 0.35,   // Bogen: markant
@@ -219,10 +219,13 @@ public sealed record AiPlatformConfig(
             ?? Ollama.OllamaConfig.DefaultReferenceVisionModel;
 
         // ── Tools ──
+        // Phase 4.2: Konsistenz-Sweep — Fallback auf FfmpegLocator statt String "ffmpeg".
+        // Damit findet jeder cfg.FfmpegPath-Aufrufer automatisch WinGet/Choco/Scoop-
+        // Installationen, ohne dass jede Aufrufstelle den Locator selbst kennen muss.
         var ffmpeg = FirstNonEmpty(
                 settings?.AiFfmpegPath,
                 Env("SEWERSTUDIO_FFMPEG"))
-            ?? "ffmpeg";
+            ?? Shared.FfmpegLocator.ResolveFfmpeg();
 
         return new AiPlatformConfig(
             Enabled:                enabled,

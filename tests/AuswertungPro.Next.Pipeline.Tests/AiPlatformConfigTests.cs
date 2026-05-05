@@ -37,7 +37,11 @@ public sealed class AiPlatformConfigTests
         Assert.Equal(300, config.SidecarTimeoutSec);
         Assert.Null(config.PipeDiameterMmOverride);
         Assert.Equal(OllamaConfig.DefaultReferenceVisionModel, config.ReferenceVisionModel);
-        Assert.Equal("ffmpeg", config.FfmpegPath);
+        // Phase 4.2: FfmpegPath geht via FfmpegLocator — kann "ffmpeg" (PATH) ODER
+        // ein aufgeloester Installationspfad (WinGet/Choco/Scoop) sein.
+        Assert.NotNull(config.FfmpegPath);
+        Assert.NotEqual("", config.FfmpegPath);
+        Assert.Contains("ffmpeg", config.FfmpegPath, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -64,7 +64,7 @@ public sealed class MeterTimelineService
         if (!_cfg.Enabled || _osd is null)
             return Array.Empty<(double, double)>();
 
-        var ffmpeg = _cfg.FfmpegPath ?? "ffmpeg";
+        var ffmpeg = _cfg.FfmpegPath ?? Shared.FfmpegLocator.ResolveFfmpeg();
 
         // Collect all frames first (fast — ffmpeg decodes, no GPU needed)
         var frames = new List<(int Index, FrameData Frame)>();

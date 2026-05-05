@@ -44,7 +44,7 @@ public sealed class BatchPipelineService
         _sidecar = sidecar ?? throw new ArgumentNullException(nameof(sidecar));
         _qwen = qwen ?? throw new ArgumentNullException(nameof(qwen));
         _config = config ?? throw new ArgumentNullException(nameof(config));
-        _ffmpegPath = ffmpegPath ?? "ffmpeg";
+        _ffmpegPath = ffmpegPath ?? Shared.FfmpegLocator.ResolveFfmpeg();
         _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
     }
 

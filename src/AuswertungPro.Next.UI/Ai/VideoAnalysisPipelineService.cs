@@ -101,7 +101,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 
             var multiModel = new MultiModelAnalysisService(
                 pipelineClient, pipelineCfg,
-                _cfg.FfmpegPath ?? "ffmpeg",
+                _cfg.FfmpegPath ?? Shared.FfmpegLocator.ResolveFfmpeg(),
                 qwenVision: qwenVision);
             multiModel.FrameStepSeconds = request.FrameStepSeconds;
             multiModel.DedupWindowFrames = request.DedupWindowFrames;
@@ -118,7 +118,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             await EnableFewShotIfAvailableAsync(ollamaVision, ct).ConfigureAwait(false);
             var videoService = new VideoFullAnalysisService(
                 vision: ollamaVision,
-                ffmpegPath: _cfg.FfmpegPath ?? "ffmpeg");
+                ffmpegPath: _cfg.FfmpegPath ?? Shared.FfmpegLocator.ResolveFfmpeg());
 
             videoService.FrameStepSeconds = request.FrameStepSeconds;
             videoService.DedupWindowFrames = request.DedupWindowFrames;

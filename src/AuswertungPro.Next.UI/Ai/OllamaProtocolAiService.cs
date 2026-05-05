@@ -17,8 +17,8 @@ namespace AuswertungPro.Next.UI.Ai;
 
 /// <summary>
 /// Lokaler KI-Service (Ollama):
-/// 1) optional Vision (qwen2.5vl) -> Findings
-/// 2) Text/Entscheider (qwen2.5:7b) -> VSA-Code Suggestion
+/// 1) optional Vision (qwen3-vl) -> Findings
+/// 2) Text/Entscheider (qwen3:8b) -> VSA-Code Suggestion
 /// </summary>
 public sealed class OllamaProtocolAiService : IProtocolAiService
 {
@@ -64,7 +64,7 @@ public sealed class OllamaProtocolAiService : IProtocolAiService
 
         if (!string.IsNullOrWhiteSpace(input.VideoPathAbs) && input.Zeit is not null)
         {
-            var bytes = await VideoFrameExtractor.TryExtractFramePngAsync(_cfg.FfmpegPath ?? "ffmpeg", input.VideoPathAbs!, input.Zeit.Value, ct);
+            var bytes = await VideoFrameExtractor.TryExtractFramePngAsync(_cfg.FfmpegPath ?? Shared.FfmpegLocator.ResolveFfmpeg(), input.VideoPathAbs!, input.Zeit.Value, ct);
             if (bytes is { Length: > 0 })
                 frameBase64 = Convert.ToBase64String(bytes);
         }
