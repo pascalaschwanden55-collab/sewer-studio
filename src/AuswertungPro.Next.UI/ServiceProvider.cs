@@ -121,109 +121,14 @@ namespace AuswertungPro.Next.UI
 
 
 
-            // Einheitliche KI-Konfiguration (1x laden, 3x projizieren)
+            // Phase 5.2.E: KI-Pipeline (Sidecar + Warmup) aus AiPipelineModule.
             var aiPlatform = AiPlatformConfig.Load(settings);
             PipelineCfg = aiPlatform.ToPipelineConfig();
+            Sidecar = AiPipelineModule.CreateSidecar(PipelineCfg, loggerFactory);
 
-            // Sidecar (YOLO/DINO/SAM) — wird in App.xaml.cs async gestartet
-            var sidecarDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "sidecar");
-            if (!Directory.Exists(sidecarDir))
-                sidecarDir = Path.Combine(AppContext.BaseDirectory, "sidecar");
-            Sidecar = new PythonSidecarService(
-                loggerFactory.CreateLogger<PythonSidecarService>(),
-                Path.GetFullPath(sidecarDir),
-                PipelineCfg.SidecarUrl.Host,
-                PipelineCfg.SidecarUrl.Port);
-
-            // AI/CodeCatalog Init (AiLocalPack)
             var cfg = aiPlatform.ToRuntimeConfig();
-
-            // Startup-Warmup: 8B-Q8 + nomic + 32B (RAM) permanent vorladen
-            // V4.1 Final: 8B-Q8 (11.7 GB GPU) + nomic (0.6 GB GPU) + 32B (22.8 GB RAM, num_gpu=0)
-            // Sidecar (YOLO+DINO+SAM): ~6 GB GPU → Total GPU ~20 GB, ~12 GB frei
             if (cfg.Enabled)
-            {
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        // 0. Auf Sidecar warten (max 60s) — verhindert parallelen VRAM-Kampf,
-                        // bei dem Ollama bei knappen VRAM-Budgets auf CPU zurueckfaellt.
-                        // Sidecar laedt YOLO+SAM (~3-4 GB) zuerst, erst dann kommt Qwen.
-                        for (int i = 0; i < 60 && !Sidecar.IsAvailable; i++)
-                            await System.Threading.Tasks.Task.Delay(1000);
-                        if (!Sidecar.IsAvailable)
-                            Logger.LogWarning(
-                                "[Startup] Sidecar nach 60s nicht verfuegbar — Qwen-Warmup laeuft trotzdem");
-
-                        using var warmupClient = cfg.CreateOllamaClient();
-
-                        // 1. VisionModel (8B) permanent vorladen — num_gpu=-1 zwingt GPU
-                        // (default -1 wird in OllamaClient zu num_gpu=999 uebersetzt =
-                        // "so viele Layer wie moeglich auf GPU", verhindert CPU-Fallback).
-                        await warmupClient.WarmupModelAsync(cfg.VisionModel, cfg.OllamaNumCtx, numGpu: -1);
-                        Logger.LogInformation(
-                            "[Startup] VisionModel {Model} vorgeladen (num_gpu=all, NUM_PARALLEL={Parallel}, ctx={Ctx})",
-                            cfg.VisionModel,
-                            Environment.GetEnvironmentVariable("OLLAMA_NUM_PARALLEL") ?? "?",
-                            cfg.OllamaNumCtx);
-
-                        // 2. EmbedModel (nomic-embed-text) vorladen — klein, immer auf GPU
-                        if (!string.IsNullOrEmpty(cfg.EmbedModel))
-                        {
-                            await warmupClient.WarmupModelAsync(cfg.EmbedModel, 0, numGpu: -1);
-                            Logger.LogInformation(
-                                "[Startup] EmbedModel {Model} vorgeladen (num_gpu=all)", cfg.EmbedModel);
-                        }
-
-                        // 3. ReferenceModel (32B) permanent in RAM vorladen — num_gpu=0, kein VRAM
-                        if (!string.IsNullOrEmpty(cfg.ReferenceVisionModel)
-                            && !string.Equals(cfg.ReferenceVisionModel, cfg.VisionModel, StringComparison.OrdinalIgnoreCase))
-                        {
-                            try
-                            {
-                                using var warmupHttp = new HttpClient { BaseAddress = cfg.OllamaBaseUri, Timeout = TimeSpan.FromMinutes(10) };
-                                var payload = new Dictionary<string, object?>
-                                {
-                                    ["model"] = cfg.ReferenceVisionModel,
-                                    ["prompt"] = "",
-                                    ["stream"] = false,
-                                    ["keep_alive"] = "8760h",
-                                    ["options"] = new Dictionary<string, object>
-                                    {
-                                        ["num_gpu"] = 10,  // hybrid: 10 Layers GPU + Rest RAM (~9s statt 28s)
-                                        ["num_ctx"] = cfg.OllamaNumCtx > 0 ? Math.Min(cfg.OllamaNumCtx, 4096) : 4096
-                                    }
-                                };
-                                var json = System.Text.Json.JsonSerializer.Serialize(payload);
-                                using var req = new HttpRequestMessage(HttpMethod.Post, "/api/generate")
-                                {
-                                    Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
-                                };
-                                using var resp = await warmupHttp.SendAsync(req).ConfigureAwait(false);
-                                Logger.LogInformation(
-                                    "[Startup] ReferenceModel {Model} vorgeladen (num_gpu=10 hybrid, komplett RAM)",
-                                    cfg.ReferenceVisionModel);
-                            }
-                            catch (Exception exRef)
-                            {
-                                Logger.LogWarning(exRef,
-                                    "[Startup] ReferenceModel {Model} Warmup fehlgeschlagen",
-                                    cfg.ReferenceVisionModel);
-                            }
-                        }
-
-                        // 4. Verifikation: pruefen ob Qwen-8B auch wirklich im VRAM ist.
-                        // Wenn size_vram==0 → Ollama hat trotz num_gpu auf CPU gewechselt
-                        // (passiert bei VRAM-OOM oder wenn das Modell groesser ist als frei).
-                        await VerifyModelInVramAsync(cfg.OllamaBaseUri, cfg.VisionModel);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogWarning(ex, "[Startup] Modell-Warmup fehlgeschlagen");
-                    }
-                });
-            }
+                AiPipelineModule.RunWarmupInBackground(cfg, Sidecar, Logger);
             // Phase 5.2.D: VSA-Katalog-Resolution aus VsaCatalogResolver-Helper.
             var codeCatalogPath = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_codes.json");
             VsaCatalogResolver.EnsureEmbeddedCatalogFile(codeCatalogPath);
@@ -234,35 +139,16 @@ namespace AuswertungPro.Next.UI
             CodeCatalog = !string.IsNullOrWhiteSpace(xmlCatalogPath)
                 ? new AuswertungPro.Next.Application.Protocol.XmlCodeCatalogProvider(xmlCatalogPath, codeCatalogPath, fallbackTextXmlPath)
                 : new AuswertungPro.Next.Application.Protocol.JsonCodeCatalogProvider(codeCatalogPath);
-            RetrievalService? retrieval = null;
-            try
-            {
-                var ollamaConfig = aiPlatform.ToOllamaConfig();
-                _kbHttp = new HttpClient { Timeout = ollamaConfig.RequestTimeout };
-                var kbCtx = new KnowledgeBaseContext();
-                var embedder = new EmbeddingService(_kbHttp, ollamaConfig);
-                retrieval = new RetrievalService(kbCtx, embedder, Settings);
-                retrieval.CheckModelConsistency();
-                if (retrieval.HasModelMismatch)
-                    Logger.LogWarning(
-                        "KB-Embedding-Modell '{StoredModel}' stimmt nicht mit aktuellem Modell '{CurrentModel}' überein. KB-Rebuild empfohlen.",
-                        retrieval.StoredEmbedModel, ollamaConfig.EmbedModel);
-            }
-            catch (Exception ex)
-            {
-                // Phase 0.2: HttpClient bei Init-Fehler explizit freigeben.
-                _kbHttp?.Dispose();
-                _kbHttp = null;
-                Logger.LogWarning(ex, "KnowledgeBase-Retrieval konnte nicht initialisiert werden. KI läuft ohne KB-Kontext.");
-            }
-
-            Retrieval = retrieval;
+            // Phase 5.2.F: KnowledgeBase-Retrieval + BrainMirror aus KnowledgeBaseModule.
+            var kb = KnowledgeBaseModule.ConfigureRetrieval(aiPlatform, settings, Logger);
+            _kbHttp = kb.KbHttp;
+            Retrieval = kb.Retrieval;
 
             var allowedCodeSet = new HashSet<string>(CodeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
             IAiSuggestionPlausibilityService plausibility = new RuleBasedAiSuggestionPlausibilityService(allowedCodeSet);
 
             ProtocolAi = cfg.Enabled
-                ? new OllamaProtocolAiService(cfg, retrieval, plausibility)
+                ? new OllamaProtocolAiService(cfg, kb.Retrieval as RetrievalService, plausibility)
                 : new NoopProtocolAiService();
 
             LogCodeCatalogWarnings(CodeCatalog, xmlCatalogPath ?? codeCatalogPath);
@@ -271,26 +157,7 @@ namespace AuswertungPro.Next.UI
             var manholesTable = Path.Combine(AppContext.BaseDirectory, "Data", "classification_manholes.json");
             Vsa = new VsaEvaluationService(channelsTable, manholesTable);
 
-            // Brain-Mirror: Alle KI-Lerndaten nach E:\Brain spiegeln
-            var brainPath = settings.BrainMirrorPath ?? Ai.KnowledgeRoot.ResolveBrainMirrorPath();
-            var brainDrive = Path.GetPathRoot(brainPath);
-            if (brainDrive is not null && Directory.Exists(brainDrive))
-            {
-                _ = new KnowledgeMirrorService(
-                    Ai.KnowledgeRoot.GetRoot(),
-                    brainPath,
-                    logger);
-                // Initialer Sync beim Start (async, blockiert nicht)
-                _ = Task.Run(async () =>
-                {
-                    try { await KnowledgeMirrorService.Current!.SyncNowAsync(); }
-                    catch (Exception ex) { Debug.WriteLine($"[BrainMirror] Initialer Sync fehlgeschlagen: {ex.Message}"); }
-                });
-            }
-            else
-            {
-                logger.LogWarning("Brain-Mirror deaktiviert: Laufwerk {Drive} nicht verfuegbar", brainDrive);
-            }
+            KnowledgeBaseModule.StartBrainMirror(settings, logger);
 
             MeasureRecommendation = new Infrastructure.Ai.MeasureRecommendationService(
                 Ai.KnowledgeRoot.GetMeasuresLearningPath(),
@@ -355,60 +222,7 @@ namespace AuswertungPro.Next.UI
 
         // Phase 5.2.D: ResolveVsaCatalogTextPath / FindTextCatalogInRoot /
         // EnsureEmbeddedCatalogFile sind nach VsaCatalogResolver migriert.
-
-        /// <summary>
-        /// Prueft nach dem Warmup via /api/ps ob das Modell im VRAM liegt.
-        /// Falls size_vram == 0 → Ollama hat auf CPU zurueckgefallen (VRAM zu knapp).
-        /// Loggt Warnung, wirft nicht — der Warmup hat trotzdem "geklappt".
-        /// </summary>
-        private async System.Threading.Tasks.Task VerifyModelInVramAsync(Uri ollamaBaseUri, string model)
-        {
-            try
-            {
-                using var http = new HttpClient { BaseAddress = ollamaBaseUri, Timeout = TimeSpan.FromSeconds(5) };
-                using var resp = await http.GetAsync("/api/ps").ConfigureAwait(false);
-                if (!resp.IsSuccessStatusCode) return;
-
-                var body = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-                using var doc = System.Text.Json.JsonDocument.Parse(body);
-                if (!doc.RootElement.TryGetProperty("models", out var models)) return;
-
-                var modelPrefix = model.Split(':')[0];
-                foreach (var m in models.EnumerateArray())
-                {
-                    var name = m.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
-                    if (!name.Equals(model, StringComparison.OrdinalIgnoreCase)
-                        && !name.StartsWith(modelPrefix, StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    long sizeVram = m.TryGetProperty("size_vram", out var v) ? v.GetInt64() : 0;
-                    long sizeTotal = m.TryGetProperty("size", out var s) ? s.GetInt64() : 0;
-                    double vramGb = sizeVram / 1_073_741_824.0;
-                    double totalGb = sizeTotal / 1_073_741_824.0;
-
-                    if (sizeVram == 0)
-                    {
-                        Logger.LogWarning(
-                            "[Startup] Modell {Model} laeuft auf CPU (size_vram=0, total={Total:F1}GB) — "
-                            + "VRAM zu knapp oder Ollama konnte nicht auf GPU laden. Prueffe nvidia-smi und andere VRAM-Nutzer.",
-                            name, totalGb);
-                    }
-                    else
-                    {
-                        Logger.LogInformation(
-                            "[Startup] Modell {Model} im VRAM: {Vram:F1}GB von {Total:F1}GB",
-                            name, vramGb, totalGb);
-                    }
-                    return;
-                }
-
-                Logger.LogWarning("[Startup] Modell {Model} nicht in /api/ps gefunden nach Warmup", model);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogDebug(ex, "[Startup] VRAM-Verifikation fehlgeschlagen (nicht kritisch)");
-            }
-        }
+        // Phase 5.2.E: VerifyModelInVramAsync und Warmup-Task sind nach AiPipelineModule migriert.
 
         public object? GetService(Type serviceType)
         {
