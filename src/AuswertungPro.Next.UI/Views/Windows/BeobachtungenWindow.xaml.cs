@@ -92,8 +92,10 @@ public partial class BeobachtungenWindow : Window
         if (string.IsNullOrWhiteSpace(rawPath))
             return;
 
-        var sp = App.Services as ServiceProvider;
-        var resolved = TryResolvePath(rawPath, sp?.Settings.LastProjectPath) ?? rawPath;
+        // Phase 5.1.B Etappe 3.E: via DI-Container.
+        AppSettings? settings = null;
+        try { settings = App.Resolve<AppSettings>(); } catch { /* DI nicht initialisiert */ }
+        var resolved = TryResolvePath(rawPath, settings?.LastProjectPath) ?? rawPath;
         if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
         {
             MessageBox.Show($"Foto nicht gefunden:\n{rawPath}", "Foto",

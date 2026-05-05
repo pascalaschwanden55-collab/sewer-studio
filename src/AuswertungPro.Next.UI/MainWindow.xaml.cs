@@ -61,14 +61,13 @@ public partial class MainWindow : Window
 
     private void OpenCodeCatalog_Click(object sender, RoutedEventArgs e)
     {
-        if (App.Services is not ServiceProvider sp)
-            return;
-
+        // Phase 5.1.B Etappe 3.E: via DI-Container.
+        var catalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>();
         var window = new CodeCatalogEditorWindow
         {
             Owner = this
         };
-        window.DataContext = new CodeCatalogEditorViewModel(sp.CodeCatalog, window);
+        window.DataContext = new CodeCatalogEditorViewModel(catalog, window);
         window.ShowDialog();
     }
 

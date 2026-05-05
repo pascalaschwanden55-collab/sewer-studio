@@ -260,12 +260,103 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject
         // Build a rule DTO from MeasureRecommendationResult
         var ruleDto = rule;
 
+        // Marktreferenz aus historischen Profil-Aggregaten (Buerglen 2024-2026)
+        MarktReferenzDto? marktRef = null;
+        try
+        {
+            // Phase 5.1.B Etappe 3.E: via DI-Container.
+            var historische = App.Resolve<Infrastructure.Devis.HistorischeSanierungenService>();
+            var submissions = App.Resolve<Infrastructure.Devis.SubmissionsPositionService>();
+            var dnVal = (double?)dn > 0 ? (double?)dn : null;
+            var profile = historische.FindMatchingProfile(
+                dnVal, pipe.Material, record.GetFieldValue("Nutzungsart"));
+            if (profile is { AnzahlFaelle: >= 3 })
+            {
+                // VSA-Code des ersten Findings -> empfohlene Submissions-Blocks
+                var firstCode = findings.Select(f => f.Code).FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
+                var blocks = !string.IsNullOrWhiteSpace(firstCode)
+                    ? submissions.RecommendBlocksForVsaCode(firstCode!)
+                    : Array.Empty<string>();
+
+                marktRef = new MarktReferenzDto
+                {
+                    ProfilLabel = $"{profile.DnKlasse}, {profile.Material}, {profile.Nutzungsart}",
+                    AnzahlFaelle = profile.AnzahlFaelle,
+                    KostenProMMedianChf = (decimal?)profile.KostenProMMedianChf,
+                    KostenProHaltungMedianChf = (decimal?)profile.KostenProHaltungMedianChf,
+                    TypischeMassnahmen = profile.TypischeMassnahmen,
+                    EmpfohleneSubmissionsBlocks = blocks,
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Sanierung-KI] Marktreferenz nicht ermittelbar: {ex.Message}");
+        }
+
+        // Hard-Constraint-Filter: Welche Verfahren sind technisch ueberhaupt zulaessig?
+        // Bogen-Detection aus VSA-Codes (BCC = Bogen, mit Q1=Winkel)
+        RulesFilterDto? rulesFilter = null;
+        try
+        {
+            // Phase 5.1.B Etappe 3.E: via DI-Container.
+            var rehabEngine = App.Resolve<Infrastructure.Sanierung.RehabilitationRulesEngine>();
+            var allCodes = (record.VsaFindings ?? new List<Domain.Models.VsaFinding>())
+                .Select(f => (Code: f.KanalSchadencode ?? "", Q1: f.Quantifizierung1))
+                .ToList();
+
+            // Bogen-Erkennung: BCC-Codes mit Q1=Winkel-Grad
+            double maxBendDeg = 0;
+            foreach (var (code, q1) in allCodes)
+            {
+                if (code.StartsWith("BCC", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (double.TryParse(q1?.Replace(',', '.'),
+                        NumberStyles.Float, CultureInfo.InvariantCulture, out var deg))
+                    {
+                        if (deg > maxBendDeg) maxBendDeg = deg;
+                    }
+                }
+            }
+
+            var ctx = new Infrastructure.Sanierung.HaltungsKontext
+            {
+                DnMm = pipe.DiameterMm,
+                Material = pipe.Material,
+                LaengeM = pipe.LengthMeter,
+                Nutzungsart = record.GetFieldValue("Nutzungsart"),
+                Grundwasser = pipe.Groundwater,
+                HasBendSevere = maxBendDeg >= 30,
+                HasBendModerate = maxBendDeg >= 15 && maxBendDeg < 30,
+                Zustandsklasse = int.TryParse(record.GetFieldValue("Zustandsklasse"), out var zkParsed) ? zkParsed : null,
+            };
+
+            var allCodesList = findings.Select(f => f.Code).Where(c => !string.IsNullOrWhiteSpace(c)).ToList();
+            var eval = rehabEngine.Evaluate(ctx, allCodesList);
+
+            rulesFilter = new RulesFilterDto
+            {
+                EligibleProcedures = eval.Eligible.Select(e => e.Procedure.Name).ToList(),
+                ConditionalProcedures = eval.Conditional.Select(e => e.Procedure.Name).ToList(),
+                ExcludedProcedures = eval.Excluded
+                    .Select(e => new ExcludedProcedure(e.Procedure.Id, e.Procedure.Name, e.Reason))
+                    .ToList(),
+                PromptHints = eval.PromptHints,
+            };
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Sanierung-KI] RulesFilter nicht ermittelbar: {ex.Message}");
+        }
+
         return new SanierungOptimizationRequest
         {
             HaltungId = record.GetFieldValue("Haltungsname") ?? record.Id.ToString(),
             Findings  = findings,
             Pipe      = pipe,
-            Rule      = ruleDto
+            Rule      = ruleDto,
+            MarktReferenz = marktRef,
+            RulesFilter = rulesFilter,
         };
     }
 }
