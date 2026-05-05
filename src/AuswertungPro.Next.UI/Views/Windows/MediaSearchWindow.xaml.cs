@@ -57,8 +57,10 @@ public partial class MediaSearchWindow : Window
 
     private void Browse_Click(object sender, RoutedEventArgs e)
     {
-        var sp = (ServiceProvider)App.Services;
-        var folder = sp.Dialogs.SelectFolder("Medien-Suchordner waehlen", FolderBox.Text);
+        // Phase 5.1.B Etappe 3.B: erster echter Aufrufer ueber DI-Container.
+        var dialogs = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+            .GetRequiredService<IDialogService>(App.DiServices);
+        var folder = dialogs.SelectFolder("Medien-Suchordner waehlen", FolderBox.Text);
         if (!string.IsNullOrWhiteSpace(folder))
             FolderBox.Text = folder;
     }
@@ -265,10 +267,11 @@ public partial class MediaSearchWindow : Window
         AppliedFotoCount = fotoCount;
         Applied = videoCount > 0 || pdfCount > 0 || fotoCount > 0;
 
-        // Persist last folder
-        var sp = (ServiceProvider)App.Services;
-        sp.Settings.LastVideoSourceFolder = FolderBox.Text.Trim();
-        sp.Settings.Save();
+        // Persist last folder — via DI (Phase 5.1.B Etappe 3.B)
+        var settings = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+            .GetRequiredService<AppSettings>(App.DiServices);
+        settings.LastVideoSourceFolder = FolderBox.Text.Trim();
+        settings.Save();
 
         DialogResult = true;
         Close();
