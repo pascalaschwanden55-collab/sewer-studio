@@ -2314,4 +2314,229 @@ public partial class PlayerWindow
 
         return false;
     }
+    // === Sub-L: Rohranfang/-ende + Streckenschaden + Auto-Kalibrierung ===
+
+    /// <summary>
+    /// Stellt sicher, dass BCD (Rohranfang) als erster Eintrag existiert.
+    /// Meter und Timestamp werden automatisch aus OSD / Video entnommen.
+    /// </summary>
+    private void EnsureRohranfangExists(double currentMeter, TimeSpan currentVideoTime, ref bool anyAdded)
+    {
+        if (_codingVm == null || _codingSessionService == null) return;
+        // BCD bereits vorhanden? Alle moeglichen Quellen pruefen
+        var vmBcd = _codingVm.Events.Count(e => string.Equals(e.Entry.Code, "BCD", StringComparison.OrdinalIgnoreCase));
+        var sessBcd = _codingSessionService.ActiveSession?.Events.Count(e =>
+            string.Equals(e.Entry.Code, "BCD", StringComparison.OrdinalIgnoreCase)) ?? 0;
+        if (vmBcd > 0 || sessBcd > 0)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[BCD-Dedup] EnsureRohranfang: bereits vorhanden (VM={vmBcd}, Session={sessBcd})");
+            return;
+        }
+        System.Diagnostics.Debug.WriteLine(
+            $"[BCD-Dedup] EnsureRohranfang: NEU erzeugen bei {currentMeter:F2}m (VM={vmBcd}, Session={sessBcd})");
+
+        // Rohranfang: OSD-Meter vom Import uebernehmen, sonst 0.00m
+        // Videozeit: aus dem Import oder Anfang des Videos
+        double rohranfangMeter = 0.0;
+        var rohranfangTime = TimeSpan.Zero;
+
+        // Aus Import-Referenz den BCD-Eintrag holen (falls vorhanden)
+        var importBcd = _codingImportEvents.FirstOrDefault(e =>
+            string.Equals(e.Entry.Code, "BCD", StringComparison.OrdinalIgnoreCase));
+        if (importBcd != null)
+        {
+            rohranfangMeter = importBcd.MeterAtCapture;
+            rohranfangTime = importBcd.VideoTimestamp;
+        }
+
+        var label = Services.CodeCatalog.VsaCodeTree.LookupLabel("BCD") ?? "Rohranfang";
+        var entry = new ProtocolEntry
+        {
+            Source = ProtocolEntrySource.Ai,
+            Code = "BCD",
+            Beschreibung = label,
+            MeterStart = rohranfangMeter,
+            Zeit = rohranfangTime
+        };
+        var ev = _codingSessionService.AddEvent(entry);
+        ev.MeterAtCapture = rohranfangMeter;
+        ev.VideoTimestamp = rohranfangTime;
+        ev.AiContext = new CodingEventAiContext
+        {
+            SuggestedCode = "BCD",
+            Confidence = 1.0,
+            Reason = "Rohranfang (automatisch)",
+            Decision = CodingUserDecision.Accepted
+        };
+        // Event-Hook (OnSessionEventAdded) fuegt automatisch in _codingVm.Events ein.
+        // KEIN explizites _codingVm.Events.Add() — sonst doppelt!
+        anyAdded = true;
+
+        // Auto-Kalibrierung bei Rohranfang versuchen (wenn noch nicht kalibriert)
+        TryAutoCalibrationFromCurrentFrame();
+    }
+
+    /// <summary>
+    /// Versucht eine Auto-Kalibrierung des Rohrdurchmessers aus dem aktuellen Video-Frame.
+    /// Erkennt Rohrinnenwand-Kanten per Helligkeitsgradienten.
+    /// </summary>
+    private async void TryAutoCalibrationFromCurrentFrame()
+    {
+        // Nur wenn noch nicht kalibriert
+        if (_codingOverlayService?.IsCalibrated == true) return;
+
+        // DN aus Haltungsdaten
+        int nominalDn = 300; // Fallback
+        if (_haltungRecord?.Fields.TryGetValue("DN_mm", out var dnStr) == true
+            && int.TryParse(dnStr, out var dn) && dn > 0)
+            nominalDn = dn;
+
+        try
+        {
+            // Aktuellen Frame capturen (async)
+            var frameBytes = await CaptureCurrentFrameAsync();
+            if (frameBytes == null || frameBytes.Length == 0) return;
+
+            var bmp = new System.Windows.Media.Imaging.BitmapImage();
+            bmp.BeginInit();
+            bmp.StreamSource = new System.IO.MemoryStream(frameBytes);
+            bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+            bmp.EndInit();
+            bmp.Freeze();
+
+            var autoCalib = Ai.AutoCalibrationService.TryAutoCalibrate(bmp, nominalDn);
+            if (autoCalib == null) return;
+
+            _codingOverlayService?.SetCalibration(autoCalib);
+
+            SetCodingAiState(
+                $"Auto-Kalibrierung: DN{nominalDn} erkannt ({autoCalib.NormalizedDiameter:P0} der Bildbreite)",
+                Color.FromRgb(0x22, 0xC5, 0x5E),
+                "Rohrdurchmesser automatisch gemessen");
+
+            System.Diagnostics.Debug.WriteLine(
+                $"[AutoCalib] DN{nominalDn}: NormDiam={autoCalib.NormalizedDiameter:F3}, " +
+                $"Center=({autoCalib.PipeCenter.X:F3},{autoCalib.PipeCenter.Y:F3}), " +
+                $"PixelDiam={autoCalib.PipePixelDiameter:F0}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AutoCalib] Fehlgeschlagen: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Fuegt BCE (Rohrende) als letzten Eintrag ein.
+    /// Meter und Timestamp werden automatisch aus OSD / Video entnommen.
+    /// Aufgerufen beim Beenden der Codier-Session oder am Videoende.
+    /// </summary>
+    private void EnsureRohrendeExists(double meterEnd, TimeSpan videoTime)
+    {
+        if (_codingVm == null || _codingSessionService == null) return;
+        // BCE bereits vorhanden?
+        if (_codingVm.Events.Any(e => string.Equals(e.Entry.Code, "BCE", StringComparison.OrdinalIgnoreCase)))
+            return;
+        // Streckenschaeden werden bereits in ExitCodingMode geschlossen (vor diesem Aufruf)
+
+        // Rohrende: OSD-Meter bevorzugen, sonst aus Import, sonst EndMeter
+        double rohrEndMeter = _codingLastOsdMeter ?? meterEnd;
+        var rohrEndTime = _player != null
+            ? TimeSpan.FromMilliseconds(_player.Time)
+            : videoTime;
+
+        // Aus Import-Referenz den BCE-Eintrag holen (falls vorhanden)
+        var importBce = _codingImportEvents.FirstOrDefault(e =>
+            string.Equals(e.Entry.Code, "BCE", StringComparison.OrdinalIgnoreCase));
+        if (importBce != null)
+        {
+            rohrEndMeter = importBce.MeterAtCapture;
+            rohrEndTime = importBce.VideoTimestamp;
+        }
+
+        var label = Services.CodeCatalog.VsaCodeTree.LookupLabel("BCE") ?? "Rohrende";
+        var entry = new ProtocolEntry
+        {
+            Source = ProtocolEntrySource.Ai,
+            Code = "BCE",
+            Beschreibung = label,
+            MeterStart = rohrEndMeter,
+            Zeit = rohrEndTime
+        };
+        var ev = _codingSessionService.AddEvent(entry);
+        ev.MeterAtCapture = rohrEndMeter;
+        ev.VideoTimestamp = rohrEndTime;
+        ev.AiContext = new CodingEventAiContext
+        {
+            SuggestedCode = "BCE",
+            Confidence = 1.0,
+            Reason = "Rohrende (automatisch)",
+            Decision = CodingUserDecision.Accepted
+        };
+        RefreshCodingEventsList();
+    }
+
+    /// <summary>
+    /// Prueft ob offene Streckenschaeden existieren (IsStreckenschaden=true, MeterEnd=null).
+    /// Zeigt Dialog mit Liste und bietet an, sie am aktuellen Meter zu schliessen.
+    /// Rueckgabe: true = weiter (geschlossen oder ignoriert), false = abgebrochen (User will weiter codieren).
+    /// </summary>
+    private bool CloseOpenStreckenschaeden(double currentMeter)
+    {
+        if (_codingVm == null) return true;
+
+        var offene = _codingVm.Events
+            .Where(e => e.Entry.IsStreckenschaden && !e.Entry.MeterEnd.HasValue)
+            .ToList();
+
+        if (offene.Count == 0) return true;
+
+        // Hinweis-Dialog mit Liste der offenen Streckenschaeden
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Folgende Streckenschaeden sind noch offen (kein MeterEnde):");
+        sb.AppendLine();
+        foreach (var ev in offene)
+        {
+            sb.AppendLine($"  \u2022 {ev.Entry.Code} \u2013 {ev.Entry.Beschreibung}");
+            sb.AppendLine($"    Start: {ev.MeterAtCapture:F2}m");
+        }
+        sb.AppendLine();
+        sb.AppendLine($"Sollen alle offenen Streckenschaeden bei {currentMeter:F2}m geschlossen werden?");
+
+        SuspendCodingOverlayInput();
+        MessageBoxResult result;
+        try
+        {
+            result = MessageBox.Show(
+                sb.ToString(),
+                "Offene Streckenschaeden",
+                MessageBoxButton.YesNoCancel,
+                MessageBoxImage.Warning);
+        }
+        finally
+        {
+            ResumeCodingOverlayInput();
+        }
+
+        if (result == MessageBoxResult.Yes)
+        {
+            // Alle offenen Streckenschaeden schliessen.
+            // MeterEnd = letzte Sichtung (MeterAtCapture) oder aktueller Meter
+            foreach (var ev in offene)
+            {
+                var start = ev.Entry.MeterStart ?? 0;
+                ev.Entry.MeterEnd = ev.MeterAtCapture > start
+                    ? ev.MeterAtCapture
+                    : currentMeter;
+                _codingSessionService?.UpdateEvent(ev.EventId, ev.Entry, ev.Overlay);
+            }
+            RefreshCodingEventsList();
+            return true;
+        }
+
+        if (result == MessageBoxResult.Cancel)
+            return false; // User will weiter codieren — Exit abbrechen
+
+        return true; // "Nein" → weiter ohne Schliessen
+    }
 }
