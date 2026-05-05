@@ -50,6 +50,13 @@ namespace AuswertungPro.Next.UI
         public static System.IServiceProvider DiServices
             => _diServices ?? throw new InvalidOperationException("DI services are not initialized.");
 
+        /// <summary>
+        /// Phase 5.1.B Etappe 3.C: Convenience-Helper fuer Aufrufer-Migration.
+        /// Aequivalent zu App.DiServices.GetRequiredService&lt;T&gt;().
+        /// </summary>
+        public static T Resolve<T>() where T : notnull
+            => ServiceProviderServiceExtensions.GetRequiredService<T>(DiServices);
+
         protected override async void OnStartup(StartupEventArgs e)
         {
             string? logPath = null;

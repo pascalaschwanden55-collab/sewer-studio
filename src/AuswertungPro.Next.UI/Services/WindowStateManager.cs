@@ -46,7 +46,8 @@ public static class WindowStateManager
 
     private static AppSettings? GetSettings()
     {
-        try { return (App.Services as ServiceProvider)?.Settings; }
+        // Phase 5.1.B Etappe 3.C: Settings via DI-Container.
+        try { return App.Resolve<AppSettings>(); }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[WindowStateManager] GetSettings: {ex.Message}");

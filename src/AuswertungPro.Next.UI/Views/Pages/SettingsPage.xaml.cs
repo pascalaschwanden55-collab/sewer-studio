@@ -22,8 +22,8 @@ public partial class SettingsPage : System.Windows.Controls.UserControl
     {
         try
         {
-            var sp = (UI.ServiceProvider)App.Services;
-            var file = sp.SanierungUserRules.Load();
+            // Phase 5.1.B Etappe 3.C: via DI-Container statt Cast
+            var file = App.Resolve<Infrastructure.Sanierung.SanierungUserRulesService>().Load();
             var active = file.Rules.Count(r => r.Enabled);
             SanierungRulesStatusText.Text =
                 $"{file.Rules.Count} Regeln gesamt ({active} aktiv)  -  zuletzt: {file.LastUpdated:dd.MM.yyyy HH:mm}";
@@ -38,8 +38,10 @@ public partial class SettingsPage : System.Windows.Controls.UserControl
     {
         try
         {
-            var sp = (UI.ServiceProvider)App.Services;
-            var win = new Views.Windows.SanierungRulesWindow(sp.SanierungUserRules, sp.RehabRulesEngine)
+            // Phase 5.1.B Etappe 3.C: via DI
+            var rules = App.Resolve<Infrastructure.Sanierung.SanierungUserRulesService>();
+            var engine = App.Resolve<Infrastructure.Sanierung.RehabilitationRulesEngine>();
+            var win = new Views.Windows.SanierungRulesWindow(rules, engine)
             {
                 Owner = Window.GetWindow(this),
             };
@@ -57,10 +59,12 @@ public partial class SettingsPage : System.Windows.Controls.UserControl
     {
         try
         {
-            var sp = (UI.ServiceProvider)App.Services;
-            var subPath = sp.SubmissionsPositions.FilePath;
-            var histPath = sp.HistorischeSanierungen.FilePath;
-            var hist = sp.HistorischeSanierungen.LoadData();
+            // Phase 5.1.B Etappe 3.C: via DI
+            var submissions = App.Resolve<Infrastructure.Devis.SubmissionsPositionService>();
+            var historische = App.Resolve<Infrastructure.Devis.HistorischeSanierungenService>();
+            var subPath = submissions.FilePath;
+            var histPath = historische.FilePath;
+            var hist = historische.LoadData();
             var anzahlHaltungen = hist.Haltungen.Count;
             var anzahlProfile = hist.ProfileAggregat.Count;
 
@@ -99,8 +103,8 @@ public partial class SettingsPage : System.Windows.Controls.UserControl
 
         try
         {
-            var sp = (UI.ServiceProvider)App.Services;
-            var preview = sp.MarktdatenImport.PreviewImport(sourceDir);
+            // Phase 5.1.B Etappe 3.C: via DI
+            var preview = App.Resolve<Infrastructure.Devis.MarktdatenImportService>().PreviewImport(sourceDir);
 
             var sb = new StringBuilder();
             sb.AppendLine($"Quelle: {preview.SourceDir}");
@@ -148,8 +152,8 @@ public partial class SettingsPage : System.Windows.Controls.UserControl
 
         try
         {
-            var sp = (UI.ServiceProvider)App.Services;
-            var result = sp.MarktdatenImport.Import(_previewedSourceDir);
+            // Phase 5.1.B Etappe 3.C: via DI
+            var result = App.Resolve<Infrastructure.Devis.MarktdatenImportService>().Import(_previewedSourceDir);
 
             var sb = new StringBuilder();
             sb.AppendLine($"Importiert: {result.ImportedFiles.Count} Datei(en)");
@@ -195,9 +199,9 @@ public partial class SettingsPage : System.Windows.Controls.UserControl
     {
         try
         {
-            var sp = (UI.ServiceProvider)App.Services;
-            sp.SubmissionsPositions.Invalidate();
-            sp.HistorischeSanierungen.Invalidate();
+            // Phase 5.1.B Etappe 3.C: via DI
+            App.Resolve<Infrastructure.Devis.SubmissionsPositionService>().Invalidate();
+            App.Resolve<Infrastructure.Devis.HistorischeSanierungenService>().Invalidate();
             UpdateMarktdatenStatus();
             MessageBox.Show(
                 "Caches invalidiert. Naechste Devis-/KI-Anfrage liest die JSONs neu vom Datentraeger.",
