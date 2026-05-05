@@ -1190,4 +1190,331 @@ public partial class PlayerWindow
                 BtnCodingAnalyze.IsEnabled = true;
         }
     }
+    // === Sub-G: Multi-Model Result-Rendering ===
+
+    /// <param name="mmResult">Analyse-Ergebnis (ungefiltert).</param>
+    /// <param name="acceptedIndices">Masken-Indices die ein Event bekommen haben (null = VSA-Code-Filter).</param>
+    private void ShowMultiModelResults(Ai.Pipeline.SingleFrameResult mmResult, HashSet<int>? acceptedIndices = null)
+    {
+        // Masken aufteilen: akzeptierte (nah) vs. verworfene (fern/ungueltig)
+        var validIndices = new List<int>();
+        var rejectedIndices = new List<int>();
+        for (int i = 0; i < mmResult.QuantifiedMasks.Count; i++)
+        {
+            bool accepted = acceptedIndices != null
+                ? acceptedIndices.Contains(i)
+                : Ai.VsaCodeResolver.InferCodeFromLabel(mmResult.QuantifiedMasks[i].Label) != null;
+
+            if (accepted) validIndices.Add(i);
+            else rejectedIndices.Add(i);
+        }
+
+        // Akzeptierte Masken als Haupt-Ergebnis
+        Ai.Pipeline.SingleFrameResult FilterByIndices(List<int> indices)
+        {
+            var fq = indices.Select(i => mmResult.QuantifiedMasks[i]).ToList();
+            var fd = indices.Where(i => i < mmResult.DinoDetections.Count)
+                .Select(i => mmResult.DinoDetections[i]).ToList();
+            var fs = mmResult.SamResponse != null
+                ? new Ai.Pipeline.SamResponse(
+                    indices.Where(i => i < mmResult.SamResponse.Masks.Count)
+                        .Select(i => mmResult.SamResponse.Masks[i]).ToList(),
+                    mmResult.SamResponse.ImageWidth, mmResult.SamResponse.ImageHeight,
+                    mmResult.SamResponse.InferenceTimeMs)
+                : mmResult.SamResponse;
+            return new Ai.Pipeline.SingleFrameResult(
+                mmResult.IsRelevant, fd, fs, fq,
+                mmResult.YoloTimeMs, mmResult.DinoTimeMs, mmResult.SamTimeMs, mmResult.Error);
+        }
+
+        var nearResult = validIndices.Count < mmResult.QuantifiedMasks.Count
+            ? FilterByIndices(validIndices) : mmResult;
+        _currentMmResult = nearResult;
+        _previewMmResult = rejectedIndices.Count > 0 ? FilterByIndices(rejectedIndices) : null;
+
+        // Alte Masken entfernen
+        Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+
+        // SAM-Masken rendern: nahe Befunde farbig + klickbar
+        if (nearResult.SamResponse != null && nearResult.QuantifiedMasks.Count > 0)
+        {
+            Ai.Pipeline.SamMaskRenderer.RenderMasks(
+                CodingOverlayCanvas,
+                nearResult.SamResponse,
+                nearResult.QuantifiedMasks,
+                CodingOverlayCanvas.ActualWidth,
+                CodingOverlayCanvas.ActualHeight,
+                onMaskClicked: OnMaskOverlayClicked,
+                onMaskDeleted: OnMaskOverlayDeleted);
+        }
+
+        // Ferne Befunde (innerhalb Rohrkreis) grau + gedimmt rendern (Vorschau)
+        if (_previewMmResult?.SamResponse != null && _previewMmResult.QuantifiedMasks.Count > 0)
+        {
+            Ai.Pipeline.SamMaskRenderer.RenderMasks(
+                CodingOverlayCanvas,
+                _previewMmResult.SamResponse,
+                _previewMmResult.QuantifiedMasks,
+                CodingOverlayCanvas.ActualWidth,
+                CodingOverlayCanvas.ActualHeight,
+                previewMode: true,
+                indexOffset: nearResult.QuantifiedMasks.Count);
+        }
+
+        // Kalibrierkreis anzeigen
+        _showReferenceDn = true;
+        RenderReferenceDn();
+    }
+
+    /// <summary>
+    /// Erstellt Events und gibt die Masken-Indices zurueck die tatsaechlich ein Event bekommen haben.
+    /// </summary>
+    private HashSet<int> AddMultiModelFindingsAsEvents(
+        Ai.Pipeline.SingleFrameResult mmResult, double captureTimestampSec)
+    {
+        var acceptedIndices = new HashSet<int>();
+        if (_codingVm == null || _codingSessionService == null) return acceptedIndices;
+
+        double meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
+        var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
+        bool anyAdded = false;
+
+        // BCD wird NICHT mehr automatisch erzeugt — nur durch Eingabemarker oder Qwen-Erkennung.
+        // EnsureRohranfangExists(meter, videoTime, ref anyAdded);
+
+        for (int i = 0; i < mmResult.QuantifiedMasks.Count; i++)
+        {
+            var quant = mmResult.QuantifiedMasks[i];
+            var dino = i < mmResult.DinoDetections.Count ? mmResult.DinoDetections[i] : null;
+
+            // Erkennungszone: nur Detektionen AUSSERHALB des Rohrkreises (nah) auswerten
+            // Detektionen in der Tiefe (innerhalb Rohrkreis) → grau anzeigen, kein Event
+            int imgW = mmResult.SamResponse?.ImageWidth ?? 1;
+            int imgH = mmResult.SamResponse?.ImageHeight ?? 1;
+            if (!IsInsideDetectionZone(dino, imgW, imgH))
+                continue;
+
+            // Gemeinsamer Resolver: DINO-Label → LiveFrameFinding → ResolveFindingCodeForCoding
+            // So laeuft der Multi-Model-Pfad durch exakt denselben Code wie Qwen.
+            var pseudoFinding = new LiveFrameFinding(
+                Label: quant.Label,
+                Severity: EstimateSeverityFromQuantification(quant),
+                PositionClock: NormalizeClockPosition(quant.ClockPosition),
+                ExtentPercent: quant.ExtentPercent,
+                VsaCodeHint: null,  // DINO liefert englische Labels, kein VSA-Code
+                HeightMm: quant.HeightMm,
+                WidthMm: quant.WidthMm,
+                IntrusionPercent: quant.IntrusionPercent,
+                CrossSectionReductionPercent: quant.CrossSectionReductionPercent,
+                DiameterReductionMm: null,
+                BboxX1: dino != null ? dino.X1 / (mmResult.SamResponse?.ImageWidth ?? 1) : null,
+                BboxY1: dino != null ? dino.Y1 / (mmResult.SamResponse?.ImageHeight ?? 1) : null,
+                BboxX2: dino != null ? dino.X2 / (mmResult.SamResponse?.ImageWidth ?? 1) : null,
+                BboxY2: dino != null ? dino.Y2 / (mmResult.SamResponse?.ImageHeight ?? 1) : null);
+
+            // Gemeinsamer Resolver (identisch mit Qwen-Pfad)
+            var code = ResolveFindingCodeForCoding(pseudoFinding, meter);
+            if (code == null)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[Multi-Model] Kein VSA-Code fuer Label='{quant.Label}' — uebersprungen");
+                continue;
+            }
+
+            // Sperrliste: vom Benutzer abgelehnte Befunde nicht erneut einfuegen
+            if (_rejectedFindings.Contains(MakeRejectionKey(code, meter)))
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[Multi-Model] Gesperrt: {code} @ {meter:F1}m (vom Benutzer geloescht)");
+                continue;
+            }
+
+            // Kunststoffrohr-Regel: Infiltration (BBF) und Bodeneindringung (BBD) sind
+            // bei intakten Kunststoffrohren physikalisch unmoeglich — das Rohr ist dicht.
+            // Nur wenn ein Strukturschaden (BA = Riss/Bruch/Versatz) in der Naehe ist,
+            // kann Wasser eindringen. Ohne Begleitschaden → Fehlalarm verwerfen.
+            if (code.StartsWith("BBF", StringComparison.OrdinalIgnoreCase)
+                || code.StartsWith("BBD", StringComparison.OrdinalIgnoreCase))
+            {
+                if (IsKunststoffRohr() && !HasNearbyStructuralDamage(meter))
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[Multi-Model] Kunststoff-Filter: {code} @ {meter:F1}m verworfen — kein Begleitschaden");
+                    continue;
+                }
+            }
+
+            var officialLabel = LookupVsaLabel(code);
+
+            // BCD/BCE existieren pro Haltung nur EINMAL — Meterstand-unabhaengige Dedup
+            // Primaer gegen session.Events pruefen (wird nie gecleared).
+            if ((string.Equals(code, "BCD", StringComparison.OrdinalIgnoreCase)
+                 || string.Equals(code, "BCE", StringComparison.OrdinalIgnoreCase))
+                && (_codingSessionService?.ActiveSession?.Events.Any(e =>
+                        CodesMatchForDedup(e.Entry.Code, code)) == true
+                    || _codingVm.Events.Any(e => CodesMatchForDedup(e.Entry.Code, code))))
+                continue;
+
+            // Dedup gegen bestehende Events (identisch mit Qwen-Pfad)
+            var coveringEvent = _codingVm.Events.FirstOrDefault(e =>
+                CodesMatchForDedup(e.Entry.Code, code) &&
+                IsAlreadyCovered(e, meter, pseudoFinding));
+            if (coveringEvent != null) continue;
+
+            // QualityGate mit Multi-Model Evidenz
+            double dinoConf = dino?.Confidence ?? quant.Confidence;
+            var evidence = new EvidenceVector(
+                YoloConf: 0.8,
+                DinoConf: dinoConf,
+                SamMaskStability: quant.Confidence,
+                PlausibilityScore: officialLabel != null ? 0.8 : 0.4
+            );
+            var gateResult = _codingQualityGate?.Evaluate(evidence)
+                ?? new QualityGateResult(dinoConf, TrafficLight.Yellow,
+                    new Dictionary<string, double>(), "Multi-Model")!;
+
+            var entry = new ProtocolEntry
+            {
+                Source = ProtocolEntrySource.Ai,
+                Code = code,
+                Beschreibung = officialLabel ?? quant.Label,
+                MeterStart = meter,
+                Zeit = videoTime
+            };
+
+            // Messungen in CodeMeta (gleiche Logik wie Qwen-Pfad)
+            ApplyQuantificationToEntry(entry, code, quant);
+
+            var codingEvent = _codingSessionService?.AddEvent(entry);
+            if (codingEvent is not null)
+                codingEvent.AiContext = new CodingEventAiContext
+                {
+                    SuggestedCode = code,
+                    Confidence = gateResult.CompositeConfidence,
+                    Reason = $"{quant.Label} (DINO {dinoConf:P0})",
+                    Decision = gateResult.IsGreen
+                        ? CodingUserDecision.Accepted
+                        : CodingUserDecision.Ignored
+                };
+
+            acceptedIndices.Add(i);
+            anyAdded = true;
+        }
+
+        if (anyAdded)
+        {
+            RefreshCodingEventsList();
+            UpdateToolBadge();
+        }
+
+        return acceptedIndices;
+    }
+
+    private void ShowCodingAiResults(LiveDetection result)
+    {
+        if (result.Error != null)
+        {
+            SetCodingAiState($"Fehler: {result.Error}", Color.FromRgb(0xEF, 0x44, 0x44),
+                $"Modell: {CompactModelName(_codingAiModelName)}");
+            CodingFindingsList.ItemsSource = null;
+            return;
+        }
+
+        // ── Zustandsautomat: Einblendung vs. echtes Videobild ──
+        // Zuerst State aktualisieren, dann pruefen ob Frame analysiert werden darf.
+        // Gating BEVOR irgendetwas ins UI geschrieben wird.
+        UpdateFrameReadiness(result);
+
+        if (!IsFrameReady())
+        {
+            // Ergebnis puffern statt verwerfen (Warmup-Phase)
+            if (result.Findings.Count > 0)
+                _pendingWarmupResult = result;
+
+            SetCodingAiState("Dateneinblendung erkannt \u2014 \u00fcbersprungen",
+                Color.FromRgb(0x94, 0xA3, 0xB8),
+                $"Warte auf Videobild... (Bild {_codingOsdSkippedFrames} von 3)");
+            CodingFindingsList.ItemsSource = null;
+            DetectionCanvas.Children.Clear();
+            return;
+        }
+
+        // Warmup-Puffer nachtraeglich verarbeiten (erste Ready-Transition)
+        if (_pendingWarmupResult != null)
+        {
+            var buffered = _pendingWarmupResult;
+            _pendingWarmupResult = null;
+            // Bestes gepuffertes Ergebnis verwenden wenn aktuelles leer ist
+            if (result.Findings.Count == 0 && buffered.Findings.Count > 0)
+                result = buffered;
+        }
+
+        // ── Ab hier: Frame ist bereit fuer Analyse ──
+
+        // OSD-Meterstand uebernehmen (Plausibilitaet: nicht rueckwaerts springen)
+        if (result.MeterReading.HasValue && result.MeterReading.Value <= 500 && _codingVm != null)
+        {
+            var newMeter = result.MeterReading.Value;
+            var prevMeter = _codingLastOsdMeter ?? 0;
+
+            // Nur vorwaerts aktualisieren (Kamera faehrt nicht rueckwaerts)
+            // Ausnahme: erster Meter-Wert (currentMeter == 0) darf immer gesetzt werden
+            if (newMeter >= prevMeter || prevMeter == 0)
+            {
+                _codingLastOsdMeter = newMeter;
+                _codingSessionService?.MoveToMeter(newMeter);
+                OsdMeterBadge.Visibility = Visibility.Visible;
+                TxtOsdMeter.Text = $"{newMeter:F2}m (OSD)";
+            }
+            else
+            {
+                // Qwen hat kleineren Meter gelesen → ignorieren (wahrscheinlich OSD-Fehler)
+                System.Diagnostics.Debug.WriteLine(
+                    $"[OSD] Meter-Ruecksprung ignoriert: {newMeter:F2}m < {prevMeter:F2}m");
+            }
+        }
+
+        // ── Findings filtern: VSA-Validierung + Deduplizierung ──
+        // Eine einzige gefilterte Liste fuer UI, Overlays und Event-Erstellung.
+        var currentMeter = result.MeterReading ?? (_codingVm?.CurrentMeter ?? 0);
+        var validFindings = FilterValidFindings(result.Findings, currentMeter);
+
+        if (validFindings.Count == 0)
+        {
+            var noDamageText = result.MeterReading.HasValue
+                ? $"OSD {result.MeterReading.Value:F2}m \u2013 Kein Befund"
+                : "Kein Befund";
+            SetCodingAiState(noDamageText, Color.FromRgb(0x22, 0xC5, 0x5E), "Schritt 3 von 3: Overlay aktualisiert");
+            CodingFindingsList.ItemsSource = null;
+            DetectionCanvas.Children.Clear();
+            return;
+        }
+
+        var findingsText = result.MeterReading.HasValue
+            ? $"OSD {result.MeterReading.Value:F2}m \u2013 {validFindings.Count} Befund(e)"
+            : $"{validFindings.Count} Befund(e)";
+        SetCodingAiState(findingsText, Color.FromRgb(0x22, 0xC5, 0x5E), "Schritt 3 von 3: Overlay und Events");
+        CodingFindingsList.ItemsSource = validFindings
+            .Select(f => new AiFindingDisplayItem(f)).ToList();
+
+        // KI-Findings als CodingEvents mit AiContext in die Ereignisliste einfuegen
+        AddAiFindingsAsEvents(result, validFindings);
+
+        // Befunde als visuelle Overlays direkt auf dem Videobild anzeigen
+        if (validFindings.Count > 0 && !CodingOverlayPopup.IsOpen)
+        {
+            DetectionOverlayGrid.Visibility = Visibility.Visible;
+            RenderDetectionOverlay(validFindings, _player.Time / 1000.0);
+        }
+
+        // Pausenmodus: Video pausieren wenn Befunde erkannt
+        if (BtnCodingPauseMode.IsChecked == true && validFindings.Count > 0)
+        {
+            _player?.SetPause(true);
+            SetCodingAiState(
+                $"{validFindings.Count} Befunde — pausiert zum Pruefen",
+                Color.FromRgb(0x38, 0xBD, 0xF8),
+                "Delete = Befund loeschen | Leertaste = weiter");
+        }
+    }
 }
