@@ -46,6 +46,9 @@ public sealed partial class DataPageViewModel : ObservableObject
             Records[i].SetFieldValue("NR", (i + 1).ToString(), FieldSource.Manual, true);
         }
     }
+    // Phase 5.1.B Etappe 3.L: _sp wird nur noch fuer 2 Bundle-Aufrufe genutzt
+    // (PlayerWindow-ctor + ProtocolEntryEditorDialog-ctor erwarten ServiceProvider).
+    // Alle anderen Zugriffe gehen ueber App.Resolve<T>().
     private readonly ServiceProvider _sp = (ServiceProvider)App.Services;
     private readonly ShellViewModel _shell;
     private readonly DispatcherTimer _saveBannerTimer;
@@ -1149,7 +1152,8 @@ public sealed partial class DataPageViewModel : ObservableObject
         using var http = new HttpClient { Timeout = timeout };
         var allowedSet = new HashSet<string>(allowedCodes, StringComparer.OrdinalIgnoreCase);
         var plausibility = new RuleBasedAiSuggestionPlausibilityService(allowedSet);
-        var pipeline = _sp.CreateVideoAnalysisPipeline(cfg, plausibility, http);
+        // Phase 5.1.B Etappe 3.L: Direkt new() statt Bundle-Methode.
+        var pipeline = new Ai.VideoAnalysisPipelineService(cfg, plausibility, http);
 
         var haltungId = record.GetFieldValue("Haltungsname") ?? record.Id.ToString();
         var request = new PipelineRequest(haltungId, videoPath, allowedCodes);
@@ -1751,7 +1755,8 @@ public sealed partial class DataPageViewModel : ObservableObject
                 };
             }
 
-            var aiService = _sp.CreateSanierungOptimization(cfg);
+            // Phase 5.1.B Etappe 3.L: Direkt new() statt Bundle-Methode.
+            var aiService = new Ai.Sanierung.AiSanierungOptimizationService(cfg);
             optimizationVm = new SanierungOptimizationViewModel(record, aiService, ruleDto);
 
             optimizationVm.TransferredToPrimary += _ =>
