@@ -34,6 +34,7 @@ using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Sanierung;
+using AuswertungPro.Next.UI.Modules;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
@@ -100,18 +101,21 @@ namespace AuswertungPro.Next.UI
             Logger = logger;
             LoggerFactory = loggerFactory;
 
-            Projects = new JsonProjectRepository();
-            PdfImport = new PdfImportServiceAdapter();
-            XtfImport = new XtfImportServiceAdapter();
-            WinCanImport = new WinCanDbImportService();
-            IbakImport = new IbakExportImportService();
-            KinsImport = new KinsImportService(WinCanImport, IbakImport);
-            ExcelExport = new ExcelTemplateExportService();
+            // Phase 5.2.A: Domain-IO-Services aus ImportExportModule.
+            var importExport = ImportExportModule.Configure();
+            Projects = importExport.Projects;
+            PdfImport = importExport.PdfImport;
+            XtfImport = importExport.XtfImport;
+            WinCanImport = importExport.WinCanImport;
+            IbakImport = importExport.IbakImport;
+            KinsImport = importExport.KinsImport;
+            ExcelExport = importExport.ExcelExport;
 
-            // Register protocol/photo/pdf services
-            Protocols = new ProtocolService();
-            PhotoImport = new PhotoImportService();
-            ProtocolPdfExporter = new ProtocolPdfExporter();
+            // Phase 5.2.B: Protokoll-/Foto-/PDF-Services aus ProtocolReportsModule.
+            var protocolReports = ProtocolReportsModule.Configure();
+            Protocols = protocolReports.Protocols;
+            PhotoImport = protocolReports.PhotoImport;
+            ProtocolPdfExporter = protocolReports.ProtocolPdfExporter;
 
             PlaywrightInstaller = new PlaywrightInstallService(loggerFactory.CreateLogger<PlaywrightInstallService>());
 
@@ -291,31 +295,16 @@ namespace AuswertungPro.Next.UI
                 Ai.KnowledgeRoot.GetMeasuresLearningPath(),
                 Ai.KnowledgeRoot.GetMeasuresModelPath());
 
-            // Eigendevis - mit Submissions-Positionskatalog (Markt-Referenzpreise aus Buerglen 2026)
-            var devisMappingPath = Path.Combine(AppContext.BaseDirectory, "Config", "devis_mappings.json");
-            var devisMappingService = new DevisMappingService(devisMappingPath);
-            var submissionsCatalogPath = Path.Combine(AppContext.BaseDirectory, "Config", "submission_positionen.json");
-            SubmissionsPositions = new Infrastructure.Devis.SubmissionsPositionService(submissionsCatalogPath);
-
-            // Historische Sanierungs-Referenzen (Buerglen 2024-2026, ~217 Haltungen)
-            var histPath = Path.Combine(AppContext.BaseDirectory, "Config", "historische_sanierungen.json");
-            HistorischeSanierungen = new Infrastructure.Devis.HistorischeSanierungenService(histPath);
-
-            // Marktdaten-Import-Service (User kann neue JSONs aus Knowledge/sanierung/ einlesen)
-            var configDir = Path.Combine(AppContext.BaseDirectory, "Config");
-            MarktdatenImport = new Infrastructure.Devis.MarktdatenImportService(
-                configDir, SubmissionsPositions, HistorischeSanierungen);
-
-            // Hard-Constraint-RulesEngine fuer Sanierungsverfahren (vor KI-Anfrage)
-            // Quelle: Knowledge/sanierung/rehabilitation_methods.yaml + products_and_manufacturers.yaml
-            // + User-Regeln aus Config/sanierung_user_rules.json (im UI editierbar)
-            var userRulesPath = Path.Combine(AppContext.BaseDirectory, "Config", "sanierung_user_rules.json");
-            SanierungUserRules = new Infrastructure.Sanierung.SanierungUserRulesService(userRulesPath);
-            var rehabMethodsPath = Path.Combine(AppContext.BaseDirectory, "Config", "rehabilitation_methods.json");
-            RehabRulesEngine = new Infrastructure.Sanierung.RehabilitationRulesEngine(SanierungUserRules, rehabMethodsPath);
-
-            DevisGenerator = new Infrastructure.Devis.DevisGenerator(devisMappingService);
-            DevisExcelExporter = new DevisExcelExporter();
+            // Phase 5.2.C: Devis-/Sanierungs-Services aus DevisSanierungModule.
+            // Konfiguriert ueber 5 JSON-Files in Config/, in korrekter Konstruktor-Reihenfolge.
+            var devisSanierung = DevisSanierungModule.Configure();
+            DevisGenerator = devisSanierung.DevisGenerator;
+            DevisExcelExporter = devisSanierung.DevisExcelExporter;
+            SubmissionsPositions = devisSanierung.SubmissionsPositions;
+            HistorischeSanierungen = devisSanierung.HistorischeSanierungen;
+            MarktdatenImport = devisSanierung.MarktdatenImport;
+            RehabRulesEngine = devisSanierung.RehabRulesEngine;
+            SanierungUserRules = devisSanierung.SanierungUserRules;
         }
 
         public Infrastructure.Devis.SubmissionsPositionService SubmissionsPositions { get; private set; } = null!;
