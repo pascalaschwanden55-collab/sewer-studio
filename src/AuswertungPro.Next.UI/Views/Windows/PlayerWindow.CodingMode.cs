@@ -6,6 +6,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using System.IO;
 using System.Threading.Tasks;
+using System.Windows.Controls;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Helpers;
@@ -361,6 +362,209 @@ public partial class PlayerWindow
         {
             ResumeCodingOverlayInput();
         }
+    }
+
+    // ─── Sub-D: Coding-List-Display (Refresh, Detail-Panel, Statistik, Shrink) ─
+
+    private void RefreshCodingEventsList()
+    {
+        if (_codingVm == null) return;
+
+        // Nach Meter sortieren, dann nach Videozeit
+        var sorted = _codingVm.Events
+            .OrderBy(e => e.MeterAtCapture)
+            .ThenBy(e => e.VideoTimestamp)
+            .ToList();
+
+        var selected = LstCodingEvents.SelectedItem;
+        _codingVm.Events.Clear();
+        foreach (var ev in sorted)
+            _codingVm.Events.Add(ev);
+
+        LstCodingEvents.ItemsSource = null;
+        LstCodingEvents.ItemsSource = _codingVm.Events;
+        if (selected != null)
+            LstCodingEvents.SelectedItem = selected;
+
+        // Verzoegert Einfaerbung nach Layout-Update
+        Dispatcher.InvokeAsync(ColorizeCodingEventListItems, DispatcherPriority.Loaded);
+        UpdateCodingStatistics();
+    }
+
+    private void UpdateCodingDefectDetailPanel(CodingEvent ev)
+    {
+        // CodingDefectDetailPanel.Visibility = Visibility.Visible; // Deaktiviert: Details sind im oberen Panel
+
+        TxtCodingDetailCode.Text = ev.Entry.Code;
+        TxtCodingDetailDescription.Text = ev.Entry.Beschreibung;
+        TxtCodingDetailDistance.Text = $"{ev.MeterAtCapture:F2}m";
+
+        // Uhrposition
+        TxtCodingDetailClock.Text = ev.Overlay?.ClockFrom != null
+            ? $"{ev.Overlay.ClockFrom:F0}h"
+            : "–";
+
+        // Schweregrad
+        if (ev.Entry.CodeMeta?.Parameters != null &&
+            ev.Entry.CodeMeta.Parameters.TryGetValue("vsa.schweregrad", out var sev))
+            TxtCodingDetailSeverity.Text = sev;
+        else
+            TxtCodingDetailSeverity.Text = "–";
+
+        // Konfidenz + Farbe
+        if (ev.AiContext != null)
+        {
+            double conf = ev.AiContext.Confidence;
+            TxtCodingDetailConfidence.Text = $"{conf * 100:F0}%";
+            TxtCodingDetailConfidence.Foreground = CodingSessionViewModel.GetConfidenceBrush(conf);
+            CodingDefectDetailBorderBrush.Color = ((SolidColorBrush)CodingSessionViewModel.GetZoneBrush(conf)).Color;
+        }
+        else
+        {
+            TxtCodingDetailConfidence.Text = "–";
+            TxtCodingDetailConfidence.Foreground = new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8));
+            CodingDefectDetailBorderBrush.Color = Color.FromRgb(0x3B, 0x82, 0xF6);
+        }
+
+        // Status
+        var status = CodingSessionViewModel.GetDefectStatus(ev);
+        TxtCodingDetailStatus.Text = $"Status: {CodingStatusToDisplayText(status)}";
+
+        CodingDefectActionGrid.Visibility = Visibility.Visible;
+        BtnCodingAcceptDefect.Visibility = Visibility.Visible;
+        BtnCodingEditDefect.Visibility = Visibility.Visible;
+        BtnCodingRejectDefect.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>Zone-Dots und Konfidenz-Texte in der Event-ListBox einfaerben.</summary>
+    private void ColorizeCodingEventListItems()
+    {
+        for (int i = 0; i < LstCodingEvents.Items.Count; i++)
+        {
+            if (LstCodingEvents.ItemContainerGenerator.ContainerFromIndex(i) is not ListBoxItem container) continue;
+            if (LstCodingEvents.Items[i] is not CodingEvent ev) continue;
+
+            var zoneDot = FindCodingChild<System.Windows.Shapes.Ellipse>(container, "ZoneDot");
+            if (zoneDot != null)
+            {
+                var status = CodingSessionViewModel.GetDefectStatus(ev);
+                zoneDot.Fill = status switch
+                {
+                    DefectStatus.Accepted or DefectStatus.AutoAccepted
+                        => new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)),
+                    DefectStatus.AcceptedWithEdit
+                        => new SolidColorBrush(Color.FromRgb(0x3B, 0x82, 0xF6)),
+                    DefectStatus.Rejected
+                        => new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44)),
+                    _ => ev.AiContext != null
+                        ? CodingSessionViewModel.GetConfidenceBrush(ev.AiContext.Confidence)
+                        : new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8))
+                };
+            }
+
+            var confText = FindCodingChild<TextBlock>(container, "TxtConfidence");
+            if (confText != null && ev.AiContext != null)
+            {
+                confText.Text = $"{ev.AiContext.Confidence * 100:F0}%";
+                confText.Foreground = CodingSessionViewModel.GetConfidenceBrush(ev.AiContext.Confidence);
+            }
+            else if (confText != null)
+            {
+                confText.Text = "";
+            }
+
+            var statusIcon = FindCodingChild<TextBlock>(container, "TxtStatusIcon");
+            if (statusIcon != null)
+            {
+                var status = CodingSessionViewModel.GetDefectStatus(ev);
+                statusIcon.Text = status switch
+                {
+                    DefectStatus.AutoAccepted      => "✓",
+                    DefectStatus.Accepted           => "✓",
+                    DefectStatus.AcceptedWithEdit   => "✎",
+                    DefectStatus.Pending            => "⏳",
+                    DefectStatus.ReviewRequired     => "⚠",
+                    DefectStatus.Rejected           => "✗",
+                    _ => ""
+                };
+                statusIcon.Foreground = CodingSessionViewModel.GetStatusBrush(status);
+            }
+        }
+    }
+
+    /// <summary>Rekursiv ein benanntes Kind-Element im VisualTree finden.</summary>
+    private static T? FindCodingChild<T>(DependencyObject parent, string childName) where T : FrameworkElement
+    {
+        int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+        for (int i = 0; i < count; i++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+            if (child is T t && t.Name == childName)
+                return t;
+            var found = FindCodingChild<T>(child, childName);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    /// <summary>Statistiken im Seitenpanel aktualisieren (direkt berechnet).</summary>
+    private void UpdateCodingStatistics()
+    {
+        if (_codingVm == null) return;
+
+        RunCodingDefectCount.Text = _codingVm.Events.Count.ToString();
+
+        var aiEvents = _codingVm.Events.Where(e => e.AiContext != null).ToList();
+        int autoAccepted = 0, pending = 0, reviewRequired = 0;
+
+        foreach (var ev in aiEvents)
+        {
+            var status = CodingSessionViewModel.GetDefectStatus(ev);
+            switch (status)
+            {
+                case DefectStatus.AutoAccepted:
+                case DefectStatus.Accepted:
+                case DefectStatus.AcceptedWithEdit:
+                    autoAccepted++;
+                    break;
+                case DefectStatus.Pending:
+                    pending++;
+                    break;
+                case DefectStatus.ReviewRequired:
+                    reviewRequired++;
+                    break;
+            }
+        }
+
+        RunCodingOpenCount.Text = (pending + reviewRequired).ToString();
+        TxtCodingStatAutoAccepted.Text = autoAccepted.ToString();
+        TxtCodingStatPending.Text = pending.ToString();
+        TxtCodingStatReviewRequired.Text = reviewRequired.ToString();
+        TxtCodingStatAvgConfidence.Text = aiEvents.Count > 0
+            ? $"{aiEvents.Average(e => e.AiContext!.Confidence) * 100:F0}%"
+            : "–";
+    }
+
+    private void ShrinkEnlargedListItem()
+    {
+        if (_enlargedListItem == null) return;
+
+        _enlargedListItem.ClearValue(Control.BackgroundProperty);
+        _enlargedListItem.ClearValue(Control.FontWeightProperty);
+
+        if (_enlargedListItem.RenderTransform is ScaleTransform st)
+        {
+            var shrink = new DoubleAnimation
+            {
+                To = 1.0,
+                Duration = TimeSpan.FromMilliseconds(150),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+            };
+            st.BeginAnimation(ScaleTransform.ScaleXProperty, shrink);
+            st.BeginAnimation(ScaleTransform.ScaleYProperty, shrink);
+        }
+
+        _enlargedListItem = null;
     }
 
     private void CodingRejectDefect_Click(object sender, RoutedEventArgs e)

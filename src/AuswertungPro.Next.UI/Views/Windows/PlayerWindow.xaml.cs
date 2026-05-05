@@ -5001,30 +5001,7 @@ public partial class PlayerWindow : Window
         RefreshCodingEventsList();
     }
 
-    private void RefreshCodingEventsList()
-    {
-        if (_codingVm == null) return;
-
-        // Nach Meter sortieren, dann nach Videozeit
-        var sorted = _codingVm.Events
-            .OrderBy(e => e.MeterAtCapture)
-            .ThenBy(e => e.VideoTimestamp)
-            .ToList();
-
-        var selected = LstCodingEvents.SelectedItem;
-        _codingVm.Events.Clear();
-        foreach (var ev in sorted)
-            _codingVm.Events.Add(ev);
-
-        LstCodingEvents.ItemsSource = null;
-        LstCodingEvents.ItemsSource = _codingVm.Events;
-        if (selected != null)
-            LstCodingEvents.SelectedItem = selected;
-
-        // Verzoeiert Einfaerbung nach Layout-Update
-        Dispatcher.InvokeAsync(ColorizeCodingEventListItems, System.Windows.Threading.DispatcherPriority.Loaded);
-        UpdateCodingStatistics();
-    }
+    // Phase 6.1.F Sub-D: RefreshCodingEventsList nach PlayerWindow.CodingMode.cs migriert.
 
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // Defekt-Detail-Panel, Aktionsbuttons, Statistik
@@ -5217,168 +5194,14 @@ public partial class PlayerWindow : Window
 
     /// <summary>Defekt-Detail-Panel mit Werten des ausgewaehlten Events befuellen.</summary>
     /// Details werden jetzt oben im KI-BEFUNDE Panel angezeigt — unteres Panel bleibt collapsed.
-    private void UpdateCodingDefectDetailPanel(CodingEvent ev)
-    {
-        // CodingDefectDetailPanel.Visibility = Visibility.Visible; // Deaktiviert: Details sind im oberen Panel
-
-        TxtCodingDetailCode.Text = ev.Entry.Code;
-        TxtCodingDetailDescription.Text = ev.Entry.Beschreibung;
-        TxtCodingDetailDistance.Text = $"{ev.MeterAtCapture:F2}m";
-
-        // Uhrposition
-        TxtCodingDetailClock.Text = ev.Overlay?.ClockFrom != null
-            ? $"{ev.Overlay.ClockFrom:F0}h"
-            : "\u2013";
-
-        // Schweregrad
-        if (ev.Entry.CodeMeta?.Parameters != null &&
-            ev.Entry.CodeMeta.Parameters.TryGetValue("vsa.schweregrad", out var sev))
-            TxtCodingDetailSeverity.Text = sev;
-        else
-            TxtCodingDetailSeverity.Text = "\u2013";
-
-        // Konfidenz + Farbe
-        if (ev.AiContext != null)
-        {
-            double conf = ev.AiContext.Confidence;
-            TxtCodingDetailConfidence.Text = $"{conf * 100:F0}%";
-            TxtCodingDetailConfidence.Foreground = CodingSessionViewModel.GetConfidenceBrush(conf);
-            CodingDefectDetailBorderBrush.Color = ((SolidColorBrush)CodingSessionViewModel.GetZoneBrush(conf)).Color;
-        }
-        else
-        {
-            TxtCodingDetailConfidence.Text = "\u2013";
-            TxtCodingDetailConfidence.Foreground = new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8));
-            CodingDefectDetailBorderBrush.Color = Color.FromRgb(0x3B, 0x82, 0xF6);
-        }
-
-        // Status
-        var status = CodingSessionViewModel.GetDefectStatus(ev);
-        TxtCodingDetailStatus.Text = $"Status: {CodingStatusToDisplayText(status)}";
-
-        // Alle Aktionen immer verfuegbar — auch manuell codierte Events
-        // muessen bestaetigt werden bevor sie als Training-Signal gelten.
-        CodingDefectActionGrid.Visibility = Visibility.Visible;
-        BtnCodingAcceptDefect.Visibility = Visibility.Visible;
-        BtnCodingEditDefect.Visibility = Visibility.Visible;
-        BtnCodingRejectDefect.Visibility = Visibility.Visible;
-    }
+    // Phase 6.1.F Sub-D: UpdateCodingDefectDetailPanel + ColorizeCodingEventListItems + FindCodingChild + UpdateCodingStatistics + ShrinkEnlargedListItem nach PlayerWindow.CodingMode.cs migriert.
 
     // Phase 6.1.C: CodingStatusToDisplayText nach PlayerWindow.Helpers.cs migriert.
 
-    /// <summary>Zone-Dots und Konfidenz-Texte in der Event-ListBox einfaerben.</summary>
-    private void ColorizeCodingEventListItems()
-    {
-        for (int i = 0; i < LstCodingEvents.Items.Count; i++)
-        {
-            if (LstCodingEvents.ItemContainerGenerator.ContainerFromIndex(i) is not ListBoxItem container) continue;
-            if (LstCodingEvents.Items[i] is not CodingEvent ev) continue;
-
-            // Zone-Dot einfaerben: Status hat Vorrang vor Konfidenz
-            // Akzeptiert = gruen, Abgelehnt = rot, sonst Konfidenz-Farbe
-            var zoneDot = FindCodingChild<System.Windows.Shapes.Ellipse>(container, "ZoneDot");
-            if (zoneDot != null)
-            {
-                var status = CodingSessionViewModel.GetDefectStatus(ev);
-                zoneDot.Fill = status switch
-                {
-                    DefectStatus.Accepted or DefectStatus.AutoAccepted
-                        => new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)), // Gruen
-                    DefectStatus.AcceptedWithEdit
-                        => new SolidColorBrush(Color.FromRgb(0x3B, 0x82, 0xF6)), // Blau
-                    DefectStatus.Rejected
-                        => new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44)), // Rot
-                    _ => ev.AiContext != null
-                        ? CodingSessionViewModel.GetConfidenceBrush(ev.AiContext.Confidence)
-                        : new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8))   // Grau (unbestaetigt)
-                };
-            }
-
-            // Konfidenz-Text einfaerben
-            var confText = FindCodingChild<TextBlock>(container, "TxtConfidence");
-            if (confText != null && ev.AiContext != null)
-            {
-                confText.Text = $"{ev.AiContext.Confidence * 100:F0}%";
-                confText.Foreground = CodingSessionViewModel.GetConfidenceBrush(ev.AiContext.Confidence);
-            }
-            else if (confText != null)
-            {
-                confText.Text = "";
-            }
-
-            // Status-Icon
-            var statusIcon = FindCodingChild<TextBlock>(container, "TxtStatusIcon");
-            if (statusIcon != null)
-            {
-                var status = CodingSessionViewModel.GetDefectStatus(ev);
-                statusIcon.Text = status switch
-                {
-                    DefectStatus.AutoAccepted      => "\u2713",
-                    DefectStatus.Accepted           => "\u2713",
-                    DefectStatus.AcceptedWithEdit   => "\u270E",
-                    DefectStatus.Pending            => "\u23F3",
-                    DefectStatus.ReviewRequired     => "\u26A0",
-                    DefectStatus.Rejected           => "\u2717",
-                    _ => ""
-                };
-                statusIcon.Foreground = CodingSessionViewModel.GetStatusBrush(status);
-            }
-        }
-    }
 
     /// <summary>Rekursiv ein benanntes Kind-Element im VisualTree finden.</summary>
-    private static T? FindCodingChild<T>(DependencyObject parent, string childName) where T : FrameworkElement
-    {
-        int count = VisualTreeHelper.GetChildrenCount(parent);
-        for (int i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is T t && t.Name == childName)
-                return t;
-            var found = FindCodingChild<T>(child, childName);
-            if (found != null) return found;
-        }
-        return null;
-    }
 
     /// <summary>Statistiken im Seitenpanel aktualisieren (direkt berechnet).</summary>
-    private void UpdateCodingStatistics()
-    {
-        if (_codingVm == null) return;
-
-        RunCodingDefectCount.Text = _codingVm.Events.Count.ToString();
-
-        // Statistiken direkt aus Events berechnen
-        var aiEvents = _codingVm.Events.Where(e => e.AiContext != null).ToList();
-        int autoAccepted = 0, pending = 0, reviewRequired = 0;
-
-        foreach (var ev in aiEvents)
-        {
-            var status = CodingSessionViewModel.GetDefectStatus(ev);
-            switch (status)
-            {
-                case DefectStatus.AutoAccepted:
-                case DefectStatus.Accepted:
-                case DefectStatus.AcceptedWithEdit:
-                    autoAccepted++;
-                    break;
-                case DefectStatus.Pending:
-                    pending++;
-                    break;
-                case DefectStatus.ReviewRequired:
-                    reviewRequired++;
-                    break;
-            }
-        }
-
-        RunCodingOpenCount.Text = (pending + reviewRequired).ToString();
-        TxtCodingStatAutoAccepted.Text = autoAccepted.ToString();
-        TxtCodingStatPending.Text = pending.ToString();
-        TxtCodingStatReviewRequired.Text = reviewRequired.ToString();
-        TxtCodingStatAvgConfidence.Text = aiEvents.Count > 0
-            ? $"{aiEvents.Average(e => e.AiContext!.Confidence) * 100:F0}%"
-            : "\u2013";
-    }
 
     // --- Coding: Existierende Protokoll-Eintraege laden ---
 
@@ -6292,30 +6115,6 @@ public partial class PlayerWindow : Window
     }
 
     /// <summary>Setzt das vergroesserte ListBox-Item auf Normalgroesse zurueck.</summary>
-    private void ShrinkEnlargedListItem()
-    {
-        if (_enlargedListItem == null) return;
-
-        // Hintergrund und Schrift zuruecksetzen
-        _enlargedListItem.ClearValue(System.Windows.Controls.Control.BackgroundProperty);
-        _enlargedListItem.ClearValue(System.Windows.Controls.Control.FontWeightProperty);
-
-        // Zurueckschrumpfen mit Animation
-        if (_enlargedListItem.RenderTransform is ScaleTransform st)
-        {
-            var shrink = new System.Windows.Media.Animation.DoubleAnimation
-            {
-                To = 1.0,
-                Duration = TimeSpan.FromMilliseconds(150),
-                EasingFunction = new System.Windows.Media.Animation.CubicEase
-                    { EasingMode = System.Windows.Media.Animation.EasingMode.EaseIn }
-            };
-            st.BeginAnimation(ScaleTransform.ScaleXProperty, shrink);
-            st.BeginAnimation(ScaleTransform.ScaleYProperty, shrink);
-        }
-
-        _enlargedListItem = null;
-    }
 
     /// <summary>Delete auf Maske (via Maus-Callback) — weiterleiten an zentrale Methode.</summary>
     private void OnMaskOverlayDeleted(int maskIndex)
