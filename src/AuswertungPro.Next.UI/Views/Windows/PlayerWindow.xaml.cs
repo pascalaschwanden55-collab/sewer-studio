@@ -395,51 +395,7 @@ public partial class PlayerWindow : Window
         return _lastOpened.TrySeekToInternal(time);
     }
 
-    /// <summary>
-    /// Erstellt einen Snapshot vom aktuellen Video-Frame als PNG.
-    /// Funktioniert mit jeder Aufloesung (auch FullHD 1920x1080).
-    /// </summary>
-    public static bool TryTakeSnapshot(out string snapshotPath)
-    {
-        snapshotPath = string.Empty;
-        if (_lastOpened?._player is null || !_lastOpened._player.IsPlaying && _lastOpened._player.Time <= 0)
-            return false;
-
-        try
-        {
-            var tempDir = Path.Combine(Path.GetTempPath(), "SewerStudio_Snapshots");
-            Directory.CreateDirectory(tempDir);
-            snapshotPath = Path.Combine(tempDir, $"snap_{DateTime.Now:yyyyMMdd_HHmmss}.png");
-
-            // VLC Snapshot: 0 = original Aufloesung (FullHD etc.)
-            return _lastOpened.TakeSnapshotSafe(snapshotPath);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// TakeSnapshot mit kurzem Pause-Trick, um D3D11-Deadlock zu vermeiden.
-    /// D3D11 haelt die Video-Surface exklusiv gesperrt; kurzes Pausieren gibt sie frei.
-    /// </summary>
-    private bool TakeSnapshotSafe(string filePath, uint width = 0, uint height = 0)
-    {
-        var wasPlaying = _player.IsPlaying;
-        if (wasPlaying)
-        {
-            _player.SetPause(true);
-            System.Threading.Thread.Sleep(60);
-        }
-        // VLC-OSD-Anzeige (Dateipfad) vorher deaktivieren, damit der Pfad
-        // nicht als Text auf dem Videobild erscheint
-        try { _player.SetMarqueeInt(VideoMarqueeOption.Enable, 0); } catch { }
-        var success = _player.TakeSnapshot(0, filePath, width, height);
-        if (wasPlaying)
-            _player.SetPause(false);
-        return success;
-    }
+    // Phase 6.1.A: TryTakeSnapshot + TakeSnapshotSafe nach PlayerWindow.Snapshot.cs migriert.
 
     private void ShowOverlay(string text, TimeSpan duration)
     {
@@ -861,11 +817,7 @@ public partial class PlayerWindow : Window
             UpdateCodingCurrentCode();
     }
 
-    private static string FormatMs(long ms)
-    {
-        var t = TimeSpan.FromMilliseconds(ms);
-        return t.TotalHours >= 1 ? t.ToString(@"hh\:mm\:ss") : t.ToString(@"mm\:ss");
-    }
+    // Phase 6.1.A: FormatMs nach PlayerWindow.Helpers.cs migriert.
 
     private void Play_Click(object sender, RoutedEventArgs e)
     {
@@ -1386,33 +1338,11 @@ public partial class PlayerWindow : Window
         }
     }
 
-    private static Color SeverityToColor(int severity, bool hasDamage)
-    {
-        if (!hasDamage)
-            return Color.FromArgb(100, 0x94, 0xA3, 0xB8); // grey with alpha
-
-        return severity switch
-        {
-            >= 4 => (Color)ColorConverter.ConvertFromString("#EF4444"), // red
-            3    => (Color)ColorConverter.ConvertFromString("#F59E0B"), // orange
-            2    => (Color)ColorConverter.ConvertFromString("#FACC15"), // yellow
-            _    => (Color)ColorConverter.ConvertFromString("#22C55E"), // green
-        };
-    }
+    // Phase 6.1.A: SeverityToColor nach PlayerWindow.Helpers.cs migriert.
 
     // Ã¢"â‚¬Ã¢"â‚¬ Live Detection Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
 
-    private static string CompactModelName(string? model)
-    {
-        if (string.IsNullOrWhiteSpace(model))
-            return "?";
-
-        var trimmed = model.Trim();
-        var slashIndex = trimmed.LastIndexOf('/');
-        if (slashIndex >= 0 && slashIndex < trimmed.Length - 1)
-            trimmed = trimmed[(slashIndex + 1)..];
-        return trimmed;
-    }
+    // Phase 6.1.A: CompactModelName nach PlayerWindow.Helpers.cs migriert.
 
     private void SetLiveDetectionBadge(string status, Color dotColor, string? stage = null)
     {
@@ -2045,47 +1975,8 @@ public partial class PlayerWindow : Window
         return $"{clock}{(extent.Length > 0 ? $" / {extent}" : "")}{extra} - {baseText}";
     }
 
-    private static Color MapDetectionSeverityColor(int severity) => Math.Clamp(severity, 1, 5) switch
-    {
-        >= 5 => Color.FromRgb(239, 68, 68),
-        4 => Color.FromRgb(249, 115, 22),
-        3 => Color.FromRgb(245, 158, 11),
-        2 => Color.FromRgb(132, 204, 22),
-        _ => Color.FromRgb(34, 197, 94)
-    };
-
-    private static int? ParseClockHour(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-        var m = System.Text.RegularExpressions.Regex.Match(raw, @"\b(?<h>1[0-2]|0?[1-9])\b");
-        if (!m.Success) return null;
-        if (!int.TryParse(m.Groups["h"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var hour))
-            return null;
-        if (hour == 0) return 12;
-        if (hour > 12) hour %= 12;
-        return hour == 0 ? 12 : hour;
-    }
-
-    private static Geometry BuildRingSectorGeometry(
-        double cx, double cy, double innerR, double outerR, double startDeg, double sweepDeg)
-    {
-        var startRad = DegToRad(startDeg);
-        var endRad = DegToRad(startDeg + sweepDeg);
-        var large = sweepDeg > 180;
-
-        var p1 = new Point(cx + Math.Cos(startRad) * outerR, cy + Math.Sin(startRad) * outerR);
-        var p2 = new Point(cx + Math.Cos(endRad) * outerR, cy + Math.Sin(endRad) * outerR);
-        var p3 = new Point(cx + Math.Cos(endRad) * innerR, cy + Math.Sin(endRad) * innerR);
-        var p4 = new Point(cx + Math.Cos(startRad) * innerR, cy + Math.Sin(startRad) * innerR);
-
-        var fig = new PathFigure { StartPoint = p1, IsClosed = true, IsFilled = true };
-        fig.Segments.Add(new ArcSegment(p2, new Size(outerR, outerR), 0, large, SweepDirection.Clockwise, true));
-        fig.Segments.Add(new LineSegment(p3, true));
-        fig.Segments.Add(new ArcSegment(p4, new Size(innerR, innerR), 0, large, SweepDirection.Counterclockwise, true));
-        return new PathGeometry(new[] { fig });
-    }
-
-    private static double DegToRad(double deg) => deg * Math.PI / 180.0;
+    // Phase 6.1.A: MapDetectionSeverityColor + ParseClockHour + BuildRingSectorGeometry +
+    // DegToRad nach PlayerWindow.Helpers.cs migriert.
 
     // Ã¢"â‚¬Ã¢"â‚¬ Manual Marking Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
 
@@ -2471,12 +2362,7 @@ public partial class PlayerWindow : Window
         CodingOverlayCanvas.Children.Add(rect);
     }
 
-    private static string TrimStatus(string? message)
-    {
-        if (string.IsNullOrWhiteSpace(message)) return "Unbekannter Fehler";
-        message = message.Replace(Environment.NewLine, " ").Trim();
-        return message.Length > 120 ? message[..120] : message;
-    }
+    // Phase 6.1.A: TrimStatus nach PlayerWindow.Helpers.cs migriert.
 
     /// <summary>
     /// Speichert eine Markierung als Teacher-Annotation (YOLO-Export + TeacherAnnotationStore).
@@ -5858,44 +5744,7 @@ public partial class PlayerWindow : Window
 
     // --- Coding Foto-Aufnahme vom Video ---
 
-    /// <summary>
-    /// Erstellt einen Snapshot vom aktuellen Video-Frame und speichert ihn im Projektordner.
-    /// </summary>
-    private string? CodingCaptureSnapshot(ProtocolEntry entry)
-    {
-        try
-        {
-            // Zielverzeichnis: neben dem Video oder im Temp
-            var videoDir = !string.IsNullOrEmpty(_videoPath)
-                ? Path.GetDirectoryName(_videoPath) ?? Path.GetTempPath()
-                : Path.GetTempPath();
-            var fotoDir = Path.Combine(videoDir, "Fotos");
-            Directory.CreateDirectory(fotoDir);
-
-            var ts = entry.Zeit.HasValue
-                ? entry.Zeit.Value.ToString(@"hh\-mm\-ss\-fff")
-                : DateTimeOffset.Now.ToString("HHmmss");
-            var fileName = $"{entry.Code}_{entry.MeterStart:F2}m_{ts}.png";
-            var filePath = Path.Combine(fotoDir, fileName);
-
-            TakeSnapshotSafe(filePath);
-
-            // VLC schreibt asynchron - kurz warten
-            for (int i = 0; i < 20; i++)
-            {
-                System.Threading.Thread.Sleep(50);
-                if (File.Exists(filePath) && new FileInfo(filePath).Length > 100)
-                    return filePath;
-            }
-
-            return File.Exists(filePath) ? filePath : null;
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Snapshot-Fehler: {ex.Message}");
-            return null;
-        }
-    }
+    // Phase 6.1.A: CodingCaptureSnapshot nach PlayerWindow.Snapshot.cs migriert.
 
     // --- Coding PDF-Export ---
 
@@ -7487,8 +7336,7 @@ public partial class PlayerWindow : Window
     private readonly HashSet<string> _rejectedFindings = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Erzeugt einen Sperrlisten-Key: Code + gerundeter Meterstand (±0.5m Toleranz).</summary>
-    private static string MakeRejectionKey(string? vsaCode, double meter)
-        => $"{vsaCode ?? "?"}@{Math.Round(meter * 2) / 2:F1}";  // Auf 0.5m runden
+    // Phase 6.1.A: MakeRejectionKey nach PlayerWindow.Helpers.cs migriert.
 
     /// <summary>Maske angeklickt — selektieren, hervorheben, Befundliste synchronisieren.</summary>
     private void OnMaskOverlayClicked(int maskIndex)
@@ -8700,27 +8548,7 @@ public partial class PlayerWindow : Window
     /// Erlaubte Code-Familien fuer Import-Fallback.
     /// Umfasst Bestandsaufnahme (BC), Strukturschaeden (BA) und Betriebliche Stoerungen (BB).
     /// </summary>
-    private static bool IsAllowedImportFallbackCode(string code)
-        => code.StartsWith("BCD", StringComparison.OrdinalIgnoreCase)   // Rohranfang
-           || code.StartsWith("BCE", StringComparison.OrdinalIgnoreCase) // Rohrende
-           || code.StartsWith("BCA", StringComparison.OrdinalIgnoreCase) // Seitl. Anschluss
-           || code.StartsWith("BCC", StringComparison.OrdinalIgnoreCase) // Bogen
-           || code.StartsWith("BBC", StringComparison.OrdinalIgnoreCase) // Ablagerung
-           || code.StartsWith("BDD", StringComparison.OrdinalIgnoreCase) // Wasserspiegel
-           // Strukturschaeden (BA-Gruppe)
-           || code.StartsWith("BAA", StringComparison.OrdinalIgnoreCase) // Verformung
-           || code.StartsWith("BAB", StringComparison.OrdinalIgnoreCase) // Riss
-           || code.StartsWith("BAC", StringComparison.OrdinalIgnoreCase) // Bruch
-           || code.StartsWith("BAF", StringComparison.OrdinalIgnoreCase) // Oberflaechenschaden
-           || code.StartsWith("BAG", StringComparison.OrdinalIgnoreCase) // Einragender Anschluss
-           || code.StartsWith("BAH", StringComparison.OrdinalIgnoreCase) // Schadhafter Anschluss
-           || code.StartsWith("BAI", StringComparison.OrdinalIgnoreCase) // Einragendes Dichtungsmaterial
-           || code.StartsWith("BAJ", StringComparison.OrdinalIgnoreCase) // Versatz
-           // Betriebliche Stoerungen (BB-Gruppe)
-           || code.StartsWith("BBA", StringComparison.OrdinalIgnoreCase) // Wurzeln
-           || code.StartsWith("BBB", StringComparison.OrdinalIgnoreCase) // Anhaftende Stoffe (Inkrustation)
-           || code.StartsWith("BBD", StringComparison.OrdinalIgnoreCase) // Eindringender Boden
-           || code.StartsWith("BBF", StringComparison.OrdinalIgnoreCase); // Infiltration
+    // Phase 6.1.A: IsAllowedImportFallbackCode nach PlayerWindow.Helpers.cs migriert.
 
     /// <summary>
     /// KI-Befunde als CodingEvents eintragen — mit QualityGate-Ampelsystem.
@@ -8974,29 +8802,7 @@ public partial class PlayerWindow : Window
         }
     }
 
-    /// <summary>VLC-Snapshot als PNG-Bytes extrahieren.</summary>
-    private async Task<byte[]?> CaptureSnapshotAsync()
-    {
-        var tmpDir = Path.GetTempPath();
-        var snapFile = Path.Combine(tmpDir, $"sewerstudio_snap_{Guid.NewGuid():N}.png");
-        try
-        {
-            TakeSnapshotSafe(snapFile);
-            for (int i = 0; i < 20; i++)
-            {
-                await Task.Delay(50);
-                if (File.Exists(snapFile) && new FileInfo(snapFile).Length > 100)
-                    break;
-            }
-            if (File.Exists(snapFile))
-                return await File.ReadAllBytesAsync(snapFile);
-            return null;
-        }
-        finally
-        {
-            try { if (File.Exists(snapFile)) File.Delete(snapFile); } catch { }
-        }
-    }
+    // Phase 6.1.A: CaptureSnapshotAsync nach PlayerWindow.Snapshot.cs migriert.
 
     // --- Ampel: Pause + Bestaetigungs-Panel ---
 
