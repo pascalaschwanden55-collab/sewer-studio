@@ -850,8 +850,8 @@ public partial class SchaechtePage : UserControl
 
     private void RestoreLayoutFromSettings()
     {
-        var sp = (ServiceProvider)App.Services;
-        var layout = sp.Settings.SchaechtePageLayout;
+        // Phase 5.1.B Etappe 3.F: via DI-Container.
+        var layout = App.Resolve<AppSettings>().SchaechtePageLayout;
         if (layout is null)
             return;
 
@@ -969,8 +969,9 @@ public partial class SchaechtePage : UserControl
         if (_isRestoringLayout || Grid.Columns.Count == 0)
             return;
 
-        var sp = (ServiceProvider)App.Services;
-        var layout = sp.Settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
+        // Phase 5.1.B Etappe 3.F: via DI-Container.
+        var settings = App.Resolve<AppSettings>();
+        var layout = settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
         layout.Columns = Grid.Columns
             .Select(col =>
             {
@@ -990,8 +991,8 @@ public partial class SchaechtePage : UserControl
             .Where(x => !string.IsNullOrWhiteSpace(x.FieldName))
             .ToList();
 
-        sp.Settings.SchaechtePageLayout = layout;
-        sp.Settings.Save();
+        settings.SchaechtePageLayout = layout;
+        settings.Save();
     }
 
     private static HorizontalAlignment ParseHorizontalAlignment(string? value)
@@ -1776,8 +1777,10 @@ public partial class SchaechtePage : UserControl
             if (System.IO.File.Exists(pdfField))
                 return pdfField;
 
-            var sp = App.Services as ServiceProvider;
-            var resolved = TryResolveRelativePath(pdfField, sp?.Settings.LastProjectPath);
+            // Phase 5.1.B Etappe 3.F: via DI-Container.
+            AppSettings? settings = null;
+            try { settings = App.Resolve<AppSettings>(); } catch { }
+            var resolved = TryResolveRelativePath(pdfField, settings?.LastProjectPath);
             if (!string.IsNullOrWhiteSpace(resolved))
                 return resolved;
         }
@@ -1789,8 +1792,10 @@ public partial class SchaechtePage : UserControl
             if (System.IO.File.Exists(link))
                 return link;
 
-            var sp = App.Services as ServiceProvider;
-            var resolved = TryResolveRelativePath(link, sp?.Settings.LastProjectPath);
+            // Phase 5.1.B Etappe 3.F: via DI-Container.
+            AppSettings? linkSettings = null;
+            try { linkSettings = App.Resolve<AppSettings>(); } catch { }
+            var resolved = TryResolveRelativePath(link, linkSettings?.LastProjectPath);
             if (!string.IsNullOrWhiteSpace(resolved))
                 return resolved;
         }
