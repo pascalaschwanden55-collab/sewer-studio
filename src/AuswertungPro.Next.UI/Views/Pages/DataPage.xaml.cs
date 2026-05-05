@@ -773,8 +773,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void RestoreLayoutFromSettings()
     {
-        var sp = (ServiceProvider)App.Services;
-        var layout = sp.Settings.DataPageLayout;
+        // Phase 5.1.B Etappe 3.H: via DI.
+        var layout = App.Resolve<AppSettings>().DataPageLayout;
         if (layout is null)
             return;
 
@@ -864,8 +864,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (_isRestoringLayout || Grid.Columns.Count == 0)
             return;
 
-        var sp = (ServiceProvider)App.Services;
-        var layout = sp.Settings.DataPageLayout ?? new DataPageLayoutSettings();
+        // Phase 5.1.B Etappe 3.H: via DI.
+        var settings = App.Resolve<AppSettings>();
+        var layout = settings.DataPageLayout ?? new DataPageLayoutSettings();
         layout.Columns = Grid.Columns
             .Select(col =>
             {
@@ -884,8 +885,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
             })
             .Where(x => !string.IsNullOrWhiteSpace(x.FieldName))
             .ToList();
-        sp.Settings.DataPageLayout = layout;
-        sp.Settings.Save();
+        settings.DataPageLayout = layout;
+        settings.Save();
     }
 
     private static HorizontalAlignment ParseHorizontalAlignment(string? value)
@@ -1349,13 +1350,13 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private string BuildPrimaryDamagePreviewContent(HaltungRecord record)
     {
-        var sp = App.Services as ServiceProvider;
+        // Phase 5.1.B Etappe 3.H: via DI-Container.
+        AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider? catalog = null;
+        try { catalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>(); } catch { }
 
         // Audit-Fix 2026-04: Beide Quellen verbinden (UNION statt Exklusiv-Fallback).
-        // Vorher: nur VsaFindings ODER Primaere_Schaeden — wenn der User einen Code aus PDF
-        // codiert (-> 1 VsaFinding), wurden die anderen 7 Codes aus Primaere_Schaeden unsichtbar.
-        var fromFindings = BuildPrimaryDamageLinesFromFindings(record, sp);
-        var fromRaw = BuildPrimaryDamageLinesFromRaw(record.GetFieldValue("Primaere_Schaeden"), sp);
+        var fromFindings = BuildPrimaryDamageLinesFromFindings(record, catalog);
+        var fromRaw = BuildPrimaryDamageLinesFromRaw(record.GetFieldValue("Primaere_Schaeden"), catalog);
 
         // Deduplizieren ueber (Meter+Code)-Praefix der Zeile.
         // Format: "0.00m BCD ..." -> Schluessel "0.00|BCD"
@@ -1411,7 +1412,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         return string.CompareOrdinal(a, b);
     }
 
-    private static List<string> BuildPrimaryDamageLinesFromFindings(HaltungRecord record, ServiceProvider? sp)
+    private static List<string> BuildPrimaryDamageLinesFromFindings(HaltungRecord record, AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider? sp)
     {
         var lines = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1443,7 +1444,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         return lines;
     }
 
-    private static List<string> BuildPrimaryDamageLinesFromRaw(string? rawText, ServiceProvider? sp)
+    private static List<string> BuildPrimaryDamageLinesFromRaw(string? rawText, AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider? sp)
     {
         var lines = new List<string>();
         if (string.IsNullOrWhiteSpace(rawText))
@@ -1609,11 +1610,11 @@ public partial class DataPage : System.Windows.Controls.UserControl
         return text;
     }
 
-    private static string? TryResolveCodeTitle(ServiceProvider? sp, string code)
+    private static string? TryResolveCodeTitle(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider? catalog, string code)
     {
-        if (sp?.CodeCatalog is null || string.IsNullOrWhiteSpace(code))
+        if (catalog is null || string.IsNullOrWhiteSpace(code))
             return null;
-        if (!sp.CodeCatalog.TryGet(code, out var def))
+        if (!catalog.TryGet(code, out var def))
             return null;
         return string.IsNullOrWhiteSpace(def.Title) ? null : def.Title.Trim();
     }
@@ -1636,8 +1637,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (string.IsNullOrWhiteSpace(rawPath))
             return;
 
-        var sp = App.Services as ServiceProvider;
-        var resolved = AuswertungPro.Next.Application.Common.ProjectPathResolver.ResolveFilePath(rawPath, sp?.Settings.LastProjectPath) ?? rawPath;
+        // Phase 5.1.B Etappe 3.H: via DI.
+        AppSettings? photoSettings = null;
+        try { photoSettings = App.Resolve<AppSettings>(); } catch { }
+        var resolved = AuswertungPro.Next.Application.Common.ProjectPathResolver.ResolveFilePath(rawPath, photoSettings?.LastProjectPath) ?? rawPath;
         if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
         {
             MessageBox.Show($"Foto nicht gefunden:\n{rawPath}", "Foto",
@@ -1791,8 +1794,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
             var newValue = GetEditedTextValue(e.EditingElement) ?? oldValue;
             if (!string.Equals(oldValue, newValue, StringComparison.OrdinalIgnoreCase))
             {
-                var sp = App.Services as ServiceProvider;
-                var projectPath = sp?.Settings.LastProjectPath;
+                // Phase 5.1.B Etappe 3.H: via DI.
+                AppSettings? renameSettings = null;
+                try { renameSettings = App.Resolve<AppSettings>(); } catch { }
+                var projectPath = renameSettings?.LastProjectPath;
 
                 // Erst Ordner + Pfade umbenennen, DANN erst den Namen setzen
                 var renameResult = AuswertungPro.Next.Application.Common.HoldingRenameService.Rename(
@@ -1878,7 +1883,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             UndockButton.IsEnabled = false;
 
             // Fensterposition aus Settings laden
-            var settings = (App.Services as ServiceProvider)?.Settings;
+            var settings = TryResolveSettingsViaDi();
             _floatingGridWindow.ApplySavedBounds(settings?.FloatingGridBounds);
 
             // Titel und Info aktualisieren
@@ -1923,7 +1928,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
 
         // Fensterposition speichern
-        var settings = (App.Services as ServiceProvider)?.Settings;
+        var settings = TryResolveSettingsViaDi();
         if (settings is not null)
         {
             settings.FloatingGridBounds = _floatingGridWindow.GetBoundsString();
@@ -1961,7 +1966,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         try
         {
-            var settings = (App.Services as ServiceProvider)?.Settings;
+            var settings = TryResolveSettingsViaDi();
             if (settings is not null)
             {
                 try
@@ -2034,9 +2039,11 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         Action vsaUpdateAction = () =>
         {
-            var sp = App.Services as ServiceProvider;
-            if (sp?.Vsa is null) return;
-            var res = sp.Vsa.EvaluateRecord(record);
+            // Phase 5.1.B Etappe 3.H: via DI.
+            AuswertungPro.Next.Application.Vsa.IVsaEvaluationService? vsa = null;
+            try { vsa = App.Resolve<AuswertungPro.Next.Application.Vsa.IVsaEvaluationService>(); } catch { }
+            if (vsa is null) return;
+            var res = vsa.EvaluateRecord(record);
             if (res.Ok)
             {
                 vm.RefreshSelectedRecord();
@@ -2379,6 +2386,13 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private static HaltungRecord? ResolveActionRecord(object sender, DataPageViewModel vm)
         => GetContextMenuRecord(sender) ?? vm.Selected;
 
+    /// <summary>Phase 5.1.B Etappe 3.H: AppSettings via DI mit Try-Catch fuer Pfad ohne initialisierten Container.</summary>
+    private static AppSettings? TryResolveSettingsViaDi()
+    {
+        try { return App.Resolve<AppSettings>(); }
+        catch { return null; }
+    }
+
     private static string? GetEditedTextValue(FrameworkElement? element)
     {
         if (element is ComboBox combo)
@@ -2473,7 +2487,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        var sp = (ServiceProvider)App.Services;
+        // Phase 5.1.B Etappe 3.H: via DI.
+        var vsa = App.Resolve<AuswertungPro.Next.Application.Vsa.IVsaEvaluationService>();
         var project = vm.Project;
         if (project is null)
         {
@@ -2482,7 +2497,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
         }
 
-        var res = sp.Vsa.Explain(project, record);
+        var res = vsa.Explain(project, record);
         if (!res.Ok || res.Value is null)
         {
             MessageBox.Show(res.ErrorMessage ?? "Berechnung fehlgeschlagen.", "Zustandsklasse",
