@@ -1517,4 +1517,189 @@ public partial class PlayerWindow
                 "Delete = Befund loeschen | Leertaste = weiter");
         }
     }
+    // === Sub-H: Frame-Readiness + OSD-Meter-Reader ===
+
+    // --- Dateneinblendung-Erkennung: Zustandsautomat ---
+    //
+    // WaitingForVideo: Dateneinblendung wird vermutet, Analyse blockiert.
+    // Warmup:          Erster Meter gesehen, warte auf Bestaetigung (2. Frame).
+    // Ready:           Analyse freigeschaltet, kein weiteres Gating.
+    //
+    private enum FrameReadiness { WaitingForVideo, Warmup, Ready }
+    private FrameReadiness _codingFrameState = FrameReadiness.WaitingForVideo;
+    private int _codingOsdSkippedFrames;
+    private int _codingMeterConfirmCount;
+
+    // Warmup-Puffer: Ergebnis aus der Warmup-Phase wird zwischengespeichert
+    // und nach Transition zu Ready nachtraeglich verarbeitet.
+    private LiveDetection? _pendingWarmupResult;
+
+    /// <summary>Setzt den Einblendungs-Zustand zurueck (bei Eintritt/Austritt Codier-Modus).</summary>
+    private void ResetFrameReadiness()
+    {
+        _codingFrameState = FrameReadiness.WaitingForVideo;
+        _codingOsdSkippedFrames = 0;
+        _codingMeterConfirmCount = 0;
+        _codingLastOsdMeter = null; // Stale Meter aus vorheriger Session verhindern
+        _pendingWarmupResult = null;
+    }
+
+    /// <summary>
+    /// Reine Bewertung: Ist der aktuelle Frame bereit fuer die Analyse?
+    /// Aendert KEINEN Zustand — dafuer ist UpdateFrameReadiness zustaendig.
+    /// </summary>
+    private bool IsFrameReady() => _codingFrameState == FrameReadiness.Ready;
+
+    /// <summary>
+    /// Aktualisiert den Einblendungs-Zustand anhand des aktuellen Analyse-Ergebnisses.
+    /// Muss VOR IsFrameReady aufgerufen werden.
+    ///
+    /// Uebergaenge:
+    ///   WaitingForVideo → Warmup:  erster Frame mit Meterstand (aus aktuellem result)
+    ///   WaitingForVideo → Ready:   3 Frames ohne Meter (kein OSD vorhanden)
+    ///   Warmup          → Ready:   2. Frame mit Meterstand (Bestaetigung)
+    ///   Warmup          → Ready:   2 Frames in Warmup ohne zweiten Meter (Fallback gegen Deadlock)
+    /// </summary>
+    private void UpdateFrameReadiness(LiveDetection result)
+    {
+        if (_codingFrameState == FrameReadiness.Ready)
+            return;
+
+        // NUR den aktuellen Frame-Meter verwenden, NICHT den gecachten _codingLastOsdMeter.
+        // Sonst kann ein stale Wert aus vorheriger Navigation die Sperre umgehen.
+        bool hasMeterThisFrame = result.MeterReading.HasValue;
+
+        switch (_codingFrameState)
+        {
+            case FrameReadiness.WaitingForVideo:
+                if (hasMeterThisFrame)
+                {
+                    // Erster Meter gesehen → Warmup (noch nicht sofort freischalten)
+                    _codingFrameState = FrameReadiness.Warmup;
+                    _codingMeterConfirmCount = 1;
+                    _codingOsdSkippedFrames = 0; // Zaehler fuer Warmup-Fallback neu starten
+                }
+                else
+                {
+                    // Kein Meter → zaehlen. Nach 3 Frames: kein OSD vorhanden.
+                    _codingOsdSkippedFrames++;
+                    if (_codingOsdSkippedFrames >= 3)
+                        _codingFrameState = FrameReadiness.Ready;
+                }
+                break;
+
+            case FrameReadiness.Warmup:
+                if (hasMeterThisFrame)
+                    _codingMeterConfirmCount++;
+
+                // 2 Frames mit Meter → sofort Ready (stabiler Uebergang)
+                if (_codingMeterConfirmCount >= 2)
+                {
+                    _codingMeterConfirmCount = 0;
+                    _codingFrameState = FrameReadiness.Ready;
+                }
+                else
+                {
+                    // Fallback: nach 2 Frames in Warmup (auch ohne zweiten Meter) → Ready.
+                    // Verhindert Deadlock bei OCR-Aussetzern nach erstem Meter.
+                    _codingOsdSkippedFrames++;
+                    if (_codingOsdSkippedFrames >= 2)
+                    {
+                        _codingMeterConfirmCount = 0;
+                        _codingFrameState = FrameReadiness.Ready;
+                    }
+                }
+                break;
+        }
+    }
+
+    // --- OSD Meter automatisch lesen beim Navigieren ---
+
+    private double? _codingLastOsdMeter;
+
+    /// <summary>
+    /// Liest den OSD-Meterstand vom aktuellen Video-Frame (async, via KI).
+    /// Wird bei Codier-Navigation und bei Event-Erstellung aufgerufen.
+    /// </summary>
+    // OSD-Prompt: NUR Meterstand lesen, keine Analyse (schneller, praeziser)
+    private static readonly string OsdMeterPrompt = """
+        Kanalinspektion OSD (On-Screen-Display).
+        Lies NUR die Meterzahl UNTEN RECHTS im Bild.
+        Das ist eine Dezimalzahl wie "0.00", "7.90", "14.98" - die gefahrene Distanz.
+        IGNORIERE alle Zahlen im oberen Headertext (Knotennummern wie 74468, 80622 etc.).
+        IGNORIERE Datumsangaben und andere Texte.
+        Antworte NUR mit der Zahl, z.B.: 7.90
+        Falls kein Meterstand lesbar: 0.00
+        """;
+
+    private async Task<double?> CodingReadOsdMeterAsync()
+    {
+        if (_codingLiveDetection == null) return null;
+
+        try
+        {
+            var tmpDir = Path.GetTempPath();
+            var snapFile = Path.Combine(tmpDir, $"sewerstudio_osd_{Guid.NewGuid():N}.png");
+            byte[]? pngBytes = null;
+
+            try
+            {
+                TakeSnapshotSafe(snapFile);
+                for (int i = 0; i < 20; i++)
+                {
+                    await Task.Delay(50);
+                    if (File.Exists(snapFile) && new FileInfo(snapFile).Length > 100)
+                        break;
+                }
+                if (File.Exists(snapFile))
+                    pngBytes = await File.ReadAllBytesAsync(snapFile);
+            }
+            finally
+            {
+                try { if (File.Exists(snapFile)) File.Delete(snapFile); } catch { }
+            }
+
+            if (pngBytes == null || pngBytes.Length == 0) return null;
+
+            // Leichtgewichtiger OSD-Request: nur Meterstand, keine volle Analyse
+            var config = AiRuntimeConfig.Load();
+            var client = config.CreateOllamaClient();
+            var b64 = Convert.ToBase64String(pngBytes);
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var messages = new[]
+            {
+                new OllamaClient.ChatMessage("user", OsdMeterPrompt, new[] { b64 })
+            };
+            var raw = await client.ChatAsync(config.VisionModel, messages, cts.Token);
+
+            // Parse: nur eine Zahl erwartet
+            var meterText = raw?.Trim().Replace(",", ".");
+            if (!string.IsNullOrWhiteSpace(meterText))
+            {
+                // Zahl extrahieren (erste Dezimalzahl im Text)
+                var match = System.Text.RegularExpressions.Regex.Match(
+                    meterText, @"(\d{1,3}(?:\.\d{1,2})?)");
+                if (match.Success && double.TryParse(match.Value,
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var meter))
+                {
+                    // Plausibilitaet: 0-500m (Knotennummern sind 5+ stellig)
+                    if (meter >= 0 && meter <= 500)
+                    {
+                        _codingLastOsdMeter = meter;
+                        OsdMeterBadge.Visibility = Visibility.Visible;
+                        TxtOsdMeter.Text = $"{meter:F2}m (OSD)";
+                        return meter;
+                    }
+                }
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }
