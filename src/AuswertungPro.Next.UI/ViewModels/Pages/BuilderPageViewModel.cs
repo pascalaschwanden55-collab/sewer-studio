@@ -16,6 +16,7 @@ using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
@@ -32,7 +33,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private static readonly CultureInfo Ch = CultureInfo.GetCultureInfo("de-CH");
 
     private readonly ShellViewModel _shell;
-    // Phase 5.1.B Etappe 3.D: ServiceProvider-Field entfernt — via App.Resolve<T>().
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
     private readonly ProjectCostStoreRepository _costRepo = new();
     private readonly CostCatalogStore _catalogStore = new();
     private readonly DispatcherTimer _refreshDebounceTimer;
@@ -168,7 +169,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         var filteredRows = Rows.ToList();
         if (filteredRows.Count == 0)
         {
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 "Keine Daten fuer den aktuellen Filter gefunden.",
                 "Druckcenter",
                 MessageBoxButton.OK,
@@ -243,7 +244,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             LastResult = $"PDF erstellt: {Path.GetFileName(output)}";
             _shell.SetStatus("Druckcenter PDF erstellt");
             PdfExportProgress = "PDF fertig.";
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 $"Druckcenter-PDF wurde erstellt:\n{output}",
                 "Druckcenter",
                 MessageBoxButton.OK,
@@ -253,7 +254,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         {
             LastResult = $"Fehler: {ex.Message}";
             PdfExportProgress = "PDF-Erstellung fehlgeschlagen.";
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 $"PDF konnte nicht erstellt werden:\n{ex.Message}",
                 "Druckcenter",
                 MessageBoxButton.OK,
@@ -278,7 +279,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             }
             else
             {
-                var decision = MessageBox.Show(
+                var decision = _dialogs.ShowMessage(
                     "Der Druckstand hat sich seit dem letzten Export geaendert.\n\nJa = letztes PDF drucken\nNein = anderes PDF auswaehlen\nAbbrechen = nichts tun",
                     "Druckcenter",
                     MessageBoxButton.YesNoCancel,
@@ -312,7 +313,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             LastResult = $"Fehler beim Drucken: {ex.Message}";
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 $"PDF konnte nicht gedruckt werden:\n{ex.Message}",
                 "Druckcenter",
                 MessageBoxButton.OK,
@@ -326,7 +327,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         if (!HasLastExportedPdf())
         {
             ClearLastExport("Die zuletzt exportierte PDF-Datei wurde nicht gefunden.");
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 "Die zuletzt exportierte PDF-Datei wurde nicht gefunden.",
                 "Druckcenter",
                 MessageBoxButton.OK,
@@ -346,7 +347,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             LastResult = $"Fehler beim Oeffnen: {ex.Message}";
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 $"PDF konnte nicht geoeffnet werden:\n{ex.Message}",
                 "Druckcenter",
                 MessageBoxButton.OK,

@@ -10,6 +10,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class ProjectPageViewModel : ObservableObject
 {
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
     private static readonly string[] FixedEigentuemerOptions = { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" };
     private readonly ShellViewModel _shell;
 
@@ -127,7 +128,7 @@ public sealed partial class ProjectPageViewModel : ObservableObject
     private void PreviewSanierenOptions()
     {
         var items = string.Join("\n", SanierenOptions);
-        System.Windows.MessageBox.Show(items, "Sanieren-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        _dialogs.ShowMessage(items, "Sanieren-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
     private void ResetSanierenOptions()
@@ -161,7 +162,7 @@ public sealed partial class ProjectPageViewModel : ObservableObject
     private void PreviewEigentuemerOptions()
     {
         var items = string.Join("\n", EigentuemerOptions);
-        System.Windows.MessageBox.Show(items, "Eigentuemer-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        _dialogs.ShowMessage(items, "Eigentuemer-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
     private void ResetEigentuemerOptions()

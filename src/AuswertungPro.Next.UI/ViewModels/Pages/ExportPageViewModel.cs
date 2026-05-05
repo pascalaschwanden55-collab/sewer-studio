@@ -128,7 +128,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task DistributeHoldingsAsync()
     {
-        var sourceMode = MessageBox.Show(
+        var sourceMode = _dialogs.ShowMessage(
             "Quelle:\nJa = PDF-Import verteilen\nNein = TXT-Import verteilen (z.B. kiDVDaten.txt)",
             "Haltungen verteilen",
             MessageBoxButton.YesNoCancel,
@@ -145,7 +145,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
         if (!useTxtImport)
         {
-            var mode = MessageBox.Show(
+            var mode = _dialogs.ShowMessage(
                 "PDF-Auswahl:\nJa = einzelne PDF-Protokolle auswaehlen\nNein = ganzen PDF-Ordner verwenden",
                 "Haltungen verteilen (PDF)",
                 MessageBoxButton.YesNoCancel,
@@ -168,7 +168,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         }
         else
         {
-            var mode = MessageBox.Show(
+            var mode = _dialogs.ShowMessage(
                 "TXT-Auswahl:\nJa = einzelne TXT-Dateien auswaehlen\nNein = ganzen TXT-Ordner verwenden",
                 "Haltungen verteilen (TXT)",
                 MessageBoxButton.YesNoCancel,
@@ -360,7 +360,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task DistributeShaftsAsync()
     {
-        var mode = MessageBox.Show(
+        var mode = _dialogs.ShowMessage(
             "PDF-Auswahl:\nJa = einzelne Schacht-PDFs auswaehlen\nNein = ganzen PDF-Ordner verwenden",
             "Schaechte verteilen",
             MessageBoxButton.YesNoCancel,
@@ -458,7 +458,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task DistributeDichtheitAsync()
     {
-        var mode = MessageBox.Show(
+        var mode = _dialogs.ShowMessage(
             "PDF-Auswahl:\nJa = einzelne DP-PDFs auswaehlen\nNein = ganzen PDF-Ordner verwenden",
             "Dichtheitsprüfung verteilen",
             MessageBoxButton.YesNoCancel,

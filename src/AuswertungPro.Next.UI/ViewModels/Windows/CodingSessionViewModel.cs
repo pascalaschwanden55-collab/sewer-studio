@@ -9,6 +9,8 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
+using AuswertungPro.Next.UI.Services;
+
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 /// <summary>
@@ -39,6 +41,7 @@ public enum DefectStatus
 /// </summary>
 public sealed partial class CodingSessionViewModel : ObservableObject, IDisposable
 {
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
     private readonly ICodingSessionService _sessionService;
     private readonly IOverlayToolService _overlayService;
     private bool _disposed;
@@ -181,7 +184,7 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogs.ShowMessage(ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -194,7 +197,7 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     [RelayCommand]
     private void AbortSession()
     {
-        if (MessageBox.Show("Session wirklich abbrechen?", "Abbrechen",
+        if (_dialogs.ShowMessage("Session wirklich abbrechen?", "Abbrechen",
                 MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
         {
             _sessionService.AbortSession("Vom Benutzer abgebrochen");
@@ -211,7 +214,7 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogs.ShowMessage(ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 

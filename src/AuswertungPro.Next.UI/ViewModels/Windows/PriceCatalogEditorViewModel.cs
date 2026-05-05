@@ -8,10 +8,13 @@ using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models.Costs;
 using AuswertungPro.Next.Infrastructure.Costs;
 
+using AuswertungPro.Next.UI.Services;
+
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 public sealed partial class PriceCatalogEditorViewModel : ObservableObject
 {
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
     private readonly CostCalculationService _costService;
     private PriceCatalog _catalog = new();
 
@@ -107,7 +110,7 @@ public sealed partial class PriceCatalogEditorViewModel : ObservableObject
         }).ToList();
 
         _costService.SaveCatalog(_catalog);
-        MessageBox.Show($"Preiskatalog gespeichert: {_costService.GetCatalogPath()}", "OK", 
+        _dialogs.ShowMessage($"Preiskatalog gespeichert: {_costService.GetCatalogPath()}", "OK", 
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }

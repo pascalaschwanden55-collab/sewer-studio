@@ -7,10 +7,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
 
+using AuswertungPro.Next.UI.Services;
+
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 public sealed partial class CodeCatalogEditorViewModel : ObservableObject
 {
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
     private const string AllGroupsLabel = "Alle";
 
     private readonly AppProtocol.ICodeCatalogProvider _catalogProvider;
@@ -126,7 +129,7 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
             return;
 
         var label = string.IsNullOrWhiteSpace(SelectedCode.Code) ? SelectedCode.Title : SelectedCode.Code;
-        var result = MessageBox.Show(
+        var result = _dialogs.ShowMessage(
             $"Code '{label}' wirklich loeschen?",
             "Code loeschen",
             MessageBoxButton.YesNo,
@@ -152,7 +155,7 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
 
         if (errors.Count > 0)
         {
-            MessageBox.Show(string.Join(Environment.NewLine, errors), "Code-Katalog", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogs.ShowMessage(string.Join(Environment.NewLine, errors), "Code-Katalog", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -165,7 +168,7 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Speichern fehlgeschlagen: {ex.Message}", "Code-Katalog", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogs.ShowMessage($"Speichern fehlgeschlagen: {ex.Message}", "Code-Katalog", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -177,18 +180,18 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
 
         if (errors.Count == 0)
         {
-            MessageBox.Show("Validierung erfolgreich. Keine Fehler gefunden.", "Code-Katalog", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogs.ShowMessage("Validierung erfolgreich. Keine Fehler gefunden.", "Code-Katalog", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
-        MessageBox.Show(string.Join(Environment.NewLine, errors), "Code-Katalog", MessageBoxButton.OK, MessageBoxImage.Warning);
+        _dialogs.ShowMessage(string.Join(Environment.NewLine, errors), "Code-Katalog", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
     private void Cancel()
     {
         if (_hasChanges)
         {
-            var result = MessageBox.Show(
+            var result = _dialogs.ShowMessage(
                 "Aenderungen verwerfen?",
                 "Code-Katalog",
                 MessageBoxButton.YesNo,

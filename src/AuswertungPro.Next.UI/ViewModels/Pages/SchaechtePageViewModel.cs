@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -14,6 +14,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class SchaechtePageViewModel : ObservableObject
 {
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
     private static readonly string[] FixedEigentuemerOptions = { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" };
     // Phase 5.1.B Etappe 3.D: ServiceProvider-Field entfernt — via App.Resolve<T>().
     private readonly ShellViewModel _shell;
@@ -369,7 +370,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private void PreviewSanierenOptions()
     {
         var items = string.Join("\n", SanierenOptions);
-        System.Windows.MessageBox.Show(items, "Sanieren-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        _dialogs.ShowMessage(items, "Sanieren-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
     private void ResetSanierenOptions()
@@ -400,7 +401,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private void PreviewEigentuemerOptions()
     {
         var items = string.Join("\n", EigentuemerOptions);
-        System.Windows.MessageBox.Show(items, "Eigentuemer-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        _dialogs.ShowMessage(items, "Eigentuemer-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
     private void ResetEigentuemerOptions()
@@ -439,7 +440,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private void PreviewPruefungsresultatOptions()
     {
         var items = string.Join("\n", PruefungsresultatOptions);
-        System.Windows.MessageBox.Show(items, "Pruefungsresultat-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        _dialogs.ShowMessage(items, "Pruefungsresultat-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
     private void ResetPruefungsresultatOptions()
@@ -475,7 +476,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private void PreviewReferenzpruefungOptions()
     {
         var items = string.Join("\n", ReferenzpruefungOptions);
-        System.Windows.MessageBox.Show(items, "Referenzpruefung-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        _dialogs.ShowMessage(items, "Referenzpruefung-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
     private void ResetReferenzpruefungOptions()

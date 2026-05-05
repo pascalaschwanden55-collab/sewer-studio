@@ -7,10 +7,13 @@ using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models.Costs;
 using AuswertungPro.Next.Infrastructure.Costs;
 
+using AuswertungPro.Next.UI.Services;
+
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
 {
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
     private readonly CostCalculationService _costService;
     private MeasureTemplates _templates;
     private PriceCatalog _catalog;
@@ -125,7 +128,7 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(TemplateId) || string.IsNullOrWhiteSpace(TemplateName))
         {
-            MessageBox.Show("ID und Name müssen ausgefüllt sein.", "Hinweis",
+            _dialogs.ShowMessage("ID und Name müssen ausgefüllt sein.", "Hinweis",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -156,7 +159,7 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
         LoadTemplates();
         SelectedTemplate = Templates.FirstOrDefault(t => t.Id == TemplateId);
 
-        MessageBox.Show("Template gespeichert.", "OK",
+        _dialogs.ShowMessage("Template gespeichert.", "OK",
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
@@ -165,7 +168,7 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
     {
         if (SelectedTemplate == null) return;
 
-        var result = MessageBox.Show($"Template '{SelectedTemplate.Name}' wirklich löschen?",
+        var result = _dialogs.ShowMessage($"Template '{SelectedTemplate.Name}' wirklich löschen?",
             "Bestätigen", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
         if (result != MessageBoxResult.Yes) return;
@@ -252,7 +255,7 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
             ? SelectedAvailablePrice.Id
             : SelectedAvailablePrice.Label;
 
-        var result = MessageBox.Show(
+        var result = _dialogs.ShowMessage(
             $"Position '{label}' wirklich löschen?",
             "Position löschen",
             MessageBoxButton.YesNo,
@@ -273,7 +276,7 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
             .ToList();
 
         _costService.SaveCatalog(_catalog);
-        MessageBox.Show("Positionen gespeichert.", "OK", MessageBoxButton.OK, MessageBoxImage.Information);
+        _dialogs.ShowMessage("Positionen gespeichert.", "OK", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private string CreateNewCatalogId()

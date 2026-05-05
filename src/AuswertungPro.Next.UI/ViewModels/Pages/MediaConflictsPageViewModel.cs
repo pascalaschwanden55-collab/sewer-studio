@@ -199,7 +199,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         var source = SelectedConflict.SelectedCandidatePath;
         if (string.IsNullOrWhiteSpace(source))
         {
-            MessageBox.Show("Bitte zuerst einen Kandidaten auswaehlen.", "Konfliktcenter", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogs.ShowMessage("Bitte zuerst einen Kandidaten auswaehlen.", "Konfliktcenter", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -241,7 +241,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(SelectedConflict.SuggestedSourcePath))
         {
-            MessageBox.Show("Keine gelernte Quelle fuer diese Position vorhanden.", "Konfliktcenter", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogs.ShowMessage("Keine gelernte Quelle fuer diese Position vorhanden.", "Konfliktcenter", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -257,7 +257,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         if (!result.Success)
         {
             LastResult = $"Fehler: {result.Message}";
-            MessageBox.Show(result.Message, "Konfliktcenter", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogs.ShowMessage(result.Message, "Konfliktcenter", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -283,7 +283,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         var projectFolder = _shell.GetProjectFolder();
         if (string.IsNullOrWhiteSpace(projectFolder) || !Directory.Exists(projectFolder))
         {
-            MessageBox.Show("Projektordner nicht verfuegbar.", "Konfliktcenter", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogs.ShowMessage("Projektordner nicht verfuegbar.", "Konfliktcenter", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -376,7 +376,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
-            MessageBox.Show("Video nicht gefunden.", "Konfliktcenter", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogs.ShowMessage("Video nicht gefunden.", "Konfliktcenter", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -396,7 +396,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Video konnte nicht gestartet werden:\n{ex.Message}", "Konfliktcenter", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogs.ShowMessage($"Video konnte nicht gestartet werden:\n{ex.Message}", "Konfliktcenter", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

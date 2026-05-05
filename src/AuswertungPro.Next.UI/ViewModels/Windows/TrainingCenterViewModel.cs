@@ -25,6 +25,7 @@ using AiTrack = AuswertungPro.Next.UI.Services.AiActivityTracker;
 
 public partial class TrainingCenterViewModel : ObservableObject
 {
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
     private const int MaxBatchLogLines = 500;
     // KB-Update serialisieren: SQLite vertraegt keine parallelen Schreibzugriffe
     private readonly SemaphoreSlim _kbUpdateLock = new(1, 1);
@@ -1202,7 +1203,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         var list = selected.Cast<TrainingSample>().ToList();
         if (list.Count == 0) { StatusText = "Keine Zeilen markiert."; return; }
 
-        var confirm = System.Windows.MessageBox.Show(
+        var confirm = _dialogs.ShowMessage(
             $"{list.Count} Samples werden ENDGUELTIG aus dem Training-Store geloescht.\n\n" +
             $"Frame-Dateien bleiben auf Disk. KB-Eintraege werden NICHT geloescht.\n\nFortfahren?",
             "Markierte Samples loeschen",
@@ -1257,7 +1258,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             .Select(g => $"{g.Key}: {g.Count()}");
         var codeSummary = string.Join(", ", topCodes);
 
-        var confirm = System.Windows.MessageBox.Show(
+        var confirm = _dialogs.ShowMessage(
             $"{pendingOnly.Count} Pending-Samples werden auf {newStatus} gesetzt.\n\n" +
             $"Top-Codes: {codeSummary}\n\n" +
             $"Stichprobe vorher pruefen!\n\nFortfahren?",
@@ -1349,7 +1350,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             Log($"  Ziel: {Path.Combine(AppSettings.AppDataDir, "data", "protocol_training.json")}");
             StatusText = $"Protokoll-Training fertig: {added} neu, {approved.Count - added} Duplikate, {codes.Count} Codes.";
 
-            System.Windows.MessageBox.Show(
+            _dialogs.ShowMessage(
                 $"Protokoll-Training fertig.\n\n" +
                 $"Neu hinzugefuegt: {added}\n" +
                 $"Duplikate uebersprungen: {approved.Count - added}\n" +

@@ -98,11 +98,12 @@ public sealed class DialogService : IDialogService
         string text,
         string title,
         MessageBoxButton buttons = MessageBoxButton.OK,
-        MessageBoxImage image = MessageBoxImage.Information)
+        MessageBoxImage image = MessageBoxImage.Information,
+        MessageBoxResult defaultResult = MessageBoxResult.None)
     {
         var owner = System.Windows.Application.Current?.MainWindow;
         return owner is not null
-            ? MessageBox.Show(owner, text, title, buttons, image)
-            : MessageBox.Show(text, title, buttons, image);
+            ? MessageBox.Show(owner, text, title, buttons, image, defaultResult)
+            : MessageBox.Show(text, title, buttons, image, defaultResult);
     }
 }

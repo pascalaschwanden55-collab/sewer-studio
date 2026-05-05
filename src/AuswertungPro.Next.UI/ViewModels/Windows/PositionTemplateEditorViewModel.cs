@@ -8,10 +8,13 @@ using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 
+using AuswertungPro.Next.UI.Services;
+
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 public sealed partial class PositionTemplateEditorViewModel : ObservableObject
 {
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
     private readonly PositionTemplateStore _store = new();
     private readonly CostCatalogStore _catalogStore = new();
     private readonly string? _projectPath;
@@ -124,7 +127,7 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
 
         if (!_store.SaveUserOverride(catalog, out var error))
         {
-            MessageBox.Show($"Fehler beim Speichern: {error}", "Fehler", 
+            _dialogs.ShowMessage($"Fehler beim Speichern: {error}", "Fehler", 
                 MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
@@ -141,7 +144,7 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
 
     private void ResetToDefault()
     {
-        var result = MessageBox.Show(
+        var result = _dialogs.ShowMessage(
             "Möchten Sie wirklich alle Änderungen verwerfen und die Standard-Einstellungen wiederherstellen?",
             "Standard wiederherstellen",
             MessageBoxButton.YesNo,
@@ -197,7 +200,7 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
     {
         if (SelectedGroup is null) return;
 
-        var result = MessageBox.Show(
+        var result = _dialogs.ShowMessage(
             $"Möchten Sie die Gruppe '{SelectedGroup.Name}' wirklich löschen?",
             "Gruppe löschen",
             MessageBoxButton.YesNo,
@@ -360,6 +363,7 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
 
 public sealed class CatalogItemViewModel
 {
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
     public string Key { get; set; } = "";
     public string DisplayName { get; set; } = "";
 }

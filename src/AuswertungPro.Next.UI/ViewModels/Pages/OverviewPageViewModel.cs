@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using System.IO;
@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using AuswertungPro.Next.UI.Helpers;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages
 {
@@ -20,6 +21,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private ProjectOverviewEntry? _selectedProjectEntry;
         private readonly ShellViewModel _shell;
         private readonly AppSettings _settings;
+        private readonly IDialogService _dialogs;
 
         public Project Project => _shell.Project;
         public bool IsProjectReady => _shell.IsProjectReady;
@@ -45,6 +47,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         {
             _shell = shell;
             _settings = App.Resolve<AppSettings>();
+            _dialogs = App.Resolve<IDialogService>();
 
             LastProjectPath = _settings.LastProjectPath;
             ProjectStatus = BuildProjectStatus();
@@ -242,7 +245,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             return;
 
         var fileName = Path.GetFileName(entry.Path);
-        var result = MessageBox.Show(
+        var result = _dialogs.ShowMessage(
             $"Projekt wirklich lÃ¶schen?\n\n{fileName}\n{entry.Path}",
             "Projekt lÃ¶schen",
             MessageBoxButton.YesNo,
@@ -265,7 +268,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"LÃ¶schen fehlgeschlagen: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogs.ShowMessage($"LÃ¶schen fehlgeschlagen: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

@@ -1,4 +1,4 @@
-﻿using AuswertungPro.Next.UI.Dialogs;
+using AuswertungPro.Next.UI.Dialogs;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Services;
 using System;
@@ -32,6 +32,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class DataPageViewModel : ObservableObject
 {
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
     private const int MinimumSamplesForModelTraining = 25;
     private const int StrongModelThreshold = 100;
     private static readonly string[] FixedEigentuemerOptions = { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" };
@@ -844,7 +845,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             var msg = logPath is null
                 ? $"Video konnte nicht gestartet werden:\n{ex.Message}{nativeHint}\n\n(Details: ex.ToString() nicht gespeichert)"
                 : $"Video konnte nicht gestartet werden:\n{ex.Message}{nativeHint}\n\nDetails gespeichert in:\n{logPath}";
-            MessageBox.Show(msg, "Video", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogs.ShowMessage(msg, "Video", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -1129,7 +1130,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         var allowedCodes = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>().AllowedCodes();
         if (allowedCodes is null || allowedCodes.Count == 0)
         {
-            MessageBox.Show("VSA-Code-Katalog ist leer oder nicht geladen.", "Videoanalyse KI",
+            _dialogs.ShowMessage("VSA-Code-Katalog ist leer oder nicht geladen.", "Videoanalyse KI",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -1137,7 +1138,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         var cfg = AiRuntimeConfig.Load();
         if (!cfg.Enabled)
         {
-            MessageBox.Show("KI ist deaktiviert (SEWERSTUDIO_AI_ENABLED=0).", "Videoanalyse KI",
+            _dialogs.ShowMessage("KI ist deaktiviert (SEWERSTUDIO_AI_ENABLED=0).", "Videoanalyse KI",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -1536,7 +1537,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         var holding = (record.GetFieldValue("Haltungsname") ?? "").Trim();
         if (string.IsNullOrWhiteSpace(holding))
         {
-            MessageBox.Show("Haltungsname fehlt in der Zeile.", "Kosten/Massnahmen",
+            _dialogs.ShowMessage("Haltungsname fehlt in der Zeile.", "Kosten/Massnahmen",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -1544,7 +1545,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         var projectPath = App.Resolve<AppSettings>().LastProjectPath;
         if (string.IsNullOrWhiteSpace(projectPath))
         {
-            MessageBox.Show("Projekt bitte zuerst speichern/oeffnen, um Kosten wiederherzustellen.", "Kosten/Massnahmen",
+            _dialogs.ShowMessage("Projekt bitte zuerst speichern/oeffnen, um Kosten wiederherzustellen.", "Kosten/Massnahmen",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -1554,7 +1555,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         {
             var dir = Path.GetDirectoryName(projectPath);
             var storePath = string.IsNullOrWhiteSpace(dir) ? "" : ProjectCostStoreRepository.GetStorePath(dir);
-            MessageBox.Show($"Keine gespeicherten Kosten/Massnahmen gefunden fuer:\n{holding}\n\nDatei:\n{storePath}",
+            _dialogs.ShowMessage($"Keine gespeicherten Kosten/Massnahmen gefunden fuer:\n{holding}\n\nDatei:\n{storePath}",
                 "Kosten/Massnahmen", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -1577,7 +1578,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         var recommendation = _measureRecommendationService.Recommend(record, maxSuggestions: 5);
         if (recommendation.Measures.Count == 0)
         {
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 "Noch keine Vorschlaege verfuegbar. Bitte zuerst einige Haltungen mit Massnahmen bewerten.",
                 "Massnahmen",
                 MessageBoxButton.OK,
@@ -1618,7 +1619,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         summary += $"\n\nQuelle: {sourceText}";
         if (recommendation.SimilarCasesCount > 0)
             summary += $" ({recommendation.SimilarCasesCount} aehnliche Faelle)";
-        MessageBox.Show(summary, "Empfohlene Sanierungsmassnahmen",
+        _dialogs.ShowMessage(summary, "Empfohlene Sanierungsmassnahmen",
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
@@ -1631,7 +1632,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         var records = _shell.Project.Data;
         if (records.Count == 0)
         {
-            MessageBox.Show("Keine Haltungen vorhanden.", "Massnahmen",
+            _dialogs.ShowMessage("Keine Haltungen vorhanden.", "Massnahmen",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -1718,7 +1719,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         var holding = (record.GetFieldValue("Haltungsname") ?? "").Trim();
         if (string.IsNullOrWhiteSpace(holding))
         {
-            MessageBox.Show("Haltungsname fehlt in der Zeile.", "Sanierungsmassnahmen",
+            _dialogs.ShowMessage("Haltungsname fehlt in der Zeile.", "Sanierungsmassnahmen",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -1791,7 +1792,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             $"Letztes Training: {trainedAt}\n" +
             $"Modell-Datei:\n{stats.ModelPath}";
 
-        MessageBox.Show(message, "KI-Modell Status", MessageBoxButton.OK, MessageBoxImage.Information);
+        _dialogs.ShowMessage(message, "KI-Modell Status", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private string? EnsureVideoPath(HaltungRecord record)
@@ -1833,7 +1834,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         if (resManual.Success && !string.IsNullOrWhiteSpace(resManual.VideoPath))
             return SaveVideoLink(record, resManual.VideoPath!, userEdited: false);
 
-        MessageBox.Show(resManual.Message, "Video", MessageBoxButton.OK, MessageBoxImage.Information);
+        _dialogs.ShowMessage(resManual.Message, "Video", MessageBoxButton.OK, MessageBoxImage.Information);
 
         var manual = App.Resolve<IDialogService>().OpenFile(
             "Video auswaehlen",
@@ -1899,7 +1900,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         if (record is null)
         {
-            MessageBox.Show("Bitte zuerst eine Haltung auswaehlen.", "Haltungsprotokoll AWU", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogs.ShowMessage("Bitte zuerst eine Haltung auswaehlen.", "Haltungsprotokoll AWU", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -1931,11 +1932,11 @@ public sealed partial class DataPageViewModel : ObservableObject
                 options);
 
             File.WriteAllBytes(output, pdf);
-            MessageBox.Show($"AWU-Haltungsprotokoll wurde erstellt:\n{output}", "Haltungsprotokoll AWU", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogs.ShowMessage($"AWU-Haltungsprotokoll wurde erstellt:\n{output}", "Haltungsprotokoll AWU", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"AWU-Haltungsprotokoll konnte nicht erstellt werden:\n{ex.Message}", "Haltungsprotokoll AWU", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogs.ShowMessage($"AWU-Haltungsprotokoll konnte nicht erstellt werden:\n{ex.Message}", "Haltungsprotokoll AWU", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -1970,7 +1971,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         if (record is null)
         {
-            MessageBox.Show("Bitte zuerst eine Haltung auswaehlen.", "Hydraulik PDF", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogs.ShowMessage("Bitte zuerst eine Haltung auswaehlen.", "Hydraulik PDF", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -1995,7 +1996,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         var result = HydraulikEngine.Berechne(input);
         if (result is null)
         {
-            MessageBox.Show("Hydraulik-Berechnung konnte nicht durchgefuehrt werden.\nBitte DN und Gefaelle pruefen.", "Hydraulik PDF", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogs.ShowMessage("Hydraulik-Berechnung konnte nicht durchgefuehrt werden.\nBitte DN und Gefaelle pruefen.", "Hydraulik PDF", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -2061,11 +2062,11 @@ public sealed partial class DataPageViewModel : ObservableObject
             var pdf = await Task.Run(() => Application.Reports.HydraulikPdfBuilder.Build(record, calc, options));
             await Task.Run(() => File.WriteAllBytes(output, pdf));
 
-            MessageBox.Show($"PDF wurde erstellt:\n{output}", "Hydraulik PDF", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogs.ShowMessage($"PDF wurde erstellt:\n{output}", "Hydraulik PDF", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"PDF konnte nicht erstellt werden:\n{ex.Message}", "Hydraulik PDF", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogs.ShowMessage($"PDF konnte nicht erstellt werden:\n{ex.Message}", "Hydraulik PDF", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -2073,7 +2074,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         if (record is null)
         {
-            MessageBox.Show("Bitte zuerst eine Haltung auswaehlen.", "Dossier", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogs.ShowMessage("Bitte zuerst eine Haltung auswaehlen.", "Dossier", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -2237,7 +2238,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             // Pruefung ob druckbar (muss auf UI-Thread, wegen MessageBox)
             if (!hasDossierBaseSection && !(options.IncludeOriginalProtokolle && originalPdfPaths.Count > 0))
             {
-                MessageBox.Show(
+                _dialogs.ShowMessage(
                     "Die ausgewaehlte Kombination enthaelt keine druckbaren Inhalte.",
                     "Dossier",
                     MessageBoxButton.OK,
@@ -2272,11 +2273,11 @@ public sealed partial class DataPageViewModel : ObservableObject
                 File.WriteAllBytes(output, pdf);
             });
 
-            MessageBox.Show($"Dossier wurde erstellt:\n{output}", "Dossier", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogs.ShowMessage($"Dossier wurde erstellt:\n{output}", "Dossier", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Dossier konnte nicht erstellt werden:\n{ex.Message}", "Dossier", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogs.ShowMessage($"Dossier konnte nicht erstellt werden:\n{ex.Message}", "Dossier", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -2291,7 +2292,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         if (paths.Count == 0)
         {
             var name = record.GetFieldValue("Haltungsname") ?? "(unbekannt)";
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 $"Kein PDF gefunden fuer Haltung '{name}'.\n\nPruefen Sie, ob das Original-PDF im Projektordner liegt.",
                 "Haltungsprotokoll (PDF)",
                 MessageBoxButton.OK, MessageBoxImage.Information);
@@ -2304,7 +2305,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"PDF konnte nicht geoeffnet werden:\n{ex.Message}",
+            _dialogs.ShowMessage($"PDF konnte nicht geoeffnet werden:\n{ex.Message}",
                 "Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
@@ -2682,7 +2683,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     private void PreviewSanierenOptions()
     {
         var items = string.Join("\n", SanierenOptions);
-        System.Windows.MessageBox.Show(items, "Sanieren-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        _dialogs.ShowMessage(items, "Sanieren-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
     private void ResetSanierenOptions()
@@ -2715,7 +2716,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     private void PreviewEigentuemerOptions()
     {
         var items = string.Join("\n", EigentuemerOptions);
-        System.Windows.MessageBox.Show(items, "Eigentuemer-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        _dialogs.ShowMessage(items, "Eigentuemer-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
     private void ResetEigentuemerOptions()
@@ -2748,7 +2749,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     private void PreviewPruefungsresultatOptions()
     {
         var items = string.Join("\n", PruefungsresultatOptions);
-        System.Windows.MessageBox.Show(items, "Pruefungsresultat-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        _dialogs.ShowMessage(items, "Pruefungsresultat-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
     }
 
     private void ResetPruefungsresultatOptions()
@@ -2787,7 +2788,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     private void PreviewReferenzpruefungOptions()
     {
         var items = string.Join("\n", ReferenzpruefungOptions);
-        System.Windows.MessageBox.Show(items, "Referenzpruefung-Liste", System.Windows.MessageBoxButton.OK,
+        _dialogs.ShowMessage(items, "Referenzpruefung-Liste", System.Windows.MessageBoxButton.OK,
             System.Windows.MessageBoxImage.Information);
     }
 
@@ -2821,7 +2822,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     private void PreviewEmpfohleneSanierungsmassnahmenOptions()
     {
         var items = string.Join("\n", EmpfohleneSanierungsmassnahmenOptions);
-        System.Windows.MessageBox.Show(items, "Sanierungsmassnahmen-Liste", System.Windows.MessageBoxButton.OK,
+        _dialogs.ShowMessage(items, "Sanierungsmassnahmen-Liste", System.Windows.MessageBoxButton.OK,
             System.Windows.MessageBoxImage.Information);
     }
 

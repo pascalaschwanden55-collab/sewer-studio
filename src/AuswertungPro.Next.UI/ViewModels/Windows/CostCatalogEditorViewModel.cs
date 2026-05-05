@@ -7,10 +7,13 @@ using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 
+using AuswertungPro.Next.UI.Services;
+
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 public sealed partial class CostCatalogEditorViewModel : ObservableObject
 {
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
     private readonly CostCatalogStore _store = new();
     private readonly CostCatalog _catalog;
     private readonly string? _projectPath;
@@ -66,7 +69,7 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
             return;
 
         var label = string.IsNullOrWhiteSpace(SelectedItem.Name) ? SelectedItem.Key : SelectedItem.Name;
-        var result = MessageBox.Show($"Position '{label}' wirklich löschen?", "Position löschen",
+        var result = _dialogs.ShowMessage($"Position '{label}' wirklich löschen?", "Position löschen",
             MessageBoxButton.YesNo, MessageBoxImage.Question);
 
         if (result != MessageBoxResult.Yes)
@@ -85,7 +88,7 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
 
         if (!_store.SaveUserOverrides(_catalog, out var error))
         {
-            MessageBox.Show($"Speichern fehlgeschlagen: {error}", "Positionen",
+            _dialogs.ShowMessage($"Speichern fehlgeschlagen: {error}", "Positionen",
                 MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }

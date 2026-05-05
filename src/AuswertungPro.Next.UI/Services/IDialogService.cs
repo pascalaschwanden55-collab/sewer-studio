@@ -31,5 +31,6 @@ public interface IDialogService
         string text,
         string title,
         MessageBoxButton buttons = MessageBoxButton.OK,
-        MessageBoxImage image = MessageBoxImage.Information);
+        MessageBoxImage image = MessageBoxImage.Information,
+        MessageBoxResult defaultResult = MessageBoxResult.None);
 }

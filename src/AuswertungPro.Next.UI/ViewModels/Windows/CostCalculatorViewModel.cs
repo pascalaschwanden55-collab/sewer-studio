@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -19,6 +19,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 public sealed partial class CostCalculatorViewModel : ObservableObject
 {
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
     private readonly CostCatalogStore _catalogStore = new();
     private readonly MeasureTemplateStore _templateStore = new();
     private readonly ProjectCostStoreRepository _costRepo = new();
@@ -226,7 +227,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(_projectPath))
         {
-            MessageBox.Show("Projekt bitte speichern, um Kosten abzulegen.", "Kosten",
+            _dialogs.ShowMessage("Projekt bitte speichern, um Kosten abzulegen.", "Kosten",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -234,7 +235,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         var key = Holding?.Trim() ?? "";
         if (string.IsNullOrWhiteSpace(key))
         {
-            MessageBox.Show("Haltungsname fehlt.", "Kosten",
+            _dialogs.ShowMessage("Haltungsname fehlt.", "Kosten",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -244,7 +245,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
         if (!_costRepo.Save(_projectPath, _store, out var error))
         {
-            MessageBox.Show($"Speichern fehlgeschlagen: {error}", "Kosten",
+            _dialogs.ShowMessage($"Speichern fehlgeschlagen: {error}", "Kosten",
                 MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
@@ -258,7 +259,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     {
         if (_applyTotal is null)
         {
-            MessageBox.Show("Kosten/Massnahmen koennen hier nicht in die Zeile uebernommen werden.", "Kosten/Massnahmen",
+            _dialogs.ShowMessage("Kosten/Massnahmen koennen hier nicht in die Zeile uebernommen werden.", "Kosten/Massnahmen",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -270,7 +271,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     {
         if (SelectedMeasures.Count == 0)
         {
-            MessageBox.Show("Bitte zuerst Massnahmen hinzufuegen.", "PDF-Export",
+            _dialogs.ShowMessage("Bitte zuerst Massnahmen hinzufuegen.", "PDF-Export",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -297,7 +298,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             var entries = BuildCostSummaryEntries(holdingCost);
             if (entries.Count == 0)
             {
-                MessageBox.Show(
+                _dialogs.ShowMessage(
                     "Keine passenden Kostenpositionen gefunden.",
                     "PDF-Export",
                     MessageBoxButton.OK,
@@ -347,12 +348,12 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             var renderer = new OfferHtmlToPdfRenderer();
             await renderer.RenderAsync(model, templatePath, output, logoPath);
 
-            MessageBox.Show($"PDF-Kostenzusammenstellung wurde erstellt:\n{output}", "PDF-Export",
+            _dialogs.ShowMessage($"PDF-Kostenzusammenstellung wurde erstellt:\n{output}", "PDF-Export",
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"PDF konnte nicht erstellt werden:\n{ex.Message}", "PDF-Export",
+            _dialogs.ShowMessage($"PDF konnte nicht erstellt werden:\n{ex.Message}", "PDF-Export",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
@@ -651,7 +652,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(measure.MeasureId))
         {
-            MessageBox.Show("Vorlagen-ID fehlt.", "Vorlage",
+            _dialogs.ShowMessage("Vorlagen-ID fehlt.", "Vorlage",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -671,12 +672,12 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
         if (!_templateStore.UpsertUserTemplate(template, out var error))
         {
-            MessageBox.Show($"Speichern fehlgeschlagen: {error}", "Vorlage",
+            _dialogs.ShowMessage($"Speichern fehlgeschlagen: {error}", "Vorlage",
                 MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
-        MessageBox.Show("Vorlage gespeichert. Gilt fuer neue Projekte.", "Vorlage",
+        _dialogs.ShowMessage("Vorlage gespeichert. Gilt fuer neue Projekte.", "Vorlage",
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
