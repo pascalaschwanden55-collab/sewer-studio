@@ -62,7 +62,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
         // Phase 1.4: Expertenmodus-Toggle bestimmt ob Eigendevis im Hauptmenue
         // sichtbar ist. Default = sichtbar (kein Default-Verhaltens-Wechsel).
-        var showExperten = _sp.Settings.ShowExpertenmodusFeatures;
+        var showExperten = App.Resolve<AppSettings>().ShowExpertenmodusFeatures;
 
         var items = new List<NavItem>
         {
@@ -229,7 +229,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public void NewProject()
     {
-        var folder = _sp.Dialogs.SelectFolder("Projektordner waehlen");
+        var folder = App.Resolve<IDialogService>().SelectFolder("Projektordner waehlen");
         if (string.IsNullOrWhiteSpace(folder))
             return;
 
@@ -237,15 +237,15 @@ public sealed partial class ShellViewModel : ObservableObject
         var projectPath = Path.Combine(folder, "projekt.json");
 
         EnsureProjectDirectory(projectPath);
-        var res = _sp.Projects.Save(p, projectPath);
+        var res = App.Resolve<AuswertungPro.Next.Application.Projects.IProjectRepository>().Save(p, projectPath);
         if (!res.Ok)
         {
             SetStatus($"Fehler: {res.ErrorMessage}");
             return;
         }
 
-        _sp.Settings.LastProjectPath = projectPath;
-        _sp.Settings.Save();
+        App.Resolve<AppSettings>().LastProjectPath = projectPath;
+        App.Resolve<AppSettings>().Save();
 
         ReplaceProject(p);
         MarkProjectReady();
@@ -258,8 +258,8 @@ public sealed partial class ShellViewModel : ObservableObject
     /// Gibt den Projektordner zurueck (Verzeichnis der projekt.json).
     /// </summary>
     public string? GetProjectFolder()
-        => string.IsNullOrWhiteSpace(_sp.Settings.LastProjectPath)
-           ? null : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
+        => string.IsNullOrWhiteSpace(App.Resolve<AppSettings>().LastProjectPath)
+           ? null : Path.GetDirectoryName(App.Resolve<AppSettings>().LastProjectPath);
 
     public bool TryOpenProject(string path)
     {
@@ -269,15 +269,15 @@ public sealed partial class ShellViewModel : ObservableObject
             return false;
         }
 
-        var res = _sp.Projects.Load(path);
+        var res = App.Resolve<AuswertungPro.Next.Application.Projects.IProjectRepository>().Load(path);
         if (!res.Ok || res.Value is null)
         {
             SetStatus($"Fehler: {res.ErrorMessage}");
             return false;
         }
 
-        _sp.Settings.LastProjectPath = path;
-        _sp.Settings.Save();
+        App.Resolve<AppSettings>().LastProjectPath = path;
+        App.Resolve<AppSettings>().Save();
         MarkProjectReady();
 
         ReplaceProject(res.Value);
@@ -287,7 +287,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public bool TryOpenProjectWithDialog()
     {
-        var path = _sp.Dialogs.OpenFile("Projekt öffnen", "Projekt (*.json)|*.json");
+        var path = App.Resolve<IDialogService>().OpenFile("Projekt öffnen", "Projekt (*.json)|*.json");
         if (path is null)
             return false;
         return TryOpenProject(path);
@@ -299,25 +299,25 @@ public sealed partial class ShellViewModel : ObservableObject
     public bool TrySaveProject()
     {
         // Save uses last path if present, else Save As
-        var path = NormalizeProjectPath(_sp.Settings.LastProjectPath);
+        var path = NormalizeProjectPath(App.Resolve<AppSettings>().LastProjectPath);
         if (string.IsNullOrWhiteSpace(path))
         {
             var defaultName = MakeSafeFileName(Project.Name);
-            path = _sp.Dialogs.SaveFile("Projekt speichern", "Projekt (*.json)|*.json", ".json", defaultName);
+            path = App.Resolve<IDialogService>().SaveFile("Projekt speichern", "Projekt (*.json)|*.json", ".json", defaultName);
             if (path is null)
             {
                 SetStatus("Speichern abgebrochen");
                 return false;
             }
-            _sp.Settings.LastProjectPath = NormalizeProjectPath(path);
-            _sp.Settings.Save();
+            App.Resolve<AppSettings>().LastProjectPath = NormalizeProjectPath(path);
+            App.Resolve<AppSettings>().Save();
         }
 
         EnsureProjectDirectory(path);
-        if (_sp.Settings.EnableRestorePoints)
+        if (App.Resolve<AppSettings>().EnableRestorePoints)
             TryCreateProjectRestorePoint(path);
 
-        var res = _sp.Projects.Save(Project, path);
+        var res = App.Resolve<AuswertungPro.Next.Application.Projects.IProjectRepository>().Save(Project, path);
         SetStatus(res.Ok ? "Gespeichert" : $"Fehler: {res.ErrorMessage}");
         if (res.Ok)
             IsProjectReady = true;
@@ -327,7 +327,7 @@ public sealed partial class ShellViewModel : ObservableObject
     public bool TrySaveProjectAs()
     {
         var defaultName = MakeSafeFileName(Project.Name);
-        var path = _sp.Dialogs.SaveFile("Projekt speichern unter", "Projekt (*.json)|*.json", ".json", defaultName);
+        var path = App.Resolve<IDialogService>().SaveFile("Projekt speichern unter", "Projekt (*.json)|*.json", ".json", defaultName);
         if (path is null)
         {
             SetStatus("Speichern abgebrochen");
@@ -335,15 +335,15 @@ public sealed partial class ShellViewModel : ObservableObject
         }
 
         path = NormalizeProjectPath(path);
-        _sp.Settings.LastProjectPath = path;
-        _sp.Settings.Save();
+        App.Resolve<AppSettings>().LastProjectPath = path;
+        App.Resolve<AppSettings>().Save();
         MarkProjectReady();
 
         EnsureProjectDirectory(path);
-        if (_sp.Settings.EnableRestorePoints)
+        if (App.Resolve<AppSettings>().EnableRestorePoints)
             TryCreateProjectRestorePoint(path);
 
-        var res = _sp.Projects.Save(Project, path);
+        var res = App.Resolve<AuswertungPro.Next.Application.Projects.IProjectRepository>().Save(Project, path);
         SetStatus(res.Ok ? $"Gespeichert: {Path.GetFileName(path)}" : $"Fehler: {res.ErrorMessage}");
         return res.Ok;
     }
