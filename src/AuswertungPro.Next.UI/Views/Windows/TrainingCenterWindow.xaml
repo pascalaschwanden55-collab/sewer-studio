@@ -1,4 +1,4 @@
-﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.TrainingCenterWindow"
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.TrainingCenterWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
@@ -220,12 +220,12 @@
 
                             <Button Content="Alle Sichtbaren approven"
                                     Command="{Binding ApproveAllVisibleCommand}"
-                                    Background="#16A34A" Foreground="White"
+                                    Background="{DynamicResource StatusGreenBrush}" Foreground="White"
                                     Padding="14,4" FontWeight="SemiBold" Margin="0,0,8,0"
                                     ToolTip="Setzt alle aktuell durch den Filter sichtbaren Pending-Samples auf Approved (mit Konfirmation)"/>
                             <Button Content="Alle Sichtbaren rejecten"
                                     Command="{Binding RejectAllVisibleCommand}"
-                                    Background="#DC2626" Foreground="White"
+                                    Background="{DynamicResource StatusRedBrush}" Foreground="White"
                                     Padding="14,4" FontWeight="SemiBold" Margin="0,0,16,0"
                                     ToolTip="Setzt alle aktuell durch den Filter sichtbaren Pending-Samples auf Rejected (mit Konfirmation)"/>
 
@@ -234,7 +234,7 @@
                             <Button Content="Markierte approven"
                                     Command="{Binding ApproveSelectedCommand}"
                                     CommandParameter="{Binding SelectedItems, ElementName=SamplesGrid}"
-                                    Background="#16A34A" Foreground="White"
+                                    Background="{DynamicResource StatusGreenBrush}" Foreground="White"
                                     Padding="14,4" FontWeight="SemiBold" Margin="0,0,8,0"
                                     ToolTip="Setzt nur die per Strg+Klick / Shift+Klick markierten Zeilen auf Approved"/>
                             <Button Content="Markierte loeschen"
@@ -374,7 +374,7 @@
                             <Button Content="⏹ Abbrechen"
                                     Command="{Binding StopSelfTrainingCommand}"
                                     IsEnabled="{Binding IsSelfTrainingRunning}"
-                                    Background="#DC2626" Foreground="White" FontWeight="SemiBold"
+                                    Background="{DynamicResource StatusRedBrush}" Foreground="White" FontWeight="SemiBold"
                                     Padding="16,6" Cursor="Hand"
                                     ToolTip="Selbsttraining sofort abbrechen — bisherige Ergebnisse bleiben erhalten"/>
                         </WrapPanel>
@@ -408,7 +408,7 @@
                                     ToolTip="Batch-Nachtbetrieb: Alle Haltungen in einem Ordner automatisch ueber Nacht verarbeiten"/>
                             <Button x:Name="BtnBatchCancel" Content="⛔ Abbrechen"
                                     Click="CancelBatchNightRun_Click"
-                                    Background="#DC2626" Foreground="White" FontWeight="SemiBold"
+                                    Background="{DynamicResource StatusRedBrush}" Foreground="White" FontWeight="SemiBold"
                                     Padding="12,5" Cursor="Hand" Visibility="Collapsed"
                                     ToolTip="Batch-Nachtbetrieb abbrechen (aktuelle Haltung wird noch fertig verarbeitet)"/>
                         </WrapPanel>

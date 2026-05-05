@@ -1,4 +1,4 @@
-﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.CodingModeWindow"
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.CodingModeWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
@@ -367,7 +367,7 @@
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,2">
                                     <Border Width="12" Height="12" CornerRadius="3"
-                                            Background="#F59E0B" Margin="0,0,8,0"/>
+                                            Background="{DynamicResource StatusOrangeBrush}" Margin="0,0,8,0"/>
                                     <TextBlock Text="Yellow (60-85%): Review empfohlen" FontSize="{StaticResource TypeCaption}"
                                                Foreground="{DynamicResource TextSecondaryBrush}"/>
                                 </StackPanel>
@@ -515,7 +515,7 @@
                             <!-- Akzeptieren -->
                             <Button Grid.Column="0" x:Name="BtnAcceptDefect"
                                     Style="{StaticResource DefectActionBtn}"
-                                    Background="#16A34A" Padding="8,3" Margin="0,0,4,0"
+                                    Background="{DynamicResource StatusGreenBrush}" Padding="8,3" Margin="0,0,4,0"
                                     ToolTip="KI-Erkennung akzeptieren und ins Protokoll uebernehmen"
                                     Click="BtnAcceptDefect_Click">
                                 <TextBlock Text="&#x2713; Akzeptieren" FontSize="{StaticResource TypeCaption}"/>
@@ -523,7 +523,7 @@
                             <!-- Ablehnen -->
                             <Button Grid.Column="1" x:Name="BtnRejectDefect"
                                     Style="{StaticResource DefectActionBtn}"
-                                    Background="#DC2626" Padding="8,3" Margin="0,0,4,0"
+                                    Background="{DynamicResource StatusRedBrush}" Padding="8,3" Margin="0,0,4,0"
                                     ToolTip="KI-Erkennung ablehnen und aus der Beobachtungsliste entfernen"
                                     Click="BtnRejectDefect_Click">
                                 <TextBlock Text="&#x2717; Ablehnen" FontSize="{StaticResource TypeCaption}"/>
@@ -541,7 +541,7 @@
                             <!-- Loeschen -->
                             <Button Grid.Column="4" x:Name="BtnDeleteDefect"
                                     Style="{StaticResource DefectActionBtn}"
-                                    Background="#DC2626" Padding="8,3"
+                                    Background="{DynamicResource StatusRedBrush}" Padding="8,3"
                                     ToolTip="Ausgewaehlte Beobachtung endgueltig aus dem Protokoll loeschen"
                                     Click="BtnDeleteDefect_Click">
                                 <TextBlock Text="&#x2716;" FontSize="{StaticResource TypeCaption}"/>
@@ -657,7 +657,7 @@
                                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                                         <TextBlock x:Name="TxtStatPending"
                                                    Text="0" FontSize="{StaticResource TypeIcon}" FontWeight="Bold"
-                                                   Foreground="#F59E0B"/>
+                                                   Foreground="{DynamicResource StatusOrangeBrush}"/>
                                     </StackPanel>
                                 </Border>
                                 <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource StatTile}">

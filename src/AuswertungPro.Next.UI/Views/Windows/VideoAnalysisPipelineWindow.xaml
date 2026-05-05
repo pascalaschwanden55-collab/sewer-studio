@@ -1,4 +1,4 @@
-﻿<Window x:Class="AuswertungPro.Next.UI.Views.Windows.VideoAnalysisPipelineWindow"
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.VideoAnalysisPipelineWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
@@ -196,13 +196,13 @@
                                 Converter={StaticResource BoolToVis}}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="MM" FontFamily="Consolas" FontSize="{StaticResource TypeMicro}"
-                                       FontWeight="Bold" Foreground="#16A34A"
+                                       FontWeight="Bold" Foreground="{DynamicResource StatusGreenBrush}"
                                        VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock FontFamily="Consolas" FontSize="{StaticResource TypeMicro}"
                                        Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center">
                                 <Run Text="Skip "/>
                                 <Run Text="{Binding YoloSkippedFrames}" FontWeight="Bold"
-                                     Foreground="#F59E0B"/>
+                                     Foreground="{DynamicResource StatusOrangeBrush}"/>
                             </TextBlock>
                         </StackPanel>
                     </Border>
@@ -316,7 +316,7 @@
                                     <TextBlock Grid.Row="2" FontSize="9" Foreground="{StaticResource MutedBrush}" Text="Messung"/>
                                     <TextBlock Grid.Row="4" Style="{StaticResource ValueLarge}"
                                                Text="{Binding PillarQuantCount}"
-                                               Foreground="#16A34A"/>
+                                               Foreground="{DynamicResource StatusGreenBrush}"/>
                                     <ProgressBar Grid.Row="6"
                                                  Style="{StaticResource ThinProgress}"
                                                  Value="{Binding MappingProgressPct}"
@@ -329,7 +329,7 @@
                             </Border>
                             <!-- Top accent line (green) -->
                             <Border Height="3" VerticalAlignment="Top" CornerRadius="8,8,0,0"
-                                    Background="#16A34A" Margin="1,1,1,0"/>
+                                    Background="{DynamicResource StatusGreenBrush}" Margin="1,1,1,0"/>
                         </Grid>
 
                         <!-- Säule 3: LOKALISIERUNG -->
@@ -351,7 +351,7 @@
                                     <TextBlock Grid.Row="2" FontSize="9" Foreground="{StaticResource MutedBrush}" Text="Position"/>
                                     <TextBlock Grid.Row="4" Style="{StaticResource ValueLarge}"
                                                Text="{Binding PillarLocalCount}"
-                                               Foreground="#F59E0B"/>
+                                               Foreground="{DynamicResource StatusOrangeBrush}"/>
                                     <ProgressBar Grid.Row="6"
                                                  Style="{StaticResource ThinProgress}">
                                         <ProgressBar.Value>
@@ -370,7 +370,7 @@
                             </Border>
                             <!-- Top accent line (amber) -->
                             <Border Height="3" VerticalAlignment="Top" CornerRadius="8,8,0,0"
-                                    Background="#F59E0B" Margin="1,1,1,0"/>
+                                    Background="{DynamicResource StatusOrangeBrush}" Margin="1,1,1,0"/>
                         </Grid>
                     </Grid>
 
@@ -430,7 +430,7 @@
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding VideoPhaseDone}" Value="True">
                                                     <Setter Property="Text" Value="✓"/>
-                                                    <Setter Property="Foreground" Value="#16A34A"/>
+                                                    <Setter Property="Foreground" Value="{StaticResource StatusGreenBrush}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -453,7 +453,7 @@
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding MappingPhaseDone}" Value="True">
                                                     <Setter Property="Text" Value="✓"/>
-                                                    <Setter Property="Foreground" Value="#16A34A"/>
+                                                    <Setter Property="Foreground" Value="{StaticResource StatusGreenBrush}"/>
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding VideoPhaseDone}" Value="True">
                                                     <Setter Property="Text" Value="●"/>
@@ -480,7 +480,7 @@
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsDone}" Value="True">
                                                     <Setter Property="Text" Value="✓"/>
-                                                    <Setter Property="Foreground" Value="#16A34A"/>
+                                                    <Setter Property="Foreground" Value="{StaticResource StatusGreenBrush}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -511,11 +511,11 @@
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsDone}" Value="True">
                                             <Setter Property="Text" Value="Fertig ✓"/>
-                                            <Setter Property="Foreground" Value="#16A34A"/>
+                                            <Setter Property="Foreground" Value="{StaticResource StatusGreenBrush}"/>
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding HasError}" Value="True">
                                             <Setter Property="Text" Value="Fehler"/>
-                                            <Setter Property="Foreground" Value="#DC2626"/>
+                                            <Setter Property="Foreground" Value="{StaticResource StatusRedBrush}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -530,7 +530,7 @@
                             <TextBlock FontSize="{StaticResource TypeBody}" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"
                                        Margin="0,0,16,0" Text="{Binding DetectionCount}"/>
                             <TextBlock FontSize="{StaticResource TypeCaption}" Foreground="{StaticResource MutedBrush}" Margin="0,0,4,0" Text="Hohe Konf."/>
-                            <TextBlock FontSize="{StaticResource TypeBody}" FontWeight="Bold" Foreground="#16A34A"
+                            <TextBlock FontSize="{StaticResource TypeBody}" FontWeight="Bold" Foreground="{DynamicResource StatusGreenBrush}"
                                        Text="{Binding HighConfidenceCount}"/>
                         </StackPanel>
                     </DockPanel>

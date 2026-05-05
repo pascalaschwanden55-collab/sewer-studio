@@ -32,6 +32,11 @@
     <Color x:Key="ColorWarning">#FFF59E0B</Color>
     <Color x:Key="ColorInfo">#FF2563EB</Color>
 
+    <!-- ── Phase 3.4: Status-Tokens (Tailwind 600) ── -->
+    <Color x:Key="ColorStatusGreen">#FF16A34A</Color>
+    <Color x:Key="ColorStatusOrange">#FFF59E0B</Color>
+    <Color x:Key="ColorStatusRed">#FFDC2626</Color>
+
     <!-- ── BACKWARD COMPAT — Legacy keys mapped to engineering palette ── -->
     <Color x:Key="ColorNeonCyan">#FF2563EB</Color>
     <Color x:Key="ColorNeonPurple">#FF7C3AED</Color>
@@ -67,6 +72,11 @@
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource ColorDanger}"/>
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource ColorWarning}"/>
     <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource ColorInfo}"/>
+
+    <!-- Phase 3.4: Status-Brushes -->
+    <SolidColorBrush x:Key="StatusGreenBrush" Color="{StaticResource ColorStatusGreen}"/>
+    <SolidColorBrush x:Key="StatusOrangeBrush" Color="{StaticResource ColorStatusOrange}"/>
+    <SolidColorBrush x:Key="StatusRedBrush" Color="{StaticResource ColorStatusRed}"/>
 
     <!-- Legacy brush keys (still referenced in pages) -->
     <SolidColorBrush x:Key="NeonCyanBrush" Color="{StaticResource ColorAccent}"/>
