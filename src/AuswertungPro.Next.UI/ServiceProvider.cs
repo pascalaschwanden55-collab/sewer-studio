@@ -224,12 +224,13 @@ namespace AuswertungPro.Next.UI
                     }
                 });
             }
+            // Phase 5.2.D: VSA-Katalog-Resolution aus VsaCatalogResolver-Helper.
             var codeCatalogPath = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_codes.json");
-            EnsureEmbeddedCatalogFile(codeCatalogPath);
-            var nodCatalogPath = ResolveVsaCatalogNodPath(settings);
-            var xmlCatalogPath = nodCatalogPath ?? ResolveVsaCatalogPath(settings);
+            VsaCatalogResolver.EnsureEmbeddedCatalogFile(codeCatalogPath);
+            var nodCatalogPath = VsaCatalogResolver.ResolveNodPath(settings);
+            var xmlCatalogPath = nodCatalogPath ?? VsaCatalogResolver.ResolveSecPath(settings);
             VsaCatalogResolvedPath = xmlCatalogPath;
-            var fallbackTextXmlPath = ResolveVsaCatalogTextPath(settings, xmlCatalogPath);
+            var fallbackTextXmlPath = VsaCatalogResolver.ResolveTextPath(settings, xmlCatalogPath);
             CodeCatalog = !string.IsNullOrWhiteSpace(xmlCatalogPath)
                 ? new AuswertungPro.Next.Application.Protocol.XmlCodeCatalogProvider(xmlCatalogPath, codeCatalogPath, fallbackTextXmlPath)
                 : new AuswertungPro.Next.Application.Protocol.JsonCodeCatalogProvider(codeCatalogPath);
@@ -328,154 +329,8 @@ namespace AuswertungPro.Next.UI
             return new AiSanierungOptimizationService(cfg, http);
         }
 
-        private static string? ResolveVsaCatalogPath(AppSettings settings)
-        {
-            if (!string.IsNullOrWhiteSpace(settings.VsaCatalogSecXmlPath))
-            {
-                if (File.Exists(settings.VsaCatalogSecXmlPath))
-                    return settings.VsaCatalogSecXmlPath;
-
-                if (Directory.Exists(settings.VsaCatalogSecXmlPath))
-                {
-                    var fromDir = FindCatalogInRoot(settings.VsaCatalogSecXmlPath);
-                    if (!string.IsNullOrWhiteSpace(fromDir))
-                        return fromDir;
-                }
-            }
-
-            var env = Environment.GetEnvironmentVariable("VSA_CATALOG_SEC_XML");
-            if (!string.IsNullOrWhiteSpace(env) && File.Exists(env))
-                return env;
-
-            var envRoot = Environment.GetEnvironmentVariable("VSA_CATALOG_ROOT");
-            if (!string.IsNullOrWhiteSpace(envRoot) && Directory.Exists(envRoot))
-            {
-                var fromRoot = FindCatalogInRoot(envRoot);
-                if (!string.IsNullOrWhiteSpace(fromRoot))
-                    return fromRoot;
-            }
-
-            if (!string.IsNullOrWhiteSpace(settings.LastProjectPath))
-            {
-                var candidate = Path.Combine(
-                    settings.LastProjectPath,
-                    "DISK1",
-                    "System",
-                    "ProgramData",
-                    "CDLAB",
-                    "Common",
-                    "Catalogs",
-                    "Version4",
-                    "EN13508_VSA_CH_DEU_SEC.xml");
-                if (File.Exists(candidate))
-                    return candidate;
-
-                var fromProject = FindCatalogInRoot(Path.Combine(
-                    settings.LastProjectPath,
-                    "DISK1",
-                    "System",
-                    "ProgramData",
-                    "CDLAB",
-                    "Common",
-                    "Catalogs"));
-                if (!string.IsNullOrWhiteSpace(fromProject))
-                    return fromProject;
-            }
-
-            // WinCan catalog directory (user-configured via Katalog-Auswahl)
-            if (!string.IsNullOrWhiteSpace(settings.WinCanCatalogDirectory))
-            {
-                var fromWinCan = FindCatalogInRoot(settings.WinCanCatalogDirectory);
-                if (!string.IsNullOrWhiteSpace(fromWinCan))
-                    return fromWinCan;
-            }
-
-            // Auto-detect common WinCanVX installation paths
-            var commonPaths = new[]
-            {
-                @"C:\CDLAB\WinCanVX\WinCanMerger\App_Data\Catalogs",
-                @"C:\Program Files\CDLAB\WinCanVX\WinCanMerger\App_Data\Catalogs",
-                @"C:\Program Files (x86)\CDLAB\WinCanVX\WinCanMerger\App_Data\Catalogs"
-            };
-            foreach (var commonPath in commonPaths)
-            {
-                var fromCommon = FindCatalogInRoot(commonPath);
-                if (!string.IsNullOrWhiteSpace(fromCommon))
-                    return fromCommon;
-            }
-
-            return null;
-        }
-
-        private static string? ResolveVsaCatalogNodPath(AppSettings settings)
-        {
-            if (!string.IsNullOrWhiteSpace(settings.VsaCatalogNodXmlPath))
-            {
-                if (File.Exists(settings.VsaCatalogNodXmlPath))
-                    return settings.VsaCatalogNodXmlPath;
-
-                if (Directory.Exists(settings.VsaCatalogNodXmlPath))
-                {
-                    var fromDir = FindCatalogInRootNod(settings.VsaCatalogNodXmlPath);
-                    if (!string.IsNullOrWhiteSpace(fromDir))
-                        return fromDir;
-                }
-            }
-
-            var env = Environment.GetEnvironmentVariable("VSA_CATALOG_NOD_XML");
-            if (!string.IsNullOrWhiteSpace(env) && File.Exists(env))
-                return env;
-
-            var envRoot = Environment.GetEnvironmentVariable("VSA_CATALOG_NOD_ROOT");
-            if (!string.IsNullOrWhiteSpace(envRoot) && Directory.Exists(envRoot))
-            {
-                var fromRoot = FindCatalogInRootNod(envRoot);
-                if (!string.IsNullOrWhiteSpace(fromRoot))
-                    return fromRoot;
-            }
-
-            return null;
-        }
-
-        private static string? FindCatalogInRoot(string root)
-        {
-            var v4 = Path.Combine(root, "Version4");
-            var candidates = new[]
-            {
-                Path.Combine(root, "EN13508_VSA-2019_CH_DEU_SEC.xml"),
-                Path.Combine(root, "EN13508_VSA_CH_DEU_SEC.xml"),
-                Path.Combine(v4, "EN13508_VSA-2019_CH_DEU_SEC.xml"),
-                Path.Combine(v4, "EN13508_VSA_CH_DEU_SEC.xml"),
-            };
-
-            foreach (var c in candidates)
-            {
-                if (File.Exists(c))
-                    return c;
-            }
-
-            return null;
-        }
-
-        private static string? FindCatalogInRootNod(string root)
-        {
-            var v4 = Path.Combine(root, "Version4");
-            var candidates = new[]
-            {
-                Path.Combine(v4, "EN13508_VSA-2019_CH_DEU_NOD.xml"),
-                Path.Combine(v4, "EN13508_VSA_CH_DEU_NOD.xml"),
-                Path.Combine(root, "EN13508_VSA-2019_CH_DEU_NOD.xml"),
-                Path.Combine(root, "EN13508_VSA_CH_DEU_NOD.xml")
-            };
-
-            foreach (var c in candidates)
-            {
-                if (File.Exists(c))
-                    return c;
-            }
-
-            return null;
-        }
+        // Phase 5.2.D: ResolveVsaCatalogPath / ResolveVsaCatalogNodPath /
+        // FindCatalogInRoot / FindCatalogInRootNod sind nach VsaCatalogResolver migriert.
 
         private void LogCodeCatalogWarnings(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider provider, string? sourcePath)
         {
@@ -498,89 +353,8 @@ namespace AuswertungPro.Next.UI
                 warnings.Count, sourceLabel, sample, suffix);
         }
 
-        private static string? ResolveVsaCatalogTextPath(AppSettings settings, string? resolvedXmlPath)
-        {
-            var configured = settings.VsaCatalogSecXmlPath;
-            if (!string.IsNullOrWhiteSpace(configured))
-            {
-                if (File.Exists(configured))
-                {
-                    var dir = Path.GetDirectoryName(configured);
-                    var fromDir = FindTextCatalogInRoot(dir);
-                    if (!string.IsNullOrWhiteSpace(fromDir))
-                        return fromDir;
-                }
-                else if (Directory.Exists(configured))
-                {
-                    var fromRoot = FindTextCatalogInRoot(configured);
-                    if (!string.IsNullOrWhiteSpace(fromRoot))
-                        return fromRoot;
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(resolvedXmlPath))
-            {
-                var dir = Path.GetDirectoryName(resolvedXmlPath);
-                if (!string.IsNullOrWhiteSpace(dir))
-                {
-                    var parent = Directory.GetParent(dir);
-                    if (parent is not null && string.Equals(Path.GetFileName(dir), "Version4", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var fromRoot = FindTextCatalogInRoot(parent.FullName);
-                        if (!string.IsNullOrWhiteSpace(fromRoot))
-                            return fromRoot;
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        private static string? FindTextCatalogInRoot(string? root)
-        {
-            if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
-                return null;
-
-            var candidates = new[]
-            {
-                Path.Combine(root, "EN13508_VSA_CH_DEU_SEC.xml"),
-                Path.Combine(root, "EN13508_VSA-2019_CH_DEU_SEC.xml")
-            };
-
-            foreach (var c in candidates)
-            {
-                if (File.Exists(c))
-                    return c;
-            }
-
-            return null;
-        }
-
-        private static void EnsureEmbeddedCatalogFile(string targetPath)
-        {
-            if (File.Exists(targetPath))
-                return;
-
-            try
-            {
-                var dir = Path.GetDirectoryName(targetPath);
-                if (!string.IsNullOrWhiteSpace(dir))
-                    Directory.CreateDirectory(dir);
-
-                var asm = Assembly.GetExecutingAssembly();
-                var resourceName = "AuswertungPro.Next.UI.Data.vsa_codes.json";
-                using var stream = asm.GetManifestResourceStream(resourceName);
-                if (stream is null)
-                    return;
-
-                using var fs = File.Create(targetPath);
-                stream.CopyTo(fs);
-            }
-            catch
-            {
-                // ignore, fallback handled by JsonCodeCatalogProvider
-            }
-        }
+        // Phase 5.2.D: ResolveVsaCatalogTextPath / FindTextCatalogInRoot /
+        // EnsureEmbeddedCatalogFile sind nach VsaCatalogResolver migriert.
 
         /// <summary>
         /// Prueft nach dem Warmup via /api/ps ob das Modell im VRAM liegt.
