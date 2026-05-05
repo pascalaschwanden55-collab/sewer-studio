@@ -17,6 +17,7 @@ using System.Windows.Threading;
 using Rectangle = System.Windows.Shapes.Rectangle;
 using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 using LibVLCSharp.Shared;
+using AuswertungPro.Next.Application.Player;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.QualityGate;
 using AuswertungPro.Next.UI.Ai.Shared;
@@ -38,7 +39,7 @@ public sealed record PlayerWindowOptions(
     int FileCachingMs,
     int NetworkCachingMs,
     int CodecThreads,
-    string VideoOutput)
+    string VideoOutput) : IVideoPlaybackOptions
 {
     public static PlayerWindowOptions Default => new(
         EnableHardwareDecoding: true,
@@ -80,18 +81,13 @@ public sealed record PlayerDamageOverlayData(
     double PipeLengthMeters,
     IReadOnlyList<DamageMarkerInfo> Markers);
 
-public partial class PlayerWindow : Window
+public partial class PlayerWindow : Window, IVlcSurface
 {
     private const float MinRate = 0.25f;
     private const float MaxRate = 8.0f;
 
-    private readonly LibVLC _libVlc;
+    private readonly IVideoPlaybackController _videoPlayback;
     private readonly MediaPlayer _player;
-    private readonly DispatcherTimer _timer;
-    private bool _isDragging;
-    private bool _wasPlayingBeforeDrag;
-    private DateTime _lastScrubSeek = DateTime.MinValue;
-    private readonly DispatcherTimer _scrubTimer;
     private readonly string _videoPath;
     private readonly PlayerWindowOptions _options;
     private readonly string? _initialOverlayText;
@@ -181,65 +177,38 @@ public partial class PlayerWindow : Window
         if (string.IsNullOrWhiteSpace(videoPath) || !File.Exists(videoPath))
             throw new FileNotFoundException("Video nicht gefunden", videoPath);
 
-        Core.Initialize();
-
-        _libVlc = CreateLibVlc(_options);
-        _player = new MediaPlayer(_libVlc)
-        {
-            EnableHardwareDecoding = _options.EnableHardwareDecoding
-        };
-        VideoView.MediaPlayer = _player;
-
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
-        _timer.Tick += (_, __) => UpdateUi();
-
-        // Scrub timer: fires pending seek when dragging (throttled)
-        _scrubTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(60) };
-        _scrubTimer.Tick += (_, __) =>
-        {
-            _scrubTimer.Stop();
-            if (_isDragging)
-                ScrubSeekToSlider();
-        };
+        _videoPlayback = CreatePlaybackController(_videoPath, _options);
+        _player = (MediaPlayer)_videoPlayback.NativePlayer;
+        _videoPlayback.PositionUpdateRequested += (_, __) => UpdateUi();
+        _videoPlayback.ScrubRequested += (_, __) => ScrubSeekToSlider();
 
         PositionSlider.AddHandler(Thumb.DragStartedEvent,
             new DragStartedEventHandler((_, __) =>
             {
-                _wasPlayingBeforeDrag = _player.IsPlaying;
-                _isDragging = true;
-                // Pause during drag so frames render cleanly
-                if (_wasPlayingBeforeDrag)
-                    _player.SetPause(true);
-                ScrubSeekToSlider();
+                _videoPlayback.BeginDrag(PositionSlider.Value, PositionSlider.Maximum);
+                ApplySeekSnapshot(_videoPlayback.PreviewSeek(PositionSlider.Value, PositionSlider.Maximum));
             }),
             true);
         PositionSlider.AddHandler(Thumb.DragCompletedEvent,
             new DragCompletedEventHandler((_, __) =>
             {
-                _scrubTimer.Stop();
-                SeekToSlider();
-                _isDragging = false;
-                // Resume playback if it was playing before drag
-                if (_wasPlayingBeforeDrag)
-                    _player.SetPause(false);
+                _videoPlayback.CompleteDrag(PositionSlider.Value, PositionSlider.Maximum);
+                UpdateUi();
             }),
             true);
 
         PositionSlider.PreviewMouseLeftButtonUp += (_, __) =>
         {
-            if (!_isDragging)
+            if (!_videoPlayback.IsDragging)
                 SeekToSlider();
         };
 
         PositionSlider.LostMouseCapture += (_, __) =>
         {
-            if (_isDragging)
+            if (_videoPlayback.IsDragging)
             {
-                _scrubTimer.Stop();
-                SeekToSlider();
-                _isDragging = false;
-                if (_wasPlayingBeforeDrag)
-                    _player.SetPause(false);
+                _videoPlayback.CancelDrag(PositionSlider.Value, PositionSlider.Maximum);
+                UpdateUi();
             }
         };
 
@@ -428,68 +397,15 @@ public partial class PlayerWindow : Window
 
     private bool TryGetCurrentTimeInternal(out TimeSpan time)
     {
-        time = default;
-        try
-        {
-            var ms = Math.Max(0, _player.Time);
-            time = TimeSpan.FromMilliseconds(ms);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
+        return _videoPlayback.TryGetCurrentTime(out time);
     }
 
     private bool TrySeekToInternal(TimeSpan time)
     {
-        try
-        {
-            EnsurePlaying();
-            var ms = (long)Math.Max(0, time.TotalMilliseconds);
-            if (_player.Length > 0 && ms > _player.Length)
-                ms = _player.Length;
-            _player.Time = ms;
+        var success = _videoPlayback.TrySeekTo(time);
+        if (success)
             UpdateUi();
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static LibVLC CreateLibVlc(PlayerWindowOptions options)
-    {
-        var args = new List<string>();
-
-        if (!string.Equals(options.VideoOutput, "any", StringComparison.OrdinalIgnoreCase))
-            args.Add($"--vout={options.VideoOutput}");
-
-        args.Add(options.EnableHardwareDecoding ? "--avcodec-hw=dxva2" : "--avcodec-hw=none");
-        args.Add($"--avcodec-threads={options.CodecThreads}");
-        args.Add($"--file-caching={options.FileCachingMs}");
-        args.Add($"--network-caching={options.NetworkCachingMs}");
-
-        if (options.DropLateFrames)
-            args.Add("--drop-late-frames");
-        if (options.SkipFrames)
-            args.Add("--skip-frames");
-
-        args.Add("--clock-jitter=0");
-        args.Add("--clock-synchro=0");
-
-        // Snapshot-Pfad nicht als OSD anzeigen (stoert bei KI-Frame-Captures)
-        args.Add("--no-snapshot-preview");
-
-        try
-        {
-            return new LibVLC(args.ToArray());
-        }
-        catch
-        {
-            return new LibVLC();
-        }
+        return success;
     }
 
     // Audit R-C3 2026-04-25: Doppel-ESC innerhalb 1.5s als Notbremse fuer
@@ -594,14 +510,15 @@ public partial class PlayerWindow : Window
 
         if (e.Key == Key.S)
         {
-            _player.Stop();
+            _videoPlayback.Stop();
+            UpdateRateLabel();
             e.Handled = true;
             return;
         }
 
         if (e.Key == Key.P)
         {
-            _player.SetPause(true);
+            _videoPlayback.Pause();
             _codingAnalysisCts?.Cancel();
             e.Handled = true;
             return;
@@ -609,8 +526,7 @@ public partial class PlayerWindow : Window
 
         if (e.Key == Key.R)
         {
-            EnsurePlaying();
-            _player.SetPause(false);
+            _videoPlayback.Resume();
             e.Handled = true;
             return;
         }
@@ -672,9 +588,7 @@ public partial class PlayerWindow : Window
 
     private void TogglePlayPause()
     {
-        EnsurePlaying();
-        var willPause = _player.IsPlaying;
-        _player.SetPause(willPause);
+        var willPause = _videoPlayback.TogglePlayPause();
 
         // Laufende KI-Analyse abbrechen wenn pausiert wird
         if (willPause)
@@ -1635,10 +1549,11 @@ public partial class PlayerWindow : Window
 
     private void OpenCodeCatalogForMark(string? clockPosition, double timestampSec, string? suggestedCode)
     {
-        // Resolve ServiceProvider: prefer injected, fallback to App.Services
-        var sp = _serviceProvider ?? (App.Services as ServiceProvider);
+        // Phase 5.1.B Etappe 3.M: via DI-Container.
+        AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider? catalog = null;
+        try { catalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>(); } catch { }
 
-        if (sp?.CodeCatalog is null)
+        if (catalog is null)
         {
             MessageBox.Show(
                 "Schadenscode-Katalog nicht verfuegbar.\n" +
@@ -4135,7 +4050,7 @@ public partial class PlayerWindow : Window
 
     private void CodingOfferPdfExport(ProtocolDocument doc)
     {
-        if (_serviceProvider == null || _haltungRecord == null) return;
+        if (_haltungRecord == null) return;
 
         var result = MessageBox.Show(
             $"Codier-Session abgeschlossen ({doc.Current.Entries.Count} Ereignisse).\n\n" +
@@ -4159,8 +4074,8 @@ public partial class PlayerWindow : Window
 
             // Projektordner ermitteln (fuer Logo-Suche und relative Pfade)
             var projectRoot = "";
-            if (!string.IsNullOrWhiteSpace(_serviceProvider.Settings.LastProjectPath))
-                projectRoot = Path.GetDirectoryName(_serviceProvider.Settings.LastProjectPath) ?? "";
+            if (!string.IsNullOrWhiteSpace(App.Resolve<AppSettings>().LastProjectPath))
+                projectRoot = Path.GetDirectoryName(App.Resolve<AppSettings>().LastProjectPath) ?? "";
 
             // Logo suchen
             var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
@@ -4172,7 +4087,7 @@ public partial class PlayerWindow : Window
             };
 
             var project = ((ViewModels.ShellViewModel?)App.Current.MainWindow?.DataContext)?.Project;
-            var pdf = _serviceProvider.ProtocolPdfExporter.BuildHaltungsprotokollPdf(
+            var pdf = App.Resolve<AuswertungPro.Next.Application.Reports.ProtocolPdfExporter>().BuildHaltungsprotokollPdf(
                 project!, _haltungRecord, doc, projectRoot, options);
             File.WriteAllBytes(dlg.FileName, pdf);
 
@@ -4305,8 +4220,8 @@ public partial class PlayerWindow : Window
         };
 
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(8) };
-        var projectFolder = !string.IsNullOrEmpty(_serviceProvider?.Settings.LastProjectPath)
-            ? Path.GetDirectoryName(_serviceProvider!.Settings.LastProjectPath) ?? ""
+        var projectFolder = !string.IsNullOrEmpty(App.Resolve<AppSettings>().LastProjectPath)
+            ? Path.GetDirectoryName(App.Resolve<AppSettings>().LastProjectPath) ?? ""
             : "";
 
         foreach (var fotoPath in entry.FotoPaths)
@@ -4721,8 +4636,8 @@ public partial class PlayerWindow : Window
         var project = ((ViewModels.ShellViewModel?)App.Current.MainWindow?.DataContext)?.Project;
         if (project == null) return;
 
-        var projectFolder = !string.IsNullOrWhiteSpace(_serviceProvider.Settings.LastProjectPath)
-            ? Path.GetDirectoryName(_serviceProvider.Settings.LastProjectPath)
+        var projectFolder = !string.IsNullOrWhiteSpace(App.Resolve<AppSettings>().LastProjectPath)
+            ? Path.GetDirectoryName(App.Resolve<AppSettings>().LastProjectPath)
             : null;
 
         var dlg = new Views.ProtocolObservationsWindow(

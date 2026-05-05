@@ -16,7 +16,11 @@ namespace AuswertungPro.Next.UI.Views;
 
 public partial class ProtocolEntryEditorDialog : Window
 {
-    private readonly ServiceProvider? _sp;
+    // Phase 5.1.B Etappe 3.M: ServiceProvider-Field durch DI-aufgeloeste Services ersetzt.
+    // ServiceProvider-Param im Konstruktor bleibt fuer API-Kompatibilitaet (wird ignoriert).
+    private readonly AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider? _codeCatalog;
+    private readonly IProtocolAiService? _protocolAi;
+    private readonly AppSettings? _settings;
     private readonly ProtocolEntryVM _entryVm;
     private readonly ProtocolEntryEditorViewModel? _paramVm;
     private readonly string? _haltungId;
@@ -41,12 +45,15 @@ public partial class ProtocolEntryEditorDialog : Window
         WindowStateManager.Track(this);
 
         _entryVm = entryVm;
-        _sp = sp ?? (App.Services as ServiceProvider);
+        // Phase 5.1.B Etappe 3.M: Services via DI-Container aufloesen, sp-Param ignoriert.
+        try { _codeCatalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>(); } catch { }
+        try { _protocolAi = App.Resolve<IProtocolAiService>(); } catch { }
+        try { _settings = App.Resolve<AppSettings>(); } catch { }
         _haltungId = haltungId;
         _videoPath = videoPath;
         _projectFolder = projectFolder;
 
-        _paramVm = _sp?.CodeCatalog is null ? null : new ProtocolEntryEditorViewModel(_sp.CodeCatalog);
+        _paramVm = _codeCatalog is null ? null : new ProtocolEntryEditorViewModel(_codeCatalog!);
 
         LoadFromEntry();
 
@@ -271,12 +278,12 @@ public partial class ProtocolEntryEditorDialog : Window
         var errors = new List<string>();
 
         var code = (CodeTextBox.Text ?? string.Empty).Trim();
-        var hasCatalog = _sp?.CodeCatalog is not null;
+        var hasCatalog = _codeCatalog is not null;
         var codeOk = !string.IsNullOrWhiteSpace(code);
         var codeInCatalog = false;
         if (!codeOk)
             errors.Add("Code ist erforderlich.");
-        else if (!hasCatalog || !_sp!.CodeCatalog.TryGet(code, out _))
+        else if (!hasCatalog || !_codeCatalog!.TryGet(code, out _))
         {
             codeOk = false;
             errors.Add("Code ist nicht im Katalog vorhanden.");
@@ -542,7 +549,7 @@ public partial class ProtocolEntryEditorDialog : Window
         if (!vsaSchachtbereichOk)
             errors.Add("VSA: Schachtbereich nur A/B/D/F/H/I/J.");
 
-        if (codeInCatalog && _sp?.CodeCatalog is not null && _sp.CodeCatalog.TryGet(code, out var def))
+        if (codeInCatalog && _codeCatalog is not null && _codeCatalog!.TryGet(code, out var def))
         {
             var hasClock = def.Parameters.Any(p => string.Equals(p.Type, "clock", StringComparison.OrdinalIgnoreCase));
             if (hasClock && !hasUhrVon)
@@ -600,19 +607,19 @@ public partial class ProtocolEntryEditorDialog : Window
         if (_isKiBusy)
             return;
 
-        if (_sp is null || _sp.CodeCatalog is null)
+        if (_codeCatalog is null || _protocolAi is null)
         {
             ValidationStatus.Text = "KI nicht verfuegbar: Service fehlt.";
             return;
         }
 
-        if (_sp.ProtocolAi is NoopProtocolAiService)
+        if (_protocolAi is NoopProtocolAiService)
         {
             ValidationStatus.Text = "KI ist deaktiviert. Setze SEWERSTUDIO_AI_ENABLED=1 und starte neu.";
             return;
         }
 
-        var allowedCodes = _sp.CodeCatalog.AllowedCodes();
+        var allowedCodes = _codeCatalog!.AllowedCodes();
         if (allowedCodes.Count == 0)
         {
             ValidationStatus.Text = "KI nicht moeglich: Code-Katalog ist leer.";
@@ -664,7 +671,7 @@ public partial class ProtocolEntryEditorDialog : Window
                 Zeit: zeit,
                 ImagePathsAbs: imagePaths.Count == 0 ? null : imagePaths);
 
-            var suggestion = await _sp.ProtocolAi.SuggestAsync(input);
+            var suggestion = await _protocolAi.SuggestAsync(input);
             if (suggestion is null)
             {
                 AiStatusText.Text = "Kein KI-Vorschlag erhalten.";
@@ -677,7 +684,7 @@ public partial class ProtocolEntryEditorDialog : Window
             {
                 AiStatusText.Text = $"KI-Vorschlag ohne Code ({suggestion.Confidence:P0}).";
             }
-            else if (_sp.CodeCatalog.TryGet(suggestion.SuggestedCode, out _))
+            else if (_codeCatalog!.TryGet(suggestion.SuggestedCode, out _))
             {
                 CodeTextBox.Text = suggestion.SuggestedCode.Trim().ToUpperInvariant();
                 AiStatusText.Text = $"KI-Vorschlag uebernommen: {suggestion.SuggestedCode} ({suggestion.Confidence:P0}).";
@@ -704,13 +711,13 @@ public partial class ProtocolEntryEditorDialog : Window
 
     private void OpenCodePicker()
     {
-        if (_sp?.CodeCatalog is null)
+        if (_codeCatalog is null)
         {
             ValidationStatus.Text = "Code-Katalog ist nicht verfuegbar.";
             return;
         }
 
-        var vm = new ProtocolCodePickerViewModel(_sp.CodeCatalog, _entryVm);
+        var vm = new ProtocolCodePickerViewModel(_codeCatalog!, _entryVm);
         var picker = new ProtocolCodePickerDialog
         {
             Owner = this,
@@ -763,7 +770,7 @@ public partial class ProtocolEntryEditorDialog : Window
             return;
         }
 
-        if (_sp?.CodeCatalog is null || !_sp.CodeCatalog.TryGet(code, out _))
+        if (_codeCatalog is null || !_codeCatalog!.TryGet(code, out _))
         {
             ValidationStatus.Text = "Code ist nicht im Katalog vorhanden.";
             ApplyLiveValidation();
@@ -833,8 +840,8 @@ public partial class ProtocolEntryEditorDialog : Window
         }
 
         if (string.IsNullOrWhiteSpace(_entryVm.Beschreibung)
-            && _sp?.CodeCatalog is not null
-            && _sp.CodeCatalog.TryGet(_entryVm.Code, out var def))
+            && _codeCatalog is not null
+            && _codeCatalog!.TryGet(_entryVm.Code, out var def))
         {
             _entryVm.Beschreibung = BuildDefaultDescription(def, _entryVm.Parameters, _entryVm.MeterStart, _entryVm.MeterEnd);
         }
@@ -890,7 +897,7 @@ public partial class ProtocolEntryEditorDialog : Window
         if (!TryNormalizeSchachtbereich(_entryVm.VsaSchachtbereich, out _, out _))
             errors.Add("VSA: Schachtbereich nur A/B/D/F/H/I/J.");
 
-        if (_sp?.CodeCatalog is not null && _sp.CodeCatalog.TryGet(code, out var def))
+        if (_codeCatalog is not null && _codeCatalog!.TryGet(code, out var def))
         {
             var hasClock = def.Parameters.Any(p => string.Equals(p.Type, "clock", StringComparison.OrdinalIgnoreCase));
             if (hasClock && !hasUhrVon)
@@ -925,7 +932,7 @@ public partial class ProtocolEntryEditorDialog : Window
         if (!string.IsNullOrWhiteSpace(_projectFolder))
             return _projectFolder;
 
-        var fromSettings = _sp?.Settings.LastProjectPath;
+        var fromSettings = _settings?.LastProjectPath;
         if (!string.IsNullOrWhiteSpace(fromSettings))
         {
             var dir = Path.GetDirectoryName(fromSettings);
