@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using AuswertungPro.Next.UI.Ai;
@@ -348,5 +350,249 @@ public partial class PlayerWindow
         DetectionCanvas.Children.Clear();
         DetectionOverlayGrid.Visibility = Visibility.Collapsed;
         CodingFindingsList.ItemsSource = null;
+    }
+
+    // ─── Detection-Overlay-Rendering (Bbox + Ring-Sektor-Fallback) ────────────
+
+    private void RenderDetectionOverlay(IReadOnlyList<LiveFrameFinding> findings, double timestampSec)
+    {
+        DetectionCanvas.Children.Clear();
+
+        var canvasWidth = DetectionCanvas.ActualWidth;
+        var canvasHeight = DetectionCanvas.ActualHeight;
+        if (canvasWidth < 60 || canvasHeight < 60)
+            return;
+
+        if (findings.Count == 0)
+            return;
+
+        // Tatsaechliche Videoflaeche berechnen (Aspect-Ratio-korrigiert)
+        var (offX, offY, width, height) = GetVideoViewRenderRect();
+
+        // Pruefen ob mindestens ein Finding Bbox hat
+        bool hasBbox = findings.Any(f => f.BboxX1.HasValue && f.BboxY1.HasValue
+                                       && f.BboxX2.HasValue && f.BboxY2.HasValue);
+
+        // Wenn keine Bboxes: Fallback auf Ring-Sektor-Darstellung
+        if (!hasBbox)
+        {
+            RenderRingSectorOverlay(findings, timestampSec, width, height);
+            return;
+        }
+
+        // ── Bbox-basiertes Rendering: Rechtecke + Labels direkt auf dem Bild ──
+        for (var i = 0; i < findings.Count && i < 8; i++)
+        {
+            var finding = findings[i];
+            var color = MapDetectionSeverityColor(finding.Severity);
+
+            if (finding.BboxX1.HasValue && finding.BboxY1.HasValue
+                && finding.BboxX2.HasValue && finding.BboxY2.HasValue)
+            {
+                var px1 = offX + finding.BboxX1.Value * width;
+                var py1 = offY + finding.BboxY1.Value * height;
+                var px2 = offX + finding.BboxX2.Value * width;
+                var py2 = offY + finding.BboxY2.Value * height;
+
+                var rectLeft = Math.Min(px1, px2);
+                var rectTop = Math.Min(py1, py2);
+                var rectW = Math.Max(1, Math.Abs(px2 - px1));
+                var rectH = Math.Max(1, Math.Abs(py2 - py1));
+
+                // Farbiges Rechteck (halbtransparent gefuellt, farbiger Rand)
+                var rect = new System.Windows.Shapes.Rectangle
+                {
+                    Width = rectW,
+                    Height = rectH,
+                    Stroke = new SolidColorBrush(Color.FromArgb(220, color.R, color.G, color.B)),
+                    StrokeThickness = 2.5,
+                    Fill = new SolidColorBrush(Color.FromArgb(35, color.R, color.G, color.B)),
+                    RadiusX = 4,
+                    RadiusY = 4,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(rect, rectLeft);
+                Canvas.SetTop(rect, rectTop);
+                DetectionCanvas.Children.Add(rect);
+
+                // Label-Badge oben am Rechteck
+                var labelText = $"{finding.VsaCodeHint ?? finding.Label} [S{finding.Severity}]";
+                if (finding.ExtentPercent is > 0)
+                    labelText += $" {finding.ExtentPercent}%";
+
+                var label = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(210, color.R, color.G, color.B)),
+                    CornerRadius = new CornerRadius(3),
+                    Padding = new Thickness(6, 2, 6, 2),
+                    Cursor = Cursors.Hand,
+                    IsHitTestVisible = true,
+                    Child = new TextBlock
+                    {
+                        Text = labelText,
+                        FontSize = 12,
+                        FontWeight = FontWeights.SemiBold,
+                        Foreground = Brushes.White
+                    }
+                };
+
+                var capturedFinding = finding;
+                var capturedTimestamp = timestampSec;
+                label.MouseLeftButtonDown += (_, _) => OnFindingClicked(capturedFinding, capturedTimestamp);
+                label.ToolTip = $"Klick: Schadenscode zuweisen\n{finding.Label}"
+                    + (finding.VsaCodeHint != null ? $"\nVorschlag: {finding.VsaCodeHint}" : "")
+                    + $"\nSchwere: {finding.Severity}/5";
+
+                label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                var desired = label.DesiredSize;
+                var lx = Math.Clamp(rectLeft, 2, width - desired.Width - 2);
+                var ly = Math.Clamp(rectTop - desired.Height - 4, 2, height - desired.Height - 2);
+                Canvas.SetLeft(label, lx);
+                Canvas.SetTop(label, ly);
+                DetectionCanvas.Children.Add(label);
+            }
+            else
+            {
+                // Einzelnes Finding ohne Bbox → Ring-Sektor-Fallback
+                RenderRingSectorFinding(finding, i, findings.Count, width, height, timestampSec);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Fallback: Ring-Sektor-Darstellung wenn keine Bounding Boxes verfuegbar.
+    /// </summary>
+    private void RenderRingSectorOverlay(IReadOnlyList<LiveFrameFinding> findings,
+        double timestampSec, double width, double height)
+    {
+        var size = Math.Min(width, height) * 0.78;
+        var cx = width / 2.0;
+        var cy = height / 2.0;
+        var ringOuter = size * 0.42;
+        var ringInner = size * 0.28;
+
+        // Aeusserer Fuehrungsring
+        var guide = new System.Windows.Shapes.Ellipse
+        {
+            Width = ringOuter * 2, Height = ringOuter * 2,
+            Stroke = new SolidColorBrush(Color.FromArgb(125, 197, 209, 134)),
+            StrokeDashArray = new DoubleCollection { 3, 3 },
+            StrokeThickness = 1.0, Fill = Brushes.Transparent, IsHitTestVisible = false
+        };
+        Canvas.SetLeft(guide, cx - ringOuter);
+        Canvas.SetTop(guide, cy - ringOuter);
+        DetectionCanvas.Children.Add(guide);
+
+        // Innerer Fuehrungsring
+        var guideInner = new System.Windows.Shapes.Ellipse
+        {
+            Width = ringInner * 2, Height = ringInner * 2,
+            Stroke = new SolidColorBrush(Color.FromArgb(105, 197, 209, 134)),
+            StrokeDashArray = new DoubleCollection { 3, 3 },
+            StrokeThickness = 0.9, Fill = Brushes.Transparent, IsHitTestVisible = false
+        };
+        Canvas.SetLeft(guideInner, cx - ringInner);
+        Canvas.SetTop(guideInner, cy - ringInner);
+        DetectionCanvas.Children.Add(guideInner);
+
+        // Uhr-Teilstriche
+        for (var hour = 1; hour <= 12; hour++)
+        {
+            var angleDeg = -90 + (hour % 12) * 30;
+            var rad = DegToRad(angleDeg);
+            DetectionCanvas.Children.Add(new System.Windows.Shapes.Line
+            {
+                X1 = cx + Math.Cos(rad) * (ringInner - 4),
+                Y1 = cy + Math.Sin(rad) * (ringInner - 4),
+                X2 = cx + Math.Cos(rad) * (ringOuter + 4),
+                Y2 = cy + Math.Sin(rad) * (ringOuter + 4),
+                Stroke = new SolidColorBrush(Color.FromArgb(65, 227, 227, 201)),
+                StrokeThickness = 0.8, IsHitTestVisible = false
+            });
+        }
+
+        for (var i = 0; i < findings.Count && i < 8; i++)
+            RenderRingSectorFinding(findings[i], i, findings.Count, width, height, timestampSec);
+    }
+
+    /// <summary>
+    /// Rendert ein einzelnes Finding als Ring-Sektor (Fallback ohne Bbox).
+    /// </summary>
+    private void RenderRingSectorFinding(LiveFrameFinding finding, int index, int total,
+        double width, double height, double timestampSec)
+    {
+        var size = Math.Min(width, height) * 0.78;
+        var cx = width / 2.0;
+        var cy = height / 2.0;
+        var ringOuter = size * 0.42;
+        var ringInner = size * 0.28;
+
+        var parsedClock = ParseClockHour(finding.PositionClock);
+        var centerDeg = parsedClock.HasValue
+            ? -90 + (parsedClock.Value % 12) * 30
+            : -90 + index * (360.0 / total);
+
+        var sweep = finding.ExtentPercent is > 0
+            ? Math.Clamp(finding.ExtentPercent.Value * 3.6, 14.0, 160.0)
+            : 18.0;
+
+        var startDeg = centerDeg - sweep / 2.0;
+        var color = MapDetectionSeverityColor(finding.Severity);
+
+        var sector = new System.Windows.Shapes.Path
+        {
+            Data = BuildRingSectorGeometry(cx, cy, ringInner, ringOuter, startDeg, sweep),
+            Fill = new SolidColorBrush(Color.FromArgb(98, color.R, color.G, color.B)),
+            Stroke = new SolidColorBrush(Color.FromArgb(220, color.R, color.G, color.B)),
+            StrokeThickness = 1.0, IsHitTestVisible = false
+        };
+        DetectionCanvas.Children.Add(sector);
+
+        // Severity-Punkt ausserhalb Ring
+        var rad2 = DegToRad(centerDeg);
+        var mx = cx + Math.Cos(rad2) * (ringOuter + 2);
+        var my = cy + Math.Sin(rad2) * (ringOuter + 2);
+
+        var dot = new System.Windows.Shapes.Ellipse
+        {
+            Width = 8, Height = 8,
+            Fill = new SolidColorBrush(color),
+            Stroke = Brushes.White, StrokeThickness = 0.8, IsHitTestVisible = false
+        };
+        Canvas.SetLeft(dot, mx - 4);
+        Canvas.SetTop(dot, my - 4);
+        DetectionCanvas.Children.Add(dot);
+
+        // Label-Badge (klickbar)
+        var labelText = BuildDetectionLabel(finding);
+        var label = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(228, 17, 19, 24)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(210, color.R, color.G, color.B)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(5, 2, 5, 2),
+            Cursor = Cursors.Hand,
+            Child = new TextBlock
+            {
+                Text = labelText, FontSize = 11,
+                Foreground = new SolidColorBrush(Color.FromRgb(225, 234, 245))
+            }
+        };
+
+        var capturedFinding = finding;
+        var capturedTimestamp = timestampSec;
+        label.MouseLeftButtonDown += (_, _) => OnFindingClicked(capturedFinding, capturedTimestamp);
+        label.ToolTip = $"Klick: Schadenscode zuweisen\n{finding.Label}"
+            + (finding.VsaCodeHint != null ? $"\nVorschlag: {finding.VsaCodeHint}" : "")
+            + $"\nSchwere: {finding.Severity}/5";
+
+        label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var desired = label.DesiredSize;
+        var lx = Math.Cos(rad2) >= 0 ? mx + 8 : mx - desired.Width - 8;
+        var ly = my - desired.Height / 2.0;
+        Canvas.SetLeft(label, Math.Clamp(lx, 2, width - desired.Width - 2));
+        Canvas.SetTop(label, Math.Clamp(ly, 2, height - desired.Height - 2));
+        DetectionCanvas.Children.Add(label);
     }
 }
