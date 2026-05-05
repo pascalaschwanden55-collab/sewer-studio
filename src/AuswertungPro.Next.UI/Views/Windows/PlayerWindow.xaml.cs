@@ -1961,22 +1961,9 @@ public partial class PlayerWindow : Window
         DetectionCanvas.Children.Add(label);
     }
 
-    private static string BuildDetectionLabel(LiveFrameFinding f)
-    {
-        var baseText = string.IsNullOrWhiteSpace(f.VsaCodeHint)
-            ? f.Label : $"{f.VsaCodeHint} {f.Label}";
-        if (baseText.Length > 24) baseText = baseText[..24] + "...";
-
-        var clock = string.IsNullOrWhiteSpace(f.PositionClock) ? "?" : f.PositionClock;
-        var extent = f.ExtentPercent is > 0 ? $"{f.ExtentPercent}%" : "";
-        var extra = "";
-        if (f.HeightMm is > 0) extra += $" H:{f.HeightMm}mm";
-        if (f.IntrusionPercent is > 0) extra += $" Einr:{f.IntrusionPercent}%";
-        return $"{clock}{(extent.Length > 0 ? $" / {extent}" : "")}{extra} - {baseText}";
-    }
-
     // Phase 6.1.A: MapDetectionSeverityColor + ParseClockHour + BuildRingSectorGeometry +
     // DegToRad nach PlayerWindow.Helpers.cs migriert.
+    // Phase 6.1.C: BuildDetectionLabel nach PlayerWindow.Helpers.cs migriert.
 
     // Ã¢"â‚¬Ã¢"â‚¬ Manual Marking Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
 
@@ -3458,14 +3445,7 @@ public partial class PlayerWindow : Window
         }
     }
 
-    private static bool HasValidLength(HaltungRecord record, string fieldName)
-    {
-        var raw = record.GetFieldValue(fieldName);
-        if (string.IsNullOrWhiteSpace(raw)) return false;
-        var normalized = raw.Replace(',', '.');
-        return double.TryParse(normalized, System.Globalization.NumberStyles.Float,
-            System.Globalization.CultureInfo.InvariantCulture, out var v) && v > 0;
-    }
+    // Phase 6.1.C: HasValidLength nach PlayerWindow.Helpers.cs migriert.
 
     private void CodingModeExit_Click(object sender, RoutedEventArgs e) => ExitCodingMode();
 
@@ -6421,16 +6401,7 @@ public partial class PlayerWindow : Window
         BtnCodingRejectDefect.Visibility = Visibility.Visible;
     }
 
-    private static string CodingStatusToDisplayText(DefectStatus status) => status switch
-    {
-        DefectStatus.AutoAccepted     => "Auto-Akzeptiert (Green Zone)",
-        DefectStatus.Pending          => "Review empfohlen (Yellow Zone)",
-        DefectStatus.ReviewRequired   => "Manuell erforderlich (Red Zone)",
-        DefectStatus.Accepted         => "Akzeptiert",
-        DefectStatus.AcceptedWithEdit => "Bearbeitet",
-        DefectStatus.Rejected         => "Abgelehnt",
-        _ => ""
-    };
+    // Phase 6.1.C: CodingStatusToDisplayText nach PlayerWindow.Helpers.cs migriert.
 
     /// <summary>Zone-Dots und Konfidenz-Texte in der Event-ListBox einfaerben.</summary>
     private void ColorizeCodingEventListItems()
@@ -8257,60 +8228,9 @@ public partial class PlayerWindow : Window
     /// Klartext-Lookup fuer einen VSA-Code mit Fallback-Kette:
     /// Voller Code → 3-Zeichen-Hauptcode → 2-Zeichen-Gruppe → null.
     /// </summary>
-    /// <summary>Delegiert an VsaCodeResolver.LookupLabel.</summary>
-    private static string? LookupVsaLabel(string code) => Ai.VsaCodeResolver.LookupLabel(code);
-
-    /// <summary>
-    /// Traegt SAM-Quantifizierungsdaten in ProtocolEntry.CodeMeta ein.
-    /// Gemeinsam genutzt von Qwen- und Multi-Model-Pfad.
-    /// </summary>
-    private static void ApplyQuantificationToEntry(
-        ProtocolEntry entry, string code, Ai.Pipeline.MaskQuantificationService.QuantifiedMask quant)
-    {
-        if (!string.IsNullOrEmpty(quant.ClockPosition))
-        {
-            entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
-            entry.CodeMeta.Parameters["vsa.uhr.von"] = quant.ClockPosition;
-        }
-        if (quant.HeightMm.HasValue)
-        {
-            entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
-            entry.CodeMeta.Parameters["vsa.hoehe.mm"] = quant.HeightMm.Value.ToString(CultureInfo.InvariantCulture);
-        }
-        if (quant.WidthMm.HasValue)
-        {
-            entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
-            entry.CodeMeta.Parameters["vsa.breite.mm"] = quant.WidthMm.Value.ToString(CultureInfo.InvariantCulture);
-        }
-        if (quant.CrossSectionReductionPercent is > 0)
-        {
-            entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
-            entry.CodeMeta.Parameters["vsa.querschnitt.prozent"] =
-                quant.CrossSectionReductionPercent.Value.ToString(CultureInfo.InvariantCulture);
-        }
-    }
-
-    /// <summary>
-    /// Schaetzt Severity (1-5) aus SAM-Quantifizierung.
-    /// Groesse der Maske relativ zum Rohrquerschnitt.
-    /// </summary>
-    private static int EstimateSeverityFromQuantification(Ai.Pipeline.MaskQuantificationService.QuantifiedMask q)
-    {
-        // Querschnittsreduktion als primaerer Indikator
-        if (q.CrossSectionReductionPercent is > 30) return 5;
-        if (q.CrossSectionReductionPercent is > 15) return 4;
-        if (q.CrossSectionReductionPercent is > 5) return 3;
-        // Einragung
-        if (q.IntrusionPercent is > 20) return 4;
-        if (q.IntrusionPercent is > 10) return 3;
-        // Hoehe relativ (grob: >50mm = ernsthaft)
-        if (q.HeightMm is > 50) return 3;
-        if (q.HeightMm is > 20) return 2;
-        return 2; // Default: leichter Schaden
-    }
-
-    /// <summary>Delegiert an VsaCodeResolver.NormalizeClock.</summary>
-    private static string? NormalizeClockPosition(string? raw) => Ai.VsaCodeResolver.NormalizeClock(raw);
+    // Phase 6.1.C: LookupVsaLabel + ApplyQuantificationToEntry +
+    // EstimateSeverityFromQuantification + NormalizeClockPosition
+    // nach PlayerWindow.Helpers.cs migriert.
 
     /// <summary>
     /// Einzige Quelle fuer VSA-Code-Aufloesung eines KI-Findings.
