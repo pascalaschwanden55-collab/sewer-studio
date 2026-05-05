@@ -342,11 +342,18 @@ public partial class TrainingCenterWindow : Window
             catch { /* KB optional — Annotation wird trotzdem gespeichert */ }
 
             Ai.Pipeline.VisionPipelineClient? sidecar = null;
-            if (App.Services is ServiceProvider sp && sp.Sidecar.IsAvailable)
+            // Phase 5.1.B Etappe 3.J: via DI-Container.
+            try
             {
-                var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-                sidecar = new Ai.Pipeline.VisionPipelineClient(sp.PipelineCfg.SidecarUrl, sidecarHttp);
+                var sidecarSvc = App.Resolve<Ai.PythonSidecarService>();
+                var pipelineCfg = App.Resolve<Ai.PipelineConfig>();
+                if (sidecarSvc.IsAvailable)
+                {
+                    var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+                    sidecar = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
+                }
             }
+            catch { /* Sidecar optional */ }
 
             var vm = new ImageAnnotationViewModel(kbManager, dedup, sidecar);
             vm.LoadFolder(tempDir);
@@ -652,10 +659,14 @@ public partial class TrainingCenterWindow : Window
         }
         catch { /* KB nicht verfuegbar — Annotationen werden trotzdem als TeacherAnnotation gespeichert */ }
 
-        // Sidecar-Client fuer SAM-Segmentierung
+        // Sidecar-Client fuer SAM-Segmentierung — Phase 5.1.B Etappe 3.J: via DI.
         Ai.Pipeline.VisionPipelineClient? sidecar = null;
-        if (App.Services is ServiceProvider sp2)
-            sidecar = new Ai.Pipeline.VisionPipelineClient(sp2.PipelineCfg.SidecarUrl);
+        try
+        {
+            var pipelineCfg = App.Resolve<Ai.PipelineConfig>();
+            sidecar = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl);
+        }
+        catch { /* Sidecar optional */ }
 
         var vm = new ImageAnnotationViewModel(kbManager, dedup, sidecar);
         new ImageAnnotationWindow(vm) { Owner = this }.Show();

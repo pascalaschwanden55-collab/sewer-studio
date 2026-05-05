@@ -627,11 +627,12 @@ public partial class TrainingCenterViewModel : ObservableObject
         _store = store;
         _import = import;
 
-        // QualityGate mit VSA-Code-Katalog initialisieren
+        // QualityGate mit VSA-Code-Katalog initialisieren — Phase 5.1.B Etappe 3.J: via DI.
         try
         {
-            var sp = App.Services as ServiceProvider;
-            var codes = sp?.CodeCatalog?.AllowedCodes();
+            AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider? catalog = null;
+            try { catalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>(); } catch { }
+            var codes = catalog?.AllowedCodes();
             _sampleQualityGate = new SampleQualityGateService(codes);
         }
         catch
