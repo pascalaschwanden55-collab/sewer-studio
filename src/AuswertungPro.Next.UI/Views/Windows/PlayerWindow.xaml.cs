@@ -2565,45 +2565,8 @@ public partial class PlayerWindow : Window
 
     // Phase 6.1.C: HasValidLength nach PlayerWindow.Helpers.cs migriert.
 
-    private void CodingModeExit_Click(object sender, RoutedEventArgs e) => ExitCodingMode();
-
-    // --- Coding UI-Update ---
-
-    // Flag: wird true wenn Meter-Navigation (Next/Previous) auslÃƒÂ¶st
-    private bool _codingNavPending;
-
-    // Benannter Handler fuer sauberes Cleanup via -=
-    private void CodingVm_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-        => Dispatcher.InvokeAsync(() => UpdateCodingUi(e.PropertyName));
-
-    private void UpdateCodingUi(string? propertyName)
-    {
-        if (_codingVm == null) return;
-        TxtCodingMeter.Text = $"{_codingVm.CurrentMeter:F2}m";
-        PipeTimeline.CurrentMeter = _codingVm.CurrentMeter;
-        // Video NUR synchronisieren wenn explizite Navigation (Next/Previous)
-        // Verhindert Zurueckspringen beim normalen Abspielen
-        if (propertyName is nameof(CodingSessionViewModel.CurrentMeter) && _codingNavPending)
-        {
-            _codingNavPending = false;
-            SyncVideoToCodingMeter();
-        }
-        UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
-
-        // Aktuellen Code am Zeitstempel anzeigen (Echtzeit)
-        UpdateCodingCurrentCode();
-
-        // Statistiken aktualisieren (nur bei relevanten Property-Aenderungen)
-        if (propertyName is nameof(CodingSessionViewModel.StatAutoAccepted) or
-            nameof(CodingSessionViewModel.StatPending) or
-            nameof(CodingSessionViewModel.StatReviewRequired) or
-            nameof(CodingSessionViewModel.StatAverageConfidence) or
-            nameof(CodingSessionViewModel.EventCount) or
-            null)
-        {
-            UpdateCodingStatistics();
-        }
-    }
+    // Phase 6.1.F Sub-B: CodingModeExit_Click + _codingNavPending +
+    // CodingVm_PropertyChanged + UpdateCodingUi nach PlayerWindow.CodingMode.cs migriert.
 
     /// <summary>
     /// Zeigt den naechsten existierenden Code in der Toolbar an, basierend auf aktuellem Meter.
@@ -2687,46 +2650,8 @@ public partial class PlayerWindow : Window
 
     // --- Coding Navigation ---
 
-    private async void CodingNext_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            if (_codingVm == null) return;
-            _codingNavPending = true;
-            _codingVm.MoveNextCommand.Execute(null);
-            // Video pausieren bei Schritt-Navigation
-            _player.SetPause(true);
-            // OSD-Meter automatisch lesen nach Navigation
-            _codingLastOsdMeter = null;
-            await CodingReadOsdMeterAsync();
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[PlayerWindow] CodingNext_Click error: {ex.Message}");
-        }
-    }
-
-    private async void CodingPrevious_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            if (_codingVm == null) return;
-            _codingNavPending = true;
-            _codingVm.MovePreviousCommand.Execute(null);
-            _player.SetPause(true);
-            _codingLastOsdMeter = null;
-            await CodingReadOsdMeterAsync();
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[PlayerWindow] CodingPrevious_Click error: {ex.Message}");
-        }
-    }
-
-    // --- Coding Werkzeuge ---
-
-    private void CodingToolRect_Click(object sender, RoutedEventArgs e)
-        => ActivateMarkTool(OverlayToolType.Rectangle, "Markieren");
+    // Phase 6.1.F Sub-B: CodingNext_Click + CodingPrevious_Click + CodingToolRect_Click
+    // nach PlayerWindow.CodingMode.cs migriert.
 
     private void CodingToolBend_Click(object sender, RoutedEventArgs e)
         => SetCodingTool(sender, OverlayToolType.PipeDirection, SchemaType.PipeDirection);
