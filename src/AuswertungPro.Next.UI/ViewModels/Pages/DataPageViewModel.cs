@@ -141,7 +141,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     public DataPageViewModel(ShellViewModel shell)
     {
         _shell = shell;
-        _measureRecommendationService = _sp.MeasureRecommendation;
+        _measureRecommendationService = App.Resolve<AuswertungPro.Next.Application.Ai.IMeasureRecommendationService>();
         _saveBannerTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _saveBannerTimer.Tick += (_, __) =>
         {
@@ -165,7 +165,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             }
         };
 
-        var uiLayout = _sp.Settings.DataPageLayout ?? new DataPageLayoutSettings();
+        var uiLayout = App.Resolve<AppSettings>().DataPageLayout ?? new DataPageLayoutSettings();
         GridMinRowHeight = uiLayout.GridMinRowHeight is >= 24d and <= 240d
             ? uiLayout.GridMinRowHeight
             : 38d;
@@ -310,7 +310,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         try
         {
             var entries = BuildEntriesFromFindings(record.VsaFindings);
-            record.Protocol = _sp.Protocols.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
+            record.Protocol = App.Resolve<AuswertungPro.Next.Application.Protocol.IProtocolService>().EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
             RefreshRecordInGrid(record);
             if (Selected?.Id == record.Id)
                 RefreshSelectedProtocolEntries();
@@ -334,7 +334,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             if (string.IsNullOrWhiteSpace(entry.Beschreibung) || entry.Beschreibung.Length <= 3)
             {
                 if (!string.IsNullOrWhiteSpace(entry.Code) &&
-                    _sp.CodeCatalog.TryGet(entry.Code, out var def) &&
+                    App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>().TryGet(entry.Code, out var def) &&
                     !string.IsNullOrWhiteSpace(def.Title))
                 {
                     entry.Beschreibung = def.Title;
@@ -359,7 +359,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             var code = f.KanalSchadencode?.Trim() ?? string.Empty;
             if ((string.IsNullOrWhiteSpace(beschreibung) || beschreibung.Length <= 3) &&
                 !string.IsNullOrWhiteSpace(code) &&
-                _sp.CodeCatalog.TryGet(code, out var codeDef) &&
+                App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>().TryGet(code, out var codeDef) &&
                 !string.IsNullOrWhiteSpace(codeDef.Title))
             {
                 beschreibung = codeDef.Title;
@@ -703,7 +703,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     public void ScheduleAutoSave()
     {
         _shell.Project.Dirty = true;
-        var mode = _sp.Settings.DataAutoSaveMode.Normalize();
+        var mode = App.Resolve<AppSettings>().DataAutoSaveMode.Normalize();
         switch (mode)
         {
             case AutoSaveMode.OnEachChange:
@@ -742,7 +742,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
     private void AutoSaveOnTimerTick()
     {
-        var mode = _sp.Settings.DataAutoSaveMode.Normalize();
+        var mode = App.Resolve<AppSettings>().DataAutoSaveMode.Normalize();
         if (mode is not (AutoSaveMode.Every5Minutes or AutoSaveMode.Every10Minutes))
         {
             _autoSaveTimer.Stop();
@@ -779,13 +779,13 @@ public sealed partial class DataPageViewModel : ObservableObject
         try
         {
             var options = new PlayerWindowOptions(
-                EnableHardwareDecoding: _sp.Settings.VideoHwDecoding,
-                DropLateFrames: _sp.Settings.VideoDropLateFrames,
-                SkipFrames: _sp.Settings.VideoSkipFrames,
-                FileCachingMs: _sp.Settings.VideoFileCachingMs,
-                NetworkCachingMs: _sp.Settings.VideoNetworkCachingMs,
-                CodecThreads: _sp.Settings.VideoCodecThreads,
-                VideoOutput: _sp.Settings.VideoOutput);
+                EnableHardwareDecoding: App.Resolve<AppSettings>().VideoHwDecoding,
+                DropLateFrames: App.Resolve<AppSettings>().VideoDropLateFrames,
+                SkipFrames: App.Resolve<AppSettings>().VideoSkipFrames,
+                FileCachingMs: App.Resolve<AppSettings>().VideoFileCachingMs,
+                NetworkCachingMs: App.Resolve<AppSettings>().VideoNetworkCachingMs,
+                CodecThreads: App.Resolve<AppSettings>().VideoCodecThreads,
+                VideoOutput: App.Resolve<AppSettings>().VideoOutput);
 
             // Build damage overlay markers from protocol entries
             PlayerDamageOverlayData? damageOverlay = null;
@@ -833,7 +833,7 @@ public sealed partial class DataPageViewModel : ObservableObject
                 serviceProvider: _sp,
                 haltungId: record.Id.ToString(),
                 haltungRecord: record);
-            _sp.Dialogs.Show(window);
+            App.Resolve<IDialogService>().Show(window);
         }
         catch (Exception ex)
         {
@@ -853,9 +853,9 @@ public sealed partial class DataPageViewModel : ObservableObject
         if (record is null)
             return;
 
-        var projectFolder = string.IsNullOrWhiteSpace(_sp.Settings.LastProjectPath)
+        var projectFolder = string.IsNullOrWhiteSpace(App.Resolve<AppSettings>().LastProjectPath)
             ? null
-            : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
+            : Path.GetDirectoryName(App.Resolve<AppSettings>().LastProjectPath);
 
         var resolvedVideoPath = ResolveExistingPath(record.GetFieldValue("Link"));
         var dlg = new AuswertungPro.Next.UI.Views.ProtocolObservationsWindow(
@@ -871,7 +871,7 @@ public sealed partial class DataPageViewModel : ObservableObject
                 ScheduleAutoSave();
             });
         dlg.Owner = System.Windows.Application.Current?.MainWindow;
-        _sp.Dialogs.ShowDialog(dlg);
+        App.Resolve<IDialogService>().ShowDialog(dlg);
 
         // Protokoll-Änderungen in die Haltungsfelder zurückschreiben.
         SyncObservationsToHoldingFields(record);
@@ -1127,7 +1127,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         var videoPath = EnsureVideoPath(record);
         if (string.IsNullOrWhiteSpace(videoPath)) return;
 
-        var allowedCodes = _sp.CodeCatalog.AllowedCodes();
+        var allowedCodes = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>().AllowedCodes();
         if (allowedCodes is null || allowedCodes.Count == 0)
         {
             MessageBox.Show("VSA-Code-Katalog ist leer oder nicht geladen.", "Videoanalyse KI",
@@ -1159,7 +1159,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             Owner = System.Windows.Application.Current?.MainWindow
         };
 
-        var ok = _sp.Dialogs.ShowDialog(win) == true;
+        var ok = App.Resolve<IDialogService>().ShowDialog(win) == true;
 
         if (ok && win.Result?.IsSuccess == true && win.Result.Document is not null)
         {
@@ -1192,21 +1192,21 @@ public sealed partial class DataPageViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(fromLink))
             return fromLink;
 
-        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
-            ? _sp.Settings.LastVideoSourceFolder
-            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
-                ? _sp.Settings.LastVideoFolder
-            : _sp.Settings.LastProjectPath is null
+        var initial = !string.IsNullOrWhiteSpace(App.Resolve<AppSettings>().LastVideoSourceFolder)
+            ? App.Resolve<AppSettings>().LastVideoSourceFolder
+            : !string.IsNullOrWhiteSpace(App.Resolve<AppSettings>().LastVideoFolder)
+                ? App.Resolve<AppSettings>().LastVideoFolder
+            : App.Resolve<AppSettings>().LastProjectPath is null
                 ? null
-                : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
+                : Path.GetDirectoryName(App.Resolve<AppSettings>().LastProjectPath);
 
         var fromInitial = TryFindProtocolFromRoot(initial, holdingTokens);
         if (!string.IsNullOrWhiteSpace(fromInitial))
             return fromInitial;
 
-        if (!string.IsNullOrWhiteSpace(_sp.Settings.LastProjectPath))
+        if (!string.IsNullOrWhiteSpace(App.Resolve<AppSettings>().LastProjectPath))
         {
-            var projectDir = Path.GetDirectoryName(_sp.Settings.LastProjectPath);
+            var projectDir = Path.GetDirectoryName(App.Resolve<AppSettings>().LastProjectPath);
             if (!string.IsNullOrWhiteSpace(projectDir))
             {
                 var fromHoldings = TryFindProtocolFromRoot(Path.Combine(projectDir, "Haltungen"), holdingTokens);
@@ -1480,15 +1480,15 @@ public sealed partial class DataPageViewModel : ObservableObject
         if (record is null)
             return;
 
-        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
-            ? _sp.Settings.LastVideoSourceFolder
-            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
-                ? _sp.Settings.LastVideoFolder
-            : _sp.Settings.LastProjectPath is null
+        var initial = !string.IsNullOrWhiteSpace(App.Resolve<AppSettings>().LastVideoSourceFolder)
+            ? App.Resolve<AppSettings>().LastVideoSourceFolder
+            : !string.IsNullOrWhiteSpace(App.Resolve<AppSettings>().LastVideoFolder)
+                ? App.Resolve<AppSettings>().LastVideoFolder
+            : App.Resolve<AppSettings>().LastProjectPath is null
                 ? null
-                : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
+                : Path.GetDirectoryName(App.Resolve<AppSettings>().LastProjectPath);
 
-        var path = _sp.Dialogs.OpenFile(
+        var path = App.Resolve<IDialogService>().OpenFile(
             "Video auswaehlen",
             MediaFileTypes.VideoDialogFilter,
             initial);
@@ -1498,9 +1498,9 @@ public sealed partial class DataPageViewModel : ObservableObject
         var selectedDir = Path.GetDirectoryName(path);
         if (!string.IsNullOrWhiteSpace(selectedDir))
         {
-            _sp.Settings.LastVideoSourceFolder = selectedDir;
-            _sp.Settings.LastVideoFolder = selectedDir; // legacy compatibility
-            _sp.Settings.Save();
+            App.Resolve<AppSettings>().LastVideoSourceFolder = selectedDir;
+            App.Resolve<AppSettings>().LastVideoFolder = selectedDir; // legacy compatibility
+            App.Resolve<AppSettings>().Save();
         }
 
         SaveVideoLink(record, path, userEdited: true);
@@ -1541,7 +1541,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             return;
         }
 
-        var projectPath = _sp.Settings.LastProjectPath;
+        var projectPath = App.Resolve<AppSettings>().LastProjectPath;
         if (string.IsNullOrWhiteSpace(projectPath))
         {
             MessageBox.Show("Projekt bitte zuerst speichern/oeffnen, um Kosten wiederherzustellen.", "Kosten/Massnahmen",
@@ -1729,7 +1729,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             holding,
             null,
             recommended,
-            _sp.Settings.LastProjectPath,
+            App.Resolve<AppSettings>().LastProjectPath,
             cost => ApplyCostsToRecord(record, cost),
             haltungRecord: record,
             projectRecords: Records);
@@ -1769,7 +1769,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         {
             Owner = System.Windows.Application.Current?.MainWindow
         };
-        _sp.Dialogs.ShowDialog(win);
+        App.Resolve<IDialogService>().ShowDialog(win);
     }
 
     private void ShowModelStatus()
@@ -1803,13 +1803,13 @@ public sealed partial class DataPageViewModel : ObservableObject
             return resolved;
         }
 
-        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
-            ? _sp.Settings.LastVideoSourceFolder
-            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
-                ? _sp.Settings.LastVideoFolder
-            : _sp.Settings.LastProjectPath is null
+        var initial = !string.IsNullOrWhiteSpace(App.Resolve<AppSettings>().LastVideoSourceFolder)
+            ? App.Resolve<AppSettings>().LastVideoSourceFolder
+            : !string.IsNullOrWhiteSpace(App.Resolve<AppSettings>().LastVideoFolder)
+                ? App.Resolve<AppSettings>().LastVideoFolder
+            : App.Resolve<AppSettings>().LastProjectPath is null
                 ? null
-                : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
+                : Path.GetDirectoryName(App.Resolve<AppSettings>().LastProjectPath);
 
         if (!string.IsNullOrWhiteSpace(initial) && Directory.Exists(initial))
         {
@@ -1819,13 +1819,13 @@ public sealed partial class DataPageViewModel : ObservableObject
                 return SaveVideoLink(record, res.VideoPath!, userEdited: false);
         }
 
-        var folder = _sp.Dialogs.SelectFolder("Video-Ordner auswaehlen", initial);
+        var folder = App.Resolve<IDialogService>().SelectFolder("Video-Ordner auswaehlen", initial);
         if (string.IsNullOrWhiteSpace(folder))
             return null;
 
-        _sp.Settings.LastVideoSourceFolder = folder;
-        _sp.Settings.LastVideoFolder = folder; // legacy compatibility
-        _sp.Settings.Save();
+        App.Resolve<AppSettings>().LastVideoSourceFolder = folder;
+        App.Resolve<AppSettings>().LastVideoFolder = folder; // legacy compatibility
+        App.Resolve<AppSettings>().Save();
 
         var toolManual = new VideoSearchTool(folder);
         var resManual = toolManual.ResolveForRecord(record);
@@ -1834,7 +1834,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         MessageBox.Show(resManual.Message, "Video", MessageBoxButton.OK, MessageBoxImage.Information);
 
-        var manual = _sp.Dialogs.OpenFile(
+        var manual = App.Resolve<IDialogService>().OpenFile(
             "Video auswaehlen",
             MediaFileTypes.VideoDialogFilter,
             folder);
@@ -1860,16 +1860,16 @@ public sealed partial class DataPageViewModel : ObservableObject
             return;
         }
 
-        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
-            ? _sp.Settings.LastVideoSourceFolder
-            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
-                ? _sp.Settings.LastVideoFolder
+        var initial = !string.IsNullOrWhiteSpace(App.Resolve<AppSettings>().LastVideoSourceFolder)
+            ? App.Resolve<AppSettings>().LastVideoSourceFolder
+            : !string.IsNullOrWhiteSpace(App.Resolve<AppSettings>().LastVideoFolder)
+                ? App.Resolve<AppSettings>().LastVideoFolder
                 : null;
 
         var win = new MediaSearchWindow(Records.ToList(), initial);
         win.Owner = System.Windows.Application.Current?.MainWindow;
 
-        if (_sp.Dialogs.ShowDialog(win) == true && win.Applied)
+        if (App.Resolve<IDialogService>().ShowDialog(win) == true && win.Applied)
         {
             _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
             _shell.Project.Dirty = true;
@@ -1891,7 +1891,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         var win = new HydraulikPanelWindow(vm);
         win.Owner = System.Windows.Application.Current?.MainWindow;
-        _sp.Dialogs.ShowDialog(win);
+        App.Resolve<IDialogService>().ShowDialog(win);
     }
 
     private void PrintAwuHaltungsprotokollPdf(HaltungRecord? record)
@@ -1905,7 +1905,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         var doc = EnsureProtocolDocumentForPdf(record);
         var holding = record.GetFieldValue("Haltungsname");
         var defaultName = $"Haltungsprotokoll_AWU_{SanitizeFilenamePart(holding)}_{DateTime.Now:yyyyMMdd}.pdf";
-        var output = _sp.Dialogs.SaveFile(
+        var output = App.Resolve<IDialogService>().SaveFile(
             "Haltungsprotokoll AWU als PDF speichern",
             "PDF (*.pdf)|*.pdf",
             defaultExt: "pdf",
@@ -1922,7 +1922,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             };
 
             var projectFolder = _shell.GetProjectFolder() ?? string.Empty;
-            var pdf = _sp.ProtocolPdfExporter.BuildHaltungsprotokollPdf(
+            var pdf = App.Resolve<AuswertungPro.Next.Application.Reports.ProtocolPdfExporter>().BuildHaltungsprotokollPdf(
                 _shell.Project,
                 record,
                 doc,
@@ -1953,7 +1953,7 @@ public sealed partial class DataPageViewModel : ObservableObject
                 && record.VsaFindings is { Count: > 0 })
             {
                 var imported = BuildEntriesFromFindings(record.VsaFindings);
-                record.Protocol = _sp.Protocols.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", imported, null);
+                record.Protocol = App.Resolve<AuswertungPro.Next.Application.Protocol.IProtocolService>().EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", imported, null);
             }
 
             return record.Protocol;
@@ -1962,7 +1962,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         var entries = record.VsaFindings is { Count: > 0 }
             ? BuildEntriesFromFindings(record.VsaFindings)
             : Array.Empty<ProtocolEntry>();
-        return _sp.Protocols.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
+        return App.Resolve<AuswertungPro.Next.Application.Protocol.IProtocolService>().EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
     }
 
     private async void PrintHydraulikPdf(HaltungRecord? record)
@@ -2001,14 +2001,14 @@ public sealed partial class DataPageViewModel : ObservableObject
         // Phase 1.4 Followup: Generischer PrintOptionsDialog ersetzt HydraulikPrintDialog.
         var dialog = new PrintOptionsDialog(PrintDialogFactory.CreateHydraulikConfig());
         dialog.Owner = System.Windows.Application.Current?.MainWindow;
-        if (_sp.Dialogs.ShowDialog(dialog) != true)
+        if (App.Resolve<IDialogService>().ShowDialog(dialog) != true)
             return;
         var hydraulikOpts = PrintDialogFactory.ToHydraulikOptions(dialog.GetSelectedOptions());
 
         // SaveFile dialog
         var holding = record.GetFieldValue("Haltungsname") ?? "Haltung";
         var defaultName = $"Hydraulik_{SanitizeFilenamePart(holding)}_{DateTime.Now:yyyyMMdd}.pdf";
-        var output = _sp.Dialogs.SaveFile(
+        var output = App.Resolve<IDialogService>().SaveFile(
             "Hydraulik-Bericht als PDF speichern",
             "PDF (*.pdf)|*.pdf",
             defaultExt: "pdf",
@@ -2097,7 +2097,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         // Kosten pruefen
         var projectFolder = _shell.GetProjectFolder() ?? "";
         var costRepo = new Infrastructure.Costs.ProjectCostStoreRepository();
-        var costStore = costRepo.Load(_sp.Settings.LastProjectPath);
+        var costStore = costRepo.Load(App.Resolve<AppSettings>().LastProjectPath);
         Domain.Models.HoldingCost? holdingCost = null;
         if (costStore.ByHolding.TryGetValue(holdingLabel.Trim(), out var hc))
             holdingCost = hc;
@@ -2123,12 +2123,12 @@ public sealed partial class DataPageViewModel : ObservableObject
             kostenAvailable,
             originalPdfPaths.Count);
 
-        if (_sp.Dialogs.ShowDialog(dialog) != true || dialog.SelectedOptions is null)
+        if (App.Resolve<IDialogService>().ShowDialog(dialog) != true || dialog.SelectedOptions is null)
             return;
 
         // SaveFileDialog
         var defaultName = $"Dossier_{SanitizeFilenamePart(holdingLabel)}_{DateTime.Now:yyyyMMdd}.pdf";
-        var output = _sp.Dialogs.SaveFile(
+        var output = App.Resolve<IDialogService>().SaveFile(
             "Haltungsdossier als PDF speichern",
             "PDF (*.pdf)|*.pdf",
             defaultExt: "pdf",
@@ -2194,7 +2194,7 @@ public sealed partial class DataPageViewModel : ObservableObject
                     var dnVal = double.TryParse(record.GetFieldValue("DN_mm"), out var d) ? d : 0;
                     var matVal = record.GetFieldValue("Rohrmaterial");
                     var nutzVal = record.GetFieldValue("Nutzungsart");
-                    var profile = _sp.HistorischeSanierungen.FindMatchingProfile(dnVal, matVal, nutzVal);
+                    var profile = App.Resolve<AuswertungPro.Next.Infrastructure.Devis.HistorischeSanierungenService>().FindMatchingProfile(dnVal, matVal, nutzVal);
                     if (profile is { AnzahlFaelle: >= 3 })
                     {
                         histRef = new Application.Reports.HistorischeReferenz
@@ -2464,9 +2464,9 @@ public sealed partial class DataPageViewModel : ObservableObject
         if (File.Exists(path))
             return path;
 
-        if (!Path.IsPathRooted(path) && !string.IsNullOrWhiteSpace(_sp.Settings.LastProjectPath))
+        if (!Path.IsPathRooted(path) && !string.IsNullOrWhiteSpace(App.Resolve<AppSettings>().LastProjectPath))
         {
-            var baseDir = Path.GetDirectoryName(_sp.Settings.LastProjectPath);
+            var baseDir = Path.GetDirectoryName(App.Resolve<AppSettings>().LastProjectPath);
             if (!string.IsNullOrWhiteSpace(baseDir))
             {
                 var combined = Path.GetFullPath(Path.Combine(baseDir, path));
@@ -2646,7 +2646,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         try
         {
             var store = new MeasureTemplateStore();
-            var catalog = store.LoadMerged(_sp.Settings.LastProjectPath);
+            var catalog = store.LoadMerged(App.Resolve<AppSettings>().LastProjectPath);
             foreach (var measure in catalog.Measures)
             {
                 if (measure.Disabled)
@@ -2669,7 +2669,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(SanierenOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (_sp.Dialogs.ShowDialog(dlg) == true)
+        if (App.Resolve<IDialogService>().ShowDialog(dlg) == true)
         {
             SanierenOptions.Clear();
             foreach (var item in vm.Items)
@@ -2702,7 +2702,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(EigentuemerOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (_sp.Dialogs.ShowDialog(dlg) == true)
+        if (App.Resolve<IDialogService>().ShowDialog(dlg) == true)
         {
             EigentuemerOptions.Clear();
             foreach (var item in vm.Items)
@@ -2735,7 +2735,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(PruefungsresultatOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (_sp.Dialogs.ShowDialog(dlg) == true)
+        if (App.Resolve<IDialogService>().ShowDialog(dlg) == true)
         {
             PruefungsresultatOptions.Clear();
             foreach (var item in vm.Items)
@@ -2774,7 +2774,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(ReferenzpruefungOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (_sp.Dialogs.ShowDialog(dlg) == true)
+        if (App.Resolve<IDialogService>().ShowDialog(dlg) == true)
         {
             ReferenzpruefungOptions.Clear();
             foreach (var item in vm.Items)
@@ -2808,7 +2808,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(EmpfohleneSanierungsmassnahmenOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (_sp.Dialogs.ShowDialog(dlg) == true)
+        if (App.Resolve<IDialogService>().ShowDialog(dlg) == true)
         {
             EmpfohleneSanierungsmassnahmenOptions.Clear();
             foreach (var item in vm.Items)
@@ -3246,11 +3246,11 @@ public sealed partial class DataPageViewModel : ObservableObject
 
     private void PersistDataPageBasicUiSettings()
     {
-        var layout = _sp.Settings.DataPageLayout ?? new DataPageLayoutSettings();
+        var layout = App.Resolve<AppSettings>().DataPageLayout ?? new DataPageLayoutSettings();
         layout.GridMinRowHeight = GridMinRowHeight;
         layout.GridZoom = GridZoom;
         layout.IsColumnReorderEnabled = IsColumnReorderEnabled;
-        _sp.Settings.DataPageLayout = layout;
-        _sp.Settings.Save();
+        App.Resolve<AppSettings>().DataPageLayout = layout;
+        App.Resolve<AppSettings>().Save();
     }
 }
