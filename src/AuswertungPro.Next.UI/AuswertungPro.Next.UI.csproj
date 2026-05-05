@@ -34,6 +34,7 @@
     <PackageReference Include="Docnet.Core" Version="2.6.0" />
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.2" />
     <PackageReference Include="Microsoft.Playwright" Version="1.50.0" />
     <PackageReference Include="LibVLCSharp" Version="3.9.5" />
