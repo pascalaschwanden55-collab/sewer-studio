@@ -5,6 +5,7 @@
         x:Name="RootWindow"
         Title="{Binding Title}" Width="1200" Height="750" MinWidth="1000" MinHeight="650"
         WindowStartupLocation="CenterScreen"
+        Icon="Assets/Brand/sewer-studio.ico"
         Closing="MainWindow_Closing">
     <Window.Resources>
         <ctrl:PercentToWidthConverter x:Key="PercentToWidthConverter"/>
@@ -184,7 +185,7 @@
                                    Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
 
                         <!-- ═══════════════ CPU ═══════════════ -->
-                        <TextBlock FontSize="8" FontFamily="Consolas" Foreground="{StaticResource MutedBrush}" Opacity="0.6"
+                        <TextBlock FontSize="8" FontFamily="Consolas" Foreground="Black" Opacity="1.0"
                                    Text="{Binding Monitor.CpuName, Mode=OneWay}" TextTrimming="CharacterEllipsis" Margin="0,0,0,3"/>
                         <!-- CPU Bar -->
                         <Grid Margin="0,0,0,2">
@@ -220,7 +221,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" FontSize="9" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                       Foreground="Black" Opacity="1.0">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -234,7 +235,7 @@
                                 <Run Text="Takt: "/><Run Text="{Binding Monitor.CpuClockMhz, Mode=OneWay, StringFormat=N0}"/><Run Text=" MHz"/>
                             </TextBlock>
                             <TextBlock Grid.Column="0" FontSize="9" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                       Foreground="Black" Opacity="1.0">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Visible"/>
@@ -254,7 +255,7 @@
                                 </TextBlock.ToolTip>
                             </TextBlock>
                             <TextBlock Grid.Column="1" FontSize="9" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                       Foreground="Black" Opacity="1.0">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -268,7 +269,7 @@
                                 <Run Text="Temp: "/><Run Text="{Binding Monitor.CpuTempC, Mode=OneWay}"/><Run Text=" °C"/>
                             </TextBlock>
                             <TextBlock Grid.Column="1" FontSize="9" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                       Foreground="Black" Opacity="1.0">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Visible"/>
@@ -325,7 +326,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" FontSize="9" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                       Foreground="Black" Opacity="1.0">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -339,7 +340,7 @@
                                 <Run Text="Takt: "/><Run Text="{Binding Monitor.RamClockMhz, Mode=OneWay, StringFormat=N0}"/><Run Text=" MHz"/>
                             </TextBlock>
                             <TextBlock Grid.Column="0" FontSize="9" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                       Foreground="Black" Opacity="1.0">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Visible"/>
@@ -359,7 +360,7 @@
                                 </TextBlock.ToolTip>
                             </TextBlock>
                             <TextBlock Grid.Column="1" FontSize="9" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                       Foreground="Black" Opacity="1.0">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -373,7 +374,7 @@
                                 <Run Text="Temp: "/><Run Text="{Binding Monitor.RamTempC, Mode=OneWay}"/><Run Text=" °C"/>
                             </TextBlock>
                             <TextBlock Grid.Column="1" FontSize="9" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                       Foreground="Black" Opacity="1.0">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Visible"/>
@@ -393,7 +394,7 @@
                                 </TextBlock.ToolTip>
                             </TextBlock>
                         </Grid>
-                        <TextBlock FontSize="9" FontFamily="Consolas" Foreground="{StaticResource MutedBrush}" Opacity="0.7" Margin="34,0,0,8">
+                        <TextBlock FontSize="9" FontFamily="Consolas" Foreground="Black" Opacity="1.0" Margin="34,0,0,8">
                             <Run Text="{Binding Monitor.RamUsedMb, Mode=OneWay, StringFormat=N0}"/><Run Text=" / "/>
                             <Run Text="{Binding Monitor.RamTotalMb, Mode=OneWay, StringFormat=N0}"/><Run Text=" MB"/>
                         </TextBlock>
@@ -402,7 +403,7 @@
                         <StackPanel>
                             <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,0,0,8" Opacity="0.3"/>
 
-                            <TextBlock FontSize="8" FontFamily="Consolas" Foreground="{StaticResource MutedBrush}" Opacity="0.6"
+                            <TextBlock FontSize="8" FontFamily="Consolas" Foreground="Black" Opacity="1.0"
                                        Text="{Binding Monitor.GpuName, Mode=OneWay}" TextTrimming="CharacterEllipsis" Margin="0,0,0,3">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
@@ -415,7 +416,7 @@
                                     </Style>
                                 </TextBlock.Style>
                             </TextBlock>
-                            <TextBlock FontSize="8" FontFamily="Consolas" Foreground="{StaticResource MutedBrush}" Opacity="0.6"
+                            <TextBlock FontSize="8" FontFamily="Consolas" Foreground="Black" Opacity="1.0"
                                        Text="GPU nicht erkannt" Margin="0,0,0,3">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
@@ -487,7 +488,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" FontSize="9" FontFamily="Consolas"
-                                           Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                           Foreground="Black" Opacity="1.0">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -501,7 +502,7 @@
                                     <Run Text="Takt: "/><Run Text="{Binding Monitor.GpuClockMhz, Mode=OneWay, StringFormat=N0}"/><Run Text=" MHz"/>
                                 </TextBlock>
                                 <TextBlock Grid.Column="0" FontSize="9" FontFamily="Consolas"
-                                           Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                           Foreground="Black" Opacity="1.0">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Visible"/>
@@ -521,7 +522,7 @@
                                     </TextBlock.ToolTip>
                                 </TextBlock>
                                 <TextBlock Grid.Column="1" FontSize="9" FontFamily="Consolas"
-                                           Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                           Foreground="Black" Opacity="1.0">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -535,7 +536,7 @@
                                     <Run Text="Temp: "/><Run Text="{Binding Monitor.GpuTempC, Mode=OneWay}"/><Run Text=" °C"/>
                                 </TextBlock>
                                 <TextBlock Grid.Column="1" FontSize="9" FontFamily="Consolas"
-                                           Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                           Foreground="Black" Opacity="1.0">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Visible"/>
@@ -583,7 +584,7 @@
                                     <Run Text="{Binding Monitor.GpuMemPercent, Mode=OneWay}"/><Run Text="%"/>
                                 </TextBlock>
                             </Grid>
-                            <TextBlock FontSize="9" FontFamily="Consolas" Foreground="{StaticResource MutedBrush}" Opacity="0.7" Margin="34,0,0,0">
+                            <TextBlock FontSize="9" FontFamily="Consolas" Foreground="Black" Opacity="1.0" Margin="34,0,0,0">
                                 <Run Text="{Binding Monitor.GpuMemUsedMb, Mode=OneWay, StringFormat=N0}"/><Run Text=" / "/>
                                 <Run Text="{Binding Monitor.GpuMemTotalMb, Mode=OneWay, StringFormat=N0}"/><Run Text=" MB"/>
                             </TextBlock>

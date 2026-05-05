@@ -13,9 +13,9 @@
     <Product>SewerStudio</Product>
 
     <!-- Phase 3.1: Application-Manifest fuer PerMonitorV2 DPI Awareness.
-         Verhindert unscharfe Schrift bei Multi-Monitor-Setups (4K + Full-HD).
-         ApplicationIcon nicht gesetzt: kein .ico-Asset im Repo, nur PNG-Logo. -->
+         Verhindert unscharfe Schrift bei Multi-Monitor-Setups (4K + Full-HD). -->
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Brand\sewer-studio.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
