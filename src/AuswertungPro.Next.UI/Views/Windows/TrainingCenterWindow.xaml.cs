@@ -674,10 +674,14 @@ public partial class TrainingCenterWindow : Window
 
     private void OpenVideoTrainingReview_Click(object sender, RoutedEventArgs e)
     {
-        if (App.Services is not ServiceProvider sp) return;
+        // Phase 5.1.B Etappe 3.K: via DI-Container.
+        var diagnostics = App.Resolve<AuswertungPro.Next.Application.Diagnostics.DiagnosticsOptions>();
+        var codeCatalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>();
+        var winCanImport = App.Resolve<AuswertungPro.Next.Application.Import.IWinCanDbImportService>();
+        var ibakImport = App.Resolve<AuswertungPro.Next.Application.Import.IIbakImportService>();
 
         // pdftotext-Pfad aus den App-Einstellungen setzen
-        Ai.Training.Services.PdfProtocolTableParser.PdfToTextExePath = sp.Diagnostics.ExplicitPdfToTextPath;
+        Ai.Training.Services.PdfProtocolTableParser.PdfToTextExePath = diagnostics.ExplicitPdfToTextPath;
 
         var cfg = Ai.AiRuntimeConfig.Load();
         if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Video-Blindtest"); return; }
@@ -687,22 +691,23 @@ public partial class TrainingCenterWindow : Window
         Func<Ai.Training.VideoSelfTrainingOrchestrator> orchestratorFactory = () =>
         {
             var allowedSet = new System.Collections.Generic.HashSet<string>(
-                sp.CodeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
+                codeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
             var plausibility = new Ai.RuleBasedAiSuggestionPlausibilityService(allowedSet);
             var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(30) };
-            var pipeline = sp.CreateVideoAnalysisPipeline(cfg, plausibility, http);
+            var pipeline = new Ai.VideoAnalysisPipelineService(cfg, plausibility, http);
             var meterTimeline = new Ai.Training.MeterTimelineService(cfg);
             return new Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
         };
 
-        var vm = new VideoTrainingReviewViewModel(orchestratorFactory, sp.WinCanImport, sp.IbakImport);
+        var vm = new VideoTrainingReviewViewModel(orchestratorFactory, winCanImport, ibakImport);
         new VideoTrainingReviewWindow(vm) { Owner = this }.Show();
     }
 
     /// <summary>V4.2 Qualitaetshebel: Frozen Eval-Set durch Qwen laufen, F1/Precision/Recall pro Code loggen.</summary>
     private async void RunEvalSet_Click(object sender, RoutedEventArgs e)
     {
-        if (App.Services is not ServiceProvider sp) return;
+        // Phase 5.1.B Etappe 3.K: kein ServiceProvider-Zugriff mehr noetig — dieser Block
+        // hat sp gar nicht benutzt; nur die Eingangs-Pruefung war dafuer da.
         var cfg = Ai.AiRuntimeConfig.Load();
         if (!cfg.Enabled)
         {
@@ -775,30 +780,36 @@ public partial class TrainingCenterWindow : Window
 
     private void OpenBenchmark_Click(object sender, RoutedEventArgs e)
     {
-        if (App.Services is not ServiceProvider sp) return;
+        // Phase 5.1.B Etappe 3.K: via DI-Container.
+        var codeCatalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>();
+        var winCanImport = App.Resolve<AuswertungPro.Next.Application.Import.IWinCanDbImportService>();
+        var ibakImport = App.Resolve<AuswertungPro.Next.Application.Import.IIbakImportService>();
+        var sidecarSvc = App.Resolve<Ai.PythonSidecarService>();
+        var pipelineCfg = App.Resolve<Ai.PipelineConfig>();
+
         var cfg = Ai.AiRuntimeConfig.Load();
         if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Benchmark"); return; }
 
         var allowedSet = new System.Collections.Generic.HashSet<string>(
-            sp.CodeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
+            codeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
         var plausibility = new Ai.RuleBasedAiSuggestionPlausibilityService(allowedSet);
         var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(30) };
-        var pipeline = sp.CreateVideoAnalysisPipeline(cfg, plausibility, http);
-        var protocolLoader = new Ai.Training.Services.ProtocolLoaderFactory(sp.WinCanImport, sp.IbakImport);
+        var pipeline = new Ai.VideoAnalysisPipelineService(cfg, plausibility, http);
+        var protocolLoader = new Ai.Training.Services.ProtocolLoaderFactory(winCanImport, ibakImport);
         var setStore = new BenchmarkSetStore();
         var metricsStore = new BenchmarkMetricsStore();
         var meterTimeline = new Ai.Training.MeterTimelineService(cfg);
         var orchestrator = new Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
 
         // V4.1: Batch-Pipeline (YOLO Batch → Filter → Qwen ×6 parallel)
-        if (sp.Sidecar.IsAvailable)
+        if (sidecarSvc.IsAvailable)
         {
             var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-            var sidecarClient = new Ai.Pipeline.VisionPipelineClient(sp.PipelineCfg.SidecarUrl, sidecarHttp);
+            var sidecarClient = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
             var ollamaClient = cfg.CreateOllamaClient();
             var qwenVision = new Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
             orchestrator.BatchPipeline = new Ai.Pipeline.BatchPipelineService(
-                sidecarClient, qwenVision, sp.PipelineCfg,
+                sidecarClient, qwenVision, pipelineCfg,
                 cfg.FfmpegPath ?? Ai.Shared.FfmpegLocator.ResolveFfmpeg());
         }
 
@@ -809,10 +820,16 @@ public partial class TrainingCenterWindow : Window
 
     private async void StartBatchNightRun_Click(object sender, RoutedEventArgs e)
     {
-        if (App.Services is not ServiceProvider sp) return;
+        // Phase 5.1.B Etappe 3.K: via DI-Container.
+        var diagnostics = App.Resolve<AuswertungPro.Next.Application.Diagnostics.DiagnosticsOptions>();
+        var codeCatalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>();
+        var winCanImport = App.Resolve<AuswertungPro.Next.Application.Import.IWinCanDbImportService>();
+        var ibakImport = App.Resolve<AuswertungPro.Next.Application.Import.IIbakImportService>();
+        var sidecarSvc = App.Resolve<Ai.PythonSidecarService>();
+        var pipelineCfg = App.Resolve<Ai.PipelineConfig>();
 
         // pdftotext-Pfad aus den App-Einstellungen setzen
-        Ai.Training.Services.PdfProtocolTableParser.PdfToTextExePath = sp.Diagnostics.ExplicitPdfToTextPath;
+        Ai.Training.Services.PdfProtocolTableParser.PdfToTextExePath = diagnostics.ExplicitPdfToTextPath;
 
         var cfg = Ai.AiRuntimeConfig.Load();
         if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Batch-Nachtbetrieb"); return; }
@@ -840,23 +857,23 @@ public partial class TrainingCenterWindow : Window
         }
 
         var allowedSet = new System.Collections.Generic.HashSet<string>(
-            sp.CodeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
+            codeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
         var plausibility = new Ai.RuleBasedAiSuggestionPlausibilityService(allowedSet);
         var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(30) };
-        var pipeline = sp.CreateVideoAnalysisPipeline(cfg, plausibility, http);
-        var protocolLoader = new Ai.Training.Services.ProtocolLoaderFactory(sp.WinCanImport, sp.IbakImport);
+        var pipeline = new Ai.VideoAnalysisPipelineService(cfg, plausibility, http);
+        var protocolLoader = new Ai.Training.Services.ProtocolLoaderFactory(winCanImport, ibakImport);
         var meterTimeline = new Ai.Training.MeterTimelineService(cfg);
         var videoOrch = new Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
 
         // V4.1: Batch-Pipeline fuer den initialen Orchestrator
-        if (sp.Sidecar.IsAvailable)
+        if (sidecarSvc.IsAvailable)
         {
             var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-            var sidecarClient = new Ai.Pipeline.VisionPipelineClient(sp.PipelineCfg.SidecarUrl, sidecarHttp);
+            var sidecarClient = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
             var ollamaClient = cfg.CreateOllamaClient();
             var qwenVision = new Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
             videoOrch.BatchPipeline = new Ai.Pipeline.BatchPipelineService(
-                sidecarClient, qwenVision, sp.PipelineCfg,
+                sidecarClient, qwenVision, pipelineCfg,
                 cfg.FfmpegPath ?? Ai.Shared.FfmpegLocator.ResolveFfmpeg());
         }
 
@@ -886,19 +903,19 @@ public partial class TrainingCenterWindow : Window
         Func<Ai.Training.VideoSelfTrainingOrchestrator> orchestratorFactory = () =>
         {
             var pHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(30) };
-            var pPipeline = sp.CreateVideoAnalysisPipeline(cfg, plausibility, pHttp);
+            var pPipeline = new Ai.VideoAnalysisPipelineService(cfg, plausibility, pHttp);
             var pTimeline = new Ai.Training.MeterTimelineService(cfg);
             var orch = new Ai.Training.VideoSelfTrainingOrchestrator(pPipeline, pTimeline);
 
             // V4.1: Batch-Pipeline (YOLO Batch → Filter → Qwen ×6 parallel)
-            if (sp.Sidecar.IsAvailable)
+            if (sidecarSvc.IsAvailable)
             {
                 var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-                var sidecarClient = new Ai.Pipeline.VisionPipelineClient(sp.PipelineCfg.SidecarUrl, sidecarHttp);
+                var sidecarClient = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
                 var ollamaClient = cfg.CreateOllamaClient();
                 var qwenVision = new Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
                 orch.BatchPipeline = new Ai.Pipeline.BatchPipelineService(
-                    sidecarClient, qwenVision, sp.PipelineCfg,
+                    sidecarClient, qwenVision, pipelineCfg,
                     cfg.FfmpegPath ?? Ai.Shared.FfmpegLocator.ResolveFfmpeg());
             }
 
@@ -913,7 +930,7 @@ public partial class TrainingCenterWindow : Window
             videoOrch, protocolLoader, enrichment, sidecarDir: sidecarDir,
             orchestratorFactory: orchestratorFactory,
             uncertaintySampler: uncertaintySampler,
-            sidecarUrl: sp.PipelineCfg.SidecarUrl.ToString());
+            sidecarUrl: pipelineCfg.SidecarUrl.ToString());
         var request = new Ai.Training.Models.BatchSelfTrainingRequest
         {
             ExportRootPath = dlg.FolderName,
@@ -1003,7 +1020,7 @@ public partial class TrainingCenterWindow : Window
                 Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [YOLO] Auto-Retrain Pruefung gestartet...\n");
 
                 using var retrainHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(90) };
-                var retrainClient = new Ai.Pipeline.VisionPipelineClient(sp.PipelineCfg.SidecarUrl, retrainHttp);
+                var retrainClient = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, retrainHttp);
                 var benchmarkSetStore = new Ai.Training.BenchmarkSetStore();
                 var benchmarkMetricsStore = new Ai.Training.BenchmarkMetricsStore();
                 var benchmarkRunner = new Ai.Training.BenchmarkRunner(
@@ -1048,7 +1065,7 @@ public partial class TrainingCenterWindow : Window
                     Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [LoRA] Qwen LoRA-Training Pruefung...\n");
 
                     using var loraHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(120) };
-                    var loraClient = new Ai.Pipeline.VisionPipelineClient(sp.PipelineCfg.SidecarUrl, loraHttp);
+                    var loraClient = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, loraHttp);
                     var ollamaConfig = Ai.Ollama.OllamaConfig.Load();
 
                     var loraBenchmarkSetStore = new Ai.Training.BenchmarkSetStore();
