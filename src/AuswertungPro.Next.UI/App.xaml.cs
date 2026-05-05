@@ -23,8 +23,10 @@ using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.Reports;
+using AuswertungPro.Next.UI.Composition;
 using AuswertungPro.Next.UI.Views.Windows;
 using AuswertungPro.Next.UI.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AuswertungPro.Next.UI
 {
@@ -33,10 +35,20 @@ namespace AuswertungPro.Next.UI
     
 
         private static ServiceProvider? _services;
+        private static System.IServiceProvider? _diServices;
         private static int _handlingException;
 
         public static IServiceProvider Services
             => _services ?? throw new InvalidOperationException("Services are not initialized.");
+
+        /// <summary>
+        /// Phase 5.1.B Etappe 3.A: Paralleler DI-Container (Microsoft.Extensions.DependencyInjection).
+        /// Aktuell von keinem Aufrufer benutzt — Migration laeuft in Etappe 3.B-D pro VM/Window.
+        /// Background-Tasks (Warmup + BrainMirror) werden NICHT von diesem Container gestartet,
+        /// weil der Legacy-ServiceProvider sie bereits triggert (Doppel-Start vermeiden).
+        /// </summary>
+        public static System.IServiceProvider DiServices
+            => _diServices ?? throw new InvalidOperationException("DI services are not initialized.");
 
         protected override async void OnStartup(StartupEventArgs e)
         {
@@ -75,6 +87,16 @@ namespace AuswertungPro.Next.UI
                 };
 
                 _services = new ServiceProvider(settings, diagnostics, logger, loggerFactory);
+
+                // Phase 5.1.B Etappe 3.A: Paralleler DI-Container. Bewusst KEIN
+                // StartBackgroundServices() — die Warmup/BrainMirror-Tasks werden
+                // bereits durch den Legacy-ServiceProvider-Konstruktor angestossen,
+                // ein zweiter Start wuerde Doppel-Warmup + Doppel-BrainMirror-Sync ausloesen.
+                var diCollection = new ServiceCollection();
+                diCollection.AddSewerStudioInfrastructure(settings, diagnostics, logger, loggerFactory);
+                diCollection.AddSewerStudioCoreServices();
+                diCollection.AddSewerStudioAiServices();
+                _diServices = diCollection.BuildServiceProvider();
 
                 // Sidecar (YOLO/Florence-2/SAM 2) im Hintergrund starten
                 if (settings.SidecarAutoStart != false)
@@ -255,6 +277,18 @@ namespace AuswertungPro.Next.UI
             catch
             {
                 // best effort service-provider shutdown
+            }
+
+            try
+            {
+                // Phase 5.1.B Etappe 3.A: DI-Container disposen — disposed alle
+                // Singleton-Services die IDisposable implementieren (KbHttp via
+                // KnowledgeBaseModule.Services-record).
+                (_diServices as IDisposable)?.Dispose();
+            }
+            catch
+            {
+                // best effort DI shutdown
             }
 
             try
