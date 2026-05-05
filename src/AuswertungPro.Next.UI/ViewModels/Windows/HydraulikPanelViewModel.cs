@@ -275,7 +275,11 @@ public sealed partial class HydraulikPanelViewModel : ObservableObject
     }
 
     private static AppSettings GetWritableSettings()
-        => (App.Services as ServiceProvider)?.Settings ?? AppSettings.Load();
+    {
+        // Phase 5.1.B Etappe 3.D: via DI-Container.
+        try { return App.Resolve<AppSettings>(); }
+        catch { return AppSettings.Load(); }
+    }
 
     private static string Fmt(double v, int dec) =>
         v.ToString($"F{dec}", CultureInfo.InvariantCulture);

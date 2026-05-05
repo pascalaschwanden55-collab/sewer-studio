@@ -32,7 +32,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private static readonly CultureInfo Ch = CultureInfo.GetCultureInfo("de-CH");
 
     private readonly ShellViewModel _shell;
-    private readonly ServiceProvider _sp = (ServiceProvider)App.Services;
+    // Phase 5.1.B Etappe 3.D: ServiceProvider-Field entfernt — via App.Resolve<T>().
     private readonly ProjectCostStoreRepository _costRepo = new();
     private readonly CostCatalogStore _catalogStore = new();
     private readonly DispatcherTimer _refreshDebounceTimer;
@@ -178,7 +178,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
         var safeProjectName = SanitizeFilePart(_shell.Project.Name);
         var defaultName = $"Druckcenter_{safeProjectName}_{DateTime.Now:yyyyMMdd}.pdf";
-        var output = _sp.Dialogs.SaveFile(
+        var output = App.Resolve<IDialogService>().SaveFile(
             "Druckcenter PDF speichern",
             "PDF (*.pdf)|*.pdf",
             defaultExt: "pdf",
@@ -239,7 +239,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             LastExportedAt = DateTimeOffset.Now;
             LastExportScopeSummary = BuildExportScopeSummary(filteredRows);
             IsLastExportCurrent = true;
-            _lastExportProjectPath = _sp.Settings.LastProjectPath ?? "";
+            _lastExportProjectPath = App.Resolve<AppSettings>().LastProjectPath ?? "";
             LastResult = $"PDF erstellt: {Path.GetFileName(output)}";
             _shell.SetStatus("Druckcenter PDF erstellt");
             PdfExportProgress = "PDF fertig.";
@@ -292,7 +292,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             }
         }
 
-        pdfPath ??= _sp.Dialogs.OpenFile("PDF zum Drucken waehlen", "PDF (*.pdf)|*.pdf");
+        pdfPath ??= App.Resolve<IDialogService>().OpenFile("PDF zum Drucken waehlen", "PDF (*.pdf)|*.pdf");
 
         if (string.IsNullOrWhiteSpace(pdfPath))
             return;
@@ -493,7 +493,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
     private void RefreshData()
     {
-        var projectPath = _sp.Settings.LastProjectPath ?? "";
+        var projectPath = App.Resolve<AppSettings>().LastProjectPath ?? "";
         if (!string.Equals(_lastExportProjectPath, projectPath, StringComparison.OrdinalIgnoreCase))
             ClearLastExport();
 

@@ -15,7 +15,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 public sealed partial class CostCalculationViewModel : ObservableObject
 {
-    private readonly ServiceProvider _sp = (ServiceProvider)App.Services;
+    // Phase 5.1.B Etappe 3.D: ServiceProvider-Field entfernt — via App.Resolve<T>().
     private readonly CostCalculationService _costService;
     private readonly MeasureTemplate _template;
     private PriceCatalog _catalog;
@@ -132,7 +132,7 @@ public sealed partial class CostCalculationViewModel : ObservableObject
         }
 
         var defaultName = $"Offerte_{SanitizeFilePart(MeasureName)}_{DateTime.Now:yyyyMMdd}.pdf";
-        var output = _sp.Dialogs.SaveFile(
+        var output = App.Resolve<IDialogService>().SaveFile(
             "Offerte als PDF speichern",
             "PDF (*.pdf)|*.pdf",
             defaultExt: "pdf",
@@ -178,7 +178,8 @@ public sealed partial class CostCalculationViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanInstallChromium))]
     private async Task InstallChromiumAsync(Window? owner)
     {
-        if (_sp.PlaywrightInstaller.IsChromiumInstalled())
+        var playwright = App.Resolve<IPlaywrightInstallService>();
+        if (playwright.IsChromiumInstalled())
         {
             MessageBox.Show("Chromium ist bereits installiert.", "PDF", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
@@ -191,7 +192,7 @@ public sealed partial class CostCalculationViewModel : ObservableObject
             IsInstallingChromium = true;
             if (owner is not null) owner.Cursor = System.Windows.Input.Cursors.Wait;
 
-            var result = await _sp.PlaywrightInstaller.InstallChromiumAsync();
+            var result = await playwright.InstallChromiumAsync();
             if (result.Success)
             {
                 MessageBox.Show("Chromium wurde installiert. PDF-Export sollte jetzt funktionieren.", "PDF", MessageBoxButton.OK, MessageBoxImage.Information);

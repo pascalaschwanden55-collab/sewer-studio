@@ -15,7 +15,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 public sealed partial class SchaechtePageViewModel : ObservableObject
 {
     private static readonly string[] FixedEigentuemerOptions = { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" };
-    private readonly ServiceProvider _sp = (ServiceProvider)App.Services;
+    // Phase 5.1.B Etappe 3.D: ServiceProvider-Field entfernt — via App.Resolve<T>().
     private readonly ShellViewModel _shell;
 
     public ObservableCollection<SchachtRecord> Records => _shell.Project.SchaechteData;
@@ -70,7 +70,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         _shell = shell;
 
-        var uiLayout = _sp.Settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
+        var uiLayout = App.Resolve<AppSettings>().SchaechtePageLayout ?? new DataPageLayoutSettings();
         GridMinRowHeight = uiLayout.GridMinRowHeight is >= 24d and <= 240d
             ? uiLayout.GridMinRowHeight
             : 38d;
@@ -357,7 +357,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(SanierenOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (_sp.Dialogs.ShowDialog(dlg) == true)
+        if (App.Resolve<IDialogService>().ShowDialog(dlg) == true)
         {
             SanierenOptions.Clear();
             foreach (var item in vm.Items)
@@ -387,7 +387,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(EigentuemerOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (_sp.Dialogs.ShowDialog(dlg) == true)
+        if (App.Resolve<IDialogService>().ShowDialog(dlg) == true)
         {
             EigentuemerOptions.Clear();
             foreach (var item in vm.Items)
@@ -427,7 +427,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(PruefungsresultatOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (_sp.Dialogs.ShowDialog(dlg) == true)
+        if (App.Resolve<IDialogService>().ShowDialog(dlg) == true)
         {
             PruefungsresultatOptions.Clear();
             foreach (var item in vm.Items)
@@ -463,7 +463,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(ReferenzpruefungOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (_sp.Dialogs.ShowDialog(dlg) == true)
+        if (App.Resolve<IDialogService>().ShowDialog(dlg) == true)
         {
             ReferenzpruefungOptions.Clear();
             foreach (var item in vm.Items)
@@ -643,12 +643,13 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
 
     private void PersistSchaechtePageBasicUiSettings()
     {
-        var layout = _sp.Settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
+        var settings = App.Resolve<AppSettings>();
+        var layout = settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
         layout.GridMinRowHeight = GridMinRowHeight;
         layout.GridZoom = GridZoom;
         layout.IsColumnReorderEnabled = IsColumnReorderEnabled;
-        _sp.Settings.SchaechtePageLayout = layout;
-        _sp.Settings.Save();
+        settings.SchaechtePageLayout = layout;
+        settings.Save();
     }
 
     private void EnforceEigentuemerOptionsExact()

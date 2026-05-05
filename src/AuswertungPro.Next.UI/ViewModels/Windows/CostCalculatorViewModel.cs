@@ -275,11 +275,12 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             return;
         }
 
-        var sp = (ServiceProvider)App.Services;
+        // Phase 5.1.B Etappe 3.D: via DI-Container.
+        var dialogs = App.Resolve<IDialogService>();
 
         var safeName = SanitizeFilePart(Holding);
         var defaultName = $"Kostenzusammenstellung_{safeName}_{DateTime.Now:yyyyMMdd}.pdf";
-        var output = sp.Dialogs.SaveFile(
+        var output = dialogs.SaveFile(
             "Kostenzusammenstellung als PDF speichern",
             "PDF (*.pdf)|*.pdf",
             defaultExt: "pdf",

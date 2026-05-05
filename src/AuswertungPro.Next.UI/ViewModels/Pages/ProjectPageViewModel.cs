@@ -113,7 +113,7 @@ public sealed partial class ProjectPageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(SanierenOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (((ServiceProvider)App.Services).Dialogs.ShowDialog(dlg) == true)
+        if (App.Resolve<IDialogService>().ShowDialog(dlg) == true)
         {
             SanierenOptions.Clear();
             foreach (var item in vm.Items)
@@ -148,7 +148,7 @@ public sealed partial class ProjectPageViewModel : ObservableObject
     {
         var vm = new OptionsEditorViewModel(EigentuemerOptions);
         var dlg = new OptionsEditorWindow(vm);
-        if (((ServiceProvider)App.Services).Dialogs.ShowDialog(dlg) == true)
+        if (App.Resolve<IDialogService>().ShowDialog(dlg) == true)
         {
             EigentuemerOptions.Clear();
             foreach (var item in vm.Items)
