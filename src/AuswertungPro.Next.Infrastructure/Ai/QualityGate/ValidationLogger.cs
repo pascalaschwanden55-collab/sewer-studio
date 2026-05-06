@@ -2,6 +2,7 @@ using System;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
+using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 

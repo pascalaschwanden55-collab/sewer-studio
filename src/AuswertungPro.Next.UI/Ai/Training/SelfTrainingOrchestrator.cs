@@ -12,11 +12,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.Pipeline;
-using AuswertungPro.Next.UI.Ai.SelfImproving;
-using AuswertungPro.Next.UI.Ai.Training.Models;
-using AuswertungPro.Next.UI.Ai.Training.Services;
 using AuswertungPro.Next.Application.CodeCatalog;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.Pipeline;
@@ -26,6 +21,10 @@ using AuswertungPro.Next.Application.Ai.SelfImproving;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Ai.Pipeline;
+using AuswertungPro.Next.UI.Ai.Training.Models;
+using AuswertungPro.Next.UI.Ai.Training.Services;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 

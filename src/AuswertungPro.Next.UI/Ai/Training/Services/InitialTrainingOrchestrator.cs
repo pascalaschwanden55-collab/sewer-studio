@@ -9,8 +9,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.UI.Ai.Pipeline;
-using AuswertungPro.Next.UI.Ai.Training.Models;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Training.Models;

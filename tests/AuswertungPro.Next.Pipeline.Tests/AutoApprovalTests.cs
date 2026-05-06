@@ -3,7 +3,6 @@ using AuswertungPro.Next.Application.Ai.Vision;
 using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Application.Ai.SelfImproving;
-using AuswertungPro.Next.UI.Ai.SelfImproving;
 using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;

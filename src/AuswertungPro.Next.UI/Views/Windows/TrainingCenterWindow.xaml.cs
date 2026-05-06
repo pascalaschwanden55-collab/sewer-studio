@@ -28,6 +28,7 @@ using AuswertungPro.Next.Application.Ai.SelfImproving;
 using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -251,7 +252,7 @@ public partial class TrainingCenterWindow : Window
         new() { Timeout = TimeSpan.FromMinutes(2) };
 
     /// <summary>Erzeugt FeedbackIngestionService mit optionalem KbManager fuer KB-Re-Indexierung.</summary>
-    private static Ai.SelfImproving.FeedbackIngestionService CreateFeedbackService(
+    private static AuswertungPro.Next.Infrastructure.Ai.SelfImproving.FeedbackIngestionService CreateFeedbackService(
         AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext db)
     {
         var logger = new AuswertungPro.Next.Infrastructure.Ai.QualityGate.ValidationLogger(db.Connection);
@@ -267,7 +268,7 @@ public partial class TrainingCenterWindow : Window
         }
         catch { /* Ollama nicht verfuegbar — Feedback wird geloggt, KB-Update uebersprungen */ }
 
-        return new Ai.SelfImproving.FeedbackIngestionService(logger, weights, kbManager);
+        return new AuswertungPro.Next.Infrastructure.Ai.SelfImproving.FeedbackIngestionService(logger, weights, kbManager);
     }
 
     private async void ReviewApprove_Click(object sender, RoutedEventArgs e)

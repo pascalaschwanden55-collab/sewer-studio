@@ -18,6 +18,7 @@ using Microsoft.Win32;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.SelfImproving;
+using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -1378,7 +1379,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// <summary>Approve a review item (accept the suggested code).</summary>
     public async Task ApproveReviewItemAsync(
         AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueItem item,
-        Ai.SelfImproving.FeedbackIngestionService feedback,
+        AuswertungPro.Next.Infrastructure.Ai.SelfImproving.FeedbackIngestionService feedback,
         AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueService queueService,
         CancellationToken ct = default)
     {
@@ -1409,7 +1410,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     public async Task RejectReviewItemAsync(
         AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueItem item,
         string correctedCode,
-        Ai.SelfImproving.FeedbackIngestionService feedback,
+        AuswertungPro.Next.Infrastructure.Ai.SelfImproving.FeedbackIngestionService feedback,
         AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueService queueService,
         CancellationToken ct = default)
     {
