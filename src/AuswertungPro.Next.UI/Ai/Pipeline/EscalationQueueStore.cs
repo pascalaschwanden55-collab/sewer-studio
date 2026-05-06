@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Pipeline;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -87,15 +88,4 @@ public sealed class EscalationQueueStore
     }
 }
 
-/// <summary>Ein Yellow/Red-Frame in der Eskalations-Queue.</summary>
-public sealed record EscalationItem
-{
-    public string? FrameBase64 { get; init; }
-    public string? FrameId { get; init; }
-    public string? VideoPath { get; init; }
-    public string? HaltungName { get; init; }
-    public double MeterPosition { get; init; }
-    public string? EscalationReason { get; init; }
-    public string? FirstResultJson { get; init; }
-    public DateTimeOffset EnqueuedAt { get; init; } = DateTimeOffset.UtcNow;
-}
+// Phase 5.3 vorbereitend: EscalationItem nach Application/Ai/Pipeline/DetectionEvent.cs.

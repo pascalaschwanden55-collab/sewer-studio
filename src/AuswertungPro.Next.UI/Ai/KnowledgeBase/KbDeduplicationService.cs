@@ -1,5 +1,6 @@
 // AuswertungPro – Video-Selbsttraining Phase 3
 using System;
+using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Domain.Ai.Training;
 using System.Linq;
 using System.Threading;
@@ -85,8 +86,4 @@ public sealed class KbDeduplicationService
     }
 }
 
-/// <summary>Ergebnis der Dedup-Pruefung.</summary>
-public sealed record DeduplicationResult(
-    bool IsAlreadyCovered,
-    double HighestSimilarity,
-    string? MostSimilarSampleId);
+// Phase 5.3 vorbereitend: DeduplicationResult nach Application/Ai/KnowledgeBase/KnowledgeBaseDtos.cs.

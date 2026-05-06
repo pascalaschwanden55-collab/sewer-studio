@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -77,10 +78,4 @@ public sealed class TrainingExportService
     }
 }
 
-public sealed record TrainingExportResult(
-    bool IsSuccess,
-    string? Error,
-    int TotalSamples,
-    int TrainCount,
-    int ValCount
-);
+// Phase 5.3 vorbereitend: TrainingExportResult nach Application/Ai/Vision/VideoAnalysisModels.cs.

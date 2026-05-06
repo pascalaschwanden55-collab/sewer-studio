@@ -153,6 +153,16 @@ public sealed record FullProtocolGenerationResult(
         new(null, Array.Empty<MappedProtocolEntry>(), error, Array.Empty<string>());
 }
 
+// ── YOLO-Training-Export ──
+
+public sealed record TrainingExportResult(
+    bool IsSuccess,
+    string? Error,
+    int TotalSamples,
+    int TrainCount,
+    int ValCount
+);
+
 // ── Live-Detection (Player-Codiermodus) ──
 
 /// <summary>

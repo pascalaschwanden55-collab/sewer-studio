@@ -1,5 +1,11 @@
 namespace AuswertungPro.Next.Application.Ai.KnowledgeBase;
 
+/// <summary>Ergebnis der Dedup-Pruefung (vor KB-Indexierung).</summary>
+public sealed record DeduplicationResult(
+    bool IsAlreadyCovered,
+    double HighestSimilarity,
+    string? MostSimilarSampleId);
+
 /// <param name="SampleId">Eindeutige ID des Samples.</param>
 /// <param name="CaseId">Herkunft (TrainingCase).</param>
 /// <param name="VsaCode">Zugehöriger VSA-Code.</param>

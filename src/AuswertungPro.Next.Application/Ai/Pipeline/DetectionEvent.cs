@@ -1,4 +1,19 @@
+using System;
+
 namespace AuswertungPro.Next.Application.Ai.Pipeline;
+
+/// <summary>Ein Yellow/Red-Frame in der Eskalations-Queue.</summary>
+public sealed record EscalationItem
+{
+    public string? FrameBase64 { get; init; }
+    public string? FrameId { get; init; }
+    public string? VideoPath { get; init; }
+    public string? HaltungName { get; init; }
+    public double MeterPosition { get; init; }
+    public string? EscalationReason { get; init; }
+    public string? FirstResultJson { get; init; }
+    public DateTimeOffset EnqueuedAt { get; init; } = DateTimeOffset.UtcNow;
+}
 
 /// <summary>
 /// Einzelne YOLO-Detektion aus einem Frame — Eingabe fuer den DetectionAggregator.
