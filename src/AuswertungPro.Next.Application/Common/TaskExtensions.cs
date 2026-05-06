@@ -1,9 +1,8 @@
 using System;
-using AuswertungPro.Next.Application.Ai.Vision;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace AuswertungPro.Next.UI.Helpers;
+namespace AuswertungPro.Next.Application.Common;
 
 /// <summary>
 /// Extension-Method fuer sicheres Fire-and-Forget.

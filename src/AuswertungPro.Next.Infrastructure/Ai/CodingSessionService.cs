@@ -9,9 +9,9 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.UI.Helpers;
+using AuswertungPro.Next.Application.Common;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Infrastructure.Ai;
 
 /// <summary>
 /// Steuert den Codier-Durchlauf einer Haltung von 0.00m bis Haltungsende.

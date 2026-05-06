@@ -1,5 +1,4 @@
 using AuswertungPro.Next.UI.Dialogs;
-using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Services;
 using System;
 using System.Collections.ObjectModel;
@@ -27,6 +26,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.UI.Hydraulik;
 using AuswertungPro.Next.Application.Ai.Vision;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 

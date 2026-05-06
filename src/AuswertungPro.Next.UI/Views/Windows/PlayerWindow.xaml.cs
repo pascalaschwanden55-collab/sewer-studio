@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
-using AuswertungPro.Next.UI.Helpers;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,6 +36,7 @@ using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -1085,7 +1085,7 @@ public partial class PlayerWindow : Window, IVlcSurface
         _codingOverlayService ??= new AuswertungPro.Next.Application.Ai.OverlayToolService();
         if (_codingVm == null)
         {
-            _codingSessionService ??= new Ai.CodingSessionService();
+            _codingSessionService ??= new AuswertungPro.Next.Infrastructure.Ai.CodingSessionService();
             _codingVm = new ViewModels.Windows.CodingSessionViewModel(_codingSessionService, _codingOverlayService);
         }
     }

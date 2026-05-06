@@ -18,12 +18,12 @@ using System.Windows.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 

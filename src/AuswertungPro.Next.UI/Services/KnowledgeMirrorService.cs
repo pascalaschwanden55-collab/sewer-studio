@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
-using AuswertungPro.Next.UI.Helpers;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Services;
 
