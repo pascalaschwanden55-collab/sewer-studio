@@ -4,10 +4,10 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Ai.Training;
 using System.Collections.Generic;
 using System.Linq;
-using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.Application.Ai.Training.Models;
+using AuswertungPro.Next.Application.Ai.Training.Services;
 
-namespace AuswertungPro.Next.UI.Ai.Training.Services;
+namespace AuswertungPro.Next.Application.Ai.Training.Services;
 
 /// <summary>
 /// Vergleicht KI-Blinddetektionen gegen importierte Protokolleintraege (Ground-Truth).

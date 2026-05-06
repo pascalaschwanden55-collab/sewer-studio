@@ -9,7 +9,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.UI.Ai.Pipeline;
 using Microsoft.Data.Sqlite;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;

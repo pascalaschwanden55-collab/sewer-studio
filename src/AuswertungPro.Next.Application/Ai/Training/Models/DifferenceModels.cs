@@ -6,6 +6,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Training.Models;
+using AuswertungPro.Next.Application.Ai.Training.Services;
 
 namespace AuswertungPro.Next.Application.Ai.Training.Models;
 
