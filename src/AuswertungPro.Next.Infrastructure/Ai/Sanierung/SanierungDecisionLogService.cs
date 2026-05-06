@@ -5,8 +5,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using AuswertungPro.Next.Infrastructure.Sanierung;
+using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 
-namespace AuswertungPro.Next.UI.Ai.Sanierung;
+namespace AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 
 /// <summary>
 /// Phase 5.5: Decision-Log fuer Sanierungs-Entscheidungen.

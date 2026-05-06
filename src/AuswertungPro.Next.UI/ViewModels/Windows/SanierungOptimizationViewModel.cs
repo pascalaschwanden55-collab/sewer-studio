@@ -3,7 +3,6 @@ using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.UI.Ai.Sanierung;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Application.Ai.Sanierung;
 
