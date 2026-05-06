@@ -676,7 +676,7 @@ public partial class PlayerWindow
         if (_trainingKbManager != null) return;
         try
         {
-            var cfg = OllamaConfig.Load();
+            var cfg = OllamaConfigExtensions.Load();
             _trainingHttp ??= new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
             _trainingEmbedder = new EmbeddingService(_trainingHttp, cfg);
             _trainingKbCtx = new KnowledgeBaseContext();

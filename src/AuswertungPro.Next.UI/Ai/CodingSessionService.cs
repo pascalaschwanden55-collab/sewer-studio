@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using System.Collections.Generic;
 using System.Linq;
@@ -266,7 +267,7 @@ public sealed class CodingSessionService : ICodingSessionService
             var approved = samples.Where(s => s.Status == Training.TrainingSampleStatus.Approved).ToList();
             if (approved.Count == 0) return;
 
-            var cfg = Ai.Ollama.OllamaConfig.Load();
+            var cfg = Ai.Ollama.OllamaConfigExtensions.Load();
             // V4.2 Fix: HttpClient disposen (Socket-Exhaustion bei vielen Samples).
             using var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
             var embedder = new KnowledgeBase.EmbeddingService(http, cfg);

@@ -1,10 +1,11 @@
 using System;
 
-namespace AuswertungPro.Next.UI.Ai.Ollama;
+namespace AuswertungPro.Next.Application.Ai.Ollama;
 
 /// <summary>
-/// Konfiguration für den Ollama-Server und verwendete Modelle.
-/// Werte werden via AiPlatformConfig geladen.
+/// Phase 5.3 Sub-F1: Konfiguration fuer den Ollama-Server und verwendete Modelle.
+/// Reiner Record + Konstanten (pure Application-Schicht). Geladen via UI-Helper
+/// <c>OllamaConfigExtensions.Load()</c> (in UI), das AiPlatformConfig nutzt.
 /// </summary>
 public sealed record OllamaConfig(
     Uri BaseUri,
@@ -17,7 +18,7 @@ public sealed record OllamaConfig(
     string? ReferenceVisionModel = null)
 {
     // ── Modell-Konstanten (Single Source of Truth) ──────────────────────
-    // V4.1: 8B×6 Slots (8192 ctx) + 32B Swap-Eskalation bei Yellow/Red
+    // V4.1: 8Bx6 Slots (8192 ctx) + 32B Swap-Eskalation bei Yellow/Red
     public const string DefaultVisionModel = "qwen3-vl:8b-q8";
     public const string DefaultTextModel   = "qwen3-vl:8b-q8";
     /// <summary>Eskalationsmodell: qwen3-vl:32b (RAM, num_gpu=0, ~28s pro Request).</summary>
@@ -25,8 +26,4 @@ public sealed record OllamaConfig(
     public const string DefaultEmbedModel  = "nomic-embed-text";
     public const string DefaultKeepAlive   = "24h";
     public const int    DefaultNumCtx      = 8192;
-
-    /// <summary>Lädt via einheitliche AiPlatformConfig.</summary>
-    public static OllamaConfig Load() =>
-        AiPlatformConfig.Load().ToOllamaConfig();
 }

@@ -1,4 +1,6 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Ollama;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Application.Ai;
 using System.Collections.Generic;
@@ -52,7 +54,7 @@ public sealed class FullProtocolGenerationService : IDisposable
         {
             try
             {
-                var ollamaConfig = OllamaConfig.Load();
+                var ollamaConfig = OllamaConfigExtensions.Load();
                 _ownedKbContext = new KnowledgeBaseContext();
                 var embedder = new EmbeddingService(httpClient, ollamaConfig);
                 _retrieval = new RetrievalService(_ownedKbContext, embedder);

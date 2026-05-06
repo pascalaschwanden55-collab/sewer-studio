@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -88,7 +89,7 @@ public sealed class WalkerHealthCheck
     {
         try
         {
-            var config = Ollama.OllamaConfig.Load();
+            var config = Ollama.OllamaConfigExtensions.Load();
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
             using var resp = await http.GetAsync(new Uri(config.BaseUri, "/api/tags"), ct);
             return resp.IsSuccessStatusCode
@@ -129,7 +130,7 @@ public sealed class WalkerHealthCheck
     {
         try
         {
-            var config = Ollama.OllamaConfig.Load();
+            var config = Ollama.OllamaConfigExtensions.Load();
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
             using var resp = await http.GetAsync(new Uri(config.BaseUri, "/api/tags"), ct);
             if (!resp.IsSuccessStatusCode)

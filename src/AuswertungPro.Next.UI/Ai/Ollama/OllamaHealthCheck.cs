@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.Ollama;
 
 namespace AuswertungPro.Next.UI.Ai.Ollama;
 

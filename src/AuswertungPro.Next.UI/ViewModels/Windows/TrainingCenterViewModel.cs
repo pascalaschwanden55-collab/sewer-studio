@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -1589,7 +1590,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         var indexedIds = new List<string>();
         try
         {
-            var ollamaConfig = OllamaConfig.Load();
+            var ollamaConfig = OllamaConfigExtensions.Load();
             var ollamaReachable = await CheckOllamaReachableAsync(ollamaConfig, ct);
             if (!ollamaReachable)
             {

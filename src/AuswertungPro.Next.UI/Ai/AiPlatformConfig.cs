@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Ollama;
 using AuswertungPro.Next.Application.Ai;
 using System.Globalization;
 using AuswertungPro.Next.UI.Ai.Ollama;
@@ -217,7 +218,7 @@ public sealed record AiPlatformConfig(
                 settings?.AiReferenceVisionModel,
                 Env("SEWERSTUDIO_AI_REFERENCE_MODEL"))
             ?? gpuReferenceModel
-            ?? Ollama.OllamaConfig.DefaultReferenceVisionModel;
+            ?? AuswertungPro.Next.Application.Ai.Ollama.OllamaConfig.DefaultReferenceVisionModel;
 
         // ── Tools ──
         // Phase 4.2: Konsistenz-Sweep — Fallback auf FfmpegLocator statt String "ffmpeg".

@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai;
 using System.Collections.Generic;
@@ -250,7 +251,7 @@ public partial class TrainingCenterWindow : Window
         Ai.KnowledgeBase.KnowledgeBaseManager? kbManager = null;
         try
         {
-            var cfg = Ai.Ollama.OllamaConfig.Load();
+            var cfg = Ai.Ollama.OllamaConfigExtensions.Load();
             var embedder = new Ai.KnowledgeBase.EmbeddingService(_feedbackHttpClient, cfg);
             kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(db, embedder);
         }
@@ -335,7 +336,7 @@ public partial class TrainingCenterWindow : Window
             try
             {
                 var kbCtx = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
-                var ollamaConfig = Ai.Ollama.OllamaConfig.Load();
+                var ollamaConfig = Ai.Ollama.OllamaConfigExtensions.Load();
                 var http = new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
                 var embedder = new Ai.KnowledgeBase.EmbeddingService(http, ollamaConfig);
                 kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(kbCtx, embedder);
@@ -653,7 +654,7 @@ public partial class TrainingCenterWindow : Window
         try
         {
             var kbCtx = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
-            var ollamaConfig = Ai.Ollama.OllamaConfig.Load();
+            var ollamaConfig = Ai.Ollama.OllamaConfigExtensions.Load();
             var http = new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
             var embedder = new Ai.KnowledgeBase.EmbeddingService(http, ollamaConfig);
             kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(kbCtx, embedder);
@@ -884,7 +885,7 @@ public partial class TrainingCenterWindow : Window
         try
         {
             var kbHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(60) };
-            var ollamaConfig = Ai.Ollama.OllamaConfig.Load();
+            var ollamaConfig = Ai.Ollama.OllamaConfigExtensions.Load();
             var kbCtx = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
             var embedder = new Ai.KnowledgeBase.EmbeddingService(kbHttp, ollamaConfig);
             var retrieval = new Ai.KnowledgeBase.RetrievalService(kbCtx, embedder);
@@ -1069,7 +1070,7 @@ public partial class TrainingCenterWindow : Window
 
                     using var loraHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(120) };
                     var loraClient = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, loraHttp);
-                    var ollamaConfig = Ai.Ollama.OllamaConfig.Load();
+                    var ollamaConfig = Ai.Ollama.OllamaConfigExtensions.Load();
 
                     var loraBenchmarkSetStore = new Ai.Training.BenchmarkSetStore();
                     var loraBenchmarkMetricsStore = new Ai.Training.BenchmarkMetricsStore();

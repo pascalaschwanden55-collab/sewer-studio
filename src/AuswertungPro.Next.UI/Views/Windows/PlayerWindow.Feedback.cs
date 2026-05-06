@@ -41,7 +41,7 @@ public partial class PlayerWindow
         KnowledgeBaseManager? kbManager = null;
         try
         {
-            var cfg = OllamaConfig.Load();
+            var cfg = OllamaConfigExtensions.Load();
             var embedder = new EmbeddingService(_feedbackHttpClient, cfg);
             kbManager = new KnowledgeBaseManager(db, embedder);
         }

@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai;
 using System.Collections.Generic;
@@ -146,7 +147,7 @@ public partial class TrainingCenterViewModel
             }
 
             // Ollama-Verbindung einmalig pruefen + KB-Objekte vorbereiten
-            var ollamaConfig = OllamaConfig.Load();
+            var ollamaConfig = OllamaConfigExtensions.Load();
             var ollamaReachable = await CheckOllamaReachableAsync(ollamaConfig, ct);
             KnowledgeBaseContext? kbCtx = null;
             KnowledgeBaseManager? kbManager = null;
