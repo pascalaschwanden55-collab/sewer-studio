@@ -6,10 +6,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai;
 using Microsoft.Extensions.Logging;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Application.Ai.Training;
 
 /// <summary>
 /// Zeitreihen-Speicherung fuer Benchmark-Durchlaeufe.
@@ -20,7 +19,7 @@ public sealed class BenchmarkMetricsStore
     private const int MaxHistoryEntries = 50;
 
     private static string FilePath => Path.Combine(
-        KnowledgeRoot.GetRoot(), "benchmark_metrics.json");
+        KnowledgeRootProvider.GetRoot(), "benchmark_metrics.json");
 
     private readonly SemaphoreSlim _lock = new(1, 1);
     private static readonly JsonSerializerOptions JsonOpts = new()

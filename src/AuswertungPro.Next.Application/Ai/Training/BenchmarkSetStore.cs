@@ -5,11 +5,9 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Application.Ai.Training;
 
 /// <summary>
 /// Speichert und verwaltet das Benchmark-Set (10-20 geschuetzte Haltungen).
@@ -19,7 +17,7 @@ namespace AuswertungPro.Next.UI.Ai.Training;
 public sealed class BenchmarkSetStore
 {
     private static string FilePath => Path.Combine(
-        KnowledgeRoot.GetRoot(), "benchmark_set.json");
+        KnowledgeRootProvider.GetRoot(), "benchmark_set.json");
 
     private readonly SemaphoreSlim _lock = new(1, 1);
     private static readonly JsonSerializerOptions JsonOpts = new()

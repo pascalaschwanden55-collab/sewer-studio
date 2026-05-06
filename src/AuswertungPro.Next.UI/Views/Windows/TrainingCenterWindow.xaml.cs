@@ -22,6 +22,7 @@ using AuswertungPro.Next.UI.ViewModels.Windows;
 using Infrastructure = AuswertungPro.Next.Infrastructure;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Application.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -1029,8 +1030,8 @@ public partial class TrainingCenterWindow : Window
 
                 using var retrainHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(90) };
                 var retrainClient = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, retrainHttp);
-                var benchmarkSetStore = new Ai.Training.BenchmarkSetStore();
-                var benchmarkMetricsStore = new Ai.Training.BenchmarkMetricsStore();
+                var benchmarkSetStore = new AuswertungPro.Next.Application.Ai.Training.BenchmarkSetStore();
+                var benchmarkMetricsStore = new AuswertungPro.Next.Application.Ai.Training.BenchmarkMetricsStore();
                 var benchmarkRunner = new Ai.Training.BenchmarkRunner(
                     benchmarkSetStore,
                     benchmarkMetricsStore,
@@ -1076,8 +1077,8 @@ public partial class TrainingCenterWindow : Window
                     var loraClient = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, loraHttp);
                     var ollamaConfig = Ai.Ollama.OllamaConfigExtensions.Load();
 
-                    var loraBenchmarkSetStore = new Ai.Training.BenchmarkSetStore();
-                    var loraBenchmarkMetricsStore = new Ai.Training.BenchmarkMetricsStore();
+                    var loraBenchmarkSetStore = new AuswertungPro.Next.Application.Ai.Training.BenchmarkSetStore();
+                    var loraBenchmarkMetricsStore = new AuswertungPro.Next.Application.Ai.Training.BenchmarkMetricsStore();
                     var loraBenchmarkRunner = new Ai.Training.BenchmarkRunner(
                         loraBenchmarkSetStore,
                         loraBenchmarkMetricsStore,
