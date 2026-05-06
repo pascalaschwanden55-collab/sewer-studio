@@ -6,9 +6,8 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
+namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 /// <summary>
 /// Phase 2.3: Channel-basierte Producer/Consumer-Pipeline fuer KB-Ingestion.

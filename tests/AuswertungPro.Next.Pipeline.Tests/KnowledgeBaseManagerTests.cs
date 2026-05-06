@@ -1,7 +1,7 @@
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training;
 using Xunit;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 

@@ -13,13 +13,13 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.Teacher;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training.Models;
 using AiTrack = AuswertungPro.Next.UI.Services.AiActivityTracker;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training.Models;
+using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 

@@ -18,11 +18,11 @@ using AuswertungPro.Next.Infrastructure.Devis;
 using AuswertungPro.Next.Infrastructure.Sanierung;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Modules;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.UI.Composition;
 

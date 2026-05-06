@@ -3,9 +3,9 @@ using AuswertungPro.Next.Domain.Ai.Training;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
+using AuswertungPro.Next.Application.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Application.Ai.Training;
 
 /// <summary>
 /// Deterministisches QualityGate fuer Training-Samples.
@@ -60,7 +60,7 @@ public sealed class SampleQualityGateService
         // Code MUSS ein gueltiger VSA-Leitungscode sein (IMMER pruefen).
         // Keine WinCan-internen Codes (BEGINN, BOGEN, FOTO etc.).
         // Keine Schachtcodes (D-Gruppe).
-        if (!KnowledgeBase.KnowledgeBaseManager.IsValidVsaLeitungscode(sample.Code))
+        if (!AuswertungPro.Next.Application.CodeCatalog.VsaLeitungscodeValidator.IsValid(sample.Code))
             return HardRed($"Code '{sample.Code}' ist kein gueltiger VSA-Leitungscode");
 
         // SampleId ist Pflicht (internes Tracking)

@@ -1,7 +1,6 @@
 using System;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using System.IO;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using Microsoft.Data.Sqlite;
 using Xunit;
 

@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 
-namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
+namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 /// <summary>
 /// Sucht die ähnlichsten Samples aus der Wissensdatenbank via Cosine-Similarity.
@@ -17,7 +17,7 @@ namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
 public sealed class RetrievalService(
     KnowledgeBaseContext db,
     EmbeddingService embedder,
-    AppSettings? settings = null) : IRetrievalService
+    RetrievalThresholds? thresholds = null) : IRetrievalService
 {
     // Konfigurierbare Schwellen (Defaults: 0.35 einfach, 0.45 hybrid)
     private const double DefaultMinSimilarity = 0.35;
@@ -85,10 +85,10 @@ public sealed class RetrievalService(
 
         scored.Sort((a, b) => b.Score.CompareTo(a.Score));
 
-        // Konfigurierbare Schwellen aus AppSettings (Fallback auf Defaults)
+        // Konfigurierbare Schwellen via RetrievalThresholds (Fallback auf Defaults)
         var minSimilarity = useHybrid
-            ? settings?.KbRetrievalHybridSimilarity ?? DefaultHybridSimilarity
-            : settings?.KbRetrievalMinSimilarity ?? DefaultMinSimilarity;
+            ? thresholds?.HybridSimilarity ?? DefaultHybridSimilarity
+            : thresholds?.MinSimilarity ?? DefaultMinSimilarity;
 
         var results = new List<RetrievalResult>(Math.Min(topK, scored.Count));
         for (var i = 0; i < Math.Min(topK, scored.Count); i++)

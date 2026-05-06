@@ -5,9 +5,9 @@ using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.UI.Ai.SelfImproving;
 

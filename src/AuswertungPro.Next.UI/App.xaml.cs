@@ -18,6 +18,7 @@ using AuswertungPro.Next.UI.Composition;
 using AuswertungPro.Next.UI.Views.Windows;
 using AuswertungPro.Next.UI.Services;
 using Microsoft.Extensions.DependencyInjection;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.UI
 {
@@ -174,7 +175,7 @@ namespace AuswertungPro.Next.UI
                 // Einmal-Migration: bestehende KB-Samples ohne QualityGateLevel nachtraeglich bewerten
                 try
                 {
-                    var backfilled = Ai.KnowledgeBase.KnowledgeBaseManager.BackfillQualityGateLevels();
+                    var backfilled = AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseManager.BackfillQualityGateLevels();
                     if (backfilled > 0)
                         logger.LogInformation("QualityGate-Backfill: {Count} Samples nachtraeglich bewertet", backfilled);
                 }

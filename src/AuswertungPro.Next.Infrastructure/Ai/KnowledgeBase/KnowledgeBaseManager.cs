@@ -9,11 +9,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.UI.Ai.Training;
-using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Application.CodeCatalog;
+using AuswertungPro.Next.Application.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
+namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 /// <summary>
 /// Orchestriert das Indizieren, Deindizieren und Neuaufbauen der KI-Wissensdatenbank.
@@ -125,7 +124,7 @@ public sealed class KnowledgeBaseManager(
             UpsertSample(sample, versionId);
             UpsertEmbedding(sample.SampleId, vector);
         });
-        KnowledgeMirrorService.Current?.NotifyChanged();
+        AuswertungPro.Next.Application.Ai.KnowledgeMirrorNotifier.NotifyChanged();
         return true;
     }
 
@@ -165,7 +164,7 @@ public sealed class KnowledgeBaseManager(
                     UpsertEmbedding(sample.SampleId, vec);
                 }
             });
-            KnowledgeMirrorService.Current?.NotifyChanged();
+            AuswertungPro.Next.Application.Ai.KnowledgeMirrorNotifier.NotifyChanged();
             return ready.Select(r => r.Sample.SampleId).ToList();
         }
         catch
@@ -188,7 +187,7 @@ public sealed class KnowledgeBaseManager(
             "DELETE FROM Embeddings WHERE SampleId = $id",
             ("$id", sampleId));
 
-        KnowledgeMirrorService.Current?.NotifyChanged();
+        AuswertungPro.Next.Application.Ai.KnowledgeMirrorNotifier.NotifyChanged();
     }
 
     /// <summary>
@@ -298,7 +297,7 @@ public sealed class KnowledgeBaseManager(
             });
 
             Debug.WriteLine($"[KnowledgeBaseManager] KB-Rebuild erfolgreich: {indexed}/{samples.Count} Samples indiziert");
-            KnowledgeMirrorService.Current?.NotifyChanged();
+            AuswertungPro.Next.Application.Ai.KnowledgeMirrorNotifier.NotifyChanged();
             return indexed;
         }
         catch
@@ -552,7 +551,7 @@ public sealed class KnowledgeBaseManager(
     /// </summary>
     public static int BackfillQualityGateLevels()
     {
-        var gate = new Training.SampleQualityGateService();
+        var gate = new AuswertungPro.Next.Application.Ai.Training.SampleQualityGateService();
         var samples = new List<(string Id, string Level)>();
 
         using var ctx = new KnowledgeBaseContext();
@@ -696,30 +695,10 @@ public sealed class KnowledgeBaseManager(
         if (string.IsNullOrWhiteSpace(sample.Code))
             return false;
 
-        return IsValidVsaLeitungscode(sample.Code);
+        return AuswertungPro.Next.Application.CodeCatalog.VsaLeitungscodeValidator.IsValid(sample.Code);
     }
 
-    /// <summary>
-    /// Prueft ob ein Code ein gueltiger VSA-Leitungscode ist.
-    /// Nur B-Codes (BA, BB, BC, BD) und AE-Codes.
-    /// Keine D-Codes (Schacht), keine WinCan-internen Codes.
-    /// Punkt-Notation wird automatisch normalisiert.
-    /// </summary>
+    /// <summary>Bridge fuer alte Aufrufer; delegiert an VsaLeitungscodeValidator.IsValid.</summary>
     public static bool IsValidVsaLeitungscode(string code)
-    {
-        if (string.IsNullOrWhiteSpace(code) || code.Length < 3)
-            return false;
-
-        // Punkt-Notation normalisieren: "BCA.A.A" → "BCAAA"
-        var normalized = code.Replace(".", "", StringComparison.Ordinal).ToUpperInvariant();
-
-        // Nur Leitungscodes: B-Gruppe (BA-BD) und AE-Gruppe
-        // Keine D-Codes (Schacht: DA, DB, DC, DD)
-        var prefix = normalized[..2];
-        if (prefix is not ("BA" or "BB" or "BC" or "BD" or "AE"))
-            return false;
-
-        // VsaCodeTree muss den Code kennen
-        return VsaCodeTree.LookupLabel(normalized) is not null;
-    }
+        => AuswertungPro.Next.Application.CodeCatalog.VsaLeitungscodeValidator.IsValid(code);
 }

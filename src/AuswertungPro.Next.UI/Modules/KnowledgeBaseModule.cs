@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Modules;
@@ -46,7 +45,10 @@ internal static class KnowledgeBaseModule
             kbHttp = new HttpClient { Timeout = ollamaConfig.RequestTimeout };
             var kbCtx = new KnowledgeBaseContext();
             var embedder = new EmbeddingService(kbHttp, ollamaConfig);
-            var retrievalService = new RetrievalService(kbCtx, embedder, settings);
+            var retrievalService = new RetrievalService(kbCtx, embedder,
+                new RetrievalThresholds(
+                    settings.KbRetrievalMinSimilarity ?? 0.35,
+                    settings.KbRetrievalHybridSimilarity ?? 0.45));
             retrievalService.CheckModelConsistency();
             if (retrievalService.HasModelMismatch)
                 logger.LogWarning(

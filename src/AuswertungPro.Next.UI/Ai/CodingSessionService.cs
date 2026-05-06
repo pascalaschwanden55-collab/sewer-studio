@@ -272,10 +272,10 @@ public sealed class CodingSessionService : ICodingSessionService
             var cfg = Ai.Ollama.OllamaConfigExtensions.Load();
             // V4.2 Fix: HttpClient disposen (Socket-Exhaustion bei vielen Samples).
             using var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
-            var embedder = new KnowledgeBase.EmbeddingService(http, cfg);
+            var embedder = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.EmbeddingService(http, cfg);
 
             using var db = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
-            var kbManager = new KnowledgeBase.KnowledgeBaseManager(db, embedder);
+            var kbManager = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseManager(db, embedder);
 
             foreach (var sample in approved)
             {

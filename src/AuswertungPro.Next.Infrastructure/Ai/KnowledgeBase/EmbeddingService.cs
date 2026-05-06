@@ -8,9 +8,9 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.Ollama;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
-namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
+namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 /// <summary>
 /// Erzeugt Text-Embeddings via Ollama <c>nomic-embed-text</c>.

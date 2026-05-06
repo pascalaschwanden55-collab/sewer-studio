@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using AuswertungPro.Next.Infrastructure.Sanierung;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.UI.Ai.Sanierung;
 

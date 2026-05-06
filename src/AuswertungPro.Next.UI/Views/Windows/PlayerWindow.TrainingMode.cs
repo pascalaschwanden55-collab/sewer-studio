@@ -11,7 +11,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using IOPath = System.IO.Path;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Teacher;

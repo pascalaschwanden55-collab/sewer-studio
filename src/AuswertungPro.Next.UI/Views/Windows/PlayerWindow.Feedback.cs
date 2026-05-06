@@ -9,7 +9,6 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai.SelfImproving;
 using AuswertungPro.Next.UI.Services;

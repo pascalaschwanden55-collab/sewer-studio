@@ -22,7 +22,6 @@ using AuswertungPro.Next.Application.Ai.SelfImproving;
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Training;

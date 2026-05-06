@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.SelfImproving;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
 
@@ -79,7 +80,7 @@ public sealed class KbEnrichmentService
                 var qgResult = _qualityGate.Evaluate(sample);
                 sample.QualityGateLevel = qgResult.Grade.ToString();
 
-                if (qgResult.Grade == Training.SampleQualityGrade.Red)
+                if (qgResult.Grade == AuswertungPro.Next.Application.Ai.Training.SampleQualityGrade.Red)
                 {
                     _log?.LogDebug(
                         "QualityGate Red fuer {Code}: {Issues}",
@@ -191,7 +192,7 @@ public sealed class KbEnrichmentService
             var qgResult = _qualityGate.Evaluate(sample);
             sample.QualityGateLevel = qgResult.Grade.ToString();
 
-            if (qgResult.Grade == Training.SampleQualityGrade.Red)
+            if (qgResult.Grade == AuswertungPro.Next.Application.Ai.Training.SampleQualityGrade.Red)
             {
                 _log?.LogDebug(
                     "QualityGate Red fuer {Code}: {Issues}",

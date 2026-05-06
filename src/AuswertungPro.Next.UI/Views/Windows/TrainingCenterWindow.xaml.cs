@@ -25,6 +25,7 @@ using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Application.Ai.SelfImproving;
+using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -255,12 +256,12 @@ public partial class TrainingCenterWindow : Window
         var weights = new AuswertungPro.Next.Infrastructure.Ai.QualityGate.WeightLearningService(db.Connection);
 
         // KbManager optional — wenn Ollama offline, wird nur geloggt
-        Ai.KnowledgeBase.KnowledgeBaseManager? kbManager = null;
+        AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseManager? kbManager = null;
         try
         {
             var cfg = Ai.Ollama.OllamaConfigExtensions.Load();
-            var embedder = new Ai.KnowledgeBase.EmbeddingService(_feedbackHttpClient, cfg);
-            kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(db, embedder);
+            var embedder = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.EmbeddingService(_feedbackHttpClient, cfg);
+            kbManager = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseManager(db, embedder);
         }
         catch { /* Ollama nicht verfuegbar — Feedback wird geloggt, KB-Update uebersprungen */ }
 
@@ -338,17 +339,17 @@ public partial class TrainingCenterWindow : Window
             var copyPath = System.IO.Path.Combine(tempDir, System.IO.Path.GetFileName(framePath));
             System.IO.File.Copy(framePath, copyPath, true);
 
-            Ai.KnowledgeBase.KnowledgeBaseManager? kbManager = null;
-            Ai.KnowledgeBase.KbDeduplicationService? dedup = null;
+            AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseManager? kbManager = null;
+            AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KbDeduplicationService? dedup = null;
             try
             {
                 var kbCtx = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
                 var ollamaConfig = Ai.Ollama.OllamaConfigExtensions.Load();
                 var http = new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
-                var embedder = new Ai.KnowledgeBase.EmbeddingService(http, ollamaConfig);
-                kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(kbCtx, embedder);
-                var retrieval = new Ai.KnowledgeBase.RetrievalService(kbCtx, embedder);
-                dedup = new Ai.KnowledgeBase.KbDeduplicationService(embedder, retrieval);
+                var embedder = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.EmbeddingService(http, ollamaConfig);
+                kbManager = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseManager(kbCtx, embedder);
+                var retrieval = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.RetrievalService(kbCtx, embedder);
+                dedup = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KbDeduplicationService(embedder, retrieval);
             }
             catch { /* KB optional — Annotation wird trotzdem gespeichert */ }
 
@@ -655,18 +656,18 @@ public partial class TrainingCenterWindow : Window
 
     private void OpenImageAnnotation_Click(object sender, RoutedEventArgs e)
     {
-        Ai.KnowledgeBase.KnowledgeBaseManager? kbManager = null;
-        Ai.KnowledgeBase.KbDeduplicationService? dedup = null;
+        AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseManager? kbManager = null;
+        AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KbDeduplicationService? dedup = null;
 
         try
         {
             var kbCtx = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
             var ollamaConfig = Ai.Ollama.OllamaConfigExtensions.Load();
             var http = new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
-            var embedder = new Ai.KnowledgeBase.EmbeddingService(http, ollamaConfig);
-            kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(kbCtx, embedder);
-            var retrieval = new Ai.KnowledgeBase.RetrievalService(kbCtx, embedder);
-            dedup = new Ai.KnowledgeBase.KbDeduplicationService(embedder, retrieval);
+            var embedder = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.EmbeddingService(http, ollamaConfig);
+            kbManager = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseManager(kbCtx, embedder);
+            var retrieval = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.RetrievalService(kbCtx, embedder);
+            dedup = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KbDeduplicationService(embedder, retrieval);
         }
         catch { /* KB nicht verfuegbar — Annotationen werden trotzdem als TeacherAnnotation gespeichert */ }
 
@@ -894,10 +895,10 @@ public partial class TrainingCenterWindow : Window
             var kbHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(60) };
             var ollamaConfig = Ai.Ollama.OllamaConfigExtensions.Load();
             var kbCtx = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
-            var embedder = new Ai.KnowledgeBase.EmbeddingService(kbHttp, ollamaConfig);
-            var retrieval = new Ai.KnowledgeBase.RetrievalService(kbCtx, embedder);
-            var kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(kbCtx, embedder);
-            var dedup = new Ai.KnowledgeBase.KbDeduplicationService(embedder, retrieval);
+            var embedder = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.EmbeddingService(kbHttp, ollamaConfig);
+            var retrieval = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.RetrievalService(kbCtx, embedder);
+            var kbManager = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseManager(kbCtx, embedder);
+            var dedup = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KbDeduplicationService(embedder, retrieval);
             // H3: Review-Queue fuer Mittel-Confidence-Samples (0.65 <= conf < 0.85).
             _reviewQueueService ??= new AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueService();
             enrichment = new Ai.KnowledgeBase.KbEnrichmentService(

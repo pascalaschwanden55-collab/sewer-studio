@@ -3,7 +3,6 @@ using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using Microsoft.Data.Sqlite;
 using Xunit;
 
