@@ -82,6 +82,15 @@ namespace AuswertungPro.Next.UI
                 AuswertungPro.Next.Application.Ai.KnowledgeBase.KnowledgeBasePathProvider.SetResolver(
                     () => Ai.KnowledgeRoot.GetKnowledgeDbPath());
 
+                // Phase 5.3: Generischer KnowledgeRoot-Provider fuer Stores in
+                // Application/Infrastructure ohne UI-Dependency auf KnowledgeRoot.
+                AuswertungPro.Next.Application.Ai.KnowledgeRootProvider.SetResolver(
+                    () => Ai.KnowledgeRoot.GetRoot());
+
+                // Phase 5.3: AppData-Pfad-Resolver (LocalAppData\SewerStudio).
+                AuswertungPro.Next.Application.Ai.AppDataPathProvider.SetResolver(
+                    () => AppSettings.AppDataDir);
+
                 // Phase 5.1.B Etappe 4 Sub-E: Nur noch DI-Container — Legacy-ServiceProvider entfernt.
                 var diCollection = new ServiceCollection();
                 diCollection.AddSewerStudioInfrastructure(settings, diagnostics, logger, loggerFactory);

@@ -1,16 +1,14 @@
-using System;
-using AuswertungPro.Next.Application.Ai.Pipeline;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace AuswertungPro.Next.UI.Ai.Pipeline;
+namespace AuswertungPro.Next.Application.Ai.Pipeline;
 
 /// <summary>
 /// Persistiert Yellow/Red-Frames als JSONL fuer gebuendelte 32B-Eskalation.
 /// Ueberlebt Programm-Abbruch — wird beim naechsten Start abgearbeitet.
-/// Pfad: {KnowledgeRoot}/escalation_queue.jsonl
+/// Pfad: {KnowledgeRoot}/escalation_queue.jsonl (UI registriert KnowledgeRootProvider).
 /// </summary>
 public sealed class EscalationQueueStore
 {
@@ -25,7 +23,7 @@ public sealed class EscalationQueueStore
 
     public EscalationQueueStore()
     {
-        _path = Path.Combine(KnowledgeRoot.GetRoot(), "escalation_queue.jsonl");
+        _path = Path.Combine(KnowledgeRootProvider.GetRoot(), "escalation_queue.jsonl");
     }
 
     /// <summary>Frame zur Queue hinzufuegen (append, thread-safe).</summary>
@@ -87,5 +85,3 @@ public sealed class EscalationQueueStore
         }
     }
 }
-
-// Phase 5.3 vorbereitend: EscalationItem nach Application/Ai/Pipeline/DetectionEvent.cs.

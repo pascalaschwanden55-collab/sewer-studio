@@ -1,13 +1,17 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
-using AuswertungPro.Next.Application.Ai.Sanierung;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace AuswertungPro.Next.UI.Ai.Sanierung;
+namespace AuswertungPro.Next.Application.Ai.Sanierung;
 
 public static class AiOptimizationSessionStore
 {
-    private static readonly string FilePath =
-        Path.Combine(AppSettings.AppDataDir, "ai_sanierung_sessions.json");
+    private static string FilePath =>
+        Path.Combine(AppDataPathProvider.GetAppDataDir(), "ai_sanierung_sessions.json");
 
     private static readonly SemaphoreSlim _lock = new(1, 1);
     private static readonly JsonSerializerOptions _jsonOpts = new() { WriteIndented = true };
