@@ -1,5 +1,6 @@
 // AuswertungPro – KI Videoanalyse Modul
 using System;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;

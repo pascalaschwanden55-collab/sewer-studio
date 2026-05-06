@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -230,7 +231,7 @@ public static class KnowledgeBackupService
             if (!File.Exists(dbPath)) return;
 
             progress?.Report("SQLite WAL-Checkpoint...");
-            using var ctx = new Ai.KnowledgeBase.KnowledgeBaseContext();
+            using var ctx = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
             using var cmd = ctx.Connection.CreateCommand();
             cmd.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
             cmd.ExecuteNonQuery();

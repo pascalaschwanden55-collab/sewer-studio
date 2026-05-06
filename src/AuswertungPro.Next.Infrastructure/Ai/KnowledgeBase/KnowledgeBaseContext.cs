@@ -1,10 +1,11 @@
 // AuswertungPro – KI Videoanalyse Modul
 using System;
+using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.IO;
 using Microsoft.Data.Sqlite;
 
-namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
+namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 /// <summary>
 /// SQLite-Datenbankkontext für die KI-Wissensdatenbank.
@@ -17,7 +18,11 @@ namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
 /// </summary>
 public sealed class KnowledgeBaseContext : IDisposable
 {
-    public static string DefaultDbPath => KnowledgeRoot.GetKnowledgeDbPath();
+    /// <summary>
+    /// Default-Pfad ueber den <see cref="KnowledgeBasePathProvider"/>.
+    /// Erfordert dass die UI-Schicht beim Start <c>SetResolver</c> aufgerufen hat.
+    /// </summary>
+    public static string DefaultDbPath => KnowledgeBasePathProvider.GetDbPath();
 
     private readonly SqliteConnection _connection;
 

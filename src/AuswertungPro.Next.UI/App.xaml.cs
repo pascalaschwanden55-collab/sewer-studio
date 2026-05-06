@@ -76,6 +76,12 @@ namespace AuswertungPro.Next.UI
                     ExplicitPdfToTextPath = settings.PdfToTextPath
                 };
 
+                // Phase 5.3 Sub-D: KnowledgeBase-Pfad-Resolver an die KnowledgeBase-Schicht
+                // (Infrastructure) durchreichen — ohne dass Infrastructure UI-Klassen
+                // wie KnowledgeRoot kennt.
+                AuswertungPro.Next.Application.Ai.KnowledgeBase.KnowledgeBasePathProvider.SetResolver(
+                    () => Ai.KnowledgeRoot.GetKnowledgeDbPath());
+
                 // Phase 5.1.B Etappe 4 Sub-E: Nur noch DI-Container — Legacy-ServiceProvider entfernt.
                 var diCollection = new ServiceCollection();
                 diCollection.AddSewerStudioInfrastructure(settings, diagnostics, logger, loggerFactory);

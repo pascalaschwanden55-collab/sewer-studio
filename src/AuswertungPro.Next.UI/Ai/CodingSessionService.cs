@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.Application.Ai;
@@ -270,7 +271,7 @@ public sealed class CodingSessionService : ICodingSessionService
             using var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
             var embedder = new KnowledgeBase.EmbeddingService(http, cfg);
 
-            using var db = new KnowledgeBase.KnowledgeBaseContext();
+            using var db = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
             var kbManager = new KnowledgeBase.KnowledgeBaseManager(db, embedder);
 
             foreach (var sample in approved)

@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -240,7 +241,7 @@ public partial class TrainingCenterWindow : Window
 
     /// <summary>Erzeugt FeedbackIngestionService mit optionalem KbManager fuer KB-Re-Indexierung.</summary>
     private static Ai.SelfImproving.FeedbackIngestionService CreateFeedbackService(
-        Ai.KnowledgeBase.KnowledgeBaseContext db)
+        AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext db)
     {
         var logger = new Ai.QualityGate.ValidationLogger(db.Connection);
         var weights = new Ai.QualityGate.WeightLearningService(db.Connection);
@@ -264,7 +265,7 @@ public partial class TrainingCenterWindow : Window
         _reviewQueueService ??= new Ai.SelfImproving.ReviewQueueService();
         try
         {
-            using var db = new Ai.KnowledgeBase.KnowledgeBaseContext();
+            using var db = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
             var feedback = CreateFeedbackService(db);
             await Vm.ApproveReviewItemAsync(Vm.SelectedReviewItem, feedback, _reviewQueueService);
         }
@@ -333,7 +334,7 @@ public partial class TrainingCenterWindow : Window
             Ai.KnowledgeBase.KbDeduplicationService? dedup = null;
             try
             {
-                var kbCtx = new Ai.KnowledgeBase.KnowledgeBaseContext();
+                var kbCtx = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
                 var ollamaConfig = Ai.Ollama.OllamaConfig.Load();
                 var http = new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
                 var embedder = new Ai.KnowledgeBase.EmbeddingService(http, ollamaConfig);
@@ -651,7 +652,7 @@ public partial class TrainingCenterWindow : Window
 
         try
         {
-            var kbCtx = new Ai.KnowledgeBase.KnowledgeBaseContext();
+            var kbCtx = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
             var ollamaConfig = Ai.Ollama.OllamaConfig.Load();
             var http = new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
             var embedder = new Ai.KnowledgeBase.EmbeddingService(http, ollamaConfig);
@@ -884,7 +885,7 @@ public partial class TrainingCenterWindow : Window
         {
             var kbHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(60) };
             var ollamaConfig = Ai.Ollama.OllamaConfig.Load();
-            var kbCtx = new Ai.KnowledgeBase.KnowledgeBaseContext();
+            var kbCtx = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
             var embedder = new Ai.KnowledgeBase.EmbeddingService(kbHttp, ollamaConfig);
             var retrieval = new Ai.KnowledgeBase.RetrievalService(kbCtx, embedder);
             var kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(kbCtx, embedder);
@@ -1078,7 +1079,7 @@ public partial class TrainingCenterWindow : Window
                         videoOrch,
                         protocolLoader.LoadProtocolAsync);
 
-                    using var kbCtx = new Ai.KnowledgeBase.KnowledgeBaseContext();
+                    using var kbCtx = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
                     var loraOrchestrator = new Ai.Training.QwenLoraOrchestrator(
                         loraClient,
                         kbCtx,

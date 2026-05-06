@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;

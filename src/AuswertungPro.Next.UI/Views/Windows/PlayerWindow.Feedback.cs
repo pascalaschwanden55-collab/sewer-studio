@@ -1,4 +1,6 @@
 using System;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
