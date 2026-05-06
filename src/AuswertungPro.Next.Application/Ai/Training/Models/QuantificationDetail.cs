@@ -1,5 +1,5 @@
 // AuswertungPro – KI Videoanalyse Modul
-namespace AuswertungPro.Next.UI.Ai.Training.Models;
+namespace AuswertungPro.Next.Application.Ai.Training.Models;
 
 /// <summary>
 /// Strukturierte Quantifizierung einer Beobachtung.

@@ -8,6 +8,7 @@ using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai.Training.Models;
+using AuswertungPro.Next.Application.Ai.Training.Models;
 
 namespace AuswertungPro.Next.UI.Ai.Training.Services;
 
@@ -183,7 +184,7 @@ public sealed class ProtocolLoaderFactory
                 (parseResult.Error != null ? $" ({parseResult.Error[..Math.Min(parseResult.Error.Length, 100)]})" : "") +
                 " — versuche PdfProtocolExtractor Fallback...");
             var extractor = new PdfProtocolExtractor();
-            IReadOnlyList<Training.Models.GroundTruthEntry> entries;
+            IReadOnlyList<AuswertungPro.Next.Application.Ai.Training.Models.GroundTruthEntry> entries;
             try
             {
                 entries = extractor.ExtractAsync(pdfPath).GetAwaiter().GetResult();

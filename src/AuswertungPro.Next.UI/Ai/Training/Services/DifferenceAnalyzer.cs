@@ -5,6 +5,7 @@ using AuswertungPro.Next.Domain.Ai.Training;
 using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.UI.Ai.Training.Models;
+using AuswertungPro.Next.Application.Ai.Training.Models;
 
 namespace AuswertungPro.Next.UI.Ai.Training.Services;
 

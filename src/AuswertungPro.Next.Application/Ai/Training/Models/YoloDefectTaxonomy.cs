@@ -1,6 +1,6 @@
 using System.Collections.Frozen;
 
-namespace AuswertungPro.Next.UI.Ai.Training.Models;
+namespace AuswertungPro.Next.Application.Ai.Training.Models;
 
 /// <summary>
 /// Statisches Mapping zwischen VSA-Schadencodes (EN 13508-2) und 10 YOLO-Defektklassen.

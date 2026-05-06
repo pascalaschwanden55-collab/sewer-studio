@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Training.Models;
+using AuswertungPro.Next.Application.Ai.Training.Models;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 

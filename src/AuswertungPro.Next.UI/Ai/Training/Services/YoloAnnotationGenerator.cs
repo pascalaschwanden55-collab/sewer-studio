@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO;
 using AuswertungPro.Next.UI.Ai.Training.Models;
+using AuswertungPro.Next.Application.Ai.Training.Models;
 
 namespace AuswertungPro.Next.UI.Ai.Training.Services;
 

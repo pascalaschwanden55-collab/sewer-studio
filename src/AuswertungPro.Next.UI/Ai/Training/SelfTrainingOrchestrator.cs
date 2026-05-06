@@ -20,6 +20,7 @@ using AuswertungPro.Next.UI.Ai.Training.Services;
 using AuswertungPro.Next.UI.Services.CodeCatalog;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.Pipeline;
+using AuswertungPro.Next.Application.Ai.Training.Models;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
