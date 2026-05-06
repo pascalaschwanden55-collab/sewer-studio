@@ -6,7 +6,7 @@ using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Ai;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Application.Ai;
 
 /// <summary>
 /// Generiert automatisch Fotos (Frame-Extraktion) fuer Rohranfang (BCD) und Rohrende/Abbruch (BCE/BDC*).

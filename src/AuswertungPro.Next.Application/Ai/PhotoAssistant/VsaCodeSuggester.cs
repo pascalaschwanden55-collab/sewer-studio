@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace AuswertungPro.Next.UI.Ai.PhotoAssistant;
+namespace AuswertungPro.Next.Application.Ai.PhotoAssistant;
 
 /// <summary>
 /// Mappt Foto-Assistent-Mess-Werte auf VSA-KEK-Codes (BAA, BAJ, BCA).

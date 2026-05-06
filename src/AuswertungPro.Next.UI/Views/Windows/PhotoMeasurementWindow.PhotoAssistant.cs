@@ -10,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.Ai.PhotoAssistant;
 using AuswertungPro.Next.UI.Ai.PhotoAssistant;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
