@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Data.Sqlite;
 
-namespace AuswertungPro.Next.UI.Ai.SelfImproving;
+namespace AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 /// <summary>
 /// Identifies KB samples that consistently lead to incorrect predictions.

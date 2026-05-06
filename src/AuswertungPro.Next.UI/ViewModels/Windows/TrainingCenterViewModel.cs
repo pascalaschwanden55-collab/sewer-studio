@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
 using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
@@ -14,6 +15,7 @@ using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
+using AuswertungPro.Next.Application.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -580,7 +582,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 int staleCount = 0;
                 try
                 {
-                    var kbq = new Ai.SelfImproving.KbQualityService(db.Connection);
+                    var kbq = new AuswertungPro.Next.Infrastructure.Ai.SelfImproving.KbQualityService(db.Connection);
                     staleCount = kbq.FindStaleCandidates().Count;
                 }
                 catch { }
@@ -1076,7 +1078,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             IsBusy = true;
             StatusText = $"Generiere Samples für {SelectedCase.CaseId}...";
 
-            var cfg = AiRuntimeConfigExtensions.Load();
+            var cfg = AiRuntimeConfigLoader.Load();
             var settings = await TrainingCenterSettingsStore.LoadAsync();
             var meterSvc = CreateMeterTimelineService(cfg, settings.GpuConcurrency);
             var generator = new TrainingSampleGenerator(cfg, meterSvc, settings);
@@ -1452,7 +1454,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 
         try
         {
-            var annotation = new Ai.Teacher.TeacherAnnotation
+            var annotation = new AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotation
             {
                 VsaCode = vsaCode.Trim().ToUpperInvariant(),
                 Beschreibung = $"Review-{reviewKind}: {item.Label}",
