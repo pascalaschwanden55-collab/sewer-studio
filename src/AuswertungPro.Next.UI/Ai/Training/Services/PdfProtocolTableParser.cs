@@ -208,7 +208,7 @@ public static class PdfProtocolTableParser
         // V4.3: Dichtheitspruefungen, Plaene etc. ueberspringen (kein Inspektionsprotokoll).
         // Filter teilt sich die Liste mit PdfProtocolExtractor damit nichts duplizieren.
         var fileName = Path.GetFileNameWithoutExtension(pdfPath).ToLowerInvariant();
-        if (PdfProtocolExtractor.NonProtocolKeywords.Any(kw => fileName.Contains(kw)))
+        if (AuswertungPro.Next.Application.Ai.Training.Services.PdfProtocolHelpers.NonProtocolKeywords.Any(kw => fileName.Contains(kw)))
             return PdfProtocolParseResult.Empty("Kein Inspektionsprotokoll (Filename-Filter)");
 
         var text = ExtractText(pdfPath);
@@ -218,7 +218,7 @@ public static class PdfProtocolTableParser
         if (!string.IsNullOrWhiteSpace(text))
         {
             var textLower = text.ToLowerInvariant();
-            if (PdfProtocolExtractor.NonProtocolTextMarkers.Any(m => textLower.Contains(m)))
+            if (AuswertungPro.Next.Application.Ai.Training.Services.PdfProtocolHelpers.NonProtocolTextMarkers.Any(m => textLower.Contains(m)))
                 return PdfProtocolParseResult.Empty("Kein Inspektionsprotokoll (Dichtheitspruefung erkannt)");
         }
 
@@ -315,7 +315,7 @@ public static class PdfProtocolTableParser
 
         // V4.2 Nachbesserung: Caesar-Decoder fuer IKAS-PDFs mit Custom-Font-Encoding.
         // Wirkt nur wenn Text verschoben ist (Check auf bekannte Wortmuster, sonst Identity).
-        text = PdfProtocolExtractor.TryDecodeShiftedText(text);
+        text = AuswertungPro.Next.Application.Ai.Training.Services.PdfProtocolHelpers.TryDecodeShiftedText(text);
 
         // V4.3: OCR-Korrekturen: "O.OOm" → "0.00m" (Buchstabe O als Null-OCR-Fehler in Meter-Kontext)
         text = OcrMeterZeroFixRegex.Replace(text, m => m.Value.Replace('O', '0'));
