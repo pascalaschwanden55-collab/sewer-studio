@@ -15,7 +15,6 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai.Teacher;
 using AuswertungPro.Next.UI.Ai.Training;
-using AuswertungPro.Next.UI.Ai.Training.Models;
 using AiTrack = AuswertungPro.Next.UI.Services.AiActivityTracker;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training.Models;

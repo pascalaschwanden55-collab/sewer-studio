@@ -1,7 +1,6 @@
 // DifferenceAnalyzer Unit-Tests — B9 Audit-Finding
 using System.Collections.Generic;
 using AuswertungPro.Next.Domain.Ai.Training;
-using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.UI.Ai.Training.Services;
 using Xunit;
 using AuswertungPro.Next.Application.Ai.Training.Models;

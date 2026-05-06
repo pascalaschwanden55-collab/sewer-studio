@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using AuswertungPro.Next.Domain.Ai.Training;
-using AuswertungPro.Next.UI.Ai.Training.Models;
 using Xunit;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 

@@ -7,7 +7,6 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.Application.CodeCatalog;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 

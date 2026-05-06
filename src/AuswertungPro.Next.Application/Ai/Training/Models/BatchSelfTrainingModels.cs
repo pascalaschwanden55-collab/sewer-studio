@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using AuswertungPro.Next.Application.Ai;
 
-namespace AuswertungPro.Next.UI.Ai.Training.Models;
+namespace AuswertungPro.Next.Application.Ai.Training.Models;
 
 /// <summary>Anfrage fuer den Batch-Selbsttraining-Durchlauf.</summary>
 public sealed class BatchSelfTrainingRequest
@@ -89,10 +89,11 @@ public sealed class BatchSelfTrainingRequest
     /// <summary>
     /// Anzahl parallel verarbeiteter Haltungen.
     /// Jede Haltung bekommt ihre eigene Pipeline-Instanz (Thread-Safe).
-    /// Default: aus TrainingCenterSettings.CaseParallelism (VRAM-adaptiv).
+    /// Default 2 (sicherer Fallback). UI sollte den Wert aus
+    /// TrainingCenterSettings.CaseParallelism (VRAM-adaptiv) ueberschreiben.
     /// Env: SEWERSTUDIO_SELFTRAIN_CASE_PARALLELISM
     /// </summary>
-    public int MaxParallelHaltungen { get; init; } = new TrainingCenterSettings().CaseParallelism;
+    public int MaxParallelHaltungen { get; init; } = 2;
 }
 
 /// <summary>Fortschrittsmeldung waehrend des Batch-Durchlaufs.</summary>

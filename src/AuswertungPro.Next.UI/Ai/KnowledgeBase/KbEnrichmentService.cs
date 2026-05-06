@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai.Training;
-using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.Training.Models;

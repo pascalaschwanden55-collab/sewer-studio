@@ -1,4 +1,3 @@
-using AuswertungPro.Next.UI.Ai.Training.Models;
 using Xunit;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 

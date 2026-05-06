@@ -946,7 +946,7 @@ public partial class TrainingCenterWindow : Window
             orchestratorFactory: orchestratorFactory,
             uncertaintySampler: uncertaintySampler,
             sidecarUrl: pipelineCfg.SidecarUrl.ToString());
-        var request = new Ai.Training.Models.BatchSelfTrainingRequest
+        var request = new AuswertungPro.Next.Application.Ai.Training.Models.BatchSelfTrainingRequest
         {
             ExportRootPath = dlg.FolderName,
             MaxHaltungen = maxHaltungen,
@@ -987,7 +987,7 @@ public partial class TrainingCenterWindow : Window
         }
 
         Vm.LogText = ""; // Log leeren vor Batch-Start
-        var progress = new Progress<Ai.Training.Models.BatchSelfTrainingProgress>(p =>
+        var progress = new Progress<AuswertungPro.Next.Application.Ai.Training.Models.BatchSelfTrainingProgress>(p =>
         {
             Vm.StatusText = p.Status;
 
