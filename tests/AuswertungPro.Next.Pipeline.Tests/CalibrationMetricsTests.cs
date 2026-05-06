@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.UI.Ai.QualityGate;
 using Xunit;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 

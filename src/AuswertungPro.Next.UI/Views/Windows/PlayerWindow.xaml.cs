@@ -1081,7 +1081,7 @@ public partial class PlayerWindow : Window, IVlcSurface
         if (_codingOverlayService != null && _codingVm != null) return;
 
         // Lazy-Init: minimales Setup fuer Overlay-Zeichnung
-        _codingOverlayService ??= new Ai.OverlayToolService();
+        _codingOverlayService ??= new AuswertungPro.Next.Application.Ai.OverlayToolService();
         if (_codingVm == null)
         {
             _codingSessionService ??= new Ai.CodingSessionService();

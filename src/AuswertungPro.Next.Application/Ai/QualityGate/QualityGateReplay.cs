@@ -3,7 +3,7 @@ using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace AuswertungPro.Next.UI.Ai.QualityGate;
+namespace AuswertungPro.Next.Application.Ai.QualityGate;
 
 /// <summary>
 /// Spielt historische EvidenceVectors gegen die aktuelle QualityGate-Konfiguration

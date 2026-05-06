@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using AuswertungPro.Next.Domain.Models;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Application.Ai;
 
 // ═══════════════════════════════════════════════════════════════════
 // Schema-Overlay System: Interaktive Schablonen fuer Rohrvermessung

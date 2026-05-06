@@ -12,6 +12,7 @@ using System.Windows.Shapes;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Application.Ai.Pipeline;
+using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 

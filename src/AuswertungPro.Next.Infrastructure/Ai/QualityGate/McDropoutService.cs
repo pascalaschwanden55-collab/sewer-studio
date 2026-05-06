@@ -7,7 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AuswertungPro.Next.UI.Ai.QualityGate;
+namespace AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 
 /// <summary>
 /// Monte-Carlo Dropout approximation via multiple LLM passes at different temperatures.
