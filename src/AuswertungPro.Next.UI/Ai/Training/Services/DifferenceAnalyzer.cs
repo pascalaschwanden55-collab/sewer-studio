@@ -1,5 +1,7 @@
 // AuswertungPro – Video-Selbsttraining Phase 2
 using System;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Domain.Ai.Training;
 using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.UI.Ai.Training.Models;

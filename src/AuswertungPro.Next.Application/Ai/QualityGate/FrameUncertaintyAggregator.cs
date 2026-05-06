@@ -1,10 +1,9 @@
 using System;
-using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Collections.Generic;
 using System.Linq;
-using AuswertungPro.Next.UI.Ai.Training.Models;
+using AuswertungPro.Next.Domain.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.QualityGate;
+namespace AuswertungPro.Next.Application.Ai.QualityGate;
 
 /// <summary>
 /// V4.2 Phase 1.2: Aggregiert per-Detection-Unsicherheiten zu einem Frame-Level-Score.
@@ -24,12 +23,6 @@ public static class FrameUncertaintyAggregator
     /// <summary>
     /// Aggregiert die Detections eines Frames zu einem Frame-Uncertainty-Score.
     /// </summary>
-    /// <param name="detections">Alle KI-Detections aus einem Frame (0..N).</param>
-    /// <param name="viewType">
-    /// Vom ViewType-Klassifikator erkannter Typ (axial/nahaufnahme/schwenk/schacht/null).
-    /// Konflikt = ViewType nicht codierbar (nahaufnahme/schwenk) aber Findings vorhanden.
-    /// </param>
-    /// <param name="viewTypeConfidence">ViewType-Konfidenz (0.0 - 1.0), null wenn unbekannt.</param>
     public static FrameUncertaintyScore Aggregate(
         IReadOnlyList<BlindDetection> detections,
         string? viewType = null,
@@ -37,8 +30,6 @@ public static class FrameUncertaintyAggregator
     {
         if (detections.Count == 0)
         {
-            // Leerer Frame: keine Detections, keine Unsicherheit auf Detection-Ebene.
-            // ViewType-Konflikt kann auch hier relevant sein (z.B. schacht ohne BCD-Finding).
             return new FrameUncertaintyScore(
                 Epistemic: 0.0,
                 Aleatoric: 0.0,
@@ -61,8 +52,6 @@ public static class FrameUncertaintyAggregator
             !CodableViewTypes.Contains(viewType) &&
             detections.Any(d => !string.IsNullOrEmpty(d.VsaCode)))
         {
-            // ViewType spricht gegen Codierbarkeit aber KI hat codiert → Konflikt.
-            // Skalierung mit ViewTypeConfidence: je sicherer der ViewType, desto groesser der Boost.
             var conf = viewTypeConfidence ?? 0.5;
             viewTypeBoost = 0.5 * Math.Clamp(conf, 0.0, 1.0);
         }
@@ -91,10 +80,7 @@ public sealed record FrameUncertaintyScore(
     /// <summary>Gesamt-Unsicherheit (Epistemic + Aleatoric + ViewType-Boost), clamped auf [0, 1].</summary>
     public double Total => Math.Clamp(Epistemic + Aleatoric + ViewTypeConflictBoost, 0.0, 1.0);
 
-    /// <summary>
-    /// True wenn Frame manuell gepruefet werden sollte.
-    /// Schwelle = <see cref="UncertaintyEstimate.NeedsReview"/>-Logik + ViewType-Konflikt.
-    /// </summary>
+    /// <summary>True wenn Frame manuell gepruefet werden sollte.</summary>
     public bool NeedsReview => Epistemic >= 0.15
         || (MinConfidence >= 0.45 && MinConfidence < 0.75)
         || ViewTypeConflictBoost > 0.0;
