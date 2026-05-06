@@ -4,9 +4,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using AuswertungPro.Next.Application.Common;
-using AuswertungPro.Next.UI.Ai.Ollama;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Infrastructure.Ai;
 
 /// <summary>
 /// Erkennt verfuegbaren GPU-VRAM via nvidia-smi und waehlt

@@ -5,10 +5,9 @@ using AuswertungPro.Next.Domain.Ai.Vision;
 using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Application.Ai;
 
 /// <summary>
 /// Quelle eines KI-generierten Overlays.

@@ -19,6 +19,7 @@ using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.SelfImproving;
 using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 

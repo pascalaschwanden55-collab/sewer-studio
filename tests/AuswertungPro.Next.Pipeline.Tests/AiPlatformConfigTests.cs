@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Ollama;
 using Xunit;

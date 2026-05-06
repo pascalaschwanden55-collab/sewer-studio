@@ -1,7 +1,8 @@
 using System;
 using System.Globalization;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 public sealed class TrainingCenterSettings
 {

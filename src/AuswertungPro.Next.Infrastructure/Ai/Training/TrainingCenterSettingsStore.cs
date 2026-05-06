@@ -2,13 +2,14 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.Training
+namespace AuswertungPro.Next.Infrastructure.Ai.Training
 {
     public static class TrainingCenterSettingsStore
     {
         private static string GetStorePath()
-            => KnowledgeRoot.GetTrainingSettingsPath();
+            => System.IO.Path.Combine(AuswertungPro.Next.Application.Ai.KnowledgeRootProvider.GetRoot(), "training_settings.json");
 
         public static async Task<TrainingCenterSettings> LoadAsync()
         {
