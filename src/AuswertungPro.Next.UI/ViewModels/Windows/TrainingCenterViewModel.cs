@@ -44,7 +44,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     private System.Net.Http.HttpClient? _kbHttpClient;
 
     /// <summary>Optionale Referenz auf die Review Queue (gesetzt von Window).</summary>
-    public Ai.SelfImproving.ReviewQueueService? ReviewQueueServiceRef { get; set; }
+    public AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueService? ReviewQueueServiceRef { get; set; }
 
     public ObservableCollection<TrainingCase> Cases { get; } = new();
     public ObservableCollection<TrainingSample> Samples { get; } = new();
@@ -1367,7 +1367,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     // ── Review Queue (Self-Improving Loop) ──────────────────────────────
 
     /// <summary>Loads pending review items into the queue.</summary>
-    public void LoadReviewQueue(Ai.SelfImproving.ReviewQueueService queueService)
+    public void LoadReviewQueue(AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueService queueService)
     {
         ReviewQueue.Clear();
         foreach (var item in queueService.GetAll())
@@ -1380,7 +1380,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     public async Task ApproveReviewItemAsync(
         AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueItem item,
         Ai.SelfImproving.FeedbackIngestionService feedback,
-        Ai.SelfImproving.ReviewQueueService queueService,
+        AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueService queueService,
         CancellationToken ct = default)
     {
         if (item.Entry is not null)
@@ -1411,7 +1411,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueItem item,
         string correctedCode,
         Ai.SelfImproving.FeedbackIngestionService feedback,
-        Ai.SelfImproving.ReviewQueueService queueService,
+        AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueService queueService,
         CancellationToken ct = default)
     {
         if (item.Entry is not null)

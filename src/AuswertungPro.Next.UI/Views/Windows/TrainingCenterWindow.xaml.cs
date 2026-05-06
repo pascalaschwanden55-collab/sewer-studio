@@ -24,6 +24,7 @@ using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.Application.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -36,7 +37,7 @@ public partial class TrainingCenterWindow : Window
     private Border[] _serviceDots = Array.Empty<Border>();
 
     // Review-Services (lazy, erst bei erster Review-Aktion)
-    private Ai.SelfImproving.ReviewQueueService? _reviewQueueService;
+    private AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueService? _reviewQueueService;
 
     // Batch-Nachtbetrieb Abbruch
     private System.Threading.CancellationTokenSource? _batchCts;
@@ -59,7 +60,7 @@ public partial class TrainingCenterWindow : Window
             SetupAutoScroll();
 
             // Review-Queue laden (falls KB vorhanden)
-            _reviewQueueService = new Ai.SelfImproving.ReviewQueueService();
+            _reviewQueueService = new AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueService();
             Vm.ReviewQueueServiceRef = _reviewQueueService;
             Vm.LoadReviewQueue(_reviewQueueService);
 
@@ -269,7 +270,7 @@ public partial class TrainingCenterWindow : Window
     private async void ReviewApprove_Click(object sender, RoutedEventArgs e)
     {
         if (Vm.SelectedReviewItem is null) return;
-        _reviewQueueService ??= new Ai.SelfImproving.ReviewQueueService();
+        _reviewQueueService ??= new AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueService();
         try
         {
             using var db = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
@@ -294,7 +295,7 @@ public partial class TrainingCenterWindow : Window
         }
 
         var item = Vm.SelectedReviewItem;
-        _reviewQueueService ??= new Ai.SelfImproving.ReviewQueueService();
+        _reviewQueueService ??= new AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueService();
         _reviewQueueService.Remove(item.Id);
         Vm.ReviewQueue.Remove(item);
         Vm.ReviewQueueCount = Vm.ReviewQueue.Count;
@@ -375,7 +376,7 @@ public partial class TrainingCenterWindow : Window
             win.ShowDialog();
 
             // Nach Annotation: Item aus Queue entfernen (als reviewed).
-            _reviewQueueService ??= new Ai.SelfImproving.ReviewQueueService();
+            _reviewQueueService ??= new AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueService();
             _reviewQueueService.Remove(item.Id);
             Vm.ReviewQueue.Remove(item);
             Vm.ReviewQueueCount = Vm.ReviewQueue.Count;
@@ -898,7 +899,7 @@ public partial class TrainingCenterWindow : Window
             var kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(kbCtx, embedder);
             var dedup = new Ai.KnowledgeBase.KbDeduplicationService(embedder, retrieval);
             // H3: Review-Queue fuer Mittel-Confidence-Samples (0.65 <= conf < 0.85).
-            _reviewQueueService ??= new Ai.SelfImproving.ReviewQueueService();
+            _reviewQueueService ??= new AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueService();
             enrichment = new Ai.KnowledgeBase.KbEnrichmentService(
                 kbManager, dedup, log: null, reviewQueue: _reviewQueueService);
         }
@@ -933,8 +934,8 @@ public partial class TrainingCenterWindow : Window
         };
 
         // V4.2 Phase 1.4: UncertaintySamplingService auf den Fenster-lokalen ReviewQueueService mappen.
-        _reviewQueueService ??= new Ai.SelfImproving.ReviewQueueService();
-        var uncertaintySampler = new Ai.SelfImproving.UncertaintySamplingService(_reviewQueueService);
+        _reviewQueueService ??= new AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueService();
+        var uncertaintySampler = new AuswertungPro.Next.Application.Ai.SelfImproving.UncertaintySamplingService(_reviewQueueService);
 
         var batchOrch = new Ai.Training.BatchSelfTrainingOrchestrator(
             videoOrch, protocolLoader, enrichment, sidecarDir: sidecarDir,

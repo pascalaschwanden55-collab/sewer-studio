@@ -7,10 +7,9 @@ using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Application.Ai.SelfImproving;
 
-namespace AuswertungPro.Next.UI.Ai.SelfImproving;
+namespace AuswertungPro.Next.Application.Ai.SelfImproving;
 
 /// <summary>
 /// Manages the review queue for Yellow-TrafficLight detections.

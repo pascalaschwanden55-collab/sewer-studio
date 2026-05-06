@@ -5,6 +5,7 @@ using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.SelfImproving;
 using Xunit;
+using AuswertungPro.Next.Application.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 

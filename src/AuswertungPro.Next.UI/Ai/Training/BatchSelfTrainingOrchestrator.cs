@@ -37,7 +37,7 @@ public sealed class BatchSelfTrainingOrchestrator
     private readonly Func<VideoSelfTrainingOrchestrator>? _orchestratorFactory;
     private readonly ProtocolLoaderFactory _protocolLoader;
     private readonly KbEnrichmentService _enrichment;
-    private readonly SelfImproving.UncertaintySamplingService? _uncertaintySampler;
+    private readonly AuswertungPro.Next.Application.Ai.SelfImproving.UncertaintySamplingService? _uncertaintySampler;
     private readonly ILogger? _log;
 
     // YOLO-Retraining nach Batch-Durchlauf (optional)
@@ -68,7 +68,7 @@ public sealed class BatchSelfTrainingOrchestrator
         string? sidecarDir = null,
         YoloRetrainOrchestrator? yoloRetrain = null,
         Func<VideoSelfTrainingOrchestrator>? orchestratorFactory = null,
-        SelfImproving.UncertaintySamplingService? uncertaintySampler = null,
+        AuswertungPro.Next.Application.Ai.SelfImproving.UncertaintySamplingService? uncertaintySampler = null,
         string? sidecarUrl = null)
     {
         _videoOrchestrator = videoOrchestrator ?? throw new ArgumentNullException(nameof(videoOrchestrator));

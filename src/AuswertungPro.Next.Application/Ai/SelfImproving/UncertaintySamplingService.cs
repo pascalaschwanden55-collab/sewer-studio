@@ -3,12 +3,11 @@ using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Collections.Generic;
 using System.Linq;
-using AuswertungPro.Next.UI.Ai.Training;
-using AuswertungPro.Next.UI.Ai.Training.Models;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.Training.Models;
+using AuswertungPro.Next.Application.Ai.SelfImproving;
 
-namespace AuswertungPro.Next.UI.Ai.SelfImproving;
+namespace AuswertungPro.Next.Application.Ai.SelfImproving;
 
 /// <summary>
 /// V4.2 Phase 1.4: Priorisiert die unsichersten Frames pro Haltung fuer manuelles Review.
