@@ -16,6 +16,8 @@ using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.UI.Ai.Training.Services;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.Training.Models;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 

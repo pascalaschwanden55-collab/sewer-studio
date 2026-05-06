@@ -23,6 +23,7 @@ using Infrastructure = AuswertungPro.Next.Infrastructure;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -704,7 +705,7 @@ public partial class TrainingCenterWindow : Window
             var plausibility = new AuswertungPro.Next.Application.Ai.RuleBasedAiSuggestionPlausibilityService(allowedSet);
             var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(30) };
             var pipeline = new Ai.VideoAnalysisPipelineService(cfg, plausibility, http);
-            var meterTimeline = new Ai.Training.MeterTimelineService(cfg);
+            var meterTimeline = new AuswertungPro.Next.Infrastructure.Ai.Training.MeterTimelineService(cfg);
             return new Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
         };
 
@@ -807,7 +808,7 @@ public partial class TrainingCenterWindow : Window
         var protocolLoader = new Ai.Training.Services.ProtocolLoaderFactory(winCanImport, ibakImport);
         var setStore = new BenchmarkSetStore();
         var metricsStore = new BenchmarkMetricsStore();
-        var meterTimeline = new Ai.Training.MeterTimelineService(cfg);
+        var meterTimeline = new AuswertungPro.Next.Infrastructure.Ai.Training.MeterTimelineService(cfg);
         var orchestrator = new Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
 
         // V4.1: Batch-Pipeline (YOLO Batch → Filter → Qwen ×6 parallel)
@@ -871,7 +872,7 @@ public partial class TrainingCenterWindow : Window
         var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(30) };
         var pipeline = new Ai.VideoAnalysisPipelineService(cfg, plausibility, http);
         var protocolLoader = new Ai.Training.Services.ProtocolLoaderFactory(winCanImport, ibakImport);
-        var meterTimeline = new Ai.Training.MeterTimelineService(cfg);
+        var meterTimeline = new AuswertungPro.Next.Infrastructure.Ai.Training.MeterTimelineService(cfg);
         var videoOrch = new Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
 
         // V4.1: Batch-Pipeline fuer den initialen Orchestrator
@@ -913,7 +914,7 @@ public partial class TrainingCenterWindow : Window
         {
             var pHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(30) };
             var pPipeline = new Ai.VideoAnalysisPipelineService(cfg, plausibility, pHttp);
-            var pTimeline = new Ai.Training.MeterTimelineService(cfg);
+            var pTimeline = new AuswertungPro.Next.Infrastructure.Ai.Training.MeterTimelineService(cfg);
             var orch = new Ai.Training.VideoSelfTrainingOrchestrator(pPipeline, pTimeline);
 
             // V4.1: Batch-Pipeline (YOLO Batch → Filter → Qwen ×6 parallel)
