@@ -1,5 +1,6 @@
 // AuswertungPro – Vergleichslogik KI-Erkennung vs. Protokoll (deterministisch)
 using System;
+using AuswertungPro.Next.Domain.Ai.Training;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;

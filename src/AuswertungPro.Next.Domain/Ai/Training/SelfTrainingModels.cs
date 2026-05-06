@@ -1,7 +1,7 @@
 // AuswertungPro – Selbststaendiges KI-Training Modelle
 using System;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Domain.Ai.Training;
 
 // ── Match-Level fuer Vergleich KI vs. Protokoll ──
 

@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Domain.Ai.Training;
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 
