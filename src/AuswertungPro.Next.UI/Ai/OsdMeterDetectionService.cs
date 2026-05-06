@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 
 namespace AuswertungPro.Next.UI.Ai;
 

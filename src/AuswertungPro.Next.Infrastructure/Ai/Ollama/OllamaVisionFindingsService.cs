@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Infrastructure.Ai.Ollama;
 
 public sealed record FrameFinding(
     double? Meter,
