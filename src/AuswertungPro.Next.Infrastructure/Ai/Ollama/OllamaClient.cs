@@ -37,6 +37,11 @@ public sealed class OllamaClient : IDisposable
     /// <summary>Anzahl Circuit-Breaker-Ausloeser seit Start.</summary>
     public int CircuitBreakerTrips => _circuitBreakerTrips;
 
+    // Schuetzt parallele Schreibzugriffe auf qwen_raw_responses.log: bei
+    // gleichzeitigen Qwen-Requests (8B + 32B-Hybrid) kann die Datei sonst
+    // verschraenkte Zeilen bekommen. STAB-H2 (Audit 2026-04-23).
+    private static readonly object _diagLogLock = new();
+
     public OllamaClient(Uri baseUri, HttpClient? http = null, TimeSpan? ownedTimeout = null, string keepAlive = "24h", int numCtx = 0, bool diagnosticsEnabled = false)
     {
         _ownsHttp = http is null;
@@ -477,9 +482,12 @@ public sealed class OllamaClient : IDisposable
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "SewerStudio", "logs");
                 Directory.CreateDirectory(logDir);
-                File.AppendAllText(
-                    Path.Combine(logDir, "qwen_raw_responses.log"),
-                    $"{DateTime.Now:HH:mm:ss} [{model}] {content[..Math.Min(content.Length, 500)]}\n---\n");
+                lock (_diagLogLock)
+                {
+                    File.AppendAllText(
+                        Path.Combine(logDir, "qwen_raw_responses.log"),
+                        $"{DateTime.Now:HH:mm:ss} [{model}] {content[..Math.Min(content.Length, 500)]}\n---\n");
+                }
             }
             catch { /* Logging darf nie crashen */ }
         }
