@@ -8,9 +8,8 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai.Pipeline;
-using AuswertungPro.Next.UI.Ai.Training;
+using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -302,58 +301,4 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
     }
 }
 
-// ── Request / Result ──────────────────────────────────────────────────────────
-
-public sealed record PipelineRequest(
-    string HaltungId,
-    string VideoPath,
-    IReadOnlyList<string> AllowedCodes,
-    string? ProjectFolderAbs = null,
-    string? RequestedBy = null,
-    double FrameStepSeconds = 3.0,
-    int DedupWindowFrames = 3
-);
-
-public sealed record PipelineResult(
-    ProtocolDocument? Document,
-    IReadOnlyList<RawVideoDetection> Detections,
-    IReadOnlyList<MappedProtocolEntry> MappedEntries,
-    PipelineStats? Stats,
-    IReadOnlyList<string> Warnings,
-    string? Error,
-    AuswertungPro.Next.Application.Ai.Vision.TelemetrySummary? Telemetry = null)
-{
-    public bool IsSuccess => Error is null;
-
-    public static PipelineResult Failed(string error) =>
-        new(null, Array.Empty<RawVideoDetection>(),
-            Array.Empty<MappedProtocolEntry>(), null,
-            Array.Empty<string>(), error);
-}
-
-public sealed record PipelineStats(
-    int FramesAnalyzed,
-    double DurationSeconds,
-    int DetectionsRaw,
-    int EntriesGenerated,
-    int EntriesWithHighConfidence
-);
-
-public sealed record PipelineProgress(
-    PipelinePhase Phase,
-    double PercentInPhase,
-    string Status,
-    int? FramesDone = null,
-    int? FramesTotal = null,
-    int? ItemsDone = null,
-    int? ItemsTotal = null,
-    byte[]? FramePreviewPng = null,
-    IReadOnlyList<LiveFrameFinding>? LiveFindings = null);
-
-public enum PipelinePhase
-{
-    VideoAnalysis,
-    MultiModelDetection,
-    CodeMapping,
-    Done
-}
+// Request / Result records moved to Application/Ai/Vision/PipelineRequestModels.cs

@@ -1,4 +1,9 @@
-namespace AuswertungPro.Next.UI.Ai;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.Vision;
+
+namespace AuswertungPro.Next.Application.Ai;
 
 public interface IVideoAnalysisPipelineService
 {
