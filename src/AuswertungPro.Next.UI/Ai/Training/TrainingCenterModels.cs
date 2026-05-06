@@ -1,20 +1,12 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Ai.Training;
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
-public enum TrainingCaseStatus
-{
-    New = 0,
-    Approved = 1,
-    Rejected = 2,
-    /// <summary>Fall wurde durch Selbsttraining verarbeitet.</summary>
-    SelfTrained = 3,
-    /// <summary>Fall wurde durch Batch-Import + KB verarbeitet.</summary>
-    BatchImported = 4
-}
+// Phase 5.3: TrainingCaseStatus + SelfTrainingEntryResult nach Application/Ai/Training/TrainingCenterModels.cs.
 
 public partial class TrainingCase : ObservableObject
 {
@@ -45,16 +37,6 @@ public sealed class TrainingCenterState
 }
 
 // ── Visualisierungs-Models fuer Selbsttraining ──
-
-/// <summary>Ein Ergebnis-Eintrag im Selbsttraining-Verlauf.</summary>
-public sealed class SelfTrainingEntryResult
-{
-    public int Index { get; init; }
-    public string VsaCode { get; init; } = "";
-    public double Meter { get; init; }
-    public MatchLevel Level { get; init; }
-    public string Summary { get; init; } = "";
-}
 
 /// <summary>Code-Verteilung: wie oft ein VSA-Code mit welchem Ergebnis erkannt wurde.</summary>
 public partial class CodeDistributionEntry : ObservableObject
