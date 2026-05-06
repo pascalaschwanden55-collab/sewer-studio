@@ -2,9 +2,8 @@ using System;
 using AuswertungPro.Next.Application.Ai.Vision;
 using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Application.Ai.QualityGate;
-using AuswertungPro.Next.UI.Ai.QualityGate;
 
-namespace AuswertungPro.Next.UI.Ai.SelfImproving;
+namespace AuswertungPro.Next.Application.Ai.SelfImproving;
 
 /// <summary>
 /// Auto-approve detections when all confidence criteria are met:

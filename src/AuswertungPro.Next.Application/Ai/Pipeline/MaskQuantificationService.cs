@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 
-namespace AuswertungPro.Next.UI.Ai.Pipeline;
+namespace AuswertungPro.Next.Application.Ai.Pipeline;
 
 /// <summary>
 /// Converts SAM pixel-level mask data into real-world measurements (mm, %).

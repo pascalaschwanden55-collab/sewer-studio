@@ -24,7 +24,6 @@ using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 using LibVLCSharp.Shared;
 using AuswertungPro.Next.Application.Player;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.QualityGate;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Domain.Models;
@@ -1323,13 +1322,13 @@ public partial class PlayerWindow : Window, IVlcSurface
             RenderSamPromptBox(minNormX, minNormY, maxNormX, maxNormY, renderW, renderH);
 
             // Quantifizierung fuer Label-Anzeige
-            var quantified = new List<Ai.Pipeline.MaskQuantificationService.QuantifiedMask>();
+            var quantified = new List<AuswertungPro.Next.Application.Ai.Pipeline.MaskQuantificationService.QuantifiedMask>();
             var cal = _codingOverlayService?.Calibration;
             foreach (var mask in samResp.Masks)
             {
                 var q = cal != null
-                    ? Ai.Pipeline.MaskQuantificationService.Quantify(mask, samResp.ImageWidth, samResp.ImageHeight, dn, cal)
-                    : Ai.Pipeline.MaskQuantificationService.Quantify(mask, samResp.ImageWidth, samResp.ImageHeight, dn);
+                    ? AuswertungPro.Next.Application.Ai.Pipeline.MaskQuantificationService.Quantify(mask, samResp.ImageWidth, samResp.ImageHeight, dn, cal)
+                    : AuswertungPro.Next.Application.Ai.Pipeline.MaskQuantificationService.Quantify(mask, samResp.ImageWidth, samResp.ImageHeight, dn);
                 quantified.Add(q);
             }
 

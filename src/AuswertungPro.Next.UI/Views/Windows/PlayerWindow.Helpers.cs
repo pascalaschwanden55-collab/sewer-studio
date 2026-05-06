@@ -1,10 +1,14 @@
 using System;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Vision;
+using AuswertungPro.Next.Domain.Ai.Vision;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Media;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.ViewModels.Protocol;
