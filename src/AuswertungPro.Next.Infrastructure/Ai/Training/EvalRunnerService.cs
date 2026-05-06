@@ -11,11 +11,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 /// <summary>
 /// V4.2: Laeuft das frozen 120-Frame Eval-Set durch Qwen und misst F1/Precision/Recall

@@ -8,11 +8,11 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.Application.CodeCatalog;
 using AuswertungPro.Next.Application.Ai.Training.Models;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 /// <summary>
 /// Ergebnis der Protokoll-gesteuerten Verifikation eines Frames.

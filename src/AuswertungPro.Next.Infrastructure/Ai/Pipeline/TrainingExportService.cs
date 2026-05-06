@@ -5,12 +5,12 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.Pipeline;
+namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 /// <summary>
 /// Exports training data to YOLO format via the Sidecar API.

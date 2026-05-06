@@ -747,7 +747,7 @@ public partial class TrainingCenterWindow : Window
             var ollamaClient = cfg.CreateOllamaClient();
             var qwen = new AuswertungPro.Next.Infrastructure.Ai.EnhancedVisionAnalysisService(
                 ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
-            var runner = new Ai.Training.EvalRunnerService(qwen);
+            var runner = new AuswertungPro.Next.Infrastructure.Ai.Training.EvalRunnerService(qwen);
 
             Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [Eval] Start Eval-Set-Lauf...\n");
 

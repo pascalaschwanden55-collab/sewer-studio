@@ -14,6 +14,7 @@ using System.Linq;
 using AuswertungPro.Next.UI.Ai.Training;
 using Xunit;
 using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 

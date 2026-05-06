@@ -5,15 +5,14 @@ using AuswertungPro.Next.Domain.Ai.Training;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
-using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.Application.CodeCatalog;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 /// <summary>
 /// Vergleicht KI-Erkennungen (EnhancedFrameAnalysis) mit Ground-Truth-Eintraegen aus dem Protokoll.
