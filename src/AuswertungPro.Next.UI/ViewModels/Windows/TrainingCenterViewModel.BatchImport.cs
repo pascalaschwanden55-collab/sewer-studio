@@ -103,7 +103,7 @@ public partial class TrainingCenterViewModel
             }
 
             // 2. Generate samples for all cases
-            var cfg = AiRuntimeConfigLoader.Load();
+            var cfg = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
             Log($"AI Config: Enabled={cfg.Enabled}, ffmpeg={cfg.FfmpegPath}");
 
             var settings = await TrainingCenterSettingsStore.LoadAsync();

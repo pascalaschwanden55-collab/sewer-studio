@@ -813,7 +813,7 @@ public partial class PlayerWindow : Window, IVlcSurface
         AiRuntimeConfig cfg;
         try
         {
-            cfg = AiRuntimeConfigLoader.Load();
+            cfg = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
         }
         catch
         {

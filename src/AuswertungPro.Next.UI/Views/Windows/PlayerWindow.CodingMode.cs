@@ -927,7 +927,7 @@ public partial class PlayerWindow
     {
         try
         {
-            var config = AiRuntimeConfigLoader.Load();
+            var config = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
             _codingAiModelName = config.VisionModel;
             if (!config.Enabled)
             {
@@ -1672,7 +1672,7 @@ public partial class PlayerWindow
             if (pngBytes == null || pngBytes.Length == 0) return null;
 
             // Leichtgewichtiger OSD-Request: nur Meterstand, keine volle Analyse
-            var config = AiRuntimeConfigLoader.Load();
+            var config = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
             var client = config.CreateOllamaClient();
             var b64 = Convert.ToBase64String(pngBytes);
 

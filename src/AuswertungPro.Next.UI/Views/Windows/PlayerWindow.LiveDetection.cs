@@ -89,7 +89,7 @@ public partial class PlayerWindow
     private async Task StartLiveDetectionAsync()
     {
         AiRuntimeConfig cfg;
-        try { cfg = AiRuntimeConfigLoader.Load(); }
+        try { cfg = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load(); }
         catch
         {
             MessageBox.Show("KI-Konfiguration konnte nicht geladen werden.", "Live-KI",

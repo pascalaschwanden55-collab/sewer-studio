@@ -2516,7 +2516,7 @@ public partial class CodingModeWindow : Window
     {
         try
         {
-            _aiConfig = AiRuntimeConfigLoader.Load();
+            _aiConfig = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
             _aiModelName = _aiConfig.VisionModel;
             if (!_aiConfig.Enabled)
             {

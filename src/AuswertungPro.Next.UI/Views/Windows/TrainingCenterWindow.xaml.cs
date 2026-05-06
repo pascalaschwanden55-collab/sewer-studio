@@ -698,7 +698,7 @@ public partial class TrainingCenterWindow : Window
         // pdftotext-Pfad aus den App-Einstellungen setzen
         Ai.Training.Services.PdfProtocolTableParser.PdfToTextExePath = diagnostics.ExplicitPdfToTextPath;
 
-        var cfg = Ai.AiRuntimeConfigLoader.Load();
+        var cfg = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
         if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Video-Blindtest"); return; }
 
         // Factory: Erstellt pro Analyse-Durchlauf frischen HttpClient + Pipeline
@@ -723,7 +723,7 @@ public partial class TrainingCenterWindow : Window
     {
         // Phase 5.1.B Etappe 3.K: kein ServiceProvider-Zugriff mehr noetig — dieser Block
         // hat sp gar nicht benutzt; nur die Eingangs-Pruefung war dafuer da.
-        var cfg = Ai.AiRuntimeConfigLoader.Load();
+        var cfg = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
         if (!cfg.Enabled)
         {
             MessageBox.Show("KI ist deaktiviert.", "Eval-Set");
@@ -802,7 +802,7 @@ public partial class TrainingCenterWindow : Window
         var sidecarSvc = App.Resolve<Ai.PythonSidecarService>();
         var pipelineCfg = App.Resolve<AuswertungPro.Next.Application.Ai.PipelineConfig>();
 
-        var cfg = Ai.AiRuntimeConfigLoader.Load();
+        var cfg = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
         if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Benchmark"); return; }
 
         var allowedSet = new System.Collections.Generic.HashSet<string>(
@@ -846,7 +846,7 @@ public partial class TrainingCenterWindow : Window
         // pdftotext-Pfad aus den App-Einstellungen setzen
         Ai.Training.Services.PdfProtocolTableParser.PdfToTextExePath = diagnostics.ExplicitPdfToTextPath;
 
-        var cfg = Ai.AiRuntimeConfigLoader.Load();
+        var cfg = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
         if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Batch-Nachtbetrieb"); return; }
 
         var dlg = new Microsoft.Win32.OpenFolderDialog { Title = "Ordner mit Haltungen waehlen" };

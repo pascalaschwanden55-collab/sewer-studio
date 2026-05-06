@@ -109,6 +109,10 @@ namespace AuswertungPro.Next.UI
                 AuswertungPro.Next.Application.Ai.Ollama.OllamaConfigProvider.SetLoader(
                     () => Ai.AiPlatformConfig.Load().ToOllamaConfig());
 
+                // Phase 5.3: AiRuntimeConfig-Loader (analog zu OllamaConfigProvider).
+                AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.SetLoader(
+                    () => Ai.AiPlatformConfig.Load().ToRuntimeConfig());
+
                 // Phase 5.1.B Etappe 4 Sub-E: Nur noch DI-Container — Legacy-ServiceProvider entfernt.
                 var diCollection = new ServiceCollection();
                 diCollection.AddSewerStudioInfrastructure(settings, diagnostics, logger, loggerFactory);

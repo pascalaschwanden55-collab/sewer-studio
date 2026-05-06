@@ -271,7 +271,9 @@ public sealed class AiPlatformConfigTests
         env.Set("SEWERSTUDIO_AI_EMBED_MODEL", "embed-wrapper");
         env.Set("SEWERSTUDIO_FFMPEG", "wrapper-ffmpeg");
 
-        var actual = AiRuntimeConfigLoader.Load();
+        AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.SetLoader(
+            () => AiPlatformConfig.Load().ToRuntimeConfig());
+        var actual = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
         var expected = AiPlatformConfig.Load().ToRuntimeConfig();
 
         Assert.Equal(expected, actual);
