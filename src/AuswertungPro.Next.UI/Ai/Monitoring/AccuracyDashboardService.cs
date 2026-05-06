@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Monitoring;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Data.Sqlite;
@@ -103,15 +104,5 @@ public sealed class AccuracyDashboardService
     private sealed record ValidationEntry(string SuggestedCode, string FinalCode, bool WasCorrect);
 }
 
-public sealed record CodeAccuracyMetric(
-    string VsaCode,
-    int TruePositives,
-    int FalsePositives,
-    int FalseNegatives,
-    double Precision,
-    double Recall,
-    double F1Score,
-    int TotalSamples
-);
-
-public sealed record OverallAccuracy(int Total, int Correct, double Accuracy);
+// Phase 5.3 vorbereitend: CodeAccuracyMetric + OverallAccuracy
+// nach Application/Ai/Monitoring/MonitoringModels.cs.

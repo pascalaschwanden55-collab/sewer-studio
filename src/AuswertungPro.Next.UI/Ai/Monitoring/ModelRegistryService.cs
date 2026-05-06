@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Monitoring;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -106,11 +107,5 @@ public sealed class ModelRegistryService
     }
 }
 
-public sealed record ModelVersionInfo(
-    string VersionId,
-    string ModelVersion,
-    double EceBefore,
-    double EceAfter,
-    string Notes,
-    DateTime CreatedUtc
-);
+// Phase 5.3 vorbereitend: ModelVersionInfo
+// nach Application/Ai/Monitoring/MonitoringModels.cs.

@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Monitoring;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -123,18 +124,5 @@ public sealed class ConfidenceDistributionTracker
     private sealed record TimestampedConfidence(double Confidence, DateTime Timestamp);
 }
 
-public sealed record DriftCheckResult(
-    double KlDivergence,
-    bool IsDrifting,
-    int ThisWeekCount,
-    int LastWeekCount,
-    double ThisWeekMean,
-    double LastWeekMean
-);
-
-public sealed record HistogramBin(
-    double BinLower,
-    double BinUpper,
-    int Count,
-    double Fraction
-);
+// Phase 5.3 vorbereitend: DriftCheckResult + HistogramBin
+// nach Application/Ai/Monitoring/MonitoringModels.cs.
