@@ -2,6 +2,7 @@
 // Statt blinder Erkennung ("was siehst du?") wird die KI gezielt gefragt:
 // "Laut Protokoll ist bei X.Xm ein Schaden YYY — bestaetige oder korrigiere."
 using System;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.RegularExpressions;

@@ -1,4 +1,6 @@
 using System;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;

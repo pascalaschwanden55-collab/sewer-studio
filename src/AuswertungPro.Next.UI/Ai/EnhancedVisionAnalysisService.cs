@@ -1,4 +1,6 @@
 using System;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+using AuswertungPro.Next.Application.Ai.Ollama;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;

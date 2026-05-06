@@ -1,5 +1,6 @@
 // AuswertungPro – KI Videoanalyse Modul
 using System;
+using AuswertungPro.Next.Application.Ai.Ollama;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;

@@ -59,6 +59,9 @@ public partial class ImageAnnotationViewModel : ObservableObject
     // BoundingBox (vom Canvas gesetzt)
     [ObservableProperty] private NormalizedBoundingBox? _currentBbox;
 
+    /// <summary>V4.3 Ring-Riss: wenn true, bleibt VsaCode nach Save erhalten (fuer Klick-Klick-Klick-Workflow).</summary>
+    public bool PreserveCodeAfterSave { get; set; }
+
     // SAM Punkt-Prompts (Linksklick=positiv, Rechtsklick=negativ)
     private readonly List<SamPointPrompt> _pointPrompts = [];
 
@@ -392,7 +395,7 @@ public partial class ImageAnnotationViewModel : ObservableObject
         var annotation = new TeacherAnnotation
         {
             VsaCode = "NONE",
-            Beschreibung = "Kein Schaden — Negativ-Beispiel",
+            Beschreibung = "Kein Befund — Negativ-Beispiel",
             MeterPosition = meterPos,
             HaltungName = HaltungName,
             ToolType = OverlayToolType.None,
@@ -547,11 +550,15 @@ public partial class ImageAnnotationViewModel : ObservableObject
             CurrentBbox = null;
             CurrentSamResult = null;
             _pointPrompts.Clear();
-            VsaCode = "";
-            SeverityText = "3";
-            ClockText = "";
-            ExtentText = "";
-            Notiz = "";
+            // V4.3 Ring-Riss: VsaCode erhalten fuer Klick-Klick-Klick-Workflow
+            if (!PreserveCodeAfterSave)
+            {
+                VsaCode = "";
+                SeverityText = "3";
+                ClockText = "";
+                ExtentText = "";
+                Notiz = "";
+            }
             // MeterText bleibt — gleiches Bild, gleicher Meterstand
         }
         catch (Exception ex)

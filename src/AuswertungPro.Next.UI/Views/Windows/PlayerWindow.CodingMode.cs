@@ -1,4 +1,6 @@
 using System;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Globalization;
 using System.Linq;
 using Rectangle = System.Windows.Shapes.Rectangle;

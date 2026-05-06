@@ -1,39 +1,50 @@
 using System;
 using System.Windows;
 using System.Windows.Controls.Primitives;
-using LibVLCSharp.Shared;
+using System.Windows.Threading;
+using AuswertungPro.Next.Application.Player;
+using AuswertungPro.Next.Infrastructure.Player;
+using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
-// Phase 6.1.D: VLC-Playback-Steuerung (Cluster B1, Sub-A) aus PlayerWindow.xaml.cs.
-// Sub-A: Play/Pause/Stop/Speed-Click-Handler + Slider-Seek + Rate-Label.
-//
-// Felder/Members (im Hauptpartial): _player, _isDragging, _scrubTimer,
-//   MinRate/MaxRate, PositionSlider, CurrentTimeText, DurationText,
-//   RateText, Speed*Button, EnsurePlaying(), UpdateUi(), ClearDetectionOverlays(),
-//   FormatMs() (in Helpers).
-//
-// VLC-Lifecycle (Cleanup, OnClosing, BuildPlayer) bleibt in 6.1.D Sub-B/C.
+// Phase 6.1.E: PlayerWindow delegiert Playback/Lifecycle an VideoPlaybackController.
+// UI-Elemente, Slider-Text und Overlay-Koordination bleiben bewusst im Window.
 public partial class PlayerWindow
 {
+    object? IVlcSurface.MediaPlayer
+    {
+        get => VideoView.MediaPlayer;
+        set => VideoView.MediaPlayer = (MediaPlayer?)value;
+    }
+
+    private IVideoPlaybackController CreatePlaybackController(string videoPath, PlayerWindowOptions options)
+    {
+        return new VideoPlaybackController(
+            videoPath,
+            options,
+            this,
+            new WpfPlaybackDispatcher(Dispatcher),
+            new WpfPlaybackTimer(Dispatcher, TimeSpan.FromMilliseconds(250)),
+            new WpfPlaybackTimer(Dispatcher, TimeSpan.FromMilliseconds(60)));
+    }
+
     private void Play_Click(object sender, RoutedEventArgs e)
     {
-        EnsurePlaying();
-        _player.SetPause(false);
+        _videoPlayback.Resume();
         UpdateRateLabel();
-        // Overlays aufraumen — beim Abspielen sind alte Markierungen irrelevant
         ClearDetectionOverlays();
     }
 
     private void Pause_Click(object sender, RoutedEventArgs e)
     {
-        _player.SetPause(true);
+        _videoPlayback.Pause();
         UpdateRateLabel();
     }
 
     private void Stop_Click(object sender, RoutedEventArgs e)
     {
-        _player.Stop();
+        _videoPlayback.Stop();
         UpdateRateLabel();
     }
 
@@ -51,83 +62,45 @@ public partial class PlayerWindow
 
     private void PositionSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (_isDragging)
+        if (_videoPlayback.IsDragging)
             UpdateSeekPreview();
     }
 
     private void SeekToSlider()
     {
-        var max = PositionSlider.Maximum;
-        if (max <= 0)
-            return;
-
-        var targetPos = PositionSlider.Value / max;
-        if (targetPos < 0)
-            targetPos = 0;
-        if (targetPos > 1)
-            targetPos = 1;
-
-        var length = _player.Length;
-        if (length > 0)
-            _player.Time = (long)(targetPos * length);
-        else
-            _player.Position = (float)targetPos;
-
+        ApplySeekSnapshot(_videoPlayback.SeekToSlider(PositionSlider.Value, PositionSlider.Maximum));
         UpdateUi();
     }
 
     private void UpdateSeekPreview()
     {
-        var max = PositionSlider.Maximum;
-        if (max <= 0)
-            return;
-
-        var targetPos = PositionSlider.Value / max;
-        if (targetPos < 0)
-            targetPos = 0;
-        if (targetPos > 1)
-            targetPos = 1;
-
-        var length = _player.Length;
-        if (length > 0)
-        {
-            var targetMs = (long)(targetPos * length);
-            CurrentTimeText.Text = FormatMs(targetMs);
-            DurationText.Text = FormatMs(length);
-        }
-        else
-        {
-            CurrentTimeText.Text = $"{targetPos:P0}";
-            DurationText.Text = "--:--";
-        }
-
-        // Throttled live seek: schedule scrub if not already pending
-        if (_isDragging && !_scrubTimer.IsEnabled)
-            _scrubTimer.Start();
+        ApplySeekSnapshot(_videoPlayback.PreviewSeek(PositionSlider.Value, PositionSlider.Maximum));
     }
 
     private void ScrubSeekToSlider()
     {
-        var max = PositionSlider.Maximum;
-        if (max <= 0)
+        ApplySeekSnapshot(_videoPlayback.ScrubSeekToSlider(PositionSlider.Value, PositionSlider.Maximum));
+    }
+
+    private void ApplySeekSnapshot(PlaybackSeekSnapshot snapshot)
+    {
+        if (snapshot.CurrentTimeMs.HasValue && snapshot.DurationMs.HasValue)
+        {
+            CurrentTimeText.Text = FormatMs(snapshot.CurrentTimeMs.Value);
+            DurationText.Text = FormatMs(snapshot.DurationMs.Value);
             return;
+        }
 
-        var targetPos = Math.Clamp(PositionSlider.Value / max, 0.0, 1.0);
-        var length = _player.Length;
-        if (length > 0)
-            _player.Time = (long)(targetPos * length);
-        else
-            _player.Position = (float)targetPos;
-
-        CurrentTimeText.Text = length > 0 ? FormatMs((long)(targetPos * length)) : $"{targetPos:P0}";
+        CurrentTimeText.Text = $"{snapshot.Position:P0}";
+        DurationText.Text = "--:--";
     }
 
     private void SetSpeed(float rate)
     {
-        var clamped = Math.Clamp(rate, MinRate, MaxRate);
-        var result = _player.SetRate(clamped);
-        if (result != 0)
+        var change = _videoPlayback.SetSpeed(rate);
+        if (!change.IsSupported)
         {
+            var clamped = Math.Clamp(rate, MinRate, MaxRate);
             MessageBox.Show($"SetRate({clamped:0.##}) nicht unterstuetzt fuer dieses Video.",
                 "Video", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -137,7 +110,7 @@ public partial class PlayerWindow
 
     private void UpdateRateLabel()
     {
-        var rate = _player.Rate <= 0f ? 1.0f : _player.Rate;
+        var rate = _videoPlayback.CurrentRate;
         RateText.Text = $"{rate:0.##}x";
         UpdateSpeedButtons(rate);
     }
@@ -157,50 +130,45 @@ public partial class PlayerWindow
         button.IsChecked = Math.Abs(currentRate - targetRate) < 0.01f;
     }
 
-    // ─── Sub-B: Playback-Lifecycle (EnsurePlaying, Play, JumpSeconds, ChangeSpeed) ──
-
     private void EnsurePlaying()
     {
-        var state = _player.State;
-        if (state == VLCState.Stopped || state == VLCState.Ended)
-            Play(_videoPath);
+        _videoPlayback.EnsurePlaying();
     }
 
     private void ChangeSpeed(float delta)
     {
-        var current = _player.Rate <= 0f ? 1.0f : _player.Rate;
-        SetSpeed(current + delta);
+        HandleRateChange(_videoPlayback.ChangeSpeed(delta));
+    }
+
+    private void HandleRateChange(PlaybackRateChange change)
+    {
+        if (!change.IsSupported)
+        {
+            var clamped = Math.Clamp(change.RequestedRate, MinRate, MaxRate);
+            MessageBox.Show($"SetRate({clamped:0.##}) nicht unterstuetzt fuer dieses Video.",
+                "Video", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        UpdateRateLabel();
     }
 
     private void JumpSeconds(int seconds)
     {
-        if (_player.Length <= 0)
+        if (!_videoPlayback.JumpSeconds(seconds))
             return;
 
-        long newTime = _player.Time + seconds * 1000L;
-        if (newTime < 0)
-            newTime = 0;
-        if (newTime > _player.Length)
-            newTime = _player.Length;
-        _player.Time = newTime;
-        ClearDetectionOverlays(); // Alte Overlays bei Navigation entfernen
+        ClearDetectionOverlays();
         UpdateUi();
     }
 
     private void Play(string path)
     {
-        using var media = new Media(_libVlc, path, FromType.FromPath);
-        _player.Play(media);
-        _timer.Start();
+        _videoPlayback.Play(path);
         UpdateRateLabel();
     }
 
-    // ─── Sub-C: Window/VLC-Cleanup ────────────────────────────────────────────
-
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
-        // SOFORT: Lifecycle-Flag setzen damit Background-Tasks ab jetzt
-        // sofort returnen und nicht auf gleich disposed Felder zugreifen.
         _isWindowClosed = true;
         try
         {
@@ -214,70 +182,17 @@ public partial class PlayerWindow
 
     private void Cleanup()
     {
-        // Defensives VLC-Cleanup: Race mit HwndHost vermeiden indem wir zuerst
-        // stoppen + detachen, dann den nativen Disposal asynchron nachziehen.
-        // Direktes Dispose auf dem UI-Thread kann AccessViolation ausloesen
-        // (sichtbar als „App schliesst sich nach ein paar Sekunden", ohne Log).
-        try { _timer.Stop(); } catch { }
-        try { _scrubTimer.Stop(); } catch { }
-
-        try
-        {
-            if (_player != null)
-            {
-                if (_player.IsPlaying)
-                    _player.Stop();
-                VideoView.MediaPlayer = null;
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[PlayerWindow] MediaPlayer-Detach Fehler: {ex.Message}");
-        }
-
-        // Native Disposal auf den naechsten Dispatcher-Cycle verlagern — gibt
-        // HwndHost Zeit seine Referenzen freizugeben, bevor LibVLC native-side
-        // Speicher freigibt.
-        var playerRef = _player;
-        var libVlcRef = _libVlc;
-        // KRITISCH 2026-04-26: _libVlc.Dispose() loest einen native AccessViolation
-        // (0xc0000005) in LibVLCLogUnset aus, der die App killt — Windows-Event-Log
-        // hat genau das nachgewiesen:
-        //   "Description: The process was terminated due to an unhandled exception.
-        //    at LibVLCSharp.Shared.LibVLC+Native.LibVLCLogUnset(IntPtr)
-        //    at LibVLCSharp.Shared.LibVLC.Dispose(Boolean)"
-        // C# try/catch faengt KEINE native AVs ohne legacy-Konfiguration.
-        // Loesung: _libVlc NICHT mehr disposen. LibVLC ist eine Singleton-artige
-        // Native-Lib (cVLC-Engine), die ohnehin nur einmal pro Prozess existiert
-        // und beim Prozess-Exit vom OS aufgeraeumt wird. Der "Leak" ist 0 Byte
-        // praktisch — derselbe Native-Speicher den der naechste PlayerWindow
-        // sowieso wieder nutzen wuerde.
-        // playerRef.Dispose() bleibt — der MediaPlayer hat keinen native-Crash-Pfad.
-        // Felder sind readonly — GC raeumt die C#-Wrapper bei Window-Dispose,
-        // wir muessen sie hier nicht null setzen.
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            try { playerRef?.Dispose(); }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[PlayerWindow] player.Dispose Fehler: {ex.Message}");
-            }
-            // libVlcRef BEWUSST nicht disposed — siehe Kommentar oben.
-            // GC.KeepAlive verhindert nur dass der Wrapper waehrend playerRef.Dispose
-            // schon collected wird (damit das letzte Native-Handle gueltig bleibt).
-            GC.KeepAlive(libVlcRef);
-        }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        _videoPlayback.Cleanup();
     }
-
-    // ─── Sub-D: UI-Update + Visibility ─────────────────────────────────────────
 
     private void UpdateUi()
     {
-        if (_isDragging)
+        if (_videoPlayback.IsDragging)
             return;
 
-        var length = _player.Length;
-        var time = Math.Max(0, _player.Time);
+        var snapshot = _videoPlayback.GetPositionSnapshot();
+        var length = snapshot.LengthMs;
+        var time = Math.Max(0, snapshot.TimeMs);
 
         if (length > 0)
         {
@@ -294,7 +209,6 @@ public partial class PlayerWindow
 
         UpdateRateLabel();
 
-        // Im Codier-Modus: Echtzeit-Code am Zeitstempel aktualisieren
         if (_isCodingMode)
             UpdateCodingCurrentCode();
     }
@@ -308,5 +222,51 @@ public partial class PlayerWindow
         if (Top < area.Top) Top = area.Top;
         if (Left + Width > area.Right) Left = area.Right - Width;
         if (Top + Height > area.Bottom) Top = area.Bottom - Height;
+    }
+
+    private sealed class WpfPlaybackTimer : IPlaybackTimer
+    {
+        private readonly DispatcherTimer _timer;
+
+        public WpfPlaybackTimer(Dispatcher dispatcher, TimeSpan interval)
+        {
+            _timer = new DispatcherTimer(DispatcherPriority.Normal, dispatcher)
+            {
+                Interval = interval
+            };
+        }
+
+        public event EventHandler? Tick
+        {
+            add => _timer.Tick += value;
+            remove => _timer.Tick -= value;
+        }
+
+        public bool IsEnabled => _timer.IsEnabled;
+
+        public void Start() => _timer.Start();
+
+        public void Stop() => _timer.Stop();
+    }
+
+    private sealed class WpfPlaybackDispatcher : IPlaybackDispatcher
+    {
+        private readonly Dispatcher _dispatcher;
+
+        public WpfPlaybackDispatcher(Dispatcher dispatcher)
+        {
+            _dispatcher = dispatcher;
+        }
+
+        public void BeginInvoke(Action action, PlaybackDispatcherPriority priority)
+        {
+            _dispatcher.BeginInvoke(action, MapPriority(priority));
+        }
+
+        private static DispatcherPriority MapPriority(PlaybackDispatcherPriority priority) => priority switch
+        {
+            PlaybackDispatcherPriority.ApplicationIdle => DispatcherPriority.ApplicationIdle,
+            _ => DispatcherPriority.Normal
+        };
     }
 }

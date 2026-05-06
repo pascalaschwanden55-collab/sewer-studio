@@ -10,7 +10,7 @@ using Polly;
 using Polly.CircuitBreaker;
 using Polly.Retry;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Infrastructure.Ai.Ollama;
 
 /// <summary>
 /// Minimaler Ollama HTTP Client mit Polly Retry + Circuit Breaker.

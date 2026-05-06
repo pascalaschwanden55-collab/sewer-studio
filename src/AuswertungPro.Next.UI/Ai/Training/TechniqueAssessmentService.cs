@@ -1,5 +1,6 @@
 // AuswertungPro – Aufnahmetechnik-Bewertung nach VSA/Furrer-Vorgaben
 using System;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using System.IO;
 using System.Text.Json;
 using System.Threading;

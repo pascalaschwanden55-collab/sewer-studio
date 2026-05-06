@@ -133,6 +133,58 @@ public sealed class ProtocolEntryVM : INotifyPropertyChanged
         set => SetParamAliases(value, "vsa.q2", "Q2", "Quantifizierung2");
     }
 
+    // V4.3 — Einheit + Werkzeug-Herkunft (CodeMeta.Parameters)
+    public string? VsaQ1Unit
+    {
+        get => GetFirstParam("vsa.q1.unit", "Q1_Unit");
+        set => SetParamAliases(value, "vsa.q1.unit", "Q1_Unit");
+    }
+
+    public string? VsaQ2Unit
+    {
+        get => GetFirstParam("vsa.q2.unit", "Q2_Unit");
+        set => SetParamAliases(value, "vsa.q2.unit", "Q2_Unit");
+    }
+
+    public string? MeasurementTool
+    {
+        get => GetFirstParam("vsa.tool", "MeasurementTool");
+        set => SetParamAliases(value, "vsa.tool", "MeasurementTool");
+    }
+
+    public string? MeasurementSubject
+    {
+        get => GetFirstParam("vsa.subject", "MeasurementSubject");
+        set => SetParamAliases(value, "vsa.subject", "MeasurementSubject");
+    }
+
+    /// <summary>
+    /// V4.3 — Anzeige-String fuer UI: "15 mm (Lineal)" oder "20 % (Querschnitt — Wurzel)".
+    /// Faellt auf VsaQ1 alleine zurueck wenn keine Einheit/Tool gesetzt ist.
+    /// </summary>
+    public string VsaQ1Display
+    {
+        get
+        {
+            var q = VsaQ1;
+            if (string.IsNullOrWhiteSpace(q)) return "";
+            var unit = VsaQ1Unit;
+            var tool = MeasurementTool;
+            var subject = MeasurementSubject;
+
+            var sb = new System.Text.StringBuilder(q);
+            if (!string.IsNullOrWhiteSpace(unit)) sb.Append(' ').Append(unit);
+            if (!string.IsNullOrWhiteSpace(tool))
+            {
+                sb.Append(" (").Append(tool);
+                if (!string.IsNullOrWhiteSpace(subject) && !string.Equals(subject, "Sonstige", StringComparison.OrdinalIgnoreCase))
+                    sb.Append(" — ").Append(subject);
+                sb.Append(')');
+            }
+            return sb.ToString();
+        }
+    }
+
     public string? VsaStrecke
     {
         get => GetParam("vsa.strecke");

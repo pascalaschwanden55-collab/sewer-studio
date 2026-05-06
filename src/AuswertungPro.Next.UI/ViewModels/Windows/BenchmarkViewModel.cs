@@ -83,6 +83,7 @@ public partial class BenchmarkViewModel : ObservableObject
             }
 
             StatusText = $"{Haltungen.Count} Benchmark-Haltungen, {History.Count} Durchlaeufe";
+            RunBenchmarkCommand.NotifyCanExecuteChanged();
         });
     }
 

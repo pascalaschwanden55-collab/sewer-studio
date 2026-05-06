@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.RegularExpressions;
