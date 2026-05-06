@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -8,23 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.UI.Ai;
 
-/// <summary>
-/// Erkannter Knick (BAG) an einer Rohrverbindung.
-/// </summary>
-public sealed record KnickFinding(
-    /// <summary>Winkel in Grad (ab 10° = Knick-Schaden).</summary>
-    double AngleDeg,
-    /// <summary>Meterstand im Video.</summary>
-    double MeterPosition,
-    /// <summary>Frame-Index wo der Knick erkannt wurde.</summary>
-    int FrameIndex,
-    /// <summary>Richtung: positiv = nach rechts/oben, negativ = nach links/unten.</summary>
-    double DirectionDeg,
-    /// <summary>Konfidenz der Erkennung (0..1).</summary>
-    double Confidence,
-    /// <summary>Muffe erkannt (stuetzt die Knick-Hypothese).</summary>
-    bool JointDetected
-);
+// Phase 5.3 vorbereitend: KnickFinding nach Application/Ai/Vision/VideoAnalysisModels.cs.
 
 /// <summary>
 /// Knick-Erkennung: Trackt den Fluchtpunkt ueber Video-Frames

@@ -10,11 +10,7 @@ using System.Threading.Tasks;
 
 namespace AuswertungPro.Next.UI.Ai;
 
-public sealed record LiveDetection(
-    double TimestampSeconds,
-    IReadOnlyList<LiveFrameFinding> Findings,
-    double? MeterReading,
-    string? Error);
+// Phase 5.3 vorbereitend: LiveDetection nach Application/Ai/Vision/VideoAnalysisModels.cs.
 
 public sealed class LiveDetectionService
 {

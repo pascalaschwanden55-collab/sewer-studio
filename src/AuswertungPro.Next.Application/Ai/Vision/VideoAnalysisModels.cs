@@ -151,3 +151,34 @@ public sealed record FullProtocolGenerationResult(
     public static FullProtocolGenerationResult Failed(string error) =>
         new(null, Array.Empty<MappedProtocolEntry>(), error, Array.Empty<string>());
 }
+
+// ── Live-Detection (Player-Codiermodus) ──
+
+/// <summary>
+/// Ergebnis der Live-Frame-Analyse im Codiermodus.
+/// </summary>
+public sealed record LiveDetection(
+    double TimestampSeconds,
+    IReadOnlyList<LiveFrameFinding> Findings,
+    double? MeterReading,
+    string? Error);
+
+// ── Knick-Erkennung (BAG via Fluchtpunkt-Tracking) ──
+
+/// <summary>
+/// Erkannter Knick (BAG) an einer Rohrverbindung.
+/// </summary>
+public sealed record KnickFinding(
+    /// <summary>Winkel in Grad (ab 10° = Knick-Schaden).</summary>
+    double AngleDeg,
+    /// <summary>Meterstand im Video.</summary>
+    double MeterPosition,
+    /// <summary>Frame-Index wo der Knick erkannt wurde.</summary>
+    int FrameIndex,
+    /// <summary>Richtung: positiv = nach rechts/oben, negativ = nach links/unten.</summary>
+    double DirectionDeg,
+    /// <summary>Konfidenz der Erkennung (0..1).</summary>
+    double Confidence,
+    /// <summary>Muffe erkannt (stuetzt die Knick-Hypothese).</summary>
+    bool JointDetected
+);
