@@ -1056,34 +1056,21 @@ public static class PdfProtocolTableParser
         try
         {
             var exePath = ResolvePdfToTextPath();
-            // ArgumentList.Add statt Arguments-String: Command-Injection-Schutz.
-            var psi = new ProcessStartInfo
+            // Phase 5.3: ProcessRunner — sicherer ArgumentList + asynchroner Drain
+            // beider Pipes + Tree-Kill bei Timeout. Loest STAB-H1-erweitert
+            // (Pipe-Deadlock weil stdout synchron gelesen wurde) zentral.
+            var result = AuswertungPro.Next.Application.Common.ProcessRunner.RunAsync(
+                fileName: exePath,
+                arguments: ["-layout", pdfPath, "-"],
+                timeout: TimeSpan.FromSeconds(30)).GetAwaiter().GetResult();
+
+            if (result.TimedOut)
             {
-                FileName = exePath,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            psi.ArgumentList.Add("-layout");
-            psi.ArgumentList.Add(pdfPath);
-            psi.ArgumentList.Add("-");
-
-            using var proc = Process.Start(psi);
-            if (proc is null) return "";
-
-            // stderr parallel lesen — verhindert Deadlock wenn stderr-Buffer voll
-            var stderrTask = proc.StandardError.ReadToEndAsync();
-            var text = proc.StandardOutput.ReadToEnd();
-
-            if (!proc.WaitForExit(30000))
-            {
-                try { proc.Kill(); } catch { }
                 Debug.WriteLine($"[PdfProtocolTableParser] pdftotext Timeout nach 30s fuer {Path.GetFileName(pdfPath)}");
                 return "";
             }
 
-            return text;
+            return result.IsSuccess ? result.Stdout : "";
         }
         catch
         {

@@ -487,29 +487,19 @@ public sealed class VideoSelfTrainingOrchestrator
         try
         {
             var ffprobe = AuswertungPro.Next.Application.Ai.FfmpegLocator.ResolveFfprobe();
-            // ArgumentList.Add statt Arguments-String: Command-Injection-Schutz.
-            var psi = new ProcessStartInfo
-            {
-                FileName = ffprobe,
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            psi.ArgumentList.Add("-v");
-            psi.ArgumentList.Add("error");
-            psi.ArgumentList.Add("-show_entries");
-            psi.ArgumentList.Add("format=duration");
-            psi.ArgumentList.Add("-of");
-            psi.ArgumentList.Add("default=noprint_wrappers=1:nokey=1");
-            psi.ArgumentList.Add(videoPath);
+            // Phase 5.3: ProcessRunner — sicherer ArgumentList + asynchroner Drain
+            // beider Pipes + Tree-Kill bei Timeout.
+            var result = await AuswertungPro.Next.Application.Common.ProcessRunner.RunAsync(
+                fileName: ffprobe,
+                arguments: ["-v", "error",
+                            "-show_entries", "format=duration",
+                            "-of", "default=noprint_wrappers=1:nokey=1",
+                            videoPath],
+                timeout: TimeSpan.FromSeconds(30),
+                ct: ct).ConfigureAwait(false);
 
-            using var proc = Process.Start(psi);
-            if (proc is null) return 600; // Fallback 10 Minuten
-
-            var output = await proc.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
-            await proc.WaitForExitAsync(ct).ConfigureAwait(false);
-
-            if (double.TryParse(output.Trim(), System.Globalization.NumberStyles.Float,
+            if (result.IsSuccess
+                && double.TryParse(result.Stdout.Trim(), System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var duration))
                 return duration;
         }
