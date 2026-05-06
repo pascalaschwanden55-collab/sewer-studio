@@ -8,7 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Infrastructure.Ai;
 
 // Phase 5.3 vorbereitend: LiveDetection nach Application/Ai/Vision/VideoAnalysisModels.cs.
 

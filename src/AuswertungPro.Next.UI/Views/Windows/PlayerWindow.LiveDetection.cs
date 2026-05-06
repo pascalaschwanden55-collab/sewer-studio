@@ -15,6 +15,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.Application.Ai.Teacher;
