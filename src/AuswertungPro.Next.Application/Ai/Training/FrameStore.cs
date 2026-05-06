@@ -3,8 +3,9 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Application.Ai.Training;
 
 /// <summary>
 /// Verwaltet extrahierte Video-Frames im Knowledge-Ordner.
@@ -18,7 +19,7 @@ public static class FrameStore
             Directory.CreateDirectory(customDir);
             return customDir;
         }
-        return KnowledgeRoot.GetFramesDir();
+        return System.IO.Path.Combine(KnowledgeRootProvider.GetRoot(), "frames");
     }
 
     /// <summary>

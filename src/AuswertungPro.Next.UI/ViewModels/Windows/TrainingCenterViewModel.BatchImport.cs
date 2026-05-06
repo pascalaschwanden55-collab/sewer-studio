@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.Ai.Training;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 

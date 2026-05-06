@@ -16,6 +16,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Application.Ai.Training;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -591,7 +592,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             });
 
             // Trend (aus JSON, kein DB-Zugriff)
-            var runs = await Ai.Training.SelfTrainingHistoryStore.LoadAsync();
+            var runs = await AuswertungPro.Next.Application.Ai.Training.SelfTrainingHistoryStore.LoadAsync();
             var last5 = runs.TakeLast(5).ToList();
             var trendText = last5.Count > 0
                 ? string.Join("\n", last5.Select(r =>

@@ -8,8 +8,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Application.Ai.Training;
 
 /// <summary>Snapshot eines einzelnen Self-Training-Laufs.</summary>
 /// <param name="CodeHitPercent">Code-Treffer-Rate (Code korrekt, unabhaengig von Meter/Clock). Zeigt die echte Erkennungsleistung.</param>
@@ -32,7 +33,7 @@ public static class SelfTrainingHistoryStore
     private static readonly SemaphoreSlim _lock = new(1, 1);
 
     private static string GetPath()
-        => Path.Combine(KnowledgeRoot.GetRoot(), "selftraining_history.json");
+        => Path.Combine(KnowledgeRootProvider.GetRoot(), "selftraining_history.json");
 
     public static async Task<List<SelfTrainingRunSnapshot>> LoadAsync()
     {
