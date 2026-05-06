@@ -14,7 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Infrastructure.Ai;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Infrastructure.Ai;
 
 /// <summary>
 /// Kompletter Video-Workflow: Video -> alle Schäden in einem Durchgang.

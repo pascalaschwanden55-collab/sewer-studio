@@ -4,12 +4,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.Pipeline;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Infrastructure.Ai;
 
 // Phase 5.3 vorbereitend: KnickFinding nach Application/Ai/Vision/VideoAnalysisModels.cs.
 
