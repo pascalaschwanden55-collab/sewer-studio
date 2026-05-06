@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Infrastructure.Ai;
 
 /// <summary>
 /// Liest den Meterstand aus dem OSD (On-Screen Display) eines Kanalinspektion-Frames.

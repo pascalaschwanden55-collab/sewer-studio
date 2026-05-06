@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 
-namespace AuswertungPro.Next.UI.Ai.QualityGate;
+namespace AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 
 /// <summary>
 /// Coordinate-descent optimizer for per-category evidence weights.

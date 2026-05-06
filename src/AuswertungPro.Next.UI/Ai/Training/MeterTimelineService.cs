@@ -1,6 +1,7 @@
 using System;
 using AuswertungPro.Next.Application.Ai.Vision;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Infrastructure.Ai;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;

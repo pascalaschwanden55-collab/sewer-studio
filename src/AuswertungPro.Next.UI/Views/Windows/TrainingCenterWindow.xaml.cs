@@ -248,8 +248,8 @@ public partial class TrainingCenterWindow : Window
     private static Ai.SelfImproving.FeedbackIngestionService CreateFeedbackService(
         AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext db)
     {
-        var logger = new Ai.QualityGate.ValidationLogger(db.Connection);
-        var weights = new Ai.QualityGate.WeightLearningService(db.Connection);
+        var logger = new AuswertungPro.Next.Infrastructure.Ai.QualityGate.ValidationLogger(db.Connection);
+        var weights = new AuswertungPro.Next.Infrastructure.Ai.QualityGate.WeightLearningService(db.Connection);
 
         // KbManager optional — wenn Ollama offline, wird nur geloggt
         Ai.KnowledgeBase.KnowledgeBaseManager? kbManager = null;

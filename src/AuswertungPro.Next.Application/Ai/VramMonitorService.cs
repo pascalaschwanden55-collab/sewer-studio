@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Common;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Application.Ai;
 
 /// <summary>
 /// Ueberwacht GPU-VRAM via nvidia-smi.

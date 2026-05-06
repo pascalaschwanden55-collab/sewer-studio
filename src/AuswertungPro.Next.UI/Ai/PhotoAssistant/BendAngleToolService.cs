@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Windows;
+using AuswertungPro.Next.Application.Ai.PhotoAssistant;
 
 namespace AuswertungPro.Next.UI.Ai.PhotoAssistant;
 

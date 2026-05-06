@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using AuswertungPro.Next.UI.Ai.QualityGate;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;

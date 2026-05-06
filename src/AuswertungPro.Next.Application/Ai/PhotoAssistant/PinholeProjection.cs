@@ -1,6 +1,6 @@
 using System;
 
-namespace AuswertungPro.Next.UI.Ai.PhotoAssistant;
+namespace AuswertungPro.Next.Application.Ai.PhotoAssistant;
 
 /// <summary>
 /// 3D-zu-2D Lochkamera-Projektion fuer den Foto-Assistenten (Bogen/Knick-Werkzeug).

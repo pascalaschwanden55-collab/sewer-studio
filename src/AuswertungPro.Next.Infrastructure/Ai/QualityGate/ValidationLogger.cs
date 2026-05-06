@@ -3,7 +3,7 @@ using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 
-namespace AuswertungPro.Next.UI.Ai.QualityGate;
+namespace AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 
 /// <summary>
 /// Logs Accept/Reject events to the ValidationLog SQLite table.
