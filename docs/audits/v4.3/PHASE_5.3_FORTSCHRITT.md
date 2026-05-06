@@ -1,6 +1,6 @@
 # Phase 5.3 — KI-Schicht aus UI: Fortschritt + Plan
 
-**Stand:** 2026-05-07
+**Stand:** 2026-05-07 (Update nachmittags)
 
 ## Ziel
 
@@ -15,14 +15,18 @@ Layer-Regel:
 - **Infrastructure**: Implementierungen mit externen Systemen (HTTP, ffmpeg, SQLite)
 - **UI**: WPF-Code (XAML, ViewModels)
 
-## Erledigt (Sub-A + Sub-B)
+## Erledigt (Sub-A bis Sub-E + Sub-D Teil 1)
 
 | Sub | Klassen | Commit |
 |---|---|---|
 | **A** | `AiSuggestionTypes` (record, interface, DTO, Schema) | `25f4d7029` |
 | **B** | `VsaCatalog`, `FfmpegLocator`, `MeterTolerances`, `RuleBased-/NoopAiSuggestionPlausibilityService` | `d9fffb8f7` |
+| **C** | `PipelineConfig` + `PipelineMode`, `PipelineVersions`, `AiRuntimeConfig` (Plus `AiRuntimeConfigExtensions` in UI) | `ee50354ba` |
+| **E** | `DetectionAggregator`, `DetectionEvent`, `QualityGateService`, `CategoryWeights`, `EvidenceVector`, `UncertaintyEstimate` | `49037240d` |
+| **D Teil 1** | `KnowledgeBaseContext`, `KnowledgeBaseWriter`, `KnowledgeBaseDiagnosticsService` (nach Infrastructure) + `KnowledgeBasePathProvider` (in Application) | `da5856031` |
 
-**Total bisher:** 7 Klassen migriert, 30+ Aufrufer-Files angepasst.
+**Total bisher:** 16 Klassen migriert (von ~60 produktiven Klassen in `UI/Ai/`).
+**Aufrufer-Files angepasst:** 80+.
 
 ## Plan fuer naechste Sub-Phasen
 
@@ -35,15 +39,19 @@ Pure Datentypen aus dem Pipeline-Subfolder:
 
 Aufwand: ~30 min, geringes Risiko.
 
-### Sub-D: KnowledgeBase-Vertraege nach Application/Ai/KnowledgeBase
-Heute existieren bereits `IRetrievalService` und `KnowledgeBaseDtos` in
-Application — fehlende Stuecke:
-- `EmbeddingService.cs` (HTTP zu Ollama → Infrastructure)
-- `RetrievalService.cs` (Implementierung → Infrastructure)
-- `KnowledgeBaseContext.cs` (SQLite → Infrastructure)
-- `KnowledgeBaseManager.cs` (Pure Logic → Application)
+### Sub-D Teil 2 (offen): Verbleibende KB-Klassen
 
-Aufwand: 2–3 h. Tests muessen angepasst werden.
+In UI verblieben (haben UI-Abhaengigkeiten — TrainingSample / OllamaConfig /
+AppSettings):
+- `EmbeddingService.cs` (nutzt OllamaConfig)
+- `RetrievalService.cs` (nutzt AppSettings)
+- `KnowledgeBaseManager.cs` (nutzt TrainingSample)
+- `KbDeduplicationService.cs` (nutzt TrainingSample)
+- `KbEnrichmentService.cs` (nutzt TrainingSample)
+- `KbIngestionPipeline.cs` (nutzt TrainingSample)
+
+Migration erfordert vorher: TrainingSample und OllamaConfig nach
+Application/Domain ziehen. Das ist Sub-H bzw. Sub-F.
 
 ### Sub-E: Pure Pipeline-Services nach Application/Ai
 Services ohne externe Abhaengigkeiten:
@@ -84,8 +92,21 @@ Aufwand: 1–2 Tage.
   (folgt Sub-D/F/G nach)
 - `Ai/Pipeline/SamMaskRenderer.cs`: WPF-Drawing
 
-## Sub-G/H sollte nach Sub-D/F kommen
-Reihenfolge: **A → B → C → D → E → F → G → H**
+## Reihenfolge: **A → B → C → E → D Teil 1 → F → D Teil 2 → G → H**
 
-Sub-A/B sind Pflicht (Abhaengigkeits-Basis), C/D/E koennen unabhaengig
-voneinander parallel. F/G/H bauen auf D/E auf.
+Sub-A/B/C/E sind komplett.
+Sub-D Teil 1 (SQLite-Layer) ist done.
+Sub-D Teil 2 braucht zuerst Sub-F (Ollama-Migration: bringt OllamaConfig
+nach Application/Infrastructure) und Sub-H (TrainingSample-Migration).
+
+## Realistische Aufwand-Einschaetzung (Stand 2026-05-07 nachmittags)
+
+| Sub | Pure Migration | Mit Cross-Layer-Refactor |
+|---|---|---|
+| F (Ollama) | 4–6 h | 8–10 h |
+| G (Sidecar) | 6–8 h | 10–12 h |
+| H (Training) | 1–2 Tage | 3–4 Tage |
+| D Teil 2 | nach F + H | — |
+
+Empfehlung: nicht alles in einer Session — pro Sub-Phase einen klaren
+Tag mit Kontext-Einarbeitung und ausreichend Pufferzeit fuer Tests.
