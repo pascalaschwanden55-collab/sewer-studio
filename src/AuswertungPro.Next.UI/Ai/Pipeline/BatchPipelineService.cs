@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
 using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.UI.Ai.Pipeline;

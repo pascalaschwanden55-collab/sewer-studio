@@ -2508,7 +2508,7 @@ public partial class CodingModeWindow : Window
     {
         try
         {
-            _aiConfig = AiRuntimeConfig.Load();
+            _aiConfig = AiRuntimeConfigExtensions.Load();
             _aiModelName = _aiConfig.VisionModel;
             if (!_aiConfig.Enabled)
             {

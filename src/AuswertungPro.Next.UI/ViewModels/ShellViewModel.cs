@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using System.IO;
@@ -115,7 +115,7 @@ public sealed partial class ShellViewModel : ObservableObject
             {
                 try
                 {
-                    var cfg = Ai.AiRuntimeConfig.Load();
+                    var cfg = Ai.AiRuntimeConfigExtensions.Load();
                     AiLoadedModels = cfg.VisionModel ?? "Qwen2.5-VL";
                 }
                 catch { AiLoadedModels = ""; }

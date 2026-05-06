@@ -1,4 +1,4 @@
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Application.Ai;
 
 /// <summary>
 /// V4.2 Nachbesserung B: Zentrale Versions-Konstanten.

@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -460,16 +461,19 @@ public sealed class MultiModelAnalysisService
             }
             var dinoMs = phaseSw.ElapsedMilliseconds;
 
-            // YOLO-Fallback: Wenn DINO nichts findet, YOLO-Detektionen als Ersatz
+            // YOLO-Fallback: Wenn DINO nichts findet, YOLO-Detektionen als Ersatz.
+            // WICHTIG: IsFallbackFromYolo=true markiert diese Detektionen als abgeleitete Evidenz,
+            // NICHT als unabhaengige Bestaetigung. QualityGate behandelt sie entsprechend.
             if (dinoResult.Detections.Count == 0 && yoloResult.Detections.Count > 0)
             {
                 var yoloDinos = yoloResult.Detections.Select(d => new DinoDetectionDto(
                     d.X1, d.Y1, d.X2, d.Y2,
                     Label: d.ClassName,
                     Confidence: d.Confidence,
-                    Phrase: d.ClassName)).ToList();
+                    Phrase: d.ClassName,
+                    IsFallbackFromYolo: true)).ToList();
                 dinoResult = new DinoResponse(yoloDinos, dinoResult.InferenceTimeMs);
-                _logger.LogDebug("Frame {Frame}: DINO leer → {Count} YOLO-Boxen als Fallback",
+                _logger.LogDebug("Frame {Frame}: DINO leer → {Count} YOLO-Boxen als FALLBACK (markiert)",
                     frameIndex, yoloDinos.Count);
             }
 
@@ -554,9 +558,18 @@ public sealed class MultiModelAnalysisService
             var quantified = MaskQuantificationService.QuantifyAll(samResult, pipeDiameterMm, pipeCalibration);
             var meter = EstimateMeter(t, duration, ref lastMeter);
 
-            // Capture max DINO confidence for EvidenceVector (nach Tiefenfilter)
-            var maxDinoConf = filteredDino.Count > 0
-                ? filteredDino.Max(d => d.Confidence) : 0.0;
+            // Capture max DINO confidence for EvidenceVector (nach Tiefenfilter).
+            // WICHTIG: YOLO-Fallback-Detektionen (IsFallbackFromYolo=true) zaehlen NICHT
+            // als unabhaengige DINO-Evidenz - sie sind aus YOLO abgeleitet und wuerden
+            // QualityGate kuenstlich verstaerken.
+            var nonFallbackDino = filteredDino.Where(d => !d.IsFallbackFromYolo).ToList();
+            var maxDinoConf = nonFallbackDino.Count > 0
+                ? nonFallbackDino.Max(d => d.Confidence) : 0.0;
+            if (filteredDino.Count > 0 && nonFallbackDino.Count == 0)
+            {
+                _logger.LogDebug("Frame {Frame}: alle DINO-Boxen sind YOLO-Fallback -> DinoConf=0 fuer QualityGate",
+                    frameIndex);
+            }
 
             // Build findings from quantified masks
             var findings = new List<EnhancedFinding>(quantified.Count);
@@ -1306,8 +1319,10 @@ public sealed class MultiModelAnalysisService
             var quantified = MaskQuantificationService.QuantifyAll(samResult, pipeDiameterMm, pipeCalibrationNvdec);
             var meter = EstimateMeter(t, duration > 0 ? duration : 300, ref lastMeter);
 
-            var maxDinoConf = dinoResult.Detections.Count > 0
-                ? dinoResult.Detections.Max(d => d.Confidence) : 0.0;
+            // YOLO-Fallback-Boxen zaehlen nicht als unabhaengige DINO-Evidenz fuer QualityGate.
+            var nonFallbackDinoNvdec = dinoResult.Detections.Where(d => !d.IsFallbackFromYolo).ToList();
+            var maxDinoConf = nonFallbackDinoNvdec.Count > 0
+                ? nonFallbackDinoNvdec.Max(d => d.Confidence) : 0.0;
 
             var findings = new List<EnhancedFinding>(quantified.Count);
             for (var i = 0; i < quantified.Count; i++)
@@ -1679,8 +1694,10 @@ public sealed class MultiModelAnalysisService
         {
             if (currentMap.TryGetValue(key, out var finding))
             {
-                // BBox Y-Zentrum fuer Bestaetigungs-Tracking berechnen
-                double yCenter = (finding.BboxY1Norm ?? 0 + (finding.BboxY2Norm ?? 1)) / 2.0;
+                // BBox Y-Zentrum fuer Bestaetigungs-Tracking berechnen.
+                // Klammern um die Null-Coalescing-Ausdruecke sind ZWINGEND noetig, da `??`
+                // schwaecher bindet als `+` -> ohne Klammern wuerde Y2 ignoriert sobald Y1 gesetzt ist.
+                double yCenter = ((finding.BboxY1Norm ?? 0) + (finding.BboxY2Norm ?? 1)) / 2.0;
                 active[key].Update(meter, finding.Severity, finding.VsaCodeHint, finding.PositionClock,
                     finding.ExtentPercent, finding.HeightMm, finding.WidthMm,
                     finding.IntrusionPercent, finding.CrossSectionReductionPercent, finding.DiameterReductionMm,

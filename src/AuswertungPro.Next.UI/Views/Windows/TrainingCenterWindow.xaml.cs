@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
@@ -9,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Teacher;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Services;
@@ -346,7 +348,7 @@ public partial class TrainingCenterWindow : Window
             try
             {
                 var sidecarSvc = App.Resolve<Ai.PythonSidecarService>();
-                var pipelineCfg = App.Resolve<Ai.PipelineConfig>();
+                var pipelineCfg = App.Resolve<AuswertungPro.Next.Application.Ai.PipelineConfig>();
                 if (sidecarSvc.IsAvailable)
                 {
                     var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
@@ -663,7 +665,7 @@ public partial class TrainingCenterWindow : Window
         Ai.Pipeline.VisionPipelineClient? sidecar = null;
         try
         {
-            var pipelineCfg = App.Resolve<Ai.PipelineConfig>();
+            var pipelineCfg = App.Resolve<AuswertungPro.Next.Application.Ai.PipelineConfig>();
             sidecar = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl);
         }
         catch { /* Sidecar optional */ }
@@ -683,7 +685,7 @@ public partial class TrainingCenterWindow : Window
         // pdftotext-Pfad aus den App-Einstellungen setzen
         Ai.Training.Services.PdfProtocolTableParser.PdfToTextExePath = diagnostics.ExplicitPdfToTextPath;
 
-        var cfg = Ai.AiRuntimeConfig.Load();
+        var cfg = Ai.AiRuntimeConfigExtensions.Load();
         if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Video-Blindtest"); return; }
 
         // Factory: Erstellt pro Analyse-Durchlauf frischen HttpClient + Pipeline
@@ -708,7 +710,7 @@ public partial class TrainingCenterWindow : Window
     {
         // Phase 5.1.B Etappe 3.K: kein ServiceProvider-Zugriff mehr noetig — dieser Block
         // hat sp gar nicht benutzt; nur die Eingangs-Pruefung war dafuer da.
-        var cfg = Ai.AiRuntimeConfig.Load();
+        var cfg = Ai.AiRuntimeConfigExtensions.Load();
         if (!cfg.Enabled)
         {
             MessageBox.Show("KI ist deaktiviert.", "Eval-Set");
@@ -785,9 +787,9 @@ public partial class TrainingCenterWindow : Window
         var winCanImport = App.Resolve<AuswertungPro.Next.Application.Import.IWinCanDbImportService>();
         var ibakImport = App.Resolve<AuswertungPro.Next.Application.Import.IIbakImportService>();
         var sidecarSvc = App.Resolve<Ai.PythonSidecarService>();
-        var pipelineCfg = App.Resolve<Ai.PipelineConfig>();
+        var pipelineCfg = App.Resolve<AuswertungPro.Next.Application.Ai.PipelineConfig>();
 
-        var cfg = Ai.AiRuntimeConfig.Load();
+        var cfg = Ai.AiRuntimeConfigExtensions.Load();
         if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Benchmark"); return; }
 
         var allowedSet = new System.Collections.Generic.HashSet<string>(
@@ -826,12 +828,12 @@ public partial class TrainingCenterWindow : Window
         var winCanImport = App.Resolve<AuswertungPro.Next.Application.Import.IWinCanDbImportService>();
         var ibakImport = App.Resolve<AuswertungPro.Next.Application.Import.IIbakImportService>();
         var sidecarSvc = App.Resolve<Ai.PythonSidecarService>();
-        var pipelineCfg = App.Resolve<Ai.PipelineConfig>();
+        var pipelineCfg = App.Resolve<AuswertungPro.Next.Application.Ai.PipelineConfig>();
 
         // pdftotext-Pfad aus den App-Einstellungen setzen
         Ai.Training.Services.PdfProtocolTableParser.PdfToTextExePath = diagnostics.ExplicitPdfToTextPath;
 
-        var cfg = Ai.AiRuntimeConfig.Load();
+        var cfg = Ai.AiRuntimeConfigExtensions.Load();
         if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Batch-Nachtbetrieb"); return; }
 
         var dlg = new Microsoft.Win32.OpenFolderDialog { Title = "Ordner mit Haltungen waehlen" };

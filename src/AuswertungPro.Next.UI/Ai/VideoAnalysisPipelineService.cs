@@ -125,7 +125,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             videoService.DedupWindowFrames = request.DedupWindowFrames;
 
             // Knick-Erkennung (BAG) einhaengen NUR wenn Sidecar wirklich aktiv ist.
-            // Wichtig: Bisheriger Code pruefte `sidecarCfg is not null`, aber PipelineConfig.Load()
+            // Wichtig: Bisheriger Code pruefte `sidecarCfg is not null`, aber AiPlatformConfig.Load().ToPipelineConfig()
             // gibt nie null zurueck -> Knick-HTTP lief auch im OllamaOnly-Modus mit Timeouts pro Frame.
             // Jetzt: nur wenn ShouldUseMultiModel wirklich Sidecar-Modus signalisiert.
             // knickHttp darf NICHT via `using` im if-Scope leben — Dispose erst nach AnalyzeAsync.
@@ -248,7 +248,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
     /// </summary>
     private async Task<(bool UseMultiModel, PipelineConfig Config)> ShouldUseMultiModelAsync(CancellationToken ct)
     {
-        var pipelineCfg = PipelineConfig.Load();
+        var pipelineCfg = AiPlatformConfig.Load().ToPipelineConfig();
 
         if (pipelineCfg.Mode == PipelineMode.OllamaOnly)
         {

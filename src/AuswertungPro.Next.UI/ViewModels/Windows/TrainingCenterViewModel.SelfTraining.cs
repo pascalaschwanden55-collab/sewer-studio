@@ -96,7 +96,7 @@ public partial class TrainingCenterViewModel
             settings.CaseParallelism = caseParallelism;
 
             // Services instanziieren (gleicher Pattern wie BatchImport)
-            var cfg = AiRuntimeConfig.Load();
+            var cfg = AiRuntimeConfigExtensions.Load();
             Log($"Ollama: {cfg.OllamaBaseUri}, Modell: {cfg.VisionModel}");
             Log($"Parallelitaet: GPU={gpuConcurrency}, Faelle={caseParallelism}, PDF-CPU={preExtractCpuParallelism} (max. Requests ~{maxInFlightRequests})");
             if (int.TryParse(Environment.GetEnvironmentVariable("OLLAMA_NUM_PARALLEL"), out var ollamaSlots)
@@ -127,7 +127,7 @@ public partial class TrainingCenterViewModel
             Ai.Pipeline.SingleFrameMultiModelService? multiModel = null;
             try
             {
-                var pipeCfg = Ai.PipelineConfig.Load();
+                var pipeCfg = Ai.AiPlatformConfig.Load().ToPipelineConfig();
                 if (pipeCfg.MultiModelEnabled)
                 {
                     var sidecarHttp = new System.Net.Http.HttpClient

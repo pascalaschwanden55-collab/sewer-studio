@@ -1135,7 +1135,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             return;
         }
 
-        var cfg = AiRuntimeConfig.Load();
+        var cfg = AiRuntimeConfigExtensions.Load();
         if (!cfg.Enabled)
         {
             _dialogs.ShowMessage("KI ist deaktiviert (SEWERSTUDIO_AI_ENABLED=0).", "Videoanalyse KI",
@@ -1737,7 +1737,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         // Build SanierungOptimizationViewModel (nullable when AI disabled)
         SanierungOptimizationViewModel? optimizationVm = null;
-        var cfg = AiRuntimeConfig.Load();
+        var cfg = AiRuntimeConfigExtensions.Load();
         if (cfg.Enabled)
         {
             var ruleResult = _measureRecommendationService.Recommend(record, maxSuggestions: 5);

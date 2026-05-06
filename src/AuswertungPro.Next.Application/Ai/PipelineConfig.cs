@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Application.Ai;
 
 /// <summary>
 /// Configuration for the Multi-Model Vision Pipeline Sidecar.
@@ -29,12 +29,7 @@ public sealed record PipelineConfig(
     double AggregatorMergeRadius = 1.5,
     /// <summary>DetectionAggregator: Maximale Luecke in Frames bevor ein Event geschlossen wird.</summary>
     int AggregatorMaxGap = 5
-)
-{
-    /// <summary>Lädt via einheitliche AiPlatformConfig.</summary>
-    public static PipelineConfig Load() =>
-        AiPlatformConfig.Load().ToPipelineConfig();
-}
+);
 
 public enum PipelineMode
 {

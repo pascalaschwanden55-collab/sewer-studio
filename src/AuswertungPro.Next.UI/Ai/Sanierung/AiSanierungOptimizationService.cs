@@ -1,4 +1,5 @@
 using System.Net.Http;
+using AuswertungPro.Next.Application.Ai;
 using System.Text;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Ai.Sanierung;
@@ -65,7 +66,7 @@ public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationSer
 
         // 2. Rule recommendation summary
         var ruleSummary = BuildRuleSummary(req.Rule);
-        var allowedMeasures = BuildAllowedMeasures(req.Rule, constraints);
+        var allowedMeasures = BuildAllowedMeasures(req.Rule, constraints, req.RulesFilter);
 
         // 3. Build prompt
         var systemPrompt = BuildSystemPrompt();
@@ -119,26 +120,66 @@ public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationSer
         if (aiDto is null)
             return BuildFallbackResult(req, constraints, "KI-Antwort konnte nicht verarbeitet werden");
 
-        // 5. §8 Validate AI measure
-        var validation = _validation.Validate(aiDto.recommended_measure, constraints);
+        // 5a. Hard-Constraint-Block-Check ZUERST (vor §8): Wenn KI ein per RulesFilter
+        //     ausgeschlossenes Verfahren empfiehlt -> sofort verwerfen.
+        //     Dies ist die deterministische Erzwingung der Hard-Constraints (RulesEngine).
         bool isFallback = false;
         string recommendedMeasure = aiDto.recommended_measure;
-        var riskFlags = new List<string>(validation.RiskFlags);
+        var riskFlags = new List<string>();
+
+        if (req.RulesFilter is { ExcludedProcedures.Count: > 0 } rfBlock)
+        {
+            var blockedProc = MatchExcludedProcedure(recommendedMeasure, rfBlock.ExcludedProcedures);
+            if (blockedProc is not null)
+            {
+                // KI hat trotz Hinweis im Prompt ein ausgeschlossenes Verfahren empfohlen.
+                // -> Auf erste Eligible aus RulesFilter wechseln, sonst erste rule.Measures.
+                var safeFallback = PickSafeFallbackFromRulesFilter(req.RulesFilter, req.Rule)
+                    ?? req.Rule?.Measures.FirstOrDefault();
+                if (safeFallback is not null)
+                {
+                    recommendedMeasure = safeFallback;
+                    isFallback = true;
+                    riskFlags.Insert(0,
+                        $"HARD-CONSTRAINT VERLETZT: KI schlug '{aiDto.recommended_measure}' vor "
+                        + $"(=ausgeschlossen: {blockedProc.Name} - {blockedProc.Reason}). "
+                        + $"Auf '{safeFallback}' umgestellt.");
+                }
+                else
+                {
+                    // Keine zulaessige Massnahme verfuegbar -> Fallback-Result mit klarer Diagnose
+                    return BuildFallbackResult(req, constraints,
+                        $"Alle Verfahren ausgeschlossen oder KI-Vorschlag '{aiDto.recommended_measure}' "
+                        + $"verletzt Hard-Constraint '{blockedProc.Name}' ({blockedProc.Reason}). "
+                        + "Manuelle Pruefung erforderlich.");
+                }
+            }
+        }
+
+        // 5b. §8 Validate AI measure (Constraints aus VsaFindings: Liner-Verbot bei Einsturz, etc.)
+        var validation = _validation.Validate(recommendedMeasure, constraints);
+        riskFlags.AddRange(validation.RiskFlags);
 
         if (!validation.Passed)
         {
-            // Use first rule measure as fallback
-            recommendedMeasure = req.Rule?.Measures.FirstOrDefault() ?? aiDto.recommended_measure;
+            // Use first rule measure as fallback - aber RulesFilter weiterhin respektieren
+            var safeFallback = PickSafeFallbackFromRulesFilter(req.RulesFilter, req.Rule)
+                ?? req.Rule?.Measures.FirstOrDefault()
+                ?? aiDto.recommended_measure;
+            recommendedMeasure = safeFallback;
             isFallback         = true;
             riskFlags.Insert(0, "KI-Vorschlag wurde wegen §8-Verletzung verworfen und durch Regelempfehlung ersetzt");
         }
 
-        // Prüfe ob die Maßnahme in der erlaubten Menge ist
+        // 5c. Pruefe ob die Maßnahme in der erlaubten Menge ist
         if (!isFallback && !allowedMeasures.Any(m =>
             recommendedMeasure.Contains(m, StringComparison.OrdinalIgnoreCase) ||
             m.Contains(recommendedMeasure, StringComparison.OrdinalIgnoreCase)))
         {
-            recommendedMeasure = req.Rule?.Measures.FirstOrDefault() ?? recommendedMeasure;
+            var safeFallback = PickSafeFallbackFromRulesFilter(req.RulesFilter, req.Rule)
+                ?? req.Rule?.Measures.FirstOrDefault()
+                ?? recommendedMeasure;
+            recommendedMeasure = safeFallback;
             isFallback = true;
             riskFlags.Insert(0, $"KI schlug '{aiDto.recommended_measure}' vor, nicht in erlaubten Maßnahmen – Regelempfehlung verwendet");
         }
@@ -182,14 +223,22 @@ public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationSer
         return """
             Du bist ein Experte für Kanalsanierung nach VSA-Standard (Schweiz).
             Analysiere die Schadensbefunde und empfehle die optimale Sanierungsmassnahme.
-            Berücksichtige die Rohrkennwerte, Einschränkungen und Regelempfehlungen.
 
-            Wichtige Regeln:
-            - Wähle IMMER aus den zulässigen Massnahmen, ausser du hast einen sehr guten Grund für eine Alternative
-            - Bei Zustandsklasse 4-5 darf Erneuerung empfohlen werden, bei 1-3 nur Reparatur/Renovation
-            - Liner-Verfahren sind bei Einsturz (BBB-Codes) nicht zulässig
+            ABSOLUT BINDENDE REGELN (keine Ausnahmen):
+            1. Wenn der Abschnitt "HARTE TECHNISCHE EINSCHRAENKUNGEN" ausgeschlossene Verfahren auflistet,
+               darfst du diese NIEMALS empfehlen - auch nicht mit Begruendung. Das sind Hard-Constraints
+               aus Hersteller-Datenblaettern und Normen (DIBt, DWA, VSA QUIK).
+            2. Wenn ZULAESSIGE Verfahren aufgelistet sind, waehlst du AUSSCHLIESSLICH aus dieser Liste.
+            3. GFK-Liner (iMPREG GL16, Alphaliner, Brandenburger) sind NICHT bogengaengig (max ~15 Grad).
+               Bei Bogenrohr nur Brawoliner (Textil, bis 90 Grad) oder Nadelfilz empfehlen.
+            4. Asbestzement (AZ): KEIN Bersten, KEINE Roboterfraesung - Faserfreisetzung verboten.
+            5. Bei Zustandsklasse 4-5 darf Erneuerung empfohlen werden, bei 1-3 nur Reparatur/Renovation.
+
+            Weitere Regeln:
+            - Liner-Verfahren sind bei Einsturz (BAC-Codes) nicht zulaessig (keine Tragstruktur)
             - confidence: 0.0 = unsicher, 1.0 = sehr sicher
-            - cost_adjustment_factor: 1.0 = Standardkosten, >1.0 = teurer als üblich, <1.0 = günstiger
+            - cost_adjustment_factor: 1.0 = Standardkosten, >1.0 = teurer als ueblich, <1.0 = guenstiger
+            - Bei Kosten orientierst du dich an der Marktreferenz (sofern angegeben)
 
             Antworte AUSSCHLIESSLICH im angegebenen JSON-Format.
             """;
@@ -232,6 +281,33 @@ public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationSer
             sb.AppendLine($"  - {f.Code}{pos}{qty}{sv}{(f.Comment is not null ? " – " + f.Comment : "")}");
         }
 
+        // HARD-CONSTRAINTS aus RulesEngine - dominant vor allem anderen.
+        // KI darf KEIN ausgeschlossenes Verfahren empfehlen, egal wie passend es scheint.
+        if (req.RulesFilter is { } rf)
+        {
+            sb.AppendLine();
+            sb.AppendLine("### HARTE TECHNISCHE EINSCHRAENKUNGEN (BINDEND - keine Ausnahmen):");
+            if (rf.PromptHints.Count > 0)
+            {
+                foreach (var hint in rf.PromptHints)
+                    sb.AppendLine($"  ! {hint}");
+            }
+            if (rf.ExcludedProcedures.Count > 0)
+            {
+                sb.AppendLine("  AUSGESCHLOSSENE Verfahren (KI darf diese NIEMALS empfehlen):");
+                foreach (var ex in rf.ExcludedProcedures)
+                    sb.AppendLine($"    - {ex.Name}: {ex.Reason}");
+            }
+            if (rf.EligibleProcedures.Count > 0 || rf.ConditionalProcedures.Count > 0)
+            {
+                sb.AppendLine("  ZULAESSIGE Verfahren (waehle ausschliesslich aus dieser Liste):");
+                foreach (var p in rf.EligibleProcedures)
+                    sb.AppendLine($"    + {p} (geeignet)");
+                foreach (var p in rf.ConditionalProcedures)
+                    sb.AppendLine($"    ~ {p} (bedingt geeignet)");
+            }
+        }
+
         sb.AppendLine();
         sb.AppendLine("### Rohrkontext:");
         sb.AppendLine($"  DN: {req.Pipe.DiameterMm?.ToString() ?? "unbekannt"} mm");
@@ -254,6 +330,27 @@ public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationSer
                 sb.AppendLine($"  - {sc.Code}{dn}{len}: {sc.Measure} → {sc.ActualCost:0} CHF");
             }
             sb.AppendLine("Berücksichtige diese Erfahrungswerte bei deiner Kostenschätzung (cost_adjustment_factor).");
+        }
+
+        // Marktreferenz aus historischem Profil-Aggregat (Buerglen 2024-2026)
+        if (req.MarktReferenz is { AnzahlFaelle: >= 3 } mr)
+        {
+            sb.AppendLine();
+            sb.AppendLine("### Marktreferenz (n=" + mr.AnzahlFaelle + " ähnliche Sanierungen, Bürglen 2024-2026):");
+            sb.AppendLine($"  Profil: {mr.ProfilLabel}");
+            if (mr.KostenProMMedianChf.HasValue)
+                sb.AppendLine($"  Median Kosten/Meter: {mr.KostenProMMedianChf.Value:F2} CHF/m");
+            if (mr.KostenProHaltungMedianChf.HasValue)
+                sb.AppendLine($"  Median Kosten/Haltung: {mr.KostenProHaltungMedianChf.Value:F0} CHF");
+            if (mr.TypischeMassnahmen.Count > 0)
+            {
+                sb.AppendLine("  Typische Massnahmen aus diesen Fällen:");
+                foreach (var m in mr.TypischeMassnahmen.Take(3))
+                    sb.AppendLine($"    - {m}");
+            }
+            if (mr.EmpfohleneSubmissionsBlocks.Count > 0)
+                sb.AppendLine($"  Submissions-Blocks: {string.Join(", ", mr.EmpfohleneSubmissionsBlocks)} (Schweizer Standard)");
+            sb.AppendLine("  Diese Marktreferenz ist ein verlässlicher Kosten-Anker. cost_adjustment_factor sollte sich daran orientieren.");
         }
 
         if (!string.IsNullOrWhiteSpace(ruleSummary))
@@ -296,13 +393,15 @@ public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationSer
 
     private static IReadOnlyList<string> BuildAllowedMeasures(
         RuleRecommendationDto? rule,
-        IReadOnlyList<MeasureConstraint> constraints)
+        IReadOnlyList<MeasureConstraint> constraints,
+        RulesFilterDto? rulesFilter = null)
     {
         if (rule is null || rule.Measures.Count == 0)
             return ["Schlauchliner", "Kurzliner", "Reparatur", "Erneuerung Neubau"];
 
         var allowed = rule.Measures.ToList();
 
+        // §8-Constraints (aus VsaFindings)
         if (constraints.Contains(MeasureConstraint.NoLinerAllowed))
             allowed.RemoveAll(SanierungValidationService.IsLinerMeasure);
 
@@ -312,7 +411,65 @@ public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationSer
         if (constraints.Contains(MeasureConstraint.NoBerstlining))
             allowed.RemoveAll(SanierungValidationService.IsBerstliningMeasure);
 
-        return allowed.Count > 0 ? allowed : rule.Measures;
+        // Hard-Constraints aus RulesEngine (z.B. GFK-Bogen, Asbest-Bersten).
+        // ExcludedProcedures haben Vorrang - betroffene Massnahmen werden hart entfernt,
+        // KEIN Fallback auf rule.Measures (sonst werden gerade die Excludes wieder zugelassen).
+        if (rulesFilter?.ExcludedProcedures is { Count: > 0 } excluded)
+        {
+            allowed.RemoveAll(m => excluded.Any(ex => MeasureMatchesProcedure(m, ex.ProcedureId)));
+        }
+
+        // Wenn nach §8-Filter leer, aber RulesFilter NICHT alles ausschliesst -> Original.
+        // Wenn nach RulesFilter leer -> bewusst leere Liste (Hard-Constraint hat absolute Prioritaet).
+        if (allowed.Count == 0)
+        {
+            var rulesFilterActive = rulesFilter?.ExcludedProcedures is { Count: > 0 };
+            return rulesFilterActive ? Array.Empty<string>() : rule.Measures;
+        }
+        return allowed;
+    }
+
+    /// <summary>Mappt Massnahmen-Klartext auf Procedure-IDs (cipp_inliner, berstlining, ...).</summary>
+    private static bool MeasureMatchesProcedure(string measure, string procedureId)
+    {
+        var m = measure.ToLowerInvariant();
+        return procedureId.ToLowerInvariant() switch
+        {
+            "cipp_inliner" => m.Contains("schlauchlin") || m.Contains("inliner") || m.Contains("relining") || m.Contains("cipp"),
+            "short_liner"  => m.Contains("kurzliner") || m.Contains("partliner") || m.Contains("hutprofil"),
+            "robotic_milling" => m.Contains("roboter") && (m.Contains("fräs") || m.Contains("fraes")),
+            "robotic_repair"  => m.Contains("roboter") && (m.Contains("spachtel") || m.Contains("reparatur")),
+            "mechanical_sleeve" => m.Contains("manschette") || m.Contains("quick-lock"),
+            "berstlining" => m.Contains("berst") || m.Contains("pipe bursting"),
+            "close_fit_lining" => m.Contains("close-fit") || m.Contains("close fit"),
+            "injection_grouting" => m.Contains("injekt") || m.Contains("verpress"),
+            "open_excavation" => m.Contains("offene bauweise") || m.Contains("erneuerung neubau") || m.Contains("aufgraben"),
+            "shaft_rehabilitation" => m.Contains("schacht"),
+            _ => m.Contains(procedureId.Replace("_", " "))
+        };
+    }
+
+    /// <summary>Prueft ob die KI-Antwort auf eine ausgeschlossene Procedure faellt - liefert
+    /// die zugehoerige ExcludedProcedure zurueck oder null.</summary>
+    private static ExcludedProcedure? MatchExcludedProcedure(
+        string aiMeasure, IReadOnlyList<ExcludedProcedure> excluded)
+    {
+        return excluded.FirstOrDefault(ex => MeasureMatchesProcedure(aiMeasure, ex.ProcedureId));
+    }
+
+    /// <summary>Waehlt eine sichere Fallback-Massnahme aus rule.Measures, die NICHT
+    /// vom RulesFilter ausgeschlossen ist.</summary>
+    private static string? PickSafeFallbackFromRulesFilter(RulesFilterDto? rulesFilter, RuleRecommendationDto? rule)
+    {
+        if (rule?.Measures is not { Count: > 0 }) return null;
+        var excluded = rulesFilter?.ExcludedProcedures ?? Array.Empty<ExcludedProcedure>();
+
+        foreach (var m in rule.Measures)
+        {
+            var hits = excluded.Any(ex => MeasureMatchesProcedure(m, ex.ProcedureId));
+            if (!hits) return m;
+        }
+        return null;
     }
 
     private SanierungOptimizationResult BuildFallbackResult(

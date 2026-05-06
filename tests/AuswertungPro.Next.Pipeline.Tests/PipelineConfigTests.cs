@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
@@ -16,7 +17,7 @@ public class PipelineConfigTests
         {
             ClearEnvVars();
 
-            var config = PipelineConfig.Load();
+            var config = AiPlatformConfig.Load().ToPipelineConfig();
 
             Assert.True(config.MultiModelEnabled);  // Default: true (Auto-Modus nutzt Sidecar wenn erreichbar)
             Assert.Equal(new Uri("http://localhost:8100"), config.SidecarUrl);
@@ -42,7 +43,7 @@ public class PipelineConfigTests
             ClearEnvVars();
             Environment.SetEnvironmentVariable("SEWERSTUDIO_MULTIMODEL_ENABLED", "1");
 
-            var config = PipelineConfig.Load();
+            var config = AiPlatformConfig.Load().ToPipelineConfig();
 
             Assert.True(config.MultiModelEnabled);
         }
@@ -68,7 +69,7 @@ public class PipelineConfigTests
             ClearEnvVars();
             Environment.SetEnvironmentVariable("SEWERSTUDIO_PIPELINE_MODE", modeStr);
 
-            var config = PipelineConfig.Load();
+            var config = AiPlatformConfig.Load().ToPipelineConfig();
 
             Assert.Equal(expected, config.Mode);
         }
@@ -90,7 +91,7 @@ public class PipelineConfigTests
             Environment.SetEnvironmentVariable("SEWERSTUDIO_DINO_TEXT_THRESHOLD", "0.35");
             Environment.SetEnvironmentVariable("SEWERSTUDIO_PIPE_DIAMETER_MM", "400");
 
-            var config = PipelineConfig.Load();
+            var config = AiPlatformConfig.Load().ToPipelineConfig();
 
             Assert.Equal(0.5, config.YoloConfidence);
             Assert.Equal(0.4, config.DinoBoxThreshold);

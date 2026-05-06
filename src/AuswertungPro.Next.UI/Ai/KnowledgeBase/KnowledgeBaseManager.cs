@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Services.CodeCatalog;

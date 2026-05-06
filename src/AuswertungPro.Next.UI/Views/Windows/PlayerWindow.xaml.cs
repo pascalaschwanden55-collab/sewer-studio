@@ -804,7 +804,7 @@ public partial class PlayerWindow : Window, IVlcSurface
         AiRuntimeConfig cfg;
         try
         {
-            cfg = AiRuntimeConfig.Load();
+            cfg = AiRuntimeConfigExtensions.Load();
         }
         catch
         {

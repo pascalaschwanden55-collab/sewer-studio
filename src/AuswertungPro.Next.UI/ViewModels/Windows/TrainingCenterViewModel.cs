@@ -1073,7 +1073,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             IsBusy = true;
             StatusText = $"Generiere Samples für {SelectedCase.CaseId}...";
 
-            var cfg = AiRuntimeConfig.Load();
+            var cfg = AiRuntimeConfigExtensions.Load();
             var settings = await TrainingCenterSettingsStore.LoadAsync();
             var meterSvc = CreateMeterTimelineService(cfg, settings.GpuConcurrency);
             var generator = new TrainingSampleGenerator(cfg, meterSvc, settings);

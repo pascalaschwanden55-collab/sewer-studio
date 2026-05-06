@@ -139,7 +139,7 @@ public partial class TrainingCenterViewModel
 
 #pragma warning disable CS0162 // Unreachable code — Sidecar-Upload-Pfad absichtlich
             // Sidecar-Verbindung prüfen
-            var pipelineCfg = PipelineConfig.Load();
+            var pipelineCfg = AiPlatformConfig.Load().ToPipelineConfig();
             var client = new VisionPipelineClient(pipelineCfg.SidecarUrl);
 
             var health = await client.HealthCheckAsync(ct).ConfigureAwait(false);

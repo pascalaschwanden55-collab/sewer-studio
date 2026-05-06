@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Ollama;
 using Xunit;
@@ -269,7 +270,7 @@ public sealed class AiPlatformConfigTests
         env.Set("SEWERSTUDIO_AI_EMBED_MODEL", "embed-wrapper");
         env.Set("SEWERSTUDIO_FFMPEG", "wrapper-ffmpeg");
 
-        var actual = AiRuntimeConfig.Load();
+        var actual = AiRuntimeConfigExtensions.Load();
         var expected = AiPlatformConfig.Load().ToRuntimeConfig();
 
         Assert.Equal(expected, actual);

@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -83,7 +84,7 @@ public partial class PlayerWindow
     private async Task StartLiveDetectionAsync()
     {
         AiRuntimeConfig cfg;
-        try { cfg = AiRuntimeConfig.Load(); }
+        try { cfg = AiRuntimeConfigExtensions.Load(); }
         catch
         {
             MessageBox.Show("KI-Konfiguration konnte nicht geladen werden.", "Live-KI",

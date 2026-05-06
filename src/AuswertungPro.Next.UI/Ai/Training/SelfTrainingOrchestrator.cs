@@ -116,7 +116,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         {
             try
             {
-                var cfg = PipelineConfig.Load();
+                var cfg = AiPlatformConfig.Load().ToPipelineConfig();
                 using var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(5) };
                 var resp = await sidecarHttp.GetAsync(new Uri(cfg.SidecarUrl, "/health"), ct);
                 _sidecarAvailable = resp.IsSuccessStatusCode;
@@ -138,7 +138,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 "Qwen Vision-Modell wird geladen..."));
 
             var modelLoaded = await _vision.Client.EnsureModelLoadedAsync(
-                _vision.ModelName, 0, ct);
+                _vision.ModelName, 0, ct: ct);
 
             if (!modelLoaded)
             {

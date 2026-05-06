@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -97,7 +98,7 @@ public partial class TrainingCenterViewModel
             }
 
             // 2. Generate samples for all cases
-            var cfg = AiRuntimeConfig.Load();
+            var cfg = AiRuntimeConfigExtensions.Load();
             Log($"AI Config: Enabled={cfg.Enabled}, ffmpeg={cfg.FfmpegPath}");
 
             var settings = await TrainingCenterSettingsStore.LoadAsync();
