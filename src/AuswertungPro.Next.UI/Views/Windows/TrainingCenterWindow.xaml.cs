@@ -20,6 +20,7 @@ using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using Infrastructure = AuswertungPro.Next.Infrastructure;
+using AuswertungPro.Next.Application.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 

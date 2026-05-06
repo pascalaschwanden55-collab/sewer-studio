@@ -19,6 +19,7 @@ using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.ViewModels.Windows;
+using AuswertungPro.Next.Application.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 

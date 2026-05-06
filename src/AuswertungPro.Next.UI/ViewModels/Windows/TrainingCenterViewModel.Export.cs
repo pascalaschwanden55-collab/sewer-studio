@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
+using AuswertungPro.Next.Application.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 

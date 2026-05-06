@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace AuswertungPro.Next.UI.Ai.Pipeline;
+namespace AuswertungPro.Next.Application.Ai.Pipeline;
 
 // ── Health ─────────────────────────────────────────────────────────────────
 

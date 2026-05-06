@@ -11,6 +11,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.Application.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -767,10 +768,10 @@ public partial class PhotoMeasurementWindow : Window
                 ?? "http://localhost:8100";
             var sidecar = new Ai.Pipeline.VisionPipelineClient(new Uri(sidecarUrl));
 
-            var samBox = new Ai.Pipeline.SamBoundingBox(pxX1, pxY1, pxX2, pxY2, "manual", 1.0);
-            var samReq = new Ai.Pipeline.SamRequest(Convert.ToBase64String(pngBytes), [samBox]);
+            var samBox = new AuswertungPro.Next.Application.Ai.Pipeline.SamBoundingBox(pxX1, pxY1, pxX2, pxY2, "manual", 1.0);
+            var samReq = new AuswertungPro.Next.Application.Ai.Pipeline.SamRequest(Convert.ToBase64String(pngBytes), [samBox]);
 
-            Ai.Pipeline.SamResponse samResp;
+            AuswertungPro.Next.Application.Ai.Pipeline.SamResponse samResp;
             try
             {
                 samResp = await sidecar.SegmentSamAsync(samReq);
@@ -799,8 +800,8 @@ public partial class PhotoMeasurementWindow : Window
         }
     }
 
-    private void RenderSamMaskOnPhoto(Ai.Pipeline.SamResponse samResp,
-        Ai.Pipeline.SamMaskResult mask, int imgW, int imgH)
+    private void RenderSamMaskOnPhoto(AuswertungPro.Next.Application.Ai.Pipeline.SamResponse samResp,
+        AuswertungPro.Next.Application.Ai.Pipeline.SamMaskResult mask, int imgW, int imgH)
     {
         double cw = OverlayCanvas.ActualWidth;
         double ch = OverlayCanvas.ActualHeight;

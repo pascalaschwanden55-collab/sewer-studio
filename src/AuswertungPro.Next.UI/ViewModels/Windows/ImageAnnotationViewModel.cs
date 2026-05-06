@@ -17,6 +17,7 @@ using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Teacher;
 using AuswertungPro.Next.UI.Ai.Training;
+using AuswertungPro.Next.Application.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 

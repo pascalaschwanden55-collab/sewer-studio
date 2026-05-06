@@ -11,6 +11,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Training;
+using AuswertungPro.Next.Application.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Ai;
 

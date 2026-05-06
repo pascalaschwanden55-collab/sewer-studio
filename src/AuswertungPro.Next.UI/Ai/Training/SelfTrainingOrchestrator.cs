@@ -2,6 +2,8 @@
 // Das PDF-Protokoll ist massgebend. Nur Eintraege MIT eingebettetem Foto werden trainiert.
 // KI analysiert das Foto blind → deterministischer Vergleich mit Protokoll.
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Domain.Ai.Training;
 using System.Collections.Generic;
@@ -17,6 +19,7 @@ using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.UI.Ai.Training.Services;
 using AuswertungPro.Next.UI.Services.CodeCatalog;
 using Microsoft.Extensions.Logging;
+using AuswertungPro.Next.Application.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 

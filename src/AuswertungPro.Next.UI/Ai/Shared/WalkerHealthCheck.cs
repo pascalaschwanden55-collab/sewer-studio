@@ -12,6 +12,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using Microsoft.Data.Sqlite;
+using AuswertungPro.Next.Application.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Ai.Shared;
 

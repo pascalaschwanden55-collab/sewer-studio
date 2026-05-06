@@ -12,6 +12,7 @@ using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Services.CodeCatalog;
 using AuswertungPro.Next.UI.ViewModels.Windows;
+using AuswertungPro.Next.Application.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 

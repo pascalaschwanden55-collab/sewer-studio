@@ -1,4 +1,7 @@
 using System;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Vision;
+using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Globalization;
@@ -18,6 +21,7 @@ using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.QualityGate;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.ViewModels.Windows;
+using AuswertungPro.Next.Application.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -1220,7 +1224,7 @@ public partial class PlayerWindow
             var fd = indices.Where(i => i < mmResult.DinoDetections.Count)
                 .Select(i => mmResult.DinoDetections[i]).ToList();
             var fs = mmResult.SamResponse != null
-                ? new Ai.Pipeline.SamResponse(
+                ? new AuswertungPro.Next.Application.Ai.Pipeline.SamResponse(
                     indices.Where(i => i < mmResult.SamResponse.Masks.Count)
                         .Select(i => mmResult.SamResponse.Masks[i]).ToList(),
                     mmResult.SamResponse.ImageWidth, mmResult.SamResponse.ImageHeight,
@@ -2080,7 +2084,7 @@ public partial class PlayerWindow
     /// Nur aktiv wenn Kalibrierung vorliegt UND Kamera frontal ins Rohr schaut.
     /// Bei abgeschwenkter Kamera oder ohne Kalibrierung → alles akzeptieren.
     /// </summary>
-    private bool IsInsideDetectionZone(Ai.Pipeline.DinoDetectionDto? dino, int imgW, int imgH)
+    private bool IsInsideDetectionZone(AuswertungPro.Next.Application.Ai.Pipeline.DinoDetectionDto? dino, int imgW, int imgH)
     {
         if (dino == null || imgW <= 0 || imgH <= 0) return true;
 

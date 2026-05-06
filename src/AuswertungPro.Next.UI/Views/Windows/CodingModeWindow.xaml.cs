@@ -1,4 +1,6 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
+using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,6 +23,7 @@ using AuswertungPro.Next.UI.ViewModels.Windows;
 using CommunityToolkit.Mvvm.Input;
 using LibVLCSharp.Shared;
 using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
+using AuswertungPro.Next.Application.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -69,7 +72,7 @@ public partial class CodingModeWindow : Window
     // SAM-Segmentierung nach BBox (Audit-Fix 2026-04: bisher nur PlayerWindow)
     // Wird beim Loaded() initialisiert und beim BBox-MouseUp aufgerufen.
     private Ai.Pipeline.VisionPipelineClient? _sidecarClient;
-    private Ai.Pipeline.SamResponse? _lastSamResult;
+    private AuswertungPro.Next.Application.Ai.Pipeline.SamResponse? _lastSamResult;
     /// <summary>Tight-BBox aus letzter SAM-Maske (in normierten Koordinaten 0..1).
     /// Wird beim Trainings-Export verwendet statt der grossen User-BBox.</summary>
     private Application.Ai.NormalizedBoundingBox? _lastSamTightBbox;
@@ -3248,7 +3251,7 @@ public partial class CodingModeWindow : Window
     /// Konturlinie: pulsierend weiss + 4px, Fuellung: 50% magenta-gelb, plus eine dicke
     /// gelbe Tight-BBox damit unmissverstaendlich erkennbar ist dass SAM gelaufen ist.
     /// </summary>
-    private void RenderManualSamMaskHighlight(Ai.Pipeline.SamResponse samResp, Ai.Pipeline.SamMaskResult mask)
+    private void RenderManualSamMaskHighlight(AuswertungPro.Next.Application.Ai.Pipeline.SamResponse samResp, AuswertungPro.Next.Application.Ai.Pipeline.SamMaskResult mask)
     {
         if (samResp is null || mask is null) return;
         var imgW = Math.Max(1, samResp.ImageWidth);
@@ -3537,11 +3540,11 @@ public partial class CodingModeWindow : Window
             }
 
             var b64 = Convert.ToBase64String(pngBytes);
-            var boxes = new[] { new Ai.Pipeline.SamBoundingBox(minX, minY, maxX, maxY, "manual", 1.0) };
+            var boxes = new[] { new AuswertungPro.Next.Application.Ai.Pipeline.SamBoundingBox(minX, minY, maxX, maxY, "manual", 1.0) };
             int dn = 300;
-            var samReq = new Ai.Pipeline.SamRequest(b64, boxes, PipeDiameterMm: dn);
+            var samReq = new AuswertungPro.Next.Application.Ai.Pipeline.SamRequest(b64, boxes, PipeDiameterMm: dn);
 
-            Ai.Pipeline.SamResponse? samResp;
+            AuswertungPro.Next.Application.Ai.Pipeline.SamResponse? samResp;
             try
             {
                 samResp = await _sidecarClient.SegmentSamAsync(samReq);

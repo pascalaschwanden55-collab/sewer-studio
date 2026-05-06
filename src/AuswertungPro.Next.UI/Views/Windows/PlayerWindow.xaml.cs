@@ -1,4 +1,6 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
+using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Application.Ai.QualityGate;
@@ -31,6 +33,7 @@ using AuswertungPro.Next.UI.ViewModels.Protocol;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Application.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -1271,12 +1274,12 @@ public partial class PlayerWindow : Window, IVlcSurface
                 $"({maxX-minX:F0}x{maxY-minY:F0}px), b64={b64.Length} bytes");
 
             // Nur BBox als Prompt — kein Punkt-Prompt, damit SAM innerhalb der Box bleibt
-            var boxes = new[] { new Ai.Pipeline.SamBoundingBox(minX, minY, maxX, maxY, "mark", 1.0) };
+            var boxes = new[] { new AuswertungPro.Next.Application.Ai.Pipeline.SamBoundingBox(minX, minY, maxX, maxY, "mark", 1.0) };
 
             int dn = _codingOverlayService?.Calibration?.NominalDiameterMm ?? 300;
-            var samReq = new Ai.Pipeline.SamRequest(b64, boxes, PipeDiameterMm: dn);
+            var samReq = new AuswertungPro.Next.Application.Ai.Pipeline.SamRequest(b64, boxes, PipeDiameterMm: dn);
 
-            Ai.Pipeline.SamResponse? samResp;
+            AuswertungPro.Next.Application.Ai.Pipeline.SamResponse? samResp;
             var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
