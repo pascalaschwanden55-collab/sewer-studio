@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using AuswertungPro.Next.Application.Ai.QualityGate;
+using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Application.Ai.Vision;
 
@@ -128,3 +129,25 @@ public sealed record PhaseStat(
     double MedianMs,
     double P95Ms,
     long TotalMs);
+
+// ── Full Protocol Generation (Detection -> ProtocolDocument) ──
+
+public sealed record FullProtocolGenerationRequest(
+    string HaltungId,
+    string VideoPath,
+    IReadOnlyList<string> AllowedCodes,
+    string? ProjectFolderAbs = null,
+    string? RequestedBy = null
+);
+
+public sealed record FullProtocolGenerationResult(
+    ProtocolDocument? Document,
+    IReadOnlyList<MappedProtocolEntry> MappedEntries,
+    string? Error,
+    IReadOnlyList<string> Warnings)
+{
+    public bool IsSuccess => Error is null;
+
+    public static FullProtocolGenerationResult Failed(string error) =>
+        new(null, Array.Empty<MappedProtocolEntry>(), error, Array.Empty<string>());
+}

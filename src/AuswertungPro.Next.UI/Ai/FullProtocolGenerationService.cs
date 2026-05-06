@@ -493,26 +493,6 @@ public sealed class FullProtocolGenerationService : IDisposable
 }
 
 // ── DTOs ──────────────────────────────────────────────────────────────────────
-
-public sealed record FullProtocolGenerationRequest(
-    string HaltungId,
-    string VideoPath,
-    IReadOnlyList<string> AllowedCodes,
-    string? ProjectFolderAbs = null,
-    string? RequestedBy = null
-);
-
-public sealed record FullProtocolGenerationResult(
-    ProtocolDocument? Document,
-    IReadOnlyList<MappedProtocolEntry> MappedEntries,
-    string? Error,
-    IReadOnlyList<string> Warnings)
-{
-    public bool IsSuccess => Error is null;
-
-    public static FullProtocolGenerationResult Failed(string error) =>
-        new(null, Array.Empty<MappedProtocolEntry>(), error, Array.Empty<string>());
-}
-
-// Phase 5.3 vorbereitend: MappedProtocolEntry + CodeMappingProgress
-// nach Domain/Ai/Vision/VideoAnalysisModels.cs.
+// Phase 5.3 vorbereitend: FullProtocolGenerationRequest/Result +
+// MappedProtocolEntry + CodeMappingProgress nach
+// Application/Ai/Vision/VideoAnalysisModels.cs.
