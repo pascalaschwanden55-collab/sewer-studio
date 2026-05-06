@@ -3,7 +3,7 @@ using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Application.Ai.Teacher;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Application.Ai.Training;
 
 /// <summary>
 /// Mappt CodingEvents (User-Entscheidungen im Codiermodus) auf TrainingSamples.

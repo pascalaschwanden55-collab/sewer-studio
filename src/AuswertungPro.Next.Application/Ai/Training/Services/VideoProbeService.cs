@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai;
 
-namespace AuswertungPro.Next.UI.Ai.Training.Services;
+namespace AuswertungPro.Next.Application.Ai.Training.Services;
 
 /// <summary>
 /// Ermittelt Video-Metadaten (Dauer, Auflösung, Codec) via ffprobe.

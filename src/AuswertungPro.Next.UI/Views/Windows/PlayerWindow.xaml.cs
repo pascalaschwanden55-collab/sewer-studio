@@ -35,6 +35,7 @@ using AuswertungPro.Next.UI.ViewModels.Windows;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Application.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -1791,7 +1792,7 @@ public partial class PlayerWindow : Window, IVlcSurface
         {
             var caseId = _codingVm?.HaltungName ?? "unknown";
             var framePath = ev.Entry.FotoPaths.Count > 0 ? ev.Entry.FotoPaths[0] : null;
-            var sample = Ai.Training.CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath);
+            var sample = AuswertungPro.Next.Application.Ai.Training.CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath);
             if (ev.Entry.FotoPaths.Count > 1)
             {
                 sample.AdditionalFramePaths ??= new System.Collections.Generic.List<string>();
@@ -1817,7 +1818,7 @@ public partial class PlayerWindow : Window, IVlcSurface
             foreach (var ev in _codingVm.Events)
             {
                 var framePath = ev.Entry.FotoPaths.Count > 0 ? ev.Entry.FotoPaths[0] : null;
-                var sample = Ai.Training.CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath);
+                var sample = AuswertungPro.Next.Application.Ai.Training.CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath);
 
                 // Alle Fotos als zusaetzliche Lernbilder referenzieren
                 // (Foto 1 = FramePath, Foto 2+ = AdditionalFrames)

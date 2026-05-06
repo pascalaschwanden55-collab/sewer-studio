@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai;
 
-namespace AuswertungPro.Next.UI.Ai.Training.Services;
+namespace AuswertungPro.Next.Application.Ai.Training.Services;
 
 /// <summary>
 /// Erkennt relevante Frame-Wechsel in Kanalinspektion-Videos via ffmpeg scene-detect.
