@@ -20,6 +20,7 @@ using AiTrack = AuswertungPro.Next.UI.Services.AiActivityTracker;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 using AuswertungPro.Next.UI.Ai.KnowledgeBase;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 

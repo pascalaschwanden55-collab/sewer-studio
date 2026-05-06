@@ -12,8 +12,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.UI.Ai.Training.Models;
-using AuswertungPro.Next.UI.Ai.Training.Services;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
@@ -22,7 +20,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training.Services;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 /// <summary>
 /// Orchestriert den Video-basierten Selbsttraining-Workflow:

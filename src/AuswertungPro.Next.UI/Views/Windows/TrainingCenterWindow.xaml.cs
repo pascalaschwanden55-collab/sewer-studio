@@ -702,7 +702,7 @@ public partial class TrainingCenterWindow : Window
 
         // Factory: Erstellt pro Analyse-Durchlauf frischen HttpClient + Pipeline
         // (HttpClient kann nicht wiederverwendet werden nachdem Headers geaendert wurden)
-        Func<Ai.Training.VideoSelfTrainingOrchestrator> orchestratorFactory = () =>
+        Func<AuswertungPro.Next.Infrastructure.Ai.Training.VideoSelfTrainingOrchestrator> orchestratorFactory = () =>
         {
             var allowedSet = new System.Collections.Generic.HashSet<string>(
                 codeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
@@ -710,7 +710,7 @@ public partial class TrainingCenterWindow : Window
             var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(30) };
             var pipeline = new Ai.VideoAnalysisPipelineService(cfg, plausibility, http);
             var meterTimeline = new AuswertungPro.Next.Infrastructure.Ai.Training.MeterTimelineService(cfg);
-            return new Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
+            return new AuswertungPro.Next.Infrastructure.Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
         };
 
         var vm = new VideoTrainingReviewViewModel(orchestratorFactory, winCanImport, ibakImport);
@@ -813,7 +813,7 @@ public partial class TrainingCenterWindow : Window
         var setStore = new BenchmarkSetStore();
         var metricsStore = new BenchmarkMetricsStore();
         var meterTimeline = new AuswertungPro.Next.Infrastructure.Ai.Training.MeterTimelineService(cfg);
-        var orchestrator = new Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
+        var orchestrator = new AuswertungPro.Next.Infrastructure.Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
 
         // V4.1: Batch-Pipeline (YOLO Batch → Filter → Qwen ×6 parallel)
         if (sidecarSvc.IsAvailable)
@@ -877,7 +877,7 @@ public partial class TrainingCenterWindow : Window
         var pipeline = new Ai.VideoAnalysisPipelineService(cfg, plausibility, http);
         var protocolLoader = new Ai.Training.Services.ProtocolLoaderFactory(winCanImport, ibakImport);
         var meterTimeline = new AuswertungPro.Next.Infrastructure.Ai.Training.MeterTimelineService(cfg);
-        var videoOrch = new Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
+        var videoOrch = new AuswertungPro.Next.Infrastructure.Ai.Training.VideoSelfTrainingOrchestrator(pipeline, meterTimeline);
 
         // V4.1: Batch-Pipeline fuer den initialen Orchestrator
         if (sidecarSvc.IsAvailable)
@@ -914,12 +914,12 @@ public partial class TrainingCenterWindow : Window
             sidecarDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "sidecar");
         // Factory fuer parallele Pipeline-Instanzen: Jede Haltung bekommt ihren eigenen
         // HttpClient + Pipeline + Orchestrator (VideoSelfTrainingOrchestrator hat internen State)
-        Func<Ai.Training.VideoSelfTrainingOrchestrator> orchestratorFactory = () =>
+        Func<AuswertungPro.Next.Infrastructure.Ai.Training.VideoSelfTrainingOrchestrator> orchestratorFactory = () =>
         {
             var pHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(30) };
             var pPipeline = new Ai.VideoAnalysisPipelineService(cfg, plausibility, pHttp);
             var pTimeline = new AuswertungPro.Next.Infrastructure.Ai.Training.MeterTimelineService(cfg);
-            var orch = new Ai.Training.VideoSelfTrainingOrchestrator(pPipeline, pTimeline);
+            var orch = new AuswertungPro.Next.Infrastructure.Ai.Training.VideoSelfTrainingOrchestrator(pPipeline, pTimeline);
 
             // V4.1: Batch-Pipeline (YOLO Batch → Filter → Qwen ×6 parallel)
             if (sidecarSvc.IsAvailable)
@@ -1037,7 +1037,7 @@ public partial class TrainingCenterWindow : Window
                 var retrainClient = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, retrainHttp);
                 var benchmarkSetStore = new AuswertungPro.Next.Application.Ai.Training.BenchmarkSetStore();
                 var benchmarkMetricsStore = new AuswertungPro.Next.Application.Ai.Training.BenchmarkMetricsStore();
-                var benchmarkRunner = new Ai.Training.BenchmarkRunner(
+                var benchmarkRunner = new AuswertungPro.Next.Infrastructure.Ai.Training.BenchmarkRunner(
                     benchmarkSetStore,
                     benchmarkMetricsStore,
                     videoOrch,
@@ -1084,7 +1084,7 @@ public partial class TrainingCenterWindow : Window
 
                     var loraBenchmarkSetStore = new AuswertungPro.Next.Application.Ai.Training.BenchmarkSetStore();
                     var loraBenchmarkMetricsStore = new AuswertungPro.Next.Application.Ai.Training.BenchmarkMetricsStore();
-                    var loraBenchmarkRunner = new Ai.Training.BenchmarkRunner(
+                    var loraBenchmarkRunner = new AuswertungPro.Next.Infrastructure.Ai.Training.BenchmarkRunner(
                         loraBenchmarkSetStore,
                         loraBenchmarkMetricsStore,
                         videoOrch,
