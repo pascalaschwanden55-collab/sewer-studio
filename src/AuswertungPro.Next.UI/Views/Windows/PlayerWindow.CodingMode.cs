@@ -1161,7 +1161,7 @@ public partial class PlayerWindow
 
                         var enhanced = await _codingEnhancedVision.AnalyzeAsync(
                             b64, _codingAnalysisCts.Token);
-                        result = Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, captureTimestampSec);
+                        result = AuswertungPro.Next.Application.Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, captureTimestampSec);
 
                         System.Diagnostics.Debug.WriteLine(
                             _codingEnhancedVision.LastRawOutput ?? "[Qwen] keine Rohdaten");
@@ -1210,7 +1210,7 @@ public partial class PlayerWindow
         {
             bool accepted = acceptedIndices != null
                 ? acceptedIndices.Contains(i)
-                : Ai.VsaCodeResolver.InferCodeFromLabel(mmResult.QuantifiedMasks[i].Label) != null;
+                : AuswertungPro.Next.Application.Ai.VsaCodeResolver.InferCodeFromLabel(mmResult.QuantifiedMasks[i].Label) != null;
 
             if (accepted) validIndices.Add(i);
             else rejectedIndices.Add(i);
@@ -1808,12 +1808,12 @@ public partial class PlayerWindow
     private string? ResolveFindingCodeForCoding(LiveFrameFinding finding, double currentMeter)
     {
         // 1. VsaCodeHint normalisieren
-        var hinted = Ai.VsaCodeResolver.NormalizeFindingCode(finding.VsaCodeHint);
+        var hinted = AuswertungPro.Next.Application.Ai.VsaCodeResolver.NormalizeFindingCode(finding.VsaCodeHint);
         if (hinted != null)
             return RefineGenericCodeFromImport(hinted, currentMeter) ?? hinted;
 
         // 2. Label-Heuristik
-        var coarse = Ai.VsaCodeResolver.InferCodeFromLabel(finding.Label);
+        var coarse = AuswertungPro.Next.Application.Ai.VsaCodeResolver.InferCodeFromLabel(finding.Label);
         if (coarse != null)
             return RefineGenericCodeFromImport(coarse, currentMeter) ?? coarse;
 
@@ -1946,7 +1946,7 @@ public partial class PlayerWindow
 
             // Streckenschaden-Erkennung: Codes die typischerweise ueber eine Strecke auftreten
             // (z.B. Wasserrueckstau, Wurzeleinwuchs, Ablagerung, Korrosion)
-            bool isStrecke = Services.CodeCatalog.VsaCodeTree.IsStreckenschadenCode(code);
+            bool isStrecke = AuswertungPro.Next.Application.CodeCatalog.VsaCodeTree.IsStreckenschadenCode(code);
 
             var entry = new ProtocolEntry
             {
@@ -2046,7 +2046,7 @@ public partial class PlayerWindow
         // (z.B. "hole", "hole seal" → beide BAC)
         for (int i = 0; i < masks.Count; i++)
         {
-            var inferredCode = Ai.VsaCodeResolver.InferCodeFromLabel(masks[i].Label);
+            var inferredCode = AuswertungPro.Next.Application.Ai.VsaCodeResolver.InferCodeFromLabel(masks[i].Label);
             if (!string.Equals(inferredCode, vsaCode, StringComparison.OrdinalIgnoreCase)) continue;
 
             var tag = $"{Ai.Pipeline.SamMaskRenderer.MaskTag}_{i}";
@@ -2356,7 +2356,7 @@ public partial class PlayerWindow
             rohranfangTime = importBcd.VideoTimestamp;
         }
 
-        var label = Services.CodeCatalog.VsaCodeTree.LookupLabel("BCD") ?? "Rohranfang";
+        var label = AuswertungPro.Next.Application.CodeCatalog.VsaCodeTree.LookupLabel("BCD") ?? "Rohranfang";
         var entry = new ProtocolEntry
         {
             Source = ProtocolEntrySource.Ai,
@@ -2460,7 +2460,7 @@ public partial class PlayerWindow
             rohrEndTime = importBce.VideoTimestamp;
         }
 
-        var label = Services.CodeCatalog.VsaCodeTree.LookupLabel("BCE") ?? "Rohrende";
+        var label = AuswertungPro.Next.Application.CodeCatalog.VsaCodeTree.LookupLabel("BCE") ?? "Rohrende";
         var entry = new ProtocolEntry
         {
             Source = ProtocolEntrySource.Ai,

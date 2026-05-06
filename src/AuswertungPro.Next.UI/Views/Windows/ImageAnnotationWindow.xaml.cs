@@ -10,7 +10,7 @@ using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai.Pipeline;
-using AuswertungPro.Next.UI.Services.CodeCatalog;
+using AuswertungPro.Next.Application.CodeCatalog;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 

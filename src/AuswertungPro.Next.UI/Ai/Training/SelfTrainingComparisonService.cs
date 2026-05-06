@@ -9,7 +9,7 @@ using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai.Shared;
 using AuswertungPro.Next.UI.Ai.Training.Models;
-using AuswertungPro.Next.UI.Services.CodeCatalog;
+using AuswertungPro.Next.Application.CodeCatalog;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 
 namespace AuswertungPro.Next.UI.Ai.Training;

@@ -13,7 +13,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.UI.Services.CodeCatalog;
+using AuswertungPro.Next.Application.CodeCatalog;
 using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.UI.Ai.Training.Services;

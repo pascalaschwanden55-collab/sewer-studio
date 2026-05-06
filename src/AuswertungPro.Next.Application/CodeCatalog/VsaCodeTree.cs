@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace AuswertungPro.Next.UI.Services.CodeCatalog;
+namespace AuswertungPro.Next.Application.CodeCatalog;
 
 // ═══════════════════════════════════════════════════════════════
 // Statischer VSA-Code-Baum (EN 13508-2 / VSA-KEK 2023)

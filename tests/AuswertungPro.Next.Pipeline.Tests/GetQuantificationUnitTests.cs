@@ -1,4 +1,4 @@
-using AuswertungPro.Next.UI.Services.CodeCatalog;
+using AuswertungPro.Next.Application.CodeCatalog;
 using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;

@@ -5,7 +5,7 @@ using AuswertungPro.Next.Domain.Ai.Vision;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Application.Ai;
 
 /// <summary>
 /// Gemeinsames Mapping fuer Enhanced/Qwen-Ergebnisse in das LiveDetection-Format.

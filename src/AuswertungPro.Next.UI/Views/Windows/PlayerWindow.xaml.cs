@@ -4389,7 +4389,7 @@ public partial class PlayerWindow : Window, IVlcSurface
                 .Any(el => tag.Equals(el.Tag as string)))
                 continue;
 
-            var maskCode = Ai.VsaCodeResolver.InferCodeFromLabel(masks[i].Label)?.ToUpperInvariant() ?? "";
+            var maskCode = AuswertungPro.Next.Application.Ai.VsaCodeResolver.InferCodeFromLabel(masks[i].Label)?.ToUpperInvariant() ?? "";
             if (evCode == maskCode || evCode.StartsWith(maskCode) || maskCode.StartsWith(evCode))
             {
                 _selectedMaskIndex = i;
@@ -4846,7 +4846,7 @@ public partial class PlayerWindow : Window, IVlcSurface
             "WASSERSTAND" => "BDD",
             "ABBRUCH" => "BDC",
             // Kein exaktes Stichwort → Freitext-Heuristik (z.B. "beule unten", "riss bei 3 uhr")
-            _ => Ai.VsaCodeResolver.InferCodeFromLabel(keyword)
+            _ => AuswertungPro.Next.Application.Ai.VsaCodeResolver.InferCodeFromLabel(keyword)
         };
 
         try
@@ -4978,7 +4978,7 @@ public partial class PlayerWindow : Window, IVlcSurface
 
         if (_currentMmResult?.QuantifiedMasks is { } masks && maskIndex < masks.Count)
         {
-            var vsaCode = Ai.VsaCodeResolver.InferCodeFromLabel(masks[maskIndex].Label);
+            var vsaCode = AuswertungPro.Next.Application.Ai.VsaCodeResolver.InferCodeFromLabel(masks[maskIndex].Label);
             SetCodingAiState(
                 $"Befund {maskIndex + 1}/{masks.Count}: {vsaCode ?? masks[maskIndex].Label}",
                 Color.FromRgb(0x38, 0xBD, 0xF8),
@@ -5125,7 +5125,7 @@ public partial class PlayerWindow : Window, IVlcSurface
         if (_currentMmResult?.QuantifiedMasks is not { } masks || maskIndex >= masks.Count) return;
 
         var quant = masks[maskIndex];
-        var vsaCode = Ai.VsaCodeResolver.InferCodeFromLabel(quant.Label);
+        var vsaCode = AuswertungPro.Next.Application.Ai.VsaCodeResolver.InferCodeFromLabel(quant.Label);
         var meter = _codingVm?.CurrentMeter ?? 0;
 
         // Auf Sperrliste setzen → wird nicht mehr erneut eingefuegt
@@ -5185,7 +5185,7 @@ public partial class PlayerWindow : Window, IVlcSurface
         if (_currentMmResult?.QuantifiedMasks is not { } masks || maskIndex >= masks.Count) return;
 
         var quant = masks[maskIndex];
-        var vsaCode = Ai.VsaCodeResolver.InferCodeFromLabel(quant.Label);
+        var vsaCode = AuswertungPro.Next.Application.Ai.VsaCodeResolver.InferCodeFromLabel(quant.Label);
         var meter = _codingVm?.CurrentMeter ?? 0;
 
         // Zugehoeriges CodingEvent finden und ueber ViewModel akzeptieren (gleicher Pfad wie Liste)

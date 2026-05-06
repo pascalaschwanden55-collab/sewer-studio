@@ -17,7 +17,7 @@ using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.SelfImproving;
 using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.UI.Ai.Training.Services;
-using AuswertungPro.Next.UI.Services.CodeCatalog;
+using AuswertungPro.Next.Application.CodeCatalog;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Training.Models;

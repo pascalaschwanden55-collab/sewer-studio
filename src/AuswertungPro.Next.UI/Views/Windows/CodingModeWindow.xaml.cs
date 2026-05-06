@@ -2719,7 +2719,7 @@ public partial class CodingModeWindow : Window
                 var b64 = Convert.ToBase64String(pngBytes);
                 var (enhanced, _) = await _enhancedVision.AnalyzeWithEscalationAsync(
                     b64, context: null, ct: _analysisCts.Token);
-                result = Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, timestampSec);
+                result = AuswertungPro.Next.Application.Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, timestampSec);
 
                 // Sichtbares Panel fuer User - vorher: Result war oft nur in der Liste
                 await Dispatcher.InvokeAsync(() =>
@@ -3073,7 +3073,7 @@ public partial class CodingModeWindow : Window
         for (var i = 0; i < findings.Count && i < 8; i++)
         {
             var f = findings[i];
-            var normalizedClock = Ai.VsaCodeResolver.NormalizeClock(f.PositionClock);
+            var normalizedClock = AuswertungPro.Next.Application.Ai.VsaCodeResolver.NormalizeClock(f.PositionClock);
             var clockMatch = System.Text.RegularExpressions.Regex.Match(normalizedClock ?? "", @"(\d{1,2})");
             int parsedClock = clockMatch.Success && int.TryParse(clockMatch.Groups[1].Value, out var ch) ? ch : 0;
             if (parsedClock == 0) parsedClock = 12;
@@ -3813,18 +3813,18 @@ public sealed class AiFindingDisplayItem
     {
         Label = f.Label;
         // Gemeinsamer Resolver: VsaCodeHint normalisieren, bei Fehlschlag Label-Heuristik
-        VsaCode = Ai.VsaCodeResolver.NormalizeFindingCode(f.VsaCodeHint)
-                   ?? Ai.VsaCodeResolver.InferCodeFromLabel(f.Label)
+        VsaCode = AuswertungPro.Next.Application.Ai.VsaCodeResolver.NormalizeFindingCode(f.VsaCodeHint)
+                   ?? AuswertungPro.Next.Application.Ai.VsaCodeResolver.InferCodeFromLabel(f.Label)
                    ?? "";
         Severity = f.Severity;
         SeverityText = f.Severity.ToString();
 
         // VSA-Klartext aus Katalog (z.B. "BCAEB" → "Seitl. Anschluss, einmuendend, Bogen")
-        Description = Ai.VsaCodeResolver.LookupLabel(VsaCode) ?? f.Label;
+        Description = AuswertungPro.Next.Application.Ai.VsaCodeResolver.LookupLabel(VsaCode) ?? f.Label;
 
         // Position: Meter + Uhrzeit zusammengefasst
         var posParts = new List<string>();
-        var normalizedClock = Ai.VsaCodeResolver.NormalizeClock(f.PositionClock);
+        var normalizedClock = AuswertungPro.Next.Application.Ai.VsaCodeResolver.NormalizeClock(f.PositionClock);
         if (!string.IsNullOrWhiteSpace(normalizedClock))
             posParts.Add(normalizedClock);
         if (f.ExtentPercent.HasValue)

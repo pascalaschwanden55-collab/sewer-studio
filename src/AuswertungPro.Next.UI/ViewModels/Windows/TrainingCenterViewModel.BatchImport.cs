@@ -649,7 +649,7 @@ public partial class TrainingCenterViewModel
         {
             var code = SelectedSample?.Code;
             if (string.IsNullOrWhiteSpace(code)) return "";
-            var label = Ai.VsaCodeResolver.LookupLabel(code);
+            var label = AuswertungPro.Next.Application.Ai.VsaCodeResolver.LookupLabel(code);
             return string.IsNullOrWhiteSpace(label) ? code : $"{code} — {label}";
         }
     }

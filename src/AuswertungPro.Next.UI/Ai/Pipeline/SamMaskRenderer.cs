@@ -439,7 +439,7 @@ public static class SamMaskRenderer
         string? groupTag = null)
     {
         // Klartext-Label bauen
-        var label = Services.CodeCatalog.VsaCodeTree.LookupLabel(quant.Label) ?? quant.Label;
+        var label = AuswertungPro.Next.Application.CodeCatalog.VsaCodeTree.LookupLabel(quant.Label) ?? quant.Label;
         var measurements = BuildMeasurementText(quant);
 
         var textBlock = new TextBlock

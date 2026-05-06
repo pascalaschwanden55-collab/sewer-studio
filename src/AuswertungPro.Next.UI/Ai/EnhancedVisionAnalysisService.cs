@@ -786,7 +786,7 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
                     if (string.IsNullOrEmpty(codeHint))
                     {
                         codeHint = VsaCodeResolver.InferCodeFromLabel(label)
-                            ?? Services.CodeCatalog.VsaCodeTree.ReverseLookup(label);
+                            ?? AuswertungPro.Next.Application.CodeCatalog.VsaCodeTree.ReverseLookup(label);
                     }
                 }
 

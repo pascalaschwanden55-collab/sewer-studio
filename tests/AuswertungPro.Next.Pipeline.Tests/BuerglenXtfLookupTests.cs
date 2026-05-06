@@ -1,6 +1,6 @@
 using System.IO;
 using System.Text.RegularExpressions;
-using AuswertungPro.Next.UI.Services.CodeCatalog;
+using AuswertungPro.Next.Application.CodeCatalog;
 using Xunit;
 using Xunit.Abstractions;
 
