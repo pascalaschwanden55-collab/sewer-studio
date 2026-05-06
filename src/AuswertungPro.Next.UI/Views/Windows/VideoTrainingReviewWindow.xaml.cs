@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.ViewModels.Windows;
+using AuswertungPro.Next.Application.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -220,7 +221,7 @@ public partial class VideoTrainingReviewWindow : Window
 
         try
         {
-            var annotation = new Ai.Teacher.TeacherAnnotation
+            var annotation = new AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotation
             {
                 VsaCode = vsaCode,
                 Beschreibung = entry.Explanation ?? vsaCode,

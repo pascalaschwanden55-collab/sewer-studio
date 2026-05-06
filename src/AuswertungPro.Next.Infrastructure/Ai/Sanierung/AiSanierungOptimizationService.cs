@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Ai.Sanierung;
 
-namespace AuswertungPro.Next.UI.Ai.Sanierung;
+namespace AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 
 public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationService
 {

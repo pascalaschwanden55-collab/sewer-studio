@@ -34,6 +34,7 @@ using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Ai.Pipeline;
+using AuswertungPro.Next.Application.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -810,7 +811,7 @@ public partial class PlayerWindow : Window, IVlcSurface
         AiRuntimeConfig cfg;
         try
         {
-            cfg = AiRuntimeConfigExtensions.Load();
+            cfg = AiRuntimeConfigLoader.Load();
         }
         catch
         {
@@ -1443,7 +1444,7 @@ public partial class PlayerWindow : Window, IVlcSurface
                 System.Globalization.CultureInfo.InvariantCulture, out var parsedMeter))
                 captureMeter = parsedMeter;
 
-            var annotation = new Ai.Teacher.TeacherAnnotation
+            var annotation = new AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotation
             {
                 AnnotationId = annotationId,
                 VsaCode = selectedEntry.Code,
@@ -4509,7 +4510,7 @@ public partial class PlayerWindow : Window, IVlcSurface
         System.IO.File.Copy(snapshotPath, destFrame, overwrite: true);
 
         // 4. Lehrer-Annotation erstellen
-        var annotation = new Ai.Teacher.TeacherAnnotation
+        var annotation = new AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotation
         {
             AnnotationId = annotationId,
             VsaCode = importEvent.Entry.Code,

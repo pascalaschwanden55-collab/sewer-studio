@@ -24,6 +24,7 @@ using CommunityToolkit.Mvvm.Input;
 using LibVLCSharp.Shared;
 using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 using AuswertungPro.Next.Application.Ai.Pipeline;
+using AuswertungPro.Next.Application.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -1888,7 +1889,7 @@ public partial class CodingModeWindow : Window
             }
 
             // 5. TeacherAnnotation erstellen und speichern (nur bei Erfolg)
-            var annotation = new Ai.Teacher.TeacherAnnotation
+            var annotation = new AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotation
             {
                 AnnotationId = annotationId,
                 VsaCode = selectedEntry.Code,
@@ -2512,7 +2513,7 @@ public partial class CodingModeWindow : Window
     {
         try
         {
-            _aiConfig = AiRuntimeConfigExtensions.Load();
+            _aiConfig = AiRuntimeConfigLoader.Load();
             _aiModelName = _aiConfig.VisionModel;
             if (!_aiConfig.Enabled)
             {

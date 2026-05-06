@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using AuswertungPro.Next.Application.Ai.Sanierung;
 
 namespace AuswertungPro.Next.UI.Ai.Sanierung;
 

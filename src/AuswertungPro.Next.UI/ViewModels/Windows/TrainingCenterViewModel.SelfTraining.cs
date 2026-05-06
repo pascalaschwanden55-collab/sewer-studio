@@ -99,7 +99,7 @@ public partial class TrainingCenterViewModel
             settings.CaseParallelism = caseParallelism;
 
             // Services instanziieren (gleicher Pattern wie BatchImport)
-            var cfg = AiRuntimeConfigExtensions.Load();
+            var cfg = AiRuntimeConfigLoader.Load();
             Log($"Ollama: {cfg.OllamaBaseUri}, Modell: {cfg.VisionModel}");
             Log($"Parallelitaet: GPU={gpuConcurrency}, Faelle={caseParallelism}, PDF-CPU={preExtractCpuParallelism} (max. Requests ~{maxInFlightRequests})");
             if (int.TryParse(Environment.GetEnvironmentVariable("OLLAMA_NUM_PARALLEL"), out var ollamaSlots)

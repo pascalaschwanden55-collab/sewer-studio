@@ -1135,7 +1135,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             return;
         }
 
-        var cfg = AiRuntimeConfigExtensions.Load();
+        var cfg = AiRuntimeConfigLoader.Load();
         if (!cfg.Enabled)
         {
             _dialogs.ShowMessage("KI ist deaktiviert (SEWERSTUDIO_AI_ENABLED=0).", "Videoanalyse KI",
@@ -1737,7 +1737,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         // Build SanierungOptimizationViewModel (nullable when AI disabled)
         SanierungOptimizationViewModel? optimizationVm = null;
-        var cfg = AiRuntimeConfigExtensions.Load();
+        var cfg = AiRuntimeConfigLoader.Load();
         if (cfg.Enabled)
         {
             var ruleResult = _measureRecommendationService.Recommend(record, maxSuggestions: 5);
@@ -1753,7 +1753,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             }
 
             // Phase 5.1.B Etappe 3.L: Direkt new() statt Bundle-Methode.
-            var aiService = new Ai.Sanierung.AiSanierungOptimizationService(cfg);
+            var aiService = new AuswertungPro.Next.Infrastructure.Ai.Sanierung.AiSanierungOptimizationService(cfg);
             optimizationVm = new SanierungOptimizationViewModel(record, aiService, ruleDto);
 
             optimizationVm.TransferredToPrimary += _ =>

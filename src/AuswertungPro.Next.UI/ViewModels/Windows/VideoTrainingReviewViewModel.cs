@@ -18,6 +18,7 @@ using AuswertungPro.Next.UI.Ai.Teacher;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training.Models;
 using AiTrack = AuswertungPro.Next.UI.Services.AiActivityTracker;
+using AuswertungPro.Next.Application.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 

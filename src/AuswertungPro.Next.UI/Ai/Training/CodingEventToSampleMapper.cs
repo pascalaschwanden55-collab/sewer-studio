@@ -1,6 +1,7 @@
 using System;
 using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 

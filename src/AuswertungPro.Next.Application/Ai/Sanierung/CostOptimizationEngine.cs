@@ -1,6 +1,6 @@
 using AuswertungPro.Next.Application.Ai.Sanierung;
 
-namespace AuswertungPro.Next.UI.Ai.Sanierung;
+namespace AuswertungPro.Next.Application.Ai.Sanierung;
 
 public sealed class CostOptimizationEngine
 {

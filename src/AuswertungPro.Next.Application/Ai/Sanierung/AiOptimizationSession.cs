@@ -1,4 +1,5 @@
-namespace AuswertungPro.Next.UI.Ai.Sanierung;
+using System;
+namespace AuswertungPro.Next.Application.Ai.Sanierung;
 
 public sealed class AiOptimizationSession
 {

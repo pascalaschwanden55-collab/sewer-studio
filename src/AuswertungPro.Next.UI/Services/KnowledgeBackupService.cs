@@ -7,6 +7,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Services;
 
@@ -392,7 +393,7 @@ public static class KnowledgeBackupService
 
             var json = File.ReadAllText(annotationsPath);
             var opts = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
-            var annotations = JsonSerializer.Deserialize<List<Ai.Teacher.TeacherAnnotation>>(json, opts);
+            var annotations = JsonSerializer.Deserialize<List<AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotation>>(json, opts);
             if (annotations is null || annotations.Count == 0) return;
 
             var localImagesDir = Ai.Teacher.TeacherAnnotationStore.GetImagesDir();

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 
-namespace AuswertungPro.Next.UI.Ai.Teacher;
+namespace AuswertungPro.Next.Application.Ai.Teacher;
 
 /// <summary>
 /// Lehrer-Annotation: Manuell markierter Bereich auf einem Video-Frame

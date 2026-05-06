@@ -1,6 +1,6 @@
 using AuswertungPro.Next.Application.Ai.Sanierung;
 
-namespace AuswertungPro.Next.UI.Ai.Sanierung;
+namespace AuswertungPro.Next.Application.Ai.Sanierung;
 
 // §8 – Validation Rules (no AI dependency)
 public sealed class SanierungValidationService
@@ -100,15 +100,15 @@ public sealed class SanierungValidationService
         };
     }
 
-    internal static bool IsLinerMeasure(string measure)
+    public static bool IsLinerMeasure(string measure)
         => measure.Contains("Liner", StringComparison.OrdinalIgnoreCase)
         || measure.Contains("Inliner", StringComparison.OrdinalIgnoreCase);
 
-    internal static bool IsReplacementMeasure(string measure)
+    public static bool IsReplacementMeasure(string measure)
         => measure.Contains("Erneuerung", StringComparison.OrdinalIgnoreCase)
         || measure.Contains("Neubau", StringComparison.OrdinalIgnoreCase);
 
-    internal static bool IsBerstliningMeasure(string measure)
+    public static bool IsBerstliningMeasure(string measure)
         => measure.Contains("Berstlining", StringComparison.OrdinalIgnoreCase)
         || measure.Contains("Burst", StringComparison.OrdinalIgnoreCase);
 }
