@@ -8,9 +8,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.Application.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Application.Ai.Training;
 
 /// <summary>
 /// Ein einzelnes Few-Shot Beispiel: Foto + VSA-Code + Beschreibung.
@@ -76,7 +76,7 @@ public sealed class FewShotExampleStore
 
     public FewShotExampleStore()
     {
-        var root = KnowledgeRoot.GetRoot();
+        var root = KnowledgeRootProvider.GetRoot();
         _indexPath = Path.Combine(root, "fewshot_examples.json");
         _imagesDir = Path.Combine(root, "fewshot_images");
     }
@@ -128,7 +128,7 @@ public sealed class FewShotExampleStore
             Directory.CreateDirectory(Path.GetDirectoryName(_indexPath)!);
             var json = JsonSerializer.Serialize(_examples, JsonOpts);
             await File.WriteAllTextAsync(_indexPath, json, ct);
-            KnowledgeMirrorService.Current?.NotifyChanged();
+            KnowledgeMirrorNotifier.NotifyChanged();
         }
         finally
         {
@@ -315,7 +315,7 @@ public sealed class FewShotExampleStore
 
     /// <summary>Absoluter Pfad zum Bild eines Beispiels.</summary>
     public string GetImagePath(FewShotExample example)
-        => Path.Combine(KnowledgeRoot.GetRoot(), example.ImageRelativePath);
+        => Path.Combine(KnowledgeRootProvider.GetRoot(), example.ImageRelativePath);
 
     /// <summary>Prueft ob das Bild noch existiert.</summary>
     public bool HasValidImage(FewShotExample example)

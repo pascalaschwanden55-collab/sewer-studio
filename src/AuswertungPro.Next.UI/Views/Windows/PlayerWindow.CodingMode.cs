@@ -21,6 +21,7 @@ using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.Application.Ai.Pipeline;
+using AuswertungPro.Next.Application.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -971,7 +972,7 @@ public partial class PlayerWindow
                 try
                 {
                     if (_codingEnhancedVision == null) return;
-                    var store = new Ai.Training.FewShotExampleStore();
+                    var store = new AuswertungPro.Next.Application.Ai.Training.FewShotExampleStore();
                     await _codingEnhancedVision.EnableFewShotAsync(store);
                     var fsDiag = _codingEnhancedVision.FewShotDiagnostics ?? "keine";
                     Dispatcher.Invoke(() =>

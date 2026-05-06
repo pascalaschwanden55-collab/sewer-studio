@@ -454,7 +454,7 @@ public partial class TrainingCenterWindow : Window
     {
         try
         {
-            var store = new AuswertungPro.Next.UI.Ai.Training.FewShotExampleStore();
+            var store = new AuswertungPro.Next.Application.Ai.Training.FewShotExampleStore();
             await store.LoadAsync();
             var ids = new HashSet<string>(StringComparer.Ordinal);
             foreach (var ex in store.Examples)

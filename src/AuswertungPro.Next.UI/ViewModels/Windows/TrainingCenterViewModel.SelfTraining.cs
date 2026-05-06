@@ -116,7 +116,7 @@ public partial class TrainingCenterViewModel
             var vision = new EnhancedVisionAnalysisService(ollamaClient, visionModel);
             try
             {
-                await vision.EnableFewShotAsync(new Ai.Training.FewShotExampleStore(), ct);
+                await vision.EnableFewShotAsync(new AuswertungPro.Next.Application.Ai.Training.FewShotExampleStore(), ct);
                 Log("Few-Shot aktiviert: gespeicherte Beispiele werden fuer Self-Training genutzt.");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)

@@ -91,6 +91,12 @@ namespace AuswertungPro.Next.UI
                 AuswertungPro.Next.Application.Ai.AppDataPathProvider.SetResolver(
                     () => AppSettings.AppDataDir);
 
+                // Phase 5.3: KnowledgeMirror-Notifier (E:\Brain Sync) — UI haelt
+                // KnowledgeMirrorService Singleton, Application/Infrastructure-Stores
+                // koennen NotifyChanged() ohne UI-Reference rufen.
+                AuswertungPro.Next.Application.Ai.KnowledgeMirrorNotifier.SetNotifier(
+                    () => Services.KnowledgeMirrorService.Current?.NotifyChanged());
+
                 // Phase 5.1.B Etappe 4 Sub-E: Nur noch DI-Container — Legacy-ServiceProvider entfernt.
                 var diCollection = new ServiceCollection();
                 diCollection.AddSewerStudioInfrastructure(settings, diagnostics, logger, loggerFactory);

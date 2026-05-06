@@ -7,16 +7,16 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.Application.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.Training
+namespace AuswertungPro.Next.Application.Ai.Training
 {
     public static class TrainingSamplesStore
     {
         // Verhindert gleichzeitige Load+Save-Operationen (Race Condition bei MergeAndSaveAsync)
         private static readonly SemaphoreSlim _fileLock = new(1, 1);
 
-        private static string GetStorePath() => KnowledgeRoot.GetTrainingSamplesPath();
+        private static string GetStorePath() => System.IO.Path.Combine(KnowledgeRootProvider.GetRoot(), "training_samples.json");
 
         public static async Task<List<TrainingSample>> LoadAsync()
         {
@@ -70,7 +70,7 @@ namespace AuswertungPro.Next.UI.Ai.Training
                 }
 
                 await SaveInternalAsync(existing);
-                KnowledgeMirrorService.Current?.NotifyChanged();
+                KnowledgeMirrorNotifier.NotifyChanged();
             }
             finally
             {
@@ -124,7 +124,7 @@ namespace AuswertungPro.Next.UI.Ai.Training
                 }
 
                 await SaveInternalAsync(existing);
-                KnowledgeMirrorService.Current?.NotifyChanged();
+                KnowledgeMirrorNotifier.NotifyChanged();
             }
             finally
             {
@@ -149,7 +149,7 @@ namespace AuswertungPro.Next.UI.Ai.Training
                 if (removed > 0)
                 {
                     await SaveInternalAsync(existing);
-                    KnowledgeMirrorService.Current?.NotifyChanged();
+                    KnowledgeMirrorNotifier.NotifyChanged();
                 }
                 return removed;
             }

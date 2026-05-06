@@ -1798,7 +1798,7 @@ public partial class PlayerWindow : Window, IVlcSurface
                 for (int i = 1; i < ev.Entry.FotoPaths.Count; i++)
                     sample.AdditionalFramePaths.Add(ev.Entry.FotoPaths[i]);
             }
-            Ai.Training.TrainingSamplesStore.MergeAndSaveAsync(new List<AuswertungPro.Next.Domain.Ai.Training.TrainingSample> { sample })
+            AuswertungPro.Next.Application.Ai.Training.TrainingSamplesStore.MergeAndSaveAsync(new List<AuswertungPro.Next.Domain.Ai.Training.TrainingSample> { sample })
                 .SafeFireAndForget("TrainingSaveSingle");
         }
         catch (Exception ex)
@@ -1831,7 +1831,7 @@ public partial class PlayerWindow : Window, IVlcSurface
                 samples.Add(sample);
             }
             if (samples.Count > 0)
-                Ai.Training.TrainingSamplesStore.MergeAndSaveAsync(samples)
+                AuswertungPro.Next.Application.Ai.Training.TrainingSamplesStore.MergeAndSaveAsync(samples)
                     .SafeFireAndForget("TrainingSave");
         }
         catch (Exception ex)

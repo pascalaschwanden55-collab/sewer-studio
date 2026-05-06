@@ -25,6 +25,7 @@ using LibVLCSharp.Shared;
 using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Application.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -2548,7 +2549,7 @@ public partial class CodingModeWindow : Window
         try
         {
             if (_enhancedVision == null) return;
-            var store = new Ai.Training.FewShotExampleStore();
+            var store = new AuswertungPro.Next.Application.Ai.Training.FewShotExampleStore();
             await _enhancedVision.EnableFewShotAsync(store);
             Dispatcher.Invoke(() =>
                 SetAiStatus("Bereit (Few-Shot geladen)", "#22C55E",

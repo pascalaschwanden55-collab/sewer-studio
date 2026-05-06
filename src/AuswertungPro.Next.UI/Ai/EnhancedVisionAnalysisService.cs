@@ -15,6 +15,7 @@ using AuswertungPro.Next.UI.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Pipeline;
+using AuswertungPro.Next.Application.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -358,7 +359,7 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
         };
         // Diverse Auswahl: Erst 1 pro Hauptgruppe (BA/BB/BC), dann auffuellen pro Code
         var allExamples = await store.GetBestExamplesAsync(maxExamples * 5, maxPerMainGroup: 10, ct: ct);
-        var diverseExamples = new List<Training.FewShotExample>();
+        var diverseExamples = new List<AuswertungPro.Next.Application.Ai.Training.FewShotExample>();
         var usedGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var usedCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -384,7 +385,7 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
                 diverseExamples.Add(ex);
         }
 
-        var examples = (IReadOnlyList<Training.FewShotExample>)diverseExamples;
+        var examples = (IReadOnlyList<AuswertungPro.Next.Application.Ai.Training.FewShotExample>)diverseExamples;
 
         // Bilder vorladen und als Base64 cachen (einmal laden, bei jeder Analyse verwenden)
         var loaded = new List<(FewShotExample, string)>();
