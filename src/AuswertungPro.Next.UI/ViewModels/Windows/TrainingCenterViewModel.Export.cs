@@ -228,7 +228,7 @@ public partial class TrainingCenterViewModel
         List<TrainingSample> approved, string outputDir, CancellationToken ct)
     {
         // TeacherAnnotations laden (echte BBoxen)
-        var annotations = await Ai.Teacher.TeacherAnnotationStore.LoadAsync();
+        var annotations = await AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.LoadAsync();
         var annotationsWithImages = annotations
             .Where(a => !string.IsNullOrWhiteSpace(a.FullFramePath) && File.Exists(a.FullFramePath))
             .ToList();

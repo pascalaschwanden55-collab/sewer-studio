@@ -716,7 +716,7 @@ public partial class PlayerWindow
                     WidthMm = finding.WidthMm,
                     HeightMm = finding.HeightMm
                 };
-                await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+                await AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
             }
 
             // Dezente Bestaetigung im OSD-Badge
@@ -812,7 +812,7 @@ public partial class PlayerWindow
                 WidthMm = primary.WidthMm,
                 HeightMm = primary.HeightMm
             };
-            await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+            await AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
 
             OsdMeterBadge.Visibility = Visibility.Visible;
             TxtOsdMeter.Text = $"✓ Training: {selectedEntry.Code} (korrigiert)";

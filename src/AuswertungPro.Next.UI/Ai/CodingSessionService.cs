@@ -8,9 +8,9 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Helpers;
-using AuswertungPro.Next.Application.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -269,7 +269,7 @@ public sealed class CodingSessionService : ICodingSessionService
             var approved = samples.Where(s => s.Status == AuswertungPro.Next.Domain.Ai.Training.TrainingSampleStatus.Approved).ToList();
             if (approved.Count == 0) return;
 
-            var cfg = Ai.Ollama.OllamaConfigExtensions.Load();
+            var cfg = AuswertungPro.Next.Application.Ai.Ollama.OllamaConfigProvider.Load();
             // V4.2 Fix: HttpClient disposen (Socket-Exhaustion bei vielen Samples).
             using var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
             var embedder = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.EmbeddingService(http, cfg);

@@ -396,8 +396,8 @@ public static class KnowledgeBackupService
             var annotations = JsonSerializer.Deserialize<List<AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotation>>(json, opts);
             if (annotations is null || annotations.Count == 0) return;
 
-            var localImagesDir = Ai.Teacher.TeacherAnnotationStore.GetImagesDir();
-            var localLabelsDir = Ai.Teacher.TeacherAnnotationStore.GetLabelsDir();
+            var localImagesDir = AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.GetImagesDir();
+            var localLabelsDir = AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.GetLabelsDir();
             var changed = false;
 
             foreach (var a in annotations)

@@ -5,10 +5,10 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Application.Ai;
 
-namespace AuswertungPro.Next.UI.Ai.Teacher;
+namespace AuswertungPro.Next.Application.Ai.Teacher;
 
 /// <summary>
 /// Append-only Store fuer Lehrer-Annotationen.
@@ -26,12 +26,12 @@ public static class TeacherAnnotationStore
     };
 
     private static string GetStorePath()
-        => Path.Combine(KnowledgeRoot.GetRoot(), "teacher_annotations.json");
+        => Path.Combine(KnowledgeRootProvider.GetRoot(), "teacher_annotations.json");
 
     /// <summary>Pfad zum Ordner fuer Lehrer-Bilder (Frames + Crops).</summary>
     public static string GetImagesDir()
     {
-        var dir = Path.Combine(KnowledgeRoot.GetRoot(), "teacher_images");
+        var dir = Path.Combine(KnowledgeRootProvider.GetRoot(), "teacher_images");
         Directory.CreateDirectory(dir);
         return dir;
     }
@@ -39,7 +39,7 @@ public static class TeacherAnnotationStore
     /// <summary>Pfad zum Ordner fuer YOLO-Annotations (.txt).</summary>
     public static string GetLabelsDir()
     {
-        var dir = Path.Combine(KnowledgeRoot.GetRoot(), "teacher_labels");
+        var dir = Path.Combine(KnowledgeRootProvider.GetRoot(), "teacher_labels");
         Directory.CreateDirectory(dir);
         return dir;
     }
@@ -82,7 +82,7 @@ public static class TeacherAnnotationStore
             }
 
             await SaveInternalAsync(existing);
-            KnowledgeMirrorService.Current?.NotifyChanged();
+            KnowledgeMirrorNotifier.NotifyChanged();
         }
         finally
         {

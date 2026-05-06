@@ -1463,7 +1463,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 HaltungName = item.SelfTrainingCaseId,
                 FullFramePath = frameExists ? framePath : null
             };
-            await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+            await AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
         }
         catch
         {

@@ -1465,7 +1465,7 @@ public partial class PlayerWindow : Window, IVlcSurface
                 HeightMm = overlay.Q1Mm
             };
 
-            await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+            await AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
 
             // Markierung AUCH als CodingEvent in die KI-Befunde-Liste eintragen
             if (_codingSessionService != null && _codingVm != null)
@@ -4506,7 +4506,7 @@ public partial class PlayerWindow : Window, IVlcSurface
         }
 
         // 3. Bild in teacher_images kopieren
-        var imagesDir = Ai.Teacher.TeacherAnnotationStore.GetImagesDir();
+        var imagesDir = AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.GetImagesDir();
         var annotationId = Guid.NewGuid().ToString("N")[..12];
         var destFrame = System.IO.Path.Combine(imagesDir, $"mark_{annotationId}.png");
         System.IO.File.Copy(snapshotPath, destFrame, overwrite: true);
@@ -4523,7 +4523,7 @@ public partial class PlayerWindow : Window, IVlcSurface
             FullFramePath = destFrame,
         };
 
-        await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+        await AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
 
         // 5. Visuelles Feedback
         try { System.IO.File.Delete(snapshotPath); } catch { }

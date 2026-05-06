@@ -249,7 +249,7 @@ public partial class VideoTrainingReviewWindow : Window
                 annotation.YoloAnnotationPath = exportResult.YoloAnnotationPath;
             }
 
-            await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+            await AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
 
             // Entscheidung automatisch auf "Protokoll korrekt" setzen
             if (entry.Decision == AuswertungPro.Next.Application.Ai.Training.Models.ReviewDecision.Pending)

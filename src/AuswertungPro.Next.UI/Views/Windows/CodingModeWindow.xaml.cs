@@ -1848,7 +1848,7 @@ public partial class CodingModeWindow : Window
 
             // Frame temporaer speichern (annotationId = kollisionsfrei)
             var tempFrame = System.IO.Path.Combine(
-                Ai.Teacher.TeacherAnnotationStore.GetImagesDir(),
+                AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.GetImagesDir(),
                 $"frame_temp_{annotationId}.png");
             await System.IO.File.WriteAllBytesAsync(tempFrame, pngBytes);
 
@@ -1913,7 +1913,7 @@ public partial class CodingModeWindow : Window
                 HeightMm = _vm.CurrentOverlay.Q1Mm
             };
 
-            await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+            await AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
 
             // Temporaeres Frame aufraeumen (wurde nach teacher_images kopiert)
             try { System.IO.File.Delete(tempFrame); } catch { }
@@ -1926,7 +1926,7 @@ public partial class CodingModeWindow : Window
                 BtnSaveAsTraining.IsEnabled = false;
             UpdateOverlayInfo(null);
 
-            var count = await Ai.Teacher.TeacherAnnotationStore.CountAsync();
+            var count = await AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.CountAsync();
             MessageBox.Show(
                 $"Lehrer-Annotation gespeichert:\n" +
                 $"Code: {selectedEntry.Code}\n" +
