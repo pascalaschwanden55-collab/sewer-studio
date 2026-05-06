@@ -19,6 +19,7 @@ using AuswertungPro.Next.UI.Views.Windows;
 using AuswertungPro.Next.UI.Services;
 using Microsoft.Extensions.DependencyInjection;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI
 {
@@ -97,6 +98,12 @@ namespace AuswertungPro.Next.UI
                 // koennen NotifyChanged() ohne UI-Reference rufen.
                 AuswertungPro.Next.Application.Ai.KnowledgeMirrorNotifier.SetNotifier(
                     () => Services.KnowledgeMirrorService.Current?.NotifyChanged());
+
+                // Phase 5.3: Sidecar-Auth-Token-Bridge (entkoppelt VisionPipelineClient
+                // vom UI-PythonSidecarService — beide static).
+                AuswertungPro.Next.Application.Ai.SidecarAuthTokenAccessor.SetResolvers(
+                    tokenResolver: () => Ai.PythonSidecarService.CurrentAuthToken,
+                    tokenFilePathResolver: () => Ai.PythonSidecarService.TokenFilePath);
 
                 // Phase 5.1.B Etappe 4 Sub-E: Nur noch DI-Container — Legacy-ServiceProvider entfernt.
                 var diCollection = new ServiceCollection();

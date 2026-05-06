@@ -15,6 +15,7 @@ using AuswertungPro.Next.UI.Ai.Training.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using AuswertungPro.Next.Application.Ai.Training.Models;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Ai.Pipeline;
 

@@ -35,6 +35,7 @@ using AppProtocol = AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -1663,7 +1664,7 @@ public partial class PlayerWindow : Window, IVlcSurface
 
     // Multi-Model Pipeline (YOLO → DINO → SAM) fuer Einzelframe-Analyse
     private Ai.Pipeline.SingleFrameMultiModelService? _codingMultiModel;
-    private Ai.Pipeline.VisionPipelineClient? _codingVisionClient;
+    private AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient? _codingVisionClient;
 
     // Import-Beobachtungen (Referenz-Spalte, nur-lesen)
     private readonly ObservableCollection<CodingEvent> _codingImportEvents = new();

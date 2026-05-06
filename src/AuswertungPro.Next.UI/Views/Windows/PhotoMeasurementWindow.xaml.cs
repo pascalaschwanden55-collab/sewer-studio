@@ -13,6 +13,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -767,7 +768,7 @@ public partial class PhotoMeasurementWindow : Window
             // Sidecar lazy initialisieren
             var sidecarUrl = Environment.GetEnvironmentVariable("SEWERSTUDIO_SIDECAR_URL")
                 ?? "http://localhost:8100";
-            var sidecar = new Ai.Pipeline.VisionPipelineClient(new Uri(sidecarUrl));
+            var sidecar = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(new Uri(sidecarUrl));
 
             var samBox = new AuswertungPro.Next.Application.Ai.Pipeline.SamBoundingBox(pxX1, pxY1, pxX2, pxY2, "manual", 1.0);
             var samReq = new AuswertungPro.Next.Application.Ai.Pipeline.SamRequest(Convert.ToBase64String(pngBytes), [samBox]);

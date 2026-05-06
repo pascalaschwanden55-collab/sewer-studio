@@ -8,8 +8,9 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
-namespace AuswertungPro.Next.UI.Ai.Pipeline;
+namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 /// <summary>
 /// HTTP client for the Python FastAPI Vision Sidecar.
@@ -31,18 +32,18 @@ public sealed class VisionPipelineClient
         _baseUri = baseUri;
         _http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
         // Auth-Token Resolver in 3 Stufen (Audit-Fix 2026-04-30: SAM-Segmentierung war
-        // ohne Token unsichtbar weil PythonSidecarService.CurrentAuthToken bei
+        // ohne Token unsichtbar weil AuswertungPro.Next.Application.Ai.SidecarAuthTokenAccessor.CurrentAuthToken bei
         // manuell gestartetem Sidecar leer ist):
         //   1. Explizit per Konstruktor uebergeben
         //   2. Singleton von PythonSidecarService (App-gestartet)
         //   3. Token-Datei %LOCALAPPDATA%/SewerStudio/.sidecar_token (manuell gestartet)
         // Wenn alles leer und SEWER_SIDECAR_AUTH=disabled gesetzt -> ohne Token weiter.
-        var effective = string.IsNullOrWhiteSpace(authToken) ? PythonSidecarService.CurrentAuthToken : authToken;
+        var effective = string.IsNullOrWhiteSpace(authToken) ? AuswertungPro.Next.Application.Ai.SidecarAuthTokenAccessor.CurrentAuthToken : authToken;
         if (string.IsNullOrWhiteSpace(effective))
         {
             try
             {
-                var tokenFile = PythonSidecarService.TokenFilePath;
+                var tokenFile = AuswertungPro.Next.Application.Ai.SidecarAuthTokenAccessor.TokenFilePath;
                 if (System.IO.File.Exists(tokenFile))
                 {
                     var fromFile = System.IO.File.ReadAllText(tokenFile).Trim();
@@ -282,7 +283,7 @@ public sealed class VisionPipelineClient
     // ── Internal ──────────────────────────────────────────────────────────
 
     /// <summary>Generischer POST-Aufruf gegen den Sidecar (intern + fuer Services).</summary>
-    internal async Task<TResponse> PostJsonAsync<TRequest, TResponse>(
+    public async Task<TResponse> PostJsonAsync<TRequest, TResponse>(
         string endpoint, TRequest request, CancellationToken ct)
         => await PostAsync<TRequest, TResponse>(endpoint, request, ct).ConfigureAwait(false);
 

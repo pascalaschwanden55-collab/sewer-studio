@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 

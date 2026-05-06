@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Ai.Pipeline;
 

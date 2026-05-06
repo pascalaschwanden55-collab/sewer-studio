@@ -22,6 +22,7 @@ using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -944,7 +945,7 @@ public partial class PlayerWindow
             {
                 var sidecarUrl = Environment.GetEnvironmentVariable("SEWERSTUDIO_SIDECAR_URL")
                     ?? "http://localhost:8100";
-                _codingVisionClient = new Ai.Pipeline.VisionPipelineClient(new Uri(sidecarUrl));
+                _codingVisionClient = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(new Uri(sidecarUrl));
                 var health = await _codingVisionClient.HealthCheckAsync();
                 if (health != null)
                 {

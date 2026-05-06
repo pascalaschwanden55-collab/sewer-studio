@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -139,7 +140,7 @@ public partial class TrainingCenterViewModel
                         BaseAddress = pipeCfg.SidecarUrl,
                         Timeout = TimeSpan.FromSeconds(pipeCfg.SidecarTimeoutSec)
                     };
-                    var pipelineClient = new Ai.Pipeline.VisionPipelineClient(pipeCfg.SidecarUrl, sidecarHttp);
+                    var pipelineClient = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(pipeCfg.SidecarUrl, sidecarHttp);
                     multiModel = new Ai.Pipeline.SingleFrameMultiModelService(
                         pipelineClient, pipeCfg.YoloConfidence, pipeCfg.DinoBoxThreshold, pipeCfg.DinoTextThreshold);
                 }

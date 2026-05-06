@@ -26,6 +26,7 @@ using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -73,7 +74,7 @@ public partial class CodingModeWindow : Window
 
     // SAM-Segmentierung nach BBox (Audit-Fix 2026-04: bisher nur PlayerWindow)
     // Wird beim Loaded() initialisiert und beim BBox-MouseUp aufgerufen.
-    private Ai.Pipeline.VisionPipelineClient? _sidecarClient;
+    private AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient? _sidecarClient;
     private AuswertungPro.Next.Application.Ai.Pipeline.SamResponse? _lastSamResult;
     /// <summary>Tight-BBox aus letzter SAM-Maske (in normierten Koordinaten 0..1).
     /// Wird beim Trainings-Export verwendet statt der grossen User-BBox.</summary>
@@ -212,7 +213,7 @@ public partial class CodingModeWindow : Window
         {
             var sidecarUrl = Environment.GetEnvironmentVariable("SEWERSTUDIO_SIDECAR_URL")
                 ?? "http://localhost:8100";
-            _sidecarClient = new Ai.Pipeline.VisionPipelineClient(new Uri(sidecarUrl));
+            _sidecarClient = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(new Uri(sidecarUrl));
             // Pre-Flight: sofort einen Health-Check senden, damit der User erfaehrt
             // ob der Sidecar erreichbar ist - vorher: stille Faulheit bis zum ersten BBox.
             _ = Task.Run(async () =>

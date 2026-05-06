@@ -26,6 +26,7 @@ using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Application.Ai.SelfImproving;
 using AuswertungPro.Next.UI.Ai.KnowledgeBase;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -353,7 +354,7 @@ public partial class TrainingCenterWindow : Window
             }
             catch { /* KB optional — Annotation wird trotzdem gespeichert */ }
 
-            Ai.Pipeline.VisionPipelineClient? sidecar = null;
+            AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient? sidecar = null;
             // Phase 5.1.B Etappe 3.J: via DI-Container.
             try
             {
@@ -362,7 +363,7 @@ public partial class TrainingCenterWindow : Window
                 if (sidecarSvc.IsAvailable)
                 {
                     var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-                    sidecar = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
+                    sidecar = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
                 }
             }
             catch { /* Sidecar optional */ }
@@ -672,11 +673,11 @@ public partial class TrainingCenterWindow : Window
         catch { /* KB nicht verfuegbar — Annotationen werden trotzdem als TeacherAnnotation gespeichert */ }
 
         // Sidecar-Client fuer SAM-Segmentierung — Phase 5.1.B Etappe 3.J: via DI.
-        Ai.Pipeline.VisionPipelineClient? sidecar = null;
+        AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient? sidecar = null;
         try
         {
             var pipelineCfg = App.Resolve<AuswertungPro.Next.Application.Ai.PipelineConfig>();
-            sidecar = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl);
+            sidecar = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl);
         }
         catch { /* Sidecar optional */ }
 
@@ -817,7 +818,7 @@ public partial class TrainingCenterWindow : Window
         if (sidecarSvc.IsAvailable)
         {
             var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-            var sidecarClient = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
+            var sidecarClient = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
             var ollamaClient = cfg.CreateOllamaClient();
             var qwenVision = new Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
             orchestrator.BatchPipeline = new Ai.Pipeline.BatchPipelineService(
@@ -881,7 +882,7 @@ public partial class TrainingCenterWindow : Window
         if (sidecarSvc.IsAvailable)
         {
             var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-            var sidecarClient = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
+            var sidecarClient = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
             var ollamaClient = cfg.CreateOllamaClient();
             var qwenVision = new Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
             videoOrch.BatchPipeline = new Ai.Pipeline.BatchPipelineService(
@@ -923,7 +924,7 @@ public partial class TrainingCenterWindow : Window
             if (sidecarSvc.IsAvailable)
             {
                 var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-                var sidecarClient = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
+                var sidecarClient = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
                 var ollamaClient = cfg.CreateOllamaClient();
                 var qwenVision = new Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
                 orch.BatchPipeline = new Ai.Pipeline.BatchPipelineService(
@@ -1032,7 +1033,7 @@ public partial class TrainingCenterWindow : Window
                 Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [YOLO] Auto-Retrain Pruefung gestartet...\n");
 
                 using var retrainHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(90) };
-                var retrainClient = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, retrainHttp);
+                var retrainClient = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, retrainHttp);
                 var benchmarkSetStore = new AuswertungPro.Next.Application.Ai.Training.BenchmarkSetStore();
                 var benchmarkMetricsStore = new AuswertungPro.Next.Application.Ai.Training.BenchmarkMetricsStore();
                 var benchmarkRunner = new Ai.Training.BenchmarkRunner(
@@ -1077,7 +1078,7 @@ public partial class TrainingCenterWindow : Window
                     Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [LoRA] Qwen LoRA-Training Pruefung...\n");
 
                     using var loraHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(120) };
-                    var loraClient = new Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, loraHttp);
+                    var loraClient = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, loraHttp);
                     var ollamaConfig = Ai.Ollama.OllamaConfigExtensions.Load();
 
                     var loraBenchmarkSetStore = new AuswertungPro.Next.Application.Ai.Training.BenchmarkSetStore();
