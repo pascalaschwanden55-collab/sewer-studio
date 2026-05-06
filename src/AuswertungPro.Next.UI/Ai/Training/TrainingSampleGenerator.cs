@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
 using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Application.Ai;
 using System.Collections.Generic;

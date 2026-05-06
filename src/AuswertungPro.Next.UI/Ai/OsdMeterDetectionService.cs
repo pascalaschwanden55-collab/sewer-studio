@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -228,12 +229,5 @@ public sealed class OsdMeterDetectionService
     }
 }
 
-public sealed record MeterReadResult(double Value, MeterSource Source);
-
-public enum MeterSource
-{
-    OsdVision,      // Ollama Vision hat OSD direkt gelesen
-    OcrText,        // OCR-Engine hat Text aus Bild gelesen
-    LinearEstimate, // Lineare Schätzung aus Zeit/Dauer
-    Unknown
-}
+// Phase 5.3 vorbereitend: MeterReadResult + MeterSource
+// nach Application/Ai/Vision/VideoAnalysisModels.cs.
