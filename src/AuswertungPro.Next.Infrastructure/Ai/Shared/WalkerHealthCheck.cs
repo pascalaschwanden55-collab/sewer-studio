@@ -13,7 +13,7 @@ using Microsoft.Data.Sqlite;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
-namespace AuswertungPro.Next.UI.Ai.Shared;
+namespace AuswertungPro.Next.Infrastructure.Ai.Shared;
 
 /// <summary>
 /// Ein-Klick Health-Check fuer die gesamte KI-Infrastruktur.
@@ -89,7 +89,7 @@ public sealed class WalkerHealthCheck
     {
         try
         {
-            var config = Ollama.OllamaConfigExtensions.Load();
+            var config = AuswertungPro.Next.Application.Ai.Ollama.OllamaConfigProvider.Load();
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
             using var resp = await http.GetAsync(new Uri(config.BaseUri, "/api/tags"), ct);
             return resp.IsSuccessStatusCode
@@ -130,7 +130,7 @@ public sealed class WalkerHealthCheck
     {
         try
         {
-            var config = Ollama.OllamaConfigExtensions.Load();
+            var config = AuswertungPro.Next.Application.Ai.Ollama.OllamaConfigProvider.Load();
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
             using var resp = await http.GetAsync(new Uri(config.BaseUri, "/api/tags"), ct);
             if (!resp.IsSuccessStatusCode)

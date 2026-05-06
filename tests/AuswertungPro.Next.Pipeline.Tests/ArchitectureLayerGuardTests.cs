@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.QualityGate;
-using AuswertungPro.Next.UI.Ai.Shared;
+using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;

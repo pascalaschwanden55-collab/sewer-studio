@@ -9,12 +9,11 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.Teacher;
-using AuswertungPro.Next.UI.Ai.Training.Models;
-using AuswertungPro.Next.UI.Ai.Training.Services;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.UI.Ai.Training.Services;
+using AuswertungPro.Next.UI.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
