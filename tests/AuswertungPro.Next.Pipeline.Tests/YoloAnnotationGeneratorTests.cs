@@ -2,6 +2,7 @@ using System.IO;
 using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.UI.Ai.Training.Services;
 using AuswertungPro.Next.Application.Ai.Training.Models;
+using AuswertungPro.Next.Application.Ai.Training.Services;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 

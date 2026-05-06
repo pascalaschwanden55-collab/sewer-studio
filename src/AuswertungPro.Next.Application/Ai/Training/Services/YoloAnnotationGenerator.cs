@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.IO;
-using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.Application.Ai.Training.Models;
+using AuswertungPro.Next.Application.Ai.Training.Services;
 
-namespace AuswertungPro.Next.UI.Ai.Training.Services;
+namespace AuswertungPro.Next.Application.Ai.Training.Services;
 
 /// <summary>
 /// Konvertiert GroundTruthEntry + Frame-Paare in YOLO-Format-Labels
