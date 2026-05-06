@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.UI.Ai;
 using Xunit;
 

@@ -5,10 +5,9 @@ using System.Linq;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.UI.Ai.Training.Services;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 
-namespace AuswertungPro.Next.UI.Ai.Training.Models;
+namespace AuswertungPro.Next.Application.Ai.Training.Models;
 
 /// <summary>Anfrage fuer einen Video-Blinddurchlauf mit Differenzanalyse.</summary>
 public sealed record VideoTrainingRequest

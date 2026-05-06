@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using System.Net.Http;
 using System.Reflection;
 using AuswertungPro.Next.UI.Ai;

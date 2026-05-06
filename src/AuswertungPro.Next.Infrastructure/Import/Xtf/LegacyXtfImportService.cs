@@ -577,6 +577,25 @@ public sealed class LegacyXtfImportService
         public string SchadenlageAnfang { get; set; } = "";
         public string SchadenlageEnde { get; set; } = "";
         public double LL { get; set; }
+        public string Videozaehlerstand { get; set; } = "";
+    }
+
+    /// <summary>
+    /// Parst den IBAK-Videozaehlerstand im Format "HH:MM:SS:FF" (Frames).
+    /// Toleriert auch "HH:MM:SS" und "H:MM:SS" ohne Frames.
+    /// </summary>
+    private static bool TryParseVideozaehlerstand(string? raw, out TimeSpan ts)
+    {
+        ts = default;
+        if (string.IsNullOrWhiteSpace(raw)) return false;
+        var parts = raw.Split(':');
+        if (parts.Length < 3 || parts.Length > 4) return false;
+        if (!int.TryParse(parts[0], out var hh)) return false;
+        if (!int.TryParse(parts[1], out var mm)) return false;
+        if (!int.TryParse(parts[2], out var ss)) return false;
+        if (hh < 0 || mm < 0 || mm >= 60 || ss < 0 || ss >= 60) return false;
+        ts = new TimeSpan(hh, mm, ss);
+        return true;
     }
 
     private static List<HaltungRecord> ParseVsaKek(XDocument doc, string sourcePath, out Dictionary<string, List<VsaFinding>> findingsPerHaltung)
@@ -676,6 +695,17 @@ public sealed class LegacyXtfImportService
                         s.SchadenlageEnde = child.Value;
                         if (double.TryParse(child.Value.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var ende))
                             finding.SchadenlageEnde = ende;
+                        break;
+                    case "Videozaehlerstand":
+                        // IBAK VSA_KEK_2020 Format: "HH:MM:SS:FF" (FF = Frames, 25 fps).
+                        // Frames ignoriert, Sekunden-Genauigkeit reicht fuer Meter-Mapping.
+                        // VsaFinding.Timestamp ist fuer Aufnahme-Datum reserviert — wir speichern
+                        // den Video-Offset als MPEG-String (bestehende Pipeline-Konvention).
+                        if (TryParseVideozaehlerstand(child.Value, out var videoTs))
+                        {
+                            s.Videozaehlerstand = child.Value;
+                            finding.MPEG = videoTs.ToString(@"hh\:mm\:ss");
+                        }
                         break;
                 }
             }

@@ -18,7 +18,6 @@ using System.Windows.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.QualityGate;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.Application.Ai.Pipeline;

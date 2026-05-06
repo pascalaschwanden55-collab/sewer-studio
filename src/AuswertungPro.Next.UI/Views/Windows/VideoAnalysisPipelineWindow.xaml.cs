@@ -1,4 +1,6 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
+using AuswertungPro.Next.Domain.Ai.Vision;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;

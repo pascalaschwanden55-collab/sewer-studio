@@ -1,4 +1,6 @@
 using System;
+using AuswertungPro.Next.Domain.Ai.Vision;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -122,7 +124,7 @@ public class QwenModelComparisonTest
         _output.WriteLine($"Eskalation: AUS");
         _output.WriteLine("");
 
-        var config = OllamaConfig.Load();
+        var config = OllamaConfigExtensions.Load();
         using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
 
         // Phase 1: Base
@@ -230,7 +232,7 @@ public class QwenModelComparisonTest
         _output.WriteLine($"Eskalation: AUS (referenceModel=null)");
         _output.WriteLine("");
 
-        var config = OllamaConfig.Load();
+        var config = OllamaConfigExtensions.Load();
         using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
 
         // Phase 1: Base-Modell

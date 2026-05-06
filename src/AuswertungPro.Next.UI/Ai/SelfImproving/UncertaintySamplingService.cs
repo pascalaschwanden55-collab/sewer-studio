@@ -3,10 +3,10 @@ using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Collections.Generic;
 using System.Linq;
-using AuswertungPro.Next.UI.Ai.QualityGate;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training.Models;
 using Microsoft.Extensions.Logging;
+using AuswertungPro.Next.Application.Ai.Training.Models;
 
 namespace AuswertungPro.Next.UI.Ai.SelfImproving;
 

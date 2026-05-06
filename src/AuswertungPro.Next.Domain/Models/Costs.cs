@@ -66,6 +66,18 @@ public sealed record CostLine
     public bool TransferMarked { get; set; }
     public bool IsPriceOverridden { get; set; }
     public bool IsQtyOverridden { get; set; }
+
+    /// <summary>Submissions-Position-Code (z.B. "2.1.1", "600.4") - aus Submissions-Katalog.</summary>
+    public string? SubmissionPos { get; set; }
+
+    /// <summary>Marktpreis-Min aus Submissions-Daten (CHF/Einheit).</summary>
+    public decimal? MarktpreisMin { get; set; }
+
+    /// <summary>Marktpreis-Max aus Submissions-Daten (CHF/Einheit).</summary>
+    public decimal? MarktpreisMax { get; set; }
+
+    /// <summary>Anzahl Anbieter im Marktpreis-Vergleich.</summary>
+    public int? MarktpreisAnzahl { get; set; }
 }
 
 public sealed record MeasureCost

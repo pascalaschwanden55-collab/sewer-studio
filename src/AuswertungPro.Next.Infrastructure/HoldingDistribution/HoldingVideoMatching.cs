@@ -126,14 +126,80 @@ internal static class HoldingVideoMatching
                 haltungOnly = withDate;
         }
 
+        // KIAS-Konvention: "<haltung>~G.mpg" ist die Gegeninspektion (Run in Gegenrichtung).
+        // Bei mehrdeutigen Treffern den Nicht-G-Treffer als Standard-Video bevorzugen
+        // - das Gegen-Video wird separat per FindGegenrichtungVideo gesucht.
+        if (haltungOnly.Count > 1)
+        {
+            var nonGegen = haltungOnly.Where(f => !IsGegenrichtungFile(f)).ToList();
+            if (nonGegen.Count == 1)
+                haltungOnly = nonGegen;
+            else if (nonGegen.Count > 1)
+                haltungOnly = nonGegen;
+        }
+
+        // KIAS-Konvention: "<haltung>~1.mpg", "~2.mpg" sind Folge-/Wiederholungs-Aufnahmen.
+        // Hauptaufnahme = Datei ohne Tilde-Suffix - bevorzugen, wenn vorhanden.
+        if (haltungOnly.Count > 1)
+        {
+            var primary = haltungOnly.Where(f => !HasTildeSuffix(f)).ToList();
+            if (primary.Count == 1)
+                haltungOnly = primary;
+        }
+
         if (haltungOnly.Count == 1)
-            return new HoldingFolderDistributor.VideoFindResult(HoldingFolderDistributor.VideoMatchStatus.Matched, haltungOnly[0], Array.Empty<string>(),
-                "Warnung: Zuordnung nur ueber Haltungsname (ohne Datumsabgleich)");
+            return new HoldingFolderDistributor.VideoFindResult(
+                HoldingFolderDistributor.VideoMatchStatus.MatchedWithoutDate,
+                haltungOnly[0],
+                Array.Empty<string>(),
+                "Warnung: Zuordnung nur ueber Haltungsname (ohne Datumsabgleich) - bei Wiederholungsinspektionen manuell pruefen");
         if (haltungOnly.Count > 1)
             return new HoldingFolderDistributor.VideoFindResult(HoldingFolderDistributor.VideoMatchStatus.Ambiguous, null, haltungOnly, "Multiple haltung-only matches (Datum nicht geprueft)");
 
         return new HoldingFolderDistributor.VideoFindResult(HoldingFolderDistributor.VideoMatchStatus.NotFound, null, Array.Empty<string>(), "No video found (fallback)");
     }
+
+    /// <summary>
+    /// Liefert (falls vorhanden) das KIAS-Gegeninspektions-Video "&lt;haltung&gt;~G.ext".
+    /// Erkennt sowohl die Tilde-Variante "~G" (KIAS/IBAK 2026) als auch das alte
+    /// suffix-g-Schema. Liefert NotFound wenn kein passendes File existiert.
+    /// </summary>
+    public static HoldingFolderDistributor.VideoFindResult FindGegenrichtungVideo(
+        string haltung,
+        IReadOnlyList<string> files)
+    {
+        var hKey = NormalizeKey(haltung);
+        if (string.IsNullOrWhiteSpace(hKey))
+            return new HoldingFolderDistributor.VideoFindResult(
+                HoldingFolderDistributor.VideoMatchStatus.NotFound, null, Array.Empty<string>(), null);
+
+        var matches = files.Where(f =>
+        {
+            var name = Path.GetFileNameWithoutExtension(f);
+            var nameKey = NormalizeKey(name);
+            // Gegen-Marker: "~G", "_G_" oder reines suffix "g".
+            return nameKey.Contains(hKey, StringComparison.OrdinalIgnoreCase) && IsGegenrichtungFile(f);
+        }).ToList();
+
+        if (matches.Count == 1)
+            return new HoldingFolderDistributor.VideoFindResult(
+                HoldingFolderDistributor.VideoMatchStatus.MatchedWithoutDate,
+                matches[0],
+                Array.Empty<string>(),
+                "Gegeninspektion (~G) ueber Haltungsname zugeordnet");
+        if (matches.Count > 1)
+            return new HoldingFolderDistributor.VideoFindResult(
+                HoldingFolderDistributor.VideoMatchStatus.Ambiguous, null, matches, "Mehrere Gegeninspektions-Kandidaten");
+
+        return new HoldingFolderDistributor.VideoFindResult(
+            HoldingFolderDistributor.VideoMatchStatus.NotFound, null, Array.Empty<string>(), null);
+    }
+
+    private static bool IsGegenrichtungFile(string path)
+        => Import.Ibak.KiasExportPattern.IsGegenrichtungName(Path.GetFileNameWithoutExtension(path) ?? "");
+
+    private static bool HasTildeSuffix(string path)
+        => Import.Ibak.KiasExportPattern.HasTildeSuffix(Path.GetFileNameWithoutExtension(path) ?? "");
 
     private static string? GetSuffixFromFirstUnderscore(string fileName)
     {

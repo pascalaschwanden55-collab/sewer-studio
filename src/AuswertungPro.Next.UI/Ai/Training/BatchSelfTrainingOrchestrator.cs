@@ -14,6 +14,7 @@ using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.UI.Ai.Training.Services;
 using Microsoft.Extensions.Logging;
+using AuswertungPro.Next.Application.Ai.Training.Models;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
@@ -670,7 +671,7 @@ public sealed class BatchSelfTrainingOrchestrator
                 var kiConf = entry.KiDetection?.Confidence ?? 0;
 
                 // Nachbar-Frame-Konsistenz: vereinfacht — wenn TP dann stabil
-                bool neighborMatch = entry.Category == Models.DifferenceCategory.TruePositive;
+                bool neighborMatch = entry.Category == AuswertungPro.Next.Application.Ai.Training.Models.DifferenceCategory.TruePositive;
 
                 var quality = Infrastructure.Import.WinCan.YoloTrainingDataGenerator.ClassifyQuality(
                     opCode, kiLabel, kiConf, boxAreaNorm: 0.3, neighborMatch);
@@ -682,7 +683,7 @@ public sealed class BatchSelfTrainingOrchestrator
                 double by2 = entry.KiDetection?.BboxY2 ?? 0.9;
 
                 // FP → Negativ-Beispiel (leeres Label)
-                if (entry.Category == Models.DifferenceCategory.FalsePositive)
+                if (entry.Category == AuswertungPro.Next.Application.Ai.Training.Models.DifferenceCategory.FalsePositive)
                 {
                     yoloClassId = -1;
                     quality = "green"; // FP-Frames sind wertvolle Negativ-Beispiele

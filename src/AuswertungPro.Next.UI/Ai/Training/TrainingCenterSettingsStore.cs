@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Ai.Training
 {

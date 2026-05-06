@@ -60,10 +60,10 @@ public static class EvalSetGenerator
         {
             foreach (var evt in p.Ereignisse)
             {
-                // Frame-Pfad konstruieren (wie InspectionFrameExtractor)
-                var haltungDir = Path.Combine(framesDir, SanitizeName(p.HaltungKey));
-                var frameName = $"{evt.ZeitSek:F1}s_{evt.CodeFull}_t+0.png";
-                var framePath = Path.Combine(haltungDir, frameName);
+                // Frame-Pfad konstruieren (wie InspectionFrameExtractor:52 — flach mit HaltungKey im Filename)
+                var safeKey = SanitizeName(p.HaltungKey);
+                var frameName = $"{safeKey}_{evt.ZeitSek:F1}s_{SanitizeName(evt.CodeFull)}_t+0.png";
+                var framePath = Path.Combine(framesDir, frameName);
 
                 if (File.Exists(framePath))
                     allEvents.Add((p, evt, framePath));
@@ -129,9 +129,9 @@ public static class EvalSetGenerator
                 if ((gap.DistanzM ?? 0) < 3.0) continue; // Nur grosse Luecken
 
                 var mitteZeit = (gap.VonZeit + gap.BisZeit) / 2.0;
-                var haltungDir = Path.Combine(framesDir, SanitizeName(p.HaltungKey));
-                var frameName = $"{mitteZeit:F1}s_kein_schaden.png";
-                var framePath = Path.Combine(haltungDir, frameName);
+                var safeKey = SanitizeName(p.HaltungKey);
+                var frameName = $"{safeKey}_{mitteZeit:F1}s_kein_schaden.png";
+                var framePath = Path.Combine(framesDir, frameName);
 
                 if (File.Exists(framePath) && usedFrames.Add(framePath))
                 {

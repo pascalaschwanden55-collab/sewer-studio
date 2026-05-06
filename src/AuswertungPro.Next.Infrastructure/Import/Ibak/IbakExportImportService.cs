@@ -46,6 +46,14 @@ public sealed class IbakExportImportService : IIbakImportService
             return Result<ImportStats>.Fail("IBAK_DATEN_MISSING", "Keine IBAK Daten.txt im Export gefunden.");
 
         var messages = new List<string>();
+
+        // KIAS-Pattern protokollieren - der Importer nutzt automatisch PDF-Stammdaten,
+        // FDB-Topologie und KIAS-Dateinamenkonvention wenn diese vorhanden sind.
+        var kiasPattern = KiasExportPattern.Detect(exportRoot);
+        if (kiasPattern.IsKias)
+        {
+            messages.Add($"KIAS-Export erkannt: {kiasPattern.HoldingPdfCount} H-PDFs, {kiasPattern.LateralPdfCount} L-PDFs, {kiasPattern.GegenrichtungVideoCount} ~G-Gegen-Videos, {kiasPattern.RepeatTakeVideoCount} ~N-Wiederholungen");
+        }
         var found = 0;
         var updated = 0;
         var errors = 0;
@@ -55,6 +63,26 @@ public sealed class IbakExportImportService : IIbakImportService
         var photoMap = LoadPhotoMap(exportRoot, fileIndex, messages);
         var protocolService = new ProtocolService();
         var created = 0;
+
+        // Stammdaten aus mehreren Quellen aggregieren: XTF (hoechste Prio,
+        // strukturiertes ISYBAU/SIA405-Modell) > PDF (Stammdatenblock) > FDB (Lt/Sc-Records).
+        // AED/AEC aus Daten.txt sind nur Wechsel-Marker und werden weiter unten als
+        // letzter Fallback genutzt.
+        IReadOnlyDictionary<string, StammdatenAggregator.AggregatedStammdaten> stammdaten;
+        try
+        {
+            (stammdaten, _) = StammdatenAggregator.Build(exportRoot, messages);
+        }
+        catch (Exception ex)
+        {
+            stammdaten = new Dictionary<string, StammdatenAggregator.AggregatedStammdaten>(StringComparer.OrdinalIgnoreCase);
+            messages.Add($"Stammdaten-Aggregation fehlgeschlagen: {ex.Message}");
+        }
+
+        // Topologie aus FDB (zur Validierung der Haltungsnamen)
+        var fdbTopology = KiasFdbTopologyReader.LoadHoldings(exportRoot, messages);
+        if (fdbTopology.Count > 0)
+            messages.Add($"FDB-Topologie geladen: {fdbTopology.Count} Haltungen");
 
         try
         {
@@ -68,6 +96,11 @@ public sealed class IbakExportImportService : IIbakImportService
                     "Haltungen importieren", holdingIndex, parsed.Count,
                     $"IBAK {holdingIndex}/{parsed.Count}", holding.Holding));
                 var key = NormalizeHoldingKey(holding.Holding);
+
+                // FDB-Validierung: warne wenn Daten.txt-Haltung nicht in der FDB-Topologie liegt.
+                if (fdbTopology.Count > 0 && !fdbTopology.ContainsKey(key))
+                    messages.Add($"Warnung: Haltung {holding.Holding} (Daten.txt) nicht in KIAS-FDB-Topologie gefunden");
+
                 var record = FindRecord(project, key);
                 if (record is null)
                 {
@@ -75,6 +108,7 @@ public sealed class IbakExportImportService : IIbakImportService
                     record = new HaltungRecord();
                     record.SetFieldValue("Haltungsname", holding.Holding, FieldSource.Legacy, userEdited: false);
                     ApplyHeaderFields(record, holding.Entries);
+                    ApplyAggregatedStammdaten(record, key, stammdaten);
                     project.Data.Add(record);
                     created++;
                     messages.Add($"Haltung neu erstellt aus IBAK: {holding.Holding}");
@@ -89,8 +123,10 @@ public sealed class IbakExportImportService : IIbakImportService
                     continue;
                 }
 
-                // Stammdaten (DN, Material, Haltungslänge) auch für bestehende Records aktualisieren
+                // Stammdaten: AED/AEC als unterster Fallback, dann aggregierte
+                // Stammdaten (XTF > PDF > FDB) ueberschreiben.
                 ApplyHeaderFields(record, holding.Entries);
+                ApplyAggregatedStammdaten(record, key, stammdaten);
 
                 ApplyPhotosToEntries(holding.Holding, holding.Entries, fileIndex, photoMap, messages);
                 ApplyProtocol(record, holding.Entries, protocolService);
@@ -803,9 +839,54 @@ public sealed class IbakExportImportService : IIbakImportService
     }
 
     /// <summary>
+    /// Schreibt aggregierte Stammdaten (XTF + PDF + FDB) in den HaltungRecord.
+    /// Quellen-Prioritaet ist im StammdatenAggregator festgelegt.
+    /// User-editierte Felder bleiben unangetastet (FieldMeta.UserEdited).
+    /// </summary>
+    private static void ApplyAggregatedStammdaten(
+        HaltungRecord record,
+        string holdingKey,
+        IReadOnlyDictionary<string, StammdatenAggregator.AggregatedStammdaten> index)
+    {
+        if (index.Count == 0 || string.IsNullOrWhiteSpace(holdingKey))
+            return;
+
+        if (!index.TryGetValue(holdingKey, out var s))
+        {
+            // Knoten-Prefix-tolerant suchen (07.1028055-10.1064892 vs 1028055-1064892).
+            var stripped = StripNodePrefixes(holdingKey);
+            s = index.FirstOrDefault(kv => string.Equals(StripNodePrefixes(kv.Key), stripped, StringComparison.OrdinalIgnoreCase)).Value;
+            if (s is null)
+                return;
+        }
+
+        TrySetIfNotEdited(record, "Rohrmaterial",     s.Material.Value);
+        TrySetIfNotEdited(record, "DN_mm",            s.DN_mm.Value?.ToString(CultureInfo.InvariantCulture));
+        TrySetIfNotEdited(record, "Haltungslaenge_m", s.Laenge_m.Value?.ToString("F2", CultureInfo.InvariantCulture));
+        TrySetIfNotEdited(record, "Geometrie",        s.Geometrie.Value);
+        TrySetIfNotEdited(record, "Nutzungsart",      s.Nutzungsart.Value);
+        TrySetIfNotEdited(record, "Profilbreite_mm",  s.Profilbreite_mm.Value?.ToString(CultureInfo.InvariantCulture));
+        TrySetIfNotEdited(record, "Strasse",          s.Strasse.Value);
+        TrySetIfNotEdited(record, "Ort",              s.Ort.Value);
+    }
+
+    private static void TrySetIfNotEdited(HaltungRecord record, string field, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+        var meta = record.FieldMeta.TryGetValue(field, out var m) ? m : null;
+        if (meta is { UserEdited: true })
+            return;
+        record.SetFieldValue(field, value, FieldSource.Legacy, userEdited: false);
+    }
+
+    /// <summary>
     /// Extrahiert Stammdaten aus IBAK-Header-Einträgen (AEC, AED, AEF)
     /// und setzt die entsprechenden Felder auf dem Record.
     /// Haltungslänge = Inspektionslänge (BCE Rohrende); AEF Baulänge nur als Fallback.
+    /// HINWEIS: AED ist ein Materialwechsel-Marker, nicht das Hauptmaterial der
+    /// Haltung. ApplyPdfStammdaten ueberschreibt diese Werte daher anschliessend
+    /// mit den PDF-Stammdaten - falls vorhanden.
     /// </summary>
     private static void ApplyHeaderFields(HaltungRecord record, List<ProtocolEntry> entries)
     {

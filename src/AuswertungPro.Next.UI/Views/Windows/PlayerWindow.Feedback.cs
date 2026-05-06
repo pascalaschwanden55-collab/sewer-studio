@@ -1,4 +1,7 @@
 using System;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Vision;
+using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.IO;
@@ -8,10 +11,10 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.Ollama;
-using AuswertungPro.Next.UI.Ai.QualityGate;
 using AuswertungPro.Next.UI.Ai.SelfImproving;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 

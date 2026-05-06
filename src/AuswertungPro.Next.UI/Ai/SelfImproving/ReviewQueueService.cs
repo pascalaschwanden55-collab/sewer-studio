@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Vision;
 using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Domain.Ai.Training;
@@ -6,7 +7,6 @@ using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.QualityGate;
 using AuswertungPro.Next.UI.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Ai.SelfImproving;

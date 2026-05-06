@@ -9,6 +9,7 @@ using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Application.Ai.Training.Models;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -251,8 +252,8 @@ public partial class VideoTrainingReviewWindow : Window
             await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
 
             // Entscheidung automatisch auf "Protokoll korrekt" setzen
-            if (entry.Decision == Ai.Training.Models.ReviewDecision.Pending)
-                entry.Decision = Ai.Training.Models.ReviewDecision.ProtocolCorrect;
+            if (entry.Decision == AuswertungPro.Next.Application.Ai.Training.Models.ReviewDecision.Pending)
+                entry.Decision = AuswertungPro.Next.Application.Ai.Training.Models.ReviewDecision.ProtocolCorrect;
 
             vm.StatusText = $"Markierung {vsaCode} gespeichert → teacher_annotations.json";
         }

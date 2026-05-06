@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Threading.Tasks;

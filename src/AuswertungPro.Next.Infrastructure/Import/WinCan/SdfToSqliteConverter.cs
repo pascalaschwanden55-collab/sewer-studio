@@ -36,8 +36,9 @@ public static class SdfToSqliteConverter
     /// <summary>
     /// Konvertiert die SDF in eine SQLite .db3. Standard-Ziel:
     /// C:\KI_BRAIN\sdf_converted\{SdfName}.db3
+    /// CancellationToken bricht laufende PowerShell-/Python-Prozesse hart ab.
     /// </summary>
-    public static string Convert(string sdfPath, string? outputPath = null)
+    public static string Convert(string sdfPath, string? outputPath = null, CancellationToken ct = default)
     {
         if (!File.Exists(sdfPath))
             throw new FileNotFoundException("SDF nicht gefunden", sdfPath);
@@ -50,8 +51,6 @@ public static class SdfToSqliteConverter
             Path.GetFileNameWithoutExtension(sdfPath) + ".db3");
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
-        // Scripts: relativ zum Repo-Root via AppDomain.BaseDirectory/../../../../tools
-        // (bin\Debug\net10.0-windows...) Fallback: via Environment-Hint.
         var toolsDir = FindToolsDir();
         if (toolsDir is null)
             throw new InvalidOperationException(
@@ -60,14 +59,18 @@ public static class SdfToSqliteConverter
         var ps1 = Path.Combine(toolsDir, "convert_sdf_to_db3.ps1");
         var py = Path.Combine(toolsDir, "sdf_json_to_sqlite.py");
 
+        ct.ThrowIfCancellationRequested();
+
         // Schritt 1: PowerShell-Export → JSON-Pfad auf stdout
-        var jsonPath = RunPowerShell(ps1, sdfPath);
+        var jsonPath = RunPowerShell(ps1, sdfPath, ct);
         if (string.IsNullOrWhiteSpace(jsonPath) || !File.Exists(jsonPath))
             throw new InvalidOperationException(
                 $"PowerShell-Konvertierung lieferte keine JSON-Datei. Letzter stdout: '{jsonPath}'");
 
+        ct.ThrowIfCancellationRequested();
+
         // Schritt 2: Python → SQLite
-        try { RunPython(py, jsonPath, outputPath); }
+        try { RunPython(py, jsonPath, outputPath, ct); }
         finally { try { File.Delete(jsonPath); } catch { /* best-effort */ } }
 
         if (!File.Exists(outputPath))
@@ -89,16 +92,17 @@ public static class SdfToSqliteConverter
         return null;
     }
 
-    private static string RunPowerShell(string scriptPath, string sdfPath)
+    private static string RunPowerShell(string scriptPath, string sdfPath, CancellationToken ct = default)
     {
         // Zentraler ProcessRunner mit asynchronem Drain + Timeout (Audit STAB-H1).
+        // CancellationToken kann den PowerShell-Prozess hart abbrechen (Audit-Fix: SDF-Cancel).
         var args = new[]
         {
             "-NoProfile", "-ExecutionPolicy", "Bypass",
             "-File", scriptPath, "-SdfPath", sdfPath
         };
         var result = AuswertungPro.Next.Application.Common.ProcessRunner
-            .RunAsync("powershell.exe", args, timeout: TimeSpan.FromMinutes(15))
+            .RunAsync("powershell.exe", args, timeout: TimeSpan.FromMinutes(15), ct: ct)
             .GetAwaiter().GetResult();
 
         if (result.StartFailed)
@@ -120,16 +124,17 @@ public static class SdfToSqliteConverter
         return result.Stdout.Trim();
     }
 
-    private static void RunPython(string scriptPath, string jsonPath, string outDb3)
+    private static void RunPython(string scriptPath, string jsonPath, string outDb3, CancellationToken ct = default)
     {
         // Zentraler ProcessRunner mit asynchronem Drain + Timeout (Audit STAB-H1).
+        // CancellationToken bricht laufenden Python-Prozess hart ab.
         var args = new[] { scriptPath, jsonPath, outDb3 };
         var env = new System.Collections.Generic.Dictionary<string, string>
         {
             ["PYTHONIOENCODING"] = "utf-8"
         };
         var result = AuswertungPro.Next.Application.Common.ProcessRunner
-            .RunAsync("python", args, timeout: TimeSpan.FromMinutes(15), environment: env)
+            .RunAsync("python", args, timeout: TimeSpan.FromMinutes(15), environment: env, ct: ct)
             .GetAwaiter().GetResult();
 
         if (result.StartFailed)

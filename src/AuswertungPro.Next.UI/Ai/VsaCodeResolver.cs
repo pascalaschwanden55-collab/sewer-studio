@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
-using AuswertungPro.Next.UI.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -245,95 +244,11 @@ public static class VsaCodeResolver
         return raw.Trim();
     }
 
-    // ── Sensor-Fusion: YOLO-cls + Meterstand + Import-Kontext ──
-
-    /// <summary>
-    /// Ergebnis der Code-Aufloesung: Bester VSA-Code mit Konfidenz und Quelle.
-    /// </summary>
-    public sealed record ResolvedCode(string Code, double Confidence, string Source);
-
-    /// <summary>
-    /// Kombiniert YOLO-cls Wahrscheinlichkeiten mit Meterstand und Import-Kontext
-    /// fuer zuverlaessige VSA-Code-Zuweisung (Sensor-Fusion).
-    /// Regellogik in C# (Business Logic), Sidecar liefert nur rohe Predictions.
-    /// </summary>
-    public static ResolvedCode? ResolveFromClassifier(
-        IReadOnlyList<YoloClassifyPrediction>? predictions,
-        double currentMeter,
-        double totalLength,
-        IReadOnlyList<(string Code, string Description, double Meter)>? importContext = null)
-    {
-        if (predictions == null || predictions.Count == 0)
-            return null;
-
-        var top1 = predictions[0];
-        var top1Code = top1.ClassName.ToUpperInvariant();
-        var top1Conf = top1.Confidence;
-
-        // BCD/BCE-Konfidenz aus Top-K extrahieren (auch wenn nicht Top-1)
-        var bcdConf = predictions
-            .FirstOrDefault(p => string.Equals(p.ClassName, "BCD", StringComparison.OrdinalIgnoreCase))
-            ?.Confidence ?? 0;
-        var bceConf = predictions
-            .FirstOrDefault(p => string.Equals(p.ClassName, "BCE", StringComparison.OrdinalIgnoreCase))
-            ?.Confidence ?? 0;
-
-        // ── Meterstand-basierte Regeln (Sensor-Fusion) ──
-
-        // Rohranfang: Meter < 0.5m UND (BCD Top-1 ODER BCD-Konfidenz > 20%)
-        if (currentMeter < 0.5 && (top1Code == "BCD" || bcdConf > 0.20))
-        {
-            return new ResolvedCode("BCD", Math.Max(bcdConf, 0.80),
-                $"Meter {currentMeter:F2}m + YOLO BCD {bcdConf:P0}");
-        }
-
-        // Rohrende: Meter > 90% Gesamtlaenge UND (BCE Top-1 ODER BCE-Konfidenz > 20%)
-        if (totalLength > 1 && currentMeter > totalLength * 0.90
-            && (top1Code == "BCE" || bceConf > 0.20))
-        {
-            return new ResolvedCode("BCE", Math.Max(bceConf, 0.80),
-                $"Meter {currentMeter:F2}/{totalLength:F1}m + YOLO BCE {bceConf:P0}");
-        }
-
-        // ── Import-Kontext Boost ──
-        // Import-Befund in der Naehe (+/- 1.5m) + YOLO erkennt gleiche Familie
-        if (importContext != null && importContext.Count > 0 && top1Conf > 0.30)
-        {
-            var family = top1Code.Length >= 3 ? top1Code[..3] : top1Code;
-            var nearbyImport = importContext
-                .Where(ic => !string.IsNullOrWhiteSpace(ic.Code)
-                    && ic.Code.StartsWith(family, StringComparison.OrdinalIgnoreCase)
-                    && Math.Abs(ic.Meter - currentMeter) < 1.5)
-                .OrderBy(ic => Math.Abs(ic.Meter - currentMeter))
-                .FirstOrDefault();
-
-            if (!string.IsNullOrWhiteSpace(nearbyImport.Code))
-            {
-                return new ResolvedCode(nearbyImport.Code, top1Conf,
-                    $"YOLO {top1Code} {top1Conf:P0} + Import {nearbyImport.Code} @ {nearbyImport.Meter:F1}m");
-            }
-        }
-
-        // ── Reine YOLO-Klassifikation (ohne Boost) ──
-        if (top1Code != "OTHER" && top1Conf > 0.40)
-        {
-            return new ResolvedCode(top1Code, top1Conf, $"YOLO {top1Code} {top1Conf:P0}");
-        }
-
-        // ── Fallback: Top-2 wenn Top-1 = OTHER ──
-        if (top1Code == "OTHER" && predictions.Count > 1)
-        {
-            var top2 = predictions[1];
-            if (top2.Confidence > 0.15
-                && !string.Equals(top2.ClassName, "OTHER", StringComparison.OrdinalIgnoreCase))
-            {
-                return new ResolvedCode(top2.ClassName.ToUpperInvariant(), top2.Confidence,
-                    $"YOLO Fallback {top2.ClassName} {top2.Confidence:P0} (Top-1 OTHER)");
-            }
-        }
-
-        return null;
-    }
+    // Phase 5.3 vorbereitend: ResolveFromClassifier (Sensor-Fusion mit
+    // YoloClassifyPrediction) wurde nirgends aufgerufen — totes Feature.
+    // Fuer Wiedereinfuehrung muesste YoloClassifyPrediction (UI.Ai.Pipeline.Dtos)
+    // entweder mit nach Application gezogen werden oder als Extension-Method
+    // in UI gehalten werden.
 
     private static bool Has(string text, string term) => text.Contains(term);
 

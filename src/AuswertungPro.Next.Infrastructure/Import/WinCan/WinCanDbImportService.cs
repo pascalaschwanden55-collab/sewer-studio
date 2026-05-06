@@ -29,8 +29,11 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
 
         ctx?.Log.AddEntry("WinCan", "Start", ImportLogStatus.Info, sourceFile: exportRoot);
 
-        // WinCan VX speichert in .sdf (SQL Server Compact) — dafuer gibt es keinen .NET 8 Treiber.
-        // Wenn .sdf vorhanden aber kein .db3, versuche XTF aus Misc/Exchange als Fallback.
+        // WinCan VX speichert in .sdf (SQL Server Compact) — dafuer gibt es keinen .NET 8/10 Treiber.
+        // Wenn .sdf vorhanden aber kein .db3:
+        //   1. Versuche SDF -> SQLite-Konvertierung (SsceDLL + PowerShell + Python)
+        //   2. Wenn das scheitert: XTF-Fallback aus Misc/Exchange
+        //   3. Wenn auch das scheitert: User-Hinweis fuer manuellen XTF-Export
         var dbPath = FindDb3(exportRoot);
         if (string.IsNullOrWhiteSpace(dbPath))
         {
@@ -39,38 +42,92 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             {
                 ctx?.Log.AddEntry("WinCan", "SDF_Detected", ImportLogStatus.Info,
                     sourceFile: sdfPath,
-                    detail: "WinCan VX SDF erkannt — kein .NET 8 Treiber verfuegbar. Suche XTF-Export als Fallback.");
+                    detail: "WinCan VX SDF erkannt - versuche automatische Konvertierung nach SQLite.");
 
-                try
+                // Schritt 1: Auto-Konvertierung SDF -> .db3 (nur wenn SSCE verfuegbar)
+                if (SdfToSqliteConverter.IsSsceAvailable())
                 {
-                    var xtfFallback = TryImportViaXtfFallback(exportRoot, project, sdfPath, ctx);
-                    if (xtfFallback is not null)
-                        return xtfFallback;
+                    try
+                    {
+                        // Ziel-.db3 direkt im selben Ordner wie die SDF -> beim naechsten
+                        // Import wird FindDb3 sie automatisch finden (idempotent).
+                        var targetDb3 = Path.ChangeExtension(sdfPath, ".db3");
+                        ctx?.Log.AddEntry("WinCan", "SDF_Convert_Start", ImportLogStatus.Info,
+                            sourceFile: sdfPath,
+                            detail: $"Konvertierung SDF -> SQLite gestartet (Ziel: {Path.GetFileName(targetDb3)}).");
+
+                        // CancellationToken durchreichen - Import-Cancel beendet jetzt auch lange PowerShell/Python-Prozesse
+                        var convertedPath = SdfToSqliteConverter.Convert(sdfPath, targetDb3, ctx?.CancellationToken ?? default);
+                        if (!string.IsNullOrWhiteSpace(convertedPath) && File.Exists(convertedPath))
+                        {
+                            ctx?.Log.AddEntry("WinCan", "SDF_Convert_Ok", ImportLogStatus.Info,
+                                sourceFile: convertedPath,
+                                detail: $"SDF erfolgreich nach SQLite konvertiert ({new FileInfo(convertedPath).Length / 1024} KB).");
+                            // Mit der konvertierten DB weitermachen
+                            dbPath = convertedPath;
+                            // -> faellt durch zum normalen DB3-Importpfad weiter unten
+                        }
+                        else
+                        {
+                            ctx?.Log.AddEntry("WinCan", "SDF_Convert_NoOutput", ImportLogStatus.Info,
+                                sourceFile: sdfPath,
+                                detail: "Konvertierung lieferte keine Ausgabedatei - faellt zurueck auf XTF-Suche.");
+                        }
+                    }
+                    catch (Exception convEx)
+                    {
+                        ctx?.Log.AddEntry("WinCan", "SDF_Convert_Failed", ImportLogStatus.Info,
+                            sourceFile: sdfPath,
+                            detail: $"SDF-Konvertierung fehlgeschlagen: {convEx.Message} - faellt zurueck auf XTF-Suche.");
+                    }
                 }
-                catch (Exception ex)
+                else
                 {
-                    ctx?.Log.AddEntry("WinCan", "XTF_Fallback_Exception", ImportLogStatus.Error,
-                        sourceFile: sdfPath, detail: ex.Message);
+                    ctx?.Log.AddEntry("WinCan", "SDF_NoSsce", ImportLogStatus.Info,
+                        sourceFile: sdfPath,
+                        detail: "SQL Server Compact 4.0 Runtime nicht installiert - keine Auto-Konvertierung moeglich. Faellt zurueck auf XTF.");
+                }
 
-                    return Result<ImportStats>.Success(new ImportStats(0, 0, 0, 1, 0,
+                // Schritt 2: Falls Konvertierung nicht geklappt hat -> XTF-Fallback
+                if (string.IsNullOrWhiteSpace(dbPath))
+                {
+                    try
+                    {
+                        var xtfFallback = TryImportViaXtfFallback(exportRoot, project, sdfPath, ctx);
+                        if (xtfFallback is not null)
+                            return xtfFallback;
+                    }
+                    catch (Exception ex)
+                    {
+                        ctx?.Log.AddEntry("WinCan", "XTF_Fallback_Exception", ImportLogStatus.Error,
+                            sourceFile: sdfPath, detail: ex.Message);
+
+                        return Result<ImportStats>.Success(new ImportStats(0, 0, 0, 1, 0,
+                            new[]
+                            {
+                                $"WinCan VX SDF erkannt ({Path.GetFileName(sdfPath)})",
+                                "Auto-Konvertierung SDF -> SQLite scheiterte oder SSCE 4.0 fehlt.",
+                                $"XTF-Fallback fehlgeschlagen mit Fehler: {ex.Message}"
+                            }));
+                    }
+
+                    // Schritt 3: Weder Konvertierung noch XTF -> User-Hinweis
+                    return Result<ImportStats>.Success(new ImportStats(0, 0, 0, 0, 0,
                         new[]
                         {
-                            $"WinCan VX SDF erkannt ({Path.GetFileName(sdfPath)})",
-                            $"XTF-Fallback fehlgeschlagen mit Fehler: {ex.Message}"
+                            $"WinCan VX SDF erkannt ({Path.GetFileName(sdfPath)}), aber Import nicht moeglich:",
+                            SdfToSqliteConverter.IsSsceAvailable()
+                                ? "  - Auto-Konvertierung SDF -> SQLite scheiterte (siehe Log)."
+                                : "  - SQL Server Compact 4.0 nicht installiert (SSCERuntime_x64-ENU.exe).",
+                            "  - Kein XTF-Export im Projekt gefunden (Misc/, Exchange/, Export/, XTF/, Root).",
+                            "Loesungen: SSCE 4.0 installieren ODER in WinCan VX 'Export -> INTERLIS 2' erstellen."
                         }));
                 }
-
-                // Kein XTF gefunden → Benutzer informieren
-                return Result<ImportStats>.Success(new ImportStats(0, 0, 0, 0, 0,
-                    new[]
-                    {
-                        $"WinCan VX SDF erkannt ({Path.GetFileName(sdfPath)}), aber kein XTF-Export gefunden.",
-                        "Gesuchte Ordner: Misc/, Exchange/, Export/, XTF/ und Projektroot.",
-                        "Bitte im WinCan VX unter 'Export → INTERLIS 2' einen XTF-Export erstellen und dann per XTF-Import einlesen."
-                    }));
+                // Wenn dbPath jetzt gesetzt ist (SDF erfolgreich konvertiert) -> faellt zum DB3-Pfad durch
             }
 
-            return ImportWithoutDb3(exportRoot, project, "WinCan DB3 nicht gefunden. Fallback auf MDB.", ctx: ctx);
+            if (string.IsNullOrWhiteSpace(dbPath))
+                return ImportWithoutDb3(exportRoot, project, "WinCan DB3 nicht gefunden. Fallback auf MDB.", ctx: ctx);
         }
 
         var messages = new List<string>();

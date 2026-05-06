@@ -1,4 +1,6 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Ollama;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using System.IO;
 using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using Microsoft.Data.Sqlite;
@@ -259,7 +261,7 @@ public sealed class KnowledgeBaseTrainingRunsTests : IDisposable
         // Tests reicht ein Stub-EmbeddingService nicht aus, weil der Manager
         // nur fuer BeginRun/EndRun den Embedder nicht braucht. Wir konstruieren
         // ihn aber ueber den realen Konstruktor mit einem Dummy-Embedder.
-        var ollamaCfg = new AuswertungPro.Next.UI.Ai.Ollama.OllamaConfig(
+        var ollamaCfg = new AuswertungPro.Next.Application.Ai.Ollama.OllamaConfig(
             BaseUri: new Uri("http://localhost:11434"),
             VisionModel: "qwen3-vl",
             TextModel: "qwen3-vl",

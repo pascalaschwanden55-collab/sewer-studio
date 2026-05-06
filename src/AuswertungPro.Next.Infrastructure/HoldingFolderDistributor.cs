@@ -18,7 +18,18 @@ using AuswertungPro.Next.Infrastructure.Import.Pdf;
 
 namespace AuswertungPro.Next.Infrastructure;
 
-public static class HoldingFolderDistributor
+/// <summary>
+/// Hoch-Level-Orchestrator fuer das Verteilen von Inspektions-Sidecar-Dateien
+/// (PDF, TXT, Video, XTF) in Haltungs-Ordner.
+///
+/// Audit-Fix 2026-04: Die Klasse war 4616 Zeilen mit 24 public + 146 private Methoden.
+/// Ueber 'partial class' jetzt physisch auf mehrere Dateien verteilt:
+///   - HoldingFolderDistributor.cs              -> Public API + Distribute/DistributeCore
+///   - HoldingFolderDistributor.DateParsing.cs  -> Date-Regex + Parse-Helpers
+///
+/// Verhalten unveraendert. Tests laufen ohne Anpassung.
+/// </summary>
+public static partial class HoldingFolderDistributor
 {
     private static readonly object SchachtDateIndexSync = new();
     private static readonly Dictionary<string, IReadOnlyDictionary<string, DateTime>> SchachtDateIndexCache =
@@ -108,7 +119,11 @@ public static class HoldingFolderDistributor
         NotChecked,
         Matched,
         NotFound,
-        Ambiguous
+        Ambiguous,
+        /// <summary>Match nur ueber Haltungsname ohne Datum-Verifikation.
+        /// Funktional eine Zuordnung, aber bei mehreren Projekten / Wiederholungsinspektionen
+        /// kann das falsch sein. UI/Devis sollten zur manuellen Pruefung markieren.</summary>
+        MatchedWithoutDate,
     }
 
     public sealed record VideoFindResult(
@@ -354,17 +369,18 @@ public static class HoldingFolderDistributor
                     ? FindVideo(section.VideoFileName, videoSourceFolder, haltung, dateStamp, recursiveVideoSearch, videoFilesCache)
                     : FindVideoByHaltungDate(videoSourceFolder, haltung, dateStamp, recursiveVideoSearch, videoFilesCache);
 
-                if (videoFind.Status != VideoMatchStatus.Matched)
+                // Beide Match-Stati erlauben Kopie: Matched (sicher) + MatchedWithoutDate (Warnung)
+                if (videoFind.Status != VideoMatchStatus.Matched && videoFind.Status != VideoMatchStatus.MatchedWithoutDate)
                 {
                     var fromLink = TryFindVideoFromRecordLink(project, haltung, videoSourceFolder, dateStamp, recursiveVideoSearch, videoFilesCache);
-                    if (fromLink.Status == VideoMatchStatus.Matched)
+                    if (fromLink.Status == VideoMatchStatus.Matched || fromLink.Status == VideoMatchStatus.MatchedWithoutDate)
                         videoFind = fromLink;
                 }
 
                 string? destVideoPath = null;
                 string? infoPath = null;
 
-                if (videoFind.Status == VideoMatchStatus.Matched && videoFind.VideoPath is not null)
+                if ((videoFind.Status == VideoMatchStatus.Matched || videoFind.Status == VideoMatchStatus.MatchedWithoutDate) && videoFind.VideoPath is not null)
                 {
                     var existingVid = FindExistingVideo(holdingFolder, videoFind.VideoPath);
                     if (existingVid is not null)
@@ -3762,14 +3778,20 @@ public static class HoldingFolderDistributor
             ? FindVideoByHaltungDate(videoSourceFolder, haltung, dateStamp, recursiveVideoSearch, videoFilesCache)
             : FindVideo(parsed.VideoFile!, videoSourceFolder, haltung, dateStamp, recursiveVideoSearch, videoFilesCache);
 
-        if (videoFind.Status != VideoMatchStatus.Matched
+        // MatchedWithoutDate (Strategy 3 in FindVideoByHaltungDate, IBAK-Exporte ohne
+        // Datum im Dateinamen) wird gleich behandelt wie Matched - sonst werden korrekt
+        // gefundene Videos nicht kopiert.
+        static bool IsVideoHit(VideoMatchStatus s)
+            => s == VideoMatchStatus.Matched || s == VideoMatchStatus.MatchedWithoutDate;
+
+        if (!IsVideoHit(videoFind.Status)
             && !string.Equals(originalHolding, haltung, StringComparison.OrdinalIgnoreCase))
         {
             var fallback = string.IsNullOrWhiteSpace(parsed.VideoFile)
                 ? FindVideoByHaltungDate(videoSourceFolder, originalHolding, dateStamp, recursiveVideoSearch, videoFilesCache)
                 : FindVideo(parsed.VideoFile!, videoSourceFolder, originalHolding, dateStamp, recursiveVideoSearch, videoFilesCache);
 
-            if (fallback.Status == VideoMatchStatus.Matched
+            if (IsVideoHit(fallback.Status)
                 || (videoFind.Status == VideoMatchStatus.NotFound && fallback.Status == VideoMatchStatus.Ambiguous))
                 videoFind = fallback;
         }
@@ -3777,25 +3799,25 @@ public static class HoldingFolderDistributor
         // Conservative fallback: use imported Link (e.g. HI116 from M150/MDB) when
         // normal matching did not produce a unique hit (NotFound/Ambiguous).
         // This keeps primary behavior but allows M150 mapping to disambiguate.
-        if (videoFind.Status != VideoMatchStatus.Matched)
+        if (!IsVideoHit(videoFind.Status))
         {
             var fromLink = TryFindVideoFromRecordLink(project, haltung, videoSourceFolder, dateStamp, recursiveVideoSearch, videoFilesCache);
-            if (fromLink.Status == VideoMatchStatus.Matched)
+            if (IsVideoHit(fromLink.Status))
                 videoFind = fromLink;
         }
 
         // Last-resort fallback for projects where videos are not named by holding, but M150/MDB carries the mapping.
-        if (videoFind.Status != VideoMatchStatus.Matched)
+        if (!IsVideoHit(videoFind.Status))
         {
             var fromSidecar = TryFindVideoFromSidecarLinks(sidecarVideoLinksByHolding, haltung, videoSourceFolder, dateStamp, recursiveVideoSearch, videoFilesCache);
-            if (fromSidecar.Status == VideoMatchStatus.Matched
+            if (IsVideoHit(fromSidecar.Status)
                 || (videoFind.Status == VideoMatchStatus.NotFound && fromSidecar.Status == VideoMatchStatus.Ambiguous))
                 videoFind = fromSidecar;
         }
 
         // Last-resort fallback for WinCAN exports without MDB:
         // map photo filenames found in PDF pages via CDIndex.txt to video filenames.
-        if (videoFind.Status != VideoMatchStatus.Matched)
+        if (!IsVideoHit(videoFind.Status))
         {
             var fromCdIndex = TryFindVideoFromCdIndexPhotoHints(
                 cdIndexVideoLinksByPhoto,
@@ -3805,13 +3827,37 @@ public static class HoldingFolderDistributor
                 dateStamp,
                 recursiveVideoSearch,
                 videoFilesCache);
-            if (fromCdIndex.Status == VideoMatchStatus.Matched
+            if (IsVideoHit(fromCdIndex.Status)
                 || (videoFind.Status == VideoMatchStatus.NotFound && fromCdIndex.Status == VideoMatchStatus.Ambiguous))
                 videoFind = fromCdIndex;
         }
 
+        // Letzte Rettung: Haltungsname aus dem PDF-Dateinamen ableiten (KIAS/IBAK
+        // Konvention "H_<haltung>.pdf"/"L_<haltung>.pdf"). Notwendig fuer
+        //  - Multi-Anschluss-L-PDFs (Parser zieht teils Gegenrichtung oder Folge-Haltung)
+        //  - Knoten-Prefix-Bugs im Parser ("7.34854-36262" -> "34854-36262")
+        // Greift nur wenn die Standardsuche kein Match brachte.
+        if (!IsVideoHit(videoFind.Status))
+        {
+            var holdingFromName = HoldingFromKiasFilename(sourcePdfPath);
+            if (!string.IsNullOrWhiteSpace(holdingFromName)
+                && !string.Equals(holdingFromName, haltung, StringComparison.OrdinalIgnoreCase))
+            {
+                var fromName = FindVideoByHaltungDate(videoSourceFolder, holdingFromName, dateStamp, recursiveVideoSearch, videoFilesCache);
+                if (IsVideoHit(fromName.Status))
+                {
+                    videoFind = fromName;
+                    // Haltung an den Dateinamen ausrichten - der Zielordner soll dann auch
+                    // unter dem Dateiname-Haltungsnamen liegen, sonst landen Splits in
+                    // einem nicht-existierenden "Pseudo"-Ordner.
+                    haltungRaw = holdingFromName;
+                    haltung = SanitizePathSegment(NormalizeHaltungId(holdingFromName));
+                }
+            }
+        }
+
         var holdingLabelAdjusted = false;
-        if (videoFind.Status == VideoMatchStatus.Matched && videoFind.VideoPath is not null)
+        if (IsVideoHit(videoFind.Status) && videoFind.VideoPath is not null)
         {
             var mappedHolding = TryResolveHoldingFromMatchedVideo(
                 sidecarHoldingsByVideoLink,
@@ -3849,8 +3895,21 @@ public static class HoldingFolderDistributor
                 }
             }
 
-            // Suche Gegeninspektions-Video (Dateiname: Haltungsnummer + 'g' vor Dateiendung)
+            // Suche Gegeninspektions-Video. Zwei Konventionen:
+            //   - Altes Schema "<haltung>g.ext" (suffix-g)
+            //   - KIAS/IBAK 2026 "<haltung>~G.ext"
+            // Erst alt, dann KIAS-Variante als Fallback.
             VideoFindResult videoFindG = FindVideoByHaltungDate(videoSourceFolder, haltung + "g", dateStamp, recursiveVideoSearch, videoFilesCache);
+            if (!IsVideoHit(videoFindG.Status))
+            {
+                var filesForG = videoFilesCache ?? EnumerateVideoFiles(videoSourceFolder, recursiveVideoSearch);
+                var gKias = HoldingVideoMatching.FindGegenrichtungVideo(haltung, filesForG);
+                // Vermeide Doppel-Kopie: wenn Gegen-Video identisch zum Standard-Video ist, ueberspringen.
+                if (IsVideoHit(gKias.Status)
+                    && gKias.VideoPath is not null
+                    && !string.Equals(gKias.VideoPath, videoFind.VideoPath, StringComparison.OrdinalIgnoreCase))
+                    videoFindG = gKias;
+            }
 
             string? destVideoPath = null;
             string? destVideoPathG = null;
@@ -3858,7 +3917,9 @@ public static class HoldingFolderDistributor
             var videoPaths = new List<string>();
 
             // Standard-Video kopieren (Duplikat-Check: gleiche Dateigroesse = bereits vorhanden)
-            if (videoFind.Status == VideoMatchStatus.Matched && videoFind.VideoPath is not null)
+            // MatchedWithoutDate (Strategy 3) wird auch akzeptiert - sonst werden IBAK-Videos
+            // nicht kopiert, weil deren Dateinamen kein Datum enthalten.
+            if (IsVideoHit(videoFind.Status) && videoFind.VideoPath is not null)
             {
                 var videoExt = Path.GetExtension(videoFind.VideoPath);
                 var destVideoName = $"{dateStamp}_{haltung}{videoExt}";
@@ -3893,7 +3954,7 @@ public static class HoldingFolderDistributor
             }
 
             // Gegeninspektions-Video kopieren (falls vorhanden und nicht identisch zum Standard-Video)
-            if (videoFindG.Status == VideoMatchStatus.Matched && videoFindG.VideoPath is not null && !string.Equals(videoFindG.VideoPath, videoFind.VideoPath, StringComparison.OrdinalIgnoreCase))
+            if (IsVideoHit(videoFindG.Status) && videoFindG.VideoPath is not null && !string.Equals(videoFindG.VideoPath, videoFind.VideoPath, StringComparison.OrdinalIgnoreCase))
             {
                 var existingVideoG = FindExistingVideo(holdingFolder, videoFindG.VideoPath);
                 if (existingVideoG is not null)
@@ -3940,6 +4001,13 @@ public static class HoldingFolderDistributor
                 0 => "Video missing",
                 _ => "OK"
             };
+
+            // Warnung anhaengen, wenn Video nur ueber Haltungsname gefunden wurde
+            // (kein Datum im Dateinamen, typisch fuer IBAK-Exporte).
+            if (videoPaths.Count > 0
+                && (videoFind.Status == VideoMatchStatus.MatchedWithoutDate
+                    || videoFindG.Status == VideoMatchStatus.MatchedWithoutDate))
+                message += " [Warnung: Video ohne Datumsabgleich]";
 
             if (!string.IsNullOrWhiteSpace(parsed.Message))
                 message += $" / Parser: {parsed.Message}";
@@ -4435,6 +4503,13 @@ public static class HoldingFolderDistributor
 
     private static string SanitizePathSegment(string value)
         => ProjectPathResolver.SanitizePathSegment(value);
+
+    /// <summary>
+    /// Liest den Haltungsnamen aus dem KIAS/IBAK-PDF-Dateinamen.
+    /// Delegiert an die zentrale KIAS-Pattern-Logik.
+    /// </summary>
+    private static string? HoldingFromKiasFilename(string? pdfPath)
+        => Import.Ibak.KiasExportPattern.HoldingFromKiasFilename(pdfPath);
 
     private static string NormalizeHaltungId(string? value)
     {

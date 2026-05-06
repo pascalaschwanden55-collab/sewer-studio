@@ -67,6 +67,33 @@ public sealed class DevisPositionVorlage
 
     [JsonPropertyName("mengenFormel")]
     public string MengenFormel { get; set; } = "1";
+
+    /// <summary>Submissions-Position (NPK/SIA-konform), z.B. "2.1.1", "600", "700".</summary>
+    [JsonPropertyName("submissionPos")]
+    public string? SubmissionPos { get; set; }
+
+    /// <summary>Marktpreis-Bandbreite aus Submissions-Daten (Min/Median/Max in CHF/Einheit).</summary>
+    [JsonPropertyName("marktpreis")]
+    public Marktpreis? Marktpreis { get; set; }
+}
+
+/// <summary>Markt-Referenzpreis aus realen Submissions (Anbieter-Vergleich).</summary>
+public sealed class Marktpreis
+{
+    [JsonPropertyName("min")]
+    public decimal Min { get; set; }
+
+    [JsonPropertyName("median")]
+    public decimal Median { get; set; }
+
+    [JsonPropertyName("max")]
+    public decimal Max { get; set; }
+
+    [JsonPropertyName("anzahl")]
+    public int Anzahl { get; set; }
+
+    [JsonPropertyName("quelle")]
+    public string Quelle { get; set; } = "";
 }
 
 public sealed class DevisMappingConfig

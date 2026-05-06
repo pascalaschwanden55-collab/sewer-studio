@@ -44,14 +44,17 @@ public sealed class KinsImportService : IKinsImportService
         // Single recursive scan for format detection instead of 5 separate scans
         var (hasDb3, hasMdb, hasFdb, hasDatenTxt, hasKiDvDataTxt) = DetectFormats(exportRoot);
 
+        // KIAS/IBAK-Pattern-Erkennung (Arizona.fdb + Film/ + Daten.txt|Report-PDFs)
+        var kias = AuswertungPro.Next.Infrastructure.Import.Ibak.KiasExportPattern.Detect(exportRoot);
+
         // Heuristik:
         // - KINS-TXT: kiDVDaten.txt vorhanden.
         // - WinCan: DB3 eindeutig, oder MDB ohne Daten.txt/FDB.
-        // - IBAK: Daten.txt/FDB eindeutig.
+        // - IBAK: Daten.txt/FDB eindeutig (KIAS ist eine Sub-Variante von IBAK).
         // - Bei gemischten Bestaenden werden beide Importer ausgefuehrt.
         var runKinsTxt = hasKiDvDataTxt;
         var runWinCan = hasDb3 || (hasMdb && !hasDatenTxt && !hasFdb && !hasKiDvDataTxt);
-        var runIbak = hasDatenTxt || hasFdb;
+        var runIbak = hasDatenTxt || hasFdb || kias.IsKias;
 
         if (!runKinsTxt && !runWinCan && !runIbak)
         {
@@ -64,8 +67,11 @@ public sealed class KinsImportService : IKinsImportService
         {
             "Importquelle: KINS",
             $"Erkennung: kiDVDaten.txt={hasKiDvDataTxt}, DB3={hasDb3}, MDB={hasMdb}, FDB={hasFdb}, Daten.txt={hasDatenTxt}",
+            $"KIAS-Pattern: {(kias.IsKias ? "ja" : "nein")} ({kias.Reason})",
             $"Strategie: KINS-TXT={(runKinsTxt ? "ja" : "nein")}, WinCan={(runWinCan ? "ja" : "nein")}, IBAK={(runIbak ? "ja" : "nein")}"
         };
+        if (kias.IsKias)
+            messages.Add($"KIAS-Inhalte: H-PDFs={kias.HoldingPdfCount}, L-PDFs={kias.LateralPdfCount}, ~G-Videos={kias.GegenrichtungVideoCount}, ~N-Wiederholungen={kias.RepeatTakeVideoCount}");
 
         var found = 0;
         var created = 0;

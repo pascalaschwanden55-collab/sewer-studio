@@ -1,4 +1,5 @@
 using AuswertungPro.Next.UI.Ai.KnowledgeBase;
+using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training;
 using Xunit;
 

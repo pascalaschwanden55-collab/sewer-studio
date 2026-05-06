@@ -23,5 +23,20 @@ namespace AuswertungPro.Next.Domain.Models
         public int? EZD { get; set; }
         public int? EZS { get; set; }
         public int? EZB { get; set; }
+
+        // PhotoMeasurement V4.3: Einheit pro Quantifizierungs-Wert.
+        // Einheit wird aus VsaCodeTree.GetQuantificationUnit(code, idx) abgeleitet.
+        // Beispiel: BAB → Einheit1 = "mm" (Rissbreite), BAA → Einheit1 = "%" (Verformung)
+        public string? Einheit1 { get; set; }
+        public string? Einheit2 { get; set; }
+
+        // PhotoMeasurement V4.3: Werkzeug-Herkunft fuer Nachvollziehbarkeit.
+        // Werte: "Lineal", "Wasserstand", "Ablagerung", "Hindernis", "Querschnitt",
+        //        "Deformation", "Anschluss", "Abzweig", "Bogen"
+        public string? MeasurementTool { get; set; }
+
+        // PhotoMeasurement V4.3: Semantik bei mehrdeutigen Werkzeugen (v.a. Querschnitt).
+        // Werte: "Wurzel", "Abplatzung", "Fehlstelle", "Sonstige"
+        public string? MeasurementSubject { get; set; }
     }
 }

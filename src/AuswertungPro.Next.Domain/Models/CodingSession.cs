@@ -38,7 +38,36 @@ public enum OverlayToolType
     Ellipse = 10,        // Ellipse/Kreis fuer Flaechenschaeden (Ecke-zu-Ecke Drag)
     Freehand = 11,       // Freihand-Zeichnung (Polyline aus Mauspfad)
     CrossSection = 12,   // Querschnittsverminderung (Polygon mit FillPercent)
-    PipeDirection = 13   // Bogen-Werkzeug: 2 Ellipsen → Richtungswechsel (BCC/BAG)
+    PipeDirection = 13,  // Bogen-Werkzeug: 2 Ellipsen → Richtungswechsel (BCC/BAG)
+    RingBBoxes = 14,     // Ringriss: Mittelpunkt + Radius → 12 BBoxes entlang Umfang
+    ClockHourLines = 15, // Uhrlage-Hilfslinien (12 Strahlen vom Rohrzentrum, btnViewClockH)
+    PipeFlowUp = 16,     // Bogen gegen Fliessrichtung (btnViewUp) - PipeDirection mit FlowMode=Up
+    PipeFlowDown = 17,   // Bogen in Fliessrichtung (btnViewDown) - PipeDirection mit FlowMode=Down
+    JointOffset3D = 18,  // 3D-Einblendung Muffenversatz (btnViewType3) - 2 parallele Ringe + Versatz-Vektor
+    PipeOverlay3D = 19,  // 3D-Einblendung Rohr (btnViewType0) - perspektivische Achse
+    BranchOverlay3D = 20, // 3D-Einblendung Abzweiger (btnViewType1) - Hauptrohr + Anschluss
+    Deformation = 21,        // 16-Punkt-Ringkreis fuer Querschnittsverformung (BAA)
+    BendAngle = 22,          // 3D-Knickrohr-Schablone fuer Knickwinkel (BAJ)
+    LateralConnection = 23   // Mondsichel-Schablone fuer seitlichen Anschluss (BCA)
+}
+
+/// <summary>
+/// Einblendstil fuer Overlay-Werkzeuge (entspricht WinCan btnViewStyle0/1/2).
+/// </summary>
+public enum OverlayDisplayStyle
+{
+    None = 0,        // btnViewStyle0 - keine Einblendungen
+    Minimal = 1,     // btnViewStyle1 - nur essentielle Linien/Punkte
+    Maximal = 2      // btnViewStyle2 - alle Hilfslinien, Beschriftungen, Skalen
+}
+
+/// <summary>
+/// Steuermodus fuer interaktive Werkzeuge (entspricht WinCan btnViewButtons).
+/// </summary>
+public enum ToolControlMode
+{
+    Slider = 0,    // Schieberegler (Default - Drag-Geste)
+    Buttons = 1    // Schaltflaechen +/- fuer pixelgenaue Korrektur
 }
 
 /// <summary>
@@ -77,6 +106,26 @@ public sealed class OverlayGeometry
 
     // Referenz zum Snapshot-Bild (PNG mit Overlay eingebrannt)
     public string? SnapshotPath { get; set; }
+
+    // ── Foto-Assistent: Deformation (BAA) ──────────────────────────────
+    /// <summary>16 Radien (0.2–1.0), Index 0 = 12h-Position, alle 22.5°.</summary>
+    public double[]? DeformationPoints { get; set; }
+    /// <summary>Berechneter Querschnitt-Wert in Prozent (100 = perfekter Kreis).</summary>
+    public double? DeformationPercent { get; set; }
+
+    // ── Foto-Assistent: Bogen / Knick (BAJ) ────────────────────────────
+    public double? BendAngleDegrees { get; set; }
+    public double? BendScale { get; set; }
+    public double? BendOffsetX { get; set; }
+    public double? BendOffsetY { get; set; }
+
+    // ── Foto-Assistent: Anschluss (BCA) ────────────────────────────────
+    public int? LateralHour { get; set; }              // 1–12
+    public double? LateralAngleDegrees { get; set; }   // 30–150
+    public double? LateralDnPercent { get; set; }      // 20–100
+    public double? LatScale { get; set; }
+    public double? LatOffsetX { get; set; }
+    public double? LatOffsetY { get; set; }
 }
 
 /// <summary>
@@ -236,6 +285,21 @@ public sealed class PhotoMeasurementResult
     public string? OverlayPhotoPath { get; set; }
     public bool Confirmed { get; set; }
     public PipeCalibration? UpdatedCalibration { get; set; }
+
+    // PhotoMeasurement V4.3 — Werte fuer VsaFinding.Quantifizierung + Einheit + Herkunft.
+    // Werden vom Werkzeug-Handler beim BtnOk_Click befuellt, vom CodingModeWindow-Consumer
+    // in VsaFinding uebernommen. Alle nullable → backward-kompatibel.
+    public string? Value1 { get; set; }
+    public string? Value2 { get; set; }
+    public string? Unit1 { get; set; }                // "mm", "%", "°"
+    public string? Unit2 { get; set; }
+    public string? MeasurementTool { get; set; }     // "Lineal", "Wasserstand", ...
+    public string? MeasurementSubject { get; set; }  // "Wurzel", "Abplatzung", "Fehlstelle"
+
+    // Foto-Assistent (BAA / BAJ / BCA) — vom WeakSpotCurator und Codier-Pfad konsumiert.
+    public string? SuggestedVsaCode { get; set; }
+    public string? SuggestedVsaDescription { get; set; }
+    public Dictionary<string, string>? PhotoAssistantParameters { get; set; }
 }
 
 /// <summary>

@@ -135,28 +135,71 @@ public static class VideoResolver
     /// <summary>
     /// Listet alle Video-Dateien rekursiv im angegebenen Verzeichnis auf.
     /// </summary>
+    /// <summary>
+    /// Windows-System-/Hidden-Ordner die beim Laufwerk-Scan Berechtigungsfehler werfen.
+    /// Case-insensitive Match auf den Ordnernamen (nicht auf den ganzen Pfad).
+    /// </summary>
+    private static readonly HashSet<string> SystemFolderNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "System Volume Information",
+        "$RECYCLE.BIN",
+        "Recovery",
+        "Config.Msi",
+        "MSOCache",
+        ".git",
+        "node_modules",
+        "__pycache__",
+        ".venv",
+        "venv"
+    };
+
+    /// <summary>
+    /// Rekursiver Video-Scan der System-/Hidden-Ordner ueberspringt.
+    /// Vermeidet Crash bei Scan von Laufwerk-Roots wie G:\ (wegen System Volume Information).
+    /// </summary>
     private static List<string> EnumerateVideos(string rootDir)
     {
+        var result = new List<string>();
+        if (!Directory.Exists(rootDir)) return result;
+        ScanRecursive(rootDir, result);
+        return result;
+    }
+
+    private static void ScanRecursive(string dir, List<string> accumulator)
+    {
+        // Dateien im aktuellen Ordner
         try
         {
-            return Directory
-                .EnumerateFiles(rootDir, "*", SearchOption.AllDirectories)
-                .Where(f => VideoExtensions.Contains(
-                    Path.GetExtension(f).ToLowerInvariant()))
-                .ToList();
+            foreach (var file in Directory.EnumerateFiles(dir, "*", SearchOption.TopDirectoryOnly))
+            {
+                if (VideoExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()))
+                    accumulator.Add(file);
+            }
         }
-        catch (UnauthorizedAccessException)
+        catch (UnauthorizedAccessException) { return; }
+        catch (DirectoryNotFoundException) { return; }
+        catch (IOException) { /* weiter */ }
+
+        // Unterordner rekursiv — System-Ordner ueberspringen
+        try
         {
-            return [];
+            foreach (var sub in Directory.EnumerateDirectories(dir))
+            {
+                var name = Path.GetFileName(sub);
+                if (SystemFolderNames.Contains(name)) continue;
+                try
+                {
+                    var attr = File.GetAttributes(sub);
+                    if ((attr & (FileAttributes.System | FileAttributes.Hidden)) == (FileAttributes.System | FileAttributes.Hidden))
+                        continue;
+                }
+                catch { /* trotzdem versuchen */ }
+                ScanRecursive(sub, accumulator);
+            }
         }
-        catch (DirectoryNotFoundException)
-        {
-            return [];
-        }
-        catch (IOException)
-        {
-            return [];
-        }
+        catch (UnauthorizedAccessException) { /* ueberspringen */ }
+        catch (DirectoryNotFoundException) { /* ueberspringen */ }
+        catch (IOException) { /* ueberspringen */ }
     }
 
     /// <summary>

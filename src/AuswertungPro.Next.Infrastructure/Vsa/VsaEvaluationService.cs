@@ -35,29 +35,49 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         if (project is null)
             return Result<IReadOnlyList<VsaConditionResult>>.Fail("VSA_PROJECT_NULL", "Project is null.");
 
-        var tableResult = LoadClassificationTable();
-        if (!tableResult.Ok || tableResult.Value is null)
+        var bundleResult = LoadClassificationTables();
+        if (!bundleResult.Ok || bundleResult.Value is null)
             return Result<IReadOnlyList<VsaConditionResult>>.Fail(
-                tableResult.ErrorCode ?? "VSA_TABLE_LOAD_FAILED",
-                tableResult.ErrorMessage ?? "Classification table could not be loaded.");
+                bundleResult.ErrorCode ?? "VSA_TABLE_LOAD_FAILED",
+                bundleResult.ErrorMessage ?? "Classification tables could not be loaded.");
 
-        var table = tableResult.Value.Table;
-        var knownCodes = new HashSet<string>(
-            table.Rules.Select(r => NormalizeCode(r.Code)).Where(c => c.Length > 0),
-            StringComparer.OrdinalIgnoreCase);
+        var bundle = bundleResult.Value;
+        // KnownCodes pro Tabelle separat - relevant fuer ResolveFindings-Filter
+        var channelKnown = bundle.Channels is null
+            ? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(
+                bundle.Channels.Table.Rules.Select(r => NormalizeCode(r.Code)).Where(c => c.Length > 0),
+                StringComparer.OrdinalIgnoreCase);
+        var manholeKnown = bundle.Manholes is null
+            ? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(
+                bundle.Manholes.Table.Rules.Select(r => NormalizeCode(r.Code)).Where(c => c.Length > 0),
+                StringComparer.OrdinalIgnoreCase);
 
         var results = new List<VsaConditionResult>(project.Data.Count * 3);
         var unknownCodeCount = 0;
+        var manholeCount = 0;
+        var channelCount = 0;
 
         foreach (var record in project.Data)
         {
+            var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+            var isManhole = assessmentLength is > 0 and < 1.5;
+            // Pro Record die richtige Tabelle waehlen - kein Mehr "Schacht-Codes auf Kanal-Tabelle prueft"
+            var selected = bundle.Pick(isManhole);
+            var table = selected.Table;
+            var knownCodes = isManhole ? manholeKnown : channelKnown;
+            if (knownCodes.Count == 0)
+                knownCodes = isManhole ? channelKnown : manholeKnown; // Fallback wenn passende Tabelle leer
+
+            if (isManhole) manholeCount++; else channelCount++;
+
             var findings = ResolveFindings(record, knownCodes);
-            var classified = ClassifyFindings(findings, table, out var unknownForRecord);
+            var dn = ParseDnFromRecord(record);
+            var material = GetMaterialFromRecord(record);
+            var classified = ClassifyFindings(findings, table, out var unknownForRecord, dn, material);
             unknownCodeCount += unknownForRecord;
 
-            var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
-            // Schaechte haben kuerzere Mindestlaenge (0.5m) als Kanaele (3.0m)
-            var isManhole = assessmentLength is > 0 and < 1.5;
             var minLength = isManhole ? 0.5 : table.DefaultMinLength_m;
             var rb = ComputeRandbedingungen(record);
 
@@ -73,7 +93,9 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         }
 
         project.Metadata["VSA_Diag"] =
-            $"Records={project.Data.Count}; UnknownCodes={unknownCodeCount}; Table={tableResult.Value.SourceName}";
+            $"Records={project.Data.Count}; UnknownCodes={unknownCodeCount}; " +
+            $"Channels={channelCount}; Manholes={manholeCount}; " +
+            $"ChannelTable={bundle.Channels?.SourceName ?? "—"}; ManholeTable={bundle.Manholes?.SourceName ?? "—"}";
 
         return Result<IReadOnlyList<VsaConditionResult>>.Success(results);
     }
@@ -83,23 +105,25 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         if (record is null)
             return Result<bool>.Fail("VSA_RECORD_NULL", "Record is null.");
 
-        var tableResult = LoadClassificationTable();
-        if (!tableResult.Ok || tableResult.Value is null)
+        var bundleResult = LoadClassificationTables();
+        if (!bundleResult.Ok || bundleResult.Value is null)
             return Result<bool>.Fail(
-                tableResult.ErrorCode ?? "VSA_TABLE_LOAD_FAILED",
-                tableResult.ErrorMessage ?? "Classification table could not be loaded.");
+                bundleResult.ErrorCode ?? "VSA_TABLE_LOAD_FAILED",
+                bundleResult.ErrorMessage ?? "Classification tables could not be loaded.");
 
-        var table = tableResult.Value.Table;
+        var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+        var isManhole = assessmentLength is > 0 and < 1.5;
+        var selected = bundleResult.Value.Pick(isManhole);
+        var table = selected.Table;
         var knownCodes = new HashSet<string>(
             table.Rules.Select(r => NormalizeCode(r.Code)).Where(c => c.Length > 0),
             StringComparer.OrdinalIgnoreCase);
 
         var findings = ResolveFindings(record, knownCodes);
-        var classified = ClassifyFindings(findings, table, out _);
+        var dn = ParseDnFromRecord(record);
+        var material = GetMaterialFromRecord(record);
+        var classified = ClassifyFindings(findings, table, out _, dn, material);
 
-        var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
-        // Schaechte haben kuerzere Mindestlaenge (0.5m) als Kanaele (3.0m)
-        var isManhole = assessmentLength is > 0 and < 1.5;
         var minLength = isManhole ? 0.5 : table.DefaultMinLength_m;
         var rb = ComputeRandbedingungen(record);
 
@@ -131,7 +155,9 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             StringComparer.OrdinalIgnoreCase);
 
         var findings = ResolveFindings(record, knownCodes);
-        var classified = ClassifyFindings(findings, table, out var unknownForRecord);
+        var dn = ParseDnFromRecord(record);
+        var material = GetMaterialFromRecord(record);
+        var classified = ClassifyFindings(findings, table, out var unknownForRecord, dn, material);
 
         var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
         // Schaechte haben kuerzere Mindestlaenge (0.5m) als Kanaele (3.0m)
@@ -148,6 +174,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         sb.AppendLine($"Haltung: {SafeField(record.GetFieldValue("Haltungsname"))}");
         sb.AppendLine($"Klassifikationstabelle: {tableResult.Value.SourceName}");
         sb.AppendLine($"Haltungslänge: {assessmentLength:F1} m");
+        sb.AppendLine($"DN: {(dn.HasValue ? dn.Value.ToString("F0") : "n/a")} mm  Material: {SafeField(material)}");
         sb.AppendLine($"Anzahl Feststellungen: {findings.Count}");
         sb.AppendLine($"Unbekannte Codes: {unknownForRecord}");
         sb.AppendLine($"Randbedingungen: B1×B2×B3×B4 = {rb:F4}");
@@ -190,28 +217,73 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
     // ── Tabelle laden ────────────────────────────────────────────────────
 
-    private Result<LoadedTable> LoadClassificationTable()
+    /// <summary>
+    /// Laedt beide Tabellen (Kanaele + Schaechte) und gibt ein Bundle zurueck.
+    /// Pro Record entscheidet der Caller anhand isManhole, welche Tabelle verwendet wird.
+    /// Mindestens eine Tabelle muss erfolgreich laden, sonst Fail.
+    /// </summary>
+    private Result<LoadedTableBundle> LoadClassificationTables()
     {
-        var candidates = new[] { _channelsTablePath, _manholesTablePath };
-        foreach (var path in candidates)
-        {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
-                continue;
+        var bundle = new LoadedTableBundle();
+        var loadErrors = new List<string>();
 
-            try
-            {
-                var table = VsaClassificationTable.LoadFromFile(path);
-                return Result<LoadedTable>.Success(new LoadedTable(table, Path.GetFileName(path)));
-            }
-            catch (Exception ex)
-            {
-                return Result<LoadedTable>.Fail("VSA_TABLE_PARSE_FAILED", $"Cannot read table '{path}': {ex.Message}");
-            }
+        if (!string.IsNullOrWhiteSpace(_channelsTablePath) && File.Exists(_channelsTablePath))
+        {
+            if (VsaClassificationTable.TryLoadFromFile(_channelsTablePath, out var ch, out var err))
+                bundle.Channels = new LoadedTable(ch, Path.GetFileName(_channelsTablePath));
+            else
+                loadErrors.Add($"Channels '{Path.GetFileName(_channelsTablePath)}': {err}");
+        }
+        if (!string.IsNullOrWhiteSpace(_manholesTablePath) && File.Exists(_manholesTablePath))
+        {
+            if (VsaClassificationTable.TryLoadFromFile(_manholesTablePath, out var mh, out var err))
+                bundle.Manholes = new LoadedTable(mh, Path.GetFileName(_manholesTablePath));
+            else
+                loadErrors.Add($"Manholes '{Path.GetFileName(_manholesTablePath)}': {err}");
         }
 
-        return Result<LoadedTable>.Fail(
-            "VSA_TABLE_MISSING",
-            $"Classification table not found. Expected '{_channelsTablePath}' or '{_manholesTablePath}'.");
+        if (bundle.Channels is null && bundle.Manholes is null)
+        {
+            var detail = loadErrors.Count > 0
+                ? string.Join(" | ", loadErrors)
+                : $"Neither '{_channelsTablePath}' nor '{_manholesTablePath}' exist.";
+            return Result<LoadedTableBundle>.Fail("VSA_TABLE_MISSING", detail);
+        }
+
+        // Warne wenn nur eine Tabelle geladen werden konnte
+        if (bundle.Channels is null)
+            System.Diagnostics.Debug.WriteLine(
+                $"[VsaEvaluationService] WARNUNG: Kanal-Tabelle nicht geladen, Schacht-Tabelle wird auch fuer Kanaele verwendet. {string.Join(" | ", loadErrors)}");
+        if (bundle.Manholes is null)
+            System.Diagnostics.Debug.WriteLine(
+                $"[VsaEvaluationService] WARNUNG: Schacht-Tabelle nicht geladen, Kanal-Tabelle wird auch fuer Schaechte verwendet. {string.Join(" | ", loadErrors)}");
+
+        return Result<LoadedTableBundle>.Success(bundle);
+    }
+
+    private sealed class LoadedTableBundle
+    {
+        public LoadedTable? Channels { get; set; }
+        public LoadedTable? Manholes { get; set; }
+        /// <summary>Waehlt anhand isManhole die richtige Tabelle. Fallback auf die andere wenn null.</summary>
+        public LoadedTable Pick(bool isManhole)
+        {
+            if (isManhole)
+                return Manholes ?? Channels!;
+            return Channels ?? Manholes!;
+        }
+    }
+
+    /// <summary>Legacy-Wrapper fuer Code, der nur eine Tabelle erwartet (Explain etc.).
+    /// Bevorzugt Channels, faellt auf Manholes zurueck.</summary>
+    private Result<LoadedTable> LoadClassificationTable()
+    {
+        var bundleResult = LoadClassificationTables();
+        if (!bundleResult.Ok || bundleResult.Value is null)
+            return Result<LoadedTable>.Fail(bundleResult.ErrorCode ?? "VSA_TABLE_MISSING",
+                bundleResult.ErrorMessage ?? "Classification tables not loadable");
+        var bundle = bundleResult.Value;
+        return Result<LoadedTable>.Success(bundle.Channels ?? bundle.Manholes!);
     }
 
     // ── Feststellungen auflösen / klassifizieren ─────────────────────────
@@ -232,7 +304,9 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
     private static List<ClassifiedFinding> ClassifyFindings(
         IEnumerable<VsaFinding> findings,
         VsaClassificationTable table,
-        out int unknownCodeCount)
+        out int unknownCodeCount,
+        double? dn = null,
+        string? material = null)
     {
         var list = new List<ClassifiedFinding>();
         unknownCodeCount = 0;
@@ -243,9 +317,9 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             if (code.Length == 0)
                 continue;
 
-            // Classify() berücksichtigt Q1/Q2-Quantifizierung für dynamische EZ-Werte.
-            // Fällt automatisch auf statische Defaults zurück wenn Q1/Q2 fehlen.
-            var classification = table.Classify(code, finding.Quantifizierung1, finding.Quantifizierung2);
+            // Classify() beruecksichtigt Q1/Q2-Quantifizierung sowie DN- und materialabhaengige Regeln.
+            // Faellt auf statische Defaults zurueck wenn Q1/Q2/DN/Material fehlen.
+            var classification = table.Classify(code, finding.Quantifizierung1, finding.Quantifizierung2, dn, material);
             if (classification is null)
             {
                 unknownCodeCount++;
@@ -258,6 +332,22 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
         return list;
     }
+
+    private static double? ParseDnFromRecord(HaltungRecord record)
+    {
+        var raw = record.GetFieldValue("DN")
+            ?? record.GetFieldValue("Nennweite")
+            ?? record.GetFieldValue("Profilbreite_mm");
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        var digits = Regex.Match(raw, @"\d+(?:[.,]\d+)?");
+        if (!digits.Success) return null;
+        return double.TryParse(digits.Value.Replace(',', '.'),
+            NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
+    }
+
+    private static string? GetMaterialFromRecord(HaltungRecord record)
+        => record.GetFieldValue("Rohrmaterial")
+           ?? record.GetFieldValue("Material");
 
     // ── Kernberechnung: Zustandsnote + Dringlichkeitszahl ────────────────
 
@@ -511,17 +601,18 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         return "Sanierungsbedarf";
     }
 
-    /// <summary>DZ → Dringlichkeitsstufe (VSA Richtlinie, Tabelle 7).</summary>
+    /// <summary>DZ → Dringlichkeitsstufe (VSA Richtlinie 2023, Tabelle 7).
+    /// Schwellen inklusiv (≤) gemaess VSA-Definition.</summary>
     private static string MapDringlichkeit(double? dz)
     {
         if (dz is null) return "n/a";
         return dz.Value switch
         {
-            < 50  => "Sofort",
-            < 150 => "Kurzfristig (3J)",
-            < 250 => "Mittelfristig (8J)",
-            < 350 => "Langfristig",
-            _     => "Keine"
+            <= 50  => "Sofort",
+            <= 150 => "Kurzfristig (3J)",
+            <= 250 => "Mittelfristig (8J)",
+            <= 350 => "Langfristig",
+            _      => "Keine"
         };
     }
 
@@ -560,8 +651,13 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             if (code.Length < 3)
                 continue;
 
-            if (knownCodes.Count > 0 && !knownCodes.Contains(code) && code.Length > 4)
-                continue;
+            // 3-Char-Prefix-Fallback: VSA-Codes sind hierarchisch (BACC -> BAC).
+            // Nur verwerfen, wenn weder Vollcode noch 3-Char-Hauptcode bekannt sind.
+            if (knownCodes.Count > 0 && !knownCodes.Contains(code))
+            {
+                if (code.Length < 3 || !knownCodes.Contains(code.Substring(0, 3)))
+                    continue;
+            }
 
             findings.Add(new VsaFinding
             {

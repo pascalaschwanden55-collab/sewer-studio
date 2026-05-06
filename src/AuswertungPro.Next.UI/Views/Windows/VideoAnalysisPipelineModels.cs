@@ -1,11 +1,12 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
+using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.QualityGate;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 

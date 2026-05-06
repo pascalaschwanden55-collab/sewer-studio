@@ -16,7 +16,6 @@ using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai.Ollama;
-using AuswertungPro.Next.UI.Ai.QualityGate;
 
 namespace AuswertungPro.Next.UI.Ai;
 
