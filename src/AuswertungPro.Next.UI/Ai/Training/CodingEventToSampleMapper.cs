@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Ai.Training;

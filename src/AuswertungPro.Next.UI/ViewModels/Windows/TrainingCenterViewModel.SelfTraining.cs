@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using System.Collections.Generic;
 using System.IO;

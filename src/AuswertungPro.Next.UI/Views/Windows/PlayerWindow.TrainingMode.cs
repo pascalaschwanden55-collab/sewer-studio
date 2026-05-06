@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using System.IO;
 using System.Linq;

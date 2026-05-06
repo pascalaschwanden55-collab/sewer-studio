@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace AuswertungPro.Next.UI.Services.CodeCatalog;
 
 // ═══════════════════════════════════════════════════════════════
-// Statischer VSA-Code-Baum (EN 13508-2 / VSA-KEK 2018)
+// Statischer VSA-Code-Baum (EN 13508-2 / VSA-KEK 2023)
 // Hierarchie: Gruppe → Hauptcode → Char1 → Char2
 // ═══════════════════════════════════════════════════════════════
 
@@ -335,26 +335,52 @@ public static class VsaCodeTree
         {
             ["AEC"] = new()
             {
-                Label = "Rohrprofil/DN",
+                Label = "Rohrprofilwechsel",
                 XPrefix = true,
+                // Langtexte laut offizieller VSA-KEK-Richtlinie
                 Char1 = new()
                 {
-                    ["A"] = C("unbek."), ["B"] = C("Ei"), ["C"] = C("Kreis"), ["D"] = C("Maul"),
-                    ["E"] = C("offen"), ["F"] = C("Rechteck"), ["G"] = C("Spezial"), ["H"] = C("Trapez")
+                    ["A"] = C("unbekannt"),
+                    ["B"] = C("Eiprofil"),
+                    ["C"] = C("Kreisprofil"),
+                    ["D"] = C("Maulprofil"),
+                    ["E"] = C("offenes Profil"),
+                    ["F"] = C("Rechteckprofil"),
+                    ["G"] = C("Spezialprofil"),
+                    ["H"] = C("unbekanntes Profil")
                 }
             },
             ["AED"] = new()
             {
-                Label = "Rohrmaterial",
+                Label = "Rohrmaterialwechsel",
                 XPrefix = true,
+                // Langtexte laut offizieller VSA-KEK-Richtlinie (SchadencodierungDatentransfer 2018/2023)
                 Char1 = new()
                 {
-                    ["A"] = C("unbek."), ["B"] = C("AZ"), ["C"] = C("NB"), ["D"] = C("OB"),
-                    ["E"] = C("PR"), ["F"] = C("SB"), ["G"] = C("BE"), ["H"] = C("FZ"),
-                    ["I"] = C("GS"), ["J"] = C("DG"), ["K"] = C("GG"), ["L"] = C("EP"),
-                    ["M"] = C("HDPE"), ["N"] = C("GUP"), ["O"] = C("PE"), ["P"] = C("PP"),
-                    ["Q"] = C("PVC"), ["R"] = C("KS"), ["S"] = C("ST"), ["T"] = C("RS"),
-                    ["U"] = C("SZ"), ["V"] = C("TO"), ["W"] = C("?"), ["X"] = C("ZE")
+                    ["A"] = C("unbekannt (Anmerkung Pflicht)"),
+                    ["B"] = C("Asbestzement"),
+                    ["C"] = C("Normalbeton"),
+                    ["D"] = C("Ortsbeton"),
+                    ["E"] = C("Pressrohrbeton"),
+                    ["F"] = C("Spezialbeton"),
+                    ["G"] = C("Beton"),
+                    ["H"] = C("Faserzement"),
+                    ["I"] = C("Gebrannte Steine"),
+                    ["J"] = C("Duktiler Guss"),
+                    ["K"] = C("Grauguss"),
+                    ["L"] = C("Epoxidharz"),
+                    ["M"] = C("Hartpolyethylen"),
+                    ["N"] = C("Polyester GUP"),
+                    ["O"] = C("Polyethylen"),
+                    ["P"] = C("Polypropylen"),
+                    ["Q"] = C("Polyvinylchlorid"),
+                    ["R"] = C("Kunststoff unbekannt"),
+                    ["S"] = C("Stahl"),
+                    ["T"] = C("Rostfreier Stahl"),
+                    ["U"] = C("Steinzeug"),
+                    ["V"] = C("Ton"),
+                    ["W"] = C("unbekanntes Material"),
+                    ["X"] = C("Zement")
                 }
             },
             ["AEF"] = new() { Label = "Baulaenge", FinalCode = "AEF" },
@@ -527,6 +553,51 @@ public static class VsaCodeTree
     ///           "BCD"  → "Rohranfang"
     ///           "???"  → null
     /// </summary>
+    /// <summary>
+    /// Liefert die Einheit ("mm", "%", "°", ...) fuer den Quantifizierungs-Slot
+    /// (index=1 → Q1, index=2 → Q2) eines VSA-Codes.
+    /// Grundlage ist der <see cref="QuantRules"/>-Katalog. Bei Q1PerChar1 wird das
+    /// Char1-Zeichen aus dem vollen Code extrahiert (z.B. "BAB" + "A" → BABA).
+    /// Gibt null zurueck wenn keine Quantifizierung definiert ist.
+    /// </summary>
+    public static string? GetQuantificationUnit(string code, int index = 1)
+    {
+        if (string.IsNullOrWhiteSpace(code) || code.Length < 3) return null;
+        if (index != 1 && index != 2) return null;
+
+        var normalized = code.Replace(".", "", StringComparison.Ordinal).ToUpperInvariant();
+        var main = normalized[..3];
+        if (!QuantRules.TryGetValue(main, out var rule) || rule is null) return null;
+
+        if (index == 2) return rule.Q2?.Einheit;
+
+        // index == 1: entweder fixes Q1 oder per-Char1
+        if (rule.Q1 is not null && rule.Q1.Einheit is not null)
+            return rule.Q1.Einheit;
+
+        if (rule.Q1PerChar1 is not null)
+        {
+            // Char1-Position im Code ermitteln (XPrefix = 'X' an Pos 4 → Char1 an 5)
+            int c1Offset = 3;
+            if (Groups.TryGetValue(main[..2], out var group)
+                && group.Codes.TryGetValue(main, out var mainDef)
+                && mainDef.XPrefix
+                && normalized.Length > 4
+                && normalized[3] == 'X')
+            {
+                c1Offset = 4;
+            }
+            if (normalized.Length > c1Offset)
+            {
+                var c1 = normalized[c1Offset].ToString();
+                if (rule.Q1PerChar1.TryGetValue(c1, out var q) && q is not null)
+                    return q.Einheit;
+            }
+        }
+
+        return null;
+    }
+
     public static string? LookupLabel(string code)
     {
         if (string.IsNullOrWhiteSpace(code) || code.Length < 2) return null;

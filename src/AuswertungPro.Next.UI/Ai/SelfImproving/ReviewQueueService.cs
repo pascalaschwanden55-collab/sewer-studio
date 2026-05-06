@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Collections.Generic;
 using System.Linq;

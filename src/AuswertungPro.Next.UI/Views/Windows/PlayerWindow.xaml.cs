@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Collections.Generic;
@@ -1793,7 +1794,7 @@ public partial class PlayerWindow : Window, IVlcSurface
                 for (int i = 1; i < ev.Entry.FotoPaths.Count; i++)
                     sample.AdditionalFramePaths.Add(ev.Entry.FotoPaths[i]);
             }
-            Ai.Training.TrainingSamplesStore.MergeAndSaveAsync(new List<Ai.Training.TrainingSample> { sample })
+            Ai.Training.TrainingSamplesStore.MergeAndSaveAsync(new List<AuswertungPro.Next.Domain.Ai.Training.TrainingSample> { sample })
                 .SafeFireAndForget("TrainingSaveSingle");
         }
         catch (Exception ex)
@@ -1808,7 +1809,7 @@ public partial class PlayerWindow : Window, IVlcSurface
         try
         {
             var caseId = _codingVm.HaltungName ?? "unknown";
-            var samples = new System.Collections.Generic.List<Ai.Training.TrainingSample>();
+            var samples = new System.Collections.Generic.List<AuswertungPro.Next.Domain.Ai.Training.TrainingSample>();
             foreach (var ev in _codingVm.Events)
             {
                 var framePath = ev.Entry.FotoPaths.Count > 0 ? ev.Entry.FotoPaths[0] : null;

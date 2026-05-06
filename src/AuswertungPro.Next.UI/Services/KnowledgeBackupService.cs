@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using System.Collections.Generic;
 using System.IO;
@@ -297,7 +298,7 @@ public static class KnowledgeBackupService
             if (!File.Exists(samplesPath)) return;
 
             var json = await File.ReadAllTextAsync(samplesPath, ct).ConfigureAwait(false);
-            var samples = JsonSerializer.Deserialize<List<Ai.Training.TrainingSample>>(json);
+            var samples = JsonSerializer.Deserialize<List<AuswertungPro.Next.Domain.Ai.Training.TrainingSample>>(json);
             if (samples is null || samples.Count == 0) return;
 
             var localFramesDir = Ai.KnowledgeRoot.GetFramesDir();

@@ -1,5 +1,6 @@
 // AuswertungPro – Bild-Bibliothek: Manuelles Annotieren von Kanalbildern
 using System;
+using AuswertungPro.Next.Domain.Ai.Training;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;

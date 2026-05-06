@@ -17,31 +17,49 @@ public static class ProtocolTrainingStore
 
     public static void AddSample(ProtocolEntry entry, string? haltungId)
     {
+        AddSamples(new[] { (entry, haltungId) });
+    }
+
+    /// <summary>
+    /// Bulk-Add mit EINEM Load + EINEM Save. HashSet-basiertes Dedup statt LINQ-Scan.
+    /// Vermeidet O(n²) Disk-IO bei grossen Mengen (war vorher UI-Freeze bei >5k Samples).
+    /// </summary>
+    public static int AddSamples(IEnumerable<(ProtocolEntry Entry, string? HaltungId)> items)
+    {
         var data = Load();
 
-        // Duplikat-Pruefung: Code + Haltung + gerundeter Meter
-        var code = entry.Code ?? "";
-        var hid = haltungId ?? "";
-        var mStart = Math.Round(entry.MeterStart ?? 0, 1);
-        var sig = $"{hid}|{code}|{mStart:F1}";
-        if (data.Samples.Any(s =>
-            $"{s.HaltungId}|{s.Code}|{Math.Round(s.MeterStart ?? 0, 1):F1}" == sig))
-            return;
+        // Bestehende Signaturen in ein HashSet zur O(1)-Dedup-Pruefung
+        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var s in data.Samples)
+            existing.Add($"{s.HaltungId}|{s.Code}|{Math.Round(s.MeterStart ?? 0, 1):F1}");
 
-        data.Samples.Add(new ProtocolTrainingSample
+        int added = 0;
+        foreach (var (entry, haltungId) in items)
         {
-            AtUtc = DateTime.UtcNow,
-            HaltungId = hid,
-            Code = code,
-            Beschreibung = entry.Beschreibung ?? "",
-            MeterStart = entry.MeterStart,
-            MeterEnd = entry.MeterEnd,
-            IsStreckenschaden = entry.IsStreckenschaden,
-            Parameters = entry.CodeMeta?.Parameters is null
-                ? new Dictionary<string, string>()
-                : new Dictionary<string, string>(entry.CodeMeta.Parameters, StringComparer.OrdinalIgnoreCase)
-        });
-        Save(data);
+            var code = entry.Code ?? "";
+            var hid = haltungId ?? "";
+            var mStart = Math.Round(entry.MeterStart ?? 0, 1);
+            var sig = $"{hid}|{code}|{mStart:F1}";
+            if (!existing.Add(sig)) continue;
+
+            data.Samples.Add(new ProtocolTrainingSample
+            {
+                AtUtc = DateTime.UtcNow,
+                HaltungId = hid,
+                Code = code,
+                Beschreibung = entry.Beschreibung ?? "",
+                MeterStart = entry.MeterStart,
+                MeterEnd = entry.MeterEnd,
+                IsStreckenschaden = entry.IsStreckenschaden,
+                Parameters = entry.CodeMeta?.Parameters is null
+                    ? new Dictionary<string, string>()
+                    : new Dictionary<string, string>(entry.CodeMeta.Parameters, StringComparer.OrdinalIgnoreCase)
+            });
+            added++;
+        }
+
+        if (added > 0) Save(data);
+        return added;
     }
 
     public static IReadOnlyList<ProtocolTrainingSample> LoadRecent(int maxCount)

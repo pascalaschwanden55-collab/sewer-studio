@@ -1,5 +1,6 @@
 // AuswertungPro – KI Videoanalyse Modul
 using System;
+using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using System.Collections.Generic;
 using System.Threading;

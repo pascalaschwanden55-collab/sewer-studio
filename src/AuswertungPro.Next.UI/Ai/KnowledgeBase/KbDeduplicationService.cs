@@ -1,5 +1,6 @@
 // AuswertungPro – Video-Selbsttraining Phase 3
 using System;
+using AuswertungPro.Next.Domain.Ai.Training;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;

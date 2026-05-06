@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using System.Collections.Generic;
@@ -260,11 +261,11 @@ public sealed class CodingSessionService : ICodingSessionService
     /// Indexiert Approved-Samples in die KB (Embedding + SQLite).
     /// Nur wenn Ollama verfuegbar — stilles Fehlschlagen bei Offline.
     /// </summary>
-    private static async Task IndexApprovedSamplesToKbAsync(List<Training.TrainingSample> samples)
+    private static async Task IndexApprovedSamplesToKbAsync(List<AuswertungPro.Next.Domain.Ai.Training.TrainingSample> samples)
     {
         try
         {
-            var approved = samples.Where(s => s.Status == Training.TrainingSampleStatus.Approved).ToList();
+            var approved = samples.Where(s => s.Status == AuswertungPro.Next.Domain.Ai.Training.TrainingSampleStatus.Approved).ToList();
             if (approved.Count == 0) return;
 
             var cfg = Ai.Ollama.OllamaConfigExtensions.Load();

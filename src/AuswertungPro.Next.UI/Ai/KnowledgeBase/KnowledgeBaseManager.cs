@@ -1,5 +1,6 @@
 // AuswertungPro – KI Videoanalyse Modul
 using System;
+using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -570,7 +571,7 @@ public sealed class KnowledgeBaseManager(
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
-                var sample = new Training.TrainingSample
+                var sample = new AuswertungPro.Next.Domain.Ai.Training.TrainingSample
                 {
                     SampleId = reader.GetString(0),
                     CaseId = reader.IsDBNull(1) ? "" : reader.GetString(1),
@@ -658,7 +659,7 @@ public sealed class KnowledgeBaseManager(
     public static string BuildEmbeddingText(
         string code, string beschreibung, string? rohrmaterial, int? nennweiteMm)
     {
-        var sample = new Training.TrainingSample { Code = code, Beschreibung = beschreibung };
+        var sample = new AuswertungPro.Next.Domain.Ai.Training.TrainingSample { Code = code, Beschreibung = beschreibung };
         return AppendEmbeddingContext(BuildBaseEmbeddingText(sample), rohrmaterial, nennweiteMm);
     }
 
