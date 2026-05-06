@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.UI.Ai;
 

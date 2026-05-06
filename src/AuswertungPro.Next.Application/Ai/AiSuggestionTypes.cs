@@ -1,11 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Application.Ai;
 
 /// <summary>
-/// Minimale AI-Typen im UI-Projekt, damit die Video-Pipeline unabhängig von anderen Layern kompiliert.
-/// (Falls du später echte Domain/Application-Typen hast, kannst du diese Datei ersetzen.)
+/// Phase 5.3 Sub-A: Reine AI-Datentypen in der Application-Schicht.
+/// Vorher in <c>AuswertungPro.Next.UI.Ai</c> — hier ohne UI-Abhaengigkeit.
 /// </summary>
 public sealed record ObservationContext(
     string Observation,
@@ -23,9 +24,8 @@ public interface IAiSuggestionPlausibilityService
     AiSuggestionResult ApplyChecks(AiSuggestionResult suggestion, ObservationContext context);
 }
 
-
 /// <summary>
-/// DTO für structured output aus dem LLM.
+/// DTO fuer structured output aus dem LLM (snake_case-konform fuer Ollama).
 /// </summary>
 public sealed class AiSuggestionResultDto
 {
@@ -46,7 +46,7 @@ public sealed class AiSuggestionResultDto
 
 public static class AiSuggestionSchemas
 {
-    // JSON Schema für AiSuggestionResultDto (Ollama /api/chat format)
+    /// <summary>JSON-Schema fuer AiSuggestionResultDto (Ollama /api/chat format).</summary>
     public static readonly JsonElement AiSuggestionResultSchema = JsonDocument.Parse("""
     {
       "type":"object",
