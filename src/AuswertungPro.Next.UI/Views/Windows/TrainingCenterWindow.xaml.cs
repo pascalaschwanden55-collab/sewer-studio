@@ -1045,7 +1045,7 @@ public partial class TrainingCenterWindow : Window
 
                 var retrainOrchestrator = new Ai.Training.YoloRetrainOrchestrator(
                     retrainClient,
-                    new Ai.Training.YoloDatasetExportService(),
+                    new AuswertungPro.Next.Infrastructure.Ai.Training.YoloDatasetExportService(),
                     benchmarkRunner,
                     benchmarkMetricsStore,
                     sidecarDir,

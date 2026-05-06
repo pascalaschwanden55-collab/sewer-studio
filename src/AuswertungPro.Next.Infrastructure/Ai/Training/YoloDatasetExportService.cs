@@ -6,9 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.Training.Models;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 /// <summary>
 /// Exportiert Training-Samples als lokales YOLO-Dataset (ohne Sidecar).
