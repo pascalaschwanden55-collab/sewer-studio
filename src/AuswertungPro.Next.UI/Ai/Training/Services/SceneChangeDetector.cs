@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI.Ai.Shared;
 
 namespace AuswertungPro.Next.UI.Ai.Training.Services;
@@ -48,38 +49,18 @@ public sealed class SceneChangeDetector
 
     private async Task<string> RunFfmpegSceneDetectAsync(string videoPath, CancellationToken ct)
     {
-        // ffmpeg -i <video> -vf "select='gt(scene,0.3)',showinfo" -f null -
-        // Die showinfo-Ausgabe enthält "pts_time:<seconds>"
-        var psi = new ProcessStartInfo
-        {
-            FileName = _ffmpeg,
-            UseShellExecute = false,
-            RedirectStandardError  = true,
-            RedirectStandardOutput = true,
-            CreateNoWindow = true
-        };
-        psi.ArgumentList.Add("-i");
-        psi.ArgumentList.Add(videoPath);
-        psi.ArgumentList.Add("-vf");
-        psi.ArgumentList.Add($"select='gt(scene,{Threshold.ToString(CultureInfo.InvariantCulture)})',showinfo");
-        psi.ArgumentList.Add("-vsync");
-        psi.ArgumentList.Add("vfr");
-        psi.ArgumentList.Add("-f");
-        psi.ArgumentList.Add("null");
-        psi.ArgumentList.Add("-");
+        // Phase D2.3: ProcessRunner. Scene-Detect kann lange dauern (lange Videos),
+        // daher kein harter Timeout — externer ct fuer Batch-Abbruch reicht.
+        var result = await ProcessRunner.RunAsync(
+            fileName: _ffmpeg,
+            arguments: ["-i", videoPath,
+                        "-vf", $"select='gt(scene,{Threshold.ToString(CultureInfo.InvariantCulture)})',showinfo",
+                        "-vsync", "vfr",
+                        "-f", "null", "-"],
+            ct: ct).ConfigureAwait(false);
 
-        try
-        {
-            using var p = Process.Start(psi);
-            if (p is null) return "";
-
-            // showinfo schreibt nach stderr
-            var stderr = await p.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
-            await p.WaitForExitAsync(ct).ConfigureAwait(false);
-            return stderr;
-        }
-        catch (OperationCanceledException) { throw; }
-        catch { return ""; }
+        // showinfo schreibt nach stderr — auch bei ExitCode != 0 nutzbar.
+        return result.Stderr ?? "";
     }
 
     private IReadOnlyList<double> BuildTimestampList(string ffmpegOutput)

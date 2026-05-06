@@ -310,44 +310,25 @@ public sealed class PdfProtocolExtractor
     /// <summary>Extrahiert Text via pdftotext -layout (bewahrt Tabellenstruktur).</summary>
     private static string ExtractTextViaPdfToText(string pdfPath)
     {
+        // pdftotext-Pfad: 1) AppSettings 2) tools-Ordner 3) PATH
+        var exePath = PdfProtocolTableParser.PdfToTextExePath;
+        if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
+        {
+            var toolsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools", "pdftotext.exe");
+            exePath = File.Exists(toolsPath) ? toolsPath : "pdftotext";
+        }
+
         try
         {
-            // pdftotext-Pfad: 1) AppSettings 2) tools-Ordner 3) PATH
-            var exePath = PdfProtocolTableParser.PdfToTextExePath;
-            if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
-            {
-                var toolsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools", "pdftotext.exe");
-                exePath = File.Exists(toolsPath) ? toolsPath : "pdftotext";
-            }
+            // Phase D2.3: ProcessRunner — sicherer ArgumentList + asynchroner Drain
+            // + Tree-Kill bei Timeout. GetAwaiter().GetResult() ist akzeptabel,
+            // weil dieser Aufrufer synchron ist (keine Cancellation-Quelle).
+            var result = AuswertungPro.Next.Application.Common.ProcessRunner.RunAsync(
+                fileName: exePath,
+                arguments: ["-layout", pdfPath, "-"],
+                timeout: TimeSpan.FromSeconds(30)).GetAwaiter().GetResult();
 
-            // ArgumentList statt Arguments-String: das BS uebernimmt das
-            // Quoten/Escapen automatisch und korrekt. Vermeidet Argument-
-            // Parsing-Bugs bei Pfaden mit Leerzeichen oder Sonderzeichen.
-            var psi = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = exePath,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            psi.ArgumentList.Add("-layout");
-            psi.ArgumentList.Add(pdfPath);
-            psi.ArgumentList.Add("-");
-
-            using var proc = System.Diagnostics.Process.Start(psi);
-            if (proc is null) return "";
-
-            var stderrTask = proc.StandardError.ReadToEndAsync();
-            var text = proc.StandardOutput.ReadToEnd();
-
-            if (!proc.WaitForExit(30000))
-            {
-                try { proc.Kill(); } catch { }
-                return "";
-            }
-
-            return text;
+            return result.IsSuccess ? result.Stdout : "";
         }
         catch
         {
@@ -717,50 +698,32 @@ public sealed class PdfProtocolExtractor
                 return Array.Empty<string>();
             }
 
-            // ArgumentList.Add statt Arguments-String: Command-Injection-Schutz
-            // bei PDF-Pfaden mit Anfuehrungszeichen/Shell-Metazeichen.
-            var psi = new System.Diagnostics.ProcessStartInfo
+            // Phase D2.3: ProcessRunner — sicherer ArgumentList + asynchroner Drain
+            // (verhindert Deadlock bei vollem stderr) + Tree-Kill bei Timeout.
+            var result = AuswertungPro.Next.Application.Common.ProcessRunner.RunAsync(
+                fileName: "python",
+                arguments: [scriptPath, pdfPath, framesDir,
+                            MinPhotoWidth.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            MinPhotoHeight.ToString(System.Globalization.CultureInfo.InvariantCulture)],
+                timeout: TimeSpan.FromSeconds(30)).GetAwaiter().GetResult();
+
+            if (result.TimedOut)
             {
-                FileName = "python",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-            psi.ArgumentList.Add(scriptPath);
-            psi.ArgumentList.Add(pdfPath);
-            psi.ArgumentList.Add(framesDir);
-            psi.ArgumentList.Add(MinPhotoWidth.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            psi.ArgumentList.Add(MinPhotoHeight.ToString(System.Globalization.CultureInfo.InvariantCulture));
-
-            using var p = System.Diagnostics.Process.Start(psi);
-            if (p == null) return Array.Empty<string>();
-
-            // WICHTIG: stdout und stderr PARALLEL lesen — sonst Deadlock!
-            // Wenn stderr voll ist und der Prozess blockiert, haengt ReadToEnd() ewig.
-            var stderrTask = p.StandardError.ReadToEndAsync();
-            var output = p.StandardOutput.ReadToEnd();
-
-            if (!p.WaitForExit(30_000))
-            {
-                // Timeout: Prozess haengt → killen
-                try { p.Kill(); } catch { /* ignore */ }
                 System.Diagnostics.Debug.WriteLine(
                     $"[PdfExtractor] PyMuPDF Timeout nach 30s fuer {Path.GetFileName(pdfPath)}");
                 return Array.Empty<string>();
             }
 
-            if (p.ExitCode != 0 || string.IsNullOrWhiteSpace(output))
+            if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.Stdout))
             {
-                var stderr = stderrTask.Result;
-                if (!string.IsNullOrWhiteSpace(stderr))
+                if (!string.IsNullOrWhiteSpace(result.Stderr))
                     System.Diagnostics.Debug.WriteLine(
-                        $"[PdfExtractor] PyMuPDF stderr: {stderr[..Math.Min(stderr.Length, 300)]}");
+                        $"[PdfExtractor] PyMuPDF stderr: {result.Stderr[..Math.Min(result.Stderr.Length, 300)]}");
                 return Array.Empty<string>();
             }
 
             // JSON parsen: [{"page": 1, "index": 0, "path": "...", "width": 788, "height": 576}, ...]
-            using var jsonDoc = System.Text.Json.JsonDocument.Parse(output);
+            using var jsonDoc = System.Text.Json.JsonDocument.Parse(result.Stdout);
             if (jsonDoc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object
                 && jsonDoc.RootElement.TryGetProperty("error", out _))
                 return Array.Empty<string>(); // Fehler-Objekt

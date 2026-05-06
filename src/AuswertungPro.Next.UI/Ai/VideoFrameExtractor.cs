@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -26,54 +27,30 @@ public static class VideoFrameExtractor
 
         var outPng = Path.Combine(Path.GetTempPath(), $"auswertungpro_frame_{Guid.NewGuid():N}.png");
 
-        // -ss vor -i ist schneller. ArgumentList.Add statt Arguments-String:
-        // verhindert Command-Injection bei Pfaden mit Anfuehrungszeichen.
-        var psi = new ProcessStartInfo
-        {
-            FileName = ffmpegPath,
-            UseShellExecute = false,
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-            CreateNoWindow = true
-        };
-        psi.ArgumentList.Add("-hide_banner");
-        psi.ArgumentList.Add("-loglevel");
-        psi.ArgumentList.Add("error");
-        psi.ArgumentList.Add("-ss");
-        psi.ArgumentList.Add(at.TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        psi.ArgumentList.Add("-i");
-        psi.ArgumentList.Add(videoPath);
-        psi.ArgumentList.Add("-frames:v");
-        psi.ArgumentList.Add("1");
-        psi.ArgumentList.Add("-vf");
-        psi.ArgumentList.Add("scale='min(1280,iw)':-2");
-        psi.ArgumentList.Add("-y");
-        psi.ArgumentList.Add(outPng);
-
         try
         {
-            using var p = Process.Start(psi);
-            if (p == null)
-                return null;
+            // Phase D2.3: ProcessRunner — sicherer ArgumentList + asynchroner Drain
+            // + harter Timeout via Tree-Kill. Loest STAB-H1 (Pipe-Deadlocks) und
+            // SEC-H1 (Command-Injection) zentral.
+            var result = await ProcessRunner.RunAsync(
+                fileName: ffmpegPath,
+                arguments: ["-hide_banner",
+                            "-loglevel", "error",
+                            "-ss", at.TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            "-i", videoPath,
+                            "-frames:v", "1",
+                            "-vf", "scale='min(1280,iw)':-2",
+                            "-y", outPng],
+                timeout: TimeSpan.FromSeconds(FfmpegTimeoutSeconds),
+                ct: ct).ConfigureAwait(false);
 
-            // Timeout: ffmpeg darf max 30s pro Frame brauchen
-            // Manche MPG-Videos blockieren ffmpeg endlos
-            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeoutCts.CancelAfter(TimeSpan.FromSeconds(FfmpegTimeoutSeconds));
-
-            try
+            if (result.TimedOut)
             {
-                await p.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-            {
-                // ffmpeg-Timeout (nicht Batch-Abbruch) → Prozess killen
-                try { p.Kill(entireProcessTree: true); } catch { }
                 Debug.WriteLine($"[VideoFrameExtractor] ffmpeg Timeout nach {FfmpegTimeoutSeconds}s bei {videoPath} @ {at.TotalSeconds:F1}s");
                 return null;
             }
 
-            if (p.ExitCode != 0)
+            if (!result.IsSuccess)
                 return null;
 
             if (!File.Exists(outPng))

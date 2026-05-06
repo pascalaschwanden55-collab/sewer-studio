@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI.Ai.Shared;
 
 namespace AuswertungPro.Next.UI.Ai.Training.Services;
@@ -50,76 +51,58 @@ public sealed class VideoProbeService
 
     private async Task<VideoProbeResult> TryFfprobeAsync(string videoPath, CancellationToken ct)
     {
-        var psi = new ProcessStartInfo
-        {
-            FileName = _ffprobe,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError  = true,
-            CreateNoWindow = true
-        };
-        psi.ArgumentList.Add("-v");           psi.ArgumentList.Add("error");
-        psi.ArgumentList.Add("-show_entries"); psi.ArgumentList.Add("format=duration");
-        psi.ArgumentList.Add("-of");           psi.ArgumentList.Add("default=noprint_wrappers=1:nokey=1");
-        psi.ArgumentList.Add(videoPath);
+        // Phase D2.3: ProcessRunner — sicherer ArgumentList + asynchroner Drain + Timeout.
+        var result = await ProcessRunner.RunAsync(
+            fileName: _ffprobe,
+            arguments: ["-v", "error",
+                        "-show_entries", "format=duration",
+                        "-of", "default=noprint_wrappers=1:nokey=1",
+                        videoPath],
+            timeout: TimeSpan.FromSeconds(30),
+            ct: ct).ConfigureAwait(false);
 
-        try
-        {
-            using var p = Process.Start(psi);
-            if (p is null) return VideoProbeResult.Fail("ffprobe: Process.Start returned null");
+        if (result.StartFailed)
+            return VideoProbeResult.Fail($"ffprobe: {result.Stderr}");
+        if (result.TimedOut)
+            return VideoProbeResult.Fail("ffprobe: Timeout");
+        if (!result.IsSuccess)
+            return VideoProbeResult.Fail($"ffprobe ExitCode {result.ExitCode}: {result.Stderr.Trim()}");
 
-            var stdout = await p.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
-            var stderr = await p.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
-            await p.WaitForExitAsync(ct).ConfigureAwait(false);
+        if (double.TryParse(result.Stdout.Trim(), NumberStyles.Float,
+                CultureInfo.InvariantCulture, out var dur) && dur > 0)
+            return VideoProbeResult.Ok(dur);
 
-            if (p.ExitCode != 0)
-                return VideoProbeResult.Fail($"ffprobe ExitCode {p.ExitCode}: {stderr.Trim()}");
-
-            if (double.TryParse(stdout.Trim(), NumberStyles.Float,
-                    CultureInfo.InvariantCulture, out var dur) && dur > 0)
-                return VideoProbeResult.Ok(dur);
-
-            return VideoProbeResult.Fail($"ffprobe: ungültige Ausgabe '{stdout.Trim()}'");
-        }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex) { return VideoProbeResult.Fail($"ffprobe: {ex.Message}"); }
+        return VideoProbeResult.Fail($"ffprobe: ungültige Ausgabe '{result.Stdout.Trim()}'");
     }
 
     private async Task<VideoProbeResult> TryFfmpegDurationAsync(string videoPath, CancellationToken ct)
     {
-        var psi = new ProcessStartInfo
+        // Phase D2.3: ProcessRunner. ffmpeg -i <video> ohne Output-Datei beendet
+        // mit ExitCode != 0, Duration-Zeile steht aber bereits in stderr.
+        var result = await ProcessRunner.RunAsync(
+            fileName: _ffmpeg,
+            arguments: ["-i", videoPath],
+            timeout: TimeSpan.FromSeconds(30),
+            ct: ct).ConfigureAwait(false);
+
+        if (result.StartFailed)
+            return VideoProbeResult.Fail($"ffmpeg: {result.Stderr}");
+        if (result.TimedOut)
+            return VideoProbeResult.Fail("ffmpeg: Timeout");
+
+        var m = Regex.Match(result.Stderr, @"Duration:\s*(\d+):(\d{2}):(\d{2}(?:\.\d+)?)");
+        if (m.Success
+            && int.TryParse(m.Groups[1].Value, out var h)
+            && int.TryParse(m.Groups[2].Value, out var min)
+            && double.TryParse(m.Groups[3].Value, NumberStyles.Float,
+                   CultureInfo.InvariantCulture, out var sec))
         {
-            FileName = _ffmpeg,
-            UseShellExecute = false,
-            RedirectStandardError  = true,
-            RedirectStandardOutput = true,
-            CreateNoWindow = true
-        };
-        psi.ArgumentList.Add("-i");
-        psi.ArgumentList.Add(videoPath);
-
-        try
-        {
-            using var p = Process.Start(psi);
-            if (p is null) return VideoProbeResult.Fail("ffmpeg: Process.Start returned null");
-
-            var stderr = await p.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
-            await p.WaitForExitAsync(ct).ConfigureAwait(false);
-
-            var m = Regex.Match(stderr, @"Duration:\s*(\d+):(\d{2}):(\d{2}(?:\.\d+)?)");
-            if (m.Success
-                && int.TryParse(m.Groups[1].Value, out var h)
-                && int.TryParse(m.Groups[2].Value, out var min)
-                && double.TryParse(m.Groups[3].Value, NumberStyles.Float,
-                       CultureInfo.InvariantCulture, out var sec))
-            {
-                return VideoProbeResult.Ok(h * 3600 + min * 60 + sec);
-            }
-
-            return VideoProbeResult.Fail($"ffmpeg: Duration-Zeile nicht gefunden. stderr: {stderr[..Math.Min(200, stderr.Length)]}");
+            return VideoProbeResult.Ok(h * 3600 + min * 60 + sec);
         }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex) { return VideoProbeResult.Fail($"ffmpeg: {ex.Message}"); }
+
+        return VideoProbeResult.Fail(
+            $"ffmpeg: Duration-Zeile nicht gefunden. stderr: " +
+            $"{result.Stderr[..Math.Min(200, result.Stderr.Length)]}");
     }
 }
 
