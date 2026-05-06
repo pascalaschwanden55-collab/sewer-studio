@@ -1,9 +1,8 @@
 using System;
-using AuswertungPro.Next.Application.Ai.Monitoring;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace AuswertungPro.Next.UI.Ai.Monitoring;
+namespace AuswertungPro.Next.Application.Ai.Monitoring;
 
 /// <summary>
 /// Tracks confidence score distributions over time windows.
@@ -123,6 +122,3 @@ public sealed class ConfidenceDistributionTracker
 
     private sealed record TimestampedConfidence(double Confidence, DateTime Timestamp);
 }
-
-// Phase 5.3 vorbereitend: DriftCheckResult + HistogramBin
-// nach Application/Ai/Monitoring/MonitoringModels.cs.

@@ -1,12 +1,11 @@
 using System;
-using AuswertungPro.Next.Application.Ai.Monitoring;
-using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Collections.Generic;
 using System.Text.Json;
+using AuswertungPro.Next.Application.Ai.Monitoring;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using Microsoft.Data.Sqlite;
-using AuswertungPro.Next.UI.Ai.QualityGate;
 
-namespace AuswertungPro.Next.UI.Ai.Monitoring;
+namespace AuswertungPro.Next.Infrastructure.Ai.Monitoring;
 
 /// <summary>
 /// Version tracking for model + weights + calibration state.
@@ -106,6 +105,3 @@ public sealed class ModelRegistryService
         cmd.ExecuteNonQuery();
     }
 }
-
-// Phase 5.3 vorbereitend: ModelVersionInfo
-// nach Application/Ai/Monitoring/MonitoringModels.cs.
