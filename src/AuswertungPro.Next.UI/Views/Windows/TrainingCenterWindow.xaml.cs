@@ -692,7 +692,7 @@ public partial class TrainingCenterWindow : Window
         {
             var allowedSet = new System.Collections.Generic.HashSet<string>(
                 codeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
-            var plausibility = new Ai.RuleBasedAiSuggestionPlausibilityService(allowedSet);
+            var plausibility = new AuswertungPro.Next.Application.Ai.RuleBasedAiSuggestionPlausibilityService(allowedSet);
             var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(30) };
             var pipeline = new Ai.VideoAnalysisPipelineService(cfg, plausibility, http);
             var meterTimeline = new Ai.Training.MeterTimelineService(cfg);
@@ -792,7 +792,7 @@ public partial class TrainingCenterWindow : Window
 
         var allowedSet = new System.Collections.Generic.HashSet<string>(
             codeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
-        var plausibility = new Ai.RuleBasedAiSuggestionPlausibilityService(allowedSet);
+        var plausibility = new AuswertungPro.Next.Application.Ai.RuleBasedAiSuggestionPlausibilityService(allowedSet);
         var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(30) };
         var pipeline = new Ai.VideoAnalysisPipelineService(cfg, plausibility, http);
         var protocolLoader = new Ai.Training.Services.ProtocolLoaderFactory(winCanImport, ibakImport);
@@ -810,7 +810,7 @@ public partial class TrainingCenterWindow : Window
             var qwenVision = new Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
             orchestrator.BatchPipeline = new Ai.Pipeline.BatchPipelineService(
                 sidecarClient, qwenVision, pipelineCfg,
-                cfg.FfmpegPath ?? Ai.Shared.FfmpegLocator.ResolveFfmpeg());
+                cfg.FfmpegPath ?? AuswertungPro.Next.Application.Ai.FfmpegLocator.ResolveFfmpeg());
         }
 
         var runner = new BenchmarkRunner(setStore, metricsStore, orchestrator, protocolLoader.LoadProtocolAsync);
@@ -858,7 +858,7 @@ public partial class TrainingCenterWindow : Window
 
         var allowedSet = new System.Collections.Generic.HashSet<string>(
             codeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
-        var plausibility = new Ai.RuleBasedAiSuggestionPlausibilityService(allowedSet);
+        var plausibility = new AuswertungPro.Next.Application.Ai.RuleBasedAiSuggestionPlausibilityService(allowedSet);
         var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(30) };
         var pipeline = new Ai.VideoAnalysisPipelineService(cfg, plausibility, http);
         var protocolLoader = new Ai.Training.Services.ProtocolLoaderFactory(winCanImport, ibakImport);
@@ -874,7 +874,7 @@ public partial class TrainingCenterWindow : Window
             var qwenVision = new Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
             videoOrch.BatchPipeline = new Ai.Pipeline.BatchPipelineService(
                 sidecarClient, qwenVision, pipelineCfg,
-                cfg.FfmpegPath ?? Ai.Shared.FfmpegLocator.ResolveFfmpeg());
+                cfg.FfmpegPath ?? AuswertungPro.Next.Application.Ai.FfmpegLocator.ResolveFfmpeg());
         }
 
         Ai.KnowledgeBase.KbEnrichmentService enrichment;
@@ -916,7 +916,7 @@ public partial class TrainingCenterWindow : Window
                 var qwenVision = new Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
                 orch.BatchPipeline = new Ai.Pipeline.BatchPipelineService(
                     sidecarClient, qwenVision, pipelineCfg,
-                    cfg.FfmpegPath ?? Ai.Shared.FfmpegLocator.ResolveFfmpeg());
+                    cfg.FfmpegPath ?? AuswertungPro.Next.Application.Ai.FfmpegLocator.ResolveFfmpeg());
             }
 
             return orch;

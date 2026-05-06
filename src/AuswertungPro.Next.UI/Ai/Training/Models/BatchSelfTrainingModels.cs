@@ -1,7 +1,7 @@
 // AuswertungPro – Video-Selbsttraining: Voll-automatischer Batch-Betrieb
 using System;
 using System.Collections.Generic;
-using AuswertungPro.Next.UI.Ai.Shared;
+using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.UI.Ai.Training.Models;
 

@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.UI.Ai.Shared;
 using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.UI.Services.CodeCatalog;
 
@@ -25,7 +27,7 @@ public interface ISelfTrainingComparisonService
 public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonService
 {
     // Toleranzen
-    private const double MeterTolerance = 1.0;      // ± 1.0m
+    private const double MeterTolerance = MeterTolerances.SelfTrainingComparison; // ± 1.0m
     private const int ClockTolerance = 1;            // ± 1 Stunde
     private const int SeverityTolerance = 1;         // ± 1 Stufe
 

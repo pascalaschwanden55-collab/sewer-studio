@@ -1,6 +1,5 @@
-using AuswertungPro.Next.Application.Ai;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Application.Ai;
 
 public sealed class NoopAiSuggestionPlausibilityService : IAiSuggestionPlausibilityService
 {

@@ -3,7 +3,7 @@ using System;
 using System.IO;
 
 
-namespace AuswertungPro.Next.UI.Ai.Shared;
+namespace AuswertungPro.Next.Application.Ai;
 
 /// <summary>
 /// Lokalisiert ffmpeg und ffprobe – entweder über absoluten Pfad (Env-Variable),

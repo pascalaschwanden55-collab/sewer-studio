@@ -65,7 +65,7 @@ public sealed class OllamaProtocolAiService : IProtocolAiService
 
         if (!string.IsNullOrWhiteSpace(input.VideoPathAbs) && input.Zeit is not null)
         {
-            var bytes = await VideoFrameExtractor.TryExtractFramePngAsync(_cfg.FfmpegPath ?? Shared.FfmpegLocator.ResolveFfmpeg(), input.VideoPathAbs!, input.Zeit.Value, ct);
+            var bytes = await VideoFrameExtractor.TryExtractFramePngAsync(_cfg.FfmpegPath ?? AuswertungPro.Next.Application.Ai.FfmpegLocator.ResolveFfmpeg(), input.VideoPathAbs!, input.Zeit.Value, ct);
             if (bytes is { Length: > 0 })
                 frameBase64 = Convert.ToBase64String(bytes);
         }

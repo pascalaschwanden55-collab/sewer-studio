@@ -44,7 +44,7 @@ public sealed class BatchPipelineService
         _sidecar = sidecar ?? throw new ArgumentNullException(nameof(sidecar));
         _qwen = qwen ?? throw new ArgumentNullException(nameof(qwen));
         _config = config ?? throw new ArgumentNullException(nameof(config));
-        _ffmpegPath = ffmpegPath ?? Shared.FfmpegLocator.ResolveFfmpeg();
+        _ffmpegPath = ffmpegPath ?? AuswertungPro.Next.Application.Ai.FfmpegLocator.ResolveFfmpeg();
         _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
     }
 
@@ -463,7 +463,7 @@ public sealed class BatchPipelineService
     {
         try
         {
-            var ffprobe = Shared.FfmpegLocator.ResolveFfprobe();
+            var ffprobe = AuswertungPro.Next.Application.Ai.FfmpegLocator.ResolveFfprobe();
             // ArgumentList.Add statt Arguments-String: Command-Injection-Schutz.
             var psi = new System.Diagnostics.ProcessStartInfo
             {

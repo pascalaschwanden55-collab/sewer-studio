@@ -185,7 +185,7 @@ public partial class VideoTrainingReviewViewModel : ObservableObject
                 NennweiteMm = nennweite,
                 InspektionslaengeMeter = inspLength,
                 FrameStepSeconds = 1.5,
-                MeterTolerance = 0.5
+                MeterTolerance = MeterTolerances.SingleTraining
             };
 
             // Protokoll laden (vereinfacht — im echten Code via Import-Service)

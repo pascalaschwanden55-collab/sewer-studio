@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using AuswertungPro.Next.UI.Ai.Shared;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai.Training.Services;
 
 namespace AuswertungPro.Next.UI.Ai.Training.Models;
@@ -32,7 +32,7 @@ public sealed record VideoTrainingRequest
     public double FrameStepSeconds { get; init; } = 1.0;
 
     /// <summary>Meter-Toleranz fuer Zuordnung KI ↔ Protokoll (Default: ±0.5m).</summary>
-    public double MeterTolerance { get; init; } = Shared.MeterTolerances.SingleTraining;
+    public double MeterTolerance { get; init; } = AuswertungPro.Next.Application.Ai.MeterTolerances.SingleTraining;
 
     /// <summary>
     /// Zentrierungs-Offset in Metern: Der Frame wird leicht nach vorn versetzt extrahiert,

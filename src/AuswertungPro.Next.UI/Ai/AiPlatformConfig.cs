@@ -225,7 +225,7 @@ public sealed record AiPlatformConfig(
         var ffmpeg = FirstNonEmpty(
                 settings?.AiFfmpegPath,
                 Env("SEWERSTUDIO_FFMPEG"))
-            ?? Shared.FfmpegLocator.ResolveFfmpeg();
+            ?? AuswertungPro.Next.Application.Ai.FfmpegLocator.ResolveFfmpeg();
 
         return new AiPlatformConfig(
             Enabled:                enabled,

@@ -106,7 +106,7 @@ public sealed class TrainingSampleGenerator
         var duration = 0.0;
         if (hasVideo)
         {
-            var (dur, _) = await GetDurationAsync(_cfg.FfmpegPath ?? Shared.FfmpegLocator.ResolveFfmpeg(), tc.VideoPath, ct)
+            var (dur, _) = await GetDurationAsync(_cfg.FfmpegPath ?? AuswertungPro.Next.Application.Ai.FfmpegLocator.ResolveFfmpeg(), tc.VideoPath, ct)
                 .ConfigureAwait(false);
             duration = dur;
             hasVideo = duration > 0; // ffmpeg nicht verfügbar → protocol-only
@@ -163,7 +163,7 @@ public sealed class TrainingSampleGenerator
                 if (hasVideo)
                 {
                     framePath = await FrameStore.ExtractAndStoreAsync(
-                        _cfg.FfmpegPath ?? Shared.FfmpegLocator.ResolveFfmpeg(),
+                        _cfg.FfmpegPath ?? AuswertungPro.Next.Application.Ai.FfmpegLocator.ResolveFfmpeg(),
                         tc.VideoPath, t, sampleId, framesDir, ct).ConfigureAwait(false);
                 }
                 // Fallback: Foto aus PDF-Bildbericht

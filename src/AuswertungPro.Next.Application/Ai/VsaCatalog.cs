@@ -5,7 +5,7 @@ using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 
-namespace AuswertungPro.Next.UI.Ai.Shared;
+namespace AuswertungPro.Next.Application.Ai;
 
 /// <summary>
 /// Statischer VSA-Code-Katalog fuer Plausibilitaetspruefung (keine DB-Abhaengigkeit).
@@ -37,8 +37,8 @@ public static class VsaCatalog
             ["BAG"] = new("BAG", "Einragender Anschluss",       false, true,  "%"),
             ["BAH"] = new("BAH", "Schadhafter Anschluss",       true,  false, null),
             ["BAI"] = new("BAI", "Einragendes Dichtungsmaterial", true, true, "%"),
-            ["BAJ"] = new("BAJ", "Verschobene Rohrverbindung",  true,  false, null),
-            ["BAK"] = new("BAK", "Schadhafte Innenauskleidung", true,  false, null),
+            ["BAJ"] = new("BAJ", "Verschobene Rohrverbindung",  true,  true,  "mm"),   // Q1: Abstand/Versatz mm; BAJC: Knick in °
+            ["BAK"] = new("BAK", "Feststellung der Innenauskleidung", true, false, null),
             ["BAL"] = new("BAL", "Schadhafte Reparatur",        true,  false, null),
             ["BAM"] = new("BAM", "Schadhafte Schweissnaht",     true,  false, null),
             ["BAN"] = new("BAN", "Poroese Leitung",             false, false, null),
@@ -70,7 +70,7 @@ public static class VsaCatalog
             // BD: Weitere Codes / Steuercodes
             // ══════════════════════════════════════════════════════════
             ["BDA"] = new("BDA", "Allgemeinzustand Foto",       false, false, null),
-            ["BDB"] = new("BDB", "Kamera nicht einsetzbar",      false, false, null),
+            ["BDB"] = new("BDB", "Allgemeine Anmerkung",          false, false, null),   // Steuercode mit std. Anmerkungen (A=Beginn TV, F=Gegenseite, G-J=Kamera)
             ["BDC"] = new("BDC", "Inspektionsabbruch",          true,  false, null),
             ["BDD"] = new("BDD", "Wasserspiegel",               true,  true,  "%"),
             ["BDE"] = new("BDE", "Zufluss/Fehlanschluss",       true,  true,  "%"),

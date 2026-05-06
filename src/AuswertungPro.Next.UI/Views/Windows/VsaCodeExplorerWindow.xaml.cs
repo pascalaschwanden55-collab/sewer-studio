@@ -10,7 +10,7 @@ using System.Windows.Media;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.Shared;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Services.CodeCatalog;
 using AuswertungPro.Next.UI.ViewModels.Windows;

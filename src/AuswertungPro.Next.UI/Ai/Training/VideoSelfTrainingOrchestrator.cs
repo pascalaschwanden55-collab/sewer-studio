@@ -477,7 +477,7 @@ public sealed class VideoSelfTrainingOrchestrator
     {
         try
         {
-            var ffprobe = Shared.FfmpegLocator.ResolveFfprobe();
+            var ffprobe = AuswertungPro.Next.Application.Ai.FfmpegLocator.ResolveFfprobe();
             // ArgumentList.Add statt Arguments-String: Command-Injection-Schutz.
             var psi = new ProcessStartInfo
             {

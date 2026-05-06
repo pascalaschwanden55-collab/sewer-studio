@@ -7,9 +7,7 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai.Pipeline;
-using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai.Training;
-using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -104,7 +102,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 
             var multiModel = new MultiModelAnalysisService(
                 pipelineClient, pipelineCfg,
-                _cfg.FfmpegPath ?? Shared.FfmpegLocator.ResolveFfmpeg(),
+                _cfg.FfmpegPath ?? AuswertungPro.Next.Application.Ai.FfmpegLocator.ResolveFfmpeg(),
                 qwenVision: qwenVision);
             multiModel.FrameStepSeconds = request.FrameStepSeconds;
             multiModel.DedupWindowFrames = request.DedupWindowFrames;
@@ -121,7 +119,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             await EnableFewShotIfAvailableAsync(ollamaVision, ct).ConfigureAwait(false);
             var videoService = new VideoFullAnalysisService(
                 vision: ollamaVision,
-                ffmpegPath: _cfg.FfmpegPath ?? Shared.FfmpegLocator.ResolveFfmpeg());
+                ffmpegPath: _cfg.FfmpegPath ?? AuswertungPro.Next.Application.Ai.FfmpegLocator.ResolveFfmpeg());
 
             videoService.FrameStepSeconds = request.FrameStepSeconds;
             videoService.DedupWindowFrames = request.DedupWindowFrames;

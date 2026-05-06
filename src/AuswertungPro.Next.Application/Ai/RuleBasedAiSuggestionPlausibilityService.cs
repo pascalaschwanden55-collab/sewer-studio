@@ -1,10 +1,8 @@
 using System;
-using AuswertungPro.Next.Application.Ai;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using AuswertungPro.Next.UI.Ai.Shared;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Application.Ai;
 
 /// <summary>
 /// Deterministische, regelbasierte Plausibilitätsprüfung für KI-Codevorschläge.
@@ -124,7 +122,7 @@ public sealed partial class RuleBasedAiSuggestionPlausibilityService : IAiSugges
         // aber der Code nur 3 Zeichen hat → Penalty (unvollstaendig)
         if (suggestedCode is not null && code.Length >= 3)
         {
-            var catalogEntry = Shared.VsaCatalog.Get(code[..3]);
+            var catalogEntry = VsaCatalog.Get(code[..3]);
             if (catalogEntry is not null)
             {
                 if (catalogEntry.RequiresCharacterization && code.Length <= 3)
