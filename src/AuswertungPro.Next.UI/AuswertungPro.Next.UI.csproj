@@ -19,6 +19,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Phase 3.1 Fix: Icon zusaetzlich als WPF-Resource einbetten,
+         damit Window.Icon="Assets/Brand/sewer-studio.ico" zur Laufzeit
+         in der gepackten XAML aufloesbar ist. -->
+    <Resource Include="Assets\Brand\sewer-studio.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="AuswertungPro.Next.Pipeline.Tests" />
   </ItemGroup>
 
