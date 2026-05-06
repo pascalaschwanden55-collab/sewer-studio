@@ -1,5 +1,6 @@
 // AuswertungPro – Video-Selbsttraining Phase 2
 using System;
+using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -224,7 +225,7 @@ public sealed class VideoSelfTrainingOrchestrator
                     .ConfigureAwait(false);
 
                 // BatchPipelineResult → PipelineResult konvertieren
-                static RawVideoDetection ConvertFinding(Ai.Pipeline.BatchFrameAnalysis a, Ai.EnhancedFinding f,
+                static RawVideoDetection ConvertFinding(Ai.Pipeline.BatchFrameAnalysis a, AuswertungPro.Next.Domain.Ai.Vision.EnhancedFinding f,
                     double videoDuration, double inspLength)
                 {
                     var meter = a.QwenResult.Meter ?? (a.TimestampSeconds / videoDuration * inspLength);

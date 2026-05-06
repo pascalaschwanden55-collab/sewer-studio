@@ -1,5 +1,6 @@
 // V4.1 Batch-Pipeline: YOLO Batch → Filter → DINO+SAM → Qwen ×6 parallel
 using System;
+using AuswertungPro.Next.Domain.Ai.Vision;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
