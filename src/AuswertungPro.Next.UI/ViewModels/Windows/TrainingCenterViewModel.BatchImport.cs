@@ -18,7 +18,6 @@ using AuswertungPro.Next.Infrastructure.Ai.Training;
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training.Services;
@@ -151,7 +150,7 @@ public partial class TrainingCenterViewModel
             }
 
             // Ollama-Verbindung einmalig pruefen + KB-Objekte vorbereiten
-            var ollamaConfig = OllamaConfigExtensions.Load();
+            var ollamaConfig = AuswertungPro.Next.Application.Ai.Ollama.OllamaConfigProvider.Load();
             var ollamaReachable = await CheckOllamaReachableAsync(ollamaConfig, ct);
             KnowledgeBaseContext? kbCtx = null;
             KnowledgeBaseManager? kbManager = null;

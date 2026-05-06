@@ -11,7 +11,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using IOPath = System.IO.Path;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Teacher;
 using AuswertungPro.Next.UI.Ai.Training;
@@ -680,7 +679,7 @@ public partial class PlayerWindow
         if (_trainingKbManager != null) return;
         try
         {
-            var cfg = OllamaConfigExtensions.Load();
+            var cfg = AuswertungPro.Next.Application.Ai.Ollama.OllamaConfigProvider.Load();
             _trainingHttp ??= new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
             _trainingEmbedder = new EmbeddingService(_trainingHttp, cfg);
             _trainingKbCtx = new KnowledgeBaseContext();

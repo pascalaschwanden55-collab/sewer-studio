@@ -9,7 +9,6 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.Ollama;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
@@ -43,7 +42,7 @@ public partial class PlayerWindow
         KnowledgeBaseManager? kbManager = null;
         try
         {
-            var cfg = OllamaConfigExtensions.Load();
+            var cfg = AuswertungPro.Next.Application.Ai.Ollama.OllamaConfigProvider.Load();
             var embedder = new EmbeddingService(_feedbackHttpClient, cfg);
             kbManager = new KnowledgeBaseManager(db, embedder);
         }

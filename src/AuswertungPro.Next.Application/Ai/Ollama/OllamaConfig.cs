@@ -5,7 +5,7 @@ namespace AuswertungPro.Next.Application.Ai.Ollama;
 /// <summary>
 /// Phase 5.3 Sub-F1: Konfiguration fuer den Ollama-Server und verwendete Modelle.
 /// Reiner Record + Konstanten (pure Application-Schicht). Geladen via UI-Helper
-/// <c>OllamaConfigExtensions.Load()</c> (in UI), das AiPlatformConfig nutzt.
+/// <c>AuswertungPro.Next.Application.Ai.Ollama.OllamaConfigProvider.Load()</c> (in UI), das AiPlatformConfig nutzt.
 /// </summary>
 public sealed record OllamaConfig(
     Uri BaseUri,

@@ -107,7 +107,7 @@ namespace AuswertungPro.Next.UI
 
                 // Phase 5.3: OllamaConfig-Loader (UI -> Application).
                 AuswertungPro.Next.Application.Ai.Ollama.OllamaConfigProvider.SetLoader(
-                    () => Ai.Ollama.OllamaConfigExtensions.Load());
+                    () => Ai.AiPlatformConfig.Load().ToOllamaConfig());
 
                 // Phase 5.1.B Etappe 4 Sub-E: Nur noch DI-Container — Legacy-ServiceProvider entfernt.
                 var diCollection = new ServiceCollection();

@@ -8,12 +8,12 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.UI.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Ai;
 
