@@ -1,10 +1,9 @@
 using System;
-using AuswertungPro.Next.Application.Ai.Vision;
 using System.Collections.Generic;
 using System.Linq;
-using AuswertungPro.Next.Domain.Ai.Vision;
+using AuswertungPro.Next.Application.Ai.Vision;
 
-namespace AuswertungPro.Next.UI.Ai.Pipeline;
+namespace AuswertungPro.Next.Application.Ai.Pipeline;
 
 /// <summary>
 /// Collects per-frame timing data and produces aggregate statistics.
@@ -23,22 +22,22 @@ public sealed class PipelineTelemetry
     {
         lock (_lock)
         {
-        if (_wallClock.IsRunning) _wallClock.Stop();
+            if (_wallClock.IsRunning) _wallClock.Stop();
 
-        var active = _frames.Where(f => !f.Skipped).ToList();
-        var skipped = _frames.Count(f => f.Skipped);
+            var active = _frames.Where(f => !f.Skipped).ToList();
+            var skipped = _frames.Count(f => f.Skipped);
 
-        return new TelemetrySummary(
-            TotalFrames: _frames.Count,
-            SkippedFrames: skipped,
-            Extraction: ComputePhase(active, f => f.ExtractionMs),
-            Yolo: ComputePhase(active, f => f.YoloMs),
-            Dino: ComputePhase(active, f => f.DinoMs),
-            Sam: ComputePhase(active, f => f.SamMs),
-            Qwen: ComputePhase(active, f => f.QwenMs),
-            Total: ComputePhase(active, f => f.TotalMs),
-            WallClockMs: _wallClock.ElapsedMilliseconds);
-        } // lock
+            return new TelemetrySummary(
+                TotalFrames: _frames.Count,
+                SkippedFrames: skipped,
+                Extraction: ComputePhase(active, f => f.ExtractionMs),
+                Yolo: ComputePhase(active, f => f.YoloMs),
+                Dino: ComputePhase(active, f => f.DinoMs),
+                Sam: ComputePhase(active, f => f.SamMs),
+                Qwen: ComputePhase(active, f => f.QwenMs),
+                Total: ComputePhase(active, f => f.TotalMs),
+                WallClockMs: _wallClock.ElapsedMilliseconds);
+        }
     }
 
     private static PhaseStat ComputePhase(
@@ -75,6 +74,3 @@ public sealed class PipelineTelemetry
         return sorted[lower] + frac * (sorted[upper] - sorted[lower]);
     }
 }
-
-// Phase 5.3 vorbereitend: FrameTiming, TelemetrySummary, PhaseStat
-// nach Domain/Ai/Vision/VideoAnalysisModels.cs.

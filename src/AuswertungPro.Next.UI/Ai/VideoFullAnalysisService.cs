@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Vision;
 using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
@@ -87,7 +88,7 @@ public sealed class VideoFullAnalysisService
 
         progress?.Report(new VideoAnalysisProgress(0, totalFrames, "Analyse gestartet..."));
 
-        var telemetry = new Pipeline.PipelineTelemetry();
+        var telemetry = new AuswertungPro.Next.Application.Ai.Pipeline.PipelineTelemetry();
 
         await using var frameStream = VideoFrameStream.Open(
             _ffmpegPath, videoPath, FrameStepSeconds, duration, ct);
