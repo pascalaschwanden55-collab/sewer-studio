@@ -1043,7 +1043,7 @@ public partial class TrainingCenterWindow : Window
                     videoOrch,
                     protocolLoader.LoadProtocolAsync);
 
-                var retrainOrchestrator = new Ai.Training.YoloRetrainOrchestrator(
+                var retrainOrchestrator = new AuswertungPro.Next.Infrastructure.Ai.Training.YoloRetrainOrchestrator(
                     retrainClient,
                     new AuswertungPro.Next.Infrastructure.Ai.Training.YoloDatasetExportService(),
                     benchmarkRunner,
@@ -1091,7 +1091,7 @@ public partial class TrainingCenterWindow : Window
                         protocolLoader.LoadProtocolAsync);
 
                     using var kbCtx = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
-                    var loraOrchestrator = new Ai.Training.QwenLoraOrchestrator(
+                    var loraOrchestrator = new AuswertungPro.Next.Infrastructure.Ai.Training.QwenLoraOrchestrator(
                         loraClient,
                         kbCtx,
                         ollamaConfig,

@@ -6,13 +6,12 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 /// <summary>
 /// Orchestrates automatic YOLO retraining, benchmark gating, versioning, and hot-reload.
@@ -138,7 +137,7 @@ public sealed class YoloRetrainOrchestrator
         Log($"YOLO Auto-Retrain: {newApproved.Count} neue Samples, {approvedWithRealBox.Count} total (SourceType=VideoTimestamp, ausgeschlossen={excludedBySource}).");
 
         var exportDir = Path.Combine(
-            KnowledgeRoot.GetRoot(),
+            AuswertungPro.Next.Application.Ai.KnowledgeRootProvider.GetRoot(),
             "training_export",
             $"yolo_autotrain_{DateTime.UtcNow:yyyyMMdd_HHmmss}");
 

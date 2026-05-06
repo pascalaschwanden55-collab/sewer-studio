@@ -7,14 +7,12 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.Ollama;
-using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 /// <summary>
 /// Orchestriert Qwen LoRA-Training: KB-Samples exportieren, Training starten,
@@ -62,7 +60,7 @@ public sealed class QwenLoraOrchestrator
         int loraRank = 16,
         CancellationToken ct = default)
     {
-        var adapterDir = Path.Combine(KnowledgeRoot.GetRoot(), "lora_adapters");
+        var adapterDir = Path.Combine(AuswertungPro.Next.Application.Ai.KnowledgeRootProvider.GetRoot(), "lora_adapters");
         Directory.CreateDirectory(adapterDir);
 
         var manifestPath = Path.Combine(adapterDir, "manifest.json");
