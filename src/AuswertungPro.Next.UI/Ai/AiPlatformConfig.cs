@@ -2,7 +2,6 @@ using System;
 using AuswertungPro.Next.Application.Ai.Ollama;
 using AuswertungPro.Next.Application.Ai;
 using System.Globalization;
-using AuswertungPro.Next.UI.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.UI.Ai;
