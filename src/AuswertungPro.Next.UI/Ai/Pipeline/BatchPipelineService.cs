@@ -1,5 +1,6 @@
 // V4.1 Batch-Pipeline: YOLO Batch → Filter → DINO+SAM → Qwen ×6 parallel
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
 using AuswertungPro.Next.Domain.Ai.Vision;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -493,29 +494,9 @@ public sealed class BatchPipelineService
 }
 
 // ── DTOs ──────────────────────────────────────────────────────────────────
-
-/// <summary>Ergebnis einer Batch-Pipeline-Analyse.</summary>
-public sealed record BatchPipelineResult(
-    List<BatchFrameAnalysis> Analyses,
-    TimeSpan Duration,
-    int TotalFrames,
-    int RelevantFrames,
-    int SkippedFrames);
-
-/// <summary>Einzelne Frame-Analyse aus der Batch-Pipeline.</summary>
-public sealed record BatchFrameAnalysis(
-    int FrameIndex,
-    double TimestampSeconds,
-    EnhancedFrameAnalysis QwenResult,
-    int YoloDetectionCount,
-    // V4.2: Persistierter Frame-Pfad (PNG), gesetzt wenn Findings vorhanden und frameOutputDir gegeben.
-    string? FramePath = null);
-
-/// <summary>Fortschritt der Batch-Pipeline.</summary>
-public sealed record BatchPipelineProgress(
-    int Done,
-    int Total,
-    string Status);
+// Phase 5.3 vorbereitend: BatchPipelineResult / BatchFrameAnalysis /
+// BatchPipelineProgress / ProtocolTarget / DamageVerification nach
+// Application/Ai/Vision/VideoAnalysisModels.cs.
 
 /// <summary>
 /// V4.2 Phase 2: Protokoll-First-Kontext — das PDF-Protokoll als Ground-Truth-Fahrplan.
@@ -583,29 +564,4 @@ public sealed class ProtocolFirstContext
     }
 }
 
-/// <summary>
-/// Ein einzelner Protokoll-Eintrag, auf den sich die Pipeline fokussieren soll.
-/// </summary>
-public sealed record ProtocolTarget(
-    string VsaCode,
-    double MeterStart,
-    double MeterEnd,
-    string? Description = null,
-    string? ClockPosition = null);
-
-/// <summary>
-/// V4.2 Phase 2.3: Ergebnis einer gerichteten Verifikation durch Qwen.
-/// "Ist Code X bei Meter Y im Frame sichtbar?" — Ja/Nein + Schweregrad.
-/// </summary>
-public sealed record DamageVerification(
-    bool Visible,
-    int? Severity,
-    double Confidence,
-    string? Notes)
-{
-    /// <summary>V4.2 Nachbesserung B: Pipeline-Version fuer Ursachenanalyse.</summary>
-    public string PipelineVersion { get; init; } = PipelineVersions.Pipeline;
-
-    /// <summary>V4.2 Nachbesserung B: Prompt-Version (VerifyPrompt).</summary>
-    public string PromptVersion { get; init; } = PipelineVersions.VerifyPrompt;
-}
+// ProtocolTarget + DamageVerification: nach Application/Ai/Vision/VideoAnalysisModels.cs

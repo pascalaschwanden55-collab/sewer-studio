@@ -185,7 +185,7 @@ public sealed class VideoSelfTrainingOrchestrator
                 BatchPipeline.FrameStepSeconds = request.FrameStepSeconds;
 
                 var batchProgress = progress is not null
-                    ? new Progress<Ai.Pipeline.BatchPipelineProgress>(p =>
+                    ? new Progress<AuswertungPro.Next.Application.Ai.Vision.BatchPipelineProgress>(p =>
                         progress.Report(new VideoTrainingProgress(
                             "KI-Analyse", p.Done, p.Total, p.Status)))
                     : null;
@@ -195,7 +195,7 @@ public sealed class VideoSelfTrainingOrchestrator
                 if (UseProtocolFirst && groundTruths.Count > 0)
                 {
                     var targets = groundTruths
-                        .Select(gt => new Ai.Pipeline.ProtocolTarget(
+                        .Select(gt => new AuswertungPro.Next.Application.Ai.Vision.ProtocolTarget(
                             VsaCode: gt.VsaCode,
                             MeterStart: gt.MeterStart,
                             MeterEnd: gt.MeterEnd,
@@ -226,7 +226,7 @@ public sealed class VideoSelfTrainingOrchestrator
                     .ConfigureAwait(false);
 
                 // BatchPipelineResult → PipelineResult konvertieren
-                static RawVideoDetection ConvertFinding(Ai.Pipeline.BatchFrameAnalysis a, AuswertungPro.Next.Domain.Ai.Vision.EnhancedFinding f,
+                static RawVideoDetection ConvertFinding(AuswertungPro.Next.Application.Ai.Vision.BatchFrameAnalysis a, AuswertungPro.Next.Domain.Ai.Vision.EnhancedFinding f,
                     double videoDuration, double inspLength)
                 {
                     var meter = a.QwenResult.Meter ?? (a.TimestampSeconds / videoDuration * inspLength);

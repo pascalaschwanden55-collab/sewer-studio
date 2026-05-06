@@ -1,4 +1,6 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Application.Ai.Ollama;
@@ -1273,7 +1275,7 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
     /// Fragt Qwen: "Ist VSA-Code {code} bei Meter {meter} in diesem Frame sichtbar?"
     /// Geschlossene Ja/Nein-Frage verhindert den BCC-Kollaps der Open-Set-Klassifikation.
     /// </summary>
-    public async Task<Pipeline.DamageVerification> VerifyCodeAsync(
+    public async Task<AuswertungPro.Next.Application.Ai.Vision.DamageVerification> VerifyCodeAsync(
         string framePngBase64,
         string vsaCode,
         double meter,
@@ -1306,7 +1308,7 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
                 formatSchema: VerificationSchema,
                 ct: ct).ConfigureAwait(false);
 
-            return new Pipeline.DamageVerification(
+            return new AuswertungPro.Next.Application.Ai.Vision.DamageVerification(
                 Visible: dto.Visible,
                 Severity: dto.Severity,
                 Confidence: Math.Clamp(dto.Confidence, 0.0, 1.0),
@@ -1317,7 +1319,7 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
         {
             System.Diagnostics.Debug.WriteLine(
                 $"[VerifyCode] Fehler fuer {vsaCode}@{meter:F1}m: {ex.Message}");
-            return new Pipeline.DamageVerification(false, null, 0.0, $"error: {ex.Message}");
+            return new AuswertungPro.Next.Application.Ai.Vision.DamageVerification(false, null, 0.0, $"error: {ex.Message}");
         }
     }
 }
