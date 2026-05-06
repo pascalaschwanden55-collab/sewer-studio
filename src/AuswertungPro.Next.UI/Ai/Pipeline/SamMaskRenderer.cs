@@ -6,7 +6,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Ai.Pipeline;

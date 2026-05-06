@@ -9,7 +9,6 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Helpers;
 
 namespace AuswertungPro.Next.UI.Ai;
