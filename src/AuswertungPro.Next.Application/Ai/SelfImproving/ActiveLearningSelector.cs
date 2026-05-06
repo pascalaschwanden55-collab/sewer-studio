@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AuswertungPro.Next.Application.Ai.SelfImproving;
 
-namespace AuswertungPro.Next.UI.Ai.SelfImproving;
+namespace AuswertungPro.Next.Application.Ai.SelfImproving;
 
 /// <summary>
 /// Active learning sample selection strategy:

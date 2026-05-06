@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Vision;
 using AuswertungPro.Next.Domain.Ai.Vision;
 using System.Collections.Generic;
@@ -8,8 +9,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.SelfImproving;
 
-namespace AuswertungPro.Next.UI.Ai.SelfImproving;
+namespace AuswertungPro.Next.Application.Ai.SelfImproving;
 
 /// <summary>
 /// Persistenter Speicher fuer die Review-Queue (K1 aus V4.2 Gesamt-Audit).
@@ -34,7 +36,7 @@ public static class ReviewQueueStore
 
     /// <summary>Pfad zur JSON-Datei im KnowledgeRoot.</summary>
     public static string FilePath =>
-        Path.Combine(KnowledgeRoot.GetRoot(), "review_queue.json");
+        Path.Combine(KnowledgeRootProvider.GetRoot(), "review_queue.json");
 
     /// <summary>
     /// Laedt die persistierte Review-Queue. Bei korruptem JSON oder fehlender Datei

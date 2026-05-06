@@ -17,6 +17,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -105,8 +106,8 @@ public partial class TrainingCenterViewModel : ObservableObject
     [ObservableProperty] private string _kbTrendDirection = "";
 
     // Review Queue (Self-Improving Loop)
-    public ObservableCollection<Ai.SelfImproving.ReviewQueueItem> ReviewQueue { get; } = new();
-    [ObservableProperty] private Ai.SelfImproving.ReviewQueueItem? _selectedReviewItem;
+    public ObservableCollection<AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueItem> ReviewQueue { get; } = new();
+    [ObservableProperty] private AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueItem? _selectedReviewItem;
     [ObservableProperty] private int _reviewQueueCount;
     [ObservableProperty] private string _reviewStatusText = "";
 
@@ -120,7 +121,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
     }
 
-    partial void OnSelectedReviewItemChanged(Ai.SelfImproving.ReviewQueueItem? value)
+    partial void OnSelectedReviewItemChanged(AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueItem? value)
     {
         OnPropertyChanged(nameof(SelectedReviewFramePath));
     }
@@ -1377,7 +1378,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     /// <summary>Approve a review item (accept the suggested code).</summary>
     public async Task ApproveReviewItemAsync(
-        Ai.SelfImproving.ReviewQueueItem item,
+        AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueItem item,
         Ai.SelfImproving.FeedbackIngestionService feedback,
         Ai.SelfImproving.ReviewQueueService queueService,
         CancellationToken ct = default)
@@ -1407,7 +1408,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     /// <summary>Reject a review item with a corrected code.</summary>
     public async Task RejectReviewItemAsync(
-        Ai.SelfImproving.ReviewQueueItem item,
+        AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueItem item,
         string correctedCode,
         Ai.SelfImproving.FeedbackIngestionService feedback,
         Ai.SelfImproving.ReviewQueueService queueService,
@@ -1441,7 +1442,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// Review-Entscheidungen werden so zum Gold-Standard fuer zukuenftiges Training (inkl. DINOv2-Heads in Phase 3.2).
     /// </summary>
     private static async Task TryAppendTeacherAnnotationAsync(
-        Ai.SelfImproving.ReviewQueueItem item,
+        AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueItem item,
         string vsaCode,
         string reviewKind)
     {
