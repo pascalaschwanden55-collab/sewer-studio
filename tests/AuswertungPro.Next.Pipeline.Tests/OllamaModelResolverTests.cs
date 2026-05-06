@@ -1,4 +1,4 @@
-using AuswertungPro.Next.UI.Ai.Ollama;
+using AuswertungPro.Next.Application.Ai.Ollama;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 

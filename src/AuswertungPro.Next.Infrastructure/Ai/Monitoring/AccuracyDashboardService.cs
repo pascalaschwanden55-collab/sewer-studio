@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Data.Sqlite;
 
-namespace AuswertungPro.Next.UI.Ai.Monitoring;
+namespace AuswertungPro.Next.Infrastructure.Ai.Monitoring;
 
 /// <summary>
 /// Per-VSA-Code Precision/Recall/F1 computation from ValidationLog.

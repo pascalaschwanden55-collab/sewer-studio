@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Ollama;
 
-namespace AuswertungPro.Next.UI.Ai.Ollama;
+namespace AuswertungPro.Next.Infrastructure.Ai.Ollama;
 
 /// <summary>
 /// Prüft ob Ollama erreichbar ist und welche Modelle verfügbar sind.

@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace AuswertungPro.Next.UI.Ai.Ollama;
+namespace AuswertungPro.Next.Application.Ai.Ollama;
 
 public static class OllamaModelResolver
 {

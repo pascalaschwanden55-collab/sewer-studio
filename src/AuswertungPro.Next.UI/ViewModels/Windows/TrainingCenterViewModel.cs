@@ -567,7 +567,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 string accText;
                 try
                 {
-                    var accSvc = new Ai.Monitoring.AccuracyDashboardService(db.Connection);
+                    var accSvc = new AuswertungPro.Next.Infrastructure.Ai.Monitoring.AccuracyDashboardService(db.Connection);
                     var metrics = accSvc.ComputeMetrics();
                     accText = metrics.Count > 0
                         ? string.Join("\n", metrics
