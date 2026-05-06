@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace AuswertungPro.Next.UI.Ai.QualityGate;
+namespace AuswertungPro.Next.Application.Ai.QualityGate;
 
 /// <summary>
 /// Weighted-average fusion of evidence signals into a composite confidence score.
@@ -13,6 +13,8 @@ public sealed class QualityGateService
 {
     public const double GreenThreshold = 0.75;
     public const double YellowThreshold = 0.45;
+    // Minimum Signale fuer Green — einzelnes Signal darf nicht allein Green erzeugen (Audit N9)
+    public const int MinSignalsForGreen = 2;
 
     private readonly Dictionary<string, CategoryWeights> _categoryWeights = new(StringComparer.OrdinalIgnoreCase);
 
@@ -65,7 +67,9 @@ public sealed class QualityGateService
         foreach (var s in signals)
             weightsUsed[s.Name] = s.Weight / totalWeight;
 
-        var trafficLight = composite >= GreenThreshold ? TrafficLight.Green
+        // Einzelnes Signal darf nicht allein Green erzeugen (Audit N9)
+        var trafficLight = composite >= GreenThreshold && signals.Count >= MinSignalsForGreen
+            ? TrafficLight.Green
             : composite >= YellowThreshold ? TrafficLight.Yellow
             : TrafficLight.Red;
 

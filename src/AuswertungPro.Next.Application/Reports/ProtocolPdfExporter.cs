@@ -47,7 +47,7 @@ public sealed class ProtocolPdfExporter
             {
                 page.Margin(25);
                 page.Size(PageSizes.A4);
-                page.DefaultTextStyle(x => x.FontSize(10));
+                page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
 
                 page.Header().Column(col =>
                 {
@@ -155,7 +155,10 @@ public sealed class ProtocolPdfExporter
         var (startNode, endNode) = SplitHoldingNodes(holdingLabel);
         var flowDown = ParseFlowDirection(record.GetFieldValue("Inspektionsrichtung"));
 
-        var grafikHeight = 700; // Tall SVG for page-filling graphic
+        // Dynamische SVG-Hoehe: waechst mit Anzahl Codes (Tabelle rechts) und Haltungslaenge (Distanz-Achse links).
+        // Damit bleiben Beobachtungstabelle und Pipe-Skala lesbar, auch bei langen Haltungen mit vielen Schaeden.
+        // Bei grafikHeight > 1000 greift die Slicing-Logik (Seite 1 / Seite 2).
+        var grafikHeight = ComputeDynamicGrafikHeight(length, entries.Count);
         var svg = options.IncludeHaltungsgrafik && length.HasValue && length.Value > 0
             ? BuildHaltungsgrafikSvg(length.Value, entries, photoNumberMap, startNode, endNode, flowDown, brand, overrideHeight: grafikHeight)
             : null;
@@ -169,39 +172,75 @@ public sealed class ProtocolPdfExporter
             {
                 page.Margin(25);
                 page.Size(PageSizes.A4);
-                page.DefaultTextStyle(x => x.FontSize(10));
+                page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
 
                 page.Header().Element(c => ComposeTopHeader(c, logoBytes, options));
 
                 page.Content().Column(col =>
                 {
                     // === SEITE 1: Titel + Header + Haltungsgrafik ===
-                    // Alles auf einer Seite, keine Spacing/ExtendVertical.
-                    // A4=842pt, Margins=50pt, Header~45pt, Footer~25pt → Content≈722pt
-                    // Titel~30pt, HeaderTable~110pt, SectionHeading~18pt, Spacing~14pt, Scale~12pt, Border/Pad~14pt → Grafik≈524pt
-                    const float grafikDisplayHeight = 490f;
+                    // Strategie: Solange die Skalierung lesbar bleibt (>= 60%), packen wir die ganze Grafik
+                    // auf eine Seite mit FitArea (proportional verkleinert -> Massstab passt sich an).
+                    // Erst wenn die Skalierung zu klein wuerde (< 60% -> Beschriftungen unleserlich),
+                    // splitten wir SVG-seitig auf mehrere Seiten mit fester Skala.
+                    const float grafikDisplayHeightPage1 = 440f;
+                    const float grafikDisplayHeightPageN = 700f;
+                    const float grafikContainerWidth = 535f; // A4 - Margins - Padding/Border
+                    const int svgViewBoxWidth = 770;
+                    const float minReadableScale = 0.60f; // Grenzwert: ab hier wird Schrift unleserlich
 
-                    col.Item().PaddingTop(4).Element(c => ComposeTitleBar(c, title, options.Subtitle, brand));
+                    col.Item().PaddingTop(2).Element(c => ComposeTitleBar(c, title, options.Subtitle, brand));
                     col.Item().PaddingTop(4).Element(c => ComposeHeaderTable(c, headerItems, brand));
 
                     if (options.IncludeHaltungsgrafik)
                     {
-                        col.Item().PaddingTop(2).Element(c => ComposeSectionHeading(c, "Haltungsgrafik", brand));
+                        col.Item().PaddingTop(4).Element(c => ComposeSectionHeading(c, "Haltungsgrafik", brand));
                         if (!string.IsNullOrWhiteSpace(svg))
                         {
                             var scale = BuildHaltungsgrafikScale(length, grafikHeight);
-                            col.Item().PaddingTop(2).Border(0.5f).BorderColor("#D1D5DB").Background("#FFFFFF").Padding(4).Column(g =>
+
+                            // Was waere die natuerliche Display-Hoehe (ohne Skalierung) im Container?
+                            var naturalDisplayHeight = grafikHeight * grafikContainerWidth / svgViewBoxWidth;
+                            // Wie stark muss FitArea() skalieren um auf eine Seite zu passen?
+                            var requiredScale = grafikDisplayHeightPage1 / naturalDisplayHeight;
+
+                            if (requiredScale >= minReadableScale)
                             {
-                                if (!string.IsNullOrWhiteSpace(scale.LengthText) || !string.IsNullOrWhiteSpace(scale.ScaleText))
+                                // Skalierung bleibt lesbar -> alles auf Seite 1, FitArea regelt das proportional.
+                                col.Item().PaddingTop(2).Element(c =>
+                                    ComposeGrafikFrame(c, svg!, scale, grafikDisplayHeightPage1));
+                            }
+                            else
+                            {
+                                // Skalierung zu stark -> Multi-Page-Slicing mit FESTER Skala (Schrift bleibt lesbar).
+                                var pxPerSvgUnit = grafikContainerWidth / svgViewBoxWidth;
+                                var maxSvgPerPage1 = grafikDisplayHeightPage1 / pxPerSvgUnit;
+                                var maxSvgPerPageN = grafikDisplayHeightPageN / pxPerSvgUnit;
+
+                                double cursorSvg = 0;
+                                bool firstSlice = true;
+                                while (cursorSvg < grafikHeight - 0.5)
                                 {
-                                    g.Item().Row(row =>
+                                    var maxThisPage = firstSlice ? maxSvgPerPage1 : maxSvgPerPageN;
+                                    var sliceSvgHeight = Math.Min(grafikHeight - cursorSvg, maxThisPage);
+                                    var sliceDisplayHeight = (float)(sliceSvgHeight * pxPerSvgUnit);
+
+                                    var sliceSvg = ExtractSvgRange(svg!, svgViewBoxWidth, grafikHeight,
+                                        (int)cursorSvg, (int)Math.Round(sliceSvgHeight));
+
+                                    if (!firstSlice)
                                     {
-                                        row.RelativeItem().Text(scale.LengthText ?? "").FontSize(10).FontColor(Colors.Grey.Darken2);
-                                        row.AutoItem().Text(scale.ScaleText ?? "").FontSize(10).FontColor(Colors.Grey.Darken2);
-                                    });
+                                        col.Item().PageBreak();
+                                        col.Item().PaddingTop(4).Element(c =>
+                                            ComposeSectionHeading(c, "Haltungsgrafik (Fortsetzung)", brand));
+                                    }
+                                    col.Item().PaddingTop(2).Element(c =>
+                                        ComposeGrafikFrame(c, sliceSvg, firstSlice ? scale : null, sliceDisplayHeight));
+
+                                    cursorSvg += sliceSvgHeight;
+                                    firstSlice = false;
                                 }
-                                g.Item().Height(grafikDisplayHeight).Svg(svg).FitArea();
-                            });
+                            }
                         }
                         else
                         {
@@ -552,7 +591,7 @@ public sealed class ProtocolPdfExporter
         {
             outer.Item().Row(row =>
             {
-                row.ConstantItem(100).Height(32).AlignMiddle().Element(c =>
+                row.ConstantItem(120).Height(38).AlignMiddle().Element(c =>
                 {
                     if (logoBytes is not null)
                         c.Image(logoBytes).FitHeight();
@@ -563,47 +602,197 @@ public sealed class ProtocolPdfExporter
                     var lines = options.SenderBlock?.Split('\n', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
                     foreach (var line in lines)
                     {
-                        col.Item().AlignRight().Text(line.Trim()).FontSize(8).FontColor("#4A5568");
+                        col.Item().AlignRight().Text(line.Trim()).FontSize(8).FontColor("#475569");
                     }
                 });
             });
-            outer.Item().PaddingTop(2).LineHorizontal(0.5f).LineColor("#D1D5DB");
+            // Klare Doppellinie als Trenner: dicke Linie oben + dünne darunter -> formal, schweizerisch.
+            outer.Item().PaddingTop(4).LineHorizontal(1.5f).LineColor("#0F172A");
+            outer.Item().PaddingTop(1).LineHorizontal(0.4f).LineColor("#0F172A");
         });
     }
 
     internal static void ComposeTitleBar(IContainer container, string title, string? subtitle, string brand)
     {
-        container.Border(0.5f).BorderColor("#D1D5DB").Row(row =>
-        {
-            row.ConstantItem(4).Background(brand);
-            row.RelativeItem()
-                .Background("#FFFFFF")
-                .PaddingVertical(5)
-                .PaddingHorizontal(10)
-                .Column(col =>
+        // Hero-Style kompakt: vertikaler Brand-Block links + grosser Haltungs-Code + Subtitle-Tag rechts.
+        var (mainTitle, microHead) = SplitTitleForHero(title);
+
+        container
+            .BorderBottom(0.5f).BorderColor("#0F172A")
+            .PaddingBottom(5)
+            .Row(row =>
+            {
+                row.ConstantItem(10).Background(brand);
+                row.ConstantItem(10); // Spacer
+
+                row.RelativeItem().Column(col =>
                 {
-                    col.Item().AlignCenter().Text(title).FontSize(13).Bold().FontColor("#111827");
-                    if (!string.IsNullOrWhiteSpace(subtitle))
-                        col.Item().AlignCenter().Text(subtitle).FontSize(9).FontColor("#4B5563");
+                    if (!string.IsNullOrWhiteSpace(microHead))
+                    {
+                        col.Item().Text(microHead.ToUpperInvariant())
+                            .FontSize(8).SemiBold().FontColor(brand);
+                    }
+                    col.Item()
+                        .Text(mainTitle).FontSize(18).Bold().FontColor("#0F172A").LineHeight(1f);
                 });
+
+                if (!string.IsNullOrWhiteSpace(subtitle))
+                {
+                    row.AutoItem().AlignBottom().PaddingBottom(2).PaddingLeft(10)
+                        .Border(0.5f).BorderColor(brand)
+                        .PaddingVertical(2).PaddingHorizontal(6)
+                        .Text(subtitle.ToUpperInvariant())
+                        .FontSize(7).SemiBold().FontColor(brand);
+                }
+            });
+    }
+
+    /// <summary>Splittet einen Titel der Form "Haltungsprotokoll - 12.04.2026 - 175.1-408" in
+    /// Mikrokopfzeile (Datum/Type) und Haupttitel (Haltungsname).</summary>
+    private static (string Main, string? Micro) SplitTitleForHero(string title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            return ("Haltungsprotokoll", null);
+
+        var parts = title.Split(" - ", StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 3)
+            return (parts[^1].Trim(), $"{parts[0].Trim()} · {parts[1].Trim()}");
+        if (parts.Length == 2)
+            return (parts[1].Trim(), parts[0].Trim());
+        return (title.Trim(), null);
+    }
+
+    /// <summary>Wellen-Trennlinie als Abwasser-Uri-Brand-Element (passt zu Wasser/Abwasser).</summary>
+    internal static void ComposeWaveDivider(IContainer container, string brand)
+    {
+        var hex = brand.TrimStart('#');
+        // SVG-Welle: niedrig, ueber volle Breite, mit Brand-Farbe.
+        // Zwei Wellen uebereinander fuer Tiefenwirkung (zweite leicht versetzt + transparenter).
+        var waveSvg =
+            "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 14' preserveAspectRatio='none'>" +
+            $"<path d='M0 8 Q 30 2, 60 8 T 120 8 T 180 8 T 240 8 T 300 8 T 360 8 T 420 8 T 480 8 T 540 8 T 600 8' " +
+            $"stroke='#{hex}' stroke-width='1.2' fill='none' opacity='0.85'/>" +
+            $"<path d='M0 11 Q 30 5, 60 11 T 120 11 T 180 11 T 240 11 T 300 11 T 360 11 T 420 11 T 480 11 T 540 11 T 600 11' " +
+            $"stroke='#{hex}' stroke-width='0.7' fill='none' opacity='0.4'/>" +
+            "</svg>";
+        container.Height(8).Svg(waveSvg).FitArea();
+    }
+
+    /// <summary>Sehr helle Brand-Variante fuer Hintergruende, die fast weiss wirken.</summary>
+    internal static string ResolveNutzungsartBrandUltraLight(string brand) => brand switch
+    {
+        "#7A6242" => "#FBF8F3", // braun ultra-hell
+        "#4A7FA5" => "#F4F8FB", // blau ultra-hell
+        "#8E4A6E" => "#FBF6F8", // magenta ultra-hell
+        _         => "#F8F9FA"  // neutral ultra-hell
+    };
+
+    /// <summary>
+    /// Bestimmt die intrinsische SVG-Hoehe der Haltungsgrafik dynamisch basierend auf:
+    /// - Anzahl Beobachtungen (Tabellenzeilen rechts: ~22pt pro Zeile)
+    /// - Haltungslaenge (Pipe-Achse links: ~3.5pt pro Meter)
+    /// Min 700pt (Standard), max 2400pt (sonst Slicing greift bei zu vielen Slices).
+    /// Bei grafikHeight > 1000 triggert die Slicing-Logik im Render-Block.
+    /// </summary>
+    private static int ComputeDynamicGrafikHeight(double? length, int entryCount)
+    {
+        const int baseHeight = 700;
+        const int minHeight = 700;
+        const int maxHeight = 2400;
+        const int rowHeight = 22;       // Tabellenzeile rechts
+        const double pipeScale = 3.5;   // pt pro Meter Pipe-Achse links
+        const int margins = 120;        // Header + Footer der Grafik
+
+        var tableNeeded = entryCount * rowHeight + margins;
+        var pipeNeeded = (int)Math.Ceiling((length ?? 0) * pipeScale) + margins;
+        var desired = Math.Max(tableNeeded, pipeNeeded);
+
+        // Wenn der dynamische Bedarf unter Standard liegt -> Standard nehmen.
+        // Sonst auf Bedarf hochfahren und cappen.
+        if (desired <= baseHeight)
+            return baseHeight;
+
+        return Math.Clamp(desired, minHeight, maxHeight);
+    }
+
+    /// <summary>Frame fuer die Haltungsgrafik (Border + Skala-Zeile + SVG-Container).</summary>
+    private static void ComposeGrafikFrame(
+        IContainer container,
+        string svg,
+        HaltungsgrafikScale? scale,
+        float displayHeight)
+    {
+        container.Border(0.5f).BorderColor("#D1D5DB").Background("#FFFFFF").Padding(4).Column(g =>
+        {
+            if (scale is not null && (!string.IsNullOrWhiteSpace(scale.LengthText) || !string.IsNullOrWhiteSpace(scale.ScaleText)))
+            {
+                g.Item().Row(row =>
+                {
+                    row.RelativeItem().Text(scale.LengthText ?? "").FontSize(10).FontColor(Colors.Grey.Darken2);
+                    row.AutoItem().Text(scale.ScaleText ?? "").FontSize(10).FontColor(Colors.Grey.Darken2);
+                });
+            }
+            g.Item().Height(displayHeight).Svg(svg).FitArea();
         });
+    }
+
+    /// <summary>
+    /// Extrahiert einen vertikalen Bereich [yStart..yStart+sliceHeight] aus einer SVG via viewBox-Manipulation.
+    /// Aendert nur das aeusserste &lt;svg&gt;-Tag, der Inhalt bleibt unveraendert.
+    /// Damit bleibt die Skala (Pixel pro SVG-Einheit) ueber alle Slices konstant.
+    /// </summary>
+    private static string ExtractSvgRange(string svg, int viewBoxWidth, int originalHeight, int yStart, int sliceHeight)
+    {
+        if (yStart < 0) yStart = 0;
+        if (sliceHeight <= 0) return svg;
+        if (yStart + sliceHeight > originalHeight) sliceHeight = originalHeight - yStart;
+
+        var ci = System.Globalization.CultureInfo.InvariantCulture;
+        var result = ReplaceFirstAttribute(svg, "viewBox", $"0 {yStart} {viewBoxWidth} {sliceHeight}");
+        result = ReplaceFirstAttribute(result, "height", sliceHeight.ToString(ci));
+        return result;
+    }
+
+    /// <summary>Convenience-Wrapper: splittet eine SVG in oberen und unteren Teil.</summary>
+    private static (string Top, string Bottom) SliceSvgVertical(
+        string svg, int viewBoxWidth, int originalHeight, double splitY)
+    {
+        if (splitY <= 0 || splitY >= originalHeight)
+            return (svg, svg);
+
+        var splitYInt = (int)Math.Round(splitY);
+        var top = ExtractSvgRange(svg, viewBoxWidth, originalHeight, 0, splitYInt);
+        var bottom = ExtractSvgRange(svg, viewBoxWidth, originalHeight, splitYInt, originalHeight - splitYInt);
+        return (top, bottom);
+    }
+
+    private static string ReplaceFirstAttribute(string xml, string attrName, string newValue)
+    {
+        // Ersetzt das erste Vorkommen von attrName="..." (mit beliebigem Inhalt) durch attrName="newValue".
+        var pattern = $@"{System.Text.RegularExpressions.Regex.Escape(attrName)}\s*=\s*""[^""]*""";
+        var replacement = $"{attrName}=\"{newValue}\"";
+        var rx = new System.Text.RegularExpressions.Regex(pattern);
+        return rx.Replace(xml, replacement, 1);
     }
 
     internal static void ComposeSectionHeading(IContainer container, string title, string brand)
     {
-        var light = ResolveNutzungsartBrandLight(brand);
-        container.Border(0.5f).BorderColor("#D1D5DB").Row(row =>
-        {
-            row.ConstantItem(3).Background(brand);
-            row.RelativeItem()
-                .Background(light)
-                .PaddingVertical(4)
-                .PaddingHorizontal(8)
-                .Text(title)
-                .FontSize(10)
-                .Bold()
-                .FontColor("#111827");
-        });
+        // Mutig-professionell: solider Brand-Block links als typografischer Anker,
+        // grosser Titel UPPERCASE darueber. Brand-Linie unten als doppelte Linienfuehrung.
+        container
+            .PaddingBottom(2)
+            .Column(col =>
+            {
+                col.Item().Row(row =>
+                {
+                    row.ConstantItem(14).Height(14).Background(brand);
+                    row.ConstantItem(10);
+                    row.RelativeItem().AlignMiddle()
+                        .Text(title.ToUpperInvariant())
+                        .FontSize(11).Bold().FontColor("#0F172A");
+                });
+                col.Item().PaddingTop(3).LineHorizontal(0.8f).LineColor(brand);
+            });
     }
 
     internal static void ComposeHeaderTable(IContainer container, IReadOnlyList<(string Label, string? Value)> items, string brand = "#7A8A94")
@@ -611,16 +800,40 @@ public sealed class ProtocolPdfExporter
         if (items.Count == 0)
             return;
 
-        // Split items into two card groups
-        var half = (int)Math.Ceiling(items.Count / 2.0);
-        var group1 = items.Take(half).ToList();
-        var group2 = items.Skip(half).ToList();
+        // 3-Spalten-Daten-Grid: kompakt, leserlich, mit feinen Vertikal-Trennlinien.
+        // Labels MICRO+UPPERCASE in Brand, Werte gross+SemiBold dunkel -> hohe Lesbarkeit auf wenig Raum.
+        const int columns = 3;
+        var perColumn = (int)Math.Ceiling(items.Count / (double)columns);
 
-        container.Row(row =>
+        container.Border(0.5f).BorderColor("#E5E7EB").Background("#FFFFFF").Padding(6).Row(row =>
         {
-            row.RelativeItem().Element(c => ComposeHeaderCard(c, group1, brand));
-            row.ConstantItem(6); // Spacer
-            row.RelativeItem().Element(c => ComposeHeaderCard(c, group2, brand));
+            for (var c = 0; c < columns; c++)
+            {
+                var slice = items.Skip(c * perColumn).Take(perColumn).ToList();
+                if (slice.Count == 0)
+                {
+                    row.RelativeItem();
+                    continue;
+                }
+
+                if (c > 0)
+                    row.ConstantItem(8).BorderLeft(0.5f).BorderColor("#E5E7EB");
+
+                row.RelativeItem().PaddingHorizontal(c == 0 ? 0 : 6).Column(colCell =>
+                {
+                    for (var i = 0; i < slice.Count; i++)
+                    {
+                        var item = slice[i];
+                        colCell.Item().PaddingBottom(i == slice.Count - 1 ? 0 : 2.5f).Column(rowBlock =>
+                        {
+                            rowBlock.Item().Text(item.Label.ToUpperInvariant())
+                                .FontSize(6.5f).SemiBold().FontColor(brand);
+                            rowBlock.Item().Text(NormalizeValue(item.Value))
+                                .FontSize(9.5f).SemiBold().FontColor("#0F172A");
+                        });
+                    }
+                });
+            }
         });
     }
 
@@ -629,27 +842,36 @@ public sealed class ProtocolPdfExporter
         if (items.Count == 0)
             return;
 
-        container.Border(0.5f).BorderColor("#D1D5DB").Row(cardRow =>
-        {
-            cardRow.ConstantItem(3).Background(brand);
-            cardRow.RelativeItem()
-                .Background("#FAFBFC")
-                .Padding(4)
-                .Table(table =>
+        // Magazin-Card: schmale Brand-Linie links + weisser Hintergrund mit feiner Border + Trennlinien zwischen Zeilen.
+        // Keine flaechige Brand-Toenung -> dezent edel statt bunt.
+        container
+            .BorderLeft(2.5f).BorderColor(brand)
+            .Border(0.5f).BorderColor("#E5E7EB")
+            .Background("#FFFFFF")
+            .Padding(8)
+            .Table(table =>
+            {
+                table.ColumnsDefinition(columns =>
                 {
-                    table.ColumnsDefinition(columns =>
-                    {
-                        columns.ConstantColumn(80);
-                        columns.RelativeColumn();
-                    });
-
-                    foreach (var item in items)
-                    {
-                        table.Cell().PaddingVertical(0.8f).Text(item.Label).FontSize(8).FontColor("#6B7280");
-                        table.Cell().PaddingVertical(0.8f).Text(NormalizeValue(item.Value)).FontSize(8.5f).SemiBold().FontColor("#1F2937");
-                    }
+                    columns.ConstantColumn(86);
+                    columns.RelativeColumn();
                 });
-        });
+
+                for (int i = 0; i < items.Count; i++)
+                {
+                    var item = items[i];
+                    var isLast = i == items.Count - 1;
+                    var labelCell = table.Cell().PaddingVertical(1.6f).PaddingRight(6);
+                    var valueCell = table.Cell().PaddingVertical(1.6f);
+                    if (!isLast)
+                    {
+                        labelCell = labelCell.BorderBottom(0.3f).BorderColor("#F1F2F4");
+                        valueCell = valueCell.BorderBottom(0.3f).BorderColor("#F1F2F4");
+                    }
+                    labelCell.Text(item.Label.ToUpperInvariant()).FontSize(7.5f).FontColor("#94A3B8");
+                    valueCell.Text(NormalizeValue(item.Value)).FontSize(9.5f).SemiBold().FontColor("#0F172A");
+                }
+            });
     }
 
     private static void ComposePhotoHeaderTable(IContainer container, IReadOnlyList<(string Label, string? Value)> items, string brand = "#7A8A94")
@@ -683,38 +905,45 @@ public sealed class ProtocolPdfExporter
 
     private static void ComposePhotoCell(IContainer container, PhotoItem item, int index, HaltungsprotokollPdfOptions options)
     {
-        var photoWidth = Math.Max(220f, Math.Min(options.PhotoWidth, 500f));
+        var photoWidth = Math.Max(180f, Math.Min(options.PhotoWidth, 500f));
 
-        container.AlignCenter().Width(photoWidth).Padding(4).Column(col =>
-        {
-            var bytes = SafeReadAllBytes(item.Path);
-            if (bytes is null || bytes.Length == 0)
+        container.AlignCenter().Width(photoWidth).Padding(3)
+            .Border(0.5f).BorderColor("#D1D5DB")
+            .Background("#FFFFFF")
+            .Column(col =>
             {
-                col.Item().Height(options.PhotoHeight)
-                    .Background("#F5F5F5")
-                    .AlignMiddle()
-                    .AlignCenter()
-                    .Text("Bild fehlt")
-                    .FontSize(9)
-                    .FontColor(Colors.Grey.Darken2);
-            }
-            else
-            {
-                col.Item().Height(options.PhotoHeight)
-                    .AlignCenter()
-                    .AlignMiddle()
-                    .Image(bytes)
-                    .FitArea();
-            }
+                var bytes = SafeReadAllBytes(item.Path);
+                if (bytes is null || bytes.Length == 0)
+                {
+                    col.Item().Height(options.PhotoHeight)
+                        .Background("#F5F5F5")
+                        .AlignMiddle()
+                        .AlignCenter()
+                        .Text("Bild fehlt")
+                        .FontSize(9)
+                        .FontColor(Colors.Grey.Darken2);
+                }
+                else
+                {
+                    col.Item().Height(options.PhotoHeight)
+                        .AlignCenter()
+                        .AlignMiddle()
+                        .Image(bytes)
+                        .FitArea();
+                }
 
-            var line1 = BuildPhotoCaptionLine1(item.Entry, index);
-            if (!string.IsNullOrWhiteSpace(line1))
-                col.Item().PaddingTop(2).AlignCenter().Text(line1).FontSize(9);
+                // Caption-Bereich mit dezenter Hintergrundtoenung
+                col.Item().PaddingTop(3).Background("#F9FAFB").Padding(4).Column(cap =>
+                {
+                    var line1 = BuildPhotoCaptionLine1(item.Entry, index);
+                    if (!string.IsNullOrWhiteSpace(line1))
+                        cap.Item().AlignCenter().Text(line1).FontSize(8.5f).SemiBold().FontColor("#1F2937");
 
-            var line2 = BuildPhotoCaptionLine2(item.Entry);
-            if (!string.IsNullOrWhiteSpace(line2))
-                col.Item().AlignCenter().Text(line2).FontSize(9);
-        });
+                    var line2 = BuildPhotoCaptionLine2(item.Entry);
+                    if (!string.IsNullOrWhiteSpace(line2))
+                        cap.Item().AlignCenter().Text(line2).FontSize(8).FontColor("#4B5563");
+                });
+            });
     }
 
     private static void ComposeObservationTable(IContainer container, IReadOnlyList<ProtocolEntry> entries)
@@ -878,8 +1107,9 @@ public sealed class ProtocolPdfExporter
             : pageTitle;
         var headerItems = BuildPhotoHeaderTable(project, record, inspectionDate, holdingLabel);
 
-        var perPage = 2;
-        var perRow = 1;
+        // Layout aus Options (Default: 4 Fotos pro Seite, 2x2 Grid)
+        var perPage = Math.Max(1, options.PhotosPerPage);
+        var perRow = Math.Max(1, options.PhotosPerRow);
         var photoIndex = 1;
         var captionHeight = 36f;
 
@@ -2828,11 +3058,11 @@ public sealed record HaltungsprotokollPdfOptions
 
     public bool IncludePhotos { get; init; } = true;
     public bool IncludeHaltungsgrafik { get; init; } = true;
-    public int PhotosPerRow { get; init; } = 1;
-    public int PhotosPerPage { get; init; } = 2;
+    public int PhotosPerRow { get; init; } = 2;
+    public int PhotosPerPage { get; init; } = 4;
     public int MaxPhotosPerEntry { get; init; } = int.MaxValue;
-    public float PhotoWidth { get; init; } = 500f;
-    public float PhotoHeight { get; init; } = 255f;
+    public float PhotoWidth { get; init; } = 250f;
+    public float PhotoHeight { get; init; } = 285f;
     public float PhotoSpacing { get; init; } = 12f;
     public string? LogoPathAbs { get; init; }
     public string FooterLine { get; init; } = "";

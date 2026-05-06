@@ -1,5 +1,6 @@
 // AuswertungPro – Video-Selbsttraining Phase 2
 using System;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;

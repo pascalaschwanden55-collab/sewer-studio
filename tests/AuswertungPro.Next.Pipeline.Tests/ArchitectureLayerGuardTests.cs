@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.UI.Ai.QualityGate;
 using AuswertungPro.Next.UI.Ai.Shared;
 using Xunit;

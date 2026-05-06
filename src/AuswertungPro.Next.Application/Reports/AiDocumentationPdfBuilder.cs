@@ -60,7 +60,7 @@ public sealed class AiDocumentationPdfBuilder
             {
                 page.Margin(26);
                 page.Size(PageSizes.A4);
-                page.DefaultTextStyle(x => x.FontSize(10));
+                page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
 
                 page.Header().Column(col =>
                 {

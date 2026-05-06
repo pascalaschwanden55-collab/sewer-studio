@@ -1,4 +1,4 @@
-namespace AuswertungPro.Next.UI.Ai.Pipeline;
+namespace AuswertungPro.Next.Application.Ai.Pipeline;
 
 /// <summary>
 /// Einzelne YOLO-Detektion aus einem Frame — Eingabe fuer den DetectionAggregator.

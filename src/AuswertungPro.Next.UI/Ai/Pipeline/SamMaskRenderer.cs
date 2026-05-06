@@ -93,6 +93,79 @@ public static class SamMaskRenderer
         return mask;
     }
 
+    // ── Boundary-Tracing (Moore-Neighborhood) ────────────────────────
+
+    /// <summary>
+    /// Extrahiert die aeussere Kontur einer Binaermaske als verbundene Polyline-Ketten
+    /// (statt achsen-paralleler Rechtecke wie ExtractContourGeometry). Liefert eine
+    /// Liste von Polygonzuegen - eine Liste pro zusammenhaengendem Maskenbereich.
+    /// Verwendet vereinfachten Moore-Neighborhood-Trace.
+    /// </summary>
+    public static List<List<Point>> ExtractContourPolylines(
+        bool[,] mask, int origWidth, int origHeight,
+        double canvasWidth, double canvasHeight)
+    {
+        int h = mask.GetLength(0);
+        int w = mask.GetLength(1);
+        var visited = new bool[h, w];
+        var result = new List<List<Point>>();
+        double sx = canvasWidth / origWidth;
+        double sy = canvasHeight / origHeight;
+
+        // 8-Nachbar-Reihenfolge fuer Moore-Trace (im Uhrzeigersinn ab 12 Uhr).
+        int[] dx = { 0, 1, 1, 1, 0, -1, -1, -1 };
+        int[] dy = { -1, -1, 0, 1, 1, 1, 0, -1 };
+
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                if (!mask[y, x] || visited[y, x]) continue;
+                // Pruefen ob Boundary-Pixel (mind. ein Nachbar ausserhalb Maske)
+                bool isBoundary = false;
+                for (int n = 0; n < 8 && !isBoundary; n++)
+                {
+                    int nx = x + dx[n], ny = y + dy[n];
+                    if (nx < 0 || nx >= w || ny < 0 || ny >= h || !mask[ny, nx])
+                        isBoundary = true;
+                }
+                if (!isBoundary) continue;
+
+                // Trace Kontur ab diesem Punkt
+                var contour = new List<Point>();
+                int cx = x, cy = y;
+                int prevDir = 4; // kommt von oben (entspricht index 4 = 6 Uhr)
+                int safety = w * h * 2; // verhindert Endlos-Schleife
+                while (safety-- > 0)
+                {
+                    visited[cy, cx] = true;
+                    contour.Add(new Point(cx * sx, cy * sy));
+
+                    // Suche naechsten Boundary-Nachbarn (im Uhrzeigersinn nach prev+6)
+                    int startDir = (prevDir + 6) % 8;
+                    bool found = false;
+                    for (int k = 0; k < 8; k++)
+                    {
+                        int d = (startDir + k) % 8;
+                        int nx = cx + dx[d], ny = cy + dy[d];
+                        if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+                        if (mask[ny, nx])
+                        {
+                            cx = nx; cy = ny; prevDir = d;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) break;
+                    if (cx == x && cy == y && contour.Count > 2) break; // Schleife geschlossen
+                }
+                if (contour.Count >= 4)
+                    result.Add(contour);
+            }
+        }
+        return result;
+    }
+
     // ── Kontur-Extraktion ───────────────────────────────────────────
 
     /// <summary>

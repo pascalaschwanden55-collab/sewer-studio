@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -662,7 +663,7 @@ public sealed record RawVideoDetection(
     int? IntrusionPercent = null,
     int? CrossSectionReductionPercent = null,
     int? DiameterReductionMm = null,
-    QualityGate.EvidenceVector? Evidence = null,
+    AuswertungPro.Next.Application.Ai.QualityGate.EvidenceVector? Evidence = null,
     // V4.2: Persistierter Frame-Pfad fuer Review-Queue-Anzeige.
     string? FramePath = null,
     double? BboxX1 = null,

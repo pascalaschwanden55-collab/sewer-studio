@@ -67,7 +67,7 @@ public class QwenModelComparisonTest
     /// Waehlt eine balancierte Stichprobe (10 Samples pro Top-Code) aus Frames die der User
     /// bereits als korrekt markiert hat. Code ↔ Bild ist hier belegt, anders als beim Eval-Set.
     /// </summary>
-    [Fact]
+    [Fact(Skip = "GPU-only Langzeittest (~100 min). Manuell starten via 'dotnet test --filter Category=GpuEval' und im SkipAttribut auskommentieren.")]
     [Trait("Category", "GpuEval")]
     public async Task CompareBaseVsThinking_OnApprovedSamples()
     {

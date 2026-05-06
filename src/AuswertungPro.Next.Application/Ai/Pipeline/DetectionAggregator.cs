@@ -1,4 +1,4 @@
-namespace AuswertungPro.Next.UI.Ai.Pipeline;
+namespace AuswertungPro.Next.Application.Ai.Pipeline;
 
 /// <summary>
 /// Temporale Aggregation von YOLO-Einzeldetektionen zu zusammengefassten Schadensereignissen.

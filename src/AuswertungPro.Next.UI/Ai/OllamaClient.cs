@@ -209,8 +209,10 @@ public sealed class OllamaClient : IDisposable
 
     /// <summary>
     /// Laedt ein Modell in den VRAM vor (leerer Prompt mit keep_alive).
+    /// numGpu: -1 = alle Layer auf GPU (Default), 0 = CPU-only, N = N Layer auf GPU (hybrid).
+    /// Ohne num_gpu entscheidet Ollama selbst und faellt bei knappem VRAM auf CPU zurueck.
     /// </summary>
-    public async Task WarmupModelAsync(string model, int numCtx = 0, CancellationToken ct = default)
+    public async Task WarmupModelAsync(string model, int numCtx = 0, int numGpu = -1, CancellationToken ct = default)
     {
         await _resiliencePipeline.ExecuteAsync(async token =>
         {
@@ -219,10 +221,18 @@ public sealed class OllamaClient : IDisposable
                 ["model"] = model,
                 ["prompt"] = "",
                 ["stream"] = false,
-                ["keep_alive"] = "-1"   // permanent im VRAM halten
+                ["keep_alive"] = "8760h"   // permanent im VRAM halten (1 Jahr)
             };
-            if (numCtx > 0)
-                payload["options"] = new Dictionary<string, object> { ["num_ctx"] = numCtx };
+
+            var options = new Dictionary<string, object>();
+            if (numCtx > 0) options["num_ctx"] = numCtx;
+            // num_gpu >= 0: explizit setzen. Fuer -1 (= "alle Layer GPU") Ollama-Standard
+            // senden wir 999 — akzeptiert von Ollama als "so viele Layer wie moeglich"
+            // und vermeidet den stillen CPU-Fallback bei knapp kalkulierten VRAM-Budgets.
+            if (numGpu >= 0) options["num_gpu"] = numGpu;
+            else if (numGpu == -1) options["num_gpu"] = 999;
+            if (options.Count > 0) payload["options"] = options;
+
             var json = JsonSerializer.Serialize(payload);
             using var req = new HttpRequestMessage(HttpMethod.Post, "/api/generate")
             {
@@ -238,7 +248,7 @@ public sealed class OllamaClient : IDisposable
     /// Prueft zuerst via /api/ps, laedt bei Bedarf via WarmupModelAsync.
     /// Gibt true zurueck wenn das Modell bereit ist.
     /// </summary>
-    public async Task<bool> EnsureModelLoadedAsync(string model, int numCtx = 0, CancellationToken ct = default)
+    public async Task<bool> EnsureModelLoadedAsync(string model, int numCtx = 0, int numGpu = -1, CancellationToken ct = default)
     {
         try
         {
@@ -257,7 +267,7 @@ public sealed class OllamaClient : IDisposable
 
             // 2. Nicht geladen → Warmup (laedt ins VRAM)
             System.Diagnostics.Debug.WriteLine($"[OllamaClient] Modell {model} wird geladen...");
-            await WarmupModelAsync(model, numCtx, ct).ConfigureAwait(false);
+            await WarmupModelAsync(model, numCtx, numGpu, ct).ConfigureAwait(false);
             System.Diagnostics.Debug.WriteLine($"[OllamaClient] Modell {model} erfolgreich geladen");
             return true;
         }
@@ -321,7 +331,7 @@ public sealed class OllamaClient : IDisposable
     public sealed record ChatMessage(string Role, string Content, IReadOnlyList<string>? ImagesBase64 = null);
 
     /// <summary>
-    /// Plain /api/chat ohne structured format — empfohlen fuer Vision-Modelle (qwen2.5vl etc.).
+    /// Plain /api/chat ohne structured format — empfohlen fuer Vision-Modelle (qwen3-vl etc.).
     /// </summary>
     public async Task<string> ChatAsync(
         string model,

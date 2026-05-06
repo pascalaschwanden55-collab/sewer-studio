@@ -1,6 +1,6 @@
 using System;
 
-namespace AuswertungPro.Next.UI.Ai.QualityGate;
+namespace AuswertungPro.Next.Application.Ai.QualityGate;
 
 /// <summary>Source method used to estimate uncertainty.</summary>
 public enum UncertaintySource

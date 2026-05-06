@@ -47,6 +47,43 @@ public sealed record SanierungOptimizationRequest
     public CostContextDto Cost { get; init; } = new();
     public RuleRecommendationDto? Rule { get; init; }
     public IReadOnlyList<HistoricalCostCaseDto>? SimilarCases { get; init; }
+
+    /// <summary>Optionale Marktreferenz aus historischen Profil-Aggregaten (Buerglen 2024-2026).
+    /// Wird im KI-Prompt als verlaesslicher Kosten-Anker genutzt.</summary>
+    public MarktReferenzDto? MarktReferenz { get; init; }
+
+    /// <summary>Hard-Constraint-Filter: Welche Verfahren sind technisch ueberhaupt zulaessig?
+    /// Wird VOR der KI-Anfrage von RehabilitationRulesEngine ermittelt.</summary>
+    public RulesFilterDto? RulesFilter { get; init; }
+}
+
+/// <summary>Vorgefilterte Verfahrensliste aus Hard-Constraint-Engine.</summary>
+public sealed record RulesFilterDto
+{
+    /// <summary>Verfahrens-IDs die laut Regeln definitiv zulaessig sind.</summary>
+    public IReadOnlyList<string> EligibleProcedures { get; init; } = Array.Empty<string>();
+
+    /// <summary>Verfahrens-IDs die nur bedingt zulaessig sind (mit Vorbehalten).</summary>
+    public IReadOnlyList<string> ConditionalProcedures { get; init; } = Array.Empty<string>();
+
+    /// <summary>Ausgeschlossene Verfahren mit Begruendung (KI darf NICHT vorschlagen).</summary>
+    public IReadOnlyList<ExcludedProcedure> ExcludedProcedures { get; init; } = Array.Empty<ExcludedProcedure>();
+
+    /// <summary>Klartext-Hinweise fuer den KI-Prompt (Bogen, AZ etc.).</summary>
+    public IReadOnlyList<string> PromptHints { get; init; } = Array.Empty<string>();
+}
+
+public sealed record ExcludedProcedure(string ProcedureId, string Name, string Reason);
+
+/// <summary>Aggregat aus realen Sanierungen mit aehnlichem DN/Material/Nutzung-Profil.</summary>
+public sealed record MarktReferenzDto
+{
+    public string ProfilLabel { get; init; } = "";
+    public int AnzahlFaelle { get; init; }
+    public decimal? KostenProMMedianChf { get; init; }
+    public decimal? KostenProHaltungMedianChf { get; init; }
+    public IReadOnlyList<string> TypischeMassnahmen { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> EmpfohleneSubmissionsBlocks { get; init; } = Array.Empty<string>();
 }
 
 public sealed record HistoricalCostCaseDto

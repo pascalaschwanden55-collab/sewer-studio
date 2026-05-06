@@ -63,7 +63,7 @@ public sealed class LiveDetectionService
 
             var b64 = Convert.ToBase64String(pngBytes);
 
-            // Use /api/chat (required for vision models like qwen2.5vl)
+            // Use /api/chat (required for vision models like qwen3-vl)
             var messages = new[]
             {
                 new OllamaClient.ChatMessage("user", Prompt, new[] { b64 })

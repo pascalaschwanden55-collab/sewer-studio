@@ -41,7 +41,7 @@ public static class HydraulikPdfBuilder
             {
                 page.Margin(25);
                 page.Size(PageSizes.A4);
-                page.DefaultTextStyle(x => x.FontSize(10));
+                page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
 
                 page.Header().Element(c =>
                 {

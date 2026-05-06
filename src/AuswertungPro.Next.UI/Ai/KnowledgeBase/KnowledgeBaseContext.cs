@@ -1,5 +1,6 @@
 // AuswertungPro – KI Videoanalyse Modul
 using System;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.IO;
 using Microsoft.Data.Sqlite;
 

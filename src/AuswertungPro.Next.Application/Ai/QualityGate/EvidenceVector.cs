@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace AuswertungPro.Next.UI.Ai.QualityGate;
+namespace AuswertungPro.Next.Application.Ai.QualityGate;
 
 /// <summary>
 /// Nullable signal vector collecting evidence from all pipeline stages.

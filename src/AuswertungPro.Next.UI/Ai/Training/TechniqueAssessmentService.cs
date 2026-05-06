@@ -46,7 +46,7 @@ public sealed class TechniqueAssessmentService : ITechniqueAssessmentService
     private const double LuminanceBright = 200.0; // > 200 = Ueberbelichtet
     private const double SharpnessThreshold = 50.0; // < 50 = Unscharf
 
-    public TechniqueAssessmentService(OllamaClient ollama, string visionModel = "qwen2.5vl:32b")
+    public TechniqueAssessmentService(OllamaClient ollama, string visionModel = "qwen3-vl:8b")
     {
         _ollama = ollama;
         _visionModel = visionModel;

@@ -91,8 +91,13 @@ public sealed class SampleQualityGateService
         }
         else if (!string.IsNullOrWhiteSpace(sample.FramePath) && !File.Exists(sample.FramePath))
         {
-            // Frame referenziert aber nicht vorhanden → Datenverlust
-            issues.Add(new("Frame-Datei existiert nicht", 2));
+            // Audit-Fix: Frame referenziert aber nicht vorhanden = Datenverlust.
+            // Selbsttraining ohne tatsaechliche Frame-Datei ist nicht verwendbar fuer Trainings-Pipelines
+            // (kein Bild = kein YOLO-Label, kein DINO-Vergleich, kein Few-Shot-Frame).
+            // -> Hard-Red bei Selbsttraining; bei Batch/PDF nur Abzug (dort ist Frame optional).
+            if (!isBatchOrPdf)
+                return HardRed($"Frame-Datei existiert nicht: {sample.FramePath}");
+            issues.Add(new("Frame-Datei existiert nicht (Batch/PDF, optional aber verdaechtig)", 2));
         }
 
         // Beschreibung ist nur Code-Echo (wenig Mehrwert, aber nicht fatal)

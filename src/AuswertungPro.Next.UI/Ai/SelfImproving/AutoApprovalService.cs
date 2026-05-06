@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.UI.Ai.QualityGate;
 
 namespace AuswertungPro.Next.UI.Ai.SelfImproving;

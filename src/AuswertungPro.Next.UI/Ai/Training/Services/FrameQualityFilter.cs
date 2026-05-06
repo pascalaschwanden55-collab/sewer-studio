@@ -1,7 +1,9 @@
 // AuswertungPro – Video-Selbsttraining Phase 2
 using System;
 using System.IO;
+using System.Threading;
 using System.Windows.Media.Imaging;
+using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.UI.Ai.Training.Services;
 
@@ -17,19 +19,38 @@ public sealed class FrameQualityFilter
     private readonly double _minLuminance;
     private readonly double _maxLuminance;
     private readonly int _maxHammingDistance;
+    private readonly ILogger? _logger;
 
     private ulong? _lastHash;
+
+    // Verwerfungs-Statistik (Telemetrie)
+    private int _totalFrames;
+    private int _rejectedDark;
+    private int _rejectedBright;
+    private int _rejectedBlurry;
+    private int _rejectedDuplicate;
+
+    /// <summary>Verwerfungs-Statistik als Zusammenfassung (fuer Logging nach Video-Ende).</summary>
+    public string GetRejectionSummary()
+    {
+        var accepted = _totalFrames - _rejectedDark - _rejectedBright - _rejectedBlurry - _rejectedDuplicate;
+        var pct = _totalFrames > 0 ? (double)accepted / _totalFrames * 100 : 0;
+        return $"Frames: {_totalFrames} total, {accepted} akzeptiert ({pct:F0}%), " +
+               $"verworfen: {_rejectedDark} dunkel, {_rejectedBright} hell, {_rejectedBlurry} unscharf, {_rejectedDuplicate} Duplikat";
+    }
 
     public FrameQualityFilter(
         double minLaplacianVariance = 100.0,
         double minLuminance = 30.0,
         double maxLuminance = 240.0,
-        int maxHammingDistance = 5)
+        int maxHammingDistance = 5,
+        ILogger? logger = null)
     {
         _minLaplacianVariance = minLaplacianVariance;
         _minLuminance = minLuminance;
         _maxLuminance = maxLuminance;
         _maxHammingDistance = maxHammingDistance;
+        _logger = logger;
     }
 
     /// <summary>
@@ -54,27 +75,61 @@ public sealed class FrameQualityFilter
 
         if (width < 8 || height < 8) return false;
 
+        Interlocked.Increment(ref _totalFrames);
+
         // 1. Helligkeit pruefen
         var luminance = ComputeMeanLuminance(grayscale);
-        if (luminance < _minLuminance || luminance > _maxLuminance)
+        if (luminance < _minLuminance)
+        {
+            Interlocked.Increment(ref _rejectedDark);
+            _logger?.LogInformation("Frame verworfen: zu dunkel (Helligkeit {Lum:F1} < {Min})",
+                luminance, _minLuminance);
             return false;
+        }
+        if (luminance > _maxLuminance)
+        {
+            Interlocked.Increment(ref _rejectedBright);
+            _logger?.LogInformation("Frame verworfen: zu hell (Helligkeit {Lum:F1} > {Max})",
+                luminance, _maxLuminance);
+            return false;
+        }
 
         // 2. Schaerfe pruefen (Laplacian-Varianz)
         var sharpness = ComputeLaplacianVariance(grayscale, width, height);
         if (sharpness < _minLaplacianVariance)
+        {
+            Interlocked.Increment(ref _rejectedBlurry);
+            _logger?.LogInformation("Frame verworfen: zu unscharf (Schaerfe {Sharp:F1} < {Min:F1})",
+                sharpness, _minLaplacianVariance);
             return false;
+        }
 
         // 3. Duplikat pruefen (dHash)
         var hash = ComputeDHash(grayscale, width, height);
         if (_lastHash.HasValue && HammingDistance(hash, _lastHash.Value) <= _maxHammingDistance)
-            return false; // Duplikat
+        {
+            Interlocked.Increment(ref _rejectedDuplicate);
+            _logger?.LogDebug("Frame verworfen: Duplikat (Hamming={Dist})",
+                HammingDistance(hash, _lastHash.Value));
+            return false;
+        }
 
         _lastHash = hash;
         return true;
     }
 
-    /// <summary>Setzt den internen Hash zurueck (z.B. bei neuem Video).</summary>
-    public void Reset() => _lastHash = null;
+    /// <summary>Setzt Hash + Statistik zurueck (z.B. bei neuem Video). Loggt Zusammenfassung.</summary>
+    public void Reset()
+    {
+        if (_totalFrames > 0)
+            _logger?.LogInformation("[FrameQualityFilter] {Summary}", GetRejectionSummary());
+        _lastHash = null;
+        _totalFrames = 0;
+        _rejectedDark = 0;
+        _rejectedBright = 0;
+        _rejectedBlurry = 0;
+        _rejectedDuplicate = 0;
+    }
 
     /// <summary>Berechnet die mittlere Helligkeit eines Grayscale-Bildes.</summary>
     internal static double ComputeMeanLuminance(byte[] grayscale)

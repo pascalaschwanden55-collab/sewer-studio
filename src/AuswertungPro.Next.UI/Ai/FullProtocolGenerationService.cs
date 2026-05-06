@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Application.Ai;
 using System.Collections.Generic;
 using System.Linq;
@@ -514,8 +515,8 @@ public sealed record MappedProtocolEntry(
     double Confidence,
     string? Reason,
     IReadOnlyList<string> Warnings,
-    QualityGate.QualityGateResult? QualityGateResult = null,
-    QualityGate.UncertaintyEstimate? Uncertainty = null
+    AuswertungPro.Next.Application.Ai.QualityGate.QualityGateResult? QualityGateResult = null,
+    AuswertungPro.Next.Application.Ai.QualityGate.UncertaintyEstimate? Uncertainty = null
 );
 
 public sealed record CodeMappingProgress(int Done, int Total, string Status)

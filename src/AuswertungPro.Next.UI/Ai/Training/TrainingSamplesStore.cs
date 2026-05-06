@@ -131,6 +131,30 @@ namespace AuswertungPro.Next.UI.Ai.Training
             }
         }
 
+        /// <summary>
+        /// Loescht Samples mit den angegebenen IDs hart aus dem JSON-Store.
+        /// Frame-Dateien und KB-Eintraege bleiben unberuehrt.
+        /// </summary>
+        public static async Task<int> RemoveByIdsAsync(ISet<string> sampleIds)
+        {
+            if (sampleIds is null || sampleIds.Count == 0) return 0;
+            await _fileLock.WaitAsync();
+            try
+            {
+                var existing = await LoadInternalAsync();
+                int before = existing.Count;
+                existing.RemoveAll(s => s.SampleId is not null && sampleIds.Contains(s.SampleId));
+                int removed = before - existing.Count;
+                if (removed > 0)
+                {
+                    await SaveInternalAsync(existing);
+                    KnowledgeMirrorService.Current?.NotifyChanged();
+                }
+                return removed;
+            }
+            finally { _fileLock.Release(); }
+        }
+
         // ── Interne Methoden (ohne Lock, nur innerhalb von _fileLock aufrufen) ──
 
         private static async Task<List<TrainingSample>> LoadInternalAsync()
@@ -258,8 +282,10 @@ namespace AuswertungPro.Next.UI.Ai.Training
                             $"Validierung fehlgeschlagen: erwartet {samples.Count}, gelesen {check?.Count ?? 0}");
                 }
 
-                // Atomares Rename: temp → Zieldatei
-                File.Move(tempPath, path, overwrite: true);
+                // Atomares Rename: temp → Zieldatei.
+                // V4.3: Retry mit Backoff gegen transiente Windows-Locks (Antivirus, Indexer, Backup).
+                // War vorher UnauthorizedAccessException → unhandled → App-Absturz bei Approve/Reject.
+                MoveWithRetry(tempPath, path);
 
                 // Alte .bad_* Dateien aufraeumen (nur die letzten 3 behalten)
                 CleanupBadFiles(path);
@@ -271,6 +297,30 @@ namespace AuswertungPro.Next.UI.Ai.Training
                 catch { /* best-effort */ }
                 throw; // Fehler weiterreichen damit der Aufrufer weiss dass Save fehlgeschlagen ist
             }
+        }
+
+        /// <summary>
+        /// V4.3: File.Move mit Retry-Loop gegen transiente Windows-Locks.
+        /// Delays: 50ms, 150ms, 400ms, 1000ms, 2500ms (Summe ~4s).
+        /// </summary>
+        private static void MoveWithRetry(string source, string dest)
+        {
+            int[] delaysMs = { 50, 150, 400, 1000, 2500 };
+            Exception? last = null;
+            foreach (var delay in delaysMs)
+            {
+                try
+                {
+                    File.Move(source, dest, overwrite: true);
+                    return;
+                }
+                catch (UnauthorizedAccessException ex) { last = ex; }
+                catch (IOException ex) { last = ex; }
+                System.Threading.Thread.Sleep(delay);
+            }
+            // Letzter Versuch ohne Catch → wirft falls's weiter lockt
+            try { File.Move(source, dest, overwrite: true); return; }
+            catch { if (last is not null) throw last; throw; }
         }
 
         /// <summary>

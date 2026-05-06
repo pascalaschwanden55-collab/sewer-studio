@@ -28,15 +28,34 @@ public sealed class VisionPipelineClient
     {
         _baseUri = baseUri;
         _http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
-        // Auth-Token (Audit 2026-04-25 SEC-H5): wird beim Sidecar-Start vom
-        // PythonSidecarService generiert. Wenn nicht explizit uebergeben, holen
-        // wir uns das aktive Token aus dem singleton-Slot — so muessen die ~6
-        // Aufrufer im Code es nicht alle einzeln durchreichen.
+        // Auth-Token Resolver in 3 Stufen (Audit-Fix 2026-04-30: SAM-Segmentierung war
+        // ohne Token unsichtbar weil PythonSidecarService.CurrentAuthToken bei
+        // manuell gestartetem Sidecar leer ist):
+        //   1. Explizit per Konstruktor uebergeben
+        //   2. Singleton von PythonSidecarService (App-gestartet)
+        //   3. Token-Datei %LOCALAPPDATA%/SewerStudio/.sidecar_token (manuell gestartet)
+        // Wenn alles leer und SEWER_SIDECAR_AUTH=disabled gesetzt -> ohne Token weiter.
         var effective = string.IsNullOrWhiteSpace(authToken) ? PythonSidecarService.CurrentAuthToken : authToken;
+        if (string.IsNullOrWhiteSpace(effective))
+        {
+            try
+            {
+                var tokenFile = PythonSidecarService.TokenFilePath;
+                if (System.IO.File.Exists(tokenFile))
+                {
+                    var fromFile = System.IO.File.ReadAllText(tokenFile).Trim();
+                    if (!string.IsNullOrWhiteSpace(fromFile))
+                        effective = fromFile;
+                }
+            }
+            catch { /* best-effort: Token-Datei optional */ }
+        }
         _authToken = string.IsNullOrWhiteSpace(effective) ? null : effective;
         // BaseAddress NICHT setzen — wir verwenden _baseUri + BuildUri() fuer jeden Request.
         // Verhindert InvalidOperationException wenn HttpClient wiederverwendet wird.
     }
+
+    public string? LastHealthError { get; private set; }
 
     /// <summary>
     /// Fuegt Auth-Header (X-Sidecar-Token) zur Request hinzu, falls Token gesetzt.
@@ -52,17 +71,26 @@ public sealed class VisionPipelineClient
     /// </summary>
     public async Task<SidecarHealthResponse?> HealthCheckAsync(CancellationToken ct = default)
     {
+        LastHealthError = null;
         try
         {
-            using var resp = await _http.GetAsync(BuildUri("/health"), ct).ConfigureAwait(false);
+            using var req = new HttpRequestMessage(HttpMethod.Get, BuildUri("/health"));
+            AddAuthHeader(req);
+            using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode)
+            {
+                LastHealthError = $"HTTP {(int)resp.StatusCode} {resp.ReasonPhrase}";
+                System.Diagnostics.Debug.WriteLine($"[VisionPipelineClient] HealthCheck failed: {LastHealthError}");
                 return null;
+            }
 
             var json = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return JsonSerializer.Deserialize<SidecarHealthResponse>(json, JsonOpts);
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            LastHealthError = $"{ex.GetType().Name}: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"[VisionPipelineClient] HealthCheck exception: {LastHealthError}");
             return null;
         }
     }

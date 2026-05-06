@@ -20,4 +20,21 @@ public sealed record DossierPrintOptions
 
     /// <summary>Absolute Pfade zu Original-PDF-Protokollen (aufgeloest).</summary>
     public IReadOnlyList<string>? OriginalPdfPaths { get; init; }
+
+    /// <summary>Optionale historische Vergleichsreferenz (aus HistorischeSanierungenService).
+    /// Wird im Devis-PDF als Plausibilitaets-Check gegen die berechneten Kosten angezeigt.</summary>
+    public HistorischeReferenz? HistorischeReferenz { get; init; }
+}
+
+/// <summary>Vergleichsdaten aus historischen Sanierungen (Bürglen 2024-2026).</summary>
+public sealed record HistorischeReferenz
+{
+    public string ProfilLabel { get; init; } = "";       // z.B. "DN300, NBR, Mischabwasser"
+    public int AnzahlFaelle { get; init; }
+    public decimal? KostenProMMedianChf { get; init; }
+    public decimal? KostenProMMinChf { get; init; }
+    public decimal? KostenProMMaxChf { get; init; }
+    public decimal? KostenProHaltungMedianChf { get; init; }
+    public IReadOnlyList<string> TypischeMassnahmen { get; init; } = Array.Empty<string>();
+    public string Quelle { get; init; } = "Auswertungen Bürglen 2024-2026";
 }

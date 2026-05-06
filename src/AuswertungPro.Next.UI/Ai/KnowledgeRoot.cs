@@ -10,9 +10,11 @@ namespace AuswertungPro.Next.UI.Ai;
 /// damit der gesamte Programmordner portabel kopiert werden kann.
 ///
 /// Prioritaet:
-///   1. AppSettings.KnowledgeRootPath  (explizit gesetzt)
+///   1. settingsOverride Parameter      (fuer Tests)
 ///   2. SEWERSTUDIO_KNOWLEDGE_ROOT     (Umgebungsvariable)
-///   3. {AppBaseDir}\Knowledge\         (Default = portabel)
+///   3. C:\KI_BRAIN                    (Default — unabhaengig vom Programmordner)
+///
+/// Spiegelung: C:\KI_BRAIN → E:\Brain (ext. Platte, via KnowledgeMirrorService)
 /// </summary>
 public static class KnowledgeRoot
 {
@@ -31,10 +33,15 @@ public static class KnowledgeRoot
         var root = ResolveRoot(settingsOverride);
         Directory.CreateDirectory(root);
 
-        // Einmalige Migration von AppData → Knowledge-Ordner
+        // Einmalige Migration beim ersten Start
         if (!_migrationDone)
         {
             _migrationDone = true;
+
+            // Migration 1: Alter Projektordner\Knowledge → C:\KI_BRAIN
+            TryMigrateFromProjectKnowledge(root);
+
+            // Migration 2: Noch aeltere AppData-Pfade → C:\KI_BRAIN
             TryMigrateFromAppData(root);
 
             // Brain-Mirror Restore: Wenn Knowledge immer noch leer,
@@ -128,6 +135,13 @@ public static class KnowledgeRoot
         return @"E:\Brain";
     }
 
+    /// <summary>
+    /// Fester Pfad fuer die Wissensdatenbank — ausserhalb des Programmordners,
+    /// damit Programmsicherungen das Wissen nicht mitkopieren muessen.
+    /// Spiegelung: KI_BRAIN → E:\Brain (via KnowledgeMirrorService).
+    /// </summary>
+    public const string DefaultRoot = @"C:\KI_BRAIN";
+
     private static string ResolveRoot(string? settingsOverride)
     {
         // 1. Expliziter Override
@@ -139,10 +153,8 @@ public static class KnowledgeRoot
         if (!string.IsNullOrEmpty(envRoot))
             return envRoot;
 
-        // 3. Default: Projektroot\Knowledge (ausserhalb bin/, ueberlebt dotnet clean)
-        //    Ermittelt durch Aufsteigen vom BaseDirectory bis zur .sln-Datei.
-        var projectRoot = FindProjectRoot(AppDomain.CurrentDomain.BaseDirectory);
-        return Path.Combine(projectRoot ?? AppDomain.CurrentDomain.BaseDirectory, "Knowledge");
+        // 3. Default: C:\KI_BRAIN (zentral, unabhaengig vom Programmordner)
+        return DefaultRoot;
     }
 
     /// <summary>
@@ -160,6 +172,63 @@ public static class KnowledgeRoot
             dir = dir.Parent;
         }
         return null;
+    }
+
+    // ── Migration Projektordner\Knowledge → C:\KI_BRAIN ────────────
+
+    /// <summary>
+    /// Kopiert vorhandene Wissensdaten aus dem alten Projektordner\Knowledge
+    /// nach C:\KI_BRAIN, sofern der neue Ordner noch keine DB hat.
+    /// Kopiert ALLE Dateien und Unterordner rekursiv.
+    /// </summary>
+    private static void TryMigrateFromProjectKnowledge(string newRoot)
+    {
+        try
+        {
+            // Nur migrieren wenn der neue Ordner noch keine DB hat
+            var newDbPath = Path.Combine(newRoot, "KnowledgeBase.db");
+            if (File.Exists(newDbPath))
+                return;
+
+            // Alten Knowledge-Ordner im Projektverzeichnis suchen
+            var projectRoot = FindProjectRoot(AppDomain.CurrentDomain.BaseDirectory);
+            if (projectRoot is null) return;
+
+            var oldKnowledgeDir = Path.Combine(projectRoot, "Knowledge");
+            if (!Directory.Exists(oldKnowledgeDir)) return;
+
+            // Sicherheitscheck: Nicht aus sich selbst kopieren
+            if (Path.GetFullPath(oldKnowledgeDir).Equals(Path.GetFullPath(newRoot), StringComparison.OrdinalIgnoreCase))
+                return;
+
+            // Rekursiv kopieren
+            CopyDirectoryRecursive(oldKnowledgeDir, newRoot);
+
+            System.Diagnostics.Debug.WriteLine(
+                $"[KnowledgeRoot] Migration: {oldKnowledgeDir} → {newRoot} abgeschlossen");
+        }
+        catch
+        {
+            // Migration ist best-effort, darf nie den Start blockieren
+        }
+    }
+
+    private static void CopyDirectoryRecursive(string sourceDir, string destDir)
+    {
+        Directory.CreateDirectory(destDir);
+
+        foreach (var file in Directory.EnumerateFiles(sourceDir))
+        {
+            var dest = Path.Combine(destDir, Path.GetFileName(file));
+            if (!File.Exists(dest))
+                File.Copy(file, dest);
+        }
+
+        foreach (var subDir in Directory.EnumerateDirectories(sourceDir))
+        {
+            var destSubDir = Path.Combine(destDir, Path.GetFileName(subDir));
+            CopyDirectoryRecursive(subDir, destSubDir);
+        }
     }
 
     // ── Migration von AppData → Knowledge ────────────────────────────

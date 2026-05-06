@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai.KnowledgeBase;

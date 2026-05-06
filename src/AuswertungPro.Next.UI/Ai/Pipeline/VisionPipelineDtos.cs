@@ -53,7 +53,9 @@ public sealed record YoloResponse(
     [property: JsonPropertyName("is_relevant")] bool IsRelevant,
     [property: JsonPropertyName("detections")] IReadOnlyList<YoloDetectionDto> Detections,
     [property: JsonPropertyName("frame_class")] string FrameClass,
-    [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs
+    [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs,
+    // True wenn YOLO ohne Custom-Weights laeuft (is_relevant ist dann fallback-bedingt true).
+    [property: JsonPropertyName("is_fallback_mode")] bool IsFallbackMode = false
 );
 
 // ── YOLO Classify ─────────────────────────────────────────────────────────
@@ -128,7 +130,10 @@ public sealed record DinoDetectionDto(
     [property: JsonPropertyName("y2")] double Y2,
     [property: JsonPropertyName("label")] string Label,
     [property: JsonPropertyName("confidence")] double Confidence,
-    [property: JsonPropertyName("phrase")] string Phrase
+    [property: JsonPropertyName("phrase")] string Phrase,
+    // Provenance: Wenn diese Detektion aus YOLO-Fallback stammt (DINO leer geliefert),
+    // ist IsFallbackFromYolo=true. QualityGate behandelt sie dann nicht als unabhaengige Evidenz.
+    [property: JsonPropertyName("is_fallback_from_yolo")] bool IsFallbackFromYolo = false
 );
 
 public sealed record DinoResponse(

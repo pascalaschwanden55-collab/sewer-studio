@@ -1,4 +1,6 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Pipeline;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Application.Ai;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -609,7 +611,7 @@ public sealed class MultiModelAnalysisService
                 ? samResult.Masks.Average(m => m.Confidence)
                 : (double?)null;
 
-            var frameEvidence = new QualityGate.EvidenceVector(
+            var frameEvidence = new AuswertungPro.Next.Application.Ai.QualityGate.EvidenceVector(
                 YoloConf: yoloEvidence,
                 DinoConf: maxDinoConf,
                 SamMaskStability: samStability,
@@ -1362,7 +1364,7 @@ public sealed class MultiModelAnalysisService
                 ? samResult.Masks.Average(m => m.Confidence)
                 : (double?)null;
 
-            var frameEvidence = new QualityGate.EvidenceVector(
+            var frameEvidence = new AuswertungPro.Next.Application.Ai.QualityGate.EvidenceVector(
                 YoloConf: yoloEvidence,
                 DinoConf: maxDinoConf,
                 SamMaskStability: samStability,
@@ -1680,7 +1682,7 @@ public sealed class MultiModelAnalysisService
         List<EnhancedFinding> current,
         double meter,
         List<RawVideoDetection> completed,
-        QualityGate.EvidenceVector? evidence = null)
+        AuswertungPro.Next.Application.Ai.QualityGate.EvidenceVector? evidence = null)
     {
         var currentMap = new Dictionary<string, EnhancedFinding>(StringComparer.OrdinalIgnoreCase);
         foreach (var f in current)
@@ -2006,7 +2008,7 @@ public sealed class MultiModelAnalysisService
         // (max ~20cm Entfernung bei typischen Kanalrohren DN100-DN600)
         const double MinBboxArea = 0.03;
 
-        var qg = new QualityGate.QualityGateService();
+        var qg = new AuswertungPro.Next.Application.Ai.QualityGate.QualityGateService();
         var before = detections.Count;
 
         detections.RemoveAll(d =>
@@ -2060,7 +2062,7 @@ public sealed class MultiModelAnalysisService
         public int? IntrusionPercent { get; private set; }
         public int? CrossSectionReductionPercent { get; private set; }
         public int? DiameterReductionMm { get; private set; }
-        public QualityGate.EvidenceVector? Evidence { get; private set; }
+        public AuswertungPro.Next.Application.Ai.QualityGate.EvidenceVector? Evidence { get; private set; }
         public int FrameCount { get; private set; } = 1;
         public int MissedFrames { get; set; }
 
@@ -2087,7 +2089,7 @@ public sealed class MultiModelAnalysisService
         public ActiveFindingState(
             string name, double start, int severity, string? hint, string? clock,
             int? extent, int? height, int? width, int? intrusion, int? crossSection, int? diameterReduction,
-            QualityGate.EvidenceVector? evidence = null,
+            AuswertungPro.Next.Application.Ai.QualityGate.EvidenceVector? evidence = null,
             double bboxYCenterNorm = 0.5)
         {
             Name = name; MeterStart = start; MeterEnd = start;
@@ -2106,7 +2108,7 @@ public sealed class MultiModelAnalysisService
 
         public void Update(double meter, int severity, string? hint, string? clock,
             int? extent, int? height, int? width, int? intrusion, int? crossSection, int? diameterReduction,
-            QualityGate.EvidenceVector? evidence = null,
+            AuswertungPro.Next.Application.Ai.QualityGate.EvidenceVector? evidence = null,
             double bboxYCenterNorm = 0.5)
         {
             MeterEnd = meter;
@@ -2156,7 +2158,7 @@ public sealed class MultiModelAnalysisService
 
         private static string SeverityLabel(int s) => s >= 4 ? "high" : s == 3 ? "mid" : "low";
 
-        private static QualityGate.EvidenceVector MergeEvidence(QualityGate.EvidenceVector a, QualityGate.EvidenceVector b) =>
+        private static AuswertungPro.Next.Application.Ai.QualityGate.EvidenceVector MergeEvidence(AuswertungPro.Next.Application.Ai.QualityGate.EvidenceVector a, AuswertungPro.Next.Application.Ai.QualityGate.EvidenceVector b) =>
             new(
                 YoloConf: Max(a.YoloConf, b.YoloConf),
                 DinoConf: Max(a.DinoConf, b.DinoConf),

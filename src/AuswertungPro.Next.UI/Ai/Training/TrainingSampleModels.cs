@@ -15,7 +15,9 @@ namespace AuswertungPro.Next.UI.Ai.Training
         /// <summary>Erfolgreich in knowledge_base.db indexiert.</summary>
         Indexed,
         /// <summary>Indexierung fehlgeschlagen (Ollama offline, Embedding-Fehler etc.).</summary>
-        Error
+        Error,
+        /// <summary>Vom Dedup-Service abgedeckt — kein eigener KB-Eintrag, gilt aber als abgeschlossen.</summary>
+        Deduplicated
     }
 
     /// <summary>String-Konstanten fuer TrainingSample.MatchLevel (vermeidet Magic Strings).</summary>

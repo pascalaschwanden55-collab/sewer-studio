@@ -2,7 +2,7 @@ using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace AuswertungPro.Next.UI.Ai.QualityGate;
+namespace AuswertungPro.Next.Application.Ai.QualityGate;
 
 /// <summary>
 /// Per-damage-category weights for evidence fusion.

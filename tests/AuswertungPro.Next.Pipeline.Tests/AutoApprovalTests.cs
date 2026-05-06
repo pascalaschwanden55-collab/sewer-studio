@@ -1,4 +1,5 @@
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.UI.Ai.QualityGate;
 using AuswertungPro.Next.UI.Ai.SelfImproving;
 using Xunit;

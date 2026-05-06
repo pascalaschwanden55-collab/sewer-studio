@@ -17,12 +17,14 @@ public sealed record OllamaConfig(
     string? ReferenceVisionModel = null)
 {
     // ── Modell-Konstanten (Single Source of Truth) ──────────────────────
-    public const string DefaultVisionModel = "qwen3-vl:2b";
-    public const string DefaultTextModel   = "qwen3:8b";
-    public const string DefaultReferenceVisionModel = "qwen3-vl:8b";
+    // V4.1: 8B×6 Slots (8192 ctx) + 32B Swap-Eskalation bei Yellow/Red
+    public const string DefaultVisionModel = "qwen3-vl:8b-q8";
+    public const string DefaultTextModel   = "qwen3-vl:8b-q8";
+    /// <summary>Eskalationsmodell: qwen3-vl:32b (RAM, num_gpu=0, ~28s pro Request).</summary>
+    public const string DefaultReferenceVisionModel = "qwen3-vl:32b";
     public const string DefaultEmbedModel  = "nomic-embed-text";
     public const string DefaultKeepAlive   = "24h";
-    public const int    DefaultNumCtx      = 32768;
+    public const int    DefaultNumCtx      = 8192;
 
     /// <summary>Lädt via einheitliche AiPlatformConfig.</summary>
     public static OllamaConfig Load() =>

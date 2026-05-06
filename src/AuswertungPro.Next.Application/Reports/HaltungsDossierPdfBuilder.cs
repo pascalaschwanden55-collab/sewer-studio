@@ -53,7 +53,7 @@ public static class HaltungsDossierPdfBuilder
                 {
                     page.Margin(25);
                     page.Size(PageSizes.A4);
-                    page.DefaultTextStyle(x => x.FontSize(10));
+                    page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
 
                     page.Header().Element(c =>
                         ProtocolPdfExporter.ComposeTopHeader(c, logoBytes, haltungsprotokollOpts));
@@ -83,7 +83,7 @@ public static class HaltungsDossierPdfBuilder
                 {
                     page.Margin(25);
                     page.Size(PageSizes.A4);
-                    page.DefaultTextStyle(x => x.FontSize(10));
+                    page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
 
                     page.Header().Element(c =>
                         ProtocolPdfExporter.ComposeTopHeader(c, logoBytes, haltungsprotokollOpts));
@@ -112,7 +112,7 @@ public static class HaltungsDossierPdfBuilder
                     {
                         page.Margin(25);
                         page.Size(PageSizes.A4);
-                        page.DefaultTextStyle(x => x.FontSize(10));
+                        page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
 
                         page.Header().Element(c =>
                             ProtocolPdfExporter.ComposeTopHeader(c, logoBytes, haltungsprotokollOpts));
@@ -138,7 +138,7 @@ public static class HaltungsDossierPdfBuilder
                 {
                     page.Margin(25);
                     page.Size(PageSizes.A4);
-                    page.DefaultTextStyle(x => x.FontSize(10));
+                    page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
 
                     page.Header().Element(c =>
                         ProtocolPdfExporter.ComposeTopHeader(c, logoBytes, haltungsprotokollOpts));
@@ -163,7 +163,7 @@ public static class HaltungsDossierPdfBuilder
                 {
                     page.Margin(25);
                     page.Size(PageSizes.A4);
-                    page.DefaultTextStyle(x => x.FontSize(10));
+                    page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
 
                     page.Header().Element(c =>
                         ProtocolPdfExporter.ComposeTopHeader(c, logoBytes, haltungsprotokollOpts));
@@ -188,7 +188,7 @@ public static class HaltungsDossierPdfBuilder
                 {
                     page.Margin(25);
                     page.Size(PageSizes.A4);
-                    page.DefaultTextStyle(x => x.FontSize(10));
+                    page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
 
                     page.Header().Element(c =>
                         ProtocolPdfExporter.ComposeTopHeader(c, logoBytes, haltungsprotokollOpts));
@@ -220,7 +220,7 @@ public static class HaltungsDossierPdfBuilder
                     {
                         page.Margin(25);
                         page.Size(PageSizes.A4);
-                        page.DefaultTextStyle(x => x.FontSize(10));
+                        page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
 
                         page.Header().Element(c =>
                             ProtocolPdfExporter.ComposeTopHeader(c, logoBytes, haltungsprotokollOpts));
@@ -232,6 +232,13 @@ public static class HaltungsDossierPdfBuilder
 
                             col.Item().PaddingTop(6).Element(c =>
                                 ComposeKostenschaetzung(c, record, options.HoldingCost, brand));
+
+                            // Optional: Vergleichsblock mit historischen Sanierungen
+                            if (options.HistorischeReferenz is { AnzahlFaelle: >= 3 } href)
+                            {
+                                col.Item().PaddingTop(10).Element(c =>
+                                    ComposeHistorischeVergleichsBox(c, href, options.HoldingCost, brand));
+                            }
                         });
 
                         page.Footer().Element(c => ComposeFooter(c, options.FooterLine));
@@ -411,26 +418,60 @@ public static class HaltungsDossierPdfBuilder
 
     private static void ComposePhotos(IContainer container, List<(string Label, string AbsPath)> photos)
     {
-        container.Column(col =>
-        {
-            foreach (var (label, path) in photos)
-            {
-                col.Item().PaddingTop(6).Column(photoCol =>
-                {
-                    photoCol.Item().Text(label).FontSize(9).Bold().FontColor("#374151");
+        // 2x2-Grid: 4 Fotos pro Seite mit max. Groesse. Cell mit Border + dezenter Caption-Box.
+        const int perPage = 4;
+        const int perRow = 2;
+        const float photoHeight = 285f;
 
-                    try
+        container.Column(outer =>
+        {
+            for (var offset = 0; offset < photos.Count; offset += perPage)
+            {
+                if (offset > 0)
+                    outer.Item().PageBreak();
+
+                var pageItems = photos.Skip(offset).Take(perPage).ToList();
+                var rowCount = (int)Math.Ceiling(pageItems.Count / (double)perRow);
+
+                outer.Item().Table(table =>
+                {
+                    table.ColumnsDefinition(columns =>
                     {
-                        var bytes = File.ReadAllBytes(path);
-                        photoCol.Item().PaddingTop(2)
-                            .Border(0.5f).BorderColor("#D1D5DB")
-                            .MaxHeight(280)
-                            .Image(bytes).FitArea();
-                    }
-                    catch
+                        for (var i = 0; i < perRow; i++)
+                            columns.RelativeColumn();
+                    });
+
+                    var idx = 0;
+                    for (var r = 0; r < rowCount; r++)
                     {
-                        photoCol.Item().PaddingTop(2).Text($"Foto nicht lesbar: {Path.GetFileName(path)}")
-                            .FontSize(8).FontColor("#DC2626");
+                        for (var c = 0; c < perRow; c++)
+                        {
+                            if (idx < pageItems.Count)
+                            {
+                                var item = pageItems[idx++];
+                                table.Cell().Padding(3).Border(0.5f).BorderColor("#D1D5DB").Background("#FFFFFF").Column(cell =>
+                                {
+                                    try
+                                    {
+                                        var bytes = File.ReadAllBytes(item.AbsPath);
+                                        cell.Item().Height(photoHeight).AlignCenter().AlignMiddle()
+                                            .Image(bytes).FitArea();
+                                    }
+                                    catch
+                                    {
+                                        cell.Item().Height(photoHeight).Background("#F5F5F5")
+                                            .AlignCenter().AlignMiddle()
+                                            .Text("Bild fehlt").FontSize(9).FontColor("#6B7280");
+                                    }
+                                    cell.Item().PaddingTop(3).Background("#F9FAFB").Padding(4)
+                                        .AlignCenter().Text(item.Label).FontSize(8.5f).SemiBold().FontColor("#1F2937");
+                                });
+                            }
+                            else
+                            {
+                                table.Cell();
+                            }
+                        }
                     }
                 });
             }
@@ -679,14 +720,16 @@ public static class HaltungsDossierPdfBuilder
                         {
                             table.ColumnsDefinition(columns =>
                             {
-                                columns.RelativeColumn(3); // Text
-                                columns.ConstantColumn(45); // Einheit
-                                columns.ConstantColumn(50); // Menge
-                                columns.ConstantColumn(65); // EP
-                                columns.ConstantColumn(70); // Total
+                                columns.ConstantColumn(35); // Pos
+                                columns.RelativeColumn(3); // Text + Marktbandbreite
+                                columns.ConstantColumn(40); // Einheit
+                                columns.ConstantColumn(45); // Menge
+                                columns.ConstantColumn(60); // EP (mit Min-Max-Hinweis)
+                                columns.ConstantColumn(65); // Total
                             });
 
                             // Header
+                            table.Cell().Background("#F3F4F6").Padding(3).Text("Pos.").FontSize(8).Bold();
                             table.Cell().Background("#F3F4F6").Padding(3).Text("Position").FontSize(8).Bold();
                             table.Cell().Background("#F3F4F6").Padding(3).Text("Einh.").FontSize(8).Bold();
                             table.Cell().Background("#F3F4F6").Padding(3).AlignRight().Text("Menge").FontSize(8).Bold();
@@ -696,7 +739,20 @@ public static class HaltungsDossierPdfBuilder
                             foreach (var line in measure.Lines.Where(l => l.Selected))
                             {
                                 var lineTotal = line.Qty * line.UnitPrice;
-                                table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2).Text(line.Text).FontSize(8);
+                                var hasMarket = line.MarktpreisMin.HasValue && line.MarktpreisMax.HasValue;
+
+                                table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2)
+                                    .Text(line.SubmissionPos ?? "-").FontSize(7).FontColor("#6B7280");
+                                // Position + ggf. Marktbandbreite als zweite Zeile
+                                table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2).Column(c =>
+                                {
+                                    c.Item().Text(line.Text).FontSize(8);
+                                    if (hasMarket)
+                                    {
+                                        c.Item().Text($"Markt: {FmtDec(line.MarktpreisMin!.Value)}–{FmtDec(line.MarktpreisMax!.Value)} CHF (n={line.MarktpreisAnzahl ?? 0})")
+                                            .FontSize(6.5f).Italic().FontColor("#6B7280");
+                                    }
+                                });
                                 table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2).Text(line.Unit).FontSize(8);
                                 table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2).AlignRight().Text(FmtDec(line.Qty)).FontSize(8);
                                 table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2).AlignRight().Text(FmtDec(line.UnitPrice)).FontSize(8);
@@ -731,6 +787,17 @@ public static class HaltungsDossierPdfBuilder
                         row.AutoItem().Text($"{FmtDec(holdingCost.TotalInclMwst > 0 ? holdingCost.TotalInclMwst : holdingCost.Total)} CHF").FontSize(11).Bold();
                     });
                 });
+
+                // Quellenangabe Marktpreise
+                var hasMarketData = holdingCost.Measures
+                    .SelectMany(m => m.Lines)
+                    .Any(l => l.MarktpreisMin.HasValue);
+                if (hasMarketData)
+                {
+                    col.Item().PaddingTop(6)
+                        .Text("Marktpreise basieren auf Submission Bürglen 2026 (n=3 Anbieter: Fretz, GKS, iTS). EP = Median.")
+                        .FontSize(7).Italic().FontColor("#6B7280");
+                }
             }
         });
     }
@@ -738,4 +805,93 @@ public static class HaltungsDossierPdfBuilder
     private static string FmtDec(decimal v) =>
         v.ToString("N2", CultureInfo.InvariantCulture);
 
+    // ── Historische Vergleichs-Box ─────────────────────────────────
+
+    private static void ComposeHistorischeVergleichsBox(
+        IContainer container, HistorischeReferenz href, HoldingCost? cost, string brand)
+    {
+        container.Border(0.5f).BorderColor(brand).Padding(10).Column(col =>
+        {
+            col.Item().Text("Vergleich mit historischen Sanierungen")
+                .FontSize(11).Bold().FontColor("#0F172A");
+            col.Item().PaddingTop(2).Text($"Profil: {href.ProfilLabel}  ·  Datenbasis: {href.AnzahlFaelle} ähnliche Haltungen ({href.Quelle})")
+                .FontSize(8.5f).FontColor("#475569");
+
+            col.Item().PaddingTop(8).Table(table =>
+            {
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.RelativeColumn(2);
+                    columns.ConstantColumn(110);
+                    columns.ConstantColumn(80);
+                });
+
+                // Header
+                table.Cell().Background("#F3F4F6").Padding(4).Text("Kennzahl").FontSize(9).Bold();
+                table.Cell().Background("#F3F4F6").Padding(4).AlignRight().Text("Wert (CHF)").FontSize(9).Bold();
+                table.Cell().Background("#F3F4F6").Padding(4).AlignCenter().Text("Status").FontSize(9).Bold();
+
+                var berechnet = cost?.Total ?? 0m;
+                var medianH = href.KostenProHaltungMedianChf ?? 0m;
+
+                // Berechnete Kosten
+                table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(3)
+                    .Text("Berechnete Kosten (diese Haltung)").FontSize(9);
+                table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(3)
+                    .AlignRight().Text(FmtDec(berechnet)).FontSize(9).SemiBold();
+                table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(3).AlignCenter().Text("");
+
+                // Historischer Median
+                table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(3)
+                    .Text("Historischer Median (n=" + href.AnzahlFaelle + ")").FontSize(9);
+                table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(3)
+                    .AlignRight().Text(medianH > 0 ? FmtDec(medianH) : "n/a").FontSize(9);
+                var status = ResolvePlausibilityStatus(berechnet, href);
+                table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(3).AlignCenter()
+                    .Text(status.Symbol).FontSize(11).FontColor(status.Color);
+
+                // Bandbreite Median CHF/m
+                if (href.KostenProMMinChf.HasValue && href.KostenProMMaxChf.HasValue)
+                {
+                    table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(3)
+                        .Text("Bandbreite (CHF/m)").FontSize(9);
+                    table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(3)
+                        .AlignRight().Text($"{FmtDec(href.KostenProMMinChf.Value)} – {FmtDec(href.KostenProMMaxChf.Value)}").FontSize(9);
+                    table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(3).AlignCenter().Text("");
+                }
+            });
+
+            // Status-Hinweis
+            var statusInfo = ResolvePlausibilityStatus(cost?.Total ?? 0m, href);
+            col.Item().PaddingTop(6).Text(statusInfo.Hinweis).FontSize(9).FontColor(statusInfo.Color);
+
+            if (href.TypischeMassnahmen.Count > 0)
+            {
+                col.Item().PaddingTop(6).Text("Typische Massnahmen aus historischen Faellen:")
+                    .FontSize(8.5f).Italic().FontColor("#475569");
+                foreach (var mn in href.TypischeMassnahmen.Take(3))
+                {
+                    col.Item().PaddingLeft(8).Text("• " + mn).FontSize(8.5f).FontColor("#475569");
+                }
+            }
+        });
+    }
+
+    private static (string Symbol, string Color, string Hinweis) ResolvePlausibilityStatus(
+        decimal berechnet, HistorischeReferenz href)
+    {
+        var median = href.KostenProHaltungMedianChf ?? 0m;
+        if (berechnet <= 0 || median <= 0)
+            return ("·", "#6B7280", "Keine Vergleichsdaten verfügbar.");
+
+        var ratio = berechnet / median;
+        if (ratio >= 0.7m && ratio <= 1.4m)
+            return ("✓", "#16A34A",
+                $"Berechnete Kosten liegen im üblichen Rahmen ({(ratio * 100m):F0}% des historischen Medians).");
+        if (ratio < 0.7m)
+            return ("⚠", "#D97706",
+                $"Berechnete Kosten deutlich unter Median ({(ratio * 100m):F0}%) — Plausibilität prüfen.");
+        return ("⚠", "#DC2626",
+            $"Berechnete Kosten deutlich über Median ({(ratio * 100m):F0}%) — Mehraufwand begründen.");
+    }
 }
