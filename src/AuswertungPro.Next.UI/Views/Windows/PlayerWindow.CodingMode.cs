@@ -23,6 +23,7 @@ using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -949,7 +950,7 @@ public partial class PlayerWindow
                 var health = await _codingVisionClient.HealthCheckAsync();
                 if (health != null)
                 {
-                    _codingMultiModel = new Ai.Pipeline.SingleFrameMultiModelService(_codingVisionClient);
+                    _codingMultiModel = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.SingleFrameMultiModelService(_codingVisionClient);
                     // Codier-Modus: Direkt Qwen, Sidecar nur fuer SAM-Nachsegmentierung
                     SetCodingAiState("Kuenstliche Intelligenz bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
                         $"{CompactModelName(_codingAiModelName)} + SAM-Segmentierung");
@@ -1203,7 +1204,7 @@ public partial class PlayerWindow
 
     /// <param name="mmResult">Analyse-Ergebnis (ungefiltert).</param>
     /// <param name="acceptedIndices">Masken-Indices die ein Event bekommen haben (null = VSA-Code-Filter).</param>
-    private void ShowMultiModelResults(Ai.Pipeline.SingleFrameResult mmResult, HashSet<int>? acceptedIndices = null)
+    private void ShowMultiModelResults(AuswertungPro.Next.Infrastructure.Ai.Pipeline.SingleFrameResult mmResult, HashSet<int>? acceptedIndices = null)
     {
         // Masken aufteilen: akzeptierte (nah) vs. verworfene (fern/ungueltig)
         var validIndices = new List<int>();
@@ -1219,7 +1220,7 @@ public partial class PlayerWindow
         }
 
         // Akzeptierte Masken als Haupt-Ergebnis
-        Ai.Pipeline.SingleFrameResult FilterByIndices(List<int> indices)
+        AuswertungPro.Next.Infrastructure.Ai.Pipeline.SingleFrameResult FilterByIndices(List<int> indices)
         {
             var fq = indices.Select(i => mmResult.QuantifiedMasks[i]).ToList();
             var fd = indices.Where(i => i < mmResult.DinoDetections.Count)
@@ -1231,7 +1232,7 @@ public partial class PlayerWindow
                     mmResult.SamResponse.ImageWidth, mmResult.SamResponse.ImageHeight,
                     mmResult.SamResponse.InferenceTimeMs)
                 : mmResult.SamResponse;
-            return new Ai.Pipeline.SingleFrameResult(
+            return new AuswertungPro.Next.Infrastructure.Ai.Pipeline.SingleFrameResult(
                 mmResult.IsRelevant, fd, fs, fq,
                 mmResult.YoloTimeMs, mmResult.DinoTimeMs, mmResult.SamTimeMs, mmResult.Error);
         }
@@ -1279,7 +1280,7 @@ public partial class PlayerWindow
     /// Erstellt Events und gibt die Masken-Indices zurueck die tatsaechlich ein Event bekommen haben.
     /// </summary>
     private HashSet<int> AddMultiModelFindingsAsEvents(
-        Ai.Pipeline.SingleFrameResult mmResult, double captureTimestampSec)
+        AuswertungPro.Next.Infrastructure.Ai.Pipeline.SingleFrameResult mmResult, double captureTimestampSec)
     {
         var acceptedIndices = new HashSet<int>();
         if (_codingVm == null || _codingSessionService == null) return acceptedIndices;

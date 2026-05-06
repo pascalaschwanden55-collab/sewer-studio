@@ -13,6 +13,7 @@ using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Ollama;
 using Xunit;
 using Xunit.Abstractions;
+using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 

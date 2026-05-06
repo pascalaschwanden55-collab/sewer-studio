@@ -27,6 +27,7 @@ using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -284,7 +285,7 @@ public partial class CodingModeWindow : Window
         Safe("AnalysisCts-Dispose", () => _analysisCts?.Dispose());
         Safe("AiStatusPulse-Stop", () => StopAiStatusPulse());
         Safe("PipelineFailure-Unsubscribe", () =>
-            Ai.EnhancedVisionAnalysisService.PipelineFailure -= OnPipelineFailure);
+            AuswertungPro.Next.Infrastructure.Ai.EnhancedVisionAnalysisService.PipelineFailure -= OnPipelineFailure);
         Safe("OllamaClient-Dispose", () => _ollamaClient?.Dispose());
         Safe("Player-Stop", () => _player?.Stop());
         Safe("Player-Dispose", () => _player?.Dispose());
@@ -3218,7 +3219,7 @@ public partial class CodingModeWindow : Window
     /// Empfaengt Pipeline-Failure-Events vom EnhancedVisionAnalysisService und macht sie
     /// im Result-Panel sichtbar (vorher: Debug.WriteLine only, fuer User unsichtbar).
     /// </summary>
-    private void OnPipelineFailure(object? sender, Ai.EnhancedVisionAnalysisService.PipelineFailureEvent ev)
+    private void OnPipelineFailure(object? sender, AuswertungPro.Next.Infrastructure.Ai.EnhancedVisionAnalysisService.PipelineFailureEvent ev)
     {
         try
         {

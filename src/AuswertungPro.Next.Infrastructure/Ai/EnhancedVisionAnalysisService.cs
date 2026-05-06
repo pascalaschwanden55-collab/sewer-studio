@@ -11,13 +11,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.Ollama;
-using AuswertungPro.Next.UI.Ai.Pipeline;
-using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Infrastructure.Ai;
 
 /// <summary>
 /// Verbesserte Vision-Analyse mit vollständiger Schadensklassenliste nach

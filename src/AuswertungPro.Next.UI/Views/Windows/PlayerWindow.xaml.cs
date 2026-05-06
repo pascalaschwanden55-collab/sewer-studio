@@ -36,6 +36,7 @@ using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -1663,7 +1664,7 @@ public partial class PlayerWindow : Window, IVlcSurface
     private System.Windows.Shapes.Rectangle? _eingabemarkerPreviewRect;
 
     // Multi-Model Pipeline (YOLO → DINO → SAM) fuer Einzelframe-Analyse
-    private Ai.Pipeline.SingleFrameMultiModelService? _codingMultiModel;
+    private AuswertungPro.Next.Infrastructure.Ai.Pipeline.SingleFrameMultiModelService? _codingMultiModel;
     private AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient? _codingVisionClient;
 
     // Import-Beobachtungen (Referenz-Spalte, nur-lesen)
@@ -4943,9 +4944,9 @@ public partial class PlayerWindow : Window, IVlcSurface
     /// Rendert Multi-Model Ergebnisse: SAM-Masken (gruene Konturen) + Label-Badges mit Messungen.
     /// </summary>
     /// <summary>Aktuelles Multi-Model-Ergebnis fuer Klick-Interaktion.</summary>
-    private Ai.Pipeline.SingleFrameResult? _currentMmResult;
+    private AuswertungPro.Next.Infrastructure.Ai.Pipeline.SingleFrameResult? _currentMmResult;
     /// <summary>Ferne Detektionen (innerhalb Rohrkreis) — grau als Vorschau angezeigt.</summary>
-    private Ai.Pipeline.SingleFrameResult? _previewMmResult;
+    private AuswertungPro.Next.Infrastructure.Ai.Pipeline.SingleFrameResult? _previewMmResult;
 
     // Phase 6.1.F Sub-G: ShowMultiModelResults + AddMultiModelFindingsAsEvents + ShowCodingAiResults nach PlayerWindow.CodingMode.cs migriert.
 

@@ -18,6 +18,7 @@ using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
@@ -46,7 +47,7 @@ public sealed class VideoSelfTrainingOrchestrator
     public bool IsPaused => _isPaused;
 
     /// <summary>Optionale Batch-Pipeline (V4.1). YOLO Batch → Filter → Qwen sequentiell mit Timeout.</summary>
-    public Ai.Pipeline.BatchPipelineService? BatchPipeline { get; set; }
+    public AuswertungPro.Next.Infrastructure.Ai.Pipeline.BatchPipelineService? BatchPipeline { get; set; }
     private bool UseBatchPipeline => BatchPipeline is not null;
 
     /// <summary>
@@ -196,7 +197,7 @@ public sealed class VideoSelfTrainingOrchestrator
                     : null;
 
                 // V4.2 Phase 2: Protokoll-First-Kontext aus GroundTruths bauen, wenn aktiviert.
-                Ai.Pipeline.ProtocolFirstContext? protocolContext = null;
+                AuswertungPro.Next.Infrastructure.Ai.Pipeline.ProtocolFirstContext? protocolContext = null;
                 if (UseProtocolFirst && groundTruths.Count > 0)
                 {
                     var targets = groundTruths
@@ -207,7 +208,7 @@ public sealed class VideoSelfTrainingOrchestrator
                             Description: gt.Text,
                             ClockPosition: gt.ClockPosition))
                         .ToList();
-                    protocolContext = new Ai.Pipeline.ProtocolFirstContext
+                    protocolContext = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.ProtocolFirstContext
                     {
                         Targets = targets,
                         VideoDurationSeconds = videoDuration,
@@ -259,7 +260,7 @@ public sealed class VideoSelfTrainingOrchestrator
                 // V4.2 Phase 2.4: Ueberraschungsfund-Pass — zweiter langsamer Durchlauf auf den Luecken.
                 if (EnableSurpriseGapsPass && protocolContext is not null)
                 {
-                    var gapsContext = new Ai.Pipeline.ProtocolFirstContext
+                    var gapsContext = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.ProtocolFirstContext
                     {
                         Targets = protocolContext.Targets,
                         VideoDurationSeconds = videoDuration,

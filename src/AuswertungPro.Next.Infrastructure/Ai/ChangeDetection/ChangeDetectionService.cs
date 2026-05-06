@@ -2,11 +2,10 @@ using System;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
-namespace AuswertungPro.Next.UI.Ai.ChangeDetection;
+namespace AuswertungPro.Next.Infrastructure.Ai.ChangeDetection;
 
 /// <summary>
 /// Service fuer Pixel-Level Aenderungserkennung zwischen zwei Inspektionen

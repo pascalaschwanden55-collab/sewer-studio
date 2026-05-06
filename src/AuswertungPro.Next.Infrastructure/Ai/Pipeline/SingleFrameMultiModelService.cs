@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai;
 
-namespace AuswertungPro.Next.UI.Ai.Pipeline;
+namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 /// <summary>
 /// Orchestriert YOLO → Florence-2 → SAM 2 fuer einen einzelnen Frame.

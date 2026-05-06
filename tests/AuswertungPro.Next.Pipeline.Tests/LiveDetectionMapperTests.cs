@@ -2,6 +2,7 @@ using System;
 using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Application.Ai;
 using Xunit;
+using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 

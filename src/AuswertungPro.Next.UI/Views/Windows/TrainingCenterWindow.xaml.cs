@@ -27,6 +27,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Application.Ai.SelfImproving;
 using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -744,7 +745,7 @@ public partial class TrainingCenterWindow : Window
         try
         {
             var ollamaClient = cfg.CreateOllamaClient();
-            var qwen = new Ai.EnhancedVisionAnalysisService(
+            var qwen = new AuswertungPro.Next.Infrastructure.Ai.EnhancedVisionAnalysisService(
                 ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
             var runner = new Ai.Training.EvalRunnerService(qwen);
 
@@ -820,8 +821,8 @@ public partial class TrainingCenterWindow : Window
             var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
             var sidecarClient = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
             var ollamaClient = cfg.CreateOllamaClient();
-            var qwenVision = new Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
-            orchestrator.BatchPipeline = new Ai.Pipeline.BatchPipelineService(
+            var qwenVision = new AuswertungPro.Next.Infrastructure.Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
+            orchestrator.BatchPipeline = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.BatchPipelineService(
                 sidecarClient, qwenVision, pipelineCfg,
                 cfg.FfmpegPath ?? AuswertungPro.Next.Application.Ai.FfmpegLocator.ResolveFfmpeg());
         }
@@ -884,8 +885,8 @@ public partial class TrainingCenterWindow : Window
             var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
             var sidecarClient = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
             var ollamaClient = cfg.CreateOllamaClient();
-            var qwenVision = new Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
-            videoOrch.BatchPipeline = new Ai.Pipeline.BatchPipelineService(
+            var qwenVision = new AuswertungPro.Next.Infrastructure.Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
+            videoOrch.BatchPipeline = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.BatchPipelineService(
                 sidecarClient, qwenVision, pipelineCfg,
                 cfg.FfmpegPath ?? AuswertungPro.Next.Application.Ai.FfmpegLocator.ResolveFfmpeg());
         }
@@ -926,8 +927,8 @@ public partial class TrainingCenterWindow : Window
                 var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(10) };
                 var sidecarClient = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarHttp);
                 var ollamaClient = cfg.CreateOllamaClient();
-                var qwenVision = new Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
-                orch.BatchPipeline = new Ai.Pipeline.BatchPipelineService(
+                var qwenVision = new AuswertungPro.Next.Infrastructure.Ai.EnhancedVisionAnalysisService(ollamaClient, cfg.VisionModel, cfg.ReferenceVisionModel, cfg.OllamaNumCtx);
+                orch.BatchPipeline = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.BatchPipelineService(
                     sidecarClient, qwenVision, pipelineCfg,
                     cfg.FfmpegPath ?? AuswertungPro.Next.Application.Ai.FfmpegLocator.ResolveFfmpeg());
             }

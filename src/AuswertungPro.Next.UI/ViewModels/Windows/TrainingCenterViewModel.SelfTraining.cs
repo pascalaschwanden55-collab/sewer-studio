@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -129,7 +130,7 @@ public partial class TrainingCenterViewModel
             var pdfExtractor = new PdfProtocolExtractor();
 
             // Multi-Modell-Pipeline (YOLO/DINO/SAM) wenn Sidecar verfuegbar
-            Ai.Pipeline.SingleFrameMultiModelService? multiModel = null;
+            AuswertungPro.Next.Infrastructure.Ai.Pipeline.SingleFrameMultiModelService? multiModel = null;
             try
             {
                 var pipeCfg = Ai.AiPlatformConfig.Load().ToPipelineConfig();
@@ -141,7 +142,7 @@ public partial class TrainingCenterViewModel
                         Timeout = TimeSpan.FromSeconds(pipeCfg.SidecarTimeoutSec)
                     };
                     var pipelineClient = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(pipeCfg.SidecarUrl, sidecarHttp);
-                    multiModel = new Ai.Pipeline.SingleFrameMultiModelService(
+                    multiModel = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.SingleFrameMultiModelService(
                         pipelineClient, pipeCfg.YoloConfidence, pipeCfg.DinoBoxThreshold, pipeCfg.DinoTextThreshold);
                 }
             }

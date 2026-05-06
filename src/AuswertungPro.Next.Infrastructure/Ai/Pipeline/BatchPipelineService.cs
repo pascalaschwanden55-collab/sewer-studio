@@ -12,8 +12,9 @@ using AuswertungPro.Next.Application.Ai;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai;
 
-namespace AuswertungPro.Next.UI.Ai.Pipeline;
+namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 /// <summary>
 /// Batch-Pipeline: Verarbeitet Video-Frames in Batches statt einzeln.

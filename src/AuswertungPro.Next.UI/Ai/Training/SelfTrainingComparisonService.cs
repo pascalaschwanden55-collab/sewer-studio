@@ -11,6 +11,7 @@ using AuswertungPro.Next.UI.Ai.Shared;
 using AuswertungPro.Next.UI.Ai.Training.Models;
 using AuswertungPro.Next.Application.CodeCatalog;
 using AuswertungPro.Next.Application.Ai.Training.Models;
+using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
