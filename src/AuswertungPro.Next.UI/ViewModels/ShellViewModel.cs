@@ -80,9 +80,12 @@ public sealed partial class ShellViewModel : ObservableObject
         };
         if (showExperten)
         {
+            // Phase 5.4: Diagnose + Eigendevis sind Power-User-Features.
+            // Im Produktmodus aus dem Hauptmenue ausblenden \u2014 Standard-User
+            // brauchen die Log-Ausgabe und das Eigendevis-Modul nicht.
             items.Add(new("\uE8A1", "Eigendevis", () => new Pages.EigendevisPageViewModel(this)));
+            items.Add(new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel()));
         }
-        items.Add(new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel()));
         items.Add(new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel()));
         NavItems = items;
 

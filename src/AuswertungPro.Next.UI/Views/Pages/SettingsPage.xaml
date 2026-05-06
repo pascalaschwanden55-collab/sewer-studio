@@ -62,10 +62,12 @@
 
         <CheckBox Content="Diagnose aktiv (Fehlercodes anzeigen)" IsChecked="{Binding EnableDiagnostics}"/>
 
-        <!-- Phase 1.4: Expertenmodus-Toggle. Default = aktiv (alles sichtbar wie heute). -->
-        <CheckBox Content="Expertenmodus: Eigendevis + Hydraulik im Hauptmenue/Toolbar"
+        <!-- Phase 5.4: Expertenmodus blendet Power-User-Features ein.
+             Default = aktiv (alles sichtbar wie heute, kein Verhaltens-Wechsel
+             fuer bestehende Nutzer). -->
+        <CheckBox Content="Expertenmodus: Eigendevis, Diagnose + Hydraulik anzeigen"
                   IsChecked="{Binding ShowExpertenmodusFeatures}"
-                  ToolTip="Bei aus: Eigendevis-Page wird aus dem Hauptmenue ausgeblendet, Hydraulik-Toolbar-Buttons in der Haltungen-Page werden versteckt. Aenderung greift nach Neustart."
+                  ToolTip="Bei aus (Produktmodus): Eigendevis-Page, Diagnose-Page und Hydraulik-Toolbar-Buttons werden ausgeblendet. Bei an (Expertenmodus): alles sichtbar. Aenderung greift nach Neustart."
                   Margin="0,8,0,0"/>
 
         <TextBlock Text="pdftotext.exe Pfad" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
