@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
 using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Application.Ai.QualityGate;
@@ -103,7 +104,7 @@ public sealed class VideoFullAnalysisService
 
             if (frameBytes is null or { Length: 0 })
             {
-                telemetry.RecordFrame(new Pipeline.FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                telemetry.RecordFrame(new AuswertungPro.Next.Application.Ai.Vision.FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
                 AdvanceAll(active, detections, DedupWindowFrames);
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex}/{totalFrames} – kein Bild"));
@@ -135,7 +136,7 @@ public sealed class VideoFullAnalysisService
             {
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex}/{totalFrames} – Timeout bei KI-Analyse ({VisionFrameTimeout.TotalSeconds:0}s)"));
-                telemetry.RecordFrame(new Pipeline.FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, visionSw.ElapsedMilliseconds, frameSw.ElapsedMilliseconds, Skipped: true));
+                telemetry.RecordFrame(new AuswertungPro.Next.Application.Ai.Vision.FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, visionSw.ElapsedMilliseconds, frameSw.ElapsedMilliseconds, Skipped: true));
                 AdvanceAll(active, detections, DedupWindowFrames);
                 continue;
             }
@@ -144,13 +145,13 @@ public sealed class VideoFullAnalysisService
             {
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex}/{totalFrames} – Fehler: {ex.Message}"));
-                telemetry.RecordFrame(new Pipeline.FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, visionSw.ElapsedMilliseconds, frameSw.ElapsedMilliseconds, Skipped: true));
+                telemetry.RecordFrame(new AuswertungPro.Next.Application.Ai.Vision.FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, visionSw.ElapsedMilliseconds, frameSw.ElapsedMilliseconds, Skipped: true));
                 AdvanceAll(active, detections, DedupWindowFrames);
                 continue;
             }
             var qwenMs = visionSw.ElapsedMilliseconds;
 
-            telemetry.RecordFrame(new Pipeline.FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, qwenMs, frameSw.ElapsedMilliseconds, Skipped: false));
+            telemetry.RecordFrame(new AuswertungPro.Next.Application.Ai.Vision.FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, qwenMs, frameSw.ElapsedMilliseconds, Skipped: false));
 
             var meter = analysis.Meter ?? EstimateMeter(t, duration);
             // Always update _lastKnownMeter so EstimateMeter doesn't stagnate at 0.01
@@ -611,79 +612,5 @@ public sealed class VideoFullAnalysisService
 }
 
 // ── DTOs ──────────────────────────────────────────────────────────────────────
-
-
-public sealed record VideoAnalysisResult(
-    string VideoPath,
-    double DurationSeconds,
-    int FramesAnalyzed,
-    IReadOnlyList<RawVideoDetection> Detections,
-    string? Error,
-    Pipeline.TelemetrySummary? Telemetry = null)
-{
-    public bool IsSuccess => Error is null;
-    public static VideoAnalysisResult Failed(string error) =>
-        new(string.Empty, 0, 0, Array.Empty<RawVideoDetection>(), error);
-}
-
-public sealed record VideoAnalysisProgress(
-    int FramesDone,
-    int FramesTotal,
-    string Status,
-    byte[]? FramePreviewPng = null,
-    IReadOnlyList<LiveFrameFinding>? LiveFindings = null)
-{
-    public double Percent => FramesTotal > 0 ? (double)FramesDone / FramesTotal * 100.0 : 0;
-}
-
-public sealed record LiveFrameFinding(
-    string Label,
-    int Severity,
-    string? PositionClock,
-    int? ExtentPercent,
-    string? VsaCodeHint = null,
-    int? HeightMm = null,
-    int? WidthMm = null,
-    int? IntrusionPercent = null,
-    int? CrossSectionReductionPercent = null,
-    int? DiameterReductionMm = null,
-    double? BboxX1 = null,
-    double? BboxY1 = null,
-    double? BboxX2 = null,
-    double? BboxY2 = null);
-
-public sealed record RawVideoDetection(
-    string FindingLabel,
-    double MeterStart,
-    double MeterEnd,
-    string Severity,
-    string? VsaCodeHint = null,   // NEU: direkt aus EnhancedVisionAnalysisService
-    string? PositionClock = null, // Uhrlage (1-12 oder "12:00")
-    int? ExtentPercent = null,    // Umfangsausdehnung in Prozent
-    int? HeightMm = null,
-    int? WidthMm = null,
-    int? IntrusionPercent = null,
-    int? CrossSectionReductionPercent = null,
-    int? DiameterReductionMm = null,
-    AuswertungPro.Next.Application.Ai.QualityGate.EvidenceVector? Evidence = null,
-    // V4.2: Persistierter Frame-Pfad fuer Review-Queue-Anzeige.
-    string? FramePath = null,
-    double? BboxX1 = null,
-    double? BboxY1 = null,
-    double? BboxX2 = null,
-    double? BboxY2 = null
-)
-{
-    // Für UI-Bindings / Mapping
-    public string Code => VsaCodeHint ?? "";
-    public string Label => FindingLabel;
-
-    // Simple Heuristik (Severity kommt i.d.R. als "high/mid/low")
-    public double Confidence => Severity?.ToLowerInvariant() switch
-    {
-        "high" => 0.90,
-        "mid"  => 0.70,
-        "low"  => 0.50,
-        _      => 0.60
-    };
-}
+// Phase 5.3 vorbereitend: VideoAnalysisResult / VideoAnalysisProgress /
+// LiveFrameFinding / RawVideoDetection nach Domain/Ai/Vision/VideoAnalysisModels.cs.

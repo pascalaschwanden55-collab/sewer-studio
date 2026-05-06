@@ -1,4 +1,6 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
+using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using System.Collections.Generic;
 using System.Linq;
@@ -315,7 +317,7 @@ public sealed record PipelineResult(
     PipelineStats? Stats,
     IReadOnlyList<string> Warnings,
     string? Error,
-    Pipeline.TelemetrySummary? Telemetry = null)
+    AuswertungPro.Next.Application.Ai.Vision.TelemetrySummary? Telemetry = null)
 {
     public bool IsSuccess => Error is null;
 

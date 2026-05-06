@@ -1,4 +1,6 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
+using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Application.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
@@ -512,17 +514,5 @@ public sealed record FullProtocolGenerationResult(
         new(null, Array.Empty<MappedProtocolEntry>(), error, Array.Empty<string>());
 }
 
-public sealed record MappedProtocolEntry(
-    RawVideoDetection Detection,
-    string? SuggestedCode,
-    double Confidence,
-    string? Reason,
-    IReadOnlyList<string> Warnings,
-    AuswertungPro.Next.Application.Ai.QualityGate.QualityGateResult? QualityGateResult = null,
-    AuswertungPro.Next.Application.Ai.QualityGate.UncertaintyEstimate? Uncertainty = null
-);
-
-public sealed record CodeMappingProgress(int Done, int Total, string Status)
-{
-    public double Percent => Total > 0 ? (double)Done / Total * 100.0 : 0;
-}
+// Phase 5.3 vorbereitend: MappedProtocolEntry + CodeMappingProgress
+// nach Domain/Ai/Vision/VideoAnalysisModels.cs.

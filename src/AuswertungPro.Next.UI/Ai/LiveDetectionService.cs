@@ -1,4 +1,6 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
+using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using System.Collections.Generic;
 using System.Text.Json;

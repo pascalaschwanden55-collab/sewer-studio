@@ -1,6 +1,8 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
 using System.Collections.Generic;
 using System.Linq;
+using AuswertungPro.Next.Domain.Ai.Vision;
 
 namespace AuswertungPro.Next.UI.Ai.Pipeline;
 
@@ -74,30 +76,5 @@ public sealed class PipelineTelemetry
     }
 }
 
-public sealed record FrameTiming(
-    int FrameIndex,
-    double TimestampSec,
-    long ExtractionMs,
-    long YoloMs,
-    long DinoMs,
-    long SamMs,
-    long QwenMs,
-    long TotalMs,
-    bool Skipped);
-
-public sealed record TelemetrySummary(
-    int TotalFrames,
-    int SkippedFrames,
-    PhaseStat Extraction,
-    PhaseStat Yolo,
-    PhaseStat Dino,
-    PhaseStat Sam,
-    PhaseStat Qwen,
-    PhaseStat Total,
-    long WallClockMs);
-
-public sealed record PhaseStat(
-    double MeanMs,
-    double MedianMs,
-    double P95Ms,
-    long TotalMs);
+// Phase 5.3 vorbereitend: FrameTiming, TelemetrySummary, PhaseStat
+// nach Domain/Ai/Vision/VideoAnalysisModels.cs.

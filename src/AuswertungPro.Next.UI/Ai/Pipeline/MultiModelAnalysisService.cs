@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
 using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.QualityGate;
