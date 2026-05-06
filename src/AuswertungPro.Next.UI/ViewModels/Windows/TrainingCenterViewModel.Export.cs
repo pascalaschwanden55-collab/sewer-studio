@@ -266,7 +266,7 @@ public partial class TrainingCenterViewModel
                 File.Copy(a.FullFramePath!, imgDst, overwrite: true);
 
                 // Label mit echten BBoxen schreiben
-                var clsIdx = Ai.Teacher.VsaYoloClassMap.GetClassId(a.VsaCode);
+                var clsIdx = AuswertungPro.Next.Application.Ai.Teacher.VsaYoloClassMap.GetClassId(a.VsaCode);
                 var bbox = a.BoundingBox;
                 var lblPath = Path.Combine(lblDir, $"teacher_{a.AnnotationId}.txt");
                 if (bbox is not null && bbox.Width > 0 && bbox.Height > 0)
@@ -311,7 +311,7 @@ public partial class TrainingCenterViewModel
                 try { File.Copy(s.FramePath, imgDst, overwrite: true); }
                 catch (IOException) { continue; } // Datei gesperrt oder nicht mehr vorhanden
 
-                var clsIdx = Ai.Teacher.VsaYoloClassMap.GetClassId(s.Code);
+                var clsIdx = AuswertungPro.Next.Application.Ai.Teacher.VsaYoloClassMap.GetClassId(s.Code);
                 var lblPath = Path.Combine(lblDir, $"sample_{i:D6}.txt");
 
                 // Echte BBox aus Eingabemarker nutzen, sonst Fallback
@@ -335,7 +335,7 @@ public partial class TrainingCenterViewModel
         }
 
         // ── data.yaml mit exaktem Klassenmapping ──
-        var fullMap = Ai.Teacher.VsaYoloClassMap.GetFullMap();
+        var fullMap = AuswertungPro.Next.Application.Ai.Teacher.VsaYoloClassMap.GetFullMap();
         var sortedClasses = fullMap.OrderBy(kv => kv.Value).Select(kv => kv.Key).ToList();
 
         var yamlPath = Path.Combine(outputDir, "data.yaml");
@@ -350,7 +350,7 @@ public partial class TrainingCenterViewModel
         await File.WriteAllLinesAsync(yamlPath, yamlLines, ct);
 
         // classes.txt exportieren
-        await Ai.Teacher.VsaYoloClassMap.ExportClassesTxtAsync(
+        await AuswertungPro.Next.Application.Ai.Teacher.VsaYoloClassMap.ExportClassesTxtAsync(
             Path.Combine(outputDir, "classes.txt"));
 
         var msg = $"YOLO-Export fertig: {totalExported} Samples " +

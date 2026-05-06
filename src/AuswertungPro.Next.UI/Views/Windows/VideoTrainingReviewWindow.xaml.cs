@@ -236,7 +236,7 @@ public partial class VideoTrainingReviewWindow : Window
 
             // YOLO-Export
             var exportService = new Ai.Teacher.TrainingAnnotationExportService();
-            var classId = Ai.Teacher.VsaYoloClassMap.GetClassId(vsaCode);
+            var classId = AuswertungPro.Next.Application.Ai.Teacher.VsaYoloClassMap.GetClassId(vsaCode);
             var baseName = $"review_{annotation.AnnotationId}";
             var exportResult = await exportService.ExportAsync(
                 entry.FramePath, bbox, vsaCode, classId, baseName);

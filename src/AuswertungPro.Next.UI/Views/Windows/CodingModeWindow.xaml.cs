@@ -1871,7 +1871,7 @@ public partial class CodingModeWindow : Window
             var baseName = $"{selectedEntry.Code}_{captureMeter:F1}m_{annotationId}";
 
             // Fix 1: VSA-Code → YOLO classId ueber persistiertes Mapping
-            int classId = Ai.Teacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
+            int classId = AuswertungPro.Next.Application.Ai.Teacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
 
             // 4. YOLO-Export (Crop + Annotation)
             var exportService = new Ai.Teacher.TrainingAnnotationExportService();

@@ -1423,7 +1423,7 @@ public partial class PlayerWindow : Window, IVlcSurface
             if (bbox.Width < 0.01 || bbox.Height < 0.01) return false;
 
             // 4. YOLO-Export
-            int classId = Ai.Teacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
+            int classId = AuswertungPro.Next.Application.Ai.Teacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
             var annotationId = Guid.NewGuid().ToString("N")[..12];
             var baseName = $"mark_{annotationId}";
 

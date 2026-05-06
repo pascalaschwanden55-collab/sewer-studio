@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai.Teacher;
+using AuswertungPro.Next.Application.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 

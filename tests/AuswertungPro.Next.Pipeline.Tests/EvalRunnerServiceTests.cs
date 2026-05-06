@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using AuswertungPro.Next.UI.Ai.Training;
 using Xunit;
+using AuswertungPro.Next.Application.Ai.Teacher;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 

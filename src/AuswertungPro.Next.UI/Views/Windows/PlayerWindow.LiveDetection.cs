@@ -1,4 +1,6 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Vision;
+using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Application.Ai;
 using System.Collections.Generic;
@@ -15,6 +17,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
+using AuswertungPro.Next.Application.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -85,7 +88,7 @@ public partial class PlayerWindow
     private async Task StartLiveDetectionAsync()
     {
         AiRuntimeConfig cfg;
-        try { cfg = AiRuntimeConfigExtensions.Load(); }
+        try { cfg = AiRuntimeConfigLoader.Load(); }
         catch
         {
             MessageBox.Show("KI-Konfiguration konnte nicht geladen werden.", "Live-KI",
@@ -679,7 +682,7 @@ public partial class PlayerWindow
             foreach (var finding in _detectionPendingFindings)
             {
                 var code = finding.VsaCodeHint ?? finding.Label;
-                int classId = Ai.Teacher.VsaYoloClassMap.GetClassId(code);
+                int classId = AuswertungPro.Next.Application.Ai.Teacher.VsaYoloClassMap.GetClassId(code);
                 var annotationId = Guid.NewGuid().ToString("N")[..12];
                 var baseName = $"det_{annotationId}";
 
@@ -695,7 +698,7 @@ public partial class PlayerWindow
                 try { System.IO.File.Delete(tempFrame); } catch { }
 
                 // TeacherAnnotation erstellen
-                var annotation = new Ai.Teacher.TeacherAnnotation
+                var annotation = new AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotation
                 {
                     AnnotationId = annotationId,
                     VsaCode = code,
@@ -779,7 +782,7 @@ public partial class PlayerWindow
             var timestampSecForFrame = _detectionPendingTimestampSec ?? timestampSec;
             var bbox = BBoxFromClockPosition(primary);
 
-            int classId = Ai.Teacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
+            int classId = AuswertungPro.Next.Application.Ai.Teacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
             var annotationId = Guid.NewGuid().ToString("N")[..12];
             var baseName = $"det_corr_{annotationId}";
 
@@ -791,7 +794,7 @@ public partial class PlayerWindow
             var exportResult = await exportService.ExportAsync(tempFrame, bbox, selectedEntry.Code, classId, baseName);
             try { System.IO.File.Delete(tempFrame); } catch { }
 
-            var annotation = new Ai.Teacher.TeacherAnnotation
+            var annotation = new AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotation
             {
                 AnnotationId = annotationId,
                 VsaCode = selectedEntry.Code,

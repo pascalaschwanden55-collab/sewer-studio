@@ -4,8 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.Teacher;
 
-namespace AuswertungPro.Next.UI.Ai.Teacher;
+namespace AuswertungPro.Next.Application.Ai.Teacher;
 
 /// <summary>
 /// Mapping von VSA-Codes auf YOLO-Klassen-IDs.
@@ -52,7 +53,7 @@ public static class VsaYoloClassMap
     };
 
     private static string GetMapPath()
-        => Path.Combine(KnowledgeRoot.GetRoot(), "yolo_class_map.json");
+        => Path.Combine(KnowledgeRootProvider.GetRoot(), "yolo_class_map.json");
 
     /// <summary>
     /// Gibt die YOLO classId fuer einen VSA-Code zurueck.
