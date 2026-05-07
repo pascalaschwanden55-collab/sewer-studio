@@ -4,7 +4,7 @@ namespace AuswertungPro.Next.Application.Ai.Pipeline;
 /// Temporale Aggregation von YOLO-Einzeldetektionen zu zusammengefassten Schadensereignissen.
 /// Funktioniert wie ein menschlicher Inspektor: Schaden erkennen, einmal notieren, weitergehen.
 /// </summary>
-public sealed class DetectionAggregator
+public sealed class DetectionAggregator : IDetectionAggregator
 {
     private readonly int _minConsecutiveFrames;
     private readonly double _minConfidence;

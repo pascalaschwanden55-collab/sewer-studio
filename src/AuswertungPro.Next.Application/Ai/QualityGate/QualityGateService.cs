@@ -9,7 +9,7 @@ namespace AuswertungPro.Next.Application.Ai.QualityGate;
 /// Nullable signals are skipped and weights renormalized over available signals.
 /// Thresholds: Green >= 0.75, Yellow >= 0.45, else Red.
 /// </summary>
-public sealed class QualityGateService
+public sealed class QualityGateService : IQualityGateService
 {
     public const double GreenThreshold = 0.75;
     public const double YellowThreshold = 0.45;
