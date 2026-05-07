@@ -268,7 +268,7 @@ Distinct VSA-Codes:     207
 5. **frames/-Bereinigung:** Frames ohne zugehörigen Sample (orphan) nach 90 Tagen loeschen. Spart geschaetzt 30-40 GB.
 6. **TrainingRuns aktiv nutzen:** Jeder YOLO/Qwen-Train sollte einen Eintrag schreiben (mAP, F1, Datum, JobId, GoldStandard-Vergleich). Aktuell unbenutzt.
 7. **CategoryWeights nutzen:** Für QualityGate-Calibration. Pipeline-Logik schreibt Weights, aber Tabelle leer → Bug oder ungenutztes Feature
-8. **KB-Backup auf E:\Brain validieren:** KnowledgeMirrorService ist da, aber kein Health-Check fuer den Mirror selbst.
+8. **KB-Backup auf E:\Brain validieren:** ✅ **abgearbeitet** — `KnowledgeMirrorService.GetHealth()` liefert Green/Yellow/Red mit Message + Bytes + Alter. UI-Anbindung im Audit-Tab als Folge-Aufgabe offen.
 
 ---
 
@@ -290,11 +290,11 @@ Distinct VSA-Codes:     207
 
 **Stabilität:**
 - STAB-H1: HttpClient-Leak in Feedback-Pipeline — ✅ **behoben** (static `_feedbackHttpClient` in PlayerWindow.Feedback.cs + TrainingCenterWindow.xaml.cs).
-- STAB-H2: AppendAllTextAsync ohne Lock auf Feedback-JSONL — ✅ **behoben** (`_positiveFeedbackLock` + `_negativeFeedbackLock` SemaphoreSlim). Zusaetzlich heute: OllamaClient `qwen_raw_responses.log` mit Lock geschuetzt.
+- STAB-H2: AppendAllTextAsync ohne Lock auf Feedback-JSONL — ✅ **behoben** (`_positiveFeedbackLock` + `_negativeFeedbackLock` SemaphoreSlim). Zusaetzlich: OllamaClient `qwen_raw_responses.log` mit Lock geschuetzt.
 - STAB-H3: AppendBatchHistoryAsync Race im Parallel-Batch — ✅ **behoben** (`_batchHistoryLock` SemaphoreSlim).
-- STAB-H4: PythonSidecarService Hard-Kill ohne Graceful-Shutdown — **NICHT** abgearbeitet (offen).
+- STAB-H4: PythonSidecarService Hard-Kill ohne Graceful-Shutdown — ✅ **behoben** (Sidecar `/shutdown`-Endpoint via SIGINT, C# POSTet vor Kill mit 3s-Wait, faellt auf Hard-Kill zurueck).
 - STAB-H5: async-void-Timer in PlayerWindow → Window-Close-Race — ✅ **behoben** (`_isWindowClosed`-Guard zu Beginn jedes async-void-Tick-Handlers).
-- STAB-H6: Exception-Swallowing in `KbQualityService.FindStaleCandidates()` — Status unklar.
+- STAB-H6: Exception-Swallowing in `KbQualityService.FindStaleCandidates()` — ✅ **behoben** (Debug-Log statt `catch{}`, Diagnose-Information bleibt erhalten).
 
 ### 4.3 Code-TODO-Marker
 
