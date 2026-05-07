@@ -451,11 +451,16 @@ Nur **6 TODO/FIXME** im gesamten Code:
 
 ### 8.2 Top-10 Verbesserungen (priorisiert)
 
-1. **PlayerWindow.xaml.cs zerschlagen** (CRITICAL ARCH-C3) — 2-3 Sessions
-2. **Command-Injection-Fixes** (SEC-H1-H3) — 2 h
-3. **JSONL-Lock + HttpClient-Singleton + Graceful-Shutdown** (STAB-H1-H4) — 3 h
-4. **TrainingCase POCO/Wrapper-Split** — ✅ **abgearbeitet** 2026-05-07 (2 Files migriert: Store + ImportService; 2 Files (Generator + SelfTraining) verbleiben bis WPF-Imaging-Adapter-Task)
-5. **WPF-Imaging-Adapter** — entsperrt 6 weitere Migrationen — 1-2 Sessions
+1. **PlayerWindow.xaml.cs zerschlagen** (CRITICAL ARCH-C3) — *teilweise* 2026-05-07: DamageMarkers + Heatmap als Partials extrahiert (5370 → 5123 LOC). Verbleibend: Hotkeys, MarkTool, CodingTool, CodeCatalog-Coding, Schacht-Ensure als weitere Partials (~2 Sessions).
+2. **Command-Injection-Fixes** (SEC-H1-H3) — ✅ abgearbeitet 2026-05-06 (alle 8 Stellen).
+3. **JSONL-Lock + HttpClient-Singleton + Graceful-Shutdown** (STAB-H1-H4) — ✅ abgearbeitet 2026-05-06.
+4. **TrainingCase POCO/Wrapper-Split** — ✅ **abgearbeitet** 2026-05-07 (alle 4 Files migriert nach Adapter-Task).
+5. **WPF-Imaging-Adapter** — ✅ **abgearbeitet** 2026-05-07. IImagePixelDecoder + IOcrPdfFallback Provider. 5 Files entkoppelt + nach Infrastructure migriert (PdfProtocolExtractor, PdfProtocolTableParser, FrameQualityFilter, TechniqueAssessmentService, SelfTrainingOrchestrator + TrainingSampleGenerator). 3 Files (AutoCalibration, ImageInversion, TrainingAnnotationExport) sind intrinsisch WPF-Bitmap-bound und bleiben bewusst in UI.
+6. **Active Learning aktivieren** — ✅ abgearbeitet 2026-05-07 (60% Uncertainty + 40% Diversity, Code-Frequenzen aus KB).
+7. **frames/-Cleanup-Job** — ✅ abgearbeitet 2026-05-07 (FrameStoreCleanupService, DryRun-Default).
+8. **Versions-Pruning** — ✅ abgearbeitet 2026-05-07 (KnowledgeBaseManager.PruneOldVersions).
+9. **Pipeline-Telemetry-Persistierung** — ✅ abgearbeitet 2026-05-07 (PipelineTelemetry.PersistSummaryAsync → JSONL).
+10. **CategoryWeights aktivieren** — ✅ abgearbeitet 2026-05-07 (PlayerWindow.CodingMode laedt LoadAllWeights aus KB).
 6. **Active-Learning aktivieren** — Yellow/Red-Anteil von 89 % auf 70 % bringen — laufender Prozess
 7. **frames/-Cleanup-Job** — spart 30-40 GB pro Nacht — 1 Session
 8. **Versions-Pruning** — KB-DB schlanker, schnellere Backups — 30 min
