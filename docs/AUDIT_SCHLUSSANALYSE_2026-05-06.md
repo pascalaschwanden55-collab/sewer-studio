@@ -451,7 +451,7 @@ Nur **6 TODO/FIXME** im gesamten Code:
 
 ### 8.2 Top-10 Verbesserungen (priorisiert)
 
-1. **PlayerWindow.xaml.cs zerschlagen** (CRITICAL ARCH-C3) — *grossteils* 2026-05-07: 6 neue Partials extrahiert (DamageMarkers, Heatmap, Hotkeys, MarkTool, CodingOverlayRender, CodingTool). Hauptfile **5370 → 2681 LOC (~50% Reduktion)**. Verbleibend: CodeCatalog-Coding, Schacht-Ensure, Coding-Apply/Persist (~600 LOC) als kleinerer Folge-Schritt.
+1. **PlayerWindow.xaml.cs zerschlagen** (CRITICAL ARCH-C3) — ✅ **abgearbeitet** 2026-05-07. 11 neue Partials extrahiert: DamageMarkers, Heatmap, Hotkeys, MarkTool, CodingOverlayRender, CodingTool, CodingApply, CodingEvents, ImportProtocol, Eingabemarker, MaskTriage. **Hauptfile 5370 → 842 LOC (-84%).** Verbleibend im Hauptfile: Konstruktor + Lifecycle-Hooks + ein paar Helpers (GetMeterFromVideoPosition, ShowOverlay, QuickScan_Click) — alles unter 850 LOC, gut wartbar.
 2. **Command-Injection-Fixes** (SEC-H1-H3) — ✅ abgearbeitet 2026-05-06 (alle 8 Stellen).
 3. **JSONL-Lock + HttpClient-Singleton + Graceful-Shutdown** (STAB-H1-H4) — ✅ abgearbeitet 2026-05-06.
 4. **TrainingCase POCO/Wrapper-Split** — ✅ **abgearbeitet** 2026-05-07 (alle 4 Files migriert nach Adapter-Task).
