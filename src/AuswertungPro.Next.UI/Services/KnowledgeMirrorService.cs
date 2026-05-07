@@ -314,6 +314,85 @@ public sealed class KnowledgeMirrorService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Audit 2026-05-06 (Punkt 3.8): Health-Check fuer den Brain-Mirror.
+    /// Validiert dass die Spiegel-Kopie auf E:\Brain aktuell und nicht-leer ist.
+    /// Wird im Audit-Tab angezeigt — wenn Yellow/Red, dann Manual-SyncNow oder
+    /// Pfad-Korrektur noetig.
+    /// </summary>
+    public KnowledgeMirrorHealth GetHealth()
+    {
+        try
+        {
+            if (!Directory.Exists(_brainRoot))
+                return new KnowledgeMirrorHealth(
+                    Status: KnowledgeMirrorStatus.Red,
+                    Message: $"Brain-Root '{_brainRoot}' existiert nicht",
+                    BrainDbBytes: 0,
+                    BrainDbAgeHours: null);
+
+            var knowledgeDb = Path.Combine(_knowledgeRoot, "KnowledgeBase.db");
+            var brainDb = Path.Combine(_brainRoot, "KnowledgeBase.db");
+
+            if (!File.Exists(knowledgeDb))
+                return new KnowledgeMirrorHealth(
+                    Status: KnowledgeMirrorStatus.Yellow,
+                    Message: "Keine Knowledge-DB lokal — Mirror nicht relevant",
+                    BrainDbBytes: 0,
+                    BrainDbAgeHours: null);
+
+            if (!File.Exists(brainDb))
+                return new KnowledgeMirrorHealth(
+                    Status: KnowledgeMirrorStatus.Red,
+                    Message: "Knowledge-DB lokal vorhanden, aber kein Mirror auf Brain",
+                    BrainDbBytes: 0,
+                    BrainDbAgeHours: null);
+
+            var brainInfo = new FileInfo(brainDb);
+            var localInfo = new FileInfo(knowledgeDb);
+            var ageHours = (DateTime.UtcNow - brainInfo.LastWriteTimeUtc).TotalHours;
+
+            if (brainInfo.Length == 0)
+                return new KnowledgeMirrorHealth(
+                    Status: KnowledgeMirrorStatus.Red,
+                    Message: "Brain-DB ist 0 Byte",
+                    BrainDbBytes: 0,
+                    BrainDbAgeHours: ageHours);
+
+            // Wenn lokale DB deutlich groesser ist als Mirror-DB, hinkt der Mirror hinterher.
+            // Threshold: mehr als 10 % Diff ODER lokal > 1 MB groesser.
+            var sizeDiffBytes = localInfo.Length - brainInfo.Length;
+            if (sizeDiffBytes > 1_000_000 || sizeDiffBytes > localInfo.Length * 0.10)
+                return new KnowledgeMirrorHealth(
+                    Status: KnowledgeMirrorStatus.Yellow,
+                    Message: $"Mirror hinkt zurueck: lokal {localInfo.Length:N0} B, Brain {brainInfo.Length:N0} B",
+                    BrainDbBytes: brainInfo.Length,
+                    BrainDbAgeHours: ageHours);
+
+            // Zu alt: > 7 Tage ohne Sync ist verdaechtig wenn lokal modifiziert wurde
+            if (ageHours > 24 * 7 && localInfo.LastWriteTimeUtc > brainInfo.LastWriteTimeUtc)
+                return new KnowledgeMirrorHealth(
+                    Status: KnowledgeMirrorStatus.Yellow,
+                    Message: $"Mirror seit {ageHours:F0}h nicht aktualisiert obwohl lokal Aenderungen",
+                    BrainDbBytes: brainInfo.Length,
+                    BrainDbAgeHours: ageHours);
+
+            return new KnowledgeMirrorHealth(
+                Status: KnowledgeMirrorStatus.Green,
+                Message: $"Mirror OK ({brainInfo.Length:N0} B, {ageHours:F1}h alt)",
+                BrainDbBytes: brainInfo.Length,
+                BrainDbAgeHours: ageHours);
+        }
+        catch (Exception ex)
+        {
+            return new KnowledgeMirrorHealth(
+                Status: KnowledgeMirrorStatus.Red,
+                Message: $"Health-Check Exception: {ex.GetType().Name}: {ex.Message}",
+                BrainDbBytes: 0,
+                BrainDbAgeHours: null);
+        }
+    }
+
     public void Dispose()
     {
         _debounceTimer.Dispose();
@@ -322,3 +401,18 @@ public sealed class KnowledgeMirrorService : IDisposable
             Current = null;
     }
 }
+
+/// <summary>Status-Ampel fuer den Brain-Mirror.</summary>
+public enum KnowledgeMirrorStatus
+{
+    Green,
+    Yellow,
+    Red,
+}
+
+/// <summary>Ergebnis eines Brain-Mirror-Health-Checks.</summary>
+public sealed record KnowledgeMirrorHealth(
+    KnowledgeMirrorStatus Status,
+    string Message,
+    long BrainDbBytes,
+    double? BrainDbAgeHours);
