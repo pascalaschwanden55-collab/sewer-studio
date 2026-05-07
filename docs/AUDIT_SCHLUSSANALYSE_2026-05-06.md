@@ -289,7 +289,7 @@ Distinct VSA-Codes:     207
 - SEC-H4: Path-Traversal via Haltungs-ID — ✅ **behoben** in `ProjectPathResolver.SanitizePathSegment` (Trim trailing dots, Reject `.`/`..`, Replace eingebettetes `..`).
 
 **Architektur (HIGH, alle 2026-05-07 abgearbeitet):**
-- ARCH-H1: Domain-Models mit `INotifyPropertyChanged` — ⚠️ **dokumentierte Tech-Debt**. Voller POCO/Wrapper-Split ist 2-3 Sessions (11+ ViewModels + 20+ XAML-Bindings). Inline-Migrationspfad in `HaltungRecord.cs`/`SchachtRecord.cs`/`Project.cs` markiert. Wird erst gemacht wenn Headless-CLI/Sidecar-Use einen Business-Treiber bekommt.
+- ARCH-H1: Domain-Models mit `INotifyPropertyChanged` — ⚠️ **Phase 1 abgeschlossen 2026-05-07**. `HaltungRecordViewModel` + `SchachtRecordViewModel` als ObservableObject-Wrapper in UI/ViewModels/Records angelegt + 6 Tests. Bestehende Bindings auf Domain-Records funktionieren weiter (Records haben noch INotifyPropertyChanged). Phase 2 (Konsumenten-ViewModels umstellen) und Phase 3 (Domain-POCO ohne INotifyPropertyChanged) bleiben offen, sind aber jetzt schichtweise machbar ohne Big-Bang.
 - ARCH-H2: Six Trainings-Orchestrators ohne Interface-Hierarchie — ✅ **abgearbeitet**. `IBatchSelfTrainingOrchestrator` neu (zusaetzlich zum bestehenden `ISelfTrainingOrchestrator`). Trainings-Familie als Doc-Block in `InitialTrainingOrchestrator` dokumentiert.
 - ARCH-H3: Inkonsistente Interface-Abstraktion bei KI-Kern-Services — ✅ **abgearbeitet**. `IQualityGateService` + `IDetectionAggregator` neu — TDD wird moeglich.
 - ARCH-H4: CLAUDE.md referenzierte nicht-existente Klassen — ✅ **abgearbeitet** (Klassen-Pfade auf 2026-05-07-Stand aktualisiert + Provider-Abschnitt ergaenzt).
@@ -319,10 +319,10 @@ Nur **6 TODO/FIXME** im gesamten Code:
 
 ### 4.4 Test-Coverage
 
-- 654 Tests (140 Infrastructure + 514 Pipeline)
-- LOC-Ratio Tests:Source = **12 265 : 65 409 ≈ 19 %**
+- **704 Tests** (140 Infrastructure + 564 Pipeline) — Stand 2026-05-07, **+50 vs. Audit-Start**
+- 2026-05-07 neu: 25 ProjectPathResolver + 6 ActiveLearningSelector (inkl. 1 Bug gefunden) + 5 FrameStoreCleanupService + 6 KnowledgeMirrorHealth + 6 HaltungRecordViewModel + 2 TrainingCaseJsonRoundtrip
 - 2 Skip-Tests
-- **Keine** Tests für: PlayerWindow, MultiModelAnalysisService, Sidecar-Routes (Python), VLC-Steuerung, SAM-Renderer
+- **Keine** Tests für: PlayerWindow, MultiModelAnalysisService (komplexe State-Automaten), Sidecar-Routes (Python), VLC-Steuerung, SAM-Renderer
 
 ### 4.5 Verbesserungen
 
