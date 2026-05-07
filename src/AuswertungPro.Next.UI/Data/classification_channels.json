@@ -1,162 +1,640 @@
-{
+﻿{
   "_comment": "VSA Richtlinie 2023 - Anhang C: Klassifizierungstabellen für Kanäle. Konservative Defaults (EZ 2) bei quantifizierungsabhängigen Codes. Erweitert um BC*/BD*-Gruppen.",
   "defaultMinLength_m": 3.0,
   "rules": [
     {
-      "code": "BAA", "ezd": null, "ezs": 2, "ezb": 2,
-      "_desc": "Verformung (Deformation) – Q1 = Verformung %",
+      "code": "AEC",
+      "ezd": null,
+      "ezs": null,
+      "ezb": null,
+      "_desc": "Aenderung Profilform — keine Zustandsbewertung (nur Dokumentation)"
+    },
+    {
+      "code": "AED",
+      "ezd": null,
+      "ezs": null,
+      "ezb": null,
+      "_desc": "Aenderung Rohrmaterial/Rohrprofil — keine Zustandsbewertung (nur Dokumentation)"
+    },
+    {
+      "code": "AEF",
+      "ezd": null,
+      "ezs": null,
+      "ezb": null,
+      "_desc": "Inspektionsende / Neue Laenge — keine Zustandsbewertung (nur Dokumentation)"
+    },
+    {
+      "code": "BAA",
+      "ezd": null,
+      "ezs": 2,
+      "ezb": 2,
+      "_desc": "Verformung (Deformation) – Q1 = Verformung %. Materialabhaengig: biegesteife Rohre (Beton/Steinzeug) versagen frueher als biegeweiche (PVC/PE).",
       "quantRules": [
         {
-          "requirement": "ezs", "parameter": "Q1",
+          "requirement": "ezs",
+          "parameter": "Q1",
+          "materialFilter": ["biegesteif"],
           "ranges": [
-            { "min": 0,  "max": 5,   "ez": 3 },
-            { "min": 5,  "max": 15,  "ez": 2 },
-            { "min": 15, "max": 999, "ez": 1 }
+            { "min": 0, "max": 1, "ez": 4 },
+            { "min": 1, "max": 3, "ez": 3 },
+            { "min": 3, "max": 4, "ez": 2 },
+            { "min": 4, "max": 7, "ez": 1 },
+            { "min": 7, "max": 999, "ez": 0 }
           ]
         },
         {
-          "requirement": "ezb", "parameter": "Q1",
+          "requirement": "ezs",
+          "parameter": "Q1",
+          "materialFilter": ["biegeweich"],
           "ranges": [
-            { "min": 0,  "max": 5,   "ez": 3 },
-            { "min": 5,  "max": 10,  "ez": 2 },
+            { "min": 0, "max": 2, "ez": 4 },
+            { "min": 2, "max": 6, "ez": 3 },
+            { "min": 6, "max": 10, "ez": 2 },
+            { "min": 10, "max": 15, "ez": 1 },
+            { "min": 15, "max": 999, "ez": 0 }
+          ]
+        },
+        {
+          "requirement": "ezs",
+          "parameter": "Q1",
+          "_desc": "Fallback ohne Materialinfo (konservativ = biegesteif)",
+          "ranges": [
+            { "min": 0, "max": 3, "ez": 3 },
+            { "min": 3, "max": 7, "ez": 2 },
+            { "min": 7, "max": 999, "ez": 1 }
+          ]
+        },
+        {
+          "requirement": "ezb",
+          "parameter": "Q1",
+          "ranges": [
+            { "min": 0, "max": 5, "ez": 3 },
+            { "min": 5, "max": 10, "ez": 2 },
             { "min": 10, "max": 999, "ez": 1 }
           ]
         }
       ]
     },
     {
-      "code": "BAB", "ezd": 2, "ezs": 2, "ezb": null,
+      "code": "BAB",
+      "ezd": 2,
+      "ezs": 2,
+      "ezb": null,
       "_desc": "Risse (Cracks) – Q1 = Rissbreite mm",
       "quantRules": [
         {
-          "requirement": "ezd", "parameter": "Q1",
+          "requirement": "ezd",
+          "parameter": "Q1",
           "ranges": [
-            { "min": 0, "max": 1,   "ez": 3 },
-            { "min": 1, "max": 5,   "ez": 2 },
-            { "min": 5, "max": 999, "ez": 1 }
+            {
+              "min": 0,
+              "max": 1,
+              "ez": 3
+            },
+            {
+              "min": 1,
+              "max": 5,
+              "ez": 2
+            },
+            {
+              "min": 5,
+              "max": 999,
+              "ez": 1
+            }
           ]
         },
         {
-          "requirement": "ezs", "parameter": "Q1",
+          "requirement": "ezs",
+          "parameter": "Q1",
           "ranges": [
-            { "min": 0, "max": 1,   "ez": 3 },
-            { "min": 1, "max": 5,   "ez": 2 },
-            { "min": 5, "max": 999, "ez": 1 }
+            {
+              "min": 0,
+              "max": 1,
+              "ez": 3
+            },
+            {
+              "min": 1,
+              "max": 5,
+              "ez": 2
+            },
+            {
+              "min": 5,
+              "max": 999,
+              "ez": 1
+            }
           ]
         }
       ]
     },
     {
-      "code": "BAC", "ezd": 2, "ezs": 2, "ezb": 1,
+      "code": "BABA",
+      "ezd": 3,
+      "ezs": 3,
+      "ezb": null,
+      "_desc": "VSA 2023: Char1=A Haarriss — IMMER pauschal mild (EZ 3), unabhaengig von Lage und Q1"
+    },
+    {
+      "code": "BABB",
+      "ezd": 3,
+      "ezs": 3,
+      "ezb": null,
+      "_desc": "VSA 2023: Char1=B Char2 unspez. — gilt fuer BABBB Querriss radial (pauschal mild). Spezifischere Codes (BABBA, BABBC) ueberlagern diesen Eintrag durch eigene Q1-Regeln.",
+      "quantRules": [
+        {
+          "requirement": "ezd",
+          "parameter": "Q1",
+          "ranges": [
+            { "min": 0, "max": 999, "ez": 3 }
+          ]
+        },
+        {
+          "requirement": "ezs",
+          "parameter": "Q1",
+          "ranges": [
+            { "min": 0, "max": 999, "ez": 3 }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "BABBA",
+      "ezd": 2,
+      "ezs": 2,
+      "ezb": null,
+      "_desc": "VSA 2023: BAB.B.A Riss laengs — strukturell, Q1=Rissbreite mm",
+      "quantRules": [
+        {
+          "requirement": "ezd",
+          "parameter": "Q1",
+          "ranges": [
+            { "min": 0, "max": 1, "ez": 3 },
+            { "min": 1, "max": 3, "ez": 2 },
+            { "min": 3, "max": 5, "ez": 1 },
+            { "min": 5, "max": 999, "ez": 0 }
+          ]
+        },
+        {
+          "requirement": "ezs",
+          "parameter": "Q1",
+          "ranges": [
+            { "min": 0, "max": 1, "ez": 3 },
+            { "min": 1, "max": 3, "ez": 2 },
+            { "min": 3, "max": 5, "ez": 1 },
+            { "min": 5, "max": 999, "ez": 0 }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "BABBC",
+      "ezd": 2,
+      "ezs": 1,
+      "ezb": null,
+      "_desc": "VSA 2023: BAB.B.C Riss komplex/Scherbenbildung — pauschal kritisch (Bruchgefahr), Q1=mm"
+    },
+    {
+      "code": "BABBE",
+      "ezd": 2,
+      "ezs": 1,
+      "ezb": null,
+      "_desc": "VSA 2023: BAB.B.E Riss sternfoermig — pauschal kritisch"
+    },
+    {
+      "code": "BABC",
+      "ezd": 2,
+      "ezs": 2,
+      "ezb": null,
+      "_desc": "VSA 2023: BAB.C Bruchansatz — pauschal mittelschwer"
+    },
+    {
+      "code": "BAC",
+      "ezd": 2,
+      "ezs": 2,
+      "ezb": 1,
       "_desc": "Rohrbruch/Einsturz (Collapse) – Q1 = Ausmass %",
       "quantRules": [
         {
-          "requirement": "ezs", "parameter": "Q1",
+          "requirement": "ezs",
+          "parameter": "Q1",
           "ranges": [
-            { "min": 0,  "max": 25,  "ez": 2 },
-            { "min": 25, "max": 50,  "ez": 1 },
-            { "min": 50, "max": 999, "ez": 0 }
+            {
+              "min": 0,
+              "max": 25,
+              "ez": 2
+            },
+            {
+              "min": 25,
+              "max": 50,
+              "ez": 1
+            },
+            {
+              "min": 50,
+              "max": 999,
+              "ez": 0
+            }
           ]
         },
         {
-          "requirement": "ezb", "parameter": "Q1",
+          "requirement": "ezb",
+          "parameter": "Q1",
           "ranges": [
-            { "min": 0,  "max": 25,  "ez": 2 },
-            { "min": 25, "max": 50,  "ez": 1 },
-            { "min": 50, "max": 999, "ez": 0 }
+            {
+              "min": 0,
+              "max": 25,
+              "ez": 2
+            },
+            {
+              "min": 25,
+              "max": 50,
+              "ez": 1
+            },
+            {
+              "min": 50,
+              "max": 999,
+              "ez": 0
+            }
           ]
         }
       ]
     },
-    { "code": "BAD", "ezd": 2,    "ezs": 2,    "ezb": 2    },
-    { "code": "BAE", "ezd": 2,    "ezs": null, "ezb": null },
     {
-      "code": "BAF", "ezd": null, "ezs": 3, "ezb": 4,
+      "code": "BACA",
+      "ezd": 1,
+      "ezs": 1,
+      "ezb": 1,
+      "_desc": "VSA 2023: BAC.A Bruch partiell — pauschal schwer (mind. EZ 1)"
+    },
+    {
+      "code": "BACB",
+      "ezd": 0,
+      "ezs": 0,
+      "ezb": 0,
+      "_desc": "VSA 2023: BAC.B Bruch/Einsturz komplett — Ausfall (EZ 0)"
+    },
+    {
+      "code": "BACC",
+      "ezd": 0,
+      "ezs": 0,
+      "ezb": 0,
+      "_desc": "VSA 2023: BAC.C Bruch mit sichtbaren Hohlraeumen — Ausfall (EZ 0), Q1 irrelevant"
+    },
+    {
+      "code": "BAD",
+      "ezd": 2,
+      "ezs": 2,
+      "ezb": 2
+    },
+    {
+      "code": "BAE",
+      "ezd": 2,
+      "ezs": null,
+      "ezb": null
+    },
+    {
+      "code": "BAF",
+      "ezd": null,
+      "ezs": 3,
+      "ezb": 4,
       "_desc": "Oberflächenschädigung – Q1 = Schadenausmass %",
       "quantRules": [
         {
-          "requirement": "ezs", "parameter": "Q1",
+          "requirement": "ezs",
+          "parameter": "Q1",
           "ranges": [
-            { "min": 0,  "max": 10,  "ez": 4 },
-            { "min": 10, "max": 30,  "ez": 3 },
-            { "min": 30, "max": 50,  "ez": 2 },
-            { "min": 50, "max": 999, "ez": 1 }
+            {
+              "min": 0,
+              "max": 10,
+              "ez": 4
+            },
+            {
+              "min": 10,
+              "max": 30,
+              "ez": 3
+            },
+            {
+              "min": 30,
+              "max": 50,
+              "ez": 2
+            },
+            {
+              "min": 50,
+              "max": 999,
+              "ez": 1
+            }
           ]
         },
         {
-          "requirement": "ezb", "parameter": "Q1",
+          "requirement": "ezb",
+          "parameter": "Q1",
           "ranges": [
-            { "min": 0,  "max": 10,  "ez": 4 },
-            { "min": 10, "max": 25,  "ez": 3 },
-            { "min": 25, "max": 50,  "ez": 2 },
-            { "min": 50, "max": 999, "ez": 1 }
+            {
+              "min": 0,
+              "max": 10,
+              "ez": 4
+            },
+            {
+              "min": 10,
+              "max": 25,
+              "ez": 3
+            },
+            {
+              "min": 25,
+              "max": 50,
+              "ez": 2
+            },
+            {
+              "min": 50,
+              "max": 999,
+              "ez": 1
+            }
           ]
         }
       ]
     },
-    { "code": "BAG", "ezd": null, "ezs": 2,    "ezb": 2    },
-    { "code": "BAH", "ezd": 2,    "ezs": null, "ezb": null },
-    { "code": "BAI", "ezd": 2,    "ezs": 3,    "ezb": 2    },
-    { "code": "BAJ", "ezd": 2,    "ezs": 2,    "ezb": null },
-    { "code": "BAK", "ezd": null, "ezs": 2,    "ezb": 2    },
-    { "code": "BAL", "ezd": 2,    "ezs": null, "ezb": null },
-    { "code": "BAM", "ezd": null, "ezs": 2,    "ezb": 2    },
-    { "code": "BAN", "ezd": 2,    "ezs": 2,    "ezb": null },
-    { "code": "BAO", "ezd": 2,    "ezs": 2,    "ezb": null },
-    { "code": "BAP", "ezd": 2,    "ezs": null, "ezb": 1    },
     {
-      "code": "BBA", "ezd": 2, "ezs": null, "ezb": 2,
+      "code": "BAG",
+      "ezd": null,
+      "ezs": 2,
+      "ezb": 2
+    },
+    {
+      "code": "BAH",
+      "ezd": 2,
+      "ezs": null,
+      "ezb": null
+    },
+    {
+      "code": "BAI",
+      "ezd": 2,
+      "ezs": 3,
+      "ezb": 2,
+      "_desc": "Einragender Anschluss/Dichtungsmaterial – Q1 = Einragung mm, DN-relativ bewertet (≥DN/4 schwer, ≥DN/10 mittel)",
+      "quantRules": [
+        {
+          "requirement": "ezb",
+          "parameter": "Q1_PCT_DN",
+          "_desc": "Q1 in % von DN: <10% leicht, 10-25% mittel, ≥25% schwer",
+          "ranges": [
+            { "min": 0, "max": 10, "ez": 3 },
+            { "min": 10, "max": 25, "ez": 2 },
+            { "min": 25, "max": 9999, "ez": 1 }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "BAJ",
+      "ezd": 2,
+      "ezs": 2,
+      "ezb": null,
+      "_desc": "Verschobene Rohrverbindung (Versatz) – Q1 = Versatz mm, DN-relativ (≥DN/2 = Ausfall, ≥DN/4 schwer, ≥DN/10 mittel)",
+      "quantRules": [
+        {
+          "requirement": "ezd",
+          "parameter": "Q1_PCT_DN",
+          "ranges": [
+            { "min": 0, "max": 10, "ez": 3 },
+            { "min": 10, "max": 25, "ez": 2 },
+            { "min": 25, "max": 50, "ez": 1 },
+            { "min": 50, "max": 9999, "ez": 0 }
+          ]
+        },
+        {
+          "requirement": "ezs",
+          "parameter": "Q1_PCT_DN",
+          "ranges": [
+            { "min": 0, "max": 10, "ez": 3 },
+            { "min": 10, "max": 25, "ez": 2 },
+            { "min": 25, "max": 50, "ez": 1 },
+            { "min": 50, "max": 9999, "ez": 0 }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "BAK",
+      "ezd": null,
+      "ezs": 2,
+      "ezb": 2
+    },
+    {
+      "code": "BAL",
+      "ezd": 2,
+      "ezs": null,
+      "ezb": null
+    },
+    {
+      "code": "BAM",
+      "ezd": null,
+      "ezs": 2,
+      "ezb": 2
+    },
+    {
+      "code": "BAN",
+      "ezd": 2,
+      "ezs": 2,
+      "ezb": null
+    },
+    {
+      "code": "BAO",
+      "ezd": 2,
+      "ezs": 2,
+      "ezb": null
+    },
+    {
+      "code": "BAP",
+      "ezd": 2,
+      "ezs": null,
+      "ezb": 1
+    },
+    {
+      "code": "BBA",
+      "ezd": 2,
+      "ezs": null,
+      "ezb": 2,
       "_desc": "Wurzeleinwuchs (Root Intrusion) – Q1 = Ausmass %",
       "quantRules": [
         {
-          "requirement": "ezd", "parameter": "Q1",
+          "requirement": "ezd",
+          "parameter": "Q1",
           "ranges": [
-            { "min": 0,  "max": 10,  "ez": 3 },
-            { "min": 10, "max": 30,  "ez": 2 },
-            { "min": 30, "max": 999, "ez": 1 }
+            {
+              "min": 0,
+              "max": 10,
+              "ez": 3
+            },
+            {
+              "min": 10,
+              "max": 30,
+              "ez": 2
+            },
+            {
+              "min": 30,
+              "max": 999,
+              "ez": 1
+            }
           ]
         },
         {
-          "requirement": "ezb", "parameter": "Q1",
+          "requirement": "ezb",
+          "parameter": "Q1",
           "ranges": [
-            { "min": 0,  "max": 10,  "ez": 3 },
-            { "min": 10, "max": 30,  "ez": 2 },
-            { "min": 30, "max": 999, "ez": 1 }
+            {
+              "min": 0,
+              "max": 10,
+              "ez": 3
+            },
+            {
+              "min": 10,
+              "max": 30,
+              "ez": 2
+            },
+            {
+              "min": 30,
+              "max": 999,
+              "ez": 1
+            }
           ]
         }
       ]
     },
-    { "code": "BBB", "ezd": 2,    "ezs": null, "ezb": 2    },
-    { "code": "BBC", "ezd": null, "ezs": null, "ezb": 2    },
-    { "code": "BBD", "ezd": 2,    "ezs": 1,    "ezb": 2    },
-    { "code": "BBE", "ezd": 2,    "ezs": null, "ezb": 2    },
-    { "code": "BBF", "ezd": 2,    "ezs": 3,    "ezb": 4    },
-    { "code": "BBG", "ezd": 2,    "ezs": null, "ezb": 3    },
-    { "code": "BBH", "ezd": null, "ezs": null, "ezb": 4    },
-    { "code": "BCA", "ezd": 2,    "ezs": null, "ezb": 2    },
-    { "code": "BCB", "ezd": 2,    "ezs": null, "ezb": 2    },
-    { "code": "BCC", "ezd": 2,    "ezs": null, "ezb": 2    },
-    { "code": "BCD", "ezd": null, "ezs": null, "ezb": null },
-    { "code": "BCE", "ezd": null, "ezs": null, "ezb": null },
-    { "code": "BDA", "ezd": null, "ezs": 2,    "ezb": 2    },
-    { "code": "BDB", "ezd": null, "ezs": 2,    "ezb": 2    },
-    { "code": "BDC", "ezd": null, "ezs": 2,    "ezb": 2    },
     {
-      "code": "BDD", "ezd": null, "ezs": null, "ezb": 2,
+      "code": "BBB",
+      "ezd": 2,
+      "ezs": null,
+      "ezb": 2
+    },
+    {
+      "code": "BBC",
+      "ezd": null,
+      "ezs": null,
+      "ezb": 2
+    },
+    {
+      "code": "BBD",
+      "ezd": 2,
+      "ezs": 1,
+      "ezb": 2
+    },
+    {
+      "code": "BBE",
+      "ezd": 2,
+      "ezs": null,
+      "ezb": 2
+    },
+    {
+      "code": "BBF",
+      "ezd": 2,
+      "ezs": 3,
+      "ezb": 4
+    },
+    {
+      "code": "BBG",
+      "ezd": 2,
+      "ezs": null,
+      "ezb": 3
+    },
+    {
+      "code": "BBH",
+      "ezd": null,
+      "ezs": null,
+      "ezb": 4
+    },
+    {
+      "code": "BCA",
+      "ezd": 2,
+      "ezs": null,
+      "ezb": 2
+    },
+    {
+      "code": "BCB",
+      "ezd": 2,
+      "ezs": null,
+      "ezb": 2
+    },
+    {
+      "code": "BCC",
+      "ezd": 2,
+      "ezs": null,
+      "ezb": 2
+    },
+    {
+      "code": "BCD",
+      "ezd": null,
+      "ezs": null,
+      "ezb": null
+    },
+    {
+      "code": "BCE",
+      "ezd": null,
+      "ezs": null,
+      "ezb": null
+    },
+    {
+      "code": "BDA",
+      "ezd": null,
+      "ezs": 2,
+      "ezb": 2
+    },
+    {
+      "code": "BDB",
+      "ezd": null,
+      "ezs": 2,
+      "ezb": 2
+    },
+    {
+      "code": "BDC",
+      "ezd": null,
+      "ezs": 2,
+      "ezb": 2
+    },
+    {
+      "code": "BDD",
+      "ezd": null,
+      "ezs": null,
+      "ezb": 2,
       "_desc": "Wasserspiegel (Water level) – Q1 = Wasserstand % lichte Hoehe",
       "quantRules": [
         {
-          "requirement": "ezb", "parameter": "Q1",
+          "requirement": "ezb",
+          "parameter": "Q1",
           "ranges": [
-            { "min": 0,  "max": 5,   "ez": 3 },
-            { "min": 5,  "max": 15,  "ez": 2 },
-            { "min": 15, "max": 999, "ez": 1 }
+            {
+              "min": 0,
+              "max": 5,
+              "ez": 3
+            },
+            {
+              "min": 5,
+              "max": 15,
+              "ez": 2
+            },
+            {
+              "min": 15,
+              "max": 999,
+              "ez": 1
+            }
           ]
         }
       ]
     },
-    { "code": "BDE", "ezd": null, "ezs": 2,    "ezb": 2    },
-    { "code": "BDF", "ezd": null, "ezs": 2,    "ezb": 2    },
-    { "code": "BDG", "ezd": null, "ezs": 2,    "ezb": 2    }
+    {
+      "code": "BDE",
+      "ezd": null,
+      "ezs": 2,
+      "ezb": 2
+    },
+    {
+      "code": "BDF",
+      "ezd": null,
+      "ezs": 2,
+      "ezb": 2
+    },
+    {
+      "code": "BDG",
+      "ezd": null,
+      "ezs": 2,
+      "ezb": 2
+    }
   ]
 }

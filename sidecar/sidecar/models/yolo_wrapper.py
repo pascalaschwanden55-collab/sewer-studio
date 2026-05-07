@@ -461,8 +461,12 @@ def detect_image(image: Image.Image | np.ndarray, confidence_threshold: float) -
 
         if _using_custom_weights:
             is_relevant = len(detections) > 0
+            is_fallback = False
         else:
+            # Fallback-Modus ohne Custom-Weights: Frames werden nicht hart gefiltert,
+            # damit Recall hoch bleibt. is_fallback_mode=True macht das transparent.
             is_relevant = True
+            is_fallback = True
             frame_class = "pipe_content" if frame_class == "empty" else frame_class
 
         return YoloResponse(
@@ -470,6 +474,7 @@ def detect_image(image: Image.Image | np.ndarray, confidence_threshold: float) -
             detections=detections,
             frame_class=frame_class,
             inference_time_ms=round(elapsed_ms, 1),
+            is_fallback_mode=is_fallback,
         )
 
 

@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>PhotoAssistant Mockup — SewerStudio (Interaktiv v2)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1e1e2e; color: #cdd6f4; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+  .toolbar { background: #181825; border-bottom: 1px solid #313244; padding: 6px 12px; display: flex; align-items: center; gap: 4px; flex-shrink: 0; flex-wrap: wrap; }
+  .toolbar .sep { width: 1px; height: 40px; background: #45475a; margin: 0 6px; }
+  .tool-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 62px; height: 54px; padding: 4px 8px; background: #313244; border: 1px solid #45475a; border-radius: 8px; color: #cdd6f4; font-size: 10px; cursor: pointer; transition: all 0.15s; user-select: none; }
+  .tool-btn:hover { border-color: #89b4fa; background: #45475a; }
+  .tool-btn.active { background: #89b4fa; color: #1e1e2e; border-color: #fff; font-weight: 600; }
+  .tool-btn .icon { font-size: 18px; margin-bottom: 2px; }
+  .tool-btn .label { font-size: 9px; white-space: nowrap; }
+  .view-group { display: flex; gap: 2px; margin-left: 8px; }
+  .view-btn { padding: 4px 10px; font-size: 10px; background: #313244; border: 1px solid #45475a; color: #cdd6f4; cursor: pointer; }
+  .view-btn:first-child { border-radius: 6px 0 0 6px; }
+  .view-btn:last-child { border-radius: 0 6px 6px 0; }
+  .view-btn.active { background: #a6e3a1; color: #1e1e2e; font-weight: 600; }
+  .action-btn { padding: 6px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; border: 1px solid #45475a; cursor: pointer; }
+  .action-btn.primary { background: #a6e3a1; color: #1e1e2e; }
+  .action-btn.danger { background: #f38ba8; color: #1e1e2e; }
+  .action-btn.secondary { background: #45475a; color: #cdd6f4; }
+  .action-btn:hover { opacity: 0.85; }
+  .toolbar-right { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .main { flex: 1; display: flex; overflow: hidden; }
+  .slider-panel { width: 52px; background: #181825; border-right: 1px solid #313244; display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 8px; }
+  .slider-label { font-size: 9px; color: #a6adc8; writing-mode: vertical-rl; transform: rotate(180deg); }
+  .canvas-area { flex: 1; position: relative; background: #11111b; overflow: hidden; }
+  #drawCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  .info-panel { width: 220px; background: #181825; border-left: 1px solid #313244; padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+  .info-section { font-size: 10px; color: #a6adc8; border-bottom: 1px solid #313244; padding-bottom: 8px; }
+  .info-section .title { font-weight: 600; color: #cdd6f4; margin-bottom: 4px; font-size: 11px; }
+  .info-row { display: flex; justify-content: space-between; margin: 2px 0; }
+  .info-value { color: #89b4fa; font-weight: 600; }
+  .info-value.green { color: #a6e3a1; }
+  .measurement-item { padding: 4px 6px; margin: 2px 0; border-radius: 4px; background: #313244; display: flex; justify-content: space-between; align-items: center; font-size: 10px; }
+  .measurement-item .del { color: #f38ba8; cursor: pointer; font-size: 14px; }
+  .statusbar { background: #181825; border-top: 1px solid #313244; padding: 6px 16px; font-size: 11px; display: flex; justify-content: space-between; flex-shrink: 0; }
+  .status-left { color: #a6adc8; }
+  .status-right { display: flex; gap: 16px; }
+  .status-item { color: #89b4fa; }
+  .status-item.green { color: #a6e3a1; }
+  .status-item.yellow { color: #f9e2af; }
+  .param-row { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+  .param-row label { font-size: 10px; color: #a6adc8; min-width: 55px; }
+  .param-row input[type=range] { flex: 1; accent-color: #89b4fa; height: 16px; }
+  .param-row .val { font-size: 11px; font-weight: 600; color: #89b4fa; min-width: 42px; text-align: right; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="tool-btn" data-tool="calibrate" title="Referenzlinie ueber Rohrdurchmesser"><div class="icon" style="color:#ff00ff">&#x2194;</div><div class="label">Kalibrieren</div></div>
+  <div class="sep"></div>
+  <div class="tool-btn active" data-tool="ruler" title="Distanz in mm"><div class="icon" style="color:#00ff00">&#x1F4CF;</div><div class="label">Distanz</div></div>
+  <div class="tool-btn" data-tool="crack" title="Rissbreite messen"><div class="icon" style="color:#ff3333">&#x2702;</div><div class="label">Rissbreite</div></div>
+  <div class="sep"></div>
+  <div class="tool-btn" data-tool="water" title="Wasserstand %"><div class="icon" style="color:#4169E1">&#x1F4A7;</div><div class="label">Wasser</div></div>
+  <div class="tool-btn" data-tool="deposit" title="Ablagerung %"><div class="icon" style="color:#D2691E">&#x25A4;</div><div class="label">Ablagerung</div></div>
+  <div class="tool-btn" data-tool="obstacle" title="Hindernis %"><div class="icon" style="color:#DC143C">&#x26D4;</div><div class="label">Hindernis</div></div>
+  <div class="sep"></div>
+  <div class="tool-btn" data-tool="deform" title="Deformation: Kreis an Rohrform anpassen"><div class="icon" style="color:#FFA500">&#x2B2D;</div><div class="label">Deformation</div></div>
+  <div class="tool-btn" data-tool="lateral" title="Anschluss: 3D-Formstueck anpassen"><div class="icon" style="color:#00ffff">&#x25EF;</div><div class="label">Anschluss</div></div>
+  <div class="tool-btn" data-tool="bend" title="Bogen: 3D-Wurm an Rohrkruemmung anpassen"><div class="icon" style="color:#ffff00">&#x2220;</div><div class="label">Bogen</div></div>
+  <div class="sep"></div>
+  <div class="view-group">
+    <div class="view-btn" data-view="none">Nichts</div>
+    <div class="view-btn" data-view="minimal">Minimal</div>
+    <div class="view-btn active" data-view="maximal">Maximal</div>
+  </div>
+  <div class="toolbar-right">
+    <button class="action-btn secondary" id="btnLoadImg" title="Bild laden (oder Drag&Drop auf Canvas)">&#x1F4C2; Bild laden</button>
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+    <button class="action-btn secondary" id="btnUndo">&#x21B6; Undo</button>
+    <button class="action-btn danger" id="btnClear">&#x1F5D1; Loeschen</button>
+    <div class="sep"></div>
+    <button class="action-btn primary">&#x1F4F7; Screenshot</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="slider-panel">
+    <div class="slider-label">Kamerahoehe</div>
+    <input type="range" min="0" max="100" value="50" id="sliderCam" style="writing-mode:vertical-lr;direction:rtl;height:180px;width:22px;accent-color:#89b4fa">
+    <div id="camVal" style="font-size:11px;font-weight:600;color:#89b4fa">50%</div>
+  </div>
+
+  <div class="canvas-area">
+    <canvas id="drawCanvas"></canvas>
+  </div>
+
+  <div class="info-panel">
+    <div class="info-section">
+      <div class="title">Kalibrierung</div>
+      <div class="info-row"><span>DN</span><span class="info-value" id="infoDn">150 mm</span></div>
+      <div class="info-row"><span>Status</span><span class="info-value" id="infoCalib">Nicht kalibriert</span></div>
+    </div>
+    <div class="info-section">
+      <div class="title" id="infoToolTitle">Distanz</div>
+      <div id="infoHint" style="font-size:10px;color:#a6adc8;margin-bottom:6px">Linie ziehen: Klick + Drag</div>
+      <!-- 3D-Werkzeug-Parameter -->
+      <div id="paramPanel" style="display:none">
+        <div id="lateralParams">
+          <div class="param-row"><label>Uhrlage</label><input type="range" min="0" max="12" value="3" step="0.5" id="paramClock"><span class="val" id="valClock">3:00</span></div>
+          <div class="info-row" style="margin:6px 0"><span style="font-size:10px;color:#a6adc8">DN gemessen</span><span class="info-value" id="valDnMeasured" style="color:#00ffff;font-weight:700">-- mm</span></div>
+          <div class="info-row"><span style="font-size:10px;color:#a6adc8">Anteil</span><span class="info-value" id="valDnRatio" style="color:#00ffff">-- %</span></div>
+          <div class="param-row" style="margin-top:6px">
+            <label>Typ</label>
+            <select id="paramTyp" style="flex:1;background:#313244;color:#cdd6f4;border:1px solid #45475a;border-radius:4px;padding:2px 4px;font-size:11px">
+              <option value="formstueck">Formstueck (BCA.B)</option>
+              <option value="eingespitzt">Eingespitzt (BCA.A)</option>
+              <option value="gestutzt">Gestutzt (BCA.C)</option>
+            </select>
+          </div>
+          <div style="font-size:9px;color:#a6adc8;margin-top:8px;line-height:1.4">
+            Drag = Oeffnung verschieben<br>
+            Mausrad = Groesse anpassen<br>
+            Erst kalibrieren fuer DN in mm
+          </div>
+        </div>
+        <div id="bendParams" style="display:none">
+          <div class="param-row"><label>Bogenwinkel</label><input type="range" min="10" max="170" value="90" id="bendAngleSlider"><span class="val" id="valBendAngle">90°</span></div>
+          <div class="param-row"><label>Richtung</label><input type="range" min="0" max="360" value="0" id="bendRotSlider"><span class="val" id="valBendRot">0°</span></div>
+          <div class="param-row"><label>Neigung</label><input type="range" min="0" max="85" value="45" id="bendNeigSlider"><span class="val" id="valBendNeig">45°</span></div>
+          <div class="param-row"><label>Kippen</label><input type="range" min="-85" max="85" value="0" id="bendKippSlider"><span class="val" id="valBendKipp">0°</span></div>
+          <div class="param-row"><label>Rundung</label><input type="range" min="10" max="100" value="60" id="bendRundSlider"><span class="val" id="valBendRund">60%</span></div>
+          <div class="param-row"><label>Scheiben</label><input type="range" min="6" max="24" value="14" id="bendSlicesSlider"><span class="val" id="valBendSlices">14</span></div>
+          <div class="param-row"><label>Kruemmung</label><input type="range" min="40" max="250" value="100" id="bendCurveSlider"><span class="val" id="valBendCurve">100%</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="info-section">
+      <div class="title">Messungen (<span id="measureCount">0</span>)</div>
+      <div id="measureList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="statusbar">
+  <div class="status-left" id="statusText">Werkzeug: <b>Distanz</b> — Linie ziehen</div>
+  <div class="status-right">
+    <span class="status-item" id="statusCalib">Nicht kalibriert</span>
+    <span class="status-item yellow" id="statusCount">0 Messungen</span>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('drawCanvas');
+const ctx = canvas.getContext('2d');
+let W, H, cx, cy, pipeR;
+let bgImage = null; // Hintergrundbild (Image-Objekt)
+
+let activeTool = 'ruler';
+let viewMode = 'maximal';
+let calibrated = false;
+let calibPixels = 0;
+let dnMm = 150;
+let cameraHeight = 50;
+let measurements = [];
+let drawing = false;
+let drawStart = null;
+let drawEnd = null;
+
+// 3D Overlay-Zustand (Deformation, Anschluss, Bogen)
+let overlay3d = null; // { type, handles[], params }
+let dragHandle = -1;
+
+const TOOLS = {
+  calibrate: { color: '#ff00ff', name: 'Kalibrieren', hint: 'Linie ueber Rohrdurchmesser ziehen', mode: 'line' },
+  ruler:     { color: '#00ff00', name: 'Distanz',     hint: 'Linie ziehen: Klick + Drag', mode: 'line' },
+  crack:     { color: '#ff3333', name: 'Rissbreite',   hint: 'Linie senkrecht zum Riss ziehen', mode: 'line' },
+  water:     { color: '#4169E1', name: 'Wasser',       hint: 'Horizontale Linie auf Wasserspiegel', mode: 'fill' },
+  deposit:   { color: '#D2691E', name: 'Ablagerung',   hint: 'Horizontale Linie auf Ablagerung', mode: 'fill' },
+  obstacle:  { color: '#DC143C', name: 'Hindernis',    hint: 'Horizontale Linie auf Hinderniskante', mode: 'fill' },
+  deform:    { color: '#FFA500', name: 'Deformation',  hint: 'Kreis an Rohrform anpassen — Handles ziehen', mode: '3d' },
+  lateral:   { color: '#00ffff', name: 'Anschluss',    hint: 'Uhrlage + DN anpassen — Slider rechts, Drag=Verschieben', mode: '3d' },
+  bend:      { color: '#ffff00', name: 'Bogen',        hint: '3D-Rohrwurm anpassen — Mausrad=Groesse, Drag=Verschieben, Slider=Drehen', mode: '3d' },
+};
+
+// ═══ RESIZE ═══
+function resize() {
+  const r = canvas.parentElement.getBoundingClientRect();
+  canvas.width = r.width; canvas.height = r.height;
+  W = canvas.width; H = canvas.height;
+  cx = W / 2; cy = H / 2;
+  pipeR = Math.min(W, H) * 0.42;
+  init3dOverlay();
+  redraw();
+}
+window.addEventListener('resize', resize);
+
+// ═══ 3D OVERLAY INIT ═══
+function init3dOverlay() {
+  if (activeTool === 'deform') {
+    // 8 Handles auf dem Kreis (N/NE/E/SE/S/SW/W/NW)
+    const h = [];
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
+      h.push({ x: cx + Math.cos(a) * pipeR * 0.85, y: cy + Math.sin(a) * pipeR * 0.85 });
+    }
+    overlay3d = { type: 'deform', handles: h };
+  } else if (activeTool === 'bend') {
+    // Roentgenbild-Wurm: 3D-Rohr entlang Kreisbogen
+    // Gekippte 3/4-Ansicht damit Scheiben als Ellipsen sichtbar sind
+    overlay3d = {
+      type: 'bend',
+      bendAngle: 90,         // Bogenwinkel in Grad
+      rotation: 0,           // Richtung: wohin der Bogen zeigt (Grad)
+      neigung: 45,           // Neigung: staucht quer zur Bogenrichtung (Grad)
+      kippen: 0,             // Kippen: staucht laengs der Bogenrichtung (nach hinten, Grad)
+      rundung: 0.6,          // Rundung: Scheiben-Form (0.1=flach, 1.0=Kreis)
+      numSlices: 14,         // Anzahl Ringscheiben
+      numLongs: 10,          // Laengslinien
+      tubeRadius: pipeR * 0.38, // Rohr-Querschnittradius
+      bendRadius: pipeR * 1.0, // Bogenradius (Kruemmung)
+      ox: cx, oy: cy,        // Position
+      scale: 1.0
+    };
+  } else if (activeTool === 'lateral') {
+    // Oeffnung direkt positionierbar — Uhrlage wird berechnet
+    const initClock = 3;
+    const initAngle = (initClock / 12) * Math.PI * 2 - Math.PI / 2;
+    overlay3d = {
+      type: 'lateral',
+      // Position der Oeffnung (direkt draggable)
+      hx: cx + Math.cos(initAngle) * pipeR * 0.75,
+      hy: cy + Math.sin(initAngle) * pipeR * 0.75,
+      dn2: 150,             // DN Abzweig in mm
+      openSize: pipeR * 0.25, // Oeffnungs-Radius in Pixel
+      typ: 'formstueck',    // 'formstueck' oder 'eingespitzt'
+      ox: cx, oy: cy        // Rohrzentrum (auch draggable mit Shift)
+    };
+  } else {
+    overlay3d = null;
+  }
+}
+
+// ═══ DRAW ═══
+function redraw() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#11111b'; ctx.fillRect(0, 0, W, H);
+
+  // Hintergrundbild zeichnen (zentriert, proportional skaliert)
+  if (bgImage) {
+    const imgAspect = bgImage.width / bgImage.height;
+    const canAspect = W / H;
+    let dw, dh, dx, dy;
+    if (imgAspect > canAspect) {
+      dw = W; dh = W / imgAspect; dx = 0; dy = (H - dh) / 2;
+    } else {
+      dh = H; dw = H * imgAspect; dy = 0; dx = (W - dw) / 2;
+    }
+    ctx.drawImage(bgImage, dx, dy, dw, dh);
+    // Pipe-Radius und Zentrum ans Bild anpassen
+    pipeR = Math.min(dw, dh) * 0.42;
+    cx = dx + dw / 2; cy = dy + dh / 2;
+  } else {
+    // Fallback: Rohr-Gradient
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, pipeR);
+    grad.addColorStop(0, '#2a2a3a'); grad.addColorStop(0.85, '#15151f'); grad.addColorStop(1, '#0a0a12');
+    ctx.beginPath(); ctx.arc(cx, cy, pipeR, 0, Math.PI * 2); ctx.fillStyle = grad; ctx.fill();
+  }
+
+  if (viewMode !== 'none') {
+    ctx.beginPath(); ctx.arc(cx, cy, pipeR, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2; ctx.stroke();
+    if (viewMode === 'maximal') {
+      for (let h = 0; h < 12; h++) {
+        const a = (h / 12) * Math.PI * 2 - Math.PI / 2;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * pipeR, cy + Math.sin(a) * pipeR);
+        ctx.strokeStyle = h % 3 === 0 ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)';
+        ctx.lineWidth = h % 3 === 0 ? 1 : 0.5; ctx.stroke();
+      }
+      [{t:'12',a:-Math.PI/2},{t:'3',a:0},{t:'6',a:Math.PI/2},{t:'9',a:Math.PI}].forEach(l => {
+        ctx.font = '600 13px Segoe UI'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fillText(l.t, cx + Math.cos(l.a) * (pipeR + 15), cy + Math.sin(l.a) * (pipeR + 15));
+      });
+      const camY = cy - pipeR + (cameraHeight / 100) * pipeR * 2;
+      ctx.setLineDash([8, 4]);
+      ctx.beginPath(); ctx.moveTo(cx - pipeR, camY); ctx.lineTo(cx + pipeR, camY);
+      ctx.strokeStyle = 'rgba(255,200,50,0.4)'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.setLineDash([]);
+      drawLabel('Kamera ' + cameraHeight + '%', cx + pipeR - 60, camY - 14, 'rgba(255,200,50,0.7)', 10);
+    }
+  }
+
+  // Messungen
+  measurements.forEach(m => drawMeasurement(m));
+
+  // 3D Overlays
+  if (overlay3d) draw3dOverlay();
+
+  // Preview
+  if (drawing && drawStart && drawEnd && TOOLS[activeTool].mode !== '3d') {
+    const t = TOOLS[activeTool];
+    if (t.mode === 'fill') drawFillPreview(drawStart, drawEnd, t.color);
+    else drawLinePreview(drawStart, drawEnd, t.color);
+  }
+}
+
+// ═══ 3D OVERLAYS ═══
+function draw3dOverlay() {
+  if (overlay3d.type === 'deform') drawDeformOverlay();
+  else if (overlay3d.type === 'bend') drawBendOverlay();
+  else if (overlay3d.type === 'lateral') drawLateralOverlay();
+}
+
+function drawDeformOverlay() {
+  const h = overlay3d.handles;
+  // Sollkreis (duenn, gestrichelt)
+  ctx.beginPath(); ctx.arc(cx, cy, pipeR * 0.85, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,165,0,0.25)'; ctx.lineWidth = 1; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+
+  // Angepasste Form (Spline durch Handles)
+  ctx.beginPath();
+  ctx.moveTo(h[0].x, h[0].y);
+  for (let i = 0; i < h.length; i++) {
+    const next = h[(i + 1) % h.length];
+    const cp1x = h[i].x + (next.x - h[(i - 1 + h.length) % h.length].x) * 0.2;
+    const cp1y = h[i].y + (next.y - h[(i - 1 + h.length) % h.length].y) * 0.2;
+    const cp2x = next.x - (h[(i + 2) % h.length].x - h[i].x) * 0.2;
+    const cp2y = next.y - (h[(i + 2) % h.length].y - h[i].y) * 0.2;
+    ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, next.x, next.y);
+  }
+  ctx.closePath();
+  ctx.strokeStyle = '#FFA500'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,165,0,0.08)'; ctx.fill();
+
+  // Handles
+  h.forEach((p, i) => {
+    ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, Math.PI * 2);
+    ctx.fillStyle = dragHandle === i ? '#fff' : '#FFA500';
+    ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+  });
+
+  // Deformations-% berechnen (Vergleich horizontaler/vertikaler Durchmesser)
+  const dV = Math.hypot(h[0].x - h[4].x, h[0].y - h[4].y);
+  const dH = Math.hypot(h[2].x - h[6].x, h[2].y - h[6].y);
+  const nominal = pipeR * 0.85 * 2;
+  const defV = ((1 - dV / nominal) * 100).toFixed(1);
+  const defH = ((1 - dH / nominal) * 100).toFixed(1);
+  drawLabel('Deformation: V=' + defV + '%  H=' + defH + '%', cx, cy - pipeR - 20, '#FFA500');
+}
+
+function drawBendOverlay() {
+  // ══════════════════════════════════════════════════════════════
+  // Roentgenbild-Wurm: 2D-Kreise entlang Kreisbogen
+  // + Neigung-Transform kippt den ganzen Wurm perspektivisch
+  // ══════════════════════════════════════════════════════════════
+  const o = overlay3d;
+  const bendRad = o.bendAngle * Math.PI / 180;
+  const rotRad = o.rotation * Math.PI / 180;
+  const neigRad = o.neigung * Math.PI / 180;
+  const sc = o.scale;
+  const R = o.bendRadius * sc;
+  const r = o.tubeRadius * sc;
+  const ox = o.ox, oy = o.oy;
+  const nSlices = o.numSlices;
+  const nLongs = o.numLongs;
+  const segs = 32;
+
+  // ── Neigung + Kippen Transformation ──
+  // Kombinierte Matrix: R(rot) * Scale(cos(kipp), cos(neig)) * R(-rot)
+  // Neigung staucht QUER zur Bogenrichtung (Rohr von oben sehen)
+  // Kippen staucht LAENGS der Bogenrichtung (Rohr geht nach hinten)
+  const cr = Math.cos(rotRad), sr = Math.sin(rotRad);
+  const nf = Math.cos(neigRad);                    // quer-Stauchung
+  const kf = Math.cos((o.kippen || 0) * Math.PI / 180); // laengs-Stauchung
+  const m00 = cr * cr * kf + sr * sr * nf;
+  const m01 = cr * sr * (kf - nf);
+  const m10 = m01;
+  const m11 = sr * sr * kf + cr * cr * nf;
+
+  function xf(px, py) {
+    const dx = px - ox, dy = py - oy;
+    return { x: ox + dx * m00 + dy * m01, y: oy + dx * m10 + dy * m11 };
+  }
+
+  // ── Bogen-Geometrie (flach, vor Neigung) ──
+  const midAngle = rotRad;
+  const arcCx = ox - R * Math.cos(midAngle);
+  const arcCy = oy - R * Math.sin(midAngle);
+  const arcStart = midAngle - bendRad / 2;
+
+  // ── Scheiben berechnen ──
+  // Bogen-Mittellinie wird verzerrt (Neigung/Kippen)
+  // Scheiben werden SEPARAT im Bildschirmraum gezeichnet (mit Rundung)
+  const slicePts = [];
+  const rundung = o.rundung || 0.6;  // 0.1=flach, 1.0=Kreis
+
+  // Alle Bogen-Mittelpunkte transformieren (fuer Tangenten-Berechnung)
+  const centers = [];
+  for (let i = 0; i < nSlices; i++) {
+    const t = i / (nSlices - 1);
+    const angle = arcStart + t * bendRad;
+    centers.push(xf(arcCx + R * Math.cos(angle), arcCy + R * Math.sin(angle)));
+  }
+
+  // Tiefenperspektive: Kippen steuert wie stark nah/fern sich unterscheiden
+  const kipRad = (o.kippen || 0) * Math.PI / 180;
+  const perspStr = Math.sin(kipRad);  // -1..+1, steuert Groessenunterschied
+
+  for (let i = 0; i < nSlices; i++) {
+    const t = i / (nSlices - 1);  // 0=Einlauf, 1=Auslauf
+    const c = centers[i];
+
+    // Tiefenskalierung: Einlauf gross, Auslauf klein (oder umgekehrt)
+    const perspScale = 1.0 - (t - 0.5) * perspStr * 0.9;
+    const sliceR = r * perspScale;
+
+    // ── Progressive Rundung ──
+    // Vorne (nah) = voller Kreis, hinten (fern) = ovale Ellipse
+    // perspScale > 1 = nah (Kreis), perspScale < 1 = fern (Ellipse)
+    // "Rundung"-Slider bestimmt wie oval das ferne Ende wird
+    const absPersp = Math.abs(perspStr);
+    let sliceRundung;
+    if (absPersp < 0.01) {
+      sliceRundung = rundung;  // kein Kippen → einheitliche Rundung
+    } else {
+      // 0 = naheste Scheibe (Kreis), 1 = fernste Scheibe (Ellipse)
+      const maxP = 1.0 + 0.45 * absPersp;
+      const minP = 1.0 - 0.45 * absPersp;
+      const depth01 = (maxP - perspScale) / (maxP - minP);
+      sliceRundung = 1.0 - depth01 * (1.0 - rundung);
+    }
+
+    // Bildschirm-Tangente aus benachbarten transformierten Punkten
+    const prev = centers[Math.max(0, i - 1)];
+    const next = centers[Math.min(nSlices - 1, i + 1)];
+    const screenTang = Math.atan2(next.y - prev.y, next.x - prev.x);
+    const cosT = Math.cos(screenTang), sinT = Math.sin(screenTang);
+
+    // Scheibe im Bildschirmraum:
+    // Senkrecht zur Tangente = sliceR (volle Groesse)
+    // Entlang Tangente = sliceR * sliceRundung (gestaucht)
+    const pts = [];
+    for (let j = 0; j <= segs; j++) {
+      const phi = (j / segs) * Math.PI * 2;
+      const lx = sliceR * sliceRundung * Math.cos(phi);  // entlang Tangente
+      const ly = sliceR * Math.sin(phi);                   // senkrecht
+      pts.push({
+        x: c.x + lx * cosT - ly * sinT,
+        y: c.y + lx * sinT + ly * cosT
+      });
+    }
+    slicePts.push(pts);
+
+    // Ringscheibe zeichnen — Helligkeit nach Tiefe (nah=hell, fern=dunkel)
+    const isEnd = (i === 0 || i === nSlices - 1);
+    const isMuffe = isEnd || (nSlices > 6 &&
+      (i === Math.floor(nSlices * 0.33) || i === Math.floor(nSlices * 0.66)));
+    const depthAlpha = 0.25 + 0.65 * perspScale;  // nah=hell, fern=dunkler
+
+    ctx.beginPath();
+    pts.forEach((p, j) => { j === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); });
+    ctx.closePath();
+
+    if (isEnd) {
+      ctx.strokeStyle = `rgba(255,255,0,${Math.min(0.95, depthAlpha + 0.2).toFixed(2)})`;
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,0,0.05)';
+      ctx.fill();
+    } else if (isMuffe) {
+      ctx.strokeStyle = `rgba(255,255,0,${Math.min(0.8, depthAlpha + 0.1).toFixed(2)})`;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle = `rgba(255,255,0,${depthAlpha.toFixed(2)})`;
+      ctx.lineWidth = 1.3;
+      ctx.stroke();
+    }
+  }
+
+  // ── Rohrflaeche: halbtransparente Fuellung zwischen Laengslinien ──
+  const longStep = Math.max(1, Math.round(segs / nLongs));
+  for (let j = 0; j < segs; j += longStep) {
+    const jNext = Math.min(j + longStep, segs);
+    // Flaeche zwischen zwei Laengslinien ueber alle Scheiben
+    for (let i = 0; i < nSlices - 1; i++) {
+      const p00 = slicePts[i][j], p01 = slicePts[i][jNext];
+      const p10 = slicePts[i+1][j], p11 = slicePts[i+1][jNext];
+      ctx.beginPath();
+      ctx.moveTo(p00.x, p00.y);
+      ctx.lineTo(p01.x, p01.y);
+      ctx.lineTo(p11.x, p11.y);
+      ctx.lineTo(p10.x, p10.y);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255,255,0,0.03)';
+      ctx.fill();
+    }
+  }
+
+  // ── Laengslinien (stark sichtbar) ──
+  for (let j = 0; j <= segs; j += longStep) {
+    ctx.beginPath();
+    for (let i = 0; i < nSlices; i++) {
+      const p = slicePts[i][Math.min(j, slicePts[i].length - 1)];
+      if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    }
+    ctx.strokeStyle = 'rgba(255,255,0,0.3)';
+    ctx.lineWidth = 1.0;
+    ctx.stroke();
+  }
+
+  // ── Bogenachse (gestrichelt) ──
+  ctx.beginPath();
+  ctx.setLineDash([6, 4]);
+  for (let i = 0; i <= 40; i++) {
+    const angle = arcStart + (i / 40) * bendRad;
+    const p = xf(arcCx + R * Math.cos(angle), arcCy + R * Math.sin(angle));
+    if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+  }
+  ctx.strokeStyle = 'rgba(255,255,0,0.25)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── Achsenlinien Ein-/Auslauf ──
+  const armLen = r * 2.5;
+  const a0 = arcStart, a1 = arcStart + bendRad;
+  const t0a = a0 + Math.PI / 2, t1a = a1 + Math.PI / 2;
+  const p0s = xf(arcCx + R * Math.cos(a0), arcCy + R * Math.sin(a0));
+  const p0e = xf(arcCx + R * Math.cos(a0) - Math.cos(t0a) * armLen,
+                  arcCy + R * Math.sin(a0) - Math.sin(t0a) * armLen);
+  ctx.beginPath(); ctx.moveTo(p0s.x, p0s.y); ctx.lineTo(p0e.x, p0e.y);
+  ctx.strokeStyle = 'rgba(255,255,0,0.45)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  const p1s = xf(arcCx + R * Math.cos(a1), arcCy + R * Math.sin(a1));
+  const p1e = xf(arcCx + R * Math.cos(a1) + Math.cos(t1a) * armLen,
+                  arcCy + R * Math.sin(a1) + Math.sin(t1a) * armLen);
+  ctx.beginPath(); ctx.moveTo(p1s.x, p1s.y); ctx.lineTo(p1e.x, p1e.y);
+  ctx.strokeStyle = 'rgba(255,255,0,0.45)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // ── Winkelbogen ──
+  const wR = Math.min(R * 0.25, r * 1.5);
+  ctx.beginPath();
+  for (let i = 0; i <= 20; i++) {
+    const angle = arcStart + (i / 20) * bendRad;
+    const p = xf(arcCx + wR * Math.cos(angle), arcCy + wR * Math.sin(angle));
+    if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+  }
+  ctx.strokeStyle = 'rgba(255,255,0,0.55)'; ctx.lineWidth = 2; ctx.stroke();
+
+  // ── Label ──
+  drawLabel('BCC: ' + o.bendAngle + '\u00B0', ox, oy - r * nf - 20, '#ffff00');
+}
+
+function drawLateralOverlay() {
+  // ══════════════════════════════════════════════════════════════
+  // Anschluss: Oeffnung frei positionierbar, Uhrlage automatisch
+  // Drag = Oeffnung verschieben, Mausrad = Groesse
+  // ══════════════════════════════════════════════════════════════
+  const o = overlay3d;
+  const typ = o.typ || 'formstueck';
+
+  // Oeffnungs-Position (frei draggable)
+  const holeX = o.hx;
+  const holeY = o.hy;
+  const openR = o.openSize;
+
+  // Uhrlage aus Position berechnen
+  const angleFromCenter = Math.atan2(holeY - cy, holeX - cx);
+  const rawClock = ((angleFromCenter + Math.PI / 2) / (Math.PI * 2)) * 12;
+  const clock = ((rawClock % 12) + 12) % 12;
+  const clockRad = angleFromCenter;
+
+  // DN aus Kalibrierung berechnen
+  let measuredDn = 0;
+  let dnRatio = 0;
+  if (calibrated && calibPixels > 0) {
+    measuredDn = Math.round((openR * 2) / calibPixels);  // Durchmesser in mm
+    dnRatio = measuredDn / dnMm;
+    document.getElementById('valDnMeasured').textContent = measuredDn + ' mm';
+    document.getElementById('valDnRatio').textContent = Math.round(dnRatio * 100) + ' %';
+  } else {
+    document.getElementById('valDnMeasured').textContent = Math.round(openR * 2) + ' px';
+    document.getElementById('valDnRatio').textContent = 'kalibrieren!';
+  }
+
+  // ── Uhrlage-Linie (Rohrzentrum → Anschluss) ──
+  ctx.beginPath();
+  ctx.setLineDash([6, 4]);
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(holeX, holeY);
+  ctx.strokeStyle = 'rgba(0,255,255,0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── Uhrlage-Punkt ──
+  ctx.beginPath();
+  ctx.arc(holeX, holeY, 5, 0, Math.PI * 2);
+  ctx.fillStyle = '#00ffff';
+  ctx.fill();
+
+  // ── Anschluss-Oeffnung ──
+  // Ellipse auf der Rohrwand — tangential zum Rohr
+  // Hauptachse tangential (entlang Rohrwand), Nebenachse radial (Tiefe)
+  const tangAngle = clockRad + Math.PI / 2;
+  const dist = Math.hypot(holeX - cx, holeY - cy);
+  const ellipseA = openR;           // tangentiale Ausdehnung
+  const ellipseB = openR * 0.5;     // radiale Ausdehnung (Perspektive)
+  const segs = 36;
+
+  if (typ === 'eingespitzt') {
+    // ── Eingespitzt: gezackte/raue Oeffnung ──
+    ctx.beginPath();
+    for (let j = 0; j <= segs; j++) {
+      const phi = (j / segs) * Math.PI * 2;
+      // Zacken: zufaellige Variation (deterministisch via sin)
+      const jitter = 1.0 + 0.12 * Math.sin(j * 7.3) + 0.08 * Math.sin(j * 13.1);
+      const lx = ellipseA * jitter * Math.cos(phi);
+      const ly = ellipseB * jitter * Math.sin(phi);
+      const cosT = Math.cos(tangAngle), sinT = Math.sin(tangAngle);
+      const px = holeX + lx * cosT - ly * sinT;
+      const py = holeY + lx * sinT + ly * cosT;
+      if (j === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(0,255,255,0.08)';
+    ctx.fill();
+
+    // Innere raue Linie (Doppellinie fuer "roh" Look)
+    ctx.beginPath();
+    for (let j = 0; j <= segs; j++) {
+      const phi = (j / segs) * Math.PI * 2;
+      const jitter = 1.0 - 0.10 * Math.sin(j * 5.7) - 0.06 * Math.sin(j * 11.3);
+      const lx = ellipseA * 0.85 * jitter * Math.cos(phi);
+      const ly = ellipseB * 0.85 * jitter * Math.sin(phi);
+      const cosT = Math.cos(tangAngle), sinT = Math.sin(tangAngle);
+      const px = holeX + lx * cosT - ly * sinT;
+      const py = holeY + lx * sinT + ly * cosT;
+      if (j === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(0,255,255,0.35)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  } else {
+    // ── Formstueck / Gestutzt: saubere Ellipse ──
+    ctx.save();
+    ctx.translate(holeX, holeY);
+    ctx.rotate(tangAngle);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, ellipseA, ellipseB, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(0,255,255,0.08)';
+    ctx.fill();
+
+    if (typ === 'gestutzt') {
+      // Gestutzt: zweiter Ring (Muffe)
+      ctx.beginPath();
+      ctx.ellipse(0, 0, ellipseA * 1.12, ellipseB * 1.12, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,255,255,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  // ── Uhrlage-Markierung auf dem Rohrumfang ──
+  const markHalf = Math.atan2(openR, dist || pipeR);
+  ctx.beginPath();
+  ctx.arc(cx, cy, dist, clockRad - markHalf, clockRad + markHalf, false);
+  ctx.strokeStyle = 'rgba(0,255,255,0.6)';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // ── Kreuz am Rohrzentrum ──
+  const crossR = 8;
+  ctx.beginPath();
+  ctx.moveTo(cx - crossR, cy); ctx.lineTo(cx + crossR, cy);
+  ctx.moveTo(cx, cy - crossR); ctx.lineTo(cx, cy + crossR);
+  ctx.strokeStyle = 'rgba(0,255,255,0.3)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // ── Label ──
+  const typCode = typ === 'eingespitzt' ? 'BCA.A' : typ === 'gestutzt' ? 'BCA.C' : 'BCA.B';
+  const displayClock = clock.toFixed(1);
+  const dnText = calibrated ? 'DN' + measuredDn + ' (' + Math.round(dnRatio * 100) + '%)' : Math.round(openR * 2) + ' px';
+  drawLabel(
+    typCode + '  ' + displayClock + ':00  ' + dnText,
+    holeX, holeY - openR - 18, '#00ffff'
+  );
+}
+
+// ═══ LABELS ═══
+function drawLabel(text, x, y, color, size) {
+  const fs = size || 13;
+  ctx.font = `700 ${fs}px Segoe UI`;
+  const tw = ctx.measureText(text).width;
+  const pad = 7, h = fs + 8;
+  ctx.fillStyle = 'rgba(0,0,0,0.78)';
+  roundRect(ctx, x - tw/2 - pad, y - h/2, tw + pad*2, h, 4); ctx.fill();
+  ctx.fillStyle = color || '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+}
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath(); c.moveTo(x+r,y); c.lineTo(x+w-r,y); c.quadraticCurveTo(x+w,y,x+w,y+r);
+  c.lineTo(x+w,y+h-r); c.quadraticCurveTo(x+w,y+h,x+w-r,y+h); c.lineTo(x+r,y+h);
+  c.quadraticCurveTo(x,y+h,x,y+h-r); c.lineTo(x,y+r); c.quadraticCurveTo(x,y,x+r,y);
+}
+function drawHandle(x, y) {
+  const r = 10;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFA500'; ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+}
+
+// ═══ SIMPLE MEASUREMENTS ═══
+function drawMeasurement(m) {
+  const t = TOOLS[m.tool];
+  if (t.mode === 'fill') drawFillMeasurement(m, t);
+  else drawLineMeasurement(m, t);
+}
+function drawLineMeasurement(m, t) {
+  ctx.beginPath(); ctx.moveTo(m.x1, m.y1); ctx.lineTo(m.x2, m.y2);
+  ctx.strokeStyle = t.color; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.stroke();
+  drawHandle(m.x1, m.y1); drawHandle(m.x2, m.y2);
+  drawLabel(m.label, (m.x1+m.x2)/2, (m.y1+m.y2)/2 - 16, t.color);
+}
+function drawFillMeasurement(m, t) {
+  const y = m.y;
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, pipeR-2, 0, Math.PI*2); ctx.clip();
+  ctx.fillStyle = t.color + '40'; ctx.fillRect(cx-pipeR, y, pipeR*2, cy+pipeR-y);
+  ctx.restore();
+  const hc = Math.sqrt(Math.max(0, pipeR*pipeR - (y-cy)*(y-cy)));
+  ctx.beginPath(); ctx.moveTo(cx-hc, y); ctx.lineTo(cx+hc, y);
+  ctx.strokeStyle = t.color; ctx.lineWidth = 3; ctx.setLineDash([8,4]); ctx.stroke(); ctx.setLineDash([]);
+  drawHandle(cx-hc, y); drawHandle(cx+hc, y);
+  drawLabel(m.label, cx, y - 16, t.color);
+}
+
+// Previews
+function drawLinePreview(p1, p2, color) {
+  ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+  ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.setLineDash([6,4]); ctx.stroke(); ctx.setLineDash([]);
+  drawHandle(p1.x, p1.y); drawHandle(p2.x, p2.y);
+  const d = Math.hypot(p2.x-p1.x, p2.y-p1.y);
+  const v = calibrated ? (d/calibPixels).toFixed(1)+' mm' : d.toFixed(0)+' px';
+  drawLabel(v, (p1.x+p2.x)/2, (p1.y+p2.y)/2 - 16, color);
+}
+function drawFillPreview(p1, p2, color) {
+  const y = p2.y;
+  const hc = Math.sqrt(Math.max(0, pipeR*pipeR - (y-cy)*(y-cy)));
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, pipeR-2, 0, Math.PI*2); ctx.clip();
+  ctx.fillStyle = color+'30'; ctx.fillRect(cx-pipeR, y, pipeR*2, cy+pipeR-y); ctx.restore();
+  ctx.beginPath(); ctx.moveTo(cx-hc, y); ctx.lineTo(cx+hc, y);
+  ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.setLineDash([6,4]); ctx.stroke(); ctx.setLineDash([]);
+  drawLabel(((cy+pipeR-y)/(pipeR*2)*100).toFixed(1)+' %', cx, y-16, color);
+}
+
+function calcValue(tool, p1, p2) {
+  const d = Math.hypot(p2.x-p1.x, p2.y-p1.y);
+  switch(tool) {
+    case 'calibrate':
+      calibPixels = d / dnMm; calibrated = true;
+      document.getElementById('infoCalib').textContent = 'Kalibriert'; document.getElementById('infoCalib').className = 'info-value green';
+      document.getElementById('statusCalib').textContent = 'Kalibriert: DN ' + dnMm; document.getElementById('statusCalib').className = 'status-item green';
+      return { label: 'DN '+dnMm, skip: true };
+    case 'ruler': { const v = calibrated ? (d/calibPixels).toFixed(1) : d.toFixed(0); return { label: (calibrated ? v+' mm' : v+' px') }; }
+    case 'crack': { const v = calibrated ? (d/calibPixels).toFixed(1) : d.toFixed(0); return { label: 'Riss: '+(calibrated ? v+' mm' : v+' px') }; }
+    case 'water': case 'deposit': case 'obstacle':
+      { const pct = ((cy+pipeR-p2.y)/(pipeR*2)*100).toFixed(1); return { label: TOOLS[tool].name+': '+pct+' %', y: p2.y }; }
+    default: return { label: '?' };
+  }
+}
+
+// ═══ MOUSE ═══
+function findHandle(mx, my) {
+  if (!overlay3d || !overlay3d.handles) return -1;
+  for (let i = 0; i < overlay3d.handles.length; i++) {
+    if (Math.hypot(mx - overlay3d.handles[i].x, my - overlay3d.handles[i].y) < 14) return i;
+  }
+  return -1;
+}
+
+// Drag-State fuer 3D-Objekt-Verschiebung (nicht Handle-Drag)
+let dragging3d = false, drag3dStart = null;
+
+canvas.addEventListener('mousedown', e => {
+  const r = canvas.getBoundingClientRect();
+  const mx = e.clientX - r.left, my = e.clientY - r.top;
+
+  if (TOOLS[activeTool].mode === '3d' && overlay3d) {
+    dragHandle = findHandle(mx, my);
+    if (dragHandle >= 0) { canvas.style.cursor = 'grabbing'; return; }
+    if (overlay3d.type === 'lateral') {
+      // Lateral: Drag bewegt die Oeffnung direkt
+      dragging3d = true;
+      drag3dStart = { x: mx, y: my, hx: overlay3d.hx, hy: overlay3d.hy };
+      canvas.style.cursor = 'move';
+      return;
+    }
+    if (overlay3d.type === 'bend') {
+      dragging3d = true;
+      drag3dStart = { x: mx, y: my, ox: overlay3d.ox || cx, oy: overlay3d.oy || cy };
+      canvas.style.cursor = 'move';
+      return;
+    }
+  }
+
+  if (TOOLS[activeTool].mode !== '3d') {
+    drawStart = { x: mx, y: my }; drawEnd = { ...drawStart }; drawing = true;
+    canvas.style.cursor = 'crosshair';
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  const r = canvas.getBoundingClientRect();
+  const mx = e.clientX - r.left, my = e.clientY - r.top;
+
+  // 3D-Objekt verschieben (Drag)
+  if (dragging3d && overlay3d && drag3dStart) {
+    if (overlay3d.type === 'lateral') {
+      // Lateral: Oeffnung verschieben, Uhrlage automatisch berechnen
+      overlay3d.hx = drag3dStart.hx + (mx - drag3dStart.x);
+      overlay3d.hy = drag3dStart.hy + (my - drag3dStart.y);
+      // Uhrlage aus Position berechnen
+      const angle = Math.atan2(overlay3d.hy - cy, overlay3d.hx - cx);
+      const rawClock = ((angle + Math.PI / 2) / (Math.PI * 2)) * 12;
+      const clock = ((rawClock % 12) + 12) % 12;
+      overlay3d.clock = Math.round(clock * 2) / 2; // auf 0.5 runden
+      document.getElementById('paramClock').value = overlay3d.clock;
+      document.getElementById('valClock').textContent = overlay3d.clock.toFixed(1) + ':00';
+    } else {
+      overlay3d.ox = (drag3dStart.ox || cx) + (mx - drag3dStart.x);
+      overlay3d.oy = (drag3dStart.oy || cy) + (my - drag3dStart.y);
+    }
+    redraw(); return;
+  }
+
+  if (dragHandle >= 0 && overlay3d) {
+    if (overlay3d.handles) {
+      overlay3d.handles[dragHandle].x = mx;
+      overlay3d.handles[dragHandle].y = my;
+      redraw(); return;
+    }
+  }
+
+  if (TOOLS[activeTool].mode === '3d' && overlay3d) {
+    const hIdx = findHandle(mx, my);
+    if (overlay3d.type === 'bend') { canvas.style.cursor = 'move'; }
+    else if (hIdx >= 0) canvas.style.cursor = 'grab';
+    else canvas.style.cursor = overlay3d.type === 'lateral' ? 'move' : 'default';
+  }
+
+  if (drawing) { drawEnd = { x: mx, y: my }; redraw(); }
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (dragging3d) { dragging3d = false; drag3dStart = null; canvas.style.cursor = 'move'; redraw(); return; }
+  if (dragHandle >= 0) {
+    dragHandle = -1;
+    canvas.style.cursor = 'default'; redraw(); return;
+  }
+  if (!drawing) return;
+  drawing = false;
+  const r = canvas.getBoundingClientRect();
+  drawEnd = { x: e.clientX - r.left, y: e.clientY - r.top };
+  canvas.style.cursor = TOOLS[activeTool].mode === '3d' ? 'default' : 'crosshair';
+  if (Math.hypot(drawEnd.x-drawStart.x, drawEnd.y-drawStart.y) < 5) { redraw(); return; }
+  const res = calcValue(activeTool, drawStart, drawEnd);
+  if (!res.skip) { measurements.push({ tool: activeTool, x1: drawStart.x, y1: drawStart.y, x2: drawEnd.x, y2: drawEnd.y, ...res }); updateList(); }
+  redraw();
+});
+
+// Mousewheel: Skalierung/Rotation fuer 3D-Overlays (Lateral + Bend)
+canvas.addEventListener('wheel', e => {
+  if (!overlay3d || (overlay3d.type !== 'lateral' && overlay3d.type !== 'bend')) return;
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.92 : 1.08;
+  if (overlay3d.type === 'lateral') {
+    // Lateral: Mausrad aendert Oeffnungsgroesse
+    overlay3d.openSize = Math.max(10, Math.min(pipeR * 0.9, overlay3d.openSize * delta));
+    redraw();
+  } else {
+    overlay3d.scale = Math.max(0.3, Math.min(5.0, (overlay3d.scale || 1) * delta));
+    redraw();
+  }
+}, { passive: false });
+
+// ═══ TOOLBAR ═══
+document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeTool = btn.dataset.tool;
+    const t = TOOLS[activeTool];
+    document.getElementById('infoToolTitle').textContent = t.name;
+    document.getElementById('infoToolTitle').style.color = t.color;
+    document.getElementById('infoHint').textContent = t.hint;
+    document.getElementById('statusText').innerHTML = 'Werkzeug: <b>'+t.name+'</b> — '+t.hint;
+    canvas.style.cursor = t.mode === '3d' ? 'default' : 'crosshair';
+
+    // Param-Panel fuer 3D (Lateral + Bend)
+    const pp = document.getElementById('paramPanel');
+    pp.style.display = (activeTool === 'lateral' || activeTool === 'bend') ? 'block' : 'none';
+    document.getElementById('lateralParams').style.display = activeTool === 'lateral' ? 'block' : 'none';
+    document.getElementById('bendParams').style.display = activeTool === 'bend' ? 'block' : 'none';
+
+    init3dOverlay(); redraw();
+  });
+});
+
+document.querySelectorAll('.view-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active'); viewMode = btn.dataset.view; redraw();
+  });
+});
+document.getElementById('btnUndo').addEventListener('click', () => { measurements.pop(); updateList(); redraw(); });
+document.getElementById('btnClear').addEventListener('click', () => {
+  measurements = []; calibrated = false; calibPixels = 0;
+  document.getElementById('infoCalib').textContent = 'Nicht kalibriert'; document.getElementById('infoCalib').className = 'info-value';
+  document.getElementById('statusCalib').textContent = 'Nicht kalibriert'; document.getElementById('statusCalib').className = 'status-item yellow';
+  updateList(); redraw();
+});
+document.getElementById('sliderCam').addEventListener('input', e => { cameraHeight = parseInt(e.target.value); document.getElementById('camVal').textContent = cameraHeight+'%'; redraw(); });
+
+// Lateral-Slider
+document.getElementById('paramClock').addEventListener('input', e => {
+  if (!overlay3d || overlay3d.type !== 'lateral') return;
+  overlay3d.clock = parseFloat(e.target.value);
+  document.getElementById('valClock').textContent = overlay3d.clock.toFixed(1) + ':00';
+  // Position auf Uhrlage aktualisieren
+  const dist = Math.hypot(overlay3d.hx - cx, overlay3d.hy - cy);
+  const newAngle = (overlay3d.clock / 12) * Math.PI * 2 - Math.PI / 2;
+  overlay3d.hx = cx + Math.cos(newAngle) * dist;
+  overlay3d.hy = cy + Math.sin(newAngle) * dist;
+  redraw();
+});
+document.getElementById('paramTyp').addEventListener('change', e => {
+  if (!overlay3d || overlay3d.type !== 'lateral') return;
+  overlay3d.typ = e.target.value;
+  redraw();
+});
+
+// Bend-Slider
+['bendAngleSlider','bendRotSlider','bendNeigSlider','bendKippSlider','bendRundSlider','bendSlicesSlider','bendCurveSlider'].forEach(id => {
+  document.getElementById(id).addEventListener('input', e => {
+    if (!overlay3d || overlay3d.type !== 'bend') return;
+    overlay3d.bendAngle = parseInt(document.getElementById('bendAngleSlider').value);
+    overlay3d.rotation = parseInt(document.getElementById('bendRotSlider').value);
+    overlay3d.neigung = parseInt(document.getElementById('bendNeigSlider').value);
+    overlay3d.kippen = parseInt(document.getElementById('bendKippSlider').value);
+    overlay3d.rundung = parseInt(document.getElementById('bendRundSlider').value) / 100;
+    overlay3d.numSlices = parseInt(document.getElementById('bendSlicesSlider').value);
+    const curvePct = parseInt(document.getElementById('bendCurveSlider').value);
+    overlay3d.bendRadius = pipeR * 1.0 * (curvePct / 100);
+    document.getElementById('valBendAngle').textContent = overlay3d.bendAngle + '\u00B0';
+    document.getElementById('valBendRot').textContent = overlay3d.rotation + '\u00B0';
+    document.getElementById('valBendNeig').textContent = overlay3d.neigung + '\u00B0';
+    document.getElementById('valBendKipp').textContent = overlay3d.kippen + '\u00B0';
+    document.getElementById('valBendRund').textContent = Math.round(overlay3d.rundung * 100) + '%';
+    document.getElementById('valBendSlices').textContent = overlay3d.numSlices;
+    document.getElementById('valBendCurve').textContent = curvePct + '%';
+    redraw();
+  });
+});
+
+function updateList() {
+  const list = document.getElementById('measureList');
+  list.innerHTML = '';
+  measurements.forEach((m, i) => {
+    const t = TOOLS[m.tool];
+    const d = document.createElement('div'); d.className = 'measurement-item';
+    d.innerHTML = `<span style="color:${t.color}">${t.name}: <b>${m.label}</b></span><span class="del" data-idx="${i}">&#x2715;</span>`;
+    list.appendChild(d);
+  });
+  list.querySelectorAll('.del').forEach(d => d.addEventListener('click', e => { measurements.splice(parseInt(e.target.dataset.idx), 1); updateList(); redraw(); }));
+  document.getElementById('measureCount').textContent = measurements.length;
+  document.getElementById('statusCount').textContent = measurements.length + ' Messungen';
+}
+
+// ═══ BILD LADEN ═══
+function loadBgImage(src) {
+  const img = new Image();
+  img.onload = () => { bgImage = img; resize(); };
+  img.onerror = () => { console.warn('Bild konnte nicht geladen werden:', src); };
+  img.src = src;
+}
+
+// Datei-Dialog
+document.getElementById('btnLoadImg').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => loadBgImage(ev.target.result);
+  reader.readAsDataURL(file);
+});
+
+// Drag & Drop auf Canvas
+const canvasArea = canvas.parentElement;
+canvasArea.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; canvasArea.style.outline = '3px dashed #89b4fa'; });
+canvasArea.addEventListener('dragleave', () => { canvasArea.style.outline = 'none'; });
+canvasArea.addEventListener('drop', e => {
+  e.preventDefault(); canvasArea.style.outline = 'none';
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = ev => loadBgImage(ev.target.result);
+  reader.readAsDataURL(file);
+});
+
+// Default-Testbild laden
+loadBgImage('test-pipe-bg.jpg');
+
+resize();
+</script>
+</body>
+</html>

@@ -20,7 +20,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Training;
-using AuswertungPro.Next.UI.Ai.Training.Services;
+using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 using AuswertungPro.Next.UI.Services;
 using AiTrack = AuswertungPro.Next.UI.Services.AiActivityTracker;
 

@@ -7,15 +7,23 @@
 - **Entwickler:** Solo, kein kommerzielles Ziel
 - **Hardware:** Intel Core Ultra 9 285K · ASUS RTX 5090 32GB · 64GB DDR5
 
-## AI-Pipeline (lokal, Workstation-Mode) — Stand 2026-04-23
+## AI-Pipeline (lokal, Workstation-Mode) — Stand 2026-04-30
 - YOLO26l-seg         → permanent GPU (TensorRT), ~1.5 GB VRAM
+                        Custom-Weights: models/yolo26l-seg/yolo26l-seg.engine
+                        Trainings-Datensatz: D:/yolo_sewer_v1 (3254 train + 809 val, 10 Klassen)
 - Qwen3-VL-8B-Q8      → FastModel GPU, ~11 GB VRAM (via Ollama, keep_alive permanent,
                         num_gpu=999 erzwungen — sonst CPU-Fallback bei RTX 5090 mit fehlender CUDA-Runtime)
 - Qwen3-VL-32B        → ReferenceModel HYBRID (num_gpu=10): ~2 GB VRAM + ~20 GB RAM,
                         kein Swap mit 8B — beide laufen parallel (CLAUDE.md-V1-Logik deprecated)
 - Grounding DINO 1.5  → **lazy** (V4.2 Phase 3.4) — wird bei erstem Request geladen,
                         ausser SEWER_SIDECAR_PREWARM_DINO=1 gesetzt
-- SAM 3               → pre-warmed, persistent im VRAM (~2.5 GB)
+                        Florence-2 laeuft als Shadow/Lernmodus parallel (siehe sam_wrapper-Doku)
+- SAM 2.1 Hiera-L     → pre-warmed, persistent im VRAM (~2.5 GB)
+                        Rollback von SAM 3 (2026-Q1) wegen Stabilitaet — wenn SAM 3.1 erprobt
+                        werden soll, separates A/B-Test-Setup verwenden, Wrapper bleibt kompatibel
+                        (sam2.1_hiera_l.yaml, models/sam2/sam2.1_hiera_large.pt)
+- nomic-embed-text    → On-demand fuer KB-Retrieval, ~0.6 GB (137M Parameter, F16)
+                        Audit-Empfehlung 2026-04: bge-m3 testen fuer Multi-Sprach-KB
 - ByteTrack/OC-SORT   → CPU, immer aktiv
 
 VRAM-Budget Soll-Stand: YOLO(1.5) + SAM(2.5) + Qwen-8B(11) + 32B-hybrid(2) + nomic(0.6) ≈ 17.6 GB.

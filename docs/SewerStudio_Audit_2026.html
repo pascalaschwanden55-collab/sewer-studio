@@ -1,0 +1,2032 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SewerStudio KI 4.1 — Vollstaendiges System-Audit</title>
+<style>
+/* ===== CSS RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #ffffff;
+  --bg-alt: #f8f9fa;
+  --bg-card: #ffffff;
+  --text: #1a1a2e;
+  --text-secondary: #4a4a6a;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --accent-dark: #1e40af;
+  --green: #059669;
+  --green-bg: #d1fae5;
+  --yellow: #d97706;
+  --yellow-bg: #fef3c7;
+  --red: #dc2626;
+  --red-bg: #fee2e2;
+  --orange: #ea580c;
+  --orange-bg: #fff7ed;
+  --purple: #7c3aed;
+  --purple-bg: #ede9fe;
+  --border: #e2e8f0;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+  --radius: 8px;
+  --font: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+}
+
+body {
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.7;
+  font-size: 14px;
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  body { font-size: 11pt; line-height: 1.5; }
+  .cover-page { page-break-after: always; }
+  .section { page-break-before: always; }
+  .no-break { page-break-inside: avoid; }
+  .card, .feature-card, .stat-card, .finding-row, .timeline-item { page-break-inside: avoid; }
+  .diagram-box { page-break-inside: avoid; }
+  table { page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+  thead { display: table-header-group; }
+  @page { margin: 18mm 15mm; size: A4; }
+  .toc { page-break-after: always; }
+  nav { display: none; }
+}
+
+/* ===== LAYOUT ===== */
+.container { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+
+/* ===== COVER PAGE ===== */
+.cover-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+  color: white;
+  padding: 60px 40px;
+}
+.cover-page .logo-icon {
+  width: 120px; height: 120px;
+  border: 4px solid rgba(255,255,255,0.3);
+  border-radius: 24px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 56px;
+  margin-bottom: 40px;
+  background: rgba(255,255,255,0.08);
+}
+.cover-page h1 {
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  margin-bottom: 16px;
+}
+.cover-page .subtitle {
+  font-size: 20px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.8);
+  max-width: 600px;
+  margin-bottom: 48px;
+  line-height: 1.6;
+  font-style: italic;
+}
+.cover-page .meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 8px 40px;
+  text-align: left;
+  font-size: 15px;
+  color: rgba(255,255,255,0.7);
+}
+.cover-page .meta-grid strong { color: white; }
+.cover-badge {
+  display: inline-block;
+  background: var(--accent);
+  color: white;
+  padding: 6px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 32px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ===== TABLE OF CONTENTS ===== */
+.toc {
+  padding: 48px 0;
+}
+.toc h2 {
+  font-size: 28px;
+  margin-bottom: 24px;
+  color: var(--accent-dark);
+}
+.toc ol {
+  list-style: none;
+  counter-reset: toc-counter;
+}
+.toc > ol > li {
+  counter-increment: toc-counter;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+}
+.toc > ol > li::before {
+  content: counter(toc-counter) ".";
+  font-weight: 700;
+  color: var(--accent);
+  margin-right: 12px;
+  display: inline-block;
+  width: 28px;
+}
+.toc > ol > li a {
+  color: var(--text);
+  text-decoration: none;
+}
+.toc > ol > li a:hover { color: var(--accent); }
+
+/* ===== SECTIONS ===== */
+.section { padding: 48px 0; }
+.section-header {
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 3px solid var(--accent);
+}
+.section-header h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent-dark);
+}
+.section-header .section-number {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+.section-header p {
+  color: var(--text-secondary);
+  margin-top: 8px;
+  font-size: 15px;
+}
+
+h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 28px 0 16px;
+}
+h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 20px 0 12px;
+  color: var(--text-secondary);
+}
+p { margin-bottom: 12px; }
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+.card-accent {
+  border-left: 4px solid var(--accent);
+}
+.card-green { border-left: 4px solid var(--green); }
+.card-yellow { border-left: 4px solid var(--yellow); }
+.card-red { border-left: 4px solid var(--red); }
+
+/* ===== TABLES ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0 24px;
+  font-size: 13px;
+}
+th, td {
+  padding: 10px 14px;
+  text-align: left;
+  border: 1px solid var(--border);
+}
+th {
+  background: var(--accent-dark);
+  color: white;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+tr:nth-child(even) { background: var(--bg-alt); }
+tr:hover { background: var(--accent-light); }
+
+/* ===== FEATURE CARDS ===== */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin: 16px 0 32px;
+}
+.feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.2s;
+}
+.feature-card:hover { box-shadow: var(--shadow-lg); }
+.feature-card .icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+.feature-card h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: var(--text);
+}
+.feature-card p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ===== STAT CARDS ===== */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 20px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.stat-card .number {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.stat-card .label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ===== DIAGRAMS ===== */
+.diagram-container {
+  margin: 24px 0;
+  overflow-x: auto;
+}
+.diagram-box {
+  display: inline-flex;
+  align-items: center;
+  padding: 14px 20px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  min-width: 100px;
+  text-align: center;
+  justify-content: center;
+  flex-direction: column;
+}
+.diagram-box .sub {
+  font-weight: 400;
+  font-size: 11px;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+.flow-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+.flow-arrow {
+  font-size: 20px;
+  color: var(--text-secondary);
+  padding: 0 6px;
+  font-weight: 700;
+}
+
+/* Layer Architecture */
+.layer-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 600px;
+  margin: 20px auto;
+}
+.layer-box {
+  padding: 18px 24px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  text-align: center;
+  font-size: 14px;
+  position: relative;
+}
+.layer-box .layer-desc {
+  font-weight: 400;
+  font-size: 12px;
+  opacity: 0.85;
+  margin-top: 4px;
+}
+.layer-arrow-down {
+  text-align: center;
+  font-size: 18px;
+  color: var(--text-secondary);
+  padding: 2px 0;
+}
+
+/* VRAM Bar */
+.vram-bar {
+  display: flex;
+  height: 48px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 16px 0;
+  border: 2px solid var(--border);
+}
+.vram-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.vram-segment .vram-label {
+  font-size: 9px;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+/* ===== TIMELINE ===== */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 24px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent-light);
+}
+.timeline-item {
+  position: relative;
+  padding-left: 60px;
+  margin-bottom: 32px;
+}
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 17px;
+  top: 6px;
+  width: 18px;
+  height: 18px;
+  background: var(--accent);
+  border-radius: 50%;
+  border: 3px solid var(--accent-light);
+}
+.timeline-item .date {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.timeline-item h4 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.timeline-item p {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* ===== BADGE ===== */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.badge-green { background: var(--green-bg); color: var(--green); }
+.badge-yellow { background: var(--yellow-bg); color: var(--yellow); }
+.badge-red { background: var(--red-bg); color: var(--red); }
+.badge-blue { background: var(--accent-light); color: var(--accent-dark); }
+.badge-purple { background: var(--purple-bg); color: var(--purple); }
+.badge-orange { background: var(--orange-bg); color: var(--orange); }
+
+/* ===== AMPEL (Traffic Light) ===== */
+.ampel-container {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+}
+.ampel-card {
+  flex: 1;
+  min-width: 200px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.ampel-card .ampel-light {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 800; color: white;
+}
+.ampel-card .ampel-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.ampel-card .ampel-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* ===== ROADMAP PHASES ===== */
+.phase-list { margin: 16px 0; }
+.phase-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.phase-item .phase-num {
+  width: 40px; height: 40px; min-width: 40px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800;
+  font-size: 16px;
+}
+.phase-item h4 { margin: 0 0 6px; font-size: 15px; }
+.phase-item p { margin: 0; font-size: 13px; color: var(--text-secondary); }
+
+/* ===== STRIKETHROUGH LIST ===== */
+.strike-list li {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+  padding: 6px 0;
+  font-size: 14px;
+  list-style: none;
+}
+.strike-list li::before {
+  content: "X  ";
+  color: var(--red);
+  font-weight: 700;
+  text-decoration: none;
+  display: inline;
+}
+
+/* ===== CODE BLOCK ===== */
+code {
+  font-family: var(--font-mono);
+  background: var(--bg-alt);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+pre {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 16px;
+  border-radius: var(--radius);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 12px 0;
+}
+
+/* ===== ESKALATION FLOW ===== */
+.eskalation-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 24px 0;
+}
+.esk-box {
+  padding: 14px 28px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 14px;
+  text-align: center;
+  min-width: 200px;
+}
+.esk-arrow { font-size: 20px; color: var(--text-secondary); }
+.esk-branch {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  width: 100%;
+}
+.esk-branch-item {
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 13px;
+  text-align: center;
+  min-width: 140px;
+}
+
+/* ===== DECISION TABLE ===== */
+.decision-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.decision-card .question {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--accent-dark);
+  margin-bottom: 12px;
+}
+.decision-card .options {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.decision-card .chosen {
+  font-weight: 600;
+  color: var(--green);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.decision-card .reasoning {
+  font-size: 13px;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+/* ===== FINDING ROW ===== */
+.finding-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.finding-id {
+  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  min-width: 40px;
+}
+.finding-text { font-size: 13px; flex: 1; }
+.finding-severity {
+  min-width: 80px;
+  text-align: center;
+}
+
+/* ===== MISC ===== */
+.highlight-box {
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin: 16px 0;
+  font-size: 14px;
+}
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 600px) {
+  .two-col { grid-template-columns: 1fr; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+}
+ul, ol { margin-left: 20px; margin-bottom: 12px; }
+li { margin-bottom: 4px; font-size: 14px; }
+
+.footer {
+  text-align: center;
+  padding: 32px 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 48px;
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- DECKBLATT                                                     -->
+<!-- ============================================================ -->
+<div class="cover-page">
+  <div class="logo-icon">&#9881;</div>
+  <h1>SewerStudio KI 4.1</h1>
+  <div class="subtitle">
+    Ein Ein-Mann-Projekt: Was ein Nicht-Programmierer mit KI-Unterstuetzung erschaffen kann
+  </div>
+  <div style="font-size: 22px; font-weight: 300; color: rgba(255,255,255,0.6); margin-bottom: 40px;">
+    Vollstaendiges System-Audit
+  </div>
+  <div class="meta-grid">
+    <span><strong>Autor:</strong></span><span>Pascal Aschwanden</span>
+    <span><strong>Datum:</strong></span><span>12. April 2026</span>
+    <span><strong>Version:</strong></span><span>4.1</span>
+    <span><strong>Plattform:</strong></span><span>WPF / .NET 8+ / Windows 11</span>
+  </div>
+  <div class="cover-badge">Vertraulich &mdash; Technisches Audit-Dokument</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- INHALTSVERZEICHNIS                                            -->
+<!-- ============================================================ -->
+<div class="container toc">
+  <h2>Inhaltsverzeichnis</h2>
+  <ol>
+    <li><a href="#s1">Zusammenfassung (Executive Summary)</a></li>
+    <li><a href="#s2">System-Architektur</a></li>
+    <li><a href="#s3">Hardware-Uebersicht</a></li>
+    <li><a href="#s4">Vollstaendige Feature-Liste</a></li>
+    <li><a href="#s5">KI-Pipeline im Detail</a></li>
+    <li><a href="#s6">Entwicklungsgeschichte (Timeline)</a></li>
+    <li><a href="#s7">Architektur-Entscheidungen</a></li>
+    <li><a href="#s8">Audit-Ergebnisse</a></li>
+    <li><a href="#s9">Optimierungs-Roadmap</a></li>
+    <li><a href="#s10">Projekt-Statistiken</a></li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+<!-- 1. EXECUTIVE SUMMARY                                          -->
+<!-- ============================================================ -->
+<div class="container section" id="s1">
+  <div class="section-header">
+    <div class="section-number">Kapitel 1</div>
+    <h2>Zusammenfassung (Executive Summary)</h2>
+    <p>Was SewerStudio ist und warum dieses Projekt bemerkenswert ist</p>
+  </div>
+
+  <div class="card card-accent">
+    <h3>Was ist SewerStudio?</h3>
+    <p>
+      SewerStudio KI 4.1 ist ein vollstaendiges Desktop-System fuer die automatisierte Kanalinspektion.
+      Es verarbeitet Inspektionsvideos aus Kanaelen, erkennt Schaeden automatisch mittels Kuenstlicher Intelligenz
+      und erstellt normkonforme Inspektionsprotokolle nach EN 13508-2 und dem Schweizer VSA-KEK-Standard (Ausgabe 2023).
+    </p>
+    <p>
+      Das Besondere an diesem Projekt: Es wurde von einem einzigen Entwickler erschaffen &mdash; einem
+      gelernten Kanalinspekteur ohne formale Programmierausbildung. Pascal Aschwanden hat dieses System
+      mit Hilfe von KI-Assistenten (Claude, ChatGPT, Gemini, DeepSeek) von Grund auf aufgebaut.
+      Das Ergebnis ist ein professionelles, produktionsreifes System mit ueber 142.000 Zeilen C#-Code,
+      ueber 790 Quelldateien und einer Multi-Modell KI-Pipeline, die vollstaendig lokal auf einer
+      einzelnen Workstation laeuft.
+    </p>
+  </div>
+
+  <h3>Systemumfang auf einen Blick</h3>
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="number">32</div>
+      <div class="label">Fenster &amp; Dialoge</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">33+</div>
+      <div class="label">ViewModels</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">140+</div>
+      <div class="label">KI-Module &amp; Services</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">13</div>
+      <div class="label">CLI-Tools</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">5</div>
+      <div class="label">Import-Formate</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">~3000</div>
+      <div class="label">Inspektionsvideos</div>
+    </div>
+  </div>
+
+  <h3>Architektur-Highlights</h3>
+  <div class="two-col">
+    <div class="card card-green">
+      <h4>Clean Architecture</h4>
+      <p>Vier klar getrennte Schichten: Domain, Application, Infrastructure und UI. Abhaengigkeiten fliessen nur nach innen. Geschaeftslogik ist von Technologie entkoppelt.</p>
+    </div>
+    <div class="card card-accent">
+      <h4>Multi-Modell KI-Pipeline</h4>
+      <p>Vier KI-Modelle arbeiten zusammen: YOLO fuer Objekterkennung, DINO fuer Grounding, SAM fuer Segmentierung und Qwen fuer Klassifikation. Alles orchestriert durch ein QualityGate-System.</p>
+    </div>
+  </div>
+
+  <div class="highlight-box">
+    <strong>Kern-Prinzip &mdash; Thin-AI:</strong> Die gesamte Geschaeftslogik (Messungen, Protokollierung, Bewertung, Kostenberechnung, Hydraulik) laeuft in determinischem C#-Code. Das LLM (Qwen) wird ausschliesslich fuer die Textgenerierung der VSA-Code-Klassifikation verwendet. Keine kritischen Entscheidungen haengen von probabilistischem KI-Output ab.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 2. SYSTEM-ARCHITEKTUR                                         -->
+<!-- ============================================================ -->
+<div class="container section" id="s2">
+  <div class="section-header">
+    <div class="section-number">Kapitel 2</div>
+    <h2>System-Architektur</h2>
+    <p>Schichtenmodell, KI-Pipeline, VRAM-Management und Eskalationslogik</p>
+  </div>
+
+  <!-- 2.1 SCHICHTENARCHITEKTUR -->
+  <h3>2.1 Schichtenarchitektur (Clean Architecture)</h3>
+  <p>
+    SewerStudio folgt dem Clean-Architecture-Muster mit vier klar getrennten Schichten.
+    Abhaengigkeiten zeigen ausschliesslich nach innen &mdash; die aeusseren Schichten kennen
+    die inneren, aber nicht umgekehrt.
+  </p>
+
+  <div class="layer-stack">
+    <div class="layer-box" style="background: #0f172a; color: white;">
+      <strong>UI / Praesentation</strong>
+      <div class="layer-desc">AuswertungPro.Next.UI &mdash; WPF Views, ViewModels, MVVM, Theme</div>
+    </div>
+    <div class="layer-arrow-down">&#9660;</div>
+    <div class="layer-box" style="background: #1e40af; color: white;">
+      <strong>Infrastructure</strong>
+      <div class="layer-desc">AuswertungPro.Next.Infrastructure &mdash; Importer, Exporter, DB-Zugriff, externe APIs</div>
+    </div>
+    <div class="layer-arrow-down">&#9660;</div>
+    <div class="layer-box" style="background: #2563eb; color: white;">
+      <strong>Application</strong>
+      <div class="layer-desc">AuswertungPro.Next.Application &mdash; Use Cases, Interfaces, DTOs</div>
+    </div>
+    <div class="layer-arrow-down">&#9660;</div>
+    <div class="layer-box" style="background: #3b82f6; color: white;">
+      <strong>Domain</strong>
+      <div class="layer-desc">AuswertungPro.Next.Domain &mdash; Entitaeten, Value Objects, Geschaeftsregeln</div>
+    </div>
+  </div>
+
+  <table class="no-break">
+    <thead>
+      <tr><th>Schicht</th><th>Projekt</th><th>Verantwortung</th><th>Beispiele</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Domain</td><td><code>AuswertungPro.Next.Domain</code></td><td>Geschaeftsregeln, Entitaeten</td><td>HaltungRecord, ProtocolEntry, VsaCode</td></tr>
+      <tr><td>Application</td><td><code>AuswertungPro.Next.Application</code></td><td>Use Cases, Interfaces</td><td>IProtocolService, IExportServices, IImportServices</td></tr>
+      <tr><td>Infrastructure</td><td><code>AuswertungPro.Next.Infrastructure</code></td><td>Technische Implementierung</td><td>PdfImportService, WinCanDbImportService, CsvExcelExportService</td></tr>
+      <tr><td>UI</td><td><code>AuswertungPro.Next.UI</code></td><td>Darstellung, Benutzerinteraktion</td><td>PlayerWindow, DataPage, CodingModeWindow</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 2.2 KI-PIPELINE FLUSSDIAGRAMM -->
+  <h3>2.2 KI-Pipeline &mdash; Vollstaendiger Datenfluss</h3>
+  <p>
+    Die KI-Pipeline verarbeitet jedes Inspektionsvideo in einer definierten Kette von Modellen.
+    Jedes Modell hat eine spezifische Aufgabe, und der QualityGate-Mechanismus entscheidet,
+    ob zusaetzliche Modelle hinzugezogen werden muessen.
+  </p>
+
+  <div class="diagram-container">
+    <div class="flow-row">
+      <div class="diagram-box" style="background: #334155; color: white;">
+        Video<div class="sub">WinCan/IBSK</div>
+      </div>
+      <div class="flow-arrow">&#10132;</div>
+      <div class="diagram-box" style="background: #475569; color: white;">
+        FFmpeg<div class="sub">Frame-Extraktion</div>
+      </div>
+      <div class="flow-arrow">&#10132;</div>
+      <div class="diagram-box" style="background: #059669; color: white;">
+        YOLO 26m-seg<div class="sub">~2 GB | ~8ms | permanent</div>
+      </div>
+      <div class="flow-arrow">&#10132;</div>
+      <div class="diagram-box" style="background: #2563eb; color: white;">
+        DINO 1.5<div class="sub">~3 GB | ~50ms | on-demand</div>
+      </div>
+      <div class="flow-arrow">&#10132;</div>
+      <div class="diagram-box" style="background: #ea580c; color: white;">
+        SAM 2.1<div class="sub">~3 GB | ~30ms | on-demand</div>
+      </div>
+    </div>
+    <div class="flow-row" style="margin-top: 8px;">
+      <div class="diagram-box" style="background: #ea580c; color: white; opacity: 0;">
+        Platzhalter
+      </div>
+      <div class="flow-arrow" style="opacity: 0;">&#10132;</div>
+      <div class="diagram-box" style="background: #6366f1; color: white;">
+        MaskQuant<div class="sub">CPU | deterministisch</div>
+      </div>
+      <div class="flow-arrow">&#10132;</div>
+      <div class="diagram-box" style="background: #7c3aed; color: white;">
+        Qwen 3B/8B<div class="sub">~3-6 GB | ~800ms | permanent</div>
+      </div>
+      <div class="flow-arrow">&#10132;</div>
+      <div class="diagram-box" style="background: #0891b2; color: white;">
+        Aggregation<div class="sub">Temporal Voting</div>
+      </div>
+      <div class="flow-arrow">&#10132;</div>
+      <div class="diagram-box" style="background: #059669; color: white;">
+        QualityGate<div class="sub">Green/Yellow/Red</div>
+      </div>
+      <div class="flow-arrow">&#10132;</div>
+      <div class="diagram-box" style="background: #1e40af; color: white;">
+        Report<div class="sub">EN 13508-2</div>
+      </div>
+    </div>
+  </div>
+
+  <table class="no-break">
+    <thead>
+      <tr><th>Modell</th><th>Aufgabe</th><th>VRAM</th><th>Latenz</th><th>Residency</th><th>Runtime</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>YOLO 26m-seg</td><td>Objekt-Detection + Instanz-Segmentierung</td><td>~2 GB</td><td>~8 ms</td><td>Permanent</td><td>TensorRT FP16</td></tr>
+      <tr><td>Grounding DINO 1.5 Edge</td><td>Text-Grounding, Uhrlage-Lokalisierung</td><td>~3 GB</td><td>~50 ms</td><td>On-Demand</td><td>Python Sidecar</td></tr>
+      <tr><td>SAM 2.1 Hiera-L</td><td>Praezise Maskensegmentierung</td><td>~3 GB</td><td>~30 ms</td><td>On-Demand</td><td>Python Sidecar</td></tr>
+      <tr><td>Qwen 2.5-VL 3B</td><td>VSA-Code-Klassifikation (primaer)</td><td>~3 GB</td><td>~800 ms</td><td>Permanent</td><td>Ollama</td></tr>
+      <tr><td>Qwen 2.5-VL 8B</td><td>VSA-Code-Klassifikation (Eskalation)</td><td>~6 GB</td><td>~1.5 s</td><td>Standby</td><td>Ollama</td></tr>
+      <tr><td>nomic-embed-text</td><td>Text-Embeddings fuer Knowledge Base</td><td>~0.3 GB</td><td>~5 ms</td><td>Permanent</td><td>Ollama</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 2.3 VRAM DIAGRAMM -->
+  <h3>2.3 VRAM-Belegungsdiagramm (RTX 5090 &mdash; 32 GB)</h3>
+  <p>
+    Die folgende Darstellung zeigt die typische VRAM-Belegung waehrend der vollstaendigen Analyse.
+    Das System ist so konzipiert, dass nie mehr als 29 GB gleichzeitig belegt werden.
+  </p>
+
+  <div class="vram-bar" style="font-size: 10px;">
+    <div class="vram-segment" style="width: 6.25%; background: #059669;">
+      2GB<div class="vram-label">YOLO</div>
+    </div>
+    <div class="vram-segment" style="width: 9.375%; background: #2563eb;">
+      3GB<div class="vram-label">DINO</div>
+    </div>
+    <div class="vram-segment" style="width: 9.375%; background: #ea580c;">
+      3GB<div class="vram-label">SAM</div>
+    </div>
+    <div class="vram-segment" style="width: 9.375%; background: #7c3aed;">
+      3GB<div class="vram-label">Qwen 3B</div>
+    </div>
+    <div class="vram-segment" style="width: 18.75%; background: repeating-linear-gradient(45deg, #dc2626, #dc2626 4px, #ef4444 4px, #ef4444 8px);">
+      6GB<div class="vram-label">Qwen 8B (Standby)</div>
+    </div>
+    <div class="vram-segment" style="width: 46.875%; background: #94a3b8; color: #1e293b;">
+      ~15GB<div class="vram-label">Frei / Puffer</div>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 16px; flex-wrap: wrap; margin: 12px 0; font-size: 12px;">
+    <span><span style="display: inline-block; width: 14px; height: 14px; background: #059669; border-radius: 3px; vertical-align: middle;"></span> YOLO (permanent)</span>
+    <span><span style="display: inline-block; width: 14px; height: 14px; background: #2563eb; border-radius: 3px; vertical-align: middle;"></span> DINO (on-demand)</span>
+    <span><span style="display: inline-block; width: 14px; height: 14px; background: #ea580c; border-radius: 3px; vertical-align: middle;"></span> SAM (on-demand)</span>
+    <span><span style="display: inline-block; width: 14px; height: 14px; background: #7c3aed; border-radius: 3px; vertical-align: middle;"></span> Qwen 3B (permanent)</span>
+    <span><span style="display: inline-block; width: 14px; height: 14px; background: #dc2626; border-radius: 3px; vertical-align: middle;"></span> Qwen 8B (Standby, gestrichelt)</span>
+    <span><span style="display: inline-block; width: 14px; height: 14px; background: #94a3b8; border-radius: 3px; vertical-align: middle;"></span> Freier VRAM</span>
+  </div>
+
+  <!-- 2.4 ESKALATION -->
+  <h3>2.4 Eskalations-Flussdiagramm</h3>
+  <p>
+    Das QualityGate bewertet jeden Fund anhand gewichteter Signale (Confidence, Konsistenz,
+    KB-Match, Messgenauigkeit). Je nach Ergebnis werden verschiedene Pfade eingeschlagen.
+  </p>
+
+  <div class="eskalation-flow">
+    <div class="esk-box" style="background: #7c3aed; color: white;">
+      Qwen 3B analysiert Frame
+    </div>
+    <div class="esk-arrow">&#9660;</div>
+    <div class="esk-box" style="background: #1e40af; color: white;">
+      QualityGate bewertet Ergebnis
+    </div>
+    <div class="esk-arrow">&#9660;</div>
+    <div class="esk-branch">
+      <div class="esk-branch-item" style="background: var(--green-bg); color: var(--green); border: 2px solid var(--green);">
+        GREEN<br><span style="font-size: 11px; font-weight: 400;">Auto-Accept &rarr; KB</span>
+      </div>
+      <div class="esk-branch-item" style="background: var(--yellow-bg); color: var(--yellow); border: 2px solid var(--yellow);">
+        YELLOW<br><span style="font-size: 11px; font-weight: 400;">Eskalation &rarr; Qwen 8B</span>
+      </div>
+      <div class="esk-branch-item" style="background: var(--red-bg); color: var(--red); border: 2px solid var(--red);">
+        RED<br><span style="font-size: 11px; font-weight: 400;">DINO + SAM &rarr; Review Queue</span>
+      </div>
+    </div>
+    <div class="esk-arrow">&#9660;</div>
+    <div class="esk-box" style="background: #0f172a; color: white;">
+      Temporal Aggregation &rarr; Finaler Befund
+    </div>
+  </div>
+
+  <table class="no-break">
+    <thead>
+      <tr><th>Gate</th><th>Bedingung</th><th>Aktion</th><th>VRAM-Auswirkung</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge badge-green">GREEN</span></td>
+        <td>Score &ge; 0.80, KB-Match vorhanden, min. 2 Signale</td>
+        <td>Auto-Accept, in Knowledge Base speichern</td>
+        <td>Kein zusaetzlicher VRAM</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-yellow">YELLOW</span></td>
+        <td>Score 0.50&ndash;0.79 oder fehlende Signale</td>
+        <td>Eskalation zu Qwen 8B fuer Zweitanalyse</td>
+        <td>+6 GB (Qwen 8B laden)</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-red">RED</span></td>
+        <td>Score &lt; 0.50 oder widerspruechliche Signale</td>
+        <td>DINO + SAM laden, detaillierte Segmentierung, Review Queue</td>
+        <td>+6 GB (DINO + SAM laden)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>2.5 Inference-Orchestrator &mdash; GPU-Zustaende</h3>
+  <p>
+    Der <code>InferenceOrchestratorService</code> verwaltet drei explizite Zustaende,
+    die bestimmen, welche Modelle zu einem Zeitpunkt im VRAM geladen sind.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Zustand</th><th>GPU-Modelle</th><th>CPU-Tasks</th><th>Uebergang</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>DETECT</strong></td><td>YOLO</td><td>Tracker + Aggregator</td><td>QualityGate Yellow/Red &rarr; SEGMENT</td></tr>
+      <tr><td><strong>SEGMENT</strong></td><td>YOLO + SAM</td><td>MaskQuantification</td><td>Segmentierung fertig &rarr; CLASSIFY</td></tr>
+      <tr><td><strong>CLASSIFY</strong></td><td>YOLO + Qwen</td><td>Report-Generierung</td><td>Klassifikation fertig &rarr; DETECT</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<!-- 3. HARDWARE                                                   -->
+<!-- ============================================================ -->
+<div class="container section" id="s3">
+  <div class="section-header">
+    <div class="section-number">Kapitel 3</div>
+    <h2>Hardware-Uebersicht</h2>
+    <p>Workstation-Spezifikationen und Nutzungsanalyse</p>
+  </div>
+
+  <h3>3.1 GPU &mdash; NVIDIA GeForce RTX 5090</h3>
+  <table>
+    <thead>
+      <tr><th>Parameter</th><th>Wert</th><th>Genutzt</th><th>Bemerkung</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>VRAM</td><td>32 GB GDDR7</td><td>&#10003; ~17-27 GB</td><td>Budget: max. 29 GB stabil</td></tr>
+      <tr><td>CUDA Cores</td><td>21.760</td><td>&#10003;</td><td>YOLO TensorRT FP16</td></tr>
+      <tr><td>Tensor Cores</td><td>680 (5. Gen)</td><td>&#10003;</td><td>Qwen Inferenz via Ollama</td></tr>
+      <tr><td>RT Cores</td><td>170 (4. Gen)</td><td>&#10007;</td><td>Nicht relevant fuer KI</td></tr>
+      <tr><td>Speicherbandbreite</td><td>1792 GB/s</td><td>&#10003;</td><td>Kritisch fuer LLM-Inferenz</td></tr>
+      <tr><td>TDP</td><td>575W</td><td>&#10003;</td><td>Volle Last bei Parallel-Inferenz</td></tr>
+      <tr><td>NVLink</td><td>Nein (Single-GPU)</td><td>&mdash;</td><td>Multi-GPU nicht geplant</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.2 CPU &mdash; Intel Core Ultra 9 285K</h3>
+  <table>
+    <thead>
+      <tr><th>Parameter</th><th>Wert</th><th>Genutzt</th><th>Bemerkung</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>P-Cores</td><td>8x Lion Cove (bis 5.7 GHz)</td><td>&#10003;</td><td>WPF UI, Orchestrierung</td></tr>
+      <tr><td>E-Cores</td><td>16x Skymont (bis 4.6 GHz)</td><td>&#10003;</td><td>Background-Tasks, FFmpeg</td></tr>
+      <tr><td>Threads</td><td>24 (P-Cores: kein HT)</td><td>&#10003;</td><td>Temporal Aggregation, Tracker</td></tr>
+      <tr><td>NPU</td><td>NPU 4 (13 TOPS)</td><td>&#10007;</td><td>Pre-Screening auf CPU schneller</td></tr>
+      <tr><td>Cache</td><td>36 MB L3</td><td>&#10003;</td><td>Datenstrukturen, Embeddings</td></tr>
+      <tr><td>iGPU</td><td>Intel Arc (4 Xe2)</td><td>&#10007;</td><td>Nicht genutzt</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.3 Arbeitsspeicher &amp; Storage</h3>
+  <table>
+    <thead>
+      <tr><th>Komponente</th><th>Spezifikation</th><th>Nutzung</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>RAM</td><td>64 GB DDR5-6000 (2x32 GB)</td><td>WPF-App, Video-Frames, Embedding-Cache</td></tr>
+      <tr><td>Primaer-SSD</td><td>NVMe Gen5 (System + App)</td><td>Model-Loading, KB-Zugriff</td></tr>
+      <tr><td>Daten-SSD</td><td>NVMe Gen4 (Videodaten)</td><td>~3000 Inspektionsvideos</td></tr>
+    </tbody>
+  </table>
+
+  <div class="highlight-box">
+    <strong>Hardware-Fazit:</strong> Die RTX 5090 mit 32 GB VRAM und 1792 GB/s Bandbreite ist der entscheidende
+    Faktor fuer die lokale Multi-Modell-Inferenz. Der Core Ultra 9 285K liefert genuegend CPU-Kerne fuer
+    die parallele Orchestrierung. NPU und iGPU bleiben ungenutzt, da die Workloads entweder zu schnell
+    fuer NPU-Overhead sind oder direkt auf der dedizierten GPU laufen.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 4. FEATURE-LISTE                                              -->
+<!-- ============================================================ -->
+<div class="container section" id="s4">
+  <div class="section-header">
+    <div class="section-number">Kapitel 4</div>
+    <h2>Vollstaendige Feature-Liste</h2>
+    <p>Alle Funktionsbereiche von SewerStudio im Ueberblick</p>
+  </div>
+
+  <!-- 4.1 VIDEO & CODIERUNG -->
+  <h3>4.1 Video &amp; Codierung</h3>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon" style="background: var(--accent-light); color: var(--accent);">&#9654;</div>
+      <h4>Video-Player (LibVLC)</h4>
+      <p>Vollstaendiger Video-Player mit Seek-Leiste, Frame-Navigation, Zeitstempel-Synchronisation und OSD-Meter-Erkennung. Unterstuetzt alle gaengigen Formate inkl. AVI, MP4, MPEG.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--green-bg); color: var(--green);">&#9673;</div>
+      <h4>Live-Detection</h4>
+      <p>Echtzeit-Schadenserkennung waehrend der Videowiedergabe. YOLO-Bounding-Boxes werden direkt auf dem Videobild ueberlagert. Confidence-Scores live angezeigt.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--purple-bg); color: var(--purple);">&#9998;</div>
+      <h4>Coding Mode (8 Overlay-Tools)</h4>
+      <p>Manueller Codierungsmodus mit 8 Werkzeugen: Distanz-Messung, Winkel, Uhrlage, Ausdehnung, Polygonflaeche, Rechteck, Punkt und Freihand-Linie. Alle Messungen werden in mm umgerechnet.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--yellow-bg); color: var(--yellow);">&#9889;</div>
+      <h4>Quick Scan</h4>
+      <p>Schnelle Voranalyse eines Videos mit reduzierter Frame-Rate. Identifiziert Stellen mit potentiellen Schaeden fuer die anschliessende detaillierte Analyse.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--red-bg); color: var(--red);">&#9881;</div>
+      <h4>Full Analysis Pipeline</h4>
+      <p>Vollstaendige automatische Analyse mit allen KI-Modellen: YOLO &rarr; DINO &rarr; SAM &rarr; Qwen. Inklusive QualityGate, Temporal Aggregation und automatischer Protokollerstellung.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--orange-bg); color: var(--orange);">&#9733;</div>
+      <h4>Live-Frame-Fenster</h4>
+      <p>Separates Fenster das den aktuellen Frame mit allen KI-Overlays (Bounding Boxes, Masken, Messwerte) in hoher Aufloesung anzeigt. Ideal fuer den zweiten Monitor.</p>
+    </div>
+  </div>
+
+  <!-- 4.2 PROTOKOLL -->
+  <h3>4.2 Protokoll-Management</h3>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon" style="background: var(--accent-light); color: var(--accent);">&#9776;</div>
+      <h4>Beobachtungskatalog (EN 13508-2)</h4>
+      <p>Vollstaendiger Katalog aller EN 13508-2 Beobachtungscodes mit Beschreibungen, Quantifizierungen und VSA-Zuordnungen. Hierarchisch organisiert mit Such- und Filterfunktion.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--green-bg); color: var(--green);">&#9733;</div>
+      <h4>VSA-Code-Explorer</h4>
+      <p>Interaktiver Explorer fuer alle 27 VSA-Schadenskategorien. Zeigt fuer jeden Code: Beschreibung, Stufen 1-5, typische Bilder aus der Knowledge Base und Haeufigkeitsstatistiken.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--purple-bg); color: var(--purple);">&#9998;</div>
+      <h4>Protokoll-Editor</h4>
+      <p>Vollstaendiger Editor fuer Inspektionsprotokolle mit Inline-Bearbeitung. Unterstuetzt Hauptcode, Charakterisierungen (1. und 2.), Uhrlage, Quantifizierung und Freitext-Bemerkungen.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--yellow-bg); color: var(--yellow);">&#9201;</div>
+      <h4>Protokoll-Versionshistorie</h4>
+      <p>Vollstaendige Aenderungshistorie fuer jedes Protokoll. Jede Aenderung wird mit Zeitstempel, Benutzer und Quelle (manuell/KI) protokolliert. Rollback auf fruehere Versionen moeglich.</p>
+    </div>
+  </div>
+
+  <!-- 4.3 IMPORT -->
+  <h3>4.3 Import-Formate</h3>
+  <table>
+    <thead>
+      <tr><th>Format</th><th>Service</th><th>Beschreibung</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="badge badge-red">PDF</span></td><td>PdfImportService</td><td>Bestehende Inspektionsprotokolle im PDF-Format. Unterstuetzt Fretz AG, KIT Bauinspekt, Abwasser Uri und weitere Formate. Regex-basierte Felderkennung.</td></tr>
+      <tr><td><span class="badge badge-blue">XTF</span></td><td>XtfImportService</td><td>Interlis-Transferformat der Schweiz (SIA 405). XML-basiert, enthaelt Geometrie und Attributdaten fuer Haltungen und Schaechte.</td></tr>
+      <tr><td><span class="badge badge-green">WinCan</span></td><td>WinCanDbImportService</td><td>Access-Datenbanken (.mdb/.accdb) von WinCan VX. Haltungen, Inspektionen, Medien-Zuordnungen. Inkl. Video-Pfad-Mapping.</td></tr>
+      <tr><td><span class="badge badge-orange">IBAK</span></td><td>IbakExportImportService</td><td>IBAK IKAS Exportformat. Strukturierte Inspektionsdaten mit Medienreferenzen und Codierungen.</td></tr>
+      <tr><td><span class="badge badge-purple">KINS</span></td><td>KinsImportService</td><td>KINS-Austauschformat fuer Kanalinspektionsdaten. Standardisierter Datenaustausch zwischen verschiedenen Software-Systemen.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 4.4 EXPORT -->
+  <h3>4.4 Export &amp; Reporting</h3>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon" style="background: var(--red-bg); color: var(--red);">&#9638;</div>
+      <h4>PDF-Export (QuestPDF)</h4>
+      <p>Professionelle PDF-Berichte mit QuestPDF. Haltungsdossier mit Protokolltabelle, Schadenbilder, VSA-Bewertung und Zustandsklasse. Hydraulik-Bericht separat.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--green-bg); color: var(--green);">&#9638;</div>
+      <h4>Excel-Export</h4>
+      <p>Tabellarischer Export aller Inspektionsdaten im XLSX-Format. Filterbare Spalten, farbcodierte Zustandsklassen, Pivot-faehige Datenstruktur.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--accent-light); color: var(--accent);">&#9638;</div>
+      <h4>CSV-Export</h4>
+      <p>Einfacher Textexport fuer Weiterverarbeitung in Drittsystemen. Konfigurierbare Trennzeichen und Spaltenauswahl.</p>
+    </div>
+  </div>
+
+  <!-- 4.5 DATENMANAGEMENT -->
+  <h3>4.5 Datenmanagement</h3>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon" style="background: var(--accent-light); color: var(--accent);">&#9638;</div>
+      <h4>Haltungen/Schacht DataGrid</h4>
+      <p>Leistungsfaehige Datentabellen fuer Haltungen und Schaechte. Sortierung, Filterung, Inline-Bearbeitung, Mehrfachauswahl und Kontextmenue. Virtualisiert fuer grosse Datenmengen.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--purple-bg); color: var(--purple);">&#9881;</div>
+      <h4>Feld-Katalog-System</h4>
+      <p>Konfigurierbarer Feldkatalog fuer alle Datenfelder. Benutzer koennen eigene Feldkataloge erstellen, importieren und zwischen Projekten teilen.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--green-bg); color: var(--green);">&#9745;</div>
+      <h4>Auto-Save &amp; Restore Points</h4>
+      <p>Automatische Sicherungspunkte bei jeder wichtigen Aenderung. Wiederherstellung auf jeden gespeicherten Zustand. Schutz vor Datenverlust bei Absturz.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--orange-bg); color: var(--orange);">&#9888;</div>
+      <h4>Medien-Konflikt-Center</h4>
+      <p>Erkennung und Aufloesung von Konflikten bei der Video-/Foto-Zuordnung zu Haltungen. Batch-Suche fuer fehlende Medien, automatische Pfad-Korrektur.</p>
+    </div>
+  </div>
+
+  <!-- 4.6 KOSTEN & SANIERUNG -->
+  <h3>4.6 Kosten &amp; Sanierung</h3>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon" style="background: var(--yellow-bg); color: var(--yellow);">&#9733;</div>
+      <h4>Kostenberechnung</h4>
+      <p>Automatische Berechnung der Sanierungskosten basierend auf Schadensbild, Rohrgeometrie und Preiskatalog. Unterstuetzt CHF und EUR.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--accent-light); color: var(--accent);">&#9776;</div>
+      <h4>Preiskataloge</h4>
+      <p>Verwaltung mehrerer Preiskataloge mit Positionen, Einheitspreisen und Mengengeruestberechnung. Import/Export als JSON.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--green-bg); color: var(--green);">&#9638;</div>
+      <h4>Massnahmen-Templates</h4>
+      <p>Vordefinierte Sanierungsmassnahmen (Inliner, Kurzliner, Roboter, Erneuerung) mit automatischer Zuordnung zu Schadenstypen und -stufen.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--purple-bg); color: var(--purple);">&#9998;</div>
+      <h4>Angebots-Generator (Eigendevis)</h4>
+      <p>Erstellung vollstaendiger Offerten mit Positionen, Mengen, Einheitspreisen und Gesamtkosten. Kombinierte Angebote ueber mehrere Haltungen. PDF-Druck.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--red-bg); color: var(--red);">&#9881;</div>
+      <h4>KI-Sanierungs-Optimierung</h4>
+      <p>KI-gestuetzte Optimierung der Sanierungsstrategie. Bewertet verschiedene Massnahmenkombinationen nach Kosten-Nutzen-Verhaeltnis und empfiehlt die optimale Variante.</p>
+    </div>
+  </div>
+
+  <!-- 4.7 HYDRAULIK -->
+  <h3>4.7 Hydraulik</h3>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon" style="background: var(--accent-light); color: var(--accent);">&#8776;</div>
+      <h4>DWA-A 110 konforme Berechnung</h4>
+      <p>Vollstaendige hydraulische Berechnung nach DWA-A 110 Standard. Beruecksichtigt Rohrgeometrie, Gefaelle, Rauheit und Wasserstand.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--green-bg); color: var(--green);">&#8776;</div>
+      <h4>Teilfuellung / Vollfuellung</h4>
+      <p>Berechnung der Leistungsfaehigkeit bei Teil- und Vollfuellung. Grafische Darstellung der Fuellstands-Geschwindigkeits-Beziehung fuer verschiedene Profiltypen.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--yellow-bg); color: var(--yellow);">&#8776;</div>
+      <h4>Ablagerungs-Berechnung</h4>
+      <p>Berechnung der kritischen Fliessgeschwindigkeit und Ablagerungsgefahr. Warnung bei Unterschreitung der Mindestgeschwindigkeit nach DWA-Richtlinie.</p>
+    </div>
+  </div>
+
+  <!-- 4.8 KI-TRAINING -->
+  <h3>4.8 KI-Training &amp; Selbstlernen</h3>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon" style="background: var(--purple-bg); color: var(--purple);">&#9881;</div>
+      <h4>Training Center</h4>
+      <p>Zentrale Verwaltung fuer alle Trainingsaktivitaeten. Video-Probe, Self-Training-Vergleiche, Meter-Timeline und GuidedVerification in einer Oberflaeche.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--green-bg); color: var(--green);">&#8635;</div>
+      <h4>Self-Training Loop</h4>
+      <p>Automatischer Kreislauf: KI analysiert &rarr; QualityGate bewertet &rarr; Green-Samples in KB &rarr; Few-Shots verbessern &rarr; KI wird besser. Kontinuierliche Verbesserung ohne manuelles Training.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--accent-light); color: var(--accent);">&#9638;</div>
+      <h4>Knowledge Base (SQLite + Embeddings)</h4>
+      <p>Lokale Wissensdatenbank mit SQLite-Backend und nomic-embed-text Vektoren. Speichert verifizierte Samples fuer Few-Shot-Retrieval. Aktives Lernen und Qualitaetsueberwachung.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--yellow-bg); color: var(--yellow);">&#9201;</div>
+      <h4>Benchmark Runner</h4>
+      <p>Automatisierte Benchmark-Laeufe ueber definierte Haltungen. Misst Precision, Recall, F1-Score und VSA-Code-Treffer. Vergleich zwischen Modellversionen und Konfigurationen.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--orange-bg); color: var(--orange);">&#9733;</div>
+      <h4>Active Learning</h4>
+      <p>Priorisierung unsicherer Samples fuer manuelle Verifikation. Identifiziert unterrepraesentierte VSA-Codes und fokussiert das Training auf Schwachstellen.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--red-bg); color: var(--red);">&#9881;</div>
+      <h4>Weight Re-Learning (Coordinate Descent)</h4>
+      <p>Automatische Anpassung der QualityGate-Signalgewichte basierend auf Benchmark-Ergebnissen. Coordinate Descent Optimierung fuer optimale Green/Yellow/Red-Verteilung.</p>
+    </div>
+  </div>
+
+  <!-- 4.9 SYSTEM -->
+  <h3>4.9 System &amp; Werkzeuge</h3>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon" style="background: var(--accent-light); color: var(--accent);">&#9681;</div>
+      <h4>Dark/Light Theme</h4>
+      <p>Umschaltbares Design zwischen dunklem und hellem Modus. Konsistente Farbpalette ueber alle 32 Fenster und Dialoge.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--green-bg); color: var(--green);">&#9860;</div>
+      <h4>System Monitor</h4>
+      <p>Echtzeit-Ueberwachung von CPU-Auslastung, GPU-VRAM, RAM-Verbrauch und Modell-Status. nvidia-smi Integration fuer GPU-Temperatur und Taktfrequenz.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon" style="background: var(--purple-bg); color: var(--purple);">&#9638;</div>
+      <h4>13 CLI-Tools</h4>
+      <p>Eigenstaendige Kommandozeilen-Werkzeuge: PdfHeaderReader, DiagnosticPdfParser, IbakPdfAnalyzer, QuickPdfAnalyzer, VsaPdfExtractor, KnowledgeBaseInspector, MeasureCatalogCli, PdfImageAnalyzer, AiDocPdf, MdbSchemaReader, PdfProtocolParser und weitere.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 5. KI-PIPELINE DETAIL                                         -->
+<!-- ============================================================ -->
+<div class="container section" id="s5">
+  <div class="section-header">
+    <div class="section-number">Kapitel 5</div>
+    <h2>KI-Pipeline im Detail</h2>
+    <p>Technische Spezifikation jedes Modells, Algorithmus und Service</p>
+  </div>
+
+  <!-- 5.1 YOLO -->
+  <h3>5.1 YOLO 26m-seg &mdash; Objekterkennung &amp; Instanzsegmentierung</h3>
+  <div class="card card-green">
+    <p>YOLO ist das primaere Erkennungsmodell und laeuft permanent auf der GPU. Es erkennt Kanalschaeden in jedem Frame und liefert Bounding Boxes und Instanzmasken.</p>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Parameter</th><th>Wert</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Modell</td><td>YOLOv8/YOLO26 Medium-Segment (custom trained)</td></tr>
+      <tr><td>Runtime</td><td>TensorRT FP16 (NVIDIA)</td></tr>
+      <tr><td>Input-Groesse</td><td>640x640 px</td></tr>
+      <tr><td>VRAM</td><td>~1.5-2 GB</td></tr>
+      <tr><td>Latenz</td><td>~8 ms pro Frame</td></tr>
+      <tr><td>Confidence-Schwelle</td><td>0.30 (Y &lt; 0.30 verwirft)</td></tr>
+      <tr><td>Klassen</td><td>Trainiert auf VSA-relevante Schadenskategorien</td></tr>
+      <tr><td>Residency</td><td>Permanent im VRAM</td></tr>
+      <tr><td>Tracking</td><td>Temporal Voting (statt ByteTrack/OC-SORT)</td></tr>
+      <tr><td>Output</td><td>BBox (x, y, w, h), Confidence, Klasse, Instanzmaske</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 5.2 DINO -->
+  <h3>5.2 Grounding DINO 1.5 Edge &mdash; Text-Grounding</h3>
+  <div class="card card-accent">
+    <p>DINO wird nur bei QualityGate Yellow/Red aktiviert. Es lokalisiert spezifische Objekte anhand von Textbeschreibungen (z.B. "crack at 3 o'clock position"). Laeuft im Python Sidecar.</p>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Parameter</th><th>Wert</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Modell</td><td>Grounding DINO 1.5 Edge</td></tr>
+      <tr><td>Runtime</td><td>Python FastAPI Sidecar (Port 8100)</td></tr>
+      <tr><td>VRAM</td><td>~3 GB</td></tr>
+      <tr><td>Latenz</td><td>~50 ms pro Frame</td></tr>
+      <tr><td>Residency</td><td>On-Demand (nur bei Yellow/Red)</td></tr>
+      <tr><td>Exklusiv mit</td><td>SAM 3 (werden zusammen geladen)</td></tr>
+    </tbody>
+  </table>
+  <h4>Typische Text-Prompts fuer DINO</h4>
+  <ul>
+    <li><code>"crack"</code>, <code>"fracture"</code>, <code>"deformation"</code></li>
+    <li><code>"root intrusion"</code>, <code>"deposit"</code>, <code>"obstruction"</code></li>
+    <li><code>"joint displacement"</code>, <code>"connection"</code>, <code>"lateral"</code></li>
+    <li><code>"corrosion"</code>, <code>"surface damage"</code>, <code>"infiltration"</code></li>
+  </ul>
+  <div class="highlight-box">
+    <strong>Bekannter Bug N2:</strong> <code>VsaCodeResolver.NormalizeClock()</code> behandelt die englischen DINO-Ausgaben (top/bottom/left/right) nicht korrekt. Die Uhrlage-Konvertierung erwartet deutsche Begriffe.
+  </div>
+
+  <!-- 5.3 SAM -->
+  <h3>5.3 SAM 2.1 Hiera-L &mdash; Segmentierung</h3>
+  <div class="card" style="border-left: 4px solid var(--orange);">
+    <p>SAM erstellt praezise Pixel-genaue Masken fuer erkannte Schaeden. Die Masken werden fuer die MaskQuantification verwendet, die dann deterministische Messwerte (Flaeche in mm&sup2;, Ausdehnung in mm) berechnet.</p>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Parameter</th><th>Wert</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Modell</td><td>SAM 2.1 Hiera-Large</td></tr>
+      <tr><td>Backbone</td><td>Hierarchical Vision Transformer</td></tr>
+      <tr><td>VRAM</td><td>~3 GB</td></tr>
+      <tr><td>Latenz</td><td>~30 ms pro Maske</td></tr>
+      <tr><td>Input</td><td>BBox-Prompts von YOLO oder DINO</td></tr>
+      <tr><td>Output</td><td>Binaere Maske (H x W), IoU-Score</td></tr>
+      <tr><td>Residency</td><td>On-Demand, exklusiv mit DINO</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Ring-Scan Verfahren</h4>
+  <p>
+    Fuer die Uhrlage-Bestimmung wird ein Ring-Scan-Algorithmus verwendet: Die Maske wird in 12 Sektoren
+    (entsprechend den Uhrzeiten 1-12) unterteilt. Fuer jeden Sektor wird der Pixel-Anteil berechnet.
+    Der Sektor mit dem hoechsten Anteil bestimmt die primaere Uhrlage, die Ausdehnung wird ueber
+    die Nachbarsektoren ermittelt.
+  </p>
+
+  <!-- 5.4 MASKQUANTIFICATION -->
+  <h3>5.4 MaskQuantification &mdash; Deterministische Messung</h3>
+  <div class="card card-accent">
+    <p>Dieser Service wandelt KI-generierte Masken in physikalische Masse um. Vollstaendig deterministisch, kein LLM involviert. Das ist das Kern-Prinzip von Thin-AI.</p>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Messwert</th><th>Formel / Methode</th><th>Einheit</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Schadensflaeche</td><td>Pixel-Count &times; (Rohrdurchmesser / Bildbreite)&sup2;</td><td>mm&sup2;</td></tr>
+      <tr><td>Schadensbreite</td><td>Max. horizontale Ausdehnung der Maske &times; Skalierungsfaktor</td><td>mm</td></tr>
+      <tr><td>Schadenshoehe</td><td>Max. vertikale Ausdehnung der Maske &times; Skalierungsfaktor</td><td>mm</td></tr>
+      <tr><td>Uhrlage</td><td>Ring-Scan mit 12 Sektoren, gewichteter Schwerpunkt</td><td>1-12 Uhr</td></tr>
+      <tr><td>Ausdehnung</td><td>Winkelbereich der Maske im Querschnitt</td><td>Grad / Prozent</td></tr>
+      <tr><td>Umfangsanteil</td><td>Belegte Sektoren / 12 &times; 100</td><td>%</td></tr>
+    </tbody>
+  </table>
+  <div class="highlight-box">
+    <strong>Bekannter Bug N8:</strong> <code>PipeImageWidthRatio</code> ist auf 0.70 hardcodiert. Bei Kameras mit anderem Sichtfeld kann die mm-Umrechnung ungenau sein. Schwer zu fixen ohne Referenzmessung.
+  </div>
+
+  <!-- 5.5 QWEN -->
+  <h3>5.5 Qwen 2.5-VL (3B / 8B) &mdash; VSA-Code-Klassifikation</h3>
+  <div class="card" style="border-left: 4px solid var(--purple);">
+    <p>Qwen ist das Vision-Language-Modell, das aus dem Kontext (Frame, Masken, Messwerte) den korrekten VSA-Code bestimmt. Es arbeitet in einer Dual-Model-Architektur: 3B als Primaermodell, 8B als Eskalation bei Yellow.</p>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Parameter</th><th>Qwen 3B (Primaer)</th><th>Qwen 8B (Eskalation)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Modell</td><td>qwen2.5-vl:3b</td><td>qwen2.5-vl:7b / 8b</td></tr>
+      <tr><td>Quantisierung</td><td>Q5_K_M</td><td>Q5_K_M</td></tr>
+      <tr><td>VRAM</td><td>~3 GB</td><td>~6 GB</td></tr>
+      <tr><td>Latenz</td><td>~800 ms</td><td>~1.5 s</td></tr>
+      <tr><td>KV-Cache</td><td>~2-3 GB/Slot</td><td>~3-4 GB/Slot</td></tr>
+      <tr><td>Residency</td><td>Permanent</td><td>Standby (lazy load)</td></tr>
+      <tr><td>Runtime</td><td>Ollama</td><td>Ollama</td></tr>
+      <tr><td>Output-Format</td><td>Strict JSON Schema</td><td>Strict JSON Schema</td></tr>
+    </tbody>
+  </table>
+
+  <h4>JSON-Schema fuer Qwen-Output</h4>
+  <pre>{
+  "vsa_code": "BAB",           // VSA-Schadenskategorie
+  "stufe": 3,                  // Schweregrad 1-5
+  "uhrlage": "3",              // Uhrlage 1-12
+  "ausdehnung": "3-5",         // Von-Bis Uhrlage
+  "charakterisierung_1": "A",  // Erste Charakterisierung
+  "charakterisierung_2": "",   // Zweite Charakterisierung
+  "bemerkung": "...",          // Freitext
+  "confidence": 0.85           // Modell-Confidence
+}</pre>
+
+  <h4>Few-Shot Retrieval</h4>
+  <p>
+    Fuer jeden Frame werden die 3-5 aehnlichsten Samples aus der Knowledge Base geholt (via nomic-embed-text Cosine Similarity). Diese werden als Few-Shot-Beispiele in den Qwen-Prompt eingefuegt. So lernt das Modell aus frueher verifizierten Klassifikationen.
+  </p>
+
+  <!-- 5.6 TEMPORAL AGGREGATION -->
+  <h3>5.6 Temporal Aggregation &mdash; ActiveFindingState</h3>
+  <div class="card card-green">
+    <p>Da ein Schaden typischerweise ueber mehrere Frames sichtbar ist, muessen die Frame-weisen Detektionen zu einem einzelnen Befund aggregiert werden. Der DetectionAggregator verwaltet dafuer ActiveFindingStates.</p>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Konzept</th><th>Beschreibung</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>ActiveFindingState</td><td>Repraesentiert einen laufenden Befund ueber mehrere Frames. Sammelt Detektionen, Confidence-Werte und Positionen.</td></tr>
+      <tr><td>Temporal Voting</td><td>Statt Tracker (ByteTrack) wird ueber die letzten N Frames abgestimmt. Ein Fund gilt als bestaetigt wenn er in &ge;60% der Frames erkannt wurde.</td></tr>
+      <tr><td>Meter-Korrelation</td><td>OSD-Meterzahl wird ausgelesen und mit Fund-Position korreliert. Jeder Befund erhaelt eine praezise Meter-Angabe.</td></tr>
+      <tr><td>FindingKey</td><td>Eindeutiger Schluessel pro Befund: <code>VSA-Code | Uhrlage | Meter</code>. Verhindert Duplikate.</td></tr>
+    </tbody>
+  </table>
+  <div class="highlight-box">
+    <strong>Bekannter Bug N4:</strong> FindingKey <code>Code|Clock</code> ohne Meter kann bei Mehrfach-Schaeden gleichen Typs an gleicher Uhrlage kollidieren. Selten, aber moeglich.
+  </div>
+
+  <!-- 5.7 QUALITYGATE -->
+  <h3>5.7 QualityGate &mdash; Automatische Qualitaetsbewertung</h3>
+  <div class="card card-yellow">
+    <p>Das QualityGate ist das zentrale Entscheidungssystem. Es bewertet jeden Fund anhand gewichteter Signale und entscheidet ueber den weiteren Verarbeitungspfad.</p>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Signal</th><th>Gewicht</th><th>Beschreibung</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>YOLO Confidence</td><td>0.25</td><td>Erkennungs-Sicherheit des Detektionsmodells</td></tr>
+      <tr><td>Qwen Confidence</td><td>0.25</td><td>Klassifikations-Sicherheit des LLM</td></tr>
+      <tr><td>KB-Match Score</td><td>0.20</td><td>Aehnlichkeit zu verifizierten Samples in der Knowledge Base</td></tr>
+      <tr><td>Temporal Consistency</td><td>0.15</td><td>Konsistenz der Erkennung ueber mehrere Frames</td></tr>
+      <tr><td>Measurement Plausibility</td><td>0.15</td><td>Physikalische Plausibilitaet der Messwerte</td></tr>
+    </tbody>
+  </table>
+  <table>
+    <thead>
+      <tr><th>Gate</th><th>Score-Bereich</th><th>Aktion</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="badge badge-green">GREEN</span></td><td>&ge; 0.80</td><td>Auto-Accept, in KB speichern, kein Review noetig</td></tr>
+      <tr><td><span class="badge badge-yellow">YELLOW</span></td><td>0.50 &ndash; 0.79</td><td>Eskalation zu Qwen 8B, ggf. DINO+SAM fuer bessere Masken</td></tr>
+      <tr><td><span class="badge badge-red">RED</span></td><td>&lt; 0.50</td><td>In Review Queue, manueller Check erforderlich</td></tr>
+    </tbody>
+  </table>
+  <div class="highlight-box">
+    <strong>Bekannter Bug N9:</strong> Bei fehlenden Signalen wird renormalisiert, d.h. ein einzelnes Signal kann theoretisch Green erzeugen. Fix empfohlen: Minimum 2 Signale fuer Green.
+  </div>
+
+  <!-- 5.8 KNOWLEDGE BASE -->
+  <h3>5.8 Knowledge Base &mdash; SQLite + Embeddings</h3>
+  <div class="card card-accent">
+    <p>Die Knowledge Base ist das Langzeitgedaechtnis des Systems. Sie speichert verifizierte Klassifikationen als Referenz fuer zukuenftige Analysen.</p>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Komponente</th><th>Technologie</th><th>Funktion</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Datenspeicher</td><td>SQLite</td><td>Samples mit VSA-Code, Metadaten, Confidence, Verifikations-Status</td></tr>
+      <tr><td>Embedding-Modell</td><td>nomic-embed-text (Ollama)</td><td>768-dimensionale Textvektoren fuer Similarity Search</td></tr>
+      <tr><td>Retrieval</td><td>Cosine Similarity</td><td>Top-K aehnliche Samples fuer Few-Shot-Prompting</td></tr>
+      <tr><td>Qualitaetssicherung</td><td>KbQualityService</td><td>Ueberwachung der Verteilung, Erkennung von Bias</td></tr>
+      <tr><td>Auto-Approval</td><td>AutoApprovalService</td><td>Green-Samples mit Score &ge; 0.60 werden automatisch aufgenommen</td></tr>
+      <tr><td>Feedback Loop</td><td>FeedbackIngestionService</td><td>Manuelle Korrekturen fliessen als neue Samples zurueck</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<!-- 6. TIMELINE                                                   -->
+<!-- ============================================================ -->
+<div class="container section" id="s6">
+  <div class="section-header">
+    <div class="section-number">Kapitel 6</div>
+    <h2>Entwicklungsgeschichte</h2>
+    <p>Von der Idee zum vollstaendigen System in vier Monaten</p>
+  </div>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="date">Januar 2026</div>
+      <h4>Phase 1 &mdash; Manuelle Codierung (Baseline)</h4>
+      <p>
+        Aufbau der Grundarchitektur: WPF-Anwendung mit MVVM-Pattern, Clean Architecture mit vier Schichten.
+        Video-Player mit LibVLC, manuelle Codierung von Kanalschaeden nach EN 13508-2.
+        Import von PDF-Protokollen und WinCan-Datenbanken. Erste Version des Haltungs-DataGrids.
+        Alles rein manuell &mdash; keine KI-Unterstuetzung bei der Codierung, nur bei der Programmierung.
+      </p>
+      <p><strong>Ueberlegung:</strong> Zuerst ein stabiles Fundament schaffen, bevor KI hinzugefuegt wird. Die manuelle Codierung dient als Referenz (Ground Truth) fuer spaetere KI-Bewertung.</p>
+    </div>
+
+    <div class="timeline-item">
+      <div class="date">Februar 2026</div>
+      <h4>Phase 2 &mdash; KI-Pipeline v1 (YOLO + DINO + SAM + Qwen 8B)</h4>
+      <p>
+        Integration der ersten KI-Pipeline: YOLO fuer Schadenserkennung, Grounding DINO fuer Lokalisierung,
+        SAM fuer Segmentierung, Qwen 8B fuer VSA-Code-Klassifikation. Python Sidecar fuer DINO/SAM,
+        Ollama fuer Qwen. Erste automatische Protokollerstellung. Erster Benchmark gegen manuelle Codierung.
+      </p>
+      <p><strong>Ueberlegung:</strong> Multi-Modell-Ansatz statt eines einzelnen grossen Modells. Jedes Modell hat eine klar definierte Aufgabe. Thin-AI-Prinzip: LLM nur fuer Textgenerierung, nicht fuer Messungen.</p>
+    </div>
+
+    <div class="timeline-item">
+      <div class="date">Maerz 2026</div>
+      <h4>Phase 3 &mdash; Self-Learning + Dual-Model + QualityGate</h4>
+      <p>
+        Einfuehrung des QualityGate-Systems (Green/Yellow/Red), Knowledge Base mit Embeddings,
+        Self-Training Loop, Dual-Model-Architektur (8B primaer + 32B Eskalation, spaeter auf 3B+8B umgestellt).
+        Weight Re-Learning fuer QualityGate-Gewichte. Active Learning und Review Queue.
+        Benchmark-Runner fuer systematische Qualitaetsmessung.
+      </p>
+      <p><strong>Ueberlegung:</strong> Das System muss sich selbst verbessern koennen. Green-Samples in die KB, Few-Shots werden besser, Precision steigt. Eskalation spart VRAM fuer 90% der Faelle.</p>
+    </div>
+
+    <div class="timeline-item">
+      <div class="date">April 2026</div>
+      <h4>Phase 4 &mdash; V4.1 (Qwen 3B Primary, Optimierung, Audit)</h4>
+      <p>
+        Umstellung auf Qwen 3B als Primaermodell (statt 8B) zur VRAM-Einsparung und Latenz-Reduktion.
+        Planung fuer parallele Qwen-Slots (OLLAMA_NUM_PARALLEL=2). Umfassendes System-Audit durch
+        mehrere KI-Systeme (ChatGPT, Claude, Gemini, DeepSeek). Bug-Fixes und Architektur-Konsolidierung.
+        Erweiterung auf 32 Fenster, Kostenberechnung, Hydraulik, Eigendevis.
+      </p>
+      <p><strong>Ueberlegung:</strong> Geschwindigkeit wichtiger als marginale Qualitaetsverbesserung. 3B bei 90% der Faelle ausreichend, 8B fuer die schwierigen 10%. Parallelisierung bringt mehr als groesseres Modell.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 7. ARCHITEKTUR-ENTSCHEIDUNGEN                                 -->
+<!-- ============================================================ -->
+<div class="container section" id="s7">
+  <div class="section-header">
+    <div class="section-number">Kapitel 7</div>
+    <h2>Architektur-Entscheidungen</h2>
+    <p>Fuer jede kritische Entscheidung: Frage, Optionen, Wahl und Begruendung</p>
+  </div>
+
+  <div class="decision-card no-break">
+    <div class="question">1. Thin-AI: C# fuer Logik, LLM nur fuer Textgenerierung?</div>
+    <div class="options"><strong>Optionen:</strong> (A) LLM fuer alles (End-to-End) | (B) LLM nur fuer Klassifikation, Rest deterministisch | (C) Kein LLM</div>
+    <div class="chosen">&#10003; Gewaehlt: (B) Thin-AI &mdash; LLM nur fuer VSA-Code-Klassifikation</div>
+    <div class="reasoning"><strong>Begruendung:</strong> Messungen muessen reproduzierbar und deterministisch sein. Ein LLM liefert bei gleicher Eingabe unterschiedliche Ergebnisse. Pixelbasierte Berechnungen (Flaeche, Ausdehnung) gehoeren in C#-Code, nicht in ein probabilistisches Modell. Das LLM bringt seinen Mehrwert bei der semantischen Zuordnung (welcher VSA-Code passt zu diesem Schadensbild).</div>
+  </div>
+
+  <div class="decision-card no-break">
+    <div class="question">2. Lokale Inferenz statt Cloud-API?</div>
+    <div class="options"><strong>Optionen:</strong> (A) OpenAI/Claude API | (B) Lokale Inferenz auf eigener GPU | (C) Hybrid</div>
+    <div class="chosen">&#10003; Gewaehlt: (B) Vollstaendig lokal auf RTX 5090</div>
+    <div class="reasoning"><strong>Begruendung:</strong> Dies ist eine Teststation &mdash; die lokale Ausfuehrung bietet volle Kontrolle ueber Modelle, Latenz und Kosten. Keine laufenden API-Kosten bei ~3000 Videos. Unabhaengigkeit von Internetverbindung. Moeglichkeit, Modelle schnell zu wechseln und zu experimentieren.</div>
+  </div>
+
+  <div class="decision-card no-break">
+    <div class="question">3. Ollama statt vLLM oder llama.cpp direkt?</div>
+    <div class="options"><strong>Optionen:</strong> (A) vLLM | (B) Ollama | (C) llama.cpp direkt | (D) TensorRT-LLM</div>
+    <div class="chosen">&#10003; Gewaehlt: (B) Ollama</div>
+    <div class="reasoning"><strong>Begruendung:</strong> Ollama bietet die einfachste API (REST), automatisches Modell-Management, Keep-Alive-Steuerung und Multi-Modell-Support. vLLM waere leistungsfaehiger fuer High-Throughput, aber der Overhead lohnt sich nicht fuer einen Single-User. Ollama hat Polly-kompatible Retry-Logik und Circuit-Breaker im C#-Client.</div>
+  </div>
+
+  <div class="decision-card no-break">
+    <div class="question">4. C# + Python Sidecar statt reines Python?</div>
+    <div class="options"><strong>Optionen:</strong> (A) Alles in Python | (B) C# Hauptapp + Python Sidecar fuer Vision | (C) Alles in C#</div>
+    <div class="chosen">&#10003; Gewaehlt: (B) C# WPF-App + Python FastAPI Sidecar</div>
+    <div class="reasoning"><strong>Begruendung:</strong> WPF bietet die beste Desktop-UI-Erfahrung unter Windows. YOLO, DINO und SAM haben das beste Python-Oekosystem. Der Sidecar laeuft als FastAPI-Server auf Port 8100 und wird per HTTP angesprochen. Klare Trennung: C# fuer UI/Logik/Orchestrierung, Python fuer GPU-Inferenz.</div>
+  </div>
+
+  <div class="decision-card no-break">
+    <div class="question">5. Temporal Voting statt ByteTrack/OC-SORT?</div>
+    <div class="options"><strong>Optionen:</strong> (A) ByteTrack | (B) OC-SORT | (C) Temporal Voting | (D) DeepSORT</div>
+    <div class="chosen">&#10003; Gewaehlt: (C) Temporal Voting</div>
+    <div class="reasoning"><strong>Begruendung:</strong> Kanalinspektionsvideos haben niedrige Frame-Raten (alle 1.5-3 Sekunden ein Frame). IoU-basierte Tracker (ByteTrack, OC-SORT) brauchen hohe Frame-Raten fuer zuverlaessiges Matching. Bei so grossen Zeitabstaenden bewegt sich die Kamera zu weit. Temporal Voting (Abstimmung ueber N Frames) ist robuster und einfacher.</div>
+  </div>
+
+  <div class="decision-card no-break">
+    <div class="question">6. nomic-embed-text beibehalten oder wechseln?</div>
+    <div class="options"><strong>Optionen:</strong> (A) nomic-embed-text behalten | (B) NV-CLIP fuer Bild-Embeddings | (C) OpenAI text-embedding-3</div>
+    <div class="chosen">&#10003; Gewaehlt: (A) nomic-embed-text beibehalten</div>
+    <div class="reasoning"><strong>Begruendung:</strong> Das Modell ist zu tief in KB, QualityGate und WeightLearning integriert. Ein Wechsel wuerde alle Embeddings in der KB invalidieren und ein Re-Embedding aller Samples erfordern. nomic-embed-text liefert gute Ergebnisse bei minimalem VRAM (~0.3 GB). NV-CLIP als Ergaenzung (nicht Ersatz) ist fuer spaeter geplant.</div>
+  </div>
+
+  <div class="decision-card no-break">
+    <div class="question">7. Dual-Model Eskalation (3B &rarr; 8B) statt einzelnem grossem Modell?</div>
+    <div class="options"><strong>Optionen:</strong> (A) Nur 32B (beste Qualitaet) | (B) Nur 3B (schnellstes) | (C) Kaskade 3B &rarr; 8B</div>
+    <div class="chosen">&#10003; Gewaehlt: (C) Kaskade 3B &rarr; 8B mit QualityGate</div>
+    <div class="reasoning"><strong>Begruendung:</strong> ~80-90% der Frames sind einfache Faelle (kein Schaden oder klarer Schaden), fuer die 3B ausreicht. Nur Yellow/Red-Faelle eskalieren zu 8B. Das spart ~3 GB VRAM permanent und reduziert die durchschnittliche Latenz von ~1.5s auf ~800ms. Die 8B-Eskalation laeuft nur bei den schwierigen ~10-20% der Faelle.</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 8. AUDIT-ERGEBNISSE                                           -->
+<!-- ============================================================ -->
+<div class="container section" id="s8">
+  <div class="section-header">
+    <div class="section-number">Kapitel 8</div>
+    <h2>Audit-Ergebnisse</h2>
+    <p>Findings aus externem Multi-KI-Audit und interner Verifizierung</p>
+  </div>
+
+  <!-- 8.1 EXTERNE FINDINGS -->
+  <h3>8.1 Externe Findings (ChatGPT / Gemini Audit)</h3>
+  <p>
+    Die Codebasis wurde durch mehrere KI-Systeme (ChatGPT, Gemini, DeepSeek) extern auditiert.
+    Anschliessend wurden alle Findings von Claude verifiziert. Ergebnis: Mehrere behauptete Bugs
+    waren falsch.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Behauptung</th><th>Status</th><th>Details</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Fehlende Retry-Logik bei Ollama</td>
+        <td><span class="badge badge-red">FALSCH</span></td>
+        <td>OllamaClient hat Polly-Pipeline mit 3 Retries und Circuit Breaker. Vollstaendig implementiert.</td>
+      </tr>
+      <tr>
+        <td>Off-by-One bei Frame-Sampling</td>
+        <td><span class="badge badge-red">NICHT GEFUNDEN</span></td>
+        <td>Kein Off-by-One-Fehler im Frame-Sampling-Code nachweisbar.</td>
+      </tr>
+      <tr>
+        <td>Deadlock bei Pause/Resume</td>
+        <td><span class="badge badge-red">NICHT GEFUNDEN</span></td>
+        <td>Pause/Resume-Mechanismus korrekt implementiert mit CancellationToken.</td>
+      </tr>
+      <tr>
+        <td>Race Condition TryConsumeBudget</td>
+        <td><span class="badge badge-red">NICHT GEFUNDEN</span></td>
+        <td>Budget-Verbrauch ist thread-safe implementiert.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="highlight-box">
+    <strong>Fazit externe Audits:</strong> Von vier behaupteten schwerwiegenden Bugs waren alle vier entweder falsch oder nicht nachweisbar. Dies unterstreicht, dass KI-Audits immer manuell verifiziert werden muessen.
+  </div>
+
+  <!-- 8.2 VERIFIZIERTE FINDINGS -->
+  <h3>8.2 Verifizierte Findings (Claude-Analyse)</h3>
+  <p>
+    Die folgende Liste enthaelt alle tatsaechlich verifizierten Findings, sortiert nach Schweregrad.
+  </p>
+
+  <h4>KRITISCH &mdash; Sofort beheben (&lt; 1 Tag)</h4>
+  <div class="finding-row" style="background: var(--red-bg);">
+    <div class="finding-id" style="color: var(--red);">N7</div>
+    <div class="finding-text">
+      <strong>SemaphoreSlim(2,2) in EnhancedVisionAnalysisService.cs:182</strong><br>
+      Erlaubt 2 gleichzeitige 32B-Inferenzen = Out-of-Memory. Loest sich mit 3B&rarr;8B-Architektur, aber bis dahin auf SemaphoreSlim(1,1) setzen.
+    </div>
+    <div class="finding-severity"><span class="badge badge-red">KRITISCH</span></div>
+  </div>
+  <div class="finding-row" style="background: var(--red-bg);">
+    <div class="finding-id" style="color: var(--red);">N2</div>
+    <div class="finding-text">
+      <strong>VsaCodeResolver.NormalizeClock() fehlt Englisch-Mapping</strong><br>
+      DINO gibt englische Positionsangaben aus (top/bottom/left/right), aber NormalizeClock erwartet deutsche Begriffe. Uhrlage-Zuordnung fehlerhaft bei DINO-Ergebnissen.
+    </div>
+    <div class="finding-severity"><span class="badge badge-red">KRITISCH</span></div>
+  </div>
+  <div class="finding-row" style="background: var(--red-bg);">
+    <div class="finding-id" style="color: var(--red);">T2</div>
+    <div class="finding-text">
+      <strong>PdfProtocolTableParser.cs:45 StufeRegex nur [1-4]</strong><br>
+      Die Regex fuer Schweregrad-Erkennung im PDF-Import akzeptiert nur Stufen 1-4. Stufe 5 (schwerstes Ausmass) wird nicht erkannt und geht verloren.
+    </div>
+    <div class="finding-severity"><span class="badge badge-red">KRITISCH</span></div>
+  </div>
+
+  <h4>HOCH &mdash; Kurzfristig beheben (1-3 Tage)</h4>
+  <div class="finding-row" style="background: var(--orange-bg);">
+    <div class="finding-id" style="color: var(--orange);">N5</div>
+    <div class="finding-text">
+      <strong>QuickScanService nutzt FrameQualityFilter nicht</strong><br>
+      Beim Quick Scan werden alle Frames an Qwen geschickt, ohne vorherige Qualitaetsfilterung. 50-70% der Qwen-Inferenzen sind auf qualitativ schlechten Frames verschwendet (unscharf, zu dunkel, Wasser).
+    </div>
+    <div class="finding-severity"><span class="badge badge-orange">HOCH</span></div>
+  </div>
+  <div class="finding-row" style="background: var(--orange-bg);">
+    <div class="finding-id" style="color: var(--orange);">N9</div>
+    <div class="finding-text">
+      <strong>QualityGateService renormalisiert bei fehlenden Signalen</strong><br>
+      Wenn nur ein Signal vorhanden ist, kann dieses allein Green erzeugen. Fix: Minimum 2 Signale fuer Green-Bewertung verlangen.
+    </div>
+    <div class="finding-severity"><span class="badge badge-orange">HOCH</span></div>
+  </div>
+  <div class="finding-row" style="background: var(--orange-bg);">
+    <div class="finding-id" style="color: var(--orange);">N3</div>
+    <div class="finding-text">
+      <strong>Meter-Toleranzen inkonsistent</strong><br>
+      Verschiedene Services verwenden unterschiedliche Toleranzen (0.5m, 1.0m, 1.5m) fuer die Meter-basierte Zuordnung. Sollte einheitlich konfiguriert werden.
+    </div>
+    <div class="finding-severity"><span class="badge badge-orange">HOCH</span></div>
+  </div>
+  <div class="finding-row" style="background: var(--orange-bg);">
+    <div class="finding-id" style="color: var(--orange);">N15</div>
+    <div class="finding-text">
+      <strong>FrameQualityFilter verwirft ohne Logging</strong><br>
+      Verworfene Frames werden nicht geloggt. Es ist nicht nachvollziehbar, wie viele und welche Frames gefiltert wurden.
+    </div>
+    <div class="finding-severity"><span class="badge badge-orange">HOCH</span></div>
+  </div>
+
+  <h4>MITTEL &mdash; Spaeter adressieren</h4>
+  <div class="finding-row" style="background: var(--yellow-bg);">
+    <div class="finding-id" style="color: var(--yellow);">N1</div>
+    <div class="finding-text">Y &lt; 0.30 verwirft Ferndetektionen still. Gewollt, aber Logging fehlt.</div>
+    <div class="finding-severity"><span class="badge badge-yellow">MITTEL</span></div>
+  </div>
+  <div class="finding-row" style="background: var(--yellow-bg);">
+    <div class="finding-id" style="color: var(--yellow);">N4</div>
+    <div class="finding-text">FindingKey-Kollision bei Mehrfach-Schaeden (Code|Clock ohne Meter).</div>
+    <div class="finding-severity"><span class="badge badge-yellow">MITTEL</span></div>
+  </div>
+  <div class="finding-row" style="background: var(--yellow-bg);">
+    <div class="finding-id" style="color: var(--yellow);">N8</div>
+    <div class="finding-text">PipeImageWidthRatio hardcoded 0.70. Ungenau bei anderen Kamera-Sichtfeldern.</div>
+    <div class="finding-severity"><span class="badge badge-yellow">MITTEL</span></div>
+  </div>
+  <div class="finding-row" style="background: var(--yellow-bg);">
+    <div class="finding-id" style="color: var(--yellow);">N10</div>
+    <div class="finding-text">Consensus braucht &ge;2 Modelle, YOLO allein bei 0.95 wird trotzdem verworfen.</div>
+    <div class="finding-severity"><span class="badge badge-yellow">MITTEL</span></div>
+  </div>
+
+  <!-- 8.3 BEWERTUNG -->
+  <h3>8.3 Gesamtbewertung</h3>
+  <div class="ampel-container">
+    <div class="ampel-card">
+      <div class="ampel-light" style="background: var(--green);">8.5</div>
+      <div class="ampel-title">Architektur</div>
+      <div class="ampel-desc">Clean Architecture, klare Schichten, gute Trennung von Concerns. Thin-AI-Prinzip konsequent umgesetzt. MVVM sauber implementiert.</div>
+    </div>
+    <div class="ampel-card">
+      <div class="ampel-light" style="background: var(--green);">7.0</div>
+      <div class="ampel-title">Robustheit</div>
+      <div class="ampel-desc">Retry-Logik vorhanden, Circuit Breaker implementiert, Auto-Save funktioniert. Einige Logging-Luecken und Toleranz-Inkonsistenzen. Solide fuer ein Solo-Projekt.</div>
+    </div>
+    <div class="ampel-card">
+      <div class="ampel-light" style="background: var(--yellow);">6.0</div>
+      <div class="ampel-title">Praezision</div>
+      <div class="ampel-desc">QualityGate-Renormalisierung, fehlende Stufe 5, DINO-Englisch-Bug reduzieren die Genauigkeit. Mit den identifizierten Fixes auf 7.5+ verbesserbar.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 9. OPTIMIERUNGS-ROADMAP                                       -->
+<!-- ============================================================ -->
+<div class="container section" id="s9">
+  <div class="section-header">
+    <div class="section-number">Kapitel 9</div>
+    <h2>Optimierungs-Roadmap</h2>
+    <p>Geplante Verbesserungen in priorisierten Phasen</p>
+  </div>
+
+  <h3>Sofort umsetzen</h3>
+  <div class="two-col">
+    <div class="card card-green">
+      <h4>SAM 2.1 Box-Batching</h4>
+      <p>Sequentielle Box-Verarbeitung durch gebatchten Forward Pass ersetzen. Ca. 10 Zeilen Code-Aenderung, sofort messbare Verbesserung der SAM-Durchsatzrate.</p>
+      <p><span class="badge badge-green">~10 Zeilen Code</span></p>
+    </div>
+    <div class="card card-green">
+      <h4>Eager Ollama Pre-Load</h4>
+      <p>Qwen beim App-Start laden statt lazy beim ersten Bedarf. Spart 30-60 Sekunden bei der ersten Analyse. Nahezu gratis in der Implementierung.</p>
+      <p><span class="badge badge-green">30-60s gespart</span></p>
+    </div>
+  </div>
+
+  <h3>Phasenplan</h3>
+  <div class="phase-list">
+    <div class="phase-item">
+      <div class="phase-num">1</div>
+      <div>
+        <h4>Qwen 3B Benchmark</h4>
+        <p>
+          50-100 Frames mit gleichem Prompt und Few-Shots testen. Messen: VSA-Code-Treffer, JSON-Stabilitaet,
+          Green/Yellow/Red Verteilung. Go/No-Go: Yellow-Rate darf max. 15% steigen gegenueber 8B.
+          Kandidaten: qwen2.5-vl:3b, Phi-4-Vision. <strong>Achtung:</strong> KV-Cache bei Vision-Modellen
+          groesser als bei Text-LLMs (~2-3 GB/Slot statt 1-1.5 GB) wegen visueller Tokens.
+        </p>
+      </div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-num">2</div>
+      <div>
+        <h4>Producer-Consumer mit 1 Qwen-Slot</h4>
+        <p>
+          Vision-Pipeline laeuft vor, Qwen konsumiert aus Queue. Kein Risiko, da rein sequentieller Qwen-Betrieb,
+          aber entkoppelt von der Vision-Wartezeit. Erwarteter Durchsatz: ~1.5-2x gegenueber aktuellem Stand.
+        </p>
+      </div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-num">3</div>
+      <div>
+        <h4>2 parallele Qwen-Slots (OLLAMA_NUM_PARALLEL=2)</h4>
+        <p>
+          GPU-Monitoring mit nvidia-smi waehrend Batch. Messen: p50/p95 Latenz, VRAM-Spitzen,
+          Einfluss auf YOLO/DINO/SAM. <strong>Warnung:</strong> GPU-Contention (Speicherbandbreite)
+          kann Vision-Pipeline verlangsamen. Realistisch: ~2-2.5x Durchsatz (nicht 3x oder 5x).
+        </p>
+      </div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-num">4</div>
+      <div>
+        <h4>8B permanent dazuladen (0-Sekunden-Eskalation)</h4>
+        <p>
+          Nur wenn Phase 1-3 sauber: 3B&times;2 + 8B permanent laden = ~24-27 GB VRAM.
+          Eskalation in 0 Sekunden statt 30-60 Sekunden Modell-Swap. Neue Kaskade: 3B &rarr; 8B
+          (statt 8B &rarr; 32B).
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <h3>Langfristig geplant</h3>
+  <div class="two-col">
+    <div class="card card-accent">
+      <h4>NV-CLIP als paralleler Bild-Retrieval</h4>
+      <p>Hybrid-Ansatz: nomic fuer Text-zu-Text, NV-CLIP fuer Bild-zu-Bild Similarity. Verbessert Few-Shot-Retrieval durch visuellen Vergleich statt nur Textvergleich.</p>
+    </div>
+    <div class="card card-accent">
+      <h4>Knowledge Distillation 32B &rarr; 3B</h4>
+      <p>Trainieren eines spezialisierten 3B-Modells mit Wissen aus dem 32B-Modell. Braucht tausende verifizierte Green-Samples in der Knowledge Base als Trainingsdaten.</p>
+    </div>
+  </div>
+
+  <h3>Durchsatz-Erwartungen (korrigiert)</h3>
+  <div class="card card-yellow">
+    <p><strong>Urspruengliche Schaetzung (Claude):</strong> ~5x Durchsatz &mdash; <strong>zu optimistisch</strong></p>
+    <p><strong>ChatGPT-Korrektur:</strong> GPU-Contention, KV-Cache groesser als angenommen, 3B-Qualitaet unklar.</p>
+    <p><strong>Realistische Erwartung:</strong> <strong>2-3x Durchsatz</strong> nach Phase 3, mit 0s Eskalation als Bonus in Phase 4.</p>
+  </div>
+
+  <h3>Was NICHT gemacht wird</h3>
+  <ul class="strike-list">
+    <li>ByteTrack/OC-SORT &mdash; IoU-Tracking bei 1.5-3s Frame-Intervall nutzlos. Temporal Voting ist besser.</li>
+    <li>NVDEC &rarr; GPU-Tensor &mdash; Bei 720p/PAL alle 1.5-3s irrelevant. Kein 4K, kein 60fps.</li>
+    <li>Intel NPU fuer Pre-Screening &mdash; Pre-Screening kostet &lt;1ms auf CPU. NPU-Overhead &gt; Gewinn.</li>
+    <li>Sparsity 2:4 &mdash; Braucht sparsifizierte Weights. Aufwand &gt;&gt; Gewinn bei YOLO im ms-Bereich.</li>
+    <li>FP4 fuer YOLO/DINO &mdash; Nur fuer Qwen (LLM). BBox-Regression braucht FP16-Praezision.</li>
+  </ul>
+</div>
+
+<!-- ============================================================ -->
+<!-- 10. STATISTIKEN                                               -->
+<!-- ============================================================ -->
+<div class="container section" id="s10">
+  <div class="section-header">
+    <div class="section-number">Kapitel 10</div>
+    <h2>Projekt-Statistiken</h2>
+    <p>SewerStudio KI 4.1 in Zahlen</p>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="number">32</div>
+      <div class="label">Fenster &amp; Dialoge</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">33+</div>
+      <div class="label">ViewModels</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">140+</div>
+      <div class="label">KI-Module &amp; Services</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">13</div>
+      <div class="label">CLI-Tools</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">5</div>
+      <div class="label">Import-Formate</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">4</div>
+      <div class="label">KI-Modelle gleichzeitig</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">~3000</div>
+      <div class="label">Inspektionsvideos</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">27</div>
+      <div class="label">VSA-Schadenskategorien</div>
+    </div>
+  </div>
+
+  <h3>Codebase-Metriken</h3>
+  <table>
+    <thead>
+      <tr><th>Metrik</th><th>Wert</th><th>Anmerkung</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>C#-Quelldateien</td><td>791</td><td>Ohne Tests und CLI-Tools</td></tr>
+      <tr><td>C#-Codezeilen (gesamt)</td><td>~142.700</td><td>Inkl. Leerzeilen und Kommentare</td></tr>
+      <tr><td>Python-Codezeilen (Sidecar)</td><td>~3.300</td><td>FastAPI, YOLO, DINO, SAM</td></tr>
+      <tr><td>XAML-Dateien (UI)</td><td>32+</td><td>WPF Views und Themes</td></tr>
+      <tr><td>ViewModels</td><td>33</td><td>MVVM-Pattern mit CommunityToolkit.Mvvm</td></tr>
+      <tr><td>Services (Application-Schicht)</td><td>15+</td><td>Interfaces und DTOs</td></tr>
+      <tr><td>Services (Infrastructure-Schicht)</td><td>30+</td><td>Import, Export, KI, Kosten</td></tr>
+      <tr><td>KI-Services (UI-Schicht)</td><td>40+</td><td>Pipeline, Training, Monitoring</td></tr>
+      <tr><td>CLI-Tools</td><td>13</td><td>Eigenstaendige Console-Apps</td></tr>
+      <tr><td>Unit-Test-Projekte</td><td>2</td><td>Infrastructure.Tests, Pipeline.Tests</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Technologie-Stack</h3>
+  <table>
+    <thead>
+      <tr><th>Kategorie</th><th>Technologie</th><th>Version / Details</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Framework</td><td>.NET 8+</td><td>LTS, WPF Desktop</td></tr>
+      <tr><td>UI-Framework</td><td>WPF (Windows Presentation Foundation)</td><td>MVVM mit CommunityToolkit.Mvvm</td></tr>
+      <tr><td>Datenbank</td><td>SQLite</td><td>Knowledge Base, Projektdaten</td></tr>
+      <tr><td>Video</td><td>LibVLC / LibVLCSharp</td><td>Plattformunabhaengiger Video-Player</td></tr>
+      <tr><td>PDF-Generierung</td><td>QuestPDF</td><td>Programmatische PDF-Erstellung</td></tr>
+      <tr><td>Excel-Export</td><td>ClosedXML / EPPlus</td><td>XLSX-Generierung</td></tr>
+      <tr><td>KI-Inference</td><td>Ollama</td><td>Lokale LLM-Inference (Qwen, nomic)</td></tr>
+      <tr><td>Vision-Inference</td><td>Python FastAPI Sidecar</td><td>YOLO, DINO, SAM auf Port 8100</td></tr>
+      <tr><td>GPU-Optimierung</td><td>TensorRT FP16</td><td>YOLO-Beschleunigung</td></tr>
+      <tr><td>Resilience</td><td>Polly</td><td>Retry-Policies, Circuit Breaker</td></tr>
+      <tr><td>HTTP</td><td>HttpClient + Polly Pipeline</td><td>Kommunikation mit Ollama &amp; Sidecar</td></tr>
+      <tr><td>Build</td><td>MSBuild / dotnet CLI</td><td>dotnet build AuswertungPro.sln</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Architektur-Projekte</h3>
+  <table>
+    <thead>
+      <tr><th>Projekt</th><th>Schicht</th><th>Beschreibung</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>AuswertungPro.Next.Domain</code></td><td>Domain</td><td>Entitaeten, Value Objects, Geschaeftsregeln</td></tr>
+      <tr><td><code>AuswertungPro.Next.Application</code></td><td>Application</td><td>Use Cases, Interfaces, Service-Vertraege</td></tr>
+      <tr><td><code>AuswertungPro.Next.Infrastructure</code></td><td>Infrastructure</td><td>Importer, Exporter, DB, externe Integration</td></tr>
+      <tr><td><code>AuswertungPro.Next.UI</code></td><td>Praesentation</td><td>WPF Views, ViewModels, Themes, KI-Services</td></tr>
+      <tr><td><code>AuswertungPro.Wpf</code></td><td>Legacy</td><td>Aeltere WPF-Komponenten (Migration)</td></tr>
+      <tr><td><code>*.Tests</code></td><td>Test</td><td>Unit Tests fuer Infrastructure und Pipeline</td></tr>
+    </tbody>
+  </table>
+
+  <div class="highlight-box">
+    <strong>Bemerkenswert:</strong> Dieses Projekt &mdash; mit seinen ~142.700 Zeilen C#, 32 Fenstern, 140+ KI-Modulen
+    und einer Multi-Modell-Pipeline &mdash; wurde von einem einzelnen Entwickler ohne formale Programmierausbildung
+    in ca. 4 Monaten erstellt. Es demonstriert, was mit modernen KI-Assistenten als Entwicklungswerkzeug moeglich ist.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- FOOTER                                                        -->
+<!-- ============================================================ -->
+<div class="container footer">
+  <p>SewerStudio KI 4.1 &mdash; System-Audit &mdash; Pascal Aschwanden &mdash; 12. April 2026</p>
+  <p>Erstellt mit KI-Unterstuetzung (Claude Opus 4.6). Alle technischen Angaben basieren auf Quellcode-Analyse.</p>
+</div>
+
+</body>
+</html>

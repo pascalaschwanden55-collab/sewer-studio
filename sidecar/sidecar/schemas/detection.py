@@ -26,6 +26,10 @@ class YoloResponse(BaseModel):
     detections: list[YoloDetection] = []
     frame_class: str = "unknown"
     inference_time_ms: float = 0.0
+    # True wenn YOLO ohne Custom-Weights laeuft -> is_relevant=True ist nicht
+    # auf Detection-Basis sondern auf Fallback-Modus zurueckzufuehren.
+    # Konsumenten (QualityGate, Telemetrie) sollten diesen Frame entsprechend gewichten.
+    is_fallback_mode: bool = False
 
 
 # ── Grounding DINO ──────────────────────────────────────────────────────────

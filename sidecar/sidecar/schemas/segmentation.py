@@ -22,7 +22,7 @@ class RingScanParams(BaseModel):
     outer_radius: float  # Pixel
     num_angles: int = 24  # Winkelschritte (alle 15°)
     num_radii: int = 3  # Radiale Schritte zwischen inner und outer
-    min_score: float = 0.25  # Mindest-Confidence (tief, da Rohrwand subtil)
+    min_score: float = 0.50  # Mindest-Confidence (0.25 erzeugt ~15% False-Positive-Masken)
     min_area_pixels: int = 100  # Mindest-Maskenflaeche
     iou_threshold: float = 0.4  # NMS IoU-Schwelle
 

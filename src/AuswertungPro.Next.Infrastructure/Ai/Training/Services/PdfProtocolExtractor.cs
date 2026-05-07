@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.CodeCatalog;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 
-namespace AuswertungPro.Next.UI.Ai.Training.Services;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
 /// <summary>
 /// Extrahiert <see cref="GroundTruthEntry"/>-Einträge aus einem Kanalinspektion-PDF.
@@ -219,12 +219,13 @@ public sealed class PdfProtocolExtractor
 
             // V4.3: OCR-Fallback BEVOR wir aufgeben. Bei Scan-PDFs liefern weder
             // pdftotext noch PdfPig Text. Windows OCR kann sie trotzdem lesen.
+            // Phase 5.3 Sub-A: via Provider-Pattern entkoppelt (war Windows.Media.Ocr).
             if (string.IsNullOrWhiteSpace(text)
-                && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041))
+                && AuswertungPro.Next.Application.Imaging.OcrPdfFallbackProvider.HasFallback)
             {
                 try
                 {
-                    text = OcrPdfFallbackService
+                    text = AuswertungPro.Next.Application.Imaging.OcrPdfFallbackProvider
                         .ExtractTextAsync(path, maxPages: 5)
                         .GetAwaiter().GetResult();
                 }
@@ -268,14 +269,12 @@ public sealed class PdfProtocolExtractor
             var entries = ParseEntriesFromText(text);
 
             // V4.3: OCR-Fallback wenn weder pdftotext noch PdfPig brauchbare Eintraege liefern.
-            // Typische Faelle: gescannte PDFs (kein Text-Layer) + IKAS-Caesar-PDFs bei denen
-            // der Byte-Shift die Meter-Zahlen zerstoert. OCR haengt ~3-5s pro PDF, aber nur
-            // wenn regulaerer Weg nichts liefert.
-            if (entries.Count == 0 && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041))
+            // Phase 5.3 Sub-A: via Provider-Pattern entkoppelt.
+            if (entries.Count == 0 && AuswertungPro.Next.Application.Imaging.OcrPdfFallbackProvider.HasFallback)
             {
                 try
                 {
-                    var ocrText = OcrPdfFallbackService
+                    var ocrText = AuswertungPro.Next.Application.Imaging.OcrPdfFallbackProvider
                         .ExtractTextAsync(path, maxPages: 5)
                         .GetAwaiter().GetResult();
                     if (!string.IsNullOrWhiteSpace(ocrText))
@@ -1294,29 +1293,13 @@ public sealed class PdfProtocolExtractor
     {
         try
         {
-            using var ms = new MemoryStream(imageBytes);
-            var bi = new System.Windows.Media.Imaging.BitmapImage();
-            bi.BeginInit();
-            bi.StreamSource = ms;
-            bi.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-            bi.DecodePixelWidth = 100; // Klein laden fuer Speed
-            bi.EndInit();
-            bi.Freeze();
+            // Phase 5.3 Sub-A: Bitmap-Decode via Application-Adapter (WPF entkoppelt).
+            // DecodePixelWidth=100 fuer Speed: kleine Auflösung reicht zur Farbzaehlung.
+            var decoded = AuswertungPro.Next.Application.Imaging.ImagePixelDecoderProvider
+                .TryDecode(imageBytes, maxWidth: 100);
+            if (decoded is null) return false; // Decode fehlgeschlagen → durchlassen
 
-            // Pixelformat auf Bgra32 normalisieren — BitmapImage kann je nach PNG
-            // verschiedene Formate liefern (Bgr24, Bgra32, Gray8 etc.).
-            // Ohne Konvertierung stimmt der Stride nicht und der Farbzaehler liest Muell.
-            System.Windows.Media.Imaging.BitmapSource src = bi;
-            if (bi.Format != System.Windows.Media.PixelFormats.Bgra32)
-            {
-                src = new System.Windows.Media.Imaging.FormatConvertedBitmap(
-                    bi, System.Windows.Media.PixelFormats.Bgra32, null, 0);
-                ((System.Windows.Media.Imaging.FormatConvertedBitmap)src).Freeze();
-            }
-
-            int stride = src.PixelWidth * 4;
-            byte[] pixels = new byte[stride * src.PixelHeight];
-            src.CopyPixels(pixels, stride, 0);
+            var pixels = decoded.Bgra32Pixels;
 
             // Eindeutige Farben zaehlen (auf 5-Bit quantisiert fuer Robustheit)
             var colors = new HashSet<int>();

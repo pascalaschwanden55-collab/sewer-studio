@@ -21,7 +21,7 @@ using AuswertungPro.Next.Application.Ai.SelfImproving;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
-using AuswertungPro.Next.UI.Ai.Training.Services;
+using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 

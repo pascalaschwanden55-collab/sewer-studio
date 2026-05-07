@@ -696,7 +696,7 @@ public partial class TrainingCenterWindow : Window
         var ibakImport = App.Resolve<AuswertungPro.Next.Application.Import.IIbakImportService>();
 
         // pdftotext-Pfad aus den App-Einstellungen setzen
-        Ai.Training.Services.PdfProtocolTableParser.PdfToTextExePath = diagnostics.ExplicitPdfToTextPath;
+        AuswertungPro.Next.Infrastructure.Ai.Training.Services.PdfProtocolTableParser.PdfToTextExePath = diagnostics.ExplicitPdfToTextPath;
 
         var cfg = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
         if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Video-Blindtest"); return; }
@@ -844,7 +844,7 @@ public partial class TrainingCenterWindow : Window
         var pipelineCfg = App.Resolve<AuswertungPro.Next.Application.Ai.PipelineConfig>();
 
         // pdftotext-Pfad aus den App-Einstellungen setzen
-        Ai.Training.Services.PdfProtocolTableParser.PdfToTextExePath = diagnostics.ExplicitPdfToTextPath;
+        AuswertungPro.Next.Infrastructure.Ai.Training.Services.PdfProtocolTableParser.PdfToTextExePath = diagnostics.ExplicitPdfToTextPath;
 
         var cfg = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
         if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Batch-Nachtbetrieb"); return; }

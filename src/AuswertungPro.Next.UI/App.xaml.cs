@@ -113,6 +113,14 @@ namespace AuswertungPro.Next.UI
                 AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.SetLoader(
                     () => Ai.AiPlatformConfig.Load().ToRuntimeConfig());
 
+                // Phase 5.3 Sub-A: WPF-Imaging-Adapter registrieren. Application-
+                // Services rufen ImagePixelDecoderProvider.Decode auf, ohne WPF
+                // direkt zu kennen.
+                AuswertungPro.Next.Application.Imaging.ImagePixelDecoderProvider.SetDecoder(
+                    new AuswertungPro.Next.UI.Imaging.WpfImagePixelDecoder());
+                AuswertungPro.Next.Application.Imaging.OcrPdfFallbackProvider.SetFallback(
+                    new AuswertungPro.Next.UI.Imaging.WindowsOcrPdfFallback());
+
                 // Phase 5.1.B Etappe 4 Sub-E: Nur noch DI-Container — Legacy-ServiceProvider entfernt.
                 var diCollection = new ServiceCollection();
                 diCollection.AddSewerStudioInfrastructure(settings, diagnostics, logger, loggerFactory);

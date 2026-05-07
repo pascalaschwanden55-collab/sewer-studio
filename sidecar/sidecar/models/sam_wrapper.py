@@ -66,6 +66,16 @@ def _load_sam2_on(device: str):
     model_cfg = settings.sam_model_type
 
     sam = build_sam2(model_cfg, ckpt_path=checkpoint, device=device)
+
+    # Blackwell-Optimierung: torch.compile
+    try:
+        import torch
+        if device.startswith("cuda"):
+            sam = torch.compile(sam, mode="reduce-overhead")
+            logger.info("SAM 2: torch.compile aktiviert")
+    except Exception as exc:
+        logger.warning("SAM 2: torch.compile fehlgeschlagen (kein Problem): %s", exc)
+
     predictor = SAM2ImagePredictor(sam)
     return sam, predictor
 

@@ -54,11 +54,13 @@ class SidecarSettings(BaseSettings):
     # Precision: "fp16" (Standard) oder "fp4" (NVFP4, RTX 50xx)
     yolo_precision: str = "fp16"
 
-    # Florence-2 (ersetzt Grounding DINO)
+    # Grounding DINO ist Primary, Florence-2 laeuft als Shadow/Lernmodus mit
+    # (siehe sidecar/models/dino_wrapper.py docstring fuer Architektur).
+    # Diese Konfig steuert die Florence-2-Shadow-Schicht.
     florence2_model_path: str = "models/florence-2"
     florence2_confidence: float = 0.25
-    dino_box_threshold: float = 0.25   # Wird intern als florence2_confidence interpretiert
-    dino_text_threshold: float = 0.20  # Wird ignoriert (Florence-2 braucht das nicht)
+    dino_box_threshold: float = 0.25   # Grounding DINO box threshold (primary)
+    dino_text_threshold: float = 0.20  # Grounding DINO text threshold (primary)
     dino_labels: str = (
         "crack . fracture . break . deformation . "
         "corrosion . surface damage . erosion . "

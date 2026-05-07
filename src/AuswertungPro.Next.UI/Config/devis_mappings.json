@@ -120,8 +120,16 @@
           "einzelposition": 1,
           "bezeichnung": "Schlauchlining UV-Haertung",
           "einheit": "m1",
-          "referenzpreis": 120,
-          "mengenFormel": "Haltungslaenge"
+          "referenzpreis": 97.8,
+          "mengenFormel": "Haltungslaenge",
+          "submissionPos": "600",
+          "marktpreis": {
+            "min": 97.8,
+            "median": 97.8,
+            "max": 97.8,
+            "anzahl": 1,
+            "quelle": "Submission Bürglen 2026 (n=3 Anbieter)"
+          }
         }
       ],
       "prioritaet": 80
@@ -141,8 +149,16 @@
           "einzelposition": 1,
           "bezeichnung": "Kurzliner-Reparatur",
           "einheit": "St",
-          "referenzpreis": 800,
-          "mengenFormel": "1"
+          "referenzpreis": 838.61,
+          "mengenFormel": "1",
+          "submissionPos": "500",
+          "marktpreis": {
+            "min": 797.22,
+            "median": 838.61,
+            "max": 880.0,
+            "anzahl": 2,
+            "quelle": "Submission Bürglen 2026 (n=3 Anbieter)"
+          }
         }
       ],
       "prioritaet": 90
@@ -170,8 +186,16 @@
           "einzelposition": 1,
           "bezeichnung": "Kontrollschacht D 800/600, bis 1.00m Hoehe",
           "einheit": "St",
-          "referenzpreis": 2000,
-          "mengenFormel": "1"
+          "referenzpreis": 11.0,
+          "mengenFormel": "1",
+          "submissionPos": "700",
+          "marktpreis": {
+            "min": 11.0,
+            "median": 11.0,
+            "max": 11.0,
+            "anzahl": 1,
+            "quelle": "Submission Bürglen 2026 (n=3 Anbieter)"
+          }
         }
       ],
       "rohrleitungsbauPositionen": [],
@@ -192,8 +216,16 @@
           "einzelposition": 1,
           "bezeichnung": "Robotersanierung Wurzelschnitt",
           "einheit": "St",
-          "referenzpreis": 500,
-          "mengenFormel": "1"
+          "referenzpreis": 1.0,
+          "mengenFormel": "1",
+          "submissionPos": "500",
+          "marktpreis": {
+            "min": 1.0,
+            "median": 1.0,
+            "max": 1.0,
+            "anzahl": 1,
+            "quelle": "Submission Bürglen 2026 (n=3 Anbieter)"
+          }
         }
       ],
       "prioritaet": 85
@@ -244,8 +276,16 @@
           "einzelposition": 2,
           "bezeichnung": "Schlauchlining bei Korrosion",
           "einheit": "m1",
-          "referenzpreis": 130,
-          "mengenFormel": "Haltungslaenge"
+          "referenzpreis": 97.8,
+          "mengenFormel": "Haltungslaenge",
+          "submissionPos": "600",
+          "marktpreis": {
+            "min": 97.8,
+            "median": 97.8,
+            "max": 97.8,
+            "anzahl": 1,
+            "quelle": "Submission Bürglen 2026 (n=3 Anbieter)"
+          }
         }
       ],
       "prioritaet": 85
@@ -306,11 +346,25 @@
           "einzelposition": 0,
           "bezeichnung": "Anschluss DN 150 erneuern",
           "einheit": "St",
-          "referenzpreis": 350,
-          "mengenFormel": "1"
+          "referenzpreis": 11.0,
+          "mengenFormel": "1",
+          "submissionPos": "600",
+          "marktpreis": {
+            "min": 11.0,
+            "median": 11.0,
+            "max": 11.0,
+            "anzahl": 1,
+            "quelle": "Submission Bürglen 2026 (n=3 Anbieter)"
+          }
         }
       ],
       "prioritaet": 85
     }
-  ]
+  ],
+  "_meta": {
+    "marktpreis_quelle": "Submission Bürglen 2026 - Abwasser Uri",
+    "stand": "2026-04-28",
+    "anzahl_marktpreise": 3,
+    "hinweis": "Referenzpreise basieren auf Median der 3 Anbieter (Fretz, GKS, iTS)."
+  }
 }

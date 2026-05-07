@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 using AuswertungPro.Next.UI.Ai.Training.Services;
 using AuswertungPro.Next.Application.Ai.Training.Services;
 using AuswertungPro.Next.Infrastructure.Ai.Training;

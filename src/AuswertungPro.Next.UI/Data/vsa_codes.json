@@ -5347,7 +5347,7 @@
     },
     {
       "code": "BDB",
-      "title": "Kamera nicht einsetzbar",
+      "title": "Allgemeine Anmerkung",
       "group": "BD (weitere Leitung)",
       "description": "Varianten: <kein Text> [BC Codes zur baulichen Bestandsaufnahme / BDB Allgemeine Anmerkung]; A       Beginn TV-Untersuch (Vorgabe) [BC Codes zur baulichen Bestandsaufnahme / AEF Ã„nderung der BaulÃ¤nge eines Rohrs]; B       Inspektion erst nach Reinigung mÃ¶glich [BC Codes zur baulichen Bestandsaufnahme / AEF Ã„nderung der BaulÃ¤nge eines Rohrs]; C       Inspektion erfolgt zu einem spÃ¤teren Zeitpunkt - 25 - [BC Codes zur baulichen Bestandsaufnahme / AEF Ã„nderung der BaulÃ¤nge eines Rohrs]",
       "parameters": [],

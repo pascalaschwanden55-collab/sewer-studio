@@ -16,7 +16,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.CodeCatalog;
 using Microsoft.Extensions.Logging;
 
-namespace AuswertungPro.Next.UI.Ai.Training.Services;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
 /// <summary>
 /// Parst die Beobachtungstabelle aus Inspektions-PDFs.
@@ -224,12 +224,13 @@ public static class PdfProtocolTableParser
 
         // V4.3: Wenn pdftotext gar nichts liefert (ERR oder leer), OCR probieren
         // bevor wir aufgeben. Scan-PDFs haben keinen Text-Layer.
+        // Phase 5.3 Sub-A: via Provider-Pattern entkoppelt.
         if (string.IsNullOrWhiteSpace(text)
-            && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041))
+            && AuswertungPro.Next.Application.Imaging.OcrPdfFallbackProvider.HasFallback)
         {
             try
             {
-                text = OcrPdfFallbackService
+                text = AuswertungPro.Next.Application.Imaging.OcrPdfFallbackProvider
                     .ExtractTextAsync(pdfPath, maxPages: 5)
                     .GetAwaiter().GetResult();
                 textFromOcr = !string.IsNullOrWhiteSpace(text);
@@ -247,13 +248,13 @@ public static class PdfProtocolTableParser
         // einmal OCR probieren. OCR rendert die Seite und liest ALLE sichtbaren Zeichen.
         if (result.Entries.Count == 0
             && !textFromOcr
-            && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041))
+            && AuswertungPro.Next.Application.Imaging.OcrPdfFallbackProvider.HasFallback)
         {
             DebugLog($"[OCR] Starte OCR-Fallback fuer {Path.GetFileName(pdfPath)}");
             try
             {
                 var ocrSw = Stopwatch.StartNew();
-                var ocrText = OcrPdfFallbackService
+                var ocrText = AuswertungPro.Next.Application.Imaging.OcrPdfFallbackProvider
                     .ExtractTextAsync(pdfPath, maxPages: 5)
                     .GetAwaiter().GetResult();
                 ocrSw.Stop();

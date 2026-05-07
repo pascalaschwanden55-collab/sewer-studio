@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "last_updated": "2026-04-28T00:00:00",
+  "rules": [
+    {
+      "id": "gfk_no_bend",
+      "name": "GFK-Liner nicht bei Bogen",
+      "enabled": true,
+      "conditions": {
+        "bend_degrees_min": 15
+      },
+      "exclude_procedure_ids": ["cipp_inliner", "close_fit_lining"],
+      "reason": "GFK-Liner (iMPREG GL16, Alphaliner, Brandenburger) ist nicht bogengaengig (max ~15 Grad). Bei Bogen Brawoliner-Familie (Textil, bis 90 Grad) oder Nadelfilz verwenden.",
+      "created_by": "Default",
+      "created_at": "2026-04-28T00:00:00",
+      "note": "Vordefinierte Standardregel - kann deaktiviert oder geloescht werden."
+    },
+    {
+      "id": "az_no_bursting",
+      "name": "Asbestzement: kein Bersten",
+      "enabled": true,
+      "conditions": {
+        "material_contains": "asbest"
+      },
+      "exclude_procedure_ids": ["berstlining", "robotic_milling", "robotic_repair"],
+      "reason": "Asbestzement-Material verbietet alle Verfahren mit Faseraufbruch (SUVA Bauarbeiterschutzverordnung, GSchG). Erlaubt: Liner ohne Aufbruch, Manschetten, Injektion.",
+      "created_by": "Default",
+      "created_at": "2026-04-28T00:00:00"
+    },
+    {
+      "id": "einsturz_no_liner",
+      "name": "Einsturz/Bruch: keine Liner-Verfahren",
+      "enabled": true,
+      "conditions": {
+        "vsa_code_starts_with": "BAC"
+      },
+      "exclude_procedure_ids": ["cipp_inliner", "close_fit_lining", "short_liner", "injection_grouting"],
+      "reason": "Einsturzgefahr (BAC): Liner kann keine Tragstruktur ersetzen. Nur Erneuerung (Berstlining oder offene Bauweise) zulaessig.",
+      "created_by": "Default",
+      "created_at": "2026-04-28T00:00:00"
+    }
+  ]
+}

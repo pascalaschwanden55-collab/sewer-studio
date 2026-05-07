@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 using AuswertungPro.Next.UI.Ai.Training.Services;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.Training.Models;
