@@ -79,7 +79,7 @@ Dadurch sind Application/Infrastructure-Services entkoppelt, ohne dass die UI-Im
 ### 1.7 Verbesserungen
 
 1. **WPF-Imaging-Adapter (Sub-A):** `IBitmapAnalyzer` in Application + `WpfBitmapAnalyzer` in UI. Entsperrt 6 Bitmap-bound Services. Aufwand: 1-2 Sessions.
-2. **TrainingCase POCO/Wrapper-Split (Sub-B):** POCO `TrainingCase` in Application, `TrainingCaseViewModel` in UI. Entsperrt TrainingCenterStore + ImportService + TrainingSampleGenerator + SelfTrainingOrchestrator. Aufwand: 1 Session.
+2. **TrainingCase POCO/Wrapper-Split (Sub-B):** ✅ **abgearbeitet** 2026-05-07. POCO `TrainingCase` in Application, `TrainingCaseViewModel` in UI. TrainingCenterStore → Application, TrainingCenterImportService → Infrastructure. JSON-Roundtrip-Tests (Legacy + neu) gruen. TrainingSampleGenerator + SelfTrainingOrchestrator bleiben in UI bis WPF-Imaging-Adapter (Sub-A) den PdfProtocolExtractor entkoppelt.
 3. **PlayerWindow zerschlagen:** Stufenweise via `partial class` (PlayerWindow.Vlc.cs, .Ai.cs, .Measure.cs, .Protocol.cs, .Hotkeys.cs). Risiko niedrig wenn auf partials umgestellt.
 4. **Interfaces für Kern-Services (ARCH-H3):** `IMultiModelAnalysisService`, `IQualityGateService`, `IDetectionAggregator`. TDD wird möglich.
 5. **Code-Konvertierung Domain-Models (ARCH-H1):** ObservableObject-Wrapper im UI, POCO-Records in Domain. Aufwand: 2-3 Sessions.
@@ -454,7 +454,7 @@ Nur **6 TODO/FIXME** im gesamten Code:
 1. **PlayerWindow.xaml.cs zerschlagen** (CRITICAL ARCH-C3) — 2-3 Sessions
 2. **Command-Injection-Fixes** (SEC-H1-H3) — 2 h
 3. **JSONL-Lock + HttpClient-Singleton + Graceful-Shutdown** (STAB-H1-H4) — 3 h
-4. **TrainingCase POCO/Wrapper-Split** — entsperrt 4 weitere Migrationen — 1 Session
+4. **TrainingCase POCO/Wrapper-Split** — ✅ **abgearbeitet** 2026-05-07 (2 Files migriert: Store + ImportService; 2 Files (Generator + SelfTraining) verbleiben bis WPF-Imaging-Adapter-Task)
 5. **WPF-Imaging-Adapter** — entsperrt 6 weitere Migrationen — 1-2 Sessions
 6. **Active-Learning aktivieren** — Yellow/Red-Anteil von 89 % auf 70 % bringen — laufender Prozess
 7. **frames/-Cleanup-Job** — spart 30-40 GB pro Nacht — 1 Session
