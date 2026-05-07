@@ -296,6 +296,11 @@ public sealed class PythonSidecarService : IDisposable
         TryStopOwnedProcess();
     }
 
+    /// <summary>
+    /// Audit STAB-H4 (2026-04-23): Vor dem Hard-Kill /shutdown POSTen damit
+    /// uvicorn die FastAPI-Lifespan-Cleanup (GPU-Modelle entladen, etc.)
+    /// sauber durchlaufen kann. Nach 3 s ohne Exit wird trotzdem gekillt.
+    /// </summary>
     private void TryStopOwnedProcess()
     {
         var process = _process;
@@ -309,9 +314,35 @@ public sealed class PythonSidecarService : IDisposable
         {
             if (_ownsProcess && !process.HasExited)
             {
-                _log.LogInformation("[Sidecar] Beende eigenen Prozess (PID={Pid})...", process.Id);
-                process.Kill(entireProcessTree: true);
-                process.WaitForExit(5000);
+                _log.LogInformation(
+                    "[Sidecar] Beende eigenen Prozess (PID={Pid}) — versuche Graceful-Shutdown via /shutdown...",
+                    process.Id);
+
+                if (TryRequestGracefulShutdown(out var responded))
+                {
+                    // 3 s warten — uvicorn-Shutdown-Handler braucht ~1-2 s fuer
+                    // GPU-Unload + Async-Tasks-Drain. Reicht der Sidecar nicht aus,
+                    // greift Kill darunter.
+                    if (process.WaitForExit(3000))
+                    {
+                        _log.LogInformation(
+                            "[Sidecar] Graceful-Shutdown erfolgreich (HTTP responded={Responded}, ExitCode={Exit})",
+                            responded, process.ExitCode);
+                    }
+                    else
+                    {
+                        _log.LogWarning(
+                            "[Sidecar] /shutdown beantwortet aber Prozess noch aktiv nach 3s — fallback Hard-Kill");
+                        process.Kill(entireProcessTree: true);
+                        process.WaitForExit(5000);
+                    }
+                }
+                else
+                {
+                    _log.LogWarning("[Sidecar] /shutdown nicht erreichbar — Hard-Kill");
+                    process.Kill(entireProcessTree: true);
+                    process.WaitForExit(5000);
+                }
             }
         }
         catch (Exception ex)
@@ -325,6 +356,33 @@ public sealed class PythonSidecarService : IDisposable
             if (ReferenceEquals(_process, process))
                 _process = null;
             IsAvailable = false;
+        }
+    }
+
+    /// <summary>
+    /// POSTet /shutdown am Sidecar (mit X-Sidecar-Token wenn aktiv).
+    /// Synchron und kurzer Timeout: dieser Pfad laeuft bei App-Exit, da darf
+    /// keine I/O ewig haengen. Returns true wenn HTTP-Antwort kam.
+    /// </summary>
+    private bool TryRequestGracefulShutdown(out bool responded)
+    {
+        responded = false;
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+            using var req = new HttpRequestMessage(HttpMethod.Post,
+                $"http://{_host}:{_port}/shutdown");
+            if (!AuthDisabled && !string.IsNullOrEmpty(AuthToken))
+                req.Headers.Add("X-Sidecar-Token", AuthToken);
+
+            var resp = http.Send(req);
+            responded = resp.IsSuccessStatusCode;
+            return true;
+        }
+        catch
+        {
+            // Sidecar antwortet nicht — Caller faellt auf Kill zurueck.
+            return false;
         }
     }
 }
