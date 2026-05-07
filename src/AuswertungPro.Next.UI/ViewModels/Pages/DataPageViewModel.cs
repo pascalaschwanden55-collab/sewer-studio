@@ -1436,9 +1436,28 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         try
         {
-            var full = Path.IsPathRooted(path)
-                ? path
-                : Path.GetFullPath(Path.Combine(projectDir, path));
+            string full;
+            if (Path.IsPathRooted(path))
+            {
+                // Absolut: User hat explizit einen externen Pfad gewählt (z.B.
+                // Video auf D:\Videoprojekte). Akzeptieren wie zuvor — Path-
+                // Traversal ist hier nicht moeglich da kein Combine.
+                full = path;
+            }
+            else
+            {
+                // Relativ: SEC-C1-Hardening (Audit 2026-04-23). Path.Combine +
+                // Path.GetFullPath kürzt `..` zwar mathematisch, lässt aber zu
+                // dass der resolved Pfad ausserhalb projectDir liegt
+                // (`..\..\..\windows\...`). Daher Containment-Check gegen den
+                // projectDir-Root erzwingen.
+                var combined = Path.GetFullPath(Path.Combine(projectDir, path));
+                var rootWithSep = projectDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                                  + Path.DirectorySeparatorChar;
+                if (!combined.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase))
+                    return null;
+                full = combined;
+            }
             return File.Exists(full) ? full : null;
         }
         catch
@@ -2472,8 +2491,15 @@ public sealed partial class DataPageViewModel : ObservableObject
             var baseDir = Path.GetDirectoryName(App.Resolve<AppSettings>().LastProjectPath);
             if (!string.IsNullOrWhiteSpace(baseDir))
             {
+                // SEC-C1-Hardening (Audit 2026-04-23): Containment-Check fuer
+                // relative Pfade gegen den Projekt-Basisordner. Verhindert
+                // dass `..\..\windows\system32\...` aus einer manipulierten
+                // Projektdatei aus dem Projekt heraussspringt.
                 var combined = Path.GetFullPath(Path.Combine(baseDir, path));
-                if (File.Exists(combined))
+                var rootWithSep = baseDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                                  + Path.DirectorySeparatorChar;
+                if (combined.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase)
+                    && File.Exists(combined))
                     return combined;
             }
         }
