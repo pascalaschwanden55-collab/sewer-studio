@@ -90,6 +90,7 @@ public sealed class VideoFullAnalysisService
         progress?.Report(new VideoAnalysisProgress(0, totalFrames, "Analyse gestartet..."));
 
         var telemetry = new AuswertungPro.Next.Application.Ai.Pipeline.PipelineTelemetry();
+        AuswertungPro.Next.Infrastructure.Ai.Pipeline.PipelineTelemetryStore.EnableSqlitePersistence(telemetry);
 
         await using var frameStream = VideoFrameStream.Open(
             _ffmpegPath, videoPath, FrameStepSeconds, duration, ct);
@@ -236,6 +237,11 @@ public sealed class VideoFullAnalysisService
 
         progress?.Report(new VideoAnalysisProgress(totalFrames, totalFrames,
             $"Fertig – {detections.Count} Schäden erkannt."));
+
+        // Sprint 2: Telemetry persistieren (JSONL + SQLite via Hook)
+        try { await telemetry.PersistSummaryAsync("VideoFullAnalysis-Ollama", ct: ct).ConfigureAwait(false); }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[VideoFullAnalysis] Telemetry-Persistierung: {ex.Message}"); }
 
         return new VideoAnalysisResult(videoPath, duration, frameIndex,
             detections.OrderBy(d => d.MeterStart).ToList(), null, telemetry.GetSummary());

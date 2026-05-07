@@ -46,6 +46,15 @@ public sealed class PipelineTelemetryStore : IDisposable
     private readonly SqliteConnection _conn;
     private static readonly SemaphoreSlim _writeLock = new(1, 1);
 
+    /// <summary>
+    /// Process-weiter Default-Store. Lazy initialisiert beim ersten Zugriff.
+    /// Wird von <see cref="PipelineTelemetryWiring"/> als
+    /// <c>PipelineTelemetry.AdditionalPersister</c> eingehaengt, damit jeder
+    /// Pipeline-Lauf automatisch in SQLite landet.
+    /// </summary>
+    private static readonly Lazy<PipelineTelemetryStore> _default = new(() => new PipelineTelemetryStore());
+    public static PipelineTelemetryStore Default => _default.Value;
+
     public PipelineTelemetryStore(string? customDbPath = null)
     {
         _dbPath = customDbPath ?? PathConstants.InAppData(PathConstants.PipelineTelemetryDb);
@@ -229,5 +238,25 @@ public sealed class PipelineTelemetryStore : IDisposable
     public void Dispose()
     {
         try { _conn.Close(); _conn.Dispose(); } catch { }
+    }
+
+    /// <summary>
+    /// Sprint 2 (2026-05-07): Verdrahtet die SQLite-Persistierung an eine
+    /// frische <see cref="PipelineTelemetry"/>-Instanz. Aufrufer ruft das
+    /// genau einmal pro Telemetry-Objekt direkt nach dem Konstruktor:
+    /// <code>
+    /// var telemetry = new PipelineTelemetry();
+    /// PipelineTelemetryStore.EnableSqlitePersistence(telemetry);
+    /// </code>
+    /// Damit landet jeder spaetere <c>PersistSummaryAsync</c>-Aufruf
+    /// zusaetzlich in <see cref="Default"/>. Failures im Hook werden
+    /// in <c>PipelineTelemetry</c> selbst geschluckt — JSONL bleibt der
+    /// zuverlaessige Pfad.
+    /// </summary>
+    public static void EnableSqlitePersistence(PipelineTelemetry telemetry)
+    {
+        if (telemetry is null) throw new ArgumentNullException(nameof(telemetry));
+        telemetry.AdditionalPersister = (label, summary, ct) =>
+            Default.SaveRunAsync(label, summary, ct);
     }
 }

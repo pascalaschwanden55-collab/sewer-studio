@@ -155,6 +155,7 @@ public sealed partial class MultiModelAnalysisService
             $"Multi-Model Pipeline: {totalFrames} Frames, DN{pipeDiameterMm}"));
 
         var telemetry = new PipelineTelemetry();
+        PipelineTelemetryStore.EnableSqlitePersistence(telemetry);
 
         await using var stream = VideoFrameStream.Open(
             _ffmpegPath, videoPath, FrameStepSeconds, duration, ct);
@@ -1038,6 +1039,11 @@ public sealed partial class MultiModelAnalysisService
             summary.Yolo.MeanMs, summary.Yolo.P95Ms, summary.Dino.MeanMs,
             summary.Sam.MeanMs, summary.Qwen.MeanMs);
 
+        // Sprint 2: Telemetry persistieren (JSONL + SQLite via Hook)
+        try { await telemetry.PersistSummaryAsync("MultiModel-AnalyzeAsync", ct: ct).ConfigureAwait(false); }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) { _logger.LogDebug(ex, "Telemetry-Persistierung fehlgeschlagen (nicht kritisch)"); }
+
         return new VideoAnalysisResult(videoPath, duration, frameIndex,
             detections.OrderBy(d => d.MeterStart).ToList(), null, summary);
     }
@@ -1094,6 +1100,7 @@ public sealed partial class MultiModelAnalysisService
         );
 
         var telemetry = new PipelineTelemetry();
+        PipelineTelemetryStore.EnableSqlitePersistence(telemetry);
 
         await foreach (var item in _client.ProcessVideoStreamAsync(request, ct).ConfigureAwait(false))
         {
@@ -1539,6 +1546,12 @@ public sealed partial class MultiModelAnalysisService
             $"NVDEC-Pipeline fertig – {detections.Count} Schäden, {skippedFrames} Frames übersprungen."));
 
         var summary = telemetry.GetSummary();
+
+        // Sprint 2: Telemetry persistieren (JSONL + SQLite via Hook)
+        try { await telemetry.PersistSummaryAsync("MultiModel-AnalyzeWithNvdec", ct: ct).ConfigureAwait(false); }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) { _logger.LogDebug(ex, "Telemetry-Persistierung fehlgeschlagen (nicht kritisch)"); }
+
         return new VideoAnalysisResult(videoPath, duration, frameIndex,
             detections.OrderBy(d => d.MeterStart).ToList(), null, summary);
     }
