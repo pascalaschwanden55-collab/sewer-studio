@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Manueller LiveSidecar-Test-Runner.
+  Verwendung:
+    dotnet test tests/AuswertungPro.Next.Pipeline.Tests/AuswertungPro.Next.Pipeline.Tests.csproj -settings tests/AuswertungPro.Next.Pipeline.Tests/.runsettings.live -filter "Category=LiveSidecar"
+
+  Erfordert:
+    - laufender Python-Sidecar auf http://localhost:8100
+    - optional: Token in %LOCALAPPDATA%/SewerStudio/.sidecar_token
+                oder Env-Variable SEWER_SIDECAR_TOKEN
+    - bei Auth-Tests: SEWER_SIDECAR_AUTH != "disabled"
+
+  Tests skippen sich selbst (early-return mit Output-Log) wenn der
+  Sidecar nicht erreichbar ist oder Voraussetzungen fehlen — sie
+  schlagen also nicht fehl, sondern werden gruen mit Hinweis-Output.
+-->
+<RunSettings>
+  <RunConfiguration>
+    <TestCaseFilter></TestCaseFilter>
+  </RunConfiguration>
+</RunSettings>

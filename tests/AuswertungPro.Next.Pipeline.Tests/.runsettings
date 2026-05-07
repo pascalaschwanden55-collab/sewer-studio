@@ -17,6 +17,6 @@
 -->
 <RunSettings>
   <RunConfiguration>
-    <TestCaseFilter>Category!=GpuEval&amp;Category!=LongRunning</TestCaseFilter>
+    <TestCaseFilter>Category!=GpuEval&amp;Category!=LongRunning&amp;Category!=LiveSidecar</TestCaseFilter>
   </RunConfiguration>
 </RunSettings>
