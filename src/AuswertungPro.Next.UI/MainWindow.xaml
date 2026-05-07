@@ -10,7 +10,7 @@
     <Window.Resources>
         <ctrl:PercentToWidthConverter x:Key="PercentToWidthConverter"/>
         <ctrl:PercentToColorConverter x:Key="PercentToColorConverter"/>
-        <ctrl:InvertedBoolConverter x:Key="InvertedBoolConverter"/>
+        <!-- InvertedBoolConverter ist seit 2026-05-07 in App.xaml als globale Resource registriert. -->
     </Window.Resources>
     <Window.InputBindings>
         <KeyBinding Key="F11" Command="{Binding ToggleFocusModeCommand}"/>

@@ -89,6 +89,7 @@ public static class ProcessRunner
                     StartFailed: true);
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             sw.Stop();

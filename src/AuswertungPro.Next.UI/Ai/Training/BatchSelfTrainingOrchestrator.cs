@@ -61,6 +61,9 @@ public sealed class BatchSelfTrainingOrchestrator : AuswertungPro.Next.Applicati
     public bool IsPaused => _isPaused;
     public bool IsRunning { get; private set; }
 
+    /// <inheritdoc/>
+    public string Name => "BatchSelfTraining (Ordner-Tree)";
+
     public BatchSelfTrainingOrchestrator(
         VideoSelfTrainingOrchestrator videoOrchestrator,
         ProtocolLoaderFactory protocolLoader,

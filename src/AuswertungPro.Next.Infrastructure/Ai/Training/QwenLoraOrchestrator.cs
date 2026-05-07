@@ -19,8 +19,11 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 /// Adapter via Ollama deployen, Benchmark-Gate pruefen.
 /// Gleiche Struktur wie YoloRetrainOrchestrator.
 /// </summary>
-public sealed class QwenLoraOrchestrator
+public sealed class QwenLoraOrchestrator : ITrainingOrchestrator
 {
+    /// <inheritdoc/>
+    public string Name => "QwenLoraRetrain";
+
     private const int MaxAdapterVersions = 3;
     private static readonly JsonSerializerOptions JsonOpts = new()
     {

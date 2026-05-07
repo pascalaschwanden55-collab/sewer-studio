@@ -20,6 +20,9 @@ using AuswertungPro.Next.UI.Services;
 using Microsoft.Extensions.DependencyInjection;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Maintenance;
+using System.Net.Http;
 
 namespace AuswertungPro.Next.UI
 {
@@ -158,6 +161,7 @@ namespace AuswertungPro.Next.UI
                 // hat der FileLoggerProvider keine Zeit zu flushen — direkt-sync-write
                 // garantiert dass die Crash-Info auf der Platte landet.
                 var crashLogPath = Path.Combine(AppSettings.AppDataDir, "logs", $"crash-{DateTime.Now:yyyyMMdd_HHmmss}.log");
+                var systemInfoBlock = BuildSystemInfoBlock();
                 void LogCrashSync(string source, Exception ex, bool isTerminating)
                 {
                     try
@@ -166,6 +170,7 @@ namespace AuswertungPro.Next.UI
                             $"=== {DateTimeOffset.Now:O} ===" + Environment.NewLine +
                             $"Source: {source}" + Environment.NewLine +
                             $"IsTerminating: {isTerminating}" + Environment.NewLine +
+                            systemInfoBlock +
                             $"Type: {ex.GetType().FullName}" + Environment.NewLine +
                             $"Message: {ex.Message}" + Environment.NewLine +
                             $"Stack:{Environment.NewLine}{ex}" + Environment.NewLine + Environment.NewLine;
@@ -250,6 +255,11 @@ namespace AuswertungPro.Next.UI
                 // das PlayerWindow zeigen kann.
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+                // Sprint 1: Nightly-Cleanup (Frame-Cleanup + Versions-Pruning)
+                // 5 Min nach Start im Hintergrund — laeuft nur wenn seit letztem
+                // Lauf >= 20 h vergangen sind (siehe MaintenanceScheduler.MinIntervalHours).
+                StartMaintenanceScheduler();
+
             }
             catch (Exception ex)
             {
@@ -293,6 +303,81 @@ namespace AuswertungPro.Next.UI
                 }
 
                 Shutdown(-1);
+            }
+        }
+
+        /// <summary>
+        /// Sprint 1 (2026-05-07): System-Info-Block fuer Crash-Logs.
+        /// Wird einmal beim Start ermittelt und in jeden Crash-Eintrag eingebettet.
+        /// Enthaelt OS, .NET-Runtime, App-Version, Speicher, Prozess-Memory.
+        /// </summary>
+        private static string BuildSystemInfoBlock()
+        {
+            try
+            {
+                var asm = System.Reflection.Assembly.GetExecutingAssembly();
+                var version = asm.GetName().Version?.ToString() ?? "unbekannt";
+                var os = Environment.OSVersion.VersionString;
+                var runtime = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
+                var arch = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture;
+                var procCount = Environment.ProcessorCount;
+                var workingSet = Environment.WorkingSet / (1024 * 1024);
+                var sb = new StringBuilder();
+                sb.AppendLine($"App-Version: {version}");
+                sb.AppendLine($"OS: {os}");
+                sb.AppendLine($"Runtime: {runtime} ({arch}, {procCount} Cores)");
+                sb.AppendLine($"WorkingSet: {workingSet} MB");
+                return sb.ToString();
+            }
+            catch
+            {
+                return "SystemInfo: nicht ermittelbar" + Environment.NewLine;
+            }
+        }
+
+        /// <summary>
+        /// Sprint 1 (2026-05-07): Nightly-Wartung (Frame-Cleanup + Versions-Pruning)
+        /// 5 Min nach App-Start im Hintergrund. Laeuft nur wenn seit letztem
+        /// erfolgreichen Lauf mind. 20 h vergangen sind. Bei Fehlern wird in
+        /// das App-Log geschrieben — die App selbst soll davon nicht abstuerzen.
+        /// </summary>
+        private static void StartMaintenanceScheduler()
+        {
+            try
+            {
+                var scheduler = new MaintenanceScheduler(
+                    runFrameCleanup: async ct =>
+                    {
+                        var svc = new FrameStoreCleanupService { DryRun = false, MinimumAgeDays = 7 };
+                        return await svc.RunAsync(ct).ConfigureAwait(false);
+                    },
+                    runVersionsPrune: ct => Task.Run(() =>
+                    {
+                        using var http = new HttpClient();
+                        using var db = new KnowledgeBaseContext();
+                        var emb = new EmbeddingService(http, AuswertungPro.Next.Application.Ai.Ollama.OllamaConfigProvider.Load());
+                        var mgr = new KnowledgeBaseManager(db, emb);
+                        return mgr.PruneOldVersions(keepLastN: 20, keepDaysMin: 30);
+                    }, ct));
+
+                _ = scheduler.StartBackgroundAsync(onError: ex =>
+                {
+                    try
+                    {
+                        var logDir = Path.Combine(AppSettings.AppDataDir, "logs");
+                        Directory.CreateDirectory(logDir);
+                        var logPath = Path.Combine(logDir, $"maintenance-{DateTime.Now:yyyyMMdd}.log");
+                        File.AppendAllText(logPath, $"{DateTimeOffset.Now:O} [Error] {ex}\n");
+                    }
+                    catch
+                    {
+                        // best-effort logging
+                    }
+                });
+            }
+            catch
+            {
+                // Scheduler-Setup darf den App-Start nie blockieren
             }
         }
 

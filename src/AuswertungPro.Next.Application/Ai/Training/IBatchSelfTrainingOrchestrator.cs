@@ -16,7 +16,7 @@ namespace AuswertungPro.Next.Application.Ai.Training;
 /// - <c>IBatchSelfTrainingOrchestrator</c> (dieses) — Batch ueber Ordner-Tree
 /// - <c>IInitialTrainingOrchestrator</c> — Erstaufbau der KB
 /// </summary>
-public interface IBatchSelfTrainingOrchestrator
+public interface IBatchSelfTrainingOrchestrator : ITrainingOrchestrator
 {
     /// <summary>
     /// Startet den Batch-Durchlauf (scannt Ordner-Tree, verarbeitet nacheinander).

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.Pipeline;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Ai;
@@ -25,6 +26,14 @@ public sealed class PythonSidecarService : IDisposable
     private Process? _process;
     private bool _ownsProcess;
     private bool _disposed;
+    private readonly RestartBudget _restartBudget = new() { MaxRestartsPerWindow = 3, Window = TimeSpan.FromMinutes(5) };
+
+    /// <summary>
+    /// Sprint 1 (2026-05-07): Wenn der Sidecar-Prozess unerwartet stirbt,
+    /// versucht der Watchdog automatisch einen Neustart. Mit Budget begrenzt
+    /// (3 Restarts in 5 Min), um Crash-Loops zu verhindern.
+    /// </summary>
+    public bool EnableAutoRestart { get; set; } = true;
 
     public bool IsRunning => _process is { HasExited: false };
 
@@ -196,6 +205,12 @@ public sealed class PythonSidecarService : IDisposable
                 _log.LogWarning("[Sidecar] Prozess beendet (ExitCode={Code})", _process?.ExitCode);
                 _ownsProcess = false;
                 IsAvailable = false;
+
+                // Watchdog: bei unerwartetem Exit (App nicht im Dispose) Restart anstossen
+                if (!_disposed && EnableAutoRestart)
+                {
+                    _ = TryRestartAsync();
+                }
             };
 
             _process.Start();
@@ -218,6 +233,57 @@ public sealed class PythonSidecarService : IDisposable
         {
             _log.LogWarning("[Sidecar] Health-Check nach 30s nicht erfolgreich — Qwen-only Fallback");
             TryStopOwnedProcess();
+        }
+    }
+
+    /// <summary>
+    /// Sprint 1: Watchdog-Restart bei unerwartetem Sidecar-Exit. Verwendet
+    /// <see cref="RestartBudget"/> um Crash-Loops zu verhindern. Liefert true
+    /// wenn ein Restart angestossen wurde.
+    /// </summary>
+    private async Task<bool> TryRestartAsync()
+    {
+        try
+        {
+            var now = DateTime.UtcNow;
+            if (!_restartBudget.TryConsume(now))
+            {
+                _log.LogError(
+                    "[Sidecar-Watchdog] Restart-Budget aufgebraucht ({Count} Crashes in {Min} Min) — kein weiterer Versuch. Bitte Sidecar manuell pruefen.",
+                    _restartBudget.RecentCount(now),
+                    _restartBudget.Window.TotalMinutes);
+                return false;
+            }
+
+            var backoff = _restartBudget.ComputeBackoff(now);
+            _log.LogWarning(
+                "[Sidecar-Watchdog] Sidecar abgestuerzt — Restart-Versuch in {Sec}s (Versuch {N})",
+                backoff.TotalSeconds,
+                _restartBudget.RecentCount(now));
+
+            await Task.Delay(backoff).ConfigureAwait(false);
+
+            if (_disposed) return false;
+
+            // Alten Prozess-Slot freigeben — StartAsync prueft IsHealthy + Port und entscheidet
+            _process = null;
+            _ownsProcess = false;
+            IsAvailable = false;
+
+            await StartAsync(CancellationToken.None).ConfigureAwait(false);
+
+            if (IsAvailable)
+                _log.LogInformation("[Sidecar-Watchdog] Restart erfolgreich");
+            else
+                _log.LogWarning("[Sidecar-Watchdog] Restart abgeschlossen, aber Sidecar nicht verfuegbar");
+
+            return IsAvailable;
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "[Sidecar-Watchdog] Restart fehlgeschlagen");
+            return false;
         }
     }
 

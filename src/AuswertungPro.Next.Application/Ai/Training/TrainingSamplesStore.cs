@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Ai.Training
 {
@@ -16,7 +17,7 @@ namespace AuswertungPro.Next.Application.Ai.Training
         // Verhindert gleichzeitige Load+Save-Operationen (Race Condition bei MergeAndSaveAsync)
         private static readonly SemaphoreSlim _fileLock = new(1, 1);
 
-        private static string GetStorePath() => System.IO.Path.Combine(KnowledgeRootProvider.GetRoot(), "training_samples.json");
+        private static string GetStorePath() => PathConstants.InKnowledgeRoot(PathConstants.TrainingSamplesFile);
 
         public static async Task<List<TrainingSample>> LoadAsync()
         {

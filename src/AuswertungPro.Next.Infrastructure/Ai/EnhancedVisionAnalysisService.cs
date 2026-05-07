@@ -989,6 +989,7 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
                             $"[EnhancedVision] 32B Swap #{_swap32bCount}: {swapResult.Findings.Count} Findings");
                         return (swapResult, true);
                     }
+                    catch (OperationCanceledException) { throw; }
                     catch (Exception ex32b)
                     {
                         SetPipelineWarning(

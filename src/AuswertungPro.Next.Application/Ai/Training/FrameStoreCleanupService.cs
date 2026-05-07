@@ -58,6 +58,15 @@ public sealed class FrameStoreCleanupService
     public int MinimumAgeDays { get; set; } = 7;
 
     /// <summary>
+    /// Sicherheits-Schwelle (fail-closed). Wenn die Sample-Liste leer ist
+    /// UND mehr als dieser Wert PNGs im frames/-Ordner liegen, wird der
+    /// Cleanup verweigert — Annahme: TrainingSamplesStore konnte nicht
+    /// laden (KB-Lock, korrupte JSON, Pfad-Problem) und ein Loeschen wuerde
+    /// alle Frames vernichten. Default 10.
+    /// </summary>
+    public int FailClosedThreshold { get; set; } = 10;
+
+    /// <summary>
     /// Scannt den frames/-Ordner, identifiziert Verwaiste und (wenn DryRun=false)
     /// loescht sie. Gibt eine Zusammenfassung zurueck.
     /// </summary>
@@ -78,8 +87,45 @@ public sealed class FrameStoreCleanupService
                 Errors: Array.Empty<string>());
         }
 
-        var activeIds = await _loadActiveSampleIds().ConfigureAwait(false);
+        // Fail-closed Stufe 1: SampleId-Load mit Exception-Schutz. Wenn wir die
+        // Sample-Liste nicht laden koennen, ist JEDES Loeschen unsicher.
+        IReadOnlyCollection<string> activeIds;
+        try
+        {
+            activeIds = await _loadActiveSampleIds().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            return new FrameStoreCleanupResult(
+                FramesDir: framesDir,
+                TotalFiles: -1,
+                ActiveSampleIds: -1,
+                OrphanFiles: 0,
+                OrphanBytes: 0,
+                DeletedFiles: 0,
+                DeletedBytes: 0,
+                DryRun: true, // erzwungen — wir haben nicht geloescht
+                Errors: new[] { $"Fail-closed: SampleIds konnten nicht geladen werden ({ex.GetType().Name}: {ex.Message}). Cleanup abgebrochen." });
+        }
+
         var allFiles = Directory.EnumerateFiles(framesDir, "*.png", SearchOption.TopDirectoryOnly).ToList();
+
+        // Fail-closed Stufe 2: leere SampleId-Liste + nennenswerter Frame-Bestand
+        // → wahrscheinlich kein wirkliches "alles ist Orphan", sondern Lade-Defekt.
+        if (activeIds.Count == 0 && allFiles.Count > FailClosedThreshold)
+        {
+            return new FrameStoreCleanupResult(
+                FramesDir: framesDir,
+                TotalFiles: allFiles.Count,
+                ActiveSampleIds: 0,
+                OrphanFiles: 0,
+                OrphanBytes: 0,
+                DeletedFiles: 0,
+                DeletedBytes: 0,
+                DryRun: true, // erzwungen
+                Errors: new[] { $"Fail-closed: Sample-Liste leer, aber {allFiles.Count} PNGs vorhanden (Schwelle {FailClosedThreshold}). Cleanup abgebrochen, um nicht alle Frames zu loeschen." });
+        }
+
         var cutoff = DateTime.UtcNow.AddDays(-MinimumAgeDays);
 
         long orphanBytes = 0;
@@ -106,11 +152,12 @@ public sealed class FrameStoreCleanupService
             foreach (var info in orphans)
             {
                 ct.ThrowIfCancellationRequested();
+                var len = info.Length; // muss VOR Delete gelesen werden — FileInfo wirft sonst FileNotFoundException
                 try
                 {
                     info.Delete();
                     deletedFiles++;
-                    deletedBytes += info.Length;
+                    deletedBytes += len;
                 }
                 catch (Exception ex)
                 {

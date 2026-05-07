@@ -10,6 +10,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.SelfImproving;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Ai.SelfImproving;
 
@@ -35,8 +36,7 @@ public static class ReviewQueueStore
     };
 
     /// <summary>Pfad zur JSON-Datei im KnowledgeRoot.</summary>
-    public static string FilePath =>
-        Path.Combine(KnowledgeRootProvider.GetRoot(), "review_queue.json");
+    public static string FilePath => PathConstants.InKnowledgeRoot(PathConstants.ReviewQueueFile);
 
     /// <summary>
     /// Laedt die persistierte Review-Queue. Bei korruptem JSON oder fehlender Datei

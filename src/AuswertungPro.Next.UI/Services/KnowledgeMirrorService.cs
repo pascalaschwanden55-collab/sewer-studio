@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Maintenance;
 
 namespace AuswertungPro.Next.UI.Services;
 
@@ -119,6 +120,26 @@ public sealed class KnowledgeMirrorService : IDisposable
             if (File.Exists(knowledgeDb))
                 return false;
 
+            // Sprint 1 (2026-05-07): SHA256-Verifikation gegen manifest.json.
+            // Bei Mismatch (korrupte Mirror-DB) → KEIN Restore.
+            // Bei NoManifest (alte Mirror-Version) → Restore mit Warning erlaubt.
+            var verification = KnowledgeMirrorVerifier.Verify(brainDb);
+            if (verification.Status == VerificationStatus.HashMismatch
+                || verification.Status == VerificationStatus.SizeMismatch)
+            {
+                Debug.WriteLine($"[BrainMirror] Restore abgebrochen — Verifikation fehlgeschlagen: {verification.Message}");
+                return false;
+            }
+
+            if (verification.Status == VerificationStatus.NoManifest)
+            {
+                Debug.WriteLine($"[BrainMirror] WARNUNG: Restore ohne Manifest-Verifikation (alter Mirror): {brainPath}");
+            }
+            else
+            {
+                Debug.WriteLine($"[BrainMirror] Verifikation OK ({verification.Message}) — Restore startet");
+            }
+
             Debug.WriteLine($"[BrainMirror] Knowledge leer, stelle aus Brain wieder her: {brainPath}");
             Directory.CreateDirectory(knowledgeRoot);
 
@@ -158,6 +179,33 @@ public sealed class KnowledgeMirrorService : IDisposable
 
         if (synced > 0)
             Debug.WriteLine($"[BrainMirror] Sync: {synced} Dateien aktualisiert → {target}");
+
+        // Sprint 1 (2026-05-07): Manifest mit SHA256 fuer KnowledgeBase.db schreiben
+        // damit ein spaeteres Restore die DB-Integritaet pruefen kann.
+        TryWriteDbManifest(target);
+    }
+
+    /// <summary>
+    /// Schreibt manifest.json mit SHA256 + Bytes der KnowledgeBase.db in den
+    /// Mirror-Root. Best-effort: Fehler nicht eskalieren — der Sync war erfolgreich,
+    /// nur die spaetere Verifikation ist dann nicht moeglich.
+    /// </summary>
+    private void TryWriteDbManifest(string mirrorRoot)
+    {
+        try
+        {
+            var dbPath = Path.Combine(mirrorRoot, "KnowledgeBase.db");
+            if (!File.Exists(dbPath)) return;
+
+            var hash = KnowledgeMirrorVerifier.ComputeSha256(dbPath);
+            var bytes = new FileInfo(dbPath).Length;
+            KnowledgeMirrorVerifier.WriteManifest(mirrorRoot, "KnowledgeBase.db", hash, bytes);
+            Debug.WriteLine($"[BrainMirror] Manifest geschrieben: {hash[..16]}…");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Brain-Mirror Manifest konnte nicht geschrieben werden");
+        }
     }
 
     // Audit-Fix: Whitelist + Verzeichnis-Skipliste statt rekursiver Vollkopie.

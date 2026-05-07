@@ -131,6 +131,7 @@ public sealed class OllamaClient : IDisposable
                 return (IReadOnlyList<string>)names;
             }, ct).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[OllamaClient] ListModelNames fehlgeschlagen: {ex.Message}");
@@ -167,6 +168,7 @@ public sealed class OllamaClient : IDisposable
                 return (IReadOnlyList<string>)names;
             }, ct).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[OllamaClient] ListLoadedModels fehlgeschlagen: {ex.Message}");
@@ -205,6 +207,7 @@ public sealed class OllamaClient : IDisposable
                     $"[OllamaClient] UnloadModel {model}: {(int)resp.StatusCode}");
             }, ct).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine(
@@ -276,6 +279,7 @@ public sealed class OllamaClient : IDisposable
             System.Diagnostics.Debug.WriteLine($"[OllamaClient] Modell {model} erfolgreich geladen");
             return true;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine(

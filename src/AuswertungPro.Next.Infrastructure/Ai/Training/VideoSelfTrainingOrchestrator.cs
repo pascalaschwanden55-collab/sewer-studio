@@ -31,8 +31,11 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 ///
 /// Der bestehende SelfTrainingOrchestrator (PDF-basiert) bleibt unveraendert.
 /// </summary>
-public sealed class VideoSelfTrainingOrchestrator
+public sealed class VideoSelfTrainingOrchestrator : ITrainingOrchestrator
 {
+    /// <inheritdoc/>
+    public string Name => "VideoSelfTraining";
+
     private readonly IVideoAnalysisPipelineService _pipeline;
     private readonly MeterTimelineService _meterTimeline;
     private readonly ILogger? _log;

@@ -16,8 +16,11 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 /// <summary>
 /// Orchestrates automatic YOLO retraining, benchmark gating, versioning, and hot-reload.
 /// </summary>
-public sealed class YoloRetrainOrchestrator
+public sealed class YoloRetrainOrchestrator : ITrainingOrchestrator
 {
+    /// <inheritdoc/>
+    public string Name => "YoloRetrain";
+
     private const int MaxArchivedVersions = 3;
     private static readonly JsonSerializerOptions JsonOpts = new()
     {

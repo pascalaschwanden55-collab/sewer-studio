@@ -118,6 +118,7 @@ public sealed class BatchPipelineService
             {
                 batchResult = await _sidecar.DetectYoloBatchAsync(batchRequest, ct).ConfigureAwait(false);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "YOLO Batch fehlgeschlagen — Frames einzeln verarbeiten");
@@ -204,6 +205,7 @@ public sealed class BatchPipelineService
                         0, dinoResp.InferenceTimeMs, samResp.InferenceTimeMs);
                 }
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "DINO/SAM fehlgeschlagen fuer Frame {Frame}", frame.Index);

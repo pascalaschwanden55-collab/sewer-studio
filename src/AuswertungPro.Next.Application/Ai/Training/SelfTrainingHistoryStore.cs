@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Ai.Training;
 
@@ -32,8 +33,7 @@ public static class SelfTrainingHistoryStore
 {
     private static readonly SemaphoreSlim _lock = new(1, 1);
 
-    private static string GetPath()
-        => Path.Combine(KnowledgeRootProvider.GetRoot(), "selftraining_history.json");
+    private static string GetPath() => PathConstants.InKnowledgeRoot(PathConstants.SelfTrainingHistoryFile);
 
     public static async Task<List<SelfTrainingRunSnapshot>> LoadAsync()
     {

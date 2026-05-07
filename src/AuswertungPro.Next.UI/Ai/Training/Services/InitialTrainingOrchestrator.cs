@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 using AuswertungPro.Next.Application.Ai.Training.Services;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -24,8 +25,11 @@ namespace AuswertungPro.Next.UI.Ai.Training.Services;
 /// parst PDF-Protokolle, loest Frames auf und exportiert ein YOLO-Dataset.
 /// Fuer nachfolgende Retraining-Laeufe ist <see cref="AuswertungPro.Next.UI.Ai.Training.YoloRetrainOrchestrator"/> zustaendig.
 /// </summary>
-public sealed class InitialTrainingOrchestrator
+public sealed class InitialTrainingOrchestrator : ITrainingOrchestrator
 {
+    /// <inheritdoc/>
+    public string Name => "InitialTraining";
+
     /// <summary>Mindestanzahl Frames damit ein Training gestartet wird.</summary>
     private const int MinFramesForTraining = 100;
 

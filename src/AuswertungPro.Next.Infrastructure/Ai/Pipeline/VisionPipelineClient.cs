@@ -30,7 +30,7 @@ public sealed class VisionPipelineClient
     public VisionPipelineClient(Uri baseUri, HttpClient? httpClient = null, string? authToken = null)
     {
         _baseUri = baseUri;
-        _http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
+        _http = httpClient ?? CreateDefaultHttpClientWithCircuitBreaker();
         // Auth-Token Resolver in 3 Stufen (Audit-Fix 2026-04-30: SAM-Segmentierung war
         // ohne Token unsichtbar weil AuswertungPro.Next.Application.Ai.SidecarAuthTokenAccessor.CurrentAuthToken bei
         // manuell gestartetem Sidecar leer ist):
@@ -56,6 +56,19 @@ public sealed class VisionPipelineClient
         _authToken = string.IsNullOrWhiteSpace(effective) ? null : effective;
         // BaseAddress NICHT setzen — wir verwenden _baseUri + BuildUri() fuer jeden Request.
         // Verhindert InvalidOperationException wenn HttpClient wiederverwendet wird.
+    }
+
+    /// <summary>
+    /// Sprint 1 (2026-05-07): Default-HttpClient mit Circuit-Breaker-Handler.
+    /// Wenn der Sidecar wiederholt failt (50 % von mind. 5 Calls in 60 s),
+    /// oeffnet der Breaker und alle weiteren Calls failen sofort statt 15 s
+    /// Timeout zu warten.
+    /// </summary>
+    private static HttpClient CreateDefaultHttpClientWithCircuitBreaker()
+    {
+        var pipeline = SidecarResilience.CreateCircuitBreaker();
+        var handler = new SidecarResilienceHandler(pipeline) { InnerHandler = new HttpClientHandler() };
+        return new HttpClient(handler) { Timeout = TimeSpan.FromMinutes(15) };
     }
 
     public string? LastHealthError { get; private set; }

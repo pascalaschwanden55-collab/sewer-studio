@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Ai.Pipeline;
 
@@ -23,7 +24,7 @@ public sealed class EscalationQueueStore
 
     public EscalationQueueStore()
     {
-        _path = Path.Combine(KnowledgeRootProvider.GetRoot(), "escalation_queue.jsonl");
+        _path = PathConstants.InKnowledgeRoot(PathConstants.EscalationQueueFile);
     }
 
     /// <summary>Frame zur Queue hinzufuegen (append, thread-safe).</summary>

@@ -158,6 +158,106 @@ public class FrameStoreCleanupServiceTests
         Assert.Equal(1, result.DeletedFiles);
     }
 
+    [Fact]
+    public async Task RunAsync_LoadActiveIdsThrows_FailsClosed()
+    {
+        // Setup: Loader wirft Exception (z.B. KB-Lock, korrupte JSON).
+        using var ctx = new TempKnowledgeRoot();
+        var framesDir = Path.Combine(ctx.Root, "frames");
+        Directory.CreateDirectory(framesDir);
+
+        // 50 alte PNGs wuerden ohne Schutz alle als Orphan eingestuft
+        var oldDate = DateTime.UtcNow.AddDays(-30);
+        for (int i = 0; i < 50; i++)
+        {
+            var p = Path.Combine(framesDir, $"frame-{i}.png");
+            File.WriteAllBytes(p, new byte[] { 0x89, 0x50, 0x4E, 0x47 });
+            File.SetLastWriteTimeUtc(p, oldDate);
+        }
+
+        var svc = new FrameStoreCleanupService(
+            loadActiveSampleIds: () => throw new InvalidOperationException("KB locked"))
+        {
+            DryRun = false // selbst mit DryRun=false darf nichts geloescht werden
+        };
+
+        var result = await svc.RunAsync();
+
+        Assert.Equal(0, result.DeletedFiles);
+        Assert.True(result.DryRun, "Fail-closed muss DryRun erzwingen");
+        Assert.NotEmpty(result.Errors);
+        Assert.Contains("Fail-closed", result.Errors[0]);
+
+        // Files muessen alle noch existieren
+        Assert.Equal(50, Directory.GetFiles(framesDir, "*.png").Length);
+    }
+
+    [Fact]
+    public async Task RunAsync_EmptyActiveIdsManyFiles_FailsClosed()
+    {
+        // Setup: activeIds=[] und mehr Files als FailClosedThreshold (Default 10).
+        using var ctx = new TempKnowledgeRoot();
+        var framesDir = Path.Combine(ctx.Root, "frames");
+        Directory.CreateDirectory(framesDir);
+
+        var oldDate = DateTime.UtcNow.AddDays(-30);
+        for (int i = 0; i < 20; i++)
+        {
+            var p = Path.Combine(framesDir, $"frame-{i}.png");
+            File.WriteAllBytes(p, new byte[] { 0x89, 0x50, 0x4E, 0x47 });
+            File.SetLastWriteTimeUtc(p, oldDate);
+        }
+
+        var svc = new FrameStoreCleanupService(
+            loadActiveSampleIds: () => Task.FromResult<IReadOnlyCollection<string>>(System.Array.Empty<string>()))
+        {
+            DryRun = false
+        };
+
+        var result = await svc.RunAsync();
+
+        Assert.Equal(20, result.TotalFiles);
+        Assert.Equal(0, result.OrphanFiles);
+        Assert.Equal(0, result.DeletedFiles);
+        Assert.True(result.DryRun, "Fail-closed muss DryRun erzwingen");
+        Assert.NotEmpty(result.Errors);
+        Assert.Contains("Fail-closed", result.Errors[0]);
+
+        // Alle 20 Files muessen noch da sein
+        Assert.Equal(20, Directory.GetFiles(framesDir, "*.png").Length);
+    }
+
+    [Fact]
+    public async Task RunAsync_EmptyActiveIdsButFewFiles_ProceedsBelowThreshold()
+    {
+        // Test-Edge-Case: leere Liste, aber wenige Files (unter Default-Schwelle 10)
+        // — Cleanup soll laufen (z.B. nach Wipe-and-Restart-Szenario).
+        using var ctx = new TempKnowledgeRoot();
+        var framesDir = Path.Combine(ctx.Root, "frames");
+        Directory.CreateDirectory(framesDir);
+
+        var oldDate = DateTime.UtcNow.AddDays(-30);
+        for (int i = 0; i < 3; i++)
+        {
+            var p = Path.Combine(framesDir, $"orphan-{i}.png");
+            File.WriteAllBytes(p, new byte[] { 0x89, 0x50, 0x4E, 0x47 });
+            File.SetLastWriteTimeUtc(p, oldDate);
+        }
+
+        var svc = new FrameStoreCleanupService(
+            loadActiveSampleIds: () => Task.FromResult<IReadOnlyCollection<string>>(System.Array.Empty<string>()))
+        {
+            DryRun = false
+        };
+
+        var result = await svc.RunAsync();
+
+        Assert.Equal(3, result.OrphanFiles);
+        Assert.Equal(3, result.DeletedFiles);
+        Assert.False(result.DryRun);
+        Assert.Empty(result.Errors);
+    }
+
     /// <summary>RAII: setzt KnowledgeRootProvider auf einen Temp-Pfad und raeumt am Ende auf.</summary>
     private sealed class TempKnowledgeRoot : IDisposable
     {

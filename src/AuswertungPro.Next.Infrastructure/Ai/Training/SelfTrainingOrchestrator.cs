@@ -29,7 +29,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 /// Durchlaeuft das PDF-Protokoll, nimmt die eingebetteten Fotos als Ground Truth,
 /// laesst die KI blind analysieren und vergleicht deterministisch.
 /// </summary>
-public interface ISelfTrainingOrchestrator
+public interface ISelfTrainingOrchestrator : ITrainingOrchestrator
 {
     /// <summary>Startet autonomes Training fuer einen Fall.</summary>
     Task<SelfTrainingResult> RunAsync(
@@ -76,6 +76,9 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
           "AEC", "AED", "AEF" };
 
     public bool IsPaused => !_pauseGate.IsSet;
+
+    /// <inheritdoc/>
+    public string Name => "SelfTraining (PDF-Protokoll)";
 
     public SelfTrainingOrchestrator(
         EnhancedVisionAnalysisService vision,
