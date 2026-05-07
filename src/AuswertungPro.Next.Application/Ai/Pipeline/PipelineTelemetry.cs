@@ -23,6 +23,14 @@ public sealed class PipelineTelemetry
     public void RecordFrame(FrameTiming timing) { lock (_lock) { _frames.Add(timing); } }
 
     /// <summary>
+    /// Sprint 2 (2026-05-07): Optionaler zusaetzlicher Persister
+    /// (typisch: SQLite-Telemetry-Store fuer Drift-Auswertung). Wird NACH
+    /// dem JSONL-Schreiben aufgerufen. Eigene Exceptions werden geschluckt
+    /// (Debug-Log) — die JSONL-Persistierung bleibt der zuverlaessige Pfad.
+    /// </summary>
+    public Func<string, TelemetrySummary, CancellationToken, Task>? AdditionalPersister { get; set; }
+
+    /// <summary>
     /// Audit 2026-05-06 Top-10: Pipeline-Telemetry-Persistierung. Schreibt
     /// die aktuelle Summary als JSONL-Zeile in
     /// <c>%LOCALAPPDATA%/SewerStudio/logs/pipeline_telemetry.jsonl</c> (oder
@@ -67,6 +75,25 @@ public sealed class PipelineTelemetry
         finally
         {
             _persistGate.Release();
+        }
+
+        // Sprint 2: zusaetzlicher Persister (z.B. SQLite). Failures schlucken,
+        // weil JSONL-Pfad bereits erfolgreich war.
+        if (AdditionalPersister is not null)
+        {
+            try
+            {
+                await AdditionalPersister(label, summary, ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[PipelineTelemetry] AdditionalPersister failed: {ex.GetType().Name}: {ex.Message}");
+            }
         }
     }
 

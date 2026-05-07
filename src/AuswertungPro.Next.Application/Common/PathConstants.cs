@@ -36,6 +36,7 @@ public static class PathConstants
     public const string AiSanierungSessionsFile = "ai_sanierung_sessions.json";
     public const string MaintenanceStateFile = "maintenance.json";
     public const string SidecarTokenFile = ".sidecar_token";
+    public const string PipelineTelemetryDb = "pipeline_telemetry.db";
 
     // ── Verzeichnis-Namen ─────────────────────────────────────────
 
