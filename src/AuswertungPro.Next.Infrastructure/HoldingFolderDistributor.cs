@@ -40,38 +40,8 @@ public static partial class HoldingFolderDistributor
     private static readonly object XtfCacheSync = new();
     private static readonly Dictionary<string, string[]> XtfFilesCache =
         new(StringComparer.OrdinalIgnoreCase);
-    public sealed record DistributionResult(
-        bool Success,
-        string Message,
-        string SourcePdfPath,
-        string? SourceVideoPath,
-        string? DestPdfPath,
-        string? DestVideoPath,
-        string? InfoPath,
-        string? HoldingFolder,
-        VideoMatchStatus VideoStatus,
-        bool PdfCorrected = false,
-        string? PdfCorrectionMessage = null);
-
-    public sealed record DistributionProgress(int Processed, int Total, string? CurrentFile);
-
-    public enum VideoMatchStatus
-    {
-        NotChecked,
-        Matched,
-        NotFound,
-        Ambiguous,
-        /// <summary>Match nur ueber Haltungsname ohne Datum-Verifikation.
-        /// Funktional eine Zuordnung, aber bei mehreren Projekten / Wiederholungsinspektionen
-        /// kann das falsch sein. UI/Devis sollten zur manuellen Pruefung markieren.</summary>
-        MatchedWithoutDate,
-    }
-
-    public sealed record VideoFindResult(
-        VideoMatchStatus Status,
-        string? VideoPath,
-        IReadOnlyList<string> Candidates,
-        string? Message);
+    // Public types ausgegliedert nach HoldingFolderDistributor.Types.cs
+    // (Refactor 2026-05-07, Charge R2).
 
     private sealed record KinsTxtSection(
         string SourceTxtPath,
@@ -1249,9 +1219,8 @@ public static partial class HoldingFolderDistributor
         return sb.ToString();
     }
 
-    // Temporarily public for diagnostic purposes
-    public sealed record ParsedPdf(bool Success, string? Message, DateTime? Date, string? Haltung, string? VideoFile);
-    public sealed record ParsedShaftPdf(bool Success, string? Message, DateTime? Date, string? ShaftNumber);
+    // ParsedPdf / ParsedShaftPdf ausgegliedert nach HoldingFolderDistributor.Types.cs
+    // (Refactor 2026-05-07, Charge R2).
 
     private static string NormalizeText(string text)
     {
