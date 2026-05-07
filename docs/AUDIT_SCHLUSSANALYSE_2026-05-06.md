@@ -319,8 +319,18 @@ Nur **6 TODO/FIXME** im gesamten Code:
 
 ### 4.4 Test-Coverage
 
-- **704 Tests** (140 Infrastructure + 564 Pipeline) — Stand 2026-05-07, **+50 vs. Audit-Start**
-- 2026-05-07 neu: 25 ProjectPathResolver + 6 ActiveLearningSelector (inkl. 1 Bug gefunden) + 5 FrameStoreCleanupService + 6 KnowledgeMirrorHealth + 6 HaltungRecordViewModel + 2 TrainingCaseJsonRoundtrip
+- **743 Tests** (140 Infrastructure + 603 Pipeline) — Stand 2026-05-07, **+89 vs. Audit-Start (+13.6%)**
+- 2026-05-07 neu (89 Tests):
+  - 25 ProjectPathResolver (SEC-H4 Path-Traversal)
+  - 6 ActiveLearningSelector (Bug entdeckt + gefixt)
+  - 5 FrameStoreCleanupService
+  - 6 KnowledgeMirrorHealth
+  - 6 HaltungRecordViewModel (ARCH-H1 Phase 1)
+  - 2 TrainingCaseJsonRoundtrip
+  - 5 SafeXmlLoader (XXE-Schutz, L4)
+  - 10 ProcessRunner (Drain + Timeout + Tree-Kill)
+  - 19 PdfProtocolHelpers (Caesar-Decode + Marker-Erkennung)
+  - 5 TaskExtensions (SafeFireAndForget)
 - 2 Skip-Tests
 - **Keine** Tests für: PlayerWindow, MultiModelAnalysisService (komplexe State-Automaten), Sidecar-Routes (Python), VLC-Steuerung, SAM-Renderer
 
