@@ -99,7 +99,7 @@ public sealed class XmlCodeCatalogProvider : ICodeCatalogProvider
         var fallbackTexts = LoadFallbackTextMap(_fallbackTextXmlPath);
         var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        var doc = XDocument.Load(_xmlPath);
+        var doc = AuswertungPro.Next.Application.Common.SafeXmlLoader.Load(_xmlPath);
         var root = doc.Root ?? throw new InvalidOperationException("XML-Katalog ohne Root-Element.");
 
         if (string.Equals(root.Name.LocalName, "WCCat", StringComparison.OrdinalIgnoreCase))
@@ -775,7 +775,7 @@ public sealed class XmlCodeCatalogProvider : ICodeCatalogProvider
 
         try
         {
-            var doc = XDocument.Load(path);
+            var doc = AuswertungPro.Next.Application.Common.SafeXmlLoader.Load(path);
             var root = doc.Root;
             if (root is null)
                 return map;

@@ -77,7 +77,7 @@ internal static class M150MdbImportHelper
 
         try
         {
-            var doc = XDocument.Load(path, LoadOptions.PreserveWhitespace);
+            var doc = AuswertungPro.Next.Application.Common.SafeXmlLoader.Load(path, LoadOptions.PreserveWhitespace);
 
             // WinCan Viewer XML: Root=NewDataSet with S_T children → parse as WinCan, not M150
             if (IsWinCanViewerXml(doc))
@@ -114,7 +114,7 @@ internal static class M150MdbImportHelper
     {
         try
         {
-            var doc = XDocument.Load(path, LoadOptions.PreserveWhitespace);
+            var doc = AuswertungPro.Next.Application.Common.SafeXmlLoader.Load(path, LoadOptions.PreserveWhitespace);
             var hgCount = doc.Descendants().Count(e => e.Name.LocalName.Equals("HG", StringComparison.OrdinalIgnoreCase));
             var hiCount = doc.Descendants().Count(e => e.Name.LocalName.Equals("HI", StringComparison.OrdinalIgnoreCase));
             return (hgCount, hiCount);

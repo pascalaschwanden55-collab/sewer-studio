@@ -99,7 +99,7 @@ public sealed class LegacyXtfImportService
             isSia405 = header.Contains("SIA405", StringComparison.OrdinalIgnoreCase);
             isVsa = header.Contains("VSA_KEK", StringComparison.OrdinalIgnoreCase);
         }
-        var doc = XDocument.Load(path, LoadOptions.PreserveWhitespace);
+        var doc = AuswertungPro.Next.Application.Common.SafeXmlLoader.Load(path, LoadOptions.PreserveWhitespace);
 
         // SIA405 und VSA_KEK koennen beide im Header stehen (VSA_KEK referenziert SIA405_Abwasser als Dependency).
         // Primaeres Modell bestimmen: wenn VSA_KEK-Daten vorhanden, diese bevorzugen.

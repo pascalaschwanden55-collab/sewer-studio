@@ -128,7 +128,7 @@ public sealed class WinCanCatalogDiscoveryService
                 return null;
 
             // Read the document just far enough to find the CATALOG element
-            var doc = XDocument.Load(filePath);
+            var doc = AuswertungPro.Next.Application.Common.SafeXmlLoader.Load(filePath);
             var root = doc.Root;
             if (root is null)
                 return null;

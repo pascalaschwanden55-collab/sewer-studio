@@ -73,7 +73,7 @@ public static class XtfStammdatenExtractor
             return result;
 
         XDocument doc;
-        try { doc = XDocument.Load(xtfPath); }
+        try { doc = AuswertungPro.Next.Application.Common.SafeXmlLoader.Load(xtfPath); }
         catch { return result; }
 
         // Sammle Kanal-Daten (Nutzungsart) und Haltung-Daten (Geometrie/Material/Laenge).

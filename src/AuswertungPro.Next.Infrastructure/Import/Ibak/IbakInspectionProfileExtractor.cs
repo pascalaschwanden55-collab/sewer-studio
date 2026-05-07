@@ -334,7 +334,13 @@ public static class IbakInspectionProfileExtractor
             for (var i = 0; i < n; i++)
                 if (buf[i] is 0xFC or 0xE4 or 0xF6 or 0xDF) return true;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // L5: File-Open-Fehler waren stumm — koennten auf Lock-/Permission-
+            // Probleme im Import-Pfad hindeuten. Debug-Log erlaubt Diagnose.
+            System.Diagnostics.Debug.WriteLine(
+                $"[IbakImport] TryDetectWin1252({Path.GetFileName(path)}): {ex.GetType().Name}: {ex.Message}");
+        }
         return false;
     }
 

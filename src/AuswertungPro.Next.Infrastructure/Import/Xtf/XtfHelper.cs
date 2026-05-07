@@ -21,7 +21,7 @@ namespace AuswertungPro.Next.Infrastructure.Import.Xtf
         {
             var result = new List<XtfHoldingInfo>();
             if (!File.Exists(xtfPath)) return result;
-            var doc = XDocument.Load(xtfPath);
+            var doc = AuswertungPro.Next.Application.Common.SafeXmlLoader.Load(xtfPath);
             XNamespace ns = doc.Root?.Name.Namespace ?? "";
 
             // SIA405: <SIA405_Abwasser.SIA405_Abwasser.Kanal ... Haltung="11111-2222" SchachtOben="..." SchachtUnten="..." />
