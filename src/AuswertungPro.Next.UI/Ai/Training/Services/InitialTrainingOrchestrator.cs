@@ -49,6 +49,13 @@ public sealed class InitialTrainingOrchestrator
         _log = logger;
     }
 
+    // Audit 2026-04-23 ARCH-H2: gemeinsame Trainings-Orchestrator-Familie:
+    //  - ISelfTrainingOrchestrator (Application) — pro Fall
+    //  - IBatchSelfTrainingOrchestrator (Application) — Ordner-Tree
+    //  - IInitialTrainingOrchestrator (UI, dieses) — Erstaufbau YOLO-Dataset
+    //  - VideoSelfTrainingOrchestrator (Infrastructure) — pro Video
+    //  - YoloRetrainOrchestrator (Infrastructure) — Modell-Retrain
+    //  - QwenLoraOrchestrator (Infrastructure) — LoRA-Adapter
     /// <summary>
     /// Fuehrt den kompletten initialen Training-Workflow durch.
     /// </summary>

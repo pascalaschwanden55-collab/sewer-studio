@@ -32,7 +32,7 @@ namespace AuswertungPro.Next.UI.Ai.Training;
 ///
 /// Fehlertoleranz: Wenn eine Haltung scheitert → ueberspringen, naechste.
 /// </summary>
-public sealed class BatchSelfTrainingOrchestrator
+public sealed class BatchSelfTrainingOrchestrator : AuswertungPro.Next.Application.Ai.Training.IBatchSelfTrainingOrchestrator
 {
     private readonly VideoSelfTrainingOrchestrator _videoOrchestrator;
     private readonly Func<VideoSelfTrainingOrchestrator>? _orchestratorFactory;
