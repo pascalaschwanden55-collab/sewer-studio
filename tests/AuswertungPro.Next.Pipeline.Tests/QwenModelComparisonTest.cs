@@ -35,7 +35,21 @@ public class QwenModelComparisonTest
     private readonly ITestOutputHelper _output;
     public QwenModelComparisonTest(ITestOutputHelper output) => _output = output;
 
-    private const string EvalDir = @"C:\KI_BRAIN\eval_set";
+    // Audit 2026-04-25 STAB-M9: Eval-Pfad ueber KI_BRAIN_ROOT env-var (Default
+    // C:\KI_BRAIN wenn lokal vorhanden, sonst Path.GetTempPath()) — verhindert
+    // rote Tests auf Maschinen ohne Eval-Daten. CompareBaseVsThinking skipt
+    // sowieso wenn das _candidates.json nicht existiert.
+    private static readonly string EvalDir = ResolveEvalDir();
+
+    private static string ResolveEvalDir()
+    {
+        var envRoot = Environment.GetEnvironmentVariable("KI_BRAIN_ROOT");
+        if (!string.IsNullOrWhiteSpace(envRoot))
+            return Path.Combine(envRoot, "eval_set");
+        if (Directory.Exists(@"C:\KI_BRAIN"))
+            return @"C:\KI_BRAIN\eval_set";
+        return Path.Combine(Path.GetTempPath(), "SewerStudio_TestArtifacts", "eval_set");
+    }
     private const string BaseModel = "qwen3-vl:8b-q8";
     private const string ThinkModel = "qwen3-vl:8b-thinking";
     private const int PlausibilityCheckAt = 30;
