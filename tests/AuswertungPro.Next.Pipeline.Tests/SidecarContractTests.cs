@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using Xunit;
 
@@ -136,6 +137,132 @@ public class SidecarContractTests
         Assert.Equal("/health", captured.RequestUri!.AbsolutePath);
     }
 
+    // ── Cluster B: POST-Endpoints (DetectYolo / SegmentSam) ─────────────────
+
+    [Fact]
+    public async Task DetectYolo_PostsToSlashDetectYolo()
+    {
+        var stub = new CapturingStubHandler
+        {
+            Responder = _ => Json(HttpStatusCode.OK,
+                """{"is_relevant":false,"detections":[],"frame_class":"irrelevant","inference_time_ms":1.0}""")
+        };
+        var client = new VisionPipelineClient(BaseUri, new HttpClient(stub));
+
+        await client.DetectYoloAsync(new YoloRequest("base64data==", 0.3), CancellationToken.None);
+
+        var captured = Assert.Single(stub.Requests);
+        Assert.Equal(HttpMethod.Post, captured.Method);
+        Assert.Equal("/detect/yolo", captured.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task SegmentSam_PostsToSlashSegmentSam()
+    {
+        var stub = new CapturingStubHandler
+        {
+            Responder = _ => Json(HttpStatusCode.OK,
+                """{"masks":[],"inference_time_ms":1.0}""")
+        };
+        var client = new VisionPipelineClient(BaseUri, new HttpClient(stub));
+
+        var boxes = new[] { new SamBoundingBox(10, 20, 100, 200, "crack", 0.95) };
+        await client.SegmentSamAsync(new SamRequest("base64data==", boxes, PipeDiameterMm: 300), CancellationToken.None);
+
+        var captured = Assert.Single(stub.Requests);
+        Assert.Equal(HttpMethod.Post, captured.Method);
+        Assert.Equal("/segment/sam", captured.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task DetectYolo_BodyContainsImageBase64AndConfidenceThreshold()
+    {
+        string? capturedBody = null;
+        var stub = new CapturingStubHandler
+        {
+            Responder = req =>
+            {
+                capturedBody = req.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+                return Json(HttpStatusCode.OK,
+                    """{"is_relevant":false,"detections":[],"frame_class":"irrelevant","inference_time_ms":1.0}""");
+            }
+        };
+        var client = new VisionPipelineClient(BaseUri, new HttpClient(stub));
+
+        await client.DetectYoloAsync(new YoloRequest("base64data==", 0.42), CancellationToken.None);
+
+        Assert.NotNull(capturedBody);
+        Assert.Contains("\"image_base64\"", capturedBody);
+        Assert.Contains("base64data==", capturedBody);
+        Assert.Contains("\"confidence_threshold\"", capturedBody);
+        Assert.Contains("0.42", capturedBody);
+    }
+
+    [Fact]
+    public async Task DetectYolo_WithToken_AddsXSidecarTokenHeaderOnPost()
+    {
+        var stub = new CapturingStubHandler
+        {
+            Responder = _ => Json(HttpStatusCode.OK,
+                """{"is_relevant":false,"detections":[],"frame_class":"irrelevant","inference_time_ms":1.0}""")
+        };
+        var client = new VisionPipelineClient(BaseUri, new HttpClient(stub), authToken: "post-token-99");
+
+        await client.DetectYoloAsync(new YoloRequest("base64data==", 0.3), CancellationToken.None);
+
+        var captured = Assert.Single(stub.Requests);
+        Assert.True(captured.Headers.TryGetValues("X-Sidecar-Token", out var values),
+            "X-Sidecar-Token-Header fehlt obwohl Token explizit gesetzt war");
+        Assert.Equal("post-token-99", values!.Single());
+    }
+
+    [Fact]
+    public async Task DetectYolo_NonSuccessStatus_ThrowsHttpRequestExceptionWithStatusAndBody()
+    {
+        var stub = new CapturingStubHandler
+        {
+            Responder = _ => new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent(
+                    "{\"detail\":\"image_base64 missing\"}",
+                    Encoding.UTF8, "application/json")
+            }
+        };
+        var client = new VisionPipelineClient(BaseUri, new HttpClient(stub));
+
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
+            client.DetectYoloAsync(new YoloRequest("", 0.3), CancellationToken.None));
+
+        // Format aus VisionPipelineClient.PostAsync:
+        //   "Sidecar {endpoint} returned {(int)status}: {body}"
+        Assert.Contains("/detect/yolo", ex.Message);
+        Assert.Contains("400", ex.Message);
+        Assert.Contains("image_base64 missing", ex.Message);
+    }
+
+    [Fact]
+    public async Task DetectYolo_CancelledToken_ThrowsOperationCanceled()
+    {
+        var stub = new CapturingStubHandler
+        {
+            // Falls der Stub doch erreicht wird, normal antworten — der ct
+            // soll aber bereits in CapturingStubHandler.SendAsync greifen.
+            Responder = _ => Json(HttpStatusCode.OK,
+                """{"is_relevant":false,"detections":[],"frame_class":"irrelevant","inference_time_ms":1.0}""")
+        };
+        var client = new VisionPipelineClient(BaseUri, new HttpClient(stub));
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            client.DetectYoloAsync(new YoloRequest("base64data==", 0.3), cts.Token));
+
+        // Stub darf nicht ausgeloest worden sein (Cancellation vor Senden).
+        Assert.Empty(stub.Requests);
+    }
+
+    // ── Helpers ─────────────────────────────────────────────────────────────
+
     private static HttpResponseMessage Json(HttpStatusCode status, string json) =>
         new(status)
         {
@@ -155,6 +282,10 @@ public class SidecarContractTests
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            // Cancellation respektieren — sonst koennen Cancellation-Tests
+            // den Stub nicht zuverlaessig vor dem Senden abbrechen.
+            cancellationToken.ThrowIfCancellationRequested();
+
             Requests.Add(request);
             var resp = Responder is null
                 ? new HttpResponseMessage(HttpStatusCode.OK)
