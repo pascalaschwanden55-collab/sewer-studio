@@ -288,6 +288,19 @@ Distinct VSA-Codes:     207
 - SEC-H1-H3, M4: Command-Injection in 8 Process.Start-Stellen — ✅ **alle 8 Stellen behoben** (auf ProcessRunner oder ArgumentList.Add). Letzte 3 Stellen heute 2026-05-06 fixiert (PdfProtocolTableParser, BatchPipelineService, VideoSelfTrainingOrchestrator).
 - SEC-H4: Path-Traversal via Haltungs-ID — ✅ **behoben** in `ProjectPathResolver.SanitizePathSegment` (Trim trailing dots, Reject `.`/`..`, Replace eingebettetes `..`).
 
+**Architektur (HIGH, alle 2026-05-07 abgearbeitet):**
+- ARCH-H1: Domain-Models mit `INotifyPropertyChanged` — ⚠️ **dokumentierte Tech-Debt**. Voller POCO/Wrapper-Split ist 2-3 Sessions (11+ ViewModels + 20+ XAML-Bindings). Inline-Migrationspfad in `HaltungRecord.cs`/`SchachtRecord.cs`/`Project.cs` markiert. Wird erst gemacht wenn Headless-CLI/Sidecar-Use einen Business-Treiber bekommt.
+- ARCH-H2: Six Trainings-Orchestrators ohne Interface-Hierarchie — ✅ **abgearbeitet**. `IBatchSelfTrainingOrchestrator` neu (zusaetzlich zum bestehenden `ISelfTrainingOrchestrator`). Trainings-Familie als Doc-Block in `InitialTrainingOrchestrator` dokumentiert.
+- ARCH-H3: Inkonsistente Interface-Abstraktion bei KI-Kern-Services — ✅ **abgearbeitet**. `IQualityGateService` + `IDetectionAggregator` neu — TDD wird moeglich.
+- ARCH-H4: CLAUDE.md referenzierte nicht-existente Klassen — ✅ **abgearbeitet** (Klassen-Pfade auf 2026-05-07-Stand aktualisiert + Provider-Abschnitt ergaenzt).
+- ARCH-H5: God-Class `MultiModelAnalysisService` (2185 LOC) — ✅ **abgearbeitet**. Helpers + Plausibility/Consensus-Filter + ProtocolMerger nach `.Helpers.cs` Partial. Hauptdatei 2185 → 1547 LOC (-30%).
+
+**Sicherheit (HIGH zusaetzlich):**
+- SEC-C1: UI-Pfade ohne Containment-Check — ✅ **abgearbeitet** (TryResolveStoredPath + ResolveExistingPath + ResolveDossierPhotoPath + AddResolvedPdf alle gehaertet).
+
+**Tests:**
+- STAB-M9: Pipeline-Tests mit absoluten Maschinenpfaden — ✅ **abgearbeitet** (`KI_BRAIN_ROOT` env-var + Skip-Pattern).
+
 **Stabilität:**
 - STAB-H1: HttpClient-Leak in Feedback-Pipeline — ✅ **behoben** (static `_feedbackHttpClient` in PlayerWindow.Feedback.cs + TrainingCenterWindow.xaml.cs).
 - STAB-H2: AppendAllTextAsync ohne Lock auf Feedback-JSONL — ✅ **behoben** (`_positiveFeedbackLock` + `_negativeFeedbackLock` SemaphoreSlim). Zusaetzlich: OllamaClient `qwen_raw_responses.log` mit Lock geschuetzt.
