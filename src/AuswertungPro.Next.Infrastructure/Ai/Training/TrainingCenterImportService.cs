@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 using AuswertungPro.Next.Application.Ai.Training;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 public sealed class TrainingCenterImportService
 {

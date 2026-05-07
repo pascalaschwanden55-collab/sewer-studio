@@ -23,6 +23,7 @@ using System.Net.Http;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.UI.Hydraulik;
 using AuswertungPro.Next.Application.Ai.Vision;

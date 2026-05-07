@@ -361,7 +361,7 @@ public static class KnowledgeBackupService
             var importedPath = Path.Combine(Ai.KnowledgeRoot.GetRoot(), "training_center.json");
             if (!File.Exists(importedPath)) return;
 
-            var tcStore = new Ai.Training.TrainingCenterStore();
+            var tcStore = new AuswertungPro.Next.Application.Ai.Training.TrainingCenterStore();
             var targetPath = tcStore.StoreFilePath;
 
             // Zielverzeichnis sicherstellen
@@ -534,7 +534,7 @@ public static class KnowledgeBackupService
 
         // Training-Center State (Case-Fortschritt) — liegt aktuell in AppData,
         // wird hier zusaetzlich unter knowledge/ exportiert fuer portablen Transfer.
-        var tcStore = new Ai.Training.TrainingCenterStore();
+        var tcStore = new AuswertungPro.Next.Application.Ai.Training.TrainingCenterStore();
         yield return (tcStore.StoreFilePath, "knowledge/training_center.json");
 
         // ══════════════════════════════════════════════════════════════════
