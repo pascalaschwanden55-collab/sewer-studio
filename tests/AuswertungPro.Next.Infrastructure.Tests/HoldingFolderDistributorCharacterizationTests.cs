@@ -346,6 +346,170 @@ public sealed class HoldingFolderDistributorCharacterizationTests
         Assert.True(File.Exists(item.DestVideoPath!));
     }
 
+    // ── Charge 3: Shafts + Dichtheit Argument-Validation ───────────────────
+    //
+    // Vier weitere Public-Eintrittspforten — DistributeShafts,
+    // DistributeShaftFiles, DistributeDichtheit, DistributeDichtheitFiles —
+    // mit teils subtilen Unterschieden in Filter-Logik und Fehler-Message.
+    // Beim Aufteilen wuerden diese Asymmetrien leicht "vereinheitlicht" und
+    // damit unbemerkt das Verhalten aendern.
+
+    [Fact]
+    public void DistributeShafts_PdfFolderDoesNotExist_ReturnsSingleNotCheckedResult()
+    {
+        using var temp = new TempDir();
+        var nonExistent = Path.Combine(temp.Path, "missing-shafts");
+        var dest = Path.Combine(temp.Path, "dest");
+
+        var results = HoldingFolderDistributor.DistributeShafts(
+            pdfSourceFolder: nonExistent,
+            destGemeindeFolder: dest);
+
+        var item = Assert.Single(results);
+        Assert.False(item.Success);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotChecked, item.VideoStatus);
+        Assert.Contains("not found", item.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(nonExistent, item.SourcePdfPath);
+    }
+
+    [Fact]
+    public void DistributeShafts_PdfFolderEmpty_ReturnsSingleNotCheckedResult_WithRecursiveMessage()
+    {
+        using var temp = new TempDir();
+        var pdfFolder = Path.Combine(temp.Path, "shaft-pdfs");
+        Directory.CreateDirectory(pdfFolder);
+        var dest = Path.Combine(temp.Path, "dest");
+
+        var results = HoldingFolderDistributor.DistributeShafts(
+            pdfSourceFolder: pdfFolder,
+            destGemeindeFolder: dest);
+
+        var item = Assert.Single(results);
+        Assert.False(item.Success);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotChecked, item.VideoStatus);
+        // Asymmetrie zu DistributeDichtheit eingefroren: Shafts schreibt
+        // "No PDF files found (recursive) in:", Dichtheit nur "found in:".
+        Assert.Contains("(recursive)", item.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DistributeShaftFiles_EmptyList_ReturnsSingleNotCheckedResult()
+    {
+        using var temp = new TempDir();
+        var dest = Path.Combine(temp.Path, "dest");
+
+        var results = HoldingFolderDistributor.DistributeShaftFiles(
+            pdfFiles: Array.Empty<string>(),
+            destGemeindeFolder: dest);
+
+        var item = Assert.Single(results);
+        Assert.False(item.Success);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotChecked, item.VideoStatus);
+        Assert.Contains("No valid PDF files", item.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DistributeShaftFiles_OnlySplitPrefixedPdfs_ReturnsSingleNotCheckedResult()
+    {
+        // DistributeShaftFiles filtert split_*.pdf — wie DistributeFiles.
+        using var temp = new TempDir();
+        var splits = new[]
+        {
+            CreateFile(temp.Path, "split_001.pdf"),
+            CreateFile(temp.Path, "split_002.pdf")
+        };
+        var dest = Path.Combine(temp.Path, "dest");
+
+        var results = HoldingFolderDistributor.DistributeShaftFiles(
+            pdfFiles: splits,
+            destGemeindeFolder: dest);
+
+        var item = Assert.Single(results);
+        Assert.False(item.Success);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotChecked, item.VideoStatus);
+        Assert.Contains("No valid PDF files", item.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DistributeDichtheit_PdfFolderDoesNotExist_ReturnsSingleNotCheckedResult()
+    {
+        using var temp = new TempDir();
+        var nonExistent = Path.Combine(temp.Path, "missing-dichtheit");
+        var dest = Path.Combine(temp.Path, "dest");
+
+        var results = HoldingFolderDistributor.DistributeDichtheit(
+            pdfSourceFolder: nonExistent,
+            destGemeindeFolder: dest);
+
+        var item = Assert.Single(results);
+        Assert.False(item.Success);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotChecked, item.VideoStatus);
+        Assert.Contains("not found", item.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(nonExistent, item.SourcePdfPath);
+    }
+
+    [Fact]
+    public void DistributeDichtheit_PdfFolderEmpty_ReturnsSingleNotCheckedResult_WithoutRecursiveMessage()
+    {
+        using var temp = new TempDir();
+        var pdfFolder = Path.Combine(temp.Path, "dichtheit-pdfs");
+        Directory.CreateDirectory(pdfFolder);
+        var dest = Path.Combine(temp.Path, "dest");
+
+        var results = HoldingFolderDistributor.DistributeDichtheit(
+            pdfSourceFolder: pdfFolder,
+            destGemeindeFolder: dest);
+
+        var item = Assert.Single(results);
+        Assert.False(item.Success);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotChecked, item.VideoStatus);
+        // Asymmetrie zu DistributeShafts eingefroren: Dichtheit-Message hat
+        // KEIN "(recursive)"-Suffix — beim Vereinheitlichen wuerde das auffallen.
+        Assert.Contains("No PDF files found", item.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("(recursive)", item.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DistributeDichtheitFiles_EmptyList_ReturnsSingleNotCheckedResult()
+    {
+        using var temp = new TempDir();
+        var dest = Path.Combine(temp.Path, "dest");
+
+        var results = HoldingFolderDistributor.DistributeDichtheitFiles(
+            pdfFiles: Array.Empty<string>(),
+            destGemeindeFolder: dest);
+
+        var item = Assert.Single(results);
+        Assert.False(item.Success);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotChecked, item.VideoStatus);
+        Assert.Contains("No valid PDF files", item.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void DistributeDichtheitFiles_OnlyMissingFiles_ReturnsSingleNotCheckedResult()
+    {
+        // Asymmetrie zu DistributeShaftFiles: DistributeDichtheitFiles
+        // filtert NICHT split_*.pdf. Hier prueft der Test trotzdem den
+        // Fall "alle Files fehlen" — ein Test fuer den split_-Unterschied
+        // braeuchte einen DistributeCore-Smoke (offen, Charge 4+).
+        using var temp = new TempDir();
+        var missing = new[]
+        {
+            Path.Combine(temp.Path, "ghost-dichtheit-1.pdf"),
+            Path.Combine(temp.Path, "ghost-dichtheit-2.pdf")
+        };
+        var dest = Path.Combine(temp.Path, "dest");
+
+        var results = HoldingFolderDistributor.DistributeDichtheitFiles(
+            pdfFiles: missing,
+            destGemeindeFolder: dest);
+
+        var item = Assert.Single(results);
+        Assert.False(item.Success);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotChecked, item.VideoStatus);
+        Assert.Contains("No valid PDF files", item.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────────
 
     /// <summary>
