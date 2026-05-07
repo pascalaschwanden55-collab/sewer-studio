@@ -510,6 +510,76 @@ public sealed class HoldingFolderDistributorCharacterizationTests
         Assert.Contains("No valid PDF files", item.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    // ── Charge 4: recursiveVideoSearch-Argument-Symmetrie ──────────────────
+    //
+    // recursiveVideoSearch ist heute ungetestet — ein Switch der beim
+    // Aufteilen leicht aus Versehen vereinheitlicht wird. Diese zwei
+    // Tests teilen das gleiche Setup (Video in Sub-Folder) und
+    // unterscheiden sich nur im Switch — A/B-Symmetrie als Refactor-Schutz.
+
+    [Fact]
+    public void DistributeTxtFiles_RecursiveSearchTrue_FindsVideoInSubFolder()
+    {
+        using var temp = new TempDir();
+        var (txtPath, videosFolder, destFolder) = SetupKinsLayout(
+            temp.Path,
+            txtBody: "Schmutzwasser 100 -> 200 UV 300 @Datei=DEEP001.MPG",
+            infoBody: "Aufnahmen: 04.12.14 - 05.12.14",
+            videosToCreate: Array.Empty<string>());
+        // Video bewusst NUR im Sub-Folder anlegen, nicht im Root.
+        var subFolder = Path.Combine(videosFolder, "subfolder");
+        Directory.CreateDirectory(subFolder);
+        File.WriteAllText(Path.Combine(subFolder, "DEEP001.MPG"), "deep-video");
+
+        var results = HoldingFolderDistributor.DistributeTxtFiles(
+            txtFiles: new[] { txtPath },
+            videoSourceFolder: videosFolder,
+            destGemeindeFolder: destFolder,
+            moveInsteadOfCopy: false,
+            overwrite: false,
+            recursiveVideoSearch: true, // <-- der Punkt
+            unmatchedFolderName: "__UNMATCHED",
+            project: null,
+            progress: null);
+
+        var item = Assert.Single(results);
+        Assert.True(item.Success, item.Message);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.Matched, item.VideoStatus);
+        Assert.False(string.IsNullOrWhiteSpace(item.DestVideoPath));
+        Assert.True(File.Exists(item.DestVideoPath!));
+    }
+
+    [Fact]
+    public void DistributeTxtFiles_RecursiveSearchFalse_DoesNotFindVideoInSubFolder()
+    {
+        using var temp = new TempDir();
+        var (txtPath, videosFolder, destFolder) = SetupKinsLayout(
+            temp.Path,
+            txtBody: "Schmutzwasser 100 -> 200 UV 300 @Datei=DEEP002.MPG",
+            infoBody: "Aufnahmen: 04.12.14 - 05.12.14",
+            videosToCreate: Array.Empty<string>());
+        // Identisches Setup wie der Recursive=true-Test, nur der Switch dreht.
+        var subFolder = Path.Combine(videosFolder, "subfolder");
+        Directory.CreateDirectory(subFolder);
+        File.WriteAllText(Path.Combine(subFolder, "DEEP002.MPG"), "deep-video");
+
+        var results = HoldingFolderDistributor.DistributeTxtFiles(
+            txtFiles: new[] { txtPath },
+            videoSourceFolder: videosFolder,
+            destGemeindeFolder: destFolder,
+            moveInsteadOfCopy: false,
+            overwrite: false,
+            recursiveVideoSearch: false, // <-- der Unterschied zum vorherigen Test
+            unmatchedFolderName: "__UNMATCHED",
+            project: null,
+            progress: null);
+
+        var item = Assert.Single(results);
+        Assert.True(item.Success, item.Message); // TXT wird trotzdem geschrieben
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotFound, item.VideoStatus);
+        Assert.Null(item.DestVideoPath);
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────────
 
     /// <summary>
