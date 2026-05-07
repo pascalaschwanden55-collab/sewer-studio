@@ -5,12 +5,13 @@
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Phase 3.3: PageHeader-Control mit Action-Button rechts. -->
         <ctrl:PageHeader Title="Diagnose"
-                         Subtitle="Log-Tail aus der Protokolldatei lesen und Fehlercodes nachschlagen.">
+                         Subtitle="Wartungs-Tools, KB-Mirror-Status, Frame-Cleanup, Versions-Pruning + Log-Tail.">
             <ctrl:PageHeader.Actions>
                 <Button Content="Log aktualisieren"
                         Command="{Binding RefreshCommand}"
@@ -19,7 +20,78 @@
             </ctrl:PageHeader.Actions>
         </ctrl:PageHeader>
 
-        <TextBox Grid.Row="1" Text="{Binding LogTail}" AcceptsReturn="True" IsReadOnly="True"
-                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+        <!-- Wartungs-Tools (Audit-Tab, 2026-05-07) -->
+        <Grid Grid.Row="1" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- KB-Mirror Health -->
+            <Border Grid.Column="0" Margin="0,0,8,0" Padding="12"
+                    BorderBrush="{DynamicResource MutedBrush}" BorderThickness="1" CornerRadius="6">
+                <StackPanel>
+                    <TextBlock Text="Brain-Mirror Health" FontWeight="SemiBold" FontSize="14"/>
+                    <TextBlock Text="Prueft ob C:\KI_BRAIN nach E:\Brain gespiegelt ist."
+                               Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="0,2,0,8"
+                               TextWrapping="Wrap"/>
+                    <Button Content="Pruefen"
+                            Command="{Binding CheckMirrorHealthCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            HorizontalAlignment="Left" Padding="16,4"/>
+                    <TextBlock Text="{Binding MirrorHealthStatus}" FontWeight="Bold" FontSize="13"
+                               Foreground="{Binding MirrorHealthBrush}" Margin="0,8,0,2"/>
+                    <TextBlock Text="{Binding MirrorHealthMessage}" TextWrapping="Wrap" FontSize="11"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Frame-Cleanup -->
+            <Border Grid.Column="1" Margin="4,0,4,0" Padding="12"
+                    BorderBrush="{DynamicResource MutedBrush}" BorderThickness="1" CornerRadius="6">
+                <StackPanel>
+                    <TextBlock Text="Frame-Cleanup" FontWeight="SemiBold" FontSize="14"/>
+                    <TextBlock Text="Loescht verwaiste PNGs unter frames/ die zu keinem TrainingSample mehr gehoeren. Schont Frames juenger als 7 Tage."
+                               Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="0,2,0,8"
+                               TextWrapping="Wrap"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Pruefen (DryRun)"
+                                Command="{Binding FrameCleanupDryRunCommand}"
+                                Style="{StaticResource SecondaryButton}"
+                                IsEnabled="{Binding IsFrameCleanupRunning, Converter={StaticResource InvertedBoolConverter}}"
+                                Padding="12,4" Margin="0,0,4,0"/>
+                        <Button Content="Loeschen"
+                                Command="{Binding FrameCleanupExecuteCommand}"
+                                Style="{StaticResource PrimaryButton}"
+                                IsEnabled="{Binding IsFrameCleanupRunning, Converter={StaticResource InvertedBoolConverter}}"
+                                Padding="12,4"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding FrameCleanupResult}" TextWrapping="Wrap"
+                               FontFamily="Consolas" FontSize="11" Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Versions-Pruning -->
+            <Border Grid.Column="2" Margin="8,0,0,0" Padding="12"
+                    BorderBrush="{DynamicResource MutedBrush}" BorderThickness="1" CornerRadius="6">
+                <StackPanel>
+                    <TextBlock Text="KB-Versionen aufraeumen" FontWeight="SemiBold" FontSize="14"/>
+                    <TextBlock Text="Loescht alte Versions-Snapshots in der Knowledge Base. Behaelt: letzte 20 + alle juenger als 30 Tage."
+                               Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="0,2,0,8"
+                               TextWrapping="Wrap"/>
+                    <Button Content="Aufraeumen"
+                            Command="{Binding VersionsPruneCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            IsEnabled="{Binding IsVersionsPruneRunning, Converter={StaticResource InvertedBoolConverter}}"
+                            HorizontalAlignment="Left" Padding="16,4"/>
+                    <TextBlock Text="{Binding VersionsPruneResult}" TextWrapping="Wrap"
+                               FontFamily="Consolas" FontSize="11" Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <TextBox Grid.Row="2" Text="{Binding LogTail}" AcceptsReturn="True" IsReadOnly="True"
+                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                 FontFamily="Consolas" FontSize="11"/>
     </Grid>
 </UserControl>

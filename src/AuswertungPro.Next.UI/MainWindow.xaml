@@ -10,6 +10,7 @@
     <Window.Resources>
         <ctrl:PercentToWidthConverter x:Key="PercentToWidthConverter"/>
         <ctrl:PercentToColorConverter x:Key="PercentToColorConverter"/>
+        <ctrl:InvertedBoolConverter x:Key="InvertedBoolConverter"/>
     </Window.Resources>
     <Window.InputBindings>
         <KeyBinding Key="F11" Command="{Binding ToggleFocusModeCommand}"/>
