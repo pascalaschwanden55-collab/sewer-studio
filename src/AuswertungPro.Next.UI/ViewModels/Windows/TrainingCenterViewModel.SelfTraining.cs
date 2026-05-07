@@ -47,7 +47,7 @@ public partial class TrainingCenterViewModel
                 if (!Directory.Exists(folder)) continue;
                 var found = await _import.ScanAsync(folder);
                 foreach (var c in found)
-                    Cases.Add(c);
+                    Cases.Add(new TrainingCaseViewModel(c));
             }
         }
 
@@ -169,7 +169,7 @@ public partial class TrainingCenterViewModel
             if (casesToTrain.Count == 0)
             {
                 // Fallback: Alle bereits verarbeitet → nur den ausgewaehlten Fall erneut
-                casesToTrain = new List<TrainingCase> { SelectedCase };
+                casesToTrain = new List<TrainingCaseViewModel> { SelectedCase };
             }
 
             Log($"Selbsttraining: {casesToTrain.Count} Faelle zu verarbeiten");
@@ -179,17 +179,17 @@ public partial class TrainingCenterViewModel
             Log($"PDF-Fotos vorab extrahieren (CPU-Parallelitaet: {preExtractCpuParallelism})...");
             await Parallel.ForEachAsync(casesToTrain,
                 new ParallelOptions { MaxDegreeOfParallelism = preExtractCpuParallelism, CancellationToken = ct },
-                async (c, token) =>
+                async (vm, token) =>
                 {
-                    if (string.IsNullOrEmpty(c.ProtocolPath)) return;
-                    var framesDir = Path.Combine(c.FolderPath, "self_training_frames");
+                    if (string.IsNullOrEmpty(vm.ProtocolPath)) return;
+                    var framesDir = Path.Combine(vm.FolderPath, "self_training_frames");
                     if (Directory.Exists(framesDir) && Directory.GetFiles(framesDir, "*.png").Length > 0) return;
                     // PdfProtocolExtractor wird in RunAsync nochmal aufgerufen —
                     // aber die Frames sind dann schon auf Disk und muessen nicht nochmal extrahiert werden
                     try
                     {
                         var extractor = new PdfProtocolExtractor();
-                        await extractor.ExtractAsync(c.ProtocolPath, framesDir, token);
+                        await extractor.ExtractAsync(vm.ProtocolPath, framesDir, token);
                     }
                     catch { /* Fehler beim Vorextrahieren ignorieren — RunAsync versucht es nochmal */ }
                 });
@@ -222,7 +222,7 @@ public partial class TrainingCenterViewModel
                 SelfTrainingResult result;
                 try
                 {
-                    result = await _selfTrainingOrchestrator.RunAsync(currentCase, progress, token);
+                    result = await _selfTrainingOrchestrator.RunAsync(currentCase.Model, progress, token);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {

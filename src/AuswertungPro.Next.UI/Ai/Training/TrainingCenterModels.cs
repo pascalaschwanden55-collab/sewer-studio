@@ -6,34 +6,83 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
-// Phase 5.3: TrainingCaseStatus + SelfTrainingEntryResult nach Application/Ai/Training/TrainingCenterModels.cs.
+// Phase 5.3: TrainingCaseStatus + SelfTrainingEntryResult + TrainingCase + TrainingCenterState
+// nach Application/Ai/Training/TrainingCenterModels.cs migriert. Hier nur noch
+// TrainingCaseViewModel (MVVM-Wrapper fuer Bindings) + UI-Visualisierungs-Models.
 
-public partial class TrainingCase : ObservableObject
+/// <summary>
+/// MVVM-Wrapper um den POCO `Application.Ai.Training.TrainingCase`. Spiegelt
+/// die fuer XAML-Bindings noetigen Properties (CaseId, FolderPath, VideoPath,
+/// ProtocolPath, Status, CreatedUtc, Rohrmaterial, NennweiteMm, Profil) und
+/// feuert PropertyChanged bei Status/Stammdaten-Aenderungen.
+///
+/// Property-Namen bleiben unveraendert zur frueheren MVVM-Klasse, damit alle
+/// XAML-Bindings (DataGrid, SelectedCase.CaseId etc.) ohne Aenderung weiter
+/// funktionieren.
+/// </summary>
+public sealed class TrainingCaseViewModel : ObservableObject
 {
-    [ObservableProperty] private string _caseId = "";
-    [ObservableProperty] private string _folderPath = "";
-    [ObservableProperty] private string _videoPath = "";
-    [ObservableProperty] private string _protocolPath = "";
-    [ObservableProperty] private TrainingCaseStatus _status = TrainingCaseStatus.New;
-    [ObservableProperty] private DateTime _createdUtc = DateTime.UtcNow;
+    /// <summary>Underlying POCO — wird in JSON serialisiert und an Services gegeben.</summary>
+    public TrainingCase Model { get; }
 
-    /// <summary>Rohrmaterial aus PDF/Import (z.B. "Polyethylen", "Beton"). Null wenn unbekannt.</summary>
-    public string? Rohrmaterial { get; set; }
+    public TrainingCaseViewModel(TrainingCase model)
+    {
+        Model = model ?? throw new ArgumentNullException(nameof(model));
+    }
 
-    /// <summary>Nennweite in mm aus PDF/Import. Null wenn unbekannt.</summary>
-    public int? NennweiteMm { get; set; }
+    public TrainingCaseViewModel() : this(new TrainingCase()) { }
 
-    /// <summary>Rohrprofil-Text (z.B. "Kreisprofil 300mm"). Null wenn unbekannt.</summary>
-    public string? Profil { get; set; }
+    public string CaseId => Model.CaseId;
+    public string FolderPath => Model.FolderPath;
+    public string VideoPath => Model.VideoPath;
+    public string ProtocolPath => Model.ProtocolPath;
+    public DateTime CreatedUtc => Model.CreatedUtc;
 
-    public override string ToString() => CaseId;
-}
+    public TrainingCaseStatus Status
+    {
+        get => Model.Status;
+        set
+        {
+            if (Model.Status == value) return;
+            Model.Status = value;
+            OnPropertyChanged();
+        }
+    }
 
-public sealed class TrainingCenterState
-{
-    public List<TrainingCase> Cases { get; set; } = new();
-    public List<string> RootFolders { get; set; } = new();
-    public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
+    public string? Rohrmaterial
+    {
+        get => Model.Rohrmaterial;
+        set
+        {
+            if (Model.Rohrmaterial == value) return;
+            Model.Rohrmaterial = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public int? NennweiteMm
+    {
+        get => Model.NennweiteMm;
+        set
+        {
+            if (Model.NennweiteMm == value) return;
+            Model.NennweiteMm = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string? Profil
+    {
+        get => Model.Profil;
+        set
+        {
+            if (Model.Profil == value) return;
+            Model.Profil = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public override string ToString() => Model.CaseId;
 }
 
 // ── Visualisierungs-Models fuer Selbsttraining ──

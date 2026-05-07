@@ -46,14 +46,16 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// <summary>Optionale Referenz auf die Review Queue (gesetzt von Window).</summary>
     public AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueService? ReviewQueueServiceRef { get; set; }
 
-    public ObservableCollection<TrainingCase> Cases { get; } = new();
+    // Phase 5.3 Sub-B: ObservableCollection<TrainingCaseViewModel> statt POCO,
+    // damit DataGrid PropertyChanged auf Status (Approve/Reject) bekommt.
+    public ObservableCollection<TrainingCaseViewModel> Cases { get; } = new();
     public ObservableCollection<TrainingSample> Samples { get; } = new();
     public ObservableCollection<WeakSpotItem> WeakSpots { get; } = new();
 
     /// <summary>Gefilterte View auf Samples (fuer Bulk-Review). Filter via SampleCodeFilter + SampleStatusFilter.</summary>
     public ICollectionView SamplesView { get; }
 
-    [ObservableProperty] private TrainingCase? _selectedCase;
+    [ObservableProperty] private TrainingCaseViewModel? _selectedCase;
     [ObservableProperty] private TrainingSample? _selectedSample;
     [ObservableProperty] private string _sampleCodeFilter = "";   // Leer = alle
     [ObservableProperty] private string _sampleStatusFilter = "Pending"; // Pending / Approved / Rejected / Alle
@@ -745,7 +747,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         var state = await _store.LoadAsync();
         Cases.Clear();
         foreach (var c in state.Cases)
-            Cases.Add(c);
+            Cases.Add(new TrainingCaseViewModel(c));
 
         // Root-Ordner wiederherstellen
         if (state.RootFolders.Count > 0)
@@ -939,7 +941,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                     // Status wiederherstellen wenn Fall schon bekannt
                     if (existingStatus.TryGetValue(c.CaseId, out var prevStatus))
                         c.Status = prevStatus;
-                    Cases.Add(c);
+                    Cases.Add(new TrainingCaseViewModel(c));
                 }
             }
 
@@ -967,7 +969,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         {
             var state = new TrainingCenterState
             {
-                Cases = Cases.ToList(),
+                Cases = Cases.Select(vm => vm.Model).ToList(),
                 RootFolders = new List<string>(_rootFolders),
                 UpdatedUtc = DateTime.UtcNow
             };
@@ -985,7 +987,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             IsBusy = true;
             var state = new TrainingCenterState
             {
-                Cases = Cases.ToList(),
+                Cases = Cases.Select(vm => vm.Model).ToList(),
                 RootFolders = new List<string>(_rootFolders),
                 UpdatedUtc = DateTime.UtcNow
             };
@@ -1039,7 +1041,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     private async Task RemoveSelectedCasesAsync(System.Collections.IList? selectedItems)
     {
         if (selectedItems is null || selectedItems.Count == 0) return;
-        var toRemove = selectedItems.Cast<TrainingCase>().ToList();
+        var toRemove = selectedItems.Cast<TrainingCaseViewModel>().ToList();
         foreach (var c in toRemove)
             Cases.Remove(c);
         SelectedCase = null;
@@ -1047,7 +1049,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         StatusText = $"{toRemove.Count} Faelle entfernt ({Cases.Count} verbleiben)";
     }
 
-    partial void OnSelectedCaseChanged(TrainingCase? value)
+    partial void OnSelectedCaseChanged(TrainingCaseViewModel? value)
     {
         ApproveCommand.NotifyCanExecuteChanged();
         RejectCommand.NotifyCanExecuteChanged();
@@ -1095,7 +1097,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             var existingSigs = existing.Select(s => s.Signature).ToHashSet(StringComparer.Ordinal);
 
             var generation = await generator.GenerateWithDiagnosticsAsync(
-                SelectedCase, existingSigs, framesDir: null, ct);
+                SelectedCase.Model, existingSigs, framesDir: null, ct);
             var newSamples = generation.Samples;
 
             if (newSamples.Count == 0)

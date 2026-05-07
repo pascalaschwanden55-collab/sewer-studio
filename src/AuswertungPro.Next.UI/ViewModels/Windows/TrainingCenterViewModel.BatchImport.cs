@@ -71,9 +71,7 @@ public partial class TrainingCenterViewModel
                 var result = await _import.ScanAsync(folder);
                 found.AddRange(result);
             }
-            var casesWithProtocol = found.Where(c => !string.IsNullOrEmpty(c.ProtocolPath)).ToList();
-
-            Log($"Gefunden: {found.Count} Ordner, {casesWithProtocol.Count} mit Protokoll");
+            Log($"Gefunden: {found.Count} Ordner");
             foreach (var c in found)
             {
                 var hasVideo = !string.IsNullOrEmpty(c.VideoPath) ? "Video" : "kein Video";
@@ -81,19 +79,23 @@ public partial class TrainingCenterViewModel
                 Log($"  {c.CaseId}: {hasVideo}, {hasProto}");
             }
 
-            StatusText = $"Gefunden: {found.Count} Ordner, {casesWithProtocol.Count} mit Protokoll";
-
             // Status bestehender Faelle erhalten (Merge statt Clear)
             var existingStatus = new Dictionary<string, TrainingCaseStatus>();
-            foreach (var c in Cases)
-                existingStatus.TryAdd(c.CaseId, c.Status);
+            foreach (var vm in Cases)
+                existingStatus.TryAdd(vm.CaseId, vm.Status);
             Cases.Clear();
             foreach (var c in found)
             {
                 if (existingStatus.TryGetValue(c.CaseId, out var prevStatus))
                     c.Status = prevStatus;
-                Cases.Add(c);
+                Cases.Add(new TrainingCaseViewModel(c));
             }
+
+            // Phase 5.3 Sub-B: Ab hier mit ViewModel-Wrappern arbeiten — Status-
+            // Aenderungen feuern PropertyChanged in den DataGrid-Bindings.
+            var casesWithProtocol = Cases.Where(vm => !string.IsNullOrEmpty(vm.ProtocolPath)).ToList();
+            Log($"Gefunden: {found.Count} Ordner, {casesWithProtocol.Count} mit Protokoll");
+            StatusText = $"Gefunden: {found.Count} Ordner, {casesWithProtocol.Count} mit Protokoll";
 
             if (casesWithProtocol.Count == 0)
             {
@@ -121,18 +123,18 @@ public partial class TrainingCenterViewModel
                 .Select(s => s.CaseId)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            var casesToProcess = new List<TrainingCase>();
+            var casesToProcess = new List<TrainingCaseViewModel>();
             var caseSkipped = 0;
-            foreach (var c in casesWithProtocol)
+            foreach (var vm in casesWithProtocol)
             {
-                if (existingCaseIds.Contains(c.CaseId))
+                if (existingCaseIds.Contains(vm.CaseId))
                 {
                     caseSkipped++;
-                    c.Status = TrainingCaseStatus.BatchImported; // UI-Status aktualisieren
+                    vm.Status = TrainingCaseStatus.BatchImported; // UI-Status aktualisieren
                 }
                 else
                 {
-                    casesToProcess.Add(c);
+                    casesToProcess.Add(vm);
                 }
             }
 
@@ -243,13 +245,13 @@ public partial class TrainingCenterViewModel
                 try
                 {
                     // Preview-Frame extrahieren
-                    var previewFrame = await ExtractPreviewFrameAsync(tc, cfg, ct);
+                    var previewFrame = await ExtractPreviewFrameAsync(tc.Model, cfg, ct);
                     if (!string.IsNullOrEmpty(previewFrame))
                         UpdateLivePreview(tc.CaseId, "Verarbeite...", "—", previewFrame);
                     else
                         UpdateLivePreview(tc.CaseId, "Verarbeite...", "—", null);
 
-                    var generation = await generator.GenerateWithDiagnosticsAsync(tc, existingSigs, framesDir: null, ct, skipVideoTimeline: true);
+                    var generation = await generator.GenerateWithDiagnosticsAsync(tc.Model, existingSigs, framesDir: null, ct, skipVideoTimeline: true);
                     var newSamples = generation.Samples;
 
                     if (newSamples.Count == 0)
@@ -419,7 +421,7 @@ public partial class TrainingCenterViewModel
                         {
                             await _store.SaveAsync(new TrainingCenterState
                             {
-                                Cases = Cases.ToList(),
+                                Cases = Cases.Select(vm => vm.Model).ToList(),
                                 UpdatedUtc = DateTime.UtcNow
                             });
                         }
@@ -493,7 +495,7 @@ public partial class TrainingCenterViewModel
             // 5. Save cases
             await _store.SaveAsync(new TrainingCenterState
             {
-                Cases = Cases.ToList(),
+                Cases = Cases.Select(vm => vm.Model).ToList(),
                 UpdatedUtc = DateTime.UtcNow
             });
             Log("Fälle gespeichert. Batch-Import abgeschlossen.");
