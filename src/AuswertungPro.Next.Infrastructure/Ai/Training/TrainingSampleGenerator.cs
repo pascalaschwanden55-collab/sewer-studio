@@ -17,7 +17,7 @@ using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 /// <summary>
 /// Erstellt TrainingSamples aus einem TrainingCase (Video + ProtocolDocument).

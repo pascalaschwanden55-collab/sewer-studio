@@ -23,7 +23,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 /// <summary>
 /// Durchlaeuft das PDF-Protokoll, nimmt die eingebetteten Fotos als Ground Truth,
@@ -123,7 +123,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         {
             try
             {
-                var cfg = AiPlatformConfig.Load().ToPipelineConfig();
+                var cfg = AuswertungPro.Next.Application.Ai.PipelineConfigProvider.Load();
                 using var sidecarHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(5) };
                 var resp = await sidecarHttp.GetAsync(new Uri(cfg.SidecarUrl, "/health"), ct);
                 _sidecarAvailable = resp.IsSuccessStatusCode;

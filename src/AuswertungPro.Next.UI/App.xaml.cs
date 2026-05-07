@@ -121,6 +121,10 @@ namespace AuswertungPro.Next.UI
                 AuswertungPro.Next.Application.Imaging.OcrPdfFallbackProvider.SetFallback(
                     new AuswertungPro.Next.UI.Imaging.WindowsOcrPdfFallback());
 
+                // Phase 5.3 Sub-A: PipelineConfig-Loader (Sidecar-URL, MultiModel-Flag).
+                AuswertungPro.Next.Application.Ai.PipelineConfigProvider.SetLoader(
+                    () => Ai.AiPlatformConfig.Load().ToPipelineConfig());
+
                 // Phase 5.1.B Etappe 4 Sub-E: Nur noch DI-Container — Legacy-ServiceProvider entfernt.
                 var diCollection = new ServiceCollection();
                 diCollection.AddSewerStudioInfrastructure(settings, diagnostics, logger, loggerFactory);

@@ -2,13 +2,13 @@
 using System;
 using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+using AuswertungPro.Next.Application.Imaging;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Media.Imaging;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 /// <summary>
 /// Bewertet Aufnahmequalitaet eines Kanalbefahrungs-Frames.
@@ -111,34 +111,25 @@ public sealed class TechniqueAssessmentService : ITechniqueAssessmentService
     /// <summary>Durchschnittliche Luminanz (0-255) aus dem PNG-Bild.</summary>
     private static double ComputeMeanLuminance(byte[] pngBytes)
     {
-        try
+        // Phase 5.3 Sub-A: WPF-Imaging-Adapter (frueher BitmapDecoder).
+        var img = ImagePixelDecoderProvider.TryDecode(pngBytes);
+        if (img is null) return 100; // Fallback Mittelwert
+
+        var pixels = img.Bgra32Pixels;
+        // Sampling: jeden 8. Pixel fuer Performance
+        long sum = 0;
+        int count = 0;
+        for (int i = 0; i < pixels.Length - 3; i += 32) // 8 Pixel * 4 Bytes
         {
-            var bmp = LoadBitmap(pngBytes);
-            if (bmp == null) return 100; // Fallback Mittelwert
-
-            int stride = bmp.PixelWidth * 4;
-            var pixels = new byte[stride * bmp.PixelHeight];
-            bmp.CopyPixels(pixels, stride, 0);
-
-            // Sampling: jeden 8. Pixel fuer Performance
-            long sum = 0;
-            int count = 0;
-            for (int i = 0; i < pixels.Length - 3; i += 32) // 8 Pixel * 4 Bytes
-            {
-                byte b = pixels[i];
-                byte g = pixels[i + 1];
-                byte r = pixels[i + 2];
-                // ITU-R BT.601 Luminanz
-                sum += (int)(0.299 * r + 0.587 * g + 0.114 * b);
-                count++;
-            }
-
-            return count > 0 ? (double)sum / count : 100;
+            byte b = pixels[i];
+            byte g = pixels[i + 1];
+            byte r = pixels[i + 2];
+            // ITU-R BT.601 Luminanz
+            sum += (int)(0.299 * r + 0.587 * g + 0.114 * b);
+            count++;
         }
-        catch
-        {
-            return 100; // Sicherer Fallback
-        }
+
+        return count > 0 ? (double)sum / count : 100;
     }
 
     /// <summary>
@@ -147,73 +138,52 @@ public sealed class TechniqueAssessmentService : ITechniqueAssessmentService
     /// </summary>
     private static double ComputeLaplacianVariance(byte[] pngBytes)
     {
-        try
+        // Phase 5.3 Sub-A: WPF-Imaging-Adapter (frueher BitmapDecoder).
+        var img = ImagePixelDecoderProvider.TryDecode(pngBytes);
+        if (img is null) return 100;
+
+        int w = img.Width;
+        int h = img.Height;
+        int stride = img.Stride;
+        var pixels = img.Bgra32Pixels;
+
+        // Graustufenbild erstellen (Sampling fuer Performance)
+        int sampleStep = Math.Max(1, Math.Min(w, h) / 200); // ~200x200 Samples
+        int sw = (w - 2) / sampleStep;
+        int sh = (h - 2) / sampleStep;
+        if (sw < 3 || sh < 3) return 100;
+
+        // Laplace-Kernel: [0,1,0; 1,-4,1; 0,1,0]
+        double sum = 0;
+        double sumSq = 0;
+        int count = 0;
+
+        for (int y = 1; y < h - 1; y += sampleStep)
         {
-            var bmp = LoadBitmap(pngBytes);
-            if (bmp == null) return 100;
-
-            int w = bmp.PixelWidth;
-            int h = bmp.PixelHeight;
-            int stride = w * 4;
-            var pixels = new byte[stride * h];
-            bmp.CopyPixels(pixels, stride, 0);
-
-            // Graustufenbild erstellen (Sampling fuer Performance)
-            int sampleStep = Math.Max(1, Math.Min(w, h) / 200); // ~200x200 Samples
-            int sw = (w - 2) / sampleStep;
-            int sh = (h - 2) / sampleStep;
-            if (sw < 3 || sh < 3) return 100;
-
-            // Laplace-Kernel: [0,1,0; 1,-4,1; 0,1,0]
-            double sum = 0;
-            double sumSq = 0;
-            int count = 0;
-
-            for (int y = 1; y < h - 1; y += sampleStep)
+            for (int x = 1; x < w - 1; x += sampleStep)
             {
-                for (int x = 1; x < w - 1; x += sampleStep)
-                {
-                    double center = GetLuminance(pixels, x, y, stride);
-                    double top = GetLuminance(pixels, x, y - 1, stride);
-                    double bottom = GetLuminance(pixels, x, y + 1, stride);
-                    double left = GetLuminance(pixels, x - 1, y, stride);
-                    double right = GetLuminance(pixels, x + 1, y, stride);
+                double center = GetLuminance(pixels, x, y, stride);
+                double top = GetLuminance(pixels, x, y - 1, stride);
+                double bottom = GetLuminance(pixels, x, y + 1, stride);
+                double left = GetLuminance(pixels, x - 1, y, stride);
+                double right = GetLuminance(pixels, x + 1, y, stride);
 
-                    double lap = top + bottom + left + right - 4 * center;
-                    sum += lap;
-                    sumSq += lap * lap;
-                    count++;
-                }
+                double lap = top + bottom + left + right - 4 * center;
+                sum += lap;
+                sumSq += lap * lap;
+                count++;
             }
+        }
 
-            if (count == 0) return 100;
-            double mean = sum / count;
-            return (sumSq / count) - (mean * mean); // Varianz
-        }
-        catch
-        {
-            return 100;
-        }
+        if (count == 0) return 100;
+        double mean = sum / count;
+        return (sumSq / count) - (mean * mean); // Varianz
     }
 
     private static double GetLuminance(byte[] pixels, int x, int y, int stride)
     {
         int idx = y * stride + x * 4;
         return 0.299 * pixels[idx + 2] + 0.587 * pixels[idx + 1] + 0.114 * pixels[idx];
-    }
-
-    private static BitmapSource? LoadBitmap(byte[] pngBytes)
-    {
-        using var ms = new MemoryStream(pngBytes);
-        var decoder = BitmapDecoder.Create(ms, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
-        if (decoder.Frames.Count == 0) return null;
-        var frame = decoder.Frames[0];
-        // Sicherstellen dass Bgra32
-        if (frame.Format != System.Windows.Media.PixelFormats.Bgra32)
-        {
-            return new FormatConvertedBitmap(frame, System.Windows.Media.PixelFormats.Bgra32, null, 0);
-        }
-        return frame;
     }
 
     // ── Bewertungs-Logik ──
