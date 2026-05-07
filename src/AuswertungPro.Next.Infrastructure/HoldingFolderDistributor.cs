@@ -3850,48 +3850,9 @@ public static partial class HoldingFolderDistributor
         });
     }
 
-    private static readonly Regex NodePrefixRegex = new(@"^\d{1,2}\.", RegexOptions.Compiled);
-
-    /// <summary>
-    /// Entfernt XX. Praefixe (1-2 Ziffern + Punkt) von beiden Seiten eines Haltungsnamens.
-    /// Z.B. "07.7695-07.7078" → "7695-7078"
-    /// </summary>
-    private static string StripNodePrefixes(string holdingKey)
-    {
-        var dashIdx = holdingKey.IndexOf('-');
-        if (dashIdx < 0)
-            return NodePrefixRegex.Replace(holdingKey, "");
-
-        var left = holdingKey[..dashIdx];
-        var right = holdingKey[(dashIdx + 1)..];
-        left = NodePrefixRegex.Replace(left, "");
-        right = NodePrefixRegex.Replace(right, "");
-        return $"{left}-{right}";
-    }
-
-    private static IEnumerable<string> EnumerateHoldingLookupKeys(string haltung)
-    {
-        var normalized = NormalizeHaltungId(haltung);
-        if (!string.IsNullOrWhiteSpace(normalized))
-            yield return normalized;
-
-        var reversed = ReverseHoldingId(normalized);
-        if (!string.IsNullOrWhiteSpace(reversed)
-            && !string.Equals(reversed, normalized, StringComparison.OrdinalIgnoreCase))
-            yield return reversed;
-    }
-
-    private static string ReverseHoldingId(string? haltung)
-    {
-        if (string.IsNullOrWhiteSpace(haltung))
-            return string.Empty;
-
-        var parts = haltung.Split('-', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length != 2)
-            return string.Empty;
-
-        return $"{parts[1]}-{parts[0]}";
-    }
+    // NodePrefixRegex, StripNodePrefixes, EnumerateHoldingLookupKeys,
+    // ReverseHoldingId ausgegliedert nach HoldingFolderDistributor.Util.cs
+    // (Refactor 2026-05-07, Charge R4).
 
     private static VideoFindResult TryFindVideoFromRecordLink(
         AuswertungPro.Next.Domain.Models.Project? project,
@@ -4195,127 +4156,11 @@ public static partial class HoldingFolderDistributor
         return string.IsNullOrEmpty(trimmed) ? "0" : trimmed;
     }
 
-    private static string? NormalizePhotoToken(string? token)
-    {
-        if (string.IsNullOrWhiteSpace(token))
-            return null;
-
-        var m = Regex.Match(token, @"(?<a>\d{1,5})_(?<b>\d{1,5})_(?<c>\d{1,7})_(?<d>[A-Za-z])");
-        if (!m.Success)
-            return null;
-
-        static string TrimLeadingZeros(string value)
-        {
-            var trimmed = value.TrimStart('0');
-            return string.IsNullOrEmpty(trimmed) ? "0" : trimmed;
-        }
-
-        var a = TrimLeadingZeros(m.Groups["a"].Value);
-        var b = TrimLeadingZeros(m.Groups["b"].Value);
-        var c = TrimLeadingZeros(m.Groups["c"].Value);
-        var d = char.ToUpperInvariant(m.Groups["d"].Value[0]);
-        return $"{a}_{b}_{c}_{d}";
-    }
-
-    private static IReadOnlyList<string> Tokenize(string line)
-        => line.Split(new[] { ' ', '\t', ';', ',', ':' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(t => t.Trim()).ToList();
-
-    private static bool HasVideoExtension(string token)
-    {
-        var normalized = NormalizeVideoFileName(token);
-        return MediaFileTypes.HasVideoExtension(normalized);
-    }
-
-    private static bool HasImageExtension(string token)
-    {
-        var normalized = NormalizeVideoFileName(token);
-        return MediaFileTypes.HasImageExtension(normalized);
-    }
-
-    private static string? NormalizeVideoFileName(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-
-        var candidate = value.Trim().Trim('"', '\'');
-        candidate = candidate.TrimEnd('.', ',', ';', ':', ')', ']', '}', '>');
-        if (string.IsNullOrWhiteSpace(candidate))
-            return null;
-
-        candidate = candidate.Replace('\\', '/');
-        var fileName = Path.GetFileName(candidate).Trim();
-        if (string.IsNullOrWhiteSpace(fileName))
-            return null;
-
-        return fileName.Trim('"', '\'');
-    }
-
-    private static string SanitizePathSegment(string value)
-        => ProjectPathResolver.SanitizePathSegment(value);
-
-    /// <summary>
-    /// Liest den Haltungsnamen aus dem KIAS/IBAK-PDF-Dateinamen.
-    /// Delegiert an die zentrale KIAS-Pattern-Logik.
-    /// </summary>
-    private static string? HoldingFromKiasFilename(string? pdfPath)
-        => Import.Ibak.KiasExportPattern.HoldingFromKiasFilename(pdfPath);
-
-    private static string NormalizeHaltungId(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return "UNKNOWN";
-
-        var text = NormalizeText(value).Trim();
-        // Extract pair pattern: XXXXX-XXXXX or XX.XXXX-XX.XXXX
-        var pairRx = new Regex(@"((?:\d{2,}\.\d{2,}|\d{4,})\s*[-]\s*(?:\d{2,}\.\d{2,}|\d{4,}))");
-        var m = pairRx.Match(text);
-        if (m.Success)
-        {
-            var normalized = m.Groups[1].Value.Replace(" ", "").Replace("/", "-");
-            // Ensure exactly one dash
-            normalized = Regex.Replace(normalized, @"\s*-+\s*", "-");
-            return normalized;
-        }
-
-        return text;
-    }
-
-    private static string NormalizeKey(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return "";
-        var sb = new StringBuilder(value.Length);
-        foreach (var ch in value)
-        {
-            if (char.IsLetterOrDigit(ch))
-                sb.Append(char.ToLowerInvariant(ch));
-        }
-        return sb.ToString();
-    }
-
-    private static bool IsValidHaltungId(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return false;
-
-        var normalized = value.Trim();
-        var rx = new Regex(@"^(?:\d{2,}\.\d{2,}|\d{4,})\s*-\s*(?:\d{2,}\.\d{2,}|\d{4,})$");
-        if (!rx.IsMatch(normalized))
-            return false;
-
-        var parts = normalized.Split('-', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length != 2)
-            return false;
-
-        // Reject common OCR glue artifacts such as "04.201423022-215987" (date fragment + id).
-        foreach (var part in parts)
-        {
-            if (Regex.IsMatch(part, @"^\d{2}\.20\d{2}\d+$"))
-                return false;
-        }
-
-        return true;
-    }
+    // String-/ID-Normalisierungs-Helfer (NormalizePhotoToken, Tokenize,
+    // HasVideoExtension, HasImageExtension, NormalizeVideoFileName,
+    // SanitizePathSegment, HoldingFromKiasFilename, NormalizeHaltungId,
+    // NormalizeKey, IsValidHaltungId) ausgegliedert nach
+    // HoldingFolderDistributor.Util.cs (Refactor 2026-05-07, Charge R4).
 
     /// <summary>
     /// Prueft ob im Haltungsordner bereits ein Video mit gleicher Dateigroesse existiert.
