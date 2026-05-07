@@ -43,7 +43,6 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     private volatile bool _hwInitDone;
     private volatile bool _hwRetried;
     private int _hwMonitorSkip;
-    private volatile bool _lhmProvidesTemp; // true only when LHM actually delivers temperature data
 
     // WMI CPU temp fallback (via process)
     private bool _wmiTempAvailable = true;
@@ -712,7 +711,6 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             {
                 CpuTempC = cpuTempC;
                 IsCpuTempAvailable = true;
-                _lhmProvidesTemp = true;
             }
 
             // Prefer live sensor clock whenever available.

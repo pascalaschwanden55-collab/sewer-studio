@@ -42,8 +42,12 @@ public sealed class ActiveLearningSelector
 
         if (codeFrequencies is not null && remaining.Count > 0)
         {
+            // Bug-Fix 2026-05-07: ReviewQueueItem.SuggestedCode liefert die UI-
+            // dekorierte Form ("BAC — Risse") statt den rohen Code ("BAC"). Die
+            // codeFrequencies-Map ist aber mit rohen Codes geschluesselt. Daher
+            // den rohen Code aus dem Item ziehen statt die Display-Property.
             diversityPicks = remaining
-                .OrderBy(c => codeFrequencies.TryGetValue(c.SuggestedCode ?? "", out var freq) ? freq : 0)
+                .OrderBy(c => LookupFrequency(c, codeFrequencies))
                 .ThenByDescending(c => c.Priority)
                 .Take(diversityCount)
                 .ToList();
@@ -60,5 +64,29 @@ public sealed class ActiveLearningSelector
         return uncertaintyPicks.Concat(diversityPicks)
             .OrderByDescending(c => c.Priority)
             .ToList();
+    }
+
+    /// <summary>
+    /// Liefert den rohen VSA-Code aus dem Review-Item — entweder direkt aus
+    /// <see cref="ReviewQueueItem.SelfTrainingSuggestedCode"/> oder aus dem
+    /// dekorierten <see cref="ReviewQueueItem.SuggestedCode"/> (vor dem
+    /// optionalen "— Klartext"-Suffix).
+    /// </summary>
+    private static int LookupFrequency(
+        ReviewQueueItem item,
+        IReadOnlyDictionary<string, int> codeFrequencies)
+    {
+        var raw = item.IsFromSelfTraining
+            ? item.SelfTrainingSuggestedCode
+            : item.Entry?.SuggestedCode;
+        if (string.IsNullOrWhiteSpace(raw))
+            return 0;
+
+        // Falls der Aufrufer aus Versehen die dekorierte Form weiterreicht,
+        // bis zum ersten Whitespace / "—" abschneiden.
+        var sep = raw.IndexOfAny(new[] { ' ', '\t', '—', '-' });
+        var key = sep > 0 ? raw[..sep] : raw;
+
+        return codeFrequencies.TryGetValue(key, out var freq) ? freq : 0;
     }
 }
