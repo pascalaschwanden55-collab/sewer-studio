@@ -533,54 +533,9 @@ public static partial class HoldingFolderDistributor
         return results;
     }
 
-    private static void CopyCandidatesToUnmatched(string unmatchedFolder, string dateStamp, string haltung, IReadOnlyList<string> candidates)
-    {
-        for (var i = 0; i < candidates.Count; i++)
-        {
-            var src = candidates[i];
-            var ext = Path.GetExtension(src);
-            var name = $"{dateStamp}_{haltung}_CANDIDATE_{(i + 1).ToString("00", CultureInfo.InvariantCulture)}{ext}";
-            var dest = EnsureUniquePath(Path.Combine(unmatchedFolder, name), overwrite: false);
-            File.Copy(src, dest, overwrite: false);
-        }
-    }
-
-    private static string BuildMissingInfo(string pdfPath, string videoName, DateTime date, string haltung)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("VIDEO MISSING");
-        sb.AppendLine($"PDF: {pdfPath}");
-        sb.AppendLine($"Film: {videoName}");
-        sb.AppendLine($"Datum: {date:dd.MM.yyyy}");
-        sb.AppendLine($"Haltung: {haltung}");
-        return sb.ToString();
-    }
-
-    private static string BuildAmbiguousInfo(string pdfPath, string videoName, DateTime date, string haltung, IReadOnlyList<string> candidates)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("VIDEO AMBIGUOUS");
-        sb.AppendLine($"PDF: {pdfPath}");
-        sb.AppendLine($"Film: {videoName}");
-        sb.AppendLine($"Datum: {date:dd.MM.yyyy}");
-        sb.AppendLine($"Haltung: {haltung}");
-        sb.AppendLine("Candidates:");
-        foreach (var c in candidates)
-            sb.AppendLine($"- {c}");
-        return sb.ToString();
-    }
-
-    private static void MoveOrCopy(string source, string dest, bool move)
-    {
-        if (move)
-        {
-            File.Move(source, dest);
-        }
-        else
-        {
-            File.Copy(source, dest, overwrite: false);
-        }
-    }
+    // I/O-Helpers (CopyCandidatesToUnmatched, BuildMissingInfo,
+    // BuildAmbiguousInfo, MoveOrCopy) ausgegliedert nach
+    // HoldingFolderDistributor.IO.cs (Refactor 2026-05-07, Charge R3).
 
     // TXT-Parsing-Methoden wurden 2026-05-07 in HoldingFolderDistributor.TxtParsing.cs ausgelagert.
 
@@ -4367,38 +4322,8 @@ public static partial class HoldingFolderDistributor
     /// Gibt den Pfad zurueck wenn ja, sonst null.
     /// Verhindert Duplikate beim erneuten Verteilen.
     /// </summary>
-    private static string? FindExistingVideo(string holdingFolder, string sourceVideoPath)
-    {
-        if (!Directory.Exists(holdingFolder) || !File.Exists(sourceVideoPath))
-            return null;
-
-        var srcInfo = new FileInfo(sourceVideoPath);
-        var srcName = Path.GetFileName(sourceVideoPath);
-
-        try
-        {
-            foreach (var existing in Directory.EnumerateFiles(holdingFolder))
-            {
-                if (!MediaFileTypes.HasVideoExtension(existing))
-                    continue;
-
-                // Exakter Dateiname-Match
-                if (string.Equals(Path.GetFileName(existing), srcName, StringComparison.OrdinalIgnoreCase))
-                    return existing;
-
-                // Gleiche Dateigroesse = selbes Video (anderer Name)
-                var existInfo = new FileInfo(existing);
-                if (existInfo.Length == srcInfo.Length && existInfo.Length > 0)
-                    return existing;
-            }
-        }
-        catch
-        {
-            // Ordner nicht lesbar
-        }
-
-        return null;
-    }
+    // FindExistingVideo ausgegliedert nach HoldingFolderDistributor.IO.cs
+    // (Refactor 2026-05-07, Charge R3).
 
     /// <summary>
     /// Versucht, ein nicht-parsbares PDF (z.B. Dichtheitspruefungsprotokoll) anhand
@@ -4444,23 +4369,8 @@ public static partial class HoldingFolderDistributor
         return null;
     }
 
-    private static string EnsureUniquePath(string path, bool overwrite)
-    {
-        if (overwrite || !File.Exists(path))
-            return path;
-
-        var dir = Path.GetDirectoryName(path) ?? "";
-        var name = Path.GetFileNameWithoutExtension(path);
-        var ext = Path.GetExtension(path);
-        for (var i = 1; i < 1000; i++)
-        {
-            var candidate = Path.Combine(dir, $"{name}_{i.ToString("00", CultureInfo.InvariantCulture)}{ext}");
-            if (!File.Exists(candidate))
-                return candidate;
-        }
-
-        throw new IOException($"Unable to find free filename for {path}");
-    }
+    // EnsureUniquePath ausgegliedert nach HoldingFolderDistributor.IO.cs
+    // (Refactor 2026-05-07, Charge R3).
 
 #if DEMO
     public static class DemoProgram
