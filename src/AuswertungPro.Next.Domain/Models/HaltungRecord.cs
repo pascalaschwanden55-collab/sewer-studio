@@ -1,5 +1,15 @@
 namespace AuswertungPro.Next.Domain.Models;
 
+// ARCH-H1 (Audit 2026-04-23): INotifyPropertyChanged in Domain ist Tech-Debt.
+// Blockiert Headless-Use (Sidecar/CLI). Zukuenftiger Migrationspfad:
+//   1. POCO-Record `HaltungRecord` (ohne INotifyPropertyChanged) in Domain.
+//   2. `HaltungRecordViewModel : ObservableObject` in UI als Bindings-Wrapper.
+//   3. ViewModels in BuilderPageViewModel/DataPageViewModel halten eigene
+//      ObservableCollection<HaltungRecordViewModel>, gespiegelt aus
+//      Project.Data (POCO-List).
+// Aufwand: 2-3 Sessions, hoch-invasiv (>20 XAML-Bindings, >10 ViewModels
+// betroffen). Entkoppelt erst, wenn Headless-CLI/Sidecar-Use einen
+// Business-Treiber bekommt.
 public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
 {
     public Guid Id { get; set; } = Guid.NewGuid();

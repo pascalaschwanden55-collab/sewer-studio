@@ -1,5 +1,6 @@
 namespace AuswertungPro.Next.Domain.Models;
 
+// ARCH-H1 (Audit 2026-04-23): siehe HaltungRecord. Gleiche Tech-Debt.
 public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
 {
     public Guid Id { get; set; } = Guid.NewGuid();

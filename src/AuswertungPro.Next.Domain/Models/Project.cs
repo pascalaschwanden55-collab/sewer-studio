@@ -19,6 +19,9 @@ public sealed class Project
     /// </summary>
     public Dictionary<string, string> Metadata { get; set; } = new(StringComparer.Ordinal);
 
+    // ARCH-H1 (Audit 2026-04-23): ObservableCollection in Domain ist Tech-Debt
+    // (siehe HaltungRecord). 11+ ViewModels / XAML-Bindings haengen direkt an
+    // diesen Collections — Switch auf List<> braucht parallele UI-VM-Schicht.
     public System.Collections.ObjectModel.ObservableCollection<HaltungRecord> Data { get; set; } = new();
     public System.Collections.ObjectModel.ObservableCollection<SchachtRecord> SchaechteData { get; set; } = new();
 
