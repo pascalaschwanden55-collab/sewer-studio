@@ -196,6 +196,32 @@ public sealed class ReviewQueueService
         lock (_lock) return _queue.Take(count).ToList();
     }
 
+    /// <summary>
+    /// Audit 2026-05-06 Top-10 Punkt 6 (Active Learning aktivieren): Liefert
+    /// eine Auswahl aus 60% Uncertainty + 40% Diversity (rarste Codes zuerst),
+    /// sofern <paramref name="codeFrequencies"/> uebergeben wird. Sonst
+    /// klassisches Priority-Top-N (Verhalten von <see cref="GetTop"/>).
+    ///
+    /// Code-Frequenzen kommen typisch aus der Knowledge Base (Sample-Counts pro
+    /// VSA-Code). Aufrufer kann sie einmalig pro Review-Session berechnen und
+    /// uebergeben.
+    /// </summary>
+    public IReadOnlyList<ReviewQueueItem> GetTopForActiveLearning(
+        int count,
+        IReadOnlyDictionary<string, int>? codeFrequencies = null)
+    {
+        EnsureLoaded();
+
+        List<ReviewQueueItem> snapshot;
+        lock (_lock) snapshot = _queue.ToList();
+
+        if (snapshot.Count <= count)
+            return snapshot;
+
+        var selector = new ActiveLearningSelector();
+        return selector.Select(snapshot, count, codeFrequencies);
+    }
+
     /// <summary>Remove a reviewed item from the queue.</summary>
     public bool Remove(string itemId)
     {

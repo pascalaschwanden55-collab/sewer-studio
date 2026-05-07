@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Vision;
 
 namespace AuswertungPro.Next.Application.Ai.Pipeline;
@@ -17,6 +21,60 @@ public sealed class PipelineTelemetry
     public IReadOnlyList<FrameTiming> Frames { get { lock (_lock) { return _frames.ToList(); } } }
 
     public void RecordFrame(FrameTiming timing) { lock (_lock) { _frames.Add(timing); } }
+
+    /// <summary>
+    /// Audit 2026-05-06 Top-10: Pipeline-Telemetry-Persistierung. Schreibt
+    /// die aktuelle Summary als JSONL-Zeile in
+    /// <c>%LOCALAPPDATA%/SewerStudio/logs/pipeline_telemetry.jsonl</c> (oder
+    /// einen vom Aufrufer angegebenen Pfad). Nicht-blockierend dank
+    /// SemaphoreSlim, damit parallele Pipeline-Laeufe sich nicht ueberschreiben.
+    ///
+    /// Schema pro Zeile:
+    ///   { "ts": "...", "label": "...", "totalFrames": 0, "skippedFrames": 0,
+    ///     "wallClockMs": 0, "yolo": { "meanMs": ..., ... }, ... }
+    /// </summary>
+    public async Task PersistSummaryAsync(
+        string label,
+        string? customPath = null,
+        CancellationToken ct = default)
+    {
+        var summary = GetSummary();
+        var path = customPath ?? GetDefaultLogPath();
+        var dir = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+
+        var entry = new
+        {
+            ts = DateTime.UtcNow.ToString("O"),
+            label,
+            totalFrames = summary.TotalFrames,
+            skippedFrames = summary.SkippedFrames,
+            wallClockMs = summary.WallClockMs,
+            extraction = summary.Extraction,
+            yolo = summary.Yolo,
+            dino = summary.Dino,
+            sam = summary.Sam,
+            qwen = summary.Qwen,
+            total = summary.Total,
+        };
+        var json = JsonSerializer.Serialize(entry);
+
+        await _persistGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            await File.AppendAllTextAsync(path, json + Environment.NewLine, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _persistGate.Release();
+        }
+    }
+
+    private static readonly SemaphoreSlim _persistGate = new(1, 1);
+
+    private static string GetDefaultLogPath() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "SewerStudio", "logs", "pipeline_telemetry.jsonl");
 
     public TelemetrySummary GetSummary()
     {

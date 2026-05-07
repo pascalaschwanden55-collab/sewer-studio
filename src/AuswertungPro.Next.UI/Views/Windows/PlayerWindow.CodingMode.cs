@@ -939,7 +939,23 @@ public partial class PlayerWindow
             var client = config.CreateOllamaClient();
             _codingLiveDetection = new LiveDetectionService(client, config.VisionModel);
             _codingEnhancedVision = new EnhancedVisionAnalysisService(client, config.VisionModel, config.ReferenceVisionModel);
-            _codingQualityGate = new QualityGateService();
+
+            // Audit 2026-05-06 Top-10 Punkt 7: CategoryWeights aus KB laden,
+            // damit gelernte Per-Code-Gewichte fuer das QualityGate aktiv werden.
+            // Fallback auf Default-Gewichte wenn KB leer / nicht erreichbar.
+            try
+            {
+                using var kbDb = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
+                var weightLearner = new AuswertungPro.Next.Infrastructure.Ai.QualityGate.WeightLearningService(kbDb.Connection);
+                var allWeights = weightLearner.LoadAllWeights();
+                _codingQualityGate = allWeights.Count > 0
+                    ? new QualityGateService(allWeights)
+                    : new QualityGateService();
+            }
+            catch
+            {
+                _codingQualityGate = new QualityGateService();
+            }
 
             // Multi-Model Pipeline (YOLO → DINO → SAM) initialisieren
             try

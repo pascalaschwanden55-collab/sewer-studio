@@ -334,6 +334,36 @@ public sealed class KnowledgeBaseManager(
         return Convert.ToInt32(cmd.ExecuteScalar());
     }
 
+    /// <summary>
+    /// Audit 2026-05-06 Top-10: Versions-Pruning. Behaelt die letzten
+    /// <paramref name="keepLastN"/> Versionen + alle Versionen juenger als
+    /// <paramref name="keepDaysMin"/> Tage. Gibt Anzahl geloeschter Versionen
+    /// zurueck.
+    ///
+    /// Aktuelle Version (in <c>_currentVersionId</c>) wird nie geloescht.
+    /// </summary>
+    public int PruneOldVersions(int keepLastN = 20, int keepDaysMin = 30)
+    {
+        var cutoff = DateTime.UtcNow.AddDays(-keepDaysMin).ToString("O");
+
+        // Versionen kandidatentauglich: aelter als cutoff und NICHT in den
+        // top-N juengsten. Aktuelle Version (currentVersionId) auch ausnehmen.
+        var current = _currentVersionId;
+        using var cmd = db.Connection.CreateCommand();
+        cmd.CommandText = """
+            DELETE FROM Versions
+            WHERE CreatedAt < $cutoff
+              AND VersionId NOT IN (
+                  SELECT VersionId FROM Versions ORDER BY CreatedAt DESC LIMIT $keepN
+              )
+              AND ($current IS NULL OR VersionId != $current)
+            """;
+        cmd.Parameters.AddWithValue("$cutoff", cutoff);
+        cmd.Parameters.AddWithValue("$keepN", keepLastN);
+        cmd.Parameters.AddWithValue("$current", (object?)current ?? DBNull.Value);
+        return cmd.ExecuteNonQuery();
+    }
+
     /// <summary>True wenn das Sample UND sein Embedding indiziert sind.</summary>
     public bool IsIndexed(string sampleId)
     {

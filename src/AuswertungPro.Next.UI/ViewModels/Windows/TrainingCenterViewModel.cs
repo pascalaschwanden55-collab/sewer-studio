@@ -1374,14 +1374,48 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     // ── Review Queue (Self-Improving Loop) ──────────────────────────────
 
-    /// <summary>Loads pending review items into the queue.</summary>
+    /// <summary>
+    /// Loads pending review items into the queue.
+    /// Audit 2026-05-06 Punkt 6: Wenn Code-Frequenzen verfuegbar sind, nutzt
+    /// die ReviewQueue Active Learning (60% Uncertainty + 40% Diversity, rarste
+    /// Codes zuerst). Sonst fallback auf Priority-only.
+    /// </summary>
     public void LoadReviewQueue(AuswertungPro.Next.Application.Ai.SelfImproving.ReviewQueueService queueService)
     {
         ReviewQueue.Clear();
-        foreach (var item in queueService.GetAll())
+
+        // Code-Frequenzen aus der Knowledge Base sammeln fuer Diversity-Sampling.
+        IReadOnlyDictionary<string, int>? codeFrequencies = null;
+        try
+        {
+            using var db = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
+            using var cmd = db.Connection.CreateCommand();
+            cmd.CommandText = "SELECT VsaCode, COUNT(*) FROM Samples WHERE VsaCode IS NOT NULL GROUP BY VsaCode";
+            using var reader = cmd.ExecuteReader();
+            var freqs = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            while (reader.Read())
+            {
+                var code = reader.GetString(0);
+                var count = reader.GetInt32(1);
+                if (!string.IsNullOrEmpty(code)) freqs[code] = count;
+            }
+            codeFrequencies = freqs;
+        }
+        catch (Exception ex)
+        {
+            // Fallback: ohne Code-Frequenzen → Priority-only Selection
+            System.Diagnostics.Debug.WriteLine(
+                $"[ReviewQueue] Code-Frequenzen nicht verfuegbar, Active Learning faellt auf Priority zurueck: {ex.Message}");
+        }
+
+        // Auswahl: bis zu 50 Items via Active Learning (Uncertainty + Diversity).
+        var items = queueService.GetTopForActiveLearning(50, codeFrequencies);
+        foreach (var item in items)
             ReviewQueue.Add(item);
         ReviewQueueCount = ReviewQueue.Count;
-        ReviewStatusText = $"{ReviewQueueCount} Einträge zur Prüfung";
+        ReviewStatusText = codeFrequencies is not null
+            ? $"{ReviewQueueCount} Einträge zur Prüfung (Active Learning, {codeFrequencies.Count} Codes in KB)"
+            : $"{ReviewQueueCount} Einträge zur Prüfung";
     }
 
     /// <summary>Approve a review item (accept the suggested code).</summary>
