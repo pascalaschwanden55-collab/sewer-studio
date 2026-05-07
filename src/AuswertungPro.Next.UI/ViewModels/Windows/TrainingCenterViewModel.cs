@@ -580,14 +580,20 @@ public partial class TrainingCenterViewModel : ObservableObject
                 }
                 catch { accText = "Validierungsdaten nicht verfuegbar"; }
 
-                // Stale Samples
+                // Stale Samples — STAB-H6 (Audit 2026-04-23): SQLite-Lock- oder
+                // Schema-Fehler aus FindStaleCandidates ist diagnostisch wertvoll
+                // (verraet KB-Korruption) und darf nicht stumm verschluckt werden.
                 int staleCount = 0;
                 try
                 {
                     var kbq = new AuswertungPro.Next.Infrastructure.Ai.SelfImproving.KbQualityService(db.Connection);
                     staleCount = kbq.FindStaleCandidates().Count;
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[KbQuality] FindStaleCandidates fehlgeschlagen: {ex.GetType().Name}: {ex.Message}");
+                }
 
                 return (gapsText, underRep.Count, accText, staleCount);
             });
