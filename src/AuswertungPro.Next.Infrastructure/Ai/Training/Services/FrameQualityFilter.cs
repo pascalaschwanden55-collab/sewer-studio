@@ -2,10 +2,10 @@
 using System;
 using System.IO;
 using System.Threading;
-using System.Windows.Media.Imaging;
+using AuswertungPro.Next.Application.Imaging;
 using Microsoft.Extensions.Logging;
 
-namespace AuswertungPro.Next.UI.Ai.Training.Services;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
 /// <summary>
 /// Leichtgewichtiger Qualitaetsfilter fuer Video-Frames.
@@ -217,17 +217,13 @@ public sealed class FrameQualityFilter
     /// <summary>Dekodiert PNG-Bytes in ein Grayscale-Array.</summary>
     private static (byte[] Grayscale, int Width, int Height) DecodeToGrayscale(byte[] pngBytes)
     {
-        using var ms = new MemoryStream(pngBytes);
-        var decoder = BitmapDecoder.Create(ms, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
-        var frame = decoder.Frames[0];
+        // Phase 5.3 Sub-A: WPF-Imaging-Adapter (frueher BitmapDecoder).
+        var img = ImagePixelDecoderProvider.TryDecode(pngBytes);
+        if (img is null) return (Array.Empty<byte>(), 0, 0);
 
-        // In Bgra32 konvertieren
-        var bgra = new FormatConvertedBitmap(frame, System.Windows.Media.PixelFormats.Bgra32, null, 0);
-        int w = bgra.PixelWidth;
-        int h = bgra.PixelHeight;
-        int stride = w * 4;
-        var pixels = new byte[stride * h];
-        bgra.CopyPixels(pixels, stride, 0);
+        int w = img.Width;
+        int h = img.Height;
+        var pixels = img.Bgra32Pixels;
 
         // Grayscale (Luminance-Formel: 0.299R + 0.587G + 0.114B)
         var gray = new byte[w * h];
