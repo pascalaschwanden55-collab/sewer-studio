@@ -41,7 +41,7 @@
                         <StackPanel>
                             <TextBlock Text="HALTUNGSKONTEXT"
                                        FontSize="{StaticResource TypeCaption}" FontWeight="Bold"
-                                       Foreground="{StaticResource NeonCyanBrush}"
+                                       Foreground="{StaticResource AccentBrush}"
                                        Margin="0,0,0,8"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -82,7 +82,7 @@
                         <StackPanel>
                             <TextBlock Text="REGELBASIERTE EMPFEHLUNG"
                                        FontSize="{StaticResource TypeCaption}" FontWeight="Bold"
-                                       Foreground="{StaticResource NeonCyanBrush}"
+                                       Foreground="{StaticResource AccentBrush}"
                                        Margin="0,0,0,8"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -120,7 +120,7 @@
                                 <TextBlock DockPanel.Dock="Left"
                                            Text="KI-OPTIMIERUNG"
                                            FontSize="{StaticResource TypeCaption}" FontWeight="Bold"
-                                           Foreground="{StaticResource NeonCyanBrush}"
+                                           Foreground="{StaticResource AccentBrush}"
                                            VerticalAlignment="Center"/>
                                 <Button DockPanel.Dock="Right"
                                         Content="Optimieren"
@@ -185,7 +185,7 @@
                                     <Run Text="{Binding OptimizationVm.CostMin, Mode=OneWay}" FontWeight="SemiBold"/>
                                     <Run Text=" | Erw. "/>
                                     <Run Text="{Binding OptimizationVm.CostExpected, Mode=OneWay}" FontWeight="Bold"
-                                         Foreground="{StaticResource NeonCyanBrush}"/>
+                                         Foreground="{StaticResource AccentBrush}"/>
                                     <Run Text=" | Max "/>
                                     <Run Text="{Binding OptimizationVm.CostMax, Mode=OneWay}" FontWeight="SemiBold"/>
                                     <Run Text=" CHF"/>
@@ -224,7 +224,7 @@
                         <StackPanel>
                             <TextBlock Text="RISIKEN &amp; EINSCHRAENKUNGEN"
                                        FontSize="{StaticResource TypeCaption}" FontWeight="Bold"
-                                       Foreground="{StaticResource NeonCyanBrush}"
+                                       Foreground="{StaticResource AccentBrush}"
                                        Margin="0,0,0,8"/>
                             <TextBlock Text="{Binding OptimizationVm.RiskText}"
                                        TextWrapping="Wrap" FontSize="9">
@@ -260,7 +260,7 @@
                                 <TextBlock DockPanel.Dock="Left"
                                            Text="KONSISTENZ-KONTROLLE"
                                            FontSize="{StaticResource TypeCaption}" FontWeight="Bold"
-                                           Foreground="{StaticResource NeonCyanBrush}"
+                                           Foreground="{StaticResource AccentBrush}"
                                            VerticalAlignment="Center"/>
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
                                     <!-- Error badge -->
@@ -321,7 +321,7 @@
                                                            FontSize="9" FontWeight="Bold" Width="32">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
-                                                            <Setter Property="Foreground" Value="{StaticResource NeonCyanBrush}"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding Severity}" Value="Error">
                                                                     <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
@@ -352,7 +352,7 @@
                                         <Style.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter Property="TextDecorations" Value="Underline"/>
-                                                <Setter Property="Foreground" Value="{StaticResource NeonCyanBrush}"/>
+                                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
                                             </Trigger>
                                         </Style.Triggers>
                                     </Style>
@@ -458,7 +458,7 @@
                                                     <TextBox Width="120" Text="{Binding LengthText, UpdateSourceTrigger=PropertyChanged}"/>
                                                     <TextBlock Text="Anschluesse (Stk):" VerticalAlignment="Center" Margin="14,0,6,0"/>
                                                     <TextBox Width="90" Text="{Binding ConnectionsText, UpdateSourceTrigger=PropertyChanged}"/>
-                                                    <TextBlock Text="{Binding PriceHint}" Foreground="{StaticResource NeonPinkBrush}"
+                                                    <TextBlock Text="{Binding PriceHint}" Foreground="{StaticResource DangerBrush}"
                                                                Margin="12,0,0,0" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                                 <DataGrid ItemsSource="{Binding Lines}" AutoGenerateColumns="False"

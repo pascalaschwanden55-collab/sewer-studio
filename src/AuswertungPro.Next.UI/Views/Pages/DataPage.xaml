@@ -29,7 +29,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Style.Triggers>
                 <Trigger Property="IsChecked" Value="True">
-                    <Setter Property="BorderBrush" Value="{StaticResource NeonCyanBrush}"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
                     <Setter Property="Background" Value="{StaticResource HeaderBrush}"/>
                 </Trigger>
             </Style.Triggers>
@@ -68,7 +68,7 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="0"/>
-            <Setter Property="Foreground" Value="{StaticResource NeonCyanBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -147,7 +147,7 @@
                     </Style>
                 </Border.Style>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Ellipse Width="12" Height="12" Fill="{Binding LearningTrafficLightColor}" Margin="0,0,8,0" Stroke="{StaticResource NeonCyanBrush}" StrokeThickness="1"/>
+                    <Ellipse Width="12" Height="12" Fill="{Binding LearningTrafficLightColor}" Margin="0,0,8,0" Stroke="{StaticResource AccentBrush}" StrokeThickness="1"/>
                     <TextBlock Text="{Binding LearningTrafficLightText}" Foreground="{StaticResource TextBrush}" Margin="0,0,12,0" />
                     <TextBlock Text="{Binding LearningInfo}" Foreground="{StaticResource TextBrush}" />
                 </StackPanel>
@@ -166,7 +166,7 @@
                     <Button Command="{Binding AddCommand}" IsEnabled="{Binding IsProjectReady}"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBody}" Foreground="{StaticResource NeonGreenBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBody}" Foreground="{StaticResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Neu" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -482,7 +482,7 @@
                     BorderThickness="1" CornerRadius="8" Margin="8" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="40,30">
                     <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="40"
-                               Foreground="{StaticResource NeonCyanBrush}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                               Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                     <TextBlock Text="DataGrid ist in separatem Fenster geoeffnet"
                                Foreground="{StaticResource TextBrush}" FontSize="{StaticResource TypeH4}" FontWeight="SemiBold"
                                HorizontalAlignment="Center" Margin="0,0,0,8"/>

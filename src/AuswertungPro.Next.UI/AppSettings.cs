@@ -114,6 +114,11 @@ public sealed class AppSettings
     // ausgeblendet. Reversibel via Settings-Page.
     public bool ShowExpertenmodusFeatures { get; set; } = true;
 
+    // Sprint 3 (2026-05-07): Tester-Onboarding-Banner.
+    // Default false → Banner sichtbar. Sobald der Nutzer "Verstanden" klickt,
+    // wird true persistiert und das Banner erscheint nicht mehr.
+    public bool TesterBannerDismissed { get; set; } = false;
+
     public static string AppDataDir =>
         TestAppDataDirOverride
         ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.ProductName);

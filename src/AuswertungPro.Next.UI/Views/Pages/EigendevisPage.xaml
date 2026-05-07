@@ -30,12 +30,12 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Background="{StaticResource NeonCyanBrush}" CornerRadius="10,0,0,10"/>
+                <Border Background="{StaticResource AccentBrush}" CornerRadius="10,0,0,10"/>
 
                 <StackPanel Grid.Column="1" Margin="16,14">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                         <TextBlock Text="&#xE8A1;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeIcon}"
-                                   Foreground="{StaticResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                   Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <TextBlock Text="Eigendevis" FontSize="{StaticResource TypeH4}" FontWeight="SemiBold"
                                    Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
@@ -45,7 +45,7 @@
                     <Button Command="{Binding GenerateCommand}" Style="{StaticResource ActionCardButton}" HorizontalAlignment="Left" ToolTip="Kostenschaetzung automatisch aus Schadencodes und Mapping-Regeln berechnen">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBodyLarge}"
-                                       Foreground="{StaticResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                       Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <TextBlock Text="Eigendevis generieren" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -79,7 +79,7 @@
                 <StackPanel Grid.Column="2" HorizontalAlignment="Right">
                     <TextBlock Text="Gesamt inkl. MWSt." Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeCaption}"/>
                     <TextBlock Text="{Binding TotalGesamt}" FontSize="{StaticResource TypeIcon}" FontWeight="Bold"
-                               Foreground="{StaticResource NeonCyanBrush}"/>
+                               Foreground="{StaticResource AccentBrush}"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -162,14 +162,14 @@
             <Button Command="{Binding ExportOhnePreisCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,8,0" ToolTip="Eigendevis als Excel exportieren, ohne Einheitspreise anzuzeigen">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBodyLarge}"
-                               Foreground="{StaticResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                               Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                     <TextBlock Text="Excel Export (ohne Preise)" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
             <Button Command="{Binding ExportMitKVCommand}" Style="{StaticResource ActionCardButton}" ToolTip="Eigendevis als Excel exportieren, inklusive Kostenvoranschlag und Preisen">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBodyLarge}"
-                               Foreground="{StaticResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                               Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                     <TextBlock Text="Excel Export (mit KV)" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>

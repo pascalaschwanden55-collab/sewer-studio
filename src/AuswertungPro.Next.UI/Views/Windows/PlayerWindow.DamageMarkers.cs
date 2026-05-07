@@ -20,8 +20,8 @@ public partial class PlayerWindow
         DamageMarkerCanvas.Children.Clear();
         _damageMarkers.Clear();
 
-        var accentBrush = (Brush)FindResource("NeonCyanBrush");
-        var accentColor = (Color)FindResource("ColorNeonCyan");
+        var accentBrush = (Brush)FindResource("AccentBrush");
+        var accentColor = (Color)FindResource("ColorAccent");
 
         foreach (var info in _damageOverlay.Markers)
         {

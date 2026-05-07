@@ -39,6 +39,15 @@ public sealed partial class ShellViewModel : ObservableObject
     public IRelayCommand GuideShowCommand { get; }
     public IRelayCommand GuideRestartCommand { get; }
     public IRelayCommand ToggleFocusModeCommand { get; }
+
+    /// <summary>
+    /// Sprint 3 (2026-05-07): Tester-Onboarding-Banner. Sichtbar bis der
+    /// Nutzer "Verstanden" klickt — Klick persistiert <c>TesterBannerDismissed</c>
+    /// in AppSettings, sodass das Banner bei Neustart auch nicht wieder erscheint.
+    /// </summary>
+    public IRelayCommand DismissTesterBannerCommand { get; }
+    [ObservableProperty] private bool _isTesterBannerVisible;
+
     [ObservableProperty] private bool _isProjectReady;
     [ObservableProperty] private bool _isGuideVisible = true;
     [ObservableProperty] private bool _isFocusMode;
@@ -101,6 +110,15 @@ public sealed partial class ShellViewModel : ObservableObject
         GuideShowCommand = new RelayCommand(() => IsGuideVisible = true);
         GuideRestartCommand = new RelayCommand(RestartGuide);
         ToggleFocusModeCommand = new RelayCommand(() => IsFocusMode = !IsFocusMode);
+
+        // Sprint 3: Tester-Banner sichtbar wenn noch nicht weggeklickt
+        IsTesterBannerVisible = !App.Resolve<AppSettings>().TesterBannerDismissed;
+        DismissTesterBannerCommand = new RelayCommand(() =>
+        {
+            IsTesterBannerVisible = false;
+            App.Resolve<AppSettings>().TesterBannerDismissed = true;
+            AppSettings.FlushPendingSave();
+        });
 
         SelectedNavItem = NavItems[0];
         CurrentPage = SelectedNavItem.CreatePage();

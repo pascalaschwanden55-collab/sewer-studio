@@ -8,6 +8,7 @@
             <ResourceDictionary.MergedDictionaries>
                  <ResourceDictionary Source="Theme/ThemeLight.xaml" />
                 <ResourceDictionary Source="Theme/Controls.xaml" />
+                <ResourceDictionary Source="Theme/Spacing.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <!-- App-Resourcen (global, von allen Pages/UserControls erreichbar). -->

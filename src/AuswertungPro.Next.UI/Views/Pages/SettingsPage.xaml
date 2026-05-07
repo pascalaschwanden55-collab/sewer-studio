@@ -28,7 +28,7 @@
                                     <Ellipse x:Name="Thumb"
                                              Width="24"
                                              Height="24"
-                                             Margin="3"
+                                             Margin="4"
                                              HorizontalAlignment="Left"
                                              Fill="{StaticResource CardBrush}"/>
                                 </Grid>
@@ -70,41 +70,41 @@
                   ToolTip="Bei aus (Produktmodus): Eigendevis-Page, Diagnose-Page und Hydraulik-Toolbar-Buttons werden ausgeblendet. Bei an (Expertenmodus): alles sichtbar. Aenderung greift nach Neustart."
                   Margin="0,8,0,0"/>
 
-        <TextBlock Text="pdftotext.exe Pfad" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <TextBlock Text="pdftotext.exe Pfad" Margin="0,16,0,8" Foreground="{StaticResource MutedBrush}"/>
         <DockPanel>
             <TextBox Text="{Binding PdfToTextPath}" MinWidth="400" />
             <Button Content="..." Command="{Binding BrowsePdfToTextCommand}" Margin="8,0,0,0" Width="44" ToolTip="Pfad zur pdftotext.exe per Dialog auswaehlen"/>
         </DockPanel>
 
-        <TextBlock Text="Projektpfad (*.json)" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <TextBlock Text="Projektpfad (*.json)" Margin="0,16,0,8" Foreground="{StaticResource MutedBrush}"/>
         <DockPanel>
             <TextBox Text="{Binding ProjectPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="400" />
             <Button Content="..." Command="{Binding BrowseProjectPathCommand}" Margin="8,0,0,0" Width="44" ToolTip="Projektdatei (JSON) per Dialog auswaehlen"/>
         </DockPanel>
 
-        <TextBlock Text="Video-Ordner (Haltungen)" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <TextBlock Text="Video-Ordner (Haltungen)" Margin="0,16,0,8" Foreground="{StaticResource MutedBrush}"/>
         <DockPanel>
             <TextBox Text="{Binding VideoFolder}" MinWidth="400" />
             <Button Content="..." Command="{Binding BrowseVideoFolderCommand}" Margin="8,0,0,0" Width="44" ToolTip="Video-Ordner mit Haltungsvideos per Dialog auswaehlen"/>
         </DockPanel>
 
-        <TextBlock Text="Automatisches Speichern" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <TextBlock Text="Automatisches Speichern" Margin="0,16,0,8" Foreground="{StaticResource MutedBrush}"/>
         <ComboBox ItemsSource="{Binding AutoSaveModeOptions}"
                   SelectedValuePath="Value"
                   DisplayMemberPath="Label"
                   SelectedValue="{Binding DataAutoSaveMode, Mode=TwoWay}"
                   MinWidth="260"/>
 
-        <TextBlock Text="Sicherheit" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <TextBlock Text="Sicherheit" Margin="0,16,0,8" Foreground="{StaticResource MutedBrush}"/>
         <StackPanel>
             <CheckBox Content="Wiederherstellungspunkte vor dem Speichern erstellen" IsChecked="{Binding EnableRestorePoints}"/>
-            <DockPanel Margin="0,6,0,0">
+            <DockPanel Margin="0,8,0,0">
                 <TextBox Text="{Binding RestorePointsFolderPath}" MinWidth="400" IsReadOnly="True" />
                 <Button Content="Wiederherstellung oeffnen" Command="{Binding OpenRestorePointsFolderCommand}" Margin="8,0,0,0" Width="180" ToolTip="Ordner mit gespeicherten Wiederherstellungspunkten im Explorer oeffnen"/>
             </DockPanel>
         </StackPanel>
 
-        <TextBlock Text="Video-Player" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <TextBlock Text="Video-Player" Margin="0,16,0,8" Foreground="{StaticResource MutedBrush}"/>
         <StackPanel>
             <CheckBox Content="Hardware-Decoding aktiv" IsChecked="{Binding VideoHwDecoding}"/>
             <CheckBox Content="Drop late frames" IsChecked="{Binding VideoDropLateFrames}" Margin="0,4,0,0"/>
@@ -145,7 +145,7 @@
             </WrapPanel>
         </StackPanel>
 
-        <TextBlock Text="Datenordner (Settings/Logs)" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <TextBlock Text="Datenordner (Settings/Logs)" Margin="0,16,0,8" Foreground="{StaticResource MutedBrush}"/>
         <DockPanel>
             <TextBox Text="{Binding DataFolderPath}" MinWidth="400" IsReadOnly="True" />
             <Button Content="Ordner oeffnen" Command="{Binding OpenDataFolderCommand}" Margin="8,0,0,0" Width="120" ToolTip="Datenordner mit Einstellungen und Logs im Explorer oeffnen"/>
@@ -157,17 +157,17 @@
             <Button Content="Logs oeffnen" Command="{Binding OpenLogsFolderCommand}" Margin="8,0,0,0" Width="120" ToolTip="Log-Dateien im Explorer anzeigen fuer Fehleranalyse"/>
         </DockPanel>
 
-        <TextBlock Text="KI-Wissen Backup" Margin="0,14,0,6" Foreground="{StaticResource MutedBrush}"/>
+        <TextBlock Text="KI-Wissen Backup" Margin="0,16,0,8" Foreground="{StaticResource MutedBrush}"/>
         <TextBlock Text="Exportiert alle KI-Lerndaten, Trainingssamples, Einstellungen und Frames als ZIP. Fuer Backup oder PC-Migration."
                    TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeCaption}" Margin="0,0,0,8"/>
         <StackPanel Orientation="Horizontal">
             <Button Content="KI-Wissen exportieren" Command="{Binding ExportBackupCommand}" Width="180" ToolTip="Alle KI-Lerndaten und Trainingssamples als ZIP-Datei sichern"/>
             <Button Content="KI-Wissen importieren" Command="{Binding ImportBackupCommand}" Margin="8,0,0,0" Width="180" ToolTip="KI-Lerndaten aus einer ZIP-Backup-Datei wiederherstellen"/>
         </StackPanel>
-        <TextBlock Text="{Binding BackupStatusText}" Margin="0,6,0,0"
+        <TextBlock Text="{Binding BackupStatusText}" Margin="0,8,0,0"
                    Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeCaption}"/>
 
-            <Button Content="Speichern" Command="{Binding SaveCommand}" Margin="0,18,0,0" Width="160" ToolTip="Alle Einstellungen dauerhaft speichern"/>
+            <Button Content="Speichern" Command="{Binding SaveCommand}" Margin="0,16,0,0" Width="160" ToolTip="Alle Einstellungen dauerhaft speichern"/>
 
         <!-- Phase 3.5: Anleitungstexte aus Settings ausgeblendet — User kann sie
              via Expander einklappen. Default eingeklappt: Settings-UI bleibt
@@ -187,7 +187,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="1. Programmueberblick" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextBrush}" FontSize="{StaticResource TypeSmall}" LineHeight="20">
                     SewerStudio ist eine professionelle WPF-Anwendung fuer die Kanalinspektion und
                     Zustandsbewertung nach SN EN 13508-2 und VSA-KEK Schweiz 2023. Die Software vereint
@@ -209,7 +209,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="2. Seiten und Navigation" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,10"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,10"/>
 
                 <TextBlock Text="Uebersicht" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,10">
@@ -246,7 +246,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="3. Projekt-Management" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextBrush}" FontSize="{StaticResource TypeSmall}" LineHeight="20">
                     Projekte werden als JSON-Dateien gespeichert (atomarer Schreibvorgang mit Backup).
                     AutoSave speichert automatisch im konfigurierbaren Intervall. Wiederherstellungspunkte
@@ -262,7 +262,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="4. Haltungen und Schaechte" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextBrush}" FontSize="{StaticResource TypeSmall}" LineHeight="20">
                     Jede Haltung ist ein Kanalsegment zwischen zwei Schaechten (typisch 30-80m). DataGrid
                     mit 25 Spalten: Name, Anfangs-/Endschacht, DN, Material, Laenge, Baujahr, Nutzungsart,
@@ -278,7 +278,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="5. Fenster und Dialoge" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,10"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,10"/>
 
                 <TextBlock Text="Videoplayer" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,8">
@@ -316,7 +316,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="6. Import-System" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,10"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,10"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,4">
                     PDF-Import (OCR via pdftotext, Formularfelder, Fretz AG/KIT/Abwasser Uri Formate).
                 </TextBlock>
@@ -336,7 +336,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="7. Export und Berichte" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,10"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,10"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,4">
                     Excel-Export mit konfigurierbaren Vorlagen. Haltungsdossier PDF mit VSA-Codes und Fotos.
                 </TextBlock>
@@ -356,7 +356,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="8. Protokoll-System" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextBrush}" FontSize="{StaticResource TypeSmall}" LineHeight="20">
                     Jede Haltung hat ein Inspektionsprotokoll mit Revisionen und Aenderungshistorie.
                     Eintraege bestehen aus: VSA-Schadencode, Meterstand, Uhrlage, Quantifizierung,
@@ -376,7 +376,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="9. KI-Pipeline (Multi-Model)" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,10"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,10"/>
 
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextBrush}" FontSize="{StaticResource TypeSmall}" LineHeight="20" Margin="0,0,0,8">
                     Vollstaendig lokale Multi-Model KI-Pipeline zur automatischen Schadenserkennung:
@@ -415,7 +415,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="10. KI-Qualitaetssicherung (Quality Gate)" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextBrush}" FontSize="{StaticResource TypeSmall}" LineHeight="20">
                     Ampelsystem (Gruen/Gelb/Rot) fuer alle KI-Ergebnisse:
                 </TextBlock>
@@ -437,7 +437,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="11. Knowledge Base (Wissensbank)" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextBrush}" FontSize="{StaticResource TypeSmall}" LineHeight="20">
                     SQLite mit Vektor-Embeddings (nomic-embed-text) fuer semantische Suche.
                     RAG: Aehnliche fruehere Faelle als Kontext fuer die KI-Bewertung.
@@ -452,7 +452,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="12. Selbstlernendes System" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,2">
                     Auto-Approval: Gruene Ampel wird automatisch in die KB aufgenommen.
                 </TextBlock>
@@ -471,7 +471,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="13. Training Center" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,2">
                     Selbsttraining: Ground-Truth-Samples aus Inspektionsergebnissen und PDF-Protokollen.
                 </TextBlock>
@@ -496,7 +496,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="14. VSA-Zustandsbewertung" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,10"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,10"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextBrush}" FontSize="{StaticResource TypeSmall}" LineHeight="20">
                     Klassifiziert den Zustand in 5 Klassen (0-4) gemaess SN EN 13508-2:
                 </TextBlock>
@@ -522,7 +522,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="15. Kostenrechner und Sanierung" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,2">
                     Massnahmen-Vorlagen: Inliner GFK/Nadelfilz, Kurzliner, Manschetten, Robotersanierung.
                 </TextBlock>
@@ -544,7 +544,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="16. Eigendevis" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextBrush}" FontSize="{StaticResource TypeSmall}" LineHeight="20">
                     Eigene Kostenvoranschlaege mit frei definierbaren Positionen und Formeln.
                     Devis-Mappings ordnen Haltungsdaten den Positionen zu. Formeln nutzen Variablen
@@ -559,7 +559,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="16a. KI-Sanierungsregeln (Leitplanken)" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,6">
                     Pflege Hard-Constraints fuer die KI: Welche Verfahren sind bei welchen Bedingungen
                     technisch ausgeschlossen? Beispiel: "WENN Bogen >= 15 Grad DANN GFK-Liner ausschliessen
@@ -580,7 +580,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="16b. Marktdaten-Import" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,6">
                     Aktualisiert die Marktpreis- und Sanierungs-Referenzdaten aus realen Anbieter-Submissions
                     und historischen Auswertungen. Quelle: D:\Offertenvergleich\* (Excel) → via Python-Reparser
@@ -605,7 +605,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="17. Hydraulik" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextBrush}" FontSize="{StaticResource TypeSmall}" LineHeight="20">
                     Hydraulische Berechnung nach DWA-A 110 fuer Kreisquerschnitte.
                     Berechnet Fliessgeschwindigkeit, Fuellungsgrad und Abflussleistung
@@ -620,7 +620,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="18. Medien-Management" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,2">
                     Medien-Suchprogramm: Batch-Suche fuer Videos/PDFs mit automatischer Haltungs-Verknuepfung.
                 </TextBlock>
@@ -639,7 +639,7 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="19. Monitoring und Modellverwaltung" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,2">
                     Accuracy-Dashboard: Echtzeit-Metriken fuer Modell-Performance und Drift-Erkennung.
                 </TextBlock>
@@ -658,22 +658,22 @@
                 Background="{StaticResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="20. KI-Konfiguration und Tastaturkuerzel" FontSize="15" FontWeight="Bold"
-                           Foreground="{StaticResource NeonCyanBrush}" Margin="0,0,0,10"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,0,0,10"/>
 
                 <TextBlock Text="Umgebungsvariablen" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,6"/>
-                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,3" FontFamily="Consolas"
+                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,4" FontFamily="Consolas"
                            Text="SEWERSTUDIO_AI_ENABLED=1                  KI aktivieren (0/1)"/>
-                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,3" FontFamily="Consolas"
+                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,4" FontFamily="Consolas"
                            Text="SEWERSTUDIO_OLLAMA_URL=localhost:11434    Ollama-Adresse"/>
-                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,3" FontFamily="Consolas"
+                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,4" FontFamily="Consolas"
                            Text="SEWERSTUDIO_AI_VISION_MODEL=qwen3-vl:8b  FastModel (~10GB VRAM)"/>
-                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,3" FontFamily="Consolas"
+                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,4" FontFamily="Consolas"
                            Text="SEWERSTUDIO_AI_TEXT_MODEL=qwen3-vl:8b    Text-Modell"/>
-                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,3" FontFamily="Consolas"
+                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,4" FontFamily="Consolas"
                            Text="SEWERSTUDIO_AI_EMBED_MODEL=nomic-embed   Embedding-Modell"/>
-                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,3" FontFamily="Consolas"
+                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,4" FontFamily="Consolas"
                            Text="SEWERSTUDIO_SIDECAR_URL=localhost:8100   Python-Sidecar"/>
-                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,14" FontFamily="Consolas"
+                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource TypeSmall}" Margin="0,0,0,16" FontFamily="Consolas"
                            Text="SEWERSTUDIO_FFMPEG=ffmpeg                FFmpeg-Pfad"/>
 
                 <TextBlock Text="Tastaturkuerzel" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,6"/>

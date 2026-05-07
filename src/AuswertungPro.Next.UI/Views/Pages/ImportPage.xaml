@@ -36,7 +36,7 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
                             ToolTip="XTF/M150/MDB, WinCan, IBAK, KINS importieren">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBody}" Foreground="{StaticResource NeonGreenBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBody}" Foreground="{StaticResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Weitere Quellen" VerticalAlignment="Center"/>
                             <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{StaticResource MutedBrush}"/>
                         </StackPanel>

@@ -138,11 +138,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource NeonCyanBrush}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                 <Setter TargetName="bd" Property="Background" Value="{DynamicResource CardBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource NeonCyanBrush}"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                 <!-- Background wird NICHT gesetzt — erlaubt Code-Behind Blink-Animation -->
                                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                             </Trigger>
@@ -223,12 +223,12 @@
 
                 <Border Grid.Column="0"
                         Margin="0,2,14,2"
-                        Background="{DynamicResource NeonCyanBrush}"
+                        Background="{DynamicResource AccentBrush}"
                         CornerRadius="999"/>
 
                 <StackPanel Grid.Column="1">
                     <TextBlock Text="Videoplayer"
-                               Foreground="{DynamicResource NeonCyanBrush}"
+                               Foreground="{DynamicResource AccentBrush}"
                                FontSize="{StaticResource TypeSmall}"
                                FontWeight="SemiBold"/>
                     <TextBlock x:Name="VideoNameText"
@@ -339,7 +339,7 @@
                             HorizontalAlignment="Right" VerticalAlignment="Top"
                             Margin="12" CornerRadius="8" Padding="10,5"
                             Background="#DD111318"
-                            BorderBrush="{DynamicResource NeonCyanBrush}"
+                            BorderBrush="{DynamicResource AccentBrush}"
                             BorderThickness="1" Visibility="Collapsed">
                         <StackPanel Orientation="Horizontal">
                             <Ellipse x:Name="AiStatusDot" Width="8" Height="8"
@@ -364,7 +364,7 @@
                         Padding="16,8" Visibility="Collapsed">
                     <StackPanel>
                         <TextBlock Text="KALIBRIERUNG" FontSize="{StaticResource TypeSmall}" FontWeight="Bold"
-                                   Foreground="{DynamicResource NeonCyanBrush}" Margin="0,0,0,4"/>
+                                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
                         <TextBlock x:Name="TxtCodingCalibHint" FontSize="{StaticResource TypeSmall}" Foreground="White"
                                    TextWrapping="Wrap" MaxWidth="300"/>
                     </StackPanel>
@@ -374,14 +374,14 @@
                 <Border x:Name="CodingConfirmationPanel" Visibility="Collapsed"
                         HorizontalAlignment="Center" VerticalAlignment="Center"
                         Background="#EE111318" CornerRadius="12" Padding="20,16"
-                        BorderBrush="{DynamicResource NeonCyanBrush}" BorderThickness="1">
+                        BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
                     <StackPanel MaxWidth="420">
                         <!-- Ampel-Farbe + KI-Vorschlag -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                             <Ellipse x:Name="ConfirmAmpel" Width="16" Height="16" Margin="0,0,8,0"
                                      VerticalAlignment="Center"/>
                             <TextBlock x:Name="TxtConfirmCode" FontSize="{StaticResource TypeH4}" FontWeight="Bold"
-                                       Foreground="{DynamicResource NeonCyanBrush}" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
                             <TextBlock x:Name="TxtConfirmConfidence" FontSize="{StaticResource TypeSmall}" Margin="8,0,0,0"
                                        Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
                         </StackPanel>
@@ -397,7 +397,7 @@
                                     ToolTip="KI-Vorschlag akzeptieren und als Befund in das Protokoll uebernehmen"/>
                             <Button Content="&#x270E; Code aendern" Click="ConfirmEdit_Click"
                                     Style="{StaticResource PlayerButton}" Padding="12,6" Margin="0,0,6,0"
-                                    Foreground="{DynamicResource NeonCyanBrush}"
+                                    Foreground="{DynamicResource AccentBrush}"
                                     ToolTip="KI-Vorschlag bearbeiten und Schadenscode manuell korrigieren"/>
                             <Button Content="&#x2717; Verwerfen" Click="ConfirmReject_Click"
                                     Style="{StaticResource PlayerButton}" Padding="12,6"
@@ -481,7 +481,7 @@
                         Background="#DD111318" CornerRadius="8"
                         Visibility="Collapsed">
                     <TextBlock x:Name="TxtOsdMeter"
-                               Foreground="{DynamicResource NeonCyanBrush}"
+                               Foreground="{DynamicResource AccentBrush}"
                                FontFamily="Consolas, Cascadia Mono"
                                FontSize="{StaticResource TypeBodyLarge}" FontWeight="Bold"/>
                 </Border>
@@ -1075,7 +1075,7 @@
                     <StackPanel Width="260">
                         <TextBlock Text="TRAININGS-MODUS"
                                    FontSize="{StaticResource TypeSmall}" FontWeight="Bold"
-                                   Foreground="{DynamicResource NeonCyanBrush}"
+                                   Foreground="{DynamicResource AccentBrush}"
                                    Margin="0,0,0,8"/>
                         <TextBlock TextWrapping="Wrap" FontSize="{StaticResource TypeCaption}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
@@ -1348,7 +1348,7 @@
                             Padding="8,3" Margin="0,0,8,0" Visibility="Collapsed">
                         <TextBlock x:Name="TxtCodingCurrentCode"
                                    FontSize="{StaticResource TypeCaption}" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource NeonCyanBrush}"/>
+                                   Foreground="{DynamicResource AccentBrush}"/>
                     </Border>
 
                     <!-- KI-Findings: Vollstaendige Anzeige mit Code + Klartext + Details -->
@@ -1368,7 +1368,7 @@
                                                  VerticalAlignment="Center" Margin="0,0,6,0"/>
                                         <!-- VSA-Code fett -->
                                         <TextBlock FontSize="{StaticResource TypeCaption}" FontWeight="Bold"
-                                                   Foreground="{DynamicResource NeonCyanBrush}"
+                                                   Foreground="{DynamicResource AccentBrush}"
                                                    VerticalAlignment="Center"
                                                    Text="{Binding VsaCode, Mode=OneWay}"/>
                                         <!-- Klartext-Beschreibung -->

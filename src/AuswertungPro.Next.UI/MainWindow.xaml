@@ -46,6 +46,70 @@
 
         </Menu>
 
+        <!-- ═══ TESTER-BANNER (Sprint 3, 2026-05-07): Onboarding-Hinweis fuer externe Tester ═══ -->
+        <Border DockPanel.Dock="Top"
+                Background="{StaticResource AccentSubtleBrush}"
+                BorderBrush="{StaticResource AccentBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="{StaticResource PaddingCard}"
+                Visibility="{Binding IsTesterBannerVisible, Converter={StaticResource InvertedBoolConverter}, FallbackValue=Collapsed}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsTesterBannerVisible}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsTesterBannerVisible}" Value="False">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsFocusMode}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Info-Icon -->
+                <TextBlock Grid.Column="0"
+                           Text="&#xE946;"
+                           FontFamily="Segoe MDL2 Assets"
+                           FontSize="20"
+                           Foreground="{StaticResource AccentBrush}"
+                           VerticalAlignment="Center"
+                           Margin="{StaticResource MarginButtonRight}"/>
+
+                <!-- Banner-Text -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="{StaticResource MarginButtonRight}">
+                    <TextBlock Text="Willkommen bei SewerStudio"
+                               FontWeight="SemiBold"
+                               FontSize="14"
+                               Foreground="{StaticResource TextBrush}"/>
+                    <TextBlock Foreground="{StaticResource TextSecondaryBrush}"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Margin="{StaticResource MarginItemBottom}">
+                        <Run Text="Heute pruefen wir: Codier-Modus, Batch-SelfTraining, PDF-Import, Live-Detection, Quick-Scan."/>
+                        <LineBreak/>
+                        <Run Text="Tipp: In den Einstellungen 'Expertenmodus' deaktivieren, um nur die Kern-Workflows zu sehen."/>
+                    </TextBlock>
+                </StackPanel>
+
+                <!-- Dismiss-Button -->
+                <Button Grid.Column="2"
+                        Content="Verstanden, ausblenden"
+                        Command="{Binding DismissTesterBannerCommand}"
+                        Style="{StaticResource SecondaryButton}"
+                        VerticalAlignment="Center"
+                        Padding="12,4"/>
+            </Grid>
+        </Border>
+
         <!-- ═══ STATUSLEISTE (vor Haupt-Grid, damit Grid als letztes DockPanel-Kind den vollen Platz bekommt) ═══ -->
         <Border DockPanel.Dock="Bottom"
                 Background="{StaticResource HeaderBrush}"

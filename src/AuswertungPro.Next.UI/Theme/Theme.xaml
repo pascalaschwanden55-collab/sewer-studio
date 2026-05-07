@@ -37,19 +37,6 @@
     <Color x:Key="ColorStatusOrange">#FFF59E0B</Color>
     <Color x:Key="ColorStatusRed">#FFDC2626</Color>
 
-    <!-- ── BACKWARD COMPAT — Legacy keys mapped to engineering palette ── -->
-    <Color x:Key="ColorNeonCyan">#FF539BF5</Color>
-    <Color x:Key="ColorNeonPurple">#FF8B5CF6</Color>
-    <Color x:Key="ColorNeonBlue">#FF539BF5</Color>
-    <Color x:Key="ColorNeonGreen">#FF3FB950</Color>
-    <Color x:Key="ColorNeonPink">#FFF85149</Color>
-    <Color x:Key="ColorNeonOrange">#FFDB6D28</Color>
-    <Color x:Key="ColorLcarsAmber">#FF539BF5</Color>
-    <Color x:Key="ColorLcarsPeach">#FF8891A0</Color>
-    <Color x:Key="ColorLcarsLavender">#FF8B5CF6</Color>
-    <Color x:Key="ColorLcarsBlue">#FF539BF5</Color>
-    <Color x:Key="ColorLcarsTan">#FF1C3050</Color>
-
     <!-- ── SOLID BRUSHES ── -->
     <SolidColorBrush x:Key="BgLightBrush" Color="{StaticResource ColorBgLight}"/>
     <SolidColorBrush x:Key="CardBrush" Color="{StaticResource ColorCard}"/>
@@ -78,19 +65,6 @@
     <SolidColorBrush x:Key="StatusOrangeBrush" Color="{StaticResource ColorStatusOrange}"/>
     <SolidColorBrush x:Key="StatusRedBrush" Color="{StaticResource ColorStatusRed}"/>
 
-    <!-- Legacy brush keys (still referenced in pages) -->
-    <SolidColorBrush x:Key="NeonCyanBrush" Color="{StaticResource ColorAccent}"/>
-    <SolidColorBrush x:Key="NeonBlueBrush" Color="{StaticResource ColorAccent}"/>
-    <SolidColorBrush x:Key="NeonPinkBrush" Color="{StaticResource ColorDanger}"/>
-    <SolidColorBrush x:Key="NeonPurpleBrush" Color="{StaticResource ColorNeonPurple}"/>
-    <SolidColorBrush x:Key="NeonGreenBrush" Color="{StaticResource ColorSuccess}"/>
-    <SolidColorBrush x:Key="NeonOrangeBrush" Color="{StaticResource ColorNeonOrange}"/>
-    <SolidColorBrush x:Key="LcarsAmberBrush" Color="{StaticResource ColorAccent}"/>
-    <SolidColorBrush x:Key="LcarsPeachBrush" Color="{StaticResource ColorTextMuted}"/>
-    <SolidColorBrush x:Key="LcarsLavenderBrush" Color="{StaticResource ColorNeonPurple}"/>
-    <SolidColorBrush x:Key="LcarsBlueBrush" Color="{StaticResource ColorAccent}"/>
-    <SolidColorBrush x:Key="LcarsTanBrush" Color="{StaticResource ColorAccentSubtle}"/>
-
     <!-- ── GRADIENT BRUSHES ── -->
     <LinearGradientBrush x:Key="BgBrush" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#FF21262D" Offset="0"/>
@@ -106,16 +80,6 @@
     <LinearGradientBrush x:Key="LcarsGradient" StartPoint="0,0" EndPoint="1,0">
         <GradientStop Color="{StaticResource ColorAccent}" Offset="0"/>
         <GradientStop Color="{StaticResource ColorAccentLight}" Offset="1"/>
-    </LinearGradientBrush>
-
-    <LinearGradientBrush x:Key="LcarsHeaderBrush" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Color="{StaticResource ColorAccent}" Offset="0"/>
-        <GradientStop Color="{StaticResource ColorAccentLight}" Offset="1"/>
-    </LinearGradientBrush>
-
-    <LinearGradientBrush x:Key="NeonWarmGradient" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Color="{StaticResource ColorNeonOrange}" Offset="0"/>
-        <GradientStop Color="{StaticResource ColorDanger}" Offset="1"/>
     </LinearGradientBrush>
 
     <SolidColorBrush x:Key="GlassBrush" Color="Transparent"/>

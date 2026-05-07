@@ -30,7 +30,7 @@
             <Border Margin="0,8,0,8" Padding="10" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="4">
                 <StackPanel>
                     <TextBlock Text="Bedingungen (alle gesetzten muessen zutreffen, leer = nicht geprueft)"
-                               FontWeight="SemiBold" Margin="0,0,0,6" Foreground="{StaticResource NeonCyanBrush}"/>
+                               FontWeight="SemiBold" Margin="0,0,0,6" Foreground="{StaticResource AccentBrush}"/>
 
                     <Grid Margin="0,2">
                         <Grid.ColumnDefinitions>
@@ -165,7 +165,7 @@
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
                 <Button Content="Abbrechen" Click="Cancel_Click" Padding="14,6" Margin="0,0,8,0"/>
                 <Button Content="Speichern" Click="Ok_Click" Padding="14,6" FontWeight="Bold"
-                        Background="{StaticResource NeonCyanBrush}" Foreground="White"/>
+                        Background="{StaticResource AccentBrush}" Foreground="White"/>
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

@@ -16,7 +16,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Style.Triggers>
                 <Trigger Property="IsChecked" Value="True">
-                    <Setter Property="BorderBrush" Value="{StaticResource NeonCyanBrush}"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
                     <Setter Property="Background" Value="{StaticResource HeaderBrush}"/>
                 </Trigger>
             </Style.Triggers>
@@ -61,7 +61,7 @@
                     </Button>
                     <Button Command="{Binding AddCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBody}" Foreground="{StaticResource NeonGreenBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBody}" Foreground="{StaticResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Neu" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>

@@ -22,7 +22,7 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="&#xE80A;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeH4}"
-                               Foreground="{DynamicResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                               Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBlock x:Name="TitleText" Text="Haltungen (abgedockt)"
                                FontSize="{StaticResource TypeBody}" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
@@ -33,7 +33,7 @@
                             ToolTip="Zurueck ins Hauptfenster andocken">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE89F;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBody}"
-                                       Foreground="{DynamicResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                       Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Andocken" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -52,7 +52,7 @@
                            FontSize="{StaticResource TypeCaption}" Foreground="{DynamicResource TextSecondaryBrush}"
                            VerticalAlignment="Center"/>
                 <TextBlock DockPanel.Dock="Right" x:Name="SelectedInfoText"
-                           FontSize="{StaticResource TypeCaption}" Foreground="{DynamicResource NeonCyanBrush}"
+                           FontSize="{StaticResource TypeCaption}" Foreground="{DynamicResource AccentBrush}"
                            VerticalAlignment="Center" HorizontalAlignment="Right"/>
             </DockPanel>
         </Border>
