@@ -56,17 +56,30 @@ dotnet test --filter Category=Recommendation
 ```
 
 ## Wichtige Klassen (Pfade relativ zu `src/`)
-- `AuswertungPro.Next.UI/Ai/Pipeline/MultiModelAnalysisService.cs` → GPU-State-Automat (Orchestrator)
-- `AuswertungPro.Next.UI/Ai/EnhancedVisionAnalysisService.cs`      → Qwen-Wrapper mit Eskalation
-- `AuswertungPro.Next.UI/Ai/Pipeline/DetectionAggregator.cs`       → Temporal Voting
-- `AuswertungPro.Next.UI/Ai/Pipeline/QualityGateService.cs`        → Green/Yellow/Red
-- `AuswertungPro.Next.UI/Ai/Pipeline/BatchPipelineService.cs`      → Batch-Pipeline mit Frame-Persistierung
-- `AuswertungPro.Next.UI/Ai/VideoAnalysisPipelineService.cs`       → Video-End-to-End-Flow
-- `AuswertungPro.Next.Application/Reports/ProtocolPdfExporter.cs`  → EN 13508-2 Output
+- `AuswertungPro.Next.UI/Ai/Pipeline/MultiModelAnalysisService.cs`        → GPU-State-Automat (Orchestrator). Bleibt in UI bis Canvas/Color-Refactor (ARCH-H5).
+- `AuswertungPro.Next.Infrastructure/Ai/EnhancedVisionAnalysisService.cs` → Qwen-Wrapper mit Eskalation
+- `AuswertungPro.Next.Application/Ai/Pipeline/DetectionAggregator.cs`     → Temporal Voting
+- `AuswertungPro.Next.Application/Ai/QualityGate/QualityGateService.cs`   → Green/Yellow/Red, lädt CategoryWeights aus KB
+- `AuswertungPro.Next.Infrastructure/Ai/Pipeline/BatchPipelineService.cs` → Batch-Pipeline mit Frame-Persistierung
+- `AuswertungPro.Next.UI/Ai/VideoAnalysisPipelineService.cs`              → Video-End-to-End-Flow (UI wegen VLC-Player-Coupling)
+- `AuswertungPro.Next.Application/Reports/ProtocolPdfExporter.cs`         → EN 13508-2 Output
 - `AuswertungPro.Next.Infrastructure/Reports/HaltungsDossierPdfBuilder.cs` → Haltungs-Dossier-PDF
-- `AuswertungPro.Next.UI/Ai/OllamaClient.cs`                       → Ollama-HTTP mit Polly Retry + Circuit Breaker
-- `AuswertungPro.Next.UI/Ai/PythonSidecarService.cs`               → Sidecar-Lifecycle auf :8100
-- `AuswertungPro.Next.UI/ServiceProvider.cs`                       → Manueller DI-Container (Warmup, Config)
+- `AuswertungPro.Next.Infrastructure/Ai/Ollama/OllamaClient.cs`           → Ollama-HTTP mit Polly Retry + Circuit Breaker
+- `AuswertungPro.Next.UI/Ai/PythonSidecarService.cs`                      → Sidecar-Lifecycle auf :8100 mit Graceful-Shutdown via /shutdown
+- `AuswertungPro.Next.UI/App.xaml.cs`                                     → DI-Container (Phase 5.1.B) + Provider-Registrierungen
+
+## Kern-Provider (Application-Layer, beim App-Start in `App.xaml.cs` registriert)
+Provider-Pattern entkoppelt KI-Services von UI-spezifischen Quellen.
+- `KnowledgeRootProvider`          → C:\KI_BRAIN-Pfad
+- `AppDataPathProvider`            → LocalAppData-Pfad
+- `KnowledgeMirrorNotifier`        → E:\Brain Sync-Trigger
+- `KnowledgeBasePathProvider`      → KB-DB-Pfad
+- `SidecarAuthTokenAccessor`       → Bearer-Token fuer Sidecar
+- `Ollama.OllamaConfigProvider`    → Ollama-Konfig
+- `AiRuntimeConfigProvider`        → KI-Laufzeit-Konfig
+- `PipelineConfigProvider`         → Sidecar-URL + YOLO/DINO-Schwellen
+- `Imaging.ImagePixelDecoderProvider` → PNG/JPG → Bgra32 (WPF-Imaging-Adapter)
+- `Imaging.OcrPdfFallbackProvider` → Windows.Media.Ocr-Fallback fuer Scan-PDFs
 
 ## Fachdomaene Kanalinspektion
 
