@@ -10,6 +10,7 @@ using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using AuswertungPro.Next.Application.Ai.Annotation;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Ai.Annotation;
 using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -302,6 +303,55 @@ public partial class PlayerWindow
 
     private void OperatorExit_Click(object sender, RoutedEventArgs e)
         => ExitOperatorMode();
+
+    /// <summary>
+    /// Phase 8 Einstiegspunkt: aus dem Trainings-Side-Panel klickt der
+    /// Operator hier, um einen Haltungsordner zu waehlen. Wir lesen Video + PDF,
+    /// bauen die Session und steigen in den Submodus ein.
+    /// </summary>
+    private void TrainingStartOperator_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Haltungsordner waehlen (Video + PDF)",
+        };
+        if (dlg.ShowDialog(this) != true) return;
+        var folder = dlg.FolderName;
+        if (string.IsNullOrWhiteSpace(folder)) return;
+
+        OperateurAnnotationSession session;
+        try
+        {
+            var builder = new OperateurSessionBuilder();
+            session = builder.BuildFromFolder(folder);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this,
+                $"Haltungsordner konnte nicht eingelesen werden:\n{ex.Message}",
+                "Operateur-Annotation", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (session.Tasks.Count == 0)
+        {
+            MessageBox.Show(this,
+                "Im PDF wurden keine Beobachtungen erkannt. Format pruefen oder anderes Protokoll waehlen.",
+                "Operateur-Annotation", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            EnterOperatorMode(session);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this,
+                $"Operator-Modus konnte nicht aktiviert werden:\n{ex.Message}",
+                "Operateur-Annotation", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 
     private void OperatorBox_Click(object sender, RoutedEventArgs e)
     {

@@ -1148,6 +1148,24 @@
                             </StackPanel>
                         </Border>
 
+                        <Border Background="{DynamicResource HeaderBrush}" CornerRadius="8"
+                                Padding="10,8" Margin="0,8,0,0">
+                            <StackPanel>
+                                <TextBlock Text="OPERATEUR-ANNOTATION"
+                                           Style="{StaticResource SectionLabel}"/>
+                                <TextBlock TextWrapping="Wrap" FontSize="{StaticResource TypeMicro}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           Margin="0,0,0,6">
+                                    Codes aus dem Inspektions-PDF einlesen und der Reihe nach codieren.
+                                </TextBlock>
+                                <Button x:Name="BtnTrainingStartOperator"
+                                        Content="Haltungsordner waehlen…"
+                                        Style="{StaticResource PlayerButton}"
+                                        Click="TrainingStartOperator_Click"
+                                        ToolTip="Ordner mit Video + PDF auswaehlen. Codes aus dem PDF werden als Aufgaben angezeigt."/>
+                            </StackPanel>
+                        </Border>
+
                         <Button x:Name="BtnTrainingExit"
                                 Content="Trainings-Modus beenden"
                                 Style="{StaticResource PlayerButton}"
