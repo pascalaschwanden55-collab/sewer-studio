@@ -47,19 +47,6 @@ public sealed class TeacherAnnotation
     /// "Regenwasser") aus dem HaltungRecord.</summary>
     public string? Nutzungsart { get; set; }
 
-    /// <summary>Frame-spezifische Material-Farbvariante (Override fuer
-    /// <see cref="Rohrmaterial"/>). Wichtig weil das HaltungRecord nur eine
-    /// Material-Bezeichnung pro Haltung haelt, ein PP-Rohr aber 4
-    /// Farb-Varianten haben kann (gruen/grau/orange/schwarz) und sich das
-    /// Material innerhalb einer Haltung sogar wechseln kann (z.B.
-    /// PP-Hausanschluss zu Beton-Hauptkanal).
-    ///
-    /// Standardwerte: "PP gruen", "PP grau", "PP orange", "PP schwarz",
-    /// "Beton", "PVC orange", "PVC grau", "Steinzeug", "GFK", "andere".
-    /// Null = kein Override, das uebergeordnete <see cref="Rohrmaterial"/>
-    /// gilt.</summary>
-    public string? MaterialFarbVariante { get; set; }
-
     // --- Geometrie (normiert 0.0-1.0) ---
     public OverlayToolType ToolType { get; set; }
     public List<NormalizedPoint> Points { get; set; } = new();
