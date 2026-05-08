@@ -1,0 +1,57 @@
+<Project>
+  <!--
+    Phase 5.5: Zentrale NuGet-Versions-Verwaltung.
+    Alle PackageReference-Versionen werden hier zentral gepflegt.
+    In den .csproj-Dateien stehen nur noch <PackageReference Include="..." />
+    ohne Version-Attribut.
+
+    Hinweis: Bei Migration 2026-05-08 wurde keine Version-Drift gefunden —
+    alle in mehreren Projekten genutzten Pakete hatten identische Versionen
+    (z.B. QuestPDF 2026.2.0 in Application + UI, LibVLCSharp 3.9.5 in
+    Infrastructure + UI, Microsoft.NET.Test.Sdk 17.10.0 in beiden Test-
+    Projekten).
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
+    <PackageVersion Include="ClosedXML" Version="0.105.0" />
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.0" />
+    <PackageVersion Include="Docnet.Core" Version="2.6.0" />
+    <PackageVersion Include="FirebirdSql.Data.FirebirdClient" Version="10.0.0" />
+    <PackageVersion Include="LibreHardwareMonitorLib" Version="0.9.6" />
+    <PackageVersion Include="LibVLCSharp" Version="3.9.5" />
+    <PackageVersion Include="LibVLCSharp.WPF" Version="3.9.5" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.2" />
+    <!--
+      Microsoft.Extensions.Logging.Abstractions: Vorher 9.0.0 (Application).
+      Bei transitive pinning zieht Microsoft.Extensions.Logging 10.0.2 (UI)
+      eine 10.0.2-Abstractions-Abhaengigkeit nach, was zu NU1109-Downgrade
+      gegen die zentrale 9.0.0 fuehrt. Auf hoechste benoetigte Version 10.0.2
+      angehoben (Phase 5.5 Migration).
+    -->
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.50.0" />
+    <!--
+      Polly: Vorher inline als "8.*" gepflegt (Floating Version). Bei zentraler
+      Paketverwaltung (CPM) verbietet NU1011 unverankerte Versionen — daher
+      auf die aktuell aufgeloeste Version 8.6.6 gepinnt (siehe nuget cache
+      C:\Users\Besitzer\.nuget\packages\polly\8.6.6).
+    -->
+    <PackageVersion Include="Polly" Version="8.6.6" />
+    <PackageVersion Include="QuestPDF" Version="2026.2.0" />
+    <PackageVersion Include="Scriban" Version="7.0.5" />
+    <PackageVersion Include="System.Data.SQLite.Core" Version="1.0.119" />
+    <PackageVersion Include="UglyToad.PdfPig" Version="1.7.0-custom-5" />
+    <PackageVersion Include="VideoLAN.LibVLC.Windows" Version="3.0.23" />
+    <PackageVersion Include="xunit" Version="2.7.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.7" />
+  </ItemGroup>
+</Project>

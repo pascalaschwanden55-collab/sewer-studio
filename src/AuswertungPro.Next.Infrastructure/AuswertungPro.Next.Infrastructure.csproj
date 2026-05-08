@@ -11,14 +11,14 @@
     <InternalsVisibleTo Include="AuswertungPro.Next.Infrastructure.Tests" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ClosedXML" Version="0.105.0" />
-    <PackageReference Include="UglyToad.PdfPig" Version="1.7.0-custom-5" />
-    <PackageReference Include="Microsoft.Playwright" Version="1.50.0" />
-    <PackageReference Include="Scriban" Version="7.0.5" />
-    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3" />
-    <PackageReference Include="FirebirdSql.Data.FirebirdClient" Version="10.0.0" />
-    <PackageReference Include="LibVLCSharp" Version="3.9.5" />
-    <PackageReference Include="Polly" Version="8.*" />
+    <PackageReference Include="ClosedXML" />
+    <PackageReference Include="UglyToad.PdfPig" />
+    <PackageReference Include="Microsoft.Playwright" />
+    <PackageReference Include="Scriban" />
+    <PackageReference Include="System.Data.SQLite.Core" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="FirebirdSql.Data.FirebirdClient" />
+    <PackageReference Include="LibVLCSharp" />
+    <PackageReference Include="Polly" />
   </ItemGroup>
 </Project>
