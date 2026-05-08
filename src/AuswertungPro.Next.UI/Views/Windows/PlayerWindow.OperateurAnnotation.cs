@@ -36,6 +36,16 @@ public partial class PlayerWindow
     private CodeTask? _operatorActive;
     private IOperateurAnnotationService? _operatorService;
 
+    // PreviewReady-Zwischenzustand: SAM-Maske ist da, aber noch nicht
+    // committed. Bleibt zwischen Box-Drawing-Complete und Confirm/Discard
+    // erhalten, damit der Operator die Maske ansehen und entscheiden kann.
+    private MaskPreview? _operatorPendingPreview;
+    private string? _operatorPendingFramePath;
+    private int _operatorPendingFrameWidth;
+    private int _operatorPendingFrameHeight;
+    private double _operatorPendingFrameTime;
+    private BoundingBoxNormalized? _operatorPendingBox;
+
     /// <summary>
     /// Aktiver Submodus? Wird in Phase 7 fuer Sichtbarkeit/HitTest gegen den
     /// Player-Overlay-Canvas gebraucht; bereits jetzt verfuegbar fuer Tests.
@@ -91,27 +101,55 @@ public partial class PlayerWindow
         try { _player?.SetPause(true); } catch { /* Player ggf. noch nicht geladen */ }
     }
 
-    /// <summary>Beendet den Submodus, verwirft alle ungespeicherten Box/Preview-Daten.</summary>
+    /// <summary>
+    /// Beendet den Submodus, verwirft alle ungespeicherten Box/Preview-Daten,
+    /// schliesst das Box-Overlay und stellt die normale Trainings-Sicht wieder
+    /// her. Der Operator landet in dem Zustand, aus dem er den Submodus
+    /// gestartet hat (Trainings-Modus aktiv, Side-Panel sichtbar) — sonst
+    /// wuerde die rechte Spalte leer wirken oder ein Overlay-Popup haengen.
+    /// </summary>
     public void ExitOperatorMode()
     {
+        // Erst Overlay-Pipeline abschalten, BEVOR die Felder gecleart werden —
+        // sonst waere _operatorBoxActive evtl. noch true, und ein nachhinkender
+        // HandleMarkDrawingComplete-Tick wuerde HandleOperatorBoxCompleteAsync
+        // mit halben Daten triggern.
+        DeactivateOperatorBoxTool();
+
         _isOperatorMode = false;
         _operatorActive = null;
         _operatorSession = null;
 
+        // OperatorPanel raus, TrainingPanel zurueck — der Operator bleibt im
+        // Trainings-Modus, das war der Einstiegspunkt.
         if (OperatorSidePanel != null)
             OperatorSidePanel.Visibility = Visibility.Collapsed;
+        if (TrainingSidePanel != null && _isTrainingMode)
+            TrainingSidePanel.Visibility = Visibility.Visible;
         if (OperatorCodeList != null)
             OperatorCodeList.ItemsSource = null;
+        if (BtnOperatorBox != null) BtnOperatorBox.IsEnabled = false;
         if (BtnOperatorSkip != null) BtnOperatorSkip.IsEnabled = false;
         if (BtnOperatorReject != null) BtnOperatorReject.IsEnabled = false;
+        if (TxtOperatorStatus != null)
+            TxtOperatorStatus.Text = "Keine Sitzung — Haltungsordner importieren.";
+        if (TxtOperatorProgress != null) TxtOperatorProgress.Text = "";
     }
 
     /// <summary>
     /// Aktualisiert Status-Text + Progress-Text basierend auf der Session.
     /// Nur Code-Behind-Schreiben gegen die x:Name-Elemente — kein Binding.
+    /// CodeTask hat kein INotifyPropertyChanged (lebt in Application-Schicht
+    /// ohne UI-Dependency), darum muss die ListBox nach State-Wechseln ihre
+    /// Status-Dots neu zeichnen — Items.Refresh() ist der pragmatische Weg.
     /// </summary>
     private void UpdateOperatorStatusUi()
     {
+        if (OperatorCodeList?.Items is { } items)
+        {
+            try { items.Refresh(); }
+            catch { /* Refresh ist best-effort */ }
+        }
         if (_operatorSession is null)
         {
             if (TxtOperatorStatus != null)
@@ -141,7 +179,22 @@ public partial class PlayerWindow
 
         var hasActiveNonTerminal = _operatorActive is not null
             && !OperateurAnnotationSession.IsTerminal(_operatorActive.State);
-        if (BtnOperatorBox != null) BtnOperatorBox.IsEnabled = hasActiveNonTerminal;
+        var hasPendingPreview = _operatorPendingPreview is not null
+            && _operatorActive is not null
+            && _operatorActive.State == CodeTaskState.PreviewReady;
+
+        if (BtnOperatorBox != null)
+        {
+            BtnOperatorBox.IsEnabled = hasActiveNonTerminal;
+            // Wenn schon eine Maske wartet: Button-Text wechselt zu
+            // "Erneut zeichnen" — drueckt klar aus, dass die alte Preview
+            // verworfen wird.
+            BtnOperatorBox.Content = hasPendingPreview
+                ? "↻ Erneut zeichnen"
+                : "▢ Box ziehen + SAM";
+        }
+        if (BtnOperatorConfirm != null)
+            BtnOperatorConfirm.IsEnabled = hasPendingPreview;
         if (BtnOperatorSkip != null) BtnOperatorSkip.IsEnabled = hasActiveNonTerminal;
         if (BtnOperatorReject != null) BtnOperatorReject.IsEnabled = hasActiveNonTerminal;
     }
@@ -157,6 +210,10 @@ public partial class PlayerWindow
     {
         if (_operatorSession is null)
             throw new InvalidOperationException("Kein aktiver Operator-Modus.");
+
+        // Wechsel auf anderes Task -> evtl. anhaengende Preview verwerfen.
+        if (!ReferenceEquals(task, _operatorActive))
+            DiscardOperatorPreview();
 
         _operatorSession.MoveToCode(task);
         _operatorActive = _operatorSession.Active;
@@ -181,6 +238,7 @@ public partial class PlayerWindow
         if (_operatorSession?.Active is null) return;
         if (OperateurAnnotationSession.IsTerminal(_operatorSession.Active.State)) return;
 
+        DiscardOperatorPreview();
         _operatorSession.MarkActiveSkipped(reason ?? "");
 
         var next = _operatorSession.FindNextPending();
@@ -204,6 +262,7 @@ public partial class PlayerWindow
         if (_operatorSession?.Active is null) return;
         if (OperateurAnnotationSession.IsTerminal(_operatorSession.Active.State)) return;
 
+        DiscardOperatorPreview();
         _operatorSession.MarkActiveRejected(reason ?? "");
 
         var next = _operatorSession.FindNextPending();
@@ -240,7 +299,26 @@ public partial class PlayerWindow
         => ExitOperatorMode();
 
     private void OperatorBox_Click(object sender, RoutedEventArgs e)
-        => ActivateOperatorBoxTool();
+    {
+        // "Erneut zeichnen": pending Preview verwerfen, dann Box-Tool aktivieren.
+        DiscardOperatorPreview();
+        UpdateOperatorStatusUi();
+        ActivateOperatorBoxTool();
+    }
+
+    private async void OperatorConfirm_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isWindowClosed) return;
+        try
+        {
+            await ConfirmOperatorPreviewAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            if (TxtOperatorStatus != null)
+                TxtOperatorStatus.Text = $"Fehler: {ex.Message}";
+        }
+    }
 
     /// <summary>
     /// Aktiviert das Rectangle-Tool im Operator-Pfad. Reuse vom bestehenden
@@ -297,8 +375,10 @@ public partial class PlayerWindow
 
     /// <summary>
     /// Wird aus <see cref="HandleMarkDrawingComplete"/> early-branched gerufen,
-    /// wenn der Operator-Submodus eine Box gezeichnet hat. Snapshot, BBox aus
-    /// der Overlay-Geometrie ableiten, Service rufen, UI aktualisieren.
+    /// wenn der Operator-Submodus eine Box gezeichnet hat. Snapshot + BBox
+    /// aus der Overlay-Geometrie ableiten, Service.PreviewMaskAsync rufen,
+    /// UI aktualisieren — KEIN automatisches Commit. Operator bestaetigt
+    /// per Strg+Enter / "Bestaetigen"-Button.
     /// </summary>
     private async Task HandleOperatorBoxCompleteAsync()
     {
@@ -316,17 +396,17 @@ public partial class PlayerWindow
             return;
         }
 
-        // Status fuer den Operateur waehrend SAM laeuft.
         if (TxtOperatorStatus != null)
             TxtOperatorStatus.Text = "SAM segmentiert …";
 
         var actualSec = (_player?.Time ?? 0) / 1000.0;
 
-        // Frame in eine *stabile* Temp-Datei schreiben — CommitAsync kopiert
-        // das nach KI_BRAIN/frames/<CaseId>/<SampleId>.png. Wir geben den Temp
-        // Path nicht frei, der Service uebernimmt die Finalisierung.
+        // Frame in *stabile* Temp-Datei. Wir behalten die Datei bis zum
+        // Confirm/Discard, damit der Operator die Maske ansehen kann ohne
+        // dass der Service ihn schon ins KI_BRAIN gemoved hat.
         var tmpPath = Path.Combine(Path.GetTempPath(),
             $"sewerstudio_operator_{Guid.NewGuid():N}.png");
+
         try
         {
             TakeSnapshotSafe(tmpPath);
@@ -348,9 +428,9 @@ public partial class PlayerWindow
 
             try
             {
-                var result = await CommitOperatorActiveAsync(
+                await PreviewOperatorActiveAsync(
                     box: box,
-                    videoFrameIndex: 0,         // Slice 1: nicht aus Frame-Index abgeleitet
+                    videoFrameIndex: 0,
                     actualFrameTimeSeconds: actualSec,
                     frameWidth: frameW,
                     frameHeight: frameH,
@@ -358,22 +438,22 @@ public partial class PlayerWindow
                     ct: CancellationToken.None);
 
                 if (TxtOperatorStatus != null)
-                {
-                    TxtOperatorStatus.Text = result.IsSuccess
-                        ? $"Sample {result.SampleId[..8]}… gespeichert."
-                        : $"Fehler: {result.Error}";
-                }
+                    TxtOperatorStatus.Text =
+                        "Maske bereit — Strg+Enter zum Bestaetigen, Box-Button neu zeichnen.";
                 UpdateOperatorStatusUi();
             }
             catch (Exception ex)
             {
                 if (TxtOperatorStatus != null)
                     TxtOperatorStatus.Text = $"Fehler: {ex.Message}";
+                // Preview fehlgeschlagen -> temp-File loeschen, kein Pending behalten.
+                try { if (File.Exists(tmpPath)) File.Delete(tmpPath); } catch { }
             }
         }
         finally
         {
-            try { if (File.Exists(tmpPath)) File.Delete(tmpPath); } catch { }
+            // Box-Tool ausschalten; tmpPath bleibt liegen, falls Preview
+            // erfolgreich war — ClearPendingPreviewFields raeumt es spaeter ab.
             DeactivateOperatorBoxTool();
         }
     }
@@ -419,6 +499,15 @@ public partial class PlayerWindow
             return true;
         }
 
+        // Strg+Eingabe: gewartete SAM-Maske bestaetigen.
+        if (ctrl && !shift && (e.Key == Key.Enter || e.Key == Key.Return))
+        {
+            // async-void via fire-and-forget Helper, damit der Hotkey-Handler
+            // sofort zurueckkehrt. Fehler werden in den Status-Text geschrieben.
+            _ = TryConfirmFromHotkeyAsync();
+            return true;
+        }
+
         // Strg+Umsch+Z: aktuellen Code ueberspringen.
         if (ctrl && shift && e.Key == Key.Z)
         {
@@ -436,13 +525,24 @@ public partial class PlayerWindow
         return false;
     }
 
+    private async Task TryConfirmFromHotkeyAsync()
+    {
+        if (_isWindowClosed) return;
+        try { await ConfirmOperatorPreviewAsync(CancellationToken.None); }
+        catch (Exception ex)
+        {
+            if (TxtOperatorStatus != null)
+                TxtOperatorStatus.Text = $"Fehler: {ex.Message}";
+        }
+    }
+
     /// <summary>
-    /// Phase 7-Vorlage: ruft Preview + Commit auf dem Service. Phase 6 stellt
-    /// den vollstaendigen Aufruf bereit, ohne ihn aus dem UI zu ziehen — die
-    /// Box-Erfassung erfolgt erst in Phase 7. Wer hier ruft, gibt die Box
-    /// direkt mit (z.B. ein Test oder eine spaetere Box-Drag-Logik).
+    /// Phase 1 des Two-Phase-API: ruft das Sidecar mit return_polygon=true
+    /// und legt die Maske im Pending-Slot ab. Persistiert NICHTS — der
+    /// Operator sieht die Maske, kann verwerfen und neu zeichnen, oder per
+    /// Confirm festschreiben (Strg+Enter / Bestaetigen-Button).
     /// </summary>
-    internal async Task<CommitResult> CommitOperatorActiveAsync(
+    internal async Task PreviewOperatorActiveAsync(
         BoundingBoxNormalized box,
         int videoFrameIndex,
         double actualFrameTimeSeconds,
@@ -460,11 +560,14 @@ public partial class PlayerWindow
             throw new InvalidOperationException(
                 $"CodeTask ist bereits {_operatorActive.State} — terminaler State darf nicht ueberschrieben werden.");
 
+        // Etwaige alte Preview verwerfen — der Operator zieht eine NEUE Box.
+        DiscardOperatorPreview();
+
         var request = new AnnotationRequest(
             CaseId: _operatorSession.CaseId,
             Code: _operatorActive.Code,
             ProtocolMeterstand: _operatorActive.Meterstand,
-            SuggestedFrameTimeSeconds: actualFrameTimeSeconds,  // Phase 7 setzt das aus dem Mapping
+            SuggestedFrameTimeSeconds: actualFrameTimeSeconds,
             ActualFrameTimeSeconds: actualFrameTimeSeconds,
             VideoFrameIndex: videoFrameIndex,
             FramePath: framePath,
@@ -472,32 +575,110 @@ public partial class PlayerWindow
             FrameHeight: frameHeight,
             Box: box);
 
-        // UI-Code-Path: KEIN ConfigureAwait(false) — die Continuations mutieren
-        // Session-State und greifen via SelectOperatorTask auf _player zu, das
-        // muss auf dem WPF-UI-Thread bleiben.
+        // KEIN ConfigureAwait(false) — Continuation mutiert UI-Felder + State.
         var preview = await _operatorService.PreviewMaskAsync(request, ct);
+
         _operatorActive.Box = box;
         _operatorActive.Preview = preview;
         _operatorActive.State = CodeTaskState.PreviewReady;
 
-        var result = await _operatorService.CommitAsync(request, preview, ct);
+        _operatorPendingPreview = preview;
+        _operatorPendingFramePath = framePath;
+        _operatorPendingFrameWidth = frameWidth;
+        _operatorPendingFrameHeight = frameHeight;
+        _operatorPendingFrameTime = actualFrameTimeSeconds;
+        _operatorPendingBox = box;
+    }
+
+    /// <summary>
+    /// Phase 2 des Two-Phase-API: schreibt das Sample (Store > YOLO > KB).
+    /// Verlangt einen vorigen <see cref="PreviewOperatorActiveAsync"/>-Aufruf;
+    /// no-op wenn keine Pending-Preview da ist.
+    /// </summary>
+    internal async Task<CommitResult?> ConfirmOperatorPreviewAsync(CancellationToken ct)
+    {
+        if (_operatorService is null)
+            throw new InvalidOperationException(
+                "OperateurAnnotationService nicht gesetzt.");
+        if (_operatorSession is null || _operatorActive is null) return null;
+        if (_operatorPendingPreview is null
+            || _operatorPendingBox is null
+            || _operatorPendingFramePath is null) return null;
+        if (_operatorActive.State != CodeTaskState.PreviewReady) return null;
+
+        var request = new AnnotationRequest(
+            CaseId: _operatorSession.CaseId,
+            Code: _operatorActive.Code,
+            ProtocolMeterstand: _operatorActive.Meterstand,
+            SuggestedFrameTimeSeconds: _operatorPendingFrameTime,
+            ActualFrameTimeSeconds: _operatorPendingFrameTime,
+            VideoFrameIndex: 0,
+            FramePath: _operatorPendingFramePath,
+            FrameWidth: _operatorPendingFrameWidth,
+            FrameHeight: _operatorPendingFrameHeight,
+            Box: _operatorPendingBox);
+
+        var result = await _operatorService.CommitAsync(request, _operatorPendingPreview, ct);
+
         if (result.IsSuccess)
         {
             _operatorSession.MarkActiveCommitted(result.SampleId, DateTime.UtcNow);
+            ClearPendingPreviewFields(deleteTempFile: true);
 
             var next = _operatorSession.FindNextPending();
             if (next is not null)
                 SelectOperatorTask(next);
             else
+            {
                 _operatorActive = null;
+                UpdateOperatorStatusUi();
+            }
         }
         else
         {
-            // Store-Fehler: Task auf Error setzen, Operator entscheidet manuell.
+            // Store-Fehler: Task auf Error, pending bleibt — Operator kann
+            // erneut Confirm versuchen (z.B. nach Sidecar-Reconnect) oder
+            // verwerfen.
             _operatorActive.State = CodeTaskState.Error;
             _operatorActive.UserReason = result.Error;
+            UpdateOperatorStatusUi();
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Verwirft eine wartende Preview (Maske + Box + temp-Frame). Setzt das
+    /// aktive Task von PreviewReady zurueck auf Active, damit der Operator
+    /// neu zeichnen kann. Loescht die temp-Frame-Datei (best-effort).
+    /// </summary>
+    internal void DiscardOperatorPreview()
+    {
+        ClearPendingPreviewFields(deleteTempFile: true);
+
+        if (_operatorActive is not null
+            && _operatorActive.State == CodeTaskState.PreviewReady)
+        {
+            _operatorActive.State = CodeTaskState.Active;
+            _operatorActive.Box = null;
+            _operatorActive.Preview = null;
+        }
+    }
+
+    private void ClearPendingPreviewFields(bool deleteTempFile)
+    {
+        if (deleteTempFile
+            && _operatorPendingFramePath is not null
+            && File.Exists(_operatorPendingFramePath))
+        {
+            try { File.Delete(_operatorPendingFramePath); } catch { /* best-effort */ }
+        }
+
+        _operatorPendingPreview = null;
+        _operatorPendingFramePath = null;
+        _operatorPendingBox = null;
+        _operatorPendingFrameWidth = 0;
+        _operatorPendingFrameHeight = 0;
+        _operatorPendingFrameTime = 0;
     }
 }

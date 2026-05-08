@@ -1203,7 +1203,62 @@
                                  Margin="0,0,0,8"
                                  MaxHeight="320"
                                  SelectionChanged="OperatorCodeList_SelectionChanged"
-                                 ToolTip="Klick: Code waehlen + zum Meterstand springen. Hotkeys: Strg+Eingabe = Bestaetigen, Strg+Umsch+Z = Ueberspringen, Strg+R = Nicht zutreffend."/>
+                                 ToolTip="Klick: Code waehlen + zum Meterstand springen. Hotkeys: Strg+Eingabe = Bestaetigen, Strg+Umsch+Z = Ueberspringen, Strg+R = Nicht zutreffend.">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="14"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <!-- Status-Dot: faerbt sich je nach State.
+                                             Pending=grau, Active/PreviewReady=akzent,
+                                             Committed=gruen, Skipped=orange,
+                                             Rejected=rot, Error=rot -->
+                                        <Ellipse Grid.Column="0" Width="8" Height="8"
+                                                 VerticalAlignment="Center"
+                                                 Margin="0,0,6,0">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill" Value="{DynamicResource TextSecondaryBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding State}" Value="Active">
+                                                            <Setter Property="Fill" Value="{DynamicResource AccentBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding State}" Value="PreviewReady">
+                                                            <Setter Property="Fill" Value="{DynamicResource AccentBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding State}" Value="Committed">
+                                                            <Setter Property="Fill" Value="#22C55E"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding State}" Value="Skipped">
+                                                            <Setter Property="Fill" Value="#F59E0B"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding State}" Value="Rejected">
+                                                            <Setter Property="Fill" Value="#EF4444"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding State}" Value="Error">
+                                                            <Setter Property="Fill" Value="#EF4444"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Code}"
+                                                   FontFamily="Consolas, Cascadia Mono"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding Meterstand, StringFormat='{}{0:F2} m'}"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   FontFamily="Consolas, Cascadia Mono"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
 
                         <StackPanel Orientation="Vertical" Margin="0,0,0,8">
                             <Button x:Name="BtnOperatorBox"
@@ -1212,21 +1267,28 @@
                                     Click="OperatorBox_Click"
                                     IsEnabled="False"
                                     Margin="0,0,0,4"
-                                    ToolTip="Aktiviert das Rechteck-Tool. Box ueber den Schaden ziehen, SAM segmentiert automatisch."/>
+                                    ToolTip="Aktiviert das Rechteck-Tool. Box ueber den Schaden ziehen, SAM segmentiert. Maske wird angezeigt — erst Strg+Enter / 'Bestaetigen' schreibt das Sample."/>
+                            <Button x:Name="BtnOperatorConfirm"
+                                    Content="&#x2714; Bestaetigen (Strg+Eingabe)"
+                                    Style="{StaticResource PlayerPrimaryButton}"
+                                    Click="OperatorConfirm_Click"
+                                    IsEnabled="False"
+                                    Margin="0,0,0,4"
+                                    ToolTip="SAM-Maske bestaetigen — Sample wird in Store + KB + YOLO geschrieben."/>
                             <Button x:Name="BtnOperatorSkip"
                                     Content="&#x21B7; Code ueberspringen"
                                     Style="{StaticResource PlayerButton}"
                                     Click="OperatorSkip_Click"
                                     IsEnabled="False"
                                     Margin="0,0,0,4"
-                                    ToolTip="Aktuellen Code als 'Skipped' markieren (z.B. Frame unscharf)"/>
+                                    ToolTip="Aktuellen Code als 'Skipped' markieren (z.B. Frame unscharf). Hotkey: Strg+Umsch+Z"/>
                             <Button x:Name="BtnOperatorReject"
                                     Content="&#x2716; Nicht zutreffend"
                                     Style="{StaticResource PlayerButton}"
                                     Click="OperatorReject_Click"
                                     IsEnabled="False"
                                     Margin="0,0,0,4"
-                                    ToolTip="Code als Protokollfehler markieren"/>
+                                    ToolTip="Code als Protokollfehler markieren. Hotkey: Strg+R"/>
                         </StackPanel>
 
                         <Button x:Name="BtnOperatorExit"
