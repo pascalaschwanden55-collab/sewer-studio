@@ -196,6 +196,18 @@ public sealed class KnowledgeBaseContext : IDisposable
             );
             """);
 
+        // Phase 2.2: explizite Per-Signal-Spalten ergaenzen (parallel zu WeightsJson).
+        // Ermoeglicht UPSERT und SQL-seitige Diagnose (z.B. AVG(YoloWeight) per Code-Gruppe).
+        // Bestehende Reader nutzen weiterhin WeightsJson — kein Bruch.
+        MigrateAddColumn("CategoryWeights", "YoloWeight",         "REAL NOT NULL DEFAULT 0");
+        MigrateAddColumn("CategoryWeights", "DinoWeight",         "REAL NOT NULL DEFAULT 0");
+        MigrateAddColumn("CategoryWeights", "SamWeight",          "REAL NOT NULL DEFAULT 0");
+        MigrateAddColumn("CategoryWeights", "QwenWeight",         "REAL NOT NULL DEFAULT 0");
+        MigrateAddColumn("CategoryWeights", "LlmWeight",          "REAL NOT NULL DEFAULT 0");
+        MigrateAddColumn("CategoryWeights", "KbWeight",           "REAL NOT NULL DEFAULT 0");
+        MigrateAddColumn("CategoryWeights", "KbAgreementWeight",  "REAL NOT NULL DEFAULT 0");
+        MigrateAddColumn("CategoryWeights", "PlausibilityWeight", "REAL NOT NULL DEFAULT 0");
+
         // QualityGate: Validation log for self-improving loop
         ExecuteNonQuery("""
             CREATE TABLE IF NOT EXISTS ValidationLog (
