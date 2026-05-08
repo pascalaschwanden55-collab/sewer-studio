@@ -23,6 +23,16 @@ from ..schemas.segmentation import MaskResult, SamResponse
 
 logger = logging.getLogger(__name__)
 
+# Slice 1: cv2 fuer Polygon-Approximation. ultralytics zieht opencv-python
+# als Dependency, der Import sollte normalerweise klappen. Wenn nicht,
+# liefern wir polygon_points=None und loggen einmalig.
+try:
+    import cv2 as _cv2
+    _HAS_CV2 = True
+except ImportError:
+    _HAS_CV2 = False
+    logger.warning("OpenCV nicht verfuegbar — SAM-Polygon-Approximation deaktiviert")
+
 
 def _get_sam_max_batch() -> int:
     """Dynamische Batch-Groesse basierend auf verfuegbarem VRAM."""
@@ -101,6 +111,43 @@ def _rle_encode(mask: np.ndarray) -> str:
     return ",".join(parts)
 
 
+def _mask_to_polygon(mask: np.ndarray, epsilon_ratio: float = 0.005) -> list[list[float]] | None:
+    """Approximiert die binaere Maske zu einem Polygon (Douglas-Peucker via cv2).
+
+    Slice 1 (Operateur-Annotation): YOLO-seg braucht ein Polygon — die Maske
+    selbst ist als RLE schon im MaskResult. Wir nehmen die groesste externe
+    Kontur, weil mehrere Inseln in einer SAM-Maske die Ausnahme sind und
+    YOLO-seg pro Sample sowieso nur ein Polygon erwartet.
+
+    Returns:
+        list[[x, y]] in Pixelkoordinaten, oder None wenn cv2 nicht verfuegbar
+        ist, die Kontur leer ist oder das Polygon zu degeneriert ist (< 3 Punkte).
+    """
+    if not _HAS_CV2:
+        return None
+
+    contours, _ = _cv2.findContours(
+        mask.astype(np.uint8),
+        _cv2.RETR_EXTERNAL,
+        _cv2.CHAIN_APPROX_SIMPLE,
+    )
+    if not contours:
+        return None
+
+    largest = max(contours, key=_cv2.contourArea)
+    perimeter = _cv2.arcLength(largest, closed=True)
+    if perimeter <= 0:
+        return None
+
+    epsilon = max(1.0, epsilon_ratio * perimeter)
+    approx = _cv2.approxPolyDP(largest, epsilon, closed=True)
+    if approx is None or len(approx) < 3:
+        return None
+
+    # approx-Form: (N, 1, 2). Auf list[[x, y]] flachklopfen.
+    return [[float(p[0][0]), float(p[0][1])] for p in approx]
+
+
 def _append_mask_result(
     masks_out: list[MaskResult],
     mask: np.ndarray,
@@ -108,12 +155,23 @@ def _append_mask_result(
     bbox: BoundingBox,
     h: int,
     w: int,
+    return_polygon: bool = False,
 ) -> None:
-    """Berechnet Masken-Statistik und fuegt MaskResult hinzu."""
+    """Berechnet Masken-Statistik und fuegt MaskResult hinzu.
+
+    Wenn ``return_polygon`` True ist, wird zusaetzlich die Maske per
+    cv2.approxPolyDP zu einem Polygon angenaehert und in
+    ``MaskResult.polygon_points`` gelegt (Slice 1: Operateur-Annotation).
+    """
     mask_area = int(mask.sum())
     ys, xs = np.where(mask)
     if len(xs) == 0:
         return
+
+    polygon_points: list[list[float]] | None = None
+    if return_polygon:
+        polygon_points = _mask_to_polygon(mask)
+
     masks_out.append(MaskResult(
         label=bbox.label,
         confidence=round(score, 4),
@@ -125,11 +183,13 @@ def _append_mask_result(
         width_pixels=int(xs.max() - xs.min() + 1),
         centroid_x=round(float(xs.mean()), 1),
         centroid_y=round(float(ys.mean()), 1),
+        polygon_points=polygon_points,
     ))
 
 
 def _predict_single_box(predictor, bbox: BoundingBox, masks_out: list[MaskResult],
-                         h: int, w: int, device: str) -> None:
+                         h: int, w: int, device: str,
+                         return_polygon: bool = False) -> None:
     """Fallback: einzelne Box vorhersagen (sequentiell)."""
     import torch
     try:
@@ -139,7 +199,7 @@ def _predict_single_box(predictor, bbox: BoundingBox, masks_out: list[MaskResult
                 point_coords=None, point_labels=None,
                 box=box_np, multimask_output=False,
             )
-        _append_mask_result(masks_out, masks[0], float(scores[0]), bbox, h, w)
+        _append_mask_result(masks_out, masks[0], float(scores[0]), bbox, h, w, return_polygon)
     except Exception as exc:
         logger.warning("SAM 2 Prediction fehlgeschlagen fuer Box %s: %s", bbox, exc)
 
@@ -147,6 +207,7 @@ def _predict_single_box(predictor, bbox: BoundingBox, masks_out: list[MaskResult
 def _predict_boxes_batched(
     predictor, boxes: list[BoundingBox], masks_out: list[MaskResult],
     h: int, w: int, device: str,
+    return_polygon: bool = False,
 ) -> None:
     """Batch: alle Boxen in einem Forward Pass durch SAM 2."""
     import torch
@@ -166,7 +227,7 @@ def _predict_boxes_batched(
         if masks.ndim == 4:
             masks = masks[:, 0]  # → (N, H, W)
         for i, bbox in enumerate(boxes):
-            _append_mask_result(masks_out, masks[i], float(scores[i]), bbox, h, w)
+            _append_mask_result(masks_out, masks[i], float(scores[i]), bbox, h, w, return_polygon)
     except Exception as exc:
         logger.warning("SAM 2 Batch fehlgeschlagen (%d Boxen): %s — Fallback sequentiell", len(boxes), exc)
         for bbox in boxes:
@@ -199,7 +260,8 @@ def _clip_annulus_mask(mask: np.ndarray, cx: float, cy: float,
     return mask & annulus
 
 
-def _ring_scan(predictor, ring_params, h: int, w: int, device: str) -> list[MaskResult]:
+def _ring_scan(predictor, ring_params, h: int, w: int, device: str,
+               return_polygon: bool = False) -> list[MaskResult]:
     """Annulus-Bereich systematisch mit SAM 2 abtasten (Sektoren-Ansatz).
 
     Strategie: Jeder Sektor bekommt positive Punkte + Constraint-Punkte
@@ -348,6 +410,7 @@ def _ring_scan(predictor, ring_params, h: int, w: int, device: str) -> list[Mask
     # MaskResult-Liste aufbauen
     results: list[MaskResult] = []
     for i, (mask, score, meta) in enumerate(keep):
+        polygon_points = _mask_to_polygon(mask) if return_polygon else None
         results.append(MaskResult(
             label=f"ring_segment_{i}",
             confidence=round(score, 4),
@@ -359,6 +422,7 @@ def _ring_scan(predictor, ring_params, h: int, w: int, device: str) -> list[Mask
             width_pixels=meta["w_px"],
             centroid_x=round(meta["centroid_x"], 1),
             centroid_y=round(meta["centroid_y"], 1),
+            polygon_points=polygon_points,
         ))
 
     return results
@@ -370,8 +434,16 @@ def segment(
     pipe_diameter_mm: int | None = None,
     point_prompts: list | None = None,
     ring_scan=None,
+    return_polygon: bool = False,
 ) -> SamResponse:
-    """Run SAM 2 Segmentation mit Bounding Boxes, Point Prompts oder Ring Scan."""
+    """Run SAM 2 Segmentation mit Bounding Boxes, Point Prompts oder Ring Scan.
+
+    Args:
+        return_polygon: Slice 1 (Operateur-Annotation). Wenn True, haengt der
+            Wrapper an jedes MaskResult ein cv2-approxPolyDP-Polygon. Default
+            False, weil Bestandspfade (Detection-/Ring-Scan) das Polygon nicht
+            brauchen und der Aufwand sonst sinnlos waere.
+    """
     device = _resolve_device()
     state = gpu_manager.ensure_loaded(
         ModelSlot.SAM, device, lambda: _load_sam2_on(device)
@@ -395,7 +467,8 @@ def segment(
 
     # ── Ring-Scan: Annulus-Bereich systematisch abtasten ──
     if ring_scan is not None:
-        masks_out = _ring_scan(predictor, ring_params=ring_scan, h=h, w=w, device=device)
+        masks_out = _ring_scan(predictor, ring_params=ring_scan, h=h, w=w, device=device,
+                                return_polygon=return_polygon)
         # image_area nachtraeglich setzen
         for m in masks_out:
             m.image_area_pixels = h * w
@@ -433,7 +506,7 @@ def segment(
                     x2=float(xs.max()), y2=float(ys.max()),
                     label="point_prompt", confidence=score,
                 )
-                _append_mask_result(masks_out, mask, score, dummy_bbox, h, w)
+                _append_mask_result(masks_out, mask, score, dummy_bbox, h, w, return_polygon)
 
         except Exception as exc:
             logger.warning("SAM 2 Point-Prompt Prediction fehlgeschlagen: %s", exc)
@@ -448,10 +521,10 @@ def segment(
             )
         for chunk_start in range(0, len(bounding_boxes), max_batch):
             chunk = bounding_boxes[chunk_start : chunk_start + max_batch]
-            _predict_boxes_batched(predictor, chunk, masks_out, h, w, device)
+            _predict_boxes_batched(predictor, chunk, masks_out, h, w, device, return_polygon)
 
     elif len(bounding_boxes) == 1:
-        _predict_single_box(predictor, bounding_boxes[0], masks_out, h, w, device)
+        _predict_single_box(predictor, bounding_boxes[0], masks_out, h, w, device, return_polygon)
 
     elapsed_ms = (time.perf_counter() - t0) * 1000
 

@@ -33,6 +33,10 @@ class SamRequest(BaseModel):
     point_prompts: list[SamPoint] | None = None
     pipe_diameter_mm: int | None = None
     ring_scan: RingScanParams | None = None
+    # Slice 1 (Operateur-Annotation): wenn True, approximiert der Wrapper
+    # die Maske zu einem Polygon (cv2.findContours + approxPolyDP) und
+    # haengt das Ergebnis als MaskResult.polygon_points an.
+    return_polygon: bool = False
 
     @property
     def point_prompts_safe(self) -> list[SamPoint]:
@@ -51,6 +55,9 @@ class MaskResult(BaseModel):
     width_pixels: int = 0
     centroid_x: float = 0.0
     centroid_y: float = 0.0
+    # Slice 1: optionale Polygon-Approximation (nur wenn SamRequest.return_polygon=True).
+    # Format: list[[x, y]] in Pixelkoordinaten (image_width / image_height des Inputs).
+    polygon_points: list[list[float]] | None = None
 
 
 class SamResponse(BaseModel):

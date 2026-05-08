@@ -21,6 +21,7 @@ async def segment_sam(req: SamRequest) -> SamResponse:
         pipe_diameter_mm=req.pipe_diameter_mm,
         point_prompts=req.point_prompts_safe,
         ring_scan=req.ring_scan,
+        return_polygon=req.return_polygon,
     )
 
 

@@ -177,7 +177,10 @@ public sealed record SamRequest(
     [property: JsonPropertyName("bounding_boxes")] IReadOnlyList<SamBoundingBox> BoundingBoxes,
     [property: JsonPropertyName("point_prompts")] IReadOnlyList<SamPointPrompt>? PointPrompts = null,
     [property: JsonPropertyName("pipe_diameter_mm")] int? PipeDiameterMm = null,
-    [property: JsonPropertyName("ring_scan")] RingScanParams? RingScan = null
+    [property: JsonPropertyName("ring_scan")] RingScanParams? RingScan = null,
+    // Slice 1 (Operateur-Annotation): wenn true, liefert das Sidecar zusaetzlich
+    // ein cv2-approxPolyDP-Polygon pro Maske. Default false fuer Bestandspfade.
+    [property: JsonPropertyName("return_polygon")] bool ReturnPolygon = false
 );
 
 public sealed record SamMaskResult(
@@ -190,7 +193,11 @@ public sealed record SamMaskResult(
     [property: JsonPropertyName("height_pixels")] int HeightPixels,
     [property: JsonPropertyName("width_pixels")] int WidthPixels,
     [property: JsonPropertyName("centroid_x")] double CentroidX,
-    [property: JsonPropertyName("centroid_y")] double CentroidY
+    [property: JsonPropertyName("centroid_y")] double CentroidY,
+    // Slice 1: optionales Polygon in Pixelkoordinaten — Sidecar fuellt nur,
+    // wenn SamRequest.ReturnPolygon=true. Die 10 Pflicht-Felder oben bleiben
+    // unveraendert (Backward-Compat fuer Bestandspfade).
+    [property: JsonPropertyName("polygon_points")] IReadOnlyList<IReadOnlyList<double>>? PolygonPoints = null
 );
 
 public sealed record SamResponse(
