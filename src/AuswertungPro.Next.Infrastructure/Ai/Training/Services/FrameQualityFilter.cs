@@ -1,5 +1,6 @@
 // AuswertungPro – Video-Selbsttraining Phase 2
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using AuswertungPro.Next.Application.Imaging;
@@ -11,15 +12,36 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 /// Leichtgewichtiger Qualitaetsfilter fuer Video-Frames.
 /// Prueft Schaerfe (Laplace-Varianz), Helligkeit und Duplikate (dHash).
 /// Kein NuGet noetig — nutzt WPF BitmapSource fuer Bildoperationen.
+///
+/// Phase 3.4: Min-Luminance ist adaptiv. Wenn in den letzten 50 Frames
+/// mehr als 30 % wegen "zu dunkel" verworfen wurden (typisch bei dunklen
+/// Beton-Rohren mit Wassersohle), wird die Schwelle temporaer auf
+/// <see cref="MinLuminanceFloor"/> gesenkt. Faellt die Reject-Rate wieder
+/// unter 15 %, wird <see cref="MinLuminance"/> wiederhergestellt (Hysterese).
 /// </summary>
 public sealed class FrameQualityFilter
 {
     // Schwellen (empirisch, konfigurierbar)
     private readonly double _minLaplacianVariance;
-    private readonly double _minLuminance;
     private readonly double _maxLuminance;
     private readonly int _maxHammingDistance;
     private readonly ILogger? _logger;
+
+    // Adaptive Helligkeitsschwelle
+    /// <summary>Standard-Mindesthelligkeit (Default 30). Wird beim Init gesetzt.</summary>
+    public double MinLuminance { get; init; } = 30.0;
+    /// <summary>Untergrenze fuer adaptive Absenkung (Default 20).</summary>
+    public double MinLuminanceFloor { get; init; } = 20.0;
+
+    // Adaptive State (lock-geschuetzt fuer Thread-Sicherheit, da Pipeline parallel laufen kann)
+    private const int AdaptiveWindowSize = 50;
+    private const double LowerThresholdRate = 0.30;   // > 30 % dunkel -> Floor aktivieren
+    private const double RestoreThresholdRate = 0.15; // < 15 % dunkel -> Default wiederherstellen
+    private readonly object _adaptiveLock = new();
+    private readonly Queue<bool> _recentDarkRejections = new(AdaptiveWindowSize);
+    private int _darkRejectsInWindow;
+    private double _currentMinLuminance;
+    private bool _adaptiveLowered;
 
     private ulong? _lastHash;
 
@@ -44,13 +66,16 @@ public sealed class FrameQualityFilter
         double minLuminance = 30.0,
         double maxLuminance = 240.0,
         int maxHammingDistance = 5,
-        ILogger? logger = null)
+        ILogger? logger = null,
+        double minLuminanceFloor = 20.0)
     {
         _minLaplacianVariance = minLaplacianVariance;
-        _minLuminance = minLuminance;
+        MinLuminance = minLuminance;
+        MinLuminanceFloor = minLuminanceFloor;
         _maxLuminance = maxLuminance;
         _maxHammingDistance = maxHammingDistance;
         _logger = logger;
+        _currentMinLuminance = minLuminance;
     }
 
     /// <summary>
@@ -77,13 +102,16 @@ public sealed class FrameQualityFilter
 
         Interlocked.Increment(ref _totalFrames);
 
-        // 1. Helligkeit pruefen
+        // 1. Helligkeit pruefen — Schwelle ist adaptiv (siehe TrackDarkRejection)
         var luminance = ComputeMeanLuminance(grayscale);
-        if (luminance < _minLuminance)
+        double effectiveMin = Volatile.Read(ref _currentMinLuminance);
+        bool tooDark = luminance < effectiveMin;
+        TrackDarkRejection(tooDark);
+        if (tooDark)
         {
             Interlocked.Increment(ref _rejectedDark);
-            _logger?.LogInformation("Frame verworfen: zu dunkel (Helligkeit {Lum:F1} < {Min})",
-                luminance, _minLuminance);
+            _logger?.LogInformation("Frame verworfen: zu dunkel (Helligkeit {Lum:F1} < {Min:F1})",
+                luminance, effectiveMin);
             return false;
         }
         if (luminance > _maxLuminance)
@@ -129,6 +157,84 @@ public sealed class FrameQualityFilter
         _rejectedBright = 0;
         _rejectedBlurry = 0;
         _rejectedDuplicate = 0;
+
+        // Adaptive State zuruecksetzen (z.B. bei neuer Haltung)
+        lock (_adaptiveLock)
+        {
+            _recentDarkRejections.Clear();
+            _darkRejectsInWindow = 0;
+            _currentMinLuminance = MinLuminance;
+            _adaptiveLowered = false;
+        }
+    }
+
+    /// <summary>
+    /// Aktualisiert das gleitende 50-Frame-Fenster mit dem aktuellen Dunkel-Reject-Status.
+    /// Senkt die Mindesthelligkeit auf <see cref="MinLuminanceFloor"/> wenn die Reject-Rate
+    /// 30 % uebersteigt; stellt <see cref="MinLuminance"/> wieder her, sobald die Rate
+    /// unter 15 % faellt (Hysterese gegen Flattern).
+    /// Thread-sicher: Pipeline kann parallel auf den Filter zugreifen.
+    /// </summary>
+    private void TrackDarkRejection(bool isDarkReject)
+    {
+        double newThreshold;
+        bool changed;
+        bool loweredNow;
+        double rate;
+
+        lock (_adaptiveLock)
+        {
+            _recentDarkRejections.Enqueue(isDarkReject);
+            if (isDarkReject) _darkRejectsInWindow++;
+
+            if (_recentDarkRejections.Count > AdaptiveWindowSize)
+            {
+                if (_recentDarkRejections.Dequeue()) _darkRejectsInWindow--;
+            }
+
+            // Erst nach gefuelltem Fenster anpassen — bei kurzen Sequenzen bleibt die Default-Schwelle.
+            if (_recentDarkRejections.Count < AdaptiveWindowSize)
+                return;
+
+            rate = (double)_darkRejectsInWindow / _recentDarkRejections.Count;
+
+            if (!_adaptiveLowered && rate > LowerThresholdRate)
+            {
+                _adaptiveLowered = true;
+                _currentMinLuminance = MinLuminanceFloor;
+                newThreshold = MinLuminanceFloor;
+                changed = true;
+                loweredNow = true;
+            }
+            else if (_adaptiveLowered && rate < RestoreThresholdRate)
+            {
+                _adaptiveLowered = false;
+                _currentMinLuminance = MinLuminance;
+                newThreshold = MinLuminance;
+                changed = true;
+                loweredNow = false;
+            }
+            else
+            {
+                return; // Keine Aenderung
+            }
+        }
+
+        if (changed)
+        {
+            if (loweredNow)
+            {
+                _logger?.LogInformation(
+                    "FrameQualityFilter: Helligkeitsschwelle adaptiv auf {Value} gesenkt (dunkle-Reject-Rate {Rate:P})",
+                    newThreshold, rate);
+            }
+            else
+            {
+                _logger?.LogInformation(
+                    "FrameQualityFilter: Helligkeitsschwelle auf {Value} zurueckgesetzt (dunkle-Reject-Rate {Rate:P})",
+                    newThreshold, rate);
+            }
+        }
     }
 
     /// <summary>Berechnet die mittlere Helligkeit eines Grayscale-Bildes.</summary>
