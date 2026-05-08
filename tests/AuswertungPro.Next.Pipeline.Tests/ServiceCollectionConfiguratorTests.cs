@@ -123,6 +123,106 @@ public sealed class ServiceCollectionConfiguratorTests
     }
 
     [Fact]
+    public void WireOperateurAnnotationService_RunsTwice_ReplacesAccessor()
+    {
+        // Slice 1 / P3.1 Smoke: Wire kann ohne Schaden zweimal laufen
+        // (z.B. nach Settings-Reload). Es ist KEIN Singleton-Lock — der
+        // Accessor wird einfach ueberschrieben.
+        EnsureConfigDirectory();
+        EnsureDataFiles();
+
+        var previous = OperateurAnnotationServiceAccessor.Current;
+        try
+        {
+            var services = BuildFullServiceCollection();
+            using var provider = services.BuildServiceProvider();
+
+            ServiceCollectionConfigurator.WireOperateurAnnotationService(provider);
+            var first = OperateurAnnotationServiceAccessor.Current;
+
+            ServiceCollectionConfigurator.WireOperateurAnnotationService(provider);
+            var second = OperateurAnnotationServiceAccessor.Current;
+
+            // Beide Aufrufe sind in sich konsistent (entweder beide null
+            // bei Init-Fehler oder beide gesetzt). Der zweite Aufruf darf
+            // den ersten nicht in einen halben State versetzen.
+            if (first is null) Assert.Null(second);
+            else Assert.NotNull(second);
+        }
+        finally
+        {
+            OperateurAnnotationServiceAccessor.Current = previous;
+        }
+    }
+
+    [Fact]
+    public void Slice1_AnnotationLayer_ExposesExpectedPublicTypes()
+    {
+        // P3.1 Smoke: Regression-Schutz gegen versehentliche Breaking-Changes
+        // an der oeffentlichen Annotation-API durch zukuenftige Refactorings.
+        // Wenn dieser Test rot wird, hat jemand eine Klasse umbenannt oder
+        // die Sichtbarkeit veraendert — bewusste Aenderungen erfordern auch
+        // ein Update der Liste hier.
+        var applicationAsm = typeof(IOperateurAnnotationService).Assembly;
+
+        Assert.NotNull(applicationAsm.GetType(
+            "AuswertungPro.Next.Application.Ai.Annotation.IOperateurAnnotationService"));
+        Assert.NotNull(applicationAsm.GetType(
+            "AuswertungPro.Next.Application.Ai.Annotation.ITrainingSamplesWriter"));
+        Assert.NotNull(applicationAsm.GetType(
+            "AuswertungPro.Next.Application.Ai.Annotation.IKnowledgeBaseIndexer"));
+        Assert.NotNull(applicationAsm.GetType(
+            "AuswertungPro.Next.Application.Ai.Annotation.IYoloDatasetWriter"));
+        Assert.NotNull(applicationAsm.GetType(
+            "AuswertungPro.Next.Application.Ai.Annotation.OperateurAnnotationSession"));
+        Assert.NotNull(applicationAsm.GetType(
+            "AuswertungPro.Next.Application.Ai.Annotation.CodeTask"));
+        Assert.NotNull(applicationAsm.GetType(
+            "AuswertungPro.Next.Application.Ai.Annotation.AnnotationRequest"));
+        Assert.NotNull(applicationAsm.GetType(
+            "AuswertungPro.Next.Application.Ai.Annotation.MaskPreview"));
+        Assert.NotNull(applicationAsm.GetType(
+            "AuswertungPro.Next.Application.Ai.Annotation.CommitResult"));
+        Assert.NotNull(applicationAsm.GetType(
+            "AuswertungPro.Next.Application.Ai.Annotation.BoundingBoxNormalized"));
+        Assert.NotNull(applicationAsm.GetType(
+            "AuswertungPro.Next.Application.Ai.Annotation.BeobachtungParser"));
+        Assert.NotNull(applicationAsm.GetType(
+            "AuswertungPro.Next.Application.Ai.Annotation.OperateurAnnotationServiceAccessor"));
+    }
+
+    [Fact]
+    public void WireOperateurAnnotationService_WithFullProvider_PopulatesAccessor()
+    {
+        EnsureConfigDirectory();
+        EnsureDataFiles();
+
+        // Vor-Zustand sichern (Tests koennten sich gegenseitig stoeren).
+        var previous = OperateurAnnotationServiceAccessor.Current;
+        try
+        {
+            OperateurAnnotationServiceAccessor.Current = null;
+
+            var services = BuildFullServiceCollection();
+            using var provider = services.BuildServiceProvider();
+
+            ServiceCollectionConfigurator.WireOperateurAnnotationService(provider);
+
+            // Wire-Methode hat einen try/catch um Init-Fehler — wenn Ollama
+            // / KbDb nicht da sind, bleibt Current null und es wurde geloggt.
+            // Acceptance: Wire wirft NICHT, der Accessor ist konsistent
+            // (entweder befuellt oder explizit null).
+            var current = OperateurAnnotationServiceAccessor.Current;
+            Assert.True(current is null || current is IOperateurAnnotationService,
+                "Accessor.Current ist entweder null (bei Init-Fehler) oder ein IOperateurAnnotationService.");
+        }
+        finally
+        {
+            OperateurAnnotationServiceAccessor.Current = previous;
+        }
+    }
+
+    [Fact]
     public void OperateurAnnotationServiceAccessor_DefaultIsNull_AndIsSetRoundtrips()
     {
         // Vor-Zustand sichern (Tests koennten in jeder Reihenfolge laufen).

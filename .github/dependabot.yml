@@ -1,0 +1,65 @@
+# Dependabot Configuration
+# Roadmap-Eintrag Z.3 — automatische Dependency-Updates fuer NuGet + Pip + GitHub Actions.
+# Wochenrhythmus reicht fuer ein Solo-Projekt; Auto-Merge ist NICHT aktiviert,
+# damit der Entwickler jeden Update bewusst pruefen kann.
+
+version: 2
+updates:
+  # .NET / NuGet — die SewerStudio-Hauptmenge
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "nuget"
+    # Major-Updates separat melden, damit z.B. .NET-LTS-Wechsel nicht still durchgehen.
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Python-Sidecar
+  - package-ecosystem: "pip"
+    directory: "/sidecar"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps-sidecar)"
+    labels:
+      - "dependencies"
+      - "python-sidecar"
+    # Torch / Ultralytics / SAM-Dependencies sind teure Updates;
+    # nur Minor/Patch automatisch, Major manuell auswerten.
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Torch-Pin haengt an CUDA-Version; manuell pruefen.
+      - dependency-name: "torch"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "torchvision"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions selbst
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: "chore(ci)"
+    labels:
+      - "dependencies"
+      - "github-actions"
