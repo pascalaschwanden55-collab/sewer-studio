@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -104,7 +105,9 @@ public sealed class PythonSidecarService : IDisposable
             }
 
             // Datei fehlt oder ungueltig -> neu generieren und persistieren
-            AuthToken = Guid.NewGuid().ToString("N");
+            // Phase 4.2: 256-Bit-Token aus RandomNumberGenerator (kryptographisch
+            // sicher) statt Guid.NewGuid (zufaellig, aber nicht crypto-rated).
+            AuthToken = GenerateCryptoToken();
             CurrentAuthToken = AuthToken;
             var dir = Path.GetDirectoryName(TokenFilePath);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
@@ -114,9 +117,25 @@ public sealed class PythonSidecarService : IDisposable
         catch (Exception ex)
         {
             _log.LogWarning(ex, "[Sidecar-Auth] Token-Datei nicht nutzbar — fallback auf In-Memory-Token.");
-            AuthToken = Guid.NewGuid().ToString("N");
+            AuthToken = GenerateCryptoToken();
             CurrentAuthToken = AuthToken;
         }
+    }
+
+    /// <summary>
+    /// Erzeugt ein 256-Bit-Token (32 Bytes), Base64Url-kodiert.
+    /// Verwendet <see cref="RandomNumberGenerator"/> (kryptographisch sicher).
+    /// Phase 4.2 des Audit-Konsens.
+    /// </summary>
+    private static string GenerateCryptoToken()
+    {
+        Span<byte> bytes = stackalloc byte[32];
+        RandomNumberGenerator.Fill(bytes);
+        // Base64Url ohne Padding: '+' -> '-', '/' -> '_', '=' weg.
+        return Convert.ToBase64String(bytes)
+            .Replace('+', '-')
+            .Replace('/', '_')
+            .TrimEnd('=');
     }
 
     /// <summary>
