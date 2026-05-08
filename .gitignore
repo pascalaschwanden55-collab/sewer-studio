@@ -129,3 +129,20 @@ yolo_sewer_v*/
 
 # Config-Backups
 src/**/Config/*.bak_*.json
+
+# ── Repo-Hygiene 2026-05-08 ─────────────────────────────────────────────
+# Sidecar-Modell-Hilfsdateien (Tokenizer, Vocab, Inference-Notebooks)
+# regenerierbar aus dem Modell-Repo
+sidecar/models/**/*.ipynb
+sidecar/models/**/tokenizer.json
+sidecar/models/**/vocab.json
+sidecar/models/**/preprocessor_config.json
+sidecar/models/**/special_tokens_map.json
+sidecar/models/**/*.txt
+
+# Benchmark-Frames sind generiert aus Eval-Set
+benchmarks/frames/
+
+# UI-Default-Settings ZIP (Build-Artefakt der Settings-Page)
+src/AuswertungPro.Next.UI/AppSettings.zip
+
