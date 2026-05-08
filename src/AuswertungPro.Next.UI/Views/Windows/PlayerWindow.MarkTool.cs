@@ -492,10 +492,26 @@ public partial class PlayerWindow
             try { System.IO.File.Delete(tempFrame); } catch { }
 
             // 5. TeacherAnnotation erstellen + persistieren
+            // Meter-Quelle (Reihenfolge):
+            //   1. Wenn IMPORT-Code preselected: dessen MeterStart (z.B. BCE @13.06m)
+            //   2. TxtCodingMeter-Anzeige (OSD-Erkennung oder manuell)
+            //   3. selectedEntry.MeterStart als letzter Fallback
+            //   4. 0 wenn nichts vorhanden
             var captureMeter = 0.0;
-            if (double.TryParse(TxtCodingMeter?.Text?.Replace("m", "").Trim(), System.Globalization.NumberStyles.Any,
-                System.Globalization.CultureInfo.InvariantCulture, out var parsedMeter))
+            if (preselectedImport?.Entry?.MeterStart is double importMeter && importMeter > 0)
+            {
+                captureMeter = importMeter;
+            }
+            else if (double.TryParse(TxtCodingMeter?.Text?.Replace("m", "").Trim(),
+                         System.Globalization.NumberStyles.Any,
+                         System.Globalization.CultureInfo.InvariantCulture, out var parsedMeter))
+            {
                 captureMeter = parsedMeter;
+            }
+            else if (selectedEntry.MeterStart is double selMeter)
+            {
+                captureMeter = selMeter;
+            }
 
             var annotation = new AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotation
             {
@@ -504,6 +520,8 @@ public partial class PlayerWindow
                 Beschreibung = selectedEntry.Beschreibung,
                 MeterPosition = captureMeter,
                 VideoTimestamp = TimeSpan.FromSeconds(timestampSec),
+                HaltungName = _haltungRecord?.GetFieldValue("Haltungsname"),
+                VideoPath = _videoPath,
                 ToolType = overlay.ToolType,
                 Points = new List<NormalizedPoint>(
                     overlay.Points.Select(p => new NormalizedPoint(p.X, p.Y))),
