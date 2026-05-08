@@ -1,9 +1,12 @@
 using System;
+using AuswertungPro.Next.Application.Ai.Annotation;
+using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Domain.Ai.Training;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,10 +20,139 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 ///     labels/train/  + labels/val/
 ///     data.yaml
 ///
-/// Label-Format pro Zeile: class_id x_center y_center width height (normiert 0-1)
+/// Label-Format pro Zeile (Detection): class_id x_center y_center width height
+/// Label-Format pro Zeile (Segment, Slice 1): class_id x1 y1 x2 y2 ... xn yn
+/// (alle Werte normiert 0..1).
+///
+/// Tech-Debt (Slice 2): <see cref="ExportAsync"/> baut die Class-Map aktuell
+/// SELBST aus den Sample-Codes (lokale Reihenfolge). <see cref="AppendSampleAsync"/>
+/// nutzt dagegen <c>VsaYoloClassMap.TryGetClassId</c>. Das kann zu unter-
+/// schiedlichen Class-IDs zwischen Append-Pfad (Operateur-Annotation) und
+/// Export-Pfad (TrainingCenter Re-Export) fuehren. Slice 2 muss die beiden
+/// Pfade harmonisieren (gemeinsame Class-Map ueber VsaYoloClassMap).
 /// </summary>
-public sealed class YoloDatasetExportService
+public sealed class YoloDatasetExportService : IYoloDatasetWriter
 {
+    private readonly string? _datasetRoot;
+
+    public YoloDatasetExportService() : this(null) { }
+
+    /// <summary>
+    /// Konstruktor mit injizierbarem Dataset-Root fuer
+    /// <see cref="AppendSampleAsync"/>. <see cref="ExportAsync"/> nimmt den
+    /// Pfad weiterhin als Methoden-Parameter — Bestandskode bleibt unangetastet.
+    /// </summary>
+    public YoloDatasetExportService(string? datasetRoot)
+    {
+        _datasetRoot = datasetRoot;
+    }
+
+    /// <summary>
+    /// Slice 1: schreibt einen einzelnen, vom Operateur annotierten Sample
+    /// als YOLO-seg-Eintrag (Bild + Label-Polygon, normiert).
+    /// Wirft, wenn die Class-ID nicht in <see cref="VsaYoloClassMap"/> ist
+    /// (kein Auto-Create) oder das Polygon-JSON degeneriert ist.
+    /// </summary>
+    public async Task<string> AppendSampleAsync(
+        TrainingSample sample,
+        MaskPreview preview,
+        CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        if (_datasetRoot is null)
+            throw new InvalidOperationException(
+                "Dataset-Root nicht gesetzt — fuer AppendSampleAsync den Konstruktor mit datasetRoot nutzen.");
+
+        if (string.IsNullOrWhiteSpace(sample.SampleId))
+            throw new ArgumentException("sample.SampleId ist Pflicht.", nameof(sample));
+        if (string.IsNullOrWhiteSpace(sample.FramePath))
+            throw new ArgumentException("sample.FramePath ist Pflicht.", nameof(sample));
+        if (preview.MaskWidth <= 0 || preview.MaskHeight <= 0)
+            throw new ArgumentException("MaskPreview.MaskWidth/Height muessen > 0 sein.", nameof(preview));
+
+        if (!VsaYoloClassMap.TryGetClassId(sample.Code, out var classId))
+            throw new InvalidOperationException(
+                $"VSA-Code '{sample.Code}' ist nicht in VsaYoloClassMap — Auto-Create im Append-Pfad ist deaktiviert (Slice 1 stabile Class-IDs).");
+
+        var polygon = ParsePolygonJson(preview.PolygonJson);
+        if (polygon.Count < 3)
+            throw new InvalidOperationException(
+                $"Polygon hat nur {polygon.Count} Punkte — YOLO-seg braucht mindestens 3.");
+
+        // Slice 1 schreibt ausschliesslich in den Train-Split. Der Split-
+        // Algorithmus aus ExportAsync ist hier bewusst nicht aktiv; eine
+        // spaetere Slice 2 kann hier eine deterministische Validation-Quote
+        // ergaenzen.
+        var trainImgDir = Path.Combine(_datasetRoot, "images", "train");
+        var trainLblDir = Path.Combine(_datasetRoot, "labels", "train");
+        Directory.CreateDirectory(trainImgDir);
+        Directory.CreateDirectory(trainLblDir);
+
+        var className = NormalizeClassName(sample.Code);
+        var ext = Path.GetExtension(sample.FramePath);
+        if (string.IsNullOrEmpty(ext)) ext = ".png";
+        var baseName = $"{sample.SampleId}_{className}";
+        var imageDest = Path.Combine(trainImgDir, baseName + ext);
+        var labelDest = Path.Combine(trainLblDir, baseName + ".txt");
+
+        // Frame kopieren — File.Copy wirft IOException, wenn der Source-Frame
+        // weg ist; das wollen wir hochbubblen, damit CommitAsync den Sample
+        // nicht als YoloWritten=true markiert.
+        File.Copy(sample.FramePath, imageDest, overwrite: true);
+
+        var labelLine = BuildSegLabelLine(classId, polygon, preview.MaskWidth, preview.MaskHeight);
+        await File.WriteAllTextAsync(labelDest, labelLine + "\n", ct).ConfigureAwait(false);
+
+        return labelDest;
+    }
+
+    private static List<(double X, double Y)> ParsePolygonJson(string polygonJson)
+    {
+        if (string.IsNullOrWhiteSpace(polygonJson))
+            throw new InvalidOperationException("MaskPreview.PolygonJson ist leer.");
+
+        // Erwartetes Format: [[x1, y1], [x2, y2], ...]
+        try
+        {
+            using var doc = JsonDocument.Parse(polygonJson);
+            var arr = doc.RootElement;
+            if (arr.ValueKind != JsonValueKind.Array)
+                throw new InvalidOperationException("PolygonJson ist kein Array.");
+
+            var points = new List<(double X, double Y)>(arr.GetArrayLength());
+            foreach (var item in arr.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Array || item.GetArrayLength() != 2)
+                    throw new InvalidOperationException("PolygonJson-Punkt muss [x, y] sein.");
+                var x = item[0].GetDouble();
+                var y = item[1].GetDouble();
+                points.Add((x, y));
+            }
+            return points;
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException("MaskPreview.PolygonJson ist nicht parsebar.", ex);
+        }
+    }
+
+    private static string BuildSegLabelLine(int classId, List<(double X, double Y)> polygonPx, int width, int height)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append(classId.ToString(CultureInfo.InvariantCulture));
+        foreach (var (x, y) in polygonPx)
+        {
+            var nx = Math.Clamp(x / width, 0.0, 1.0);
+            var ny = Math.Clamp(y / height, 0.0, 1.0);
+            sb.Append(' ');
+            sb.Append(nx.ToString("F6", CultureInfo.InvariantCulture));
+            sb.Append(' ');
+            sb.Append(ny.ToString("F6", CultureInfo.InvariantCulture));
+        }
+        return sb.ToString();
+    }
+
     /// <summary>
     /// Exportiert Approved-Samples als YOLO-Dataset.
     /// </summary>

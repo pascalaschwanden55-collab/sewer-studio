@@ -134,6 +134,32 @@ namespace AuswertungPro.Next.Application.Ai.Training
         }
 
         /// <summary>
+        /// Slice 1 (Operateur-Annotation): aktualisiert ausschliesslich den
+        /// <see cref="TrainingSample.KbIndexState"/> eines per SampleId
+        /// gefundenen Samples. Atomar unter <see cref="_fileLock"/>.
+        /// </summary>
+        /// <returns>true, wenn das Sample existiert und aktualisiert wurde.</returns>
+        public static async Task<bool> UpdateIndexStateAsync(string sampleId, KbIndexState state)
+        {
+            if (string.IsNullOrWhiteSpace(sampleId)) return false;
+            await _fileLock.WaitAsync();
+            try
+            {
+                var existing = await LoadInternalAsync();
+                var idx = existing.FindIndex(s =>
+                    string.Equals(s.SampleId, sampleId, StringComparison.Ordinal));
+                if (idx < 0) return false;
+
+                if (existing[idx].KbIndexState == state) return true;
+                existing[idx].KbIndexState = state;
+                await SaveInternalAsync(existing);
+                KnowledgeMirrorNotifier.NotifyChanged();
+                return true;
+            }
+            finally { _fileLock.Release(); }
+        }
+
+        /// <summary>
         /// Loescht Samples mit den angegebenen IDs hart aus dem JSON-Store.
         /// Frame-Dateien und KB-Eintraege bleiben unberuehrt.
         /// </summary>
