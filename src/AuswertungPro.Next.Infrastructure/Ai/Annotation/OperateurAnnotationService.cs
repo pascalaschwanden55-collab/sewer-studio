@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Annotation;
 using AuswertungPro.Next.Application.Ai.Pipeline;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Ai.Training;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Annotation;
@@ -113,8 +114,12 @@ public sealed class OperateurAnnotationService : IOperateurAnnotationService
 
         // Step 0: Frame finalisieren — temp-Pfad → KI_BRAIN/frames/<CaseId>/<SampleId>.png.
         // Korrektur K3/K4 (Plan-Header): vorher unklar, jetzt vor jedem Persist-Schritt.
+        // CaseId kommt aus PDF-/Ordner-Importen und kann '/', '\', ':', '..' enthalten —
+        // SanitizePathSegment neutralisiert das (Path-Traversal-Schutz, identisch zu
+        // HoldingFolderDistributor und Co.).
         var brainRoot = KnowledgeRootProvider.GetRoot();
-        var caseDir = Path.Combine(brainRoot, "frames", request.CaseId);
+        var safeCaseId = ProjectPathResolver.SanitizePathSegment(request.CaseId);
+        var caseDir = Path.Combine(brainRoot, "frames", safeCaseId);
         Directory.CreateDirectory(caseDir);
 
         var sourceExt = Path.GetExtension(request.FramePath);

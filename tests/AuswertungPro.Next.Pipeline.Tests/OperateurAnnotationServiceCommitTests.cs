@@ -178,6 +178,26 @@ public sealed class OperateurAnnotationServiceCommitTests : IDisposable
     }
 
     [Fact]
+    public async Task CommitAsync_DangerousCaseId_IsSanitizedBeforePathBuild()
+    {
+        // CaseId-Quellen sind PDF-/Ordner-Importe. Ein CaseId mit ".." oder
+        // Slashes darf den Frame nicht ausserhalb von KI_BRAIN/frames/ landen.
+        var framePath = WriteFrame("temp-evil.png");
+        var spy = new SpyDeps();
+        var svc = NewService(spy);
+
+        var request = NewRequest("../../etc", framePath);
+        var result = await svc.CommitAsync(request, MakePreview(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.FramePath);
+        // Final path muss unter <Root>/frames/ liegen, kein "../../etc".
+        var framesRoot = Path.Combine(_iso.Root, "frames");
+        Assert.StartsWith(framesRoot, result.FramePath!, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("..", result.FramePath!);
+    }
+
+    [Fact]
     public async Task CommitAsync_FrameDeltaSeconds_IsActualMinusSuggested()
     {
         var framePath = WriteFrame("temp-8.png");
