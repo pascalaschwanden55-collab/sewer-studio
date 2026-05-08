@@ -39,6 +39,7 @@ public partial class CodingModeWindow : Window
     private readonly CodingSessionViewModel _vm;
     private readonly ICodingSessionService _sessionService;
     private readonly IOverlayToolService _overlayService;
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
 
     private LibVLC? _libVlc;
     private MediaPlayer? _player;
@@ -1738,7 +1739,7 @@ public partial class CodingModeWindow : Window
     private async Task OfferPhotoCapture(CodingEvent codingEvent)
     {
         // Foto 1 anbieten
-        var result1 = MessageBox.Show(
+        var result1 = _dialogs.ShowMessage(
             $"Foto 1 fuer {codingEvent.Entry.Code} ({codingEvent.MeterAtCapture:F2}m) erstellen?",
             "Foto erstellen",
             MessageBoxButton.YesNo,
@@ -1750,7 +1751,7 @@ public partial class CodingModeWindow : Window
             await CapturePhotoForSelectedEvent(0);
 
             // Foto 2 anbieten nur wenn Foto 1 erstellt wurde
-            var result2 = MessageBox.Show(
+            var result2 = _dialogs.ShowMessage(
                 $"Foto 2 fuer {codingEvent.Entry.Code} ({codingEvent.MeterAtCapture:F2}m) erstellen?",
                 "Foto erstellen",
                 MessageBoxButton.YesNo,
@@ -1782,7 +1783,7 @@ public partial class CodingModeWindow : Window
     {
         if (_vm.CurrentOverlay == null)
         {
-            MessageBox.Show("Bitte zuerst eine Markierung zeichnen.", "Keine Markierung",
+            _dialogs.ShowMessage("Bitte zuerst eine Markierung zeichnen.", "Keine Markierung",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -1796,7 +1797,7 @@ public partial class CodingModeWindow : Window
         };
         if (!allowedTools.Contains(_vm.CurrentOverlay.ToolType))
         {
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 $"Das Werkzeug \"{_vm.CurrentOverlay.ToolType}\" erzeugt keine Flaechenmarkierung.\n" +
                 "Fuer Lehrer-Annotationen bitte Rechteck, Ellipse oder Freihand verwenden.",
                 "Werkzeug nicht geeignet",
@@ -1838,7 +1839,7 @@ public partial class CodingModeWindow : Window
             var pngBytes = await CaptureCurrentFrameAsync();
             if (pngBytes == null || pngBytes.Length == 0)
             {
-                MessageBox.Show("Frame konnte nicht extrahiert werden.", "Fehler",
+                _dialogs.ShowMessage("Frame konnte nicht extrahiert werden.", "Fehler",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -1863,7 +1864,7 @@ public partial class CodingModeWindow : Window
             if (bbox.Width < MinBboxDimension || bbox.Height < MinBboxDimension)
             {
                 try { System.IO.File.Delete(tempFrame); } catch { }
-                MessageBox.Show(
+                _dialogs.ShowMessage(
                     "Die Markierung ist zu klein oder hat keine Flaeche.\n" +
                     "Fuer Lehrer-Annotationen bitte Rechteck, Ellipse oder Freihand verwenden.",
                     "Markierung ungueltig",
@@ -1884,7 +1885,7 @@ public partial class CodingModeWindow : Window
             // Fix 2: Nur bei erfolgreichem Export persistieren
             if (!exportResult.Success)
             {
-                MessageBox.Show(
+                _dialogs.ShowMessage(
                     $"Export fehlgeschlagen:\n{exportResult.Error}\n\nAnnotation wird NICHT gespeichert.",
                     "Export-Fehler",
                     MessageBoxButton.OK, MessageBoxImage.Error);
@@ -1927,7 +1928,7 @@ public partial class CodingModeWindow : Window
             UpdateOverlayInfo(null);
 
             var count = await AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.CountAsync();
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 $"Lehrer-Annotation gespeichert:\n" +
                 $"Code: {selectedEntry.Code}\n" +
                 $"Meter: {captureMeter:F2}m\n" +
@@ -1940,7 +1941,7 @@ public partial class CodingModeWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Fehler beim Speichern:\n{ex.Message}", "Fehler",
+            _dialogs.ShowMessage($"Fehler beim Speichern:\n{ex.Message}", "Fehler",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
@@ -2248,7 +2249,7 @@ public partial class CodingModeWindow : Window
             if (entry.FotoPaths.Count > 0 && !string.IsNullOrEmpty(entry.FotoPaths[0])
                 && System.IO.File.Exists(entry.FotoPaths[0]))
             {
-                var answer = MessageBox.Show(
+                var answer = _dialogs.ShowMessage(
                     "Stelle auf dem Foto markieren fuer KI-Training?\n\n" +
                     "Das hilft der KI, den korrigierten Code beim naechsten Mal\n" +
                     "an der richtigen Stelle zu erkennen.",
@@ -2303,7 +2304,7 @@ public partial class CodingModeWindow : Window
         if (_vm.SelectedDefect == null) return;
 
         var ev = _vm.SelectedDefect;
-        var result = System.Windows.MessageBox.Show(
+        var result = _dialogs.ShowMessage(
             $"Beobachtung \"{ev.Entry.Code}\" bei {ev.MeterAtCapture:F2}m wirklich löschen?",
             "Beobachtung löschen",
             MessageBoxButton.YesNo,
