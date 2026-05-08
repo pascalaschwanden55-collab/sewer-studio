@@ -22,6 +22,7 @@ public partial class VsaCodeExplorerWindow : Window
     private readonly VsaCodeExplorerViewModel _vm;
     private readonly string? _videoPath;
     private readonly TimeSpan? _currentVideoTime;
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
 
     /// <summary>
     /// Optionaler Callback: Liefert einen Snapshot vom aktuellen VLC-Player-Frame.
@@ -916,7 +917,7 @@ public partial class VsaCodeExplorerWindow : Window
             string.IsNullOrEmpty(_vm.FotoPaths[photoIndex]) ||
             !File.Exists(_vm.FotoPaths[photoIndex]))
         {
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 "Kein Foto vorhanden. Bitte zuerst ein Foto aufnehmen.",
                 "PhotoAssistant", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
@@ -991,7 +992,7 @@ public partial class VsaCodeExplorerWindow : Window
             {
                 if (string.IsNullOrWhiteSpace(_videoPath) || !File.Exists(_videoPath))
                 {
-                    MessageBox.Show("Kein Video geladen.", "Foto", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogs.ShowMessage("Kein Video geladen.", "Foto", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
 
@@ -1010,7 +1011,7 @@ public partial class VsaCodeExplorerWindow : Window
 
                 if (bytes is null || bytes.Length == 0)
                 {
-                    MessageBox.Show("Frame-Extraktion fehlgeschlagen.", "Foto", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _dialogs.ShowMessage("Frame-Extraktion fehlgeschlagen.", "Foto", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 

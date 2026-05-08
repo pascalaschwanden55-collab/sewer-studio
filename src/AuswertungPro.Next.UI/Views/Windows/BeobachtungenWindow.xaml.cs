@@ -18,6 +18,7 @@ public partial class BeobachtungenWindow : Window
     private readonly object? _commandParameter;
     private Action? _vsaUpdateAction;
     private Action? _syncHoldingFieldsAction;
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
 
     public BeobachtungenWindow(
         ObservableCollection<ProtocolEntry> entries,
@@ -98,14 +99,14 @@ public partial class BeobachtungenWindow : Window
         var resolved = TryResolvePath(rawPath, settings?.LastProjectPath) ?? rawPath;
         if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
         {
-            MessageBox.Show($"Foto nicht gefunden:\n{rawPath}", "Foto",
+            _dialogs.ShowMessage($"Foto nicht gefunden:\n{rawPath}", "Foto",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
         if (!AuswertungPro.Next.Application.Common.ProcessRunner.TryOpenWithDefaultProgram(resolved, out var openErr))
         {
-            MessageBox.Show($"Foto konnte nicht geoeffnet werden:\n{openErr}", "Foto",
+            _dialogs.ShowMessage($"Foto konnte nicht geoeffnet werden:\n{openErr}", "Foto",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
