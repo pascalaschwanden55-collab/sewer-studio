@@ -103,4 +103,123 @@ public sealed class OperateurAnnotationSessionTests
         Assert.Same(task, session.Active);
         Assert.Single(session.Tasks);
     }
+
+    [Fact]
+    public void MoveToCode_SetsActiveAndState()
+    {
+        var session = NewSessionWith("BAB B", "BBB Z");
+
+        session.MoveToCode(session.Tasks[0]);
+
+        Assert.Same(session.Tasks[0], session.Active);
+        Assert.Equal(CodeTaskState.Active, session.Tasks[0].State);
+    }
+
+    [Fact]
+    public void MoveToCode_PreviousActiveWithoutCommit_FallsBackToPending()
+    {
+        var session = NewSessionWith("BAB B", "BBB Z");
+        var first = session.Tasks[0];
+        var second = session.Tasks[1];
+
+        session.MoveToCode(first);
+        first.Box = new BoundingBoxNormalized(0.5, 0.5, 0.1, 0.1);
+        first.State = CodeTaskState.PreviewReady;
+
+        session.MoveToCode(second);
+
+        Assert.Equal(CodeTaskState.Pending, first.State);
+        Assert.Null(first.Box);
+        Assert.Same(second, session.Active);
+        Assert.Equal(CodeTaskState.Active, second.State);
+    }
+
+    [Fact]
+    public void MoveToCode_DoesNotResetCommittedTasks()
+    {
+        var session = NewSessionWith("BAB B", "BBB Z");
+        var first = session.Tasks[0];
+        var second = session.Tasks[1];
+
+        session.MoveToCode(first);
+        session.MarkActiveCommitted("sample-1", DateTime.UtcNow);
+        Assert.Equal(CodeTaskState.Committed, first.State);
+
+        session.MoveToCode(second);
+
+        Assert.Equal(CodeTaskState.Committed, first.State);
+        Assert.Equal("sample-1", first.CommittedSampleId);
+    }
+
+    [Fact]
+    public void MoveToCode_TaskNotInSession_Throws()
+    {
+        var session = NewSessionWith("BAB B");
+        var foreign = new CodeTask { Code = "BBB Z", Meterstand = 5 };
+
+        Assert.Throws<ArgumentException>(() => session.MoveToCode(foreign));
+    }
+
+    [Fact]
+    public void MarkActiveCommitted_SetsSampleIdAndUtc()
+    {
+        var session = NewSessionWith("BAB B");
+        session.MoveToCode(session.Tasks[0]);
+
+        var ts = new DateTime(2026, 5, 8, 12, 0, 0, DateTimeKind.Utc);
+        session.MarkActiveCommitted("sample-x", ts);
+
+        Assert.Equal(CodeTaskState.Committed, session.Tasks[0].State);
+        Assert.Equal("sample-x", session.Tasks[0].CommittedSampleId);
+        Assert.Equal(ts, session.Tasks[0].CommittedUtc);
+    }
+
+    [Fact]
+    public void MarkActive_NoActive_Throws()
+    {
+        var session = NewSessionWith("BAB B");
+        Assert.Throws<InvalidOperationException>(() =>
+            session.MarkActiveCommitted("x", DateTime.UtcNow));
+        Assert.Throws<InvalidOperationException>(() => session.MarkActiveSkipped("r"));
+        Assert.Throws<InvalidOperationException>(() => session.MarkActiveRejected("r"));
+    }
+
+    [Fact]
+    public void FindFirstPending_ReturnsFirstPending_OrNullIfAllDone()
+    {
+        var session = NewSessionWith("BAB B", "BBB Z", "BCD");
+        session.MoveToCode(session.Tasks[0]);
+        session.MarkActiveCommitted("s1", DateTime.UtcNow);
+
+        var nextFirst = session.FindFirstPending();
+        Assert.Same(session.Tasks[1], nextFirst);
+
+        // Alle erledigen
+        session.MoveToCode(session.Tasks[1]);
+        session.MarkActiveSkipped("blur");
+        session.MoveToCode(session.Tasks[2]);
+        session.MarkActiveCommitted("s3", DateTime.UtcNow);
+
+        Assert.Null(session.FindFirstPending());
+    }
+
+    [Fact]
+    public void FindNextPending_SkipsCommittedTasksAfterActive()
+    {
+        var session = NewSessionWith("A", "B", "C");
+        // A=Active, B=Committed (vorgesetzt), C=Pending
+        session.MoveToCode(session.Tasks[0]);
+        session.Tasks[1].State = CodeTaskState.Committed;
+
+        var next = session.FindNextPending();
+        Assert.Same(session.Tasks[2], next);
+    }
+
+    private static OperateurAnnotationSession NewSessionWith(params string[] codes)
+    {
+        var session = new OperateurAnnotationSession { CaseId = "c1" };
+        for (var i = 0; i < codes.Length; i++)
+            session.Tasks.Add(new CodeTask { Code = codes[i], Meterstand = (i + 1) * 10.0 });
+        return session;
+    }
 }
