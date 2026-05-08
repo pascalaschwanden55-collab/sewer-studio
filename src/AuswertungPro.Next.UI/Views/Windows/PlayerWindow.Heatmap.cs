@@ -55,7 +55,7 @@ public partial class PlayerWindow
             {
                 var targetMs = (long)(timestampSec * 1000);
                 if (targetMs > length) targetMs = length;
-                _player.Time = targetMs;
+                TrySeekRobust(targetMs);
             }
             UpdateUi();
         };

@@ -175,7 +175,7 @@ public partial class PlayerWindow
 
         var length = _player.Length;
         if (length > 0)
-            _player.Time = (long)(ratio * length);
+            TrySeekRobust((long)(ratio * length));
         else
             _player.Position = (float)ratio;
 

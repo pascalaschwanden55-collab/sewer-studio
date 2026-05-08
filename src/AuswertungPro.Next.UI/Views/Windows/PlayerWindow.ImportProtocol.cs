@@ -45,7 +45,7 @@ public partial class PlayerWindow
     private void SeekToImportEvent(CodingEvent importEvent)
     {
         if (_player != null && importEvent.VideoTimestamp.TotalMilliseconds > 0)
-            _player.Time = (long)importEvent.VideoTimestamp.TotalMilliseconds;
+            TrySeekRobust((long)importEvent.VideoTimestamp.TotalMilliseconds);
         else if (_codingSessionService != null && importEvent.MeterAtCapture > 0)
         {
             _codingSessionService.MoveToMeter(importEvent.MeterAtCapture);

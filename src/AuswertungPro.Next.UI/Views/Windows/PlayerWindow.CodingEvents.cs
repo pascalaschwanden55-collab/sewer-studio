@@ -454,7 +454,7 @@ public partial class PlayerWindow
     {
         if (LstCodingEvents.SelectedItem is not CodingEvent codingEvent) return;
         if (_player != null && codingEvent.VideoTimestamp.TotalMilliseconds > 0)
-            _player.Time = (long)codingEvent.VideoTimestamp.TotalMilliseconds;
+            TrySeekRobust((long)codingEvent.VideoTimestamp.TotalMilliseconds);
     }
 
     /// <summary>

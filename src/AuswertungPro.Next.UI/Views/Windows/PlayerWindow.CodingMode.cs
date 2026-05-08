@@ -171,8 +171,8 @@ public partial class PlayerWindow
         if (_codingVm == null || _player.Length <= 0 || _codingVm.EndMeter <= 0) return;
         double fraction = _codingVm.CurrentMeter / _codingVm.EndMeter;
         long targetMs = (long)(fraction * _player.Length);
-        _player.Time = Math.Clamp(targetMs, 0, _player.Length);
-        _codingVm.CurrentVideoTime = TimeSpan.FromMilliseconds(_player.Time);
+        if (TrySeekRobust(targetMs))
+            _codingVm.CurrentVideoTime = TimeSpan.FromMilliseconds(_player.Time);
     }
 
     // ─── OSD-Timer (Meter aus VLC-Bild auslesen) ─────────────────────────────

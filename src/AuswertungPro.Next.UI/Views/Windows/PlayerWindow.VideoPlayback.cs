@@ -29,6 +29,74 @@ public partial class PlayerWindow
             new WpfPlaybackTimer(Dispatcher, TimeSpan.FromMilliseconds(60)));
     }
 
+    /// <summary>
+    /// Robuster Seek auf einen Zeitstempel im Video. Direktes
+    /// <c>_player.Time = ms</c> kann VLC haengen lassen wenn der State
+    /// gerade Stopped/Ended/Error ist oder das Video nicht <c>IsSeekable</c>.
+    /// Diese Methode prueft Vorbedingungen, faengt Exceptions ab und nutzt
+    /// einen Position-Fallback wenn Time-Seek schief geht.
+    /// </summary>
+    /// <returns>true wenn Seek vermutlich erfolgreich gestartet wurde.</returns>
+    private bool TrySeekRobust(long targetMs)
+    {
+        if (_player == null) return false;
+        if (_isWindowClosed) return false;
+
+        try
+        {
+            var length = _player.Length;
+            if (length <= 0)
+            {
+                // Video noch nicht offen — Seek nicht moeglich, aber nicht haengen.
+                System.Diagnostics.Debug.WriteLine("[PlayerWindow] TrySeekRobust: length<=0, video noch nicht bereit");
+                return false;
+            }
+
+            // Clamp auf gueltigen Bereich
+            var clamped = Math.Clamp(targetMs, 0L, length);
+
+            // VLC-State muss seekable sein. Wenn Stopped/Ended: Play() neu starten,
+            // VLC laedt das Video automatisch und setzt dann Time.
+            var state = _player.State;
+            if (state == LibVLCSharp.Shared.VLCState.Stopped
+                || state == LibVLCSharp.Shared.VLCState.Ended)
+            {
+                _player.Play();
+                _player.SetPause(true);
+            }
+
+            if (!_player.IsSeekable)
+            {
+                // Manche Container/Codecs blockieren IsSeekable — versuche es
+                // trotzdem via Position (Verhaeltnis 0.0-1.0), das ist robuster.
+                _player.Position = (float)((double)clamped / length);
+                return true;
+            }
+
+            _player.Time = clamped;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PlayerWindow] TrySeekRobust({targetMs}ms) failed: {ex.Message}");
+            // Letzter Versuch ueber Position
+            try
+            {
+                var length = _player.Length;
+                if (length > 0)
+                {
+                    _player.Position = (float)Math.Clamp((double)targetMs / length, 0.0, 1.0);
+                    return true;
+                }
+            }
+            catch
+            {
+                // Wirklich tot — UI bleibt aber responsiv weil wir nicht haengen
+            }
+            return false;
+        }
+    }
+
     private void Play_Click(object sender, RoutedEventArgs e)
     {
         _videoPlayback.Resume();

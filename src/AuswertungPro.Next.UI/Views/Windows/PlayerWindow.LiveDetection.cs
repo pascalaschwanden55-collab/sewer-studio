@@ -618,7 +618,7 @@ public partial class PlayerWindow
         if (_detectionPendingTimestampSec.HasValue && _player != null)
         {
             long targetMs = (long)(_detectionPendingTimestampSec.Value * 1000);
-            _player.Time = targetMs;
+            TrySeekRobust(targetMs);
         }
 
         // Zusammenfassung der Befunde
