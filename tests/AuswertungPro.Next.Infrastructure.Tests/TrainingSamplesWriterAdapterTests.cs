@@ -36,6 +36,27 @@ public sealed class TrainingSamplesWriterAdapterTests
     }
 
     [Fact]
+    public async Task AppendAsync_TwoSamplesWithSameSignature_BothPersist()
+    {
+        // Regression: vorher rief der Adapter MergeAndSaveAsync auf, das via
+        // Signature dedupliziert haette. Fuer Operateur-Annotation MUSS jeder
+        // Append landen, sonst meldet CommitAsync StorePersisted=true obwohl
+        // im Store nichts neues steht.
+        using var iso = StoreIsolation.Fresh();
+        var adapter = new TrainingSamplesWriterAdapter();
+
+        var s1 = MakeSample("c1", "BAB B", 12.3, "id-A");
+        var s2 = MakeSample("c1", "BAB B", 12.3, "id-B"); // gleiche Signature!
+        await adapter.AppendAsync(s1, CancellationToken.None);
+        await adapter.AppendAsync(s2, CancellationToken.None);
+
+        var loaded = await TrainingSamplesStore.LoadAsync();
+        Assert.Equal(2, loaded.Count);
+        Assert.Contains(loaded, s => s.SampleId == "id-A");
+        Assert.Contains(loaded, s => s.SampleId == "id-B");
+    }
+
+    [Fact]
     public async Task UpdateIndexStateAsync_OnlyTouchesIndexState()
     {
         using var iso = StoreIsolation.Fresh();

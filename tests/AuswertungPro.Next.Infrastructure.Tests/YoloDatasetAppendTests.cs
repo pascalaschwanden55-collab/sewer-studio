@@ -123,6 +123,49 @@ public sealed class YoloDatasetAppendTests : IDisposable
     }
 
     [Fact]
+    public async Task AppendSampleAsync_WritesDataYamlFromVsaYoloClassMap()
+    {
+        var framePath = WriteDummyFrame("frame-yaml.png");
+        var sample = MakeSample("sample-yaml", "BAB B", framePath);
+        var preview = MakePreview(width: 100, height: 100,
+            polygonPx: new[] { (10.0, 10.0), (90.0, 10.0), (90.0, 90.0) });
+
+        var svc = new YoloDatasetExportService(_datasetRoot);
+        await svc.AppendSampleAsync(sample, preview, CancellationToken.None);
+
+        var yamlPath = Path.Combine(_datasetRoot, "data.yaml");
+        Assert.True(File.Exists(yamlPath), "data.yaml fehlt — Dataset waere nicht trainierbar.");
+
+        var lines = await File.ReadAllLinesAsync(yamlPath);
+        Assert.Contains(lines, l => l.StartsWith("path:", StringComparison.Ordinal));
+        Assert.Contains(lines, l => l == "train: images/train");
+        Assert.Contains(lines, l => l == "val: images/val");
+        Assert.Contains(lines, l => l.StartsWith("nc:", StringComparison.Ordinal));
+
+        // Klassen-Liste muss die VsaYoloClassMap-Reihenfolge spiegeln (BCD an Index 0).
+        var namesLine = lines.Single(l => l.StartsWith("names:", StringComparison.Ordinal));
+        Assert.Contains("'BCD'", namesLine);
+        Assert.Contains("'BAB'", namesLine);
+    }
+
+    [Fact]
+    public async Task AppendSampleAsync_CreatesValDirectoriesEvenWithoutValSamples()
+    {
+        var framePath = WriteDummyFrame("frame-val.png");
+        var sample = MakeSample("sample-val", "BAB B", framePath);
+        var preview = MakePreview(width: 100, height: 100,
+            polygonPx: new[] { (10.0, 10.0), (90.0, 10.0), (90.0, 90.0) });
+
+        var svc = new YoloDatasetExportService(_datasetRoot);
+        await svc.AppendSampleAsync(sample, preview, CancellationToken.None);
+
+        Assert.True(Directory.Exists(Path.Combine(_datasetRoot, "images", "val")),
+            "images/val/ fehlt — YOLO-Training crasht beim val-Split.");
+        Assert.True(Directory.Exists(Path.Combine(_datasetRoot, "labels", "val")),
+            "labels/val/ fehlt — YOLO-Training crasht beim val-Split.");
+    }
+
+    [Fact]
     public async Task AppendSampleAsync_TwoSamples_ProduceDistinctLabelFiles()
     {
         var framePath1 = WriteDummyFrame("frame-a.png");

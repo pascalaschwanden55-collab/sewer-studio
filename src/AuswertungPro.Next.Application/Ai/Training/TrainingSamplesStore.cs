@@ -134,6 +134,28 @@ namespace AuswertungPro.Next.Application.Ai.Training
         }
 
         /// <summary>
+        /// Slice 1 (Operateur-Annotation): haengt **genau ein** Sample atomar
+        /// an den Store an — ohne Signature-Dedup. Der Aufrufer ist dafuer
+        /// verantwortlich, dass <see cref="TrainingSample.SampleId"/> eindeutig
+        /// ist. Im Gegensatz zu <see cref="MergeAndSaveAsync"/>, wo gleiche
+        /// Signaturen still verworfen wuerden, garantiert diese Methode, dass
+        /// CommitAsync ein verlaessliches "persisted=true" melden kann.
+        /// </summary>
+        public static async Task AppendOneAsync(TrainingSample sample)
+        {
+            if (sample is null) throw new ArgumentNullException(nameof(sample));
+            await _fileLock.WaitAsync();
+            try
+            {
+                var existing = await LoadInternalAsync();
+                existing.Add(sample);
+                await SaveInternalAsync(existing);
+                KnowledgeMirrorNotifier.NotifyChanged();
+            }
+            finally { _fileLock.Release(); }
+        }
+
+        /// <summary>
         /// Slice 1 (Operateur-Annotation): aktualisiert ausschliesslich den
         /// <see cref="TrainingSample.KbIndexState"/> eines per SampleId
         /// gefundenen Samples. Atomar unter <see cref="_fileLock"/>.

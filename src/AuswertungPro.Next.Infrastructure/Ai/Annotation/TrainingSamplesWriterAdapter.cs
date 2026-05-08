@@ -19,7 +19,10 @@ public sealed class TrainingSamplesWriterAdapter : ITrainingSamplesWriter
     public Task AppendAsync(TrainingSample sample, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        return TrainingSamplesStore.MergeAndSaveAsync(new List<TrainingSample> { sample });
+        // AppendOneAsync (kein Signature-Dedup): wenn CommitAsync ein Sample
+        // schreibt, soll es im Store landen — auch wenn die Signature mit einem
+        // alten Eintrag kollidiert. KB ist fuer Dedup zustaendig (eigener Pfad).
+        return TrainingSamplesStore.AppendOneAsync(sample);
     }
 
     public async Task UpdateIndexStateAsync(string sampleId, KbIndexState state, CancellationToken ct)

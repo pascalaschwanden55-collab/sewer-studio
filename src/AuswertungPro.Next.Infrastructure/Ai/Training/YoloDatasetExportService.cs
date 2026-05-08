@@ -85,9 +85,13 @@ public sealed class YoloDatasetExportService : IYoloDatasetWriter
         // spaetere Slice 2 kann hier eine deterministische Validation-Quote
         // ergaenzen.
         var trainImgDir = Path.Combine(_datasetRoot, "images", "train");
+        var valImgDir   = Path.Combine(_datasetRoot, "images", "val");
         var trainLblDir = Path.Combine(_datasetRoot, "labels", "train");
+        var valLblDir   = Path.Combine(_datasetRoot, "labels", "val");
         Directory.CreateDirectory(trainImgDir);
+        Directory.CreateDirectory(valImgDir);
         Directory.CreateDirectory(trainLblDir);
+        Directory.CreateDirectory(valLblDir);
 
         var className = NormalizeClassName(sample.Code);
         var ext = Path.GetExtension(sample.FramePath);
@@ -104,7 +108,36 @@ public sealed class YoloDatasetExportService : IYoloDatasetWriter
         var labelLine = BuildSegLabelLine(classId, polygon, preview.MaskWidth, preview.MaskHeight);
         await File.WriteAllTextAsync(labelDest, labelLine + "\n", ct).ConfigureAwait(false);
 
+        // data.yaml: stabile VsaYoloClassMap-Reihenfolge dokumentieren, damit
+        // ein frisch angelegter Dataset-Root nach dem ersten Append direkt
+        // trainierbar ist (B4: Append-Pfad muss stabilisierte Class-IDs
+        // explizit machen).
+        await WriteDataYamlAsync(_datasetRoot, ct).ConfigureAwait(false);
+
         return labelDest;
+    }
+
+    private static async Task WriteDataYamlAsync(string datasetRoot, CancellationToken ct)
+    {
+        var classes = VsaYoloClassMap.GetFullMap()
+            .OrderBy(kv => kv.Value)
+            .Select(kv => kv.Key)
+            .ToList();
+
+        var yamlLines = new List<string>
+        {
+            $"# SewerStudio YOLO-seg Dataset — geschrieben von AppendSampleAsync ({DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ})",
+            $"# Class-Map-Quelle: VsaYoloClassMap (stabile IDs).",
+            $"path: {datasetRoot}",
+            "train: images/train",
+            "val: images/val",
+            "",
+            $"nc: {classes.Count}",
+            $"names: [{string.Join(", ", classes.Select(c => $"'{c}'"))}]",
+        };
+
+        var yamlPath = Path.Combine(datasetRoot, "data.yaml");
+        await File.WriteAllLinesAsync(yamlPath, yamlLines, ct).ConfigureAwait(false);
     }
 
     private static List<(double X, double Y)> ParsePolygonJson(string polygonJson)
