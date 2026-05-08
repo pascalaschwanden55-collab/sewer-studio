@@ -421,19 +421,48 @@ public partial class PlayerWindow
     {
         try
         {
-            // 1. VSA-Code waehlen — VsaCodeExplorer oeffnet sich sofort
-            // Meter automatisch aus OSD oder Videoposition berechnen
-            var autoMeter = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
-            var entry = new ProtocolEntry();
-            var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(entry, autoMeter, TimeSpan.FromSeconds(timestampSec));
-            var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
+            // 1. VSA-Code-Quelle bestimmen.
+            //
+            // Direkt-Pfad (nachtraegliches Codieren mit Trainings-Annotation):
+            // Wenn rechts in der IMPORT-Liste schon ein Eintrag selektiert ist
+            // (LstImportEvents.SelectedItem), nutzen wir den Code von dort und
+            // ueberspringen den VsaCodeExplorer-Dialog. Das ist genau der Fall
+            // "Stelle markiert + Code ist klar (z.B. BCCBA aus dem importierten
+            // Protokoll) → BBox + SAM + Save ohne Zwischenfrage".
+            //
+            // Fallback-Pfad: kein Code vorausgewaehlt → Explorer oeffnet sich
+            // (urspruengliches Verhalten).
+            ProtocolEntry selectedEntry;
+            var preselectedImport = LstImportEvents?.SelectedItem as Domain.Models.CodingEvent;
+            if (preselectedImport != null && !string.IsNullOrWhiteSpace(preselectedImport.Entry?.Code))
             {
-                Owner = this
-            };
-            if (explorer.ShowDialog() != true || explorer.SelectedEntry == null)
-                return false;
-
-            var selectedEntry = explorer.SelectedEntry;
+                var src = preselectedImport.Entry!;
+                selectedEntry = new ProtocolEntry
+                {
+                    Code = src.Code,
+                    Beschreibung = src.Beschreibung,
+                    MeterStart = src.MeterStart,
+                    MeterEnd = src.MeterEnd,
+                    Zeit = src.Zeit ?? TimeSpan.FromSeconds(timestampSec),
+                    IsStreckenschaden = src.IsStreckenschaden,
+                    CodeMeta = src.CodeMeta,
+                    Source = ProtocolEntrySource.Manual
+                };
+            }
+            else
+            {
+                // Meter automatisch aus OSD oder Videoposition berechnen
+                var autoMeter = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
+                var entry = new ProtocolEntry();
+                var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(entry, autoMeter, TimeSpan.FromSeconds(timestampSec));
+                var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
+                {
+                    Owner = this
+                };
+                if (explorer.ShowDialog() != true || explorer.SelectedEntry == null)
+                    return false;
+                selectedEntry = explorer.SelectedEntry;
+            }
 
             // 2. Frame-Capture
             var frameBytes = await CaptureCurrentFrameAsync();
