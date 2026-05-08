@@ -113,7 +113,56 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     public void Pause() => _pauseGate.Reset();
     public void Resume() => _pauseGate.Set();
 
+    /// <summary>
+    /// Phase 2.3b: Provenance-Wrapper. Jeder PDF-Selbsttrainingslauf wird in einen
+    /// <see cref="TrainingRun"/> eingebettet — bei Erfolg Complete mit
+    /// <c>SamplesGenerated</c> als samplesAffected, bei Exception Fail/Cancel.
+    /// Bei TotalEntries==0 (kein Foto im PDF) wird der Run als Cancelled markiert,
+    /// da nicht versucht wurde zu trainieren.
+    /// </summary>
     public async Task<SelfTrainingResult> RunAsync(
+        TrainingCase tc,
+        IProgress<SelfTrainingStep> progress,
+        CancellationToken ct)
+    {
+        var run = await TrainingRunsStore.BeginRunAsync(
+            TrainingRunTriggers.SelfTraining,
+            notes: $"caseId={tc.CaseId}").ConfigureAwait(false);
+
+        try
+        {
+            var result = await RunCoreAsync(tc, progress, ct).ConfigureAwait(false);
+
+            // Kein nutzbares Foto im PDF -> nichts versucht -> Cancel
+            if (result.TotalEntries == 0 || result.SamplesGenerated == 0 && result.CodeHits == 0)
+            {
+                await TrainingRunsStore.CancelRunAsync(
+                    run.RunId,
+                    notes: $"TotalEntries={result.TotalEntries}, SamplesGenerated={result.SamplesGenerated}")
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                await TrainingRunsStore.CompleteRunAsync(
+                    run.RunId,
+                    samplesAffected: result.SamplesGenerated).ConfigureAwait(false);
+            }
+
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            await TrainingRunsStore.CancelRunAsync(run.RunId, "Cancelled").ConfigureAwait(false);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await TrainingRunsStore.FailRunAsync(run.RunId, ex.Message).ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    private async Task<SelfTrainingResult> RunCoreAsync(
         TrainingCase tc,
         IProgress<SelfTrainingStep> progress,
         CancellationToken ct)

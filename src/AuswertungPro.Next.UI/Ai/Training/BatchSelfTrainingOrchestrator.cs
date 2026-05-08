@@ -8,11 +8,13 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Domain.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 using AuswertungPro.Next.UI.Ai.Training.Services;
 using Microsoft.Extensions.Logging;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
@@ -90,14 +92,64 @@ public sealed class BatchSelfTrainingOrchestrator : AuswertungPro.Next.Applicati
     }
 
     /// <summary>
-    /// Startet den Batch-Durchlauf.
-    /// Scannt den Export-Ordner, findet alle Haltungen mit Video + Protokoll,
-    /// und verarbeitet sie nacheinander.
+    /// Phase 2.3b: Provenance-Wrapper. Jeder Batch-Lauf wird als ein einzelner
+    /// <see cref="TrainingRun"/> erfasst. Bei Erfolg Complete mit Anzahl
+    /// erfolgreich verarbeiteter Haltungen als samplesAffected. Wenn nichts
+    /// entdeckt/zu tun war (TotalHaltungen==0 und Processed==0) wird der Run
+    /// als Cancelled markiert. Exceptions werden zu Fail/Cancel und re-thrown.
     /// </summary>
     public async Task<BatchSelfTrainingResult> RunAsync(
         BatchSelfTrainingRequest request,
         IProgress<BatchSelfTrainingProgress>? progress = null,
         CancellationToken ct = default)
+    {
+        var run = await TrainingRunsStore.BeginRunAsync(
+            TrainingRunTriggers.SelfTraining,
+            notes: $"batch root={request.ExportRootPath}").ConfigureAwait(false);
+
+        try
+        {
+            var result = await RunCoreAsync(request, progress, ct).ConfigureAwait(false);
+
+            // Nichts zu tun (keine Haltungen entdeckt oder alle bereits verarbeitet)
+            if (result.TotalHaltungen == 0 && result.Processed == 0)
+            {
+                await TrainingRunsStore.CancelRunAsync(
+                    run.RunId,
+                    notes: $"Skipped={result.Skipped}, keine neuen Haltungen").ConfigureAwait(false);
+            }
+            else
+            {
+                await TrainingRunsStore.CompleteRunAsync(
+                    run.RunId,
+                    samplesAffected: result.Processed,
+                    notes: $"processed={result.Processed} failed={result.Failed} skipped={result.Skipped} kbIndexed={result.FinalStats.KbIndexed}")
+                    .ConfigureAwait(false);
+            }
+
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            await TrainingRunsStore.CancelRunAsync(run.RunId, "Cancelled").ConfigureAwait(false);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await TrainingRunsStore.FailRunAsync(run.RunId, ex.Message).ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Startet den Batch-Durchlauf.
+    /// Scannt den Export-Ordner, findet alle Haltungen mit Video + Protokoll,
+    /// und verarbeitet sie nacheinander.
+    /// </summary>
+    private async Task<BatchSelfTrainingResult> RunCoreAsync(
+        BatchSelfTrainingRequest request,
+        IProgress<BatchSelfTrainingProgress>? progress,
+        CancellationToken ct)
     {
         IsRunning = true;
         _isCancelled = false;

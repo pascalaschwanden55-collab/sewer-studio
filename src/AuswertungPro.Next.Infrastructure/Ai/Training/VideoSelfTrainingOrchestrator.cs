@@ -84,7 +84,10 @@ public sealed class VideoSelfTrainingOrchestrator : ITrainingOrchestrator
     }
 
     /// <summary>
-    /// Fuehrt den kompletten Video-Selbsttraining-Workflow durch.
+    /// Phase 2.3b: Provenance-Wrapper. Jeder Video-Selbsttrainingslauf wird in
+    /// einen <see cref="TrainingRun"/> eingebettet. Bei Erfolg Complete mit
+    /// (TP+FN+FP+MM) als samplesAffected (Anzahl der DifferenceEntries).
+    /// Bei OperationCanceledException Cancel, sonst Fail.
     /// </summary>
     public async Task<VideoTrainingResult> RunAsync(
         VideoTrainingRequest request,
@@ -95,6 +98,45 @@ public sealed class VideoSelfTrainingOrchestrator : ITrainingOrchestrator
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(protocol);
 
+        var run = await TrainingRunsStore.BeginRunAsync(
+            TrainingRunTriggers.SelfTraining,
+            notes: $"video={Path.GetFileName(request.VideoPath)} haltung={protocol.HaltungId}")
+            .ConfigureAwait(false);
+
+        try
+        {
+            var result = await RunCoreAsync(request, protocol, progress, ct).ConfigureAwait(false);
+
+            var samples =
+                result.Report.TruePositiveCount
+                + result.Report.FalseNegativeCount
+                + result.Report.FalsePositiveCount
+                + result.Report.CodeMismatchCount;
+
+            await TrainingRunsStore.CompleteRunAsync(
+                run.RunId,
+                samplesAffected: samples).ConfigureAwait(false);
+
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            await TrainingRunsStore.CancelRunAsync(run.RunId, "Cancelled").ConfigureAwait(false);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await TrainingRunsStore.FailRunAsync(run.RunId, ex.Message).ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    private async Task<VideoTrainingResult> RunCoreAsync(
+        VideoTrainingRequest request,
+        ProtocolDocument protocol,
+        IProgress<VideoTrainingProgress>? progress,
+        CancellationToken ct)
+    {
         var sw = Stopwatch.StartNew();
 
         // ── Phase 1: Protokoll → GroundTruth ──────────────────────────
