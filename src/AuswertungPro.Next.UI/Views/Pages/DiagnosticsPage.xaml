@@ -6,17 +6,25 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Phase 3.3: PageHeader-Control mit Action-Button rechts. -->
         <ctrl:PageHeader Title="Diagnose"
-                         Subtitle="Wartungs-Tools, KB-Mirror-Status, Frame-Cleanup, Versions-Pruning + Log-Tail.">
+                         Subtitle="KB-Dashboard, Wartungs-Tools, KB-Mirror-Status, Frame-Cleanup, Versions-Pruning + Log-Tail.">
             <ctrl:PageHeader.Actions>
-                <Button Content="Log aktualisieren"
-                        Command="{Binding RefreshCommand}"
-                        Style="{StaticResource SecondaryButton}"
-                        ToolTip="Aktuelle Log-Eintraege aus der Protokolldatei neu laden"/>
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="KB-Dashboard aktualisieren"
+                            Command="{Binding RefreshDashboardCommand}"
+                            Style="{StaticResource SecondaryButton}"
+                            Margin="0,0,8,0"
+                            ToolTip="KB-Statistiken (Quality, Accuracy, Problemcodes) neu laden"/>
+                    <Button Content="Log aktualisieren"
+                            Command="{Binding RefreshCommand}"
+                            Style="{StaticResource SecondaryButton}"
+                            ToolTip="Aktuelle Log-Eintraege aus der Protokolldatei neu laden"/>
+                </StackPanel>
             </ctrl:PageHeader.Actions>
         </ctrl:PageHeader>
 
@@ -90,8 +98,166 @@
             </Border>
         </Grid>
 
-        <TextBox Grid.Row="2" Text="{Binding LogTail}" AcceptsReturn="True" IsReadOnly="True"
+        <!-- KB-Dashboard (P1.4 Roadmap, 2026-05-08) -->
+        <Border Grid.Row="2" Margin="0,0,0,16" Padding="12"
+                BorderBrush="{DynamicResource MutedBrush}" BorderThickness="1" CornerRadius="6">
+            <StackPanel>
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="KB-Dashboard"
+                               FontWeight="SemiBold" FontSize="15"/>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding DashboardStatus}"
+                               Foreground="{DynamicResource MutedBrush}"
+                               FontSize="11" VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- Stat-Cards: Total Samples, Total Validations, Overall Accuracy, Review-Queue -->
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Margin="0,0,4,0" Padding="10"
+                            Background="{DynamicResource AccentSubtleBrush}" CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock Text="Samples in KB" FontSize="11"
+                                       Foreground="{DynamicResource MutedBrush}"/>
+                            <TextBlock Text="{Binding TotalSamplesText}"
+                                       FontWeight="Bold" FontSize="20"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="1" Margin="4,0,4,0" Padding="10"
+                            Background="{DynamicResource AccentSubtleBrush}" CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock Text="Validierungen" FontSize="11"
+                                       Foreground="{DynamicResource MutedBrush}"/>
+                            <TextBlock Text="{Binding TotalValidationsText}"
+                                       FontWeight="Bold" FontSize="20"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="2" Margin="4,0,4,0" Padding="10"
+                            Background="{DynamicResource AccentSubtleBrush}" CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock Text="Trefferquote (KI vs Mensch)" FontSize="11"
+                                       Foreground="{DynamicResource MutedBrush}"/>
+                            <TextBlock Text="{Binding OverallAccuracyText}"
+                                       FontWeight="Bold" FontSize="20"
+                                       Foreground="{Binding OverallAccuracyBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="3" Margin="4,0,0,0" Padding="10"
+                            Background="{DynamicResource AccentSubtleBrush}" CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock Text="Review-Queue (offen)" FontSize="11"
+                                       Foreground="{DynamicResource MutedBrush}"/>
+                            <TextBlock Text="{Binding ReviewQueueLengthText}"
+                                       FontWeight="Bold" FontSize="20"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Quality-Verteilung als horizontale Bar -->
+                <TextBlock Text="Quality-Verteilung der KB-Samples"
+                           FontWeight="SemiBold" FontSize="12" Margin="0,4,0,4"/>
+                <Grid Height="22" Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="{Binding GreenStarWidth}"/>
+                        <ColumnDefinition Width="{Binding YellowStarWidth}"/>
+                        <ColumnDefinition Width="{Binding RedStarWidth}"/>
+                        <ColumnDefinition Width="{Binding UnknownStarWidth}"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Background="#22C55E"/>
+                    <Border Grid.Column="1" Background="#F59E0B"/>
+                    <Border Grid.Column="2" Background="#EF4444"/>
+                    <Border Grid.Column="3" Background="#94A3B8"/>
+                </Grid>
+                <TextBlock Text="{Binding QualityDistributionText}"
+                           FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                           Margin="0,0,0,12"/>
+
+                <!-- Zwei Tabellen nebeneinander: Top-Problemcodes + Unterrepraesentiert -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Top-Problemcodes -->
+                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                        <TextBlock Text="Top-Problemcodes (niedrige Trefferquote, ausreichend Stichproben)"
+                                   FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                        <DataGrid ItemsSource="{Binding TopProblemCodes}"
+                                  AutoGenerateColumns="False" IsReadOnly="True"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  MaxHeight="220" CanUserAddRows="False"
+                                  RowHeaderWidth="0" SelectionMode="Single">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Code" Binding="{Binding VsaCode}" Width="80"/>
+                                <DataGridTextColumn Header="Samples" Binding="{Binding SampleCount}" Width="70"/>
+                                <DataGridTextColumn Header="Validiert" Binding="{Binding ValidationTotal}" Width="70"/>
+                                <DataGridTextColumn Header="Trefferquote" Binding="{Binding AccuracyText}" Width="90"/>
+                                <DataGridTextColumn Header="Score" Binding="{Binding ProblemScoreText}" Width="60"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+
+                    <!-- Unterrepraesentierte Codes -->
+                    <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                        <TextBlock Text="Unterrepraesentierte Codes (Long-Tail, &lt; 50 Samples)"
+                                   FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                        <DataGrid ItemsSource="{Binding UnderRepresentedCodes}"
+                                  AutoGenerateColumns="False" IsReadOnly="True"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  MaxHeight="220" CanUserAddRows="False"
+                                  RowHeaderWidth="0" SelectionMode="Single">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Code" Binding="{Binding VsaCode}" Width="80"/>
+                                <DataGridTextColumn Header="Samples" Binding="{Binding SampleCount}" Width="70"/>
+                                <DataGridTextColumn Header="Validiert" Binding="{Binding ValidationTotal}" Width="70"/>
+                                <DataGridTextColumn Header="Trefferquote" Binding="{Binding AccuracyText}" Width="90"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Review-Export-Button -->
+                <Border Margin="0,12,0,0" Padding="10"
+                        Background="{DynamicResource AccentSubtleBrush}" CornerRadius="4">
+                    <StackPanel>
+                        <TextBlock Text="Wochen-Review-Liste"
+                                   FontWeight="SemiBold" FontSize="12"/>
+                        <TextBlock Text="Erzeugt eine CSV-Datei mit den unsichersten Samples (60% Uncertainty + 40% Diversity nach ActiveLearningSelector). Datei landet im KnowledgeRoot und kann in Excel geoeffnet werden."
+                                   FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                                   TextWrapping="Wrap" Margin="0,2,0,8"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Anzahl:" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="11"/>
+                            <TextBox Text="{Binding ReviewExportCount, UpdateSourceTrigger=PropertyChanged}"
+                                     Width="60" Margin="0,0,12,0" VerticalContentAlignment="Center"/>
+                            <Button Content="Review-Liste exportieren"
+                                    Command="{Binding ExportReviewListCommand}"
+                                    Style="{StaticResource PrimaryButton}"
+                                    IsEnabled="{Binding IsReviewExportRunning, Converter={StaticResource InvertedBoolConverter}}"
+                                    Padding="14,4"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding ReviewExportResult}" TextWrapping="Wrap"
+                                   FontFamily="Consolas" FontSize="11" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <TextBox Grid.Row="3" Text="{Binding LogTail}" AcceptsReturn="True" IsReadOnly="True"
                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                 FontFamily="Consolas" FontSize="11"/>
+                 FontFamily="Consolas" FontSize="11" MinHeight="120"/>
     </Grid>
 </UserControl>
