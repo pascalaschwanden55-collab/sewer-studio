@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Roadmap Z.1: BenchmarkDotNet fuer Performance-Regressions-Tests an
+    kritischen CPU-Workloads. Bewusst NICHT in AuswertungPro.sln eingebunden,
+    weil BenchmarkDotNet Release-Build erzwingt und CI-Build verlangsamen
+    wuerde. On-demand ueber "dotnet run -c Release" ausfuehren
+    (siehe README in diesem Ordner).
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\AuswertungPro.Next.Application\AuswertungPro.Next.Application.csproj" />
+    <ProjectReference Include="..\..\src\AuswertungPro.Next.Domain\AuswertungPro.Next.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+  </ItemGroup>
+</Project>
