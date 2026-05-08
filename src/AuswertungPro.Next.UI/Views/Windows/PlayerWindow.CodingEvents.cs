@@ -283,9 +283,8 @@ public partial class PlayerWindow
                 project!, _haltungRecord, doc, projectRoot, options);
             File.WriteAllBytes(dlg.FileName, pdf);
 
-            // PDF oeffnen
-            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(dlg.FileName) { UseShellExecute = true }); }
-            catch { }
+            // PDF oeffnen via ProcessRunner-Foundation (Phase 4.4)
+            AuswertungPro.Next.Application.Common.ProcessRunner.TryOpenWithDefaultProgram(dlg.FileName, out _);
 
             ShowOverlay("PDF-Protokoll erstellt", TimeSpan.FromSeconds(4));
         }

@@ -143,6 +143,84 @@ public static class ProcessRunner
             TimedOut: timedOut,
             StartFailed: false);
     }
+
+    /// <summary>
+    /// Oeffnet eine Datei oder URL im Standardprogramm des Betriebssystems
+    /// (UseShellExecute = true). Zentralisiert die "ShellOpen"-Aufrufe (Foto/PDF
+    /// im Standard-Viewer anzeigen) und kapselt Fehlerbehandlung.
+    /// Phase 4.4: ersetzt direkte Process.Start-Aufrufe in UI/ViewModels.
+    /// </summary>
+    /// <param name="filePathOrUrl">Datei-Pfad oder URL.</param>
+    /// <returns>true bei erfolgreichem Start, false sonst (mit <paramref name="error"/>).</returns>
+    public static bool TryOpenWithDefaultProgram(string filePathOrUrl, out string? error)
+    {
+        error = null;
+        if (string.IsNullOrWhiteSpace(filePathOrUrl))
+        {
+            error = "Pfad oder URL ist leer.";
+            return false;
+        }
+
+        try
+        {
+            using var p = Process.Start(new ProcessStartInfo
+            {
+                FileName = filePathOrUrl,
+                UseShellExecute = true
+            });
+            return p is not null;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Wirft <see cref="InvalidOperationException"/> bei Fehler — fuer Aufrufer
+    /// die selbst try/catch betreiben (z.B. um eigene Dialog-Boxen zu zeigen).
+    /// </summary>
+    public static void OpenWithDefaultProgram(string filePathOrUrl)
+    {
+        if (!TryOpenWithDefaultProgram(filePathOrUrl, out var error))
+            throw new InvalidOperationException(error ?? "Unbekannter Fehler beim Oeffnen.");
+    }
+
+    /// <summary>
+    /// Startet eine Datei mit einem expliziten Shell-Verb (z.B. "print", "edit").
+    /// Phase 4.4: zentralisiert den Druck-Verb-Aufruf in BuilderPageViewModel.
+    /// </summary>
+    public static bool TryOpenWithVerb(string filePath, string verb, out string? error)
+    {
+        error = null;
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            error = "Pfad ist leer.";
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(verb))
+        {
+            error = "Verb ist leer.";
+            return false;
+        }
+
+        try
+        {
+            using var p = Process.Start(new ProcessStartInfo
+            {
+                FileName = filePath,
+                Verb = verb,
+                UseShellExecute = true
+            });
+            return p is not null;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
 }
 
 /// <summary>
