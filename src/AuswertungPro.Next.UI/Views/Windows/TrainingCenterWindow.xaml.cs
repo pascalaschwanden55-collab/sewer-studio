@@ -46,6 +46,8 @@ public partial class TrainingCenterWindow : Window
     // Batch-Nachtbetrieb Abbruch
     private System.Threading.CancellationTokenSource? _batchCts;
 
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
+
     public TrainingCenterWindow()
     {
         InitializeComponent();
@@ -283,7 +285,7 @@ public partial class TrainingCenterWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Fehler beim Akzeptieren: {ex.Message}",
+            _dialogs.ShowMessage($"Fehler beim Akzeptieren: {ex.Message}",
                 "Review", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
@@ -293,7 +295,7 @@ public partial class TrainingCenterWindow : Window
     {
         if (Vm.SelectedReviewItem is null)
         {
-            MessageBox.Show("Kein Item ausgewaehlt.", "Review",
+            _dialogs.ShowMessage("Kein Item ausgewaehlt.", "Review",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -312,7 +314,7 @@ public partial class TrainingCenterWindow : Window
     {
         if (Vm.SelectedReviewItem is null)
         {
-            MessageBox.Show("Kein Item ausgewaehlt.", "Review",
+            _dialogs.ShowMessage("Kein Item ausgewaehlt.", "Review",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -321,7 +323,7 @@ public partial class TrainingCenterWindow : Window
         var framePath = item.SelfTrainingFramePath;
         if (string.IsNullOrWhiteSpace(framePath) || !System.IO.File.Exists(framePath))
         {
-            MessageBox.Show("Kein Frame-Bild fuer dieses Item vorhanden.", "Review",
+            _dialogs.ShowMessage("Kein Frame-Bild fuer dieses Item vorhanden.", "Review",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -388,7 +390,7 @@ public partial class TrainingCenterWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Fehler beim Oeffnen der Korrektur: {ex.Message}",
+            _dialogs.ShowMessage($"Fehler beim Oeffnen der Korrektur: {ex.Message}",
                 "Review", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         finally
@@ -447,7 +449,7 @@ public partial class TrainingCenterWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Fehler beim Laden der Lehrer-Annotationen:\n{ex.Message}",
+            _dialogs.ShowMessage($"Fehler beim Laden der Lehrer-Annotationen:\n{ex.Message}",
                 "Lehrer", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
@@ -552,7 +554,7 @@ public partial class TrainingCenterWindow : Window
 
         if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
         {
-            MessageBox.Show("Kein Bild fuer diese Annotation verfuegbar.",
+            _dialogs.ShowMessage("Kein Bild fuer diese Annotation verfuegbar.",
                 "FewShot", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -578,13 +580,13 @@ public partial class TrainingCenterWindow : Window
                 $"teacher:{_selectedTeacherAnnotation.AnnotationId}",
                 1.0);
 
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 $"Annotation '{_selectedTeacherAnnotation.VsaCode}' als FewShot-Beispiel hinzugefuegt (quality=1.0).",
                 "FewShot", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Fehler: {ex.Message}", "FewShot", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogs.ShowMessage($"Fehler: {ex.Message}", "FewShot", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -592,7 +594,7 @@ public partial class TrainingCenterWindow : Window
     {
         if (_selectedTeacherAnnotation is null) return;
 
-        var result = MessageBox.Show(
+        var result = _dialogs.ShowMessage(
             $"Annotation '{_selectedTeacherAnnotation.VsaCode}' bei {_selectedTeacherAnnotation.MeterPosition:F1}m wirklich loeschen?\n\n" +
             "Zugehoerige Dateien (Frame, Crop, YOLO-Label) werden ebenfalls entfernt.",
             "Annotation loeschen",
@@ -626,7 +628,7 @@ public partial class TrainingCenterWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Fehler beim Loeschen: {ex.Message}",
+            _dialogs.ShowMessage($"Fehler beim Loeschen: {ex.Message}",
                 "Lehrer", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -699,7 +701,7 @@ public partial class TrainingCenterWindow : Window
         AuswertungPro.Next.Infrastructure.Ai.Training.Services.PdfProtocolTableParser.PdfToTextExePath = diagnostics.ExplicitPdfToTextPath;
 
         var cfg = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
-        if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Video-Blindtest"); return; }
+        if (!cfg.Enabled) { _dialogs.ShowMessage("KI ist deaktiviert.", "Video-Blindtest"); return; }
 
         // Factory: Erstellt pro Analyse-Durchlauf frischen HttpClient + Pipeline
         // (HttpClient kann nicht wiederverwendet werden nachdem Headers geaendert wurden)
@@ -726,14 +728,14 @@ public partial class TrainingCenterWindow : Window
         var cfg = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
         if (!cfg.Enabled)
         {
-            MessageBox.Show("KI ist deaktiviert.", "Eval-Set");
+            _dialogs.ShowMessage("KI ist deaktiviert.", "Eval-Set");
             return;
         }
 
         var evalDir = System.IO.Path.Combine(@"C:\KI_BRAIN", "eval_set");
         if (!System.IO.Directory.Exists(System.IO.Path.Combine(evalDir, "images")))
         {
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 $"Eval-Set nicht gefunden: {evalDir}\n\n" +
                 "Erzeuge es zuerst via Profile extrahieren → Eval-Set.",
                 "Eval-Set", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -771,7 +773,7 @@ public partial class TrainingCenterWindow : Window
                 $"F1={result.OverallF1:P1}\n" +
                 $"[{DateTime.Now:HH:mm:ss}] [Eval] CSV: {result.CsvPath}\n");
 
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 $"Eval-Set fertig\n\n" +
                 $"Frames: {result.TotalFrames}\n" +
                 $"Richtig: {result.CorrectPredictions}\n" +
@@ -783,7 +785,7 @@ public partial class TrainingCenterWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Eval-Set Fehler: {ex.Message}", "Eval-Set",
+            _dialogs.ShowMessage($"Eval-Set Fehler: {ex.Message}", "Eval-Set",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] [Eval] Fehler: {ex.Message}\n");
         }
@@ -803,7 +805,7 @@ public partial class TrainingCenterWindow : Window
         var pipelineCfg = App.Resolve<AuswertungPro.Next.Application.Ai.PipelineConfig>();
 
         var cfg = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
-        if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Benchmark"); return; }
+        if (!cfg.Enabled) { _dialogs.ShowMessage("KI ist deaktiviert.", "Benchmark"); return; }
 
         var allowedSet = new System.Collections.Generic.HashSet<string>(
             codeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
@@ -847,12 +849,12 @@ public partial class TrainingCenterWindow : Window
         AuswertungPro.Next.Infrastructure.Ai.Training.Services.PdfProtocolTableParser.PdfToTextExePath = diagnostics.ExplicitPdfToTextPath;
 
         var cfg = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
-        if (!cfg.Enabled) { MessageBox.Show("KI ist deaktiviert.", "Batch-Nachtbetrieb"); return; }
+        if (!cfg.Enabled) { _dialogs.ShowMessage("KI ist deaktiviert.", "Batch-Nachtbetrieb"); return; }
 
         var dlg = new Microsoft.Win32.OpenFolderDialog { Title = "Ordner mit Haltungen waehlen" };
         if (dlg.ShowDialog() != true) return;
 
-        var confirm = MessageBox.Show(
+        var confirm = _dialogs.ShowMessage(
             $"Batch-Nachtbetrieb starten?\n\nOrdner: {dlg.FolderName}\n\nAlle Haltungen mit Video + PDF werden automatisch verarbeitet.\nDas kann mehrere Stunden dauern.",
             "Batch-Nachtbetrieb", MessageBoxButton.OKCancel, MessageBoxImage.Question);
         if (confirm != MessageBoxResult.OK) return;
@@ -867,7 +869,7 @@ public partial class TrainingCenterWindow : Window
         if (string.IsNullOrWhiteSpace(limitInput)) return;
         if (!int.TryParse(limitInput, out var maxHaltungen) || maxHaltungen < 0)
         {
-            MessageBox.Show("Ungueltige Zahl — Abbruch.", "Batch-Nachtbetrieb");
+            _dialogs.ShowMessage("Ungueltige Zahl — Abbruch.", "Batch-Nachtbetrieb");
             return;
         }
 
@@ -907,7 +909,7 @@ public partial class TrainingCenterWindow : Window
             enrichment = new Ai.KnowledgeBase.KbEnrichmentService(
                 kbManager, dedup, log: null, reviewQueue: _reviewQueueService);
         }
-        catch (Exception ex) { MessageBox.Show($"KB-Fehler: {ex.Message}"); return; }
+        catch (Exception ex) { _dialogs.ShowMessage($"KB-Fehler: {ex.Message}", "Knowledge-Base", MessageBoxButton.OK, MessageBoxImage.Error); return; }
 
         // Sidecar-Pfad fuer Auto-Restart bei Crash
         var sidecarDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "sidecar");
@@ -1159,7 +1161,7 @@ public partial class TrainingCenterWindow : Window
             var trainingDelta = Math.Max(0, trainingCountAfter - trainingCountBefore);
             var trainingBboxDelta = Math.Max(0, trainingBboxAfter - trainingBboxBefore);
 
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 $"Batch fertig: {result.Processed}/{result.TotalHaltungen} Haltungen in {result.TotalDuration.TotalMinutes:F0} Min\n\n" +
                 $"TP:{s.TruePositives} FN:{s.FalseNegatives} FP:{s.FalsePositives} MM:{s.CodeMismatches}\n" +
                 $"F1: {s.F1:P1}\n\nKB: +{s.KbIndexed} neu, {s.KbDeduplicated} Duplikate\n" +
@@ -1173,9 +1175,9 @@ public partial class TrainingCenterWindow : Window
         catch (OperationCanceledException)
         {
             Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Batch abgebrochen.\n");
-            MessageBox.Show("Batch-Nachtbetrieb wurde abgebrochen.", "Abgebrochen", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogs.ShowMessage("Batch-Nachtbetrieb wurde abgebrochen.", "Abgebrochen", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-        catch (Exception ex) { MessageBox.Show($"Batch-Fehler: {ex.Message}"); }
+        catch (Exception ex) { _dialogs.ShowMessage($"Batch-Fehler: {ex.Message}", "Batch-Nachtbetrieb", MessageBoxButton.OK, MessageBoxImage.Error); }
         finally
         {
             var btnRestore = this.FindName("BtnBatchNight") as System.Windows.Controls.Button;
@@ -1193,7 +1195,7 @@ public partial class TrainingCenterWindow : Window
     {
         if (_batchCts == null || _batchCts.IsCancellationRequested) return;
 
-        var confirm = MessageBox.Show(
+        var confirm = _dialogs.ShowMessage(
             "Batch-Nachtbetrieb wirklich abbrechen?\n\nDie aktuelle Haltung wird noch fertig verarbeitet.",
             "Abbrechen?", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (confirm != MessageBoxResult.Yes) return;
@@ -1271,7 +1273,7 @@ public partial class TrainingCenterWindow : Window
         try { dlgResult = dlg.ShowDialog(); }
         catch (Exception dex)
         {
-            MessageBox.Show($"Dialog konnte nicht geoeffnet werden:\n{dex.Message}",
+            _dialogs.ShowMessage($"Dialog konnte nicht geoeffnet werden:\n{dex.Message}",
                 "Profile extrahieren", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
@@ -1302,7 +1304,7 @@ public partial class TrainingCenterWindow : Window
             catch (Exception kex)
             {
                 try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] KIAS-FEHLER (vor Try): {kex.Message}\n"); } catch { }
-                MessageBox.Show($"KIAS/IBAK-Extraktion fehlgeschlagen:\n{kex}", "Profile extrahieren",
+                _dialogs.ShowMessage($"KIAS/IBAK-Extraktion fehlgeschlagen:\n{kex}", "Profile extrahieren",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
             return;
@@ -1313,7 +1315,7 @@ public partial class TrainingCenterWindow : Window
         {
             if (!Infrastructure.Import.WinCan.SdfToSqliteConverter.IsSsceAvailable())
             {
-                MessageBox.Show(
+                _dialogs.ShowMessage(
                     "SDF-Konvertierung nicht moeglich: SQL Server Compact 4.0 Runtime fehlt.\n\n" +
                     "Installieren via 'Microsoft SQL Server Compact 4.0 SP1' " +
                     "(download.microsoft.com, SSCERuntime_x64-ENU.exe).",
@@ -1333,7 +1335,7 @@ public partial class TrainingCenterWindow : Window
             catch (Exception ex)
             {
                 try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] SDF-Konvertierung FEHLGESCHLAGEN: {ex.Message}\n"); } catch { }
-                MessageBox.Show($"SDF-Konvertierung fehlgeschlagen:\n\n{ex.Message}",
+                _dialogs.ShowMessage($"SDF-Konvertierung fehlgeschlagen:\n\n{ex.Message}",
                     "SDF-Konvertierung", MessageBoxButton.OK, MessageBoxImage.Error);
                 BtnExtractProfiles.IsEnabled = true;
                 return;
@@ -1410,7 +1412,7 @@ public partial class TrainingCenterWindow : Window
             var framesDir = System.IO.Path.Combine(@"C:\KI_BRAIN", "training_frames");
             int geschaetzteFrames = profiles.Sum(p => p.Ereignisse.Count * 5 + p.Luecken.Count(l => (l.DistanzM ?? 0) > 3) + 2);
 
-            var extractFrames = MessageBox.Show(
+            var extractFrames = _dialogs.ShowMessage(
                 $"{profiles.Count} Profile extrahiert.\n" +
                 $"{mitVideo} davon haben ein Video.\n\n" +
                 $"Geschwindigkeit: {patterns.MedianFahrgeschwindigkeit:F3} m/s\n" +
@@ -1428,7 +1430,7 @@ public partial class TrainingCenterWindow : Window
         catch (Exception ex)
         {
             try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] FEHLER: {ex.Message}\n"); } catch { }
-            MessageBox.Show($"Fehler: {ex.Message}", "Profile extrahieren", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogs.ShowMessage($"Fehler: {ex.Message}", "Profile extrahieren", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -1474,7 +1476,7 @@ public partial class TrainingCenterWindow : Window
             try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] {profiles.Count} Profile aus IBAK Daten.txt extrahiert\n"); } catch { }
             if (profiles.Count == 0)
             {
-                MessageBox.Show($"Keine Inspektionsprofile gefunden.\nExport-Wurzel: {exportRoot}\n\n"
+                _dialogs.ShowMessage($"Keine Inspektionsprofile gefunden.\nExport-Wurzel: {exportRoot}\n\n"
                     + "Pruefe ob Film/Daten.txt vorhanden ist.",
                     "Profile extrahieren", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -1502,7 +1504,7 @@ public partial class TrainingCenterWindow : Window
             try { Vm?.AppendToLogText($"  Profile mit Video: {mitVideo}/{profiles.Count}, ohne Laenge: {ohneLaenge}\n"); } catch { }
             try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] KIAS/IBAK-Profile fertig.\n"); } catch { }
 
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 $"KIAS/IBAK-Extraktion erfolgreich:\n\n"
                 + $"  - {profiles.Count} Inspektionsprofile\n"
                 + $"  - {totalEvents} Beobachtungen\n"
@@ -1517,7 +1519,7 @@ public partial class TrainingCenterWindow : Window
         catch (Exception ex)
         {
             try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] FEHLER: {ex.Message}\n"); } catch { }
-            MessageBox.Show($"Fehler: {ex.Message}", "Profile extrahieren", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogs.ShowMessage($"Fehler: {ex.Message}", "Profile extrahieren", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -1609,7 +1611,7 @@ public partial class TrainingCenterWindow : Window
         Vm.AppendToLogText($"  Gespeichert: {framesDir}\n");
         Vm.AppendToLogText($"  Index: {indexPath}\n");
 
-        MessageBox.Show(
+        _dialogs.ShowMessage(
             $"{allFrames.Count} Frames extrahiert!\n\n" +
             $"Referenz: {refFrames}\n" +
             $"Negativ: {negFrames}\n" +
@@ -1673,7 +1675,7 @@ public partial class TrainingCenterWindow : Window
             Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Kandidaten gespeichert: {candidatesPath}\n");
 
             // Fragen ob sofort exportieren (alle als approved)
-            var result = MessageBox.Show(
+            var result = _dialogs.ShowMessage(
                 $"{candidates.Count} Eval-Kandidaten generiert.\n\n" +
                 $"Du kannst jetzt:\n" +
                 $"• JA: Alle als 'approved' markieren und Eval-Set exportieren\n" +
@@ -1696,7 +1698,7 @@ public partial class TrainingCenterWindow : Window
                 Vm.AppendToLogText($"  Pfad: {evalDir}\n");
                 Vm.AppendToLogText($"  WICHTIG: Dieses Set wird NIE vom Training beruehrt!\n");
 
-                MessageBox.Show(
+                _dialogs.ShowMessage(
                     $"{exported} Frames als Eval-Set exportiert.\n\n" +
                     $"Pfad: {evalDir}\n\n" +
                     $"WICHTIG: Dieses Set ist eingefroren.\n" +
@@ -1714,7 +1716,7 @@ public partial class TrainingCenterWindow : Window
         catch (Exception ex)
         {
             Vm.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] FEHLER: {ex.Message}\n");
-            MessageBox.Show($"Fehler: {ex.Message}", "Eval-Set", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogs.ShowMessage($"Fehler: {ex.Message}", "Eval-Set", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
