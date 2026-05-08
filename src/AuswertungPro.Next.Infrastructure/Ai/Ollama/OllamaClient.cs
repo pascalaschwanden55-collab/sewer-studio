@@ -37,6 +37,11 @@ public sealed class OllamaClient : IDisposable
     /// <summary>Anzahl Circuit-Breaker-Ausloeser seit Start.</summary>
     public int CircuitBreakerTrips => _circuitBreakerTrips;
 
+    // Phase 5.7 (Reflection-Reduktion): Test-Hook fuer Konstruktor-Verifikation
+    // (BaseAddress / Timeout). Nur fuer Pipeline.Tests sichtbar via
+    // InternalsVisibleTo — kein Teil der oeffentlichen API.
+    internal HttpClient HttpForTesting => _http;
+
     // Schuetzt parallele Schreibzugriffe auf qwen_raw_responses.log: bei
     // gleichzeitigen Qwen-Requests (8B + 32B-Hybrid) kann die Datei sonst
     // verschraenkte Zeilen bekommen. STAB-H2 (Audit 2026-04-23).
