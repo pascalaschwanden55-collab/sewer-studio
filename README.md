@@ -30,10 +30,12 @@ auf der eigenen Workstation — kein Cloud-Upload, keine Internet-Abhaengigkeit.
 | | |
 |---|---|
 | Build | `dotnet build` → 0 Warnungen, 0 Fehler |
-| Tests | 785 gruen, 1 uebersprungen (140 Infrastructure + 645 Pipeline) |
-| Codeumfang | ~602 C#-Dateien / ~138 k Zeilen (src + tests) |
+| Tests | 819 gruen, 1 uebersprungen |
+| Codeumfang | ~620 C#-Dateien / ~140 k Zeilen (src + tests) |
 | Architektur | Domain / Application / Infrastructure / UI mit Architekturtests |
 | Plattform | .NET 10, WPF, Windows 11 |
+| CI | GitHub Actions (Build + Test bei jedem Push, Python-Sidecar-Lint) |
+| ADRs | 5 dokumentierte Architektur-Entscheidungen in `docs/adr/` |
 
 ## KI-Pipeline (lokal)
 
@@ -142,6 +144,8 @@ Architektur-Prinzipien siehe `CLAUDE.md`.
 | [`docs/INTENSIV_AUDIT_STANDORTBESTIMMUNG_2026-05-07.md`](docs/INTENSIV_AUDIT_STANDORTBESTIMMUNG_2026-05-07.md) | Aktuelle Standortbestimmung mit Notenskala |
 | [`docs/AUDIT_SCHLUSSANALYSE_2026-05-06.md`](docs/AUDIT_SCHLUSSANALYSE_2026-05-06.md) | Schlussanalyse mit allen Befunden |
 | [`docs/TEST_BRIEFING_2026-05-07.md`](docs/TEST_BRIEFING_2026-05-07.md) | Briefing fuer externe Tester |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Was erreicht ist + offene Punkte priorisiert |
+| [`docs/adr/`](docs/adr/) | Architecture Decision Records (5 ADRs) |
 
 ## Status & Lizenz
 
