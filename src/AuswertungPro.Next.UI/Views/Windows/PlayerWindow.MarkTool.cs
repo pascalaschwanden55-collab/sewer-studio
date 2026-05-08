@@ -134,6 +134,18 @@ public partial class PlayerWindow
     {
         // Window-Lifecycle-Guard fuer async-void-Methode
         if (_isWindowClosed) return;
+
+        // Slice 1 (Operateur-Annotation): wenn der Operator-Box-Tool aktiv ist,
+        // route auf den Operator-Pfad — das Rectangle-Tool teilt sich die
+        // CodingOverlayPopup-Pipeline mit dem Mark-Tool, aber das Sample-
+        // Schreiben laeuft anders (kein Code-Picker, kein Teacher-Annotation-
+        // Store, sondern OperateurAnnotationService).
+        if (_operatorBoxActive && _operatorActive is not null)
+        {
+            await HandleOperatorBoxCompleteAsync();
+            return;
+        }
+
         try
         {
             var overlay = _codingVm?.CurrentOverlay;

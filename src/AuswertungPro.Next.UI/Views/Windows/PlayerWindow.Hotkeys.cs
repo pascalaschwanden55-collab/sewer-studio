@@ -15,6 +15,16 @@ public partial class PlayerWindow
 
     private void PlayerWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        // Slice 1 (Operateur-Annotation): wenn der Submodus aktiv ist, hat er
+        // Vorrang. ESC verlaesst dann nur den Submodus und nicht den ganzen
+        // Trainings-Modus — sonst wuerde der Operator unbeabsichtigt
+        // mehrere Klicks tief aussteigen.
+        if (_isOperatorMode && Operator_TryHandleKey(e))
+        {
+            e.Handled = true;
+            return;
+        }
+
         // ESC im Trainings-Modus = Notausstieg. Ohne diese Zeile fing das Popup-
         // Fadenkreuz alle Mausklicks ab und der Toggle-Button war nicht mehr
         // erreichbar (UI-Trap).

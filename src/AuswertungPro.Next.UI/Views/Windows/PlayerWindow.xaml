@@ -1156,6 +1156,87 @@
                     </StackPanel>
                 </ScrollViewer>
             </Border>
+
+            <!-- ═════════ OPERATEUR-ANNOTATION (Slice 1, Phase 7) ═════════
+                 Sub-Panel innerhalb der Trainings-Modus-Spalte. Zeigt die
+                 PDF-Codes als Aufgabenliste. Box-Overlay nutzt das vorhandene
+                 CodingOverlayPopup/Canvas-Pattern (B6: WPF-Airspace mit LibVLC).
+            -->
+            <Border x:Name="OperatorSidePanel" Grid.Column="2"
+                    Visibility="Collapsed"
+                    Margin="8,0,0,0"
+                    Background="{DynamicResource CardGlassBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    CornerRadius="10" Padding="10"
+                    BorderThickness="1">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Width="260">
+                        <TextBlock Text="OPERATEUR-ANNOTATION"
+                                   FontSize="{StaticResource TypeSmall}" FontWeight="Bold"
+                                   Foreground="{DynamicResource AccentBrush}"
+                                   Margin="0,0,0,8"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="{StaticResource TypeCaption}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,0,0,10">
+                            Code aus der Liste waehlen &#x2192; Box ueber Schaden ziehen &#x2192; SAM-Maske bestaetigen. Sample landet in Store + KB + YOLO-Datensatz.
+                        </TextBlock>
+
+                        <Border Background="{DynamicResource HeaderBrush}" CornerRadius="8"
+                                Padding="10,8" Margin="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Text="STATUS" Style="{StaticResource SectionLabel}"/>
+                                <TextBlock x:Name="TxtOperatorStatus"
+                                           Text="Keine Sitzung — Haltungsordner importieren."
+                                           FontSize="{StaticResource TypeSmall}" Foreground="{DynamicResource TextBrush}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock x:Name="TxtOperatorProgress"
+                                           Text=""
+                                           FontSize="{StaticResource TypeMicro}" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="CODES AUS PDF" Style="{StaticResource SectionLabel}"/>
+                        <ListBox x:Name="OperatorCodeList"
+                                 FontSize="{StaticResource TypeSmall}"
+                                 Margin="0,0,0,8"
+                                 MaxHeight="320"
+                                 SelectionChanged="OperatorCodeList_SelectionChanged"
+                                 ToolTip="Klick: Code waehlen + zum Meterstand springen. Hotkeys: Strg+Eingabe = Bestaetigen, Strg+Umsch+Z = Ueberspringen, Strg+R = Nicht zutreffend."/>
+
+                        <StackPanel Orientation="Vertical" Margin="0,0,0,8">
+                            <Button x:Name="BtnOperatorBox"
+                                    Content="&#x25A2; Box ziehen + SAM"
+                                    Style="{StaticResource PlayerPrimaryButton}"
+                                    Click="OperatorBox_Click"
+                                    IsEnabled="False"
+                                    Margin="0,0,0,4"
+                                    ToolTip="Aktiviert das Rechteck-Tool. Box ueber den Schaden ziehen, SAM segmentiert automatisch."/>
+                            <Button x:Name="BtnOperatorSkip"
+                                    Content="&#x21B7; Code ueberspringen"
+                                    Style="{StaticResource PlayerButton}"
+                                    Click="OperatorSkip_Click"
+                                    IsEnabled="False"
+                                    Margin="0,0,0,4"
+                                    ToolTip="Aktuellen Code als 'Skipped' markieren (z.B. Frame unscharf)"/>
+                            <Button x:Name="BtnOperatorReject"
+                                    Content="&#x2716; Nicht zutreffend"
+                                    Style="{StaticResource PlayerButton}"
+                                    Click="OperatorReject_Click"
+                                    IsEnabled="False"
+                                    Margin="0,0,0,4"
+                                    ToolTip="Code als Protokollfehler markieren"/>
+                        </StackPanel>
+
+                        <Button x:Name="BtnOperatorExit"
+                                Content="Sitzung beenden"
+                                Style="{StaticResource PlayerButton}"
+                                Click="OperatorExit_Click"
+                                Margin="0,8,0,0"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
         </Grid>
 
         <!-- â•â•â•â•â•â•â• CODING-WERKZEUGE (nur im Codier-Modus sichtbar) â•â•â•â•â•â•â• -->

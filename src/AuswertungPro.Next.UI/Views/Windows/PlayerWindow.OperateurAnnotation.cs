@@ -1,8 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media.Imaging;
 using AuswertungPro.Next.Application.Ai.Annotation;
+using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -23,6 +31,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class PlayerWindow
 {
     private bool _isOperatorMode;
+    private bool _operatorBoxActive;        // Phase 7: Box-Tool aktiv?
     private OperateurAnnotationSession? _operatorSession;
     private CodeTask? _operatorActive;
     private IOperateurAnnotationService? _operatorService;
@@ -60,6 +69,19 @@ public partial class PlayerWindow
         _operatorActive = null;
         _isOperatorMode = true;
 
+        // UI: OperatorPanel sichtbar, TrainingPanel raus. Code-Liste direkt
+        // an Tasks binden (B5: kein VM, ItemsSource per Code-Behind).
+        if (OperatorSidePanel != null)
+            OperatorSidePanel.Visibility = Visibility.Visible;
+        if (TrainingSidePanel != null)
+            TrainingSidePanel.Visibility = Visibility.Collapsed;
+        if (TrainingSidePanelColumn != null)
+            TrainingSidePanelColumn.Width = new GridLength(280);
+
+        if (OperatorCodeList != null)
+            OperatorCodeList.ItemsSource = session.Tasks;
+        UpdateOperatorStatusUi();
+
         // Erstes Pending-Task automatisch aktivieren (sofern vorhanden), damit
         // der Operateur direkt einsteigen kann.
         var first = session.FindFirstPending();
@@ -75,13 +97,61 @@ public partial class PlayerWindow
         _isOperatorMode = false;
         _operatorActive = null;
         _operatorSession = null;
+
+        if (OperatorSidePanel != null)
+            OperatorSidePanel.Visibility = Visibility.Collapsed;
+        if (OperatorCodeList != null)
+            OperatorCodeList.ItemsSource = null;
+        if (BtnOperatorSkip != null) BtnOperatorSkip.IsEnabled = false;
+        if (BtnOperatorReject != null) BtnOperatorReject.IsEnabled = false;
+    }
+
+    /// <summary>
+    /// Aktualisiert Status-Text + Progress-Text basierend auf der Session.
+    /// Nur Code-Behind-Schreiben gegen die x:Name-Elemente — kein Binding.
+    /// </summary>
+    private void UpdateOperatorStatusUi()
+    {
+        if (_operatorSession is null)
+        {
+            if (TxtOperatorStatus != null)
+                TxtOperatorStatus.Text = "Keine Sitzung — Haltungsordner importieren.";
+            if (TxtOperatorProgress != null) TxtOperatorProgress.Text = "";
+            return;
+        }
+
+        var total = _operatorSession.Tasks.Count;
+        var done = 0;
+        foreach (var t in _operatorSession.Tasks)
+            if (OperateurAnnotationSession.IsTerminal(t.State)) done++;
+
+        if (TxtOperatorProgress != null)
+            TxtOperatorProgress.Text = $"{done}/{total} Codes erledigt";
+
+        if (TxtOperatorStatus != null)
+        {
+            if (_operatorActive is null)
+                TxtOperatorStatus.Text = total == done && total > 0
+                    ? "Alle Codes erledigt."
+                    : "Code aus Liste waehlen.";
+            else
+                TxtOperatorStatus.Text =
+                    $"Aktiv: {_operatorActive.Code} @ {_operatorActive.Meterstand:F2} m";
+        }
+
+        var hasActiveNonTerminal = _operatorActive is not null
+            && !OperateurAnnotationSession.IsTerminal(_operatorActive.State);
+        if (BtnOperatorBox != null) BtnOperatorBox.IsEnabled = hasActiveNonTerminal;
+        if (BtnOperatorSkip != null) BtnOperatorSkip.IsEnabled = hasActiveNonTerminal;
+        if (BtnOperatorReject != null) BtnOperatorReject.IsEnabled = hasActiveNonTerminal;
     }
 
     /// <summary>
     /// Setzt das aktive CodeTask. Der Player wird auf die Position des Codes
     /// pausiert; Box+Preview eines vorigen, nicht-committed Tasks fallen
     /// zurueck auf Pending (kein Datenverlust, keine Halb-Annotationen).
-    /// Phase 7 ergaenzt das Seek auf den exakten Frame.
+    /// Mapping Meterstand-&gt;Frame-Zeit ist Sache des Importers (Slice 1
+    /// haelt die Suggested-Time im Request fest, kein automatisches Seek).
     /// </summary>
     public void SelectOperatorTask(CodeTask task)
     {
@@ -92,8 +162,13 @@ public partial class PlayerWindow
         _operatorActive = _operatorSession.Active;
 
         try { _player?.SetPause(true); } catch { /* best-effort */ }
-        // Seek auf Meterstand kommt in Phase 7 (Mapping Meterstand->Frame-Zeit
-        // ist keine reine Session-Logik, sondern lebt im Player).
+
+        // Selektion in der ListBox spiegeln, falls die Auswahl programmatisch
+        // (z.B. aus EnterOperatorMode oder nach Commit) angestossen wurde.
+        if (OperatorCodeList != null && !ReferenceEquals(OperatorCodeList.SelectedItem, task))
+            OperatorCodeList.SelectedItem = task;
+
+        UpdateOperatorStatusUi();
     }
 
     /// <summary>
@@ -110,9 +185,14 @@ public partial class PlayerWindow
 
         var next = _operatorSession.FindNextPending();
         if (next is not null)
+        {
             SelectOperatorTask(next);
+        }
         else
+        {
             _operatorActive = null;
+            UpdateOperatorStatusUi();
+        }
     }
 
     /// <summary>
@@ -128,9 +208,232 @@ public partial class PlayerWindow
 
         var next = _operatorSession.FindNextPending();
         if (next is not null)
+        {
             SelectOperatorTask(next);
+        }
         else
+        {
             _operatorActive = null;
+            UpdateOperatorStatusUi();
+        }
+    }
+
+    // ── XAML-Click-Handler (von OperatorSidePanel verdrahtet) ────────────
+
+    private void OperatorCodeList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_operatorSession is null) return;
+        if (OperatorCodeList?.SelectedItem is not CodeTask selected) return;
+        // Vermeide Loops, falls SelectOperatorTask die Selektion programmatisch
+        // gerade umsetzt.
+        if (ReferenceEquals(selected, _operatorActive)) return;
+        SelectOperatorTask(selected);
+    }
+
+    private void OperatorSkip_Click(object sender, RoutedEventArgs e)
+        => SkipOperatorActive("Skip-Button");
+
+    private void OperatorReject_Click(object sender, RoutedEventArgs e)
+        => RejectOperatorActive("Reject-Button");
+
+    private void OperatorExit_Click(object sender, RoutedEventArgs e)
+        => ExitOperatorMode();
+
+    private void OperatorBox_Click(object sender, RoutedEventArgs e)
+        => ActivateOperatorBoxTool();
+
+    /// <summary>
+    /// Aktiviert das Rectangle-Tool im Operator-Pfad. Reuse vom bestehenden
+    /// Mark-Tool-Pattern (B6: WPF-Airspace mit LibVLC) — gleiche
+    /// CodingOverlayPopup/Canvas-Pipeline wie ActivateMarkTool, nur mit
+    /// einem Operator-Routing-Flag.
+    /// </summary>
+    private void ActivateOperatorBoxTool()
+    {
+        if (_operatorActive is null) return;
+        if (OperateurAnnotationSession.IsTerminal(_operatorActive.State)) return;
+
+        try { _player?.SetPause(true); } catch { /* best-effort */ }
+
+        EnsureMarkOverlayReady();
+        if (_codingOverlayService is null) return;
+
+        _operatorBoxActive = true;
+        _codingOverlayService.ActiveTool = OverlayToolType.Rectangle;
+        if (_codingVm != null) _codingVm.CurrentOverlay = null;
+
+        if (CodingOverlayPopup != null)
+        {
+            CodingOverlayPopup.IsOpen = true;
+            UpdateCodingOverlayViewport();
+        }
+        if (CodingOverlayCanvas != null)
+        {
+            CodingOverlayCanvas.IsHitTestVisible = true;
+            CodingOverlayCanvas.Cursor = Cursors.Cross;
+        }
+
+        if (TxtOperatorStatus != null)
+            TxtOperatorStatus.Text = $"Box ueber {_operatorActive.Code} ziehen…";
+    }
+
+    /// <summary>Schliesst das Box-Overlay und setzt das Operator-Flag zurueck.</summary>
+    private void DeactivateOperatorBoxTool()
+    {
+        _operatorBoxActive = false;
+        if (_codingOverlayService is not null)
+        {
+            _codingOverlayService.CancelDraw();
+            _codingOverlayService.ActiveTool = OverlayToolType.None;
+        }
+        if (_codingVm is not null) _codingVm.CurrentOverlay = null;
+        if (CodingOverlayPopup != null) CodingOverlayPopup.IsOpen = false;
+        if (CodingOverlayCanvas != null)
+        {
+            CodingOverlayCanvas.IsHitTestVisible = false;
+            CodingOverlayCanvas.Cursor = Cursors.Arrow;
+        }
+    }
+
+    /// <summary>
+    /// Wird aus <see cref="HandleMarkDrawingComplete"/> early-branched gerufen,
+    /// wenn der Operator-Submodus eine Box gezeichnet hat. Snapshot, BBox aus
+    /// der Overlay-Geometrie ableiten, Service rufen, UI aktualisieren.
+    /// </summary>
+    private async Task HandleOperatorBoxCompleteAsync()
+    {
+        if (_isWindowClosed) return;
+        if (_operatorSession is null || _operatorActive is null)
+        {
+            DeactivateOperatorBoxTool();
+            return;
+        }
+
+        var overlay = _codingVm?.CurrentOverlay;
+        if (overlay is null || overlay.Points is null || overlay.Points.Count < 2)
+        {
+            DeactivateOperatorBoxTool();
+            return;
+        }
+
+        // Status fuer den Operateur waehrend SAM laeuft.
+        if (TxtOperatorStatus != null)
+            TxtOperatorStatus.Text = "SAM segmentiert …";
+
+        var actualSec = (_player?.Time ?? 0) / 1000.0;
+
+        // Frame in eine *stabile* Temp-Datei schreiben — CommitAsync kopiert
+        // das nach KI_BRAIN/frames/<CaseId>/<SampleId>.png. Wir geben den Temp
+        // Path nicht frei, der Service uebernimmt die Finalisierung.
+        var tmpPath = Path.Combine(Path.GetTempPath(),
+            $"sewerstudio_operator_{Guid.NewGuid():N}.png");
+        try
+        {
+            TakeSnapshotSafe(tmpPath);
+            for (var i = 0; i < 30; i++)
+            {
+                await Task.Delay(50);
+                if (File.Exists(tmpPath) && new FileInfo(tmpPath).Length > 100) break;
+            }
+            if (!File.Exists(tmpPath))
+            {
+                if (TxtOperatorStatus != null)
+                    TxtOperatorStatus.Text = "Frame-Capture leer — Video pausiert?";
+                DeactivateOperatorBoxTool();
+                return;
+            }
+
+            var (frameW, frameH) = ReadPngDimensions(tmpPath);
+            var box = BuildBoxFromOverlay(overlay);
+
+            try
+            {
+                var result = await CommitOperatorActiveAsync(
+                    box: box,
+                    videoFrameIndex: 0,         // Slice 1: nicht aus Frame-Index abgeleitet
+                    actualFrameTimeSeconds: actualSec,
+                    frameWidth: frameW,
+                    frameHeight: frameH,
+                    framePath: tmpPath,
+                    ct: CancellationToken.None);
+
+                if (TxtOperatorStatus != null)
+                {
+                    TxtOperatorStatus.Text = result.IsSuccess
+                        ? $"Sample {result.SampleId[..8]}… gespeichert."
+                        : $"Fehler: {result.Error}";
+                }
+                UpdateOperatorStatusUi();
+            }
+            catch (Exception ex)
+            {
+                if (TxtOperatorStatus != null)
+                    TxtOperatorStatus.Text = $"Fehler: {ex.Message}";
+            }
+        }
+        finally
+        {
+            try { if (File.Exists(tmpPath)) File.Delete(tmpPath); } catch { }
+            DeactivateOperatorBoxTool();
+        }
+    }
+
+    private static BoundingBoxNormalized BuildBoxFromOverlay(OverlayGeometry overlay)
+    {
+        var minX = overlay.Points.Min(p => p.X);
+        var maxX = overlay.Points.Max(p => p.X);
+        var minY = overlay.Points.Min(p => p.Y);
+        var maxY = overlay.Points.Max(p => p.Y);
+        return new BoundingBoxNormalized(
+            XCenter: (minX + maxX) / 2.0,
+            YCenter: (minY + maxY) / 2.0,
+            Width: Math.Max(maxX - minX, 0.001),
+            Height: Math.Max(maxY - minY, 0.001));
+    }
+
+    private static (int Width, int Height) ReadPngDimensions(string path)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
+        var decoder = new PngBitmapDecoder(stream,
+            BitmapCreateOptions.None, BitmapCacheOption.Default);
+        var frame = decoder.Frames[0];
+        return (frame.PixelWidth, frame.PixelHeight);
+    }
+
+    // ── Hotkeys (wird aus PlayerWindow_PreviewKeyDown geroutet) ──────────
+
+    /// <summary>
+    /// Operator-spezifische Hotkeys. Liefert <c>true</c>, wenn die Taste
+    /// behandelt wurde — der Aufrufer setzt dann <c>e.Handled = true</c>.
+    /// Wird nur gerufen, wenn <see cref="_isOperatorMode"/> aktiv ist.
+    /// </summary>
+    private bool Operator_TryHandleKey(KeyEventArgs e)
+    {
+        var ctrl = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
+        var shift = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
+
+        // ESC: Operator-Modus verlassen (vor dem Trainings-ESC-Notausstieg).
+        if (e.Key == Key.Escape)
+        {
+            ExitOperatorMode();
+            return true;
+        }
+
+        // Strg+Umsch+Z: aktuellen Code ueberspringen.
+        if (ctrl && shift && e.Key == Key.Z)
+        {
+            SkipOperatorActive("Hotkey:Ctrl+Shift+Z");
+            return true;
+        }
+
+        // Strg+R: Code als nicht zutreffend markieren.
+        if (ctrl && !shift && e.Key == Key.R)
+        {
+            RejectOperatorActive("Hotkey:Ctrl+R");
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
