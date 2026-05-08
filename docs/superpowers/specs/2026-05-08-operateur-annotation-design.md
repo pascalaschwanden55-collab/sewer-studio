@@ -41,25 +41,43 @@ Domain  ─►  Application  ─►  Infrastructure  ─►  UI
 
 ```
 src/AuswertungPro.Next.Domain/Ai/Training/
-  TrainingSample.cs                      ← ERWEITERT (Mask-Felder)
-  SourceTypeNames.cs                     ← ERWEITERT ("OperateurAnnotation")
+  TrainingSample.cs                      ← ERWEITERT (Mask-Felder +
+                                          SourceTypeNames-Konstante
+                                          "OperateurAnnotation" in
+                                          gleicher Datei)
 
 src/AuswertungPro.Next.Application/Ai/Annotation/
   IOperateurAnnotationService.cs         ← NEU
   OperateurAnnotationModels.cs           ← NEU (DTOs)
   OperateurAnnotationSession.cs          ← NEU (Session-State)
+  ITrainingSamplesWriter.cs              ← NEU (Adapter-Vertrag)
+  IKnowledgeBaseIndexer.cs               ← NEU (Adapter-Vertrag)
+  IYoloDatasetWriter.cs                  ← NEU (Adapter-Vertrag)
+
+src/AuswertungPro.Next.Application/Ai/Pipeline/
+  VisionPipelineDtos.cs                  ← ERWEITERT (SamRequest.ReturnPolygon,
+                                          SamMaskResult.PolygonPoints/PolygonJson)
+
+src/AuswertungPro.Next.Application/Ai/Teacher/
+  VsaYoloClassMap.cs                     ← ERWEITERT (TryGetClassId-Variante
+                                          ohne Auto-Create)
 
 src/AuswertungPro.Next.Infrastructure/Ai/Annotation/
   OperateurAnnotationService.cs          ← NEU (Implementation)
+  TrainingSamplesWriterAdapter.cs        ← NEU (delegiert an statischen Store)
+  KnowledgeBaseIndexerAdapter.cs         ← NEU (delegiert an Manager)
 
 src/AuswertungPro.Next.Infrastructure/Ai/Training/
-  YoloDatasetExportService.cs            ← ERWEITERT (AppendSampleAsync)
+  YoloDatasetExportService.cs            ← ERWEITERT (AppendSampleAsync,
+                                          implementiert IYoloDatasetWriter)
 
 src/AuswertungPro.Next.UI/Views/Windows/
   PlayerWindow.OperateurAnnotation.cs    ← NEU (Partial)
 
-sidecar/main.py (oder /segment/sam-Endpoint)
-                                         ← ERWEITERT (return_polygon-Flag)
+sidecar/sidecar/schemas/segmentation.py  ← ERWEITERT (SamRequest.return_polygon,
+                                          SamMaskResult.polygon_points)
+sidecar/sidecar/routes/sam.py            ← ERWEITERT (Polygon im Response
+                                          weiterreichen)
 ```
 
 ### 1.3 Zwei-Phasen-API (Vertrag)
@@ -82,22 +100,55 @@ public interface IOperateurAnnotationService
 
 Damit `OperateurAnnotationService` testbar bleibt (Stub-Sidecar +
 Mock-Store/-YOLO/-KB), brauchen die folgenden bestehenden Klassen
-**Interfaces oder Adapter**:
+**Interfaces / Adapter mit echter API-Semantik**:
 
-| Bestehende Klasse | Mocking-Bedarf | Vorschlag |
+| Bestehende Klasse | Reale API | Adapter-Vertrag (NEU) |
 |---|---|---|
-| `TrainingSamplesStore` | static class, schwer mockbar | Adapter: `ITrainingSamplesWriter` mit `Add(TrainingSample)`, `Update(TrainingSample)`, `TryGetByCaseAndCode(string, string, double)`. Implementation delegiert an die statische Klasse. |
-| `KnowledgeBaseManager` | konkrete Klasse | falls noch kein Interface vorhanden: `IKnowledgeBaseIndexer` mit `IndexSampleAsync(TrainingSample, CancellationToken)`. |
-| `YoloDatasetExportService` | konkrete Klasse | `IYoloDatasetWriter` mit `AppendSampleAsync(TrainingSample, CancellationToken)`. |
-| `VisionPipelineClient` | konkrete Klasse, aber bereits via `HttpClient` injizierbar | Stub-Pattern wie in `SidecarContractTests` reicht. |
-| `VsaYoloClassMap` | static-Methoden | direkt nutzen, keine Adapter — gibt nur stabile IDs zurueck, keine I/O. |
+| `TrainingSamplesStore` (static) | `LoadAsync()`, `SaveAsync(list)`, `MergeAndSaveAsync(list)`, `MergeOrUpdateAsync(samples)` | `ITrainingSamplesWriter` mit drei klar formulierten Methoden:<br>`AppendAsync(TrainingSample, CancellationToken)` — Single-Sample-Schreiben (intern via `MergeAndSaveAsync` mit Single-Element-Liste).<br>`UpdateIndexStateAsync(string sampleId, KbIndexState state, CancellationToken)` — gezieltes Status-Update per SampleId (intern: Load + Find + Update + Save).<br>`FindCommittedAsync(string caseId, string sourceType, string code, double meterTolerance, CancellationToken)` — fuer wiederholten Import (Load + Filter). |
+| `KnowledgeBaseManager` | konkrete Klasse | `IKnowledgeBaseIndexer` mit `IndexSampleAsync(TrainingSample, CancellationToken)`. Adapter delegiert an Manager. |
+| `YoloDatasetExportService` | Batch-orientiert, kein Single-Append | `IYoloDatasetWriter.AppendSampleAsync(TrainingSample, CancellationToken)`. Service implementiert das Interface direkt; neue Methode kommt in den bestehenden Service. |
+| `VisionPipelineClient` | konkret, `HttpClient` injizierbar | Stub-Pattern wie in `SidecarContractTests` reicht — kein zusaetzliches Interface noetig. |
+| `VsaYoloClassMap` (static) | `GetClassId(code)` ist **auto-wachsend** und persistiert neue IDs sofort. Das ist gefaehrlich fuer einen stabilen YOLO-Datensatz. | Neue Methode `TryGetClassId(string vsaCode, out int classId)` ohne Auto-Create. `OperateurAnnotationService` nutzt **ausschliesslich** diese Variante. Wenn Code unbekannt: YOLO-Write skipped, Warning emittiert. |
 
-**Implementation der Seams gehoert in den Implementations-Plan**, nicht
-in diese Design-Phase. Der Plan muss klaeren ob die Adapter neu
-geschrieben oder durch Refactoring der bestehenden Klassen erreicht
-werden.
+**Wichtig zur `MergeOrUpdateAsync`-Realitaet**: das bestehende
+`MergeOrUpdateAsync` aktualisiert bei Signatur-Treffer nur ausgewaehlte
+Felder (Status, Notes, MatchLevel, KiCode, KbIndexState, SourceType,
+TechniqueGrade, Rohrmaterial, NennweiteMm, IsKorrigiert, QualityGateLevel)
+— **NICHT** FramePath, BBox, Mask-Felder, FrameDeltaSeconds. Fuer
+Operateur-Annotation ist das richtig: das Sample wird beim ersten
+`AppendAsync` mit allen Feldern geschrieben, spaeter wird **nur** der
+KbIndexState aktualisiert. Wenn der Adapter spaeter mehr Felder
+aktualisieren soll, muss `MergeOrUpdateAsync` erweitert werden — das
+ist explizit Slice-2-Thema.
+
+**Implementation der Seams gehoert in den Implementations-Plan**.
+Adapter-Klassen sind in 1.2 als zu erstellende Dateien aufgefuehrt.
 
 ## 2. UI im PlayerWindow.TrainingMode
+
+### 2.0 Abgrenzung zum bestehenden TrainingMode
+
+`PlayerWindow.TrainingMode.cs` enthaelt heute bereits SAM-/Box-/
+Negativ-Sample-/Box-only-Logik fuer einen anderen Workflow
+(KI-Selbstlern-Modus mit `SourceTypeNames.TeacherAnnotation`).
+**Diese bestehende Logik bleibt unveraendert.**
+
+Operateur-Annotation kommt als **isolierter Submodus** im selben
+TrainingMode-Partial mit:
+
+- eigenen UI-Controls (`_operatorCodeList`, `_operatorOverlayCanvas`,
+  `_operatorConfirmButton` ...) — kein Reuse der bestehenden
+  Box-/SAM-Controls
+- eigenem Submode-Switch (`_operatorAnnotationActive`-Flag)
+- eigenem Save-Pfad (ueber `IOperateurAnnotationService`,
+  **nicht** ueber das bestehende Training-Save-Verhalten)
+- eigener Source-Type-Konstante (`OperateurAnnotation`,
+  nicht `TeacherAnnotation`)
+
+Damit wird sichergestellt, dass die Slice-1-Restriktionen (kein
+Multi-Box, keine Negativ-Samples, kein Box-only-Fallback) nicht
+durch versehentliches Wiederverwenden der bestehenden Pfade
+unterlaufen werden.
 
 ### 2.1 Layout
 
@@ -215,7 +266,9 @@ public sealed record MaskPreview(
     int MaskHeight,
     int MaskAreaPixels,
     double SamConfidence,
-    TimeSpan SamLatency);
+    TimeSpan SamLatency,
+    IReadOnlyList<string>? Warnings);    // z.B. "LowSamConfidence",
+                                         // "MaskTooSmall"
 
 public sealed record CommitResult(
     bool IsSuccess,                      // = StorePersisted
@@ -289,42 +342,77 @@ INPUT: AnnotationRequest + MaskPreview
 
 2. Frame.png finalisieren (temp → SampleId-Pfad)
 
-3. TrainingSamplesStore.Add(sample)               ← STORE = WAHRHEIT
+3. ITrainingSamplesWriter.AppendAsync(sample)     ← STORE = WAHRHEIT
+   (intern via Store.MergeAndSaveAsync mit Single-Element-Liste)
    ↑ failed: Abbruch, kein YOLO/KB
    ↑ success: StorePersisted = true
 
-4. YoloDatasetExportService.AppendSampleAsync(...)
-   - VsaYoloClassMap.GetClassId(code) — STABIL
-   - falls Code nicht in Map: skip YOLO, Warning emit
-   - Polygon aus Sidecar (return_polygon:true)
+4. IYoloDatasetWriter.AppendSampleAsync(sample)
+   - VsaYoloClassMap.TryGetClassId(code, out classId) — STABIL,
+     KEIN Auto-Create
+   - falls Code nicht mappbar: skip YOLO, Warning "UnknownYoloClass"
+   - Polygon aus MaskPreview.PolygonJson
    ↑ failed: YoloWritten = false, weiter zu KB
 
-5. KnowledgeBaseManager.IndexSampleAsync(...)
+5. IKnowledgeBaseIndexer.IndexSampleAsync(sample)
    ↑ failed:
-       sample.KbIndexState = Pending
-       Store.Update(sample) ← Status persistieren!
+       ITrainingSamplesWriter.UpdateIndexStateAsync(
+           sample.SampleId, KbIndexState.Pending)
        KbIndexed = false
 
 6. CommitResult zusammenstellen.
    IsSuccess = StorePersisted (alle anderen sind Status-Felder)
 ```
 
+Die Adapter-Interfaces (siehe 1.4) entkoppeln die Service-Logik von
+den konkreten statischen/I/O-Klassen — damit ist Stub-Mocking in
+Tests sauber moeglich.
+
 ### 3.5 Sidecar `/segment/sam` — Erweiterung
 
-Bestehender Endpoint bekommt einen zusaetzlichen Request-Parameter:
+Drei Stellen muessen erweitert werden — Sidecar **und** C#-DTOs:
+
+**Python-Sidecar** (`sidecar/sidecar/schemas/segmentation.py`):
 
 ```python
-# Sidecar
 class SamRequest(BaseModel):
     image_base64: str
     bounding_boxes: list[SamBoundingBox]
     pipe_diameter_mm: int | None = None
     return_polygon: bool = False    # NEU
+
+
+class SamMaskResult(BaseModel):
+    # ... bestehende Felder ...
+    polygon_points: list[list[float]] | None = None    # NEU
+                                                       # [[x, y], [x, y], ...]
 ```
 
-Wenn `return_polygon = true`: Response enthaelt zusaetzlich
-`polygon_points` (List of [x, y]-Paaren) pro Maske, vorbereinigt
-fuer YOLO-seg-Format.
+`sidecar/sidecar/routes/sam.py` reicht das Polygon im Response weiter
+(berechnet via `cv2.findContours(...) + cv2.approxPolyDP(...)` aus der
+binaeren Maske wenn `return_polygon=true`).
+
+**C#-DTOs** (`src/AuswertungPro.Next.Application/Ai/Pipeline/VisionPipelineDtos.cs`):
+
+```csharp
+public sealed record SamRequest(
+    [property: JsonPropertyName("image_base64")] string ImageBase64,
+    [property: JsonPropertyName("bounding_boxes")] IReadOnlyList<SamBoundingBox> BoundingBoxes,
+    [property: JsonPropertyName("point_prompts")] IReadOnlyList<SamPointPrompt>? PointPrompts = null,
+    [property: JsonPropertyName("pipe_diameter_mm")] int? PipeDiameterMm = null,
+    [property: JsonPropertyName("ring_scan")] RingScanParams? RingScan = null,
+    [property: JsonPropertyName("return_polygon")] bool ReturnPolygon = false   // NEU
+);
+
+public sealed record SamMaskResult(
+    // ... bestehende Felder ...
+    [property: JsonPropertyName("polygon_points")]
+        IReadOnlyList<IReadOnlyList<double>>? PolygonPoints = null   // NEU
+);
+```
+
+Defaults sind ruckwaertskompatibel — bestehende Aufrufer brauchen
+keine Aenderung.
 
 ## 4. Workflow + Edge-Cases
 
@@ -355,10 +443,10 @@ Trainingsmodus
 |---|---|
 | Sidecar nicht erreichbar | PreviewMaskAsync wirft. Toast "Sidecar nicht erreichbar". Confirm bleibt disabled. **Slice 1: kein Box-only-Fallback.** |
 | SAM-Confidence < 0.3 | Maske wird angezeigt, Status-Panel Warning. Confirm aktiv. Sample bekommt `Warnings = ["LowSamConfidence"]`. |
-| Code nicht in `VsaYoloClassMap` | Status-Panel: "Code in YOLO-Map fehlt — Sample geht nur in KB". CommitAsync skipped YOLO-Write. CommitResult.YoloWritten = false. |
-| `TrainingSamplesStore.Add` failed | CommitResult.IsSuccess = false. CodeTask.State = Error. Error-Dialog zeigt Grund. |
+| Code nicht in `VsaYoloClassMap` (`TryGetClassId` returns false) | Status-Panel: "Code in YOLO-Map fehlt — Sample geht nur in KB". CommitAsync skipped YOLO-Write. CommitResult.YoloWritten = false, Warning "UnknownYoloClass". **Wichtig:** kein Auto-Create der Class-ID — sonst werden YOLO-Datensatz-IDs leise instabil. |
+| `ITrainingSamplesWriter.AppendAsync` failed | CommitResult.IsSuccess = false. CodeTask.State = Error. Error-Dialog zeigt Grund. |
 | YOLO-Write failed | Store hat Sample, KB versucht. CodeTask bleibt Committed. Toast "YOLO-Datensatz nicht beschreibbar". |
-| KB-Indexierung failed | Sample.KbIndexState = Pending, Store.Update. CodeTask Committed. KbIngestionPipeline (existiert) zieht spaeter nach. |
+| KB-Indexierung failed | `ITrainingSamplesWriter.UpdateIndexStateAsync(sampleId, Pending)` aufgerufen. CodeTask Committed. KbIngestionPipeline (existiert) zieht spaeter nach. |
 | Streckenschaden | **Slice 1: nur 1 Sample am MeterCenter.** Multi-Sample Slice 2. |
 | User wechselt Code im PreviewReady | Modal "Verwerfen / Hier bleiben / Bestaetigen+wechseln". |
 | Wiederholter Import einer Haltung | Beim Import: Store-Query nach `CaseId+SourceType=OperateurAnnotation`. Bekannte Codes mit ±0.5m-Toleranz als Committed initialisieren. |
@@ -419,18 +507,31 @@ nicht hart festgenagelt:
   PreviewReady → Committed)
 - DTO-Roundtrip JSON
 
-**Infrastructure-Tests**:
+**Infrastructure-Tests** (mit Stub-Sidecar + Mock-Adaptern fuer
+`ITrainingSamplesWriter`, `IKnowledgeBaseIndexer`, `IYoloDatasetWriter`):
 - `OperateurAnnotationService.PreviewMaskAsync`:
   - Happy: Sidecar liefert Maske + Polygon
   - Sidecar 503: wirft mit klarer Message
-  - Niedrige Confidence: Warning im Preview
+  - Niedrige Confidence: `MaskPreview.Warnings` enthaelt "LowSamConfidence"
 - `OperateurAnnotationService.CommitAsync`:
   - Happy: alle drei Schritte erfolgreich
-  - Store fails: Abbruch, IsSuccess=false
-  - YOLO fails: Store + KB ok, YoloWritten=false
-  - KB fails: Store + YOLO ok, KbIndexState=Pending, Store.Update aufgerufen
-  - Code unbekannt in `VsaYoloClassMap`: skip YOLO, Warning
+  - `ITrainingSamplesWriter.AppendAsync` fails: Abbruch, IsSuccess=false
+  - `IYoloDatasetWriter` fails: Store + KB ok, YoloWritten=false
+  - `IKnowledgeBaseIndexer` fails: Store + YOLO ok, KbIndexState=Pending,
+    `ITrainingSamplesWriter.UpdateIndexStateAsync` wurde aufgerufen
+  - `VsaYoloClassMap.TryGetClassId` returns false: skip YOLO,
+    Warning "UnknownYoloClass" im CommitResult
 - Frame-Cleanup: temp-Frame nach Erfolg umbenannt, nach Fehler geloescht
+
+**Adapter-Tests** (Infrastructure):
+- `TrainingSamplesWriterAdapter.AppendAsync` schreibt via
+  `MergeAndSaveAsync` und Sample landet in der Datei
+- `TrainingSamplesWriterAdapter.UpdateIndexStateAsync` findet das
+  Sample per SampleId und aktualisiert nur `KbIndexState`
+- `TrainingSamplesWriterAdapter.FindCommittedAsync` filtert auf
+  `CaseId + SourceType + Code` mit Meter-Toleranz
+- `VsaYoloClassMap.TryGetClassId` mit unbekanntem Code: returns
+  false, **kein Eintrag im Map-File** (im Gegensatz zu `GetClassId`)
 
 **UI-Smoke** (ohne FlaUI):
 - ViewModel-Test: Session-Load, Active-Task-Selection
@@ -447,13 +548,52 @@ gruen, Build 0 Warnungen / 0 Fehler.
 
 ```
 1. Domain + Application — Vertrag fixieren
-2. Sidecar-Endpoint return_polygon-Flag
-3. Adapter/Interfaces fuer Store/YOLO/KB (Mocking-Voraussetzung)
-4. Infrastructure-Service mit Stub-Sidecar-Tests
-5. UI-Partial: Code-Liste + Hotkeys (ohne Box-Drag)
-6. UI: Box-Drag + Frame-Capture + Maske-Render
-7. End-to-End Live-Test
-8. Polishing (Wiederholt-Import, Cleanup, Toasts)
+   - TrainingSample-Erweiterung (Mask-Felder + FrameDeltaSeconds)
+   - SourceTypeNames.OperateurAnnotation in TrainingSample.cs
+   - DTOs (AnnotationRequest, MaskPreview mit Warnings, CommitResult)
+   - OperateurAnnotationSession + CodeTask + States
+   - Adapter-Interfaces (ITrainingSamplesWriter, IKnowledgeBaseIndexer,
+     IYoloDatasetWriter)
+
+2. VsaYoloClassMap erweitern
+   - Neue Methode TryGetClassId(code, out id) ohne Auto-Create
+   - Bestehende GetClassId bleibt fuer andere Konsumenten unveraendert
+
+3. Sidecar-Endpoint + C#-DTOs
+   - sidecar/schemas/segmentation.py: return_polygon, polygon_points
+   - sidecar/routes/sam.py: cv2-Polygon-Approximation
+   - VisionPipelineDtos.cs: SamRequest.ReturnPolygon,
+     SamMaskResult.PolygonPoints
+   - Sidecar-Live-Test mit return_polygon:true
+
+4. Adapter-Implementierungen in Infrastructure
+   - TrainingSamplesWriterAdapter: AppendAsync, UpdateIndexStateAsync,
+     FindCommittedAsync (delegiert an statische TrainingSamplesStore)
+   - KnowledgeBaseIndexerAdapter: delegiert an KnowledgeBaseManager
+   - YoloDatasetExportService.AppendSampleAsync (neu, implementiert
+     IYoloDatasetWriter)
+
+5. Infrastructure-Service mit Stub-Sidecar-Tests
+   - OperateurAnnotationService implementiert IOperateurAnnotationService
+   - Konstruktor injiziert: VisionPipelineClient, IYoloDatasetWriter,
+     IKnowledgeBaseIndexer, ITrainingSamplesWriter, VsaYoloClassMap-
+     Lookup-Helper
+   - Tests via StubHandler (Sidecar) + Mock-Adapter
+
+6. UI-Partial: Code-Liste + Hotkeys (ohne Box-Drag)
+   - eigene _operator...-Felder, isolierter Submode
+   - Code-Liste-Binding gegen OperateurAnnotationSession
+   - Smoke-Tests via ViewModel
+
+7. UI: Box-Drag + Frame-Capture + Maske-Render
+   - bestehendes Mark-Tool als Vorlage, aber eigener Overlay
+   - Frame-Capture wiederverwendet bestehende Snapshot-Logik
+   - Maske-Render aus PolygonJson (oder RLE-Fallback)
+
+8. End-to-End Live-Test gegen echten Sidecar
+
+9. Polishing (Wiederholt-Import via FindCommittedAsync,
+   Temp-Frame-Cleanup, Toasts, Doku)
 ```
 
 Geschaetzte Gesamtzeit: 2-3 Tage Solo-Entwicklung. Konkrete
@@ -486,7 +626,9 @@ Slice 1 ist fertig, wenn:
 | Frame-Capture vom VLC-Player flickert | mittel | bestehende Snapshot-Logik aus Codiermodus wiederverwenden |
 | SAM-Latenz bei grossen Frames | mittel | Frame vor SAM-Call auf 1024px schrumpfen |
 | Adapter-Schreiben fuer Store/YOLO/KB groesser als gedacht | mittel | im Implementations-Plan separat planen, ggf. erst Slice 1.5 |
-| `VsaYoloClassMap` luekenhaft fuer einige Codes | niedrig | Warning + Skip-YOLO-Pfad ist eingebaut |
+| `VsaYoloClassMap` luekenhaft fuer einige Codes | niedrig | Warning + Skip-YOLO-Pfad ist eingebaut, `TryGetClassId` ohne Auto-Create |
+| Bestehender TrainingMode wird versehentlich wiederverwendet | mittel | isolierter Submode mit eigenen `_operator...`-Feldern (siehe 2.0) |
+| `MergeOrUpdateAsync` aktualisiert Mask-Felder nicht | niedrig | Adapter-Vertrag (siehe 1.4) — Slice 1 schreibt einmal vollstaendig, danach nur KbIndexState-Update |
 | Polygon-Format Edge-Cases (sehr kleine Mask) | niedrig | Sidecar bereinigt, C# reicht durch |
 
 ## 7. Offene Punkte fuer den Implementations-Plan
