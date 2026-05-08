@@ -513,6 +513,12 @@ public partial class PlayerWindow
                 captureMeter = selMeter;
             }
 
+            // Haltungs-Kontext aus dem Record uebernehmen (Material/DN/Profil/Nutzung)
+            int? dnMm = null;
+            if (int.TryParse(_haltungRecord?.GetFieldValue("DN_mm"), System.Globalization.NumberStyles.Integer,
+                    System.Globalization.CultureInfo.InvariantCulture, out var dnParsed))
+                dnMm = dnParsed;
+
             var annotation = new AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotation
             {
                 AnnotationId = annotationId,
@@ -522,6 +528,10 @@ public partial class PlayerWindow
                 VideoTimestamp = TimeSpan.FromSeconds(timestampSec),
                 HaltungName = _haltungRecord?.GetFieldValue("Haltungsname"),
                 VideoPath = _videoPath,
+                Rohrmaterial = _haltungRecord?.GetFieldValue("Rohrmaterial"),
+                DnMm = dnMm,
+                Profil = _haltungRecord?.GetFieldValue("Profil"),
+                Nutzungsart = _haltungRecord?.GetFieldValue("Nutzungsart"),
                 ToolType = overlay.ToolType,
                 Points = new List<NormalizedPoint>(
                     overlay.Points.Select(p => new NormalizedPoint(p.X, p.Y))),

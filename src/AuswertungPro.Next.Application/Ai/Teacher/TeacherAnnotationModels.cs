@@ -29,6 +29,24 @@ public sealed class TeacherAnnotation
     public string? HaltungName { get; set; }
     public string? VideoPath { get; set; }
 
+    // --- Haltungs-Kontext (aus HaltungRecord uebernommen) ---
+    /// <summary>Rohrmaterial (z.B. "Polypropylen", "Beton", "PVC", "Steinzeug").
+    /// Hilft beim Filtern des Trainingsdatensatzes pro Material und beim
+    /// kontextuellen Embedding fuer KB-Retrieval (gleicher Schaden in
+    /// gleichem Material zaehlt mehr).</summary>
+    public string? Rohrmaterial { get; set; }
+
+    /// <summary>Nennweite in mm (z.B. 185, 250, 300).</summary>
+    public int? DnMm { get; set; }
+
+    /// <summary>Profil-Form (z.B. "Kreisprofil", "Eiform"). Aus dem OSD oder
+    /// dem Stammdaten-Feld der Haltung.</summary>
+    public string? Profil { get; set; }
+
+    /// <summary>Nutzungsart (z.B. "Schmutzabwasser", "Mischabwasser",
+    /// "Regenwasser") aus dem HaltungRecord.</summary>
+    public string? Nutzungsart { get; set; }
+
     // --- Geometrie (normiert 0.0-1.0) ---
     public OverlayToolType ToolType { get; set; }
     public List<NormalizedPoint> Points { get; set; } = new();
