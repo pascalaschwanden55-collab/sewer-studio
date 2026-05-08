@@ -104,6 +104,13 @@ public sealed class TrainingSample
     /// <summary>QualityGate-Ampel zum Sample-Zeitpunkt (Green/Yellow/Red).</summary>
     public string? QualityGateLevel { get; set; }
 
+    /// <summary>
+    /// Roadmap P1.3: Provenance — welcher Trainings-/Export-Run hat dieses
+    /// Sample erzeugt oder zuletzt geaendert? Optional; null fuer Samples
+    /// die vor Einfuehrung der Provenance entstanden sind.
+    /// </summary>
+    public string? TrainingRunId { get; set; }
+
     // ── SAM-Maske (Slice 1, Operateur-Annotation) ────────────────────────
     /// <summary>Run-Length-Encoded Maske vom Sidecar. Format-Tag in <see cref="SamMaskEncoding"/>.</summary>
     public string? SamMaskRle { get; set; }

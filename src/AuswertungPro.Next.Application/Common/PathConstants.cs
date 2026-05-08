@@ -27,6 +27,7 @@ public static class PathConstants
     public const string YoloClassMapFile = "yolo_class_map.json";
     public const string FewShotExamplesFile = "fewshot_examples.json";
     public const string SelfTrainingHistoryFile = "selftraining_history.json";
+    public const string TrainingRunsFile = "training_runs.json";
     public const string TrainingCenterFile = "training_center.json";
     public const string TrainingSettingsFile = "training_settings.json";
     public const string MirrorManifestFile = "manifest.json";
