@@ -65,12 +65,60 @@ public sealed class YoloRetrainOrchestrator : ITrainingOrchestrator
             return YoloRetrainResult.Skipped("Retraining laeuft bereits (Mutex belegt)");
         try
         {
-            return await RunIfEligibleCoreAsync(minNewApprovedSamples, epochs, imageSize, batch, ct)
+            return await RunWithProvenanceAsync(minNewApprovedSamples, epochs, imageSize, batch, ct)
                 .ConfigureAwait(false);
         }
         finally
         {
             _retrainMutex.Release();
+        }
+    }
+
+    /// <summary>
+    /// Phase 2.3: Wrapper, der jeden Retrain-Lauf in einen
+    /// <see cref="TrainingRun"/> einbettet. Das Resultat steuert ob
+    /// Complete/Cancel/Fail geschrieben wird:
+    /// - Skipped (Attempted=false) -> Cancel mit Status-Text als Grund
+    /// - Failed (Attempted=true, Deployed=false) -> Fail mit Status-Text
+    /// - Rejected (RejectedByGate=true) -> Fail mit Status-Text
+    /// - Deployed -> Complete mit NewApprovedSamples als samplesAffected
+    /// Bei Exceptions wird ebenfalls FailRunAsync aufgerufen, dann re-thrown.
+    /// </summary>
+    private async Task<YoloRetrainResult> RunWithProvenanceAsync(
+        int minNewApprovedSamples,
+        int epochs,
+        int imageSize,
+        int batch,
+        CancellationToken ct)
+    {
+        var run = await TrainingRunsStore.BeginRunAsync(
+            TrainingRunTriggers.YoloRetrain,
+            notes: $"min={minNewApprovedSamples} epochs={epochs} imgsz={imageSize} batch={batch}")
+            .ConfigureAwait(false);
+
+        try
+        {
+            var result = await RunIfEligibleCoreAsync(minNewApprovedSamples, epochs, imageSize, batch, ct)
+                .ConfigureAwait(false);
+
+            if (!result.Attempted)
+                await TrainingRunsStore.CancelRunAsync(run.RunId, result.StatusText).ConfigureAwait(false);
+            else if (result.Deployed)
+                await TrainingRunsStore.CompleteRunAsync(run.RunId, samplesAffected: result.NewApprovedSamples).ConfigureAwait(false);
+            else
+                await TrainingRunsStore.FailRunAsync(run.RunId, result.StatusText, samplesAffected: result.NewApprovedSamples).ConfigureAwait(false);
+
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            await TrainingRunsStore.CancelRunAsync(run.RunId, "Cancelled").ConfigureAwait(false);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await TrainingRunsStore.FailRunAsync(run.RunId, ex.Message).ConfigureAwait(false);
+            throw;
         }
     }
 
