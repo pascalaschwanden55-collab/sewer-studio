@@ -518,8 +518,18 @@ public partial class PlayerWindow
 
             await AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
 
-            // Markierung AUCH als CodingEvent in die KI-Befunde-Liste eintragen
-            if (_codingSessionService != null && _codingVm != null)
+            // Wenn der Code aus der IMPORT-Liste vorausgewaehlt war, ist die
+            // Haltung bereits korrekt codiert. Der User wollte nur "der KI
+            // zeigen wo der Code im Frame zu sehen ist" — pures Training.
+            // Deshalb KEIN CodingEvent zur Session hinzufuegen → kein
+            // Protokoll-Eintrag, der bestehende Code bleibt unveraendert.
+            // Die TeacherAnnotation oben enthaelt bereits Frame + BBox +
+            // YOLO-Label, das ist alles was YOLO/SAM zum Training braucht.
+            //
+            // Standard-Pfad (kein Preselected): wie vorher — Markierung als
+            // CodingEvent in die KI-Befunde-Liste, geht ins Protokoll bei
+            // Uebernehmen (urspruengliches Codier-Verhalten).
+            if (preselectedImport == null && _codingSessionService != null && _codingVm != null)
             {
                 var codingEntry = new ProtocolEntry
                 {
