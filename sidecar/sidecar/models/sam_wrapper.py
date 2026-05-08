@@ -231,7 +231,7 @@ def _predict_boxes_batched(
     except Exception as exc:
         logger.warning("SAM 2 Batch fehlgeschlagen (%d Boxen): %s — Fallback sequentiell", len(boxes), exc)
         for bbox in boxes:
-            _predict_single_box(predictor, bbox, masks_out, h, w, device)
+            _predict_single_box(predictor, bbox, masks_out, h, w, device, return_polygon)
 
 
 def _is_in_annulus(cx: float, cy: float, center_x: float, center_y: float,
