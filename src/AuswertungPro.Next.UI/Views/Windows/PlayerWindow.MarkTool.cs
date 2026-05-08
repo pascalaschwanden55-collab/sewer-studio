@@ -182,21 +182,21 @@ public partial class PlayerWindow
             // Training speichern: Frame + YOLO-Export + TeacherAnnotation + CodingEvent
             bool saved = await SaveMarkAsTrainingAsync(overlay, timestampSec, clockPos);
 
-            // Overlay entfernen und Canvas neu zeichnen.
-            // WICHTIG: preserveSamMasks=true — sonst werden die gerade von
-            // ShowSamPreviewAtMarkAsync gerenderten Masken durch
-            // ClearTransientCodingCanvas sofort wieder geloescht.
             if (_codingVm != null) _codingVm.CurrentOverlay = null;
-            RedrawCodingCanvas(includeManualOverlay: false, preserveSamMasks: true);
 
             if (saved)
             {
-                // Erfolgreich gespeichert → Tool deaktivieren
+                // Erfolgreich gespeichert → BBox + SAM-Maske beide loeschen,
+                // Tool deaktivieren. Frame ist jetzt clean fuer naechste Stelle.
+                Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+                RedrawCodingCanvas(includeManualOverlay: false, preserveSamMasks: false);
                 DeactivateMarkTool();
             }
             else
             {
-                // Abgebrochen → Tool bleibt aktiv, naechste Markierung kann sofort gezeichnet werden
+                // Abgebrochen → BBox weg, SAM-Maske bleibt sichtbar (User kann
+                // gleich neu markieren ohne dass die Voransicht verschwindet).
+                RedrawCodingCanvas(includeManualOverlay: false, preserveSamMasks: true);
                 if (_codingOverlayService != null)
                     _codingOverlayService.ActiveTool = _markToolType;
                 CodingOverlayCanvas.Cursor = Cursors.Cross;
