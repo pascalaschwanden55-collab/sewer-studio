@@ -12,7 +12,261 @@
 
 ---
 
-## File Structure
+## ⚠️ Plan-Korrekturen (Review 2026-05-08)
+
+Vor Implementation-Start: 6 Blocker am echten Code verifiziert und korrigiert.
+Tasks unten sind **mit diesen Korrekturen** auszufuehren — wo Task-Code und
+Korrektur kollidieren, gilt die Korrektur.
+
+### Blocker B1 — Sidecar: Polygon im Wrapper, nicht in der Route
+
+`sidecar/sidecar/routes/sam.py` hat **keinen Zugriff** auf die rohe numpy-Maske
+— die Route delegiert an den Wrapper. Polygon-Approximation gehoert in
+`sidecar/sidecar/models/sam_wrapper.py` (dort lebt `numpy.ndarray`).
+Plus: das Schema heisst real `MaskResult` (nicht `SamMaskResult`).
+
+**Patch fuer Task 7**:
+- `sidecar/sidecar/schemas/segmentation.py`: `class MaskResult(BaseModel)` um
+  `polygon_points: list[list[float]] | None = None` ergaenzen.
+- `sidecar/sidecar/schemas/segmentation.py`: `class SamRequest(BaseModel)` um
+  `return_polygon: bool = False` ergaenzen.
+- `sidecar/sidecar/models/sam_wrapper.py`: Polygon-Approximation **innerhalb**
+  der Wrapper-Methode (wo die binaere Maske als numpy-Array vorliegt), Polygon
+  als zusaetzliches Output zurueckgeben.
+- `sidecar/sidecar/routes/sam.py`: Polygon-Wert vom Wrapper durchreichen,
+  **kein** cv2-Import in der Route.
+
+### Blocker B2 — C# `SamMaskResult`: ergaenzen, nicht ersetzen
+
+Realer `SamMaskResult` hat **10 Felder**: `Label, Confidence, Bbox, MaskRle,
+MaskAreaPixels, ImageAreaPixels, HeightPixels, WidthPixels, CentroidX,
+CentroidY`. Der Plan-Code in Task 8 ersetzt den Record und verliert
+4 Felder. Stattdessen: am Ende `PolygonPoints` als optional ergaenzen.
+
+**Korrigierter Code fuer Task 8 Step 3** (`SamMaskResult`):
+```csharp
+public sealed record SamMaskResult(
+    [property: JsonPropertyName("label")] string Label,
+    [property: JsonPropertyName("confidence")] double Confidence,
+    [property: JsonPropertyName("bbox")] IReadOnlyList<double> Bbox,
+    [property: JsonPropertyName("mask_rle")] string MaskRle,
+    [property: JsonPropertyName("mask_area_pixels")] int MaskAreaPixels,
+    [property: JsonPropertyName("image_area_pixels")] int ImageAreaPixels,
+    [property: JsonPropertyName("height_pixels")] int HeightPixels,
+    [property: JsonPropertyName("width_pixels")] int WidthPixels,
+    [property: JsonPropertyName("centroid_x")] double CentroidX,
+    [property: JsonPropertyName("centroid_y")] double CentroidY,
+    [property: JsonPropertyName("polygon_points")]
+        IReadOnlyList<IReadOnlyList<double>>? PolygonPoints = null   // NEU
+);
+```
+
+`SamResponse` hat **4 Felder**: `Masks, ImageWidth, ImageHeight,
+InferenceTimeMs`. Test-Stubs in Task 13/14/15 muessen das beim Bauen von
+`SamResponse(...)` treffen — der Plan-Stub passt nicht zur echten Signatur.
+
+### Blocker B3 — `IYoloDatasetWriter.AppendSampleAsync` braucht Polygon
+
+Polygon-Punkte liegen nur in `MaskPreview.PolygonJson`, nicht in
+`TrainingSample`. Fuer YOLO-seg muss der Writer Polygon kennen.
+
+**Patch fuer Task 5 Step 3** (`IYoloDatasetWriter`):
+```csharp
+public interface IYoloDatasetWriter
+{
+    Task<string> AppendSampleAsync(
+        TrainingSample sample,
+        MaskPreview preview,    // NEU — Polygon-Quelle
+        CancellationToken ct);
+}
+```
+
+`OperateurAnnotationService.CommitAsync` reicht entsprechend `preview` durch.
+
+### Blocker B4 — YOLO-Pfad-Layout: `images/train/`, nicht `train/images/`
+
+Realer `YoloDatasetExportService.ExportAsync` nutzt:
+```
+{outputDir}/images/train/   {outputDir}/images/val/
+{outputDir}/labels/train/   {outputDir}/labels/val/
+```
+Plan in Task 12 hatte es vertauscht. Plus: der bestehende Service hat
+**keinen** Konstruktor mit `_datasetRoot`-Field — er nimmt `outputDir` als
+Methoden-Parameter. Fuer Tests entweder
+- `AppendSampleAsync(sample, preview, outputDir, ct)` (zusaetzlicher Param), oder
+- ein neuer Konstruktor mit injizierbarem Default-Dataset-Root.
+
+**Empfehlung**: Konstruktor-Variante als Erweiterung, damit DI den Default
+liefert (`D:/yolo_sewer_v1`) und Tests einen Test-Pfad uebergeben koennen.
+
+**Wichtige Klippe**: `ExportAsync` baut die Class-Map aktuell **selbst** aus
+den Sample-Codes (`classMap` in der Methode), nutzt **nicht**
+`VsaYoloClassMap`. Wenn `AppendSampleAsync` `VsaYoloClassMap.TryGetClassId`
+nutzt, sind Class-IDs zwischen Append- und Export-Pfad **inkonsistent**.
+
+**Loesung in Slice 1**: `AppendSampleAsync` schreibt eine `data.yaml` mit der
+gleichen Klassen-Reihenfolge wie `VsaYoloClassMap` (oder die Klassen-Map
+wird beim ersten Append einmal initialisiert und gespeichert). Bestehende
+`ExportAsync`-Logik bleibt unangetastet, ist aber als Tech-Debt zu
+dokumentieren ("Inkompatibilitaet Append vs. Export-Pfad — Slice 2").
+
+### Blocker B5 — Kein `PlayerWindowViewModel`
+
+`PlayerWindow` ist **eine** partial class ueber 21 Dateien — **es gibt kein
+Window-VM**. Bestehendes Pattern (siehe `PlayerWindow.MarkTool.cs`,
+`PlayerWindow.TrainingMode.cs`): direkte Felder im Window plus XAML-Bindings
+gegen `x:Name`-Elemente.
+
+**Patch fuer Task 16/18/19/20/22/23**:
+- `OperateurAnnotationSession` und `CodeTask? Active` als **direkte Felder**
+  im PlayerWindow.OperateurAnnotation.cs:
+  ```csharp
+  private OperateurAnnotationSession? _operatorSession;
+  private CodeTask? _operatorActive;
+  ```
+- DataBinding gegen `_operatorSession.Tasks` per Code-Behind:
+  ```csharp
+  OperatorCodeList.ItemsSource = _operatorSession?.Tasks;
+  ```
+- ListBox-`SelectedItem` per `SelectionChanged`-Handler statt Two-Way-Binding.
+- Task 16 entfaellt komplett (keine VM-Erweiterung), bzw. wird zu
+  "Field-Initialisierung im Partial".
+
+### Blocker B6 — WPF-Airspace mit LibVLC: Canvas direkt funktioniert nicht
+
+Ein normales `Canvas` ueber dem `VideoView` ist im Airspace-Modus
+**unsichtbar**. Bestehendes Pattern in `PlayerWindow.MarkTool.cs` und
+`PlayerWindow.CodingOverlayRender.cs`: `Popup` mit eigenem Render oder
+`AdornerLayer` ueber dem VideoView-Container.
+
+**Patch fuer Task 20**:
+- **Nicht** `<Canvas x:Name="OperatorOverlayCanvas" .../>` direkt ueber
+  `VideoView` legen.
+- Stattdessen das bestehende Overlay-Pattern aus `PlayerWindow.MarkTool.cs`
+  uebernehmen (gleicher Pop-up-/Adorner-Mechanismus, der heute fuer Punkt/
+  Ellipse/Freihand/Rechteck-Markieren funktioniert).
+- Beim Implementieren: erst `PlayerWindow.MarkTool.cs` lesen, dann
+  identische Render-Pipeline fuer den neuen `_operator...`-Submodus
+  wiederverwenden.
+
+### Korrektur K1 — `FindCommittedAsync` braucht Meterstand-Parameter
+
+Mit `meterTolerance` aber ohne Anker-Meterstand ist die Toleranz sinnlos.
+
+**Patch fuer Task 5 Step 1, Task 10 Step 1+3, Task 25**:
+```csharp
+Task<IReadOnlyList<TrainingSample>> FindCommittedAsync(
+    string caseId,
+    string sourceType,
+    string code,
+    double meter,            // NEU — Anker-Meterstand
+    double meterTolerance,
+    CancellationToken ct);
+```
+
+Implementation in `TrainingSamplesWriterAdapter`:
+```csharp
+return all
+    .Where(s => string.Equals(s.CaseId, caseId, StringComparison.OrdinalIgnoreCase))
+    .Where(s => string.Equals(s.SourceType, sourceType, StringComparison.OrdinalIgnoreCase))
+    .Where(s => string.Equals(s.Code, code, StringComparison.OrdinalIgnoreCase))
+    .Where(s => Math.Abs(s.MeterStart - meter) <= meterTolerance)   // NEU
+    .ToList();
+```
+
+Test in Task 10: erwarte **2** statt 3 Treffer fuer `meter=10.0,
+tolerance=0.5` (10.0 + 10.3 sind drin, 12.0 nicht).
+
+### Korrektur K2 — `CommitAsync` setzt KB-Indexed bei Erfolg
+
+Bei KB-Erfolg muss der Store-Zustand auch auf `KbIndexState.Indexed`
+aktualisiert werden, sonst bleibt das Sample dauerhaft auf `None`.
+
+**Patch in Task 14 Step 3** (CommitAsync, KB-Block):
+```csharp
+// 3. KB (best-effort)
+bool kbIndexed = false;
+try
+{
+    await _indexer.IndexSampleAsync(sample, ct);
+    kbIndexed = true;
+    // Status persistieren — Indexed
+    try
+    {
+        await _writer.UpdateIndexStateAsync(
+            sampleId, Domain.Ai.Training.KbIndexState.Indexed, ct);
+    }
+    catch
+    {
+        warnings.Add("KbIndexedStateUpdateFailed");
+    }
+}
+catch (OperationCanceledException)
+{
+    throw;   // niemals als Warning schlucken
+}
+catch (Exception ex)
+{
+    warnings.Add($"KbFailed:{ex.Message}");
+    try
+    {
+        await _writer.UpdateIndexStateAsync(
+            sampleId, Domain.Ai.Training.KbIndexState.Pending, ct);
+    }
+    catch
+    {
+        warnings.Add("KbStateUpdateFailed");
+    }
+}
+```
+
+Gleiche `OperationCanceledException`-Behandlung in den Store- und
+YOLO-Bloecken — Cancellation wird durchgereicht, nicht als Warning
+maskiert.
+
+### Korrektur K3 — Temp-Frame-Finalisierung
+
+Plan erwaehnt nur das Loeschen von Temp-Frames, nicht das **Umbenennen**
+nach `%KI_BRAIN%/frames/<CaseId>/<SampleId>.png` bei erfolgreichem Commit.
+Das muss in `OperateurAnnotationService.CommitAsync` **vor** dem Store-
+Append passieren.
+
+**Ergaenzung in Task 14 Step 3** (vor "1. Store"):
+```csharp
+// 0. Frame finalisieren (temp -> KI_BRAIN/frames/<CaseId>/<SampleId>.png)
+var brainRoot = AuswertungPro.Next.Application.Common.KnowledgeRootProvider.GetRoot();
+var caseDir = Path.Combine(brainRoot, "frames", request.CaseId);
+Directory.CreateDirectory(caseDir);
+var finalFramePath = Path.Combine(caseDir, $"{sampleId}.png");
+File.Copy(request.FramePath, finalFramePath, overwrite: false);
+
+// sample bekommt finalen Pfad, nicht den temp-Pfad
+sample.FramePath = finalFramePath;
+```
+
+UI-seitig (Task 22/23): nach erfolgreichem Commit den temp-Pfad aufraeumen,
+**nicht** als FramePath im Sample verwenden.
+
+### Korrektur K4 — DI ueber `ServiceCollectionConfigurator`
+
+Real existiert `src/AuswertungPro.Next.UI/Composition/ServiceCollectionConfigurator.cs`
+(getestet via `ServiceCollectionConfiguratorTests`). Plan-Code in Task 22
+schreibt direkt in `App.xaml.cs` — falsch.
+
+**Patch fuer Task 22 Step 1**: Registrierungen in
+`ServiceCollectionConfigurator.cs` einfuegen, nicht in `App.xaml.cs`.
+
+### Korrektur K5 — Test-Stub-Signaturen
+
+Die Test-Stubs in Task 13 nutzen `new SamResponse(masks, 12.3)` mit zwei
+Argumenten. Realer Constructor hat **vier** Argumente:
+`SamResponse(Masks, ImageWidth, ImageHeight, InferenceTimeMs)`. Stubs in
+Tasks 13/14/15 entsprechend anpassen.
+
+Gleiches gilt fuer `new SamMaskResult(...)` — 10 Pflicht-Felder + optional
+Polygon (siehe B2).
+
+---
 
 | Datei | Status | Verantwortung |
 |---|---|---|
@@ -32,7 +286,7 @@
 | `src/AuswertungPro.Next.Infrastructure/Ai/Training/YoloDatasetExportService.cs` | MODIFY | AppendSampleAsync (Single-Sample) |
 | `src/AuswertungPro.Next.Infrastructure/Ai/Annotation/OperateurAnnotationService.cs` | CREATE | Service-Implementation |
 | `src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.OperateurAnnotation.cs` | CREATE | UI-Partial im TrainingMode |
-| `src/AuswertungPro.Next.UI/App.xaml.cs` | MODIFY | DI-Registrierung der neuen Services |
+| `src/AuswertungPro.Next.UI/Composition/ServiceCollectionConfigurator.cs` | MODIFY | DI-Registrierung der neuen Services (siehe K4) |
 | `tests/AuswertungPro.Next.Pipeline.Tests/` | CREATE | Diverse Test-Dateien (Tasks zeigen Pfade) |
 
 ---
@@ -604,6 +858,13 @@ git commit -m "feat(application): add operateur annotation session state"
 
 ### Task 5: Adapter-Interfaces + IOperateurAnnotationService
 
+> ⚠️ **Korrektur K1 (FindCommittedAsync) + Blocker B3 (IYoloDatasetWriter)** —
+> siehe Header "Plan-Korrekturen" oben. `FindCommittedAsync` braucht
+> `double meter`-Parameter; `IYoloDatasetWriter.AppendSampleAsync` braucht
+> `MaskPreview preview` als zusaetzlichen Parameter (Polygon-Quelle).
+> Die Code-Bloecke unten sind die **alten** Signaturen — bei der Implementation
+> mit den korrigierten Signaturen aus dem Header arbeiten.
+
 **Files:**
 - Create: `src/AuswertungPro.Next.Application/Ai/Annotation/ITrainingSamplesWriter.cs`
 - Create: `src/AuswertungPro.Next.Application/Ai/Annotation/IKnowledgeBaseIndexer.cs`
@@ -857,9 +1118,16 @@ git commit -m "feat(yolo-class-map): add TryGetClassId without auto-create"
 
 ### Task 7: Python-Sidecar — return_polygon + cv2-Polygon-Approximation
 
+> ⚠️ **Blocker B1 (Polygon im Wrapper, nicht in der Route)** — siehe Header.
+> `routes/sam.py` hat **keinen Zugriff** auf die rohe numpy-Maske; cv2-Approx
+> gehoert in `sidecar/sidecar/models/sam_wrapper.py`. Schema-Klasse heisst
+> `MaskResult` (nicht `SamMaskResult`). Vor Implementation: `sam_wrapper.py`
+> lesen und Polygon dort produzieren — die Route reicht nur durch.
+
 **Files:**
 - Modify: `sidecar/sidecar/schemas/segmentation.py`
-- Modify: `sidecar/sidecar/routes/sam.py`
+- Modify: `sidecar/sidecar/models/sam_wrapper.py`   ← Polygon-Approx hier
+- Modify: `sidecar/sidecar/routes/sam.py`           ← reicht nur durch
 
 - [ ] **Step 1: Schema erweitern**
 
@@ -983,6 +1251,13 @@ git commit -m "feat(sidecar): add return_polygon flag with cv2 approximation"
 ---
 
 ### Task 8: C# DTOs — SamRequest.ReturnPolygon + SamMaskResult.PolygonPoints
+
+> ⚠️ **Blocker B2 (SamMaskResult ergaenzen, nicht ersetzen)** — siehe Header.
+> Der reale Record hat **10 Felder**. Bei Step 3 die korrigierte Variante aus
+> dem Header nehmen — die haengt `PolygonPoints` als optionales 11. Feld am
+> Ende an und behaelt `HeightPixels`, `WidthPixels`, `CentroidX`, `CentroidY`.
+> Achtung auch: `SamResponse` hat **4 Felder** (Masks, ImageWidth, ImageHeight,
+> InferenceTimeMs) — relevant fuer Test-Stubs in Task 13/14/15.
 
 **Files:**
 - Modify: `src/AuswertungPro.Next.Application/Ai/Pipeline/VisionPipelineDtos.cs`
@@ -1199,6 +1474,11 @@ git commit -m "test(sidecar): add live test for return_polygon flag"
 ## Phase 4 — Adapter-Implementierungen
 
 ### Task 10: TrainingSamplesWriterAdapter
+
+> ⚠️ **Korrektur K1 (FindCommittedAsync)** — siehe Header. Method-Signatur
+> hat zusaetzlich `double meter`-Parameter; LINQ-Filter nutzt
+> `Math.Abs(s.MeterStart - meter) <= meterTolerance`. Test-Erwartung **2** statt
+> 3 Treffer fuer `meter=10.0, tolerance=0.5` (10.0 + 10.3 sind drin, 12.0 nicht).
 
 **Files:**
 - Create: `src/AuswertungPro.Next.Infrastructure/Ai/Annotation/TrainingSamplesWriterAdapter.cs`
@@ -1467,6 +1747,17 @@ git commit -m "feat(infra): add KnowledgeBaseIndexerAdapter"
 
 ### Task 12: YoloDatasetExportService.AppendSampleAsync (Single-Sample-Write)
 
+> ⚠️ **Blocker B4 (YOLO-Pfad-Layout + Class-Map-Inkonsistenz)** — siehe Header.
+> Reales Layout ist `{outputDir}/images/train/` und `{outputDir}/labels/train/`
+> (nicht `train/images/`). Service hat heute **keinen** `_datasetRoot`-Field —
+> entweder neuer Konstruktor mit injizierbarem Default oder zusaetzlicher
+> `outputDir`-Parameter in `AppendSampleAsync`. Plus: `ExportAsync` baut
+> `classMap` selbst aus den Sample-Codes; `AppendSampleAsync` muss eine
+> kompatible `data.yaml` mit `VsaYoloClassMap`-Reihenfolge schreiben und die
+> Inkonsistenz als Tech-Debt-Marker dokumentieren ("Slice 2: classMap
+> harmonisieren"). Method-Signatur: `AppendSampleAsync(sample, preview, ct)`
+> — Polygon kommt aus `preview.PolygonJson`.
+
 **Files:**
 - Modify: `src/AuswertungPro.Next.Infrastructure/Ai/Training/YoloDatasetExportService.cs`
 - Test: `tests/AuswertungPro.Next.Infrastructure.Tests/YoloDatasetAppendTests.cs`
@@ -1635,6 +1926,13 @@ git commit -m "feat(yolo): add AppendSampleAsync for single-sample write"
 ## Phase 5 — Infrastructure Service
 
 ### Task 13: OperateurAnnotationService Skeleton + PreviewMaskAsync
+
+> ⚠️ **Korrektur K5 (Test-Stub-Signaturen)** — siehe Header.
+> `new SamResponse(masks, 12.3)` aus dem Plan-Code passt **nicht** zur echten
+> Signatur. Korrekt: `SamResponse(Masks, ImageWidth, ImageHeight,
+> InferenceTimeMs)` (4 Args). `SamMaskResult`-Konstruktor hat 10 Pflicht-Felder
+> + optional `PolygonPoints` (siehe B2). Bei jedem Stub-Bau die echten Felder
+> setzen.
 
 **Files:**
 - Create: `src/AuswertungPro.Next.Infrastructure/Ai/Annotation/OperateurAnnotationService.cs`
@@ -1913,6 +2211,20 @@ git commit -m "feat(annotation): add OperateurAnnotationService with PreviewMask
 
 ### Task 14: CommitAsync Happy Path
 
+> ⚠️ **Korrekturen K2 + K3 + K4** — siehe Header.
+> - **K2 (KbIndexed bei Erfolg)**: nach `IndexSampleAsync`-Erfolg
+>   `UpdateIndexStateAsync(..., KbIndexState.Indexed, ct)` aufrufen — sonst
+>   bleibt das Sample dauerhaft auf `None`.
+> - **K3 (Temp-Frame finalisieren)**: vor dem Store-Append den temp-Frame
+>   nach `%KI_BRAIN%/frames/<CaseId>/<SampleId>.png` kopieren und
+>   `sample.FramePath` auf den finalen Pfad setzen.
+> - **K4 (OperationCanceledException nicht schlucken)**: in allen drei Bloecken
+>   (Store, YOLO, KB) Cancellation per `catch (OperationCanceledException) { throw; }`
+>   durchreichen — niemals als Warning maskieren.
+> - **B3 (Polygon an Writer)**: `IYoloDatasetWriter.AppendSampleAsync(sample,
+>   preview, ct)` mit `MaskPreview` aus dem Cache aufrufen.
+> Genaue Code-Bloecke stehen im Header.
+
 **Files:**
 - Modify: `src/AuswertungPro.Next.Infrastructure/Ai/Annotation/OperateurAnnotationService.cs`
 - Test: `tests/AuswertungPro.Next.Pipeline.Tests/OperateurAnnotationServiceCommitTests.cs`
@@ -2168,6 +2480,12 @@ git commit -m "feat(annotation): implement CommitAsync happy path"
 
 ### Task 15: CommitAsync Error-Pfade
 
+> ⚠️ **Korrektur K3 (OCE)** — siehe Header. Zusaetzlicher Test noetig:
+> `CommitAsync_StoreCancelled_RethrowsOCE` — der Token wird zwischen Step 0
+> (Frame-Finalize) und Step 1 (Store-Append) gecancelt; erwartet ist
+> `OperationCanceledException` (kein `result.Warnings`-Eintrag, keine
+> Maskierung). Gleicher Test-Typ optional auch fuer YOLO-/KB-Block.
+
 **Files:**
 - Modify: `tests/AuswertungPro.Next.Pipeline.Tests/OperateurAnnotationServiceCommitTests.cs`
 
@@ -2310,6 +2628,15 @@ git commit -m "test(annotation): cover commit error paths"
 
 ### Task 16: ViewModel-Erweiterung fuer OperateurAnnotationSession
 
+> ⚠️ **Blocker B5 (kein PlayerWindowViewModel)** — siehe Header.
+> Task 16 in der urspruenglichen Form **entfaellt**: `PlayerWindow` ist eine
+> partial class ueber 21 Dateien, **es gibt kein Window-VM**. Stattdessen:
+> direkte Felder (`_operatorSession`, `_operatorActive`) im neuen Partial
+> `PlayerWindow.OperateurAnnotation.cs` plus Code-Behind-Bindings gegen
+> `x:Name`-Elemente (`OperatorCodeList.ItemsSource = _operatorSession?.Tasks`).
+> Step 1 unten ("class PlayerWindowViewModel finden") wird **kein** Ergebnis
+> liefern — ist Erwartung. Step 2 wird zu "Field-Initialisierung im Partial".
+
 **Files:**
 - Modify: `src/AuswertungPro.Next.UI/ViewModels/Windows/PlayerWindowViewModel.cs` (oder TrainingMode-spezifisches VM falls separat)
 - Test: minimal — Session-Property + Active-Property mit INotifyPropertyChanged
@@ -2432,6 +2759,15 @@ git commit -m "feat(ui): add PlayerWindow.OperateurAnnotation partial skeleton"
 ---
 
 ### Task 18: Code-Liste UI mit Status-Dots + Import-Button
+
+> ⚠️ **Blocker B5 (kein VM)** — siehe Header. XAML-Bindings wie
+> `ItemsSource="{Binding OperatorSession.Tasks}"` funktionieren **nicht**, weil
+> `PlayerWindow.DataContext` nicht auf ein VM mit dieser Property zeigt.
+> Stattdessen Code-Behind im Partial:
+> `OperatorCodeList.ItemsSource = _operatorSession?.Tasks;` direkt nach
+> Session-Initialisierung. Selektion per `SelectionChanged`-Handler statt
+> Two-Way-Binding. `IsEnabled`/`Visibility` werden ebenfalls per Code-Behind
+> gesteuert (z.B. `OperatorImportButton.IsEnabled = ...`).
 
 **Files:**
 - Modify: `src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml` (oder TrainingMode-Tab)
@@ -2718,6 +3054,16 @@ git commit -m "feat(ui): add operator annotation hotkeys"
 
 ### Task 20: Box-Drag-Handler im Player-Overlay
 
+> ⚠️ **Blocker B6 (WPF-Airspace mit LibVLC) + B5 (kein VM)** — siehe Header.
+> Ein normales `<Canvas>` ueber `VideoView` ist im Airspace-Modus
+> **unsichtbar**. Vor der Implementation **Pflicht**:
+> `src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.MarkTool.cs` und
+> `PlayerWindow.CodingOverlayRender.cs` lesen — die nutzen Popup/AdornerLayer
+> als funktionierendes Overlay-Pattern. Identische Render-Pipeline
+> wiederverwenden, **nicht** `<Canvas x:Name="OperatorOverlayCanvas" .../>`
+> direkt ueber `VideoView` legen. Visibility/Mouse-Handler kommen ebenfalls
+> aus dem Mark-Tool-Pattern (kein `{Binding OperatorMode.Active, ...}`).
+
 **Files:**
 - Modify: `src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml` (Overlay-Canvas)
 - Modify: `src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.OperateurAnnotation.cs`
@@ -2896,13 +3242,22 @@ git commit -m "feat(ui): capture frame from vlc for sam preview"
 
 ### Task 22: SAM-Preview-Aufruf + Maske-Render
 
+> ⚠️ **Korrektur K4 (DI ueber ServiceCollectionConfigurator)** — siehe Header.
+> Registrierungen kommen in
+> `src/AuswertungPro.Next.UI/Composition/ServiceCollectionConfigurator.cs`
+> (mit Test-Coverage in `ServiceCollectionConfiguratorTests`), **nicht** in
+> `App.xaml.cs`. Step 1 unten ist falsch verortet — den Code in den
+> Configurator schreiben.
+> Maske-Render im UI muss ebenfalls ueber das Mark-Tool-Pattern (B6) laufen,
+> nicht ueber direkt im Canvas gezeichnete Polygone.
+
 **Files:**
 - Modify: `src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.OperateurAnnotation.cs`
-- Modify: `src/AuswertungPro.Next.UI/App.xaml.cs` (DI-Registrierung)
+- Modify: `src/AuswertungPro.Next.UI/Composition/ServiceCollectionConfigurator.cs` (DI-Registrierung)
 
 - [ ] **Step 1: DI fuer IOperateurAnnotationService**
 
-In `App.xaml.cs`, im DI-Setup:
+In `ServiceCollectionConfigurator.cs`, im DI-Setup:
 
 ```csharp
 services.AddSingleton<ITrainingSamplesWriter, TrainingSamplesWriterAdapter>();
