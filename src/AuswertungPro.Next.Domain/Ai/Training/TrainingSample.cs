@@ -40,6 +40,8 @@ public static class SourceTypeNames
     public const string VideoLinear = "VideoLinear";
     public const string BatchImport = "BatchImport";
     public const string TeacherAnnotation = "TeacherAnnotation";
+    /// <summary>Slice 1: Operateur klickt Code im Trainingsmodus, zieht Box, SAM-Maske bestaetigt.</summary>
+    public const string OperateurAnnotation = "OperateurAnnotation";
 }
 
 /// <summary>
@@ -101,6 +103,32 @@ public sealed class TrainingSample
 
     /// <summary>QualityGate-Ampel zum Sample-Zeitpunkt (Green/Yellow/Red).</summary>
     public string? QualityGateLevel { get; set; }
+
+    // ── SAM-Maske (Slice 1, Operateur-Annotation) ────────────────────────
+    /// <summary>Run-Length-Encoded Maske vom Sidecar. Format-Tag in <see cref="SamMaskEncoding"/>.</summary>
+    public string? SamMaskRle { get; set; }
+    /// <summary>Format-Tag fuer Migrations-Faehigkeit (z.B. "sidecar-sam-rle-v1").</summary>
+    public string? SamMaskEncoding { get; set; }
+    /// <summary>Pixelbreite der Maske (= Frame-Breite zum Annotations-Zeitpunkt).</summary>
+    public int? MaskWidth { get; set; }
+    /// <summary>Pixelhoehe der Maske.</summary>
+    public int? MaskHeight { get; set; }
+    /// <summary>Anzahl Pixel innerhalb der Maske (fuer Filter / QualityGate).</summary>
+    public int? MaskAreaPixels { get; set; }
+    /// <summary>SAM-Confidence der ausgewaehlten Maske.</summary>
+    public double? SamConfidence { get; set; }
+
+    /// <summary>Hat eine vollstaendige SAM-Maske (RLE + Dimensionen).</summary>
+    public bool HasMask =>
+        !string.IsNullOrEmpty(SamMaskRle)
+        && MaskWidth.HasValue && MaskWidth.Value > 0
+        && MaskHeight.HasValue && MaskHeight.Value > 0;
+
+    /// <summary>
+    /// Sekunden-Offset zwischen Anker-Meterstand (PDF) und tatsaechlich annotiertem Frame.
+    /// Negativ = Operateur ging zurueck. Null = an Anker codiert.
+    /// </summary>
+    public double? FrameDeltaSeconds { get; set; }
 
     // BoundingBox (normiert 0-1, YOLO-Format: center + size)
     /// <summary>BBox X-Center (normiert 0-1). Null = keine BBox vorhanden.</summary>
