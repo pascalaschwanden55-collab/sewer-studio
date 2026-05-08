@@ -96,10 +96,16 @@ public partial class PlayerWindow
         // ist keine reine Session-Logik, sondern lebt im Player).
     }
 
-    /// <summary>Operateur uebergeht den aktuellen Code (z.B. Frame unscharf).</summary>
+    /// <summary>
+    /// Operateur uebergeht den aktuellen Code (z.B. Frame unscharf).
+    /// No-op wenn kein Active oder Active bereits in einem terminalen State —
+    /// schuetzt vor Doppel-Klick und stale Hotkeys auf bereits abgehakten Tasks.
+    /// </summary>
     public void SkipOperatorActive(string reason)
     {
-        if (_operatorSession is null) return;
+        if (_operatorSession?.Active is null) return;
+        if (OperateurAnnotationSession.IsTerminal(_operatorSession.Active.State)) return;
+
         _operatorSession.MarkActiveSkipped(reason ?? "");
 
         var next = _operatorSession.FindNextPending();
@@ -109,10 +115,15 @@ public partial class PlayerWindow
             _operatorActive = null;
     }
 
-    /// <summary>Operateur erkennt Protokollfehler — Code nicht zutreffend.</summary>
+    /// <summary>
+    /// Operateur erkennt Protokollfehler — Code nicht zutreffend.
+    /// Gleiche Defensiv-Logik wie <see cref="SkipOperatorActive"/>.
+    /// </summary>
     public void RejectOperatorActive(string reason)
     {
-        if (_operatorSession is null) return;
+        if (_operatorSession?.Active is null) return;
+        if (OperateurAnnotationSession.IsTerminal(_operatorSession.Active.State)) return;
+
         _operatorSession.MarkActiveRejected(reason ?? "");
 
         var next = _operatorSession.FindNextPending();
@@ -142,6 +153,9 @@ public partial class PlayerWindow
                 "OperateurAnnotationService nicht gesetzt — App-Bootstrapping muss SetOperateurAnnotationService rufen.");
         if (_operatorSession is null || _operatorActive is null)
             throw new InvalidOperationException("Kein aktives CodeTask.");
+        if (OperateurAnnotationSession.IsTerminal(_operatorActive.State))
+            throw new InvalidOperationException(
+                $"CodeTask ist bereits {_operatorActive.State} — terminaler State darf nicht ueberschrieben werden.");
 
         var request = new AnnotationRequest(
             CaseId: _operatorSession.CaseId,
@@ -155,12 +169,15 @@ public partial class PlayerWindow
             FrameHeight: frameHeight,
             Box: box);
 
-        var preview = await _operatorService.PreviewMaskAsync(request, ct).ConfigureAwait(false);
+        // UI-Code-Path: KEIN ConfigureAwait(false) — die Continuations mutieren
+        // Session-State und greifen via SelectOperatorTask auf _player zu, das
+        // muss auf dem WPF-UI-Thread bleiben.
+        var preview = await _operatorService.PreviewMaskAsync(request, ct);
         _operatorActive.Box = box;
         _operatorActive.Preview = preview;
         _operatorActive.State = CodeTaskState.PreviewReady;
 
-        var result = await _operatorService.CommitAsync(request, preview, ct).ConfigureAwait(false);
+        var result = await _operatorService.CommitAsync(request, preview, ct);
         if (result.IsSuccess)
         {
             _operatorSession.MarkActiveCommitted(result.SampleId, DateTime.UtcNow);

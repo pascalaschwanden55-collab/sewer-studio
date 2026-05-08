@@ -204,6 +204,49 @@ public sealed class OperateurAnnotationSessionTests
     }
 
     [Fact]
+    public void MarkActiveCommitted_OnTerminal_Throws()
+    {
+        var session = NewSessionWith("BAB B");
+        session.MoveToCode(session.Tasks[0]);
+        session.MarkActiveCommitted("s1", DateTime.UtcNow);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            session.MarkActiveCommitted("s2", DateTime.UtcNow));
+    }
+
+    [Fact]
+    public void MarkActiveSkipped_OnTerminal_Throws()
+    {
+        var session = NewSessionWith("BAB B");
+        session.MoveToCode(session.Tasks[0]);
+        session.MarkActiveCommitted("s1", DateTime.UtcNow);
+
+        Assert.Throws<InvalidOperationException>(() => session.MarkActiveSkipped("blur"));
+    }
+
+    [Fact]
+    public void MarkActiveRejected_OnTerminal_Throws()
+    {
+        var session = NewSessionWith("BAB B");
+        session.MoveToCode(session.Tasks[0]);
+        session.MarkActiveSkipped("blur");
+
+        Assert.Throws<InvalidOperationException>(() => session.MarkActiveRejected("nope"));
+    }
+
+    [Fact]
+    public void IsTerminal_ReturnsTrueForCommittedSkippedRejected()
+    {
+        Assert.True(OperateurAnnotationSession.IsTerminal(CodeTaskState.Committed));
+        Assert.True(OperateurAnnotationSession.IsTerminal(CodeTaskState.Skipped));
+        Assert.True(OperateurAnnotationSession.IsTerminal(CodeTaskState.Rejected));
+        Assert.False(OperateurAnnotationSession.IsTerminal(CodeTaskState.Pending));
+        Assert.False(OperateurAnnotationSession.IsTerminal(CodeTaskState.Active));
+        Assert.False(OperateurAnnotationSession.IsTerminal(CodeTaskState.PreviewReady));
+        Assert.False(OperateurAnnotationSession.IsTerminal(CodeTaskState.Error));
+    }
+
+    [Fact]
     public void FindNextPending_SkipsCommittedTasksAfterActive()
     {
         var session = NewSessionWith("A", "B", "C");

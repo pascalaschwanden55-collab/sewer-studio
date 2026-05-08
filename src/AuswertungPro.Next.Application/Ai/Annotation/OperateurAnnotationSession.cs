@@ -88,6 +88,7 @@ public sealed class OperateurAnnotationSession
     {
         if (Active is null)
             throw new InvalidOperationException("Kein aktives CodeTask — MoveToCode zuerst.");
+        EnsureNotTerminal(Active.State);
         if (string.IsNullOrWhiteSpace(sampleId))
             throw new ArgumentException("sampleId Pflicht.", nameof(sampleId));
 
@@ -101,6 +102,7 @@ public sealed class OperateurAnnotationSession
     {
         if (Active is null)
             throw new InvalidOperationException("Kein aktives CodeTask — MoveToCode zuerst.");
+        EnsureNotTerminal(Active.State);
         Active.UserReason = reason ?? "";
         Active.State = CodeTaskState.Skipped;
     }
@@ -110,8 +112,22 @@ public sealed class OperateurAnnotationSession
     {
         if (Active is null)
             throw new InvalidOperationException("Kein aktives CodeTask — MoveToCode zuerst.");
+        EnsureNotTerminal(Active.State);
         Active.UserReason = reason ?? "";
         Active.State = CodeTaskState.Rejected;
+    }
+
+    /// <summary>True, wenn der State terminal ist (Committed/Skipped/Rejected).</summary>
+    public static bool IsTerminal(CodeTaskState state)
+        => state == CodeTaskState.Committed
+        || state == CodeTaskState.Skipped
+        || state == CodeTaskState.Rejected;
+
+    private static void EnsureNotTerminal(CodeTaskState state)
+    {
+        if (IsTerminal(state))
+            throw new InvalidOperationException(
+                $"CodeTask ist bereits {state} — terminaler State darf nicht ueberschrieben werden.");
     }
 
     /// <summary>Naechstes <see cref="CodeTaskState.Pending"/>-Task nach Active, oder null.</summary>
