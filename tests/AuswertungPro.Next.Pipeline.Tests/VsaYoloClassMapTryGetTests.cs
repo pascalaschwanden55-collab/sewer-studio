@@ -72,23 +72,26 @@ public sealed class VsaYoloClassMapTryGetTests
     /// Setzt KnowledgeRootProvider auf einen frischen Temp-Pfad und kippt
     /// den statischen _map-Cache via Reflection, damit der naechste Aufruf
     /// gegen einen leeren Default-Datenstand laeuft. Stellt nach Dispose den
-    /// alten Zustand wieder her, damit andere Tests nicht beeintraechtigt
-    /// werden.
+    /// **exakten** Vor-Zustand wieder her (vorheriger Resolver, ggf. null),
+    /// damit andere Tests nicht beeintraechtigt werden.
     /// </summary>
     private sealed class ClassMapIsolation : IDisposable
     {
         private readonly string _tempDir;
-        private readonly bool _hadResolverBefore;
+        private readonly Func<string>? _previousResolver;
 
-        private ClassMapIsolation(string tempDir, bool hadResolverBefore)
+        private ClassMapIsolation(string tempDir, Func<string>? previousResolver)
         {
             _tempDir = tempDir;
-            _hadResolverBefore = hadResolverBefore;
+            _previousResolver = previousResolver;
         }
 
         public static ClassMapIsolation FreshEmptyRoot()
         {
-            var hadResolverBefore = KnowledgeRootProvider.HasResolver;
+            // Vorhandenen Resolver direkt aus dem Feld lesen — HasResolver
+            // beantwortet nur die Ja/Nein-Frage, nicht "welcher".
+            var previousResolver = ReadStaticResolver();
+
             var tempDir = Path.Combine(
                 Path.GetTempPath(),
                 "VsaYoloClassMapTryGetTests-" + Guid.NewGuid().ToString("N"));
@@ -97,7 +100,7 @@ public sealed class VsaYoloClassMapTryGetTests
             KnowledgeRootProvider.SetResolver(() => tempDir);
             ResetStaticMapCache();
 
-            return new ClassMapIsolation(tempDir, hadResolverBefore);
+            return new ClassMapIsolation(tempDir, previousResolver);
         }
 
         public void Dispose()
@@ -105,12 +108,10 @@ public sealed class VsaYoloClassMapTryGetTests
             // Cache leeren, damit der naechste Test EnsureLoaded() neu durchlaeuft
             ResetStaticMapCache();
 
-            // Resolver auf den Vor-Zustand zuruecksetzen. Wenn vorher keiner
-            // gesetzt war, _resolver via Reflection auf null kippen.
-            if (!_hadResolverBefore)
-            {
-                ResetStaticResolver();
-            }
+            // Resolver exakt auf den Vor-Zustand zuruecksetzen — auch wenn
+            // vorher schon einer gesetzt war (z.B. durch einen anderen Test
+            // oder einen test-weiten Setup-Pfad).
+            WriteStaticResolver(_previousResolver);
 
             try
             {
@@ -131,12 +132,17 @@ public sealed class VsaYoloClassMapTryGetTests
             mapField?.SetValue(null, null);
         }
 
-        private static void ResetStaticResolver()
-        {
-            var resolverField = typeof(KnowledgeRootProvider).GetField(
+        private static FieldInfo GetResolverField()
+            => typeof(KnowledgeRootProvider).GetField(
                 "_resolver",
-                BindingFlags.NonPublic | BindingFlags.Static);
-            resolverField?.SetValue(null, null);
-        }
+                BindingFlags.NonPublic | BindingFlags.Static)
+               ?? throw new InvalidOperationException(
+                   "KnowledgeRootProvider._resolver field not found via reflection.");
+
+        private static Func<string>? ReadStaticResolver()
+            => (Func<string>?)GetResolverField().GetValue(null);
+
+        private static void WriteStaticResolver(Func<string>? resolver)
+            => GetResolverField().SetValue(null, resolver);
     }
 }
