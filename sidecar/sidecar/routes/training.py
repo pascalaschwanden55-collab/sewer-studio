@@ -87,7 +87,9 @@ def _job_to_response(job: _TrainJobState) -> YoloTrainJobStatusResponse:
         error=job.error,
         model_path=job.model_path,
         metrics=YoloTrainMetrics(**job.metrics) if job.metrics else None,
-        dataset_quality=YoloDatasetQuality(**job.dataset_quality) if job.dataset_quality else None,
+        dataset_quality=YoloDatasetQuality(**job.dataset_quality)
+        if job.dataset_quality
+        else None,
         epochs_completed=job.epochs_completed,
         started_utc=job.started_utc,
         finished_utc=job.finished_utc,
@@ -120,10 +122,14 @@ def _extract_train_metrics(model) -> dict:
     except Exception:
         pass
 
-    precision = _extract_metric(metrics_dict, "metrics/precision(B)", "metrics/precision")
+    precision = _extract_metric(
+        metrics_dict, "metrics/precision(B)", "metrics/precision"
+    )
     recall = _extract_metric(metrics_dict, "metrics/recall(B)", "metrics/recall")
     f1 = _extract_metric(metrics_dict, "metrics/f1(B)", "metrics/f1")
-    map50 = _extract_metric(metrics_dict, "metrics/mAP50(B)", "metrics/mAP50", "metrics/mAP_0.5")
+    map50 = _extract_metric(
+        metrics_dict, "metrics/mAP50(B)", "metrics/mAP50", "metrics/mAP_0.5"
+    )
     map50_95 = _extract_metric(
         metrics_dict, "metrics/mAP50-95(B)", "metrics/mAP50-95", "metrics/mAP_0.5:0.95"
     )
@@ -137,7 +143,9 @@ def _extract_train_metrics(model) -> dict:
     }
 
 
-def _is_fallback_box(x_center: float, y_center: float, width: float, height: float) -> bool:
+def _is_fallback_box(
+    x_center: float, y_center: float, width: float, height: float
+) -> bool:
     return (
         abs(x_center - 0.5) <= 0.02
         and abs(y_center - 0.5) <= 0.02
@@ -214,18 +222,28 @@ def _unload_models_for_training() -> None:
 def _restore_models_after_training() -> None:
     logger.info("YOLO training: restoring DINO + SAM after training")
     try:
-        from ..models.dino_wrapper import _load_dino_on, _resolve_device as _resolve_dino_device
+        from ..models.dino_wrapper import (
+            _load_dino_on,
+            _resolve_device as _resolve_dino_device,
+        )
 
         dino_device = _resolve_dino_device()
-        gpu_manager.ensure_loaded(ModelSlot.DINO, dino_device, lambda: _load_dino_on(dino_device))
+        gpu_manager.ensure_loaded(
+            ModelSlot.DINO, dino_device, lambda: _load_dino_on(dino_device)
+        )
     except Exception as exc:
         logger.warning("Could not restore DINO after training: %s", exc)
 
     try:
-        from ..models.sam_wrapper import _load_sam2_on, _resolve_device as _resolve_sam_device
+        from ..models.sam_wrapper import (
+            _load_sam2_on,
+            _resolve_device as _resolve_sam_device,
+        )
 
         sam_device = _resolve_sam_device()
-        gpu_manager.ensure_loaded(ModelSlot.SAM, sam_device, lambda: _load_sam2_on(sam_device))
+        gpu_manager.ensure_loaded(
+            ModelSlot.SAM, sam_device, lambda: _load_sam2_on(sam_device)
+        )
     except Exception as exc:
         logger.warning("Could not restore SAM after training: %s", exc)
 
@@ -297,7 +315,9 @@ def _run_training_job(job_id: str, req: YoloTrainRequest, data_yaml_path: Path) 
         last_path = save_dir / "weights" / "last.pt"
         model_path = best_path if best_path.exists() else last_path
         if not model_path.exists():
-            raise RuntimeError(f"Training completed but no weights found in {save_dir / 'weights'}")
+            raise RuntimeError(
+                f"Training completed but no weights found in {save_dir / 'weights'}"
+            )
 
         epoch_raw = getattr(trainer, "epoch", req.epochs - 1)
         try:
@@ -317,13 +337,20 @@ def _run_training_job(job_id: str, req: YoloTrainRequest, data_yaml_path: Path) 
 
         # Auto-reload: hot-swap inference model with new best weights
         try:
-            logger.info("YOLO train job %s: auto-reloading inference model with %s", job_id, resolved_model)
+            logger.info(
+                "YOLO train job %s: auto-reloading inference model with %s",
+                job_id,
+                resolved_model,
+            )
             yolo_wrapper.reload_model(model_path=resolved_model, wait_timeout_sec=30.0)
-            logger.info("YOLO train job %s: inference model reloaded successfully", job_id)
+            logger.info(
+                "YOLO train job %s: inference model reloaded successfully", job_id
+            )
         except Exception as reload_exc:
             logger.warning(
                 "YOLO train job %s: auto-reload failed (%s), manual /model/reload required",
-                job_id, reload_exc,
+                job_id,
+                reload_exc,
             )
 
         _update_job(
@@ -418,7 +445,11 @@ async def export_yolo(req: TrainingExportRequest) -> TrainingExportResponse:
             val_count += 1
 
     if skipped > 0:
-        logger.warning("export_yolo: %d of %d samples skipped due to invalid image data", skipped, len(req.samples))
+        logger.warning(
+            "export_yolo: %d of %d samples skipped due to invalid image data",
+            skipped,
+            len(req.samples),
+        )
 
     data_yaml = out / "data.yaml"
     yaml_lines = [
@@ -445,7 +476,9 @@ async def train_yolo(req: YoloTrainRequest) -> YoloTrainJobResponse:
     global _active_job_id
     data_yaml = _resolve_path(req.dataset_path)
     if not data_yaml.exists():
-        raise HTTPException(status_code=404, detail=f"dataset_path not found: {data_yaml}")
+        raise HTTPException(
+            status_code=404, detail=f"dataset_path not found: {data_yaml}"
+        )
 
     with _jobs_lock:
         if _active_job_id is not None:

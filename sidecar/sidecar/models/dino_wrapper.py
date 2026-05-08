@@ -42,10 +42,12 @@ _florence2_model = None
 _florence2_processor = None
 _florence2_lock = threading.Lock()
 _shadow_enabled: bool = True
-_shadow_log_dir = Path(os.environ.get(
-    "SEWER_FLORENCE2_SHADOW_DIR",
-    str(Path(settings.models_dir).parent / "florence2_shadow_log")
-))
+_shadow_log_dir = Path(
+    os.environ.get(
+        "SEWER_FLORENCE2_SHADOW_DIR",
+        str(Path(settings.models_dir).parent / "florence2_shadow_log"),
+    )
+)
 
 # Zaehler fuer Shadow-Statistik
 _shadow_stats = {"total": 0, "match": 0, "mismatch": 0, "errors": 0}
@@ -56,6 +58,7 @@ _shadow_executor_lock = threading.Lock()
 # ══════════════════════════════════════════════════════════════════════════
 # DINO (Primary) — Grounding DINO 1.5
 # ══════════════════════════════════════════════════════════════════════════
+
 
 def _find_dino_files() -> tuple[str, str]:
     """Locate Grounding DINO config and weights in models_dir."""
@@ -123,6 +126,7 @@ def _load_dino_on(device: str):
     # Blackwell-Optimierungen: channels_last + torch.compile
     try:
         import torch
+
         if device.startswith("cuda"):
             model = model.to(memory_format=torch.channels_last)
             model = torch.compile(model, mode="reduce-overhead")
@@ -140,6 +144,7 @@ _load_florence2_on = _load_dino_on
 def _cuda_available() -> bool:
     try:
         import torch
+
         return torch.cuda.is_available()
     except Exception:
         return False
@@ -174,10 +179,12 @@ def detect(
         import torch
         from torchvision import transforms
 
-        transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-        ])
+        transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+            ]
+        )
         img_tensor = transform(img)
 
         with torch.cuda.amp.autocast(enabled=device.startswith("cuda")):
@@ -205,15 +212,17 @@ def detect(
         y1 = (cy - bh / 2) * h
         x2 = (cx + bw / 2) * w
         y2 = (cy + bh / 2) * h
-        detections.append(DinoDetection(
-            x1=round(x1, 1),
-            y1=round(y1, 1),
-            x2=round(x2, 1),
-            y2=round(y2, 1),
-            label=phrase.strip(),
-            confidence=round(float(logit), 4),
-            phrase=phrase.strip(),
-        ))
+        detections.append(
+            DinoDetection(
+                x1=round(x1, 1),
+                y1=round(y1, 1),
+                x2=round(x2, 1),
+                y2=round(y2, 1),
+                label=phrase.strip(),
+                confidence=round(float(logit), 4),
+                phrase=phrase.strip(),
+            )
+        )
 
     dino_response = DinoResponse(
         detections=detections,
@@ -223,7 +232,11 @@ def detect(
     # Florence-2 Shadow: async im Hintergrund, blockiert NICHT den Response
     _shadow_stats["_request_count"] = _shadow_stats.get("_request_count", 0) + 1
     shadow_every_n = settings.shadow_every_n
-    if _shadow_enabled and detections and _shadow_stats["_request_count"] % shadow_every_n == 0:
+    if (
+        _shadow_enabled
+        and detections
+        and _shadow_stats["_request_count"] % shadow_every_n == 0
+    ):
         executor = _get_shadow_executor()
         executor.submit(
             _florence2_shadow_compare,
@@ -240,6 +253,7 @@ def detect(
 # ══════════════════════════════════════════════════════════════════════════
 # Florence-2 (Shadow / Lernmodus)
 # ══════════════════════════════════════════════════════════════════════════
+
 
 def _ensure_florence2_loaded():
     """Laedt Florence-2 lazy beim ersten Shadow-Call."""
@@ -267,15 +281,22 @@ def _ensure_florence2_loaded():
                 if model_dir.exists() and any(model_dir.glob("*.safetensors")):
                     break
             else:
-                logger.warning("Florence-2 Shadow: Kein Modell gefunden — Shadow deaktiviert")
+                logger.warning(
+                    "Florence-2 Shadow: Kein Modell gefunden — Shadow deaktiviert"
+                )
                 return
 
             logger.info("Florence-2 Shadow: Lade %s auf %s...", model_dir.name, device)
             dtype = torch.float16 if device.startswith("cuda") else torch.float32
-            _florence2_model = AutoModelForCausalLM.from_pretrained(
-                str(model_dir), trust_remote_code=True,
-                torch_dtype=dtype,
-            ).to(device).eval()
+            _florence2_model = (
+                AutoModelForCausalLM.from_pretrained(
+                    str(model_dir),
+                    trust_remote_code=True,
+                    torch_dtype=dtype,
+                )
+                .to(device)
+                .eval()
+            )
             _florence2_processor = AutoProcessor.from_pretrained(
                 str(model_dir), trust_remote_code=True
             )
@@ -318,7 +339,9 @@ def _florence2_shadow_compare(
         device = _resolve_florence2_device()
         dtype = next(_florence2_model.parameters()).dtype
         inputs = {
-            k: v.to(device=device, dtype=dtype) if v.is_floating_point() else v.to(device)
+            k: v.to(device=device, dtype=dtype)
+            if v.is_floating_point()
+            else v.to(device)
             for k, v in inputs.items()
         }
 
@@ -351,8 +374,13 @@ def _florence2_shadow_compare(
         should_log = match_ratio < 0.5 or _shadow_stats["total"] % 10 == 0
         if should_log:
             _save_training_pair(
-                dino_detections, f2_labels, f2_bboxes,
-                img_w, img_h, match_ratio, image_base64,
+                dino_detections,
+                f2_labels,
+                f2_bboxes,
+                img_w,
+                img_h,
+                match_ratio,
+                image_base64,
             )
 
         if _shadow_stats["total"] % 50 == 0:
@@ -388,8 +416,11 @@ def _save_training_pair(
         "image_size": [img_w, img_h],
         "match_ratio": round(match_ratio, 3),
         "dino_detections": [
-            {"label": d.label, "confidence": d.confidence,
-             "bbox": [d.x1, d.y1, d.x2, d.y2]}
+            {
+                "label": d.label,
+                "confidence": d.confidence,
+                "bbox": [d.x1, d.y1, d.x2, d.y2],
+            }
             for d in dino_dets
         ],
         "florence2_labels": f2_labels,
@@ -414,7 +445,9 @@ def get_shadow_stats() -> dict:
     """Gibt aktuelle Shadow-Statistik zurueck (fuer Health-Endpoint)."""
     return {
         "shadow_enabled": _shadow_enabled,
-        "shadow_model": "florence-2-ft" if _florence2_model is not None else "not_loaded",
+        "shadow_model": "florence-2-ft"
+        if _florence2_model is not None
+        else "not_loaded",
         **_shadow_stats,
         "match_rate": round(
             _shadow_stats["match"] / max(_shadow_stats["total"], 1) * 100, 1

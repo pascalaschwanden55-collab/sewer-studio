@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 class ParsePdfRequest(BaseModel):
     """Request fuer PDF-Tabellen-Parsing."""
+
     pdf_base64: str
     page_numbers: list[int] | None = None  # None = alle Seiten
     table_format: str = "auto"  # "auto", "fretz", "kit", "uri"
@@ -14,6 +15,7 @@ class ParsePdfRequest(BaseModel):
 
 class ParsedRow(BaseModel):
     """Eine einzelne Zeile aus einer extrahierten Tabelle."""
+
     meter_start: float | None = None
     meter_end: float | None = None
     code: str = ""
@@ -28,6 +30,7 @@ class ParsedRow(BaseModel):
 
 class ParsedTable(BaseModel):
     """Eine extrahierte Tabelle aus einer PDF-Seite."""
+
     page: int
     rows: list[ParsedRow]
     format_detected: str = "unknown"
@@ -36,6 +39,7 @@ class ParsedTable(BaseModel):
 
 class ParsePdfResponse(BaseModel):
     """Response mit extrahierten Tabellen."""
+
     tables: list[ParsedTable]
     total_rows: int = 0
     inference_time_ms: float = 0.0

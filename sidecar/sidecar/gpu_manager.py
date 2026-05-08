@@ -28,6 +28,7 @@ class ModelSlot(str, enum.Enum):
 @dataclass
 class SlotState:
     """State for a single loaded model slot."""
+
     model: Any = None
     processor: Any = None
     device: str = ""
@@ -125,10 +126,11 @@ class GpuModelManager:
         """Gibt den verfuegbaren (freien) VRAM in GB zurueck."""
         try:
             import torch
+
             if torch.cuda.is_available():
                 allocated = torch.cuda.memory_allocated(0)
                 total = torch.cuda.get_device_properties(0).total_mem
-                return (total - allocated) / (1024 ** 3)
+                return (total - allocated) / (1024**3)
         except Exception:
             pass
         return 8.0  # Konservativer Fallback
@@ -137,6 +139,7 @@ class GpuModelManager:
         """Gibt die aktuelle VRAM-Auslastung in Prozent zurueck (0-100)."""
         try:
             import torch
+
             if torch.cuda.is_available():
                 allocated = torch.cuda.memory_allocated(0)
                 total = torch.cuda.get_device_properties(0).total_mem
@@ -154,13 +157,15 @@ class GpuModelManager:
         if pct >= self.VRAM_ERROR_PERCENT:
             logger.error(
                 "VRAM KRITISCH: %.1f%% belegt (Schwelle: %.0f%%) — OOM-Risiko!",
-                pct, self.VRAM_ERROR_PERCENT
+                pct,
+                self.VRAM_ERROR_PERCENT,
             )
             return "critical"
         elif pct >= self.VRAM_WARN_PERCENT:
             logger.warning(
                 "VRAM Warnung: %.1f%% belegt (Schwelle: %.0f%%)",
-                pct, self.VRAM_WARN_PERCENT
+                pct,
+                self.VRAM_WARN_PERCENT,
             )
             return "warning"
         return "ok"
@@ -178,6 +183,7 @@ class GpuModelManager:
         vram_utilization = 0.0
         try:
             import torch
+
             if torch.cuda.is_available():
                 vram_allocated = torch.cuda.memory_allocated(0) / (1024**3)
                 vram_total = torch.cuda.get_device_properties(0).total_mem / (1024**3)
@@ -197,7 +203,9 @@ class GpuModelManager:
                 }
 
         # Legacy compat: report first loaded model or "none"
-        loaded_names = [s.value for s in self._slots if self._slots[s].model is not None]
+        loaded_names = [
+            s.value for s in self._slots if self._slots[s].model is not None
+        ]
         current = loaded_names[0] if loaded_names else "none"
 
         # Always-On Pipeline: pruefen ob YOLO+DINO+SAM geladen sind
@@ -239,6 +247,7 @@ class GpuModelManager:
     def _try_empty_cache() -> None:
         try:
             import torch
+
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
         except Exception:

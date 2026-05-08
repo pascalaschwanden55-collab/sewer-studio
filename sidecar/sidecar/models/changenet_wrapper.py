@@ -26,6 +26,7 @@ def _resolve_device() -> str:
     device = settings.gpu_device
     try:
         import torch
+
         if device.startswith("cuda") and not torch.cuda.is_available():
             return "cpu"
     except ImportError:
@@ -41,11 +42,15 @@ def _load_changenet_on(device: str):
     """
     # TODO: Vortrainiertes ChangeNet-Modell laden wenn verfuegbar
     # Voruebergehend: None zurueckgeben, Pixel-Differenz als Fallback
-    logger.info("ChangeNet: Verwende Pixel-Differenz-Algorithmus (kein vortrainiertes Modell)")
+    logger.info(
+        "ChangeNet: Verwende Pixel-Differenz-Algorithmus (kein vortrainiertes Modell)"
+    )
     return None, None
 
 
-def _align_images(img_a: np.ndarray, img_b: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def _align_images(
+    img_a: np.ndarray, img_b: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
     """Bildausrichtung (einfaches Resize auf gleiche Groesse)."""
     h = max(img_a.shape[0], img_b.shape[0])
     w = max(img_a.shape[1], img_b.shape[1])
@@ -85,10 +90,10 @@ def _compute_change_mask(
     significant = diff > threshold
 
     # Heuristik: dunkler geworden = potentielle Verschlechterung (Riss, Ablagerung)
-    darker = (gray_new < gray_old - threshold)
-    lighter = (gray_new > gray_old + threshold)
+    darker = gray_new < gray_old - threshold
+    lighter = gray_new > gray_old + threshold
 
-    change_mask[darker] = 1   # Verschlechterung (rot)
+    change_mask[darker] = 1  # Verschlechterung (rot)
     change_mask[lighter] = 2  # Verbesserung (gruen)
 
     # Kleine Regionen entfernen (Rauschen)
@@ -144,8 +149,8 @@ def detect_changes(
     mask = result["change_mask"]
 
     # Rot = Verschlechterung, Gruen = Verbesserung, Gelb = Neu
-    overlay[mask == 1] = [255, 0, 0, 128]    # Rot, halbtransparent
-    overlay[mask == 2] = [0, 255, 0, 128]    # Gruen
+    overlay[mask == 1] = [255, 0, 0, 128]  # Rot, halbtransparent
+    overlay[mask == 2] = [0, 255, 0, 128]  # Gruen
     overlay[mask == 3] = [255, 255, 0, 128]  # Gelb
 
     # Als PNG encodieren

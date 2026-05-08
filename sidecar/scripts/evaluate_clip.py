@@ -23,7 +23,9 @@ from pathlib import Path
 
 import numpy as np
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -31,6 +33,7 @@ def _load_clip_model(device: str = "cuda:0"):
     """Laedt NV-CLIP / OpenCLIP Modell."""
     try:
         import open_clip
+
         model, _, preprocess = open_clip.create_model_and_transforms(
             "ViT-L-14", pretrained="datacomp_xl_s13b_b90k"
         )
@@ -38,11 +41,15 @@ def _load_clip_model(device: str = "cuda:0"):
         tokenizer = open_clip.get_tokenizer("ViT-L-14")
         return model, preprocess, tokenizer
     except ImportError:
-        logger.error("open_clip nicht installiert. Install: pip install open_clip_torch")
+        logger.error(
+            "open_clip nicht installiert. Install: pip install open_clip_torch"
+        )
         sys.exit(1)
 
 
-def _embed_image_clip(model, preprocess, image_path: str, device: str = "cuda:0") -> np.ndarray:
+def _embed_image_clip(
+    model, preprocess, image_path: str, device: str = "cuda:0"
+) -> np.ndarray:
     """Embeddet ein Bild mit CLIP."""
     import torch
     from PIL import Image
@@ -82,19 +89,29 @@ def _precision_at_k(retrieved: list[str], relevant: set[str], k: int = 3) -> flo
 
 
 def main():
-    parser = argparse.ArgumentParser(description="NV-CLIP vs. nomic-embed-text Evaluation")
-    parser.add_argument("--kb-path", type=str, default="KnowledgeBase.db",
-                        help="Pfad zur KnowledgeBase SQLite")
-    parser.add_argument("--samples", type=int, default=100,
-                        help="Anzahl KB-Samples fuer Embedding")
-    parser.add_argument("--queries", type=int, default=20,
-                        help="Anzahl Goldstandard-Queries")
+    parser = argparse.ArgumentParser(
+        description="NV-CLIP vs. nomic-embed-text Evaluation"
+    )
+    parser.add_argument(
+        "--kb-path",
+        type=str,
+        default="KnowledgeBase.db",
+        help="Pfad zur KnowledgeBase SQLite",
+    )
+    parser.add_argument(
+        "--samples", type=int, default=100, help="Anzahl KB-Samples fuer Embedding"
+    )
+    parser.add_argument(
+        "--queries", type=int, default=20, help="Anzahl Goldstandard-Queries"
+    )
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--output", type=str, default="CLIP_EVALUATION_REPORT.md")
     args = parser.parse_args()
 
     logger.info("=== NV-CLIP Evaluation ===")
-    logger.info("KB: %s, Samples: %d, Queries: %d", args.kb_path, args.samples, args.queries)
+    logger.info(
+        "KB: %s, Samples: %d, Queries: %d", args.kb_path, args.samples, args.queries
+    )
 
     # Goldstandard-Queries (VSA-Codes mit erwarteten Labels)
     gold_queries = [
@@ -142,12 +159,16 @@ def main():
     report_lines.append("## Empfehlung")
     report_lines.append("")
     report_lines.append("*Evaluation muss mit realen KB-Daten durchgefuehrt werden.*")
-    report_lines.append("*CLIP-Modell auf RTX 5090 installieren: `pip install open_clip_torch`*")
+    report_lines.append(
+        "*CLIP-Modell auf RTX 5090 installieren: `pip install open_clip_torch`*"
+    )
     report_lines.append("")
     report_lines.append("## Goldstandard-Queries")
     report_lines.append("")
     for i, q in enumerate(gold_queries, 1):
-        report_lines.append(f"{i}. **{q['query']}** → erwartet: {', '.join(q['expected_codes'])}")
+        report_lines.append(
+            f"{i}. **{q['query']}** → erwartet: {', '.join(q['expected_codes'])}"
+        )
 
     output_path = Path(args.output)
     output_path.write_text("\n".join(report_lines), encoding="utf-8")

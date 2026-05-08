@@ -7,12 +7,14 @@ from pydantic import BaseModel, Field
 
 class PipeAxisRequest(BaseModel):
     """Einzelnes Frame zur Rohrachsen-Analyse."""
+
     image_base64: str
     pipe_diameter_mm: int | None = None
 
 
 class PipeAxisResult(BaseModel):
     """Erkannter Fluchtpunkt und Rohroeffnung eines Frames."""
+
     vanishing_x: float = Field(description="Fluchtpunkt X (normiert 0..1)")
     vanishing_y: float = Field(description="Fluchtpunkt Y (normiert 0..1)")
     pipe_center_x: float = Field(description="Rohrmitte X (normiert 0..1)")
@@ -26,10 +28,12 @@ class PipeAxisResult(BaseModel):
 
 class PipeAxisBatchRequest(BaseModel):
     """Mehrere Frames auf einmal analysieren (Batch fuer Video)."""
+
     frames: list[PipeAxisRequest] = []
 
 
 class PipeAxisBatchResponse(BaseModel):
     """Batch-Ergebnis mit allen Frame-Achsen."""
+
     results: list[PipeAxisResult] = []
     total_time_ms: float = 0.0

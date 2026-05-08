@@ -9,6 +9,7 @@ from .detection import BoundingBox
 
 class SamPoint(BaseModel):
     """Punkt-Prompt fuer SAM: x/y in Pixel, label=1 positiv, label=0 negativ."""
+
     x: float
     y: float
     label: int = 1  # 1=positiv (das will ich), 0=negativ (das nicht)
@@ -16,13 +17,16 @@ class SamPoint(BaseModel):
 
 class RingScanParams(BaseModel):
     """Ring-Scan: SAM tastet den Annulus-Bereich (Rohrwand) systematisch ab."""
+
     center_x: float  # Pixel
     center_y: float  # Pixel
     inner_radius: float  # Pixel
     outer_radius: float  # Pixel
     num_angles: int = 24  # Winkelschritte (alle 15°)
     num_radii: int = 3  # Radiale Schritte zwischen inner und outer
-    min_score: float = 0.50  # Mindest-Confidence (0.25 erzeugt ~15% False-Positive-Masken)
+    min_score: float = (
+        0.50  # Mindest-Confidence (0.25 erzeugt ~15% False-Positive-Masken)
+    )
     min_area_pixels: int = 100  # Mindest-Maskenflaeche
     iou_threshold: float = 0.4  # NMS IoU-Schwelle
 
@@ -69,11 +73,12 @@ class SamResponse(BaseModel):
 
 # ── Training Export ─────────────────────────────────────────────────────────
 
+
 class TrainingSample(BaseModel):
     image_base64: str
     labels: list[dict] = Field(
         default_factory=list,
-        description="[{class_name, x_center, y_center, width, height}] (YOLO normalized)"
+        description="[{class_name, x_center, y_center, width, height}] (YOLO normalized)",
     )
 
 
@@ -153,9 +158,12 @@ class ModelReloadResponse(BaseModel):
 
 class LoraTrainSample(BaseModel):
     """Ein Trainings-Sample fuer Qwen LoRA: Bild + erwartete JSON-Antwort."""
+
     image_base64: str
     prompt: str = "Analysiere dieses Kanalbild."
-    expected_response: str = Field(description="Erwartete JSON-Antwort mit Schadenscodes")
+    expected_response: str = Field(
+        description="Erwartete JSON-Antwort mit Schadenscodes"
+    )
 
 
 class LoraTrainRequest(BaseModel):
@@ -208,6 +216,7 @@ class LoraDeployResponse(BaseModel):
 
 
 # ── SAM Batch ──────────────────────────────────────────────────────────
+
 
 class SamBatchItem(BaseModel):
     image_base64: str

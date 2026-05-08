@@ -19,6 +19,7 @@ def _make_test_image(w: int = 320, h: int = 240, color=(0, 0, 0)) -> str:
 @pytest.fixture
 def client():
     from sidecar.main import app
+
     return TestClient(app)
 
 
@@ -38,10 +39,13 @@ def test_health(client):
 def test_yolo_empty_frame(client):
     """A solid black image should produce no detections."""
     img_b64 = _make_test_image(color=(0, 0, 0))
-    resp = client.post("/detect/yolo", json={
-        "image_base64": img_b64,
-        "confidence_threshold": 0.25,
-    })
+    resp = client.post(
+        "/detect/yolo",
+        json={
+            "image_base64": img_b64,
+            "confidence_threshold": 0.25,
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert "is_relevant" in data

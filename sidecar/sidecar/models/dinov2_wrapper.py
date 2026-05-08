@@ -84,7 +84,10 @@ def _load_heads_if_needed() -> None:
             return
         d = _heads_dir()
         if not d.exists():
-            logger.info("DINOv2 Linear-Heads: Verzeichnis %s existiert nicht — keine Heads geladen", d)
+            logger.info(
+                "DINOv2 Linear-Heads: Verzeichnis %s existiert nicht — keine Heads geladen",
+                d,
+            )
             _heads_loaded = True
             return
 
@@ -99,10 +102,16 @@ def _load_heads_if_needed() -> None:
                 _heads[code] = head
                 count += 1
             except Exception as exc:
-                logger.warning("DINOv2-Head %s konnte nicht geladen werden: %s", code, exc)
+                logger.warning(
+                    "DINOv2-Head %s konnte nicht geladen werden: %s", code, exc
+                )
         _heads_manifest_hash = _compute_heads_manifest_hash(d)
-        logger.info("DINOv2 Linear-Heads geladen: %d (%s), manifest_hash=%s",
-                    count, ", ".join(sorted(_heads.keys())), _heads_manifest_hash)
+        logger.info(
+            "DINOv2 Linear-Heads geladen: %d (%s), manifest_hash=%s",
+            count,
+            ", ".join(sorted(_heads.keys())),
+            _heads_manifest_hash,
+        )
         _heads_loaded = True
 
 
@@ -110,7 +119,10 @@ def _load_heads_if_needed() -> None:
 
 
 def _resolve_device() -> str:
-    device = getattr(settings, "effective_dinov2_device", None) or settings.effective_dino_device
+    device = (
+        getattr(settings, "effective_dinov2_device", None)
+        or settings.effective_dino_device
+    )
     if device.startswith("cuda") and not torch.cuda.is_available():
         return "cpu"
     return device
@@ -154,7 +166,9 @@ def _extract_features(image: Image.Image) -> torch.Tensor:
 # ── Public API ──────────────────────────────────────────────────────────────
 
 
-def classify(image_base64: str, target_codes: list[str] | None = None) -> DinoV2Response:
+def classify(
+    image_base64: str, target_codes: list[str] | None = None
+) -> DinoV2Response:
     """
     Haupt-Endpunkt: Extrahiert Features + klassifiziert pro Head.
     Wenn keine Heads geladen sind (vor Phase 3.2 Training), wird eine leere
@@ -219,12 +233,14 @@ def classify(image_base64: str, target_codes: list[str] | None = None) -> DinoV2
             logits = head(features)  # [1, 3]
             probs = softmax(logits).squeeze(0).tolist()
             idx = int(torch.argmax(logits, dim=-1).item())
-            predictions.append(DinoV2Prediction(
-                vsa_code=code,
-                severity_class=HEAD_CLASSES[idx],
-                confidence=float(probs[idx]),
-                scores={cls: float(probs[i]) for i, cls in enumerate(HEAD_CLASSES)},
-            ))
+            predictions.append(
+                DinoV2Prediction(
+                    vsa_code=code,
+                    severity_class=HEAD_CLASSES[idx],
+                    confidence=float(probs[idx]),
+                    scores={cls: float(probs[i]) for i, cls in enumerate(HEAD_CLASSES)},
+                )
+            )
     heads_ms = (time.perf_counter() - t_heads) * 1000
 
     return DinoV2Response(

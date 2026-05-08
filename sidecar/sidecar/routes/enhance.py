@@ -76,7 +76,13 @@ async def enhance_image(req: EnhanceRequest) -> EnhanceResponse:
 
     logger.debug(
         "Enhanced %dx%d → %dx%d (%.1fx) in %.1fms via %s",
-        input_w, input_h, output_w, output_h, scale_factor, elapsed_ms, _vsr_backend,
+        input_w,
+        input_h,
+        output_w,
+        output_h,
+        scale_factor,
+        elapsed_ms,
+        _vsr_backend,
     )
 
     return EnhanceResponse(

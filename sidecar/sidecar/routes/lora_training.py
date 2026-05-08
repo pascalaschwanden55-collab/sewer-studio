@@ -187,8 +187,13 @@ def _run_lora_training(job_id: str, req: LoraTrainRequest) -> None:
             r=req.lora_rank,
             lora_alpha=req.lora_alpha,
             target_modules=[
-                "q_proj", "k_proj", "v_proj", "o_proj",
-                "gate_proj", "up_proj", "down_proj",
+                "q_proj",
+                "k_proj",
+                "v_proj",
+                "o_proj",
+                "gate_proj",
+                "up_proj",
+                "down_proj",
             ],
             lora_dropout=0.05,
         )
@@ -259,6 +264,7 @@ def _run_lora_training(job_id: str, req: LoraTrainRequest) -> None:
         # Training-Guard freigeben
         try:
             from ..models import yolo_wrapper
+
             yolo_wrapper.end_training_guard()
         except Exception:
             pass
@@ -291,7 +297,9 @@ async def train_lora(req: LoraTrainRequest) -> LoraTrainJobResponse:
     from ..models import yolo_wrapper
 
     job_id = str(uuid.uuid4())
-    state = _LoraJobState(job_id=job_id, status="queued", message="LoRA training queued")
+    state = _LoraJobState(
+        job_id=job_id, status="queued", message="LoRA training queued"
+    )
 
     with _jobs_lock:
         # Guard innerhalb des Locks — verhindert Race (B5)
@@ -366,13 +374,13 @@ async def deploy_lora(req: LoraDeployRequest) -> LoraDeployResponse:
             detail=f"Adapter-Pfad ausserhalb des erlaubten Verzeichnisses: {adapter_path}",
         )
     if not adapter_path.exists():
-        raise HTTPException(status_code=404, detail=f"Adapter not found: {adapter_path}")
+        raise HTTPException(
+            status_code=404, detail=f"Adapter not found: {adapter_path}"
+        )
 
     # Modelfile erstellen
     modelfile_content = (
-        f"FROM {req.base_model}\n"
-        f"ADAPTER {adapter_path}\n"
-        f"PARAMETER num_ctx 32768\n"
+        f"FROM {req.base_model}\nADAPTER {adapter_path}\nPARAMETER num_ctx 32768\n"
     )
 
     try:
@@ -388,7 +396,9 @@ async def deploy_lora(req: LoraDeployRequest) -> LoraDeployResponse:
                 },
             )
             if resp.status_code != 200:
-                raise RuntimeError(f"Ollama create failed: {resp.status_code} {resp.text}")
+                raise RuntimeError(
+                    f"Ollama create failed: {resp.status_code} {resp.text}"
+                )
 
         logger.info(
             "LoRA adapter deployed as '%s' via Ollama Modelfile", req.model_name

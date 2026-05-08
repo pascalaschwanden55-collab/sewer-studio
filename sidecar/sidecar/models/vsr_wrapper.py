@@ -33,8 +33,11 @@ def _try_load_realesrgan() -> object | None:
         from realesrgan import RealESRGANer
 
         model = RRDBNet(
-            num_in_ch=3, num_out_ch=3,
-            num_feat=64, num_block=23, num_grow_ch=32,
+            num_in_ch=3,
+            num_out_ch=3,
+            num_feat=64,
+            num_block=23,
+            num_grow_ch=32,
             scale=4,
         )
 
@@ -57,10 +60,10 @@ def _try_load_realesrgan() -> object | None:
             scale=4,
             model_path=str(weights_path),
             model=model,
-            tile=256,      # Kacheln fuer VRAM-Management (verhindert OOM bei grossen Frames)
+            tile=256,  # Kacheln fuer VRAM-Management (verhindert OOM bei grossen Frames)
             tile_pad=10,
             pre_pad=0,
-            half=True,     # FP16 fuer RTX 5090 (2x schneller, ~1GB VRAM)
+            half=True,  # FP16 fuer RTX 5090 (2x schneller, ~1GB VRAM)
         )
         logger.info("Real-ESRGAN geladen: %s (FP16=True)", weights_path.name)
         return upsampler

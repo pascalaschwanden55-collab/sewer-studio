@@ -28,6 +28,7 @@ def is_nvdec_available() -> bool:
 
     try:
         import PyNvVideoCodec as nvc  # pip install pynvvideocodec
+
         # Kurzer Funktionstest: Demuxer mit leerem Pfad → AttributeError wenn API fehlt
         _ = nvc.CreateDemuxer
         _nvdec_available = True
@@ -37,7 +38,9 @@ def is_nvdec_available() -> bool:
         # DLL-Ladefehler = PyNvVideoCodec installiert, aber NVIDIA Video Codec SDK DLL fehlt
         err_str = str(ie)
         if "DLL load failed" in err_str or "module" in err_str.lower():
-            _nvdec_check_error = "nvcuvid.dll nicht gefunden (NVIDIA Video Codec SDK fehlt)"
+            _nvdec_check_error = (
+                "nvcuvid.dll nicht gefunden (NVIDIA Video Codec SDK fehlt)"
+            )
             logger.info(
                 "NVDEC: nvcuvid.dll nicht gefunden — "
                 "NVIDIA Video Codec SDK 13 installieren oder von nvidia.com herunterladen. "
@@ -45,7 +48,9 @@ def is_nvdec_available() -> bool:
             )
         else:
             _nvdec_check_error = "PyNvVideoCodec nicht installiert"
-            logger.info("NVDEC: PyNvVideoCodec nicht installiert — Software-Fallback aktiv")
+            logger.info(
+                "NVDEC: PyNvVideoCodec nicht installiert — Software-Fallback aktiv"
+            )
     except Exception as e:
         _nvdec_available = False
         _nvdec_check_error = str(e)
@@ -58,6 +63,7 @@ def get_video_duration(video_path: str) -> float:
     """Videodauer in Sekunden via PyAV ermitteln."""
     try:
         import av
+
         with av.open(video_path) as container:
             if container.duration and container.duration > 0:
                 return float(container.duration) / 1_000_000  # Microsekunden → Sekunden
@@ -70,6 +76,7 @@ def get_video_duration(video_path: str) -> float:
 
 
 # ── NVDEC-Pfad ────────────────────────────────────────────────────────────────
+
 
 def _decode_frames_nvdec(
     video_path: str,
@@ -117,9 +124,7 @@ def _decode_frames_nvdec(
 
         # NV12 → RGB
         yuv = nv12.reshape((h * 3 // 2, w))
-        rgb = np.array(
-            Image.fromarray(yuv, "YCbCr").convert("RGB")
-        )
+        rgb = np.array(Image.fromarray(yuv, "YCbCr").convert("RGB"))
 
         yield pts_sec, rgb
         next_target = pts_sec + step_seconds
@@ -130,7 +135,9 @@ def _decode_frames_nvdec(
         if surface.Empty():
             break
         decoder.LastPacketData(packet_data)
-        pts_sec = packet_data.pts / 1_000_000_000.0 if packet_data.pts > 0 else next_target
+        pts_sec = (
+            packet_data.pts / 1_000_000_000.0 if packet_data.pts > 0 else next_target
+        )
 
         if pts_sec < next_target:
             continue
@@ -141,6 +148,7 @@ def _decode_frames_nvdec(
             continue
 
         from PIL import Image
+
         yuv = nv12.reshape((h * 3 // 2, w))
         rgb = np.array(Image.fromarray(yuv, "YCbCr").convert("RGB"))
         yield pts_sec, rgb
@@ -148,6 +156,7 @@ def _decode_frames_nvdec(
 
 
 # ── Software-Fallback (PyAV) ──────────────────────────────────────────────────
+
 
 def _decode_frames_software(
     video_path: str,
@@ -178,6 +187,7 @@ def _decode_frames_software(
 
 # ── Oeffentliche API ──────────────────────────────────────────────────────────
 
+
 def decode_frames(
     video_path: str,
     step_seconds: float,
@@ -196,7 +206,8 @@ def decode_frames(
         except Exception as e:
             logger.warning(
                 "NVDEC-Dekodierung fehlgeschlagen fuer '%s': %s — Software-Fallback",
-                Path(video_path).name, e,
+                Path(video_path).name,
+                e,
             )
 
     # Software-Fallback

@@ -17,6 +17,7 @@ from fastapi import FastAPI
 # Muss VOR allen torch/CUDA-Imports passieren.
 try:
     import torch
+
     torch_lib = os.path.join(os.path.dirname(torch.__file__), "lib")
     if os.path.isdir(torch_lib) and hasattr(os, "add_dll_directory"):
         os.add_dll_directory(torch_lib)
@@ -25,7 +26,18 @@ except ImportError:
 
 from .config import settings
 from .gpu_manager import gpu_manager, ModelSlot
-from .routes import health, yolo, dino, sam, training, lora_training, pipe_axis, parse, changenet, dinov2
+from .routes import (
+    health,
+    yolo,
+    dino,
+    sam,
+    training,
+    lora_training,
+    pipe_axis,
+    parse,
+    changenet,
+    dinov2,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -40,11 +52,12 @@ def _prewarm_dino() -> None:
     Florence-2 wird als Shadow-Modell lazy beim ersten Request geladen."""
     try:
         from .models.dino_wrapper import _load_dino_on
+
         device = settings.effective_dino_device
-        gpu_manager.ensure_loaded(
-            ModelSlot.DINO, device,
-            lambda: _load_dino_on(device))
-        logger.info("DINO pre-warmed on %s (Florence-2 Shadow wird lazy geladen)", device)
+        gpu_manager.ensure_loaded(ModelSlot.DINO, device, lambda: _load_dino_on(device))
+        logger.info(
+            "DINO pre-warmed on %s (Florence-2 Shadow wird lazy geladen)", device
+        )
     except Exception as e:
         logger.warning("DINO pre-warm fehlgeschlagen: %s — wird lazy geladen", e)
 
@@ -53,10 +66,9 @@ def _prewarm_sam() -> None:
     """Laedt SAM 2 beim Start in den VRAM (persistent)."""
     try:
         from .models.sam_wrapper import _load_sam2_on
+
         device = settings.effective_sam_device
-        gpu_manager.ensure_loaded(
-            ModelSlot.SAM, device,
-            lambda: _load_sam2_on(device))
+        gpu_manager.ensure_loaded(ModelSlot.SAM, device, lambda: _load_sam2_on(device))
         logger.info("SAM 2 pre-warmed on %s", device)
     except Exception as e:
         logger.warning("SAM 2 pre-warm fehlgeschlagen: %s — wird lazy geladen", e)
@@ -67,16 +79,17 @@ def _prewarm_yolo() -> None:
     Inkl. TensorRT-Export falls noetig (dauert 2-5 Min beim ersten Mal)."""
     try:
         from .models.yolo_wrapper import _load_yolo_on
+
         device = settings.effective_yolo_device
-        gpu_manager.ensure_loaded(
-            ModelSlot.YOLO, device,
-            lambda: _load_yolo_on(device))
+        gpu_manager.ensure_loaded(ModelSlot.YOLO, device, lambda: _load_yolo_on(device))
         logger.info("YOLO pre-warmed on %s", device)
     except Exception as e:
         logger.warning("YOLO pre-warm fehlgeschlagen: %s — wird lazy geladen", e)
 
 
-_VRAM_MONITOR_INTERVAL_SEC = int(os.environ.get("SEWER_SIDECAR_VRAM_MONITOR_INTERVAL", "30"))
+_VRAM_MONITOR_INTERVAL_SEC = int(
+    os.environ.get("SEWER_SIDECAR_VRAM_MONITOR_INTERVAL", "30")
+)
 
 # Globales Flag: True wenn VRAM kritisch belegt ist (>90%)
 vram_critical: bool = False
@@ -94,12 +107,10 @@ async def _vram_monitor_loop() -> None:
         try:
             await asyncio.sleep(_VRAM_MONITOR_INTERVAL_SEC)
             status = gpu_manager.check_vram_health()
-            vram_critical = (status == "critical")
+            vram_critical = status == "critical"
             if status != "ok":
                 pct = gpu_manager.get_vram_utilization_percent()
-                logger.warning(
-                    "VRAM-Monitor: Status=%s (%.1f%% belegt)", status, pct
-                )
+                logger.warning("VRAM-Monitor: Status=%s (%.1f%% belegt)", status, pct)
         except asyncio.CancelledError:
             break
         except Exception as e:
@@ -138,7 +149,9 @@ async def lifespan(app: FastAPI):
         _prewarm_dino()
         logger.info("DINO 1.5 Pre-Warm aktiviert (SEWER_SIDECAR_PREWARM_DINO=1)")
     else:
-        logger.info("DINO 1.5 im Lazy-Mode (V4.2 Default) — wird bei erstem Request geladen")
+        logger.info(
+            "DINO 1.5 im Lazy-Mode (V4.2 Default) — wird bei erstem Request geladen"
+        )
     _prewarm_sam()
     elapsed = time.perf_counter() - t0
     logger.info("Pre-warm abgeschlossen in %.1fs (YOLO+SAM, DINO lazy)", elapsed)
@@ -205,10 +218,13 @@ async def vram_guard_middleware(request: Request, call_next):
 #
 # Wenn keine Quelle Token liefert, bleibt Auth deaktiviert (Dev/Test).
 
+
 def _resolve_sidecar_token() -> str:
     auth_mode = os.environ.get("SEWER_SIDECAR_AUTH", "").strip().lower()
     if auth_mode == "disabled":
-        logger.warning("[Auth] SEWER_SIDECAR_AUTH=disabled — Auth komplett deaktiviert.")
+        logger.warning(
+            "[Auth] SEWER_SIDECAR_AUTH=disabled — Auth komplett deaktiviert."
+        )
         return ""
 
     env_token = os.environ.get("SEWER_SIDECAR_TOKEN", "").strip()
@@ -244,7 +260,10 @@ if not SIDECAR_TOKEN:
         "an oder akzeptiere Dev-Modus."
     )
 else:
-    logger.info("[Auth] Bearer-Token aktiv (Header: X-Sidecar-Token, Laenge=%d)", len(SIDECAR_TOKEN))
+    logger.info(
+        "[Auth] Bearer-Token aktiv (Header: X-Sidecar-Token, Laenge=%d)",
+        len(SIDECAR_TOKEN),
+    )
 
 
 @app.middleware("http")
@@ -281,6 +300,7 @@ app.include_router(dinov2.router, tags=["dinov2"])
 # Video + Enhance Endpoints (Phase 2/3)
 try:
     from .routes import video, enhance
+
     app.include_router(video.router, tags=["video"])
     app.include_router(enhance.router, tags=["enhance"])
 except ImportError:

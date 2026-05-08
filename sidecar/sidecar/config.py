@@ -59,7 +59,7 @@ class SidecarSettings(BaseSettings):
     # Diese Konfig steuert die Florence-2-Shadow-Schicht.
     florence2_model_path: str = "models/florence-2"
     florence2_confidence: float = 0.25
-    dino_box_threshold: float = 0.25   # Grounding DINO box threshold (primary)
+    dino_box_threshold: float = 0.25  # Grounding DINO box threshold (primary)
     dino_text_threshold: float = 0.20  # Grounding DINO text threshold (primary)
     dino_labels: str = (
         "crack . fracture . break . deformation . "
@@ -84,7 +84,7 @@ class SidecarSettings(BaseSettings):
     # Aktiviert automatisches Upscaling auf vsr_min_resolution Hoehe vor YOLO.
     # Erfordert: pip install realesrgan basicsr + RealESRGAN_x4plus.pth in models/
     # Fallback: Lanczos-Bicubic (immer verfuegbar, kein ML)
-    vsr_enabled: bool = False   # opt-in: aktivieren wenn Real-ESRGAN-Gewichte vorhanden
+    vsr_enabled: bool = False  # opt-in: aktivieren wenn Real-ESRGAN-Gewichte vorhanden
     vsr_min_resolution: int = 720  # Nur Frames unter dieser Hoehe werden hochskaliert
 
     model_config = {"env_prefix": "SEWER_SIDECAR_"}

@@ -30,7 +30,9 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -67,9 +69,7 @@ PROMPT_VARIANTS = {
         "BAH joint offset . BAI intruding connection . "
         "BCA lateral connection . BCD pipe start . BCE pipe end"
     ),
-    "v5_simple": (
-        "damage . crack . root . deposit . defect . hole . connection"
-    ),
+    "v5_simple": ("damage . crack . root . deposit . defect . hole . connection"),
     "v6_descriptive": (
         "a crack in the pipe wall . "
         "tree roots growing into the pipe . "
@@ -92,15 +92,21 @@ def load_florence2(device: str = "cuda:0"):
         model_path = str(Path(__file__).parent.parent / "models" / "florence-2")
 
     logger.info("Lade Florence-2 von %s ...", model_path)
-    model = AutoModelForCausalLM.from_pretrained(
-        model_path, trust_remote_code=True, torch_dtype=torch.float16
-    ).to(device).eval()
+    model = (
+        AutoModelForCausalLM.from_pretrained(
+            model_path, trust_remote_code=True, torch_dtype=torch.float16
+        )
+        .to(device)
+        .eval()
+    )
     processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
     logger.info("Florence-2 geladen")
     return model, processor
 
 
-def run_grounding(model, processor, img: Image.Image, prompt: str, device: str = "cuda:0"):
+def run_grounding(
+    model, processor, img: Image.Image, prompt: str, device: str = "cuda:0"
+):
     """Fuehrt CAPTION_TO_PHRASE_GROUNDING aus und gibt Detektionen zurueck."""
     import torch
 
@@ -116,10 +122,14 @@ def run_grounding(model, processor, img: Image.Image, prompt: str, device: str =
 
     t0 = time.perf_counter()
     with torch.inference_mode():
-        ids = model.generate(**inputs, max_new_tokens=1024, num_beams=3, do_sample=False)
+        ids = model.generate(
+            **inputs, max_new_tokens=1024, num_beams=3, do_sample=False
+        )
 
     text = processor.batch_decode(ids, skip_special_tokens=False)[0]
-    result = processor.post_process_generation(text, task=task, image_size=(img.width, img.height))
+    result = processor.post_process_generation(
+        text, task=task, image_size=(img.width, img.height)
+    )
     elapsed = (time.perf_counter() - t0) * 1000
 
     od = result.get(task, {})
@@ -127,15 +137,14 @@ def run_grounding(model, processor, img: Image.Image, prompt: str, device: str =
     labels = od.get("labels", [])
 
     return {
-        "detections": [
-            {"bbox": b, "label": l}
-            for b, l in zip(bboxes, labels)
-        ],
+        "detections": [{"bbox": b, "label": l} for b, l in zip(bboxes, labels)],
         "inference_ms": elapsed,
     }
 
 
-def load_test_images(images_dir: str, max_images: int = 50) -> list[tuple[str, Image.Image]]:
+def load_test_images(
+    images_dir: str, max_images: int = 50
+) -> list[tuple[str, Image.Image]]:
     """Laedt Testbilder aus einem Ordner."""
     img_dir = Path(images_dir)
     extensions = {".png", ".jpg", ".jpeg", ".bmp"}
@@ -194,7 +203,9 @@ def stage_prompt(args):
 
         logger.info(
             "  Avg detections: %.2f | Avg time: %.0fms | Top labels: %s",
-            avg_det, avg_ms, ", ".join(f"{l}({c})" for l, c in top_labels[:5])
+            avg_det,
+            avg_ms,
+            ", ".join(f"{l}({c})" for l, c in top_labels[:5]),
         )
 
     # Ergebnis speichern
@@ -207,7 +218,8 @@ def stage_prompt(args):
     best = max(results.items(), key=lambda x: x[1]["avg_detections"])
     logger.info(
         "\n>>> EMPFEHLUNG: Variante '%s' mit %.1f Detektionen/Bild <<<",
-        best[0], best[1]["avg_detections"]
+        best[0],
+        best[1]["avg_detections"],
     )
 
 
@@ -220,26 +232,35 @@ def stage_compare(args):
         logger.error("Keine Testbilder gefunden")
         return
 
-    logger.info("Vergleiche Florence-2 (GROUNDING) vs. aktuellem Sidecar (/detect/dino)")
+    logger.info(
+        "Vergleiche Florence-2 (GROUNDING) vs. aktuellem Sidecar (/detect/dino)"
+    )
 
     for img_name, img in images[:10]:
         buf = io.BytesIO()
         img.save(buf, format="PNG")
         b64 = base64.b64encode(buf.getvalue()).decode()
 
-        resp = requests.post("http://localhost:8100/detect/dino", json={
-            "image_base64": b64,
-            "text_prompt": None,
-            "box_threshold": 0.25,
-            "text_threshold": 0.20,
-        }, timeout=30)
+        resp = requests.post(
+            "http://localhost:8100/detect/dino",
+            json={
+                "image_base64": b64,
+                "text_prompt": None,
+                "box_threshold": 0.25,
+                "text_threshold": 0.20,
+            },
+            timeout=30,
+        )
 
         data = resp.json()
         dets = data.get("detections", [])
         labels = [d["label"] for d in dets]
         logger.info(
             "%s: %d Detektionen [%s] (%.0fms)",
-            img_name, len(dets), ", ".join(labels), data.get("inference_time_ms", 0)
+            img_name,
+            len(dets),
+            ", ".join(labels),
+            data.get("inference_time_ms", 0),
         )
 
 
@@ -279,10 +300,15 @@ def stage_finetune(args):
 
 def main():
     parser = argparse.ArgumentParser(description="Florence-2 Kalibrierung")
-    parser.add_argument("--stage", choices=["prompt", "compare", "finetune"],
-                        default="prompt", help="Kalibrierungs-Stufe")
-    parser.add_argument("--images", type=str, default=".",
-                        help="Ordner mit Testbildern (PNG/JPG)")
+    parser.add_argument(
+        "--stage",
+        choices=["prompt", "compare", "finetune"],
+        default="prompt",
+        help="Kalibrierungs-Stufe",
+    )
+    parser.add_argument(
+        "--images", type=str, default=".", help="Ordner mit Testbildern (PNG/JPG)"
+    )
     parser.add_argument("--max-images", type=int, default=50)
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--output", type=str, default=None)

@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 # cv2 ist verfuegbar (ultralytics-Abhaengigkeit)
 try:
     import cv2
+
     _HAS_CV2 = True
 except ImportError:
     _HAS_CV2 = False
@@ -49,7 +50,9 @@ def _find_vanishing_point_cv2(gray: np.ndarray) -> tuple[float, float, float]:
     dark_mask = cv2.morphologyEx(dark_mask, cv2.MORPH_CLOSE, kernel)
 
     # Groesste zusammenhaengende Dunkelregion finden
-    contours, _ = cv2.findContours(dark_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(
+        dark_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
     if not contours:
         return 0.5, 0.5, 0.0
 
@@ -75,7 +78,9 @@ def _find_vanishing_point_cv2(gray: np.ndarray) -> tuple[float, float, float]:
     return cx / w, cy / h, confidence
 
 
-def _find_pipe_ellipse_cv2(gray: np.ndarray) -> tuple[float, float, float, float, float]:
+def _find_pipe_ellipse_cv2(
+    gray: np.ndarray,
+) -> tuple[float, float, float, float, float]:
     """Rohroeffnung als Ellipse fitten (OpenCV).
 
     Sucht den hellen Ring (Rohrwand) um das dunkle Lumen.
@@ -171,10 +176,13 @@ def _fallback_numpy(gray: np.ndarray) -> PipeAxisResult:
     ys, xs = np.where(mask)
     if len(xs) == 0:
         return PipeAxisResult(
-            vanishing_x=0.5, vanishing_y=0.5,
-            pipe_center_x=0.5, pipe_center_y=0.5,
-            pipe_radius_x=0.3, pipe_radius_y=0.3,
-            confidence=0.0
+            vanishing_x=0.5,
+            vanishing_y=0.5,
+            pipe_center_x=0.5,
+            pipe_center_y=0.5,
+            pipe_radius_x=0.3,
+            pipe_radius_y=0.3,
+            confidence=0.0,
         )
 
     weights = inverted[mask]
@@ -182,10 +190,14 @@ def _fallback_numpy(gray: np.ndarray) -> PipeAxisResult:
     vy = np.average(ys, weights=weights) / h
 
     return PipeAxisResult(
-        vanishing_x=round(vx, 4), vanishing_y=round(vy, 4),
-        pipe_center_x=round(vx, 4), pipe_center_y=round(vy, 4),
-        pipe_radius_x=0.3, pipe_radius_y=0.3,
-        confidence=0.3, has_joint=False
+        vanishing_x=round(vx, 4),
+        vanishing_y=round(vy, 4),
+        pipe_center_x=round(vx, 4),
+        pipe_center_y=round(vy, 4),
+        pipe_radius_x=0.3,
+        pipe_radius_y=0.3,
+        confidence=0.3,
+        has_joint=False,
     )
 
 

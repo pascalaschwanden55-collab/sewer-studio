@@ -24,16 +24,16 @@ OUTPUT_ROOT = Path(r"C:\KI_BRAIN\yolo_detection_dataset")
 # YOLO-Klassen (gleich wie bestehendes yolo26m Modell)
 # Mapping von VSA-Hauptcode zu YOLO-Klasse
 VSA_TO_YOLO = {
-    "BAA": 0,   # deformation
-    "BAB": 1,   # crack
-    "BAC": 2,   # fracture
-    "BAF": 3,   # surface_damage
-    "BAG": 4,   # intruding_connection
-    "BAI": 5,   # seal_defect
-    "BAJ": 6,   # displaced_joint
-    "BBA": 7,   # roots
-    "BBB": 8,   # deposits_attached
-    "BBC": 9,   # deposits_settled
+    "BAA": 0,  # deformation
+    "BAB": 1,  # crack
+    "BAC": 2,  # fracture
+    "BAF": 3,  # surface_damage
+    "BAG": 4,  # intruding_connection
+    "BAI": 5,  # seal_defect
+    "BAJ": 6,  # displaced_joint
+    "BBA": 7,  # roots
+    "BBB": 8,  # deposits_attached
+    "BBC": 9,  # deposits_settled
     "BBF": 10,  # infiltration
 }
 
@@ -63,12 +63,16 @@ def get_yolo_class(code_main: str) -> int | None:
 
 def detect_dino(image_b64: str) -> list[dict]:
     """DINO Open-Vocabulary Detection ueber Sidecar."""
-    resp = requests.post(f"{SIDECAR_URL}/detect/dino", json={
-        "image_base64": image_b64,
-        "text_prompt": "crack. fracture. root. deposit. infiltration. joint. deformation. corrosion. connection. obstruction. damage.",
-        "box_threshold": 0.20,
-        "text_threshold": 0.15,
-    }, timeout=30)
+    resp = requests.post(
+        f"{SIDECAR_URL}/detect/dino",
+        json={
+            "image_base64": image_b64,
+            "text_prompt": "crack. fracture. root. deposit. infiltration. joint. deformation. corrosion. connection. obstruction. damage.",
+            "box_threshold": 0.20,
+            "text_threshold": 0.15,
+        },
+        timeout=30,
+    )
     resp.raise_for_status()
     return resp.json().get("detections", [])
 
@@ -76,14 +80,24 @@ def detect_dino(image_b64: str) -> list[dict]:
 def segment_sam(image_b64: str, boxes: list[dict]) -> dict:
     """SAM Segmentierung ueber Sidecar."""
     sam_boxes = [
-        {"x1": b["x1"], "y1": b["y1"], "x2": b["x2"], "y2": b["y2"],
-         "label": b.get("label", ""), "confidence": b.get("confidence", 0.5)}
+        {
+            "x1": b["x1"],
+            "y1": b["y1"],
+            "x2": b["x2"],
+            "y2": b["y2"],
+            "label": b.get("label", ""),
+            "confidence": b.get("confidence", 0.5),
+        }
         for b in boxes
     ]
-    resp = requests.post(f"{SIDECAR_URL}/segment/sam", json={
-        "image_base64": image_b64,
-        "bounding_boxes": sam_boxes,
-    }, timeout=30)
+    resp = requests.post(
+        f"{SIDECAR_URL}/segment/sam",
+        json={
+            "image_base64": image_b64,
+            "bounding_boxes": sam_boxes,
+        },
+        timeout=30,
+    )
     resp.raise_for_status()
     return resp.json()
 
@@ -145,8 +159,8 @@ def process_frame(frame: dict, images_dir: Path, labels_dir: Path, stats: Counte
 
     # YOLO Label schreiben
     label_line = to_yolo_label(
-        best["x1"], best["y1"], best["x2"], best["y2"],
-        img_w, img_h, yolo_class)
+        best["x1"], best["y1"], best["x2"], best["y2"], img_w, img_h, yolo_class
+    )
 
     # Bild kopieren + Label schreiben
     dest_img = images_dir / png_path.name
@@ -154,6 +168,7 @@ def process_frame(frame: dict, images_dir: Path, labels_dir: Path, stats: Counte
 
     if not dest_img.exists():
         import shutil
+
         shutil.copy2(str(png_path), str(dest_img))
 
     dest_lbl.write_text(label_line + "\n")
@@ -177,7 +192,8 @@ def main():
 
     # Nur Referenz-Frames mit Schaden in Axialsicht
     frames = [
-        f for f in all_frames
+        f
+        for f in all_frames
         if f["is_reference_frame"]
         and f.get("defekt_klasse")
         and f["szene_klasse"] == "axial"
@@ -189,11 +205,15 @@ def main():
 
     # Train/Val Split (80/20)
     import random
+
     random.seed(42)
     random.shuffle(frames)
     split = int(len(frames) * 0.8)
 
-    for split_name, split_frames in [("train", frames[:split]), ("val", frames[split:])]:
+    for split_name, split_frames in [
+        ("train", frames[:split]),
+        ("val", frames[split:]),
+    ]:
         images_dir = OUTPUT_ROOT / split_name / "images"
         labels_dir = OUTPUT_ROOT / split_name / "labels"
         images_dir.mkdir(parents=True, exist_ok=True)
@@ -204,7 +224,10 @@ def main():
 
         for i, frame in enumerate(split_frames):
             if (i + 1) % 10 == 0 or i == 0:
-                print(f"  {split_name}: [{i+1}/{total}] {frame.get('code_main', '?')}", end="\r")
+                print(
+                    f"  {split_name}: [{i + 1}/{total}] {frame.get('code_main', '?')}",
+                    end="\r",
+                )
             process_frame(frame, images_dir, labels_dir, stats)
 
         print(f"\n  {split_name}: {dict(stats)}")
@@ -226,7 +249,8 @@ names:
 
     # Negativ-Frames (ohne Label, leeres .txt)
     neg_frames = [
-        f for f in all_frames
+        f
+        for f in all_frames
         if f["is_reference_frame"]
         and not f.get("defekt_klasse")
         and f["szene_klasse"] == "axial"
@@ -241,6 +265,7 @@ names:
                 png_path = Path(r"C:\KI_BRAIN\training_frames") / png_path.name
             if png_path.exists():
                 import shutil
+
                 dest = neg_dir_img / png_path.name
                 if not dest.exists():
                     shutil.copy2(str(png_path), str(dest))

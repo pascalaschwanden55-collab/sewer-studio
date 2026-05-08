@@ -28,6 +28,7 @@ def _resolve_device() -> str:
     device = settings.gpu_device
     try:
         import torch
+
         if device.startswith("cuda") and not torch.cuda.is_available():
             return "cpu"
     except ImportError:
@@ -41,20 +42,20 @@ def _load_nemotron_on(device: str):
         from transformers import AutoModelForCausalLM, AutoProcessor
     except ImportError:
         raise ImportError(
-            "transformers nicht installiert. "
-            "Install: pip install transformers"
+            "transformers nicht installiert. Install: pip install transformers"
         )
 
     model_path = Path(settings.models_dir) / "nemotron-parse"
     if not model_path.exists():
         raise FileNotFoundError(
-            f"Nemotron-Parse nicht gefunden in {model_path}. "
-            "Bitte Modell dort ablegen."
+            f"Nemotron-Parse nicht gefunden in {model_path}. Bitte Modell dort ablegen."
         )
 
     import torch
+
     model = AutoModelForCausalLM.from_pretrained(
-        str(model_path), trust_remote_code=True,
+        str(model_path),
+        trust_remote_code=True,
         torch_dtype=torch.float16 if device.startswith("cuda") else torch.float32,
     ).to(device)
     model.eval()
@@ -72,10 +73,10 @@ def _parse_row_from_text(text: str) -> ParsedRow | None:
     # Regex fuer typische Protokollzeilen: Meter Code Char1 Char2 Uhr Bemerkung
     # z.B. "12.30  BAB  A  B  3-9  Riss quer diagonal"
     meter_pattern = re.compile(
-        r"(\d{1,3}[.,]\d{1,2})\s+"      # Meterstand
-        r"([A-Z]{2,4})\s*"               # Code
-        r"([A-Z]?)\s*"                   # Char1
-        r"([A-Z]?)\s*"                   # Char2
+        r"(\d{1,3}[.,]\d{1,2})\s+"  # Meterstand
+        r"([A-Z]{2,4})\s*"  # Code
+        r"([A-Z]?)\s*"  # Char1
+        r"([A-Z]?)\s*"  # Char2
         r"(\d{1,2}(?:[-:]\d{1,2})?)?.*"  # Uhrlage (optional)
     )
 
@@ -115,6 +116,7 @@ def parse_pdf(
     # PDF-Seiten extrahieren
     try:
         import fitz  # PyMuPDF
+
         doc = fitz.open(stream=raw, filetype="pdf")
     except ImportError:
         logger.error("PyMuPDF nicht installiert. Install: pip install pymupdf")
@@ -140,12 +142,16 @@ def parse_pdf(
                 rows.append(parsed)
 
         if rows:
-            tables.append(ParsedTable(
-                page=page_idx + 1,
-                rows=rows,
-                format_detected=table_format if table_format != "auto" else "regex_fallback",
-                confidence=0.5,  # Regex-basiert = niedrige Confidence
-            ))
+            tables.append(
+                ParsedTable(
+                    page=page_idx + 1,
+                    rows=rows,
+                    format_detected=table_format
+                    if table_format != "auto"
+                    else "regex_fallback",
+                    confidence=0.5,  # Regex-basiert = niedrige Confidence
+                )
+            )
             total_rows += len(rows)
 
     doc.close()
@@ -164,7 +170,9 @@ def parse_pdf(
         # Voruebergehend: Regex-Ergebnisse verwenden
         logger.info("Nemotron-Parse geladen — verwende Modell-basierte Extraktion")
     except Exception as exc:
-        logger.info("Nemotron-Parse nicht verfuegbar (%s) — verwende Regex-Fallback", exc)
+        logger.info(
+            "Nemotron-Parse nicht verfuegbar (%s) — verwende Regex-Fallback", exc
+        )
 
     return ParsePdfResponse(
         tables=tables,

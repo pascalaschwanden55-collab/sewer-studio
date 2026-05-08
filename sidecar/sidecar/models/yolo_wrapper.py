@@ -89,7 +89,9 @@ def _begin_maintenance(reason: str, timeout_sec: float = 0.0) -> None:
     deadline = time.monotonic() + max(timeout_sec, 0.0)
     with _state_cv:
         if _maintenance_reason is not None:
-            raise RuntimeError(f"YOLO maintenance already active ({_maintenance_reason})")
+            raise RuntimeError(
+                f"YOLO maintenance already active ({_maintenance_reason})"
+            )
         _maintenance_reason = reason
         while _active_inference > 0:
             remaining = deadline - time.monotonic()
@@ -158,7 +160,9 @@ def _resolve_yolo_model_path() -> tuple[str, bool]:
             if settings.yolo_use_tensorrt:
                 engine = override.with_suffix(".engine")
                 if engine.exists():
-                    logger.info("TensorRT engine for runtime override found: %s", engine)
+                    logger.info(
+                        "TensorRT engine for runtime override found: %s", engine
+                    )
                     return str(engine), True
             return str(override), True
         logger.warning("Runtime override does not exist anymore: %s", override)
@@ -291,7 +295,9 @@ def _resolve_device() -> str:
     """Determine effective device for YOLO inference."""
     device = settings.effective_yolo_device
     if device.startswith("cuda") and not _cuda_available():
-        logger.warning("YOLO configured for %s but CUDA unavailable, falling back to cpu", device)
+        logger.warning(
+            "YOLO configured for %s but CUDA unavailable, falling back to cpu", device
+        )
         return "cpu"
     return device
 
@@ -408,7 +414,9 @@ def decode_image(image_base64: str) -> Image.Image:
     return Image.open(io.BytesIO(raw)).convert("RGB")
 
 
-def detect_image(image: Image.Image | np.ndarray, confidence_threshold: float) -> YoloResponse:
+def detect_image(
+    image: Image.Image | np.ndarray, confidence_threshold: float
+) -> YoloResponse:
     """Run YOLO detection on a PIL image or numpy RGB array."""
     if isinstance(image, np.ndarray):
         image = Image.fromarray(image)
@@ -479,7 +487,11 @@ def detect_image(image: Image.Image | np.ndarray, confidence_threshold: float) -
 
 
 _rejection_stats: dict[str, int] = {
-    "too_dark": 0, "too_bright": 0, "too_uniform": 0, "too_blurry": 0, "ok": 0
+    "too_dark": 0,
+    "too_bright": 0,
+    "too_uniform": 0,
+    "too_blurry": 0,
+    "ok": 0,
 }
 
 
@@ -567,12 +579,21 @@ def detect_batch(
                 usable_indices.append(i)
                 usable_images.append(np.array(img))
             else:
-                results_out[i] = (frame_ids[i], YoloResponse(
-                    is_relevant=False, detections=[], frame_class=reason, inference_time_ms=0.0))
+                results_out[i] = (
+                    frame_ids[i],
+                    YoloResponse(
+                        is_relevant=False,
+                        detections=[],
+                        frame_class=reason,
+                        inference_time_ms=0.0,
+                    ),
+                )
 
         if usable_images:
             # Batch-Predict: ultralytics unterstuetzt Liste als source
-            batch_results = model.predict(source=usable_images, conf=confidence_threshold, verbose=False)
+            batch_results = model.predict(
+                source=usable_images, conf=confidence_threshold, verbose=False
+            )
             elapsed_ms = (time.perf_counter() - t0) * 1000
 
             for batch_idx, orig_idx in enumerate(usable_indices):
@@ -591,21 +612,34 @@ def detect_batch(
                         cls_id = int(all_cls[j])
                         conf = float(all_conf[j])
                         cls_name = result.names.get(cls_id, str(cls_id))
-                        detections.append(YoloDetection(
-                            x1=float(all_xyxy[j, 0]), y1=float(all_xyxy[j, 1]),
-                            x2=float(all_xyxy[j, 2]), y2=float(all_xyxy[j, 3]),
-                            class_name=cls_name, confidence=conf))
+                        detections.append(
+                            YoloDetection(
+                                x1=float(all_xyxy[j, 0]),
+                                y1=float(all_xyxy[j, 1]),
+                                x2=float(all_xyxy[j, 2]),
+                                y2=float(all_xyxy[j, 3]),
+                                class_name=cls_name,
+                                confidence=conf,
+                            )
+                        )
 
                 if _using_custom_weights:
                     is_relevant = len(detections) > 0
                 else:
                     is_relevant = True
-                    frame_class = "pipe_content" if frame_class == "empty" else frame_class
+                    frame_class = (
+                        "pipe_content" if frame_class == "empty" else frame_class
+                    )
 
-                results_out[orig_idx] = (frame_ids[orig_idx], YoloResponse(
-                    is_relevant=is_relevant, detections=detections,
-                    frame_class=frame_class,
-                    inference_time_ms=round(elapsed_ms / len(usable_images), 1)))
+                results_out[orig_idx] = (
+                    frame_ids[orig_idx],
+                    YoloResponse(
+                        is_relevant=is_relevant,
+                        detections=detections,
+                        frame_class=frame_class,
+                        inference_time_ms=round(elapsed_ms / len(usable_images), 1),
+                    ),
+                )
         else:
             elapsed_ms = (time.perf_counter() - t0) * 1000
 
@@ -667,7 +701,9 @@ def classify(image_base64: str, top_k: int = 5) -> list[tuple[str, float]]:
         if probs is None:
             return []
 
-        top_indices = probs.data.topk(min(top_k, len(probs.data))).indices.cpu().tolist()
+        top_indices = (
+            probs.data.topk(min(top_k, len(probs.data))).indices.cpu().tolist()
+        )
         predictions = []
         for idx in top_indices:
             name = model.names.get(idx, str(idx))

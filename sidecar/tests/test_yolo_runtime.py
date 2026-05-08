@@ -22,7 +22,9 @@ def restore_yolo_settings():
             yolo_wrapper._runtime_model_override = original_override
 
 
-def test_resolve_yolo_model_path_uses_custom_weights(tmp_path: Path, restore_yolo_settings):
+def test_resolve_yolo_model_path_uses_custom_weights(
+    tmp_path: Path, restore_yolo_settings
+):
     yolo_dir = tmp_path / "yolo26m"
     yolo_dir.mkdir(parents=True)
     weights = yolo_dir / "custom.pt"
@@ -38,7 +40,9 @@ def test_resolve_yolo_model_path_uses_custom_weights(tmp_path: Path, restore_yol
     assert using_custom is True
 
 
-def test_resolve_yolo_model_path_strict_mode_raises_without_weights(tmp_path: Path, restore_yolo_settings):
+def test_resolve_yolo_model_path_strict_mode_raises_without_weights(
+    tmp_path: Path, restore_yolo_settings
+):
     settings.models_dir = str(tmp_path)
     settings.yolo_model_name = "missing.pt"
     settings.require_custom_yolo = True
@@ -47,12 +51,16 @@ def test_resolve_yolo_model_path_strict_mode_raises_without_weights(tmp_path: Pa
         yolo_wrapper._resolve_yolo_model_path()
 
 
-def test_resolve_yolo_model_path_uses_active_pointer(tmp_path: Path, restore_yolo_settings):
+def test_resolve_yolo_model_path_uses_active_pointer(
+    tmp_path: Path, restore_yolo_settings
+):
     yolo_dir = tmp_path / "yolo26m"
     yolo_dir.mkdir(parents=True)
     weights = yolo_dir / "yolo_v2.pt"
     weights.write_bytes(b"weights")
-    (yolo_dir / "active.json").write_text('{"active_model":"yolo_v2.pt"}', encoding="utf-8")
+    (yolo_dir / "active.json").write_text(
+        '{"active_model":"yolo_v2.pt"}', encoding="utf-8"
+    )
 
     settings.models_dir = str(tmp_path)
     settings.yolo_model_name = "missing.pt"

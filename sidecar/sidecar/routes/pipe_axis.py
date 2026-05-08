@@ -2,8 +2,10 @@
 
 from fastapi import APIRouter
 from ..schemas.pipe_axis import (
-    PipeAxisRequest, PipeAxisResult,
-    PipeAxisBatchRequest, PipeAxisBatchResponse,
+    PipeAxisRequest,
+    PipeAxisResult,
+    PipeAxisBatchRequest,
+    PipeAxisBatchResponse,
 )
 from ..models import pipe_axis
 
@@ -20,6 +22,7 @@ async def analyze_pipe_axis(req: PipeAxisRequest) -> PipeAxisResult:
 async def analyze_pipe_axis_batch(req: PipeAxisBatchRequest) -> PipeAxisBatchResponse:
     """Batch: Mehrere Frames auf einmal analysieren."""
     import time
+
     t0 = time.perf_counter()
     results = [pipe_axis.analyze_pipe_axis(f.image_base64) for f in req.frames]
     total_ms = (time.perf_counter() - t0) * 1000

@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 # liefern wir polygon_points=None und loggen einmalig.
 try:
     import cv2 as _cv2
+
     _HAS_CV2 = True
 except ImportError:
     _HAS_CV2 = False
@@ -66,10 +67,7 @@ def _load_sam2_on(device: str):
         from sam2.build_sam import build_sam2
         from sam2.sam2_image_predictor import SAM2ImagePredictor
     except ImportError:
-        raise ImportError(
-            "sam2 ist nicht installiert. "
-            "Install mit: pip install sam2"
-        )
+        raise ImportError("sam2 ist nicht installiert. Install mit: pip install sam2")
 
     checkpoint = _find_sam2_checkpoint()
     # sam2.build_sam2 erwartet Hydra-Config Name (z.B. "sam2.1/sam2.1_hiera_l.yaml")
@@ -80,6 +78,7 @@ def _load_sam2_on(device: str):
     # Blackwell-Optimierung: torch.compile
     try:
         import torch
+
         if device.startswith("cuda"):
             sam = torch.compile(sam, mode="reduce-overhead")
             logger.info("SAM 2: torch.compile aktiviert")
@@ -93,6 +92,7 @@ def _load_sam2_on(device: str):
 def _cuda_available() -> bool:
     try:
         import torch
+
         return torch.cuda.is_available()
     except Exception:
         return False
@@ -111,7 +111,9 @@ def _rle_encode(mask: np.ndarray) -> str:
     return ",".join(parts)
 
 
-def _mask_to_polygon(mask: np.ndarray, epsilon_ratio: float = 0.005) -> list[list[float]] | None:
+def _mask_to_polygon(
+    mask: np.ndarray, epsilon_ratio: float = 0.005
+) -> list[list[float]] | None:
     """Approximiert die binaere Maske zu einem Polygon (Douglas-Peucker via cv2).
 
     Slice 1 (Operateur-Annotation): YOLO-seg braucht ein Polygon — die Maske
@@ -172,45 +174,63 @@ def _append_mask_result(
     if return_polygon:
         polygon_points = _mask_to_polygon(mask)
 
-    masks_out.append(MaskResult(
-        label=bbox.label,
-        confidence=round(score, 4),
-        bbox=[bbox.x1, bbox.y1, bbox.x2, bbox.y2],
-        mask_rle=_rle_encode(mask.astype(np.uint8)),
-        mask_area_pixels=mask_area,
-        image_area_pixels=h * w,
-        height_pixels=int(ys.max() - ys.min() + 1),
-        width_pixels=int(xs.max() - xs.min() + 1),
-        centroid_x=round(float(xs.mean()), 1),
-        centroid_y=round(float(ys.mean()), 1),
-        polygon_points=polygon_points,
-    ))
+    masks_out.append(
+        MaskResult(
+            label=bbox.label,
+            confidence=round(score, 4),
+            bbox=[bbox.x1, bbox.y1, bbox.x2, bbox.y2],
+            mask_rle=_rle_encode(mask.astype(np.uint8)),
+            mask_area_pixels=mask_area,
+            image_area_pixels=h * w,
+            height_pixels=int(ys.max() - ys.min() + 1),
+            width_pixels=int(xs.max() - xs.min() + 1),
+            centroid_x=round(float(xs.mean()), 1),
+            centroid_y=round(float(ys.mean()), 1),
+            polygon_points=polygon_points,
+        )
+    )
 
 
-def _predict_single_box(predictor, bbox: BoundingBox, masks_out: list[MaskResult],
-                         h: int, w: int, device: str,
-                         return_polygon: bool = False) -> None:
+def _predict_single_box(
+    predictor,
+    bbox: BoundingBox,
+    masks_out: list[MaskResult],
+    h: int,
+    w: int,
+    device: str,
+    return_polygon: bool = False,
+) -> None:
     """Fallback: einzelne Box vorhersagen (sequentiell)."""
     import torch
+
     try:
         box_np = np.array([bbox.x1, bbox.y1, bbox.x2, bbox.y2])
         with torch.inference_mode():
             masks, scores, _ = predictor.predict(
-                point_coords=None, point_labels=None,
-                box=box_np, multimask_output=False,
+                point_coords=None,
+                point_labels=None,
+                box=box_np,
+                multimask_output=False,
             )
-        _append_mask_result(masks_out, masks[0], float(scores[0]), bbox, h, w, return_polygon)
+        _append_mask_result(
+            masks_out, masks[0], float(scores[0]), bbox, h, w, return_polygon
+        )
     except Exception as exc:
         logger.warning("SAM 2 Prediction fehlgeschlagen fuer Box %s: %s", bbox, exc)
 
 
 def _predict_boxes_batched(
-    predictor, boxes: list[BoundingBox], masks_out: list[MaskResult],
-    h: int, w: int, device: str,
+    predictor,
+    boxes: list[BoundingBox],
+    masks_out: list[MaskResult],
+    h: int,
+    w: int,
+    device: str,
     return_polygon: bool = False,
 ) -> None:
     """Batch: alle Boxen in einem Forward Pass durch SAM 2."""
     import torch
+
     if not boxes:
         return
 
@@ -227,15 +247,29 @@ def _predict_boxes_batched(
         if masks.ndim == 4:
             masks = masks[:, 0]  # → (N, H, W)
         for i, bbox in enumerate(boxes):
-            _append_mask_result(masks_out, masks[i], float(scores[i]), bbox, h, w, return_polygon)
+            _append_mask_result(
+                masks_out, masks[i], float(scores[i]), bbox, h, w, return_polygon
+            )
     except Exception as exc:
-        logger.warning("SAM 2 Batch fehlgeschlagen (%d Boxen): %s — Fallback sequentiell", len(boxes), exc)
+        logger.warning(
+            "SAM 2 Batch fehlgeschlagen (%d Boxen): %s — Fallback sequentiell",
+            len(boxes),
+            exc,
+        )
         for bbox in boxes:
-            _predict_single_box(predictor, bbox, masks_out, h, w, device, return_polygon)
+            _predict_single_box(
+                predictor, bbox, masks_out, h, w, device, return_polygon
+            )
 
 
-def _is_in_annulus(cx: float, cy: float, center_x: float, center_y: float,
-                   inner_r: float, outer_r: float) -> bool:
+def _is_in_annulus(
+    cx: float,
+    cy: float,
+    center_x: float,
+    center_y: float,
+    inner_r: float,
+    outer_r: float,
+) -> bool:
     """Prueft ob Punkt im Annulus (Ring-Bereich) liegt."""
     dist = np.sqrt((cx - center_x) ** 2 + (cy - center_y) ** 2)
     return inner_r <= dist <= outer_r
@@ -250,8 +284,9 @@ def _compute_iou(mask_a: np.ndarray, mask_b: np.ndarray) -> float:
     return float(intersection / union)
 
 
-def _clip_annulus_mask(mask: np.ndarray, cx: float, cy: float,
-                       r_inner: float, r_outer: float) -> np.ndarray:
+def _clip_annulus_mask(
+    mask: np.ndarray, cx: float, cy: float, r_inner: float, r_outer: float
+) -> np.ndarray:
     """Maske auf den Annulus-Bereich zuschneiden (Pixel ausserhalb = 0)."""
     h, w = mask.shape
     yy, xx = np.ogrid[:h, :w]
@@ -260,8 +295,9 @@ def _clip_annulus_mask(mask: np.ndarray, cx: float, cy: float,
     return mask & annulus
 
 
-def _ring_scan(predictor, ring_params, h: int, w: int, device: str,
-               return_polygon: bool = False) -> list[MaskResult]:
+def _ring_scan(
+    predictor, ring_params, h: int, w: int, device: str, return_polygon: bool = False
+) -> list[MaskResult]:
     """Annulus-Bereich systematisch mit SAM 2 abtasten (Sektoren-Ansatz).
 
     Strategie: Jeder Sektor bekommt positive Punkte + Constraint-Punkte
@@ -282,9 +318,11 @@ def _ring_scan(predictor, ring_params, h: int, w: int, device: str,
     # Strategie 1: Sektoren-Scan (je 30° Sektor, mehrere pos. Punkte + neg. Constraints)
     sector_step = 2 * np.pi / n_angles
     mid_r = (r_inner + r_outer) / 2.0
-    radii = np.linspace(r_inner + (r_outer - r_inner) * 0.2,
-                        r_outer - (r_outer - r_inner) * 0.2,
-                        n_radii)
+    radii = np.linspace(
+        r_inner + (r_outer - r_inner) * 0.2,
+        r_outer - (r_outer - r_inner) * 0.2,
+        n_radii,
+    )
 
     # Feste negative Constraint-Punkte: Zentrum + 4 Punkte knapp ausserhalb
     neg_margin = (r_outer - r_inner) * 0.5
@@ -298,8 +336,13 @@ def _ring_scan(predictor, ring_params, h: int, w: int, device: str,
     # Punkte im Bild-Bereich filtern
     neg_points = [(x, y) for x, y in neg_points if 0 <= x < w and 0 <= y < h]
 
-    logger.info("Ring-Scan: %d Sektoren x %d Radien, r_inner=%.0f, r_outer=%.0f",
-                n_angles, n_radii, r_inner, r_outer)
+    logger.info(
+        "Ring-Scan: %d Sektoren x %d Radien, r_inner=%.0f, r_outer=%.0f",
+        n_angles,
+        n_radii,
+        r_inner,
+        r_outer,
+    )
 
     candidates: list[tuple[np.ndarray, float, dict]] = []
 
@@ -372,13 +415,17 @@ def _ring_scan(predictor, ring_params, h: int, w: int, device: str,
                     continue
 
                 # Maske die den ganzen Annulus ausfuellt → skip
-                annulus_area = np.pi * (r_outer ** 2 - r_inner ** 2)
+                annulus_area = np.pi * (r_outer**2 - r_inner**2)
                 if mask_area > annulus_area * 0.6:
                     continue
 
                 meta = {
-                    "bbox": [float(xs.min()), float(ys.min()),
-                             float(xs.max()), float(ys.max())],
+                    "bbox": [
+                        float(xs.min()),
+                        float(ys.min()),
+                        float(xs.max()),
+                        float(ys.max()),
+                    ],
                     "area": mask_area,
                     "centroid_x": centroid_x,
                     "centroid_y": centroid_y,
@@ -411,19 +458,21 @@ def _ring_scan(predictor, ring_params, h: int, w: int, device: str,
     results: list[MaskResult] = []
     for i, (mask, score, meta) in enumerate(keep):
         polygon_points = _mask_to_polygon(mask) if return_polygon else None
-        results.append(MaskResult(
-            label=f"ring_segment_{i}",
-            confidence=round(score, 4),
-            bbox=meta["bbox"],
-            mask_rle=_rle_encode(mask.astype(np.uint8)),
-            mask_area_pixels=meta["area"],
-            image_area_pixels=0,  # wird unten gesetzt
-            height_pixels=meta["h_px"],
-            width_pixels=meta["w_px"],
-            centroid_x=round(meta["centroid_x"], 1),
-            centroid_y=round(meta["centroid_y"], 1),
-            polygon_points=polygon_points,
-        ))
+        results.append(
+            MaskResult(
+                label=f"ring_segment_{i}",
+                confidence=round(score, 4),
+                bbox=meta["bbox"],
+                mask_rle=_rle_encode(mask.astype(np.uint8)),
+                mask_area_pixels=meta["area"],
+                image_area_pixels=0,  # wird unten gesetzt
+                height_pixels=meta["h_px"],
+                width_pixels=meta["w_px"],
+                centroid_x=round(meta["centroid_x"], 1),
+                centroid_y=round(meta["centroid_y"], 1),
+                polygon_points=polygon_points,
+            )
+        )
 
     return results
 
@@ -467,8 +516,14 @@ def segment(
 
     # ── Ring-Scan: Annulus-Bereich systematisch abtasten ──
     if ring_scan is not None:
-        masks_out = _ring_scan(predictor, ring_params=ring_scan, h=h, w=w, device=device,
-                                return_polygon=return_polygon)
+        masks_out = _ring_scan(
+            predictor,
+            ring_params=ring_scan,
+            h=h,
+            w=w,
+            device=device,
+            return_polygon=return_polygon,
+        )
         # image_area nachtraeglich setzen
         for m in masks_out:
             m.image_area_pixels = h * w
@@ -502,11 +557,16 @@ def segment(
             ys, xs = np.where(mask)
             if len(xs) > 0:
                 dummy_bbox = BoundingBox(
-                    x1=float(xs.min()), y1=float(ys.min()),
-                    x2=float(xs.max()), y2=float(ys.max()),
-                    label="point_prompt", confidence=score,
+                    x1=float(xs.min()),
+                    y1=float(ys.min()),
+                    x2=float(xs.max()),
+                    y2=float(ys.max()),
+                    label="point_prompt",
+                    confidence=score,
                 )
-                _append_mask_result(masks_out, mask, score, dummy_bbox, h, w, return_polygon)
+                _append_mask_result(
+                    masks_out, mask, score, dummy_bbox, h, w, return_polygon
+                )
 
         except Exception as exc:
             logger.warning("SAM 2 Point-Prompt Prediction fehlgeschlagen: %s", exc)
@@ -517,14 +577,19 @@ def segment(
         if len(bounding_boxes) > max_batch:
             logger.warning(
                 "SAM 2 Batch %d Boxen > Limit %d — wird in Chunks aufgeteilt",
-                len(bounding_boxes), max_batch,
+                len(bounding_boxes),
+                max_batch,
             )
         for chunk_start in range(0, len(bounding_boxes), max_batch):
             chunk = bounding_boxes[chunk_start : chunk_start + max_batch]
-            _predict_boxes_batched(predictor, chunk, masks_out, h, w, device, return_polygon)
+            _predict_boxes_batched(
+                predictor, chunk, masks_out, h, w, device, return_polygon
+            )
 
     elif len(bounding_boxes) == 1:
-        _predict_single_box(predictor, bounding_boxes[0], masks_out, h, w, device, return_polygon)
+        _predict_single_box(
+            predictor, bounding_boxes[0], masks_out, h, w, device, return_polygon
+        )
 
     elapsed_ms = (time.perf_counter() - t0) * 1000
 

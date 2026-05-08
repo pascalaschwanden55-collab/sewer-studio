@@ -76,10 +76,18 @@ def _resize_if_needed(img_rgb: np.ndarray, max_width: int) -> np.ndarray:
     return np.array(pil.resize((new_w, new_h), Image.LANCZOS))
 
 
-def _decode_frames_blocking(video_path: str, step_seconds: float, frame_queue: asyncio.Queue, loop: asyncio.AbstractEventLoop, worker_count: int) -> None:
+def _decode_frames_blocking(
+    video_path: str,
+    step_seconds: float,
+    frame_queue: asyncio.Queue,
+    loop: asyncio.AbstractEventLoop,
+    worker_count: int,
+) -> None:
     frame_index = 0
     try:
-        for ts, frame_rgb, backend in video_decoder.decode_frames(video_path, step_seconds):
+        for ts, frame_rgb, backend in video_decoder.decode_frames(
+            video_path, step_seconds
+        ):
             frame_index += 1
             asyncio.run_coroutine_threadsafe(
                 frame_queue.put((frame_index, ts, frame_rgb, backend)), loop
@@ -89,7 +97,9 @@ def _decode_frames_blocking(video_path: str, step_seconds: float, frame_queue: a
             asyncio.run_coroutine_threadsafe(frame_queue.put(None), loop).result()
 
 
-async def _decode_frames_to_queue(video_path: str, step_seconds: float, frame_queue: asyncio.Queue, worker_count: int) -> None:
+async def _decode_frames_to_queue(
+    video_path: str, step_seconds: float, frame_queue: asyncio.Queue, worker_count: int
+) -> None:
     loop = asyncio.get_running_loop()
     await asyncio.to_thread(
         _decode_frames_blocking,
@@ -101,7 +111,9 @@ async def _decode_frames_to_queue(video_path: str, step_seconds: float, frame_qu
     )
 
 
-def _process_frame(req: VideoProcessRequest, frame_item: tuple[int, float, np.ndarray, str]) -> dict:
+def _process_frame(
+    req: VideoProcessRequest, frame_item: tuple[int, float, np.ndarray, str]
+) -> dict:
     frame_index, ts, frame_rgb, backend = frame_item
     t0 = time.perf_counter()
 
@@ -129,8 +141,12 @@ def _process_frame(req: VideoProcessRequest, frame_item: tuple[int, float, np.nd
     if yolo_result.is_relevant:
         result["detections"] = [
             {
-                "x1": d.x1, "y1": d.y1, "x2": d.x2, "y2": d.y2,
-                "class_name": d.class_name, "confidence": d.confidence,
+                "x1": d.x1,
+                "y1": d.y1,
+                "x2": d.x2,
+                "y2": d.y2,
+                "class_name": d.class_name,
+                "confidence": d.confidence,
             }
             for d in yolo_result.detections
         ]

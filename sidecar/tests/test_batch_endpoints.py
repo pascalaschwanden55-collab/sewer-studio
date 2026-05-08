@@ -32,13 +32,16 @@ def client():
 
 class TestYoloBatch:
     def test_batch_returns_correct_count(self, client, image_b64):
-        resp = client.post("/detect/yolo/batch", json={
-            "items": [
-                {"image_base64": image_b64, "frame_id": "f1"},
-                {"image_base64": image_b64, "frame_id": "f2"},
-            ],
-            "confidence_threshold": 0.25,
-        })
+        resp = client.post(
+            "/detect/yolo/batch",
+            json={
+                "items": [
+                    {"image_base64": image_b64, "frame_id": "f1"},
+                    {"image_base64": image_b64, "frame_id": "f2"},
+                ],
+                "confidence_threshold": 0.25,
+            },
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert len(data["results"]) == 2
@@ -47,23 +50,29 @@ class TestYoloBatch:
         assert data["total_inference_time_ms"] > 0
 
     def test_batch_single_item(self, client, image_b64):
-        resp = client.post("/detect/yolo/batch", json={
-            "items": [{"image_base64": image_b64, "frame_id": "single"}],
-            "confidence_threshold": 0.25,
-        })
+        resp = client.post(
+            "/detect/yolo/batch",
+            json={
+                "items": [{"image_base64": image_b64, "frame_id": "single"}],
+                "confidence_threshold": 0.25,
+            },
+        )
         assert resp.status_code == 200
         assert len(resp.json()["results"]) == 1
 
 
 class TestDinoBatch:
     def test_batch_returns_results(self, client, image_b64):
-        resp = client.post("/detect/dino/batch", json={
-            "items": [
-                {"image_base64": image_b64, "frame_id": "d1"},
-            ],
-            "box_threshold": 0.30,
-            "text_threshold": 0.25,
-        })
+        resp = client.post(
+            "/detect/dino/batch",
+            json={
+                "items": [
+                    {"image_base64": image_b64, "frame_id": "d1"},
+                ],
+                "box_threshold": 0.30,
+                "text_threshold": 0.25,
+            },
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert len(data["results"]) == 1
@@ -73,31 +82,53 @@ class TestDinoBatch:
 class TestSamBatch:
     def test_batch_with_yolo_boxes(self, client, image_b64):
         # Erst YOLO fuer Boxen
-        yolo_resp = client.post("/detect/yolo", json={
-            "image_base64": image_b64,
-            "confidence_threshold": 0.25,
-        })
+        yolo_resp = client.post(
+            "/detect/yolo",
+            json={
+                "image_base64": image_b64,
+                "confidence_threshold": 0.25,
+            },
+        )
         detections = yolo_resp.json().get("detections", [])
         boxes = [
-            {"x1": d["x1"], "y1": d["y1"], "x2": d["x2"], "y2": d["y2"],
-             "label": d["class_name"]}
+            {
+                "x1": d["x1"],
+                "y1": d["y1"],
+                "x2": d["x2"],
+                "y2": d["y2"],
+                "label": d["class_name"],
+            }
             for d in detections[:3]
         ]
 
-        resp = client.post("/segment/sam/batch", json={
-            "items": [
-                {"image_base64": image_b64, "bounding_boxes": boxes, "frame_id": "s1"},
-            ],
-        })
+        resp = client.post(
+            "/segment/sam/batch",
+            json={
+                "items": [
+                    {
+                        "image_base64": image_b64,
+                        "bounding_boxes": boxes,
+                        "frame_id": "s1",
+                    },
+                ],
+            },
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert len(data["results"]) == 1
         assert data["results"][0]["frame_id"] == "s1"
 
     def test_batch_empty_boxes(self, client, image_b64):
-        resp = client.post("/segment/sam/batch", json={
-            "items": [
-                {"image_base64": image_b64, "bounding_boxes": [], "frame_id": "empty"},
-            ],
-        })
+        resp = client.post(
+            "/segment/sam/batch",
+            json={
+                "items": [
+                    {
+                        "image_base64": image_b64,
+                        "bounding_boxes": [],
+                        "frame_id": "empty",
+                    },
+                ],
+            },
+        )
         assert resp.status_code == 200

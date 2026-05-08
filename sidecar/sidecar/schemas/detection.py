@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 # ── YOLO ────────────────────────────────────────────────────────────────────
 
+
 class YoloRequest(BaseModel):
     image_base64: str
     confidence_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
@@ -34,6 +35,7 @@ class YoloResponse(BaseModel):
 
 # ── Grounding DINO ──────────────────────────────────────────────────────────
 
+
 class DinoRequest(BaseModel):
     image_base64: str
     text_prompt: str | None = None
@@ -58,6 +60,7 @@ class DinoResponse(BaseModel):
 
 # ── Bounding Box (shared input for SAM) ────────────────────────────────────
 
+
 class BoundingBox(BaseModel):
     x1: float
     y1: float
@@ -68,6 +71,7 @@ class BoundingBox(BaseModel):
 
 
 # ── YOLO Classify ─────────────────────────────────────────────────────────
+
 
 class YoloClassifyRequest(BaseModel):
     image_base64: str
@@ -85,6 +89,7 @@ class YoloClassifyResponse(BaseModel):
 
 
 # ── YOLO Batch ─────────────────────────────────────────────────────────
+
 
 class YoloBatchItem(BaseModel):
     image_base64: str
@@ -107,6 +112,7 @@ class YoloBatchResponse(BaseModel):
 
 
 # ── DINO Batch ─────────────────────────────────────────────────────────
+
 
 class DinoBatchItem(BaseModel):
     image_base64: str

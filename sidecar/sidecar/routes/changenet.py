@@ -16,6 +16,7 @@ router = APIRouter(prefix="/analyze")
 
 class ChangeDetectionRequest(BaseModel):
     """Request fuer Aenderungserkennung."""
+
     image_old_base64: str
     image_new_base64: str
     threshold: int = 30
@@ -23,6 +24,7 @@ class ChangeDetectionRequest(BaseModel):
 
 class ChangeDetectionResponse(BaseModel):
     """Response mit Aenderungs-Overlay und Statistik."""
+
     change_overlay_base64: str
     image_width: int
     image_height: int
