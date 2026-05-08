@@ -15,7 +15,6 @@ Ergebnis wird in CLIP_EVALUATION_REPORT.md gespeichert.
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import sys
 import time

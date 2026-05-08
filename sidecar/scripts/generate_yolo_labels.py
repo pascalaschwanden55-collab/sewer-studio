@@ -138,7 +138,7 @@ def process_frame(frame: dict, images_dir: Path, labels_dir: Path, stats: Counte
     # DINO Detection
     try:
         detections = detect_dino(img_b64)
-    except Exception as e:
+    except Exception:
         stats["dino_error"] += 1
         return
 

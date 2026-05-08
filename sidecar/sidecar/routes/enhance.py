@@ -23,7 +23,7 @@ from fastapi import APIRouter
 from PIL import Image
 from pydantic import BaseModel, Field
 
-from ..models.vsr_wrapper import enhance_frame, get_vsr_status, _vsr_backend
+from ..models.vsr_wrapper import enhance_frame, _vsr_backend
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

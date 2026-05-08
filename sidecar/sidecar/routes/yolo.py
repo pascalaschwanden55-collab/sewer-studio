@@ -117,7 +117,6 @@ async def classify_viewtype(req: ViewTypeRequest) -> ViewTypeResponse:
     """Aufnahmetechnik-Klassifikation: axial / schacht / uebergang."""
     import time
     import base64
-    import numpy as np
     from PIL import Image
     import io
 

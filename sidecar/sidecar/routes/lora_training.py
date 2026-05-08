@@ -8,13 +8,11 @@ from __future__ import annotations
 
 import json
 import logging
-import subprocess
 import threading
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from fastapi import APIRouter, HTTPException
 
