@@ -15,7 +15,6 @@ Architektur:
 
 from __future__ import annotations
 
-import asyncio
 import base64
 import io
 import json
@@ -360,7 +359,7 @@ def _florence2_shadow_compare(
 
         # Vergleich: wie viele DINO-Labels hat Florence-2 auch gefunden?
         dino_labels_set = {d.label.lower() for d in dino_detections}
-        f2_labels_set = {l.lower().strip() for l in f2_labels}
+        f2_labels_set = {label.lower().strip() for label in f2_labels}
         overlap = dino_labels_set & f2_labels_set
         match_ratio = len(overlap) / max(len(dino_labels_set), 1)
 

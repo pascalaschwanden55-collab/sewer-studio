@@ -16,7 +16,6 @@ import numpy as np
 from PIL import Image
 
 from ..config import settings
-from ..gpu_manager import gpu_manager, ModelSlot
 
 logger = logging.getLogger(__name__)
 
@@ -85,9 +84,6 @@ def _compute_change_mask(
 
     # Schwellenwert
     change_mask = np.zeros_like(diff, dtype=np.uint8)
-
-    # Signifikante Aenderungen
-    significant = diff > threshold
 
     # Heuristik: dunkler geworden = potentielle Verschlechterung (Riss, Ablagerung)
     darker = gray_new < gray_old - threshold

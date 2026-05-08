@@ -7,11 +7,12 @@ Kein Swap-Overhead — jeder Frame bekommt die volle CV-Pipeline.
 import asyncio
 import logging
 import os
-import sys
 import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 # ── DLL-Suchpfad fuer NVDEC (PyNvVideoCodec braucht cudart64_12.dll aus PyTorch) ──
 # Muss VOR allen torch/CUDA-Imports passieren.
@@ -182,10 +183,6 @@ app = FastAPI(
     description="Always-On Multi-Model Vision Pipeline (YOLO / Florence-2 / SAM 2 / VSR)",
     lifespan=lifespan,
 )
-
-
-from starlette.requests import Request
-from starlette.responses import JSONResponse
 
 
 @app.middleware("http")

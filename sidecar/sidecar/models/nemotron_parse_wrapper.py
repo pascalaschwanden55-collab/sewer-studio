@@ -8,13 +8,11 @@ GPU-Slot: ModelSlot.PARSE (on-demand, nicht persistent).
 from __future__ import annotations
 
 import base64
-import io
 import time
 import logging
 import re
 from pathlib import Path
 
-import numpy as np
 
 from ..config import settings
 from ..gpu_manager import gpu_manager, ModelSlot
@@ -162,7 +160,9 @@ def parse_pdf(
     model_used = "regex_fallback"
     try:
         device = _resolve_device()
-        state = gpu_manager.ensure_loaded(
+        # state = gpu_manager.ensure_loaded(...) — wieder aktivieren, sobald
+        # die Nemotron-basierte Extraktion implementiert ist (siehe TODO unten).
+        gpu_manager.ensure_loaded(
             ModelSlot.PARSE, device, lambda: _load_nemotron_on(device)
         )
         model_used = "nemotron-parse"

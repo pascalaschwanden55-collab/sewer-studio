@@ -12,17 +12,12 @@ Nutzung:
 from __future__ import annotations
 
 import argparse
-import base64
-import io
 import json
 import logging
-import os
 import random
 import time
 from pathlib import Path
-from collections import defaultdict
 
-import numpy as np
 from PIL import Image
 
 logging.basicConfig(
@@ -219,7 +214,7 @@ def main():
         logger.info("Prompt: %s", prompt[:80] + "...")
 
         class_results = {}
-        total_tp, total_fn, total_fp = 0, 0, 0
+        total_tp, total_fn = 0, 0
         total_ms = 0
 
         for vsa_code, image_paths in samples.items():

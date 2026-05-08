@@ -22,12 +22,9 @@ import base64
 import io
 import json
 import logging
-import os
-import sys
 import time
 from pathlib import Path
 
-import numpy as np
 from PIL import Image
 
 logging.basicConfig(
@@ -137,7 +134,7 @@ def run_grounding(
     labels = od.get("labels", [])
 
     return {
-        "detections": [{"bbox": b, "label": l} for b, l in zip(bboxes, labels)],
+        "detections": [{"bbox": b, "label": label} for b, label in zip(bboxes, labels)],
         "inference_ms": elapsed,
     }
 
@@ -205,7 +202,7 @@ def stage_prompt(args):
             "  Avg detections: %.2f | Avg time: %.0fms | Top labels: %s",
             avg_det,
             avg_ms,
-            ", ".join(f"{l}({c})" for l, c in top_labels[:5]),
+            ", ".join(f"{label}({c})" for label, c in top_labels[:5]),
         )
 
     # Ergebnis speichern
