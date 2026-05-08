@@ -82,6 +82,33 @@ public static class VsaYoloClassMap
     }
 
     /// <summary>
+    /// Wie <see cref="GetClassId"/>, aber **ohne** Auto-Create und ohne Persistenz.
+    /// Liefert <c>false</c> wenn die Kategorie nicht in der Map ist.
+    /// Slice 1 (Operateur-Annotation): wir wollen keine instabilen Class-IDs
+    /// erzeugen, damit der YOLO-Datensatz konsistent bleibt.
+    /// </summary>
+    public static bool TryGetClassId(string vsaCode, out int classId)
+    {
+        classId = -1;
+        if (string.IsNullOrWhiteSpace(vsaCode)) return false;
+
+        var category = ExtractCategory(vsaCode);
+        if (string.IsNullOrEmpty(category)) return false;
+
+        lock (_lock)
+        {
+            EnsureLoaded();
+            if (_map!.TryGetValue(category, out var id))
+            {
+                classId = id;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// V4.2: Umgekehrte Zuordnung class_id → VSA-Code (fuer EvalRunner + Report).
     /// Gibt ersten passenden Code zurueck, oder null wenn classId nicht im Mapping.
     /// </summary>

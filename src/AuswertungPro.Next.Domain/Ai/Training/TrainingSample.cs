@@ -120,7 +120,7 @@ public sealed class TrainingSample
 
     /// <summary>Hat eine vollstaendige SAM-Maske (RLE + Dimensionen).</summary>
     public bool HasMask =>
-        !string.IsNullOrEmpty(SamMaskRle)
+        !string.IsNullOrWhiteSpace(SamMaskRle)
         && MaskWidth.HasValue && MaskWidth.Value > 0
         && MaskHeight.HasValue && MaskHeight.Value > 0;
 
