@@ -298,23 +298,16 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         if (string.IsNullOrWhiteSpace(pdfPath))
             return;
 
-        try
+        if (AuswertungPro.Next.Application.Common.ProcessRunner.TryOpenWithVerb(pdfPath, "print", out var printErr))
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = pdfPath,
-                Verb = "print",
-                UseShellExecute = true
-            };
-            Process.Start(psi);
             LastResult = $"Druckauftrag gestartet: {pdfPath}";
             _shell.SetStatus("PDF-Druckauftrag gestartet");
         }
-        catch (Exception ex)
+        else
         {
-            LastResult = $"Fehler beim Drucken: {ex.Message}";
+            LastResult = $"Fehler beim Drucken: {printErr}";
             _dialogs.ShowMessage(
-                $"PDF konnte nicht gedruckt werden:\n{ex.Message}",
+                $"PDF konnte nicht gedruckt werden:\n{printErr}",
                 "Druckcenter",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -335,20 +328,15 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             return;
         }
 
-        try
+        if (AuswertungPro.Next.Application.Common.ProcessRunner.TryOpenWithDefaultProgram(LastExportedPdfPath, out var openErr))
         {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = LastExportedPdfPath,
-                UseShellExecute = true
-            });
             LastResult = $"PDF geoeffnet: {Path.GetFileName(LastExportedPdfPath)}";
         }
-        catch (Exception ex)
+        else
         {
-            LastResult = $"Fehler beim Oeffnen: {ex.Message}";
+            LastResult = $"Fehler beim Oeffnen: {openErr}";
             _dialogs.ShowMessage(
-                $"PDF konnte nicht geoeffnet werden:\n{ex.Message}",
+                $"PDF konnte nicht geoeffnet werden:\n{openErr}",
                 "Druckcenter",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);

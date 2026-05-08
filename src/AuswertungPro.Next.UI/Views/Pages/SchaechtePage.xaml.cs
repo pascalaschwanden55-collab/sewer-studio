@@ -1736,17 +1736,9 @@ public partial class SchaechtePage : UserControl
             return;
         }
 
-        try
+        if (!AuswertungPro.Next.Application.Common.ProcessRunner.TryOpenWithDefaultProgram(pdfPath, out var openErr))
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = pdfPath,
-                UseShellExecute = true
-            });
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"PDF konnte nicht geoeffnet werden:\n{ex.Message}", "Protokoll",
+            MessageBox.Show($"PDF konnte nicht geoeffnet werden:\n{openErr}", "Protokoll",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

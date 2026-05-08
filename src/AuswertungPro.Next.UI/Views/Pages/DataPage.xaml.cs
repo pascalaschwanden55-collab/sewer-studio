@@ -1648,17 +1648,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
         }
 
-        try
+        if (!AuswertungPro.Next.Application.Common.ProcessRunner.TryOpenWithDefaultProgram(resolved, out var openErr))
         {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = resolved,
-                UseShellExecute = true
-            });
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Foto konnte nicht geoeffnet werden:\n{ex.Message}", "Foto",
+            MessageBox.Show($"Foto konnte nicht geoeffnet werden:\n{openErr}", "Foto",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
