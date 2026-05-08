@@ -297,6 +297,13 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
     private readonly bool _useFullDamagePrompt;
     // Retry-Throttle: max 2 gleichzeitige Retries (kein VRAM-Risiko mehr, nur CPU/GPU-Contention)
     private readonly SemaphoreSlim _retryThrottle = new(2, 2);
+    // 32B Eskalations-Lock: serialisiert parallele 32B-Aufrufe (CLAUDE.md Phase 3.1).
+    // 32B laeuft hybrid (~2 GB VRAM + ~20 GB RAM, num_gpu=10) — parallele Calls
+    // wuerden Ollama in CPU-Fallback und VRAM/RAM-Stau druecken (~28 s statt ~9 s).
+    // STATIC: gilt prozessweit, weil Ollama nur eine 32B-Instanz haelt — selbst wenn
+    // mehrere EnhancedVisionAnalysisService-Instanzen leben, darf nur ein 32B-Call
+    // gleichzeitig laufen. 8B-Calls bleiben unbeeinflusst.
+    private static readonly SemaphoreSlim _escalation32BLock = new(1, 1);
     private int _retryCount;
     // Telemetrie: Retry-Gruende einzeln zaehlen fuer datenbasierte Schwellen-Justierung
     private int _retryAllCodesNull;
@@ -423,6 +430,12 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
                 ct: ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
+        catch (Exception ex) when (IsStructuredJsonParseFailure(ex))
+        {
+            // Phase 3.2: Unstrukturierte Ollama-Antwort → poorQuality-Fallback,
+            // statt den ganzen Batch zu crashen.
+            return PoorQualityFallback("Frame-Analyse", _model, ex);
+        }
         catch (Exception ex)
         {
             return FailAnalysis("Frame-Analyse", _model, ex);
@@ -504,6 +517,59 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
         return EnhancedFrameAnalysis.Empty(message);
     }
 
+    /// <summary>
+    /// Phase 3.2: Erkennt unstrukturierte/korrupte Ollama-Antworten, die nicht
+    /// ins erwartete JSON-Schema passen. Solche Faelle sollen nicht den ganzen
+    /// Batchlauf killen — sie werden als poorQuality-Frame markiert und der Lauf
+    /// laeuft weiter. CancellationToken-Faelle (OperationCanceledException)
+    /// werden hier NICHT erkannt, die muessen weiter propagieren.
+    /// </summary>
+    private static bool IsStructuredJsonParseFailure(Exception ex)
+    {
+        if (ex is JsonException) return true;
+        // OllamaClient.ChatStructuredWithOptionsAsync wirft InvalidOperationException
+        // mit Nachricht "Structured JSON konnte nicht geparst werden: ..." bei
+        // Deserialisierungs-Fehlern. Der "JSON konnte nicht geparst"-Match deckt
+        // beide bekannten Varianten ab (Structured JSON / JSON konnte nicht geparst).
+        if (ex is InvalidOperationException
+            && !string.IsNullOrEmpty(ex.Message)
+            && ex.Message.Contains("JSON konnte nicht geparst", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Phase 3.2: Konservativer Fallback fuer unstrukturierte Ollama-Antworten.
+    /// Liefert ein leeres EnhancedFrameAnalysis mit ImageQuality="schlecht" und
+    /// IsEmptyFrame=true (siehe EnhancedFrameAnalysis.Empty), damit das Frame
+    /// als poorQuality klassifiziert wird statt den Batch zu crashen. Logging
+    /// erfolgt als Warning ueber Debug.WriteLine + PipelineFailure-Event,
+    /// damit Drift sichtbar bleibt.
+    /// </summary>
+    private EnhancedFrameAnalysis PoorQualityFallback(string stage, string model, Exception ex)
+    {
+        var marker = $"PoorQuality: {stage} ({model}) lieferte unstrukturierte Antwort " +
+                     $"({ex.GetType().Name}): {ex.Message}";
+        // Als Warning loggen — kein swallow, damit der Drift in den Logs sichtbar bleibt
+        System.Diagnostics.Debug.WriteLine($"[EnhancedVision][WARN] {marker}");
+        SetPipelineWarning(marker);
+        try
+        {
+            PipelineFailure?.Invoke(this, new PipelineFailureEvent(
+                Stage: stage + " (PoorQuality-Fallback)",
+                Model: model,
+                ExceptionType: ex.GetType().Name,
+                Message: ex.Message,
+                At: DateTimeOffset.Now));
+        }
+        catch { /* Event-Handler-Fehler nicht propagieren */ }
+        // EnhancedFrameAnalysis.Empty setzt ImageQuality="schlecht", IsEmptyFrame=true,
+        // Findings=leer — genau das gewuenschte poorQuality-Verhalten.
+        return EnhancedFrameAnalysis.Empty(marker);
+    }
+
     private void SetPipelineWarning(string message)
     {
         LastPipelineWarning = message;
@@ -559,6 +625,11 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
                 ct: ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
+        catch (Exception ex) when (IsStructuredJsonParseFailure(ex))
+        {
+            // Phase 3.2: Unstrukturierte Ollama-Antwort → poorQuality-Fallback.
+            return PoorQualityFallback("PDF-Foto-Analyse", _model, ex);
+        }
         catch (Exception ex)
         {
             return FailAnalysis("PDF-Foto-Analyse", _model, ex);
@@ -898,6 +969,11 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
                 ct: ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
+        catch (Exception ex) when (IsStructuredJsonParseFailure(ex))
+        {
+            // Phase 3.2: Unstrukturierte Ollama-Antwort → poorQuality-Fallback.
+            return PoorQualityFallback("Kontextanalyse", _model, ex);
+        }
         catch (Exception ex)
         {
             return FailAnalysis("Kontextanalyse", _model, ex);
@@ -980,6 +1056,9 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
                 {
                     System.Diagnostics.Debug.WriteLine(
                         $"[EnhancedVision] Same-Model-Retry unzureichend ({retryReason}) — starte 32B Swap-Eskalation");
+                    // Serialisierung: nur ein 32B-Call gleichzeitig (CLAUDE.md Phase 3.1).
+                    // WaitAsync wirft OperationCanceledException bei ct → propagiert nach oben.
+                    await _escalation32BLock.WaitAsync(ct).ConfigureAwait(false);
                     try
                     {
                         var swapResult = await AnalyzeWithModelAsync(_referenceModel, framePngBase64, ct)
@@ -997,6 +1076,10 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
                         try { PipelineFailure?.Invoke(this, new PipelineFailureEvent(
                             "32B-Eskalation", _referenceModel,
                             ex32b.GetType().Name, ex32b.Message, DateTimeOffset.Now)); } catch { }
+                    }
+                    finally
+                    {
+                        _escalation32BLock.Release();
                     }
                 }
             }
@@ -1079,11 +1162,22 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
         messages.Add(new OllamaClient.ChatMessage(
             Role: "user", Content: prompt, ImagesBase64: [framePngBase64]));
 
-        var dto = await _client.ChatStructuredAsync<EnhancedVisionDto>(
-            model: _model,
-            messages: messages,
-            formatSchema: EnhancedVisionSchema,
-            ct: ct).ConfigureAwait(false);
+        EnhancedVisionDto dto;
+        try
+        {
+            dto = await _client.ChatStructuredAsync<EnhancedVisionDto>(
+                model: _model,
+                messages: messages,
+                formatSchema: EnhancedVisionSchema,
+                ct: ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) when (IsStructuredJsonParseFailure(ex))
+        {
+            // Phase 3.2: Unstrukturierte Ollama-Antwort beim Retry → poorQuality-Fallback,
+            // statt die Exception bis in den Batch hochpropagieren zu lassen.
+            return PoorQualityFallback("Retry mit erweitertem Prompt", _model, ex);
+        }
 
         return MapToAnalysis(dto);
     }
@@ -1141,6 +1235,11 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
             return MapToAnalysis(dto);
         }
         catch (OperationCanceledException) { throw; }
+        catch (Exception ex) when (IsStructuredJsonParseFailure(ex))
+        {
+            // Phase 3.2: Unstrukturierte Ollama-Antwort vom Reference-Modell → poorQuality-Fallback.
+            return PoorQualityFallback("Modell-Eskalation", model, ex);
+        }
         catch (Exception ex)
         {
             return FailAnalysis("Modell-Eskalation", model, ex);
@@ -1175,6 +1274,11 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
             return MapToAnalysis(dto);
         }
         catch (OperationCanceledException) { throw; }
+        catch (Exception ex) when (IsStructuredJsonParseFailure(ex))
+        {
+            // Phase 3.2: Unstrukturierte Ollama-Antwort vom Reference-Modell → poorQuality-Fallback.
+            return PoorQualityFallback("Modell-Eskalation mit Kontext", model, ex);
+        }
         catch (Exception ex)
         {
             return FailAnalysis("Modell-Eskalation mit Kontext", model, ex);
