@@ -138,6 +138,11 @@ namespace AuswertungPro.Next.UI
                 // Background-Tasks (Modell-Warmup + BrainMirror-Sync) starten.
                 ServiceCollectionConfigurator.StartBackgroundServices(_diServices);
 
+                // Slice 1 (Operateur-Annotation): Service-Vollzusammenbau und
+                // Eintrag im Accessor, damit das PlayerWindow-Submodus den
+                // Service lazy ziehen kann.
+                ServiceCollectionConfigurator.WireOperateurAnnotationService(_diServices);
+
                 // Sidecar (YOLO/Florence-2/SAM 2) im Hintergrund starten.
                 if (settings.SidecarAutoStart != false)
                 {

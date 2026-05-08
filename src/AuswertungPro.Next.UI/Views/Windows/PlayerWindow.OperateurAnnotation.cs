@@ -71,9 +71,14 @@ public partial class PlayerWindow
     public void EnterOperatorMode(OperateurAnnotationSession session)
     {
         if (session is null) throw new ArgumentNullException(nameof(session));
+
+        // Service kann via SetOperateurAnnotationService injiziert worden
+        // sein (z.B. fuer Tests) ODER lazy aus dem Accessor gezogen werden,
+        // den das App-Bootstrapping nach DI-Build befuellt. Beides erlaubt.
+        _operatorService ??= OperateurAnnotationServiceAccessor.Current;
         if (_operatorService is null)
             throw new InvalidOperationException(
-                "OperateurAnnotationService nicht gesetzt — App-Bootstrapping muss SetOperateurAnnotationService rufen.");
+                "OperateurAnnotationService nicht verfuegbar — KI-Pipeline aus oder App-Bootstrapping unvollstaendig.");
 
         _operatorSession = session;
         _operatorActive = null;

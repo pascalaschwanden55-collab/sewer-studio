@@ -1,5 +1,6 @@
 using System.IO;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Annotation;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Devis;
 using AuswertungPro.Next.Application.Diagnostics;
@@ -115,6 +116,40 @@ public sealed class ServiceCollectionConfiguratorTests
         Assert.NotNull(provider.GetRequiredService<IAiSuggestionPlausibilityService>());
         Assert.NotNull(provider.GetRequiredService<IMeasureRecommendationService>());
         Assert.NotNull(provider.GetRequiredService<IPlaywrightInstallService>());
+
+        // Slice 1 (Operateur-Annotation): Adapter sind im AI-Block registriert.
+        Assert.NotNull(provider.GetRequiredService<ITrainingSamplesWriter>());
+        Assert.NotNull(provider.GetRequiredService<IYoloDatasetWriter>());
+    }
+
+    [Fact]
+    public void OperateurAnnotationServiceAccessor_DefaultIsNull_AndIsSetRoundtrips()
+    {
+        // Vor-Zustand sichern (Tests koennten in jeder Reihenfolge laufen).
+        var previous = OperateurAnnotationServiceAccessor.Current;
+        try
+        {
+            OperateurAnnotationServiceAccessor.Current = null;
+            Assert.Null(OperateurAnnotationServiceAccessor.Current);
+
+            var stub = new StubOperateurAnnotationService();
+            OperateurAnnotationServiceAccessor.Current = stub;
+            Assert.Same(stub, OperateurAnnotationServiceAccessor.Current);
+        }
+        finally
+        {
+            OperateurAnnotationServiceAccessor.Current = previous;
+        }
+    }
+
+    private sealed class StubOperateurAnnotationService : IOperateurAnnotationService
+    {
+        public System.Threading.Tasks.Task<MaskPreview> PreviewMaskAsync(
+            AnnotationRequest req, System.Threading.CancellationToken ct)
+            => throw new System.NotImplementedException();
+        public System.Threading.Tasks.Task<CommitResult> CommitAsync(
+            AnnotationRequest req, MaskPreview preview, System.Threading.CancellationToken ct)
+            => throw new System.NotImplementedException();
     }
 
     [Fact]

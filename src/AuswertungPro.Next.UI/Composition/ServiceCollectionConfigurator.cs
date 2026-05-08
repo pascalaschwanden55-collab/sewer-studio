@@ -4,6 +4,7 @@ using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Annotation;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Devis;
 using AuswertungPro.Next.Application.Diagnostics;
@@ -187,7 +188,32 @@ public static class ServiceCollectionConfigurator
             new PlaywrightInstallService(
                 sp.GetRequiredService<ILoggerFactory>().CreateLogger<PlaywrightInstallService>()));
 
+        // Slice 1 (Operateur-Annotation): zwei Adapter mit einfachem
+        // Lifetime registrieren. Der Service-Vollzusammenbau (mit
+        // KnowledgeBaseManager + VisionPipelineClient) passiert im
+        // App-Bootstrapping, weil diese beiden heute nicht aus dem
+        // Container kommen — der Service-Accessor wird dort befuellt.
+        services.AddSingleton<ITrainingSamplesWriter,
+            Infrastructure.Ai.Annotation.TrainingSamplesWriterAdapter>();
+        services.AddSingleton<IYoloDatasetWriter>(_ =>
+            new Infrastructure.Ai.Training.YoloDatasetExportService(
+                ResolveYoloDatasetRoot()));
+
         return services;
+    }
+
+    /// <summary>
+    /// Slice 1: liefert den Default-Pfad fuer den YOLO-seg-Datensatz.
+    /// Reihenfolge: Env-Var <c>SEWERSTUDIO_YOLO_DATASET</c> &gt; <c>D:\yolo_sewer_v1</c>
+    /// (Workstation-Konvention laut CLAUDE.md). Existenz wird hier nicht
+    /// erzwungen — AppendSampleAsync legt die Unterordner an.
+    /// </summary>
+    private static string ResolveYoloDatasetRoot()
+    {
+        var envRoot = System.Environment.GetEnvironmentVariable("SEWERSTUDIO_YOLO_DATASET");
+        return string.IsNullOrWhiteSpace(envRoot)
+            ? @"D:\yolo_sewer_v1"
+            : envRoot;
     }
 
     /// <summary>
@@ -206,5 +232,62 @@ public static class ServiceCollectionConfigurator
             AiPipelineModule.RunWarmupInBackground(cfg, sidecar, logger);
 
         KnowledgeBaseModule.StartBrainMirror(settings, logger);
+    }
+
+    /// <summary>
+    /// Slice 1 (Operateur-Annotation): voll zusammengesetzten Service in
+    /// <see cref="OperateurAnnotationServiceAccessor"/> ablegen. Wird vom
+    /// PlayerWindow.OperateurAnnotation lazy aus dem Accessor gezogen
+    /// (dort hat das Submodus-Bedienpanel Zugriff darauf).
+    ///
+    /// Bewusst nach <see cref="StartBackgroundServices"/> aufgerufen — Sidecar
+    /// muss nicht laufen, damit der Service registriert ist; Sidecar-Calls
+    /// failen erst bei tatsaechlicher Nutzung (gewuenscht: KI-Pipeline kann
+    /// lazy starten).
+    ///
+    /// Bei Init-Fehlern bleibt der Accessor null und der Submodus wirft eine
+    /// klare Meldung beim Enter — die Haupt-App laeuft weiter.
+    /// </summary>
+    public static void WireOperateurAnnotationService(IServiceProvider provider)
+    {
+        var logger = provider.GetRequiredService<ILogger>();
+        try
+        {
+            var writer = provider.GetRequiredService<ITrainingSamplesWriter>();
+            var yolo = provider.GetRequiredService<IYoloDatasetWriter>();
+            var pipelineCfg = provider.GetRequiredService<PipelineConfig>();
+            var aiPlatform = provider.GetRequiredService<AiPlatformConfig>();
+
+            // Sidecar-HTTP fuer SAM-Calls: lebt fuer die Lebenszeit der App.
+            // Wird beim Shutdown ueber den DI-Container nicht mehr disposed
+            // (wir bauen ihn ausserhalb), aber WPF-Process-Exit raeumt eh alles ab.
+            var sidecarHttp = new System.Net.Http.HttpClient();
+            var sidecarClient = new Infrastructure.Ai.Pipeline.VisionPipelineClient(
+                pipelineCfg.SidecarUrl, sidecarHttp);
+
+            // KnowledgeBaseManager — gleiches Pattern wie der Maintenance-Pruner
+            // in App.xaml.cs (db + http + embedder + manager).
+            var ollamaCfg = aiPlatform.ToOllamaConfig();
+            var kbHttp = new System.Net.Http.HttpClient { Timeout = ollamaCfg.RequestTimeout };
+            var kbDb = new KnowledgeBaseContext();
+            var kbEmbedder = new EmbeddingService(kbHttp, ollamaCfg);
+            var kbManager = new KnowledgeBaseManager(kbDb, kbEmbedder);
+            var indexer = new Infrastructure.Ai.Annotation.KnowledgeBaseIndexerAdapter(kbManager);
+
+            var service = new Infrastructure.Ai.Annotation.OperateurAnnotationService(
+                samDelegate: (req, ct) => sidecarClient.SegmentSamAsync(req, ct),
+                writer: writer,
+                indexer: indexer,
+                yolo: yolo);
+
+            OperateurAnnotationServiceAccessor.Current = service;
+            logger.LogInformation("[OperateurAnnotation] Service registriert.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex,
+                "[OperateurAnnotation] Service-Setup fehlgeschlagen — Submodus deaktiviert");
+            OperateurAnnotationServiceAccessor.Current = null;
+        }
     }
 }
