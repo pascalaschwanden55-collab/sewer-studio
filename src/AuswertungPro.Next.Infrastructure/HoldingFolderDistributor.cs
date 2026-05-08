@@ -93,87 +93,13 @@ public static partial class HoldingFolderDistributor
     // HoldingFolderDistributor.VideoMatching.cs
     // (Refactor 2026-05-07, Charge R8).
 
-    private sealed record PageInfo(int PageNumber, string Text, string SourcePath);
-    private sealed record PdfPageChunk(IReadOnlyList<int> Pages, ParsedPdf Parsed);
-
-    private static IReadOnlyList<PageInfo> ReadPdfPages(string pdfPath)
-    {
-        try
-        {
-            var extraction = PdfTextExtractor.ExtractPages(pdfPath);
-            if (extraction.Pages.Count == 0)
-                return ReadPdfPagesWithPdfPig(pdfPath);
-
-            var pages = new List<PageInfo>(extraction.Pages.Count);
-            for (var i = 0; i < extraction.Pages.Count; i++)
-            {
-                var text = (extraction.Pages[i] ?? "").Replace("\r\n", "\n").Trim();
-                pages.Add(new PageInfo(i + 1, text, pdfPath));
-            }
-            return pages;
-        }
-        catch
-        {
-            return ReadPdfPagesWithPdfPig(pdfPath);
-        }
-    }
-
-    private static IReadOnlyList<PageInfo> ReadPdfPagesWithPdfPig(string pdfPath)
-    {
-        // PdfTextExtractor nutzt Layout-erhaltende Extraktion (Letter-by-Letter),
-        // die Zeilen/Spalten korrekt rekonstruiert. Direkt page.Text ist unbrauchbar
-        // weil es keine Zeilenumbrueche oder Abstande erhaelt.
-        try
-        {
-            var extraction = PdfTextExtractor.ExtractPages(pdfPath);
-            var pages = new List<PageInfo>(extraction.Pages.Count);
-            for (var i = 0; i < extraction.Pages.Count; i++)
-            {
-                var text = (extraction.Pages[i] ?? "").Replace("\r\n", "\n").Trim();
-                pages.Add(new PageInfo(i + 1, text, pdfPath));
-            }
-            return pages;
-        }
-        catch
-        {
-            // Absoluter Fallback: page.Text (besser als nichts)
-            var pages = new List<PageInfo>();
-            using var doc = PdfDocument.Open(pdfPath);
-            var pageNumber = 0;
-            foreach (var page in doc.GetPages())
-            {
-                pageNumber++;
-                var text = (page.Text ?? "").Replace("\r\n", "\n").Trim();
-                pages.Add(new PageInfo(pageNumber, text, pdfPath));
-            }
-            return pages;
-        }
-    }
-
-    private static string ReadPdfText(string pdfPath)
-    {
-        var sb = new StringBuilder();
-        using var doc = PdfDocument.Open(pdfPath);
-        foreach (var page in doc.GetPages())
-            sb.AppendLine(page.Text);
-        return sb.ToString();
-    }
+    // PageInfo, PdfPageChunk, ReadPdfPages, ReadPdfPagesWithPdfPig,
+    // ReadPdfText, NormalizeText ausgegliedert nach
+    // HoldingFolderDistributor.PdfReading.cs
+    // (Refactor 2026-05-08, Charge R13).
 
     // ParsedPdf / ParsedShaftPdf ausgegliedert nach HoldingFolderDistributor.Types.cs
     // (Refactor 2026-05-07, Charge R2).
-
-    private static string NormalizeText(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return text ?? string.Empty;
-
-        return text
-            .Replace('\u00A0', ' ')
-            .Replace('–', '-')
-            .Replace('—', '-')
-            .Replace('−', '-')
-            .Replace("\t", " ");
-    }
 
     // TryParseDateString ausgegliedert nach HoldingFolderDistributor.DateParsing.cs
     // (Refactor 2026-05-07, Charge R5).
@@ -248,15 +174,9 @@ public static partial class HoldingFolderDistributor
     // ausgegliedert nach HoldingFolderDistributor.SchachtPdfParsing.cs
     // (Refactor 2026-05-07, Charge R7).
 
-    private static string BuildPageRange(IReadOnlyList<int> pages)
-    {
-        if (pages.Count == 0) return "";
-        var sorted = pages.Distinct().OrderBy(p => p).ToList();
-        return sorted.Count == 1 ? $"{sorted[0]}" : $"{sorted[0]}-{sorted[^1]}";
-    }
-
-    private static bool IsContentsPage(string text)
-        => text.Contains("Inhaltsverzeichnis", StringComparison.OrdinalIgnoreCase);
+    // BuildPageRange + IsContentsPage ausgegliedert nach
+    // HoldingFolderDistributor.PdfReading.cs
+    // (Refactor 2026-05-08, Charge R13).
 
     // TryFindInspectionDate, TryFindSchachtDate, FindNearbyDate
     // ausgegliedert nach HoldingFolderDistributor.DateParsing.cs
