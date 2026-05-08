@@ -246,19 +246,35 @@ def _resolve_sidecar_token() -> str:
 
 
 SIDECAR_TOKEN = _resolve_sidecar_token()
+_AUTH_MODE = os.environ.get("SEWER_SIDECAR_AUTH", "").strip().lower()
 
-# Endpunkte, die ohne Token erreichbar bleiben (read-only Health/Status)
-_PUBLIC_PATHS = ("/health", "/docs", "/openapi.json", "/redoc")
+# Endpunkte, die ohne Token erreichbar bleiben (read-only Health/Status).
+# /docs und /openapi.json sind nur erreichbar wenn Auth komplett disabled
+# ist (Dev-Modus) - sonst koennten sie Implementierungs-Details leaken.
+_PUBLIC_PATHS = ("/health",)
+_DEV_PUBLIC_PATHS = ("/health", "/docs", "/openapi.json", "/redoc")
+
+# Phase 4.1: Fail-Closed. Ohne Token UND ohne explizites SEWER_SIDECAR_AUTH=disabled
+# verweigern wir den Start. Das verhindert dass der Sidecar versehentlich offen
+# auf 8100 lauscht (lokale Browser/SSRF/andere Prozesse koennten /admin/reload_model
+# treffen = PyTorch-Pickle = RCE).
+if not SIDECAR_TOKEN and _AUTH_MODE != "disabled":
+    raise RuntimeError(
+        "[Auth] Kein Sidecar-Token und SEWER_SIDECAR_AUTH ungesetzt. "
+        "Fail-closed (Phase 4.1): Setze SEWER_SIDECAR_TOKEN, lege "
+        "%LOCALAPPDATA%/SewerStudio/.sidecar_token an, oder setze "
+        "SEWER_SIDECAR_AUTH=disabled fuer Dev-Modus."
+    )
 
 if not SIDECAR_TOKEN:
     logger.warning(
-        "[Auth] Kein Token verfuegbar — administrative Endpunkte OHNE Authentisierung "
-        "erreichbar. Setze SEWER_SIDECAR_TOKEN, lege %LOCALAPPDATA%/SewerStudio/.sidecar_token "
-        "an oder akzeptiere Dev-Modus."
+        "[Auth] SEWER_SIDECAR_AUTH=disabled — Auth komplett aus (Dev-Modus). "
+        "/docs, /openapi.json und /redoc bleiben in diesem Modus oeffentlich."
     )
 else:
     logger.info(
-        "[Auth] Bearer-Token aktiv (Header: X-Sidecar-Token, Laenge=%d)",
+        "[Auth] Bearer-Token aktiv (Header: X-Sidecar-Token, Laenge=%d). "
+        "/docs ist NICHT oeffentlich erreichbar.",
         len(SIDECAR_TOKEN),
     )
 
@@ -266,10 +282,16 @@ else:
 @app.middleware("http")
 async def token_auth_middleware(request: Request, call_next):
     """Pruefen X-Sidecar-Token fuer alle nicht-Health-Endpunkte."""
+    path = request.url.path
+
     if not SIDECAR_TOKEN:
+        # Dev-Modus: alles inkl. /docs offen.
+        if any(path.startswith(p) for p in _DEV_PUBLIC_PATHS):
+            return await call_next(request)
         return await call_next(request)
 
-    path = request.url.path
+    # Auth aktiv: nur /health bleibt oeffentlich. /docs/openapi.json/redoc
+    # erfordern Token, sonst leaken sie Schema-Details.
     if any(path.startswith(p) for p in _PUBLIC_PATHS):
         return await call_next(request)
 
