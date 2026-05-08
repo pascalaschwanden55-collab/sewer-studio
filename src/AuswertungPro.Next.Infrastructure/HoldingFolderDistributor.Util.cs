@@ -207,4 +207,53 @@ public static partial class HoldingFolderDistributor
 
         return true;
     }
+
+    // TryFindFilmName + TrimLeadingZerosValue (Refactor 2026-05-08, Charge R18)
+
+    private static string? TryFindFilmName(string text, Regex filmRx)
+    {
+        var filmMatch = filmRx.Match(text);
+        if (filmMatch.Success)
+            return NormalizeVideoFileName(filmMatch.Groups[1].Value);
+
+        // Fallback: any token with common video extension
+        var extRx = new Regex($@"\b([A-Za-z0-9_\-\.]+?\.(?:{VideoExtensionPattern}))\b", RegexOptions.IgnoreCase);
+        var extMatch = extRx.Match(text);
+        if (extMatch.Success)
+            return NormalizeVideoFileName(extMatch.Groups[1].Value);
+
+        // Fallback: line with "Film" or "Video" -> take next non-empty token
+        var lines = text.Replace("\r\n", "\n").Split('\n');
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            if (!line.Contains("Film", StringComparison.OrdinalIgnoreCase) &&
+                !line.Contains("Video", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var tokens = Tokenize(line);
+            var candidate = tokens.FirstOrDefault(t => HasVideoExtension(t));
+            if (!string.IsNullOrWhiteSpace(candidate))
+                return NormalizeVideoFileName(candidate);
+
+            if (i + 1 < lines.Length)
+            {
+                var nextTokens = Tokenize(lines[i + 1]);
+                var nextCandidate = nextTokens.FirstOrDefault(t => HasVideoExtension(t));
+                if (!string.IsNullOrWhiteSpace(nextCandidate))
+                    return NormalizeVideoFileName(nextCandidate);
+            }
+        }
+
+        return null;
+    }
+
+    private static string TrimLeadingZerosValue(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return value;
+
+        var trimmed = value.TrimStart('0');
+        return string.IsNullOrEmpty(trimmed) ? "0" : trimmed;
+    }
 }

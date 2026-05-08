@@ -346,4 +346,47 @@ public static partial class HoldingFolderDistributor
 
         return TrimLeadingZerosValue(digits);
     }
+
+    // SplitPdfIntoShafts (Refactor 2026-05-08, Charge R17)
+    private static IReadOnlyList<PdfShaftChunk> SplitPdfIntoShafts(IReadOnlyList<PageInfo> pages)
+    {
+        var chunks = new List<PdfShaftChunk>();
+        if (pages.Count == 0) return chunks;
+
+        List<int>? currentPages = null;
+        ParsedShaftPdf? currentParsed = null;
+
+        foreach (var page in pages)
+        {
+            var parsed = ParseSchachtPdfPageWithOcrFallback(page);
+            if (!parsed.Success)
+            {
+                if (currentPages is not null && currentParsed is not null)
+                    currentPages.Add(page.PageNumber);
+                continue;
+            }
+
+            if (currentPages is not null
+                && currentParsed is not null
+                && string.Equals(parsed.ShaftNumber, currentParsed.ShaftNumber, StringComparison.OrdinalIgnoreCase)
+                && parsed.Date == currentParsed.Date)
+            {
+                currentPages.Add(page.PageNumber);
+                continue;
+            }
+
+            if (currentPages is not null && currentParsed is not null)
+                chunks.Add(new PdfShaftChunk(currentPages, currentParsed));
+
+            currentPages = new List<int> { page.PageNumber };
+            currentParsed = parsed;
+        }
+
+        if (currentPages is not null && currentParsed is not null)
+            chunks.Add(new PdfShaftChunk(currentPages, currentParsed));
+
+        return chunks;
+    }
+
+    private sealed record PdfShaftChunk(IReadOnlyList<int> Pages, ParsedShaftPdf Parsed);
 }
