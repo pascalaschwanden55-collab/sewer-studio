@@ -16,7 +16,7 @@ using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Application.Reports;
 
-public sealed class ProtocolPdfExporter
+public sealed partial class ProtocolPdfExporter
 {
     private const int HaltungsgrafikWidth = 770;
     private const int HaltungsgrafikHeight = 520;
