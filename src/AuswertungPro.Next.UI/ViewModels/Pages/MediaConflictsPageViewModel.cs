@@ -410,12 +410,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             if (!File.Exists(path) && !Directory.Exists(path))
                 return false;
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = path,
-                UseShellExecute = true
-            });
-            return true;
+            return AuswertungPro.Next.Application.Common.ProcessRunner.TryOpenWithDefaultProgram(path, out _);
         }
         catch
         {
@@ -425,22 +420,10 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
 
     private static void TryOpenFolder(string folder)
     {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
-                return;
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+            return;
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                Arguments = $"\"{folder}\"",
-                UseShellExecute = true
-            });
-        }
-        catch
-        {
-            // Ignore UI helper errors.
-        }
+        AuswertungPro.Next.Application.Common.ProcessRunner.TryOpenWithDefaultProgram(folder, out _);
     }
 
     private static void TryOpenSelectInExplorer(string? path)

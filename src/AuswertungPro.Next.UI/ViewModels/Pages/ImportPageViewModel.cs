@@ -130,8 +130,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     {
         if (!string.IsNullOrWhiteSpace(_lastReportPath) && File.Exists(_lastReportPath))
         {
-            try { Process.Start(new ProcessStartInfo(_lastReportPath) { UseShellExecute = true }); }
-            catch { /* ignore */ }
+            AuswertungPro.Next.Application.Common.ProcessRunner.TryOpenWithDefaultProgram(_lastReportPath, out _);
         }
         else
         {
@@ -144,8 +143,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         var dir = GetReportDir();
         if (dir != null && Directory.Exists(dir))
         {
-            try { Process.Start(new ProcessStartInfo(dir) { UseShellExecute = true }); }
-            catch { /* ignore */ }
+            AuswertungPro.Next.Application.Common.ProcessRunner.TryOpenWithDefaultProgram(dir, out _);
         }
         else
         {

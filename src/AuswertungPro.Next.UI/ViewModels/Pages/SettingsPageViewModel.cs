@@ -180,12 +180,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject
 
             Directory.CreateDirectory(path);
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                Arguments = $"\"{path}\"",
-                UseShellExecute = true
-            });
+            if (!AuswertungPro.Next.Application.Common.ProcessRunner.TryOpenWithDefaultProgram(path, out var openErr))
+                _dialogs.ShowMessage($"Ordner konnte nicht geöffnet werden:\n{openErr}", "SewerStudio", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         catch (Exception ex)
         {
