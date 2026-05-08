@@ -1,0 +1,52 @@
+# Auto-detect text files for line-ending normalization (Windows checkout =
+# CRLF, internal git storage = LF).
+* text=auto
+
+# Source code: text, normalize to LF in the repository.
+*.cs    text eol=lf diff=csharp
+*.xaml  text eol=lf
+*.csproj text eol=lf
+*.sln   text eol=crlf
+*.props text eol=lf
+*.targets text eol=lf
+*.editorconfig text eol=lf
+*.json  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.md    text eol=lf
+*.py    text eol=lf diff=python
+*.toml  text eol=lf
+*.cfg   text eol=lf
+*.ini   text eol=lf
+*.ps1   text eol=crlf
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# Binary assets (no text/diff/merge).
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.mp4   binary
+*.mov   binary
+*.mkv   binary
+*.webm  binary
+*.zip   binary
+*.7z    binary
+*.gz    binary
+*.tar   binary
+
+# Data/Models (gitignored anyway, but protect against accidental tracking).
+*.db    binary
+*.sqlite binary
+*.sqlite-wal binary
+*.sqlite-shm binary
+*.pt    binary
+*.pth   binary
+*.bin   binary
+*.onnx  binary
+*.engine binary
+*.safetensors binary
+*.pyc   binary
