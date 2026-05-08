@@ -26,6 +26,13 @@ desktop.ini
 **/__pycache__/
 **/*.pyc
 
+# Pytest / Coverage Artefakte (Phase 5.1)
+**/.coverage
+**/.coverage.*
+**/coverage.xml
+**/htmlcov/
+**/.pytest_cache/
+
 # Build artifacts
 artifacts/
 
