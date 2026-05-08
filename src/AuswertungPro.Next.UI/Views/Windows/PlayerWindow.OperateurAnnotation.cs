@@ -147,17 +147,11 @@ public partial class PlayerWindow
     /// <summary>
     /// Aktualisiert Status-Text + Progress-Text basierend auf der Session.
     /// Nur Code-Behind-Schreiben gegen die x:Name-Elemente — kein Binding.
-    /// CodeTask hat kein INotifyPropertyChanged (lebt in Application-Schicht
-    /// ohne UI-Dependency), darum muss die ListBox nach State-Wechseln ihre
-    /// Status-Dots neu zeichnen — Items.Refresh() ist der pragmatische Weg.
+    /// CodeTask implementiert INotifyPropertyChanged, daher zeichnen sich die
+    /// Status-Dots in der ListBox automatisch nach — kein Items.Refresh() noetig.
     /// </summary>
     private void UpdateOperatorStatusUi()
     {
-        if (OperatorCodeList?.Items is { } items)
-        {
-            try { items.Refresh(); }
-            catch { /* Refresh ist best-effort */ }
-        }
         if (_operatorSession is null)
         {
             if (TxtOperatorStatus != null)

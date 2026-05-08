@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace AuswertungPro.Next.Application.Ai.Annotation;
 
@@ -22,24 +24,78 @@ public enum CodeTaskState
 /// <summary>
 /// Eine Annotations-Aufgabe pro Protokoll-Code. Lebt nur in der Session,
 /// nicht persistiert. Dauerhafte Wahrheit ist TrainingSamplesStore.
+///
+/// Implementiert <see cref="INotifyPropertyChanged"/>, damit die Operator-
+/// Code-Liste in der UI direkt auf State-Wechsel reagiert (DataTrigger
+/// auf <see cref="State"/>, ohne dass das Code-Behind <c>Items.Refresh()</c>
+/// rufen muss). CodeTask lebt in Application — kein Domain-Layer-Bruch
+/// (ADR-0004 betrifft nur Domain-Modelle wie HaltungRecord/SchachtRecord).
 /// </summary>
-public sealed class CodeTask
+public sealed class CodeTask : INotifyPropertyChanged
 {
     public string Code { get; init; } = "";
     public double Meterstand { get; init; }
-    public CodeTaskState State { get; set; } = CodeTaskState.Pending;
+
+    private CodeTaskState _state = CodeTaskState.Pending;
+    public CodeTaskState State
+    {
+        get => _state;
+        set => SetProperty(ref _state, value);
+    }
 
     // PreviewReady-Daten
-    public BoundingBoxNormalized? Box { get; set; }
-    public MaskPreview? Preview { get; set; }
-    public double? FrameDeltaSeconds { get; set; }
+    private BoundingBoxNormalized? _box;
+    public BoundingBoxNormalized? Box
+    {
+        get => _box;
+        set => SetProperty(ref _box, value);
+    }
+
+    private MaskPreview? _preview;
+    public MaskPreview? Preview
+    {
+        get => _preview;
+        set => SetProperty(ref _preview, value);
+    }
+
+    private double? _frameDeltaSeconds;
+    public double? FrameDeltaSeconds
+    {
+        get => _frameDeltaSeconds;
+        set => SetProperty(ref _frameDeltaSeconds, value);
+    }
 
     // Committed-Daten
-    public string? CommittedSampleId { get; set; }
-    public DateTime? CommittedUtc { get; set; }
+    private string? _committedSampleId;
+    public string? CommittedSampleId
+    {
+        get => _committedSampleId;
+        set => SetProperty(ref _committedSampleId, value);
+    }
+
+    private DateTime? _committedUtc;
+    public DateTime? CommittedUtc
+    {
+        get => _committedUtc;
+        set => SetProperty(ref _committedUtc, value);
+    }
 
     // Skipped/Rejected-Daten
-    public string? UserReason { get; set; }
+    private string? _userReason;
+    public string? UserReason
+    {
+        get => _userReason;
+        set => SetProperty(ref _userReason, value);
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    private void SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value)) return;
+        field = value;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }
 
 /// <summary>

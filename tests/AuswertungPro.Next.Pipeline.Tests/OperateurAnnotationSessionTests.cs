@@ -235,6 +235,35 @@ public sealed class OperateurAnnotationSessionTests
     }
 
     [Fact]
+    public void CodeTask_StateChange_FiresPropertyChanged()
+    {
+        var task = new CodeTask { Code = "BAB B", Meterstand = 12.3 };
+        var changes = new System.Collections.Generic.List<string?>();
+        task.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
+
+        task.State = CodeTaskState.Active;
+        task.State = CodeTaskState.PreviewReady;
+        task.State = CodeTaskState.PreviewReady;   // gleiches Value -> kein Event
+
+        Assert.Equal(new[] { nameof(CodeTask.State), nameof(CodeTask.State) }, changes);
+    }
+
+    [Fact]
+    public void CodeTask_BoxAndPreview_FirePropertyChanged()
+    {
+        var task = new CodeTask { Code = "BAB B", Meterstand = 12.3 };
+        var changes = new System.Collections.Generic.List<string?>();
+        task.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
+
+        task.Box = new BoundingBoxNormalized(0.5, 0.5, 0.1, 0.1);
+        task.Preview = new MaskPreview("rle", "v1", "[]", 100, 100, 10, 0.5,
+            System.TimeSpan.Zero, null);
+
+        Assert.Contains(nameof(CodeTask.Box), changes);
+        Assert.Contains(nameof(CodeTask.Preview), changes);
+    }
+
+    [Fact]
     public void IsTerminal_ReturnsTrueForCommittedSkippedRejected()
     {
         Assert.True(OperateurAnnotationSession.IsTerminal(CodeTaskState.Committed));
