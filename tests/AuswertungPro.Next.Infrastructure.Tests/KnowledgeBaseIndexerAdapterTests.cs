@@ -14,6 +14,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 /// Fehler erkannt wird (nicht stillschweigend geschluckt — sonst wuerde
 /// CommitAsync KB als "indexed" markieren, obwohl es nicht stimmt).
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class KnowledgeBaseIndexerAdapterTests
 {
     [Fact]

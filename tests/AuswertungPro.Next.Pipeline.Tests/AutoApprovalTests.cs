@@ -7,6 +7,7 @@ using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class AutoApprovalTests
 {
     private static MappedProtocolEntry CreateEntry(

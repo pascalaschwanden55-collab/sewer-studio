@@ -17,6 +17,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 /// Trained-Model-Priorisierung), TrainModel (Min-Samples-Guard, Roundtrip),
 /// Stats, Signature-Stabilitaet, Persistenz-Roundtrip.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class MeasureRecommendationServiceTests : IDisposable
 {
     private readonly string _tempDir;

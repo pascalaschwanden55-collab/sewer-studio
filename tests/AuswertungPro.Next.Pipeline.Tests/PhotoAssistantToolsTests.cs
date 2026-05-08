@@ -6,6 +6,7 @@ using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Slow")]
 public class PhotoAssistantToolsTests
 {
     [Fact]

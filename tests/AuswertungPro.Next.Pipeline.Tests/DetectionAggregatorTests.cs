@@ -3,6 +3,7 @@ using AuswertungPro.Next.Application.Ai.Pipeline;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public class DetectionAggregatorTests
 {
     private static FrameDetection MakeDetection(int classId, string className,

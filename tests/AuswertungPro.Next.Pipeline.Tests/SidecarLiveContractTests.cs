@@ -24,6 +24,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// statt zu failen — xUnit 2.7 hat kein natives Runtime-Skip und der User
 /// wollte keine neue Test-Dependency.
 /// </summary>
+[Trait("Category", "Unit")]
 public class SidecarLiveContractTests
 {
     private const string SidecarBaseUrl = "http://localhost:8100";

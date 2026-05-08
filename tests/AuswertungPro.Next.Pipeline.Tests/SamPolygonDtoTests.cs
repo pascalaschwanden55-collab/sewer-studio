@@ -10,6 +10,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// optionale Polygon-Felder ergaenzt. Backward-Kompatibilitaet ist Pflicht —
 /// alte Sidecar-Antworten ohne polygon_points muessen weiterhin parsen.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class SamPolygonDtoTests
 {
     private static readonly JsonSerializerOptions JsonOpts = new()

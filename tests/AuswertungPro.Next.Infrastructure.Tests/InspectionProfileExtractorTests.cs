@@ -9,6 +9,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 /// Unit-Tests fuer InspectionProfileExtractor.
 /// Prueft ParseTimeCtr, BuildCanonicalCode, BuildProfile, BuildSegments und BuildQualityFlags.
 /// </summary>
+[Trait("Category", "Unit")]
 public class InspectionProfileExtractorTests
 {
     // =========================================================================

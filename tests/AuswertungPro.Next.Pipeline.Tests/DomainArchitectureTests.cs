@@ -17,6 +17,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// muss die erwartete Liste angepasst werden — das macht jede Verschiebung
 /// im Code-Review sichtbar.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class DomainArchitectureTests
 {
     [Fact]

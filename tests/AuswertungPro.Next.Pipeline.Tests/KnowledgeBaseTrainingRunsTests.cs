@@ -19,6 +19,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 ///  - Samples bekommen RunId via UpsertSample-Pfad
 ///  - Mehrere sequenzielle Runs sind unabhaengig
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class KnowledgeBaseTrainingRunsTests : IDisposable
 {
     private readonly string _dbPath;

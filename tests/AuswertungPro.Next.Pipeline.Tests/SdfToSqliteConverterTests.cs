@@ -10,6 +10,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Integrationstest: SDF → SQLite via PowerShell+Python-Pipeline.
 /// Braucht SSCE 4.0 Runtime + powershell.exe + python im PATH.
 /// </summary>
+[Trait("Category", "Integration")]
 public class SdfToSqliteConverterTests
 {
     private readonly ITestOutputHelper _output;

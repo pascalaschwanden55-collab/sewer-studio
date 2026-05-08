@@ -5,6 +5,7 @@ using AuswertungPro.Next.Application.Ai.Training.Models;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class DifferenceReportMetricsTests
 {
     [Fact]

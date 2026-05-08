@@ -9,6 +9,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Tests fuer KnowledgeBaseManager: IsIndexWorthy und BuildEmbeddingText.
 /// Prueft: Punkt-Codes, WinCan-Codes, kurze Beschreibungen, Embedding-Anreicherung.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class KnowledgeBaseManagerTests
 {
     private static TrainingSample MakeSample(

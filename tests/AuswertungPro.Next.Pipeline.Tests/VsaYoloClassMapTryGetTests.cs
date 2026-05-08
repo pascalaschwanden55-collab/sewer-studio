@@ -13,6 +13,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// sonst koennen frueher gelaufene Tests (oder Produktiv-Pfad) "XYZ" o.ae.
 /// schon einbetoniert haben.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class VsaYoloClassMapTryGetTests
 {
     [Fact]

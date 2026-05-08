@@ -5,6 +5,7 @@ using AuswertungPro.Next.Application.Ai.QualityGate;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class CalibrationMetricsTests
 {
     [Fact]

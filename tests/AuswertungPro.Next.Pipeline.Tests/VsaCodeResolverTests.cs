@@ -8,6 +8,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Tests fuer VsaCodeResolver — zentrale VSA-Code-Aufloesung.
 /// Deckt ab: NormalizeFindingCode, InferCodeFromLabel, LookupLabel, NormalizeClock.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class VsaCodeResolverTests
 {
     // ═══════════════════════════════════════════════════════════════

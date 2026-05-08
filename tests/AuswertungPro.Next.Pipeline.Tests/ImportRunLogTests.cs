@@ -2,6 +2,7 @@ using AuswertungPro.Next.Application.Import;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public class ImportRunLogTests
 {
     [Fact]

@@ -10,6 +10,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public class VisionPipelineClientTests
 {
     [Fact]

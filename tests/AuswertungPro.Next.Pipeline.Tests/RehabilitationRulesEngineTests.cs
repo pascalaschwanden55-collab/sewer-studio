@@ -17,6 +17,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 ///   - DN-Range-Check, Material-Check, Bogen-Check
 ///   - Fallback bei kaputtem JSON
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class RehabilitationRulesEngineTests : IDisposable
 {
     private readonly string _tempDir;

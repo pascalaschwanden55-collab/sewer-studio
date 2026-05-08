@@ -6,6 +6,7 @@ using AuswertungPro.Next.Infrastructure.Output.Offers;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class OfferPdfModelFactoryTests
 {
     [Fact]

@@ -2,6 +2,7 @@ using AuswertungPro.Next.Application.Protocol;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
+[Trait("Category", "Integration")]
 public sealed class CodeCatalogProviderTests
 {
     [Fact]

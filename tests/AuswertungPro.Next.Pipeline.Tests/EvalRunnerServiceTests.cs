@@ -18,6 +18,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Integration")]
 public sealed class EvalRunnerServiceTests : IDisposable
 {
     private readonly string _tempDir;

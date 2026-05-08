@@ -11,6 +11,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 /// Slice 1 (Operateur-Annotation): Builder fuer eine Session aus Volltext
 /// (testbar ohne pdftotext) + Folder-Variante (sucht Video/PDF).
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class OperateurSessionBuilderTests : IDisposable
 {
     private readonly string _tempDir;

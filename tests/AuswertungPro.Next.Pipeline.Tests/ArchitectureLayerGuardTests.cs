@@ -21,6 +21,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Zusaetzlich: Thin-AI-Prinzip — keine Business-Logik im Python-Sidecar.
 /// </summary>
 [Trait("Category", "Architecture")]
+[Trait("Category", "Unit")]
 public class ArchitectureLayerGuardTests
 {
     private static readonly string SolutionRoot = FindSolutionRoot();

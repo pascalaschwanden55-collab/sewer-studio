@@ -13,6 +13,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Tests fuer DifferenceAnalyzer: Vergleich KI-Blinddetektionen gegen Ground-Truth (Protokoll).
 /// Prueft Greedy-Assignment, Code-Matching, Meter-Toleranz, Grundgeruest-Behandlung und Metriken.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class DifferenceAnalyzerTests
 {
     // ── Hilfsmethoden ──

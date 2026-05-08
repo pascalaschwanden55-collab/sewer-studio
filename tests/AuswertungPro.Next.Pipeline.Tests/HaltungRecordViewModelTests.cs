@@ -11,6 +11,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Stellt sicher dass der Wrapper das Domain-Modell korrekt spiegelt
 /// und PropertyChanged 1:1 weiterleitet.
 /// </summary>
+[Trait("Category", "Unit")]
 public class HaltungRecordViewModelTests
 {
     [Fact]

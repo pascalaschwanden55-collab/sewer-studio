@@ -7,6 +7,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// <summary>
 /// V4.3 — Anzeige-String fuer Wert+Einheit+Tool+Subject im Protokoll-UI.
 /// </summary>
+[Trait("Category", "Unit")]
 public class ProtocolEntryVmMetadataTests
 {
     private static ProtocolEntryVM Make()

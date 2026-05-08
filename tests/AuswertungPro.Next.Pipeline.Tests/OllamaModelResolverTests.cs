@@ -2,6 +2,7 @@ using AuswertungPro.Next.Application.Ai.Ollama;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class OllamaModelResolverTests
 {
     [Fact]

@@ -16,6 +16,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 ///  - FK bleibt nach Phase 2.2 aktiv
 ///  - Kein "database is locked" bei kontrollierter Parallelitaet
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class KnowledgeBaseWriterTests : IDisposable
 {
     private readonly string _dbPath;

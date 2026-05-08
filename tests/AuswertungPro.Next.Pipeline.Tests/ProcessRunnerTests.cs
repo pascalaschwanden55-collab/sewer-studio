@@ -13,6 +13,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Tests laufen mit cmd.exe (Windows) — der Build-/Test-Pfad ist Win-only.
 /// Bei wiederverwendbaren Tests sollte ein OS-Plattform-Skip stehen.
 /// </summary>
+[Trait("Category", "Slow")]
 public class ProcessRunnerTests
 {
     [Fact]

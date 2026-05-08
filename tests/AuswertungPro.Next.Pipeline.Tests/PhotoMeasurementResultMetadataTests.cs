@@ -7,6 +7,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// V4.3 Phase 3.1 — PhotoMeasurementResult erweitert um Metadaten-Felder.
 /// Smoke-Test dass Nullable-Defaults und Setter funktionieren.
 /// </summary>
+[Trait("Category", "Unit")]
 public class PhotoMeasurementResultMetadataTests
 {
     [Fact]
@@ -52,6 +53,7 @@ public class PhotoMeasurementResultMetadataTests
 /// <summary>
 /// V4.3 Phase 3.1 — VsaFinding erweitert um Einheit + MeasurementTool + Subject.
 /// </summary>
+[Trait("Category", "Unit")]
 public class VsaFindingMetadataTests
 {
     [Fact]

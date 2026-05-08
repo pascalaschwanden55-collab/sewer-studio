@@ -6,6 +6,7 @@ using Xunit;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class VideoPlaybackControllerTests
 {
     [Fact]

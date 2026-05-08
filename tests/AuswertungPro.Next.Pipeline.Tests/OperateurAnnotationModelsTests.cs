@@ -4,6 +4,7 @@ using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class OperateurAnnotationModelsTests
 {
     [Fact]

@@ -5,6 +5,7 @@ using AuswertungPro.Next.Application.Ai.Training.Services;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Integration")]
 public class YoloAnnotationGeneratorTests
 {
     /// <summary>BAB.B.A (Querriss) → Klasse 0, Full-Frame-Bbox.</summary>

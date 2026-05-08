@@ -9,6 +9,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Tests fuer den KnowledgeMirror-Health-Check (Audit Punkt 3.8).
 /// Liefert Green/Yellow/Red basierend auf Brain-Mirror-Zustand.
 /// </summary>
+[Trait("Category", "Integration")]
 public class KnowledgeMirrorHealthTests
 {
     private static (string knowledgeRoot, string brainRoot) MakeRoots()

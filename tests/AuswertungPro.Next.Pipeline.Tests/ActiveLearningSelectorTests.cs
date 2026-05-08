@@ -10,6 +10,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Tests fuer den ActiveLearning-Selector (Audit Top-10 Punkt 6).
 /// Strategie: 60% Uncertainty (hoechste Priority) + 40% Diversity (rarste Codes).
 /// </summary>
+[Trait("Category", "Unit")]
 public class ActiveLearningSelectorTests
 {
     private static ReviewQueueItem MakeItem(string id, double priority, string code) =>

@@ -10,6 +10,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Tests fuer <see cref="TaskExtensions.SafeFireAndForget"/>.
 /// Verhindert ungeloggte Exceptions bei <c>_ = SomeAsync(...)</c>.
 /// </summary>
+[Trait("Category", "Unit")]
 public class TaskExtensionsTests
 {
     [Fact]

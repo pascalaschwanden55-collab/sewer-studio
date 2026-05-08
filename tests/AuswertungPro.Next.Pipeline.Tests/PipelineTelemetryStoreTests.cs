@@ -9,6 +9,7 @@ using Xunit;
 namespace AuswertungPro.Next.Pipeline.Tests;
 
 /// <summary>Tests fuer PipelineTelemetryStore (Sprint 2: SQLite-Persistierung).</summary>
+[Trait("Category", "Integration")]
 public class PipelineTelemetryStoreTests : IDisposable
 {
     private readonly string _tempDir;

@@ -11,6 +11,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// ValidationLog-Aggregation) und den darauf aufbauenden KbDashboardService.
 /// Reine SQLite-Tests, keine GPU-/Ollama-Abhaengigkeit.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class KbDashboardServiceTests : IDisposable
 {
     private readonly string _dbPath;

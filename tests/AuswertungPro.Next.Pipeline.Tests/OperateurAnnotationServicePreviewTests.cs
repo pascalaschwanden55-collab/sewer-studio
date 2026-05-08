@@ -16,6 +16,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// mit return_polygon=true an und uebersetzt die SAM-Antwort in eine
 /// MaskPreview. Persistiert NICHTS.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class OperateurAnnotationServicePreviewTests : IDisposable
 {
     private readonly string _tempDir;

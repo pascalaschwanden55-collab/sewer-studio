@@ -4,6 +4,7 @@ using AuswertungPro.Next.Application.Import;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Integration")]
 public class ImportRunReportExporterTests : IDisposable
 {
     private readonly string _tempDir;

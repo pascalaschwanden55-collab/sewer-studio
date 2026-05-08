@@ -17,6 +17,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Test wird uebersprungen wenn die SDF-konvertierten DB3-Dateien fehlen — keine
 /// rote CI mehr auf Maschinen ohne lokale Eval-Daten.
 /// </summary>
+[Trait("Category", "Integration")]
 public class SdfProfileExtractionTest
 {
     private readonly ITestOutputHelper _output;

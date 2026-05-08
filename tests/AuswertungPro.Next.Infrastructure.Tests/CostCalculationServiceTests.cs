@@ -7,6 +7,7 @@ using AuswertungPro.Next.Infrastructure.Costs;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class CostCalculationServiceTests
 {
     [Fact]

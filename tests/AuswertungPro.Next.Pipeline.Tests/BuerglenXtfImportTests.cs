@@ -15,6 +15,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// muss alle 608 Kanalschaden-Eintraege importieren. Pro Finding muessen
 /// KanalSchadencode, Distanz (MeterStart) und Videozaehlerstand (MPEG) gesetzt sein.
 /// </summary>
+[Trait("Category", "Integration")]
 public class BuerglenXtfImportTests
 {
     private readonly ITestOutputHelper _output;

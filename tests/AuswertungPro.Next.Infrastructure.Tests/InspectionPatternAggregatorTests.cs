@@ -7,6 +7,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 /// <summary>
 /// Unit-Tests fuer InspectionPatternAggregator — Aggregation statistischer Muster.
 /// </summary>
+[Trait("Category", "Unit")]
 public class InspectionPatternAggregatorTests
 {
     // -------------------------------------------------------------------------

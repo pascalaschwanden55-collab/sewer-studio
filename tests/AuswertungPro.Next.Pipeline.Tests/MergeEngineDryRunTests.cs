@@ -4,6 +4,7 @@ using AuswertungPro.Next.Infrastructure.Import.Common;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public class MergeEngineDryRunTests
 {
     [Fact]

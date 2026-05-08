@@ -13,6 +13,7 @@ using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Integration")]
 public sealed class AiPlatformConfigTests
 {
     [Fact]

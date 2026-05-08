@@ -5,6 +5,7 @@ using Xunit;
 namespace AuswertungPro.Next.Pipeline.Tests;
 
 /// <summary>Tests fuer RestartBudget (Sidecar-Watchdog Slide-Window-Logik).</summary>
+[Trait("Category", "Unit")]
 public class RestartBudgetTests
 {
     [Fact]

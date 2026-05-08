@@ -19,6 +19,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 ///   DistributeFiles         : 0 echte Tests vor dieser Datei
 ///   DistributeTxt           : 0 echte Tests vor dieser Datei
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class HoldingFolderDistributorCharacterizationTests
 {
     [Fact]

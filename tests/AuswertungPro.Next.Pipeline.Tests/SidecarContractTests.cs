@@ -17,6 +17,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// CapturingStubHandler und friert das heutige Verhalten von
 /// <see cref="VisionPipelineClient"/> ein, bevor die Klasse refaktoriert wird.
 /// </summary>
+[Trait("Category", "Unit")]
 public class SidecarContractTests
 {
     private static readonly Uri BaseUri = new("http://localhost:8100");

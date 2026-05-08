@@ -9,6 +9,7 @@ using Xunit;
 namespace AuswertungPro.Next.Pipeline.Tests;
 
 /// <summary>Tests fuer SidecarResilience (Sprint 1: Circuit-Breaker auf Sidecar).</summary>
+[Trait("Category", "Unit")]
 public class SidecarResilienceTests
 {
     [Fact]

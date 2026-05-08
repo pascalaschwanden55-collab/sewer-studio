@@ -14,6 +14,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// 2) Blau > Rot + 20 bei Luminanz > 100 (lila-invertiertes WinCan-PDF)
 /// </summary>
 [Trait("Category", "Recommendation")]
+[Trait("Category", "Slow")]
 public sealed class ImageInversionHelperTests
 {
     /// <summary>Erzeugt ein synthetisches PNG mit bestimmten RGB-Werten.</summary>

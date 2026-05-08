@@ -11,6 +11,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// müssen vom VsaCodeTree.LookupLabel aufgelöst werden können — sonst hat die UI
 /// "unbekannte Codes" in der KB.
 /// </summary>
+[Trait("Category", "Integration")]
 public class BuerglenXtfLookupTests
 {
     private readonly ITestOutputHelper _output;

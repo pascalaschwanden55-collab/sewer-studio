@@ -18,6 +18,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 /// frischen, isolierten KI_BRAIN-Pfad, damit weder die Produktiv-Daten
 /// noch andere Tests stoeren.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class TrainingSamplesWriterAdapterTests
 {
     [Fact]

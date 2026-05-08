@@ -6,6 +6,7 @@ using AuswertungPro.Next.UI.Ai;
 namespace AuswertungPro.Next.Pipeline.Tests;
 
 [Collection("EnvironmentVars")]
+[Trait("Category", "Unit")]
 public class PipelineConfigTests
 {
     [Fact]

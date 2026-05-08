@@ -12,6 +12,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class BenchmarkTests
 {
     // --- Hilfsmethoden ---

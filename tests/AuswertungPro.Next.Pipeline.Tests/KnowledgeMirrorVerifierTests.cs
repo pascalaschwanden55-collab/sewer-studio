@@ -5,6 +5,7 @@ using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Integration")]
 public class KnowledgeMirrorVerifierTests : IDisposable
 {
     private readonly string _tempDir;

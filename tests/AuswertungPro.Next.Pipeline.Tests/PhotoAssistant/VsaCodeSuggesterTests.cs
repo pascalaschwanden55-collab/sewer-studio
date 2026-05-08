@@ -4,6 +4,7 @@ using Xunit;
 namespace AuswertungPro.Next.Pipeline.Tests.PhotoAssistant;
 
 [Trait("Category", "PhotoAssistant")]
+[Trait("Category", "Unit")]
 public class VsaCodeSuggesterTests
 {
     [Fact]

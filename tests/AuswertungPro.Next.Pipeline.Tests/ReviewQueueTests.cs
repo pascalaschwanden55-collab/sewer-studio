@@ -8,6 +8,7 @@ using AuswertungPro.Next.Application.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class ReviewQueueTests
 {
     private static MappedProtocolEntry CreateEntry(double confidence, TrafficLight light, double? epistemic = null) =>

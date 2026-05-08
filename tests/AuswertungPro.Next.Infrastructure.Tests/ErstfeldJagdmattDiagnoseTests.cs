@@ -12,6 +12,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 // Diagnose-Test (kein Regression-Test): Erstellt einen Bericht ueber die Verteilung
 // fuer das echte Projekt D:\Videoprojekte\Erstfeld_Jagdmatt_38454_0426.
 // Wird per "dotnet test --filter Category=Diag" ausgefuehrt.
+[Trait("Category", "Integration")]
 public sealed class ErstfeldJagdmattDiagnoseTests
 {
     private readonly ITestOutputHelper _out;

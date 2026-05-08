@@ -20,6 +20,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 ///   K3: OperationCanceledException wird NICHT als Warning geschluckt
 ///   K4: Temp-Frame wird nach KI_BRAIN/frames/&lt;CaseId&gt;/&lt;SampleId&gt;.png finalisiert
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class OperateurAnnotationServiceCommitTests : IDisposable
 {
     private readonly KnowledgeRootIsolation _iso;

@@ -12,6 +12,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// <summary>
 /// Tests fuer MaintenanceScheduler (Sprint 1: Nightly-Cleanup).
 /// </summary>
+[Trait("Category", "Integration")]
 public class MaintenanceSchedulerTests : IDisposable
 {
     private readonly string _tempDir;

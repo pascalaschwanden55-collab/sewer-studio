@@ -11,6 +11,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Schuetzt vor XXE-Attacken (XML External Entities) bei Import von externen
 /// XTF/SIA-405-Dateien.
 /// </summary>
+[Trait("Category", "Integration")]
 public class SafeXmlLoaderTests
 {
     private static string WriteTempXml(string content)

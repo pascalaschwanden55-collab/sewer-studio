@@ -30,6 +30,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// AUSFUEHRUNG: ~100 Min (Base ~4 Min, Thinking ~96 Min).
 /// GPU-Konflikt vermeiden — kein Nachtbatch, kein SewerStudio-Batch.
 /// </summary>
+[Trait("Category", "Slow")]
 public class QwenModelComparisonTest
 {
     private readonly ITestOutputHelper _output;

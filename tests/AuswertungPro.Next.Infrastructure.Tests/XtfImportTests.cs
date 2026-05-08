@@ -6,6 +6,7 @@ using AuswertungPro.Next.Infrastructure.Import.Xtf;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
+[Trait("Category", "Integration")]
 public sealed class XtfImportTests
 {
     [Fact(Skip = "Requires local XTF file not checked into repository")]

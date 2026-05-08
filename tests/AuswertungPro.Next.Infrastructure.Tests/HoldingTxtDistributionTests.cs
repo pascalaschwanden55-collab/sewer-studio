@@ -5,6 +5,7 @@ using AuswertungPro.Next.Infrastructure;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
+[Trait("Category", "Integration")]
 public sealed class HoldingTxtDistributionTests
 {
     [Fact]

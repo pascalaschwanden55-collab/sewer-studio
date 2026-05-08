@@ -10,6 +10,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Phase 3.5 (2026-05-08): Tests fuer <see cref="PipelineDriftDetector"/>.
 /// Reine Berechnung — keine Mocks, kein I/O.
 /// </summary>
+[Trait("Category", "Unit")]
 public class PipelineDriftDetectorTests
 {
     /// <summary>

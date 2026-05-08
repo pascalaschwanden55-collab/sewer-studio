@@ -5,6 +5,7 @@ using AuswertungPro.Next.Infrastructure.Vsa;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class ConnectionCountEstimatorTests
 {
     [Fact]

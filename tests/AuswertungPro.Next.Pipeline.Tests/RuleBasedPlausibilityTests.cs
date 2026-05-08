@@ -3,6 +3,7 @@ using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public class RuleBasedPlausibilityTests
 {
     private readonly RuleBasedAiSuggestionPlausibilityService _sut = new();

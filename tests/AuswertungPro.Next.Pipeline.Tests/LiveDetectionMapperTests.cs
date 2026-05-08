@@ -6,6 +6,7 @@ using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class LiveDetectionMapperTests
 {
     [Fact]

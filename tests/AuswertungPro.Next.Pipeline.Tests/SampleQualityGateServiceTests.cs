@@ -9,6 +9,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Tests fuer das gewichtete SampleQualityGate (Green/Yellow/Red).
 /// Prueft: Hard-Red Kriterien, gewichtete Issues, SourceType-Logik, Batch-Auswertung.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class SampleQualityGateServiceTests
 {
     private static TrainingSample MakeSample(

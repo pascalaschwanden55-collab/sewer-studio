@@ -8,6 +8,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Erkennung Nicht-Inspektions-PDF (Rechnungen/DP) und einen Caesar-Decoder
 /// fuer IKAS-PDFs mit verschobenen Zeichen aus falschen CMaps.
 /// </summary>
+[Trait("Category", "Unit")]
 public class PdfProtocolHelpersTests
 {
     [Fact]

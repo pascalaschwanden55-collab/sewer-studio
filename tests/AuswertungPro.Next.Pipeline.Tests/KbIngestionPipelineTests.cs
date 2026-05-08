@@ -22,6 +22,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 ///   - Cancellation: alle Stages stoppen sauber
 ///   - Fehler in einer Stage propagiert
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class KbIngestionPipelineTests
 {
     private static TrainingSample MakeSample(string id = "s1", string code = "BAB") =>

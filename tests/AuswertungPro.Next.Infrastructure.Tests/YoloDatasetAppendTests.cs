@@ -20,6 +20,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 ///    dem Code selbst.
 ///  - YOLO-seg-Label ist class_id + Polygon-Punkte (normiert 0..1).
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class YoloDatasetAppendTests : IDisposable
 {
     private readonly string _datasetRoot;

@@ -9,6 +9,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Schuetzt gegen Path-Traversal-Attacken via Haltungs-IDs aus externen Quellen
 /// (manipulierte WinCan-DB / Import-XML / Mail-Anhaenge).
 /// </summary>
+[Trait("Category", "Unit")]
 public class ProjectPathResolverTests
 {
     [Theory]

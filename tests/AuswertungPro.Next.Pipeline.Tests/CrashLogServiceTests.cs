@@ -6,6 +6,7 @@ using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Integration")]
 public class CrashLogServiceTests : IDisposable
 {
     private readonly string _tempDir;

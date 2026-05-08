@@ -11,6 +11,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Prueft FK-Constraint Embeddings -> Samples + ModelVersion-Spalte.
 /// Sind reine Schema-/Migration-Tests, keine GPU-/Ollama-Abhaengigkeit.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class KnowledgeBaseSchemaTests : IDisposable
 {
     private readonly string _dbPath;

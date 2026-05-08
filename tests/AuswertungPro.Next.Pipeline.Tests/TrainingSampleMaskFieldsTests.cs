@@ -7,6 +7,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Slice 1 (Operateur-Annotation): TrainingSample um SAM-Maske + FrameDeltaSeconds erweitert.
 /// HasMask ist nur dann true, wenn alle Pflicht-Felder fuer die Maske vorhanden sind.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class TrainingSampleMaskFieldsTests
 {
     [Fact]

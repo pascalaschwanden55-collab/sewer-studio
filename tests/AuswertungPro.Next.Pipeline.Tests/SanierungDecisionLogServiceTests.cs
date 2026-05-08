@@ -13,6 +13,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Phase 5.5: Tests fuer SanierungDecisionLogService — persistiert
 /// RulesEvaluation-Ergebnisse mit Provenance (Knowledge-Version, RunId).
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class SanierungDecisionLogServiceTests : IDisposable
 {
     private readonly string _dbPath;

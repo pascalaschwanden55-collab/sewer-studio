@@ -7,6 +7,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// V4.3 Phase 3.2: VsaCodeTree.GetQuantificationUnit muss Einheiten aus QuantRules
 /// korrekt ableiten. Basis fuer XTF/PDF/Qwen-Import.
 /// </summary>
+[Trait("Category", "Unit")]
 public class GetQuantificationUnitTests
 {
     [Theory]

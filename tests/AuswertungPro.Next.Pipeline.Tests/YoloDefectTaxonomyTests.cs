@@ -7,6 +7,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Tests fuer YoloDefectTaxonomy — Mapping zwischen VSA-Codes und YOLO-Klassen.
 /// Deckt ab: FromVsaCode, AllClasses, GenerateDataYaml.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class YoloDefectTaxonomyTests
 {
     // ═══════════════════════════════════════════════════════════════

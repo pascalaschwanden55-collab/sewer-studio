@@ -5,6 +5,7 @@ using AuswertungPro.Next.Application.Ai.Pipeline;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class MultiModelAnalysisServiceTests
 {
     [Fact]

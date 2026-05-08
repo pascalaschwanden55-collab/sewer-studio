@@ -14,6 +14,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 ///  1) PersistAsync schreibt alle Pending-Categories in die getypten Spalten.
 ///  2) Noise-Filter (L1 &lt;= NoiseFilterThreshold) verhindert UPSERT.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class WeightLearningPersistAsyncTests : IDisposable
 {
     private readonly string _dbPath;

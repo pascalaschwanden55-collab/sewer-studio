@@ -4,6 +4,7 @@ using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class HydraulikEngineTests
 {
     [Fact]

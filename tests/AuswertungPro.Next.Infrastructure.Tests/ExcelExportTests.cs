@@ -9,6 +9,7 @@ using AuswertungPro.Next.Infrastructure.Export.Excel;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
+[Trait("Category", "Integration")]
 public sealed class ExcelExportTests
 {
     [Fact]

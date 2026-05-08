@@ -10,6 +10,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 
 // Diagnose-Test: Schema und Inhalt der Arizona.fdb (KIAS-Export) inspizieren.
 // Ausfuehren: dotnet test --filter "Category=Diag&FullyQualifiedName~Fdb"
+[Trait("Category", "Integration")]
 public sealed class ErstfeldFdbInspectTests
 {
     private readonly ITestOutputHelper _out;

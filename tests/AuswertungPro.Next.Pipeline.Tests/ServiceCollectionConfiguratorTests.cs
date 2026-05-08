@@ -31,6 +31,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 /// Stellt sicher, dass alle in 5.2.A-C migrierten Services aufgeloest werden koennen
 /// — ohne ServiceProvider, ohne App.Services.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class ServiceCollectionConfiguratorTests
 {
     [Fact]

@@ -2,6 +2,7 @@ using AuswertungPro.Next.Infrastructure.Import.Pdf;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
+[Trait("Category", "Integration")]
 public sealed class PdfChunkingTableHeaderTests
 {
     [Fact]

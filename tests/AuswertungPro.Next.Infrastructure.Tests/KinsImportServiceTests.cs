@@ -8,6 +8,7 @@ using AuswertungPro.Next.Infrastructure.Import.Kins;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
+[Trait("Category", "Integration")]
 public sealed class KinsImportServiceTests
 {
     [Fact]

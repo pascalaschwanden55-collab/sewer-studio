@@ -17,6 +17,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Tests laufen gegen einen frischen Temp-KnowledgeRoot, damit Produktiv-
 /// Daten und andere Tests nicht stoeren.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class TrainingRunsStoreTests : IDisposable
 {
     private readonly KnowledgeRootScope _scope;

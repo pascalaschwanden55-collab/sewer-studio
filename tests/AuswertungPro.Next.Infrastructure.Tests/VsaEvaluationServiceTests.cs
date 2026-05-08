@@ -6,6 +6,7 @@ using AuswertungPro.Next.Infrastructure.Vsa;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
+[Trait("Category", "Integration")]
 public sealed class VsaEvaluationServiceTests
 {
     private static VsaEvaluationService CreateService()

@@ -8,6 +8,7 @@ using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class EscalationGuardrailTests
 {
     // ── Guardrail A: Batch-Pfade duerfen NICHT AnalyzeWithEscalationAsync aufrufen ──

@@ -19,6 +19,7 @@ using System.Net.Http;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class OllamaClientTests
 {
     [Fact]

@@ -11,6 +11,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// JSON-Roundtrip nicht bricht. Bestehende `training_center.json`-Dateien
 /// muessen unveraendert lesbar bleiben.
 /// </summary>
+[Trait("Category", "Unit")]
 public class TrainingCaseJsonRoundtripTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new()

@@ -9,6 +9,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Format-Varianten: Standard (zwei optionale Code-Tokens) + Fretz
 /// (Foto-Nr + HH:MM:SS vorgesetzt).
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class BeobachtungParserTests
 {
     [Fact]

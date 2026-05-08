@@ -14,6 +14,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Identifiziert verwaiste PNGs unter C:\KI_BRAIN\frames die zu keinem
 /// TrainingSample mehr gehoeren.
 /// </summary>
+[Trait("Category", "Integration")]
 public class FrameStoreCleanupServiceTests
 {
     [Fact]

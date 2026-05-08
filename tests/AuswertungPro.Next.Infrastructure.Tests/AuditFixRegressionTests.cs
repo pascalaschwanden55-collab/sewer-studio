@@ -14,6 +14,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 /// Regression-Tests fuer die Audit-Fixes vom 28.04.2026.
 /// Sichert ab, dass die heutigen kritischen Korrekturen nicht versehentlich rueckgaengig gemacht werden.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class AuditFixRegressionTests
 {
     // ── Audit-Fix 1: BBox Y-Mitten Operator-Prioritaet ────────────────────
