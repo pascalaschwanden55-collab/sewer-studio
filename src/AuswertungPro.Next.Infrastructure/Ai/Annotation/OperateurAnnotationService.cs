@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Annotation;
+using AuswertungPro.Next.Application.CodeCatalog;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Ai.Training;
@@ -236,6 +237,7 @@ public sealed class OperateurAnnotationService : IOperateurAnnotationService
             SampleId = sampleId,
             CaseId = request.CaseId,
             Code = request.Code,
+            Beschreibung = BuildBeschreibung(request.Code),
             MeterStart = request.ProtocolMeterstand,
             MeterEnd = request.ProtocolMeterstand,
             IsStreckenschaden = false,
@@ -265,6 +267,16 @@ public sealed class OperateurAnnotationService : IOperateurAnnotationService
         sample.Signature = TrainingSample.BuildCanonicalSignature(
             request.CaseId, request.Code, request.ProtocolMeterstand, request.ProtocolMeterstand);
         return sample;
+    }
+
+    private static string BuildBeschreibung(string code)
+    {
+        var trimmed = code?.Trim() ?? "";
+        if (trimmed.Length == 0) return "";
+
+        var normalized = trimmed.Replace(".", "", StringComparison.Ordinal);
+        var label = VsaCodeTree.LookupLabel(normalized);
+        return label is null ? trimmed : $"{trimmed} — {label}";
     }
 
     /// <summary>

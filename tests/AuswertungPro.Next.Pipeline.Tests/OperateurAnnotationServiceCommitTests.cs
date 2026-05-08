@@ -61,6 +61,8 @@ public sealed class OperateurAnnotationServiceCommitTests : IDisposable
         Assert.NotNull(spy.LastAppendedSample);
         Assert.Equal(expectedFinalPath, spy.LastAppendedSample!.FramePath);
         Assert.Equal(SourceTypeNames.OperateurAnnotation, spy.LastAppendedSample.SourceType);
+        Assert.False(string.IsNullOrWhiteSpace(spy.LastAppendedSample.Beschreibung));
+        Assert.Contains("BAB", spy.LastAppendedSample.Beschreibung, StringComparison.Ordinal);
 
         // K2: nach erfolgreichem KB-Index muss UpdateIndexStateAsync(Indexed) gerufen werden.
         Assert.Contains(spy.IndexStateUpdates, u =>
