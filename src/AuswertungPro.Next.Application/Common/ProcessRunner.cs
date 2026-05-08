@@ -221,6 +221,47 @@ public static class ProcessRunner
             return false;
         }
     }
+
+    /// <summary>
+    /// Oeffnet den Windows-Explorer mit ausgewaehlter Datei (/select,-Variante).
+    /// Faellt bei nicht-existierender Datei auf das Eltern-Verzeichnis zurueck.
+    /// Slice 4c: ersetzt Inline-Aufrufe von explorer.exe /select,
+    /// </summary>
+    public static bool TryOpenAndSelectInExplorer(string filePath, out string? error)
+    {
+        error = null;
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            error = "Pfad ist leer.";
+            return false;
+        }
+
+        try
+        {
+            if (!System.IO.File.Exists(filePath))
+            {
+                var dir = System.IO.Path.GetDirectoryName(filePath);
+                if (!string.IsNullOrWhiteSpace(dir) && System.IO.Directory.Exists(dir))
+                    return TryOpenWithDefaultProgram(dir, out error);
+
+                error = "Datei und Eltern-Verzeichnis existieren nicht.";
+                return false;
+            }
+
+            using var p = Process.Start(new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = $"/select,\"{filePath}\"",
+                UseShellExecute = true
+            });
+            return p is not null;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
 }
 
 /// <summary>

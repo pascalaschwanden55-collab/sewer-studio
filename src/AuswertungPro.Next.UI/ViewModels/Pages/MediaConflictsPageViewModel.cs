@@ -428,29 +428,9 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
 
     private static void TryOpenSelectInExplorer(string? path)
     {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(path))
-                return;
+        if (string.IsNullOrWhiteSpace(path))
+            return;
 
-            if (File.Exists(path))
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "explorer.exe",
-                    Arguments = $"/select,\"{path}\"",
-                    UseShellExecute = true
-                });
-                return;
-            }
-
-            var dir = Path.GetDirectoryName(path);
-            if (!string.IsNullOrWhiteSpace(dir) && Directory.Exists(dir))
-                TryOpenFolder(dir);
-        }
-        catch
-        {
-            // Ignore UI helper errors.
-        }
+        AuswertungPro.Next.Application.Common.ProcessRunner.TryOpenAndSelectInExplorer(path, out _);
     }
 }
