@@ -10,6 +10,7 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 public partial class SettingsPage : System.Windows.Controls.UserControl
 {
     private string? _previewedSourceDir;
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
 
     public SettingsPage()
     {
@@ -50,7 +51,7 @@ public partial class SettingsPage : System.Windows.Controls.UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Konnte Regelverwaltung nicht oeffnen:\n{ex.Message}",
+            _dialogs.ShowMessage($"Konnte Regelverwaltung nicht oeffnen:\n{ex.Message}",
                 "Sanierungsregeln", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -129,7 +130,7 @@ public partial class SettingsPage : System.Windows.Controls.UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Fehler bei Vorschau:\n{ex.Message}", "Marktdaten-Import",
+            _dialogs.ShowMessage($"Fehler bei Vorschau:\n{ex.Message}", "Marktdaten-Import",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -138,12 +139,12 @@ public partial class SettingsPage : System.Windows.Controls.UserControl
     {
         if (string.IsNullOrWhiteSpace(_previewedSourceDir))
         {
-            MessageBox.Show("Bitte zuerst eine Quelle waehlen (Vorschau).", "Marktdaten-Import",
+            _dialogs.ShowMessage("Bitte zuerst eine Quelle waehlen (Vorschau).", "Marktdaten-Import",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        var confirm = MessageBox.Show(
+        var confirm = _dialogs.ShowMessage(
             $"Marktdaten-JSONs aus folgendem Verzeichnis importieren?\n\n{_previewedSourceDir}\n\n" +
             "Bestehende Config-Dateien werden gesichert (.bak).",
             "Marktdaten-Import",
@@ -181,7 +182,7 @@ public partial class SettingsPage : System.Windows.Controls.UserControl
                 ? "Service-Caches invalidiert. Naechste Devis-/KI-Anfrage liest die neuen Daten."
                 : "Caches NICHT invalidiert.");
 
-            MessageBox.Show(sb.ToString(), "Marktdaten-Import abgeschlossen",
+            _dialogs.ShowMessage(sb.ToString(), "Marktdaten-Import abgeschlossen",
                 MessageBoxButton.OK, MessageBoxImage.Information);
 
             UpdateMarktdatenStatus();
@@ -190,7 +191,7 @@ public partial class SettingsPage : System.Windows.Controls.UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Fehler beim Import:\n{ex.Message}", "Marktdaten-Import",
+            _dialogs.ShowMessage($"Fehler beim Import:\n{ex.Message}", "Marktdaten-Import",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -203,13 +204,13 @@ public partial class SettingsPage : System.Windows.Controls.UserControl
             App.Resolve<Infrastructure.Devis.SubmissionsPositionService>().Invalidate();
             App.Resolve<Infrastructure.Devis.HistorischeSanierungenService>().Invalidate();
             UpdateMarktdatenStatus();
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 "Caches invalidiert. Naechste Devis-/KI-Anfrage liest die JSONs neu vom Datentraeger.",
                 "Marktdaten", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Fehler:\n{ex.Message}", "Marktdaten",
+            _dialogs.ShowMessage($"Fehler:\n{ex.Message}", "Marktdaten",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
