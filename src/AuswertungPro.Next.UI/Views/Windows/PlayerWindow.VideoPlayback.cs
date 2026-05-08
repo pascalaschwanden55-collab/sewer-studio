@@ -141,7 +141,7 @@ public partial class PlayerWindow
         if (!change.IsSupported)
         {
             var clamped = Math.Clamp(rate, MinRate, MaxRate);
-            MessageBox.Show($"SetRate({clamped:0.##}) nicht unterstuetzt fuer dieses Video.",
+            _dialogs.ShowMessage($"SetRate({clamped:0.##}) nicht unterstuetzt fuer dieses Video.",
                 "Video", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -185,7 +185,7 @@ public partial class PlayerWindow
         if (!change.IsSupported)
         {
             var clamped = Math.Clamp(change.RequestedRate, MinRate, MaxRate);
-            MessageBox.Show($"SetRate({clamped:0.##}) nicht unterstuetzt fuer dieses Video.",
+            _dialogs.ShowMessage($"SetRate({clamped:0.##}) nicht unterstuetzt fuer dieses Video.",
                 "Video", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 

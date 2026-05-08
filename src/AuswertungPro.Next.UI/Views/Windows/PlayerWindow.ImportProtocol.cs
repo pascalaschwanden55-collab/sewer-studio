@@ -69,7 +69,7 @@ public partial class PlayerWindow
         // 2. Frame capturen
         if (!TryTakeSnapshot(out var snapshotPath) || !System.IO.File.Exists(snapshotPath))
         {
-            MessageBox.Show("Frame konnte nicht aufgenommen werden.\nBitte prüfen Sie ob das Video läuft.",
+            _dialogs.ShowMessage("Frame konnte nicht aufgenommen werden.\nBitte prüfen Sie ob das Video läuft.",
                 "Import bestätigen", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -200,7 +200,7 @@ public partial class PlayerWindow
     {
         if (_haltungRecord == null) return;
 
-        var result = MessageBox.Show(
+        var result = _dialogs.ShowMessage(
             $"{doc.Current.Entries.Count} Beobachtungen protokolliert.\n\n" +
             "Protokoll jetzt anzeigen und bearbeiten?\n" +
             "(Aenderungen werden in Primaere Schaeden uebernommen)",

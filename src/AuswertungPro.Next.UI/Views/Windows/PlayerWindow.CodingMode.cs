@@ -664,7 +664,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Codier-Modus", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogs.ShowMessage(ex.Message, "Codier-Modus", MessageBoxButton.OK, MessageBoxImage.Warning);
             ExitCodingMode();
             return;
         }
@@ -2532,7 +2532,7 @@ public partial class PlayerWindow
         MessageBoxResult result;
         try
         {
-            result = MessageBox.Show(
+            result = _dialogs.ShowMessage(
                 sb.ToString(),
                 "Offene Streckenschaeden",
                 MessageBoxButton.YesNoCancel,

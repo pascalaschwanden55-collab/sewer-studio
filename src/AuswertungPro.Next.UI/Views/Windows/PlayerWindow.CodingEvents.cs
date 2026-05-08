@@ -244,7 +244,7 @@ public partial class PlayerWindow
     {
         if (_haltungRecord == null) return;
 
-        var result = MessageBox.Show(
+        var result = _dialogs.ShowMessage(
             $"Codier-Session abgeschlossen ({doc.Current.Entries.Count} Ereignisse).\n\n" +
             "MÃƒÂ¶chten Sie jetzt ein PDF-Protokoll mit Grafik und Fotos erstellen?",
             "PDF-Protokoll erstellen",
@@ -290,7 +290,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"PDF konnte nicht erstellt werden:\n{ex.Message}", "Fehler",
+            _dialogs.ShowMessage($"PDF konnte nicht erstellt werden:\n{ex.Message}", "Fehler",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -470,7 +470,7 @@ public partial class PlayerWindow
         double currentMeter = _codingVm.CurrentMeter;
         if (currentMeter <= (startEvent.MeterAtCapture + 0.01))
         {
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 "Der aktuelle Meterstand muss groesser sein als der Anfang des Streckenschadens.",
                 "Streckenschaden", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
@@ -512,7 +512,7 @@ public partial class PlayerWindow
         MessageBoxResult confirm;
         try
         {
-            confirm = MessageBox.Show($"Ereignis '{codingEvent.Entry.Code}' loeschen?", "Loeschen",
+            confirm = _dialogs.ShowMessage($"Ereignis '{codingEvent.Entry.Code}' loeschen?", "Loeschen",
                 MessageBoxButton.YesNo, MessageBoxImage.Question);
         }
         finally

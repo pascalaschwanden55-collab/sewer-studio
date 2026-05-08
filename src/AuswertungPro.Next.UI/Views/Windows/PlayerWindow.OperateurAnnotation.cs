@@ -323,7 +323,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this,
+            _dialogs.ShowMessage(
                 $"Haltungsordner konnte nicht eingelesen werden:\n{ex.Message}",
                 "Operateur-Annotation", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
@@ -331,7 +331,7 @@ public partial class PlayerWindow
 
         if (session.Tasks.Count == 0)
         {
-            MessageBox.Show(this,
+            _dialogs.ShowMessage(
                 "Im PDF wurden keine Beobachtungen erkannt. Format pruefen oder anderes Protokoll waehlen.",
                 "Operateur-Annotation", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
@@ -343,7 +343,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this,
+            _dialogs.ShowMessage(
                 $"Operator-Modus konnte nicht aktiviert werden:\n{ex.Message}",
                 "Operateur-Annotation", MessageBoxButton.OK, MessageBoxImage.Error);
         }

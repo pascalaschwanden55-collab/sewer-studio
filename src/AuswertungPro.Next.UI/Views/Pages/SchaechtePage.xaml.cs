@@ -21,6 +21,8 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 
 public partial class SchaechtePage : UserControl
 {
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
+
     private sealed class ComboBindingTag
     {
         public ComboBindingTag(string recordField, string optionField)
@@ -1697,7 +1699,7 @@ public partial class SchaechtePage : UserControl
         if (_vm is null)
             return;
 
-        var result = MessageBox.Show(
+        var result = _dialogs.ShowMessage(
             $"Alle Werte in Spalte \"{displayName}\" loeschen?",
             "Spalte leeren",
             MessageBoxButton.YesNo,
@@ -1719,7 +1721,7 @@ public partial class SchaechtePage : UserControl
         var record = _vm.Selected;
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile ausgewaehlt. Bitte direkt auf eine Zeile rechtsklicken.", "Protokoll",
+            _dialogs.ShowMessage("Keine Zeile ausgewaehlt. Bitte direkt auf eine Zeile rechtsklicken.", "Protokoll",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -1728,7 +1730,7 @@ public partial class SchaechtePage : UserControl
         if (string.IsNullOrWhiteSpace(pdfPath))
         {
             var schacht = GetSchachtNumber(record);
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 string.IsNullOrWhiteSpace(schacht)
                     ? "Kein Schachtprotokoll-PDF verknuepft."
                     : $"Kein Schachtprotokoll-PDF verknuepft fuer Schacht {schacht}.",
@@ -1738,7 +1740,7 @@ public partial class SchaechtePage : UserControl
 
         if (!AuswertungPro.Next.Application.Common.ProcessRunner.TryOpenWithDefaultProgram(pdfPath, out var openErr))
         {
-            MessageBox.Show($"PDF konnte nicht geoeffnet werden:\n{openErr}", "Protokoll",
+            _dialogs.ShowMessage($"PDF konnte nicht geoeffnet werden:\n{openErr}", "Protokoll",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -1753,7 +1755,7 @@ public partial class SchaechtePage : UserControl
         var record = _vm.Selected;
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile ausgewaehlt. Bitte direkt auf eine Zeile rechtsklicken.", "Details",
+            _dialogs.ShowMessage("Keine Zeile ausgewaehlt. Bitte direkt auf eine Zeile rechtsklicken.", "Details",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }

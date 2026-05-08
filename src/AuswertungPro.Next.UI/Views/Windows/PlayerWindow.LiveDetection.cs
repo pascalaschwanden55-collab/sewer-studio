@@ -92,7 +92,7 @@ public partial class PlayerWindow
         try { cfg = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load(); }
         catch
         {
-            MessageBox.Show("KI-Konfiguration konnte nicht geladen werden.", "Live-KI",
+            _dialogs.ShowMessage("KI-Konfiguration konnte nicht geladen werden.", "Live-KI",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             LiveDetectionButton.IsChecked = false;
             return;
@@ -100,7 +100,7 @@ public partial class PlayerWindow
 
         if (!cfg.Enabled)
         {
-            MessageBox.Show("KI ist deaktiviert. Bitte in den Einstellungen aktivieren.", "Live-KI",
+            _dialogs.ShowMessage("KI ist deaktiviert. Bitte in den Einstellungen aktivieren.", "Live-KI",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             LiveDetectionButton.IsChecked = false;
             return;
@@ -157,7 +157,7 @@ public partial class PlayerWindow
         catch (Exception ex)
         {
             LiveDetectionButton.IsChecked = false;
-            MessageBox.Show($"Live-KI konnte nicht gestartet werden: {ex.Message}", "Live-KI",
+            _dialogs.ShowMessage($"Live-KI konnte nicht gestartet werden: {ex.Message}", "Live-KI",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }

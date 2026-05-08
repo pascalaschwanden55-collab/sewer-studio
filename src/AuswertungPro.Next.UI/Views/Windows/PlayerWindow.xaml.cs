@@ -100,6 +100,7 @@ public partial class PlayerWindow : Window, IVlcSurface
     private readonly PlayerWindowOptions _options;
     private readonly string? _initialOverlayText;
     private readonly PlayerDamageOverlayData? _damageOverlay;
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
     private readonly List<(DamageMarkerInfo Info, FrameworkElement Container, FrameworkElement TickOrRange, TextBlock Label)> _damageMarkers = new();
 
     // Ã¢"â‚¬Ã¢"â‚¬ Quick-Scan state Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
@@ -471,7 +472,7 @@ public partial class PlayerWindow : Window, IVlcSurface
         }
         catch
         {
-            MessageBox.Show("KI-Konfiguration konnte nicht geladen werden.", "Schnell-Scan",
+            _dialogs.ShowMessage("KI-Konfiguration konnte nicht geladen werden.", "Schnell-Scan",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             QuickScanButton.IsChecked = false;
             return;
@@ -479,7 +480,7 @@ public partial class PlayerWindow : Window, IVlcSurface
 
         if (!cfg.Enabled)
         {
-            MessageBox.Show("KI ist deaktiviert. Bitte in den Einstellungen aktivieren.", "Schnell-Scan",
+            _dialogs.ShowMessage("KI ist deaktiviert. Bitte in den Einstellungen aktivieren.", "Schnell-Scan",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             QuickScanButton.IsChecked = false;
             return;

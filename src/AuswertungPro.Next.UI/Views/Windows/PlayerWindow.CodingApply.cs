@@ -45,7 +45,7 @@ public partial class PlayerWindow
 
         if (catalog is null)
         {
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 "Schadenscode-Katalog nicht verfuegbar.\n" +
                 "Bitte die App neu starten oder KI-Einstellungen pruefen.",
                 "Markieren", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -167,7 +167,7 @@ public partial class PlayerWindow
     {
         if (_haltungRecord == null)
         {
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 "Codier-Modus benoetigt eine Haltung.\n" +
                 "Bitte das Video ueber die Datenseite mit einer Haltung oeffnen.",
                 "Codier-Modus", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -176,7 +176,7 @@ public partial class PlayerWindow
 
         if (_isTrainingMode)
         {
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 "Bitte zuerst den Trainings-Modus beenden.",
                 "Codier-Modus", MessageBoxButton.OK, MessageBoxImage.Information);
             return;

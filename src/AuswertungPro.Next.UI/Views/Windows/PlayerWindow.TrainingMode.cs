@@ -63,7 +63,7 @@ public partial class PlayerWindow
         {
             if (_isCodingMode)
             {
-                MessageBox.Show(
+                _dialogs.ShowMessage(
                     "Bitte zuerst den Codier-Modus beenden.",
                     "Trainings-Modus",
                     MessageBoxButton.OK,
