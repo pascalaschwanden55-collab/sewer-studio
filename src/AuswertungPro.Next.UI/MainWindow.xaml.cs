@@ -8,6 +8,8 @@ namespace AuswertungPro.Next.UI;
 
 public partial class MainWindow : Window
 {
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
+
     public MainWindow()
     {
         InitializeComponent();
@@ -21,7 +23,7 @@ public partial class MainWindow : Window
         {
             if (DataContext is ShellViewModel vm && vm.Project.Dirty)
             {
-                var result = MessageBox.Show(
+                var result = _dialogs.ShowMessage(
                     "Es gibt ungespeicherte Aenderungen. Jetzt speichern?",
                     "Projekt speichern",
                     MessageBoxButton.YesNoCancel,

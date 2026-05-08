@@ -9,6 +9,8 @@ namespace AuswertungPro.Next.UI.Dialogs
 {
     public class OptionsEditorViewModel : INotifyPropertyChanged
     {
+        private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
+
         public ObservableCollection<string> Items { get; }
         public string? SelectedItem
         {
@@ -141,13 +143,13 @@ namespace AuswertungPro.Next.UI.Dialogs
                 var value = (item ?? string.Empty).Trim();
                 if (string.IsNullOrEmpty(value))
                 {
-                    MessageBox.Show("Leere Eintraege sind nicht erlaubt.", "Ungueltige Liste",
+                    _dialogs.ShowMessage("Leere Eintraege sind nicht erlaubt.", "Ungueltige Liste",
                         MessageBoxButton.OK, MessageBoxImage.Warning);
                     return false;
                 }
                 if (!seen.Add(value))
                 {
-                    MessageBox.Show("Doppelte Eintraege sind nicht erlaubt.", "Ungueltige Liste",
+                    _dialogs.ShowMessage("Doppelte Eintraege sind nicht erlaubt.", "Ungueltige Liste",
                         MessageBoxButton.OK, MessageBoxImage.Warning);
                     return false;
                 }

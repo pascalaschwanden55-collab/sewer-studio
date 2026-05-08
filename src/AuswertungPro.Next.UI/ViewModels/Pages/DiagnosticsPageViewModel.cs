@@ -17,6 +17,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class DiagnosticsPageViewModel : ObservableObject
 {
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
+
     [ObservableProperty] private string _logTail = "";
 
     // ── Wartungs-Tools (Audit-Tab, 2026-05-07) ──
@@ -136,7 +138,7 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject
         // Bestaetigung wenn nicht DryRun
         if (!dryRun)
         {
-            var confirm = MessageBox.Show(
+            var confirm = _dialogs.ShowMessage(
                 "Verwaiste Frame-PNGs werden geloescht. Vorher DryRun ausfuehren empfohlen.\n\nFortfahren?",
                 "Frames bereinigen",
                 MessageBoxButton.YesNo,
@@ -185,7 +187,7 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject
     {
         if (IsVersionsPruneRunning) return;
 
-        var confirm = MessageBox.Show(
+        var confirm = _dialogs.ShowMessage(
             "Alte KB-Versions-Snapshots werden geloescht.\n" +
             "Behalten: letzte 20 Versionen + alle juenger als 30 Tage.\n" +
             "Aktuelle Version bleibt immer erhalten.\n\nFortfahren?",

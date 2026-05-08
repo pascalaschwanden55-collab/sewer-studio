@@ -13,6 +13,7 @@ public sealed partial class ProtocolHistoryWindow : Window
     private readonly IProtocolService _protocols;
     private readonly Action _onRestored;
     private readonly ObservableCollection<HistoryRow> _rows = new();
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
 
     public ProtocolHistoryWindow(ProtocolDocument doc, IProtocolService protocols, Action onRestored)
     {
@@ -50,11 +51,11 @@ public sealed partial class ProtocolHistoryWindow : Window
         var row = HistoryGrid.SelectedItem as HistoryRow;
         if (row?.Revision is null)
         {
-            MessageBox.Show("Bitte eine Revision auswaehlen.", "Historie", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogs.ShowMessage("Bitte eine Revision auswaehlen.", "Historie", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
-        var confirm = MessageBox.Show("Diese Revision wiederherstellen?", "Historie", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        var confirm = _dialogs.ShowMessage("Diese Revision wiederherstellen?", "Historie", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (confirm != MessageBoxResult.Yes)
             return;
 
