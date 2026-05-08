@@ -26,7 +26,7 @@ jobs:
         run: dotnet build AuswertungPro.sln -c Release --no-restore
 
       - name: Run tests
-        run: dotnet test AuswertungPro.sln -c Release --no-build --verbosity normal --logger "trx;LogFileName=results.trx"
+        run: dotnet test AuswertungPro.sln -c Release --no-build --verbosity normal --logger "trx;LogFileName=results.trx" --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
       - name: Upload test results
         if: always()
@@ -34,6 +34,33 @@ jobs:
         with:
           name: test-results
           path: "**/results.trx"
+
+      # Roadmap Z.4: Coverage-Report. Aktuell als Artifact + Job-Summary,
+      # NICHT als PR-Gate (Slice-1-Baseline muss erst etablieren).
+      - name: Install ReportGenerator
+        if: always()
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool
+
+      - name: Generate coverage report
+        if: always()
+        shell: pwsh
+        run: |
+          $cov = Get-ChildItem -Recurse -Filter "coverage.cobertura.xml" | Select-Object -First 5
+          if (-not $cov) { Write-Host "Keine coverage.cobertura.xml gefunden, ueberspringe Report"; exit 0 }
+          reportgenerator "-reports:**/coverage.cobertura.xml" "-targetdir:CoverageReport" "-reporttypes:Html;MarkdownSummaryGithub;TextSummary"
+          if (Test-Path "CoverageReport/Summary.txt") {
+            Get-Content "CoverageReport/Summary.txt" | Select-Object -First 30
+          }
+          if (Test-Path "CoverageReport/SummaryGithub.md") {
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value (Get-Content "CoverageReport/SummaryGithub.md" -Raw)
+          }
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: CoverageReport/
 
   python-sidecar-lint:
     runs-on: ubuntu-latest
