@@ -76,7 +76,13 @@ public static partial class HoldingFolderDistributor
 
     /// <summary>
     /// Sucht im Holding-Folder nach einem bereits vorhandenen Video, das dem
-    /// Source-Video entspricht (Dateiname-Match oder gleiche Groesse).
+    /// Source-Video entspricht. Match-Reihenfolge:
+    /// 1. Exakter Dateiname (case-insensitive)
+    /// 2. Gleiche Dateigroesse + gleicher Partial-Hash der ersten 64 KB
+    ///
+    /// Phase 4.5: Reine Groessen-Gleichheit kann zu False-Positives fuehren
+    /// (zwei verschiedene Videos mit gleicher Byte-Anzahl). Der Partial-Hash
+    /// schliesst das fuer den Normalfall aus, ohne das ganze Video zu lesen.
     /// </summary>
     private static string? FindExistingVideo(string holdingFolder, string sourceVideoPath)
     {
@@ -85,6 +91,7 @@ public static partial class HoldingFolderDistributor
 
         var srcInfo = new FileInfo(sourceVideoPath);
         var srcName = Path.GetFileName(sourceVideoPath);
+        byte[]? srcHead = null; // lazy: nur berechnen wenn ein Groessen-Match auftritt
 
         try
         {
@@ -93,13 +100,23 @@ public static partial class HoldingFolderDistributor
                 if (!MediaFileTypes.HasVideoExtension(existing))
                     continue;
 
-                // Exakter Dateiname-Match
+                // 1. Exakter Dateiname-Match
                 if (string.Equals(Path.GetFileName(existing), srcName, StringComparison.OrdinalIgnoreCase))
                     return existing;
 
-                // Gleiche Dateigroesse = selbes Video (anderer Name)
+                // 2. Gleiche Groesse + Partial-Hash gleich
                 var existInfo = new FileInfo(existing);
-                if (existInfo.Length == srcInfo.Length && existInfo.Length > 0)
+                if (existInfo.Length != srcInfo.Length || existInfo.Length == 0)
+                    continue;
+
+                srcHead ??= TryReadHead(sourceVideoPath, 64 * 1024);
+                if (srcHead is null || srcHead.Length == 0)
+                    continue;
+
+                var existingHead = TryReadHead(existing, 64 * 1024);
+                if (existingHead is null) continue;
+
+                if (existingHead.Length == srcHead.Length && existingHead.AsSpan().SequenceEqual(srcHead))
                     return existing;
             }
         }
@@ -109,6 +126,30 @@ public static partial class HoldingFolderDistributor
         }
 
         return null;
+    }
+
+    /// <summary>Liefert die ersten <paramref name="maxBytes"/> Bytes der Datei.</summary>
+    private static byte[]? TryReadHead(string path, int maxBytes)
+    {
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
+            var len = (int)Math.Min(maxBytes, stream.Length);
+            if (len <= 0) return Array.Empty<byte>();
+            var buffer = new byte[len];
+            var read = 0;
+            while (read < len)
+            {
+                var n = stream.Read(buffer, read, len - read);
+                if (n <= 0) break;
+                read += n;
+            }
+            return read == len ? buffer : buffer.AsSpan(0, read).ToArray();
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>
