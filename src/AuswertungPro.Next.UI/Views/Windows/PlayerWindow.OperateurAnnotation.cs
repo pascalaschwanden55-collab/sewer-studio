@@ -9,6 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using AuswertungPro.Next.Application.Ai.Annotation;
+using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai.Annotation;
 using AuswertungPro.Next.UI.Ai;
@@ -121,6 +122,7 @@ public partial class PlayerWindow
         // HandleMarkDrawingComplete-Tick wuerde HandleOperatorBoxCompleteAsync
         // mit halben Daten triggern.
         DeactivateOperatorBoxTool();
+        DiscardOperatorPreview();
 
         _isOperatorMode = false;
         _operatorActive = null;
@@ -411,7 +413,7 @@ public partial class PlayerWindow
     }
 
     /// <summary>Schliesst das Box-Overlay und setzt das Operator-Flag zurueck.</summary>
-    private void DeactivateOperatorBoxTool()
+    private void DeactivateOperatorBoxTool(bool keepPreviewVisible = false)
     {
         _operatorBoxActive = false;
         if (_codingOverlayService is not null)
@@ -420,11 +422,14 @@ public partial class PlayerWindow
             _codingOverlayService.ActiveTool = OverlayToolType.None;
         }
         if (_codingVm is not null) _codingVm.CurrentOverlay = null;
-        if (CodingOverlayPopup != null) CodingOverlayPopup.IsOpen = false;
+        if (CodingOverlayPopup != null && !keepPreviewVisible)
+            CodingOverlayPopup.IsOpen = false;
         if (CodingOverlayCanvas != null)
         {
             CodingOverlayCanvas.IsHitTestVisible = false;
             CodingOverlayCanvas.Cursor = Cursors.Arrow;
+            if (!keepPreviewVisible)
+                Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
         }
     }
 
@@ -492,6 +497,9 @@ public partial class PlayerWindow
                     framePath: tmpPath,
                     ct: CancellationToken.None);
 
+                if (_operatorPendingPreview is not null)
+                    RenderOperatorPreviewOverlay(_operatorPendingPreview, box, frameW, frameH);
+
                 if (TxtOperatorStatus != null)
                     TxtOperatorStatus.Text =
                         "Maske bereit — Strg+Enter zum Bestaetigen, Box-Button neu zeichnen.";
@@ -509,8 +517,85 @@ public partial class PlayerWindow
         {
             // Box-Tool ausschalten; tmpPath bleibt liegen, falls Preview
             // erfolgreich war — ClearPendingPreviewFields raeumt es spaeter ab.
-            DeactivateOperatorBoxTool();
+            var keepPreviewVisible = _operatorPendingPreview is not null
+                && _operatorActive?.State == CodeTaskState.PreviewReady;
+            DeactivateOperatorBoxTool(keepPreviewVisible);
         }
+    }
+
+    /// <summary>
+    /// Rendert die SAM-Preview im selben Popup wie das Mark-Tool. Der
+    /// Operator muss die Maske sehen koennen, bevor Commit erlaubt ist.
+    /// </summary>
+    private void RenderOperatorPreviewOverlay(
+        MaskPreview preview,
+        BoundingBoxNormalized box,
+        int frameWidth,
+        int frameHeight)
+    {
+        if (CodingOverlayCanvas is null) return;
+        if (frameWidth <= 0 || frameHeight <= 0) return;
+
+        Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+
+        if (CodingOverlayPopup != null)
+        {
+            CodingOverlayPopup.IsOpen = true;
+            UpdateCodingOverlayViewport();
+        }
+
+        var (renderW, renderH) = GetCodingOverlayRenderSize();
+        var minNormX = Clamp01(box.XCenter - box.Width / 2.0);
+        var minNormY = Clamp01(box.YCenter - box.Height / 2.0);
+        var maxNormX = Clamp01(box.XCenter + box.Width / 2.0);
+        var maxNormY = Clamp01(box.YCenter + box.Height / 2.0);
+
+        RenderSamPromptBox(minNormX, minNormY, maxNormX, maxNormY, renderW, renderH);
+
+        var x1 = minNormX * frameWidth;
+        var y1 = minNormY * frameHeight;
+        var x2 = maxNormX * frameWidth;
+        var y2 = maxNormY * frameHeight;
+        var mask = new SamMaskResult(
+            Label: _operatorActive?.Code ?? "Operateur",
+            Confidence: preview.SamConfidence,
+            Bbox: new[] { x1, y1, x2, y2 },
+            MaskRle: preview.SamMaskRle,
+            MaskAreaPixels: preview.MaskAreaPixels,
+            ImageAreaPixels: frameWidth * frameHeight,
+            HeightPixels: (int)Math.Max(1, y2 - y1),
+            WidthPixels: (int)Math.Max(1, x2 - x1),
+            CentroidX: box.XCenter * frameWidth,
+            CentroidY: box.YCenter * frameHeight);
+
+        var response = new SamResponse(
+            Masks: new[] { mask },
+            ImageWidth: frameWidth,
+            ImageHeight: frameHeight,
+            InferenceTimeMs: preview.SamLatency.TotalMilliseconds);
+
+        var quantified = new[]
+        {
+            new MaskQuantificationService.QuantifiedMask(
+                Label: mask.Label,
+                Confidence: preview.SamConfidence,
+                HeightMm: null,
+                WidthMm: null,
+                ExtentPercent: null,
+                CrossSectionReductionPercent: null,
+                IntrusionPercent: null,
+                ClockPosition: null)
+        };
+
+        Ai.Pipeline.SamMaskRenderer.RenderMasks(
+            CodingOverlayCanvas,
+            response,
+            quantified,
+            renderW,
+            renderH);
+
+        static double Clamp01(double value)
+            => value < 0 ? 0 : value > 1 ? 1 : value;
     }
 
     private static BoundingBoxNormalized BuildBoxFromOverlay(OverlayGeometry overlay)
@@ -679,6 +764,10 @@ public partial class PlayerWindow
         {
             _operatorSession.MarkActiveCommitted(result.SampleId, DateTime.UtcNow);
             ClearPendingPreviewFields(deleteTempFile: true);
+            if (CodingOverlayCanvas is not null)
+                Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+            if (CodingOverlayPopup is not null)
+                CodingOverlayPopup.IsOpen = false;
 
             var next = _operatorSession.FindNextPending();
             if (next is not null)
@@ -710,6 +799,10 @@ public partial class PlayerWindow
     internal void DiscardOperatorPreview()
     {
         ClearPendingPreviewFields(deleteTempFile: true);
+        if (CodingOverlayCanvas is not null)
+            Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+        if (!_operatorBoxActive && CodingOverlayPopup is not null)
+            CodingOverlayPopup.IsOpen = false;
 
         if (_operatorActive is not null
             && _operatorActive.State == CodeTaskState.PreviewReady)
