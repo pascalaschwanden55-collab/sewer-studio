@@ -17,6 +17,8 @@ public partial class PrintOptionsDialog : Window
 {
     public PrintOptionsDialogViewModel ViewModel { get; }
 
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
+
     public PrintOptionsDialog(PrintDialogConfig config)
     {
         ViewModel = new PrintOptionsDialogViewModel(config);
@@ -28,7 +30,7 @@ public partial class PrintOptionsDialog : Window
     {
         if (!ViewModel.HasAnySelection())
         {
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 "Bitte mindestens eine Sektion auswaehlen.",
                 ViewModel.DialogTitle,
                 MessageBoxButton.OK,

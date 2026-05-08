@@ -23,6 +23,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class VideoAnalysisPipelineWindow : Window
 {
     private readonly IVideoAnalysisPipelineService _pipeline;
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
     private PipelineRequest _request;
     private readonly CancellationTokenSource _cts = new();
     private readonly List<LiveFrameFinding> _liveFrameFindings = new();
@@ -923,7 +924,7 @@ public partial class VideoAnalysisPipelineWindow : Window
     {
         if (_result is null || !_result.IsSuccess || _result.Document is null)
         {
-            MessageBox.Show("Kein gültiges Ergebnis zum Übertragen vorhanden.", "Videoanalyse KI",
+            _dialogs.ShowMessage("Kein gültiges Ergebnis zum Übertragen vorhanden.", "Videoanalyse KI",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }

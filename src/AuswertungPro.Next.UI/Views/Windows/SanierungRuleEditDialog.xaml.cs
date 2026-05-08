@@ -11,6 +11,7 @@ public partial class SanierungRuleEditDialog : Window
 {
     public SanierungUserRule? Result { get; private set; }
     private readonly SanierungUserRule _original;
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
 
     public SanierungRuleEditDialog(SanierungUserRule rule)
     {
@@ -44,19 +45,19 @@ public partial class SanierungRuleEditDialog : Window
     {
         if (string.IsNullOrWhiteSpace(NameBox.Text))
         {
-            MessageBox.Show("Bitte einen Regel-Namen angeben.", "Fehlende Eingabe",
+            _dialogs.ShowMessage("Bitte einen Regel-Namen angeben.", "Fehlende Eingabe",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (string.IsNullOrWhiteSpace(ExcludeIdsBox.Text))
         {
-            MessageBox.Show("Bitte mindestens eine Verfahrens-ID zum Ausschliessen angeben.",
+            _dialogs.ShowMessage("Bitte mindestens eine Verfahrens-ID zum Ausschliessen angeben.",
                 "Fehlende Eingabe", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (string.IsNullOrWhiteSpace(ReasonBox.Text))
         {
-            MessageBox.Show("Bitte eine Begruendung angeben (wird der KI im Prompt mitgegeben).",
+            _dialogs.ShowMessage("Bitte eine Begruendung angeben (wird der KI im Prompt mitgegeben).",
                 "Fehlende Eingabe", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }

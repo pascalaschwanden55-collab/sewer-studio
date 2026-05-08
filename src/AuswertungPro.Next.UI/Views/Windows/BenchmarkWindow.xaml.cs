@@ -7,6 +7,8 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class BenchmarkWindow : Window
 {
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
+
     public BenchmarkWindow()
     {
         InitializeComponent();
@@ -33,7 +35,7 @@ public partial class BenchmarkWindow : Window
             System.Diagnostics.Debug.WriteLine($"[BenchmarkWindow.Loaded] {ex.GetType().Name}: {ex.Message}");
             try
             {
-                MessageBox.Show($"Benchmark-Daten konnten nicht geladen werden:\n\n{ex.Message}",
+                _dialogs.ShowMessage($"Benchmark-Daten konnten nicht geladen werden:\n\n{ex.Message}",
                     "Benchmark", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             catch { /* MessageBox darf nicht weiter eskalieren */ }

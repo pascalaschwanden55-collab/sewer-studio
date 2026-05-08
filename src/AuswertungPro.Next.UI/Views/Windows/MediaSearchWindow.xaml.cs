@@ -22,6 +22,7 @@ public partial class MediaSearchWindow : Window
     private readonly string? _initialFolder;
     private CancellationTokenSource? _cts;
     private List<MediaMatchRow>? _rows;
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
 
     /// <summary>True if the user clicked "Anwenden" and changes were applied.</summary>
     public bool Applied { get; private set; }
@@ -69,7 +70,7 @@ public partial class MediaSearchWindow : Window
         var folder = FolderBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
         {
-            MessageBox.Show("Bitte einen gueltigen Ordner waehlen.", "Medien-Suche",
+            _dialogs.ShowMessage("Bitte einen gueltigen Ordner waehlen.", "Medien-Suche",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -136,7 +137,7 @@ public partial class MediaSearchWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Fehler bei der Suche:\n{ex.Message}", "Medien-Suche",
+            _dialogs.ShowMessage($"Fehler bei der Suche:\n{ex.Message}", "Medien-Suche",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally

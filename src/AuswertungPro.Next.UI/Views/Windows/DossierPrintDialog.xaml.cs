@@ -7,6 +7,8 @@ public partial class DossierPrintDialog : Window
 {
     public DossierPrintOptions? SelectedOptions { get; private set; }
 
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
+
     public DossierPrintDialog()
     {
         InitializeComponent();
@@ -78,7 +80,7 @@ public partial class DossierPrintDialog : Window
     {
         if (!HasAnySelection())
         {
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 "Bitte mindestens eine Sektion fuer das Dossier auswaehlen.",
                 "Dossier",
                 MessageBoxButton.OK,

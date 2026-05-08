@@ -13,6 +13,7 @@ public partial class SanierungRulesWindow : Window
     private readonly SanierungUserRulesService _service;
     private readonly RehabilitationRulesEngine _engine;
     private ObservableCollection<RuleRowVm> _rows = new();
+    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
 
     public SanierungRulesWindow(SanierungUserRulesService service, RehabilitationRulesEngine engine)
     {
@@ -83,7 +84,7 @@ public partial class SanierungRulesWindow : Window
     private void Delete_Click(object sender, RoutedEventArgs e)
     {
         if (Selected is null) return;
-        var confirm = MessageBox.Show(
+        var confirm = _dialogs.ShowMessage(
             $"Regel '{Selected.Name}' wirklich loeschen?\n\n(Alternative: deaktivieren statt loeschen)",
             "Regel loeschen", MessageBoxButton.OKCancel, MessageBoxImage.Question);
         if (confirm == MessageBoxResult.OK)
@@ -101,14 +102,14 @@ public partial class SanierungRulesWindow : Window
             _service.Save(file);
             // Engine ueber Cache-Invalidate informieren - naechste Anfrage liest neu
             _service.Invalidate();
-            MessageBox.Show(
+            _dialogs.ShowMessage(
                 $"Gespeichert: {_rows.Count(r => r.Enabled)} aktive Regeln (von {_rows.Count} insgesamt).\n\n" +
                 "Die KI verwendet ab der naechsten Anfrage die neuen Regeln.",
                 "Sanierungsregeln", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Speichern fehlgeschlagen:\n{ex.Message}",
+            _dialogs.ShowMessage($"Speichern fehlgeschlagen:\n{ex.Message}",
                 "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
