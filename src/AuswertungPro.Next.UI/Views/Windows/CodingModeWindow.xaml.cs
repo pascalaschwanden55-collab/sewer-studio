@@ -2353,21 +2353,18 @@ public partial class CodingModeWindow : Window
 
     // StatusToDisplayText nach CodingModeWindow.EventList.cs migriert (Slice 8a.2.8).
 
-    /// <summary>Ereignisliste nach Meter aufsteigend sortieren.</summary>
+    /// <summary>Ereignisliste nach Meter aufsteigend sortieren + Listbox-Refresh.
+    /// Sortierung delegiert ans ViewModel; nur die ListBox-Anzeige bleibt hier.</summary>
     private void ResortEventsByMeter()
     {
         if (_vm == null) return;
 
-        var sorted = _vm.Events
-            .OrderBy(e => e.MeterAtCapture)
-            .ThenBy(e => e.VideoTimestamp)
-            .ToList();
-
         var selected = LstEvents.SelectedItem;
-        _vm.Events.Clear();
-        foreach (var ev in sorted)
-            _vm.Events.Add(ev);
+        _vm.SortByMeter();
 
+        // ItemsSource nullen + neu setzen erzwingt ein vollstaendiges
+        // ItemContainer-Rebuild (sonst behaelt WPF teilweise alte Container-
+        // Bindings nach Clear+Add). Reine UI-Sorge, bleibt im Window.
         LstEvents.ItemsSource = null;
         LstEvents.ItemsSource = _vm.Events;
         if (selected != null)
