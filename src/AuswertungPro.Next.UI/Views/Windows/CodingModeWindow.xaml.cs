@@ -724,40 +724,24 @@ public partial class CodingModeWindow : Window
 
     private void ApplyCalibration(NormalizedPoint start, NormalizedPoint end)
     {
-        // Pixel-Abstand berechnen (in tatsaechlichen Canvas-Pixeln)
+        // Pixel-Abstand berechnen (in tatsaechlichen Canvas-Pixeln) — Window
+        // weiss die Canvas-Groesse, Service nicht.
         var p1 = NormalizedToPixel(start);
         var p2 = NormalizedToPixel(end);
         double pixelDiameter = Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
+        int dn = _overlayService.Calibration?.NominalDiameterMm ?? 300;
 
-        if (pixelDiameter < 10)
+        // Math + State-Mutation laufen jetzt im Service (Slice 8a.2.10).
+        var cal = _overlayService.ApplyManualCalibration(start, end, pixelDiameter, dn);
+        if (cal == null)
         {
             TxtCalibrationHint.Text = "Linie zu kurz – bitte nochmal zeichnen";
             _calibStart = null;
             return;
         }
 
-        // Rohrmitte = Mittelpunkt der Referenzlinie
-        var center = new NormalizedPoint((start.X + end.X) / 2, (start.Y + end.Y) / 2);
-
-        // Normierter Durchmesser (Laenge der Referenzlinie in 0.0–1.0)
-        double dx = end.X - start.X;
-        double dy = end.Y - start.Y;
-        double normDiameter = Math.Sqrt(dx * dx + dy * dy);
-
-        // DN aus bestehendem Calibration oder Fallback
-        int dn = _overlayService.Calibration?.NominalDiameterMm ?? 300;
-
-        var cal = new PipeCalibration
-        {
-            NominalDiameterMm = dn,
-            PipePixelDiameter = pixelDiameter,
-            NormalizedDiameter = normDiameter,
-            PipeCenter = center,
-            WasManuallyCalibrated = true
-        };
-        _overlayService.SetCalibration(cal);
-
-        // Session-Kalibrierung auch setzen
+        // Session-Kalibrierung auch setzen (Session-Layer bleibt direkt —
+        // separater ADR-Slice).
         if (_sessionService.ActiveSession != null)
             _sessionService.ActiveSession.Calibration = cal;
 
@@ -780,8 +764,8 @@ public partial class CodingModeWindow : Window
         };
         OverlayCanvas.Children.Add(refLine);
 
-        // DN-Label an der Mitte
-        var midPx = NormalizedToPixel(center);
+        // DN-Label an der Mitte (Service hat den Center in cal.PipeCenter abgelegt)
+        var midPx = NormalizedToPixel(cal.PipeCenter);
         var label = new TextBlock
         {
             Text = $"DN {dn}",
