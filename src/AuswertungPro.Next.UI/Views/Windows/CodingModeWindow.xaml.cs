@@ -802,10 +802,34 @@ public partial class CodingModeWindow : Window
 
     // --- Vorschau-Rendering ---
 
+    // Strategy-Pattern fuer das Vorschau-Rendering (Slice 8a.2.11). Pro
+    // OverlayToolType wird hier ein IPreviewToolRenderer registriert.
+    // Tools, die noch nicht migriert sind, fallen auf den Switch unten zurueck.
+    private static readonly System.Collections.Generic.Dictionary<OverlayToolType, Preview.IPreviewToolRenderer> _previewRenderers
+        = new()
+        {
+            [OverlayToolType.Rectangle] = new Preview.RectanglePreviewRenderer(),
+        };
+
     private void RenderPreview(NormalizedPoint? start, NormalizedPoint current)
     {
         ClearPreviewShapes();
         if (start == null) return;
+
+        // Migrierte Tools laufen ueber den Renderer-Strategy-Pattern.
+        if (_previewRenderers.TryGetValue(_overlayService.ActiveTool, out var renderer))
+        {
+            var ctx = new Preview.PreviewRenderContext(
+                Canvas: OverlayCanvas,
+                Start: start,
+                Current: current,
+                ToPixel: NormalizedToPixel,
+                OverlayService: _overlayService,
+                CurrentOverlay: _vm.CurrentOverlay,
+                PreviewTag: OverlayTagPreview);
+            renderer.Render(ctx);
+            return;
+        }
 
         var p1 = NormalizedToPixel(start);
         var p2 = NormalizedToPixel(current);
@@ -824,22 +848,6 @@ public partial class CodingModeWindow : Window
                     StrokeDashArray = new DoubleCollection { 4, 2 },
                     Tag = OverlayTagPreview
                 });
-                break;
-
-            case OverlayToolType.Rectangle:
-                var previewRect = new Rectangle
-                {
-                    Width = Math.Abs(p2.X - p1.X),
-                    Height = Math.Abs(p2.Y - p1.Y),
-                    Stroke = Brushes.Cyan,
-                    StrokeThickness = 2,
-                    StrokeDashArray = new DoubleCollection { 4, 2 },
-                    Fill = new SolidColorBrush(Color.FromArgb(40, 0, 255, 255)),
-                    Tag = OverlayTagPreview
-                };
-                Canvas.SetLeft(previewRect, Math.Min(p1.X, p2.X));
-                Canvas.SetTop(previewRect, Math.Min(p1.Y, p2.Y));
-                OverlayCanvas.Children.Add(previewRect);
                 break;
 
             case OverlayToolType.Arc:

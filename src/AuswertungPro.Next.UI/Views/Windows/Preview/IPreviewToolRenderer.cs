@@ -4,6 +4,8 @@ using System.Windows.Controls;
 
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
+// OverlayToolType lebt in Domain.Models.CodingSession; OverlayGeometry +
+// NormalizedPoint ebenfalls Domain.Models.
 
 namespace AuswertungPro.Next.UI.Views.Windows.Preview;
 
