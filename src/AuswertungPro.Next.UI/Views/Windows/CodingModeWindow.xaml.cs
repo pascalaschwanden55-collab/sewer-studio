@@ -2311,7 +2311,13 @@ public partial class CodingModeWindow : Window
             SetAiStatus("Frame wird analysiert...", "#F59E0B",
                 $"Inferenz ({CompactModelName(_aiModelName)})", busy: true);
 
-            await RunLiveAnalysisAsync(_analysisCts.Token, oneShot: true);
+            var rendered = await RunLiveAnalysisAsync(_analysisCts.Token, oneShot: true);
+            if (rendered)
+            {
+                int befundCount = _vm?.Events?.Count ?? 0;
+                SetAiStatus($"Analyse beendet — {befundCount} Beobachtungen", "#22C55E",
+                    "Fertig");
+            }
         }
         catch (OperationCanceledException)
         {
@@ -2330,14 +2336,6 @@ public partial class CodingModeWindow : Window
             {
                 BtnAnalyzeFrame.IsEnabled = true;
                 TxtAnalyzeButton.Text = "Frame analysieren";
-
-                // Fertig-Meldung (ueberschreibt evtl. Readiness-Gate-Status,
-                // wenn die Analyse durchlief). Bei Cancel/Fehler hat der
-                // catch-Block bereits eine Status-Meldung gesetzt — die
-                // bleibt sichtbar, bis SetAiStatus hier sie ueberschreibt.
-                int befundCount = _vm?.Events?.Count ?? 0;
-                SetAiStatus($"Analyse beendet — {befundCount} Beobachtungen", "#22C55E",
-                    "Fertig");
             });
         }
     }

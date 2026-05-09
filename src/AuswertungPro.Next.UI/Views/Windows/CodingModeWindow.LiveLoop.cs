@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -36,9 +37,9 @@ public partial class CodingModeWindow
     /// <param name="ct">Loop-CTS aus dem Caller (Q3 aus Mini-ADR: eine
     /// Loop-CTS pro Coding-Session). Cancel beendet die Schleife sauber.</param>
     /// <param name="oneShot">true → nach erster Iteration return.</param>
-    private async Task RunLiveAnalysisAsync(CancellationToken ct, bool oneShot = false)
+    private async Task<bool> RunLiveAnalysisAsync(CancellationToken ct, bool oneShot = false)
     {
-        if (_liveDetection == null || _player == null) return;
+        if (_liveDetection == null || _player == null) return false;
 
         // Cadence zwischen Frames in Millisekunden. ~2.5s entspricht der
         // typischen Qwen-3-VL-8B-Q8-Inferenzzeit; gibt der State-Maschine
@@ -54,8 +55,8 @@ public partial class CodingModeWindow
             var pngBytes = await CaptureCurrentFrameAsync();
             if (pngBytes == null || pngBytes.Length == 0)
             {
-                if (oneShot) return;
-                try { await Task.Delay(RetryDelayMs, ct); } catch (OperationCanceledException) { return; }
+                if (oneShot) return false;
+                try { await Task.Delay(RetryDelayMs, ct); } catch (OperationCanceledException) { return false; }
                 continue;
             }
 
@@ -70,20 +71,43 @@ public partial class CodingModeWindow
                     var (enhanced, _) = await _enhancedVision.AnalyzeWithEscalationAsync(
                         b64, context: null, ct: ct);
                     result = LiveDetectionMapper.FromEnhancedAnalysis(enhanced, timestampSec);
+
+                    // Sichtbares Panel fuer User - vorher: Result war oft nur in der Liste.
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        var sb = new System.Text.StringBuilder();
+                        sb.AppendLine($"Bildqualitaet: {enhanced.ImageQuality}");
+                        sb.AppendLine($"Material: {enhanced.PipeMaterial}");
+                        if (enhanced.PipeDiameterMm.HasValue)
+                            sb.AppendLine($"DN geschaetzt: {enhanced.PipeDiameterMm} mm");
+                        sb.AppendLine($"Findings: {enhanced.Findings.Count}");
+                        foreach (var f in enhanced.Findings.Take(3))
+                        {
+                            sb.AppendLine($"• {f.Label}");
+                            if (!string.IsNullOrEmpty(f.VsaCodeHint))
+                                sb.AppendLine($"  Code: {f.VsaCodeHint}  | Sev: {f.Severity}");
+                        }
+                        if (!string.IsNullOrWhiteSpace(_enhancedVision.LastPipelineWarning))
+                            sb.AppendLine($"Warnung: {_enhancedVision.LastPipelineWarning}");
+                        if (string.IsNullOrEmpty(enhanced.Error))
+                            ShowBboxResultPanel("Frame-Analyse", sb.ToString(), isError: false);
+                        else
+                            ShowBboxResultPanel("Analyse-Fehler", enhanced.Error, isError: true);
+                    });
                 }
                 else
                 {
                     result = await _liveDetection.AnalyzeFrameAsync(pngBytes, timestampSec, ct);
                 }
             }
-            catch (OperationCanceledException) { return; }
+            catch (OperationCanceledException) { return false; }
             catch (Exception ex)
             {
                 await Dispatcher.InvokeAsync(() =>
                     SetAiStatus($"Fehler: {ex.Message}", "#EF4444",
                         $"Modell: {CompactModelName(_aiModelName)}", error: true));
-                if (oneShot) return;
-                try { await Task.Delay(RetryDelayMs, ct); } catch (OperationCanceledException) { return; }
+                if (oneShot) return false;
+                try { await Task.Delay(RetryDelayMs, ct); } catch (OperationCanceledException) { return false; }
                 continue;
             }
 
@@ -99,8 +123,8 @@ public partial class CodingModeWindow
                         "#94A3B8",
                         $"Warte auf Videobild... (Bild {_vm.OsdSkippedFrames} von 3)"));
 
-                if (oneShot) return;
-                try { await Task.Delay(RetryDelayMs, ct); } catch (OperationCanceledException) { return; }
+                if (oneShot) return false;
+                try { await Task.Delay(RetryDelayMs, ct); } catch (OperationCanceledException) { return false; }
                 continue;
             }
 
@@ -116,9 +140,11 @@ public partial class CodingModeWindow
             // ── Render ──
             await Dispatcher.InvokeAsync(() => ShowAiResults(result));
 
-            if (oneShot) return;
-            try { await Task.Delay(LoopDelayMs, ct); } catch (OperationCanceledException) { return; }
+            if (oneShot) return true;
+            try { await Task.Delay(LoopDelayMs, ct); } catch (OperationCanceledException) { return false; }
         }
         while (!ct.IsCancellationRequested);
+
+        return false;
     }
 }
