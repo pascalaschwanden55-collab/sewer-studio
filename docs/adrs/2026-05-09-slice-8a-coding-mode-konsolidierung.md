@@ -1,7 +1,7 @@
 # ADR-Skizze: Slice 8a — Coding-Mode-Konsolidierung
 
 Datum: 2026-05-09
-Status: **In Diskussion** — Frage 1 beantwortet (DataPage-Pfad wichtig), 2+3 offen
+Status: **Entschieden** — Option B (Konsolidierung aufs CodingModeWindow). PlayerWindow als eigenstaendiges Coding-Window faellt weg.
 Branch: `feature/pdf-import-beobachtungen`
 
 ## Kontext
@@ -114,54 +114,87 @@ Components**:
 
 **Frage 1 — DataPage-Pfad wichtig?** → **JA, sehr wichtig.**
 
-Damit ist **Option A (Konsolidierung auf PlayerWindow) ausgeschlossen** —
-wenn der DataPage → CodingModeWindow-Workflow primaer ist, darf das
-CodingModeWindow nicht ersatzlos verschwinden.
+**Frage 2 — Zwei-Monitor-Workflow regelmaessig?** → **JA.**
 
-Verbleibende Optionen:
-- **Option C** (Shared-Component-Layer) — Doppelpflege loesen ohne
-  Workflow-aenderung. Endzustand: beide Windows bleiben.
-- **Option B** (Konsolidierung aufs CodingModeWindow) — PlayerWindow.
-  CodingMode wird ausgehoehlt, CodingModeWindow uebernimmt allein.
-  Erfordert Antwort auf Frage 2 (Zwei-Monitor-Workflow).
+**Frage 3 — Hotkey-Routing?** → **"Theoretisch brauche ich nur das
+Codierfenster. Wir verschmelzen den Player zu einem."**
 
-## Empfehlung (zur Diskussion, aktualisiert)
+## Entscheidung: Option B (mit Erweiterung)
 
-**Option C als Endzustand.**
+PlayerWindow als eigenstaendiges Coding-Window **faellt weg**. Das
+CodingModeWindow uebernimmt komplett — es **ist** der Player. Im Detail:
 
-Begruendung:
-1. DataPage-Pfad ist primaer, also bleibt CodingModeWindow als
-   eigenstaendiges Window.
-2. PlayerWindow.CodingMode wird trotzdem genutzt (z.B. wenn User direkt
-   aus Video heraus codiert) — also bleibt auch der zweite Pfad.
-3. Doppelpflege wird durch Shared-UserControls geloest, ohne irgendeinen
-   Workflow zu brechen.
-4. Kein State-Big-Bang — inkrementell pro Sprint ein Component.
+- **CodingModeWindow** ist die einzige Buehne fuer:
+  - Video-Wiedergabe (LibVLC) inkl. Hotkeys (Play/Pause/Speed/Seek)
+  - Coding-Workflow (Mark/BBox/SAM, Schadens-Codierung, Trainingsbox)
+  - Live-AI-Overlays + Schema-Rendering
+  - Hotkey-Routing (alle `KeyDown`-Events landen hier)
+- **PlayerWindow.CodingMode.cs** + alle anderen Coding-bezogenen
+  PlayerWindow-Partials (`PlayerWindow.CodingApply.cs`,
+  `PlayerWindow.CodingEvents.cs`, `PlayerWindow.CodingTool.cs`,
+  `PlayerWindow.CodingOverlayRender.cs`, `PlayerWindow.CodingOverlay
+  Schema.cs`, `PlayerWindow.MarkTool.cs`, `PlayerWindow.MaskTriage.cs`)
+  → **werden geloescht** oder so weit reduziert, dass nur reine
+  Video-Wiedergabe-Funktionalitaet uebrig bleibt.
+- **PlayerWindow** als Window kann entweder:
+  - **B.1** ganz geloescht werden — alle Aufrufer (DataPage,
+    BeobachtungenWindow, etc.) routen direkt aufs CodingModeWindow.
+  - **B.2** als reiner Quick-Look-Player ohne Coding bleiben (z.B.
+    "Video schauen ohne codieren"-Workflow).
 
-Option B bleibt nur dann attraktiv, wenn die Zwei-Monitor-Antwort kommt
-und PlayerWindow.CodingMode in der Praxis kaum genutzt wird.
+User-Praeferenz fuer B.1 vs B.2 ist offen — wird im Plan adressiert.
 
-## Konkrete naechste Schritte (Option C)
+## Konsequenzen
 
-| Sprint | Aktion |
-|---|---|
-| 1 | `CodingOverlayRenderer` als `UserControl` mit Schnittstelle `IRenderTarget` (Canvas + Brushes + Layer-Tags). Beide Windows nutzen die gleiche Instanz. |
-| 2 | `CodingStatisticsPanel` als `UserControl` mit `ISessionStats`-DataContext. |
-| 3 | `CodingDefectDetailPanel` als `UserControl`. |
-| 4 | `ICodingHotkeyHandler` Service: zentrale Registrierung, beide Windows routen Tastatur-Events. |
-| 5 | `ICodingSessionState`-Interface (gemeinsamer State-Lese-Pfad). Schreibender Pfad bleibt im SessionService. |
-| 6 | (Option-A geloescht — DataPage-Pfad bleibt erhalten.) |
+**Pro:**
+- Eine einzige Coding-Buehne → Doppelpflege weg.
+- Hotkey-Routing trivial: alles im CodingModeWindow.
+- Zwei-Monitor-Workflow bleibt erhalten (CodingModeWindow ist frei
+  positionierbar).
+- DataPage → CodingModeWindow-Workflow bleibt unveraendert.
+- Spart ~3000 Zeilen Code allein in `PlayerWindow.CodingMode.cs`,
+  plus weitere Reduktion in den anderen Coding-Partials.
 
-## Offene Fragen fuer den User
+**Contra / Risiko:**
+- Hoeher Migrationsaufwand als Option C.
+- Bestehende Tests, die ueber PlayerWindow Coding-Pfade nutzen, muessen
+  umgebaut oder geloescht werden.
+- Nicht-Coding-Konsumenten von PlayerWindow (z.B. Quick-Look,
+  PlaywrightPdfImport-Vorschau) muessen entweder ans CodingModeWindow
+  umgeleitet werden oder bekommen ein eigenes minimal-Player-Window.
 
-1. ~~Ist der heutige **DataPage → CodingModeWindow**-Pfad noch wichtig?~~ →
-   **JA. CodingModeWindow bleibt.**
-2. Wird der **Zwei-Monitor-Workflow** regelmaessig genutzt (Player auf
-   Monitor 1, CodingModeWindow auf Monitor 2)? Falls ja, sollte
-   PlayerWindow.CodingMode-Pfad evtl. ganz weg (Option B). Falls nein,
-   bleiben beide Pfade (Option C).
-3. Welche Hotkeys sollen "winning" haben, wenn beide Windows gleichzeitig
-   im Fokus konkurrieren? (Heute eher Zufall.)
+## Konkreter Migrationsplan (Option B)
 
-Sobald Frage 2 beantwortet ist, kann ein konkreter Plan (mit
-Slice-Aufteilung wie Slice 8a.1, 8a.2 usw.) geschrieben werden.
+Reihenfolge so gewaehlt, dass jeder Slice fuer sich gruen baut + tested
+und bei jedem Schritt das CodingModeWindow funktional bleibt.
+
+| Slice | Aktion | Risiko |
+|---|---|---|
+| **8a.1** | **Audit-Skript**: Diff aller Methoden in PlayerWindow.CodingMode.cs vs. CodingModeWindow.xaml.cs. Liste mit "in beiden / nur Player / nur CodingMode" als Markdown speichern. | niedrig |
+| **8a.2** | **Fehlende Funktionalitaet** von Player → CodingModeWindow migrieren (alles aus 8a.1 unter "nur Player"). Pro Methode ein eigener Commit. | mittel |
+| **8a.3** | **Aufrufer umleiten**: DataPage, BeobachtungenWindow, ImportPage, MediaConflictsPage usw. sollen statt `new PlayerWindow(...)` mit Coding-Modus jetzt `new CodingModeWindow(...)` oeffnen. | mittel |
+| **8a.4** | **Coding-Partials in PlayerWindow loeschen**: alle `PlayerWindow.Coding*.cs` + `PlayerWindow.MarkTool.cs` + `PlayerWindow.MaskTriage.cs` entfernen. PlayerWindow ist dann nur noch Wiedergabe. | hoch |
+| **8a.5** | **Entscheidung B.1 vs B.2**: PlayerWindow ganz loeschen (B.1) oder als reiner Quick-Look-Player behalten (B.2). | abhaengig von User |
+| **8a.6** | **Hotkey-Routing aufraeumen**: PlayerWindow.Hotkeys.cs verliert alle Coding-Hotkeys. Alle Coding-Hotkeys leben jetzt nur noch im CodingModeWindow. | mittel |
+| **8a.7** | **Tests aktualisieren**: alle Tests, die PlayerWindow als Coding-Stage gebraucht haben, auf CodingModeWindow umbauen. | mittel |
+| **8a.8** | **Manueller Smoke**: User testet alle Workflows die PlayerWindow betreffen. | (User) |
+| **8a.9** | **Rollback-Punkt**: Tag setzen `pre-slice-8a-cleanup`, falls spaeter ein Coding-Bug auftaucht der nur ueber den alten Player-Pfad reproduzierbar ist. | niedrig |
+
+## Vorbereitung vor Slice 8a.1
+
+Vor dem ersten Cut sollten die existierenden Slice-Patterns bestaetigt sein:
+
+1. ✅ **OverlayToolService** ist als `partial class` zerlegt (Slice 33). Beide
+   Windows benutzen denselben Service — keine Doppelpflege fuer
+   Geometry-Builders.
+2. ✅ **CodingSessionService** als gemeinsamer State-Container existiert.
+3. ✅ **Tests** sind aktuell gruen (946 + 1 skip).
+4. **TODO**: Vor 8a.1 einen **Branch-Tag** setzen (`pre-slice-8a`),
+   damit der Migrationsstand klar abgrenzbar bleibt.
+
+## Offene Detail-Fragen
+
+- **8a.5 — B.1 oder B.2?**: Brauchst du ein "Video-nur-anschauen"-Window
+  ohne Coding (z.B. fuer Praesentationen, Beweise, Schulungen)?
+  Wenn ja → B.2 (PlayerWindow bleibt schlank).
+  Wenn nein → B.1 (PlayerWindow ganz weg, CodingModeWindow ist alles).
