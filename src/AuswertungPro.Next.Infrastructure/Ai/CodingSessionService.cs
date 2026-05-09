@@ -235,6 +235,20 @@ public sealed class CodingSessionService : ICodingSessionService
                     : null;
 
                 var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath);
+
+                // Slice 8a.3 Step 4.5c: Foto 2..N als zusaetzliche Lernbilder
+                // referenzieren — Foto 1 ist FramePath, Foto 2+ wandert in
+                // AdditionalFramePaths (wie der alte
+                // PlayerWindow.PersistCodingEventsAsTrainingSamples-Pfad
+                // es schon machte). Vorher gingen die zusaetzlichen Fotos
+                // beim Bridge-Pfad verloren.
+                if (ev.Entry.FotoPaths.Count > 1)
+                {
+                    sample.AdditionalFramePaths ??= new List<string>();
+                    for (int i = 1; i < ev.Entry.FotoPaths.Count; i++)
+                        sample.AdditionalFramePaths.Add(ev.Entry.FotoPaths[i]);
+                }
+
                 samples.Add(sample);
             }
 
