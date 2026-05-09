@@ -1386,7 +1386,10 @@ public partial class PlayerWindow
     /// Liest den OSD-Meterstand vom aktuellen Video-Frame (async, via KI).
     /// Wird bei Codier-Navigation und bei Event-Erstellung aufgerufen.
     /// </summary>
-    // OSD-Prompt: NUR Meterstand lesen, keine Analyse (schneller, praeziser)
+    // OSD-Prompt: NUR Meterstand lesen, keine Analyse (schneller, praeziser).
+    // Slice 8a.3 Step 5a.2: nach Kill-Switch von CodingReadOsdMeterAsync nicht
+    // mehr verwendet. Bleibt bis 5b stehen, Pragma unterdrueckt CS0414.
+#pragma warning disable CS0414
     private static readonly string OsdMeterPrompt = """
         Kanalinspektion OSD (On-Screen-Display).
         Lies NUR die Meterzahl UNTEN RECHTS im Bild.
@@ -1396,6 +1399,7 @@ public partial class PlayerWindow
         Antworte NUR mit der Zahl, z.B.: 7.90
         Falls kein Meterstand lesbar: 0.00
         """;
+#pragma warning restore CS0414
 
     // Slice 8a.3 Step 1b: Parsing des LLM-Outputs ist nach
     // AuswertungPro.Next.Application.Ai.OsdMeterParser ausgelagert.
@@ -1405,62 +1409,15 @@ public partial class PlayerWindow
 
     private async Task<double?> CodingReadOsdMeterAsync()
     {
-        if (_codingLiveDetection == null) return null;
-
-        try
-        {
-            var tmpDir = Path.GetTempPath();
-            var snapFile = Path.Combine(tmpDir, $"sewerstudio_osd_{Guid.NewGuid():N}.png");
-            byte[]? pngBytes = null;
-
-            try
-            {
-                TakeSnapshotSafe(snapFile);
-                for (int i = 0; i < 20; i++)
-                {
-                    await Task.Delay(50);
-                    if (File.Exists(snapFile) && new FileInfo(snapFile).Length > 100)
-                        break;
-                }
-                if (File.Exists(snapFile))
-                    pngBytes = await File.ReadAllBytesAsync(snapFile);
-            }
-            finally
-            {
-                try { if (File.Exists(snapFile)) File.Delete(snapFile); } catch { }
-            }
-
-            if (pngBytes == null || pngBytes.Length == 0) return null;
-
-            // Leichtgewichtiger OSD-Request: nur Meterstand, keine volle Analyse
-            var config = AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.Load();
-            var client = config.CreateOllamaClient();
-            var b64 = Convert.ToBase64String(pngBytes);
-
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            var messages = new[]
-            {
-                new OllamaClient.ChatMessage("user", OsdMeterPrompt, new[] { b64 })
-            };
-            var raw = await client.ChatAsync(config.VisionModel, messages, cts.Token);
-
-            // Parse: deterministischer Regex/Range-Filter, ausgelagert
-            // nach OsdMeterParser (Slice 8a.3 Step 1a/1b).
-            var meter = _osdMeterParser.TryParse(raw);
-            if (meter.HasValue)
-            {
-                _codingLastOsdMeter = meter.Value;
-                OsdMeterBadge.Visibility = Visibility.Visible;
-                TxtOsdMeter.Text = $"{meter.Value:F2}m (OSD)";
-                return meter;
-            }
-
-            return null;
-        }
-        catch
-        {
-            return null;
-        }
+        // Slice 8a.3 Step 5a.2 (Kill-Switch): die alte In-Place-OSD-Lese-
+        // Logik ist seit Step 4.5 vom UI nicht mehr erreichbar
+        // (CodingMode_Click oeffnet jetzt CodingModeWindow als Dialog,
+        // dessen OSD-Pipeline lebt im VM + OsdMeterParser). Falls dieser
+        // Pfad doch versehentlich getriggert wird: kein VLC-Snapshot +
+        // Ollama-Roundtrip mehr — einfach null zurueck. Caller behandeln
+        // null bereits als "OSD nicht lesbar".
+        await Task.CompletedTask;
+        return null;
     }
     // === Sub-I: KI-Filter-Pfad — FilterValidFindings + Code-Resolver + AddAiFindings ===
 
