@@ -383,16 +383,10 @@ public partial class PlayerWindow
     {
         if (_codingVm == null) return;
 
-        // Nach Meter sortieren, dann nach Videozeit
-        var sorted = _codingVm.Events
-            .OrderBy(e => e.MeterAtCapture)
-            .ThenBy(e => e.VideoTimestamp)
-            .ToList();
-
+        // Nach Meter sortieren (delegiert ans VM); Selection ueber den
+        // Sort hinweg sichern und ItemContainer-Rebuild erzwingen.
         var selected = LstCodingEvents.SelectedItem;
-        _codingVm.Events.Clear();
-        foreach (var ev in sorted)
-            _codingVm.Events.Add(ev);
+        _codingVm.SortByMeter();
 
         LstCodingEvents.ItemsSource = null;
         LstCodingEvents.ItemsSource = _codingVm.Events;
