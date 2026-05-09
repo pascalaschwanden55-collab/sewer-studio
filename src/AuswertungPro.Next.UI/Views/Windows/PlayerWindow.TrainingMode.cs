@@ -61,16 +61,9 @@ public partial class PlayerWindow
         }
         else
         {
-            if (_isCodingMode)
-            {
-                _dialogs.ShowMessage(
-                    "Bitte zuerst den Codier-Modus beenden.",
-                    "Trainings-Modus",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-                TrainingModeButton.IsChecked = false;
-                return;
-            }
+            // Slice 8a.3 Step 5b: _isCodingMode-Guard entfaellt — der alte
+            // In-Place-Codier-Modus existiert nicht mehr. Codieren laeuft
+            // ueber das CodingModeWindow (Bridge in PlayerWindow.CodingApply).
             EnterTrainingMode();
             TrainingModeButton.IsChecked = true;
         }

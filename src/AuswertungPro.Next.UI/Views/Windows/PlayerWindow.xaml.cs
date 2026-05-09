@@ -159,22 +159,11 @@ public partial class PlayerWindow : Window, IVlcSurface
         _lastOpened = this;
         Loaded += (_, _) => EnsureVisibleOnScreen();
 
-        // Overlay suspendieren wenn ein FREMDES Fenster den Fokus bekommt (z.B. Snipping Tool).
-        // Nicht bei eigenen Child-Dialogen (MessageBox, VsaCodeExplorer) — die verwenden
-        // SuspendCodingOverlayInput/ResumeCodingOverlayInput direkt.
-        Deactivated += (_, _) =>
-        {
-            // Nur suspendieren wenn kein eigener Dialog den Fokus hat
-            if (_codingOverlaySuspendDepth > 0) return;
-            _deactivatedByExternalWindow = true;
-            SuspendCodingOverlayInput();
-        };
-        Activated += (_, _) =>
-        {
-            if (!_deactivatedByExternalWindow) return;
-            _deactivatedByExternalWindow = false;
-            ResumeCodingOverlayInput();
-        };
+        // Slice 8a.3 Step 5b: Deactivated/Activated-Suspend-Handler aus dem
+        // alten Codier-Modus entfernt. Suspend/Resume-Logik lebte in
+        // PlayerWindow.CodingTool.cs (geloescht); ohne den In-Place-Codier-
+        // Workflow brauchen MarkTool/OperateurAnnotation keinen globalen
+        // Overlay-Suspend mehr — die Tools managen ihre Zeichnung selbst.
 
         var fileName = Path.GetFileName(videoPath);
         var displayName = string.IsNullOrWhiteSpace(fileName) ? "Video" : fileName;
@@ -296,17 +285,10 @@ public partial class PlayerWindow : Window, IVlcSurface
                     _lastOpened = null;
             });
 
-            // 2. Codier-Modus sauber beenden (Timer + CTS stoppen vor VLC-Dispose)
-            Safe("Coding-Mode-Cleanup", () =>
-            {
-                _isCodingMode = false;
-                StopCodingOsdTimer();
-                _codingAnalysisCts?.Cancel();
-                _codingAnalysisCts?.Dispose();
-                _codingAnalysisCts = null;
-                _codingLiveDetection = null;
-                StopCodingAiPulse();
-            });
+            // Slice 8a.3 Step 5b: Coding-Mode-Cleanup-Block entfaellt — alle
+            // Felder/Timer (StopCodingOsdTimer, _codingAnalysisCts,
+            // _codingLiveDetection, StopCodingAiPulse) gehoeren zum geloeschten
+            // In-Place-Coding-Modus.
 
             Safe("QuickScan-Cancel", () => _quickScanCts?.Cancel());
             Safe("LiveDetection-Stop", () => StopLiveDetection());
@@ -716,48 +698,30 @@ public partial class PlayerWindow : Window, IVlcSurface
             CodingOverlayCanvas.Children.Remove(el);
     }
 
+    /// <summary>
+    /// Vereinfachter Redraw nach Slice 8a.3 Step 5b: AI-Overlay-/Schema-/
+    /// ToolBadge-Rendering ist mit dem In-Place-Coding-Modus weggefallen.
+    /// Was bleibt: Viewport synchronisieren + transiente Elemente clearen.
+    /// MarkTool / OperateurAnnotation rufen das nach SAM-Preview / Save
+    /// auf, um die Canvas in einen sauberen Zustand zu bringen.
+    /// </summary>
     private void RedrawCodingCanvas(bool includeManualOverlay, bool preserveSamMasks = false)
     {
-        // preserveSamMasks=true: SAM-Mask-Overlay (Cyan-Konturen nach BBox-Markierung)
-        // bleibt erhalten. Notwendig nach ShowSamPreviewAtMarkAsync, sonst werden
-        // die gerade gerenderten Masken durch nachfolgendes RedrawCodingCanvas
-        // sofort wieder geloescht (User-Beschwerde "wird nicht segmentiert").
         UpdateCodingOverlayViewport();
-        ClearTransientCodingCanvas(clearManualOverlay: true, clearSamMasks: !preserveSamMasks);
-        RenderAiOverlays();
-        RenderReferenceDn();
-
-        if (_codingSchemaManager.IsActive)
-            RenderActiveCodingSchema();
-        else if (includeManualOverlay && _codingVm?.CurrentOverlay != null)
-            RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: false);
-
-        UpdateToolBadge();
+        ClearTransientCodingCanvas(clearManualOverlay: includeManualOverlay, clearSamMasks: !preserveSamMasks);
     }
 
 
     private void UpdateCodingOverlayInfo(OverlayGeometry? overlay)
     {
+        // Slice 8a.3 Step 5b: TxtCodingQ1/Q2/Clock/Arc-Labels lebten in der
+        // geloeschten CodingSidePanel. Was bleibt, ist das CodingMeasurementPanel
+        // unten am Video mit TxtCodingMeasurement (eine Zeile fuer alle Werte).
         if (overlay == null)
         {
-            TxtCodingQ1.Text = "Q1: -"; TxtCodingQ2.Text = "Q2: -";
-            TxtCodingClock.Text = "Uhr: -"; TxtCodingArc.Text = "Bogen: -";
             CodingMeasurementPanel.Visibility = Visibility.Collapsed;
             return;
         }
-
-        TxtCodingQ1.Text = overlay.Q1Mm.HasValue ? $"Q1: {overlay.Q1Mm:F1} mm" : "Q1: -";
-        TxtCodingQ2.Text = overlay.Q2Mm.HasValue ? $"Q2: {overlay.Q2Mm:F1} mm" : "Q2: -";
-        TxtCodingClock.Text = overlay.ClockFrom.HasValue
-            ? $"Uhr: {overlay.ClockFrom:F1}" + (overlay.ClockTo.HasValue ? $" -> {overlay.ClockTo:F1}" : "")
-            : "Uhr: -";
-        TxtCodingArc.Text = overlay.ToolType == OverlayToolType.Level && overlay.FillPercent.HasValue
-            ? $"Fuellung: {overlay.FillPercent:F1}%"
-            : overlay.ArcDegrees.HasValue
-                ? (overlay.ToolType == OverlayToolType.PipeBend
-                    ? $"Winkel: {overlay.ArcDegrees:F1}\u00B0"
-                    : $"Bogen: {overlay.ArcDegrees:F0} deg")
-                : "Bogen: -";
 
         CodingMeasurementPanel.Visibility = Visibility.Visible;
         var parts = new List<string>();

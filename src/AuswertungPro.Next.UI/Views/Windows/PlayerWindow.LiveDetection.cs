@@ -185,9 +185,9 @@ public partial class PlayerWindow
         FindingSummaryPanel.Visibility = Visibility.Collapsed;
         _currentFindings.Clear();
 
-        // Fertig-Meldung mit Zusammenfassung
-        int totalEvents = _codingVm?.Events?.Count ?? 0;
-        LiveDetectionStatusText.Text = $"KI-Analyse beendet — {totalEvents} Beobachtungen";
+        // Fertig-Meldung (Slice 8a.3 Step 5b: Event-Count aus _codingVm
+        // entfaellt — die Coding-Session lebte im geloeschten In-Place-Modus).
+        LiveDetectionStatusText.Text = "KI-Analyse beendet";
         LiveDetectionStatusText.Visibility = Visibility.Visible;
 
         // Video pausieren damit der User die Meldung sieht
@@ -357,7 +357,7 @@ public partial class PlayerWindow
     {
         DetectionCanvas.Children.Clear();
         DetectionOverlayGrid.Visibility = Visibility.Collapsed;
-        CodingFindingsList.ItemsSource = null;
+        // Slice 8a.3 Step 5b: CodingFindingsList lebte in CodingToolbar (geloescht).
     }
 
     // ─── Detection-Overlay-Rendering (Bbox + Ring-Sektor-Fallback) ────────────
@@ -727,10 +727,7 @@ public partial class PlayerWindow
             resetTimer.Tick += (_, _) =>
             {
                 resetTimer.Stop();
-                if (_codingLastOsdMeter.HasValue)
-                    TxtOsdMeter.Text = $"{_codingLastOsdMeter.Value:F2}m (OSD)";
-                else
-                    OsdMeterBadge.Visibility = Visibility.Collapsed;
+                OsdMeterBadge.Visibility = Visibility.Collapsed;
             };
             resetTimer.Start();
         }
@@ -755,8 +752,9 @@ public partial class PlayerWindow
         {
             var timestampSec = _player.Time / 1000.0;
 
-            // VsaCodeExplorer oeffnen fuer Korrektur — Meter aus OSD/Video
-            var autoMeter2 = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
+            // VsaCodeExplorer oeffnen fuer Korrektur — Meter aus Videoposition
+            // (OSD-Reader entfaellt seit Slice 8a.3 Step 5b).
+            var autoMeter2 = GetMeterFromVideoPosition();
             var entry = new ProtocolEntry();
             var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(entry, autoMeter2, TimeSpan.FromSeconds(timestampSec));
             var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
@@ -821,10 +819,7 @@ public partial class PlayerWindow
             resetTimer.Tick += (_, _) =>
             {
                 resetTimer.Stop();
-                if (_codingLastOsdMeter.HasValue)
-                    TxtOsdMeter.Text = $"{_codingLastOsdMeter.Value:F2}m (OSD)";
-                else
-                    OsdMeterBadge.Visibility = Visibility.Collapsed;
+                OsdMeterBadge.Visibility = Visibility.Collapsed;
             };
             resetTimer.Start();
         }

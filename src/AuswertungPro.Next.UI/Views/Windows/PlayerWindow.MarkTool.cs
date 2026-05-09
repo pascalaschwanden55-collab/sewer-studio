@@ -24,15 +24,9 @@ public partial class PlayerWindow
 
     private void ManualMark_Click(object sender, RoutedEventArgs e)
     {
-        if (_isCodingMode)
-            ToolsDropdownPopup.IsOpen = !ToolsDropdownPopup.IsOpen;
-        else
-            MarkToolPopup.IsOpen = !MarkToolPopup.IsOpen;
-    }
-
-    private void ToolsDropdown_Click(object sender, RoutedEventArgs e)
-    {
-        ToolsDropdownPopup.IsOpen = !ToolsDropdownPopup.IsOpen;
+        // Slice 8a.3 Step 5b: ToolsDropdownPopup-Pfad entfaellt — gehoerte zum
+        // alten Codier-Modus, MarkTool laeuft jetzt immer ueber MarkToolPopup.
+        MarkToolPopup.IsOpen = !MarkToolPopup.IsOpen;
     }
 
     private void MarkTool_Punkt_Click(object sender, RoutedEventArgs e)
@@ -49,12 +43,12 @@ public partial class PlayerWindow
 
     private void ActivateMarkTool(OverlayToolType tool, string label)
     {
+        // Slice 8a.3 Step 5b: CodingMarkToolPopup + ToolsDropdownPopup
+        // entfallen mit der CodingToolbar — nur MarkToolPopup bleibt.
         MarkToolPopup.IsOpen = false;
-        CodingMarkToolPopup.IsOpen = false;
-        ToolsDropdownPopup.IsOpen = false;
         _markToolType = tool;
         TxtMarkToolName.Text = label;
-        TxtActiveToolLabel.Text = label;
+        // Slice 8a.3 Step 5b: TxtActiveToolLabel entfaellt mit CodingToolbar.
         _player.SetPause(true);
         _codingSchemaManager.Cancel();
         _codingSchemaType = null;
@@ -116,15 +110,15 @@ public partial class PlayerWindow
             DetectionOverlayGrid.Visibility = Visibility.Collapsed;
         }
 
-        if (!_isCodingMode)
-        {
-            _codingSchemaManager.Cancel();
-            _codingOverlayService?.CancelDraw();
-            if (_codingOverlayService != null)
-                _codingOverlayService.ActiveTool = OverlayToolType.None;
-            CodingOverlayPopup.IsOpen = false;
-            CodingOverlayCanvas.IsHitTestVisible = false;
-        }
+        // Slice 8a.3 Step 5b: _isCodingMode-Guard entfaellt — Overlay-Cleanup
+        // laeuft jetzt immer (es gibt keinen In-Place-Codier-Modus mehr,
+        // der das Popup offen halten muesste).
+        _codingSchemaManager.Cancel();
+        _codingOverlayService?.CancelDraw();
+        if (_codingOverlayService != null)
+            _codingOverlayService.ActiveTool = OverlayToolType.None;
+        CodingOverlayPopup.IsOpen = false;
+        CodingOverlayCanvas.IsHitTestVisible = false;
     }
 
     /// <summary>
@@ -217,8 +211,11 @@ public partial class PlayerWindow
         if (_isWindowClosed) return;
         if (_codingVisionClient == null)
         {
+            // Slice 8a.3 Step 5b: SetCodingAiState (Status-Badge im alten
+            // Codier-Toolbar) ist weggefallen. Status laeuft jetzt nur noch
+            // ueber Debug.WriteLine — die SAM-Maske selbst zeigt sichtbar
+            // an, ob etwas erkannt wurde.
             System.Diagnostics.Debug.WriteLine("[SAM] Abbruch: _codingVisionClient ist null (Sidecar nicht initialisiert)");
-            SetCodingAiState("SAM: Sidecar-Client nicht initialisiert", Color.FromRgb(0xEF, 0x44, 0x44));
             return;
         }
 
@@ -229,7 +226,6 @@ public partial class PlayerWindow
             if (overlay.Points.Count == 0)
             {
                 System.Diagnostics.Debug.WriteLine("[SAM] Abbruch: BBox-Punkte fehlen");
-                SetCodingAiState("SAM: BBox-Punkte fehlen", Color.FromRgb(0xEF, 0x44, 0x44));
                 return;
             }
 
@@ -238,7 +234,6 @@ public partial class PlayerWindow
             if (pngBytes == null || pngBytes.Length == 0)
             {
                 System.Diagnostics.Debug.WriteLine("[SAM] Abbruch: Snapshot leer/null");
-                SetCodingAiState("SAM: Frame-Capture leer (Video pausiert?)", Color.FromRgb(0xEF, 0x44, 0x44));
                 return;
             }
 
@@ -291,7 +286,6 @@ public partial class PlayerWindow
             if ((maxX - minX) < 4 || (maxY - minY) < 4)
             {
                 System.Diagnostics.Debug.WriteLine($"[SAM] BBox zu klein: {maxX - minX:F0}x{maxY - minY:F0} px");
-                SetCodingAiState($"SAM: BBox zu klein ({maxX - minX:F0}x{maxY - minY:F0} px)", Color.FromRgb(0xF5, 0x9E, 0x0B));
                 return;
             }
 
@@ -310,13 +304,11 @@ public partial class PlayerWindow
             var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
-                SetCodingAiState("SAM: laeuft...", Color.FromRgb(0xF5, 0x9E, 0x0B), pulse: true);
                 samResp = await _codingVisionClient.SegmentSamAsync(samReq);
             }
             catch (Exception apiEx)
             {
                 System.Diagnostics.Debug.WriteLine($"[SAM] API-Fehler: {apiEx.Message}");
-                SetCodingAiState($"SAM-Fehler: {TrimStatus(apiEx.Message)}", Color.FromRgb(0xEF, 0x44, 0x44));
                 return;
             }
             finally
@@ -327,7 +319,6 @@ public partial class PlayerWindow
             if (samResp == null)
             {
                 System.Diagnostics.Debug.WriteLine("[SAM] Antwort null (Sidecar nicht erreichbar oder 401/500)");
-                SetCodingAiState("SAM-Fehler: Sidecar antwortet nicht", Color.FromRgb(0xEF, 0x44, 0x44));
                 return;
             }
 
@@ -336,7 +327,7 @@ public partial class PlayerWindow
 
             if (samResp.Masks.Count == 0)
             {
-                SetCodingAiState("SAM: Keine Maske gefunden (leeres Ergebnis vom Sidecar)", Color.FromRgb(0xF5, 0x9E, 0x0B));
+                System.Diagnostics.Debug.WriteLine("[SAM] Keine Maske gefunden (leeres Ergebnis vom Sidecar)");
                 return;
             }
 
@@ -368,14 +359,12 @@ public partial class PlayerWindow
             var visibleSamElements = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
                 .Count(e => (e.Tag as string)?.StartsWith(Ai.Pipeline.SamMaskRenderer.MaskTag, StringComparison.Ordinal) == true);
 
-            SetCodingAiState($"SAM-Maske: {samResp.Masks.Count} Region(en) in {sw.ElapsedMilliseconds} ms",
-                Color.FromRgb(0x22, 0xC5, 0x5E),
-                $"Overlay-Elemente: {visibleSamElements}");
+            System.Diagnostics.Debug.WriteLine(
+                $"[SAM] Erfolg: {samResp.Masks.Count} Region(en) in {sw.ElapsedMilliseconds} ms, Overlay-Elemente: {visibleSamElements}");
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[SAM] Unerwarteter Fehler: {ex}");
-            SetCodingAiState($"SAM-Fehler: {TrimStatus(ex.Message)}", Color.FromRgb(0xEF, 0x44, 0x44));
         }
     }
 
@@ -421,38 +410,14 @@ public partial class PlayerWindow
     {
         try
         {
-            // 1. VSA-Code-Quelle bestimmen.
-            //
-            // Direkt-Pfad (nachtraegliches Codieren mit Trainings-Annotation):
-            // Wenn rechts in der IMPORT-Liste schon ein Eintrag selektiert ist
-            // (LstImportEvents.SelectedItem), nutzen wir den Code von dort und
-            // ueberspringen den VsaCodeExplorer-Dialog. Das ist genau der Fall
-            // "Stelle markiert + Code ist klar (z.B. BCCBA aus dem importierten
-            // Protokoll) → BBox + SAM + Save ohne Zwischenfrage".
-            //
-            // Fallback-Pfad: kein Code vorausgewaehlt → Explorer oeffnet sich
-            // (urspruengliches Verhalten).
+            // Slice 8a.3 Step 5b: Preselected-Import-Pfad (LstImportEvents) ist
+            // weggefallen — die Liste lebte im geloeschten CodingSidePanel.
+            // Live-MarkTool oeffnet jetzt immer den VsaCodeExplorer.
+
+            // 1. VSA-Code via Explorer auswaehlen.
             ProtocolEntry selectedEntry;
-            var preselectedImport = LstImportEvents?.SelectedItem as Domain.Models.CodingEvent;
-            if (preselectedImport != null && !string.IsNullOrWhiteSpace(preselectedImport.Entry?.Code))
             {
-                var src = preselectedImport.Entry!;
-                selectedEntry = new ProtocolEntry
-                {
-                    Code = src.Code,
-                    Beschreibung = src.Beschreibung,
-                    MeterStart = src.MeterStart,
-                    MeterEnd = src.MeterEnd,
-                    Zeit = src.Zeit ?? TimeSpan.FromSeconds(timestampSec),
-                    IsStreckenschaden = src.IsStreckenschaden,
-                    CodeMeta = src.CodeMeta,
-                    Source = ProtocolEntrySource.Manual
-                };
-            }
-            else
-            {
-                // Meter automatisch aus OSD oder Videoposition berechnen
-                var autoMeter = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
+                var autoMeter = GetMeterFromVideoPosition();
                 var entry = new ProtocolEntry();
                 var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(entry, autoMeter, TimeSpan.FromSeconds(timestampSec));
                 var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
@@ -492,26 +457,8 @@ public partial class PlayerWindow
             try { System.IO.File.Delete(tempFrame); } catch { }
 
             // 5. TeacherAnnotation erstellen + persistieren
-            // Meter-Quelle (Reihenfolge):
-            //   1. Wenn IMPORT-Code preselected: dessen MeterStart (z.B. BCE @13.06m)
-            //   2. TxtCodingMeter-Anzeige (OSD-Erkennung oder manuell)
-            //   3. selectedEntry.MeterStart als letzter Fallback
-            //   4. 0 wenn nichts vorhanden
-            var captureMeter = 0.0;
-            if (preselectedImport?.Entry?.MeterStart is double importMeter && importMeter > 0)
-            {
-                captureMeter = importMeter;
-            }
-            else if (double.TryParse(TxtCodingMeter?.Text?.Replace("m", "").Trim(),
-                         System.Globalization.NumberStyles.Any,
-                         System.Globalization.CultureInfo.InvariantCulture, out var parsedMeter))
-            {
-                captureMeter = parsedMeter;
-            }
-            else if (selectedEntry.MeterStart is double selMeter)
-            {
-                captureMeter = selMeter;
-            }
+            // Meter-Quelle: selectedEntry.MeterStart oder Videoposition als Fallback.
+            var captureMeter = selectedEntry.MeterStart ?? GetMeterFromVideoPosition() ?? 0.0;
 
             // Haltungs-Kontext aus dem Record uebernehmen (Material/DN/Profil/Nutzung)
             int? dnMm = null;
@@ -546,36 +493,10 @@ public partial class PlayerWindow
 
             await AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
 
-            // Wenn der Code aus der IMPORT-Liste vorausgewaehlt war, ist die
-            // Haltung bereits korrekt codiert. Der User wollte nur "der KI
-            // zeigen wo der Code im Frame zu sehen ist" — pures Training.
-            // Deshalb KEIN CodingEvent zur Session hinzufuegen → kein
-            // Protokoll-Eintrag, der bestehende Code bleibt unveraendert.
-            // Die TeacherAnnotation oben enthaelt bereits Frame + BBox +
-            // YOLO-Label, das ist alles was YOLO/SAM zum Training braucht.
-            //
-            // Standard-Pfad (kein Preselected): wie vorher — Markierung als
-            // CodingEvent in die KI-Befunde-Liste, geht ins Protokoll bei
-            // Uebernehmen (urspruengliches Codier-Verhalten).
-            if (preselectedImport == null && _codingSessionService != null && _codingVm != null)
-            {
-                var codingEntry = new ProtocolEntry
-                {
-                    Source = ProtocolEntrySource.Manual,
-                    Code = selectedEntry.Code,
-                    Beschreibung = selectedEntry.Beschreibung,
-                    MeterStart = selectedEntry.MeterStart ?? captureMeter,
-                    MeterEnd = selectedEntry.MeterEnd,
-                    Zeit = selectedEntry.Zeit ?? TimeSpan.FromSeconds(timestampSec),
-                    IsStreckenschaden = selectedEntry.IsStreckenschaden,
-                    CodeMeta = selectedEntry.CodeMeta
-                };
-                if (exportResult.FullFramePath != null)
-                    codingEntry.FotoPaths.Add(exportResult.FullFramePath);
-
-                _codingSessionService.AddEvent(codingEntry, overlay);
-                RefreshCodingEventsList();
-            }
+            // Slice 8a.3 Step 5b: Coding-Session-AddEvent + RefreshCodingEventsList
+            // entfaellt — die KI-Befunde-Liste (LstCodingEvents) lebte im
+            // geloeschten CodingSidePanel. TeacherAnnotation oben enthaelt
+            // bereits Frame + BBox + YOLO-Label fuer YOLO/SAM-Training.
 
             // Dezente Statusmeldung im OSD-Badge (kein MessageBox-Popup)
             OsdMeterBadge.Visibility = Visibility.Visible;
@@ -586,10 +507,7 @@ public partial class PlayerWindow
             resetTimer.Tick += (_, _) =>
             {
                 resetTimer.Stop();
-                if (_codingLastOsdMeter.HasValue)
-                    TxtOsdMeter.Text = $"{_codingLastOsdMeter.Value:F2}m (OSD)";
-                else
-                    OsdMeterBadge.Visibility = Visibility.Collapsed;
+                OsdMeterBadge.Visibility = Visibility.Collapsed;
             };
             resetTimer.Start();
             return true;
@@ -638,5 +556,92 @@ public partial class PlayerWindow
         if (hour == 0) hour = 12;
 
         return hour.ToString();
+    }
+
+    // ─── CodingOverlayCanvas-Mouse-Handler ─────────────────────────────────
+    //
+    // Slice 8a.3 Step 5b: Die alten Handler in PlayerWindow.CodingTool.cs
+    // (Eingabemarker, Schema, Kalibrieren, Multi-Punkt) sind zusammen mit
+    // dem In-Place-Codier-Modus geloescht. Was hier bleibt, ist die schlanke
+    // Version, die der Live-MarkTool-Flow braucht: Punkt setzen, Drag-
+    // Vorschau zeichnen, beim Loslassen ueber HandleMarkDrawingComplete in
+    // den SAM-/VsaCodeExplorer-Pfad gehen.
+    private void CodingCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_codingOverlayService == null || _codingVm == null) return;
+        if (_codingOverlayService.ActiveTool == OverlayToolType.None) return;
+
+        var pos = e.GetPosition(CodingOverlayCanvas);
+        var norm = CodingPixelToNorm(pos);
+
+        // Multi-Punkt-Werkzeug (z.B. Winkelmesser): drei Klicks bauen den Overlay
+        if (_codingOverlayService.IsMultiPointTool)
+        {
+            if (_codingOverlayService.DrawPointCount == 0)
+                _codingVm.CurrentOverlay = null;
+
+            bool complete = _codingVm.OnCanvasMultiPointClick(norm);
+            ClearTransientCodingCanvas(clearManualOverlay: true);
+            // Vorschau zeichnen: nichts zu tun ohne RenderOverlayGeometry —
+            // der Live-MarkTool-Flow braucht es nicht (Rectangle ist Standard).
+            if (complete)
+                UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
+            return;
+        }
+
+        // Standard-Werkzeug (z.B. Rechteck): Klick + Drag
+        _codingVm.CurrentOverlay = null;
+        UpdateCodingOverlayInfo(null);
+        _codingVm.OnCanvasMouseDown(norm);
+        CodingOverlayCanvas.CaptureMouse();
+        ClearTransientCodingCanvas(clearManualOverlay: true);
+    }
+
+    private void CodingCanvas_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (_codingOverlayService == null || _codingVm == null) return;
+        if (!_codingOverlayService.IsDrawing) return;
+
+        var pos = e.GetPosition(CodingOverlayCanvas);
+        var norm = CodingPixelToNorm(pos);
+        _codingVm.OnCanvasMouseMove(norm);
+        // Slice 8a.3 Step 5b: Live-Vorschau-Rendering (RenderOverlayGeometry)
+        // entfaellt mit dem alten In-Place-Modus. Der User sieht das BBox-
+        // Resultat erst beim MouseUp via SAM-Maske + RenderSamPromptBox.
+    }
+
+    private void CodingCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_codingOverlayService == null || _codingVm == null) return;
+        if (!_codingOverlayService.IsDrawing) return;
+
+        var pos = e.GetPosition(CodingOverlayCanvas);
+        var norm = CodingPixelToNorm(pos);
+        _codingVm.OnCanvasMouseUp(norm);
+        CodingOverlayCanvas.ReleaseMouseCapture();
+        ClearTransientCodingCanvas(clearManualOverlay: true);
+
+        if (_codingVm.CurrentOverlay != null)
+        {
+            // Mark-Tool-Flow: VsaCodeExplorer + SAM + Training speichern.
+            if (_markToolType != OverlayToolType.None
+                || _codingVm.CurrentOverlay.ToolType == OverlayToolType.Rectangle)
+            {
+                HandleMarkDrawingComplete();
+                return;
+            }
+            UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
+        }
+        else
+        {
+            UpdateCodingOverlayInfo(null);
+        }
+    }
+
+    private void CodingCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        // Slice 8a.3 Step 5b: Mausrad-Handling (PipeBend-Winkel) entfaellt
+        // mit dem geloeschten Schema-Werkzeug. Live-MarkTool nutzt das Rad
+        // nicht.
     }
 }

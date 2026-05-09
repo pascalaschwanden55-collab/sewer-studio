@@ -249,8 +249,8 @@ public partial class PlayerWindow
 
         UpdateRateLabel();
 
-        if (_isCodingMode)
-            UpdateCodingCurrentCode();
+        // Slice 8a.3 Step 5b: UpdateCodingCurrentCode-Aufruf entfaellt mit
+        // dem alten In-Place-Codier-Modus.
     }
 
     private void EnsureVisibleOnScreen()
