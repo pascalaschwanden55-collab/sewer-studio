@@ -681,7 +681,7 @@ public partial class PlayerWindow
         // KI-Befunde-Liste startet LEER — KI erkennt frisch, User korrigiert.
         _codingImportEvents.Clear();
         var allExisting = _codingVm.Events.OrderBy(e => e.MeterAtCapture).ToList();
-        _codingVm.Events.Clear();
+        _codingVm.ClearEvents();
         foreach (var ev in allExisting)
             _codingImportEvents.Add(ev);
         LstImportEvents.ItemsSource = _codingImportEvents;

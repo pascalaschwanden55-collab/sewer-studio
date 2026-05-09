@@ -140,7 +140,7 @@ public partial class PlayerWindow
                 MeterAtCapture = entry.MeterStart ?? 0,
                 VideoTimestamp = entry.Zeit ?? TimeSpan.Zero
             };
-            _codingVm.Events.Add(codingEvent);
+            _codingVm.AddEventInOrder(codingEvent);
         }
     }
 
