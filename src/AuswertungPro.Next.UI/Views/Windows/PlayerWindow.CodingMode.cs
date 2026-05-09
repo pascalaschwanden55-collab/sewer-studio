@@ -1652,6 +1652,12 @@ public partial class PlayerWindow
         Falls kein Meterstand lesbar: 0.00
         """;
 
+    // Slice 8a.3 Step 1b: Parsing des LLM-Outputs ist nach
+    // AuswertungPro.Next.Application.Ai.OsdMeterParser ausgelagert.
+    // Stateless, Regex precompiled — eine Instanz pro Process.
+    private static readonly AuswertungPro.Next.Application.Ai.IOsdMeterParser _osdMeterParser
+        = new AuswertungPro.Next.Application.Ai.OsdMeterParser();
+
     private async Task<double?> CodingReadOsdMeterAsync()
     {
         if (_codingLiveDetection == null) return null;
@@ -1693,26 +1699,15 @@ public partial class PlayerWindow
             };
             var raw = await client.ChatAsync(config.VisionModel, messages, cts.Token);
 
-            // Parse: nur eine Zahl erwartet
-            var meterText = raw?.Trim().Replace(",", ".");
-            if (!string.IsNullOrWhiteSpace(meterText))
+            // Parse: deterministischer Regex/Range-Filter, ausgelagert
+            // nach OsdMeterParser (Slice 8a.3 Step 1a/1b).
+            var meter = _osdMeterParser.TryParse(raw);
+            if (meter.HasValue)
             {
-                // Zahl extrahieren (erste Dezimalzahl im Text)
-                var match = System.Text.RegularExpressions.Regex.Match(
-                    meterText, @"(\d{1,3}(?:\.\d{1,2})?)");
-                if (match.Success && double.TryParse(match.Value,
-                    System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var meter))
-                {
-                    // Plausibilitaet: 0-500m (Knotennummern sind 5+ stellig)
-                    if (meter >= 0 && meter <= 500)
-                    {
-                        _codingLastOsdMeter = meter;
-                        OsdMeterBadge.Visibility = Visibility.Visible;
-                        TxtOsdMeter.Text = $"{meter:F2}m (OSD)";
-                        return meter;
-                    }
-                }
+                _codingLastOsdMeter = meter.Value;
+                OsdMeterBadge.Visibility = Visibility.Visible;
+                TxtOsdMeter.Text = $"{meter.Value:F2}m (OSD)";
+                return meter;
             }
 
             return null;
