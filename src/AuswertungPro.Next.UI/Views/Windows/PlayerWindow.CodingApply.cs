@@ -129,7 +129,12 @@ public partial class PlayerWindow
     private readonly Dictionary<string, (double TimeSec, double AreaNorm, double Confidence, string Label)>
         _codingDepthCandidates = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource? _codingAnalysisCts;
+    // Slice 8a.3 Step 5a.1: Lese-Zugriff im Kill-Switch entfernt; der
+    // Schreibzugriff in ResumeAfterPause bleibt bis 5b dranne. Pragma
+    // unterdrueckt CS0414 fuer dieses Uebergangsfenster.
+#pragma warning disable CS0414
     private bool _codingIsAnalyzing;
+#pragma warning restore CS0414
     private string _codingAiModelName = string.Empty;
     private bool _codingAiPulseRunning;
 
