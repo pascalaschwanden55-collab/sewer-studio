@@ -49,10 +49,9 @@ public partial class CodingModeWindow : Window
     private bool _videoPlaying;     // true wenn Video laeuft (nicht pausiert)
     private double _lastSyncedMeter = -1; // Verhindert Doppel-Sync
 
-    // Overlay-Zeichnung (WPF Shapes auf Canvas)
-    private Line? _previewLine;
-    private Ellipse? _previewPoint;
-    private Rectangle? _previewRect;
+    // Overlay-Zeichnung (WPF Shapes auf Canvas).
+    // Felder _previewLine/_previewPoint/_previewRect waren toter Ballast —
+    // wurden geschrieben, aber nie gelesen. Cleanup laeuft ueber Tags.
     private const string OverlayTagPreview = "overlay_preview";
     private const string OverlayTagManual = "overlay_manual";
     private const string OverlayTagCalibration = "overlay_calibration";
@@ -584,7 +583,7 @@ public partial class CodingModeWindow : Window
             ClearPreviewShapes();
             var p1 = NormalizedToPixel(_calibStart);
             var p2 = NormalizedToPixel(normalized);
-            _previewLine = new Line
+            OverlayCanvas.Children.Add(new Line
             {
                 X1 = p1.X, Y1 = p1.Y,
                 X2 = p2.X, Y2 = p2.Y,
@@ -592,8 +591,7 @@ public partial class CodingModeWindow : Window
                 StrokeThickness = 2.5,
                 StrokeDashArray = new DoubleCollection { 6, 3 },
                 Tag = OverlayTagPreview
-            };
-            OverlayCanvas.Children.Add(_previewLine);
+            });
 
             // Pixel-Laenge anzeigen
             double pxLen = Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
@@ -817,7 +815,7 @@ public partial class CodingModeWindow : Window
             case OverlayToolType.Line:
             case OverlayToolType.Stretch:
             case OverlayToolType.Ruler:
-                _previewLine = new Line
+                OverlayCanvas.Children.Add(new Line
                 {
                     X1 = p1.X, Y1 = p1.Y,
                     X2 = p2.X, Y2 = p2.Y,
@@ -825,12 +823,11 @@ public partial class CodingModeWindow : Window
                     StrokeThickness = 2,
                     StrokeDashArray = new DoubleCollection { 4, 2 },
                     Tag = OverlayTagPreview
-                };
-                OverlayCanvas.Children.Add(_previewLine);
+                });
                 break;
 
             case OverlayToolType.Rectangle:
-                _previewRect = new Rectangle
+                var previewRect = new Rectangle
                 {
                     Width = Math.Abs(p2.X - p1.X),
                     Height = Math.Abs(p2.Y - p1.Y),
@@ -840,9 +837,9 @@ public partial class CodingModeWindow : Window
                     Fill = new SolidColorBrush(Color.FromArgb(40, 0, 255, 255)),
                     Tag = OverlayTagPreview
                 };
-                Canvas.SetLeft(_previewRect, Math.Min(p1.X, p2.X));
-                Canvas.SetTop(_previewRect, Math.Min(p1.Y, p2.Y));
-                OverlayCanvas.Children.Add(_previewRect);
+                Canvas.SetLeft(previewRect, Math.Min(p1.X, p2.X));
+                Canvas.SetTop(previewRect, Math.Min(p1.Y, p2.Y));
+                OverlayCanvas.Children.Add(previewRect);
                 break;
 
             case OverlayToolType.Arc:
@@ -871,7 +868,7 @@ public partial class CodingModeWindow : Window
                 break;
 
             case OverlayToolType.Point:
-                _previewPoint = new Ellipse
+                var previewPoint = new Ellipse
                 {
                     Width = 12, Height = 12,
                     Fill = Brushes.Red,
@@ -879,9 +876,9 @@ public partial class CodingModeWindow : Window
                     StrokeThickness = 2,
                     Tag = OverlayTagPreview
                 };
-                Canvas.SetLeft(_previewPoint, p1.X - 6);
-                Canvas.SetTop(_previewPoint, p1.Y - 6);
-                OverlayCanvas.Children.Add(_previewPoint);
+                Canvas.SetLeft(previewPoint, p1.X - 6);
+                Canvas.SetTop(previewPoint, p1.Y - 6);
+                OverlayCanvas.Children.Add(previewPoint);
                 break;
 
             case OverlayToolType.Level:
@@ -922,7 +919,7 @@ public partial class CodingModeWindow : Window
                 Canvas.SetTop(previewFill, Math.Min(previewTop, previewBottom));
                 OverlayCanvas.Children.Add(previewFill);
 
-                _previewLine = new Line
+                OverlayCanvas.Children.Add(new Line
                 {
                     X1 = p1.X,
                     Y1 = levelY,
@@ -932,8 +929,7 @@ public partial class CodingModeWindow : Window
                     StrokeThickness = 2.5,
                     StrokeDashArray = new DoubleCollection { 6, 3 },
                     Tag = OverlayTagPreview
-                };
-                OverlayCanvas.Children.Add(_previewLine);
+                });
 
                 if (_vm.CurrentOverlay?.ToolType == OverlayToolType.Level)
                 {
@@ -1457,12 +1453,7 @@ public partial class CodingModeWindow : Window
     }
 
     private void ClearPreviewShapes()
-    {
-        RemoveOverlayElementsByTag(OverlayTagPreview);
-        _previewLine = null;
-        _previewPoint = null;
-        _previewRect = null;
-    }
+        => RemoveOverlayElementsByTag(OverlayTagPreview);
 
     private void ClearManualShapes()
         => RemoveOverlayElementsByTag(OverlayTagManual);
