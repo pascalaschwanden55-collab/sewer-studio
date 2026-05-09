@@ -277,6 +277,10 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     /// <summary>Reine Bewertung: ist der Frame bereit fuer die Analyse?</summary>
     public bool IsFrameReady => FrameReadinessState == FrameReadiness.Ready;
 
+    /// <summary>Anzahl bisher uebersprungener Frames in der Warmup-/WaitingForVideo-
+    /// Phase. Wird in der UI-Status-Anzeige als "Bild X von 3" verwendet.</summary>
+    public int OsdSkippedFrames => _osdSkippedFrames;
+
     /// <summary>Zuletzt aus dem OSD gelesener Meterstand.
     /// Wird vom OSD-Reader gesetzt und vom Loop konsumiert. Reset auf null
     /// in <see cref="ResetFrameReadiness"/>.</summary>

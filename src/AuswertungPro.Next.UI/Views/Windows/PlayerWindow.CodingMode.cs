@@ -612,7 +612,9 @@ public partial class PlayerWindow
     {
         if (_isCodingMode || _haltungRecord == null) return;
         _isCodingMode = true;
-        ResetFrameReadiness();
+        // Slice 8a.3 Step 2b: Frame-Readiness lebt jetzt im
+        // CodingSessionViewModel. Frischer VM (siehe Z. 634) startet
+        // ohnehin in WaitingForVideo, kein expliziter Reset noetig.
 
         // Video pausieren
         _player.SetPause(true);
@@ -902,13 +904,19 @@ public partial class PlayerWindow
         Safe("VM-Unsubscribe+Null", () =>
         {
             if (_codingVm != null)
+            {
                 _codingVm.PropertyChanged -= CodingVm_PropertyChanged;
+                _codingVm.ResetFrameReadiness(); // belt-and-suspenders vor discard
+            }
             _codingVm = null;
             _codingSessionService = null;
             _codingOverlayService = null;
             _codingIsCalibrating = false;
             _codingCalibStart = null;
-            ResetFrameReadiness(); // setzt auch _codingLastOsdMeter = null
+            // Slice 8a.3 Step 2b: _codingLastOsdMeter bleibt Player-Field
+            // (wird in einem spaeteren Slice migriert), darum hier explizit
+            // null setzen — vorher implizit ueber ResetFrameReadiness.
+            _codingLastOsdMeter = null;
             _codingOverlaySuspendDepth = 0;
             _codingOverlayWasOpenBeforeSuspend = false;
         });
@@ -1432,6 +1440,7 @@ public partial class PlayerWindow
 
     private void ShowCodingAiResults(LiveDetection result)
     {
+        if (_codingVm == null) return; // Coding-Modus inzwischen verlassen
         if (result.Error != null)
         {
             SetCodingAiState($"Fehler: {result.Error}", Color.FromRgb(0xEF, 0x44, 0x44),
@@ -1443,27 +1452,28 @@ public partial class PlayerWindow
         // ── Zustandsautomat: Einblendung vs. echtes Videobild ──
         // Zuerst State aktualisieren, dann pruefen ob Frame analysiert werden darf.
         // Gating BEVOR irgendetwas ins UI geschrieben wird.
-        UpdateFrameReadiness(result);
+        // Slice 8a.3 Step 2b: State-Maschine wohnt jetzt im VM.
+        _codingVm.RecordFrame(result);
 
-        if (!IsFrameReady())
+        if (!_codingVm.IsFrameReady)
         {
             // Ergebnis puffern statt verwerfen (Warmup-Phase)
             if (result.Findings.Count > 0)
-                _pendingWarmupResult = result;
+                _codingVm.PendingWarmupResult = result;
 
             SetCodingAiState("Dateneinblendung erkannt \u2014 \u00fcbersprungen",
                 Color.FromRgb(0x94, 0xA3, 0xB8),
-                $"Warte auf Videobild... (Bild {_codingOsdSkippedFrames} von 3)");
+                $"Warte auf Videobild... (Bild {_codingVm.OsdSkippedFrames} von 3)");
             CodingFindingsList.ItemsSource = null;
             DetectionCanvas.Children.Clear();
             return;
         }
 
         // Warmup-Puffer nachtraeglich verarbeiten (erste Ready-Transition)
-        if (_pendingWarmupResult != null)
+        if (_codingVm.PendingWarmupResult != null)
         {
-            var buffered = _pendingWarmupResult;
-            _pendingWarmupResult = null;
+            var buffered = _codingVm.PendingWarmupResult;
+            _codingVm.PendingWarmupResult = null;
             // Bestes gepuffertes Ergebnis verwenden wenn aktuelles leer ist
             if (result.Findings.Count == 0 && buffered.Findings.Count > 0)
                 result = buffered;
@@ -1537,101 +1547,9 @@ public partial class PlayerWindow
                 "Delete = Befund loeschen | Leertaste = weiter");
         }
     }
-    // === Sub-H: Frame-Readiness + OSD-Meter-Reader ===
-
-    // --- Dateneinblendung-Erkennung: Zustandsautomat ---
-    //
-    // WaitingForVideo: Dateneinblendung wird vermutet, Analyse blockiert.
-    // Warmup:          Erster Meter gesehen, warte auf Bestaetigung (2. Frame).
-    // Ready:           Analyse freigeschaltet, kein weiteres Gating.
-    //
-    private enum FrameReadiness { WaitingForVideo, Warmup, Ready }
-    private FrameReadiness _codingFrameState = FrameReadiness.WaitingForVideo;
-    private int _codingOsdSkippedFrames;
-    private int _codingMeterConfirmCount;
-
-    // Warmup-Puffer: Ergebnis aus der Warmup-Phase wird zwischengespeichert
-    // und nach Transition zu Ready nachtraeglich verarbeitet.
-    private LiveDetection? _pendingWarmupResult;
-
-    /// <summary>Setzt den Einblendungs-Zustand zurueck (bei Eintritt/Austritt Codier-Modus).</summary>
-    private void ResetFrameReadiness()
-    {
-        _codingFrameState = FrameReadiness.WaitingForVideo;
-        _codingOsdSkippedFrames = 0;
-        _codingMeterConfirmCount = 0;
-        _codingLastOsdMeter = null; // Stale Meter aus vorheriger Session verhindern
-        _pendingWarmupResult = null;
-    }
-
-    /// <summary>
-    /// Reine Bewertung: Ist der aktuelle Frame bereit fuer die Analyse?
-    /// Aendert KEINEN Zustand — dafuer ist UpdateFrameReadiness zustaendig.
-    /// </summary>
-    private bool IsFrameReady() => _codingFrameState == FrameReadiness.Ready;
-
-    /// <summary>
-    /// Aktualisiert den Einblendungs-Zustand anhand des aktuellen Analyse-Ergebnisses.
-    /// Muss VOR IsFrameReady aufgerufen werden.
-    ///
-    /// Uebergaenge:
-    ///   WaitingForVideo → Warmup:  erster Frame mit Meterstand (aus aktuellem result)
-    ///   WaitingForVideo → Ready:   3 Frames ohne Meter (kein OSD vorhanden)
-    ///   Warmup          → Ready:   2. Frame mit Meterstand (Bestaetigung)
-    ///   Warmup          → Ready:   2 Frames in Warmup ohne zweiten Meter (Fallback gegen Deadlock)
-    /// </summary>
-    private void UpdateFrameReadiness(LiveDetection result)
-    {
-        if (_codingFrameState == FrameReadiness.Ready)
-            return;
-
-        // NUR den aktuellen Frame-Meter verwenden, NICHT den gecachten _codingLastOsdMeter.
-        // Sonst kann ein stale Wert aus vorheriger Navigation die Sperre umgehen.
-        bool hasMeterThisFrame = result.MeterReading.HasValue;
-
-        switch (_codingFrameState)
-        {
-            case FrameReadiness.WaitingForVideo:
-                if (hasMeterThisFrame)
-                {
-                    // Erster Meter gesehen → Warmup (noch nicht sofort freischalten)
-                    _codingFrameState = FrameReadiness.Warmup;
-                    _codingMeterConfirmCount = 1;
-                    _codingOsdSkippedFrames = 0; // Zaehler fuer Warmup-Fallback neu starten
-                }
-                else
-                {
-                    // Kein Meter → zaehlen. Nach 3 Frames: kein OSD vorhanden.
-                    _codingOsdSkippedFrames++;
-                    if (_codingOsdSkippedFrames >= 3)
-                        _codingFrameState = FrameReadiness.Ready;
-                }
-                break;
-
-            case FrameReadiness.Warmup:
-                if (hasMeterThisFrame)
-                    _codingMeterConfirmCount++;
-
-                // 2 Frames mit Meter → sofort Ready (stabiler Uebergang)
-                if (_codingMeterConfirmCount >= 2)
-                {
-                    _codingMeterConfirmCount = 0;
-                    _codingFrameState = FrameReadiness.Ready;
-                }
-                else
-                {
-                    // Fallback: nach 2 Frames in Warmup (auch ohne zweiten Meter) → Ready.
-                    // Verhindert Deadlock bei OCR-Aussetzern nach erstem Meter.
-                    _codingOsdSkippedFrames++;
-                    if (_codingOsdSkippedFrames >= 2)
-                    {
-                        _codingMeterConfirmCount = 0;
-                        _codingFrameState = FrameReadiness.Ready;
-                    }
-                }
-                break;
-        }
-    }
+    // === Sub-H: Frame-Readiness — migriert nach CodingSessionViewModel
+    // (Slice 8a.3 Step 2b). Hier verbleibt nur _codingLastOsdMeter,
+    // das in einem spaeteren Slice ebenfalls migriert wird.
 
     // --- OSD Meter automatisch lesen beim Navigieren ---
 
