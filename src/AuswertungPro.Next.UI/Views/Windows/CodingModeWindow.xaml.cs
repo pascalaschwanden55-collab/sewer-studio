@@ -804,7 +804,6 @@ public partial class CodingModeWindow : Window
 
     // Strategy-Pattern fuer das Vorschau-Rendering (Slice 8a.2.11). Pro
     // OverlayToolType wird hier ein IPreviewToolRenderer registriert.
-    // Tools, die noch nicht migriert sind, fallen auf den Switch unten zurueck.
     private static readonly System.Collections.Generic.Dictionary<OverlayToolType, Preview.IPreviewToolRenderer> _previewRenderers
         = BuildPreviewRenderers();
 
@@ -820,6 +819,8 @@ public partial class CodingModeWindow : Window
             [OverlayToolType.Arc]       = new Preview.ArcPreviewRenderer(),
             [OverlayToolType.Point]     = new Preview.PointPreviewRenderer(),
             [OverlayToolType.Level]     = new Preview.LevelPreviewRenderer(),
+            [OverlayToolType.Ellipse]   = new Preview.EllipsePreviewRenderer(),
+            [OverlayToolType.Freehand]  = new Preview.FreehandPreviewRenderer(),
         };
     }
 
@@ -828,63 +829,18 @@ public partial class CodingModeWindow : Window
         ClearPreviewShapes();
         if (start == null) return;
 
-        // Migrierte Tools laufen ueber den Renderer-Strategy-Pattern.
-        if (_previewRenderers.TryGetValue(_overlayService.ActiveTool, out var renderer))
-        {
-            var ctx = new Preview.PreviewRenderContext(
-                Canvas: OverlayCanvas,
-                Start: start,
-                Current: current,
-                ToPixel: NormalizedToPixel,
-                OverlayService: _overlayService,
-                CurrentOverlay: _vm.CurrentOverlay,
-                PreviewTag: OverlayTagPreview);
-            renderer.Render(ctx);
-            return;
-        }
+        if (!_previewRenderers.TryGetValue(_overlayService.ActiveTool, out var renderer))
+            return; // Werkzeug hat keinen Preview-Renderer (z.B. None)
 
-        var p1 = NormalizedToPixel(start);
-        var p2 = NormalizedToPixel(current);
-
-        switch (_overlayService.ActiveTool)
-        {
-            case OverlayToolType.Ellipse:
-                var ellipsePreview = new System.Windows.Shapes.Ellipse
-                {
-                    Width = Math.Abs(p2.X - p1.X),
-                    Height = Math.Abs(p2.Y - p1.Y),
-                    Stroke = Brushes.MediumPurple,
-                    StrokeThickness = 2,
-                    StrokeDashArray = new DoubleCollection { 4, 2 },
-                    Fill = new SolidColorBrush(Color.FromArgb(30, 147, 112, 219)),
-                    Tag = OverlayTagPreview
-                };
-                Canvas.SetLeft(ellipsePreview, Math.Min(p1.X, p2.X));
-                Canvas.SetTop(ellipsePreview, Math.Min(p1.Y, p2.Y));
-                OverlayCanvas.Children.Add(ellipsePreview);
-                break;
-
-            case OverlayToolType.Freehand:
-                // Freihand-Vorschau: Polyline aus gesammelten Punkten
-                var preview = _vm.CurrentOverlay;
-                if (preview?.Points.Count >= 2)
-                {
-                    var polyline = new System.Windows.Shapes.Polyline
-                    {
-                        Stroke = Brushes.HotPink,
-                        StrokeThickness = 2,
-                        StrokeDashArray = new DoubleCollection { 3, 2 },
-                        Tag = OverlayTagPreview
-                    };
-                    foreach (var pt in preview.Points)
-                    {
-                        var px = NormalizedToPixel(pt);
-                        polyline.Points.Add(new Point(px.X, px.Y));
-                    }
-                    OverlayCanvas.Children.Add(polyline);
-                }
-                break;
-        }
+        var ctx = new Preview.PreviewRenderContext(
+            Canvas: OverlayCanvas,
+            Start: start,
+            Current: current,
+            ToPixel: NormalizedToPixel,
+            OverlayService: _overlayService,
+            CurrentOverlay: _vm.CurrentOverlay,
+            PreviewTag: OverlayTagPreview);
+        renderer.Render(ctx);
     }
 
     private void RenderOverlayGeometry(OverlayGeometry geometry)
