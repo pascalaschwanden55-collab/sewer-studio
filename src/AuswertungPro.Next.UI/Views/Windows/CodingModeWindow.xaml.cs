@@ -2300,9 +2300,9 @@ public partial class CodingModeWindow : Window
 
         if (result != MessageBoxResult.Yes) return;
 
-        // Event aus Session und Liste entfernen
+        // Event aus Session und VM-Liste entfernen
         _sessionService.RemoveEvent(ev.EventId);
-        _vm.Events.Remove(ev);
+        _vm.RemoveEvent(ev);
         _vm.SelectedDefect = null;
         DefectDetailPanel.Visibility = Visibility.Collapsed;
         ClearAllDrawingShapes(); // Overlay entfernen nach Loeschung

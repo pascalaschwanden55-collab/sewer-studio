@@ -522,7 +522,7 @@ public partial class PlayerWindow
         if (confirm != MessageBoxResult.Yes) return;
 
         _codingSessionService?.RemoveEvent(codingEvent.EventId);
-        _codingVm?.Events.Remove(codingEvent);
+        _codingVm?.RemoveEvent(codingEvent);
         if (_codingVm != null && ReferenceEquals(_codingVm.SelectedDefect, codingEvent))
             _codingVm.SelectedDefect = null;
         CodingDefectDetailPanel.Visibility = Visibility.Collapsed;

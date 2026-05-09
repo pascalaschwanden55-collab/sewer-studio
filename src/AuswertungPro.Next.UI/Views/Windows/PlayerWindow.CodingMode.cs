@@ -603,7 +603,7 @@ public partial class PlayerWindow
 
         // Ablehnen = Eintrag komplett entfernen (nicht nur Status setzen)
         _codingSessionService?.RemoveEvent(ev.EventId);
-        _codingVm.Events.Remove(ev);
+        _codingVm.RemoveEvent(ev);
         _codingVm.SelectedDefect = null;
         CodingDefectDetailPanel.Visibility = Visibility.Collapsed;
         RefreshCodingEventsList();
@@ -2636,7 +2636,7 @@ public partial class PlayerWindow
             _codingPendingConfirmEvent.AiContext!.Decision = CodingUserDecision.Rejected;
             // Event entfernen
             _codingSessionService?.RemoveEvent(_codingPendingConfirmEvent.EventId);
-            _codingVm?.Events.Remove(_codingPendingConfirmEvent);
+            _codingVm?.RemoveEvent(_codingPendingConfirmEvent);
             RefreshCodingEventsList();
         }
 
