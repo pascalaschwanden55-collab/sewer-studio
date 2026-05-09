@@ -817,6 +817,8 @@ public partial class CodingModeWindow : Window
             [OverlayToolType.Line]      = line,
             [OverlayToolType.Stretch]   = line,
             [OverlayToolType.Ruler]     = line,
+            [OverlayToolType.Arc]       = new Preview.ArcPreviewRenderer(),
+            [OverlayToolType.Point]     = new Preview.PointPreviewRenderer(),
         };
     }
 
@@ -845,45 +847,6 @@ public partial class CodingModeWindow : Window
 
         switch (_overlayService.ActiveTool)
         {
-            case OverlayToolType.Arc:
-                // Bogen-Vorschau: Linie vom Zentrum zu Start und Ende
-                var center = NormalizedToPixel(new NormalizedPoint(0.5, 0.5));
-                var arcLine1 = new Line
-                {
-                    X1 = center.X, Y1 = center.Y,
-                    X2 = p1.X, Y2 = p1.Y,
-                    Stroke = Brushes.Yellow,
-                    StrokeThickness = 1.5,
-                    StrokeDashArray = new DoubleCollection { 3, 2 },
-                    Tag = OverlayTagPreview
-                };
-                var arcLine2 = new Line
-                {
-                    X1 = center.X, Y1 = center.Y,
-                    X2 = p2.X, Y2 = p2.Y,
-                    Stroke = Brushes.Yellow,
-                    StrokeThickness = 1.5,
-                    StrokeDashArray = new DoubleCollection { 3, 2 },
-                    Tag = OverlayTagPreview
-                };
-                OverlayCanvas.Children.Add(arcLine1);
-                OverlayCanvas.Children.Add(arcLine2);
-                break;
-
-            case OverlayToolType.Point:
-                var previewPoint = new Ellipse
-                {
-                    Width = 12, Height = 12,
-                    Fill = Brushes.Red,
-                    Stroke = Brushes.White,
-                    StrokeThickness = 2,
-                    Tag = OverlayTagPreview
-                };
-                Canvas.SetLeft(previewPoint, p1.X - 6);
-                Canvas.SetTop(previewPoint, p1.Y - 6);
-                OverlayCanvas.Children.Add(previewPoint);
-                break;
-
             case OverlayToolType.Level:
                 var levelStroke = _overlayService.ActiveLevelMode switch
                 {
