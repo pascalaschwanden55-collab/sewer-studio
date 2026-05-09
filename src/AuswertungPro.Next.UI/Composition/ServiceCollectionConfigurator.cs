@@ -124,6 +124,32 @@ public static class ServiceCollectionConfigurator
         services.AddSingleton(sp => sp.GetRequiredService<AiPlatformConfig>().ToPipelineConfig());
         services.AddSingleton(sp => sp.GetRequiredService<AiPlatformConfig>().ToRuntimeConfig());
 
+        // Slice 3: Named HttpClients via IHttpClientFactory (loest Socket-Exhaustion
+        // bei kurzlebigen new HttpClient()-Aufrufen). Pool-Lifetime per default 2min.
+        // Konsumenten bekommen IHttpClientFactory injiziert und rufen
+        // factory.CreateClient("name") fuer einen scope-sicheren Client.
+        services.AddHttpClient("sidecar", c =>
+        {
+            c.Timeout = TimeSpan.FromMinutes(15);
+        });
+        services.AddHttpClient("sidecar-shutdown", c =>
+        {
+            c.Timeout = TimeSpan.FromSeconds(3);
+        });
+        services.AddHttpClient("sidecar-health", c =>
+        {
+            c.Timeout = TimeSpan.FromSeconds(2);
+        });
+        services.AddHttpClient("ollama-kb", (sp, c) =>
+        {
+            var ollama = sp.GetRequiredService<AiPlatformConfig>().ToOllamaConfig();
+            c.Timeout = ollama.RequestTimeout;
+        });
+        services.AddHttpClient("walker-health", c =>
+        {
+            c.Timeout = TimeSpan.FromSeconds(5);
+        });
+
         // Sidecar (YOLO/DINO/SAM) — wird in App.OnStartup async gestartet
         services.AddSingleton(sp => AiPipelineModule.CreateSidecar(
             sp.GetRequiredService<PipelineConfig>(),

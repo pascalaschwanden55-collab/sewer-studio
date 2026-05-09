@@ -42,6 +42,7 @@
     <PackageReference Include="LibreHardwareMonitorLib" />
     <PackageReference Include="Microsoft.Data.Sqlite" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="Microsoft.Playwright" />
     <PackageReference Include="LibVLCSharp" />

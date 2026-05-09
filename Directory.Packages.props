@@ -28,6 +28,7 @@
     <PackageVersion Include="LibVLCSharp.WPF" Version="3.9.5" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.3" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.2" />
     <!--
       Microsoft.Extensions.Logging.Abstractions: Vorher 9.0.0 (Application).
