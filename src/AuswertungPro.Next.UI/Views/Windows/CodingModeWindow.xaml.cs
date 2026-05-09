@@ -2293,79 +2293,25 @@ public partial class CodingModeWindow : Window
                 SetAiStatus("Analyse-Lock gebrochen, neuer Versuch...", "#F59E0B", "Reset");
             }
         }
-        await AnalyzeCurrentFrameAsync();
-    }
 
-    private async Task AnalyzeCurrentFrameAsync()
-    {
-        if (_liveDetection == null || _player == null) return;
-        if (_isAnalyzing) return;
+        // Slice 8a.3 Step 4: Single-Frame laeuft durch die Loop-Methode mit
+        // oneShot=true. Spart Duplikation gegenueber dem alten
+        // AnalyzeCurrentFrameAsync. Readiness-Gate ist aktiv — falls der User
+        // beim ersten Klick noch im Warmup ist, gibt es eine
+        // "Dateneinblendung uebersprungen"-Meldung statt einer Analyse.
+        // Wenn UI-Smoke das als verwirrend zeigt: useReadinessGate-Flag
+        // nachruesten.
         _isAnalyzing = true;
-
         _analysisCts?.Cancel();
         _analysisCts = new CancellationTokenSource();
-
         try
         {
             BtnAnalyzeFrame.IsEnabled = false;
             TxtAnalyzeButton.Text = "Analysiere...";
-            SetAiStatus("Frame wird analysiert...", "#F59E0B", "1/3 Snapshot", busy: true);
-
-            // Zeitstempel VOR dem Capture festhalten (Capture wartet bis zu 1s)
-            var timestampSec = _player.Time / 1000.0;
-
-            // Frame aus VLC als PNG extrahieren
-            var pngBytes = await CaptureCurrentFrameAsync();
-            if (pngBytes == null || pngBytes.Length == 0)
-            {
-                SetAiStatus("Frame konnte nicht extrahiert werden", "#EF4444",
-                    $"Modell: {CompactModelName(_aiModelName)}", error: true);
-                return;
-            }
-
             SetAiStatus("Frame wird analysiert...", "#F59E0B",
-                $"2/3 Inferenz ({CompactModelName(_aiModelName)})", busy: true);
+                $"Inferenz ({CompactModelName(_aiModelName)})", busy: true);
 
-            LiveDetection result;
-
-            // Bevorzugt EnhancedVisionAnalysisService (besserer Prompt + Schema + ImageQuality-Gate)
-            if (_enhancedVision != null)
-            {
-                var b64 = Convert.ToBase64String(pngBytes);
-                var (enhanced, _) = await _enhancedVision.AnalyzeWithEscalationAsync(
-                    b64, context: null, ct: _analysisCts.Token);
-                result = AuswertungPro.Next.Application.Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, timestampSec);
-
-                // Sichtbares Panel fuer User - vorher: Result war oft nur in der Liste
-                await Dispatcher.InvokeAsync(() =>
-                {
-                    var sb = new System.Text.StringBuilder();
-                    sb.AppendLine($"Bildqualitaet: {enhanced.ImageQuality}");
-                    sb.AppendLine($"Material: {enhanced.PipeMaterial}");
-                    if (enhanced.PipeDiameterMm.HasValue)
-                        sb.AppendLine($"DN geschaetzt: {enhanced.PipeDiameterMm} mm");
-                    sb.AppendLine($"Findings: {enhanced.Findings.Count}");
-                    foreach (var f in enhanced.Findings.Take(3))
-                    {
-                        sb.AppendLine($"• {f.Label}");
-                        if (!string.IsNullOrEmpty(f.VsaCodeHint))
-                            sb.AppendLine($"  Code: {f.VsaCodeHint}  | Sev: {f.Severity}");
-                    }
-                    if (!string.IsNullOrWhiteSpace(_enhancedVision.LastPipelineWarning))
-                        sb.AppendLine($"Warnung: {_enhancedVision.LastPipelineWarning}");
-                    if (string.IsNullOrEmpty(enhanced.Error))
-                        ShowBboxResultPanel("Frame-Analyse", sb.ToString(), isError: false);
-                    else
-                        ShowBboxResultPanel("Analyse-Fehler", enhanced.Error, isError: true);
-                });
-            }
-            else
-            {
-                result = await _liveDetection!.AnalyzeFrameAsync(
-                    pngBytes, timestampSec, _analysisCts.Token);
-            }
-
-            await Dispatcher.InvokeAsync(() => ShowAiResults(result));
+            await RunLiveAnalysisAsync(_analysisCts.Token, oneShot: true);
         }
         catch (OperationCanceledException)
         {
@@ -2385,7 +2331,10 @@ public partial class CodingModeWindow : Window
                 BtnAnalyzeFrame.IsEnabled = true;
                 TxtAnalyzeButton.Text = "Frame analysieren";
 
-                // Fertig-Meldung
+                // Fertig-Meldung (ueberschreibt evtl. Readiness-Gate-Status,
+                // wenn die Analyse durchlief). Bei Cancel/Fehler hat der
+                // catch-Block bereits eine Status-Meldung gesetzt — die
+                // bleibt sichtbar, bis SetAiStatus hier sie ueberschreibt.
                 int befundCount = _vm?.Events?.Count ?? 0;
                 SetAiStatus($"Analyse beendet — {befundCount} Beobachtungen", "#22C55E",
                     "Fertig");
