@@ -1,7 +1,13 @@
 # Slice 8a Punkt 3 — Mini-ADR Frame-Readiness / Live-AI-Coding-Loop
 
 Datum: 2026-05-09
-Status: **Entwurf** — wartet auf User-Review, kein Code bevor freigegeben
+Status: **Entschieden** (User-Review 2026-05-09 22:00 lokal)
+- Q1 = C (VM-Owner)
+- Q2 = C (Hybrid)
+- Q3 = A (Loop-CTS)
+- Q5-Verteilung: zugestimmt
+- Schritt 1 in 1a/1b/(1c optional) verfeinert (siehe Migrations-Schnitt)
+- Smoke-Test-Gates: nach Schritt 4 + vor Schritt 5
 Vorgeschichte:
 - Konsolidierungs-ADR: `2026-05-09-slice-8a-coding-mode-konsolidierung.md` (Option B.1)
 - Audit-Diff: `2026-05-09-slice-8a-1-audit-diff.md`
@@ -186,28 +192,60 @@ Pipeline, die testbar wird.
 
 ## Resultierender Migrations-Schnitt (kein Code, nur Liste)
 
-Wenn diese ADR genehmigt wird, würde der eigentliche Slice 8a.3
-in dieser Reihenfolge laufen:
+Slice 8a.3 läuft in dieser Reihenfolge:
 
-1. **`IOsdMeterReader`-Service** mit Implementierung (heutige
-   `CodingReadOsdMeterAsync`-Logik). API + Test-Mock.
+### Schritt 1 — OSD-Parsing extrahieren (in drei Mini-Schritten)
+
+- **1a. Pure Parsing-/Mapping-Logik extrahieren.** Neuer `OsdMeterParser`
+  in der Application-Schicht: `TryParse(string rawText)` → `double?`.
+  Kapselt nur die heutige inline-Regex (`(\d{1,3}(?:\.\d{1,2})?)`) +
+  Komma→Punkt-Normalisierung + Plausibilitäts-Range (0–500m).
+  KEINE Ollama-, KEINE VLC-, KEINE XAML-Abhängigkeit. Stateless,
+  rein synchron, voll Unit-test-bar.
+- **1b. Caller umstellen.** `CodingReadOsdMeterAsync` in
+  `PlayerWindow.CodingMode.cs` ersetzt die inline-Regex-Logik durch
+  einen Aufruf von `OsdMeterParser.TryParse(...)`. Verhalten
+  unverändert; einziges Resultat: die deterministische Schicht ist
+  testbar separiert.
+- **1c (optional, wahrscheinlich nicht nötig).** Falls sich später
+  zeigt, dass die volle I/O-Pipeline (Snapshot → Vision → Parse) als
+  Service gebraucht wird, kommt dann ein `IOsdMeterReader`. Heute
+  reicht der Parser plus eine Window-Methode, die Snapshot + Vision
+  inline orchestriert.
+
+### Schritte 2–6
+
 2. **VM-API für Frame-Readiness:** `IsFrameReady`-Property,
    `RecordFrame(LiveDetection)`-Methode, `ResetFrameReadiness`-
    Methode auf `CodingSessionViewModel`. Felder + Enum mitnehmen.
-3. **CodingModeWindow.LiveLoop.cs**-Partial mit
+3. **`CodingModeWindow.LiveLoop.cs`**-Partial mit
    `RunLiveAnalysisAsync` (Loop-Methode aus PlayerWindow portiert
    und auf VM-API umgebogen). Loop-CTS aus Q3.
 4. **Single-Frame-Pfad anpassen:** existierender
    `BtnAnalyzeFrame_Click` ruft die Loop-Methode mit `oneShot=true`-
    Parameter — gleicher Pfad, eine Iteration.
+   → **UI-Smoke-Test fällig** (siehe unten).
 5. **PlayerWindow-Pendant löschen:** `RunCodingAnalysisAsync`,
    Frame-Readiness-Methoden, OSD-Reader, alle 5 Felder. Bridge-
    Methoden umbiegen (`TrySeekTo` etc.).
+   → **UI-Smoke-Test fällig vor diesem Schritt** (siehe unten).
 6. **Pause-Confirm-Workflow** als separater Sub-Slice nach
    Stabilisierung — eigenes Mini-ADR.
 
-Pro Schritt: Build + Test, ein Commit. Schritt 5 ist der riskanteste
-und kann erst, wenn Schritte 1–4 stabil mit Smoke-Test laufen.
+### Verifikation pro Schritt
+
+- **1a, 1b, 2, 3:** Build + Tests reichen (deterministisches Refactor,
+  keine User-sichtbare UI-Änderung).
+- **4:** **UI-Smoke-Test fällig** — Single-Frame-Pfad läuft jetzt
+  über die neue Loop-Methode. User klickt einmal auf "Analyse" und
+  prüft: Status-Anzeige, Result-Panel, AI-Overlay erscheinen wie
+  vorher.
+- **5:** **UI-Smoke-Test fällig BEVOR PlayerWindow gelöscht wird** —
+  Test der vollständigen Live-Coding-Session: Session starten, durchs
+  Video navigieren, KI feuert mehrere Frames, Akzept/Edit/Reject
+  funktioniert, Session abschließen erzeugt Protokoll.
+- **6:** Eigene ADR + eigener Smoke-Test, weil Pause-Confirm ein
+  separater Workflow ist.
 
 ## Was nicht in diese ADR gehört
 
@@ -217,11 +255,21 @@ und kann erst, wenn Schritte 1–4 stabil mit Smoke-Test laufen.
 - **PlayerWindow.Coding\*-Löschung.** Slice 8a.7 laut Konsolidierungs-
   ADR.
 
-## Offene Punkte für Dich (Reviewer)
+## Entscheidungs-Protokoll
 
-1. Stimmst Du den Empfehlungen Q1=C, Q2=C, Q3=A, Q5-Verteilung zu?
-2. Reicht der Schnitt aus 1–6 oder soll Schritt 1 selbst nochmal
-   feiner geschnitten werden (z.B. `IOsdMeterReader` ohne Ollama
-   zuerst, dann mit)?
-3. Ist Smoke-Test nach Schritt 4 ausreichend oder willst Du nach
-   jedem Schritt einen UI-Check?
+User-Review am 2026-05-09 ~22:00 lokal:
+
+1. **Q1=C, Q2=C, Q3=A, Q5-Verteilung:** zugestimmt. Begründung des
+   Users: "bester Kompromiss: Session-/Readiness-State ins ViewModel,
+   Capture nah am Window, AI-Aufruf im bestehenden Service,
+   Orchestrierung erstmal als Window-Partial. Hält den Slice machbar,
+   ohne sofort alles neu zu erfinden."
+2. **Schritt 1 wird in 1a/1b/(1c optional) verfeinert.** 1a kapselt
+   nur die deterministische Pixel-zu-Meter-Parsing-Logik ohne neue
+   Ollama-/AI-Abhängigkeit. 1c bleibt offen für den Fall, dass eine
+   echte I/O-Service-Schicht später nötig wird.
+3. **Smoke-Test-Gates:** nach Schritt 4 (Single-Frame über neue Loop)
+   und vor Schritt 5 (PlayerWindow-Löschung). Alle anderen Schritte
+   nur Build + Tests.
+
+Slice 8a.3 ist freigegeben und startet mit Schritt 1a.
