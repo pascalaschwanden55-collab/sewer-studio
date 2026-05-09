@@ -24,6 +24,7 @@ public sealed class PythonSidecarService : IDisposable
     private readonly string _sidecarDir;
     private readonly string _host;
     private readonly int _port;
+    private readonly IHttpClientFactory? _httpFactory;
     private Process? _process;
     private bool _ownsProcess;
     private bool _disposed;
@@ -72,12 +73,18 @@ public sealed class PythonSidecarService : IDisposable
         string.Equals(Environment.GetEnvironmentVariable("SEWER_SIDECAR_AUTH"),
                       "disabled", StringComparison.OrdinalIgnoreCase);
 
-    public PythonSidecarService(ILogger logger, string sidecarDir, string host = "127.0.0.1", int port = 8100)
+    public PythonSidecarService(
+        ILogger logger,
+        string sidecarDir,
+        string host = "127.0.0.1",
+        int port = 8100,
+        IHttpClientFactory? httpFactory = null)
     {
         _log = logger;
         _sidecarDir = sidecarDir;
         _host = host;
         _port = port;
+        _httpFactory = httpFactory;
 
         if (AuthDisabled)
         {
@@ -323,7 +330,11 @@ public sealed class PythonSidecarService : IDisposable
 
     private async Task<bool> IsHealthyAsync(CancellationToken ct)
     {
-        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+        // Slice 3b: Named HttpClient via Factory wenn verfuegbar — verhindert
+        // Socket-Exhaustion bei haeufigem Polling. Fallback auf new HttpClient
+        // fuer Konstruktoren ohne Factory (Tests, Legacy-Pfade).
+        var http = _httpFactory?.CreateClient("sidecar-health")
+            ?? new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
         var healthUrl = $"http://{_host}:{_port}/health";
 
         try
@@ -334,6 +345,11 @@ public sealed class PythonSidecarService : IDisposable
         catch
         {
             return false;
+        }
+        finally
+        {
+            // Nur disposen wenn wir den Client selbst gebaut haben.
+            if (_httpFactory is null) http.Dispose();
         }
     }
 
@@ -452,9 +468,11 @@ public sealed class PythonSidecarService : IDisposable
     private bool TryRequestGracefulShutdown(out bool responded)
     {
         responded = false;
+        // Slice 3b: Named HttpClient via Factory; Fallback auf new HttpClient.
+        var http = _httpFactory?.CreateClient("sidecar-shutdown")
+            ?? new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
         try
         {
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
             using var req = new HttpRequestMessage(HttpMethod.Post,
                 $"http://{_host}:{_port}/shutdown");
             if (!AuthDisabled && !string.IsNullOrEmpty(AuthToken))
@@ -468,6 +486,10 @@ public sealed class PythonSidecarService : IDisposable
         {
             // Sidecar antwortet nicht — Caller faellt auf Kill zurueck.
             return false;
+        }
+        finally
+        {
+            if (_httpFactory is null) http.Dispose();
         }
     }
 }

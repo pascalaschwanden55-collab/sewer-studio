@@ -29,7 +29,8 @@ internal static class AiPipelineModule
     /// </summary>
     public static PythonSidecarService CreateSidecar(
         PipelineConfig pipelineCfg,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        IHttpClientFactory? httpFactory = null)
     {
         // Sidecar-Pfad: zuerst 5 Ebenen ueber AppContext.BaseDirectory (Repo-Root in Dev),
         // dann Fallback auf BaseDirectory/sidecar (Deploy-Layout).
@@ -41,7 +42,8 @@ internal static class AiPipelineModule
             loggerFactory.CreateLogger<PythonSidecarService>(),
             Path.GetFullPath(sidecarDir),
             pipelineCfg.SidecarUrl.Host,
-            pipelineCfg.SidecarUrl.Port);
+            pipelineCfg.SidecarUrl.Port,
+            httpFactory);
     }
 
     /// <summary>

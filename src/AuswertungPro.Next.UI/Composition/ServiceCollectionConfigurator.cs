@@ -153,7 +153,8 @@ public static class ServiceCollectionConfigurator
         // Sidecar (YOLO/DINO/SAM) — wird in App.OnStartup async gestartet
         services.AddSingleton(sp => AiPipelineModule.CreateSidecar(
             sp.GetRequiredService<PipelineConfig>(),
-            sp.GetRequiredService<ILoggerFactory>()));
+            sp.GetRequiredService<ILoggerFactory>(),
+            sp.GetRequiredService<System.Net.Http.IHttpClientFactory>()));
 
         // VSA-Code-Katalog (XML aus VsaCatalogResolver oder JSON-Fallback)
         services.AddSingleton<ICodeCatalogProvider>(sp =>
