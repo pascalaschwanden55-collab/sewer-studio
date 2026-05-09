@@ -198,6 +198,13 @@ public partial class PlayerWindow
         {
             _haltungRecord.Protocol = codingWindow.CompletedProtocol;
             _haltungRecord.ModifiedAtUtc = DateTime.UtcNow;
+            // Slice 8a.3 Step 4.5b: Primaere_Schaeden-Feld aus dem
+            // neuen Protokoll synchronisieren — sonst zeigt das DataGrid
+            // weiter den alten Stand. SyncCodingToPrimaryDamages lebt
+            // in PlayerWindow.ImportProtocol.cs und ist nicht Teil des
+            // alten Coding-Mode-Blocks, kann also stehen bleiben wenn
+            // Step 5 PlayerWindow.Coding* loescht.
+            SyncCodingToPrimaryDamages(codingWindow.CompletedProtocol);
             var entryCount = codingWindow.CompletedProtocol.Current?.Entries?.Count ?? 0;
             ShowOverlay(
                 $"Codierung uebernommen ({entryCount} Eintraege)",
