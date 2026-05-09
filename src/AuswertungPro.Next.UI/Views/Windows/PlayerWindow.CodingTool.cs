@@ -551,28 +551,17 @@ public partial class PlayerWindow
         var p1 = CodingNormToPixel(start);
         var p2 = CodingNormToPixel(end);
         double pixelDiameter = Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
+        int dn = _codingOverlayService.Calibration?.NominalDiameterMm ?? 300;
 
-        if (pixelDiameter < 10)
+        // Math + State-Mutation laufen jetzt im Service (Slice 8a.2.10).
+        var cal = _codingOverlayService.ApplyManualCalibration(start, end, pixelDiameter, dn);
+        if (cal == null)
         {
             TxtCodingCalibHint.Text = "Linie zu kurz - bitte nochmal";
             _codingCalibStart = null;
             return;
         }
 
-        var center = new NormalizedPoint((start.X + end.X) / 2, (start.Y + end.Y) / 2);
-        double dx = end.X - start.X, dy = end.Y - start.Y;
-        double normDiameter = Math.Sqrt(dx * dx + dy * dy);
-        int dn = _codingOverlayService.Calibration?.NominalDiameterMm ?? 300;
-
-        var cal = new PipeCalibration
-        {
-            NominalDiameterMm = dn,
-            PipePixelDiameter = pixelDiameter,
-            NormalizedDiameter = normDiameter,
-            PipeCenter = center,
-            WasManuallyCalibrated = true
-        };
-        _codingOverlayService.SetCalibration(cal);
         _codingSchemaManager.Active?.ApplyCalibration(cal);
 
         TxtCodingCalibStatus.Text = $"Kalibriert: {cal.MmPerNormUnit:F1} mm/norm";
