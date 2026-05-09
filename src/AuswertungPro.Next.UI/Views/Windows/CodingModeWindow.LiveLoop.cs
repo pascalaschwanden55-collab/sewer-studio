@@ -1,0 +1,124 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Vision;
+
+namespace AuswertungPro.Next.UI.Views.Windows;
+
+// Slice 8a.3 Step 3: Loop-Orchestrator als CodingModeWindow-Partial.
+//
+// Diese Datei fuegt einen neuen, additiven Code-Pfad hinzu: die
+// Live-Coding-Loop, die im PlayerWindow heute als RunCodingAnalysisAsync
+// existiert. Sie fuetterte Frame fuer Frame durch Capture → Vision →
+// Render. Hier wandert sie ans CodingModeWindow und nutzt die in Step 2a
+// migrierte Frame-Readiness-API (VM-Owner).
+//
+// Step 3 ist BEWUSST additiv: kein bestehender Caller wird umgebogen.
+// Die Methode existiert, wird aber noch nicht aufgerufen. Step 4 leitet
+// dann den Single-Frame-Pfad (BtnAnalyzeFrame_Click) ueber RunLiveAnalysis-
+// Async mit oneShot=true. Step 5 entfernt PlayerWindow-Pendant.
+//
+// Pipeline-Variante: Hier wird die einfache Qwen-/EnhancedVision-Pfad
+// genutzt (wie der heutige AnalyzeCurrentFrameAsync). Die YOLO-first/
+// SAM/Multi-Model-Eskalation aus PlayerWindow bleibt fuer eine spaetere
+// Iteration. Verhalten: identisch zum heutigen Single-Frame-Pfad,
+// nur in einer Schleife mit Frame-Readiness-Gate davor.
+public partial class CodingModeWindow
+{
+    /// <summary>
+    /// Live-Coding-Loop: capture → vision → readiness-gate → render,
+    /// in Endlosschleife bis CancellationToken signalisiert.
+    /// Mit oneShot=true wird nach genau einer Iteration zurueckgekehrt
+    /// (fuer den Single-Frame-Pfad in Step 4).
+    /// </summary>
+    /// <param name="ct">Loop-CTS aus dem Caller (Q3 aus Mini-ADR: eine
+    /// Loop-CTS pro Coding-Session). Cancel beendet die Schleife sauber.</param>
+    /// <param name="oneShot">true → nach erster Iteration return.</param>
+    private async Task RunLiveAnalysisAsync(CancellationToken ct, bool oneShot = false)
+    {
+        if (_liveDetection == null || _player == null) return;
+
+        // Cadence zwischen Frames in Millisekunden. ~2.5s entspricht der
+        // typischen Qwen-3-VL-8B-Q8-Inferenzzeit; gibt der State-Maschine
+        // Zeit, OSD-Meter zu bestaetigen ohne CPU/GPU zu pruegeln.
+        const int LoopDelayMs = 2500;
+        const int RetryDelayMs = 1500; // wenn Capture fehlschlaegt
+
+        do
+        {
+            if (ct.IsCancellationRequested) break;
+
+            // ── Capture ──
+            var pngBytes = await CaptureCurrentFrameAsync();
+            if (pngBytes == null || pngBytes.Length == 0)
+            {
+                if (oneShot) return;
+                try { await Task.Delay(RetryDelayMs, ct); } catch (OperationCanceledException) { return; }
+                continue;
+            }
+
+            // ── Vision ──
+            var timestampSec = _player.Time / 1000.0;
+            LiveDetection result;
+            try
+            {
+                if (_enhancedVision != null)
+                {
+                    var b64 = Convert.ToBase64String(pngBytes);
+                    var (enhanced, _) = await _enhancedVision.AnalyzeWithEscalationAsync(
+                        b64, context: null, ct: ct);
+                    result = LiveDetectionMapper.FromEnhancedAnalysis(enhanced, timestampSec);
+                }
+                else
+                {
+                    result = await _liveDetection.AnalyzeFrameAsync(pngBytes, timestampSec, ct);
+                }
+            }
+            catch (OperationCanceledException) { return; }
+            catch (Exception ex)
+            {
+                await Dispatcher.InvokeAsync(() =>
+                    SetAiStatus($"Fehler: {ex.Message}", "#EF4444",
+                        $"Modell: {CompactModelName(_aiModelName)}", error: true));
+                if (oneShot) return;
+                try { await Task.Delay(RetryDelayMs, ct); } catch (OperationCanceledException) { return; }
+                continue;
+            }
+
+            // ── Frame-Readiness Gate (VM-API aus Step 2a) ──
+            _vm.RecordFrame(result);
+            if (!_vm.IsFrameReady)
+            {
+                if (result.Findings.Count > 0)
+                    _vm.PendingWarmupResult = result;
+
+                await Dispatcher.InvokeAsync(() =>
+                    SetAiStatus("Dateneinblendung — uebersprungen",
+                        "#94A3B8",
+                        $"Warte auf Videobild... (Bild {_vm.OsdSkippedFrames} von 3)"));
+
+                if (oneShot) return;
+                try { await Task.Delay(RetryDelayMs, ct); } catch (OperationCanceledException) { return; }
+                continue;
+            }
+
+            // ── Warmup-Puffer einarbeiten (erste Ready-Transition) ──
+            if (_vm.PendingWarmupResult != null)
+            {
+                var buffered = _vm.PendingWarmupResult;
+                _vm.PendingWarmupResult = null;
+                if (result.Findings.Count == 0 && buffered.Findings.Count > 0)
+                    result = buffered;
+            }
+
+            // ── Render ──
+            await Dispatcher.InvokeAsync(() => ShowAiResults(result));
+
+            if (oneShot) return;
+            try { await Task.Delay(LoopDelayMs, ct); } catch (OperationCanceledException) { return; }
+        }
+        while (!ct.IsCancellationRequested);
+    }
+}
