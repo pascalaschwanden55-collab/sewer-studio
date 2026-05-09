@@ -20,7 +20,7 @@ public class OsdMeterParserTests
     [InlineData("14.98", 14.98)]
     [InlineData("123", 123.0)]
     [InlineData("123.45", 123.45)]
-    public void TryParse_AccepteableNumber_ReturnsValue(string input, double expected)
+    public void TryParse_AcceptableNumber_ReturnsValue(string input, double expected)
     {
         var result = _parser.TryParse(input);
         Assert.NotNull(result);
