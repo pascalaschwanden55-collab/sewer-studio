@@ -819,6 +819,7 @@ public partial class CodingModeWindow : Window
             [OverlayToolType.Ruler]     = line,
             [OverlayToolType.Arc]       = new Preview.ArcPreviewRenderer(),
             [OverlayToolType.Point]     = new Preview.PointPreviewRenderer(),
+            [OverlayToolType.Level]     = new Preview.LevelPreviewRenderer(),
         };
     }
 
@@ -847,83 +848,6 @@ public partial class CodingModeWindow : Window
 
         switch (_overlayService.ActiveTool)
         {
-            case OverlayToolType.Level:
-                var levelStroke = _overlayService.ActiveLevelMode switch
-                {
-                    LevelMode.Water => Brushes.RoyalBlue,
-                    LevelMode.Obstacle => Brushes.Crimson,
-                    _ => Brushes.Chocolate
-                };
-                double levelY = p2.Y;
-
-                // Fuellflaeche mit Rohr-Ellipsen-Clip (nicht ueber den Kreis hinaus)
-                var prevCalib = _overlayService.Calibration;
-                var prevCenter = prevCalib?.PipeCenter ?? new NormalizedPoint(0.5, 0.5);
-                double prevR = (prevCalib?.NormalizedDiameter ?? 0.7) / 2.0;
-                var prevCenterPx = NormalizedToPixel(prevCenter);
-                double prevRxPx = prevR * OverlayCanvas.ActualWidth;
-                double prevRyPx = prevR * OverlayCanvas.ActualHeight;
-
-                double previewTop = _overlayService.ActiveLevelMode == LevelMode.Obstacle
-                    ? (prevCenterPx.Y - prevRyPx) : levelY;
-                double previewBottom = _overlayService.ActiveLevelMode == LevelMode.Obstacle
-                    ? levelY : (prevCenterPx.Y + prevRyPx);
-                var previewFill = new Rectangle
-                {
-                    Width = prevRxPx * 2,
-                    Height = Math.Abs(previewBottom - previewTop),
-                    Fill = new SolidColorBrush(Color.FromArgb(38,
-                        ((SolidColorBrush)levelStroke).Color.R,
-                        ((SolidColorBrush)levelStroke).Color.G,
-                        ((SolidColorBrush)levelStroke).Color.B)),
-                    Tag = OverlayTagPreview,
-                    Clip = new EllipseGeometry(
-                        new Point(prevRxPx, prevCenterPx.Y - Math.Min(previewTop, previewBottom)),
-                        prevRxPx, prevRyPx)
-                };
-                Canvas.SetLeft(previewFill, prevCenterPx.X - prevRxPx);
-                Canvas.SetTop(previewFill, Math.Min(previewTop, previewBottom));
-                OverlayCanvas.Children.Add(previewFill);
-
-                OverlayCanvas.Children.Add(new Line
-                {
-                    X1 = p1.X,
-                    Y1 = levelY,
-                    X2 = p2.X,
-                    Y2 = levelY,
-                    Stroke = levelStroke,
-                    StrokeThickness = 2.5,
-                    StrokeDashArray = new DoubleCollection { 6, 3 },
-                    Tag = OverlayTagPreview
-                });
-
-                if (_vm.CurrentOverlay?.ToolType == OverlayToolType.Level)
-                {
-                    var mode = _overlayService.ActiveLevelMode switch
-                    {
-                        LevelMode.Water => "Wasser",
-                        LevelMode.Obstacle => "Hindernis",
-                        _ => "Ablagerung"
-                    };
-                    var text = _vm.CurrentOverlay.FillPercent.HasValue
-                        ? $"{mode}: {_vm.CurrentOverlay.FillPercent:F1}%"
-                        : $"{mode}: ...";
-                    var label = new TextBlock
-                    {
-                        Text = text,
-                        Foreground = Brushes.White,
-                        FontSize = 11,
-                        FontWeight = FontWeights.SemiBold,
-                        Background = new SolidColorBrush(Color.FromArgb(180, 0, 0, 0)),
-                        Padding = new Thickness(4, 2, 4, 2),
-                        Tag = OverlayTagPreview
-                    };
-                    Canvas.SetLeft(label, (p1.X + p2.X) / 2 + 6);
-                    Canvas.SetTop(label, levelY - 16);
-                    OverlayCanvas.Children.Add(label);
-                }
-                break;
-
             case OverlayToolType.Ellipse:
                 var ellipsePreview = new System.Windows.Shapes.Ellipse
                 {
