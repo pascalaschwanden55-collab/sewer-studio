@@ -2180,9 +2180,17 @@ public partial class CodingModeWindow : Window
 
     private async void OnSessionCompleted(object? sender, ProtocolDocument doc)
     {
-        // Fotos fuer Rohranfang/Rohrende generieren
-        var holdingDir = _haltung?.GetFieldValue("Link");
+        // Fotos fuer Rohranfang/Rohrende generieren.
+        // Slice 8a.3 Step 4.5a: "Link" im HaltungRecord zeigt auf den
+        // Videopfad (siehe PlayerWindow._videoPath, ResolveExistingPath in
+        // DataPageViewModel.MediaProtocol). Vorher wurde der Pfad direkt
+        // als holdingDir benutzt, was Directory.Exists immer false machte
+        // → Boundary-Fotos wurden nie generiert. Jetzt: Verzeichnis aus
+        // dem Videopfad ableiten.
         var videoPath = _vm.VideoPath;
+        var holdingDir = !string.IsNullOrWhiteSpace(videoPath)
+            ? System.IO.Path.GetDirectoryName(videoPath)
+            : null;
         if (!string.IsNullOrWhiteSpace(holdingDir) && System.IO.Directory.Exists(holdingDir)
             && !string.IsNullOrWhiteSpace(videoPath))
         {
