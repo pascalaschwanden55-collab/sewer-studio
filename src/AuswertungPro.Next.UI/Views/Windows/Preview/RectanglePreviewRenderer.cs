@@ -1,10 +1,7 @@
 using System;
-using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
-
-using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Views.Windows.Preview;
 
@@ -13,8 +10,6 @@ namespace AuswertungPro.Next.UI.Views.Windows.Preview;
 // Pilot fuer das Strategy-Pattern (Slice 8a.2.11 Step 2).
 internal sealed class RectanglePreviewRenderer : IPreviewToolRenderer
 {
-    public OverlayToolType ToolType => OverlayToolType.Rectangle;
-
     public void Render(PreviewRenderContext ctx)
     {
         var p1 = ctx.ToPixel(ctx.Start);

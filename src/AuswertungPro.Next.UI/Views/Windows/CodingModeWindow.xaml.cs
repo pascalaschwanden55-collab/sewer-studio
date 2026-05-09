@@ -806,10 +806,19 @@ public partial class CodingModeWindow : Window
     // OverlayToolType wird hier ein IPreviewToolRenderer registriert.
     // Tools, die noch nicht migriert sind, fallen auf den Switch unten zurueck.
     private static readonly System.Collections.Generic.Dictionary<OverlayToolType, Preview.IPreviewToolRenderer> _previewRenderers
-        = new()
+        = BuildPreviewRenderers();
+
+    private static System.Collections.Generic.Dictionary<OverlayToolType, Preview.IPreviewToolRenderer> BuildPreviewRenderers()
+    {
+        var line = new Preview.LinePreviewRenderer();
+        return new()
         {
             [OverlayToolType.Rectangle] = new Preview.RectanglePreviewRenderer(),
+            [OverlayToolType.Line]      = line,
+            [OverlayToolType.Stretch]   = line,
+            [OverlayToolType.Ruler]     = line,
         };
+    }
 
     private void RenderPreview(NormalizedPoint? start, NormalizedPoint current)
     {
@@ -836,20 +845,6 @@ public partial class CodingModeWindow : Window
 
         switch (_overlayService.ActiveTool)
         {
-            case OverlayToolType.Line:
-            case OverlayToolType.Stretch:
-            case OverlayToolType.Ruler:
-                OverlayCanvas.Children.Add(new Line
-                {
-                    X1 = p1.X, Y1 = p1.Y,
-                    X2 = p2.X, Y2 = p2.Y,
-                    Stroke = Brushes.Lime,
-                    StrokeThickness = 2,
-                    StrokeDashArray = new DoubleCollection { 4, 2 },
-                    Tag = OverlayTagPreview
-                });
-                break;
-
             case OverlayToolType.Arc:
                 // Bogen-Vorschau: Linie vom Zentrum zu Start und Ende
                 var center = NormalizedToPixel(new NormalizedPoint(0.5, 0.5));

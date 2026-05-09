@@ -17,13 +17,12 @@ namespace AuswertungPro.Next.UI.Views.Windows.Preview;
 
 /// <summary>
 /// Renderer fuer die Vorschau eines bestimmten OverlayToolType-Werkzeugs
-/// waehrend der Benutzer mit der Maus zieht.
+/// waehrend der Benutzer mit der Maus zieht. Tool-Zuordnung passiert
+/// beim Registrieren im Dispatch-Dictionary, nicht ueber Property — so
+/// kann derselbe Renderer mehrere Tools bedienen (z.B. Line/Stretch/Ruler).
 /// </summary>
 internal interface IPreviewToolRenderer
 {
-    /// <summary>Welches Werkzeug bedient dieser Renderer.</summary>
-    OverlayToolType ToolType { get; }
-
     /// <summary>Zeichnet die Vorschau-Shapes mit Tag <see cref="PreviewRenderContext.PreviewTag"/>
     /// auf <see cref="PreviewRenderContext.Canvas"/>. Cleanup laeuft separat ueber Tag-Lookup.</summary>
     void Render(PreviewRenderContext ctx);
