@@ -6,6 +6,7 @@ using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Vision;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -21,6 +22,23 @@ public enum CodingScanMode
     Assist,  // KI schlaegt vor, User bestaetigt
     Fast,    // KI akzeptiert Green automatisch
     Full     // Alle Detektionen pruefen
+}
+
+/// <summary>
+/// Bereitschafts-Phasen fuer die Live-Frame-Analyse:
+/// WaitingForVideo → Warmup → Ready. Slice 8a.3 Step 2a aus
+/// PlayerWindow.CodingMode.cs migriert; Verhalten 1:1.
+/// </summary>
+public enum FrameReadiness
+{
+    /// <summary>Dateneinblendung wird vermutet, Analyse blockiert.</summary>
+    WaitingForVideo,
+
+    /// <summary>Erster Meter gesehen, warte auf Bestaetigung (2. Frame).</summary>
+    Warmup,
+
+    /// <summary>Analyse freigeschaltet, kein weiteres Gating.</summary>
+    Ready
 }
 
 /// <summary>
@@ -41,15 +59,26 @@ public enum DefectStatus
 /// </summary>
 public sealed partial class CodingSessionViewModel : ObservableObject, IDisposable
 {
-    private readonly IDialogService _dialogs = App.Resolve<IDialogService>();
+    private readonly IDialogService _dialogs;
     private readonly ICodingSessionService _sessionService;
     private readonly IOverlayToolService _overlayService;
     private bool _disposed;
 
-    public CodingSessionViewModel(ICodingSessionService sessionService, IOverlayToolService overlayService)
+    /// <summary>Konstruktor.</summary>
+    /// <param name="sessionService">Coding-Session-Service.</param>
+    /// <param name="overlayService">Overlay-Tool-Service.</param>
+    /// <param name="dialogs">Dialog-Service. Optional — wird falls null aus DI
+    /// (App.Resolve) aufgeloest, was Produktiv-Caller nicht aendert. Tests
+    /// koennen einen Stub injizieren, ohne den vollen DI-Container zu
+    /// initialisieren (Slice 8a.3 Step 2a).</param>
+    public CodingSessionViewModel(
+        ICodingSessionService sessionService,
+        IOverlayToolService overlayService,
+        IDialogService? dialogs = null)
     {
         _sessionService = sessionService;
         _overlayService = overlayService;
+        _dialogs = dialogs ?? App.Resolve<IDialogService>();
 
         _sessionService.StateChanged += OnSessionStateChanged;
         _sessionService.MeterChanged += OnSessionMeterChanged;
@@ -221,6 +250,108 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
             Events.Add(ev);
         OnPropertyChanged(nameof(EventCount));
         RefreshStatistics();
+    }
+
+    // --- Frame-Readiness (Slice 8a.3 Step 2a / ADR-Punkt 3) ---
+    //
+    // Zustandsautomat fuer "ist der Frame bereit fuer die Analyse?".
+    // Migriert 1:1 aus PlayerWindow.CodingMode.cs (FrameReadiness-Enum
+    // + 5 Felder + 3 Methoden). VM ist der Owner, weil Frame-Readiness
+    // konzeptionell Session-Phase ist (Warmup → Ready), nicht UI-Sorge.
+    //
+    // Caller-Migration (Step 2b) folgt separat.
+    //
+    // Uebergaenge (UpdateFrameReadiness/RecordFrame):
+    //   WaitingForVideo → Warmup:  erster Frame mit Meterstand
+    //   WaitingForVideo → Ready:   3 Frames ohne Meter (kein OSD)
+    //   Warmup          → Ready:   2. Frame mit Meterstand (Bestaetigung)
+    //   Warmup          → Ready:   2 Frames in Warmup ohne 2. Meter (Deadlock-Fallback)
+
+    private int _osdSkippedFrames;
+    private int _meterConfirmCount;
+
+    /// <summary>Aktuelle Bereitschafts-Phase. Setter ist privat, Mutationen
+    /// laufen ueber <see cref="RecordFrame"/> und <see cref="ResetFrameReadiness"/>.</summary>
+    public FrameReadiness FrameReadinessState { get; private set; } = FrameReadiness.WaitingForVideo;
+
+    /// <summary>Reine Bewertung: ist der Frame bereit fuer die Analyse?</summary>
+    public bool IsFrameReady => FrameReadinessState == FrameReadiness.Ready;
+
+    /// <summary>Zuletzt aus dem OSD gelesener Meterstand.
+    /// Wird vom OSD-Reader gesetzt und vom Loop konsumiert. Reset auf null
+    /// in <see cref="ResetFrameReadiness"/>.</summary>
+    public double? LastOsdMeter { get; set; }
+
+    /// <summary>Warmup-Puffer: Ergebnis aus der Warmup-Phase wird zwischen-
+    /// gespeichert und nach Transition zu Ready nachtraeglich verarbeitet.
+    /// Loop ist verantwortlich fuer Stash/Consume; Reset auf null in
+    /// <see cref="ResetFrameReadiness"/>.</summary>
+    public LiveDetection? PendingWarmupResult { get; set; }
+
+    /// <summary>Setzt den Bereitschafts-Zustand komplett zurueck (bei
+    /// Eintritt/Austritt Codier-Modus oder Session-Reopen).</summary>
+    public void ResetFrameReadiness()
+    {
+        FrameReadinessState = FrameReadiness.WaitingForVideo;
+        _osdSkippedFrames = 0;
+        _meterConfirmCount = 0;
+        LastOsdMeter = null;       // Stale Meter aus vorheriger Session verhindern
+        PendingWarmupResult = null;
+    }
+
+    /// <summary>Fuehrt einen Live-Detection-Frame durch den State-Automat.
+    /// Muss VOR dem Lesen von <see cref="IsFrameReady"/> aufgerufen werden.</summary>
+    public void RecordFrame(LiveDetection result)
+    {
+        if (FrameReadinessState == FrameReadiness.Ready)
+            return;
+
+        // NUR den aktuellen Frame-Meter verwenden, NICHT den gecachten
+        // LastOsdMeter — sonst kann ein stale Wert die Sperre umgehen.
+        bool hasMeterThisFrame = result.MeterReading.HasValue;
+
+        switch (FrameReadinessState)
+        {
+            case FrameReadiness.WaitingForVideo:
+                if (hasMeterThisFrame)
+                {
+                    // Erster Meter gesehen → Warmup
+                    FrameReadinessState = FrameReadiness.Warmup;
+                    _meterConfirmCount = 1;
+                    _osdSkippedFrames = 0;
+                }
+                else
+                {
+                    // Kein Meter → zaehlen. Nach 3 Frames: kein OSD vorhanden.
+                    _osdSkippedFrames++;
+                    if (_osdSkippedFrames >= 3)
+                        FrameReadinessState = FrameReadiness.Ready;
+                }
+                break;
+
+            case FrameReadiness.Warmup:
+                if (hasMeterThisFrame)
+                    _meterConfirmCount++;
+
+                // 2 Frames mit Meter → sofort Ready (stabiler Uebergang)
+                if (_meterConfirmCount >= 2)
+                {
+                    _meterConfirmCount = 0;
+                    FrameReadinessState = FrameReadiness.Ready;
+                }
+                else
+                {
+                    // Fallback: 2 Frames in Warmup ohne 2. Meter → Ready
+                    // (verhindert Deadlock bei OCR-Aussetzern).
+                    _osdSkippedFrames++;
+                    if (_osdSkippedFrames >= 2)
+                    {
+                        _meterConfirmCount = 0;
+                        FrameReadinessState = FrameReadiness.Ready;
+                    }
+                }
+                break;
+        }
     }
 
     // --- Aktueller Overlay (waehrend Zeichnen oder nach Abschluss) ---
