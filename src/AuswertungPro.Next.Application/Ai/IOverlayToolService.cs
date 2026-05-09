@@ -36,6 +36,22 @@ public interface IOverlayToolService
     /// <summary>Ist kalibriert?</summary>
     bool IsCalibrated { get; }
 
+    /// <summary>
+    /// Berechnet PipeCalibration aus einer manuell gezeichneten Referenzlinie
+    /// (Start/End auf Rohrdurchmesser) und setzt sie als aktive Calibration.
+    /// Liefert null wenn die Linie zu kurz ist (pixelDiameter &lt; 10) — in
+    /// dem Fall wird KEINE Calibration ueberschrieben.
+    /// </summary>
+    /// <param name="start">Startpunkt der Referenzlinie (normiert 0.0..1.0).</param>
+    /// <param name="end">Endpunkt der Referenzlinie (normiert 0.0..1.0).</param>
+    /// <param name="pixelDiameter">Distanz Start-End in tatsaechlichen Canvas-Pixeln.</param>
+    /// <param name="nominalDiameterMm">DN aus Stammdaten (oder Fallback).</param>
+    PipeCalibration? ApplyManualCalibration(
+        NormalizedPoint start,
+        NormalizedPoint end,
+        double pixelDiameter,
+        int nominalDiameterMm);
+
     // --- Zeichenoperationen (normierte Koordinaten 0.0–1.0) ---
 
     /// <summary>Zeichnung starten (MouseDown).</summary>

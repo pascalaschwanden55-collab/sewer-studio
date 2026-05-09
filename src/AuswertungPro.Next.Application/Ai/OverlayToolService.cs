@@ -74,6 +74,32 @@ public sealed partial class OverlayToolService : IOverlayToolService
     public PipeCalibration? Calibration => _calibration;
     public bool IsCalibrated => _calibration != null && _calibration.IsCalibrated;
 
+    public PipeCalibration? ApplyManualCalibration(
+        NormalizedPoint start,
+        NormalizedPoint end,
+        double pixelDiameter,
+        int nominalDiameterMm)
+    {
+        if (pixelDiameter < 10)
+            return null;
+
+        var center = new NormalizedPoint((start.X + end.X) / 2, (start.Y + end.Y) / 2);
+        double dx = end.X - start.X;
+        double dy = end.Y - start.Y;
+        double normDiameter = Math.Sqrt(dx * dx + dy * dy);
+
+        var cal = new PipeCalibration
+        {
+            NominalDiameterMm = nominalDiameterMm,
+            PipePixelDiameter = pixelDiameter,
+            NormalizedDiameter = normDiameter,
+            PipeCenter = center,
+            WasManuallyCalibrated = true
+        };
+        _calibration = cal;
+        return cal;
+    }
+
     // --- Zeichenoperationen (2-Punkt: Klick+Drag) ---
 
     public void BeginDraw(NormalizedPoint startPoint)
