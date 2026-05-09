@@ -2351,27 +2351,8 @@ public partial class CodingModeWindow : Window
         RenderAiOverlays(_currentAiOverlays);
     }
 
-    // StatusToDisplayText nach CodingModeWindow.EventList.cs migriert (Slice 8a.2.8).
-
-    /// <summary>Ereignisliste nach Meter aufsteigend sortieren + Listbox-Refresh.
-    /// Sortierung delegiert ans ViewModel; nur die ListBox-Anzeige bleibt hier.</summary>
-    private void ResortEventsByMeter()
-    {
-        if (_vm == null) return;
-
-        var selected = LstEvents.SelectedItem;
-        _vm.SortByMeter();
-
-        // ItemsSource nullen + neu setzen erzwingt ein vollstaendiges
-        // ItemContainer-Rebuild (sonst behaelt WPF teilweise alte Container-
-        // Bindings nach Clear+Add). Reine UI-Sorge, bleibt im Window.
-        LstEvents.ItemsSource = null;
-        LstEvents.ItemsSource = _vm.Events;
-        if (selected != null)
-            LstEvents.SelectedItem = selected;
-    }
-
-    // ColorizeEventListItems / FindChild<T> / UpdateStatistics nach
+    // StatusToDisplayText / ResortEventsByMeter / ColorizeEventListItems /
+    // FindChild<T> / UpdateStatistics nach
     // CodingModeWindow.EventList.cs migriert (Slice 8a.2.8).
 
     // --- Session abgeschlossen → Protokoll zurueckgeben ---

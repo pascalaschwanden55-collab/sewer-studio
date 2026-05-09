@@ -9,12 +9,11 @@ using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
-// CodingModeWindow Event-Listen-Pflege (Slice 8a.2.8): UI-Listen-Helfer
-// fuer Status-Text-Mapping, Zone-Dot/Konfidenz/Status-Icon-Einfaerbung,
-// VisualTree-FindChild und Statistik-Panel-Update. Reine UI-Update-Logik.
-//
-// ResortEventsByMeter bewusst NICHT migriert — mutiert _vm.Events direkt
-// (Clear + Add) → Session-State-Mutation, ADR-Vorrat.
+// CodingModeWindow Event-Listen-Pflege (Slice 8a.2.8 / Slice 8a.2.9):
+// UI-Listen-Helfer fuer Status-Text-Mapping, Zone-Dot/Konfidenz/Status-
+// Icon-Einfaerbung, VisualTree-FindChild, Statistik-Panel-Update und
+// Listbox-Sortierungs-Refresh. Reine UI-Update-Logik. Sortierung selbst
+// delegiert seit 8a.2.9 ans ViewModel (_vm.SortByMeter).
 public partial class CodingModeWindow
 {
     private static string StatusToDisplayText(DefectStatus status) => status switch
@@ -27,6 +26,24 @@ public partial class CodingModeWindow
         DefectStatus.Rejected         => "Abgelehnt",
         _ => ""
     };
+
+    /// <summary>Ereignisliste nach Meter aufsteigend sortieren + Listbox-Refresh.
+    /// Sortierung delegiert ans ViewModel; nur die ListBox-Anzeige bleibt hier.</summary>
+    private void ResortEventsByMeter()
+    {
+        if (_vm == null) return;
+
+        var selected = LstEvents.SelectedItem;
+        _vm.SortByMeter();
+
+        // ItemsSource nullen + neu setzen erzwingt ein vollstaendiges
+        // ItemContainer-Rebuild (sonst behaelt WPF teilweise alte Container-
+        // Bindings nach Clear+Add). Reine UI-Sorge, bleibt im Window.
+        LstEvents.ItemsSource = null;
+        LstEvents.ItemsSource = _vm.Events;
+        if (selected != null)
+            LstEvents.SelectedItem = selected;
+    }
 
     /// <summary>Zone-Dots und Konfidenz-Texte in der Event-ListBox einfaerben.</summary>
     private void ColorizeEventListItems()
