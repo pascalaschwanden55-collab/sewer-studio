@@ -182,8 +182,32 @@ public partial class PlayerWindow
             return;
         }
 
-        EnterCodingMode();
+        // Slice 8a.3 Step 4.5 Bridge: Klick auf "Codier-Modus" oeffnet
+        // jetzt CodingModeWindow als Dialog. Der alte In-Place-Pfad
+        // (EnterCodingMode + PlayerWindow.Coding*-Partials) bleibt im Code
+        // als Fallback — git-revertable wenn der Smoke etwas zeigt. Step 5
+        // entfernt ihn endgueltig.
+        _player?.SetPause(true);
+
+        var codingWindow = new CodingModeWindow(_haltungRecord, _videoPath)
+        {
+            Owner = this
+        };
+        var result = codingWindow.ShowDialog();
+        if (result == true && codingWindow.CompletedProtocol != null)
+        {
+            _haltungRecord.Protocol = codingWindow.CompletedProtocol;
+            _haltungRecord.ModifiedAtUtc = DateTime.UtcNow;
+            var entryCount = codingWindow.CompletedProtocol.Current?.Entries?.Count ?? 0;
+            ShowOverlay(
+                $"Codierung uebernommen ({entryCount} Eintraege)",
+                TimeSpan.FromSeconds(3));
+        }
     }
+
+    // EnterCodingMode + alle PlayerWindow.Coding*-Partials bleiben als
+    // Fallback im Code; werden seit 4.5 nicht mehr von der UI gerufen.
+    // Step 5 loescht den ganzen Block, sobald der UI-Smoke gruen ist.
 
     // Phase 6.1.F Sub-E: EnterCodingMode + LoadExistingProtocolEventsAsImport + ExitCodingMode nach PlayerWindow.CodingMode.cs migriert.
 
