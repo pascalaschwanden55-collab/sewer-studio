@@ -1,7 +1,7 @@
 # ADR-Skizze: Slice 8a — Coding-Mode-Konsolidierung
 
 Datum: 2026-05-09
-Status: **Diskussion** (nicht entschieden)
+Status: **In Diskussion** — Frage 1 beantwortet (DataPage-Pfad wichtig), 2+3 offen
 Branch: `feature/pdf-import-beobachtungen`
 
 ## Kontext
@@ -110,21 +110,38 @@ Components**:
 - Lange Migration (~5-8 Sprints).
 - State-Verteilung bleibt unsauber.
 
-## Empfehlung (zur Diskussion)
+## User-Antworten (2026-05-09)
 
-**Option C als Zwischenschritt, dann Option A als Endzustand.**
+**Frage 1 — DataPage-Pfad wichtig?** → **JA, sehr wichtig.**
+
+Damit ist **Option A (Konsolidierung auf PlayerWindow) ausgeschlossen** —
+wenn der DataPage → CodingModeWindow-Workflow primaer ist, darf das
+CodingModeWindow nicht ersatzlos verschwinden.
+
+Verbleibende Optionen:
+- **Option C** (Shared-Component-Layer) — Doppelpflege loesen ohne
+  Workflow-aenderung. Endzustand: beide Windows bleiben.
+- **Option B** (Konsolidierung aufs CodingModeWindow) — PlayerWindow.
+  CodingMode wird ausgehoehlt, CodingModeWindow uebernimmt allein.
+  Erfordert Antwort auf Frage 2 (Zwei-Monitor-Workflow).
+
+## Empfehlung (zur Diskussion, aktualisiert)
+
+**Option C als Endzustand.**
 
 Begruendung:
-1. **Heute** ist das groesste Risiko die Doppelpflege bei Render-Bugs.
-   Option C reduziert das Risiko ohne grosse User-aenderung.
-2. **Mittelfristig** ist Option A die saubere Loesung, wenn der User
-   bereit ist, den Workflow umzulernen — das spart wirklich Code und
-   raeumt die State-Verteilung auf.
-3. **Option B** ist nur attraktiv, wenn der Zwei-Monitor-Workflow das
-   primaere Anwendungsmuster ist. Praxis bisher: User arbeitet mit
-   einem Monitor, also ist B keine Vereinfachung sondern Komplikation.
+1. DataPage-Pfad ist primaer, also bleibt CodingModeWindow als
+   eigenstaendiges Window.
+2. PlayerWindow.CodingMode wird trotzdem genutzt (z.B. wenn User direkt
+   aus Video heraus codiert) — also bleibt auch der zweite Pfad.
+3. Doppelpflege wird durch Shared-UserControls geloest, ohne irgendeinen
+   Workflow zu brechen.
+4. Kein State-Big-Bang — inkrementell pro Sprint ein Component.
 
-## Konkrete naechste Schritte (wenn Option C gewaehlt wird)
+Option B bleibt nur dann attraktiv, wenn die Zwei-Monitor-Antwort kommt
+und PlayerWindow.CodingMode in der Praxis kaum genutzt wird.
+
+## Konkrete naechste Schritte (Option C)
 
 | Sprint | Aktion |
 |---|---|
@@ -133,18 +150,18 @@ Begruendung:
 | 3 | `CodingDefectDetailPanel` als `UserControl`. |
 | 4 | `ICodingHotkeyHandler` Service: zentrale Registrierung, beide Windows routen Tastatur-Events. |
 | 5 | `ICodingSessionState`-Interface (gemeinsamer State-Lese-Pfad). Schreibender Pfad bleibt im SessionService. |
-| 6+ | Wenn Option A entschieden: `CodingModeWindow` schrittweise leeren → loeschen. |
+| 6 | (Option-A geloescht — DataPage-Pfad bleibt erhalten.) |
 
 ## Offene Fragen fuer den User
 
-1. Ist der heutige **DataPage → CodingModeWindow**-Pfad noch wichtig? Oder
-   geht der Workflow eh meistens ueber **DataPage → Video oeffnen → Coding-
-   Mode aktivieren** (= Option A)?
-2. Wird der Zwei-Monitor-Workflow regelmaessig genutzt? Wenn ja — dann
-   ist die `Show()`-Variante des PlayerWindow auf einem zweiten Bildschirm
-   ein muss.
+1. ~~Ist der heutige **DataPage → CodingModeWindow**-Pfad noch wichtig?~~ →
+   **JA. CodingModeWindow bleibt.**
+2. Wird der **Zwei-Monitor-Workflow** regelmaessig genutzt (Player auf
+   Monitor 1, CodingModeWindow auf Monitor 2)? Falls ja, sollte
+   PlayerWindow.CodingMode-Pfad evtl. ganz weg (Option B). Falls nein,
+   bleiben beide Pfade (Option C).
 3. Welche Hotkeys sollen "winning" haben, wenn beide Windows gleichzeitig
    im Fokus konkurrieren? (Heute eher Zufall.)
 
-Sobald diese Fragen beantwortet sind, kann ein konkreter Plan (mit
+Sobald Frage 2 beantwortet ist, kann ein konkreter Plan (mit
 Slice-Aufteilung wie Slice 8a.1, 8a.2 usw.) geschrieben werden.
