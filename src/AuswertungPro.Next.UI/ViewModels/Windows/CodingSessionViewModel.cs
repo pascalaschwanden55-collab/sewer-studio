@@ -152,6 +152,77 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
 
     public ObservableCollection<CodingEvent> Events { get; } = new();
 
+    // --- Events Public-API (Slice 8a.2.9 / ADR-Punkt 4 Session-State-Besitz) ---
+    // Schreib-Zugriffe auf Events laufen ab jetzt durch diese Methoden,
+    // damit EventCount-PropertyChanged + RefreshStatistics konsistent
+    // ausgeloest werden und nicht jeder Caller die Buchhaltung selbst macht.
+
+    /// <summary>Sortiert die Events nach Meter aufsteigend, dann nach Videozeit (in-place).</summary>
+    public void SortByMeter()
+    {
+        var sorted = Events.OrderBy(e => e.MeterAtCapture)
+                           .ThenBy(e => e.VideoTimestamp)
+                           .ToList();
+        if (sorted.Count == Events.Count)
+        {
+            // Vergleichen ob Reihenfolge schon stimmt — dann kein No-op-Reset.
+            bool sameOrder = true;
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                if (!ReferenceEquals(sorted[i], Events[i])) { sameOrder = false; break; }
+            }
+            if (sameOrder) return;
+        }
+        Events.Clear();
+        foreach (var ev in sorted)
+            Events.Add(ev);
+        OnPropertyChanged(nameof(EventCount));
+    }
+
+    /// <summary>Fuegt ein Event so ein, dass die Liste nach Meter sortiert bleibt.
+    /// Vorbedingung: Liste ist bereits nach Meter sortiert.</summary>
+    public void AddEventInOrder(CodingEvent ev)
+    {
+        int idx = 0;
+        while (idx < Events.Count && Events[idx].MeterAtCapture <= ev.MeterAtCapture)
+            idx++;
+        Events.Insert(idx, ev);
+        OnPropertyChanged(nameof(EventCount));
+        RefreshStatistics();
+    }
+
+    /// <summary>Entfernt ein Event aus der Liste. Liefert true wenn entfernt.</summary>
+    public bool RemoveEvent(CodingEvent ev)
+    {
+        var removed = Events.Remove(ev);
+        if (removed)
+        {
+            OnPropertyChanged(nameof(EventCount));
+            RefreshStatistics();
+        }
+        return removed;
+    }
+
+    /// <summary>Loescht alle Events (Session-Reset / Reload).</summary>
+    public void ClearEvents()
+    {
+        if (Events.Count == 0) return;
+        Events.Clear();
+        OnPropertyChanged(nameof(EventCount));
+        RefreshStatistics();
+    }
+
+    /// <summary>Bulk-Replace fuer Reload-Szenarien (z.B. Session reopen).
+    /// Effizienter als ClearEvents() + N x AddEventInOrder().</summary>
+    public void ReplaceAllEvents(IEnumerable<CodingEvent> events)
+    {
+        Events.Clear();
+        foreach (var ev in events)
+            Events.Add(ev);
+        OnPropertyChanged(nameof(EventCount));
+        RefreshStatistics();
+    }
+
     // --- Aktueller Overlay (waehrend Zeichnen oder nach Abschluss) ---
 
     [ObservableProperty] private OverlayGeometry? _currentOverlay;
