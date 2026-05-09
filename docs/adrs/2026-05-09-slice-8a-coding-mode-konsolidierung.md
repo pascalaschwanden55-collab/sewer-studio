@@ -1,7 +1,7 @@
 # ADR-Skizze: Slice 8a — Coding-Mode-Konsolidierung
 
 Datum: 2026-05-09
-Status: **Entschieden** — Option B (Konsolidierung aufs CodingModeWindow). PlayerWindow als eigenstaendiges Coding-Window faellt weg.
+Status: **Entschieden** — Option **B.1** (Konsolidierung aufs CodingModeWindow). PlayerWindow faellt **ganz weg** — das CodingModeWindow hat eh einen vollwertigen Video-Player eingebaut.
 Branch: `feature/pdf-import-beobachtungen`
 
 ## Kontext
@@ -194,7 +194,6 @@ Vor dem ersten Cut sollten die existierenden Slice-Patterns bestaetigt sein:
 
 ## Offene Detail-Fragen
 
-- **8a.5 — B.1 oder B.2?**: Brauchst du ein "Video-nur-anschauen"-Window
-  ohne Coding (z.B. fuer Praesentationen, Beweise, Schulungen)?
-  Wenn ja → B.2 (PlayerWindow bleibt schlank).
-  Wenn nein → B.1 (PlayerWindow ganz weg, CodingModeWindow ist alles).
+✅ **8a.5 — B.1 entschieden**: PlayerWindow geht ganz weg. CodingMode
+Window kann eh alles (Play/Pause/Stop/Speed/Scrub) — der Coding-Modus
+ist nur eine optionale Overlay-Schicht.
