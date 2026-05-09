@@ -815,20 +815,8 @@ public partial class CodingModeWindow : Window
         CalibrationHint.Visibility = Visibility.Collapsed;
     }
 
-    private NormalizedPoint PixelToNormalized(Point pixel)
-    {
-        double w = OverlayCanvas.ActualWidth;
-        double h = OverlayCanvas.ActualHeight;
-        if (w <= 0 || h <= 0) return new NormalizedPoint(0.5, 0.5);
-        return new NormalizedPoint(pixel.X / w, pixel.Y / h);
-    }
-
-    private Point NormalizedToPixel(NormalizedPoint normalized)
-    {
-        return new Point(
-            normalized.X * OverlayCanvas.ActualWidth,
-            normalized.Y * OverlayCanvas.ActualHeight);
-    }
+    // PixelToNormalized + NormalizedToPixel nach
+    // CodingModeWindow.CoordHelpers.cs migriert (Slice 8a.2.7).
 
     // --- Vorschau-Rendering ---
 
