@@ -237,7 +237,7 @@ public partial class PlayerWindow
             if (CodesMatchForDedup(ev.Entry.Code, vsaCode)
                 && Math.Abs((ev.MeterAtCapture) - meter) < 1.0)
             {
-                _codingVm.Events.RemoveAt(i);
+                _codingVm.RemoveEvent(ev);
                 _codingSessionService?.ActiveSession?.Events.Remove(ev);
                 System.Diagnostics.Debug.WriteLine(
                     $"[Sperrliste] CodingEvent entfernt: {ev.Entry.Code} @ {ev.MeterAtCapture:F1}m");
