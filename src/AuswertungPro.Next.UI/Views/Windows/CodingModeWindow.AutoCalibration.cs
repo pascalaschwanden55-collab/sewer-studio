@@ -13,11 +13,18 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 // Frame-Readiness-Gate.
 public partial class CodingModeWindow
 {
-    /// <summary>true, sobald TryAutoCalibrateOnceAsync einen Versuch
-    /// unternommen hat (auch wenn er fehlschlug). Verhindert Retry-
-    /// Schleife pro Frame; manuell darf der User trotzdem jederzeit
-    /// kalibrieren (Q5=A im Mini-ADR).</summary>
+    /// <summary>true wenn Auto-Kalibrierung erfolgreich war ODER
+    /// das Versuchs-Limit erreicht ist. Verhindert weitere Auto-Kal-
+    /// Aufrufe pro Frame; manuell darf der User trotzdem jederzeit
+    /// kalibrieren.</summary>
     private bool _calibrationAutoTried;
+
+    /// <summary>Slice 8a.6.D 2026-05-10: Anzahl bisheriger Auto-Kal-Versuche
+    /// mit gueltigem Bitmap aber Algorithmus-Failure. Vorher wurde bereits
+    /// nach dem ersten Versuch (ggf. mit defektem ersten Frame) aufgegeben.
+    /// Jetzt: bis zu MaxAutoCalibrationAttempts Versuche.</summary>
+    private int _calibrationAutoAttempts;
+    private const int MaxAutoCalibrationAttempts = 5;
 
     /// <summary>Decodiert PNG-Bytes (wie sie CaptureCurrentFrameAsync liefert)
     /// in eine BitmapSource fuer AutoCalibrationService.TryAutoCalibrate.
@@ -66,18 +73,37 @@ public partial class CodingModeWindow
         if (!_haltung.Fields.TryGetValue("DN_mm", out var dnStr) ||
             !int.TryParse(dnStr, out var dn) || dn <= 0) return;
 
-        // Markiere "versucht" sofort — auch bei spaeterem Fehlschlag,
-        // damit der naechste Frame nicht erneut die CPU-intensive
-        // Pixel-Analyse ausloest.
-        _calibrationAutoTried = true;
+        // Slice 8a.6.D (2026-05-10): Limit-Check vor dem Versuch — wenn
+        // wir das Maximum erreicht haben, geben wir auf und melden dem
+        // User. Vorher wurde nach dem ERSTEN Versuch aufgegeben, auch
+        // wenn der Frame defekt war.
+        if (_calibrationAutoAttempts >= MaxAutoCalibrationAttempts)
+        {
+            _calibrationAutoTried = true;
+            await Dispatcher.InvokeAsync(() =>
+                TxtCalibrationStatus.Text = "Auto-Kalibrierung fehlgeschlagen — bitte manuell kalibrieren");
+            return;
+        }
 
+        // Bitmap-Dekode-Failure zaehlt NICHT als Versuch — das war meist
+        // ein Capture-Problem (schwarzer Frame, defektes PNG), nicht der
+        // Algorithmus. Naechster Frame bekommt eine neue Chance.
         var bitmap = DecodePngToBitmap(pngBytes);
         if (bitmap is null) return;
 
-        var result = AutoCalibrationService.TryAutoCalibrate(bitmap, dn);
-        if (result is null) return;
+        // Echter Versuch — Algorithmus hat ein Bild bekommen.
+        _calibrationAutoAttempts++;
 
-        // SetCalibration + UI-Status atomar auf dem UI-Thread setzen.
+        var result = AutoCalibrationService.TryAutoCalibrate(bitmap, dn);
+        if (result is null)
+        {
+            // Algorithmus hat keine plausible Kante gefunden. Naechster
+            // Frame versucht erneut, bis Limit erreicht.
+            return;
+        }
+
+        // Erfolg: nicht mehr versuchen.
+        _calibrationAutoTried = true;
         await Dispatcher.InvokeAsync(() =>
         {
             _overlayService.SetCalibration(result);

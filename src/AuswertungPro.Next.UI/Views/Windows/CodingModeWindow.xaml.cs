@@ -81,6 +81,12 @@ public partial class CodingModeWindow : Window
     /// Wird beim Trainings-Export verwendet statt der grossen User-BBox.</summary>
     private Application.Ai.NormalizedBoundingBox? _lastSamTightBbox;
 
+    // Letterbox/Pillarbox-Fix (2026-05-10): Frame-Dimensionen aus dem
+    // ersten erfolgreichen Capture gecacht. ComputeVideoContentRect nutzt
+    // sie um den sichtbaren Video-Bereich (statt volles Canvas) zu berechnen.
+    private int _videoFrameWidthCache;
+    private int _videoFrameHeightCache;
+
     public CodingModeWindow(HaltungRecord haltung, string? videoPath)
     {
         InitializeComponent();
@@ -567,6 +573,13 @@ public partial class CodingModeWindow : Window
             return;
         }
 
+        // Slice 8a.6.B (2026-05-10): Bei neuer Maus-Geste alte SAM-Tight-BBox
+        // verwerfen. Verhindert dass beim Trainings-Export ein veralteter
+        // Tight-Wert von einer frueheren BBox verwendet wird, wenn der User
+        // die BBox neu zieht und SAM nicht durchlaeuft (Sidecar-down,
+        // SAM-Fehler, leere Maske).
+        _lastSamTightBbox = null;
+
         _vm.OnCanvasMouseDown(normalized);
         OverlayCanvas.CaptureMouse();
         ClearAllDrawingShapes();
@@ -710,6 +723,24 @@ public partial class CodingModeWindow : Window
             if (child is ToggleButton tb && tb != BtnCalibrate)
                 tb.IsChecked = false;
         }
+
+        // Slice 8a.6.C (2026-05-10): Wenn Frame-Cache noch leer, einen
+        // Capture im Hintergrund anstossen. Dauer ~1.5s — User braucht
+        // typischerweise mehrere Sekunden um die Referenzlinie zu ziehen,
+        // sodass der Cache beim ApplyCalibration-Aufruf gefuellt ist und
+        // ComputeSourceFramePixelDiameter den korrekten Wert liefert.
+        if (_videoFrameWidthCache <= 0 || _videoFrameHeightCache <= 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                try { await CaptureCurrentFrameAsync(); }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[CodingMode Calibrate] Pre-Capture fehlgeschlagen: {ex.Message}");
+                }
+            });
+        }
     }
 
     private void BtnCalibrate_Unchecked(object sender, RoutedEventArgs e)
@@ -722,11 +753,25 @@ public partial class CodingModeWindow : Window
 
     private void ApplyCalibration(NormalizedPoint start, NormalizedPoint end)
     {
-        // Pixel-Abstand berechnen (in tatsaechlichen Canvas-Pixeln) — Window
-        // weiss die Canvas-Groesse, Service nicht.
         var p1 = NormalizedToPixel(start);
         var p2 = NormalizedToPixel(end);
-        double pixelDiameter = Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
+
+        // Slice 8a.6.C (2026-05-10): Pixel-Diameter im Source-Frame-
+        // Koordinatensystem rechnen, nicht im Canvas. Bei Letterbox/Pillarbox
+        // war Canvas-Pixel-Distanz um den Stretch-Faktor verzerrt — Pipe-
+        // Diameter im Service stimmte nicht mit dem ueberein, was SAM/Qwen
+        // an Source-Pixeln sehen.
+        // Fallback: wenn Frame-Cache noch leer (kein Capture gelaufen),
+        // verwenden wir die Canvas-Pixel-Distanz (alter Pfad). Auto-Capture
+        // wurde im BtnCalibrate_Checked angestossen, sollte beim Loslassen
+        // der Zeichen-Linie meist gefuellt sein.
+        double pixelDiameter = ComputeSourceFramePixelDiameter(
+            start, end, _videoFrameWidthCache, _videoFrameHeightCache);
+        if (pixelDiameter <= 0)
+        {
+            pixelDiameter = Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
+        }
+
         int dn = _overlayService.Calibration?.NominalDiameterMm ?? 300;
 
         // Math + State-Mutation laufen jetzt im Service (Slice 8a.2.10).
@@ -2791,6 +2836,9 @@ public partial class CodingModeWindow : Window
                 await Dispatcher.InvokeAsync(() =>
                     ShowBboxResultPanel("SAM-Fehler", ex.Message, isError: true));
                 System.Diagnostics.Debug.WriteLine($"[CodingMode SAM] Sidecar-Fehler: {ex.Message}");
+                // Slice 8a.6.B: Stale-Reset bei SAM-HTTP-Fehler — sonst koennte
+                // beim Trainings-Export ein alter Tight-BBox-Wert verwendet werden.
+                _lastSamTightBbox = null;
 
                 // Trotzdem Qwen aufrufen, damit der User wenigstens eine Klassifikation erhaelt.
                 _ = ClassifyBboxWithQwenAsync(pngBytes,
@@ -2805,6 +2853,8 @@ public partial class CodingModeWindow : Window
                 SetStatusSafe("SAM: Keine Maske gefunden (leeres Ergebnis vom Sidecar)");
                 await Dispatcher.InvokeAsync(() =>
                     ShowBboxResultPanel("SAM: keine Maske", "Sidecar lieferte 0 Regionen.\nQwen wird trotzdem versucht...", isError: true));
+                // Slice 8a.6.B: Stale-Reset bei leerem SAM-Ergebnis.
+                _lastSamTightBbox = null;
                 _ = ClassifyBboxWithQwenAsync(pngBytes,
                     (int)Math.Round(minX), (int)Math.Round(minY),
                     (int)Math.Round(maxX), (int)Math.Round(maxY),
@@ -2830,6 +2880,13 @@ public partial class CodingModeWindow : Window
                     Width = Math.Max(0, tx2 - tx1),
                     Height = Math.Max(0, ty2 - ty1),
                 };
+            }
+            else
+            {
+                // Slice 8a.6.B: Bbox-Liste hat nicht 4 Elemente — defekte
+                // SAM-Antwort. Trotzdem Maske gerendert (siehe unten),
+                // aber Tight-BBox darf nicht von alter Geste uebernommen werden.
+                _lastSamTightBbox = null;
             }
 
             // Maske rendern - eigene, sehr deutliche Darstellung fuer manuelle BBox

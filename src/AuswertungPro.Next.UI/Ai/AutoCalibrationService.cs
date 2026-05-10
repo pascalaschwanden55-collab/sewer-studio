@@ -9,18 +9,32 @@ namespace AuswertungPro.Next.UI.Ai;
 /// Auto-Kalibrierung: Erkennt den Rohrdurchmesser aus einem Video-Frame.
 /// Scannt horizontale Zeilen nahe der Bildmitte nach Helligkeitskanten (Rohrinnenwand).
 /// Kein Sidecar noetig — reine Pixel-Analyse in C#.
+///
+/// Slice 8a.6.E (2026-05-10): Pillarbox-Erkennung. Wenn das Video als
+/// Pillarbox/Letterbox in einem anderen Container-Aspect-Ratio gerendert
+/// ist, hat der Frame schwarze Balken links/rechts. Diese Balken hatten
+/// frueher die extremen Helligkeitsgradienten an ihren Kanten geliefert
+/// — Algorithmus detektierte sie statt der echten Rohrwand. Jetzt:
+/// erkennen + ROI auf Content-Bereich beschraenken.
 /// </summary>
 public static class AutoCalibrationService
 {
     // Mindest-Gradient (Helligkeitsaenderung pro Pixel) fuer Kantenerkennung
     private const int MinGradientStrength = 25;
 
-    // Plausibilitaet: Rohrdurchmesser muss zwischen 25% und 92% der Bildbreite liegen
+    // Plausibilitaet: Rohrdurchmesser muss zwischen 25% und 92% der CONTENT-Breite liegen
     private const double MinDiameterRatio = 0.25;
     private const double MaxDiameterRatio = 0.92;
 
     // Zeilen die abgetastet werden (relativ zur Bildhoehe, 0.0-1.0)
     private static readonly double[] ScanLines = { 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70 };
+
+    // Pillarbox-Detection: Pixel <= dieser Helligkeit gilt als "schwarz" (PNG-encoded
+    // schwarze Balken sind oft 0..5; Sicherheitsabstand 15).
+    private const byte BlackThreshold = 15;
+    // Maximale Pillarbox-Breite: 35% der Bildseite. Mehr ist unrealistisch fuer
+    // typische Videos (sonst stimmt was anderes nicht).
+    private const double MaxPillarboxRatio = 0.35;
 
     /// <summary>
     /// Versucht den Rohrdurchmesser automatisch aus einem Frame zu erkennen.
@@ -40,6 +54,15 @@ public static class AutoCalibrationService
         // Frame in Graustufen-Byte-Array konvertieren
         byte[] grayPixels = ConvertToGrayscale(frame);
 
+        // Slice 8a.6.E (2026-05-10): Pillarbox-Bereiche detektieren und beim
+        // Edge-Scan ueberspringen. Sonst werden die Balken-Kanten als
+        // "Rohrwand" interpretiert.
+        var (leftPad, rightPad) = DetectPillarboxPadding(grayPixels, width, height);
+        int contentLeft = leftPad;
+        int contentRight = width - rightPad;
+        int contentWidth = contentRight - contentLeft;
+        if (contentWidth < 100) return null; // Content zu schmal — wahrscheinlich kein gueltiger Frame.
+
         // Mehrere horizontale Zeilen scannen und Rohrkanten finden
         var measurements = new System.Collections.Generic.List<(int left, int right)>();
 
@@ -48,7 +71,7 @@ public static class AutoCalibrationService
             int y = (int)(scanY * height);
             if (y < 0 || y >= height) continue;
 
-            var edges = FindPipeEdgesInRow(grayPixels, width, y);
+            var edges = FindPipeEdgesInRow(grayPixels, width, y, contentLeft, contentRight);
             if (edges.HasValue)
                 measurements.Add(edges.Value);
         }
@@ -69,13 +92,16 @@ public static class AutoCalibrationService
             .ToArray();
         double medianCenterX = centers[centers.Length / 2];
 
-        // Plausibilitaet
-        double diameterRatio = (double)medianDiameter / width;
+        // Plausibilitaet: Diameter im Verhaeltnis zur Content-Breite (nicht zur
+        // ganzen Bildbreite). Sonst wuerde Pillarbox die Ratios verfaelschen.
+        double diameterRatio = (double)medianDiameter / contentWidth;
         if (diameterRatio < MinDiameterRatio || diameterRatio > MaxDiameterRatio)
             return null;
 
-        // NormalizedDiameter: Verhaeltnis zur Bildbreite
-        double normalizedDiameter = diameterRatio;
+        // NormalizedDiameter: Verhaeltnis zur ganzen Bildbreite (im
+        // Source-Frame-Koordinatensystem, weil PipeCalibration vom
+        // ganzen Frame ausgeht).
+        double normalizedDiameter = (double)medianDiameter / width;
 
         // PipeCenter: X aus Median, Y aus der mittleren Scanline (0.50)
         double normalizedCenterX = medianCenterX / width;
@@ -94,17 +120,23 @@ public static class AutoCalibrationService
     /// <summary>
     /// Findet die linke und rechte Rohrwand-Kante in einer horizontalen Zeile.
     /// Sucht nach starken Helligkeitsgradienten (dunkel→hell = Rohrinnenwand→Rohrwand).
+    /// Slice 8a.6.E: contentLeft/contentRight begrenzen den Scan-Bereich auf
+    /// den nicht-Pillarbox-Teil.
     /// </summary>
-    private static (int left, int right)? FindPipeEdgesInRow(byte[] gray, int width, int y)
+    private static (int left, int right)? FindPipeEdgesInRow(
+        byte[] gray, int width, int y, int contentLeft, int contentRight)
     {
         int rowStart = y * width;
+        int contentMid = (contentLeft + contentRight) / 2;
+        int leftBound = Math.Max(contentLeft + 10, 1);
+        int rightBound = Math.Min(contentRight - 10, width - 2);
+        if (rightBound <= leftBound) return null;
 
         // Von links scannen: staerksten Gradient finden (dunkel→hell = Rohrwand)
         int leftEdge = -1;
         int maxLeftGrad = 0;
-        for (int x = 10; x < width / 2; x++)
+        for (int x = leftBound; x < contentMid; x++)
         {
-            // Gradient: Aenderung ueber 3 Pixel Fenster
             int grad = gray[rowStart + x + 1] - gray[rowStart + x - 1];
             if (grad > maxLeftGrad && grad > MinGradientStrength)
             {
@@ -116,9 +148,8 @@ public static class AutoCalibrationService
         // Von rechts scannen: staerksten Gradient finden
         int rightEdge = -1;
         int maxRightGrad = 0;
-        for (int x = width - 11; x > width / 2; x--)
+        for (int x = rightBound; x > contentMid; x--)
         {
-            // Gradient: diesmal negativ (hell→dunkel von rechts gesehen)
             int grad = gray[rowStart + x - 1] - gray[rowStart + x + 1];
             if (grad > maxRightGrad && grad > MinGradientStrength)
             {
@@ -131,6 +162,43 @@ public static class AutoCalibrationService
         if (rightEdge <= leftEdge + 50) return null; // Mindestbreite 50px
 
         return (leftEdge, rightEdge);
+    }
+
+    /// <summary>Pillarbox/Letterbox-Padding-Detection (Slice 8a.6.E 2026-05-10).
+    /// Tastet auf der mittleren Bild-Hoehe Pixel von links bzw. rechts ab und
+    /// liefert die Anzahl Pixel die als "schwarzer Balken" erkannt wurden.
+    /// Statisch — testbar mit synthetischen Bildern.</summary>
+    /// <returns>(leftPad, rightPad) in Pixeln. Beide 0 wenn kein Pillarbox.</returns>
+    public static (int leftPad, int rightPad) DetectPillarboxPadding(
+        byte[] gray, int width, int height)
+    {
+        if (gray == null || width <= 0 || height <= 0) return (0, 0);
+        if (gray.Length < width * height) return (0, 0);
+
+        int midY = height / 2;
+        int rowStart = midY * width;
+        int maxPad = (int)(width * MaxPillarboxRatio);
+
+        int leftPad = 0;
+        for (int x = 0; x < maxPad; x++)
+        {
+            if (gray[rowStart + x] > BlackThreshold) break;
+            leftPad = x + 1;
+        }
+
+        int rightPad = 0;
+        for (int x = width - 1; x >= width - maxPad; x--)
+        {
+            if (gray[rowStart + x] > BlackThreshold) break;
+            rightPad = (width - 1 - x) + 1;
+        }
+
+        // Sanity: wenn das Content-Fenster zu klein wird, kein Pillarbox annehmen
+        // (vermutlich ist das Bild grossteils dunkel).
+        if (width - leftPad - rightPad < width / 2)
+            return (0, 0);
+
+        return (leftPad, rightPad);
     }
 
     /// <summary>

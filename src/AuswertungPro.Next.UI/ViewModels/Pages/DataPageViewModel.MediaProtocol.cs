@@ -93,11 +93,49 @@ public sealed partial class DataPageViewModel
                     damageOverlay = new PlayerDamageOverlayData(pipeLength, markers);
             }
 
-            var window = new PlayerWindow(path, options,
-                damageOverlay: damageOverlay,
-                haltungId: record.Id.ToString(),
-                haltungRecord: record);
-            App.Resolve<IDialogService>().Show(window);
+            // Slice 8a.5 Sub-Slice 2 (2026-05-10): DataPage oeffnet direkt
+            // das CodingModeWindow statt des PlayerWindow. User-Wunsch:
+            // "Videoplayer und Codiermodus sind dasselbe Fenster" — beim Video-
+            // Oeffnen sofort im Codiermodus landen.
+            //
+            // Funktions-Delta gegenueber PlayerWindow-Pfad (kommt in spaeteren
+            // Sub-Slices zurueck):
+            // - damageOverlay (Schaden-Marker am Slider): heute weg, Codier-
+            //   modus zeigt stattdessen seine PipeGraphTimeline.
+            // - PlayerWindowOptions (HW-Decoding etc.): heute weg, Codier-
+            //   modus nutzt eigene LibVLC-Args.
+            // - haltungId-Parameter: heute weg, record.Id ist im Codiermodus
+            //   ueber den HaltungRecord verfuegbar.
+            //
+            // _ = options + damageOverlay + record.Id explizit verworfen,
+            // damit kein "unused"-Warning entsteht und die Build-Pipeline
+            // nicht meckert. Wird in Phase 8a.5.2 (DamageOverlay-Port nach
+            // CodingMode) wieder genutzt.
+            _ = options;
+            _ = damageOverlay;
+            var window = new CodingModeWindow(record, path);
+            // Slice 8a.5 Sub-Slice 2 (2026-05-10): MainWindow als Owner +
+            // ShowDialog. Top-Level-Window mit Show() bewirkte einen WPF-
+            // Mouse-Routing-Bug: BBox-Drawing auf der OverlayCanvas im
+            // Codiermodus reagierte nicht. Owner+ShowDialog stellt die gleiche
+            // Window-Hierarchie her wie der frueher PlayerWindow→CodingMode-Pfad.
+            var mainWin = System.Windows.Application.Current?.MainWindow;
+            if (mainWin != null && !ReferenceEquals(mainWin, window))
+                window.Owner = mainWin;
+            var result = window.ShowDialog();
+
+            // Bug-Fix 2026-05-10: CompletedProtocol-Synchronisation. Frueher
+            // Bridge-Pfad (PlayerWindow.CodingApply.CodingMode_Click) hat bei
+            // erfolgreichem Abschluss record.Protocol/ModifiedAtUtc gesetzt
+            // und Primaere_Schaeden gespiegelt. In der ersten Version dieses
+            // Direkt-Pfads (Sub-Slice 2) war das vergessen — Codierung wurde
+            // gespeichert aber DataPage zeigte den alten Stand.
+            if (result == true && window.CompletedProtocol != null)
+            {
+                record.Protocol = window.CompletedProtocol;
+                record.ModifiedAtUtc = DateTime.UtcNow;
+                SyncCodingToPrimaryDamages(record, window.CompletedProtocol);
+            }
         }
         catch (Exception ex)
         {
@@ -110,6 +148,55 @@ public sealed partial class DataPageViewModel
                 : $"Video konnte nicht gestartet werden:\n{ex.Message}{nativeHint}\n\nDetails gespeichert in:\n{logPath}";
             _dialogs.ShowMessage(msg, "Video", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    /// <summary>Spiegelt das Codiermodus-Protokoll auf das Primaere_Schaeden-Feld
+    /// des HaltungRecord. Logik dupliziert aus PlayerWindow.ImportProtocol.cs;
+    /// gehoert in eine eigene Application-Layer-Datei wenn der PlayerWindow-
+    /// Pfad spaeter ganz weg ist (Phase 8a.5.4).</summary>
+    private static void SyncCodingToPrimaryDamages(HaltungRecord record, ProtocolDocument doc)
+    {
+        var entries = doc.Current?.Entries?
+            .Where(e => !e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code))
+            .ToList();
+        if (entries == null || entries.Count == 0)
+        {
+            record.SetFieldValue("Primaere_Schaeden", "", FieldSource.Manual, userEdited: true);
+            record.ModifiedAtUtc = DateTime.UtcNow;
+            return;
+        }
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var lines = new List<string>();
+        foreach (var entry in entries)
+        {
+            var code = (entry.Code ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(code)) continue;
+
+            var meter = entry.MeterStart ?? entry.MeterEnd;
+            var meterKey = meter.HasValue ? meter.Value.ToString("F2") : "";
+            if (!seen.Add($"{code.ToUpperInvariant()}|{meterKey}")) continue;
+
+            var parts = new List<string>();
+            if (meter.HasValue) parts.Add($"{meter.Value:0.00}m");
+            parts.Add(code);
+            if (!string.IsNullOrWhiteSpace(entry.Beschreibung))
+                parts.Add(entry.Beschreibung.Trim().Replace("\r", "").Replace("\n", " "));
+
+            if (entry.CodeMeta?.Parameters != null)
+            {
+                if (entry.CodeMeta.Parameters.TryGetValue("vsa.q1", out var q1) && !string.IsNullOrWhiteSpace(q1))
+                    parts.Add($"Q1={q1}");
+                if (entry.CodeMeta.Parameters.TryGetValue("vsa.q2", out var q2) && !string.IsNullOrWhiteSpace(q2))
+                    parts.Add($"Q2={q2}");
+            }
+
+            lines.Add(string.Join(" ", parts));
+        }
+
+        record.SetFieldValue("Primaere_Schaeden", string.Join("\n", lines),
+            FieldSource.Manual, userEdited: true);
+        record.ModifiedAtUtc = DateTime.UtcNow;
     }
 
     private void OpenProtocol(HaltungRecord? record)
