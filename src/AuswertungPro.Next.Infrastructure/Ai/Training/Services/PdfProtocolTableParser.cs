@@ -288,7 +288,12 @@ public static partial class PdfProtocolTableParser
             var safeName = Regex.Replace(Path.GetFileNameWithoutExtension(pdfPath), @"[^\w\-]", "_");
             File.WriteAllText(Path.Combine(dir, $"{safeName}.txt"), ocrText);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // Best-effort OCR-Dump: ein Schreib-Fehler darf den Parser-Lauf
+            // nicht kippen, aber im Debug-Output sichtbar bleiben.
+            System.Diagnostics.Debug.WriteLine($"[PdfProtocolTableParser] OcrDump-Write: {ex.Message}");
+        }
     }
 
     private static readonly object _debugLogLock = new();
@@ -304,7 +309,11 @@ public static partial class PdfProtocolTableParser
             lock (_debugLogLock)
                 File.AppendAllText(file, $"{DateTime.Now:HH:mm:ss.fff} {line}{Environment.NewLine}");
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // Best-effort: DebugLog selbst rekursiv im Debug-Output statt File.
+            System.Diagnostics.Debug.WriteLine($"[PdfProtocolTableParser] DebugLog: {ex.Message}");
+        }
     }
 
     /// <summary>

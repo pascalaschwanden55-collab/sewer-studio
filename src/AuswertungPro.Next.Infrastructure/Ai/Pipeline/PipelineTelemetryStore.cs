@@ -237,7 +237,10 @@ public sealed class PipelineTelemetryStore : IDisposable
 
     public void Dispose()
     {
-        try { _conn.Close(); _conn.Dispose(); } catch { }
+        // Best-effort Cleanup: SQLite-Connection kann beim Shutdown schon
+        // disposed sein, das ist kein Loggable Failure.
+        try { _conn.Close(); _conn.Dispose(); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PipelineTelemetryStore] Dispose: {ex.Message}"); }
     }
 
     /// <summary>

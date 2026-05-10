@@ -416,7 +416,9 @@ public static partial class HoldingFolderDistributor
                     }
                     finally
                     {
-                        try { if (File.Exists(tempPdfPath)) File.Delete(tempPdfPath); } catch { }
+                        // Best-effort: temporaere Chunk-PDF, Loesch-Failure unkritisch.
+                        try { if (File.Exists(tempPdfPath)) File.Delete(tempPdfPath); }
+                        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Distribute] tempPdf-Delete: {ex.Message}"); }
                     }
                 }
             }

@@ -37,14 +37,29 @@ public static partial class HoldingFolderDistributor
 
         // Rekursiv suchen: M150/XML liegen in der Praxis oft in Unterordnern.
         // XML nicht mehr über Dateinamen filtern, da viele Exporte generische Namen haben.
-        try { sidecarFiles.AddRange(Directory.EnumerateFiles(folder, "*.xtf", SearchOption.AllDirectories)); } catch { }
-        try { sidecarFiles.AddRange(Directory.EnumerateFiles(folder, "*.m150", SearchOption.AllDirectories)); } catch { }
-        try { sidecarFiles.AddRange(Directory.EnumerateFiles(folder, "*.mdb", SearchOption.AllDirectories)); } catch { }
-        try { sidecarFiles.AddRange(Directory.EnumerateFiles(folder, "*.xml", SearchOption.AllDirectories)); } catch { }
+        // Best-effort pro Pattern: Zugriffsfehler auf einzelne Subdirs duerfen
+        // den ganzen Sidecar-Scan nicht kippen.
+        TryEnumerateSidecar(folder, "*.xtf",  sidecarFiles);
+        TryEnumerateSidecar(folder, "*.m150", sidecarFiles);
+        TryEnumerateSidecar(folder, "*.mdb",  sidecarFiles);
+        TryEnumerateSidecar(folder, "*.xml",  sidecarFiles);
 
         return sidecarFiles
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static void TryEnumerateSidecar(string folder, string pattern, List<string> sink)
+    {
+        try
+        {
+            sink.AddRange(Directory.EnumerateFiles(folder, pattern, SearchOption.AllDirectories));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[Distribute.VideoMatching] EnumerateSidecar({pattern}): {ex.Message}");
+        }
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<string>> BuildSidecarVideoLinkIndex(

@@ -147,9 +147,12 @@ public sealed partial class EnhancedVisionAnalysisService
                     {
                         SetPipelineWarning(
                             $"32B Swap fehlgeschlagen ({_referenceModel}): {ex32b.GetType().Name}: {ex32b.Message} - verwende Retry-Ergebnis");
+                        // Best-effort: PipelineFailure-Subscriber darf die
+                        // 32B-Eskalation nicht kippen, falls der Handler wirft.
                         try { PipelineFailure?.Invoke(this, new PipelineFailureEvent(
                             "32B-Eskalation", _referenceModel,
-                            ex32b.GetType().Name, ex32b.Message, DateTimeOffset.Now)); } catch { }
+                            ex32b.GetType().Name, ex32b.Message, DateTimeOffset.Now)); }
+                        catch (Exception evEx) { System.Diagnostics.Debug.WriteLine($"[Escalation] PipelineFailure-Handler: {evEx.Message}"); }
                     }
                     finally
                     {
