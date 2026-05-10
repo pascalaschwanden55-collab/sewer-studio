@@ -134,7 +134,7 @@ public partial class PhotoMeasurementWindow
         OverlayCanvas.Children.Add(sollEll); _paLayer.Add(sollEll);
 
         // Ist-Polygon
-        var pts = DeformationToolService.ComputePoints(new Point(cx, cy), baseR, _paDeformPoints);
+        var pts = DeformationToolService.ComputePoints(new Point2D(cx, cy), baseR, _paDeformPoints);
         var poly = new Polygon
         {
             Stroke = new SolidColorBrush(Color.FromArgb(220, 251, 191, 36)),
@@ -142,7 +142,7 @@ public partial class PhotoMeasurementWindow
             Fill = new SolidColorBrush(Color.FromArgb(50, 251, 191, 36)),
             IsHitTestVisible = false
         };
-        foreach (var p in pts) poly.Points.Add(p);
+        foreach (var p in pts) poly.Points.Add(p.ToWpfPoint());
         OverlayCanvas.Children.Add(poly); _paLayer.Add(poly);
 
         // Stuetzpunkte
@@ -208,9 +208,9 @@ public partial class PhotoMeasurementWindow
                 StrokeThickness = 1.4,
                 IsHitTestVisible = false
             };
-            foreach (var p in ring.RingPoints) poly.Points.Add(p);
+            foreach (var p in ring.RingPoints) poly.Points.Add(p.ToWpfPoint());
             // Schliessen
-            poly.Points.Add(ring.RingPoints[0]);
+            poly.Points.Add(ring.RingPoints[0].ToWpfPoint());
             OverlayCanvas.Children.Add(poly); _paLayer.Add(poly);
         }
     }
@@ -236,8 +236,9 @@ public partial class PhotoMeasurementWindow
         // Mondsichel
         var latRel = (_paLatDnPercent / 100.0) * _paLatScale;
         var pathData = LateralToolService.BuildSichelPathData(baseR, latRel, _paLatAngleDeg);
-        var center = LateralToolService.ComputeSichelCenter(
-            new Point(cx, cy), baseR, _paLatHour, _paLatOffsetX, _paLatOffsetY);
+        var centerP2D = LateralToolService.ComputeSichelCenter(
+            new Point2D(cx, cy), baseR, _paLatHour, _paLatOffsetX, _paLatOffsetY);
+        var center = centerP2D.ToWpfPoint();
 
         var path = new System.Windows.Shapes.Path
         {

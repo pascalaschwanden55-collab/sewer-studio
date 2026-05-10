@@ -1,5 +1,5 @@
 using System.Linq;
-using AuswertungPro.Next.UI.Ai.PhotoAssistant;
+using AuswertungPro.Next.Application.Ai.PhotoAssistant;
 using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests.PhotoAssistant;

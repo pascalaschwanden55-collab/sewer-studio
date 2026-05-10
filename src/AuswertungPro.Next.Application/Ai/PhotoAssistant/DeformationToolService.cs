@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Windows;
 
-namespace AuswertungPro.Next.UI.Ai.PhotoAssistant;
+namespace AuswertungPro.Next.Application.Ai.PhotoAssistant;
 
 /// <summary>
 /// Werkzeug "Deformation" (BAA) — 16-Punkt-Ringkreis.
@@ -56,20 +55,20 @@ public static class DeformationToolService
     /// Liefert die 16 Stuetzpunkt-Positionen in Bildraum-Koordinaten (Pixel).
     /// Index 0 = 12h (oben), 4 = 3h (rechts), 8 = 6h (unten), 12 = 9h (links).
     /// </summary>
-    public static IReadOnlyList<Point> ComputePoints(
-        Point center, double baseRadius, IReadOnlyList<double> radii)
+    public static IReadOnlyList<Point2D> ComputePoints(
+        Point2D center, double baseRadius, IReadOnlyList<double> radii)
     {
         if (radii is null) throw new ArgumentNullException(nameof(radii));
         if (radii.Count != PointCount)
             throw new ArgumentException($"Genau {PointCount} Radien erwartet, erhalten: {radii.Count}.");
 
-        var pts = new Point[PointCount];
+        var pts = new Point2D[PointCount];
         for (var i = 0; i < PointCount; i++)
         {
             // 12h = oben, also bei Winkel -90°. Im Uhrzeigersinn weiter.
             var angle = (i * 360.0 / PointCount - 90.0) * Math.PI / 180.0;
             var r = ClampRadius(radii[i]) * baseRadius;
-            pts[i] = new Point(center.X + Math.Cos(angle) * r, center.Y + Math.Sin(angle) * r);
+            pts[i] = new Point2D(center.X + Math.Cos(angle) * r, center.Y + Math.Sin(angle) * r);
         }
         return pts;
     }

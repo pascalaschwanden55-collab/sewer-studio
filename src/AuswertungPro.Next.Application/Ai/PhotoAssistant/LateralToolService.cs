@@ -1,8 +1,7 @@
 using System;
 using System.Globalization;
-using System.Windows;
 
-namespace AuswertungPro.Next.UI.Ai.PhotoAssistant;
+namespace AuswertungPro.Next.Application.Ai.PhotoAssistant;
 
 /// <summary>
 /// Werkzeug "Anschluss" (BCA) — Mondsichel-Schablone als WPF-Path.
@@ -65,8 +64,8 @@ public static class LateralToolService
     /// <summary>
     /// Berechnet die Sichel-Position (Mittelpunkt) auf dem Hauptrohr.
     /// </summary>
-    public static Point ComputeSichelCenter(
-        Point pipeCenter,
+    public static Point2D ComputeSichelCenter(
+        Point2D pipeCenter,
         double baseRadius,
         int hour,
         double latOffsetX = 0,
@@ -75,7 +74,7 @@ public static class LateralToolService
         var hourAngle = (hour * 30.0 - 90.0) * Math.PI / 180.0;
         var x = pipeCenter.X + Math.Cos(hourAngle) * 0.65 * baseRadius + latOffsetX;
         var y = pipeCenter.Y + Math.Sin(hourAngle) * 0.65 * baseRadius + latOffsetY;
-        return new Point(x, y);
+        return new Point2D(x, y);
     }
 
     /// <summary>Rotation in Grad: jede Uhrposition ist 30° Drehung.</summary>

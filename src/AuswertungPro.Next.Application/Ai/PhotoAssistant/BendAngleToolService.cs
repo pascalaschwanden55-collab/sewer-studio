@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Windows;
-using AuswertungPro.Next.Application.Ai.PhotoAssistant;
 
-namespace AuswertungPro.Next.UI.Ai.PhotoAssistant;
+namespace AuswertungPro.Next.Application.Ai.PhotoAssistant;
 
 /// <summary>
 /// Werkzeug "Bogen / Knick" (BAJ) — echte 3D-Lochkamera-Projektion eines Knickrohrs.
@@ -36,9 +34,9 @@ public static class BendAngleToolService
 
     /// <summary>Ein projizierter Ring + Achsen-Mittelpunkt + Tiefe (fuer Opazitaets-Sortierung).</summary>
     public sealed record ProjectedRing(
-        Point AxisCenterScreen,
+        Point2D AxisCenterScreen,
         double DepthAtAxis,
-        IReadOnlyList<Point> RingPoints);
+        IReadOnlyList<Point2D> RingPoints);
 
     /// <summary>
     /// Generiert die zwei Rohrstuecke als Liste projizierter Ringe.
@@ -51,7 +49,7 @@ public static class BendAngleToolService
     /// <param name="dragOffsetX">Drag-Verschiebung in Pixel.</param>
     /// <param name="dragOffsetY">Drag-Verschiebung in Pixel.</param>
     /// <param name="bendDirectionDegrees">Richtung des Knicks im XY-Bild-Plan (0=oben/12h, 90=rechts/3h, 180=unten/6h, 270=links/9h). Default 270 = links (Kompatibilitaet zur alten Hardcoded-Variante).</param>
-    public static (IReadOnlyList<ProjectedRing> Tube1, IReadOnlyList<ProjectedRing> Tube2, Point? KinkPointScreen)
+    public static (IReadOnlyList<ProjectedRing> Tube1, IReadOnlyList<ProjectedRing> Tube2, Point2D? KinkPointScreen)
         BuildProjectedRings(
             double bendAngleDegrees,
             double bendScale,
@@ -106,8 +104,8 @@ public static class BendAngleToolService
         // Knickpunkt projizieren
         var kinkProj = PinholeProjection.Project(
             kinkX, kinkY, kinkZ, focal, camDist, camYOffset, cx, cy, dragOffsetX, dragOffsetY);
-        Point? kinkScreen = kinkProj.HasValue
-            ? new Point(kinkProj.Value.sx, kinkProj.Value.sy) : null;
+        Point2D? kinkScreen = kinkProj.HasValue
+            ? new Point2D(kinkProj.Value.sx, kinkProj.Value.sy) : null;
 
         return (tube1, tube2, kinkScreen);
     }
@@ -149,7 +147,7 @@ public static class BendAngleToolService
             var axisProj = PinholeProjection.Project(
                 ax, ay, az, focal, camDist, camYOffset, cx, cy, dragOffsetX, dragOffsetY);
 
-            var ringPts = new List<Point>(RingSegments);
+            var ringPts = new List<Point2D>(RingSegments);
             for (var s = 0; s < RingSegments; s++)
             {
                 var phi = s / (double)RingSegments * 2 * Math.PI;
@@ -161,11 +159,11 @@ public static class BendAngleToolService
                 var p = PinholeProjection.Project(
                     px, py, pz, focal, camDist, camYOffset, cx, cy, dragOffsetX, dragOffsetY);
                 if (p.HasValue)
-                    ringPts.Add(new Point(p.Value.sx, p.Value.sy));
+                    ringPts.Add(new Point2D(p.Value.sx, p.Value.sy));
             }
 
             rings.Add(new ProjectedRing(
-                AxisCenterScreen: axisProj.HasValue ? new Point(axisProj.Value.sx, axisProj.Value.sy) : new Point(double.NaN, double.NaN),
+                AxisCenterScreen: axisProj.HasValue ? new Point2D(axisProj.Value.sx, axisProj.Value.sy) : new Point2D(double.NaN, double.NaN),
                 DepthAtAxis: axisProj?.depth ?? double.MaxValue,
                 RingPoints: ringPts));
         }
