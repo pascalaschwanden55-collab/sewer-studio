@@ -1,15 +1,24 @@
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
+using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
-// Slice 8a Auto-Kalibrierung-Wiring Step 1 — PNG-Decoder-Helper.
+// Slice 8a Auto-Kalibrierung-Wiring Step 1 + 2 —
+// PNG-Decoder + einmaliger Auto-Kalibrierungs-Trigger.
 // Mini-ADR: docs/adrs/2026-05-10-slice-8a-auto-kalibrierung.md
 //
-// Step 2 fuegt TryAutoCalibrateOnceAsync hinzu, Step 3 verdrahtet das
-// Ganze im LiveLoop. Step 1 liefert nur den getesteten Decoder.
+// Step 3 verdrahtet TryAutoCalibrateOnceAsync im LiveLoop nach dem
+// Frame-Readiness-Gate.
 public partial class CodingModeWindow
 {
+    /// <summary>true, sobald TryAutoCalibrateOnceAsync einen Versuch
+    /// unternommen hat (auch wenn er fehlschlug). Verhindert Retry-
+    /// Schleife pro Frame; manuell darf der User trotzdem jederzeit
+    /// kalibrieren (Q5=A im Mini-ADR).</summary>
+    private bool _calibrationAutoTried;
+
     /// <summary>Decodiert PNG-Bytes (wie sie CaptureCurrentFrameAsync liefert)
     /// in eine BitmapSource fuer AutoCalibrationService.TryAutoCalibrate.
     /// Returns null wenn pngBytes null/empty/korrupt sind — wirft nicht.</summary>
@@ -35,5 +44,44 @@ public partial class CodingModeWindow
             // Indikator hat ohne den Live-Loop zu kippen.
             return null;
         }
+    }
+
+    /// <summary>Versucht genau einmal pro Coding-Modus-Session aus dem
+    /// aktuellen Frame eine Pipe-Calibration abzuleiten. Frueh-Returns
+    /// fuer "schon kalibriert", "schon versucht", "DN fehlt", "PNG kaputt",
+    /// "Algo liefert null". Bei Erfolg wird die Calibration via
+    /// _overlayService.SetCalibration gesetzt und der Status-Text
+    /// aktualisiert.
+    ///
+    /// Hinweis: Die zurueckgelieferte PipeCalibration setzt
+    /// `WasManuallyCalibrated=true` — bestehende Eigenheit des
+    /// AutoCalibrationService (Field-Name irrefuehrend, markiert
+    /// "Calibration gueltig", nicht "User-gesetzt"). Der Wert wird
+    /// unveraendert uebernommen; Rename ist Folge-Slice falls noetig.</summary>
+    private async Task TryAutoCalibrateOnceAsync(byte[]? pngBytes)
+    {
+        if (_calibrationAutoTried) return;
+        if (_overlayService.IsCalibrated) return;
+        if (_haltung is null) return;
+        if (!_haltung.Fields.TryGetValue("DN_mm", out var dnStr) ||
+            !int.TryParse(dnStr, out var dn) || dn <= 0) return;
+
+        // Markiere "versucht" sofort — auch bei spaeterem Fehlschlag,
+        // damit der naechste Frame nicht erneut die CPU-intensive
+        // Pixel-Analyse ausloest.
+        _calibrationAutoTried = true;
+
+        var bitmap = DecodePngToBitmap(pngBytes);
+        if (bitmap is null) return;
+
+        var result = AutoCalibrationService.TryAutoCalibrate(bitmap, dn);
+        if (result is null) return;
+
+        // SetCalibration + UI-Status atomar auf dem UI-Thread setzen.
+        await Dispatcher.InvokeAsync(() =>
+        {
+            _overlayService.SetCalibration(result);
+            TxtCalibrationStatus.Text = $"Auto-kalibriert: DN {dn} mm";
+        });
     }
 }
