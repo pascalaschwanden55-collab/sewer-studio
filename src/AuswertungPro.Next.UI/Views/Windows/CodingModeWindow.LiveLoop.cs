@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Vision;
+using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -140,11 +141,79 @@ public partial class CodingModeWindow
             // ── Render ──
             await Dispatcher.InvokeAsync(() => ShowAiResults(result));
 
+            // ── Pause-Confirm-Gate (Slice 8a Pause-Confirm Step 4) ──
+            // Erstes Yellow/Red-Finding ans VM melden und auf User-Decision warten.
+            // Green-Findings werden im aktuellen Slice nicht automatisch in die
+            // Eventliste uebernommen (Auto-BCD/BCE ist im Mini-ADR ausgeklammert).
+            try
+            {
+                var consumed = await PromptConfirmIfNeededAsync(result, timestampSec, ct);
+                if (consumed && oneShot) return true;
+            }
+            catch (OperationCanceledException) { return false; }
+
             if (oneShot) return true;
             try { await Task.Delay(LoopDelayMs, ct); } catch (OperationCanceledException) { return false; }
         }
         while (!ct.IsCancellationRequested);
 
         return false;
+    }
+
+    /// <summary>Prueft die Findings auf Yellow/Red, pausiert den Player und
+    /// haelt den Loop ueber BeginConfirmationAsync auf bis der User
+    /// Akzeptieren/Bearbeiten/Verwerfen geklickt hat. Liefert true wenn ein
+    /// Finding behandelt wurde (Pause + Confirm-Roundtrip).</summary>
+    private async Task<bool> PromptConfirmIfNeededAsync(
+        LiveDetection result, double timestampSec, CancellationToken ct)
+    {
+        // Erstes Finding mit Yellow/Red-Severity finden.
+        LiveFrameFinding? hit = null;
+        bool hitIsRed = false;
+        double hitConfidence = 0;
+        foreach (var f in result.Findings)
+        {
+            var (isGreen, isYellow, isRed, conf) = EvaluateGate(f);
+            if (isGreen) continue;
+            hit = f;
+            hitIsRed = isRed;
+            hitConfidence = conf;
+            break;
+        }
+        if (hit is null) return false;
+
+        var meter = result.MeterReading ?? _vm.LastOsdMeter ?? 0.0;
+        var videoTs = TimeSpan.FromSeconds(timestampSec);
+        var ev = BuildCodingEventFromFinding(hit, meter, videoTs, hitConfidence);
+
+        // Player pausieren, BeginConfirmationAsync awaiten, dann je nach
+        // Decision Event aufnehmen oder droppen.
+        await Dispatcher.InvokeAsync(() => _player?.SetPause(true));
+
+        CodingUserDecision decision;
+        try
+        {
+            decision = await _vm.BeginConfirmationAsync(ev, hitConfidence, hitIsRed, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // Beim Cancel Loop nicht mehr resumen — Caller schliesst eh ab.
+            throw;
+        }
+
+        switch (decision)
+        {
+            case CodingUserDecision.Accepted:
+            case CodingUserDecision.AcceptedWithEdit:
+                await Dispatcher.InvokeAsync(() => _vm.AddEventInOrder(ev));
+                break;
+            case CodingUserDecision.Rejected:
+                // Sperrliste folgt in Step 5: hier nur droppen.
+                break;
+        }
+
+        // Player wieder laufen lassen.
+        await Dispatcher.InvokeAsync(() => _player?.SetPause(false));
+        return true;
     }
 }
