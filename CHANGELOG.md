@@ -4,6 +4,43 @@ Notable changes to this project. Format follows [Keep a Changelog](https://keepa
 
 ## Unreleased — branch `feature/pdf-import-beobachtungen`
 
+### Slice 8a — Pause-Confirm-Workflow (re-implementiert)
+
+Pause-Confirm-Workflow im neuen `CodingModeWindow` (alter In-Place-Pfad
+im PlayerWindow wurde in Slice 8a.3 Step 5b geloescht). Loop pausiert
+das Video bei Yellow/Red-Findings, oeffnet ein Confirmation-Panel mit
+Akzeptieren/Bearbeiten/Verwerfen-Buttons, wartet auf User-Decision.
+
+**Added:**
+
+- `CodingSessionViewModel.PauseConfirm.cs`-Partial mit zwei
+  Punkt-4-API-Bloecken: ConfirmationFlow (`BeginConfirmationAsync`,
+  `CompleteConfirmation`, `IsAwaitingUserDecision`,
+  `PendingConfirmationEvent/Confidence/IsRed`) und Sperrliste
+  (`AddRejection`, `IsRejected`, `MakeRejectionKey`, alle mit
+  Code+Label+Meter-Schluessel).
+- `CodingModeWindow.xaml`: Inline-Confirm-Panel als ZIndex=20-Overlay,
+  Visibility ans VM gebunden, Ampel-Ellipse mit DataTrigger auf
+  `PendingConfirmationIsRed`, Konfidenz-Anzeige in Prozent.
+- `CodingModeWindow.PauseConfirm.cs`: Click-Handler + statische Helper
+  `EvaluateGate` (lokale Severity-Policy bis ein echter QualityGate-
+  Service da ist) und `BuildCodingEventFromFinding`.
+- `CodingModeWindow.LiveLoop.PromptConfirmIfNeededAsync`: erstes
+  Yellow/Red-Finding ans VM melden, Player pausieren/resumen,
+  Decision-Branches (Accepted → AddEventInOrder; AcceptedWithEdit →
+  zusaetzlich LstEvents.SelectedItem + ScrollIntoView +
+  UpdateDefectDetailPanel; Rejected → echte VSA-Codes in Sperrliste,
+  AI-Fallback als One-Shot-Drop).
+- Sperrlisten-Schluessel `CODE|LABEL@MM.MM` mit zwei Tolerance-Stufen:
+  echte VSA-Codes +/-0.5m, AI-Bucket +/-0.1m.
+
+**Tests:** 27 neue Faelle (12 ConfirmationFlow + 20 Sperrliste mit
+Label-Disambiguator + AI-Tolerance). Pipeline 800 → 832.
+
+**Documentation:**
+
+- [`docs/adrs/2026-05-10-slice-8a-pause-confirm.md`](docs/adrs/2026-05-10-slice-8a-pause-confirm.md) — Mini-ADR, Status: Done.
+
 ### Slice 1 — Operateur-Annotation im Trainingsmodus
 
 End-to-End-Workflow: Haltungsordner importieren → VSA-Codes aus PDF lesen → Code anklicken → Box ziehen → SAM-Maske bestätigen → Sample landet Best-Effort in TrainingSamplesStore + KnowledgeBase + YOLO-seg-Datensatz.

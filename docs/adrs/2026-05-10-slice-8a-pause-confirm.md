@@ -1,13 +1,34 @@
 # Slice 8a Pause-Confirm-Workflow — Mini-ADR
 
 Datum: 2026-05-10
-Status: **Entschieden** (User-Review 2026-05-10 mit Korrekturen)
+Status: **Done** (UI-Smokes 1+2 durch, Slice in 8 Commits abgeschlossen)
+
+Geliefert:
+- Step 1a `17cb341` — VM ConfirmationFlow + 12 Tests
+- Step 1b `9bd5910` — VM Sperrliste + 15 Tests
+- Step 2  `9e6697f` — XAML Confirm-Panel + Click-Stubs
+- Step 3  `c162ccf` — Click-Handler-Bodies
+- Step 4  `c006ff3` — LiveLoop Pause-Confirm-Gate
+- Step 4-fix `d298718` — Edit-Affordance-Sync (LstEvents.SelectedItem +
+  ScrollIntoView + UpdateDefectDetailPanel nach AddEventInOrder)
+- Step 5  `521a104` — Sperrliste-Filter im Loop + AddRejection
+- Step 5-fix `a80c01c` — drei Schaerfungen am AI-Bucket: Label-
+  Disambiguator im Schluessel, Per-Code-Tolerance (AI 0.1m / sonst 0.5m),
+  AI-Findings nicht in Sperrliste persistieren
+
+Tests-Bilanz: +27 neue Faelle (12 ConfirmationFlow + 15→20
+Sperrliste). Pipeline 800 → 832, Gesamt 1017 PASS / 1 SKIP / 0 FAIL.
+
+User-Review-Entscheidungen 2026-05-10:
 - Q1–Q5: zugestimmt
 - Step 1 in 1a/1b geteilt (ConfirmationFlow vs. Sperrliste)
 - Gate-Quelle korrigiert: kein QualityGateResult vorhanden, lokale
   Severity-Policy fuer diesen Slice
 - UI-Smoke nach Step 4 + final nach Step 5
 - Sperrliste in-memory only, keine Persistenz
+- Edit-Affordance: Loop synchronisiert LstEvents + DefectDetailPanel
+  nach AddEventInOrder; modaler Editor oeffnet nicht automatisch
+- AI-Bucket: drei Fixes layered (Label-Key, 0.1m-Toleranz, Skip)
 Vorgeschichte:
 - Konsolidierungs-ADR: `2026-05-09-slice-8a-coding-mode-konsolidierung.md` (Option B.1)
 - Audit-Diff: `2026-05-09-slice-8a-1-audit-diff.md` (Pause-Confirm dort als kritisch markiert)
