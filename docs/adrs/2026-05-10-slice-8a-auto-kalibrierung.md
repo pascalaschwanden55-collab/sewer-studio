@@ -1,17 +1,35 @@
 # Slice 8a Auto-Kalibrierung-Wiring — Mini-ADR
 
 Datum: 2026-05-10
-Status: **Entschieden** (User-Review 2026-05-10 mit zwei Praezisierungen)
+Status: **Done** (UI-Smoke durch, Slice in 4 Commits abgeschlossen)
+
+Geliefert:
+- ADR-Finalize `34a7a5a` — Status: Entschieden + 2 Praezisierungen
+- Step 1 `953b905` — DecodePngToBitmap (internal static) + 3 Tests
+- Step 2 `a5cdf20` — TryAutoCalibrateOnceAsync mit Frueh-Returns +
+  atomarem UI-Update
+- Step 3 `a97c24b` — LiveLoop-Hook nach Warmup-Buffer und vor
+  ShowAiResults
+
+Tests-Bilanz: +3 neue Faelle (Decoder-Tests). Pipeline 832 → 835,
+Gesamt 1020 PASS / 1 SKIP / 0 FAIL.
+
+User-Review 2026-05-10:
 - Q1–Q6: zugestimmt (alle A-Empfehlungen)
 - Praezisierung 1: `WasManuallyCalibrated=true` aus
   `AutoCalibrationService.TryAutoCalibrate` ist eine **bestehende
   Eigenheit** des Services (Field-Name irrefuehrend), nicht die
-  gewuenschte Semantik dieses Slices. Wir uebernehmen die Calibration
-  unveraendert; ein Rename / Refactor des Flag-Felds ist eigener
-  Folge-Slice falls noetig.
+  gewuenschte Semantik dieses Slices. Wert unveraendert uebernommen;
+  ein Rename / Refactor des Flag-Felds ist eigener Folge-Slice falls
+  noetig.
 - Praezisierung 2: PNG-Decode-Helper als `internal static` in der
   neuen `AutoCalibration.cs`-Partial. Tests "klein und testbar" —
   nicht zu gross.
+- Nuance Smoke-Review: `_calibrationAutoTried` wird nicht gesetzt
+  wenn `DN_mm` fehlt — bewusst so, damit ein nachtraeglich befuelltes
+  DN-Feld in derselben Session doch noch eine Auto-Calibration
+  triggern kann (Dictionary-Lookup + IsCalibrated-Property sind
+  billig, echte Pixel-Analyse bleibt doppelt geblockt).
 Vorgeschichte:
 - Audit-Diff: `2026-05-09-slice-8a-1-audit-diff.md` markiert Auto-Kalibrierung
   als "wichtiges UX-Feature" (Step 5 der Migrations-Reihenfolge).

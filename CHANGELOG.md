@@ -4,6 +4,46 @@ Notable changes to this project. Format follows [Keep a Changelog](https://keepa
 
 ## Unreleased — branch `feature/pdf-import-beobachtungen`
 
+### Slice 8a — Auto-Kalibrierung-Wiring
+
+`AutoCalibrationService.TryAutoCalibrate` (172 LOC, Pixel-Scan-Algorithmus,
+existiert seit langem) wird jetzt im neuen `CodingModeWindow` automatisch
+beim ersten Ready-Frame ausgeloest — vorher startete jede Coding-Modus-
+Session unkalibriert und der User musste die Referenz-Linie manuell
+ziehen.
+
+**Added:**
+
+- `CodingModeWindow.AutoCalibration.cs`-Partial mit zwei Bausteinen:
+  - `internal static DecodePngToBitmap(byte[]?)` — PNG → BitmapSource
+    mit Null-/Korrupt-Schutz (returnt null statt zu werfen).
+  - `private async Task TryAutoCalibrateOnceAsync(byte[]? pngBytes)`
+    mit Frueh-Returns (schon kalibriert, schon versucht, kein
+    `DN_mm` in den Stammdaten, korruptes PNG, Algo liefert null) und
+    atomarem UI-Update auf dem Dispatcher-Thread.
+- LiveLoop-Hook in `CodingModeWindow.LiveLoop.RunLiveAnalysisAsync`:
+  einzeiliger `await TryAutoCalibrateOnceAsync(pngBytes)`-Call nach
+  Warmup-Puffer und vor ShowAiResults.
+
+**Behavior:**
+
+- Bei Erfolg: Status-Text "Auto-kalibriert: DN xxx mm", Mess-Werkzeuge
+  liefern direkt plausible mm-Werte ohne manuelle Referenz-Linie.
+- Bei Fehlschlag (kein erkennbares Pipe-Profil im ersten Frame):
+  Status bleibt "Nicht kalibriert", manueller `BtnCalibrate`-Pfad
+  bleibt unveraendert verfuegbar.
+- Genau ein Versuch pro Session (`_calibrationAutoTried`-Flag).
+- `WasManuallyCalibrated=true` aus dem AutoCalibrationService wird
+  unveraendert uebernommen — bestehende Eigenheit (Field-Name
+  irrefuehrend, markiert "Calibration gueltig" statt "User-gesetzt").
+
+**Tests:** 3 neue Faelle (Decoder-Roundtrip, null/empty, korrupt).
+Pipeline 832 → 835.
+
+**Documentation:**
+
+- [`docs/adrs/2026-05-10-slice-8a-auto-kalibrierung.md`](docs/adrs/2026-05-10-slice-8a-auto-kalibrierung.md) — Mini-ADR, Status: Done.
+
 ### Slice 8a — Pause-Confirm-Workflow (re-implementiert)
 
 Pause-Confirm-Workflow im neuen `CodingModeWindow` (alter In-Place-Pfad
