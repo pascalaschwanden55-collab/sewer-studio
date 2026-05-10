@@ -15,7 +15,7 @@ using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Domain.Models;
 using Microsoft.Extensions.Logging;
 
-namespace AuswertungPro.Next.UI.Ai.Pipeline;
+namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 // Audit 2026-04-23 ARCH-H5: MultiModelAnalysisService war 2185 LOC. Pure
 // Helper, Plausibility-/Consensus-Filter und der ProtocolMerger sind hier

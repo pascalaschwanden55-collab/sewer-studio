@@ -1,5 +1,5 @@
 using System;
-using AuswertungPro.Next.UI.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using Xunit;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 

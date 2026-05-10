@@ -17,7 +17,7 @@ using AuswertungPro.Next.Application.Ai.Training.Models;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai;
 
-namespace AuswertungPro.Next.UI.Ai.Pipeline;
+namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 /// <summary>
 /// Orchestrates the Multi-Model pipeline per frame:
