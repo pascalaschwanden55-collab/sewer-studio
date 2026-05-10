@@ -51,7 +51,7 @@ public partial class PlayerWindow
         }
         // VLC-OSD-Anzeige (Dateipfad) vorher deaktivieren, damit der Pfad
         // nicht als Text auf dem Videobild erscheint
-        try { _player.SetMarqueeInt(LibVLCSharp.Shared.VideoMarqueeOption.Enable, 0); } catch { }
+        try { _player.SetMarqueeInt(LibVLCSharp.Shared.VideoMarqueeOption.Enable, 0); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
         var success = _player.TakeSnapshot(0, filePath, width, height);
         if (wasPlaying)
             _player.SetPause(false);
@@ -117,7 +117,7 @@ public partial class PlayerWindow
         }
         finally
         {
-            try { if (File.Exists(snapFile)) File.Delete(snapFile); } catch { }
+            try { if (File.Exists(snapFile)) File.Delete(snapFile); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
         }
     }
 }

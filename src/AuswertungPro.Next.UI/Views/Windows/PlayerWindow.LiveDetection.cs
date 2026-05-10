@@ -278,7 +278,11 @@ public partial class PlayerWindow
                 }
             });
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            // Live-Detection-Cancel ist normaler Workflow (User bricht ab),
+            // kein Logging.
+        }
         catch (Exception ex)
         {
             var msg = ex.Message;
@@ -322,7 +326,7 @@ public partial class PlayerWindow
         }
         finally
         {
-            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
         }
     }
 
@@ -696,7 +700,7 @@ public partial class PlayerWindow
                 await System.IO.File.WriteAllBytesAsync(tempFrame, frameBytes);
 
                 var exportResult = await exportService.ExportAsync(tempFrame, bbox, code, classId, baseName);
-                try { System.IO.File.Delete(tempFrame); } catch { }
+                try { System.IO.File.Delete(tempFrame); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
 
                 // TeacherAnnotation erstellen
                 var annotation = new AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotation
@@ -791,7 +795,7 @@ public partial class PlayerWindow
 
             var exportService = new Ai.Teacher.TrainingAnnotationExportService();
             var exportResult = await exportService.ExportAsync(tempFrame, bbox, selectedEntry.Code, classId, baseName);
-            try { System.IO.File.Delete(tempFrame); } catch { }
+            try { System.IO.File.Delete(tempFrame); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
 
             var annotation = new AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotation
             {

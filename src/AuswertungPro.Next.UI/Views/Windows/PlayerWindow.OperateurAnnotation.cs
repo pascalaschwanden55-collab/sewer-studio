@@ -504,7 +504,7 @@ public partial class PlayerWindow
                 if (TxtOperatorStatus != null)
                     TxtOperatorStatus.Text = $"Fehler: {ex.Message}";
                 // Preview fehlgeschlagen -> temp-File loeschen, kein Pending behalten.
-                try { if (File.Exists(tmpPath)) File.Delete(tmpPath); } catch { }
+                try { if (File.Exists(tmpPath)) File.Delete(tmpPath); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
             }
         }
         finally

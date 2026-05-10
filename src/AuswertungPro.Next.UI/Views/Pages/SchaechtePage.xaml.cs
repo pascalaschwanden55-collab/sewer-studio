@@ -861,7 +861,7 @@ public partial class SchaechtePage : UserControl
 
             // Phase 5.1.B Etappe 3.F: via DI-Container.
             AppSettings? settings = null;
-            try { settings = App.Resolve<AppSettings>(); } catch { }
+            try { settings = App.Resolve<AppSettings>(); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
             var resolved = TryResolveRelativePath(pdfField, settings?.LastProjectPath);
             if (!string.IsNullOrWhiteSpace(resolved))
                 return resolved;
@@ -876,7 +876,7 @@ public partial class SchaechtePage : UserControl
 
             // Phase 5.1.B Etappe 3.F: via DI-Container.
             AppSettings? linkSettings = null;
-            try { linkSettings = App.Resolve<AppSettings>(); } catch { }
+            try { linkSettings = App.Resolve<AppSettings>(); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
             var resolved = TryResolveRelativePath(link, linkSettings?.LastProjectPath);
             if (!string.IsNullOrWhiteSpace(resolved))
                 return resolved;

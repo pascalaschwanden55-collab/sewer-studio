@@ -40,7 +40,7 @@ public partial class DataPage
         {
             // Phase 5.1.B Etappe 3.H: via DI.
             AuswertungPro.Next.Application.Vsa.IVsaEvaluationService? vsa = null;
-            try { vsa = App.Resolve<AuswertungPro.Next.Application.Vsa.IVsaEvaluationService>(); } catch { }
+            try { vsa = App.Resolve<AuswertungPro.Next.Application.Vsa.IVsaEvaluationService>(); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
             if (vsa is null) return;
             var res = vsa.EvaluateRecord(record);
             if (res.Ok)

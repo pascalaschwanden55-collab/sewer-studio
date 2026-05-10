@@ -459,7 +459,7 @@ public partial class PlayerWindow
             var exportResult = await exportService.ExportAsync(tempFrame, bbox, selectedEntry.Code, classId, baseName);
 
             // Temp aufräumen
-            try { System.IO.File.Delete(tempFrame); } catch { }
+            try { System.IO.File.Delete(tempFrame); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
 
             // 5. TeacherAnnotation erstellen + persistieren
             // Meter-Quelle: selectedEntry.MeterStart oder Videoposition als Fallback.

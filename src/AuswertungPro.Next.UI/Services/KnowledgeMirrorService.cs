@@ -69,7 +69,11 @@ public sealed class KnowledgeMirrorService : IDisposable
         {
             _debounceTimer.Change(DebounceDelayMs, Timeout.Infinite);
         }
-        catch (ObjectDisposedException) { }
+        catch (ObjectDisposedException)
+        {
+            // Service-Shutdown: _debounceTimer wurde disposed.
+            // Kein Logging — normaler Lifecycle.
+        }
     }
 
     /// <summary>

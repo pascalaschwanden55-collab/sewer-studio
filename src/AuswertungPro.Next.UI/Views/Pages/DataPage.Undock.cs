@@ -84,7 +84,7 @@ public partial class DataPage
             {
                 _floatingGridWindow.DockBackRequested -= DockGridBack;
                 _floatingGridWindow.Closed -= FloatingGridWindow_Closed;
-                try { _floatingGridWindow.Close(); } catch { }
+                try { _floatingGridWindow.Close(); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
                 _floatingGridWindow = null;
             }
         }
@@ -176,8 +176,8 @@ public partial class DataPage
         {
             // Diese drei Zeilen MUESSEN ausgefuehrt werden, sonst UI-Trap.
             _floatingGridWindow = null;
-            try { UndockedPlaceholder.Visibility = Visibility.Collapsed; } catch { }
-            try { UndockButton.IsEnabled = true; } catch { }
+            try { UndockedPlaceholder.Visibility = Visibility.Collapsed; } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
+            try { UndockButton.IsEnabled = true; } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
         }
     }
 

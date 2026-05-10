@@ -102,7 +102,7 @@ public sealed class PlaywrightInstallService : IPlaywrightInstallService
         }
         catch (OperationCanceledException)
         {
-            try { if (!p.HasExited) p.Kill(entireProcessTree: true); } catch { }
+            try { if (!p.HasExited) p.Kill(entireProcessTree: true); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
             throw;
         }
 

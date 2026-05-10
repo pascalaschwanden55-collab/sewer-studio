@@ -29,7 +29,7 @@ public partial class PlayerWindow
     {
         // Phase 5.1.B Etappe 3.M: via DI-Container.
         AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider? catalog = null;
-        try { catalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>(); } catch { }
+        try { catalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>(); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
 
         if (catalog is null)
         {

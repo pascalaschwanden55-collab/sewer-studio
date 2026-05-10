@@ -43,9 +43,9 @@ public partial class ProtocolEntryEditorDialog : Window
         WindowStateManager.Track(this);
 
         _entryVm = entryVm;
-        try { _codeCatalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>(); } catch { }
-        try { _protocolAi = App.Resolve<IProtocolAiService>(); } catch { }
-        try { _settings = App.Resolve<AppSettings>(); } catch { }
+        try { _codeCatalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>(); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
+        try { _protocolAi = App.Resolve<IProtocolAiService>(); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
+        try { _settings = App.Resolve<AppSettings>(); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
         _haltungId = haltungId;
         _videoPath = videoPath;
         _projectFolder = projectFolder;

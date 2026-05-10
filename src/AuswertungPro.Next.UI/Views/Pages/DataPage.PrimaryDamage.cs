@@ -18,7 +18,7 @@ public partial class DataPage
     {
         // Phase 5.1.B Etappe 3.H: via DI-Container.
         AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider? catalog = null;
-        try { catalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>(); } catch { }
+        try { catalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>(); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
 
         // Audit-Fix 2026-04: Beide Quellen verbinden (UNION statt Exklusiv-Fallback).
         var fromFindings = BuildPrimaryDamageLinesFromFindings(record, catalog);

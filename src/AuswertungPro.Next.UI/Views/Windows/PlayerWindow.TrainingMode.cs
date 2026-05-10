@@ -75,7 +75,7 @@ public partial class PlayerWindow
         _isTrainingMode = true;
 
         // Video pausieren (User kann jederzeit wieder auf Play druecken)
-        try { _player.SetPause(true); } catch { }
+        try { _player.SetPause(true); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
 
         // UI einblenden
         TrainingSidePanel.Visibility = Visibility.Visible;
@@ -150,7 +150,7 @@ public partial class PlayerWindow
         }
 
         // Wenn Video laeuft: erst pausieren
-        try { if (_player.IsPlaying) _player.SetPause(true); } catch { }
+        try { if (_player.IsPlaying) _player.SetPause(true); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
 
         // Altes Rechteck entfernen
         RemoveTrainingRectShape();
@@ -427,7 +427,7 @@ public partial class PlayerWindow
             var exportService = new TrainingAnnotationExportService();
             var exportResult = await exportService.ExportAsync(tempFrame, bbox, code, classId, baseName);
 
-            try { File.Delete(tempFrame); } catch { }
+            try { File.Delete(tempFrame); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
 
             // 6. TeacherAnnotation persistieren
             int severity = ParseTrainingSeverity();

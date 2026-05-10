@@ -575,7 +575,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         // Phase 5.1.B Etappe 3.H: via DI.
         AppSettings? photoSettings = null;
-        try { photoSettings = App.Resolve<AppSettings>(); } catch { }
+        try { photoSettings = App.Resolve<AppSettings>(); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
         var resolved = AuswertungPro.Next.Application.Common.ProjectPathResolver.ResolveFilePath(rawPath, photoSettings?.LastProjectPath) ?? rawPath;
         if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
         {
@@ -724,7 +724,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             {
                 // Phase 5.1.B Etappe 3.H: via DI.
                 AppSettings? renameSettings = null;
-                try { renameSettings = App.Resolve<AppSettings>(); } catch { }
+                try { renameSettings = App.Resolve<AppSettings>(); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
                 var projectPath = renameSettings?.LastProjectPath;
 
                 // Erst Ordner + Pfade umbenennen, DANN erst den Namen setzen

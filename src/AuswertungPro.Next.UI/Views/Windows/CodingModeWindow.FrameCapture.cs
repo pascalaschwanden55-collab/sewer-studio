@@ -40,15 +40,15 @@ public partial class CodingModeWindow
                     && new FileInfo(snapFile).Length > 100)
                 {
                     var bytes = await File.ReadAllBytesAsync(snapFile);
-                    try { File.Delete(snapFile); } catch { }
+                    try { File.Delete(snapFile); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
                     return bytes;
                 }
-                try { if (File.Exists(snapFile)) File.Delete(snapFile); } catch { }
+                try { if (File.Exists(snapFile)) File.Delete(snapFile); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[CodingMode Capture] VLC-Snapshot Fehler: {ex.Message}");
-                try { if (File.Exists(snapFile)) File.Delete(snapFile); } catch { }
+                try { if (File.Exists(snapFile)) File.Delete(snapFile); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
             }
         }
 

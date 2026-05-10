@@ -399,7 +399,7 @@ public partial class TrainingCenterWindow : Window
             // im Knowledge-Ordner persistiert, nicht im Temp.
             if (tempDir is not null)
             {
-                try { System.IO.Directory.Delete(tempDir, recursive: true); } catch { }
+                try { System.IO.Directory.Delete(tempDir, recursive: true); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
             }
         }
 

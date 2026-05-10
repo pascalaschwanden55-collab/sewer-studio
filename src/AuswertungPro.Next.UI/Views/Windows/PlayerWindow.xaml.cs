@@ -375,7 +375,7 @@ public partial class PlayerWindow : Window, IVlcSurface
             t.Tick += (_, __) =>
             {
                 t.Stop();
-                try { _player.SetMarqueeInt(VideoMarqueeOption.Enable, 0); } catch { }
+                try { _player.SetMarqueeInt(VideoMarqueeOption.Enable, 0); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
             };
             t.Start();
         }

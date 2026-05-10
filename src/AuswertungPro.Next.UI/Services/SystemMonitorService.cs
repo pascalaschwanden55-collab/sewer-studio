@@ -699,7 +699,7 @@ public sealed partial class SystemMonitorService : INotifyPropertyChanged, IDisp
     public void Dispose()
     {
         _timer.Stop();
-        try { _computer?.Close(); } catch { }
-        try { _cpuPerfCounter?.Dispose(); } catch { }
+        try { _computer?.Close(); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
+        try { _cpuPerfCounter?.Dispose(); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
     }
 }

@@ -177,7 +177,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             // sauber durchziehen, bevor das Source-Objekt weg ist.
             _ = System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ =>
             {
-                try { old.Dispose(); } catch { }
+                try { old.Dispose(); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
             });
         }
         return _genCts!.Token;
@@ -197,7 +197,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             try { old.Cancel(); } catch { /* race: bereits disposed */ }
             _ = System.Threading.Tasks.Task.Delay(2000).ContinueWith(_ =>
             {
-                try { old.Dispose(); } catch { }
+                try { old.Dispose(); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
             });
         }
         return _selfTrainingCts!.Token;
@@ -293,7 +293,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         try
         {
             AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider? catalog = null;
-            try { catalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>(); } catch { }
+            try { catalog = App.Resolve<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>(); } catch (Exception _bestEffortEx) { System.Diagnostics.Debug.WriteLine($"[best-effort] {_bestEffortEx.Message}"); }
             var codes = catalog?.AllowedCodes();
             _sampleQualityGate = new SampleQualityGateService(codes);
         }
