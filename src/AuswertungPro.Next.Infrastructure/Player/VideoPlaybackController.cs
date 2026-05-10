@@ -52,11 +52,20 @@ public sealed class VideoPlaybackController : IVideoPlaybackController
         _surface.MediaPlayer = _backend.NativePlayer;
         _timer.Tick += OnTimerTick;
         _scrubTimer.Tick += OnScrubTimerTick;
+        _backend.LengthChanged += OnBackendLengthChanged;
+        _backend.EncounteredError += OnBackendEncounteredError;
+        _backend.FirstPlayingOnce += OnBackendFirstPlayingOnce;
     }
 
     public event EventHandler? PositionUpdateRequested;
 
     public event EventHandler? ScrubRequested;
+
+    public event EventHandler<long>? LengthChanged;
+
+    public event EventHandler<string>? EncounteredError;
+
+    public event EventHandler? FirstPlayingOnce;
 
     public object NativePlayer => _backend.NativePlayer;
 
@@ -228,6 +237,9 @@ public sealed class VideoPlaybackController : IVideoPlaybackController
         _cleanupStarted = true;
         Try(_timer.Stop);
         Try(_scrubTimer.Stop);
+        Try(() => _backend.LengthChanged -= OnBackendLengthChanged);
+        Try(() => _backend.EncounteredError -= OnBackendEncounteredError);
+        Try(() => _backend.FirstPlayingOnce -= OnBackendFirstPlayingOnce);
 
         try
         {
@@ -263,6 +275,21 @@ public sealed class VideoPlaybackController : IVideoPlaybackController
         _scrubTimer.Stop();
         if (IsDragging)
             ScrubRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnBackendLengthChanged(object? sender, long lengthMs)
+    {
+        LengthChanged?.Invoke(this, lengthMs);
+    }
+
+    private void OnBackendEncounteredError(object? sender, string message)
+    {
+        EncounteredError?.Invoke(this, message);
+    }
+
+    private void OnBackendFirstPlayingOnce(object? sender, EventArgs e)
+    {
+        FirstPlayingOnce?.Invoke(this, EventArgs.Empty);
     }
 
     private PlaybackSeekSnapshot BuildSeekSnapshot(double sliderValue, double sliderMaximum)
@@ -305,6 +332,13 @@ public sealed class VideoPlaybackController : IVideoPlaybackController
     {
         private readonly LibVLC _libVlc;
         private readonly MediaPlayer _player;
+        // FirstPlayingOnce-Gating: pro Play()-Aufruf einmal feuern, danach
+        // weitere Playing-Events ignorieren bis erneut Play(...) gerufen wird.
+        private bool _firstPlayingFired;
+
+        public event EventHandler<long>? LengthChanged;
+        public event EventHandler<string>? EncounteredError;
+        public event EventHandler? FirstPlayingOnce;
 
         public LibVlcPlaybackBackend(IVideoPlaybackOptions options)
         {
@@ -314,6 +348,9 @@ public sealed class VideoPlaybackController : IVideoPlaybackController
             {
                 EnableHardwareDecoding = options.EnableHardwareDecoding
             };
+            _player.LengthChanged += OnPlayerLengthChanged;
+            _player.EncounteredError += OnPlayerEncounteredError;
+            _player.Playing += OnPlayerPlaying;
         }
 
         public object NativePlayer => _player;
@@ -340,11 +377,16 @@ public sealed class VideoPlaybackController : IVideoPlaybackController
 
         public void Play(string path)
         {
+            _firstPlayingFired = false;
             using var media = new VlcMedia(_libVlc, path, FromType.FromPath);
             _player.Play(media);
         }
 
-        public void Play() => _player.Play();
+        public void Play()
+        {
+            _firstPlayingFired = false;
+            _player.Play();
+        }
 
         public void SetPause(bool pause) => _player.SetPause(pause);
 
@@ -354,6 +396,17 @@ public sealed class VideoPlaybackController : IVideoPlaybackController
 
         public void Dispose()
         {
+            try
+            {
+                _player.LengthChanged -= OnPlayerLengthChanged;
+                _player.EncounteredError -= OnPlayerEncounteredError;
+                _player.Playing -= OnPlayerPlaying;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[VideoPlaybackController] event detach error: {ex.Message}");
+            }
+
             try
             {
                 _player.Dispose();
@@ -367,6 +420,24 @@ public sealed class VideoPlaybackController : IVideoPlaybackController
             // native AccessViolation in LibVLCLogUnset on shutdown; process exit
             // cleans up the singleton-like native engine.
             GC.KeepAlive(_libVlc);
+        }
+
+        private void OnPlayerLengthChanged(object? sender, MediaPlayerLengthChangedEventArgs e)
+        {
+            LengthChanged?.Invoke(this, e.Length);
+        }
+
+        private void OnPlayerEncounteredError(object? sender, EventArgs e)
+        {
+            EncounteredError?.Invoke(this, "MediaPlayer encountered error");
+        }
+
+        private void OnPlayerPlaying(object? sender, EventArgs e)
+        {
+            if (_firstPlayingFired)
+                return;
+            _firstPlayingFired = true;
+            FirstPlayingOnce?.Invoke(this, EventArgs.Empty);
         }
 
         private static LibVLC CreateLibVlc(IVideoPlaybackOptions options)

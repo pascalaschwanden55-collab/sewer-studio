@@ -23,6 +23,13 @@ public interface IVideoPlaybackController
 
     event EventHandler? ScrubRequested;
 
+    // Slice 8a CodingMode VLC-Migration (Slice-1): Lifecycle-Events vom Backend.
+    event EventHandler<long>? LengthChanged;
+
+    event EventHandler<string>? EncounteredError;
+
+    event EventHandler? FirstPlayingOnce;
+
     object NativePlayer { get; }
 
     bool IsDragging { get; }

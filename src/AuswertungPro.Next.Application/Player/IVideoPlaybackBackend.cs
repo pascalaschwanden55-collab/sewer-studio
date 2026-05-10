@@ -16,6 +16,12 @@ public enum VideoPlaybackState
 
 public interface IVideoPlaybackBackend : IDisposable
 {
+    // Slice 8a CodingMode VLC-Migration (Slice-1): Lifecycle-Events
+    // hochgereicht, damit CodingModeWindow nicht direkt LibVLC abonnieren muss.
+    event EventHandler<long>? LengthChanged;
+    event EventHandler<string>? EncounteredError;
+    event EventHandler? FirstPlayingOnce;
+
     object NativePlayer { get; }
 
     bool IsPlaying { get; }

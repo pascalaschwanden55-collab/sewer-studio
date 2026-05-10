@@ -71,6 +71,70 @@ public sealed class VideoPlaybackControllerTests
     }
 
     [Fact]
+    public void LengthChanged_PropagatesFromBackendToController()
+    {
+        var ctx = CreateController();
+        long received = 0;
+        var fired = 0;
+        ctx.Controller.LengthChanged += (_, lengthMs) => { received = lengthMs; fired++; };
+
+        ctx.Backend.RaiseLengthChanged(42_000);
+
+        Assert.Equal(1, fired);
+        Assert.Equal(42_000, received);
+    }
+
+    [Fact]
+    public void EncounteredError_PropagatesFromBackendToController()
+    {
+        var ctx = CreateController();
+        string? received = null;
+        ctx.Controller.EncounteredError += (_, msg) => received = msg;
+
+        ctx.Backend.RaiseEncounteredError("boom");
+
+        Assert.Equal("boom", received);
+    }
+
+    [Fact]
+    public void FirstPlayingOnce_PropagatesEachBackendFire()
+    {
+        // Backend selbst stellt Once-Garantie sicher (siehe LibVlcPlaybackBackend
+        // mit _firstPlayingFired-Flag); der Controller reicht durch und
+        // multipliziert die Events nicht.
+        var ctx = CreateController();
+        var fired = 0;
+        ctx.Controller.FirstPlayingOnce += (_, _) => fired++;
+
+        ctx.Backend.RaiseFirstPlayingOnce();
+        ctx.Backend.RaiseFirstPlayingOnce();
+
+        Assert.Equal(2, fired);
+    }
+
+    [Fact]
+    public void Cleanup_DetachesBackendLifecycleEvents()
+    {
+        var ctx = CreateController();
+        var lengthFired = 0;
+        var errorFired = 0;
+        var firstPlayFired = 0;
+        ctx.Controller.LengthChanged += (_, _) => lengthFired++;
+        ctx.Controller.EncounteredError += (_, _) => errorFired++;
+        ctx.Controller.FirstPlayingOnce += (_, _) => firstPlayFired++;
+
+        ctx.Controller.Cleanup();
+
+        ctx.Backend.RaiseLengthChanged(1);
+        ctx.Backend.RaiseEncounteredError("late");
+        ctx.Backend.RaiseFirstPlayingOnce();
+
+        Assert.Equal(0, lengthFired);
+        Assert.Equal(0, errorFired);
+        Assert.Equal(0, firstPlayFired);
+    }
+
+    [Fact]
     public void Cleanup_StopsDetachesAndDefersBackendDispose()
     {
         var ctx = CreateController();
@@ -157,6 +221,16 @@ public sealed class VideoPlaybackControllerTests
 
     private sealed class FakeBackend : IVideoPlaybackBackend
     {
+        public event EventHandler<long>? LengthChanged;
+        public event EventHandler<string>? EncounteredError;
+        public event EventHandler? FirstPlayingOnce;
+
+        public void RaiseLengthChanged(long lengthMs) => LengthChanged?.Invoke(this, lengthMs);
+
+        public void RaiseEncounteredError(string message) => EncounteredError?.Invoke(this, message);
+
+        public void RaiseFirstPlayingOnce() => FirstPlayingOnce?.Invoke(this, EventArgs.Empty);
+
         public object NativePlayer { get; } = new();
 
         public bool IsPlaying { get; set; }
