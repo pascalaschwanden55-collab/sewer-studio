@@ -123,6 +123,12 @@ namespace AuswertungPro.Next.UI
                     new AuswertungPro.Next.UI.Imaging.WpfImagePixelDecoder());
                 AuswertungPro.Next.Application.Imaging.OcrPdfFallbackProvider.SetFallback(
                     new AuswertungPro.Next.UI.Imaging.WindowsOcrPdfFallback());
+                // Phase 6.3 Vorbereitung: PipeCalibration-from-Bytes-Adapter.
+                // Erlaubt MultiModelAnalysisService die Auto-Kalibrierung
+                // ohne direkte BitmapDecoder-Nutzung — Voraussetzung fuer
+                // den Migrations-File-Move nach Infrastructure/Ai/Pipeline.
+                AuswertungPro.Next.Application.Ai.Imaging.PipeCalibrationFromBytesProvider.SetImplementation(
+                    new AuswertungPro.Next.UI.Imaging.WpfPipeCalibrationFromBytes());
 
                 // Phase 5.3 Sub-A: PipelineConfig-Loader (Sidecar-URL, MultiModel-Flag).
                 AuswertungPro.Next.Application.Ai.PipelineConfigProvider.SetLoader(

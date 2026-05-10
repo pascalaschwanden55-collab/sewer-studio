@@ -186,18 +186,18 @@ public sealed partial class MultiModelAnalysisService
 
             var frameBase64 = Convert.ToBase64String(frameBytes);
 
-            // Auto-Kalibrierung: beim ersten brauchbaren Frame Rohrdurchmesser messen
+            // Auto-Kalibrierung: beim ersten brauchbaren Frame Rohrdurchmesser messen.
+            // Phase 6.3 Vorbereitung (2026-05-10): geht jetzt ueber
+            // PipeCalibrationFromBytesProvider statt direkt BitmapDecoder, damit
+            // dieser Service WPF-frei ist und in einem Folge-Slice nach
+            // Infrastructure/Ai/Pipeline verschoben werden kann.
             if (!calibrationAttempted && frameBytes.Length > 1000)
             {
                 calibrationAttempted = true;
                 try
                 {
-                    using var ms = new MemoryStream(frameBytes);
-                    var decoder = System.Windows.Media.Imaging.BitmapDecoder.Create(
-                        ms, System.Windows.Media.Imaging.BitmapCreateOptions.None,
-                        System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
-                    var bmp = decoder.Frames[0];
-                    pipeCalibration = AutoCalibrationService.TryAutoCalibrate(bmp, pipeDiameterMm);
+                    pipeCalibration = AuswertungPro.Next.Application.Ai.Imaging
+                        .PipeCalibrationFromBytesProvider.Instance?.TryCalibrate(frameBytes, pipeDiameterMm);
                     if (pipeCalibration != null)
                     {
                         _logger.LogInformation(
@@ -1240,17 +1240,15 @@ public sealed partial class MultiModelAnalysisService
             catch { /* preview optional */ }
 
             // K3: Auto-Kalibrierung beim ersten brauchbaren Frame (einmalig pro Video).
+            // Phase 6.3 Vorbereitung (2026-05-10): geht jetzt ueber
+            // PipeCalibrationFromBytesProvider statt direkt BitmapDecoder.
             if (!calibrationAttemptedNvdec && frameBytes != null && frameBytes.Length > 1000)
             {
                 calibrationAttemptedNvdec = true;
                 try
                 {
-                    using var calMs = new MemoryStream(frameBytes);
-                    var decoder = System.Windows.Media.Imaging.BitmapDecoder.Create(
-                        calMs, System.Windows.Media.Imaging.BitmapCreateOptions.None,
-                        System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
-                    var bmp = decoder.Frames[0];
-                    pipeCalibrationNvdec = AutoCalibrationService.TryAutoCalibrate(bmp, pipeDiameterMm);
+                    pipeCalibrationNvdec = AuswertungPro.Next.Application.Ai.Imaging
+                        .PipeCalibrationFromBytesProvider.Instance?.TryCalibrate(frameBytes, pipeDiameterMm);
                     if (pipeCalibrationNvdec != null)
                     {
                         _logger.LogInformation(
