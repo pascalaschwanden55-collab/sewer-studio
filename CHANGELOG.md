@@ -4,6 +4,40 @@ Notable changes to this project. Format follows [Keep a Changelog](https://keepa
 
 ## Unreleased — branch `feature/pdf-import-beobachtungen`
 
+### Slice 8a — PlayerWindow-Cleanup nach 5b
+
+Entfernt Dead-Code-Residuen aus `PlayerWindow.CodingApply.cs`, die nach
+dem Loesch-Slice 8a.3 Step 5b zurueckgeblieben waren.
+
+**Removed:**
+
+- `PlayerWindow.CodingApply._codingSchemaType` (nur null-gesetzt, nie
+  gelesen).
+- `PlayerWindow.CodingApply._codingLastOsdMeter` (nie gesetzt, immer
+  null) und der dazugehoerige `#pragma warning disable CS0414, CS0649`
+  Block.
+- `PlayerWindow.CodingApply.EnsureHaltungslaenge` (Fallback-Kette fuer
+  Haltungslaenge_m) — einziger Caller war der in 5b geloeschte
+  In-Place-Coding-Mode. Falls eine Folge-Slice die Fallback-Kette
+  wieder braucht: git-history vor `5b3900a`.
+- `PlayerWindow.Helpers.HasValidLength` (einziger Caller war
+  EnsureHaltungslaenge).
+
+**Reframing der Audit-Diff-Plan-Steps 9-11:** Der Original-Audit-Diff
+vom 2026-05-09 listete Static-Bridge-Migration + Aufrufer-Umleitung +
+PlayerWindow-Loeschung als finale Schritte. Reality-Check 2026-05-10:
+PlayerWindow ist 5478 LOC in 14 Partials und das Default-Video-Fenster
+mit aktiven eigenen Features (LiveDetection, OperateurAnnotation,
+MarkTool, TrainingMode, VideoPlayback, Hotkeys etc.). Eine Aufloesung
+im Audit-Diff-Sinn entfaellt by-design — die Coding-Partials sind in
+5b weg, der Rest bleibt.
+
+**LOC-Delta:** -76 netto.
+
+**Documentation:**
+
+- [`docs/adrs/2026-05-10-slice-8a-playerwindow-cleanup.md`](docs/adrs/2026-05-10-slice-8a-playerwindow-cleanup.md) — Mini-ADR, Status: Done.
+
 ### Slice 8a — Auto-BCD/BCE/Streckenschaden
 
 Korrigiert die Streckenschaden-Behandlung beim Session-Abschluss (vorher

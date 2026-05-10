@@ -1,11 +1,37 @@
 # Slice 8a PlayerWindow-Cleanup nach 5b — Mini-ADR
 
 Datum: 2026-05-10
-Status: **Entschieden** (User-Freigabe 2026-05-10: "ich moechte den ganzen umbau des gesamten programms")
-- Q1=B: Cleanup-Scope = pragma-Felder + EnsureHaltungslaenge + ggf. SchemaManager
-- Q2=A: EnsureHaltungslaenge loeschen (YAGNI)
-- Q3: Smoke = MarkTool-Workflow durchklicken — an User delegiert
-- Code wird autonom ausgefuehrt; UI-Smoke ist User-Item
+Status: **Done** (Slice in 1 Commit abgeschlossen, UI-Smoke an User delegiert)
+
+Geliefert:
+- Cleanup `5b3900a` — Dead-Code-Felder (_codingSchemaType,
+  _codingLastOsdMeter), pragma-Block, EnsureHaltungslaenge-Methode +
+  HasValidLength-Helper entfernt. _codingSchemaManager bleibt (aktiv
+  via .Cancel() in MarkTool/Hotkeys).
+
+Befund nach Code-Audit (Q1=B):
+- _codingSchemaType: nur null-gesetzt in MarkTool, nirgends gelesen → raus.
+- _codingLastOsdMeter: nirgends gesetzt, immer null → raus + einziger
+  Aufrufer (OpenCodeCatalogForMark) nutzt jetzt direkt
+  GetMeterFromVideoPosition().
+- _codingSchemaManager: aktiv in MarkTool.cs:53/116 + Hotkeys.cs:49 via
+  .Cancel() → bleibt (entgegen meinem Mini-ADR-Vorschlag, basierend auf
+  Live-Code-Audit).
+- EnsureHaltungslaenge: kein Caller mehr nach 5b → raus + HasValidLength-
+  Helper (einziger Caller war EnsureHaltungslaenge) → raus.
+
+LOC-Delta: -76 netto.
+
+User-Freigabe 2026-05-10:
+- Q1=B: pragma-Felder + EnsureHaltungslaenge + ggf. SchemaManager.
+- Q2=A: EnsureHaltungslaenge loeschen.
+- Q3: Smoke = MarkTool-Workflow, an User delegiert.
+
+UI-Smoke-Pending (User-Item):
+- PlayerWindow oeffnen, MarkTool aktivieren (SAM-Markierung zeichnen).
+- Code-Catalog oeffnen via Markierung.
+- Foto-Aufnahme.
+- Verhalten muss unveraendert bleiben.
 
 Vorgeschichte:
 - Audit-Diff: `2026-05-09-slice-8a-1-audit-diff.md` Step 9-11 hat
