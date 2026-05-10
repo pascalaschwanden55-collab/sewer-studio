@@ -354,7 +354,10 @@ public sealed class FewShotExampleStore
         var imgPath = GetImagePath(ex);
         if (File.Exists(imgPath))
         {
-            try { File.Delete(imgPath); } catch { }
+            // Best-effort: zum Sample gehoerige Bilddatei aufraeumen, Loesch-
+            // Failure (z.B. file-locked, permissions) blockiert Store-Cleanup nicht.
+            try { File.Delete(imgPath); }
+            catch (Exception fEx) { System.Diagnostics.Debug.WriteLine($"[FewShotStore] DeleteImage: {fEx.Message}"); }
         }
 
         await SaveAsync(ct);

@@ -254,7 +254,10 @@ public static class InspectionFrameExtractor
             }
             catch (OperationCanceledException) when (timeout.IsCancellationRequested)
             {
-                try { prozess.Kill(); } catch { }
+                // Best-effort: ffmpeg-Process bei Timeout abschiessen.
+                // Race wenn Process schon selbst gestorben ist ist OK.
+                try { prozess.Kill(); }
+                catch (Exception killEx) { System.Diagnostics.Debug.WriteLine($"[InspectionFrameExtractor] Kill: {killEx.Message}"); }
                 return false;
             }
 

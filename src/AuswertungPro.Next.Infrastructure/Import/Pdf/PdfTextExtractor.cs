@@ -110,7 +110,9 @@ public static class PdfTextExtractor
         }
         finally
         {
-            try { if (File.Exists(tempOut)) File.Delete(tempOut); } catch { }
+            // Best-effort: pdftotext-Output-Temp aufraeumen, Loesch-Failure unkritisch.
+            try { if (File.Exists(tempOut)) File.Delete(tempOut); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PdfTextExtractor] tempOut-Delete: {ex.Message}"); }
         }
     }
 

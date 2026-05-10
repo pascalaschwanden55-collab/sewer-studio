@@ -62,11 +62,18 @@ internal static class PdfOcrExtractor
                     var prefix = Path.GetFileName(tempBase);
                     foreach (var path in Directory.EnumerateFiles(tempDir, $"{prefix}*"))
                     {
-                        try { File.Delete(path); } catch { }
+                        // Best-effort: temp-Outputs einzeln loeschen, einer
+                        // koennte noch von tesseract gelockt sein.
+                        try { File.Delete(path); }
+                        catch (Exception fEx) { System.Diagnostics.Debug.WriteLine($"[PdfOcr] DeleteTemp: {fEx.Message}"); }
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                // Best-effort outer: EnumerateFiles selbst koennte werfen.
+                System.Diagnostics.Debug.WriteLine($"[PdfOcr] CleanupTemp: {ex.Message}");
+            }
         }
     }
 

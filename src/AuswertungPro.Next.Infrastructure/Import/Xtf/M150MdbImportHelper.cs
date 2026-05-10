@@ -674,7 +674,10 @@ finally {
             var stderrTask = process.StandardError.ReadToEndAsync();
             if (!process.WaitForExit(120000))
             {
-                try { process.Kill(entireProcessTree: true); } catch { }
+                // Best-effort: Powershell-Prozess + Children abschiessen,
+                // Race wenn Process schon selbst gestorben ist OK.
+                try { process.Kill(entireProcessTree: true); }
+                catch (Exception killEx) { System.Diagnostics.Debug.WriteLine($"[M150MdbImport] KillTree: {killEx.Message}"); }
                 error = "MDB-Import timeout nach 120 Sekunden.";
                 return false;
             }
@@ -719,8 +722,12 @@ finally {
         }
         finally
         {
-            try { if (File.Exists(tempScript)) File.Delete(tempScript); } catch { }
-            try { if (File.Exists(tempJson)) File.Delete(tempJson); } catch { }
+            // Best-effort: temp-Powershell-Script + temp-JSON aufraeumen,
+            // einzelne Loesch-Failures (file-locked) sind unkritisch.
+            try { if (File.Exists(tempScript)) File.Delete(tempScript); }
+            catch (Exception sEx) { System.Diagnostics.Debug.WriteLine($"[M150MdbImport] tempScript-Delete: {sEx.Message}"); }
+            try { if (File.Exists(tempJson)) File.Delete(tempJson); }
+            catch (Exception jEx) { System.Diagnostics.Debug.WriteLine($"[M150MdbImport] tempJson-Delete: {jEx.Message}"); }
         }
     }
 

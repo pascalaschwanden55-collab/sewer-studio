@@ -306,8 +306,11 @@ namespace AuswertungPro.Next.Application.Ai.Training
                     var bak2 = path + ".bak.2";
                     var bak3 = path + ".bak.3";
                     // Rotation: .bak.2 → .bak.3, .bak → .bak.2, aktuell → .bak
-                    if (File.Exists(bak2)) { try { File.Copy(bak2, bak3, true); } catch { } }
-                    if (File.Exists(bak1)) { try { File.Copy(bak1, bak2, true); } catch { } }
+                    // Best-effort Backup-Rotation: einzelne Copy-Failures
+                    // (z.B. bak3 gerade von Antivirus gelockt) duerfen die
+                    // Save-Operation nicht blockieren.
+                    if (File.Exists(bak2)) { try { File.Copy(bak2, bak3, true); } catch (Exception bEx) { System.Diagnostics.Debug.WriteLine($"[TrainingSamplesStore] Backup-Rotate bak3: {bEx.Message}"); } }
+                    if (File.Exists(bak1)) { try { File.Copy(bak1, bak2, true); } catch (Exception bEx) { System.Diagnostics.Debug.WriteLine($"[TrainingSamplesStore] Backup-Rotate bak2: {bEx.Message}"); } }
                     File.Copy(path, bak1, overwrite: true);
                 }
                 catch { /* best-effort */ }
