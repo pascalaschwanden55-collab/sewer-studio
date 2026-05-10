@@ -30,13 +30,11 @@ public partial class CodingModeWindow
 
     private void ConfirmEdit_Click(object sender, System.Windows.RoutedEventArgs e)
     {
-        // Edit-Pfad: pending Event ins SelectedDefect, damit das
-        // DefectDetailPanel sofort die Edit-Bindings hat. Loop bekommt
-        // AcceptedWithEdit und legt das Event in der Eventliste an
-        // (AddEventInOrder via CodingModeWindow.LiveLoop.cs).
-        var pending = _vm.PendingConfirmationEvent;
-        if (pending is not null)
-            _vm.SelectedDefect = pending;
+        // Edit-Affordance wird vom Loop nach AddEventInOrder verdrahtet:
+        // _vm.SelectedDefect / LstEvents.SelectedItem / UpdateDefectDetailPanel.
+        // Hier nur Decision an die VM melden — sonst wuerde SelectedDefect
+        // doppelt gesetzt (gleiche Referenz, zweites PropertyChanged
+        // bleibt aus, optionale Binding-Watcher koennten getaeuscht werden).
         _vm.CompleteConfirmation(CodingUserDecision.AcceptedWithEdit);
     }
 

@@ -204,8 +204,24 @@ public partial class CodingModeWindow
         switch (decision)
         {
             case CodingUserDecision.Accepted:
-            case CodingUserDecision.AcceptedWithEdit:
                 await Dispatcher.InvokeAsync(() => _vm.AddEventInOrder(ev));
+                break;
+            case CodingUserDecision.AcceptedWithEdit:
+                // Edit-Pfad: Event aufnehmen und sofort die Edit-Affordance
+                // surfen. _vm.SelectedDefect wurde in ConfirmEdit_Click gesetzt,
+                // aber LstEvents.SelectedItem laeuft separat (kein VM-Binding)
+                // und das DefectDetailPanel wird nicht gebunden, sondern via
+                // UpdateDefectDetailPanel(ev) manuell befuellt. Per ADR-Q5-A
+                // landet der User auf der Edit-Affordance — der modale Editor
+                // bleibt einen Klick entfernt.
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    _vm.AddEventInOrder(ev);
+                    _vm.SelectedDefect = ev;
+                    LstEvents.SelectedItem = ev;
+                    LstEvents.ScrollIntoView(ev);
+                    UpdateDefectDetailPanel(ev);
+                });
                 break;
             case CodingUserDecision.Rejected:
                 // Sperrliste folgt in Step 5: hier nur droppen.
