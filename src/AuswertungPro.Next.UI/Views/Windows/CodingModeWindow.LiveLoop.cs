@@ -171,10 +171,10 @@ public partial class CodingModeWindow
 
         // Erstes Yellow/Red-Finding finden, das nicht bereits in der
         // Sperrliste steht (Slice 8a Pause-Confirm Step 5). Sperrliste
-        // arbeitet auf dem Code wie ihn BuildCodingEventFromFinding
-        // erzeugt — VsaCodeHint, sonst Fallback "AI" — damit der User
-        // beim naechsten Frame mit dem gleichen Reject-Schluessel kein
-        // Pause-Panel mehr sieht.
+        // arbeitet auf Code+Label wie BuildCodingEventFromFinding sie
+        // erzeugt — VsaCodeHint (Fallback "AI") + finding.Label —
+        // damit "AI"+"Riss" und "AI"+"Wurzel" am gleichen Meter
+        // unabhaengig voneinander getoggelt werden koennen.
         LiveFrameFinding? hit = null;
         bool hitIsRed = false;
         double hitConfidence = 0;
@@ -183,7 +183,7 @@ public partial class CodingModeWindow
             var (isGreen, isYellow, isRed, conf) = EvaluateGate(f);
             if (isGreen) continue;
             var candidateCode = string.IsNullOrWhiteSpace(f.VsaCodeHint) ? "AI" : f.VsaCodeHint!;
-            if (_vm.IsRejected(candidateCode, frameMeter)) continue;
+            if (_vm.IsRejected(candidateCode, f.Label, frameMeter)) continue;
             hit = f;
             hitIsRed = isRed;
             hitConfidence = conf;
@@ -233,10 +233,20 @@ public partial class CodingModeWindow
                 break;
             case CodingUserDecision.Rejected:
                 // Slice 8a Pause-Confirm Step 5: in die in-memory Sperrliste
-                // aufnehmen, damit das gleiche Finding (Code + Meter +/- 0.5m)
+                // aufnehmen, damit das gleiche Finding (Code + Label + Meter)
                 // im Rest der Session nicht erneut den Pause-Confirm-Workflow
                 // triggert. AddRejection ist idempotent + case-insensitive.
-                _vm.AddRejection(ev.Entry.Code, ev.MeterAtCapture);
+                //
+                // AI-Fallback-Bucket NICHT persistieren: code-lose Findings
+                // landen alle auf "AI", was selbst mit Label-Disambiguator
+                // und enger 0.1m-Toleranz noch zu Kollisionen fuehren kann.
+                // Lieber jeden AI-Reject als One-Shot-Drop behandeln, damit
+                // der User bei wirklich anderen Findings nicht uebergangen
+                // wird. Echte VSA-Codes landen wie gehabt in der Sperrliste.
+                if (!string.Equals(ev.Entry.Code, "AI", StringComparison.OrdinalIgnoreCase))
+                {
+                    _vm.AddRejection(ev.Entry.Code, hit.Label, ev.MeterAtCapture);
+                }
                 break;
         }
 

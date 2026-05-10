@@ -29,7 +29,7 @@ public class CodingSessionViewModelRejectionListTests
     {
         var vm = BuildVm();
         Assert.Empty(vm.RejectedFindings);
-        Assert.False(vm.IsRejected("BAB", 12.5));
+        Assert.False(vm.IsRejected("BAB", "Riss", 12.5));
     }
 
     // --- Add + IsRejected (Happy-Path) ---
@@ -38,8 +38,8 @@ public class CodingSessionViewModelRejectionListTests
     public void Add_ThenIsRejectedExactMatch_ReturnsTrue()
     {
         var vm = BuildVm();
-        vm.AddRejection("BAB", 12.5);
-        Assert.True(vm.IsRejected("BAB", 12.5));
+        vm.AddRejection("BAB", "Riss", 12.5);
+        Assert.True(vm.IsRejected("BAB", "Riss", 12.5));
         Assert.Single(vm.RejectedFindings);
     }
 
@@ -47,57 +47,104 @@ public class CodingSessionViewModelRejectionListTests
     public void Add_DifferentCode_NotRejected()
     {
         var vm = BuildVm();
-        vm.AddRejection("BAB", 12.5);
-        Assert.False(vm.IsRejected("BAC", 12.5));
+        vm.AddRejection("BAB", "Riss", 12.5);
+        Assert.False(vm.IsRejected("BAC", "Riss", 12.5));
     }
 
     [Fact]
     public void Add_DifferentMeterFarOff_NotRejected()
     {
         var vm = BuildVm();
-        vm.AddRejection("BAB", 12.5);
-        Assert.False(vm.IsRejected("BAB", 20.0));
+        vm.AddRejection("BAB", "Riss", 12.5);
+        Assert.False(vm.IsRejected("BAB", "Riss", 20.0));
     }
 
-    // --- Toleranz ±0.5m ---
+    // --- Toleranz ±0.5m fuer echte Codes ---
 
     [Fact]
     public void IsRejected_MeterWithinTolerance_ReturnsTrue()
     {
         var vm = BuildVm();
-        vm.AddRejection("BAB", 12.5);
-        Assert.True(vm.IsRejected("BAB", 12.0));   // -0.5 inklusive
-        Assert.True(vm.IsRejected("BAB", 13.0));   // +0.5 inklusive
-        Assert.True(vm.IsRejected("BAB", 12.49));  // mittendrin
+        vm.AddRejection("BAB", "Riss", 12.5);
+        Assert.True(vm.IsRejected("BAB", "Riss", 12.0));   // -0.5 inklusive
+        Assert.True(vm.IsRejected("BAB", "Riss", 13.0));   // +0.5 inklusive
+        Assert.True(vm.IsRejected("BAB", "Riss", 12.49));  // mittendrin
     }
 
     [Fact]
     public void IsRejected_MeterOutsideTolerance_ReturnsFalse()
     {
         var vm = BuildVm();
-        vm.AddRejection("BAB", 12.5);
-        Assert.False(vm.IsRejected("BAB", 11.99));  // -0.51
-        Assert.False(vm.IsRejected("BAB", 13.01));  // +0.51
+        vm.AddRejection("BAB", "Riss", 12.5);
+        Assert.False(vm.IsRejected("BAB", "Riss", 11.99));  // -0.51
+        Assert.False(vm.IsRejected("BAB", "Riss", 13.01));  // +0.51
     }
 
-    // --- Case-Insensitive Code-Match ---
+    // --- AI-Bucket: enge Toleranz +/-0.1m ---
+
+    [Fact]
+    public void IsRejected_AiCode_UsesNarrowTolerance()
+    {
+        var vm = BuildVm();
+        vm.AddRejection("AI", "Riss", 12.5);
+        Assert.True(vm.IsRejected("AI", "Riss", 12.45));   // -0.05 innerhalb +/-0.1
+        Assert.True(vm.IsRejected("AI", "Riss", 12.59));   // +0.09 innerhalb +/-0.1
+        Assert.True(vm.IsRejected("AI", "Riss", 12.4));    // -0.1 inklusive
+        Assert.True(vm.IsRejected("AI", "Riss", 12.6));    // +0.1 inklusive
+        Assert.False(vm.IsRejected("AI", "Riss", 12.3));   // -0.2 ausserhalb (echte Toleranz waere 0.5)
+        Assert.False(vm.IsRejected("AI", "Riss", 12.7));   // +0.2 ausserhalb
+    }
+
+    // --- Label-Disambiguator: AI+Riss vs AI+Wurzel sind verschieden ---
+
+    [Fact]
+    public void IsRejected_AiBucket_LabelDisambiguates()
+    {
+        var vm = BuildVm();
+        vm.AddRejection("AI", "Riss", 12.5);
+        // Selbe Stelle, anderes Label → nicht gesperrt.
+        Assert.False(vm.IsRejected("AI", "Wurzel", 12.5));
+        // Selbe Stelle, gleiches Label → gesperrt.
+        Assert.True(vm.IsRejected("AI", "Riss", 12.5));
+    }
+
+    [Fact]
+    public void IsRejected_RealCode_LabelDisambiguates()
+    {
+        var vm = BuildVm();
+        vm.AddRejection("BAB", "Riss laengs", 12.5);
+        Assert.False(vm.IsRejected("BAB", "Riss quer", 12.5));
+        Assert.True(vm.IsRejected("BAB", "Riss laengs", 12.5));
+    }
+
+    // --- Case-Insensitive Code- und Label-Match ---
 
     [Fact]
     public void IsRejected_CaseInsensitive_MatchesAllCasings()
     {
         var vm = BuildVm();
-        vm.AddRejection("bab", 12.5);
-        Assert.True(vm.IsRejected("BAB", 12.5));
-        Assert.True(vm.IsRejected("BaB", 12.5));
-        Assert.True(vm.IsRejected("bab", 12.5));
+        vm.AddRejection("bab", "Riss", 12.5);
+        Assert.True(vm.IsRejected("BAB", "RISS", 12.5));
+        Assert.True(vm.IsRejected("BaB", "Riss", 12.5));
+        Assert.True(vm.IsRejected("bab", "riss", 12.5));
     }
 
     [Fact]
-    public void Add_TrimsWhitespace()
+    public void Add_TrimsWhitespaceCodeAndLabel()
     {
         var vm = BuildVm();
-        vm.AddRejection("  BAB  ", 12.5);
-        Assert.True(vm.IsRejected("BAB", 12.5));
+        vm.AddRejection("  BAB  ", "  Riss  ", 12.5);
+        Assert.True(vm.IsRejected("BAB", "Riss", 12.5));
+    }
+
+    [Fact]
+    public void Add_NullLabel_TreatedAsEmpty()
+    {
+        var vm = BuildVm();
+        vm.AddRejection("BAB", null, 12.5);
+        Assert.True(vm.IsRejected("BAB", null, 12.5));
+        Assert.True(vm.IsRejected("BAB", "", 12.5));
+        Assert.True(vm.IsRejected("BAB", "  ", 12.5));
     }
 
     // --- Idempotenz ---
@@ -106,9 +153,9 @@ public class CodingSessionViewModelRejectionListTests
     public void AddRejection_SameKeyTwice_StoresOnce()
     {
         var vm = BuildVm();
-        vm.AddRejection("BAB", 12.5);
-        vm.AddRejection("BAB", 12.5);   // exakt gleich
-        vm.AddRejection("bab", 12.502); // < 1cm Diff + andere Schreibung
+        vm.AddRejection("BAB", "Riss", 12.5);
+        vm.AddRejection("BAB", "Riss", 12.5);     // exakt gleich
+        vm.AddRejection("bab", "RISS", 12.502);   // < 1cm Diff + andere Schreibung
         Assert.Single(vm.RejectedFindings);
     }
 
@@ -116,8 +163,17 @@ public class CodingSessionViewModelRejectionListTests
     public void AddRejection_DifferentMetersBeyondCmTolerance_StoresBoth()
     {
         var vm = BuildVm();
-        vm.AddRejection("BAB", 12.50);
-        vm.AddRejection("BAB", 12.60);   // > 1cm Diff: separater Eintrag
+        vm.AddRejection("BAB", "Riss", 12.50);
+        vm.AddRejection("BAB", "Riss", 12.60);  // > 1cm Diff: separater Eintrag
+        Assert.Equal(2, vm.RejectedFindings.Count);
+    }
+
+    [Fact]
+    public void AddRejection_DifferentLabel_SameMeter_StoresBoth()
+    {
+        var vm = BuildVm();
+        vm.AddRejection("AI", "Riss", 12.5);
+        vm.AddRejection("AI", "Wurzel", 12.5);
         Assert.Equal(2, vm.RejectedFindings.Count);
     }
 
@@ -127,9 +183,9 @@ public class CodingSessionViewModelRejectionListTests
     public void AddRejection_EmptyCode_IsNoOp()
     {
         var vm = BuildVm();
-        vm.AddRejection("", 12.5);
-        vm.AddRejection("   ", 12.5);
-        vm.AddRejection(null!, 12.5);
+        vm.AddRejection("", "Riss", 12.5);
+        vm.AddRejection("   ", "Riss", 12.5);
+        vm.AddRejection(null!, "Riss", 12.5);
         Assert.Empty(vm.RejectedFindings);
     }
 
@@ -137,10 +193,10 @@ public class CodingSessionViewModelRejectionListTests
     public void IsRejected_EmptyCode_ReturnsFalse()
     {
         var vm = BuildVm();
-        vm.AddRejection("BAB", 12.5);
-        Assert.False(vm.IsRejected("", 12.5));
-        Assert.False(vm.IsRejected("   ", 12.5));
-        Assert.False(vm.IsRejected(null!, 12.5));
+        vm.AddRejection("BAB", "Riss", 12.5);
+        Assert.False(vm.IsRejected("", "Riss", 12.5));
+        Assert.False(vm.IsRejected("   ", "Riss", 12.5));
+        Assert.False(vm.IsRejected(null!, "Riss", 12.5));
     }
 
     // --- MakeRejectionKey-Format ist stable ---
@@ -148,23 +204,24 @@ public class CodingSessionViewModelRejectionListTests
     [Fact]
     public void MakeRejectionKey_FormatIsStable()
     {
-        Assert.Equal("BAB@12.50", CodingSessionViewModel.MakeRejectionKey("BAB", 12.5));
-        Assert.Equal("BAB@12.50", CodingSessionViewModel.MakeRejectionKey("bab", 12.5));
-        Assert.Equal("BAB@12.50", CodingSessionViewModel.MakeRejectionKey("  BAB  ", 12.5));
-        Assert.Equal("BAC@7.05", CodingSessionViewModel.MakeRejectionKey("BAC", 7.05));
-        Assert.Equal("BAC@0.00", CodingSessionViewModel.MakeRejectionKey("BAC", 0.0));
+        Assert.Equal("BAB|RISS@12.50",  CodingSessionViewModel.MakeRejectionKey("BAB", "Riss", 12.5));
+        Assert.Equal("BAB|RISS@12.50",  CodingSessionViewModel.MakeRejectionKey("bab", "riss", 12.5));
+        Assert.Equal("BAB|RISS@12.50",  CodingSessionViewModel.MakeRejectionKey("  BAB  ", "  Riss  ", 12.5));
+        Assert.Equal("BAC|@7.05",       CodingSessionViewModel.MakeRejectionKey("BAC", "", 7.05));
+        Assert.Equal("BAC|@0.00",       CodingSessionViewModel.MakeRejectionKey("BAC", null, 0.0));
+        Assert.Equal("AI|WURZEL@3.20",  CodingSessionViewModel.MakeRejectionKey("AI", "Wurzel", 3.2));
     }
 
     [Fact]
     public void MakeRejectionKey_UsesInvariantCulture()
     {
-        // Auch in de-DE muss der Punkt als Dezimaltrenner kommen.
         var prev = System.Threading.Thread.CurrentThread.CurrentCulture;
         try
         {
             System.Threading.Thread.CurrentThread.CurrentCulture =
                 new System.Globalization.CultureInfo("de-DE");
-            Assert.Equal("BAB@12.50", CodingSessionViewModel.MakeRejectionKey("BAB", 12.5));
+            Assert.Equal("BAB|RISS@12.50",
+                CodingSessionViewModel.MakeRejectionKey("BAB", "Riss", 12.5));
         }
         finally
         {
@@ -178,11 +235,11 @@ public class CodingSessionViewModelRejectionListTests
     public void RejectedFindings_ContainsStableKeys()
     {
         var vm = BuildVm();
-        vm.AddRejection("BAB", 12.5);
-        vm.AddRejection("bac", 7.0);
+        vm.AddRejection("BAB", "Riss", 12.5);
+        vm.AddRejection("bac", "", 7.0);
 
         var keys = vm.RejectedFindings.OrderBy(k => k).ToList();
-        Assert.Equal(new[] { "BAB@12.50", "BAC@7.00" }, keys);
+        Assert.Equal(new[] { "BAB|RISS@12.50", "BAC|@7.00" }, keys);
     }
 
     // --- Service-Stubs ---

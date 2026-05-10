@@ -113,55 +113,83 @@ public sealed partial class CodingSessionViewModel
 
     // ─── Step 1b: Sperrliste / Reject-Key ───────────────────────────────
 
-    private const double RejectionMeterTolerance = 0.5;
+    // Tolerance-Tabelle: AI-Bucket (code-loses Finding mit Fallback "AI") wird
+    // sehr eng gehalten, damit "Riss bei 12.5m" nicht semantisch wahllose
+    // Findings im naechsten halben Meter mit-erschlaegt. Echte VSA-Codes
+    // bleiben bei +/-0.5m.
+    private const double RejectionMeterToleranceDefault = 0.5;
+    private const double RejectionMeterToleranceAi = 0.1;
+    private const string AiFallbackCode = "AI";
 
-    private readonly List<(string codeNormalized, double meter)> _rejections = new();
+    private static double ToleranceFor(string codeNormalized)
+        => codeNormalized == AiFallbackCode
+            ? RejectionMeterToleranceAi
+            : RejectionMeterToleranceDefault;
+
+    // Storage: Code-Key + Label-Key (disambiguiert "AI"+"Riss" vs "AI"+"Wurzel")
+    // + Meter. Alle Strings normalisiert.
+    private readonly List<(string codeNormalized, string labelNormalized, double meter)> _rejections = new();
 
     /// <summary>Liste aller in dieser Session abgelehnten Findings als
-    /// stabile Schluessel (Code@Meter). Read-only, fuer Diagnostics/Logging.</summary>
+    /// stabile Schluessel (Code|Label@Meter). Read-only, fuer Diagnostics/Logging.</summary>
     public IReadOnlyCollection<string> RejectedFindings
-        => _rejections.Select(r => MakeRejectionKey(r.codeNormalized, r.meter)).ToList();
+        => _rejections
+            .Select(r => MakeRejectionKey(r.codeNormalized, r.labelNormalized, r.meter))
+            .ToList();
 
-    /// <summary>Fuegt ein Reject in die Sperrliste ein (idempotent: gleicher Code
-    /// + Meter mit &lt;1cm Differenz wird nicht doppelt gespeichert).</summary>
-    public void AddRejection(string code, double meter)
+    /// <summary>Fuegt ein Reject in die Sperrliste ein. Idempotent: gleicher
+    /// Code + gleicher Label + Meter mit &lt;1cm Differenz wird nicht doppelt
+    /// gespeichert.</summary>
+    public void AddRejection(string code, string? label, double meter)
     {
         if (string.IsNullOrWhiteSpace(code)) return;
-        var normalized = code.Trim().ToUpperInvariant();
+        var normalizedCode = code.Trim().ToUpperInvariant();
+        var normalizedLabel = NormalizeLabel(label);
 
-        // Idempotenz: gleicher Eintrag (innerhalb 1cm) nicht doppelt aufnehmen.
         for (int i = 0; i < _rejections.Count; i++)
         {
             var r = _rejections[i];
-            if (r.codeNormalized == normalized && Math.Abs(r.meter - meter) < 0.01)
+            if (r.codeNormalized == normalizedCode &&
+                r.labelNormalized == normalizedLabel &&
+                Math.Abs(r.meter - meter) < 0.01)
                 return;
         }
 
-        _rejections.Add((normalized, meter));
+        _rejections.Add((normalizedCode, normalizedLabel, meter));
     }
 
-    /// <summary>true wenn fuer (code, meter) bereits ein Reject vorliegt.
-    /// Toleranz ±0.5m, Code case-insensitive.</summary>
-    public bool IsRejected(string code, double meter)
+    /// <summary>true wenn fuer (code, label, meter) bereits ein Reject vorliegt.
+    /// Toleranz +/-0.5m fuer echte Codes, +/-0.1m fuer den AI-Fallback-Bucket.
+    /// Code + Label case-insensitive.</summary>
+    public bool IsRejected(string code, string? label, double meter)
     {
         if (string.IsNullOrWhiteSpace(code)) return false;
-        var normalized = code.Trim().ToUpperInvariant();
+        var normalizedCode = code.Trim().ToUpperInvariant();
+        var normalizedLabel = NormalizeLabel(label);
+        var tolerance = ToleranceFor(normalizedCode);
 
         for (int i = 0; i < _rejections.Count; i++)
         {
             var r = _rejections[i];
-            if (r.codeNormalized == normalized &&
-                Math.Abs(r.meter - meter) <= RejectionMeterTolerance)
+            if (r.codeNormalized == normalizedCode &&
+                r.labelNormalized == normalizedLabel &&
+                Math.Abs(r.meter - meter) <= tolerance)
                 return true;
         }
         return false;
     }
 
-    /// <summary>Stable Key fuer ein Rejection-Entry. Format: "CODE@MM.MM".
-    /// Public fuer Logging/Tests.</summary>
-    public static string MakeRejectionKey(string code, double meter)
+    /// <summary>Stable Key fuer ein Rejection-Entry. Format:
+    /// "CODE|LABEL@MM.MM" (label leer → "CODE|@MM.MM"). Public fuer
+    /// Logging/Tests.</summary>
+    public static string MakeRejectionKey(string code, string? label, double meter)
     {
-        var normalized = (code ?? "").Trim().ToUpperInvariant();
-        return $"{normalized}@{meter.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}";
+        var normalizedCode = (code ?? "").Trim().ToUpperInvariant();
+        var normalizedLabel = NormalizeLabel(label);
+        var meterStr = meter.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+        return $"{normalizedCode}|{normalizedLabel}@{meterStr}";
     }
+
+    private static string NormalizeLabel(string? label)
+        => (label ?? "").Trim().ToUpperInvariant();
 }
