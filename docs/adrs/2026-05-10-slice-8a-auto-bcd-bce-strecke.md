@@ -1,7 +1,10 @@
 # Slice 8a Auto-BCD/BCE/Streckenschaden — Mini-ADR
 
 Datum: 2026-05-10
-Status: **Entwurf** (wartet auf User-Review)
+Status: **Entschieden** (User-Freigabe 2026-05-10: "weiter bis alles umgebaut wurde")
+- Q1=A, Q2=A, Q3=B, Q4=A, Q5=A, Q6=C: alle Empfehlungen bestaetigt
+- Steps 1-3 werden autonom ausgefuehrt; UI-Smoke-Stop nach Step 3
+  weil der Yes/No/Cancel-Dialog manuelle Interaktion braucht.
 
 Vorgeschichte:
 - Audit-Diff: `2026-05-09-slice-8a-1-audit-diff.md` markiert Auto-BCD/BCE/
@@ -317,17 +320,19 @@ ADR auf Done flippen, CHANGELOG-Eintrag.
 - **Boundary-Photo-Workflow** (`BoundaryPhotoService` bleibt
   unveraendert im OnSessionCompleted).
 
-## Offene Punkte fuer Dich (Reviewer)
+## Entscheidungs-Protokoll
 
-1. **Q1 (BCD-Auto):** A (Status quo) ist mein Vorschlag — EnsureBoundaries
-   garantiert VSA-Konformitaet. Lieber B (Live-Visibility) oder C
-   (Legacy-Stil ohne Auto-BCD)?
-2. **Q2 (BCE-Auto):** A (Status quo) — analog zu Q1. Lieber Live-Variante?
-3. **Q3 (Streckenschaden-Dialog):** B (YesNoCancel) ist mein Vorschlag.
-   Lieber A (Exception bleibt) oder C (Auto-Close)?
-4. **Q4 (Dialog-Owner):** A (Window Code-Behind) — ok?
-5. **Q5 (Service-API):** A (CompleteSession-Overload) — ok?
-6. **Q6 (Tests):** C (nur Service-Overload-Test) — ok?
+User-Freigabe 2026-05-10 ("weiter bis alles umgebaut wurde"):
 
-Wenn die sechs Punkte ok sind, schreibe ich die Steps 1-4 in
-einzelnen Commits, Build/Test-Gate und UI-Smoke-Stop nach Step 3.
+1. **Q1=A:** BCD-Auto via EnsureBoundaries beim CompleteSession bleibt.
+2. **Q2=A:** BCE-Auto via EnsureBoundaries beim CompleteSession bleibt.
+3. **Q3=B:** Legacy-Dialog (YesNoCancel) bei offenen Streckenschaeden
+   statt heutiger Exception.
+4. **Q4=A:** Dialog-Logik in CodingModeWindow.StreckenschadenDialog.cs-Partial.
+5. **Q5=A:** Service-Overload `CompleteSession(bool allowOpen=false)`.
+6. **Q6=C:** Nur der Service-Overload bekommt einen Test, Window-Dialog
+   ist UI-Smoke-Sache.
+
+Steps 1-3 werden autonom ausgefuehrt mit Build + Tests pro Commit.
+UI-Smoke nach Step 3 ist manuelle Interaktion (Dialog-Klicks) — vor
+Step 4 stoppe ich und warte.
