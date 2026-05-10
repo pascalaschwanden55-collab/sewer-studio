@@ -55,7 +55,7 @@ public partial class PlayerWindow
 
         var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
             entry,
-            _codingLastOsdMeter ?? GetMeterFromVideoPosition(),
+            GetMeterFromVideoPosition(),
             TimeSpan.FromSeconds(timestampSec));
 
         var dlg = new VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
@@ -81,28 +81,17 @@ public partial class PlayerWindow
     }
 
     // ─── Felder, die LIVE-Features brauchen (MarkTool/OperateurAnnotation/Hotkeys/LiveDetection) ─
+    //
+    // Slice 8a PlayerWindow-Cleanup (2026-05-10): die nach 5b residualen
+    // pragma-suppressed Felder _codingSchemaType (nur Reset, nie gelesen)
+    // und _codingLastOsdMeter (nie gesetzt, immer null) wurden entfernt.
+    // Aufrufer von _codingLastOsdMeter (OpenCodeCatalogForMark) nutzt
+    // jetzt direkt GetMeterFromVideoPosition().
 
     private CodingSessionViewModel? _codingVm;
     private ICodingSessionService? _codingSessionService;
     private IOverlayToolService? _codingOverlayService;
     private readonly SchemaOverlayManager _codingSchemaManager = new();
-
-    // _codingSchemaType / _codingLastOsdMeter werden mit dem aktuellen
-    // Schnitt nur gelesen oder genullt — der schreibende Pfad (Schema-
-    // Werkzeuge, OSD-Reader) lebte im geloeschten In-Place-Codier-Modus.
-    // Pragma unterdrueckt die "nie gesetzt"-Warnung bis ein Folge-Slice die
-    // Felder entweder reanimiert oder ganz entfernt.
-#pragma warning disable CS0414, CS0649
-    // _codingSchemaType wird in MarkTool noch genullt (Reset-Pfad), aber
-    // nirgends mehr gelesen — CS0414 unterdrueckt die Warnung, bis ein
-    // Folge-Slice das Reset entfernt.
-    private SchemaType? _codingSchemaType;
-
-    // Letzter via OSD gelesener Meterstand. Frueher vom OSD-Timer gespeist;
-    // wird heute nur noch als Fallback fuer GetMeterFromVideoPosition genutzt
-    // (bleibt beim aktuellen Schnitt null, ohne Funktionsverlust).
-    private double? _codingLastOsdMeter;
-#pragma warning restore CS0414, CS0649
 
     // Sidecar-Client fuer SAM-Preview im MarkTool. Slice 8a.3 Step 5b-Fix:
     // wird beim ersten Bedarf in PlayerWindow.MarkTool.TryEnsureCodingVisionClient
@@ -157,68 +146,8 @@ public partial class PlayerWindow
         }
     }
 
-    /// <summary>
-    /// Stellt sicher, dass Haltungslaenge_m gesetzt ist.
-    /// Fallback-Kette: Haltungslaenge_m → Laenge_m → DamageOverlay → Protokoll BCE → manuelle Eingabe.
-    /// </summary>
-    private void EnsureHaltungslaenge(HaltungRecord record)
-    {
-        // Bereits vorhanden?
-        if (HasValidLength(record, "Haltungslaenge_m"))
-            return;
-
-        // Fallback 1: Laenge_m
-        if (HasValidLength(record, "Laenge_m"))
-        {
-            record.SetFieldValue("Haltungslaenge_m",
-                record.GetFieldValue("Laenge_m"),
-                Domain.Models.FieldSource.Legacy, userEdited: false);
-            return;
-        }
-
-        // Fallback 2: DamageOverlay (wurde beim Oeffnen aus dem Protokoll berechnet)
-        if (_damageOverlay != null && _damageOverlay.PipeLengthMeters > 0)
-        {
-            record.SetFieldValue("Haltungslaenge_m",
-                _damageOverlay.PipeLengthMeters.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
-                Domain.Models.FieldSource.Legacy, userEdited: false);
-            return;
-        }
-
-        // Fallback 3: Protokoll BCE-Eintrag (Rohrende) → hoechster Meter
-        if (record.Protocol?.Current?.Entries is { Count: > 0 } entries)
-        {
-            var maxMeter = entries
-                .Where(e => e.MeterStart.HasValue && e.MeterStart.Value > 0)
-                .Select(e => e.MeterStart!.Value)
-                .DefaultIfEmpty(0)
-                .Max();
-
-            if (maxMeter > 0)
-            {
-                record.SetFieldValue("Haltungslaenge_m",
-                    maxMeter.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
-                    Domain.Models.FieldSource.Legacy, userEdited: false);
-                return;
-            }
-        }
-
-        // Fallback 4: Benutzer manuell fragen
-        var input = Microsoft.VisualBasic.Interaction.InputBox(
-            "Haltungslaenge konnte nicht ermittelt werden.\n" +
-            "Bitte Haltungslaenge in Meter eingeben (z.B. 45.3):",
-            "Haltungslaenge eingeben", "");
-
-        if (!string.IsNullOrWhiteSpace(input))
-        {
-            var normalized = input.Trim().Replace(',', '.');
-            if (double.TryParse(normalized, System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var val) && val > 0)
-            {
-                record.SetFieldValue("Haltungslaenge_m",
-                    val.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
-                    Domain.Models.FieldSource.Manual, userEdited: true);
-            }
-        }
-    }
+    // EnsureHaltungslaenge wurde im Slice 8a PlayerWindow-Cleanup
+    // (2026-05-10) entfernt — der einzige Caller war der in 5b geloeschte
+    // In-Place-Coding-Mode. Falls eine Folge-Slice die Fallback-Kette
+    // wieder braucht, siehe git-history vor Commit 5187449.
 }

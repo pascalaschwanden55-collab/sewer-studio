@@ -121,14 +121,10 @@ public partial class PlayerWindow
         return $"{clock}{(extent.Length > 0 ? $" / {extent}" : "")}{extra} - {baseText}";
     }
 
-    private static bool HasValidLength(HaltungRecord record, string fieldName)
-    {
-        var raw = record.GetFieldValue(fieldName);
-        if (string.IsNullOrWhiteSpace(raw)) return false;
-        var normalized = raw.Replace(',', '.');
-        return double.TryParse(normalized, NumberStyles.Float,
-            CultureInfo.InvariantCulture, out var v) && v > 0;
-    }
+    // HasValidLength wurde im Slice 8a PlayerWindow-Cleanup (2026-05-10)
+    // entfernt — einziger Caller war EnsureHaltungslaenge in
+    // PlayerWindow.CodingApply.cs, das mit dem In-Place-Coding-Mode in
+    // 5b obsolet wurde.
 
     private static string CodingStatusToDisplayText(DefectStatus status) => status switch
     {

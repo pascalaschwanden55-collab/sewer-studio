@@ -1,7 +1,11 @@
 # Slice 8a PlayerWindow-Cleanup nach 5b — Mini-ADR
 
 Datum: 2026-05-10
-Status: **Entwurf** (wartet auf User-Review)
+Status: **Entschieden** (User-Freigabe 2026-05-10: "ich moechte den ganzen umbau des gesamten programms")
+- Q1=B: Cleanup-Scope = pragma-Felder + EnsureHaltungslaenge + ggf. SchemaManager
+- Q2=A: EnsureHaltungslaenge loeschen (YAGNI)
+- Q3: Smoke = MarkTool-Workflow durchklicken — an User delegiert
+- Code wird autonom ausgefuehrt; UI-Smoke ist User-Item
 
 Vorgeschichte:
 - Audit-Diff: `2026-05-09-slice-8a-1-audit-diff.md` Step 9-11 hat
@@ -199,16 +203,14 @@ In `PlayerWindow.MarkTool.cs:54`:
   Video-Window weiter.
 - **OperateurAnnotation UI-Smoke** (Memory-TODO).
 
-## Offene Punkte fuer Dich (Reviewer)
+## Entscheidungs-Protokoll
 
-1. **Q1 Cleanup-Scope:** B (Felder + EnsureHaltungslaenge + ggf.
-   `_codingSchemaManager`) ist mein Vorschlag. Lieber A (nur Pragma-
-   Felder) oder C (mit Rename)?
-2. **Q2 EnsureHaltungslaenge:** A (loeschen) — bestaetigt?
-3. **Q3 Smoke-Plan:** PlayerWindow MarkTool-Workflow durchklicken,
-   Verhalten unveraendert. Reicht das?
+User-Freigabe 2026-05-10:
+- Q1=B: pragma-Felder + EnsureHaltungslaenge + ggf. SchemaManager.
+- Q2=A: EnsureHaltungslaenge loeschen.
+- Q3: Smoke = MarkTool-Workflow, an User delegiert.
 
-Wenn die drei Punkte ok sind, schreibe ich den Cleanup-Commit.
+Cleanup wird in 1 Commit autonom ausgefuehrt.
 
 ## Wie lange geht das noch?
 

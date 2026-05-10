@@ -51,7 +51,6 @@ public partial class PlayerWindow
         // Slice 8a.3 Step 5b: TxtActiveToolLabel entfaellt mit CodingToolbar.
         _player.SetPause(true);
         _codingSchemaManager.Cancel();
-        _codingSchemaType = null;
 
         if (tool == OverlayToolType.Point)
         {
