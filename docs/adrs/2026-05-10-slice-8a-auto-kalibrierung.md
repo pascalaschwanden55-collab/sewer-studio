@@ -1,7 +1,17 @@
 # Slice 8a Auto-Kalibrierung-Wiring — Mini-ADR
 
 Datum: 2026-05-10
-Status: **Entwurf** (wartet auf User-Review)
+Status: **Entschieden** (User-Review 2026-05-10 mit zwei Praezisierungen)
+- Q1–Q6: zugestimmt (alle A-Empfehlungen)
+- Praezisierung 1: `WasManuallyCalibrated=true` aus
+  `AutoCalibrationService.TryAutoCalibrate` ist eine **bestehende
+  Eigenheit** des Services (Field-Name irrefuehrend), nicht die
+  gewuenschte Semantik dieses Slices. Wir uebernehmen die Calibration
+  unveraendert; ein Rename / Refactor des Flag-Felds ist eigener
+  Folge-Slice falls noetig.
+- Praezisierung 2: PNG-Decode-Helper als `internal static` in der
+  neuen `AutoCalibration.cs`-Partial. Tests "klein und testbar" —
+  nicht zu gross.
 Vorgeschichte:
 - Audit-Diff: `2026-05-09-slice-8a-1-audit-diff.md` markiert Auto-Kalibrierung
   als "wichtiges UX-Feature" (Step 5 der Migrations-Reihenfolge).
@@ -188,15 +198,20 @@ In dieser Reihenfolge, jeder Step eigener Commit + Build/Test-Gate:
 
 ### Step 1: PNG → BitmapSource Helper
 
-Kleine reine Pixel-Helper-Funktion, evtl. in `CodingModeWindow.AutoCalibration.cs`:
+`internal static` Methode in der neuen `CodingModeWindow.AutoCalibration.cs`-Partial
+(User-Praezisierung 2026-05-10):
 ```csharp
-private static BitmapSource? DecodePngToBitmap(byte[] pngBytes)
+internal static BitmapSource? DecodePngToBitmap(byte[]? pngBytes)
 ```
 
-Tests im Pipeline-Tests-Project:
-- Roundtrip mit einem 100x100-PNG-Fixture
+Klein und testbar. Tests im Pipeline-Tests-Project bewusst knapp:
+- Roundtrip mit einem programmatisch erzeugten kleinen PNG
 - null/empty bytes → null
 - Korrupte Bytes → null (kein Throw)
+
+Keine grosse Test-Suite — der Helper ist trivial, die Calibration-
+Logik selbst lebt in `AutoCalibrationService` und ist nicht Teil
+dieses Slices.
 
 ### Step 2: AutoCalibration-Helper-Partial
 
@@ -220,6 +235,13 @@ private async Task TryAutoCalibrateOnceAsync(byte[] pngBytes)
         TxtCalibrationStatus.Text = $"Auto-kalibriert: DN {dn} mm");
 }
 ```
+
+**Hinweis zu `WasManuallyCalibrated=true`:** Die zurueckgegebene
+`PipeCalibration` aus `TryAutoCalibrate` setzt `WasManuallyCalibrated=true`.
+Das ist eine **bestehende Eigenheit des AutoCalibrationService**
+(Field-Name irrefuehrend — er markiert "Calibration ist gueltig",
+nicht "vom User gesetzt"). Wir uebernehmen den Wert unveraendert.
+Ein Rename / Refactor des Felds ist eigener Folge-Slice falls noetig.
 
 ### Step 3: Loop-Integration
 
@@ -262,17 +284,19 @@ if (_vm.IsFrameReady)
 - **Algorithmus-Tuning von AutoCalibrationService** (MinGradientStrength,
   ScanLines, Plausibilitaets-Schwellen) — separater Slice.
 
-## Offene Punkte fuer Dich (Reviewer)
+## Entscheidungs-Protokoll
 
-1. **Q1 (Trigger-Zeitpunkt):** A ist mein Vorschlag. Lieber B (sofort
-   bei Loaded), oder D (erst bei BCD-Finding)?
-2. **Q2 (Trigger-Owner):** B (eigene Partial-Methode) oder lieber A
-   (inline im Loop)?
-3. **Q3 (Trigger-Sequenz):** OK so, oder fehlt was?
-4. **Q4 (Retry-Strategie):** A (einmalig) ist mein Vorschlag.
-   Wahrscheinlich ok fuer MVP, aber sag mir wenn du B erwartet hast.
-5. **Q5 (Manueller Pfad):** A (unveraendert) — bestaetigt?
-6. **Q6 (DN_mm fehlt):** A (Skip) — bestaetigt?
+User-Review 2026-05-10:
 
-Wenn die sechs Punkte ok sind, schreibe ich die Steps 1-4 in
-einzelnen Commits, Build/Test-Gate und UI-Smoke-Stop nach Step 3.
+1. **Q1=A, Q2=B, Q3=OK, Q4=A, Q5=A, Q6=A:** zugestimmt.
+2. **Praezisierung 1 — `WasManuallyCalibrated=true`:** Bestehende
+   Eigenheit von `AutoCalibrationService.TryAutoCalibrate`
+   (Field-Name irrefuehrend, markiert "Calibration gueltig" nicht
+   "User-gesetzt"). Im ADR als bestehender Artefakt dokumentiert,
+   nicht als gewuenschte Semantik. Rename ist Folge-Slice falls noetig.
+3. **Praezisierung 2 — PNG-Decode-Helper:** `internal static` in
+   der neuen Partial. Tests bewusst klein gehalten (Roundtrip + null
+   + korrupt) — der Helper ist trivial, Calibration-Logik selbst
+   lebt im AutoCalibrationService und ist nicht Teil dieses Slices.
+
+Slice freigegeben, startet mit Step 1.
