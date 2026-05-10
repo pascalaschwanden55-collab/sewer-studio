@@ -178,7 +178,7 @@ public class CodingSessionViewModelFrameReadinessTests
         public void ResumeSession() => throw new NotImplementedException();
         public void SetWaitingForInput() => throw new NotImplementedException();
         public void AbortSession(string reason) => throw new NotImplementedException();
-        public ProtocolDocument CompleteSession() => throw new NotImplementedException();
+        public ProtocolDocument CompleteSession(bool allowOpenStreckenschaden = false) => throw new NotImplementedException();
         public IReadOnlyList<CodingEvent> GetOpenStreckenschaeden() => throw new NotImplementedException();
         public void CloseStreckenschaden(Guid eventId, double endMeter) => throw new NotImplementedException();
         public double CurrentMeter => 0;

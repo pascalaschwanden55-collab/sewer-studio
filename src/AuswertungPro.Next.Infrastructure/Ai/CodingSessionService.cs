@@ -155,7 +155,7 @@ public sealed class CodingSessionService : ICodingSessionService
         ev.Entry.MeterEnd = endMeter;
     }
 
-    public ProtocolDocument CompleteSession()
+    public ProtocolDocument CompleteSession(bool allowOpenStreckenschaden = false)
     {
         EnsureSession();
 
@@ -163,19 +163,28 @@ public sealed class CodingSessionService : ICodingSessionService
         // Streckenschaeden ohne Ende offen sind. User-Klage 2026-04-25:
         // "wenn ich einen streckenschaden anfan protokolliert hab ist das
         //  a1 und der muss geschlossen werden bevor die codierung zu ende ist"
-        var open = _session!.Events.Where(IsOpenStreckenschaden).ToList();
-        if (open.Count > 0)
+        //
+        // Slice 8a Auto-BCD/BCE-Strecke (2026-05-10): das Window kann mit
+        // allowOpenStreckenschaden=true ueberschreiben (Y/N/Cancel-Dialog
+        // hat "No: ohne Schliessen abschliessen" gewaehlt). Die Eintraege
+        // landen dann mit MeterEnd=null im Protokoll, ProtocolBoundaryService
+        // .Validate flagged sie als Warnung.
+        if (!allowOpenStreckenschaden)
         {
-            var liste = string.Join(
-                ", ",
-                open.Select(e =>
-                    $"{e.Entry.Code} bei {e.Entry.MeterStart:F2}m"));
-            throw new InvalidOperationException(
-                $"Codierung kann nicht abgeschlossen werden: {open.Count} offene(r) Streckenschaden " +
-                $"ohne End-Meter ({liste}). Bitte mit 'Streckenschaden schliessen' abschliessen oder Event loeschen.");
+            var open = _session!.Events.Where(IsOpenStreckenschaden).ToList();
+            if (open.Count > 0)
+            {
+                var liste = string.Join(
+                    ", ",
+                    open.Select(e =>
+                        $"{e.Entry.Code} bei {e.Entry.MeterStart:F2}m"));
+                throw new InvalidOperationException(
+                    $"Codierung kann nicht abgeschlossen werden: {open.Count} offene(r) Streckenschaden " +
+                    $"ohne End-Meter ({liste}). Bitte mit 'Streckenschaden schliessen' abschliessen oder Event loeschen.");
+            }
         }
 
-        _session.State = CodingSessionState.Completed;
+        _session!.State = CodingSessionState.Completed;
         _session.CompletedAt = DateTimeOffset.UtcNow;
 
         // Protokoll aus gesammelten Events generieren

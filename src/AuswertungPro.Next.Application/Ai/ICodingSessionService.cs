@@ -32,10 +32,17 @@ public interface ICodingSessionService
 
     /// <summary>
     /// Session abschliessen → Protokoll generieren.
-    /// Wirft InvalidOperationException wenn offene Streckenschaeden existieren —
-    /// erst alle Streckenschaden-Ereignisse mit MeterEnd schliessen.
+    /// Per Default wirft InvalidOperationException wenn offene
+    /// Streckenschaeden existieren — erst alle Streckenschaden-Ereignisse
+    /// mit MeterEnd schliessen.
+    /// Mit <paramref name="allowOpenStreckenschaden"/>=true wird die Pruefung
+    /// uebersprungen; offene Streckenschaeden landen mit MeterEnd=null im
+    /// Protokoll und werden von ProtocolBoundaryService.Validate als
+    /// Warnung geflaggt. Slice 8a Auto-BCD/BCE-Strecke (2026-05-10):
+    /// erlaubt Window dem User per Yes/No/Cancel-Dialog "ohne Schliessen
+    /// abschliessen" zu waehlen.
     /// </summary>
-    ProtocolDocument CompleteSession();
+    ProtocolDocument CompleteSession(bool allowOpenStreckenschaden = false);
 
     /// <summary>
     /// Liefert offene Streckenschaeden (IsStreckenschaden=true ohne MeterEnd).
