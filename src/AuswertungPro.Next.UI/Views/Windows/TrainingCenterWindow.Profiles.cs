@@ -13,12 +13,29 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 // Extraktion fuer Trainings-Daten. Aus dem Hauptdatei extrahiert (Slice 9b).
 public partial class TrainingCenterWindow
 {
+    /// <summary>Best-effort Log-Append: VM-Append darf den UI-Workflow nie kippen.
+    /// Slice 2026-05-10 catch-hygiene: ersetzt 33 `SafeAppendToLog(...);`
+    /// Patterns durch einen einzigen Helper. Ein Debug.WriteLine bei Failure
+    /// macht stille Fehler im VS-Output sichtbar ohne den User zu stoeren.</summary>
+    private void SafeAppendToLog(string text)
+    {
+        try
+        {
+            Vm?.AppendToLogText(text);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[TrainingCenter] AppendToLog fehlgeschlagen: {ex.Message}");
+        }
+    }
+
     // ── Inspektions-Profile extrahieren ──────────────────────────────────
 
     private async void ExtractProfiles_Click(object sender, RoutedEventArgs e)
     {
         // Sofort sichtbares Feedback - sonst denkt der User nichts passiere.
-        try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Profile-Extraktion: Datei waehlen...\n"); } catch { }
+        SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] Profile-Extraktion: Datei waehlen...\n");
 
         // Quelle waehlen:
         //   - WinCan: DB3 (SQLite) / SDF (SQL Server Compact) / SQLite
@@ -49,14 +66,14 @@ public partial class TrainingCenterWindow
         }
         if (dlgResult != true)
         {
-            try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Auswahl abgebrochen.\n"); } catch { }
+            SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] Auswahl abgebrochen.\n");
             return;
         }
 
         var selectedPath = dlg.FileName;
         string db3Path;
 
-        try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Gewaehlt: {selectedPath}\n"); } catch { }
+        SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] Gewaehlt: {selectedPath}\n");
 
         // KIAS/IBAK-Pfad: wenn Arizona.fdb, Daten.txt oder *.xtf gewaehlt -> IBAK-Profile
         // direkt aus Daten.txt + Stammdaten-Aggregator (XTF/PDF/FDB) extrahieren.
@@ -73,7 +90,7 @@ public partial class TrainingCenterWindow
             }
             catch (Exception kex)
             {
-                try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] KIAS-FEHLER (vor Try): {kex.Message}\n"); } catch { }
+                SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] KIAS-FEHLER (vor Try): {kex.Message}\n");
                 _dialogs.ShowMessage($"KIAS/IBAK-Extraktion fehlgeschlagen:\n{kex}", "Profile extrahieren",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -95,16 +112,16 @@ public partial class TrainingCenterWindow
             }
 
             BtnExtractProfiles.IsEnabled = false;
-            try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] SDF wird nach SQLite konvertiert: {System.IO.Path.GetFileName(selectedPath)}...\n"); } catch { }
+            SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] SDF wird nach SQLite konvertiert: {System.IO.Path.GetFileName(selectedPath)}...\n");
             try
             {
                 db3Path = await System.Threading.Tasks.Task.Run(() =>
                     Infrastructure.Import.WinCan.SdfToSqliteConverter.Convert(selectedPath));
-                try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Konvertierung fertig: {db3Path}\n"); } catch { }
+                SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] Konvertierung fertig: {db3Path}\n");
             }
             catch (Exception ex)
             {
-                try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] SDF-Konvertierung FEHLGESCHLAGEN: {ex.Message}\n"); } catch { }
+                SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] SDF-Konvertierung FEHLGESCHLAGEN: {ex.Message}\n");
                 _dialogs.ShowMessage($"SDF-Konvertierung fehlgeschlagen:\n\n{ex.Message}",
                     "SDF-Konvertierung", MessageBoxButton.OK, MessageBoxImage.Error);
                 BtnExtractProfiles.IsEnabled = true;
@@ -119,41 +136,41 @@ public partial class TrainingCenterWindow
         var patternsPath = System.IO.Path.Combine(@"C:\KI_BRAIN", "inspection_patterns.json");
 
         BtnExtractProfiles.IsEnabled = false;
-        try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Profile extrahieren: {System.IO.Path.GetFileName(db3Path)}...\n"); } catch { }
+        SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] Profile extrahieren: {System.IO.Path.GetFileName(db3Path)}...\n");
 
         try
         {
             var profiles = await System.Threading.Tasks.Task.Run(() =>
                 Infrastructure.Import.WinCan.InspectionProfileExtractor.ExtractFromDb3(db3Path));
 
-            try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] {profiles.Count} Profile extrahiert\n"); } catch { }
+            SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] {profiles.Count} Profile extrahiert\n");
 
             // Profile speichern
             await System.Threading.Tasks.Task.Run(() =>
                 Infrastructure.Import.WinCan.InspectionProfileExtractor.SaveProfiles(profiles, outputDir));
 
-            try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Profile gespeichert: {outputDir}\n"); } catch { }
+            SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] Profile gespeichert: {outputDir}\n");
 
             // Muster aggregieren
             var patterns = Infrastructure.Import.WinCan.InspectionPatternAggregator.Aggregate(profiles);
             await System.Threading.Tasks.Task.Run(() =>
                 Infrastructure.Import.WinCan.InspectionPatternAggregator.SavePatterns(patterns, patternsPath));
 
-            try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Muster aggregiert:\n"); } catch { }
-            try { Vm?.AppendToLogText($"  Haltungen: {patterns.AnzahlHaltungen}, Beobachtungen: {patterns.AnzahlBeobachtungen}\n"); } catch { }
-            try { Vm?.AppendToLogText($"  Median Geschwindigkeit: {patterns.MedianFahrgeschwindigkeit:F3} m/s\n"); } catch { }
-            try { Vm?.AppendToLogText($"  Median Codierungen/m: {patterns.MedianCodierungenProMeter:F2}\n"); } catch { }
-            try { Vm?.AppendToLogText($"  Median Luecke: {patterns.MedianLueckeMeter:F1}m\n"); } catch { }
+            SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] Muster aggregiert:\n");
+            SafeAppendToLog($"  Haltungen: {patterns.AnzahlHaltungen}, Beobachtungen: {patterns.AnzahlBeobachtungen}\n");
+            SafeAppendToLog($"  Median Geschwindigkeit: {patterns.MedianFahrgeschwindigkeit:F3} m/s\n");
+            SafeAppendToLog($"  Median Codierungen/m: {patterns.MedianCodierungenProMeter:F2}\n");
+            SafeAppendToLog($"  Median Luecke: {patterns.MedianLueckeMeter:F1}m\n");
             foreach (var r in patterns.SequenzRegeln)
-                try { Vm?.AppendToLogText($"  Regel: {r.Regel} (Support: {r.Support:P0}, Ausnahmen: {r.Ausnahmen})\n"); } catch { }
+                SafeAppendToLog($"  Regel: {r.Regel} (Support: {r.Support:P0}, Ausnahmen: {r.Ausnahmen})\n");
 
             // QualityFlags zusammenfassen
             int warnCount = profiles.Count(p => p.QualityFlags.Warnings.Count > 0);
             int noBcd = profiles.Count(p => p.QualityFlags.MissingBcd);
             int noBce = profiles.Count(p => p.QualityFlags.MissingBce);
-            try { Vm?.AppendToLogText($"  Warnungen: {warnCount} Profile, fehlendes BCD: {noBcd}, fehlendes BCE: {noBce}\n"); } catch { }
+            SafeAppendToLog($"  Warnungen: {warnCount} Profile, fehlendes BCD: {noBcd}, fehlendes BCE: {noBce}\n");
 
-            try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Profile fertig. Gespeichert nach {outputDir}\n"); } catch { }
+            SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] Profile fertig. Gespeichert nach {outputDir}\n");
 
             // Fragen ob Frames extrahiert werden sollen.
             // Bei SDF-Quelle verwenden wir den Original-SDF-Pfad fuer die Video-Suche —
@@ -199,7 +216,7 @@ public partial class TrainingCenterWindow
         }
         catch (Exception ex)
         {
-            try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] FEHLER: {ex.Message}\n"); } catch { }
+            SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] FEHLER: {ex.Message}\n");
             _dialogs.ShowMessage($"Fehler: {ex.Message}", "Profile extrahieren", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
@@ -216,9 +233,12 @@ public partial class TrainingCenterWindow
     /// </summary>
     private async System.Threading.Tasks.Task ExtractProfilesFromKiasAsync(string selectedFile)
     {
-        try { BtnExtractProfiles.IsEnabled = false; } catch { }
+        // Best-effort: Button-Disable darf nie throwen, falls es vor dem
+        // ersten Render kommt oder das XAML-Element zwischenzeitlich weg ist.
+        try { BtnExtractProfiles.IsEnabled = false; }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TrainingCenter] BtnDisable: {ex.Message}"); }
         // Sofort sichtbares Feedback bevor irgendetwas crashen kann.
-        try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] KIAS-Extraktion startet fuer {System.IO.Path.GetFileName(selectedFile)}...\n"); } catch { }
+        SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] KIAS-Extraktion startet fuer {System.IO.Path.GetFileName(selectedFile)}...\n");
         try
         {
             // Export-Wurzel aus Datei-Pfad ableiten:
@@ -234,16 +254,16 @@ public partial class TrainingCenterWindow
                 ? parent!
                 : dir;
 
-            try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] KIAS/IBAK-Quelle erkannt: {System.IO.Path.GetFileName(selectedFile)}\n"); } catch { }
-            try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Export-Wurzel: {exportRoot}\n"); } catch { }
+            SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] KIAS/IBAK-Quelle erkannt: {System.IO.Path.GetFileName(selectedFile)}\n");
+            SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] Export-Wurzel: {exportRoot}\n");
 
             var pattern = Infrastructure.Import.Ibak.KiasExportPattern.Detect(exportRoot);
-            try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] KIAS-Pattern: {(pattern.IsKias ? "ja" : "nein")} ({pattern.Reason})\n"); } catch { }
+            SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] KIAS-Pattern: {(pattern.IsKias ? "ja" : "nein")} ({pattern.Reason})\n");
 
             var profiles = await System.Threading.Tasks.Task.Run(() =>
                 Infrastructure.Import.Ibak.IbakInspectionProfileExtractor.ExtractFromExportRoot(exportRoot));
 
-            try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] {profiles.Count} Profile aus IBAK Daten.txt extrahiert\n"); } catch { }
+            SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] {profiles.Count} Profile aus IBAK Daten.txt extrahiert\n");
             if (profiles.Count == 0)
             {
                 _dialogs.ShowMessage($"Keine Inspektionsprofile gefunden.\nExport-Wurzel: {exportRoot}\n\n"
@@ -257,22 +277,22 @@ public partial class TrainingCenterWindow
 
             await System.Threading.Tasks.Task.Run(() =>
                 Infrastructure.Import.WinCan.InspectionProfileExtractor.SaveProfiles(profiles, outputDir));
-            try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Profile gespeichert: {outputDir}\n"); } catch { }
+            SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] Profile gespeichert: {outputDir}\n");
 
             var aggPatterns = Infrastructure.Import.WinCan.InspectionPatternAggregator.Aggregate(profiles);
             await System.Threading.Tasks.Task.Run(() =>
                 Infrastructure.Import.WinCan.InspectionPatternAggregator.SavePatterns(aggPatterns, patternsPath));
 
-            try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] Muster aggregiert:\n"); } catch { }
-            try { Vm?.AppendToLogText($"  Haltungen: {aggPatterns.AnzahlHaltungen}, Beobachtungen: {aggPatterns.AnzahlBeobachtungen}\n"); } catch { }
-            try { Vm?.AppendToLogText($"  Median Geschwindigkeit: {aggPatterns.MedianFahrgeschwindigkeit:F3} m/s\n"); } catch { }
-            try { Vm?.AppendToLogText($"  Median Codierungen/m: {aggPatterns.MedianCodierungenProMeter:F2}\n"); } catch { }
+            SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] Muster aggregiert:\n");
+            SafeAppendToLog($"  Haltungen: {aggPatterns.AnzahlHaltungen}, Beobachtungen: {aggPatterns.AnzahlBeobachtungen}\n");
+            SafeAppendToLog($"  Median Geschwindigkeit: {aggPatterns.MedianFahrgeschwindigkeit:F3} m/s\n");
+            SafeAppendToLog($"  Median Codierungen/m: {aggPatterns.MedianCodierungenProMeter:F2}\n");
 
             int mitVideo = profiles.Count(p => !string.IsNullOrEmpty(p.VideoPfad));
             int ohneLaenge = profiles.Count(p => p.LaengeM is null);
             int totalEvents = profiles.Sum(p => p.Ereignisse.Count);
-            try { Vm?.AppendToLogText($"  Profile mit Video: {mitVideo}/{profiles.Count}, ohne Laenge: {ohneLaenge}\n"); } catch { }
-            try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] KIAS/IBAK-Profile fertig.\n"); } catch { }
+            SafeAppendToLog($"  Profile mit Video: {mitVideo}/{profiles.Count}, ohne Laenge: {ohneLaenge}\n");
+            SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] KIAS/IBAK-Profile fertig.\n");
 
             _dialogs.ShowMessage(
                 $"KIAS/IBAK-Extraktion erfolgreich:\n\n"
@@ -288,7 +308,7 @@ public partial class TrainingCenterWindow
         }
         catch (Exception ex)
         {
-            try { Vm?.AppendToLogText($"[{DateTime.Now:HH:mm:ss}] FEHLER: {ex.Message}\n"); } catch { }
+            SafeAppendToLog($"[{DateTime.Now:HH:mm:ss}] FEHLER: {ex.Message}\n");
             _dialogs.ShowMessage($"Fehler: {ex.Message}", "Profile extrahieren", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
