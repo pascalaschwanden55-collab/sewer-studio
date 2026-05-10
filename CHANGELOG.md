@@ -4,6 +4,51 @@ Notable changes to this project. Format follows [Keep a Changelog](https://keepa
 
 ## Unreleased — branch `feature/pdf-import-beobachtungen`
 
+### Slice 8a — Auto-BCD/BCE/Streckenschaden
+
+Korrigiert die Streckenschaden-Behandlung beim Session-Abschluss (vorher
+warf eine `InvalidOperationException`, jetzt gibt es einen Yes/No/Cancel-
+Dialog wie im Legacy-PlayerWindow). BCD/BCE-Auto-Erzeugung bleibt im
+bestehenden `ProtocolBoundaryService.EnsureBoundaries`-Pfad — der ist
+getestet und garantiert VSA-Konformitaet.
+
+**Changed:**
+
+- `ICodingSessionService.CompleteSession` bekommt einen optionalen
+  Parameter `bool allowOpenStreckenschaden = false`. Default behaelt das
+  alte Verhalten (Exception bei offenen Streckenschaeden); mit `true`
+  landen offene Streckenschaeden mit `MeterEnd=null` im Protokoll und
+  werden von `ProtocolBoundaryService.Validate` als Warnung geflaggt.
+- `CodingSessionViewModel.CompleteSessionWithChoice(bool allowOpen)` als
+  neue VM-Methode fuer den Window-Pre-Complete-Hook (existing
+  `CompleteSessionCommand` ruft weiter mit Default).
+- `CodingModeWindow.BtnComplete_Click` zeigt vor dem Abschluss den
+  Streckenschaden-Yes/No/Cancel-Dialog (neue Partial
+  `CodingModeWindow.StreckenschadenDialog.cs`).
+
+**Added:**
+
+- `CodingModeWindow.StreckenschadenDialog.cs` mit
+  `ConfirmOpenStreckenschadenAndChooseAction(out bool allowOpen)`:
+  - Yes → alle offenen Streckenschaeden via
+    `ICodingSessionService.CloseStreckenschaden` bei `MeterAtCapture`
+    bzw. aktuellem Meter schliessen (mit 1cm-Floor falls endMeter
+    <= MeterStart).
+  - No → return mit allowOpen=true, Caller ruft
+    CompleteSessionWithChoice(true).
+  - Cancel → return false, Window bleibt offen.
+
+**Tests:** 5 neue Faelle in
+`CodingSessionServiceCompleteSessionTests` (Default-Throw,
+allowOpen=false-Throw, allowOpen=true mit/ohne offene Streckenschaeden,
+geschlossene Streckenschaden Baseline). `[Collection("KnowledgeRootIsolation")]`
+auf den Tests + `TrainingSamplesWriterAdapterTests` serialisiert den
+statischen `KnowledgeRootProvider._resolver`. Infra 185 → 190.
+
+**Documentation:**
+
+- [`docs/adrs/2026-05-10-slice-8a-auto-bcd-bce-strecke.md`](docs/adrs/2026-05-10-slice-8a-auto-bcd-bce-strecke.md) — Mini-ADR, Status: Done.
+
 ### Slice 8a — Auto-Kalibrierung-Wiring
 
 `AutoCalibrationService.TryAutoCalibrate` (172 LOC, Pixel-Scan-Algorithmus,

@@ -1,10 +1,32 @@
 # Slice 8a Auto-BCD/BCE/Streckenschaden — Mini-ADR
 
 Datum: 2026-05-10
-Status: **Entschieden** (User-Freigabe 2026-05-10: "weiter bis alles umgebaut wurde")
-- Q1=A, Q2=A, Q3=B, Q4=A, Q5=A, Q6=C: alle Empfehlungen bestaetigt
-- Steps 1-3 werden autonom ausgefuehrt; UI-Smoke-Stop nach Step 3
-  weil der Yes/No/Cancel-Dialog manuelle Interaktion braucht.
+Status: **Done** (Slice in 4 Commits abgeschlossen, UI-Smoke an User delegiert)
+
+Geliefert:
+- ADR-Finalize `8f7d7a0` — Status: Entschieden
+- Step 1 `a2e085a` — CompleteSession(allowOpenStreckenschaden)-Overload + 5 Tests
+- Step 2 `c96ea2f` — StreckenschadenDialog.cs Pre-Complete-Hook
+- Step 3 `4b51e2d` — VM CompleteSessionWithChoice + BtnComplete_Click-Wiring + Test-Isolation-Fix
+
+Tests-Bilanz: +5 neue Faelle (Service-Overload). Infra 185 -> 190,
+Gesamt 1025 PASS / 1 SKIP / 0 FAIL.
+
+Bonus: Race-Condition zwischen TrainingSamplesWriterAdapterTests und
+neuen Service-Tests via [Collection("KnowledgeRootIsolation")] auf
+beiden Klassen serialisiert (statischer KnowledgeRootProvider._resolver).
+
+User-Freigabe 2026-05-10:
+- Initial: "weiter bis alles umgebaut wurde" (Q1=A, Q2=A, Q3=B, Q4=A,
+  Q5=A, Q6=C alle bestaetigt).
+- Final: "auto bcd alles umsetzen" — UI-Smoke an User delegiert,
+  Steps 1-4 voll durchgezogen.
+
+UI-Smoke-Pending (User-Item):
+- Streckenschaden ohne Ende anlegen, "Codierung abschliessen" -> Dialog.
+- Yes -> alle bei aktuellem Meter geschlossen, Protokoll OK.
+- No -> offen im Protokoll (MeterEnd=null), Validate flagged Warnung.
+- Cancel -> Dialog zu, Window bleibt offen.
 
 Vorgeschichte:
 - Audit-Diff: `2026-05-09-slice-8a-1-audit-diff.md` markiert Auto-BCD/BCE/
