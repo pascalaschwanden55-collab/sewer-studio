@@ -1,9 +1,23 @@
-"""Smoke-Tests fuer Batch-Endpunkte (braucht laufenden Sidecar)."""
+"""Smoke-Tests fuer Batch-Endpunkte (braucht laufenden Sidecar).
+
+Diese Tests sind alle mit `pytest.mark.live` markiert: sie sprechen den
+Sidecar via HTTP an und brauchen daher
+- einen laufenden Sidecar-Prozess auf SIDECAR_URL (default localhost:8100)
+- einen gueltigen SEWER_SIDECAR_TOKEN-Header (Phase 4.1 fail-closed Auth)
+
+Im Standard-pytest-Lauf werden sie via `conftest.py::pytest_collection_modifyitems`
+geskippt. Aktivierung:
+
+    SEWER_SIDECAR_TOKEN=<token> pytest -m live sidecar/tests/test_batch_endpoints.py
+"""
 
 import base64
 import os
 import pytest
 import httpx
+
+# Modul-weiter Marker: jeder Test in dieser Datei ist ein Live-Test.
+pytestmark = pytest.mark.live
 
 SIDECAR_URL = os.environ.get("SIDECAR_URL", "http://localhost:8100")
 TEST_IMAGE_DIR = os.environ.get("TEST_IMAGE_DIR", r"C:\KI_BRAIN\fewshot_images")
@@ -25,8 +39,13 @@ def image_b64():
 
 
 @pytest.fixture(scope="module")
-def client():
-    with httpx.Client(base_url=SIDECAR_URL, timeout=60) as c:
+def client(auth_headers):
+    """httpx-Client mit X-Sidecar-Token-Default-Header.
+
+    `auth_headers` kommt aus conftest.py und skipt den Test sauber, wenn
+    kein Token gesetzt ist - kein 401-Krach mehr.
+    """
+    with httpx.Client(base_url=SIDECAR_URL, timeout=60, headers=auth_headers) as c:
         yield c
 
 
