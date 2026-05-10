@@ -1,21 +1,33 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
-// Slice 8a Pause-Confirm Step 1a — ConfirmationFlow / TCS-State.
+// Slice 8a Pause-Confirm Step 1a/1b — ConfirmationFlow + Sperrliste.
 // Mini-ADR: docs/adrs/2026-05-10-slice-8a-pause-confirm.md
 //
-// Loop ruft BeginConfirmationAsync(...) wenn ein Yellow/Red-Finding
-// auftaucht. VM speichert pending-state + TaskCompletionSource. UI
-// (CodingModeWindow.PauseConfirm.cs in Step 3) ruft CompleteConfirmation,
-// damit der awaitende Loop seine Decision bekommt.
+// Step 1a (ConfirmationFlow):
+//   Loop ruft BeginConfirmationAsync(...) wenn ein Yellow/Red-Finding
+//   auftaucht. VM speichert pending-state + TaskCompletionSource. UI
+//   (CodingModeWindow.PauseConfirm.cs in Step 3) ruft CompleteConfirmation,
+//   damit der awaitende Loop seine Decision bekommt.
+//
+// Step 1b (Sperrliste):
+//   Wenn der User ein Finding mit "Rejected" abschmettert, soll dasselbe
+//   Finding (gleicher Code + Meter ± 0.5m) im aktuellen Loop-Run nicht
+//   noch einmal als Confirmation-Trigger auftauchen. Sperrliste ist
+//   in-memory only (Mini-ADR-Entscheidung 2026-05-10) und wird beim
+//   naechsten Session-Start wieder leer.
 //
 // Punkt-4-Pattern: VM ist Owner des State, Window ist nur UI-Renderer.
 public sealed partial class CodingSessionViewModel
 {
+    // ─── Step 1a: ConfirmationFlow / TCS-State ──────────────────────────
+
     private TaskCompletionSource<CodingUserDecision>? _pendingTcs;
     private CancellationTokenRegistration? _pendingCtRegistration;
 
@@ -97,5 +109,59 @@ public sealed partial class CodingSessionViewModel
         OnPropertyChanged(nameof(PendingConfirmationEvent));
         OnPropertyChanged(nameof(PendingConfirmationConfidence));
         OnPropertyChanged(nameof(PendingConfirmationIsRed));
+    }
+
+    // ─── Step 1b: Sperrliste / Reject-Key ───────────────────────────────
+
+    private const double RejectionMeterTolerance = 0.5;
+
+    private readonly List<(string codeNormalized, double meter)> _rejections = new();
+
+    /// <summary>Liste aller in dieser Session abgelehnten Findings als
+    /// stabile Schluessel (Code@Meter). Read-only, fuer Diagnostics/Logging.</summary>
+    public IReadOnlyCollection<string> RejectedFindings
+        => _rejections.Select(r => MakeRejectionKey(r.codeNormalized, r.meter)).ToList();
+
+    /// <summary>Fuegt ein Reject in die Sperrliste ein (idempotent: gleicher Code
+    /// + Meter mit &lt;1cm Differenz wird nicht doppelt gespeichert).</summary>
+    public void AddRejection(string code, double meter)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return;
+        var normalized = code.Trim().ToUpperInvariant();
+
+        // Idempotenz: gleicher Eintrag (innerhalb 1cm) nicht doppelt aufnehmen.
+        for (int i = 0; i < _rejections.Count; i++)
+        {
+            var r = _rejections[i];
+            if (r.codeNormalized == normalized && Math.Abs(r.meter - meter) < 0.01)
+                return;
+        }
+
+        _rejections.Add((normalized, meter));
+    }
+
+    /// <summary>true wenn fuer (code, meter) bereits ein Reject vorliegt.
+    /// Toleranz ±0.5m, Code case-insensitive.</summary>
+    public bool IsRejected(string code, double meter)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return false;
+        var normalized = code.Trim().ToUpperInvariant();
+
+        for (int i = 0; i < _rejections.Count; i++)
+        {
+            var r = _rejections[i];
+            if (r.codeNormalized == normalized &&
+                Math.Abs(r.meter - meter) <= RejectionMeterTolerance)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>Stable Key fuer ein Rejection-Entry. Format: "CODE@MM.MM".
+    /// Public fuer Logging/Tests.</summary>
+    public static string MakeRejectionKey(string code, double meter)
+    {
+        var normalized = (code ?? "").Trim().ToUpperInvariant();
+        return $"{normalized}@{meter.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}";
     }
 }
