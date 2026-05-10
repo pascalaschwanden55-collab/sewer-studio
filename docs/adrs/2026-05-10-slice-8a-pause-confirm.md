@@ -1,7 +1,13 @@
 # Slice 8a Pause-Confirm-Workflow — Mini-ADR
 
 Datum: 2026-05-10
-Status: **Entwurf** — wartet auf User-Review, kein Code bevor freigegeben
+Status: **Entschieden** (User-Review 2026-05-10 mit Korrekturen)
+- Q1–Q5: zugestimmt
+- Step 1 in 1a/1b geteilt (ConfirmationFlow vs. Sperrliste)
+- Gate-Quelle korrigiert: kein QualityGateResult vorhanden, lokale
+  Severity-Policy fuer diesen Slice
+- UI-Smoke nach Step 4 + final nach Step 5
+- Sperrliste in-memory only, keine Persistenz
 Vorgeschichte:
 - Konsolidierungs-ADR: `2026-05-09-slice-8a-coding-mode-konsolidierung.md` (Option B.1)
 - Audit-Diff: `2026-05-09-slice-8a-1-audit-diff.md` (Pause-Confirm dort als kritisch markiert)
@@ -75,7 +81,36 @@ bekommen.
 - `CodingUserDecision`-Enum (Accepted/AcceptedWithEdit/Rejected/...)
   ist Domain-Model und verfuegbar.
 - `QualityGateResult` mit `IsGreen/IsYellow/IsRed` und
-  `CompositeConfidence` existiert in der Application-Schicht.
+  `CompositeConfidence` existiert in der Application-Schicht — wird
+  aber im aktuellen `RunLiveAnalysisAsync`-Pfad **NICHT** erzeugt
+  (siehe naechster Abschnitt "Gate-Quelle"). Ein voller QualityGate-
+  Service-Umbau ist in diesem Slice ausgeklammert.
+
+### D) Gate-Quelle: was der Loop heute weiss (User-Korrektur 2026-05-10)
+
+`EnhancedVisionAnalysisService.AnalyzeWithEscalationAsync` liefert
+`(EnhancedFrameAnalysis Result, bool Escalated)`. Aus den Findings im
+`LiveDetectionMapper.FromEnhancedAnalysis(...)`-Resultat steht pro
+Finding eine `Severity` (int, 1–5). Ein vollstaendiger
+`QualityGateResult` mit `CompositeConfidence` wird im Loop heute
+**nicht** berechnet.
+
+Fuer diesen Slice nutzen wir eine **lokale Gate-Policy** aequivalent
+zur UI-Severity-Heuristik:
+
+```
+confidence = Severity * 0.20  (Sev 1 → 20%, Sev 5 → 100%)
+
+confidence >= 0.85  → Green   (Auto-Accept, kein Pause)
+confidence >= 0.60  → Yellow  (Pause + Confirm)
+confidence <  0.60  → Red     (Pause + Confirm)
+```
+
+Diese Policy lebt als private Helper-Methode in der neuen
+`CodingModeWindow.PauseConfirm.cs`-Partial (oder im Loop selbst).
+Wenn ein Folge-Slice spaeter `EnhancedVisionAnalysisService` um eine
+echte `QualityGateResult`-Ausgabe erweitert, wird die Helper-Methode
+durch den Service-Call ersetzt — **ohne Schnittstellen-Aenderung am VM**.
 
 ## Die fuenf Designfragen
 
@@ -176,47 +211,103 @@ ein Folge-Slice.
 
 ## Resultierender Migrations-Schnitt (kein Code, nur Liste)
 
-In dieser Reihenfolge (alle einzelne Commits, jeweils Build+Test gate):
+In dieser Reihenfolge (alle einzelne Commits, jeweils Build+Test gate).
+Step 1 ist auf 1a/1b geteilt (User-Korrektur 2026-05-10).
 
-1. **VM-API erweitern:** auf `CodingSessionViewModel`:
-   - `IReadOnlyCollection&lt;string&gt; RejectedFindings` (read-only Public)
-   - `bool IsAwaitingUserDecision` (ObservableProperty fuer XAML-Binding)
-   - `Task&lt;CodingUserDecision&gt; BeginConfirmationAsync(CodingEvent ev, QualityGateResult gate, CancellationToken ct)`
-   - `void CompleteConfirmation(CodingUserDecision decision)`  (vom UI gerufen)
-   - `void AddRejection(string code, double meter)`
-   - Plus interne `_pendingConfirmation`-Tuple und HashSet.
-   - **Tests:** state-machine-Tests fuer "kein pending → BeginAsync setzt
-     pending → Complete schliesst → Result kommt zurueck", "Cancel
-     wirft OperationCanceledException", "Sperrliste-MakeKey/Add/Contains".
+### Step 1a: VM-API ConfirmationFlow + Tests
 
-2. **CodingModeWindow.xaml-Panel:** neuer `Border x:Name="ConfirmationPanel"`
-   ueber `OverlayCanvas` mit Visibility binding `_vm.IsAwaitingUserDecision`.
-   Ampel-Ellipse, Code-Text, Konfidenz, Beschreibung, drei Buttons
-   (`Click="ConfirmAccept_Click"` etc. — die Click-Handler liegen in
-   einer neuen `CodingModeWindow.PauseConfirm.cs`-Partial).
+Auf `CodingSessionViewModel`:
+- `bool IsAwaitingUserDecision` (ObservableProperty fuer XAML-Binding)
+- `CodingEvent? PendingConfirmationEvent` (read-only)
+- `double? PendingConfirmationConfidence` (read-only, 0..1)
+- `bool PendingConfirmationIsRed` (read-only Bool, fuer Ampel-Faerbung)
+- `Task<CodingUserDecision> BeginConfirmationAsync(CodingEvent ev, double confidence, bool isRed, CancellationToken ct)`
+- `void CompleteConfirmation(CodingUserDecision decision)` (vom UI gerufen)
+- Interner `TaskCompletionSource<CodingUserDecision>` plus pending-state-Tuple.
 
-3. **CodingModeWindow.PauseConfirm.cs:** Click-Handler die
-   `_vm.CompleteConfirmation(...)` rufen, plus auf Edit-Click den
-   `_vm.SelectedDefect`-Setzer.
+**Tests:** "kein pending → BeginAsync setzt pending → CompleteConfirmation
+schliesst → Result kommt zurueck", "Cancel wirft OperationCanceledException",
+"BeginAsync waehrend bereits pending → InvalidOperationException oder
+documented behavior", "CompleteConfirmation ohne pending → No-Op oder
+documented behavior".
 
-4. **Loop-Integration:** `RunLiveAnalysisAsync` in
-   `CodingModeWindow.LiveLoop.cs` bekommt nach jedem analyzed Frame
-   das `QualityGateResult`-Tuple aus `EnhancedVisionAnalysisService`
-   (das schon zurueckkommt). Wenn nicht-green → erstes Finding +
-   gate-Result an `_vm.BeginConfirmationAsync` uebergeben, await.
-   Decision-Branches:
-   - Accepted/AcceptedWithEdit → Loop continues
-   - Rejected → Sperrliste-Entry, Event aus VM entfernen, continue.
+### Step 1b: VM-API Sperrliste + Tests
 
-5. **Sperrliste in Filter:** im Loop oder in
-   `EnhancedVisionAnalysisService.AnalyzeWithEscalationAsync`-Caller:
-   findings deren `(code, meter)` in `_vm.RejectedFindings` ist,
-   werden vor Hinzufuegen verworfen.
+Auf `CodingSessionViewModel`:
+- `IReadOnlyCollection<string> RejectedFindings` (read-only Public)
+- `void AddRejection(string code, double meter)`
+- `bool IsRejected(string code, double meter)` (mit ±0.5m-Toleranz)
+- `static string MakeRejectionKey(string code, double meter)` (oder privat
+  als Helper)
 
-6. **UI-Smoke** (User-Aufgabe): Coding-Modus, gemeldetes Yellow-Finding
-   triggert Pause + Panel, Accept/Edit/Reject werden visuell richtig
-   verarbeitet, Player resumed sauber, Sperrliste verhindert
-   Re-Erkennung des gleichen Findings.
+**Tests:** "Add + IsRejected = true", "Toleranz ±0.5m", "case-insensitive
+Code-Match", "MakeRejectionKey-Format ist stable".
+
+### Step 2: CodingModeWindow.xaml — Confirmation-Panel
+
+Neuer `Border x:Name="ConfirmationPanel"` ueber `OverlayCanvas`. Visibility
+binding gegen `_vm.IsAwaitingUserDecision`. Ampel-Ellipse (`Fill` aus
+Helper-Converter, der `PendingConfirmationIsRed` interpretiert), Code-Text,
+Konfidenz, Beschreibung, drei Buttons (`Click="ConfirmAccept_Click"`/`...Edit`/`...Reject`)
+mit Handlern in der neuen `CodingModeWindow.PauseConfirm.cs`-Partial.
+
+### Step 3: CodingModeWindow.PauseConfirm.cs
+
+Click-Handler die `_vm.CompleteConfirmation(...)` rufen. Auf Edit-Click
+zusaetzlich `_vm.SelectedDefect = _vm.PendingConfirmationEvent` setzen,
+damit das DefectDetailPanel den User in den Edit-Modus bringt.
+
+Plus die lokale Gate-Policy als private Helper:
+```
+private static (bool isGreen, bool isYellow, bool isRed, double confidence)
+    EvaluateGate(LiveFrameFinding f)
+{
+    var conf = Math.Clamp(f.Severity * 0.20, 0.0, 1.0);
+    if (conf >= 0.85) return (true, false, false, conf);
+    if (conf >= 0.60) return (false, true, false, conf);
+    return (false, false, true, conf);
+}
+```
+
+### Step 4: Loop-Integration in CodingModeWindow.LiveLoop.cs
+
+`RunLiveAnalysisAsync` bekommt nach jedem analyzed Frame die
+`LiveDetection.Findings`-Liste. Erstes Finding mit `IsYellow || IsRed`
+laut lokaler Gate-Policy wird nicht direkt akzeptiert sondern:
+- Player auf Pause via `_player.SetPause(true)`
+- `await _vm.BeginConfirmationAsync(event, confidence, isRed, ct)`
+- Decision-Branches:
+  - `Accepted` / `AcceptedWithEdit` → CodingEvent in VM setzen
+    (heute via `_vm.AddEventInOrder`?), Loop continues, Player resume
+  - `Rejected` → KEIN Event-Add. Loop continues, Player resume.
+    (Sperrliste folgt in Step 5.)
+
+→ **UI-Smoke 1 faellig** (siehe unten).
+
+### Step 5: Sperrliste-Filter
+
+Im Loop vor dem `BeginConfirmationAsync`-Aufruf: pruefe
+`_vm.IsRejected(code, meter)`. Wenn true → Finding ueberspringen, kein
+Pause/Confirm. Bei `Rejected`-Decision in Step 4 dann
+`_vm.AddRejection(code, meter)`.
+
+→ **UI-Smoke 2 faellig** (siehe unten).
+
+### Step 6: Doku + Memory
+
+Memory-TODO "OperateurAnnotation-Smoke" + dieser Slice abschliessen.
+Mini-ADR Status auf Done flippen.
+
+### Verifikation pro Step
+
+- **1a, 1b, 2, 3:** Build + Tests reichen (deterministisches Refactor +
+  XAML-Layout, keine User-sichtbare Verhaltensaenderung).
+- **4:** **UI-Smoke 1 faellig** — Coding-Modus, ein Yellow/Red-Finding
+  triggert Pause + Panel + Ampel; Accept resumed Player; Edit setzt
+  SelectedDefect korrekt; Reject dropped Event ohne Sperrliste-Wirkung.
+- **5:** **UI-Smoke 2 faellig** — gleiche Stelle nochmal codieren,
+  zuvor Rejected: dann triggert kein Pause-Panel mehr.
+- **6:** kein Smoke (nur Doku).
 
 ## Was diese ADR explizit ausklammert
 
@@ -227,13 +318,26 @@ In dieser Reihenfolge (alle einzelne Commits, jeweils Build+Test gate):
   Findings produzierte. Heute liefert `EnhancedVisionAnalysisService` einfaches Qwen — fuer
   den Pause-Confirm-Workflow reicht das, weitere Pipeline-Stufen sind ein eigenes Thema.
 
-## Offene Punkte fuer Dich (Reviewer)
+## Entscheidungs-Protokoll
 
-1. Stimmst Du den Empfehlungen Q1=A, Q2=A, Q3=A, Q4=A, Q5=A zu?
-2. Reicht der 6-Schritt-Schnitt oder ist Schritt 1 (VM-API) zu gross
-   und braucht Sub-Aufteilung (z.B. Sperrliste vs. ConfirmationFlow
-   getrennt)?
-3. UI-Smoke nach Schritt 5 reicht, oder willst Du Zwischen-Smoke nach
-   Schritt 4 (Loop ohne Sperrliste, nur Pause-Confirm)?
-4. Soll die Sperrliste persistent sein (z.B. in der CodingSession
-   serialisiert) oder bewusst nur in-memory pro Session?
+User-Review am 2026-05-10:
+
+1. **Q1=A, Q2=A, Q3=A, Q4=A, Q5=A:** zugestimmt.
+2. **Step 1 in 1a/1b geteilt:** ConfirmationFlow/TCS-State (1a)
+   getrennt von Sperrliste/Reject-Key (1b). Saubere Test-Granularitaet.
+3. **Gate-Quelle korrigiert:** mein urspruenglicher Entwurf hatte
+   faelschlich behauptet, der Loop bekomme schon ein
+   `QualityGateResult`. Tatsaechlich liefert
+   `EnhancedVisionAnalysisService.AnalyzeWithEscalationAsync` nur
+   `(EnhancedFrameAnalysis, bool Escalated)`. Fuer diesen Slice nutzen
+   wir die lokale Severity-Policy (siehe Bestandsaufnahme Abschnitt
+   D). Ein voller QualityGate-Service-Umbau bleibt ausserhalb dieses
+   Slices.
+4. **UI-Smoke nach Step 4 + final nach Step 5.** Step 4 prueft Pause/
+   Panel/Accept/Edit/Reject/Resume; Step 5 prueft zusaetzlich
+   Sperrliste-Wirkung.
+5. **Sperrliste in-memory only.** Persistenz-in-CodingSession ist ein
+   eigener spaeterer Slice (sonst wuerde aus dem Mini-Slice ein
+   Datenmodell-/Serialisierungs-Umbau).
+
+Slice 8a Pause-Confirm ist freigegeben und startet mit Step 1a.
