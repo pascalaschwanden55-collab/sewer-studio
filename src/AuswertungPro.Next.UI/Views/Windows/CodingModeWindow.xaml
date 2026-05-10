@@ -12,6 +12,9 @@
         WindowStartupLocation="CenterOwner">
 
     <Window.Resources>
+        <!-- Slice 8a Pause-Confirm Step 2: Bool→Visibility fuer das Confirmation-Panel. -->
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
         <Style x:Key="CodingCard" TargetType="Border" BasedOn="{StaticResource Card}">
             <Setter Property="Background" Value="{DynamicResource CardGlassBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
@@ -338,6 +341,80 @@
                                      VerticalAlignment="Center" Margin="0,0,3,0"/>
                             <TextBlock Text="Tracker" FontSize="9" Foreground="{StaticResource MutedBrush}"
                                        VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Slice 8a Pause-Confirm Step 2: Confirmation-Panel.
+                         Visibility ans VM gebunden (IsAwaitingUserDecision).
+                         Step 3 verdrahtet die Click-Handler, Step 4 ruft im
+                         Loop BeginConfirmationAsync. -->
+                    <Border x:Name="ConfirmationPanel"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Padding="20,16"
+                            Background="#EE000000" CornerRadius="12"
+                            BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2"
+                            Panel.ZIndex="20"
+                            Visibility="{Binding IsAwaitingUserDecision, Converter={StaticResource BoolToVis}}">
+                        <StackPanel Orientation="Vertical" MinWidth="360">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Ellipse x:Name="ConfirmAmpel" Width="14" Height="14"
+                                         VerticalAlignment="Center" Margin="0,0,8,0">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Setter Property="Fill" Value="#F59E0B"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding PendingConfirmationIsRed}" Value="True">
+                                                    <Setter Property="Fill" Value="#EF4444"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+                                <TextBlock Text="KI-Vorschlag bestaetigen"
+                                           Foreground="White" FontWeight="Bold"
+                                           FontSize="{StaticResource TypeBodyLarge}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <TextBlock Foreground="White"
+                                       FontFamily="Consolas, Cascadia Mono"
+                                       FontSize="{StaticResource TypeBodyLarge}" FontWeight="Bold"
+                                       Text="{Binding PendingConfirmationEvent.Entry.Code, FallbackValue=''}"/>
+                            <TextBlock Foreground="{DynamicResource TextSecondaryBrush}"
+                                       FontSize="{StaticResource TypeBody}"
+                                       TextWrapping="Wrap" MaxWidth="340"
+                                       Margin="0,2,0,8"
+                                       Text="{Binding PendingConfirmationEvent.Entry.Beschreibung, FallbackValue=''}"/>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <TextBlock Text="Konfidenz:" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontSize="{StaticResource TypeSmall}" Margin="0,0,6,0"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Foreground="White" FontWeight="SemiBold"
+                                           FontSize="{StaticResource TypeSmall}"
+                                           VerticalAlignment="Center"
+                                           Text="{Binding PendingConfirmationConfidence,
+                                                          StringFormat={}{0:P0},
+                                                          FallbackValue='–'}"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button x:Name="BtnConfirmAccept" Content="Akzeptieren"
+                                        Click="ConfirmAccept_Click"
+                                        Padding="14,6" Margin="0,0,8,0"
+                                        Background="#22C55E" Foreground="White"
+                                        BorderThickness="0" Cursor="Hand"/>
+                                <Button x:Name="BtnConfirmEdit" Content="Bearbeiten"
+                                        Click="ConfirmEdit_Click"
+                                        Padding="14,6" Margin="0,0,8,0"
+                                        Background="#F59E0B" Foreground="White"
+                                        BorderThickness="0" Cursor="Hand"/>
+                                <Button x:Name="BtnConfirmReject" Content="Verwerfen"
+                                        Click="ConfirmReject_Click"
+                                        Padding="14,6"
+                                        Background="#EF4444" Foreground="White"
+                                        BorderThickness="0" Cursor="Hand"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
                 </Grid>
