@@ -167,7 +167,14 @@ public partial class CodingModeWindow
     private async Task<bool> PromptConfirmIfNeededAsync(
         LiveDetection result, double timestampSec, CancellationToken ct)
     {
-        // Erstes Finding mit Yellow/Red-Severity finden.
+        var frameMeter = result.MeterReading ?? _vm.LastOsdMeter ?? 0.0;
+
+        // Erstes Yellow/Red-Finding finden, das nicht bereits in der
+        // Sperrliste steht (Slice 8a Pause-Confirm Step 5). Sperrliste
+        // arbeitet auf dem Code wie ihn BuildCodingEventFromFinding
+        // erzeugt — VsaCodeHint, sonst Fallback "AI" — damit der User
+        // beim naechsten Frame mit dem gleichen Reject-Schluessel kein
+        // Pause-Panel mehr sieht.
         LiveFrameFinding? hit = null;
         bool hitIsRed = false;
         double hitConfidence = 0;
@@ -175,6 +182,8 @@ public partial class CodingModeWindow
         {
             var (isGreen, isYellow, isRed, conf) = EvaluateGate(f);
             if (isGreen) continue;
+            var candidateCode = string.IsNullOrWhiteSpace(f.VsaCodeHint) ? "AI" : f.VsaCodeHint!;
+            if (_vm.IsRejected(candidateCode, frameMeter)) continue;
             hit = f;
             hitIsRed = isRed;
             hitConfidence = conf;
@@ -182,9 +191,8 @@ public partial class CodingModeWindow
         }
         if (hit is null) return false;
 
-        var meter = result.MeterReading ?? _vm.LastOsdMeter ?? 0.0;
         var videoTs = TimeSpan.FromSeconds(timestampSec);
-        var ev = BuildCodingEventFromFinding(hit, meter, videoTs, hitConfidence);
+        var ev = BuildCodingEventFromFinding(hit, frameMeter, videoTs, hitConfidence);
 
         // Player pausieren, BeginConfirmationAsync awaiten, dann je nach
         // Decision Event aufnehmen oder droppen.
@@ -224,7 +232,11 @@ public partial class CodingModeWindow
                 });
                 break;
             case CodingUserDecision.Rejected:
-                // Sperrliste folgt in Step 5: hier nur droppen.
+                // Slice 8a Pause-Confirm Step 5: in die in-memory Sperrliste
+                // aufnehmen, damit das gleiche Finding (Code + Meter +/- 0.5m)
+                // im Rest der Session nicht erneut den Pause-Confirm-Workflow
+                // triggert. AddRejection ist idempotent + case-insensitive.
+                _vm.AddRejection(ev.Entry.Code, ev.MeterAtCapture);
                 break;
         }
 
