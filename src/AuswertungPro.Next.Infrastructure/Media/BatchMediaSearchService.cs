@@ -148,6 +148,10 @@ public sealed class BatchMediaSearchService
             ct.ThrowIfCancellationRequested();
             var dir = stack.Pop();
 
+            // Best-effort Filesystem-Traversal: einzelne Verzeichnisse die nicht
+            // les-/zugreifbar sind ueberspringen, ohne den ganzen Scan zu kippen.
+            // Das ist normales Verhalten bei Netzwerk-Shares, System-Verzeichnissen
+            // oder gerade-belegten Dateien.
             try
             {
                 foreach (var file in Directory.EnumerateFiles(dir))
@@ -161,9 +165,9 @@ public sealed class BatchMediaSearchService
                     }
                 }
             }
-            catch (UnauthorizedAccessException) { }
-            catch (DirectoryNotFoundException) { }
-            catch (IOException) { }
+            catch (UnauthorizedAccessException ex) { System.Diagnostics.Debug.WriteLine($"[MediaScan] AccessDenied: {dir}: {ex.Message}"); }
+            catch (DirectoryNotFoundException) { /* Race: dir wurde zwischen Push und Enumerate geloescht */ }
+            catch (IOException ex) { System.Diagnostics.Debug.WriteLine($"[MediaScan] IO: {dir}: {ex.Message}"); }
 
             if (recursive)
             {
@@ -172,9 +176,9 @@ public sealed class BatchMediaSearchService
                     foreach (var sub in Directory.EnumerateDirectories(dir))
                         stack.Push(sub);
                 }
-                catch (UnauthorizedAccessException) { }
-                catch (DirectoryNotFoundException) { }
-                catch (IOException) { }
+                catch (UnauthorizedAccessException ex) { System.Diagnostics.Debug.WriteLine($"[MediaScan] AccessDenied (subdirs): {dir}: {ex.Message}"); }
+                catch (DirectoryNotFoundException) { /* Race */ }
+                catch (IOException ex) { System.Diagnostics.Debug.WriteLine($"[MediaScan] IO (subdirs): {dir}: {ex.Message}"); }
             }
         }
 
