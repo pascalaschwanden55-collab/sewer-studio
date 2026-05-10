@@ -309,7 +309,11 @@ public partial class PlayerWindow
             }
             catch (Exception apiEx)
             {
+                // Slice 8a.3 5b-followup: HTTP-/Netzwerk-Fehler waehrend
+                // SegmentSamAsync sichtbar ueber den OSD-Badge-Bereich
+                // melden — analog zum Init-Hint, statt nur Debug.WriteLine.
                 System.Diagnostics.Debug.WriteLine($"[SAM] API-Fehler: {apiEx.Message}");
+                ShowSamOfflineHint("API-Fehler");
                 return;
             }
             finally
@@ -320,6 +324,7 @@ public partial class PlayerWindow
             if (samResp == null)
             {
                 System.Diagnostics.Debug.WriteLine("[SAM] Antwort null (Sidecar nicht erreichbar oder 401/500)");
+                ShowSamOfflineHint("Antwort leer");
                 return;
             }
 
