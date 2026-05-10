@@ -138,6 +138,13 @@ public partial class CodingModeWindow
                     result = buffered;
             }
 
+            // ── Auto-Kalibrierung (Slice 8a Auto-Kalibrierung Step 3) ──
+            // Einmaliger Versuch beim ersten Ready-Frame; lebt in
+            // CodingModeWindow.AutoCalibration.cs. Frueh-Returns deckt
+            // alles ab (schon kalibriert / schon versucht / DN fehlt).
+            try { await TryAutoCalibrateOnceAsync(pngBytes); }
+            catch (OperationCanceledException) { return false; }
+
             // ── Render ──
             await Dispatcher.InvokeAsync(() => ShowAiResults(result));
 
