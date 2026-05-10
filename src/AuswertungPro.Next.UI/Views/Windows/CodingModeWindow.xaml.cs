@@ -1366,7 +1366,7 @@ public partial class CodingModeWindow : Window
                 .Where(el => (el.Tag as string) == "sam_manual_mask").ToList();
             foreach (var el in samElements) OverlayCanvas.Children.Remove(el);
         }
-        catch { }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CodingModeWindow] SamMask-Cleanup: {ex.Message}"); }
 
         OverlayToolType tool;
         if (sender == BtnToolRect) tool = OverlayToolType.Rectangle;
@@ -1680,7 +1680,9 @@ public partial class CodingModeWindow : Window
             const double MinBboxDimension = 0.01; // Mindestgroesse 1% des Frames
             if (bbox.Width < MinBboxDimension || bbox.Height < MinBboxDimension)
             {
-                try { System.IO.File.Delete(tempFrame); } catch { }
+                // Best-effort: Temp-Frame ist Disposable, Loesch-Failure unkritisch.
+            try { System.IO.File.Delete(tempFrame); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CodingModeWindow] tempFrame-Delete: {ex.Message}"); }
                 _dialogs.ShowMessage(
                     "Die Markierung ist zu klein oder hat keine Flaeche.\n" +
                     "Fuer Lehrer-Annotationen bitte Rechteck, Ellipse oder Freihand verwenden.",
@@ -1734,7 +1736,9 @@ public partial class CodingModeWindow : Window
             await AuswertungPro.Next.Application.Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
 
             // Temporaeres Frame aufraeumen (wurde nach teacher_images kopiert)
-            try { System.IO.File.Delete(tempFrame); } catch { }
+            // Best-effort: Temp-Frame ist Disposable, Loesch-Failure unkritisch.
+            try { System.IO.File.Delete(tempFrame); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CodingModeWindow] tempFrame-Delete: {ex.Message}"); }
 
             // 6. Reset
             _vm.CurrentOverlay = null;
@@ -2470,7 +2474,12 @@ public partial class CodingModeWindow : Window
                 Dispatcher.BeginInvoke(() => { if (TxtStatus != null) TxtStatus.Text = text; });
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // Best-effort waehrend Shutdown: Dispatcher kann disposed sein,
+            // TxtStatus kann unbound sein. Status-Update ist Cosmetic.
+            System.Diagnostics.Debug.WriteLine($"[CodingModeWindow] SetStatusSafe: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -2702,7 +2711,7 @@ public partial class CodingModeWindow : Window
                 .Where(el => (el.Tag as string) == "sam_manual_mask").ToList();
             foreach (var el in prev) OverlayCanvas.Children.Remove(el);
         }
-        catch { }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CodingModeWindow] PrevSamMask-Cleanup: {ex.Message}"); }
 
         if (_sidecarClient is null)
         {
