@@ -87,23 +87,27 @@ public partial class PlayerWindow
     private IOverlayToolService? _codingOverlayService;
     private readonly SchemaOverlayManager _codingSchemaManager = new();
 
-    // _codingSchemaType / _codingVisionClient / _codingLastOsdMeter werden mit
-    // dem aktuellen Schnitt nur gelesen oder genullt — der schreibende Pfad
-    // (Schema-Werkzeuge, OSD-Reader, Sidecar-Init) lebte im geloeschten
-    // In-Place-Codier-Modus. Pragmas unterdruecken die "nie gesetzt"-Warnungen
-    // bis ein Folge-Slice die Felder entweder reanimiert oder ganz entfernt.
+    // _codingSchemaType / _codingLastOsdMeter werden mit dem aktuellen
+    // Schnitt nur gelesen oder genullt — der schreibende Pfad (Schema-
+    // Werkzeuge, OSD-Reader) lebte im geloeschten In-Place-Codier-Modus.
+    // Pragma unterdrueckt die "nie gesetzt"-Warnung bis ein Folge-Slice die
+    // Felder entweder reanimiert oder ganz entfernt.
 #pragma warning disable CS0414, CS0649
+    // _codingSchemaType wird in MarkTool noch genullt (Reset-Pfad), aber
+    // nirgends mehr gelesen — CS0414 unterdrueckt die Warnung, bis ein
+    // Folge-Slice das Reset entfernt.
     private SchemaType? _codingSchemaType;
-
-    // Sidecar-Client fuer SAM-Preview im MarkTool. Wird beim ersten Bedarf
-    // initialisiert; im Live-Pfad reicht eine Lazy-Init durch MarkTool selbst.
-    private VisionPipelineClient? _codingVisionClient;
 
     // Letzter via OSD gelesener Meterstand. Frueher vom OSD-Timer gespeist;
     // wird heute nur noch als Fallback fuer GetMeterFromVideoPosition genutzt
     // (bleibt beim aktuellen Schnitt null, ohne Funktionsverlust).
     private double? _codingLastOsdMeter;
 #pragma warning restore CS0414, CS0649
+
+    // Sidecar-Client fuer SAM-Preview im MarkTool. Slice 8a.3 Step 5b-Fix:
+    // wird beim ersten Bedarf in PlayerWindow.MarkTool.TryEnsureCodingVisionClient
+    // initialisiert (PipelineConfigProvider liefert die URL).
+    private VisionPipelineClient? _codingVisionClient;
 
     // ─── Bridge: Codier-Modus-Klick oeffnet CodingModeWindow ─────────────────
 

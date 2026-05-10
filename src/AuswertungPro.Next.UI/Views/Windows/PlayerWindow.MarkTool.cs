@@ -209,13 +209,14 @@ public partial class PlayerWindow
     private async Task ShowSamPreviewAtMarkAsync(OverlayGeometry overlay, double normX, double normY)
     {
         if (_isWindowClosed) return;
-        if (_codingVisionClient == null)
+
+        // Slice 8a.3 Step 5b-Fix: Sidecar-Client lazy-initialisieren —
+        // das alte InitCodingAi() ist mit der Coding-Mode-Loeschung weg,
+        // also waere _codingVisionClient sonst dauerhaft null. Bei
+        // Init-Fehler kurz im OsdMeterBadge-Bereich melden.
+        if (!TryEnsureCodingVisionClient())
         {
-            // Slice 8a.3 Step 5b: SetCodingAiState (Status-Badge im alten
-            // Codier-Toolbar) ist weggefallen. Status laeuft jetzt nur noch
-            // ueber Debug.WriteLine — die SAM-Maske selbst zeigt sichtbar
-            // an, ob etwas erkannt wurde.
-            System.Diagnostics.Debug.WriteLine("[SAM] Abbruch: _codingVisionClient ist null (Sidecar nicht initialisiert)");
+            ShowSamOfflineHint("Sidecar nicht erreichbar");
             return;
         }
 
@@ -304,7 +305,7 @@ public partial class PlayerWindow
             var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
-                samResp = await _codingVisionClient.SegmentSamAsync(samReq);
+                samResp = await _codingVisionClient!.SegmentSamAsync(samReq);
             }
             catch (Exception apiEx)
             {
@@ -643,5 +644,61 @@ public partial class PlayerWindow
         // Slice 8a.3 Step 5b: Mausrad-Handling (PipeBend-Winkel) entfaellt
         // mit dem geloeschten Schema-Werkzeug. Live-MarkTool nutzt das Rad
         // nicht.
+    }
+
+    // ── Slice 8a.3 Step 5b-Fix: Sidecar-Client-Lazy-Init + SAM-offline-Hint ──
+    //
+    // Vorher hat InitCodingAi() den _codingVisionClient gesetzt; mit der
+    // Coding-Mode-Loeschung ist dieser Pfad weg. Damit das MarkTool-SAM-
+    // Preview nicht stillschweigend abbricht, hier eine kleine Lazy-Init
+    // ueber den globalen PipelineConfigProvider (resolved settings ->
+    // SEWERSTUDIO_SIDECAR_URL -> http://localhost:8100).
+
+    private bool TryEnsureCodingVisionClient()
+    {
+        if (_codingVisionClient != null) return true;
+        try
+        {
+            var pipelineCfg = AuswertungPro.Next.Application.Ai.PipelineConfigProvider.Load();
+            _codingVisionClient = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(
+                pipelineCfg.SidecarUrl);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SAM] VisionPipelineClient-Init fehlgeschlagen: {ex.Message}");
+            return false;
+        }
+    }
+
+    private DispatcherTimer? _samOfflineHideTimer;
+
+    private void ShowSamOfflineHint(string reason)
+    {
+        try
+        {
+            OsdMeterBadge.Visibility = Visibility.Visible;
+            TxtOsdMeter.Text = $"SAM offline: {reason}";
+
+            // Auto-Hide nach 4s, damit der Badge nicht haengen bleibt.
+            _samOfflineHideTimer?.Stop();
+            _samOfflineHideTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(4)
+            };
+            _samOfflineHideTimer.Tick += (_, _) =>
+            {
+                _samOfflineHideTimer?.Stop();
+                _samOfflineHideTimer = null;
+                if (_isWindowClosed) return;
+                OsdMeterBadge.Visibility = Visibility.Collapsed;
+                TxtOsdMeter.Text = string.Empty;
+            };
+            _samOfflineHideTimer.Start();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SAM] ShowSamOfflineHint fehlgeschlagen: {ex.Message}");
+        }
     }
 }
