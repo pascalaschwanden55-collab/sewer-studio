@@ -1452,7 +1452,15 @@ public partial class CodingModeWindow : Window
     }
 
     private void BtnComplete_Click(object sender, RoutedEventArgs e)
-        => _vm.CompleteSessionCommand.Execute(null);
+    {
+        // Slice 8a Auto-BCD/BCE-Strecke (Step 3): Pre-Complete-Hook prueft
+        // auf offene Streckenschaeden und laesst den User Yes/No/Cancel
+        // entscheiden. Bei Cancel bleibt das Window offen, sonst wird die
+        // Session mit dem entsprechenden allowOpen-Flag abgeschlossen.
+        if (!ConfirmOpenStreckenschadenAndChooseAction(out var allowOpen))
+            return;
+        _vm.CompleteSessionWithChoice(allowOpen);
+    }
 
     private void BtnAbort_Click(object sender, RoutedEventArgs e)
         => _vm.AbortSessionCommand.Execute(null);

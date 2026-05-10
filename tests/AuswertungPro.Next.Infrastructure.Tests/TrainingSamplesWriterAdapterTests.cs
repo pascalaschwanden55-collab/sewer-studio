@@ -19,6 +19,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 /// noch andere Tests stoeren.
 /// </summary>
 [Trait("Category", "Integration")]
+[Collection("KnowledgeRootIsolation")]  // Serialisiert mit anderen Tests die KnowledgeRootProvider._resolver anfassen.
 public sealed class TrainingSamplesWriterAdapterTests
 {
     [Fact]

@@ -411,11 +411,20 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     }
 
     [RelayCommand]
-    private void CompleteSession()
+    private void CompleteSession() => CompleteSessionInternal(allowOpen: false);
+
+    /// <summary>Schliesst die Session ab. allowOpen=true ueberspringt die
+    /// Streckenschaden-Pruefung im Service (offene landen mit MeterEnd=null
+    /// im Protokoll). Slice 8a Auto-BCD/BCE-Strecke (2026-05-10): wird vom
+    /// Window nach dem Streckenschaden-Yes/No/Cancel-Dialog gerufen.</summary>
+    public void CompleteSessionWithChoice(bool allowOpen)
+        => CompleteSessionInternal(allowOpen);
+
+    private void CompleteSessionInternal(bool allowOpen)
     {
         try
         {
-            var doc = _sessionService.CompleteSession();
+            var doc = _sessionService.CompleteSession(allowOpen);
             SessionCompleted?.Invoke(this, doc);
         }
         catch (Exception ex)
