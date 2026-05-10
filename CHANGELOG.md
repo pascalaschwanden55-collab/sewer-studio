@@ -4,6 +4,38 @@ Notable changes to this project. Format follows [Keep a Changelog](https://keepa
 
 ## Unreleased — branch `feature/pdf-import-beobachtungen`
 
+### Phase 6.3 Vorbereitung — MultiModelAnalysisService WPF-frei
+
+ARCH-H5 / Thin-AI-Prinzip aus CLAUDE.md: KI-Logik soll aus dem
+UI-Layer in Application/Infrastructure migrieren. Die letzten WPF-
+Kopplungen in `MultiModelAnalysisService` (zwei `BitmapDecoder`-Sites
+fuer Auto-Kalibrierung) sind mit dieser Slice durch eine
+Application-Layer-Abstraktion ersetzt — der Service ist jetzt
+WPF-frei und kann in einem Folge-Slice nach
+`Infrastructure/Ai/Pipeline` verschoben werden (mechanisch).
+
+**Added:**
+
+- `AuswertungPro.Next.Application.Ai.Imaging.IPipeCalibrationFromBytes`
+  Interface + `PipeCalibrationFromBytesProvider` Static-Provider
+  (Pattern analog `ImagePixelDecoderProvider`).
+- `AuswertungPro.Next.UI.Imaging.WpfPipeCalibrationFromBytes` als
+  WPF-Impl (intern `BitmapDecoder` + `AutoCalibrationService`).
+- `App.xaml.cs` registriert die Impl gemeinsam mit den anderen
+  Imaging-Providern beim App-Start.
+
+**Changed:**
+
+- `MultiModelAnalysisService` ruft beim ersten brauchbaren Frame
+  `PipeCalibrationFromBytesProvider.Instance?.TryCalibrate(bytes, dn)`
+  statt direkt `BitmapDecoder.Create(...)` + `AutoCalibrationService.TryAutoCalibrate(...)`.
+  Bei null-Provider (Tests / nicht-UI-Hosts) faellt der Calibration-
+  Schritt aequivalent zum heutigen "TryAutoCalibrate liefert null"-Pfad zurueck.
+
+**Documentation:**
+
+- [`docs/adrs/2026-05-10-phase-6-3-multimodel-wpf-decouple.md`](docs/adrs/2026-05-10-phase-6-3-multimodel-wpf-decouple.md) — Mini-ADR, Status: Done.
+
 ### Slice 8a — PlayerWindow-Cleanup nach 5b
 
 Entfernt Dead-Code-Residuen aus `PlayerWindow.CodingApply.cs`, die nach

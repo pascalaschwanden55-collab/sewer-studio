@@ -1,7 +1,31 @@
 # Phase 6.3 Vorbereitung: MultiModelAnalysisService WPF-frei machen — Mini-ADR
 
 Datum: 2026-05-10
-Status: **Entschieden** (User-Auftrag "weiter bis alles umgebaut wurde")
+Status: **Done** (Steps 1-3 in 1 Commit, File-Move als Folge-Slice)
+
+Geliefert:
+- ADR `cb0c8c9` — Mini-ADR Status: Entschieden
+- Steps 1-3 `f25ec49` — IPipeCalibrationFromBytes-Interface +
+  WpfPipeCalibrationFromBytes-Impl + App.xaml.cs-Wiring +
+  MultiModelAnalysisService konsumiert Provider statt BitmapDecoder
+
+Verifikation: grep auf System.Windows / BitmapDecoder /
+AutoCalibrationService in MultiModelAnalysisService liefert nur noch
+Kommentar-Treffer. Service ist WPF-frei.
+
+Build: 0 Warn / 0 Err. Tests: 1025 PASS / 1 SKIP.
+
+**Folge-Slice** (nicht in dieser ADR):
+File-Move MultiModelAnalysisService.cs + MultiModelAnalysisService.Helpers.cs
+nach Infrastructure/Ai/Pipeline. Nicht-trivial weil:
+- Der Namespace `AuswertungPro.Next.UI.Ai.Pipeline` enthaelt
+  mehrere Klassen (DetectionAggregator, MaskQuantificationService,
+  ...) die mitziehen muessten oder einzeln aufgesplittet werden.
+- ~15 Aufrufer-Files mit `using AuswertungPro.Next.UI.Ai.Pipeline`
+  brauchen Update.
+
+Eigener Slice mit eigenem Mini-ADR — die Voraussetzung
+(WPF-Freiheit) ist mit dieser ADR erfuellt.
 
 Vorgeschichte:
 - AUDIT_SEWERSTUDIO_2026-04-23.md: ARCH-H5 — KI-Services aus UI-Layer
