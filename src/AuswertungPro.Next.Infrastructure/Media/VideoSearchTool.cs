@@ -50,7 +50,7 @@ public sealed class VideoSearchTool
             // WinCan ersetzt Sonderzeichen im Dateinamen durch Underscore, deshalb
             // tolerieren wir Punkt vs Underscore beim Match.
             var flatMatch = TryResolveFlatLayout(holdingRaw, tokens);
-            if (flatMatch != null)
+            if (flatMatch.HasUniqueMatch)
             {
                 return new VideoResolveResult(
                     true,
@@ -58,7 +58,22 @@ public sealed class VideoSearchTool
                     holdingRaw,
                     null,
                     null,
-                    flatMatch);
+                    flatMatch.Path);
+            }
+
+            // Robustheits-Fix 2026-05-10: Ambiguity-Pfad analog zu directCandidates
+            // weiter unten (Z.~110) — Auto-Relink wird uebersprungen, User sieht
+            // die Kandidaten und entscheidet manuell.
+            if (flatMatch.IsAmbiguous)
+            {
+                return new VideoResolveResult(
+                    false,
+                    $"Mehrdeutige Video-Treffer im Flat-Layout ({flatMatch.AmbiguousPaths!.Count}). Auto-Relink uebersprungen.",
+                    holdingRaw,
+                    null,
+                    null,
+                    null,
+                    flatMatch.AmbiguousPaths);
             }
 
             return new VideoResolveResult(
@@ -149,6 +164,27 @@ public sealed class VideoSearchTool
         .ToList();
     }
 
+    /// <summary>Ergebnis der Flat-Layout-Suche.</summary>
+    /// <remarks>
+    /// Robustheits-Fix 2026-05-10: Frueher returnte TryResolveFlatLayout
+    /// einen Best-Match-Pfad bei Score-Gleichstand still — gefaehrlich bei
+    /// aehnlichen Haltungsnummern oder duplizierten Exporten. Jetzt:
+    /// bei mehreren Kandidaten mit identischem Top-Score wird Ambiguity
+    /// gemeldet, Caller entscheidet (Auto-Relink uebersprungen).
+    /// </remarks>
+    private readonly record struct FlatLayoutMatchResult(
+        string? Path,
+        IReadOnlyList<string>? AmbiguousPaths)
+    {
+        public static FlatLayoutMatchResult None { get; } = new(null, null);
+
+        /// <summary>true wenn genau ein eindeutiger Treffer vorliegt.</summary>
+        public bool HasUniqueMatch => Path != null;
+
+        /// <summary>true wenn mehrere Kandidaten den gleichen Top-Score haben.</summary>
+        public bool IsAmbiguous => AmbiguousPaths is { Count: > 1 };
+    }
+
     /// <summary>
     /// Fallback fuer LightViewer/Flat-Export-Layout: Videos liegen flach im root
     /// als <HaltungsId>_<Seq>.mp4 (z.B. "7_420-408_0001.mp4" fuer Haltung "7.420-408").
@@ -157,9 +193,9 @@ public sealed class VideoSearchTool
     /// vergleichen. Wenn alle Knotennummern aus dem HaltungsKey im Dateinamen
     /// vorkommen, ist es ein Treffer.
     /// </summary>
-    private string? TryResolveFlatLayout(string holdingRaw, IReadOnlyList<string> tokens)
+    private FlatLayoutMatchResult TryResolveFlatLayout(string holdingRaw, IReadOnlyList<string> tokens)
     {
-        if (!Directory.Exists(_root)) return null;
+        if (!Directory.Exists(_root)) return FlatLayoutMatchResult.None;
 
         // Alle Video-Dateien im _root (rekursiv) ohne Holding-Filterung
         var videoExt = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -182,7 +218,7 @@ public sealed class VideoSearchTool
             .Where(s => s.Length >= 1)
             .Distinct()
             .ToList();
-        if (nums.Count == 0) return null;
+        if (nums.Count == 0) return FlatLayoutMatchResult.None;
 
         // Tokens in beiden Schreibweisen vorbereiten (Punkt + Underscore)
         var tokenVariants = tokens
@@ -211,13 +247,22 @@ public sealed class VideoSearchTool
             if (score > 0) matches.Add((v, score));
         }
 
-        if (matches.Count == 0) return null;
+        if (matches.Count == 0) return FlatLayoutMatchResult.None;
 
-        // Bestes Match: hoechster Score, bei Gleichstand kuerzester Pfad (spezifischer)
-        return matches
-            .OrderByDescending(m => m.Score)
-            .ThenBy(m => m.Path.Length)
-            .First().Path;
+        // Robustheits-Fix 2026-05-10: bei Score-Gleichstand Ambiguity melden,
+        // statt still den kuerzesten Pfad zu nehmen. Verhindert Falsch-Relink
+        // bei aehnlichen Haltungsnummern oder duplizierten Exporten.
+        var topScore = matches.Max(m => m.Score);
+        var topMatches = matches
+            .Where(m => m.Score == topScore)
+            .OrderBy(m => m.Path.Length)
+            .Select(m => m.Path)
+            .ToList();
+
+        if (topMatches.Count == 1)
+            return new FlatLayoutMatchResult(topMatches[0], null);
+
+        return new FlatLayoutMatchResult(null, topMatches);
     }
 
     private string? FindPdf(string holdingDir, IReadOnlyList<string> tokens)
