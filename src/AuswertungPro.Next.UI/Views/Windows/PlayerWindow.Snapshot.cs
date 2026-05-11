@@ -52,10 +52,26 @@ public partial class PlayerWindow
         // VLC-OSD-Anzeige (Dateipfad) vorher deaktivieren, damit der Pfad
         // nicht als Text auf dem Videobild erscheint
         try { _player.SetMarqueeInt(LibVLCSharp.Shared.VideoMarqueeOption.Enable, 0); } catch { }
-        var success = _player.TakeSnapshot(0, filePath, width, height);
-        if (wasPlaying)
-            _player.SetPause(false);
-        return success;
+
+        // Robustheit-Fix 2026-05-10: Resume in finally — wenn TakeSnapshot
+        // eine native Exception wirft (D3D11-Lock, Codec-Wechsel), blieb
+        // das Video frueher pausiert haengen.
+        try
+        {
+            return _player.TakeSnapshot(0, filePath, width, height);
+        }
+        finally
+        {
+            if (wasPlaying)
+            {
+                try { _player.SetPause(false); }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[PlayerWindow.Snapshot] Resume nach TakeSnapshot fehlgeschlagen: {ex.Message}");
+                }
+            }
+        }
     }
 
     /// <summary>

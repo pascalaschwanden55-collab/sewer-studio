@@ -23,7 +23,13 @@ public sealed class ExcelTemplateExportService : IExcelExportService
             if (headerRow <= 0) headerRow = 11;
             if (startRow <= 0) startRow = 12;
 
-            Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+            // Robustheit-Fix 2026-05-10: GetDirectoryName liefert "" bei reinem
+            // Dateinamen — CreateDirectory("") wirft ArgumentException, plus
+            // null-forgiving Operator war unsicher. Jetzt: nur anlegen wenn
+            // ein echtes Verzeichnis abgeleitet werden kann.
+            var outputDir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputDir))
+                Directory.CreateDirectory(outputDir);
 
             using var wb = new XLWorkbook(templatePath);
             var ws = wb.Worksheets.FirstOrDefault(w => string.Equals(w.Name, "Haltungen", StringComparison.OrdinalIgnoreCase))
@@ -128,7 +134,13 @@ public sealed class ExcelTemplateExportService : IExcelExportService
             if (headerRow <= 0) headerRow = 11;
             if (startRow <= 0) startRow = 12;
 
-            Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+            // Robustheit-Fix 2026-05-10: GetDirectoryName liefert "" bei reinem
+            // Dateinamen — CreateDirectory("") wirft ArgumentException, plus
+            // null-forgiving Operator war unsicher. Jetzt: nur anlegen wenn
+            // ein echtes Verzeichnis abgeleitet werden kann.
+            var outputDir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputDir))
+                Directory.CreateDirectory(outputDir);
 
             using var wb = new XLWorkbook(templatePath);
             var ws = wb.Worksheets.FirstOrDefault(w => string.Equals(w.Name, "Schaechte", StringComparison.OrdinalIgnoreCase))
