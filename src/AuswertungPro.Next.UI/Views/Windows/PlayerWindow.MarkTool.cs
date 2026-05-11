@@ -230,6 +230,17 @@ public partial class PlayerWindow
                 return;
             }
 
+            // Robustheits-Fix 2026-05-11 (Deep-Dive #8): Frame-Validierung
+            // bevor er an SAM geht. Schwarze/uniforme Frames (z.B. waehrend
+            // Codec-Wechsel oder D3D11-Lock) wuerden vorher zu falschen oder
+            // leeren Masken fuehren — User sah nur "0 Masken" ohne Grund.
+            if (!Common.FrameValidation.IsFrameValid(pngBytes))
+            {
+                System.Diagnostics.Debug.WriteLine("[SAM] Abbruch: Frame uniform/zu klein (z.B. schwarz/weiss)");
+                SetCodingAiState("SAM: Bild zu uniform — bitte Video kurz weiterspielen", Color.FromRgb(0xF5, 0x9E, 0x0B));
+                return;
+            }
+
             var b64 = Convert.ToBase64String(pngBytes);
 
             // Bild-Aufloesung dynamisch aus dem Snapshot lesen (vorher hartkodiert

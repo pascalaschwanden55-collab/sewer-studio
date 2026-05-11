@@ -297,6 +297,18 @@ public partial class PlayerWindow
             double x2 = (rectPx.X + rectPx.Width) * sx;
             double y2 = (rectPx.Y + rectPx.Height) * sy;
 
+            // Robustheits-Fix 2026-05-11 (Deep-Dive #8): Frame-Validierung
+            // vor SAM-Aufruf. Wenn der gecapturete Frame schwarz oder uniform
+            // ist, ueberspringen wir den SAM-Aufruf und melden es dem User.
+            if (!Common.FrameValidation.IsFrameValid(frameBytes))
+            {
+                TxtTrainingStatus.Text =
+                    "Trainings-Snapshot zu uniform (schwarz/weiss) — bitte Video kurz weiterspielen";
+                System.Diagnostics.Debug.WriteLine(
+                    "[TrainingMode SAM] Abbruch: Frame uniform");
+                return;
+            }
+
             var b64 = Convert.ToBase64String(frameBytes);
             var req = new SamRequest(b64, new[] { new SamBoundingBox(x1, y1, x2, y2, "training", 1.0) });
 

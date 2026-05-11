@@ -313,8 +313,23 @@ public partial class PlayerWindow
             if (!File.Exists(tempPath))
                 return null;
 
-            return await File.ReadAllBytesAsync(tempPath,
+            var bytes = await File.ReadAllBytesAsync(tempPath,
                 _detectionCts?.Token ?? CancellationToken.None);
+
+            // Robustheits-Fix 2026-05-11 (Deep-Dive #8): Frame validieren
+            // bevor er an die KI geht. Schwarze/uniforme Frames (z.B. wenn
+            // VLC waehrend des Codec-Wechsels ein leeres Frame liefert)
+            // wuerden zu Fehl-Detektionen oder leeren Klassifikationen
+            // fuehren — lieber als "invalid" zurueckgeben, Caller skippt
+            // diesen Frame und versucht beim naechsten Tick erneut.
+            if (!Common.FrameValidation.IsFrameValid(bytes))
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    "[LiveDetection] Frame uniform/leer — wird uebersprungen");
+                return null;
+            }
+
+            return bytes;
         }
         catch
         {
