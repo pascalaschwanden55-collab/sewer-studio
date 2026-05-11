@@ -315,7 +315,12 @@ public static partial class HoldingFolderDistributor
         {
             if (!XtfFilesCache.ContainsKey(dir))
             {
-                XtfFilesCache[dir] = Directory.GetFiles(dir, "*.xtf", SearchOption.AllDirectories);
+                // Robustheits-Fix 2026-05-10 (Deep-Dive #1): SafeFileEnumeration
+                // statt Directory.GetFiles — gesperrte Unterordner brechen den
+                // XTF-Cache-Aufbau nicht mehr ab.
+                XtfFilesCache[dir] = Common.SafeFileEnumeration
+                    .EnumerateFilesSafe(dir, "*.xtf", recursive: true)
+                    .ToArray();
             }
         }
     }

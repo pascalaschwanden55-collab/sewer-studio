@@ -23,8 +23,11 @@ public static partial class HoldingFolderDistributor
         if (!Directory.Exists(root))
             return Array.Empty<string>();
 
-        var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        return Directory.EnumerateFiles(root, "*.*", searchOption)
+        // Robustheits-Fix 2026-05-10 (Deep-Dive #1): SafeFileEnumeration toleriert
+        // gesperrte Unterordner — frueher konnte ein einziger Auth-Fehler den
+        // ganzen Video-Index killen.
+        return Common.SafeFileEnumeration
+            .EnumerateFilesSafe(root, "*.*", recursive: recursive)
             .Where(MediaFileTypes.HasVideoExtension)
             .ToList();
     }

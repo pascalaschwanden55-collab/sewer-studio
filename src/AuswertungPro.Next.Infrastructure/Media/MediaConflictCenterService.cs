@@ -88,7 +88,11 @@ public sealed class MediaConflictCenterService
         if (!Directory.Exists(holdingsRoot))
             return Array.Empty<MediaConflictCase>();
 
-        var infoFiles = Directory.EnumerateFiles(holdingsRoot, "*_VIDEO_*.txt", SearchOption.AllDirectories)
+        // Robustheits-Fix 2026-05-10 (Deep-Dive #1): SafeFileEnumeration statt
+        // Directory.EnumerateFiles direkt. Gesperrte Haltungs-Ordner brechen
+        // den Konflikt-Scan jetzt nicht mehr ab.
+        var infoFiles = Common.SafeFileEnumeration
+            .EnumerateFilesSafe(holdingsRoot, "*_VIDEO_*.txt", recursive: true)
             .Where(path =>
                 path.EndsWith("_VIDEO_MISSING.txt", StringComparison.OrdinalIgnoreCase)
                 || path.EndsWith("_VIDEO_AMBIGUOUS.txt", StringComparison.OrdinalIgnoreCase))
@@ -713,7 +717,10 @@ public sealed class MediaConflictCenterService
         if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
             return map;
 
-        foreach (var file in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
+        // Robustheits-Fix 2026-05-10 (Deep-Dive #1): SafeFileEnumeration
+        // toleriert gesperrte Unterordner beim Auto-Resolve-Scan.
+        foreach (var file in Common.SafeFileEnumeration
+            .EnumerateFilesSafe(root, "*.*", recursive: true))
         {
             var ext = Path.GetExtension(file);
             if (!VideoExtensions.Contains(ext))

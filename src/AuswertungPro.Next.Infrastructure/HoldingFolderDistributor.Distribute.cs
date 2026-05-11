@@ -34,7 +34,11 @@ public static partial class HoldingFolderDistributor
         if (!Directory.Exists(pdfSourceFolder))
             return new[] { new DistributionResult(false, $"PDF folder not found: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) };
 
-        var pdfFiles = Directory.EnumerateFiles(pdfSourceFolder, "*.pdf", SearchOption.AllDirectories)
+        // Robustheits-Fix 2026-05-10 (Deep-Dive #1): SafeFileEnumeration statt
+        // Directory.EnumerateFiles direkt. Gesperrte/fluechtige Unterordner
+        // brechen den Import jetzt nicht mehr global ab.
+        var pdfFiles = Common.SafeFileEnumeration
+            .EnumerateFilesSafe(pdfSourceFolder, "*.pdf", recursive: true)
             .Where(p => !Path.GetFileName(p).StartsWith("split_", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
