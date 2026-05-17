@@ -346,12 +346,33 @@ public partial class PlayerWindow
     {
         if (BtnCodingLiveAi.IsChecked == true)
         {
-            // 8s Intervall: Qwen braucht ~3s Inferenz + 1s Capture + Puffer
-            _codingLiveAiTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
+            if (_codingEnhancedVision == null && _codingLiveDetection == null && _codingMultiModel == null)
+            {
+                BtnCodingLiveAi.IsChecked = false;
+                SetCodingAiState("Live-KI nicht bereit", Color.FromRgb(0xEF, 0x44, 0x44),
+                    "Sidecar/Qwen noch nicht initialisiert");
+                return;
+            }
+
+            // Live-KI nutzt denselben Pfad wie "Frame pruefen":
+            // Multi-Model/SAM zuerst, Qwen nur als Fallback.
+            _codingLiveAiTimer?.Stop();
+            _codingLiveAiTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(CodingLiveAiIntervalSeconds) };
             _codingLiveAiTimer.Tick += CodingLiveAiTimer_Tick;
             _codingLiveAiTimer.Start();
 
+            try
+            {
+                _videoPlayback.Resume();
+                UpdateRateLabel();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Live-KI] Video-Resume fehlgeschlagen: {ex.Message}");
+            }
+
             // Gruen blinken wenn aktiv
+            _codingLiveAiBlinkTimer?.Stop();
             _codingLiveAiBlinkTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
             _codingLiveAiBlinkTimer.Tick += (_, _) =>
             {
@@ -364,8 +385,9 @@ public partial class PlayerWindow
             _codingLiveAiBlinkTimer.Start();
             BtnCodingLiveAi.Background = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
 
-            SetCodingAiState("Automatische KI-Analyse aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
-                $"Intervall alle 5 Sekunden | {CompactModelName(_codingAiModelName)}");
+            SetCodingAiState("Live-KI aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
+                $"Multi-Model/SAM alle {CodingLiveAiIntervalSeconds}s | {CompactModelName(_codingAiModelName)}");
+            CodingLiveAiTimer_Tick(_codingLiveAiTimer, EventArgs.Empty);
         }
         else
         {
@@ -391,14 +413,14 @@ public partial class PlayerWindow
         try
         {
             // Nicht analysieren wenn: bereits analysierend, Video pausiert, WaitingForUserInput
-            // Mindestens ein Analyse-Service muss verfuegbar sein
-            if (_codingEnhancedVision == null && _codingLiveDetection == null) return;
+            // Mindestens ein Analyse-Service muss verfuegbar sein.
+            if (_codingEnhancedVision == null && _codingLiveDetection == null && _codingMultiModel == null) return;
             if (_codingSessionService?.ActiveSession?.State == CodingSessionState.WaitingForUserInput) return;
 
             // Nur analysieren wenn Video tatsaechlich laeuft
             if (_player == null || !_player.IsPlaying) return;
 
-            await RunCodingAnalysisAsync("Automatische KI-Analyse: Analysiere...");
+            await RunCodingAnalysisAsync("Live-KI: Frame wird gescannt...");
         }
         catch (Exception ex)
         {

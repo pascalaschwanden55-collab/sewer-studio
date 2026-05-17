@@ -118,7 +118,8 @@ public sealed class VideoFullAnalysisService
                 frameIndex,
                 totalFrames,
                 $"Frame {frameIndex}/{totalFrames} – Bild extrahiert",
-                FramePreviewPng: frameBytes));
+                FramePreviewPng: frameBytes,
+                TimestampSeconds: t));
 
             EnhancedFrameAnalysis analysis;
             var visionSw = System.Diagnostics.Stopwatch.StartNew();
@@ -128,7 +129,8 @@ public sealed class VideoFullAnalysisService
                     frameIndex,
                     totalFrames,
                     $"Frame {frameIndex}/{totalFrames} – KI analysiert Bild...",
-                    FramePreviewPng: frameBytes));
+                    FramePreviewPng: frameBytes,
+                    TimestampSeconds: t));
 
                 using var visionCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 visionCts.CancelAfter(VisionFrameTimeout);
@@ -178,8 +180,10 @@ public sealed class VideoFullAnalysisService
                     DiameterReductionMm: f.DiameterReductionMm))
                 .ToList();
 
-            // Knick-Erkennung: Fluchtpunkt-Tracking parallel (~5ms, blockiert nicht)
-            if (KnickDetection is not null && frameBytes is { Length: > 0 })
+            // Knick-/Bogen-Erkennung nur in Axialsicht: Schwenks/Nahaufnahmen
+            // bewegen den Fluchtpunkt kamerabedingt und erzeugen sonst falsche BCC.
+            if (KnickDetection is not null && string.Equals(analysis.ViewType, "axial", StringComparison.OrdinalIgnoreCase)
+                && frameBytes is { Length: > 0 })
             {
                 try
                 {
@@ -188,48 +192,44 @@ public sealed class VideoFullAnalysisService
                         .ConfigureAwait(false);
                     if (knick != null)
                     {
-                        // Knick als Finding hinzufuegen (BAG = Lageabweichung/Knick)
+                        // BAG = Lageabweichung/Knick
                         int knickSeverity = knick.AngleDeg >= 30 ? 4 : knick.AngleDeg >= 15 ? 3 : 2;
-                        var knickLabel = $"Knick {knick.AngleDeg:F0}°";
-                        liveFindings.Add(new LiveFrameFinding(
-                            Label: knickLabel,
-                            Severity: knickSeverity,
-                            PositionClock: null,
-                            ExtentPercent: null,
-                            VsaCodeHint: "BAG",
-                            HeightMm: null, WidthMm: null,
-                            IntrusionPercent: null,
-                            CrossSectionReductionPercent: null,
-                            DiameterReductionMm: null));
+                        AddGeometricFinding(
+                            liveFindings, current,
+                            label: $"Knick {knick.AngleDeg:F0}°",
+                            vsaCode: "BAG",
+                            severity: knickSeverity,
+                            notes: $"Lageabweichung {knick.AngleDeg:F1}° an Rohrverbindung (Konf: {knick.Confidence:F0}%)");
+                    }
 
-                        current.Add(new EnhancedFinding(
-                            Label: knickLabel,
-                            VsaCodeHint: "BAG",
-                            Severity: knickSeverity,
-                            PositionClock: null,
-                            ExtentPercent: null,
-                            HeightMm: null, WidthMm: null,
-                            IntrusionPercent: null,
-                            CrossSectionReductionPercent: null,
-                            DiameterReductionMm: null,
-                            Notes: $"Lageabweichung {knick.AngleDeg:F1}° an Rohrverbindung (Konf: {knick.Confidence:F0}%)"
-                        ));
+                    // Bogen-Erkennung (BCC): nutzt die soeben gesammelte
+                    // Fluchtpunkt-Historie — kein zusaetzlicher Sidecar-Call.
+                    var bend = KnickDetection.CheckForBend(meter);
+                    if (bend?.RecommendedCode is { } bendCode)
+                    {
+                        AddGeometricFinding(
+                            liveFindings, current,
+                            label: $"Bogen {FormatBendDirection(bend.Direction)}",
+                            vsaCode: bendCode,
+                            severity: 1,
+                            notes: $"Geometrische Bogen-Erkennung (Konf: {bend.Confidence:P0}) — {bend.DiagnosticText}");
                     }
                 }
                 catch
                 {
-                    // Knick-Erkennung darf Pipeline nicht blockieren
+                    // Knick-/Bogen-Erkennung darf Pipeline nicht blockieren
                 }
             }
 
-            UpdateActive(active, current, meter, detections);
+            UpdateActive(active, current, meter, t, detections);
 
             progress?.Report(new VideoAnalysisProgress(
                 frameIndex,
                 totalFrames,
                 $"Frame {frameIndex}/{totalFrames} @ {meter:0.0}m – {current.Count} Befunde",
                 FramePreviewPng: frameBytes,
-                LiveFindings: liveFindings));
+                LiveFindings: liveFindings,
+                TimestampSeconds: t));
         }
 
         foreach (var a in active.Values)
@@ -253,6 +253,7 @@ public sealed class VideoFullAnalysisService
         Dictionary<string, ActiveFinding> active,
         List<EnhancedFinding> current,
         double meter,
+        double timestampSeconds,
         List<RawVideoDetection> completed)
     {
         var currentMap = new Dictionary<string, EnhancedFinding>(StringComparer.OrdinalIgnoreCase);
@@ -267,7 +268,7 @@ public sealed class VideoFullAnalysisService
         {
             if (currentMap.TryGetValue(key, out var finding))
             {
-                active[key].Update(meter, finding.Severity, finding.VsaCodeHint, finding.PositionClock, finding.ExtentPercent,
+                active[key].Update(meter, timestampSeconds, finding.Severity, finding.VsaCodeHint, finding.PositionClock, finding.ExtentPercent,
                     finding.HeightMm, finding.WidthMm, finding.IntrusionPercent, finding.CrossSectionReductionPercent, finding.DiameterReductionMm,
                     finding.BboxX1Norm, finding.BboxY1Norm, finding.BboxX2Norm, finding.BboxY2Norm);
             }
@@ -291,6 +292,7 @@ public sealed class VideoFullAnalysisService
                 active[pair.Key] = new ActiveFinding(
                     f.Label.Trim(),
                     meter,
+                    timestampSeconds,
                     f.Severity,
                     f.VsaCodeHint,
                     f.PositionClock,
@@ -485,6 +487,41 @@ public sealed class VideoFullAnalysisService
         return string.IsNullOrWhiteSpace(clock) ? keyBase : $"{keyBase}|{clock}";
     }
 
+    // Geometrische Befunde (Knick BAG, Bogen BCC) tragen keine Uhrlage, Ausdehnung
+    // oder Quantifizierung — sie kommen aus Fluchtpunkt-Tracking, nicht aus SAM/DINO.
+    // Helper buendelt das identische Aufbau-Muster fuer beide Findings-Senken.
+    private static void AddGeometricFinding(
+        List<LiveFrameFinding> liveFindings,
+        List<EnhancedFinding> current,
+        string label,
+        string vsaCode,
+        int severity,
+        string notes)
+    {
+        liveFindings.Add(new LiveFrameFinding(
+            Label: label,
+            Severity: severity,
+            PositionClock: null,
+            ExtentPercent: null,
+            VsaCodeHint: vsaCode,
+            HeightMm: null, WidthMm: null,
+            IntrusionPercent: null,
+            CrossSectionReductionPercent: null,
+            DiameterReductionMm: null));
+
+        current.Add(new EnhancedFinding(
+            Label: label,
+            VsaCodeHint: vsaCode,
+            Severity: severity,
+            PositionClock: null,
+            ExtentPercent: null,
+            HeightMm: null, WidthMm: null,
+            IntrusionPercent: null,
+            CrossSectionReductionPercent: null,
+            DiameterReductionMm: null,
+            Notes: notes));
+    }
+
     private static int? TryParseClockHour(string? raw)
     {
         var normalized = VsaCodeResolver.NormalizeClock(raw);
@@ -515,11 +552,23 @@ public sealed class VideoFullAnalysisService
         return string.IsNullOrWhiteSpace(dir) ? "ffprobe" + ext : Path.Combine(dir, "ffprobe" + ext);
     }
 
+    private static string FormatBendDirection(AuswertungPro.Next.Application.Ai.Pipeline.PipeAxisBendDetector.BendDirection direction)
+        => direction switch
+        {
+            AuswertungPro.Next.Application.Ai.Pipeline.PipeAxisBendDetector.BendDirection.Left => "links",
+            AuswertungPro.Next.Application.Ai.Pipeline.PipeAxisBendDetector.BendDirection.Right => "rechts",
+            AuswertungPro.Next.Application.Ai.Pipeline.PipeAxisBendDetector.BendDirection.Up => "oben",
+            AuswertungPro.Next.Application.Ai.Pipeline.PipeAxisBendDetector.BendDirection.Down => "unten",
+            AuswertungPro.Next.Application.Ai.Pipeline.PipeAxisBendDetector.BendDirection.Straight => "gerade",
+            _ => "unbekannt"
+        };
+
     private sealed class ActiveFinding
     {
         public string Name { get; }
         public double MeterStart { get; }
         public double MeterEnd { get; private set; }
+        public double TimestampStartSeconds { get; private set; }
         public int MaxSeverity { get; private set; }
         public string? VsaCodeHint { get; private set; }
         public string? PositionClock { get; private set; }
@@ -540,6 +589,7 @@ public sealed class VideoFullAnalysisService
         public ActiveFinding(
             string name,
             double start,
+            double timestampSeconds,
             int severity,
             string? hint,
             string? positionClock,
@@ -555,6 +605,7 @@ public sealed class VideoFullAnalysisService
             double? bboxY2 = null)
         {
             Name = name; MeterStart = start; MeterEnd = start;
+            TimestampStartSeconds = timestampSeconds;
             MaxSeverity = severity; VsaCodeHint = hint;
             PositionClock = NormalizeClock(positionClock);
             ExtentPercent = extentPercent is null ? null : Math.Clamp(extentPercent.Value, 1, 100);
@@ -568,6 +619,7 @@ public sealed class VideoFullAnalysisService
 
         public void Update(
             double meter,
+            double timestampSeconds,
             int severity,
             string? hint,
             string? positionClock,
@@ -583,6 +635,7 @@ public sealed class VideoFullAnalysisService
             double? bboxY2 = null)
         {
             MeterEnd = meter;
+            TimestampStartSeconds = Math.Min(TimestampStartSeconds, timestampSeconds);
             MissedFrames = 0;
             if (severity > MaxSeverity)
             {
@@ -613,7 +666,8 @@ public sealed class VideoFullAnalysisService
         public RawVideoDetection ToDetection() =>
             new(Name, MeterStart, MeterEnd, SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock, ExtentPercent,
                 HeightMm, WidthMm, IntrusionPercent, CrossSectionReductionPercent, DiameterReductionMm,
-                BboxX1: BboxX1, BboxY1: BboxY1, BboxX2: BboxX2, BboxY2: BboxY2);
+                BboxX1: BboxX1, BboxY1: BboxY1, BboxX2: BboxX2, BboxY2: BboxY2,
+                TimestampSeconds: TimestampStartSeconds);
 
         private static string SeverityLabel(int s) => s >= 4 ? "high" : s == 3 ? "mid" : "low";
     }

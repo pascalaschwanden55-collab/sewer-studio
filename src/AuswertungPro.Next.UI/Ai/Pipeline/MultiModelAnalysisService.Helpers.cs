@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Diagnostics;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Application.Ai.Training.Models;
@@ -87,17 +88,9 @@ public sealed partial class MultiModelAnalysisService
 
     // ── Private helpers ────────────────────────────────────────────────
 
+    // Audit 2026-05-13 M1: Fachlogik nach Application/Ai/Pipeline/SeverityEstimator verschoben.
     private static int EstimateSeverity(MaskQuantificationService.QuantifiedMask q)
-    {
-        // Heuristic based on physical dimensions
-        if (q.CrossSectionReductionPercent is > 50) return 5;
-        if (q.CrossSectionReductionPercent is > 25) return 4;
-        if (q.ExtentPercent is > 50) return 4;
-        if (q.HeightMm is > 50) return 3;
-        if (q.ExtentPercent is > 25) return 3;
-        if (q.HeightMm is > 10) return 2;
-        return 1;
-    }
+        => SeverityEstimator.Estimate(q);
 
     private static (double? X1, double? Y1, double? X2, double? Y2) GetNormalizedBbox(
         SamMaskResult mask,
@@ -116,6 +109,114 @@ public sealed partial class MultiModelAnalysisService
 
     private static double Clamp01(double value) => Math.Clamp(value, 0.0, 1.0);
 
+    private async Task<List<EnhancedFinding>> AnalyzePipeAxisGeometryAsync(
+        string frameBase64,
+        double position,
+        int pipeDiameterMm,
+        Queue<(PipeAxisResult Axis, double Position)> history,
+        PipeAxisBendDetector detector,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(frameBase64))
+            return new List<EnhancedFinding>();
+
+        PipeAxisResult axis;
+        try
+        {
+            axis = await _client.AnalyzePipeAxisAsync(
+                new PipeAxisRequest(frameBase64, pipeDiameterMm), ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "PipeAxis geometry failed at position {Position:F2}", position);
+            return new List<EnhancedFinding>();
+        }
+
+        history.Enqueue((axis, position));
+        while (history.Count > 8)
+            history.Dequeue();
+
+        if (history.Count < detector.MinWindowSize)
+            return new List<EnhancedFinding>();
+
+        var bend = detector.Detect(history.ToList());
+        if (string.IsNullOrWhiteSpace(bend.RecommendedCode) || bend.Confidence < 0.12)
+            return new List<EnhancedFinding>();
+
+        return new List<EnhancedFinding>
+        {
+            new(
+                Label: $"Bogen {FormatBendDirection(bend.Direction)}",
+                VsaCodeHint: bend.RecommendedCode,
+                Severity: 1,
+                PositionClock: null,
+                ExtentPercent: null,
+                HeightMm: null,
+                WidthMm: null,
+                IntrusionPercent: null,
+                CrossSectionReductionPercent: null,
+                DiameterReductionMm: null,
+                Notes: bend.DiagnosticText)
+        };
+    }
+
+    private bool TryEmitGeometryOnlyFrame(
+        IReadOnlyList<EnhancedFinding> geometryFindings,
+        Dictionary<string, ActiveFindingState> active,
+        List<RawVideoDetection> detections,
+        double meter,
+        double timestampSeconds,
+        int frameIndex,
+        int totalFrames,
+        byte[]? frameBytes,
+        IProgress<VideoAnalysisProgress>? progress,
+        string statusSuffix)
+    {
+        if (geometryFindings.Count == 0)
+            return false;
+
+        var findings = geometryFindings.ToList();
+        UpdateActive(active, findings, meter, timestampSeconds, detections, evidence: null);
+
+        progress?.Report(new VideoAnalysisProgress(
+            frameIndex,
+            totalFrames,
+            $"Frame {frameIndex}/{totalFrames} @ {meter:0.0}m - Geometrie: {findings.Count} Befund(e) ({statusSuffix})",
+            FramePreviewPng: frameBytes,
+            LiveFindings: ToLiveFindings(findings),
+            TimestampSeconds: timestampSeconds));
+
+        return true;
+    }
+
+    private static IReadOnlyList<LiveFrameFinding> ToLiveFindings(IEnumerable<EnhancedFinding> findings)
+        => findings.Select(f => new LiveFrameFinding(
+            Label: f.Label,
+            Severity: f.Severity,
+            PositionClock: f.PositionClock,
+            ExtentPercent: f.ExtentPercent,
+            VsaCodeHint: f.VsaCodeHint,
+            HeightMm: f.HeightMm,
+            WidthMm: f.WidthMm,
+            IntrusionPercent: f.IntrusionPercent,
+            CrossSectionReductionPercent: f.CrossSectionReductionPercent,
+            DiameterReductionMm: f.DiameterReductionMm)).ToList();
+
+    private static string FormatBendDirection(PipeAxisBendDetector.BendDirection direction)
+        => direction switch
+        {
+            PipeAxisBendDetector.BendDirection.Left => "links",
+            PipeAxisBendDetector.BendDirection.Right => "rechts",
+            PipeAxisBendDetector.BendDirection.Up => "oben",
+            PipeAxisBendDetector.BendDirection.Down => "unten",
+            PipeAxisBendDetector.BendDirection.Straight => "gerade",
+            _ => "unbekannt"
+        };
+
     private static bool ShouldSuppressByImageQuality(string? imageQuality, double dinoConf)
     {
         if (!string.Equals(imageQuality, "schlecht", StringComparison.OrdinalIgnoreCase))
@@ -125,6 +226,104 @@ public sealed partial class MultiModelAnalysisService
         // Bei starken DINO-Hinweisen behalten wir Findings fuer bessere Recall.
         return dinoConf < 0.35;
     }
+
+    private static void RecordYoloRawDiagnostics(
+        int frameIndex,
+        double timestampSeconds,
+        double meter,
+        YoloResponse response,
+        double latencyMs,
+        string source)
+    {
+        AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+        {
+            Stage = AiDiagnosticStage.YoloRaw,
+            Source = source,
+            Summary = $"Frame {frameIndex}: YOLO relevant={response.IsRelevant}, boxes={response.Detections.Count}, class={response.FrameClass ?? "-"}",
+            RawOutput = FormatYoloDetections(response.Detections),
+            LatencyMs = latencyMs,
+            Metadata = new Dictionary<string, string>
+            {
+                ["frame_index"] = frameIndex.ToString(CultureInfo.InvariantCulture),
+                ["timestamp_seconds"] = timestampSeconds.ToString("F2", CultureInfo.InvariantCulture),
+                ["meter"] = meter.ToString("F2", CultureInfo.InvariantCulture),
+                ["boxes"] = response.Detections.Count.ToString(CultureInfo.InvariantCulture),
+                ["is_relevant"] = response.IsRelevant.ToString(),
+                ["frame_class"] = response.FrameClass ?? ""
+            }
+        });
+    }
+
+    private static void RecordDinoRawDiagnostics(
+        int frameIndex,
+        double timestampSeconds,
+        double meter,
+        DinoResponse response,
+        IReadOnlyList<DinoDetectionDto> filtered,
+        double latencyMs,
+        string source)
+    {
+        AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+        {
+            Stage = AiDiagnosticStage.MultiModelRaw,
+            Source = source,
+            Summary = $"Frame {frameIndex}: DINO raw={response.Detections.Count}, filtered={filtered.Count}",
+            RawOutput = FormatDinoDetections(response.Detections),
+            LatencyMs = latencyMs,
+            Metadata = new Dictionary<string, string>
+            {
+                ["stage"] = "dino",
+                ["frame_index"] = frameIndex.ToString(CultureInfo.InvariantCulture),
+                ["timestamp_seconds"] = timestampSeconds.ToString("F2", CultureInfo.InvariantCulture),
+                ["meter"] = meter.ToString("F2", CultureInfo.InvariantCulture),
+                ["raw_boxes"] = response.Detections.Count.ToString(CultureInfo.InvariantCulture),
+                ["filtered_boxes"] = filtered.Count.ToString(CultureInfo.InvariantCulture)
+            }
+        });
+    }
+
+    private static void RecordSamRawDiagnostics(
+        int frameIndex,
+        double timestampSeconds,
+        double meter,
+        SamResponse response,
+        int promptBoxes,
+        bool usedRingScan,
+        double latencyMs,
+        string source)
+    {
+        AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+        {
+            Stage = AiDiagnosticStage.MultiModelRaw,
+            Source = source,
+            Summary = $"Frame {frameIndex}: SAM masks={response.Masks.Count}, boxes={promptBoxes}, ring_scan={usedRingScan}",
+            RawOutput = FormatSamMasks(response.Masks),
+            LatencyMs = latencyMs,
+            Metadata = new Dictionary<string, string>
+            {
+                ["stage"] = "sam",
+                ["frame_index"] = frameIndex.ToString(CultureInfo.InvariantCulture),
+                ["timestamp_seconds"] = timestampSeconds.ToString("F2", CultureInfo.InvariantCulture),
+                ["meter"] = meter.ToString("F2", CultureInfo.InvariantCulture),
+                ["prompt_boxes"] = promptBoxes.ToString(CultureInfo.InvariantCulture),
+                ["masks"] = response.Masks.Count.ToString(CultureInfo.InvariantCulture),
+                ["ring_scan"] = usedRingScan.ToString(),
+                ["image_size"] = $"{response.ImageWidth}x{response.ImageHeight}"
+            }
+        });
+    }
+
+    private static string FormatYoloDetections(IReadOnlyList<YoloDetectionDto> detections)
+        => string.Join(Environment.NewLine, detections.Select(d =>
+            $"{d.ClassName} conf={d.Confidence:F2} box=[{d.X1:F0},{d.Y1:F0},{d.X2:F0},{d.Y2:F0}]"));
+
+    private static string FormatDinoDetections(IReadOnlyList<DinoDetectionDto> detections)
+        => string.Join(Environment.NewLine, detections.Select(d =>
+            $"{d.Label} conf={d.Confidence:F2} fallback={d.IsFallbackFromYolo} phrase={d.Phrase ?? ""} box=[{d.X1:F0},{d.Y1:F0},{d.X2:F0},{d.Y2:F0}]"));
+
+    private static string FormatSamMasks(IReadOnlyList<SamMaskResult> masks)
+        => string.Join(Environment.NewLine, masks.Select(m =>
+            $"{m.Label} conf={m.Confidence:F2} area={m.MaskAreaPixels} centroid=({m.CentroidX:F0},{m.CentroidY:F0})"));
 
     private static double EstimateQwenVisionConfidence(string? imageQuality, bool hasFindings)
     {
@@ -161,10 +360,28 @@ public sealed partial class MultiModelAnalysisService
         return Path.GetFullPath(path);
     }
 
+    private static (int Width, int Height) ReadPngDimensions(byte[]? pngBytes)
+    {
+        if (pngBytes is null || pngBytes.Length < 24)
+            return (720, 576);
+
+        try
+        {
+            int w = (pngBytes[16] << 24) | (pngBytes[17] << 16) | (pngBytes[18] << 8) | pngBytes[19];
+            int h = (pngBytes[20] << 24) | (pngBytes[21] << 16) | (pngBytes[22] << 8) | pngBytes[23];
+            return (w > 0 && h > 0) ? (w, h) : (720, 576);
+        }
+        catch
+        {
+            return (720, 576);
+        }
+    }
+
     private void UpdateActive(
         Dictionary<string, ActiveFindingState> active,
         List<EnhancedFinding> current,
         double meter,
+        double timestampSeconds,
         List<RawVideoDetection> completed,
         AuswertungPro.Next.Application.Ai.QualityGate.EvidenceVector? evidence = null)
     {
@@ -184,7 +401,7 @@ public sealed partial class MultiModelAnalysisService
                 // Klammern um die Null-Coalescing-Ausdruecke sind ZWINGEND noetig, da `??`
                 // schwaecher bindet als `+` -> ohne Klammern wuerde Y2 ignoriert sobald Y1 gesetzt ist.
                 double yCenter = ((finding.BboxY1Norm ?? 0) + (finding.BboxY2Norm ?? 1)) / 2.0;
-                active[key].Update(meter, finding.Severity, finding.VsaCodeHint, finding.PositionClock,
+                active[key].Update(meter, timestampSeconds, finding.Severity, finding.VsaCodeHint, finding.PositionClock,
                     finding.ExtentPercent, finding.HeightMm, finding.WidthMm,
                     finding.IntrusionPercent, finding.CrossSectionReductionPercent, finding.DiameterReductionMm,
                     evidence, yCenter);
@@ -204,9 +421,9 @@ public sealed partial class MultiModelAnalysisService
             if (!active.ContainsKey(pair.Key))
             {
                 var f = pair.Value;
-                double yCenter = (f.BboxY1Norm ?? 0 + (f.BboxY2Norm ?? 1)) / 2.0;
+                double yCenter = ((f.BboxY1Norm ?? 0) + (f.BboxY2Norm ?? 1)) / 2.0;
                 active[pair.Key] = new ActiveFindingState(
-                    f.Label.Trim(), meter, f.Severity, f.VsaCodeHint, f.PositionClock,
+                    f.Label.Trim(), meter, timestampSeconds, f.Severity, f.VsaCodeHint, f.PositionClock,
                     f.ExtentPercent, f.HeightMm, f.WidthMm,
                     f.IntrusionPercent, f.CrossSectionReductionPercent, f.DiameterReductionMm,
                     evidence, yCenter);
@@ -386,157 +603,32 @@ public sealed partial class MultiModelAnalysisService
 
     // ── Materialplausibilitaet ─────────────────────────────────────────────
 
-    /// <summary>
-    /// Filtert Detektionen die fuer das verbaute Rohrmaterial unplausibel sind.
-    /// Kunststoffrohre (PE, PVC, PP, GFK) sind dicht — Infiltration (BBF) ist nur
-    /// bei gleichzeitigem Strukturschaden (BA) oder defekter Verbindung (BAJ/BAH)
-    /// moeglich. Ohne Begleitschaden wird BBF bei Kunststoff verworfen.
-    /// </summary>
+    // Audit 2026-05-13 M1: Fachlogik nach Application/Ai/Pipeline/MaterialPlausibilityFilter
+    // verschoben. Hier nur noch der Dispatcher mit Bezug zu Service-State (_config, _logger).
+
     private void ApplyMaterialPlausibilityFilter(List<RawVideoDetection> detections, string? materialOverride = null)
-    {
-        var material = materialOverride ?? _config.PipeMaterial;
-        if (string.IsNullOrWhiteSpace(material)) return;
+        => MaterialPlausibilityFilter.Apply(detections, materialOverride ?? _config.PipeMaterial, _logger);
 
-        bool isKunststoff = IsKunststoffMaterial(material);
-        if (!isKunststoff) return;
-
-        // Pruefen ob ein Strukturschaden in der Naehe ist (±2m)
-        bool HasNearbyStructuralDamage(double meter)
-        {
-            return detections.Any(d =>
-            {
-                var code = d.VsaCodeHint;
-                if (string.IsNullOrEmpty(code) || code.Length < 2) return false;
-                var prefix = code[..2].ToUpperInvariant();
-                // BA = Strukturell (Riss, Bruch, Versatz), oder BAJ/BAH (defekte Verbindung)
-                return prefix == "BA" && Math.Abs(d.MeterStart - meter) < 2.0;
-            });
-        }
-
-        var before = detections.Count;
-        detections.RemoveAll(d =>
-        {
-            var code = d.VsaCodeHint?.ToUpperInvariant() ?? "";
-            // BBF = Infiltration: bei Kunststoff nur mit Begleitschaden
-            if (code.StartsWith("BBF") && !HasNearbyStructuralDamage(d.MeterStart))
-            {
-                _logger.LogInformation(
-                    "Materialplausibilitaet: {Code} @ {Meter:F1}m verworfen — Kunststoffrohr ({Material}) ohne Begleitschaden",
-                    code, d.MeterStart, material);
-                return true;
-            }
-            // BBD = Eindringender Boden: bei intaktem Kunststoff ebenfalls nur mit Schaden
-            if (code.StartsWith("BBD") && !HasNearbyStructuralDamage(d.MeterStart))
-            {
-                _logger.LogInformation(
-                    "Materialplausibilitaet: {Code} @ {Meter:F1}m verworfen — Kunststoffrohr ({Material}) ohne Begleitschaden",
-                    code, d.MeterStart, material);
-                return true;
-            }
-            return false;
-        });
-
-        if (before != detections.Count)
-        {
-            _logger.LogInformation(
-                "Materialplausibilitaet ({Material}): {Before} → {After} Detektionen",
-                material, before, detections.Count);
-        }
-    }
-
-    /// <summary>
-    /// Mappt ein Qwen-Material auf den spezifischen AED-Untercode.
-    /// VSA: AEDXO=PE, AEDXP=PP, AEDXQ=PVC, AEDXG=Beton, AEDXU=Steinzeug, AED=generisch.
-    /// </summary>
     private static string MapMaterialToAedCode(string material)
-    {
-        var m = material.ToUpperInvariant();
-        if (m.Contains("PE") || m.Contains("POLYETHYL")) return "AEDXO";
-        if (m.Contains("PP") || m.Contains("POLYPROP")) return "AEDXP";
-        if (m.Contains("PVC") || m.Contains("POLYVINYL")) return "AEDXQ";
-        if (m.Contains("BETON") || m.Contains("CONCRETE")) return "AEDXG";
-        if (m.Contains("STEINZEUG") || m.Contains("VITRIF")) return "AEDXU";
-        if (m.Contains("GFK") || m.Contains("FIBERGLASS")) return "AEDXH";
-        if (m.Contains("STAHL") || m.Contains("STEEL")) return "AEDXI";
-        if (m.Contains("GUSS") || m.Contains("CAST")) return "AEDXJ";
-        if (m.Contains("FASER") || m.Contains("ASBESTOS")) return "AEDXK";
-        return "AED"; // Generisch
-    }
+        => MaterialPlausibilityFilter.MapMaterialToAedCode(material);
 
-    /// <summary>
-    /// Prueft ob das Material ein Kunststoff ist (dichte Rohrwand).
-    /// Erkennt: Polyethylen, PE, PVC, PP, GFK, Kunststoff, Plastik etc.
-    /// </summary>
     private static bool IsKunststoffMaterial(string material)
-    {
-        var m = material.ToUpperInvariant();
-        return m.Contains("PE") || m.Contains("PVC") || m.Contains("PP")
-            || m.Contains("GFK") || m.Contains("KUNSTSTOFF") || m.Contains("PLASTIK")
-            || m.Contains("POLYETHYL") || m.Contains("POLYPROP") || m.Contains("POLYVINYL")
-            || m.Contains("HDPE") || m.Contains("FASERZ"); // Faserzement = auch dicht
-    }
+        => MaterialPlausibilityFilter.IsKunststoff(material);
 
     // ── ActiveFindingState (mirrors VideoFullAnalysisService.ActiveFinding) ──
 
-    /// <summary>
-    /// Filtert Detektionen die nicht von mindestens 2 Modellen bestaetigt werden,
-    /// entfernt Red-QualityGate-Ergebnisse und verwirft zu kleine/weit entfernte Objekte.
-    /// </summary>
+    // Audit 2026-05-13 M1: Fachlogik nach Application/Ai/Pipeline/ConsensusQualityFilter verschoben.
     private void ApplyConsensusAndQualityFilter(List<RawVideoDetection> detections)
-    {
-        const double YoloMin = 0.20;  // YOLO bestaetigt
-        const double DinoMin = 0.25;  // DINO bestaetigt
-        const double QwenMin = 0.55;  // Qwen bestaetigt (vorher 0.40 — zu nah an Zufall)
-
-        // Minimale BBox-Flaeche (normiert): Objekte unter ~3% der Bildflaeche sind zu weit weg
-        // (max ~20cm Entfernung bei typischen Kanalrohren DN100-DN600)
-        const double MinBboxArea = 0.03;
-
-        var qg = new AuswertungPro.Next.Application.Ai.QualityGate.QualityGateService();
-        var before = detections.Count;
-
-        detections.RemoveAll(d =>
-        {
-            // 0. Zu kleine/weit entfernte Objekte verwerfen
-            if (d.BboxX1 is not null && d.BboxY1 is not null &&
-                d.BboxX2 is not null && d.BboxY2 is not null)
-            {
-                var bboxW = Math.Abs(d.BboxX2.Value - d.BboxX1.Value);
-                var bboxH = Math.Abs(d.BboxY2.Value - d.BboxY1.Value);
-                var area = bboxW * bboxH;
-                if (area < MinBboxArea)
-                    return true;
-            }
-
-            if (d.Evidence is not { } ev) return false; // Kein Evidence → behalten (Legacy)
-
-            // 1. QualityGate Red → raus
-            var result = qg.Evaluate(ev);
-            if (result.IsRed)
-                return true;
-
-            // 2. Multi-Model-Konsens: mindestens 2 Modelle muessen bestaetigen
-            int confirmations = 0;
-            if (ev.YoloConf is >= YoloMin) confirmations++;
-            if (ev.DinoConf is >= DinoMin) confirmations++;
-            if (ev.QwenVisionConf is >= QwenMin) confirmations++;
-
-            return confirmations < 2;
-        });
-
-        if (before != detections.Count)
-        {
-            _logger.LogInformation(
-                "Konsens+QualityGate-Filter: {Before} → {After} Detektionen ({Removed} entfernt)",
-                before, detections.Count, before - detections.Count);
-        }
-    }
+        => ConsensusQualityFilter.Apply(detections, _logger);
 
     private sealed class ActiveFindingState
     {
         public string Name { get; }
         public double MeterStart { get; private set; }
         public double MeterEnd { get; private set; }
+        public double TimestampStartSeconds { get; private set; }
+        public double TimestampEndSeconds { get; private set; }
+        public double? ConfirmedTimestampSeconds { get; private set; }
         public int MaxSeverity { get; private set; }
         public string? VsaCodeHint { get; private set; }
         public string? PositionClock { get; private set; }
@@ -571,12 +663,14 @@ public sealed partial class MultiModelAnalysisService
         private const double ConfirmationYThreshold = 0.30;
 
         public ActiveFindingState(
-            string name, double start, int severity, string? hint, string? clock,
+            string name, double start, double timestampSeconds, int severity, string? hint, string? clock,
             int? extent, int? height, int? width, int? intrusion, int? crossSection, int? diameterReduction,
             AuswertungPro.Next.Application.Ai.QualityGate.EvidenceVector? evidence = null,
             double bboxYCenterNorm = 0.5)
         {
             Name = name; MeterStart = start; MeterEnd = start;
+            TimestampStartSeconds = timestampSeconds;
+            TimestampEndSeconds = timestampSeconds;
             MaxSeverity = severity; VsaCodeHint = hint; PositionClock = clock;
             ExtentPercent = extent; HeightMm = height; WidthMm = width;
             IntrusionPercent = intrusion; CrossSectionReductionPercent = crossSection;
@@ -587,15 +681,17 @@ public sealed partial class MultiModelAnalysisService
             {
                 IsConfirmed = true;
                 ConfirmedMeter = start;
+                ConfirmedTimestampSeconds = timestampSeconds;
             }
         }
 
-        public void Update(double meter, int severity, string? hint, string? clock,
+        public void Update(double meter, double timestampSeconds, int severity, string? hint, string? clock,
             int? extent, int? height, int? width, int? intrusion, int? crossSection, int? diameterReduction,
             AuswertungPro.Next.Application.Ai.QualityGate.EvidenceVector? evidence = null,
             double bboxYCenterNorm = 0.5)
         {
             MeterEnd = meter;
+            TimestampEndSeconds = timestampSeconds;
             MissedFrames = 0;
             FrameCount++;
             if (severity > MaxSeverity) MaxSeverity = severity;
@@ -620,6 +716,7 @@ public sealed partial class MultiModelAnalysisService
                 {
                     IsConfirmed = true;
                     ConfirmedMeter = meter;
+                    ConfirmedTimestampSeconds = timestampSeconds;
                     // Meter korrigieren: Bestaetigung auf Kamerahoehe ist genauer
                     MeterStart = meter;
                 }
@@ -630,7 +727,22 @@ public sealed partial class MultiModelAnalysisService
         /// True wenn der Befund finalisiert werden soll (genug Frames + bestaetigt).
         /// Unbestaetigte Ferndetektionen werden still verworfen.
         /// </summary>
-        public bool ShouldFinalize => IsConfirmed && FrameCount >= MinConfirmationFrames;
+        public bool ShouldFinalize => IsConfirmed && (FrameCount >= MinConfirmationFrames || IsSingleFrameEventCode);
+
+        private bool IsSingleFrameEventCode
+        {
+            get
+            {
+                var code = VsaCodeResolver.NormalizeFindingCode(VsaCodeHint) ?? VsaCodeHint;
+                if (string.IsNullOrWhiteSpace(code) || code.Length < 2)
+                    return false;
+
+                var prefix2 = code[..2].ToUpperInvariant();
+                var prefix3 = code.Length >= 3 ? code[..3].ToUpperInvariant() : prefix2;
+                return prefix2 is "BC" or "BD" or "AE"
+                    || prefix3 is "BCA" or "BCC" or "BCD" or "BCE";
+            }
+        }
 
         public RawVideoDetection ToDetection() =>
             new(Name,
@@ -638,7 +750,8 @@ public sealed partial class MultiModelAnalysisService
                 MeterEnd,
                 SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock,
                 ExtentPercent, HeightMm, WidthMm, IntrusionPercent, CrossSectionReductionPercent, DiameterReductionMm,
-                Evidence: Evidence is not null ? Evidence with { FrameCount = FrameCount } : null);
+                Evidence: Evidence is not null ? Evidence with { FrameCount = FrameCount } : null,
+                TimestampSeconds: ConfirmedTimestampSeconds ?? TimestampStartSeconds);
 
         private static string SeverityLabel(int s) => s >= 4 ? "high" : s == 3 ? "mid" : "low";
 

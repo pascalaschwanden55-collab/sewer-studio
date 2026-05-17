@@ -200,6 +200,7 @@ public partial class PlayerWindow
             PositionSlider.Value = pos * PositionSlider.Maximum;
             CurrentTimeText.Text = FormatMs(time);
             DurationText.Text = FormatMs(length);
+            RepositionDamageMarkers();
         }
         else
         {

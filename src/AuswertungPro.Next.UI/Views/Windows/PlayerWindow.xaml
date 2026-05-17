@@ -511,6 +511,47 @@
                                        Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                         </WrapPanel>
 
+                        <Border x:Name="CodingScanPreviewPanel"
+                                Style="{StaticResource PlayerCard}"
+                                Margin="0,0,0,8"
+                                Padding="6"
+                                Visibility="Collapsed">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="160"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0"
+                                        Height="96"
+                                        Background="#111318"
+                                        CornerRadius="6"
+                                        ClipToBounds="True">
+                                    <Image x:Name="ImgCodingScanPreview"
+                                           Stretch="Uniform"
+                                           SnapsToDevicePixels="True"/>
+                                </Border>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="LIVE-SCAN"
+                                               Style="{StaticResource SectionLabel}"
+                                               Margin="0,0,0,2"
+                                               FontSize="{StaticResource TypeMicro}"/>
+                                    <TextBlock x:Name="TxtCodingScanPreviewStatus"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               FontSize="{StaticResource TypeCaption}"
+                                               TextWrapping="Wrap"
+                                               MaxHeight="42"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock x:Name="TxtCodingScanPreviewFindings"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               FontSize="{StaticResource TypeMicro}"
+                                               TextWrapping="Wrap"
+                                               MaxHeight="42"
+                                               Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
                         <!-- == 2. Drei-Spalten-Ansicht: KI-Befunde | Details | Import == -->
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
@@ -557,6 +598,8 @@
                                         <ListBox.ContextMenu>
                                             <ContextMenu>
                                                 <MenuItem Header="Bearbeiten (Doppelklick)" Click="CodingEventEdit_Click"/>
+                                                <MenuItem Header="&#x1F3AF; Mit BBox als Training markieren" Click="CodingTrainingWithBbox_Click"
+                                                          FontWeight="SemiBold"/>
                                                 <MenuItem Header="Fotos anzeigen" Click="CodingEventShowPhotos_Click"/>
                                                 <Separator/>
                                                 <MenuItem Header="Streckenschaden schliessen (Ende hier)"
@@ -605,25 +648,36 @@
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="Auto"/>
                                                             <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="Auto"/>
                                                             <ColumnDefinition Width="*"/>
                                                             <ColumnDefinition Width="Auto"/>
                                                         </Grid.ColumnDefinitions>
                                                         <Ellipse x:Name="ZoneDot" Grid.Column="0"
                                                                  Width="7" Height="7"
                                                                  Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                        <!-- Quellen-Badge: 🤖=AI, ⚙=Heuristik, 👤=Manual, 📄=Import.
+                                                             Macht sichtbar woher der Code stammt (User-Wunsch 2026-05-11).
+                                                             Audit 2026-05-13 L3: Margin halbiert, damit ZoneDot↔Code-Spalte
+                                                             nicht doppelt 4px Luft hat (ZoneDot 0,0,4,0 + Icon 0,0,4,0). -->
                                                         <TextBlock Grid.Column="1"
+                                                                   Text="{Binding Entry.Source, Converter={StaticResource ProtocolEntrySourceToIconConverter}}"
+                                                                   ToolTip="{Binding Entry.Source, Converter={StaticResource ProtocolEntrySourceToTooltipConverter}}"
+                                                                   FontSize="10"
+                                                                   VerticalAlignment="Center"
+                                                                   Margin="0,0,2,0"/>
+                                                        <TextBlock Grid.Column="2"
                                                                    Text="{Binding Entry.Code}"
                                                                    FontFamily="Consolas"
                                                                    FontWeight="Bold" FontSize="{StaticResource TypeCaption}"
                                                                    VerticalAlignment="Center"
                                                                    Margin="0,0,4,0"/>
-                                                        <TextBlock Grid.Column="2"
+                                                        <TextBlock Grid.Column="3"
                                                                    Text="{Binding Entry.Beschreibung}"
                                                                    FontSize="{StaticResource TypeMicro}"
                                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                                    TextTrimming="CharacterEllipsis"
                                                                    VerticalAlignment="Center"/>
-                                                        <TextBlock Grid.Column="3" x:Name="TxtStatusIcon"
+                                                        <TextBlock Grid.Column="4" x:Name="TxtStatusIcon"
                                                                    FontSize="{StaticResource TypeCaption}" Margin="2,0,0,0"
                                                                    VerticalAlignment="Center"/>
                                                     </Grid>
@@ -737,10 +791,14 @@
                                              Foreground="{DynamicResource TextBrush}"
                                              MaxHeight="400"
                                              IsHitTestVisible="True"
+                                             SelectionChanged="ImportEvents_SelectionChanged"
                                              MouseDoubleClick="ImportEvents_DoubleClick">
                                         <ListBox.ContextMenu>
                                             <ContextMenu>
                                                 <MenuItem Header="&#x2713; Bestätigen (als Training übernehmen)" Click="ImportConfirm_Click"/>
+                                                <MenuItem Header="&#x1F3AF; Mit BBox als Training markieren" Click="ImportTrainingWithBbox_Click"
+                                                          FontWeight="SemiBold"/>
+                                                <Separator/>
                                                 <MenuItem Header="Zum Zeitpunkt springen" Click="ImportSeek_Click"/>
                                             </ContextMenu>
                                         </ListBox.ContextMenu>
@@ -781,19 +839,27 @@
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="Auto"/>
                                                             <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="Auto"/>
                                                             <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
                                                         <Border Grid.Column="0" Width="7" Height="7"
                                                                 CornerRadius="4"
                                                                 Background="#6366F1"
                                                                 Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                        <!-- Quellen-Badge: 🤖=AI, ⚙=Heuristik, 👤=Manual, 📄=Import -->
                                                         <TextBlock Grid.Column="1"
+                                                                   Text="{Binding Entry.Source, Converter={StaticResource ProtocolEntrySourceToIconConverter}}"
+                                                                   ToolTip="{Binding Entry.Source, Converter={StaticResource ProtocolEntrySourceToTooltipConverter}}"
+                                                                   FontSize="10"
+                                                                   VerticalAlignment="Center"
+                                                                   Margin="0,0,4,0"/>
+                                                        <TextBlock Grid.Column="2"
                                                                    Text="{Binding Entry.Code}"
                                                                    FontFamily="Consolas"
                                                                    FontWeight="Bold" FontSize="{StaticResource TypeCaption}"
                                                                    VerticalAlignment="Center"
                                                                    Margin="0,0,4,0"/>
-                                                        <TextBlock Grid.Column="2"
+                                                        <TextBlock Grid.Column="3"
                                                                    Text="{Binding Entry.Beschreibung}"
                                                                    FontSize="{StaticResource TypeMicro}"
                                                                    Foreground="{DynamicResource TextSecondaryBrush}"
@@ -1228,10 +1294,20 @@
                            PlacementTarget="{Binding ElementName=BtnToolsDropdown}"/>
                 </StackPanel>
 
-                <!-- KI-Status + Analyse (zwei Zeilen) -->
-                <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,12,0">
+                <!-- KI-Status + Analyse (zwei Zeilen). Status und Buttons sind getrennt,
+                     damit wechselnde KI-Texte die Buttonposition nicht verschieben. -->
+                <Grid Grid.Column="2" VerticalAlignment="Center" Margin="0,0,12,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="330"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
                     <!-- Zeile 1: Status + Hauptbuttons -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                    <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,0,10,3" ClipToBounds="True">
                         <Border Width="1" Height="28" Background="{DynamicResource BorderBrush}" Margin="0,0,8,0"/>
                         <Grid Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center">
                             <Ellipse x:Name="CodingAiPulseRing" Width="10" Height="10"
@@ -1245,25 +1321,65 @@
                         </Grid>
                         <TextBlock x:Name="TxtCodingAiStatus" FontSize="{StaticResource TypeCaption}"
                                    Foreground="{DynamicResource TextBrush}"
-                                   Text="Kuenstliche Intelligenz bereit" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                   Text="Kuenstliche Intelligenz bereit" VerticalAlignment="Center" Margin="0,0,4,0"
+                                   Width="135" TextTrimming="CharacterEllipsis"/>
                         <TextBlock x:Name="TxtCodingAiStage" FontSize="9"
                                    Foreground="{StaticResource MutedBrush}"
-                                   Text="" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                   Text="" VerticalAlignment="Center" Margin="0,0,8,0"
+                                   Width="155" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,3">
                         <ToggleButton x:Name="BtnCodingLiveAi" Style="{StaticResource SpeedToggleButton}"
                                       IsChecked="False" Margin="0,0,6,0"
-                                      ToolTip="Automatische KI-Analyse im Codiermodus an/aus (alle 5s)" Click="CodingLiveAi_Click">
-                            <TextBlock Text="Automatische KI-Analyse" FontSize="{StaticResource TypeCaption}"/>
+                                      Visibility="Visible"
+                                      ToolTip="Live-KI im Codiermodus: Video laeuft, Multi-Model/SAM scannt und schreibt KI-Befunde" Click="CodingLiveAi_Click">
+                            <TextBlock Text="Live-KI" FontSize="{StaticResource TypeCaption}"/>
                         </ToggleButton>
+                        <Button x:Name="BtnCodingAutoProtocol"
+                                Style="{StaticResource PlayerPrimaryButton}"
+                                Padding="10,5" FontSize="{StaticResource TypeCaption}"
+                                Click="CodingAutoProtocol_Click"
+                                ToolTip="Erstellt ein KI-Protokoll fuer das ganze Video. Falls Importdaten vorhanden sind, werden diese automatisch mitgeprueft.">
+                            <TextBlock Text="KI-Protokoll erstellen"/>
+                        </Button>
                         <Button x:Name="BtnCodingAnalyze"
                                 Style="{StaticResource PlayerPrimaryButton}"
+                                Margin="6,0,0,0"
                                 Padding="10,5" FontSize="{StaticResource TypeCaption}"
                                 Click="CodingAnalyzeFrame_Click"
                                 ToolTip="Aktuellen Frame einmalig per KI analysieren">
-                            <TextBlock Text="Aktuellen Frame analysieren"/>
+                            <TextBlock Text="Frame pruefen"/>
+                        </Button>
+                        <Button x:Name="BtnCodingFullScan"
+                                Style="{StaticResource PlayerPrimaryButton}"
+                                Margin="6,0,0,0"
+                                Padding="10,5" FontSize="{StaticResource TypeCaption}"
+                                Visibility="Visible"
+                                Click="CodingFullVideoScan_Click"
+                                ToolTip="Komplettes Video headless mit FrameStep 1.5s analysieren und Treffer als KI-Befunde uebernehmen">
+                            <TextBlock Text="Video komplett scannen"/>
+                        </Button>
+                        <Button x:Name="BtnCodingImportScan"
+                                Style="{StaticResource PlayerPrimaryButton}"
+                                Margin="6,0,0,0"
+                                Padding="10,5" FontSize="{StaticResource TypeCaption}"
+                                Visibility="Collapsed"
+                                Click="CodingImportScan_Click"
+                                ToolTip="Importliste gezielt pruefen: um jeden Import-Eintrag Frames extrahieren und Code verifizieren">
+                            <TextBlock Text="Importliste pruefen"/>
+                        </Button>
+                        <Button x:Name="BtnAiDiagnostics"
+                                Style="{StaticResource PlayerPrimaryButton}"
+                                Margin="6,0,0,0"
+                                Padding="10,5" FontSize="{StaticResource TypeCaption}"
+                                Visibility="Visible"
+                                Click="OpenAiDiagnostics_Click"
+                                ToolTip="KI-Diagnose-Cockpit: Live-Sicht auf Qwen-Antworten, Filter-Drops und Event-Creation">
+                            <TextBlock Text="KI-Diagnose"/>
                         </Button>
                     </StackPanel>
                     <!-- Zeile 2: Pausenmodus + Eingabemarker + Overlays -->
-                    <StackPanel Orientation="Horizontal">
+                    <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal">
                         <ToggleButton x:Name="BtnCodingPauseMode" Style="{StaticResource SpeedToggleButton}"
                                       IsChecked="False" Margin="0,0,6,0"
                                       ToolTip="Pausenmodus: Video pausiert bei jedem KI-Befund — Zeit zum Korrigieren oder Bestaetigen"
@@ -1291,7 +1407,7 @@
                     </StackPanel>
 
                     <!-- Eingabemarker: Freitext + Schnellauswahl -->
-                    <Border x:Name="EingabemarkerPopup" Visibility="Collapsed"
+                    <Border x:Name="EingabemarkerPopup" Grid.Row="2" Grid.ColumnSpan="2" Visibility="Collapsed"
                             Margin="6,0,0,0" VerticalAlignment="Center"
                             Background="{StaticResource HeaderBrush}" CornerRadius="6"
                             BorderBrush="{StaticResource AccentBrush}" BorderThickness="2"
@@ -1338,7 +1454,7 @@
                                        VerticalAlignment="Center" Margin="6,0,0,0"/>
                         </StackPanel>
                     </Border>
-                </StackPanel>
+                </Grid>
 
                 <!-- Aktuelle Position: Code am Zeitstempel (aus DataGrid) -->
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">

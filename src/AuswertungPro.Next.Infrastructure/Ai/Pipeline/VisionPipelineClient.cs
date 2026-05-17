@@ -233,6 +233,25 @@ public sealed class VisionPipelineClient
     }
 
     /// <summary>
+    /// Batch-Variante: Mehrere Frames in einem Roundtrip an /analyze/pipe-axis/batch.
+    /// 2026-05-11 fuer Bogen-/BCC-Erkennung ueber ein Frame-Fenster — Drift des
+    /// Fluchtpunkts ueber die Zeit signalisiert Rohrkruemmung.
+    /// </summary>
+    /// <remarks>
+    /// TODO (Audit 2026-05-13 M5): Aktuell ungenutzt — Endpunkt + DTOs sind als
+    /// Phase-2-Vorbereitung definiert, der Aufrufer (Coding-Loop oder Video-Pipeline)
+    /// fehlt noch. Sidecar-Seite ist seit Audit 2026-05-13 M4 bereits auf
+    /// <c>asyncio.to_thread</c> umgestellt (siehe sidecar/routes/pipe_axis.py) und
+    /// blockiert den Event-Loop nicht mehr.
+    /// </remarks>
+    public async Task<PipeAxisBatchResponse> AnalyzePipeAxisBatchAsync(
+        PipeAxisBatchRequest request, CancellationToken ct = default)
+    {
+        return await PostAsync<PipeAxisBatchRequest, PipeAxisBatchResponse>(
+            "/analyze/pipe-axis/batch", request, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// NVDEC + YOLO Video-Pipeline: Dekodiert Video auf dem Sidecar-Server und
     /// liefert YOLO-Ergebnisse als NDJSON-Stream.
     /// Relevante Frames enthalten image_base64 fuer nachgelagerte DINO/SAM/Qwen-Analyse.

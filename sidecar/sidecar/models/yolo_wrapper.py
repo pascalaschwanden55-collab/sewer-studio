@@ -459,6 +459,10 @@ def detect_image(image: Image.Image | np.ndarray, confidence_threshold: float) -
                         )
                     )
 
+        detections, was_lateral_corrected = _correct_lateral_connection_label(image, detections)
+        if was_lateral_corrected:
+            frame_class = "lateral_connection"
+
         if _using_custom_weights:
             is_relevant = len(detections) > 0
             is_fallback = False
@@ -534,6 +538,84 @@ def _is_frame_usable(img: Image.Image) -> tuple[bool, str]:
     return True, "ok"
 
 
+def _correct_lateral_connection_label(
+    img: Image.Image,
+    detections: list[YoloDetection],
+) -> tuple[list[YoloDetection], bool]:
+    if not detections or not _looks_like_lateral_connection(img):
+        return detections, False
+
+    corrected: list[YoloDetection] = []
+    changed = False
+    for det in detections:
+        if det.class_name.upper() == "BCC":
+            corrected.append(YoloDetection(
+                x1=det.x1,
+                y1=det.y1,
+                x2=det.x2,
+                y2=det.y2,
+                class_name="BCA",
+                confidence=min(det.confidence, 0.92),
+            ))
+            changed = True
+        else:
+            corrected.append(det)
+
+    return corrected, changed
+
+
+def _looks_like_lateral_connection(img: Image.Image) -> bool:
+    """Detect a clear secondary dark pipe opening.
+
+    Sewer lateral connections often show two large dark openings in the
+    inspection image. Bends usually show one dominant opening. This is a
+    conservative BCC->BCA correction for obvious connection frames only.
+    """
+    try:
+        from scipy.ndimage import binary_opening, find_objects, label
+
+        arr = np.array(img.convert("RGB"), dtype=np.float32)
+        h, w = arr.shape[:2]
+        if h < 100 or w < 100:
+            return False
+
+        gray = arr.mean(axis=2)
+        roi = gray[int(h * 0.18):int(h * 0.86), int(w * 0.02):int(w * 0.98)]
+        if roi.size == 0:
+            return False
+
+        threshold = min(80.0, float(np.percentile(roi, 25)))
+        mask = roi < threshold
+        mask = binary_opening(mask, structure=np.ones((5, 5), dtype=bool))
+
+        labels, count = label(mask)
+        slices = find_objects(labels)
+        roi_area = float(roi.shape[0] * roi.shape[1])
+        min_area = max(1200.0, roi_area * 0.045)
+
+        large_components = 0
+        for idx in range(1, count + 1):
+            sl = slices[idx - 1]
+            if sl is None:
+                continue
+            area = int(np.count_nonzero(labels[sl] == idx))
+            if area < min_area:
+                continue
+            ys, xs = sl
+            width = xs.stop - xs.start
+            height = ys.stop - ys.start
+            if width < roi.shape[1] * 0.12 or height < roi.shape[0] * 0.12:
+                continue
+            large_components += 1
+            if large_components >= 2:
+                return True
+
+        return False
+    except Exception as exc:
+        logger.debug("Lateral-connection heuristic failed: %s", exc)
+        return False
+
+
 def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
     """Run YOLO detection on a base64-encoded image."""
     return detect_image(decode_image(image_base64), confidence_threshold)
@@ -595,6 +677,11 @@ def detect_batch(
                             x1=float(all_xyxy[j, 0]), y1=float(all_xyxy[j, 1]),
                             x2=float(all_xyxy[j, 2]), y2=float(all_xyxy[j, 3]),
                             class_name=cls_name, confidence=conf))
+
+                detections, was_lateral_corrected = _correct_lateral_connection_label(
+                    images[orig_idx], detections)
+                if was_lateral_corrected:
+                    frame_class = "lateral_connection"
 
                 if _using_custom_weights:
                     is_relevant = len(detections) > 0

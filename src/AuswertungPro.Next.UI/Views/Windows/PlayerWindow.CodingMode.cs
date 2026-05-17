@@ -1,5 +1,6 @@
 using System;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Diagnostics;
 using AuswertungPro.Next.Application.Ai.Vision;
 using AuswertungPro.Next.Domain.Ai.Vision;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
@@ -41,6 +42,10 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 //   _codingLastOsdMeter, _player.
 public partial class PlayerWindow
 {
+    private const string CodingScanVisualTag = "scan_visual";
+    private const int CodingLiveAiIntervalSeconds = 5;
+    private const int CodingRingScanPreviewMaxMasks = 6;
+
     // ─── KI-Status-Badge im Codier-Modus ──────────────────────────────────────
 
     private void SetCodingAiState(string status, Color dotColor, string? stage = null, bool pulse = false)
@@ -55,9 +60,14 @@ public partial class PlayerWindow
         TxtCodingAiStage.Text = stage ?? string.Empty;
         CodingAiDot.Fill = new SolidColorBrush(dotColor);
         if (pulse)
+        {
             StartCodingAiPulse();
+            ClearCodingScanVisual();
+        }
         else
+        {
             StopCodingAiPulse();
+        }
     }
 
     private void StartCodingAiPulse()
@@ -107,6 +117,95 @@ public partial class PlayerWindow
 
         CodingAiPulseRing.BeginAnimation(UIElement.OpacityProperty, null);
         CodingAiPulseRing.Opacity = 0;
+        ClearCodingScanVisual();
+    }
+
+    private void ShowCodingScanVisual(string status)
+    {
+        if (!_isCodingMode || CodingOverlayCanvas == null || CodingOverlayPopup == null)
+            return;
+
+        UpdateCodingOverlayViewport();
+        var w = CodingOverlayCanvas.ActualWidth > 1 ? CodingOverlayCanvas.ActualWidth : CodingOverlayCanvas.Width;
+        var h = CodingOverlayCanvas.ActualHeight > 1 ? CodingOverlayCanvas.ActualHeight : CodingOverlayCanvas.Height;
+        if (w <= 1 || h <= 1)
+            return;
+
+        ClearCodingScanVisual();
+
+        var amber = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
+        var frame = new Border
+        {
+            Width = w,
+            Height = h,
+            BorderBrush = amber,
+            BorderThickness = new Thickness(2),
+            Background = new SolidColorBrush(Color.FromArgb(18, 0xF5, 0x9E, 0x0B)),
+            Tag = CodingScanVisualTag,
+            IsHitTestVisible = false
+        };
+        Panel.SetZIndex(frame, 900);
+        CodingOverlayCanvas.Children.Add(frame);
+
+        var line = new Rectangle
+        {
+            Width = 3,
+            Height = h,
+            Fill = amber,
+            Opacity = 0.9,
+            Tag = CodingScanVisualTag,
+            IsHitTestVisible = false
+        };
+        Panel.SetZIndex(line, 901);
+        Canvas.SetLeft(line, 0);
+        Canvas.SetTop(line, 0);
+        CodingOverlayCanvas.Children.Add(line);
+
+        line.BeginAnimation(Canvas.LeftProperty, new DoubleAnimation
+        {
+            From = 0,
+            To = Math.Max(0, w - line.Width),
+            Duration = TimeSpan.FromMilliseconds(900),
+            RepeatBehavior = RepeatBehavior.Forever
+        });
+
+        var badge = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(220, 17, 19, 24)),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(8, 4, 8, 4),
+            Tag = CodingScanVisualTag,
+            IsHitTestVisible = false,
+            Child = new TextBlock
+            {
+                Text = string.IsNullOrWhiteSpace(status) ? "KI scannt" : status,
+                Foreground = amber,
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                MaxWidth = 240
+            }
+        };
+        Panel.SetZIndex(badge, 902);
+        Canvas.SetLeft(badge, Math.Max(8, w - 260));
+        Canvas.SetTop(badge, 8);
+        CodingOverlayCanvas.Children.Add(badge);
+    }
+
+    private void ClearCodingScanVisual()
+    {
+        if (CodingOverlayCanvas == null)
+            return;
+
+        var old = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
+            .Where(e => e.Tag is string s && s == CodingScanVisualTag)
+            .ToList();
+        foreach (var el in old)
+        {
+            if (el is Rectangle line)
+                line.BeginAnimation(Canvas.LeftProperty, null);
+            CodingOverlayCanvas.Children.Remove(el);
+        }
     }
 
     // ─── "Aktueller Code"-Badge am Meter ──────────────────────────────────────
@@ -119,44 +218,35 @@ public partial class PlayerWindow
             return;
         }
 
-        // Aktuellen Meter ermitteln: OSD-Wert bevorzugen, sonst Video-Position berechnen
-        double currentMeter;
-        if (_codingLastOsdMeter.HasValue)
-        {
-            currentMeter = _codingLastOsdMeter.Value;
-        }
-        else if (_player.Length > 0 && _codingVm.EndMeter > 0)
-        {
-            currentMeter = (_player.Time / (double)_player.Length) * _codingVm.EndMeter;
-        }
-        else
-        {
-            currentMeter = _codingVm.CurrentMeter;
-        }
-
-        // Naechsten Code innerhalb ±0.5m finden
+        // Aktuellen Code ueber Videozeit ermitteln. Meter/OSD ist Zusatzinfo.
+        var currentTime = TimeSpan.FromMilliseconds(Math.Max(0, _player.Time));
+        var currentMs = currentTime.TotalMilliseconds;
+        // Naechsten Code innerhalb +/-1s am Video-Zeitstempel finden.
         var nearestEvent = _codingVm.Events
-            .Where(ev => Math.Abs(ev.MeterAtCapture - currentMeter) < 0.5)
-            .OrderBy(ev => Math.Abs(ev.MeterAtCapture - currentMeter))
+            .Select(ev => new { Event = ev, HasTime = TryGetCodingEventTime(ev, out var time), Time = time })
+            .Where(x => x.HasTime && Math.Abs(x.Time.TotalMilliseconds - currentMs) <= 1000)
+            .OrderBy(x => Math.Abs(x.Time.TotalMilliseconds - currentMs))
             .FirstOrDefault();
 
         if (nearestEvent != null)
         {
-            TxtCodingCurrentCode.Text = $"▶ {nearestEvent.MeterAtCapture:F2}m {nearestEvent.Entry.Code} {nearestEvent.Entry.Beschreibung}";
+            TxtCodingCurrentCode.Text =
+                $"▶ {FormatMs((long)nearestEvent.Time.TotalMilliseconds)} {nearestEvent.Event.Entry.Code} {nearestEvent.Event.Entry.Beschreibung}";
             CodingCurrentCodeBadge.Visibility = Visibility.Visible;
         }
         else
         {
             // Naechsten bevorstehenden Code anzeigen
             var nextEvent = _codingVm.Events
-                .Where(ev => ev.MeterAtCapture > currentMeter)
-                .OrderBy(ev => ev.MeterAtCapture)
+                .Select(ev => new { Event = ev, HasTime = TryGetCodingEventTime(ev, out var time), Time = time })
+                .Where(x => x.HasTime && x.Time.TotalMilliseconds > currentMs)
+                .OrderBy(x => x.Time)
                 .FirstOrDefault();
 
             if (nextEvent != null)
             {
-                var distM = nextEvent.MeterAtCapture - currentMeter;
-                TxtCodingCurrentCode.Text = $"→ in {distM:F1}m: {nextEvent.Entry.Code}";
+                var deltaMs = Math.Max(0, nextEvent.Time.TotalMilliseconds - currentMs);
+                TxtCodingCurrentCode.Text = $"→ in {FormatMs((long)deltaMs)}: {nextEvent.Event.Entry.Code}";
                 CodingCurrentCodeBadge.Visibility = Visibility.Visible;
             }
             else
@@ -166,13 +256,31 @@ public partial class PlayerWindow
         }
     }
 
+    private static bool TryGetCodingEventTime(CodingEvent ev, out TimeSpan time)
+    {
+        if (ev.Entry.Zeit.HasValue)
+        {
+            time = ev.Entry.Zeit.Value;
+            return true;
+        }
+
+        if (ev.VideoTimestamp > TimeSpan.Zero)
+        {
+            time = ev.VideoTimestamp;
+            return true;
+        }
+
+        time = TimeSpan.Zero;
+        return false;
+    }
+
     private void SyncVideoToCodingMeter()
     {
-        if (_codingVm == null || _player.Length <= 0 || _codingVm.EndMeter <= 0) return;
-        double fraction = _codingVm.CurrentMeter / _codingVm.EndMeter;
-        long targetMs = (long)(fraction * _player.Length);
-        _player.Time = Math.Clamp(targetMs, 0, _player.Length);
-        _codingVm.CurrentVideoTime = TimeSpan.FromMilliseconds(_player.Time);
+        if (_codingVm == null) return;
+
+        // Keine lineare Meter->Videozeit-Schaetzung mehr: auf der Videoleiste
+        // ist ausschliesslich der echte Player-Timecode massgebend.
+        _codingVm.CurrentVideoTime = TimeSpan.FromMilliseconds(Math.Max(0, _player.Time));
     }
 
     // ─── OSD-Timer (Meter aus VLC-Bild auslesen) ─────────────────────────────
@@ -383,10 +491,11 @@ public partial class PlayerWindow
     {
         if (_codingVm == null) return;
 
-        // Nach Meter sortieren, dann nach Videozeit
+        // Primaer nach Videozeit sortieren. Meter ist nur fachliche Zusatzinfo.
         var sorted = _codingVm.Events
-            .OrderBy(e => e.MeterAtCapture)
-            .ThenBy(e => e.VideoTimestamp)
+            .OrderBy(e => TryGetCodingEventTime(e, out var time) ? 0 : 1)
+            .ThenBy(e => TryGetCodingEventTime(e, out var time) ? time : TimeSpan.MaxValue)
+            .ThenBy(e => e.MeterAtCapture)
             .ToList();
 
         var selected = LstCodingEvents.SelectedItem;
@@ -849,6 +958,18 @@ public partial class PlayerWindow
             _codingAnalysisCts?.Cancel();
             _codingAnalysisCts?.Dispose();
             _codingAnalysisCts = null;
+            _codingBulkScanCts?.Cancel();
+            _codingBulkScanCts?.Dispose();
+            _codingBulkScanCts = null;
+            _codingBulkScanRunning = false;
+            _codingImportScanCts?.Cancel();
+            _codingImportScanCts?.Dispose();
+            _codingImportScanCts = null;
+            _codingImportScanRunning = false;
+            _codingAutoProtocolCts?.Cancel();
+            _codingAutoProtocolCts?.Dispose();
+            _codingAutoProtocolCts = null;
+            _codingAutoProtocolRunning = false;
         });
 
         Safe("ImportEvents-Clear", () =>
@@ -963,6 +1084,13 @@ public partial class PlayerWindow
                 var sidecarUrl = Environment.GetEnvironmentVariable("SEWERSTUDIO_SIDECAR_URL")
                     ?? "http://localhost:8100";
                 _codingVisionClient = new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(new Uri(sidecarUrl));
+                // Pipe-Axis-Diagnose-Service: Ringbuffer + BendDetector + Recorder-Push.
+                // Analyzer-Func ist der einzige Touchpoint zur Infrastructure-HTTP-Schicht;
+                // Application-Service bleibt damit frei von HttpClient-Abhaengigkeiten.
+                _pipeAxisService = new AuswertungPro.Next.Application.Ai.Pipeline.PipeAxisDiagnosticsService(
+                    analyze: async (req, token) =>
+                        await _codingVisionClient.AnalyzePipeAxisAsync(req, token).ConfigureAwait(false),
+                    recorder: AuswertungPro.Next.Application.Ai.Diagnostics.AiDiagnosticsRecorderProvider.Current);
                 var health = await _codingVisionClient.HealthCheckAsync();
                 if (health != null)
                 {
@@ -1023,6 +1151,68 @@ public partial class PlayerWindow
         }
     }
 
+    private async Task<bool> TryEnsureCodingMultiModelAsync(CancellationToken ct = default)
+    {
+        if (_codingVisionClient != null && _codingMultiModel != null)
+            return true;
+
+        try
+        {
+            PipelineConfig? pipelineCfg = null;
+            try
+            {
+                if (PipelineConfigProvider.HasLoader)
+                    pipelineCfg = PipelineConfigProvider.Load();
+            }
+            catch
+            {
+                // Best-effort: falls der Loader nicht bereit ist, nutzen wir die Standard-URL.
+            }
+
+            if (pipelineCfg is { MultiModelEnabled: false } || pipelineCfg?.Mode == PipelineMode.OllamaOnly)
+            {
+                SetYoloStatus("Aus", Color.FromRgb(0x94, 0xA3, 0xB8), "Pipeline: Ollama-only");
+                return false;
+            }
+
+            var envUrl = Environment.GetEnvironmentVariable("SEWERSTUDIO_SIDECAR_URL");
+            var sidecarUri = !string.IsNullOrWhiteSpace(envUrl) && Uri.TryCreate(envUrl, UriKind.Absolute, out var parsed)
+                ? parsed
+                : pipelineCfg?.SidecarUrl ?? new Uri("http://127.0.0.1:8100");
+
+            _codingVisionClient ??= new AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient(sidecarUri);
+
+            _pipeAxisService ??= new AuswertungPro.Next.Application.Ai.Pipeline.PipeAxisDiagnosticsService(
+                analyze: async (req, token) =>
+                    await _codingVisionClient.AnalyzePipeAxisAsync(req, token).ConfigureAwait(false),
+                recorder: AiDiagnosticsRecorderProvider.Current);
+
+            var health = await _codingVisionClient.HealthCheckAsync(ct);
+            if (health == null)
+            {
+                SetYoloStatus("Offline", Color.FromRgb(0x94, 0xA3, 0xB8),
+                    _codingVisionClient.LastHealthError ?? sidecarUri.ToString());
+                return false;
+            }
+
+            _codingMultiModel ??= new AuswertungPro.Next.Infrastructure.Ai.Pipeline.SingleFrameMultiModelService(_codingVisionClient);
+            SetYoloStatus("Bereit", Color.FromRgb(0x22, 0xC5, 0x5E), $"Sidecar {health.Status}");
+            return true;
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            SetYoloStatus("Offline", Color.FromRgb(0xEF, 0x44, 0x44), ex.Message);
+            AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+            {
+                Stage = AiDiagnosticStage.YoloError,
+                Source = nameof(TryEnsureCodingMultiModelAsync),
+                Summary = $"Sidecar nicht bereit: {ex.Message}"
+            });
+            return false;
+        }
+    }
+
     private async Task RunCodingAnalysisAsync(string activityText, bool disableAnalyzeButton = false,
         string? keywordHint = null, string? codeHint = null)
     {
@@ -1032,6 +1222,11 @@ public partial class PlayerWindow
         _codingIsAnalyzing = true;
         _codingAnalysisCts?.Cancel();
         _codingAnalysisCts = new CancellationTokenSource();
+
+        // 2026-05-15 Audit: Masken vom VORIGEN Frame leeren bevor wir den naechsten
+        // analysieren. Sonst bleiben Ring-Scan-Overlays "eingefroren" sichtbar (auch
+        // ueber andere Fenster wie VS Code) bis irgendwas sie spaeter ueberschreibt.
+        Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
 
         try
         {
@@ -1055,10 +1250,12 @@ public partial class PlayerWindow
 
                 var b64 = Convert.ToBase64String(pngBytes);
                 int dn = _codingOverlayService?.Calibration?.NominalDiameterMm ?? 300;
+                await TryEnsureCodingMultiModelAsync(_codingAnalysisCts.Token);
 
                 // ── Schritt 1: YOLO26l-seg Erkennung (2ms) + Kandidaten-Tracking ──
                 LiveDetection? result = null;
                 bool yoloHadFindings = false;
+                MultiModelFrameResult? qwenContext = null;
 
                 if (_codingVisionClient != null && _codingMultiModel != null)
                 {
@@ -1070,8 +1267,15 @@ public partial class PlayerWindow
                         var mmResult = await _codingMultiModel.AnalyzeFrameAsync(
                             pngBytes, dn, _codingOverlayService?.Calibration,
                             _codingAnalysisCts.Token);
+                        qwenContext = CreateQwenContext(mmResult, captureTimestampSec);
 
-                        if (mmResult.HasDetections && mmResult.SamResponse != null)
+                        if (mmResult.HasMasks && !mmResult.HasDetections)
+                        {
+                            ShowRingScanPreview(
+                                mmResult,
+                                $"SAM Ring-Scan {mmResult.SamTimeMs:F0}ms | Qwen prueft Code");
+                        }
+                        else if (mmResult.HasDetections && mmResult.SamResponse != null)
                         {
                             int imgW = mmResult.SamResponse.ImageWidth;
                             int imgH = mmResult.SamResponse.ImageHeight;
@@ -1117,38 +1321,64 @@ public partial class PlayerWindow
 
                             if (nearIndices.Count > 0)
                             {
-                                yoloHadFindings = true;
-
-                                // Nur Nahbereich-Detektionen als Events + SAM-Masken
+                                // 2026-05-11 A+-Fix: yoloHadFindings darf erst dann true werden,
+                                // wenn AddMultiModelFindingsAsEvents tatsaechlich Events erzeugt
+                                // hat. Sonst gilt: YOLO sah was → Qwen-Fallback wird blockiert →
+                                // Bogen-/Strukturcodes werden nie klassifiziert.
+                                // Smoking Gun bei "Bogen-Erkennung lausig": YOLO erkennt
+                                // 'connection' nahe, Code-Resolver mapt nicht → alle verworfen →
+                                // Qwen niemals aufgerufen.
                                 var acceptedIndices = AddMultiModelFindingsAsEvents(mmResult, captureTimestampSec);
-                                // Nur nahe Masken rendern
-                                var nearAccepted = acceptedIndices != null
-                                    ? new HashSet<int>(acceptedIndices.Where(i => nearIndices.Contains(i)))
-                                    : nearIndices;
-                                ShowMultiModelResults(mmResult, nearAccepted);
+                                yoloHadFindings = acceptedIndices.Count > 0;
 
-                                int nearCount = _currentMmResult?.QuantifiedMasks.Count ?? 0;
-                                var depthInfo = depthLabels.Count > 0
-                                    ? $" | Tiefe: {string.Join(", ", depthLabels)}"
-                                    : "";
-                                SetCodingAiState(
-                                    $"{nearCount} Befunde (YOLO){depthInfo}",
-                                    Color.FromRgb(0x22, 0xC5, 0x5E),
-                                    $"YOLO {mmResult.YoloTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms");
-
-                                if (BtnCodingPauseMode.IsChecked == true && nearCount > 0)
+                                if (yoloHadFindings)
                                 {
-                                    _player?.SetPause(true);
+                                    // Nur nahe Masken rendern
+                                    var nearAccepted = new HashSet<int>(
+                                        acceptedIndices.Where(i => nearIndices.Contains(i)));
+                                    ShowMultiModelResults(mmResult, nearAccepted);
+
+                                    int nearCount = _currentMmResult?.QuantifiedMasks.Count ?? 0;
+                                    var depthInfo = depthLabels.Count > 0
+                                        ? $" | Tiefe: {string.Join(", ", depthLabels)}"
+                                        : "";
                                     SetCodingAiState(
-                                        $"{nearCount} Befunde — pausiert{depthInfo}",
-                                        Color.FromRgb(0x38, 0xBD, 0xF8),
-                                        "Delete = loeschen | O = OK | Leertaste = weiter");
+                                        $"{nearCount} Befunde (YOLO){depthInfo}",
+                                        Color.FromRgb(0x22, 0xC5, 0x5E),
+                                        $"YOLO {mmResult.YoloTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms");
+
+                                    if (BtnCodingPauseMode.IsChecked == true && nearCount > 0)
+                                    {
+                                        _player?.SetPause(true);
+                                        SetCodingAiState(
+                                            $"{nearCount} Befunde — pausiert{depthInfo}",
+                                            Color.FromRgb(0x38, 0xBD, 0xF8),
+                                            "Delete = loeschen | O = OK | Leertaste = weiter");
+                                    }
+                                }
+                                else
+                                {
+                                    // YOLO sah Detektionen, aber Pipeline-Filter haben alle
+                                    // verworfen (Code-Resolver/Zone/Sperrliste/Kunststoff/Dedup).
+                                    // → yoloHadFindings bleibt false → Qwen-Fallback wird gleich
+                                    // ausgeloest (Z. 1174). Masken werden geleert, damit kein
+                                    // Altergebnis als YOLO-Treffer angezeigt wird.
+                                    System.Diagnostics.Debug.WriteLine(
+                                        $"[YOLO→Filter] {nearIndices.Count} Nah-Detektionen, " +
+                                        $"alle durch Pipeline-Filter verworfen → Qwen-Fallback");
+                                    ShowVisibleMultiModelMasks(
+                                        mmResult,
+                                        nearIndices,
+                                        "Kein neuer Eintrag: Filter/Duplikat, Qwen prueft Code");
                                 }
                             }
                             else if (depthLabels.Count > 0)
                             {
                                 // Nur Tiefen-Kandidaten → anzeigen als Vorschau
-                                Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+                                ShowVisibleMultiModelMasks(
+                                    mmResult,
+                                    Enumerable.Range(0, mmResult.QuantifiedMasks.Count),
+                                    "Vorschau: Kamera muss naeher");
                                 SetCodingAiState(
                                     $"Vorschau: {string.Join(", ", depthLabels)} (in Tiefe)",
                                     Color.FromRgb(0x94, 0xA3, 0xB8),
@@ -1156,12 +1386,28 @@ public partial class PlayerWindow
                             }
                             else
                             {
-                                Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+                                var acceptedIndices = AddMultiModelFindingsAsEvents(mmResult, captureTimestampSec);
+                                yoloHadFindings = acceptedIndices.Count > 0;
+                                if (acceptedIndices.Count > 0)
+                                {
+                                    ShowMultiModelResults(mmResult, acceptedIndices);
+                                    SetCodingAiState(
+                                        $"{acceptedIndices.Count} SAM-Maske(n) sichtbar",
+                                        Color.FromRgb(0x22, 0xC5, 0x5E),
+                                        $"SAM {mmResult.SamTimeMs:F0}ms | Protokoll aktualisiert");
+                                }
+                                else
+                                {
+                                    ShowVisibleMultiModelMasks(
+                                        mmResult,
+                                        Enumerable.Range(0, mmResult.QuantifiedMasks.Count),
+                                        $"SAM {mmResult.SamTimeMs:F0}ms | Qwen prueft Code");
+                                }
                             }
                         }
                         else
                         {
-                            Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+                            ClearMasksUnlessLiveAiKeepsLast();
                         }
                     }
                     catch (Exception yoloEx)
@@ -1178,12 +1424,14 @@ public partial class PlayerWindow
                         SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
                             $"Qwen-Fallback: {CompactModelName(_codingAiModelName)}", pulse: true);
 
-                        var enhanced = await _codingEnhancedVision.AnalyzeAsync(
-                            b64, _codingAnalysisCts.Token);
+                        var (enhanced, escalated) = await _codingEnhancedVision.AnalyzeWithEscalationAsync(
+                            b64, qwenContext, pipeDiameterMm: dn, ct: _codingAnalysisCts.Token);
                         result = AuswertungPro.Next.Application.Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, captureTimestampSec);
 
                         System.Diagnostics.Debug.WriteLine(
                             _codingEnhancedVision.LastRawOutput ?? "[Qwen] keine Rohdaten");
+                        if (escalated)
+                            System.Diagnostics.Debug.WriteLine("[Qwen-Fallback] Retry/Eskalation wurde ausgefuehrt");
 
                         ShowCodingAiResults(result);
                     }
@@ -1198,8 +1446,39 @@ public partial class PlayerWindow
                 // Wenn weder YOLO noch Qwen etwas gefunden haben
                 if (!yoloHadFindings && (result == null || result.Findings.Count == 0))
                 {
-                    SetCodingAiState("Kein Befund erkannt",
-                        Color.FromRgb(0x94, 0xA3, 0xB8), "YOLO + Qwen");
+                    if (qwenContext?.SamMasks.Count > 0)
+                    {
+                        SetCodingAiState(
+                            $"{qwenContext.SamMasks.Count} SAM-Kandidaten, kein VSA-Code",
+                            Color.FromRgb(0xF5, 0x9E, 0x0B),
+                            "Qwen hat keinen sicheren Befund bestaetigt");
+                    }
+                    else
+                    {
+                        SetCodingAiState("Kein Befund erkannt",
+                            Color.FromRgb(0x94, 0xA3, 0xB8), "YOLO + Qwen");
+                    }
+                }
+
+                // 2026-05-12 (A.4): Pipe-Axis-Diagnose ergaenzend zur Single-Frame-
+                // Analyse. Bewertet die Fluchtpunkt-Drift ueber ein Frame-Fenster
+                // — erkennt Boegen geometrisch, dort wo Qwen am Einzelframe scheitert.
+                if (_pipeAxisService != null)
+                {
+                    var pipeAxisMeter = _codingLastOsdMeter ?? _codingVm?.CurrentMeter ?? 0.0;
+                    var pipeAxisTimestamp = TimeSpan.FromSeconds(captureTimestampSec);
+                    var bendResult = await _pipeAxisService.PushFrameAsync(
+                        b64, captureTimestampSec, _codingDnMm, _codingAnalysisCts.Token)
+                        .ConfigureAwait(false);
+
+                    if (bendResult != null
+                        && bendResult.Confidence >= 0.7
+                        && bendResult.RecommendedCode?.StartsWith("BCC", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        await Dispatcher.InvokeAsync(() =>
+                                TryAddPipeAxisBendEvent(bendResult, pipeAxisMeter, pipeAxisTimestamp))
+                            .Task.ConfigureAwait(false);
+                    }
                 }
             }
         }
@@ -1258,6 +1537,10 @@ public partial class PlayerWindow
         _currentMmResult = nearResult;
         _previewMmResult = rejectedIndices.Count > 0 ? FilterByIndices(rejectedIndices) : null;
 
+        CodingOverlayPopup.IsOpen = true;
+        UpdateCodingOverlayViewport();
+        var (renderW, renderH) = GetCodingOverlayRenderSize();
+
         // Alte Masken entfernen
         Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
 
@@ -1268,8 +1551,8 @@ public partial class PlayerWindow
                 CodingOverlayCanvas,
                 nearResult.SamResponse,
                 nearResult.QuantifiedMasks,
-                CodingOverlayCanvas.ActualWidth,
-                CodingOverlayCanvas.ActualHeight,
+                renderW,
+                renderH,
                 onMaskClicked: OnMaskOverlayClicked,
                 onMaskDeleted: OnMaskOverlayDeleted);
         }
@@ -1281,8 +1564,8 @@ public partial class PlayerWindow
                 CodingOverlayCanvas,
                 _previewMmResult.SamResponse,
                 _previewMmResult.QuantifiedMasks,
-                CodingOverlayCanvas.ActualWidth,
-                CodingOverlayCanvas.ActualHeight,
+                renderW,
+                renderH,
                 previewMode: true,
                 indexOffset: nearResult.QuantifiedMasks.Count);
         }
@@ -1290,6 +1573,166 @@ public partial class PlayerWindow
         // Kalibrierkreis anzeigen
         _showReferenceDn = true;
         RenderReferenceDn();
+    }
+
+    private MultiModelFrameResult? CreateQwenContext(
+        SingleFrameResult mmResult,
+        double captureTimestampSec)
+    {
+        var masks = mmResult.SamResponse?.Masks ?? Array.Empty<SamMaskResult>();
+        if (mmResult.DinoDetections.Count == 0 && masks.Count == 0)
+            return null;
+
+        var imgW = mmResult.SamResponse?.ImageWidth ?? 0;
+        var imgH = mmResult.SamResponse?.ImageHeight ?? 0;
+        if (imgW <= 0 || imgH <= 0)
+            return null;
+
+        return new MultiModelFrameResult(
+            TimestampSec: captureTimestampSec,
+            Meter: _codingLastOsdMeter ?? _codingVm?.CurrentMeter,
+            IsRelevant: mmResult.IsRelevant,
+            DinoDetections: mmResult.DinoDetections,
+            SamMasks: masks,
+            ImageWidth: imgW,
+            ImageHeight: imgH,
+            YoloTimeMs: mmResult.YoloTimeMs,
+            DinoTimeMs: mmResult.DinoTimeMs,
+            SamTimeMs: mmResult.SamTimeMs);
+    }
+
+    private void ShowRingScanPreview(
+        SingleFrameResult mmResult,
+        string stage)
+    {
+        var previewIndices = SelectRingScanPreviewIndices(mmResult, CodingRingScanPreviewMaxMasks);
+        if (previewIndices.Count == 0 || mmResult.SamResponse == null)
+        {
+            ClearMasksUnlessLiveAiKeepsLast();
+            return;
+        }
+
+        var previewResult = FilterMaskOnlyResult(mmResult, previewIndices);
+        _currentMmResult = null;
+        _previewMmResult = previewResult;
+
+        CodingOverlayPopup.IsOpen = true;
+        UpdateCodingOverlayViewport();
+        var (renderW, renderH) = GetCodingOverlayRenderSize();
+
+        Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+        if (previewResult.SamResponse != null)
+        {
+            Ai.Pipeline.SamMaskRenderer.RenderMaskBoundingBoxes(
+                CodingOverlayCanvas,
+                previewResult.SamResponse,
+                previewResult.QuantifiedMasks,
+                renderW,
+                renderH,
+                previewMode: true);
+        }
+
+        _showReferenceDn = true;
+        RenderReferenceDn();
+
+        var total = mmResult.QuantifiedMasks.Count;
+        var shown = previewIndices.Count;
+        var suffix = shown < total ? $" | Vorschau {shown}/{total}" : string.Empty;
+        SetCodingAiState(
+            $"{total} SAM-Kandidat(en)",
+            Color.FromRgb(0xF5, 0x9E, 0x0B),
+            stage + suffix);
+    }
+
+    private static IReadOnlyList<int> SelectRingScanPreviewIndices(
+        SingleFrameResult mmResult,
+        int maxMasks)
+    {
+        if (maxMasks <= 0 || mmResult.SamResponse == null)
+            return Array.Empty<int>();
+
+        return Enumerable.Range(0, mmResult.QuantifiedMasks.Count)
+            .Where(i => i < mmResult.SamResponse.Masks.Count)
+            .OrderByDescending(i => mmResult.SamResponse.Masks[i].Confidence)
+            .ThenBy(i => mmResult.SamResponse.Masks[i].MaskAreaPixels)
+            .Take(maxMasks)
+            .ToList();
+    }
+
+    private static SingleFrameResult FilterMaskOnlyResult(
+        SingleFrameResult mmResult,
+        IReadOnlyList<int> indices)
+    {
+        var quantified = indices.Select(i => mmResult.QuantifiedMasks[i]).ToList();
+        var samResponse = mmResult.SamResponse != null
+            ? new SamResponse(
+                indices.Where(i => i < mmResult.SamResponse.Masks.Count)
+                    .Select(i => mmResult.SamResponse.Masks[i])
+                    .ToList(),
+                mmResult.SamResponse.ImageWidth,
+                mmResult.SamResponse.ImageHeight,
+                mmResult.SamResponse.InferenceTimeMs)
+            : null;
+
+        return new SingleFrameResult(
+            IsRelevant: mmResult.IsRelevant,
+            DinoDetections: Array.Empty<DinoDetectionDto>(),
+            SamResponse: samResponse,
+            QuantifiedMasks: quantified,
+            YoloTimeMs: mmResult.YoloTimeMs,
+            DinoTimeMs: mmResult.DinoTimeMs,
+            SamTimeMs: mmResult.SamTimeMs,
+            Error: mmResult.Error)
+        { ViewType = mmResult.ViewType };
+    }
+
+    private void ShowVisibleMultiModelMasks(
+        AuswertungPro.Next.Infrastructure.Ai.Pipeline.SingleFrameResult mmResult,
+        IEnumerable<int> maskIndices,
+        string stage)
+    {
+        var visibleMaskIndices = maskIndices
+            .Where(i => i >= 0 && i < mmResult.QuantifiedMasks.Count)
+            .ToHashSet();
+
+        if (visibleMaskIndices.Count == 0)
+        {
+            ClearMasksUnlessLiveAiKeepsLast();
+            return;
+        }
+
+        if (stage.StartsWith("Vorschau:", StringComparison.OrdinalIgnoreCase))
+        {
+            var acceptedIndices = AddMultiModelFindingsAsEvents(
+                mmResult,
+                Math.Max(0, _player.Time / 1000.0));
+            if (acceptedIndices.Count > 0)
+            {
+                ShowMultiModelResults(mmResult, acceptedIndices);
+                SetCodingAiState(
+                    $"{acceptedIndices.Count} Befund(e) aus SAM-Maske codiert",
+                    Color.FromRgb(0x22, 0xC5, 0x5E),
+                    $"SAM {mmResult.SamTimeMs:F0}ms | Protokoll aktualisiert");
+                return;
+            }
+        }
+
+        ShowMultiModelResults(mmResult, visibleMaskIndices);
+        SetCodingAiState(
+            $"{visibleMaskIndices.Count} SAM-Maske(n) sichtbar",
+            Color.FromRgb(0xF5, 0x9E, 0x0B),
+            stage);
+    }
+
+    private void ClearMasksUnlessLiveAiKeepsLast()
+    {
+        // Im Live-Modus ist eine vorhandene SAM-Maske der sichtbare Nachweis,
+        // dass die KI etwas erkannt hat. Ein einzelner Folgetick ohne neuen Code
+        // darf sie nicht sofort wegloeschen.
+        if (BtnCodingLiveAi?.IsChecked == true && HasVisibleMasks())
+            return;
+
+        Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
     }
 
     /// <summary>
@@ -1318,7 +1761,16 @@ public partial class PlayerWindow
             int imgW = mmResult.SamResponse?.ImageWidth ?? 1;
             int imgH = mmResult.SamResponse?.ImageHeight ?? 1;
             if (!IsInsideDetectionZone(dino, imgW, imgH))
+            {
+                AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+                {
+                    Stage = AiDiagnosticStage.CodingFilterDrop,
+                    Source = nameof(AddMultiModelFindingsAsEvents),
+                    Summary = $"{quant.Label} liegt in Rohr-Tiefe (nicht im Nahbereich)",
+                    DroppedReason = AiDiagnosticDropReason.ZoneDepth
+                });
                 continue;
+            }
 
             // Gemeinsamer Resolver: DINO-Label → LiveFrameFinding → ResolveFindingCodeForCoding
             // So laeuft der Multi-Model-Pfad durch exakt denselben Code wie Qwen.
@@ -1344,6 +1796,13 @@ public partial class PlayerWindow
             {
                 System.Diagnostics.Debug.WriteLine(
                     $"[Multi-Model] Kein VSA-Code fuer Label='{quant.Label}' — uebersprungen");
+                AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+                {
+                    Stage = AiDiagnosticStage.CodingFilterDrop,
+                    Source = nameof(AddMultiModelFindingsAsEvents),
+                    Summary = $"Label='{quant.Label}' kein VSA-Code ableitbar",
+                    DroppedReason = AiDiagnosticDropReason.CodeResolverNull
+                });
                 continue;
             }
 
@@ -1352,6 +1811,13 @@ public partial class PlayerWindow
             {
                 System.Diagnostics.Debug.WriteLine(
                     $"[Multi-Model] Gesperrt: {code} @ {meter:F1}m (vom Benutzer geloescht)");
+                AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+                {
+                    Stage = AiDiagnosticStage.CodingFilterDrop,
+                    Source = nameof(AddMultiModelFindingsAsEvents),
+                    Summary = $"{code} @ {meter:F2}m vom Benutzer abgelehnt",
+                    DroppedReason = AiDiagnosticDropReason.RejectedByUser
+                });
                 continue;
             }
 
@@ -1366,6 +1832,13 @@ public partial class PlayerWindow
                 {
                     System.Diagnostics.Debug.WriteLine(
                         $"[Multi-Model] Kunststoff-Filter: {code} @ {meter:F1}m verworfen — kein Begleitschaden");
+                    AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+                    {
+                        Stage = AiDiagnosticStage.CodingFilterDrop,
+                        Source = nameof(AddMultiModelFindingsAsEvents),
+                        Summary = $"{code} @ {meter:F2}m Kunststoffrohr ohne Begleitschaden",
+                        DroppedReason = AiDiagnosticDropReason.KunststoffFilter
+                    });
                     continue;
                 }
             }
@@ -1379,13 +1852,34 @@ public partial class PlayerWindow
                 && (_codingSessionService?.ActiveSession?.Events.Any(e =>
                         CodesMatchForDedup(e.Entry.Code, code)) == true
                     || _codingVm.Events.Any(e => CodesMatchForDedup(e.Entry.Code, code))))
+            {
+                AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+                {
+                    Stage = AiDiagnosticStage.CodingFilterDrop,
+                    Source = nameof(AddMultiModelFindingsAsEvents),
+                    Summary = $"{code} bereits in der Haltung vorhanden",
+                    DroppedReason = string.Equals(code, "BCD", StringComparison.OrdinalIgnoreCase)
+                        ? AiDiagnosticDropReason.DedupBcd
+                        : AiDiagnosticDropReason.DedupBce
+                });
                 continue;
+            }
 
             // Dedup gegen bestehende Events (identisch mit Qwen-Pfad)
             var coveringEvent = _codingVm.Events.FirstOrDefault(e =>
                 CodesMatchForDedup(e.Entry.Code, code) &&
                 IsAlreadyCovered(e, meter, pseudoFinding));
-            if (coveringEvent != null) continue;
+            if (coveringEvent != null)
+            {
+                AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+                {
+                    Stage = AiDiagnosticStage.CodingFilterDrop,
+                    Source = nameof(AddMultiModelFindingsAsEvents),
+                    Summary = $"{code} @ {meter:F2}m bereits von Event {coveringEvent.Entry.Code} abgedeckt",
+                    DroppedReason = AiDiagnosticDropReason.DedupExisting
+                });
+                continue;
+            }
 
             // QualityGate mit Multi-Model Evidenz
             double dinoConf = dino?.Confidence ?? quant.Confidence;
@@ -1422,6 +1916,24 @@ public partial class PlayerWindow
                         ? CodingUserDecision.Accepted
                         : CodingUserDecision.Ignored
                 };
+
+            // 2026-05-11 Diagnostik: positiver Pfad — Multi-Model-Quelle (YOLO+DINO+SAM).
+            AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+            {
+                Stage = AiDiagnosticStage.EventCreated,
+                Source = nameof(AddMultiModelFindingsAsEvents),
+                Summary = $"{code} @ {meter:F2}m (Multi-Model) DINO={dinoConf:P0} " +
+                          $"gate={gateResult.TrafficLight}",
+                Metadata = new Dictionary<string, string>
+                {
+                    ["code"] = code,
+                    ["meter"] = meter.ToString("F2", CultureInfo.InvariantCulture),
+                    ["dino_confidence"] = dinoConf.ToString("F2", CultureInfo.InvariantCulture),
+                    ["sam_mask_stability"] = quant.Confidence.ToString("F2", CultureInfo.InvariantCulture),
+                    ["quality_gate"] = gateResult.TrafficLight.ToString(),
+                    ["source"] = "multimodel"
+                }
+            });
 
             acceptedIndices.Add(i);
             anyAdded = true;
@@ -1502,7 +2014,7 @@ public partial class PlayerWindow
 
         // ── Findings filtern: VSA-Validierung + Deduplizierung ──
         // Eine einzige gefilterte Liste fuer UI, Overlays und Event-Erstellung.
-        var currentMeter = result.MeterReading ?? (_codingVm?.CurrentMeter ?? 0);
+        var currentMeter = ResolveAnalysisMeter(result);
         var validFindings = FilterValidFindings(result.Findings, currentMeter);
 
         if (validFindings.Count == 0)
@@ -1516,15 +2028,30 @@ public partial class PlayerWindow
             return;
         }
 
-        var findingsText = result.MeterReading.HasValue
-            ? $"OSD {result.MeterReading.Value:F2}m \u2013 {validFindings.Count} Befund(e)"
-            : $"{validFindings.Count} Befund(e)";
-        SetCodingAiState(findingsText, Color.FromRgb(0x22, 0xC5, 0x5E), "Schritt 3 von 3: Overlay und Events");
         CodingFindingsList.ItemsSource = validFindings
             .Select(f => new AiFindingDisplayItem(f)).ToList();
 
         // KI-Findings als CodingEvents mit AiContext in die Ereignisliste einfuegen
-        AddAiFindingsAsEvents(result, validFindings);
+        var addResult = AddAiFindingsAsEvents(result, validFindings);
+        if (addResult.AddedCount > 0)
+        {
+            SetCodingAiState(
+                $"{currentMeter:F2}m - {addResult.AddedCount} Befund(e) codiert",
+                Color.FromRgb(0x22, 0xC5, 0x5E),
+                "Schritt 3 von 3: Overlay und Events");
+        }
+        else if (addResult.RejectedByGateCount > 0)
+        {
+            SetCodingAiState(
+                $"{addResult.RejectedByGateCount} unsichere KI-Treffer - nicht codiert",
+                Color.FromRgb(0xF5, 0x9E, 0x0B),
+                "QualityGate Yellow/Red");
+        }
+        else
+        {
+            SetCodingAiState("Kein neuer Befund codiert",
+                Color.FromRgb(0x94, 0xA3, 0xB8), "Filter/Duplikat");
+        }
 
         // Befunde als visuelle Overlays direkt auf dem Videobild anzeigen
         if (validFindings.Count > 0 && !CodingOverlayPopup.IsOpen)
@@ -1534,14 +2061,22 @@ public partial class PlayerWindow
         }
 
         // Pausenmodus: Video pausieren wenn Befunde erkannt
-        if (BtnCodingPauseMode.IsChecked == true && validFindings.Count > 0)
+        if (BtnCodingPauseMode.IsChecked == true && addResult.AddedCount > 0)
         {
             _player?.SetPause(true);
             SetCodingAiState(
-                $"{validFindings.Count} Befunde — pausiert zum Pruefen",
+                $"{addResult.AddedCount} Befunde - pausiert zum Pruefen",
                 Color.FromRgb(0x38, 0xBD, 0xF8),
                 "Delete = Befund loeschen | Leertaste = weiter");
         }
+    }
+
+    private double ResolveAnalysisMeter(LiveDetection result)
+    {
+        if (result.MeterReading is > 0.001 and <= 500)
+            return result.MeterReading.Value;
+
+        return _codingLastOsdMeter ?? _codingVm?.CurrentMeter ?? 0;
     }
     // === Sub-H: Frame-Readiness + OSD-Meter-Reader ===
 
@@ -1749,18 +2284,87 @@ public partial class PlayerWindow
             // BCD/BCE: Live-Check bei JEDEM Finding (nicht gecacht!).
             // Wichtig weil zwischen Analyse-Start und diesem Punkt der Eingabemarker
             // bereits ein BCD erzeugt haben kann (async Timing).
+            //
+            // 2026-05-12 (A.2): Wenn das vorhandene Event aus der Heuristik
+            // stammt (EnsureRohranfangExists / EnsureRohrendeExists), wird es
+            // durch Qwen-Bestaetigung auf Source=Ai upgegradet statt das Qwen-
+            // Finding zu droppen. Damit verschwindet der echte KI-Beleg nicht
+            // mehr lautlos in der Dedup-Falle.
             if (code != null
                 && (string.Equals(code, "BCD", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(code, "BCE", StringComparison.OrdinalIgnoreCase)))
             {
-                bool alreadyExists =
-                    _codingSessionService?.ActiveSession?.Events.Any(e =>
-                        string.Equals(e.Entry.Code, code, StringComparison.OrdinalIgnoreCase)) == true
-                    || _codingVm?.Events.Any(e =>
-                        string.Equals(e.Entry.Code, code, StringComparison.OrdinalIgnoreCase)) == true;
-                if (alreadyExists)
+                CodingEvent? existing =
+                    _codingSessionService?.ActiveSession?.Events.FirstOrDefault(e =>
+                        string.Equals(e.Entry.Code, code, StringComparison.OrdinalIgnoreCase))
+                    ?? _codingVm?.Events.FirstOrDefault(e =>
+                        string.Equals(e.Entry.Code, code, StringComparison.OrdinalIgnoreCase));
+
+                if (existing != null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[KI-Filter] {code} uebersprungen (bereits vorhanden, live-check)");
+                    bool wasHeuristic = existing.Entry.Source == ProtocolEntrySource.Heuristic;
+
+                    if (wasHeuristic)
+                    {
+                        // Upgrade: Heuristik → Ai (Qwen hat den Code bestaetigt).
+                        //
+                        // Audit 2026-05-13 M3: AiContext NICHT pauschal ersetzen.
+                        // - LiveFrameFinding traegt heute keinen sauberen Confidence-Wert;
+                        //   ein hartcodiertes 1.0 waere irrefuehrend (QualityGate kann
+                        //   z.B. Yellow gemeldet haben).
+                        // - Existing Reason/Decision/Confidence stammen aus der Heuristik
+                        //   und bleiben Grundwahrheit. Die Qwen-Bestaetigung ist als
+                        //   eigener Diagnose-Record unten dokumentiert.
+                        // - Nur wenn noch gar kein AiContext existiert, einen minimalen
+                        //   anlegen (ohne Confidence-Spike).
+                        existing.Entry.Source = ProtocolEntrySource.Ai;
+                        if (existing.AiContext is null)
+                        {
+                            existing.AiContext = new CodingEventAiContext
+                            {
+                                SuggestedCode = code,
+                                Reason = $"{code} (Heuristik + Qwen bestaetigt)",
+                                Decision = CodingUserDecision.Accepted
+                                // Confidence bewusst nicht setzen → bleibt 0 (default),
+                                // bis ein echter Modell-Konfidenzwert verfuegbar ist.
+                            };
+                        }
+                        // else: AiContext bleibt unangetastet — alle Felder erhalten.
+
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[KI-Filter] {code} Heuristik → Ai upgegradet (Qwen-Bestaetigung)");
+                        AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+                        {
+                            Stage = AiDiagnosticStage.EventCreated,
+                            Source = nameof(FilterValidFindings),
+                            Summary = $"{code} @ {currentMeter:F2}m Heuristik → Ai " +
+                                      "(Qwen hat Code bestaetigt)",
+                            Metadata = new Dictionary<string, string>
+                            {
+                                ["code"] = code,
+                                ["meter"] = currentMeter.ToString("F2",
+                                    CultureInfo.InvariantCulture),
+                                ["source"] = "qwen-upgrade-from-heuristic"
+                            }
+                        });
+                    }
+                    else
+                    {
+                        // Existierendes Event ist bereits Ai/Manual/Imported — echtes Dedup.
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[KI-Filter] {code} uebersprungen (bereits vorhanden, live-check)");
+                        AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+                        {
+                            Stage = AiDiagnosticStage.CodingFilterDrop,
+                            Source = nameof(FilterValidFindings),
+                            Summary = $"{code} @ {currentMeter:F2}m bereits vorhanden " +
+                                      $"(Source={existing.Entry.Source})",
+                            DroppedReason = string.Equals(code, "BCD",
+                                    StringComparison.OrdinalIgnoreCase)
+                                ? AiDiagnosticDropReason.DedupBcd
+                                : AiDiagnosticDropReason.DedupBce
+                        });
+                    }
                     continue;
                 }
             }
@@ -1772,6 +2376,13 @@ public partial class PlayerWindow
             {
                 System.Diagnostics.Debug.WriteLine(
                     $"[KI-Filter] Verworfen: Label='{f.Label}' (kein VSA-Code ableitbar)");
+                AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+                {
+                    Stage = AiDiagnosticStage.CodingFilterDrop,
+                    Source = nameof(FilterValidFindings),
+                    Summary = $"Label='{f.Label}' VsaCodeHint='{f.VsaCodeHint ?? "-"}' kein VSA-Code ableitbar",
+                    DroppedReason = AiDiagnosticDropReason.CodeResolverNull
+                });
                 continue;
             }
 
@@ -1780,6 +2391,13 @@ public partial class PlayerWindow
             {
                 System.Diagnostics.Debug.WriteLine(
                     $"[KI-Filter] Gesperrt: {code} @ {currentMeter:F1}m (vom Benutzer geloescht)");
+                AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+                {
+                    Stage = AiDiagnosticStage.CodingFilterDrop,
+                    Source = nameof(FilterValidFindings),
+                    Summary = $"{code} @ {currentMeter:F2}m vom Benutzer abgelehnt",
+                    DroppedReason = AiDiagnosticDropReason.RejectedByUser
+                });
                 continue;
             }
 
@@ -1803,7 +2421,17 @@ public partial class PlayerWindow
                 dedupeKey = $"{code}@{NormalizeClockPosition(normalizedFinding.PositionClock) ?? "?"}";
             }
 
-            if (!seen.Add(dedupeKey)) continue;
+            if (!seen.Add(dedupeKey))
+            {
+                AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+                {
+                    Stage = AiDiagnosticStage.CodingFilterDrop,
+                    Source = nameof(FilterValidFindings),
+                    Summary = $"Dedup: {dedupeKey}",
+                    DroppedReason = AiDiagnosticDropReason.DedupExisting
+                });
+                continue;
+            }
 
             filtered.Add(normalizedFinding);
         }
@@ -1889,19 +2517,43 @@ public partial class PlayerWindow
         return candidate?.Code;
     }
 
+    private ImportCorroborationMatch? FindImportCorroboration(string code, double currentMeter)
+    {
+        if (_codingImportEvents.Count == 0)
+            return null;
+
+        var imports = _codingImportEvents
+            .Where(ev => !string.IsNullOrWhiteSpace(ev.Entry?.Code))
+            .Select(ev => (Code: ev.Entry!.Code!, Meter: ev.MeterAtCapture));
+
+        return ImportCorroboration.FindNearest(code, currentMeter, imports);
+    }
+
+    private static string BuildAiFindingReason(string label, ImportCorroborationMatch? importMatch)
+    {
+        if (importMatch is null)
+            return label;
+
+        var distanceText = importMatch.DistanceMeters.ToString("F2", CultureInfo.InvariantCulture);
+        var meterText = importMatch.Meter.ToString("F2", CultureInfo.InvariantCulture);
+        return $"{label} | Import bestaetigt {importMatch.Code} @ {meterText}m (Abstand {distanceText}m)";
+    }
+
     /// <summary>
     /// KI-Befunde als CodingEvents eintragen — mit QualityGate-Ampelsystem.
     /// Erwartet bereits gefilterte Findings (aus FilterValidFindings).
     /// </summary>
-    private void AddAiFindingsAsEvents(LiveDetection result, IReadOnlyList<LiveFrameFinding> validFindings)
+    private (int AddedCount, int RejectedByGateCount) AddAiFindingsAsEvents(
+        LiveDetection result,
+        IReadOnlyList<LiveFrameFinding> validFindings)
     {
-        if (_codingVm == null || _codingSessionService == null) return;
+        if (_codingVm == null || _codingSessionService == null) return (0, 0);
 
-        double meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
+        double meter = ResolveAnalysisMeter(result);
         var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
         bool anyAdded = false;
-        CodingEvent? firstUnsure = null;
-        QualityGateResult? firstUnsureGate = null;
+        var addedCount = 0;
+        var rejectedByGateCount = 0;
 
         // BCD wird NICHT mehr automatisch erzeugt — nur durch Eingabemarker oder Qwen-Erkennung.
         // EnsureRohranfangExists(meter, videoTime, ref anyAdded);
@@ -1909,7 +2561,7 @@ public partial class PlayerWindow
         if (validFindings.Count == 0)
         {
             if (anyAdded) RefreshCodingEventsList();
-            return;
+            return (0, 0);
         }
 
         foreach (var finding in validFindings)
@@ -1950,16 +2602,39 @@ public partial class PlayerWindow
                 continue;
             }
 
-            // QualityGate: Severity -> EvidenceVector -> Ampel
-            var evidence = new EvidenceVector(
-                QwenVisionConf: finding.Severity / 5.0,
-                PlausibilityScore: 0.6
-            );
+            var importMatch = FindImportCorroboration(code, meter);
+
+            // QualityGate: Qwen alleine bleibt vorsichtig. Wenn das importierte
+            // Protokoll denselben Code an fast derselben Stelle enthaelt, zaehlt
+            // das als zusaetzliches Plausibilitaetssignal.
+            var evidence = ImportCorroboration.BuildQwenEvidence(finding.Severity, code, importMatch);
             var gateResult = _codingQualityGate?.Evaluate(evidence)
                 ?? new QualityGateResult(
                     finding.Severity / 5.0,
                     finding.Severity >= 4 ? TrafficLight.Green : TrafficLight.Yellow,
                     new Dictionary<string, double>(), "Fallback")!;
+
+            if (!gateResult.IsGreen)
+            {
+                rejectedByGateCount++;
+                AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+                {
+                    Stage = AiDiagnosticStage.CodingFilterDrop,
+                    Source = nameof(AddAiFindingsAsEvents),
+                    Summary = $"{code} @ {meter:F2}m nicht automatisch codiert " +
+                              $"(gate={gateResult.TrafficLight}, conf={gateResult.CompositeConfidence:F2})",
+                    DroppedReason = AiDiagnosticDropReason.QualityGateRed,
+                    Metadata = new Dictionary<string, string>
+                    {
+                        ["code"] = code,
+                        ["meter"] = meter.ToString("F2", CultureInfo.InvariantCulture),
+                        ["confidence"] = gateResult.CompositeConfidence.ToString("F2", CultureInfo.InvariantCulture),
+                        ["quality_gate"] = gateResult.TrafficLight.ToString(),
+                        ["reason"] = gateResult.Explanation
+                    }
+                });
+                continue;
+            }
 
             // officialLabel wurde oben bereits per LookupLabel geholt und validiert
 
@@ -2006,11 +2681,34 @@ public partial class PlayerWindow
                 {
                     SuggestedCode = code,
                     Confidence = gateResult.CompositeConfidence,
-                    Reason = finding.Label,
+                    Reason = BuildAiFindingReason(finding.Label, importMatch),
                     Decision = gateResult.IsGreen
                         ? CodingUserDecision.Accepted
                         : CodingUserDecision.Ignored
                 };
+
+            var aiSource = importMatch is not null ? "Qwen+Import" : "Qwen";
+
+            // 2026-05-11 Diagnostik: positiver Pfad — Event wurde tatsaechlich
+            // in die KI-Befund-Liste aufgenommen. Quelle: Qwen-Pfad.
+            AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+            {
+                Stage = AiDiagnosticStage.EventCreated,
+                Source = nameof(AddAiFindingsAsEvents),
+                Summary = $"{code} @ {meter:F2}m ({aiSource}) conf={gateResult.CompositeConfidence:F2} " +
+                          $"gate={gateResult.TrafficLight}",
+                Metadata = new Dictionary<string, string>
+                {
+                    ["code"] = code,
+                    ["meter"] = meter.ToString("F2", CultureInfo.InvariantCulture),
+                    ["confidence"] = gateResult.CompositeConfidence.ToString("F2", CultureInfo.InvariantCulture),
+                    ["quality_gate"] = gateResult.TrafficLight.ToString(),
+                    ["source"] = importMatch is not null ? "qwen-import" : "qwen",
+                    ["import_code"] = importMatch?.Code ?? "",
+                    ["import_meter"] = importMatch?.Meter.ToString("F2", CultureInfo.InvariantCulture) ?? "",
+                    ["import_distance_m"] = importMatch?.DistanceMeters.ToString("F2", CultureInfo.InvariantCulture) ?? ""
+                }
+            });
 
             // Bbox → OverlayGeometry (Rectangle) fuer Kontur-Rendering auf CodingOverlayCanvas
             if (finding.BboxX1.HasValue && finding.BboxY1.HasValue
@@ -2034,12 +2732,7 @@ public partial class PlayerWindow
             }
 
             anyAdded = true;
-
-            if (!gateResult.IsGreen && firstUnsure == null)
-            {
-                firstUnsure = codingEvent;
-                firstUnsureGate = gateResult;
-            }
+            addedCount++;
         }
 
         if (anyAdded)
@@ -2051,8 +2744,7 @@ public partial class PlayerWindow
             UpdateToolBadge();
         }
 
-        if (firstUnsure != null && firstUnsureGate != null)
-            PauseAndAskConfirmation(firstUnsure, firstUnsureGate);
+        return (addedCount, rejectedByGateCount);
     }
     // === Sub-K: Coding-Helper (Mask-Helper + Klassifikation + Import-Kontext + Dedup) ===
 
@@ -2124,8 +2816,18 @@ public partial class PlayerWindow
         double dy = cy - centerY;
         double dist = Math.Sqrt(dx * dx + dy * dy);
 
-        // AUSSERHALB des Rohrkreises = nah an der Wand = zuverlaessig erkennbar
-        return dist > pipeRadius;
+        // Annulus-Zone statt nur aeusserer Halbraum:
+        // - Die NAHE Wand projiziert AUSSERHALB des Rohrkreises (dist > pipeRadius).
+        // - Die FERNE Wand projiziert auf einen kleineren Ring (dist > pipeRadius * InnerRatio).
+        //   Beide sind im 2D-Bild scharf — der frueher harte Filter `dist > pipeRadius` hat
+        //   die Wandbefunde im Bildhintergrund (Streckenschaeden im Sichtkegel) stumm gedroppt.
+        // - Unterhalb InnerRatio = direkte Tunnel-Tiefe (Mitte des Bildes) = unscharf.
+        // - Oberhalb OuterRatio = ausserhalb plausibler Wandprojektion = Bildecke/Artefakt.
+        const double InnerRatio = 0.4;
+        const double OuterRatio = 2.0;
+        double inner = pipeRadius * InnerRatio;
+        double outer = pipeRadius * OuterRatio;
+        return dist >= inner && dist <= outer;
     }
 
     /// <summary>
@@ -2342,6 +3044,97 @@ public partial class PlayerWindow
     // === Sub-L: Rohranfang/-ende + Streckenschaden + Auto-Kalibrierung ===
 
     /// <summary>
+    /// Fuegt einen Pipe-Axis-Bogen als Heuristik-Befund ein, wenn noch kein
+    /// BCC*-Eintrag in unmittelbarer Naehe existiert.
+    /// </summary>
+    private void TryAddPipeAxisBendEvent(
+        PipeAxisBendDetector.BendDetectionResult result,
+        double currentMeter,
+        TimeSpan captureTimestamp)
+    {
+        if (_codingVm == null || _codingSessionService == null) return;
+
+        var code = result.RecommendedCode?.Trim();
+        if (string.IsNullOrWhiteSpace(code)
+            || result.Confidence < 0.7
+            || !code.StartsWith("BCC", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        bool IsNearbyBcc(CodingEvent ev)
+        {
+            var existingCode = ev.Entry.Code ?? "";
+            if (!existingCode.StartsWith("BCC", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var existingMeter = ev.Entry.MeterStart ?? ev.MeterAtCapture;
+            return Math.Abs(existingMeter - currentMeter) <= 2.0;
+        }
+
+        if (_codingVm.Events.Any(IsNearbyBcc)
+            || (_codingSessionService.ActiveSession?.Events.Any(IsNearbyBcc) ?? false))
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[PipeAxis-BCC-Dedup] {code} @ {currentMeter:F2}m uebersprungen (BCC* im 2m-Fenster)");
+            AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+            {
+                Stage = AiDiagnosticStage.CodingFilterDrop,
+                Source = nameof(TryAddPipeAxisBendEvent),
+                Summary = $"{code} @ {currentMeter:F2}m bereits durch BCC* im 2m-Fenster abgedeckt",
+                DroppedReason = AiDiagnosticDropReason.DedupExisting,
+                Metadata = new Dictionary<string, string>
+                {
+                    ["code"] = code,
+                    ["meter"] = currentMeter.ToString("F2", CultureInfo.InvariantCulture),
+                    ["confidence"] = result.Confidence.ToString("F2", CultureInfo.InvariantCulture),
+                    ["source"] = "pipe-axis"
+                }
+            });
+            return;
+        }
+
+        var label = LookupVsaLabel(code) ?? LookupVsaLabel("BCC") ?? "Bogen";
+        var entry = new ProtocolEntry
+        {
+            Source = ProtocolEntrySource.Heuristic,
+            Code = code,
+            Beschreibung = label,
+            MeterStart = currentMeter,
+            Zeit = captureTimestamp
+        };
+
+        var ev = _codingSessionService.AddEvent(entry);
+        ev.MeterAtCapture = currentMeter;
+        ev.VideoTimestamp = captureTimestamp;
+        ev.AiContext = new CodingEventAiContext
+        {
+            SuggestedCode = code,
+            Confidence = result.Confidence,
+            Reason = "Rohrbogen aus Pipe-Axis-Drift",
+            Decision = CodingUserDecision.Accepted
+        };
+
+        // Event-Hook (OnSessionEventAdded) fuegt automatisch in _codingVm.Events ein.
+        // KEIN explizites _codingVm.Events.Add() — sonst doppelt.
+        AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+        {
+            Stage = AiDiagnosticStage.EventCreated,
+            Source = nameof(TryAddPipeAxisBendEvent),
+            Summary = $"{code} @ {currentMeter:F2}m (PipeAxis-Heuristik) conf={result.Confidence:F2}",
+            Metadata = new Dictionary<string, string>
+            {
+                ["code"] = code,
+                ["meter"] = currentMeter.ToString("F2", CultureInfo.InvariantCulture),
+                ["confidence"] = result.Confidence.ToString("F2", CultureInfo.InvariantCulture),
+                ["source"] = "pipe-axis",
+                ["curvature"] = result.CurvatureScore.ToString("F3", CultureInfo.InvariantCulture)
+            }
+        });
+
+        RefreshCodingEventsList();
+        UpdateToolBadge();
+    }
+
+    /// <summary>
     /// Stellt sicher, dass BCD (Rohranfang) als erster Eintrag existiert.
     /// Meter und Timestamp werden automatisch aus OSD / Video entnommen.
     /// </summary>
@@ -2376,9 +3169,13 @@ public partial class PlayerWindow
         }
 
         var label = AuswertungPro.Next.Application.CodeCatalog.VsaCodeTree.LookupLabel("BCD") ?? "Rohranfang";
+        // 2026-05-11 Diagnostik: BCD wird nicht von der KI aus Frames erkannt,
+        // sondern als Geschaeftslogik-Heuristik eingefuegt ("jede Inspektion
+        // beginnt mit einem Rohranfang"). Source.Heuristic statt .Ai macht das
+        // in der UI sichtbar — siehe Source-Tag-Badge im LstCodingEvents-Template.
         var entry = new ProtocolEntry
         {
-            Source = ProtocolEntrySource.Ai,
+            Source = ProtocolEntrySource.Heuristic,
             Code = "BCD",
             Beschreibung = label,
             MeterStart = rohranfangMeter,
@@ -2480,9 +3277,11 @@ public partial class PlayerWindow
         }
 
         var label = AuswertungPro.Next.Application.CodeCatalog.VsaCodeTree.LookupLabel("BCE") ?? "Rohrende";
+        // 2026-05-11 Diagnostik: analog BCD — BCE ist Heuristik, nicht echte
+        // Frame-Analyse. Source.Heuristic statt .Ai signalisiert das.
         var entry = new ProtocolEntry
         {
-            Source = ProtocolEntrySource.Ai,
+            Source = ProtocolEntrySource.Heuristic,
             Code = "BCE",
             Beschreibung = label,
             MeterStart = rohrEndMeter,
@@ -2669,8 +3468,8 @@ public partial class PlayerWindow
         // Globale Ampel zuruecksetzen
         if (BtnCodingLiveAi.IsChecked == true)
         {
-            SetCodingAiState("Automatische KI-Analyse aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
-                $"Intervall alle 5 Sekunden | {CompactModelName(_codingAiModelName)}");
+            SetCodingAiState("Live-KI aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
+                $"Multi-Model/SAM alle {CodingLiveAiIntervalSeconds}s | {CompactModelName(_codingAiModelName)}");
         }
         else
         {
@@ -2995,5 +3794,34 @@ public partial class PlayerWindow
     private async Task AnalyzeWithOverlayHintAsync(OverlayGeometry overlay)
     {
         await RunCodingAnalysisAsync("Analyse: markierte Stelle...");
+    }
+
+    // 2026-05-13 (Audit H4): Pipe-Axis-Loop nach
+    // AuswertungPro.Next.Application.Ai.Pipeline.PipeAxisDiagnosticsService migriert.
+    // Aufruf siehe RunCodingAnalysisAsync — _pipeAxisService.PushFrameAsync(...).
+
+    /// <summary>Liefert den nominellen Rohrdurchmesser in mm (falls bekannt),
+    /// fuer den Pipe-Axis-Request — Sidecar kann damit Kalibrierung verbessern.</summary>
+    private int? _codingDnMm => _codingOverlayService?.Calibration?.NominalDiameterMm;
+
+    // 2026-05-11: KI-Diagnose-Cockpit oeffnen (Snapshot des AiDiagnosticsRecorder).
+    // Singleton-Window-Pattern — bestehende Instanz wird in den Vordergrund gebracht
+    // statt mehrfach zu oeffnen.
+    private AiDiagnosticsWindow? _aiDiagnosticsWindow;
+
+    private void OpenAiDiagnostics_Click(object sender, RoutedEventArgs e)
+    {
+        if (_aiDiagnosticsWindow == null)
+        {
+            _aiDiagnosticsWindow = new AiDiagnosticsWindow { Owner = this };
+            _aiDiagnosticsWindow.Closed += (_, _) => _aiDiagnosticsWindow = null;
+            _aiDiagnosticsWindow.Show();
+        }
+        else
+        {
+            if (_aiDiagnosticsWindow.WindowState == WindowState.Minimized)
+                _aiDiagnosticsWindow.WindowState = WindowState.Normal;
+            _aiDiagnosticsWindow.Activate();
+        }
     }
 }

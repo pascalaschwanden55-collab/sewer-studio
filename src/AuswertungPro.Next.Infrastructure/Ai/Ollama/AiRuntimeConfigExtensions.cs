@@ -15,5 +15,6 @@ public static class AiRuntimeConfigExtensions
         new(cfg.OllamaBaseUri, http,
             cfg.OllamaRequestTimeout,
             keepAlive: cfg.OllamaKeepAlive,
-            numCtx: cfg.OllamaNumCtx);
+            numCtx: cfg.OllamaNumCtx,
+            diagnosticsEnabled: cfg.EnableDiagnostics);
 }

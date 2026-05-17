@@ -43,8 +43,27 @@ public sealed class KnickDetectionService
     private readonly List<KnickFinding> _findings = new();
     private double _lastKnickMeter = -999;
 
+    // Bogen-Erkennung (BCC): paralleler Sample-Puffer im PipeAxisResult-Format,
+    // damit der pure-Function PipeAxisBendDetector unveraendert konsumieren kann
+    // und keine doppelten Sidecar-Calls noetig sind.
+    private readonly List<(PipeAxisResult Axis, double Position)> _bendSamples = new();
+    private double _lastBendMeter = -999;
+    // Mindestabstand zwischen zwei aufeinanderfolgenden BCC-Findings.
+    // Ein Bogen erstreckt sich typischerweise ueber 2-5m — mehr als ein
+    // neuer Bogen pro Meter ist in einer Kanalhaltung nicht realistisch
+    // und entstuende vermutlich durch Kamera-Nachschwingen.
+    private const double MinBendSpacingMeter = 1.0;
+    private const int MaxHistorySamples = MinFramesBeforeDetection * 4;
+
     /// <summary>Alle erkannten Knicke seit Reset.</summary>
     public IReadOnlyList<KnickFinding> Findings => _findings;
+
+    /// <summary>
+    /// Optionaler Bogen-Detektor (BCC). Wird er gesetzt, prueft <see cref="CheckForBend"/>
+    /// die Fluchtpunkt-Historie zusaetzlich auf graduelle Krummungen. Bleibt er null,
+    /// arbeitet der Service unveraendert nur als Knick-Detektor.
+    /// </summary>
+    public PipeAxisBendDetector? BendDetector { get; set; }
 
     public KnickDetectionService(VisionPipelineClient sidecar, ILogger? logger = null)
     {
@@ -58,6 +77,8 @@ public sealed class KnickDetectionService
         _history.Clear();
         _findings.Clear();
         _lastKnickMeter = -999;
+        _bendSamples.Clear();
+        _lastBendMeter = -999;
     }
 
     /// <summary>
@@ -90,6 +111,13 @@ public sealed class KnickDetectionService
             return null;
         }
 
+        // Bogen-Sample-Puffer ZUERST: PipeAxisBendDetector hat eine eigene
+        // MinFrameConfidence-Schwelle und filtert intern. Frueh-Return wegen
+        // Knick-Confidence darf den Bend-Puffer nicht beschneiden — sonst gehen
+        // Frames stumm verloren falls die Schwellen jemals divergieren.
+        _bendSamples.Add((axis, meterPosition));
+        TrimOldest(_bendSamples, GetMaxBendSampleCount());
+
         if (axis.Confidence < MinConfidence)
             return null;
 
@@ -100,6 +128,7 @@ public sealed class KnickDetectionService
             axis.Confidence, axis.HasJoint);
 
         _history.Add(sample);
+        TrimOldest(_history, MaxHistorySamples);
 
         // Nicht genug Daten fuer Erkennung
         if (_history.Count < MinFramesBeforeDetection)
@@ -204,6 +233,34 @@ public sealed class KnickDetectionService
     }
 
     /// <summary>
+    /// Prueft die aktuelle Fluchtpunkt-Historie auf einen Bogen (BCC) ueber
+    /// den injizierten <see cref="BendDetector"/>. Liefert <c>null</c> wenn
+    /// kein Detektor gesetzt ist, das Fenster zu klein ist, der letzte Bend
+    /// noch zu nahe liegt oder die Drift unterhalb der Schwelle bleibt.
+    /// Aufrufer ist verantwortlich, das Ergebnis als Finding zu materialisieren.
+    /// </summary>
+    public PipeAxisBendDetector.BendDetectionResult? CheckForBend(double currentMeter)
+    {
+        if (BendDetector is null) return null;
+        if (_bendSamples.Count < BendDetector.MinWindowSize) return null;
+        if (currentMeter - _lastBendMeter < MinBendSpacingMeter) return null;
+
+        // Fenster: 2x MinWindowSize, damit die Halbfenster-Glaettung im Detektor
+        // genuegend Frames hat. Aelteres wird ignoriert.
+        int windowLen = Math.Min(_bendSamples.Count, BendDetector.MinWindowSize * 2);
+        var window = _bendSamples.GetRange(_bendSamples.Count - windowLen, windowLen);
+
+        var result = BendDetector.Detect(window);
+        if (result.RecommendedCode is null) return null;
+
+        _lastBendMeter = currentMeter;
+        _logger?.LogInformation(
+            "Bogen erkannt: {Code} bei {Meter:F2}m ({Diagnostic})",
+            result.RecommendedCode, currentMeter, result.DiagnosticText);
+        return result;
+    }
+
+    /// <summary>
     /// Prueft ob die Bewegung graduell ist (= Bogen, kein Knick).
     /// Ein Bogen zeigt gleichmaessigen, kleinen Shift ueber viele Frames.
     /// Ein Knick zeigt einen grossen Sprung in 1-2 Frames.
@@ -237,6 +294,15 @@ public sealed class KnickDetectionService
         bool evenlyDistributed = shifts.Count > 0 && maxSingleShift < avgShift * 2.5;
 
         return allSmall && evenlyDistributed;
+    }
+
+    private int GetMaxBendSampleCount()
+        => Math.Max(MaxHistorySamples, (BendDetector?.MinWindowSize ?? MinFramesBeforeDetection) * 4);
+
+    private static void TrimOldest<T>(List<T> samples, int maxCount)
+    {
+        if (samples.Count <= maxCount) return;
+        samples.RemoveRange(0, samples.Count - maxCount);
     }
 
     /// <summary>Interner Tracking-Datensatz pro Frame.</summary>

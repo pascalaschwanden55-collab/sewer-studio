@@ -192,11 +192,23 @@ def _compute_iou(mask_a: np.ndarray, mask_b: np.ndarray) -> float:
 def _clip_annulus_mask(mask: np.ndarray, cx: float, cy: float,
                        r_inner: float, r_outer: float) -> np.ndarray:
     """Maske auf den Annulus-Bereich zuschneiden (Pixel ausserhalb = 0)."""
-    h, w = mask.shape
+    mask_arr = np.asarray(mask)
+    if mask_arr.dtype == np.bool_:
+        mask_bool = mask_arr
+    elif np.issubdtype(mask_arr.dtype, np.floating):
+        # SAM2 kann float-Masken liefern; das Clipping erwartet eine binaere Maske.
+        if mask_arr.min() >= 0.0 and mask_arr.max() <= 1.0:
+            mask_bool = mask_arr >= 0.5
+        else:
+            mask_bool = mask_arr > 0.0
+    else:
+        mask_bool = mask_arr != 0
+
+    h, w = mask_arr.shape
     yy, xx = np.ogrid[:h, :w]
     dist = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
     annulus = (dist >= r_inner) & (dist <= r_outer)
-    return mask & annulus
+    return mask_bool & annulus
 
 
 def _ring_scan(predictor, ring_params, h: int, w: int, device: str) -> list[MaskResult]:

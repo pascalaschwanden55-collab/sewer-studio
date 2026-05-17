@@ -790,46 +790,56 @@ public sealed partial class DataPageViewModel : ObservableObject
                 CodecThreads: App.Resolve<AppSettings>().VideoCodecThreads,
                 VideoOutput: App.Resolve<AppSettings>().VideoOutput);
 
-            // Build damage overlay markers from protocol entries
+            // Build damage overlay markers from protocol entries. Die Video-
+            // Zeitleiste ist zeitbasiert; Meterwerte sind nur Zusatzinfo.
             PlayerDamageOverlayData? damageOverlay = null;
+            var markers = new System.Collections.Generic.List<DamageMarkerInfo>();
             var lengthStr = record.GetFieldValue("Haltungslaenge_m");
-            if (double.TryParse(lengthStr?.Replace(',', '.'),
-                    NumberStyles.Float, CultureInfo.InvariantCulture, out var pipeLength)
-                && pipeLength > 0)
+            var pipeLength = double.TryParse(lengthStr?.Replace(',', '.'),
+                    NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedPipeLength)
+                && parsedPipeLength > 0
+                    ? parsedPipeLength
+                    : 0;
+
+            if (record.Protocol?.Current?.Entries is { Count: > 0 } entries)
             {
-                var markers = new System.Collections.Generic.List<DamageMarkerInfo>();
-
-                if (record.Protocol?.Current?.Entries is { Count: > 0 } entries)
+                foreach (var e in entries.Where(e => !e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code)))
                 {
-                    foreach (var e in entries.Where(e => !e.IsDeleted && e.MeterStart.HasValue))
-                    {
-                        markers.Add(new DamageMarkerInfo(
-                            e.Code ?? "",
-                            e.Beschreibung,
-                            e.MeterStart!.Value,
-                            e.MeterEnd,
-                            e.IsStreckenschaden));
-                    }
-                }
-                else if (record.VsaFindings is { Count: > 0 } findings)
-                {
-                    foreach (var f in findings)
-                    {
-                        var mStart = f.MeterStart ?? f.SchadenlageAnfang;
-                        if (mStart is null) continue;
-                        var mEnd = f.MeterEnd ?? f.SchadenlageEnde;
-                        markers.Add(new DamageMarkerInfo(
-                            f.KanalSchadencode?.Trim() ?? "",
-                            f.Raw,
-                            mStart.Value,
-                            mEnd,
-                            mEnd.HasValue && mEnd.Value > mStart.Value));
-                    }
-                }
+                    var time = e.Zeit ?? ParseMpegTime(e.Mpeg);
+                    if (!time.HasValue)
+                        continue;
 
-                if (markers.Count > 0)
-                    damageOverlay = new PlayerDamageOverlayData(pipeLength, markers);
+                    markers.Add(new DamageMarkerInfo(
+                        e.Code ?? "",
+                        e.Beschreibung,
+                        e.MeterStart ?? 0,
+                        e.MeterEnd,
+                        e.IsStreckenschaden,
+                        time));
+                }
             }
+            else if (record.VsaFindings is { Count: > 0 } findings)
+            {
+                foreach (var f in findings)
+                {
+                    var time = ParseMpegTime(f.MPEG) ?? f.Timestamp?.TimeOfDay;
+                    if (!time.HasValue)
+                        continue;
+
+                    var mStart = f.MeterStart ?? f.SchadenlageAnfang ?? 0;
+                    var mEnd = f.MeterEnd ?? f.SchadenlageEnde;
+                    markers.Add(new DamageMarkerInfo(
+                        f.KanalSchadencode?.Trim() ?? "",
+                        f.Raw,
+                        mStart,
+                        mEnd,
+                        mEnd.HasValue && mEnd.Value > mStart,
+                        time));
+                }
+            }
+
+            if (markers.Count > 0)
+                damageOverlay = new PlayerDamageOverlayData(pipeLength, markers);
 
             var window = new PlayerWindow(path, options,
                 damageOverlay: damageOverlay,

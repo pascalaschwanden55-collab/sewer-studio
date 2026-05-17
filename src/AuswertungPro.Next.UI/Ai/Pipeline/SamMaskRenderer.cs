@@ -321,6 +321,70 @@ public static class SamMaskRenderer
     /// <param name="onMaskDeleted">Optionaler Callback wenn Delete auf einer Maske gedrueckt wird (Index).</param>
     /// <param name="previewMode">Wenn true: Masken grau + gedimmt rendern (Vorschau fuer ferne Detektionen).</param>
     /// <param name="indexOffset">Offset fuer Masken-Index im Tag (fuer zweiten RenderMasks-Aufruf).</param>
+    public static void RenderMaskBoundingBoxes(
+        Canvas canvas,
+        SamResponse samResponse,
+        IReadOnlyList<MaskQuantificationService.QuantifiedMask> quantified,
+        double canvasWidth,
+        double canvasHeight,
+        bool previewMode = true,
+        int indexOffset = 0)
+    {
+        if (samResponse == null || samResponse.Masks.Count == 0) return;
+        if (samResponse.ImageWidth <= 0 || samResponse.ImageHeight <= 0) return;
+
+        var strokeColor = previewMode
+            ? Color.FromArgb(190, 245, 158, 11)
+            : Color.FromArgb(220, 0, 255, 0);
+        var fillColor = previewMode
+            ? Color.FromArgb(22, 245, 158, 11)
+            : Color.FromArgb(35, 0, 255, 0);
+
+        for (int i = 0; i < samResponse.Masks.Count; i++)
+        {
+            var mask = samResponse.Masks[i];
+            if (mask.Bbox.Count < 4)
+                continue;
+
+            var x1 = Math.Clamp(mask.Bbox[0] / samResponse.ImageWidth * canvasWidth, 0, canvasWidth);
+            var y1 = Math.Clamp(mask.Bbox[1] / samResponse.ImageHeight * canvasHeight, 0, canvasHeight);
+            var x2 = Math.Clamp(mask.Bbox[2] / samResponse.ImageWidth * canvasWidth, 0, canvasWidth);
+            var y2 = Math.Clamp(mask.Bbox[3] / samResponse.ImageHeight * canvasHeight, 0, canvasHeight);
+            var w = Math.Max(2, x2 - x1);
+            var h = Math.Max(2, y2 - y1);
+            var groupTag = $"{MaskTag}_ring_{i + indexOffset}";
+
+            var rect = new Rectangle
+            {
+                Width = w,
+                Height = h,
+                Stroke = new SolidColorBrush(strokeColor),
+                StrokeThickness = 2,
+                Fill = new SolidColorBrush(fillColor),
+                Tag = groupTag,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(rect, x1);
+            Canvas.SetTop(rect, y1);
+            canvas.Children.Add(rect);
+
+            if (mask.CentroidX >= 0 && mask.CentroidY >= 0)
+            {
+                var dot = new Ellipse
+                {
+                    Width = 6,
+                    Height = 6,
+                    Fill = new SolidColorBrush(strokeColor),
+                    Tag = groupTag,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(dot, mask.CentroidX / samResponse.ImageWidth * canvasWidth - 3);
+                Canvas.SetTop(dot, mask.CentroidY / samResponse.ImageHeight * canvasHeight - 3);
+                canvas.Children.Add(dot);
+            }
+        }
+    }
+
     public static void RenderMasks(
         Canvas canvas,
         SamResponse samResponse,

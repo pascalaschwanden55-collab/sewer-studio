@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.Diagnostics;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -33,8 +35,12 @@ public sealed class SingleFrameMultiModelService
     public SingleFrameMultiModelService(
         VisionPipelineClient client,
         double yoloConfidence = 0.25,
-        double dinoBoxThreshold = 0.30,
-        double dinoTextThreshold = 0.25)
+        // Audit 2026-05-15: DINO-Schwellen gesenkt (box 0.30→0.20, text 0.25→0.15).
+        // Vorher fand DINO bei Kanalbildern fast nichts; mehr Recall jetzt, die
+        // false-positives werden vom Konsens-Filter (≥2 Modelle) + QualityGate
+        // abgefangen.
+        double dinoBoxThreshold = 0.20,
+        double dinoTextThreshold = 0.15)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _yoloConfidence = yoloConfidence;
@@ -90,6 +96,7 @@ public sealed class SingleFrameMultiModelService
             var yoloReq = new YoloRequest(b64, _yoloConfidence);
             var yoloResp = await _client.DetectYoloAsync(yoloReq, ct);
             yoloMs = yoloResp.InferenceTimeMs;
+            RecordYoloRaw(yoloResp, yoloMs, imgWidth, imgHeight, detectedViewType);
 
             if (!yoloResp.IsRelevant && !RunDinoFallbackOnIrrelevantFrames)
             {
@@ -106,6 +113,7 @@ public sealed class SingleFrameMultiModelService
             // 2. YOLO-Detektionen als Boxen nutzen (DINO versagt bei Kanalbildern)
             // Tiefenfilter: Nur Boxen im Nahbereich durchlassen (nicht in der Rohrtiefe)
             var yoloAsDetections = yoloResp.Detections
+                .Where(d => SamPromptCodeFilter.ShouldUseAsSamPrompt(d.ClassName))
                 .Where(d => !IsNearCenter(d.X1, d.Y1, d.X2, d.Y2, imgWidth, imgHeight))
                 .Select(d => new DinoDetectionDto(
                     d.X1, d.Y1, d.X2, d.Y2,
@@ -121,10 +129,12 @@ public sealed class SingleFrameMultiModelService
                 var dinoReq = new DinoRequest(b64, null, _dinoBoxThreshold, _dinoTextThreshold);
                 var dinoResp = await _client.DetectDinoAsync(dinoReq, ct);
                 dinoMs = dinoResp.InferenceTimeMs;
+                RecordDinoRaw(dinoResp, dinoMs, yoloAsDetections.Count, detectedViewType);
                 if (dinoResp.Detections.Count > 0)
                 {
                     // DINO hat etwas gefunden — DINO-Boxen bevorzugen (praeziser)
                     nearDetections = dinoResp.Detections
+                        .Where(d => SamPromptCodeFilter.ShouldUseAsSamPrompt(d.Label))
                         .Where(d => !IsInsidePipeCircle(d.X1, d.Y1, d.X2, d.Y2, pipeAxis, imgWidth, imgHeight))
                         .ToList();
                     // Wenn DINO-Filter alles wegfiltert, YOLO-Boxen als Fallback
@@ -134,8 +144,31 @@ public sealed class SingleFrameMultiModelService
             }
             catch { /* DINO optional — wenn es fehlt, reichen YOLO-Boxen */ }
 
-            if (nearDetections.Count == 0)
+            // 3. SAM 2 Segmentation. Wenn YOLO/DINO keine Box liefert, scannt SAM
+            // den Rohrwand-Annulus sichtbar ab statt still ohne Segmentierung
+            // zurueckzukehren.
+            var samBoxes = nearDetections
+                .Select(d => new SamBoundingBox(d.X1, d.Y1, d.X2, d.Y2, d.Label, d.Confidence))
+                .ToList();
+
+            var ringScan = samBoxes.Count == 0
+                ? PipeAxisRingScanFactory.Create(pipeAxis, imgWidth, imgHeight)
+                : null;
+
+            if (samBoxes.Count == 0 && ringScan is null)
             {
+                RecordMultiModelRaw(
+                    summary: "SAM nicht gestartet: keine Boxen und kein Ring-Scan moeglich",
+                    latencyMs: dinoMs,
+                    rawOutput: null,
+                    metadata: new Dictionary<string, string>
+                    {
+                        ["view_type"] = detectedViewType ?? "",
+                        ["yolo_boxes_after_filter"] = yoloAsDetections.Count.ToString(CultureInfo.InvariantCulture),
+                        ["dino_boxes_after_filter"] = nearDetections.Count.ToString(CultureInfo.InvariantCulture),
+                        ["ring_scan"] = "false"
+                    });
+
                 return new SingleFrameResult(
                     IsRelevant: yoloResp.IsRelevant,
                     DinoDetections: Array.Empty<DinoDetectionDto>(),
@@ -146,13 +179,14 @@ public sealed class SingleFrameMultiModelService
                 { ViewType = detectedViewType };
             }
 
-            // 3. SAM 2 Segmentation (nur Nahbereich-Boxen)
-            var samBoxes = nearDetections.Select(d => new SamBoundingBox(
-                d.X1, d.Y1, d.X2, d.Y2, d.Label, d.Confidence)).ToList();
-
-            var samReq = new SamRequest(b64, samBoxes, PipeDiameterMm: pipeDiameterMm > 0 ? pipeDiameterMm : null);
+            var samReq = new SamRequest(
+                b64,
+                samBoxes,
+                PipeDiameterMm: pipeDiameterMm > 0 ? pipeDiameterMm : null,
+                RingScan: ringScan);
             var samResp = await _client.SegmentSamAsync(samReq, ct);
             samMs = samResp.InferenceTimeMs;
+            RecordSamRaw(samResp, samMs, samBoxes.Count, ringScan is not null, detectedViewType);
 
             // 4. Quantifizierung: Pixel-Masken → mm, %, Uhrposition
             var quantified = new List<MaskQuantificationService.QuantifiedMask>();
@@ -176,6 +210,12 @@ public sealed class SingleFrameMultiModelService
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
+            AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+            {
+                Stage = AiDiagnosticStage.YoloError,
+                Source = nameof(SingleFrameMultiModelService),
+                Summary = $"SingleFrame Multi-Model Fehler: {ex.Message}"
+            });
             return SingleFrameResult.Empty($"Multi-Model Fehler: {ex.Message}");
         }
     }
@@ -282,6 +322,101 @@ public sealed class SingleFrameMultiModelService
             return (720, 576);
         }
     }
+
+    private static void RecordYoloRaw(
+        YoloResponse response,
+        double latencyMs,
+        int imgWidth,
+        int imgHeight,
+        string? viewType)
+    {
+        AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+        {
+            Stage = AiDiagnosticStage.YoloRaw,
+            Source = nameof(SingleFrameMultiModelService),
+            Summary = $"YOLO relevant={response.IsRelevant}, boxes={response.Detections.Count}, class={response.FrameClass ?? "-"}",
+            RawOutput = FormatYoloDetections(response.Detections),
+            LatencyMs = latencyMs,
+            Metadata = new Dictionary<string, string>
+            {
+                ["view_type"] = viewType ?? "",
+                ["image_size"] = $"{imgWidth}x{imgHeight}",
+                ["boxes"] = response.Detections.Count.ToString(CultureInfo.InvariantCulture),
+                ["frame_class"] = response.FrameClass ?? "",
+                ["is_relevant"] = response.IsRelevant.ToString()
+            }
+        });
+    }
+
+    private static void RecordDinoRaw(
+        DinoResponse response,
+        double latencyMs,
+        int yoloBoxesAfterFilter,
+        string? viewType)
+    {
+        RecordMultiModelRaw(
+            summary: $"DINO raw boxes={response.Detections.Count}, yolo_fallback_boxes={yoloBoxesAfterFilter}",
+            latencyMs: latencyMs,
+            rawOutput: FormatDinoDetections(response.Detections),
+            metadata: new Dictionary<string, string>
+            {
+                ["stage"] = "dino",
+                ["view_type"] = viewType ?? "",
+                ["dino_boxes_raw"] = response.Detections.Count.ToString(CultureInfo.InvariantCulture),
+                ["yolo_boxes_after_filter"] = yoloBoxesAfterFilter.ToString(CultureInfo.InvariantCulture)
+            });
+    }
+
+    private static void RecordSamRaw(
+        SamResponse response,
+        double latencyMs,
+        int promptBoxes,
+        bool usedRingScan,
+        string? viewType)
+    {
+        RecordMultiModelRaw(
+            summary: $"SAM masks={response.Masks.Count}, boxes={promptBoxes}, ring_scan={usedRingScan}",
+            latencyMs: latencyMs,
+            rawOutput: FormatSamMasks(response.Masks),
+            metadata: new Dictionary<string, string>
+            {
+                ["stage"] = "sam",
+                ["view_type"] = viewType ?? "",
+                ["prompt_boxes"] = promptBoxes.ToString(CultureInfo.InvariantCulture),
+                ["masks"] = response.Masks.Count.ToString(CultureInfo.InvariantCulture),
+                ["ring_scan"] = usedRingScan.ToString(),
+                ["image_size"] = $"{response.ImageWidth}x{response.ImageHeight}"
+            });
+    }
+
+    private static void RecordMultiModelRaw(
+        string summary,
+        double latencyMs,
+        string? rawOutput,
+        IReadOnlyDictionary<string, string> metadata)
+    {
+        AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+        {
+            Stage = AiDiagnosticStage.MultiModelRaw,
+            Source = nameof(SingleFrameMultiModelService),
+            Summary = summary,
+            RawOutput = rawOutput,
+            LatencyMs = latencyMs,
+            Metadata = metadata
+        });
+    }
+
+    private static string FormatYoloDetections(IReadOnlyList<YoloDetectionDto> detections)
+        => string.Join(Environment.NewLine, detections.Select(d =>
+            $"{d.ClassName} conf={d.Confidence:F2} box=[{d.X1:F0},{d.Y1:F0},{d.X2:F0},{d.Y2:F0}]"));
+
+    private static string FormatDinoDetections(IReadOnlyList<DinoDetectionDto> detections)
+        => string.Join(Environment.NewLine, detections.Select(d =>
+            $"{d.Label} conf={d.Confidence:F2} phrase={d.Phrase ?? ""} box=[{d.X1:F0},{d.Y1:F0},{d.X2:F0},{d.Y2:F0}]"));
+
+    private static string FormatSamMasks(IReadOnlyList<SamMaskResult> masks)
+        => string.Join(Environment.NewLine, masks.Select(m =>
+            $"{m.Label} conf={m.Confidence:F2} area={m.MaskAreaPixels} centroid=({m.CentroidX:F0},{m.CentroidY:F0})"));
 }
 
 /// <summary>

@@ -116,6 +116,13 @@ namespace AuswertungPro.Next.UI
                 AuswertungPro.Next.Application.Ai.AiRuntimeConfigProvider.SetLoader(
                     () => Ai.AiPlatformConfig.Load().ToRuntimeConfig());
 
+                // 2026-05-11: AI-Diagnostics-Recorder registrieren — globaler
+                // Ringbuffer fuer alle AI-Pipeline-Events (Qwen-Raw/Mapped/Suppressed,
+                // YOLO, Multi-Model, Filter-Drops, Pipe-Axis). UI-Diagnose-Panel
+                // pollt diesen Recorder. Capacity 200, RawOutput-Cap 16KB.
+                AuswertungPro.Next.Application.Ai.Diagnostics.AiDiagnosticsRecorderProvider.Set(
+                    new AuswertungPro.Next.Application.Ai.Diagnostics.AiDiagnosticsRecorder());
+
                 // Phase 5.3 Sub-A: WPF-Imaging-Adapter registrieren. Application-
                 // Services rufen ImagePixelDecoderProvider.Decode auf, ohne WPF
                 // direkt zu kennen.

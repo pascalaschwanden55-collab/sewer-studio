@@ -12,4 +12,13 @@
     <ProjectReference Include="..\..\src\AuswertungPro.Next.Domain\AuswertungPro.Next.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\src\AuswertungPro.Next.UI\Config\cost_catalog.json"
+          Link="Config\cost_catalog.json"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\AuswertungPro.Next.UI\Config\measure_templates.json"
+          Link="Config\measure_templates.json"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

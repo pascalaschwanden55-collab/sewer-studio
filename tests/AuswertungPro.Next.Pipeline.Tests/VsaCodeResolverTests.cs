@@ -68,6 +68,10 @@ public sealed class VsaCodeResolverTests
     // ═══════════════════════════════════════════════════════════════
 
     [Theory]
+    [InlineData("BCA", "BCA")]
+    [InlineData("BCC", "BCC")]
+    [InlineData("BCAAA", "BCAAA")]
+    [InlineData("BCA.A.A", "BCAAA")]
     [InlineData("Seitlicher Anschluss", "BCA")]
     [InlineData("Lateral connection at 3 o'clock", "BCA")]
     [InlineData("Abzweig links", "BCA")]

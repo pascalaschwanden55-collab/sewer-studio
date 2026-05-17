@@ -10,6 +10,7 @@ using System.Windows.Threading;
 using AuswertungPro.Next.Infrastructure;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Application.Export;
+using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -32,6 +33,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     public IAsyncRelayCommand ExportCommand { get; }
     public IAsyncRelayCommand ExportSchaechteCommand { get; }
+    public IAsyncRelayCommand ExportNpkAusmassCommand { get; }
+    public IAsyncRelayCommand ExportNpkTenderCommand { get; }
     public IAsyncRelayCommand DistributeHoldingsCommand { get; }
     public IAsyncRelayCommand DistributeShaftsCommand { get; }
     public IAsyncRelayCommand DistributeDichtheitCommand { get; }
@@ -45,6 +48,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
         _excelExport = App.Resolve<IExcelExportService>();
         ExportCommand = new AsyncRelayCommand(ExportAsync, CanRunProjectExportCommands);
         ExportSchaechteCommand = new AsyncRelayCommand(ExportSchaechteAsync, CanRunProjectExportCommands);
+        ExportNpkAusmassCommand = new AsyncRelayCommand(ExportNpkAusmassAsync, CanRunProjectExportCommands);
+        ExportNpkTenderCommand = new AsyncRelayCommand(ExportNpkTenderAsync, CanRunProjectExportCommands);
         DistributeHoldingsCommand = new AsyncRelayCommand(DistributeHoldingsAsync, CanRunDistributeCommands);
         DistributeShaftsCommand = new AsyncRelayCommand(DistributeShaftsAsync, CanRunDistributeCommands);
         DistributeDichtheitCommand = new AsyncRelayCommand(DistributeDichtheitAsync, CanRunDistributeCommands);
@@ -72,6 +77,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
     {
         ExportCommand.NotifyCanExecuteChanged();
         ExportSchaechteCommand.NotifyCanExecuteChanged();
+        ExportNpkAusmassCommand.NotifyCanExecuteChanged();
+        ExportNpkTenderCommand.NotifyCanExecuteChanged();
         DistributeHoldingsCommand.NotifyCanExecuteChanged();
         DistributeShaftsCommand.NotifyCanExecuteChanged();
         DistributeDichtheitCommand.NotifyCanExecuteChanged();
@@ -125,6 +132,67 @@ public sealed partial class ExportPageViewModel : ObservableObject
     }
 
     // ─── Distribution: Haltungen ───────────────────────────────────────────
+
+    private Task ExportNpkAusmassAsync()
+        => ExportNpkAusmassCoreAsync(includePrices: true);
+
+    private Task ExportNpkTenderAsync()
+        => ExportNpkAusmassCoreAsync(includePrices: false);
+
+    private async Task ExportNpkAusmassCoreAsync(bool includePrices)
+    {
+        var projectPath = _settings.LastProjectPath;
+        if (string.IsNullOrWhiteSpace(projectPath))
+        {
+            _dialogs.ShowMessage("Projekt bitte zuerst speichern/oeffnen, damit die gespeicherten Haltungskosten gefunden werden.", "NPK-Ausmass",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var defaultName = includePrices
+            ? $"NPK_Ausmass_mit_Kosten_{DateTime.Now:yyyyMMdd}.xlsx"
+            : $"NPK_Ausschreibung_ohne_Preise_{DateTime.Now:yyyyMMdd}.xlsx";
+        var title = includePrices
+            ? "NPK-Ausmass mit Kosten exportieren"
+            : "NPK-Ausschreibung ohne Preise exportieren";
+        var outPath = _dialogs.SaveFile(title, "Excel (*.xlsx)|*.xlsx", ".xlsx", defaultName);
+        if (outPath is null)
+            return;
+
+        try
+        {
+            IsPageBusy = true;
+            var store = new ProjectCostStoreRepository().Load(projectPath);
+            var exporter = new ProjectCostAusmassExcelExporter();
+            var result = await Task.Run(() => exporter.Export(
+                store,
+                outPath,
+                new ProjectCostAusmassExportOptions
+                {
+                    IncludePrices = includePrices,
+                    Title = includePrices ? "NPK 135 Ausmass mit Kosten" : "NPK 135 Ausschreibung",
+                    Currency = "CHF",
+                    Project = _shell.Project
+                }));
+
+            if (result.Ok)
+            {
+                LastResult = includePrices
+                    ? $"NPK-Ausmass exportiert: {outPath}\nPositionen: {result.PositionCount}\nTotal exkl. MWST: {result.NetTotal:N2} CHF\nTotal inkl. MWST: {result.TotalInclVat:N2} CHF"
+                    : $"NPK-Ausschreibung ohne Preise exportiert: {outPath}\nPositionen: {result.PositionCount}";
+                _shell.SetStatus(includePrices ? "NPK-Ausmass exportiert" : "NPK-Ausschreibung exportiert");
+            }
+            else
+            {
+                LastResult = $"Fehler: {result.Error}";
+                _shell.SetStatus("NPK-Ausmass Export fehlgeschlagen");
+            }
+        }
+        finally
+        {
+            IsPageBusy = false;
+        }
+    }
 
     private async Task DistributeHoldingsAsync()
     {

@@ -179,8 +179,22 @@ public partial class PlayerWindow
 
             if (saved)
             {
-                // Erfolgreich gespeichert → Tool deaktivieren
-                DeactivateMarkTool();
+                // 2026-05-11 Multi-BBox-Modus: Wenn der User im
+                // Training-from-existing-Flow "Weitere BBox" gewaehlt hat,
+                // bleibt _pendingTrainingFromExistingEntry gesetzt — Tool
+                // muss aktiv bleiben fuer die naechste Markierung mit gleichem
+                // Code. Sonst (Normalfall): Tool deaktivieren.
+                if (_pendingTrainingFromExistingEntry != null)
+                {
+                    if (_codingOverlayService != null)
+                        _codingOverlayService.ActiveTool = OverlayToolType.Rectangle;
+                    CodingOverlayCanvas.Cursor = Cursors.Cross;
+                }
+                else
+                {
+                    // Erfolgreich gespeichert → Tool deaktivieren
+                    DeactivateMarkTool();
+                }
             }
             else
             {
@@ -420,19 +434,64 @@ public partial class PlayerWindow
     {
         try
         {
-            // 1. VSA-Code waehlen — VsaCodeExplorer oeffnet sich sofort
-            // Meter automatisch aus OSD oder Videoposition berechnen
-            var autoMeter = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
-            var entry = new ProtocolEntry();
-            var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(entry, autoMeter, TimeSpan.FromSeconds(timestampSec));
-            var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
-            {
-                Owner = this
-            };
-            if (explorer.ShowDialog() != true || explorer.SelectedEntry == null)
-                return false;
+            ProtocolEntry selectedEntry;
+            bool wasFromPendingTraining = false;
 
-            var selectedEntry = explorer.SelectedEntry;
+            // 2026-05-11 Training-from-existing-Workflow: Wenn der Trainings-Modus
+            // ueber Rechtsklick auf einen bestehenden Import/Befund gestartet wurde
+            // (StartTrainingFromExistingEvent), ist der Code schon bekannt — KEIN
+            // VsaCodeExplorer noetig. User-Wunsch: Rechtsklick "Training-BBox" →
+            // nur Spring + BBox + SAM + Bestaetigung, ohne den Codier-Dialog erneut
+            // zu oeffnen.
+            if (_pendingTrainingFromExistingEntry != null)
+            {
+                var src = _pendingTrainingFromExistingEntry;
+                var codeLabel = string.IsNullOrWhiteSpace(src.Code) ? "(kein Code)" : src.Code;
+                var beschrLabel = string.IsNullOrWhiteSpace(src.Beschreibung) ? "" : "\nBeschreibung: " + src.Beschreibung;
+                var confirm = MessageBox.Show(
+                    $"Markierung als Training speichern?\n\nCode: {codeLabel}{beschrLabel}",
+                    "Training bestaetigen",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                if (confirm != MessageBoxResult.Yes)
+                {
+                    _pendingTrainingFromExistingEntry = null;
+                    return false;
+                }
+
+                selectedEntry = new ProtocolEntry
+                {
+                    Code = src.Code,
+                    Beschreibung = src.Beschreibung,
+                    MeterStart = src.MeterStart,
+                    MeterEnd = src.MeterEnd,
+                    Zeit = src.Zeit,
+                    IsStreckenschaden = src.IsStreckenschaden,
+                    CodeMeta = src.CodeMeta
+                };
+                wasFromPendingTraining = true;
+                // Pending-State wird erst NACH erfolgreichem Save gecleart —
+                // siehe Multi-BBox-Block am Ende der Methode (User-Wunsch
+                // 2026-05-11: "bei einem Riss können mehrere BBoxen hilfreich
+                // sein"). Wenn der User "Weitere BBox" ablehnt, wird hier
+                // gecleart; bei Ja bleibt der State fuer den naechsten Aufruf.
+            }
+            else
+            {
+                // 1. VSA-Code waehlen — VsaCodeExplorer oeffnet sich sofort
+                // Meter automatisch aus OSD oder Videoposition berechnen
+                var autoMeter = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
+                var entry = new ProtocolEntry();
+                var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(entry, autoMeter, TimeSpan.FromSeconds(timestampSec));
+                var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
+                {
+                    Owner = this
+                };
+                if (explorer.ShowDialog() != true || explorer.SelectedEntry == null)
+                    return false;
+
+                selectedEntry = explorer.SelectedEntry;
+            }
 
             // 2. Frame-Capture
             var frameBytes = await CaptureCurrentFrameAsync();
@@ -524,6 +583,30 @@ public partial class PlayerWindow
                     OsdMeterBadge.Visibility = Visibility.Collapsed;
             };
             resetTimer.Start();
+
+            // 2026-05-11 Multi-BBox-Loop fuer Training-from-existing-Workflow:
+            // Bei Riss/Streckenschaden koennen mehrere BBoxen mit gleichem Code
+            // hilfreich sein. Nach erfolgreichem Save fragen, ob weitere BBox
+            // folgt — wenn Ja: pending state bleibt, naechster BBox-Draw nutzt
+            // wieder denselben Code (ohne VsaCodeExplorer). Wenn Nein: pending
+            // state cleared, normaler Markieren-Flow nimmt wieder VsaCodeExplorer.
+            if (wasFromPendingTraining)
+            {
+                var more = MessageBox.Show(
+                    $"Weitere BBox mit Code {selectedEntry.Code} markieren?\n" +
+                    "(z.B. fuer Riss ueber mehrere Stellen)",
+                    "Multi-BBox-Modus",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                if (more != MessageBoxResult.Yes)
+                {
+                    _pendingTrainingFromExistingEntry = null;
+                }
+                // else: pending bleibt, BBox-Tool bleibt aktiv (siehe
+                // HandleMarkDrawingComplete: re-aktiviert Rectangle-Tool wenn
+                // pending != null).
+            }
+
             return true;
         }
         catch (Exception ex)

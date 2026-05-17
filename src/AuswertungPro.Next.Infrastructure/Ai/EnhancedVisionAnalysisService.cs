@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.Diagnostics;
 using AuswertungPro.Next.Application.Ai.Pipeline;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai;
@@ -295,8 +296,8 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
     // axial/nahaufnahme/schwenk/schacht-Erkennung) verwendet — fuer
     // Batch-/Video-Pipelines. Codier-Modus bleibt auf der kuerzeren Variante.
     private readonly bool _useFullDamagePrompt;
-    // Retry-Throttle: max 2 gleichzeitige Retries (kein VRAM-Risiko mehr, nur CPU/GPU-Contention)
-    private readonly SemaphoreSlim _retryThrottle = new(2, 2);
+    // 32B-Eskalation ist RAM-intensiv; nur ein Referenzmodell-Call gleichzeitig.
+    private readonly SemaphoreSlim _retryThrottle = new(1, 1);
     private int _retryCount;
     // Telemetrie: Retry-Gruende einzeln zaehlen fuer datenbasierte Schwellen-Justierung
     private int _retryAllCodesNull;
@@ -454,6 +455,42 @@ BBFC (Infiltration fliesst) vs BCD (Rohranfang mit Wasser):
         else
         {
             LastFilterLog = null;
+        }
+
+        // 2026-05-11 Diagnostik: qwen.mapped — Anzahl Findings nach View-Type-Soft-
+        // Filter und die mapped Labels. qwen.suppressed — wenn der Filter wirklich
+        // etwas weggenommen hat, mit standardisiertem Grund.
+        var metadata = new Dictionary<string, string>
+        {
+            ["raw_findings"] = rawFindingsCount.ToString(),
+            ["mapped_findings"] = filteredCount.ToString(),
+            ["view_type"] = result.ViewType ?? "",
+            ["image_quality"] = dto.ImageQuality ?? "",
+            ["is_empty_frame"] = dto.IsEmptyFrame.ToString().ToLowerInvariant()
+        };
+
+        AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+        {
+            Stage = AiDiagnosticStage.QwenMapped,
+            Source = nameof(EnhancedVisionAnalysisService) + "." + nameof(AnalyzeAsync),
+            Model = _model,
+            Summary = $"{filteredCount}/{rawFindingsCount} Findings nach Mapping " +
+                      $"(view_type={result.ViewType ?? "?"}, quality={dto.ImageQuality ?? "?"})",
+            Metadata = metadata
+        });
+
+        if (filteredCount < rawFindingsCount)
+        {
+            AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+            {
+                Stage = AiDiagnosticStage.QwenSuppressed,
+                Source = nameof(EnhancedVisionAnalysisService) + "." + nameof(AnalyzeAsync),
+                Model = _model,
+                Summary = $"{rawFindingsCount - filteredCount} Findings unterdrueckt " +
+                          $"(view_type={result.ViewType ?? "?"})",
+                DroppedReason = AiDiagnosticDropReason.ViewTypeSuppressed,
+                Metadata = metadata
+            });
         }
 
         return result;
@@ -721,7 +758,13 @@ Du analysierst einen Frame aus einem Kanalinspektion-Video (TV-Inspektion Abwass
 
 AUFGABEN (in dieser Reihenfolge!):
 1. Bestimme den AUFNAHMETYP (view_type): axial, nahaufnahme, schwenk oder schacht.
-   Bei nahaufnahme oder schwenk: findings=[], is_empty_frame=true (NICHT codieren!).
+   axial = Blick entlang der Rohrachse, Rohrverlauf/Oeffnung sichtbar.
+   nahaufnahme = Rohrwand/Objekt klebt direkt vor der Kamera, kein Rohrverlauf erkennbar.
+   schwenk = Kamera seitlich/unscharf bewegt, keine stabile Axialsicht.
+   schacht = Schacht/Start- oder Endbereich sichtbar.
+   WICHTIG: Ein zentral sichtbares Rohr, Anschluss, Bogen, Rohrende oder Wasserspiegel ist NICHT automatisch nahaufnahme.
+   Bei nahaufnahme oder schwenk: view_type korrekt setzen, aber klar sichtbare VSA-Befunde trotzdem melden.
+   is_empty_frame=true nur setzen, wenn wirklich kein codierbarer Befund/Steuercode sichtbar ist.
 2. Lies den METERSTAND aus dem OSD (On-Screen Display) – typisch oben oder unten im Bild (z.B. "18.40 m").
 3. Erkenne das ROHRMATERIAL und den DURCHMESSER falls sichtbar.
 4. Erkenne ALLE sichtbaren Schäden/Anomalien mit Schweregrad 1-5 (1=kaum, 5=sehr schwer).
@@ -747,7 +790,7 @@ KRITISCH — PFLICHT-MELDUNGEN (IMMER melden, severity=1):
 - Seitliche Oeffnung in Rohrwand → label="BCA" (Anschluss)
 Diese sind KEINE Schaeden, muessen aber IMMER als Finding gemeldet werden!
 Nur wenn WIRKLICH nichts sichtbar ist: findings=[], is_empty_frame=true.
-WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findings verworfen.
+WICHTIG: Setze view_type konservativ. Falsches nahaufnahme/schwenk unterdrueckt echte Befunde im Nachlauf.
 """;
     }
 
@@ -817,16 +860,34 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
         // Audit-Trail: Unterdrueckte Findings werden in SuppressedFindings gespeichert
         var suppressedFindings = new List<EnhancedFinding>();
 
+        static bool IsMandatoryBcFinding(EnhancedFinding finding)
+        {
+            var code = finding.VsaCodeHint?.Trim();
+            return !string.IsNullOrEmpty(code)
+                   && (code.StartsWith("BCD", StringComparison.OrdinalIgnoreCase)
+                       || code.StartsWith("BCE", StringComparison.OrdinalIgnoreCase)
+                       || code.StartsWith("BCC", StringComparison.OrdinalIgnoreCase)
+                       || code.StartsWith("BCA", StringComparison.OrdinalIgnoreCase));
+        }
+
         if (viewType is "nahaufnahme" or "schwenk")
         {
             // Soft-Filter: Severity hart auf 1 (= optisch/Beobachtung) abstufen
             // und Audit-Notes ergaenzen. Findings bleiben in der Liste, koennen aber
             // QualityGate nicht mehr triggern.
-            suppressedFindings.AddRange(findings);
-            findings = findings.Select(f => f with
+            // BC-Codes sind VSA-KEK-Pflichtmeldungen mit Severity 1 und duerfen
+            // nie wegen view_type=nahaufnahme/schwenk gefiltert werden.
+            findings = findings.Select(f =>
             {
-                Severity = 1,
-                Notes = $"[Soft-Suppress: view_type={viewType} -> Severity 1] {f.Notes ?? ""}"
+                if (IsMandatoryBcFinding(f))
+                    return f;
+
+                suppressedFindings.Add(f);
+                return f with
+                {
+                    Severity = 1,
+                    Notes = $"[Soft-Suppress: view_type={viewType} -> Severity 1] {f.Notes ?? ""}"
+                };
             }).ToList();
         }
 
@@ -851,11 +912,43 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
             var suppressedCodes = string.Join(", ", suppressedFindings.Select(f => f.VsaCodeHint ?? f.Label));
             LastSuppressedLog = $"[Suppressed] {suppressedFindings.Count} Findings unterdrueckt (view_type={viewType}): {suppressedCodes}";
             System.Diagnostics.Debug.WriteLine(LastSuppressedLog);
+            AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+            {
+                Stage = AiDiagnosticStage.QwenSuppressed,
+                Source = $"{nameof(EnhancedVisionAnalysisService)}.{nameof(MapToAnalysis)}",
+                Summary = LastSuppressedLog,
+                DroppedReason = AiDiagnosticDropReason.ViewTypeSuppressed,
+                RawOutput = FormatFindingsForDiagnostics(suppressedFindings),
+                Metadata = new Dictionary<string, string>
+                {
+                    ["view_type"] = viewType,
+                    ["image_quality"] = dto.ImageQuality ?? "",
+                    ["suppressed_count"] = suppressedFindings.Count.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["findings_after_soft_suppress"] = findings.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                }
+            });
         }
         else
         {
             LastSuppressedLog = null;
         }
+
+        AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+        {
+            Stage = AiDiagnosticStage.QwenMapped,
+            Source = $"{nameof(EnhancedVisionAnalysisService)}.{nameof(MapToAnalysis)}",
+            Summary = $"Qwen mapped: view_type={viewType}, findings={findings.Count}, empty={dto.IsEmptyFrame}",
+            RawOutput = FormatFindingsForDiagnostics(findings),
+            Metadata = new Dictionary<string, string>
+            {
+                ["view_type"] = viewType,
+                ["image_quality"] = dto.ImageQuality ?? "",
+                ["is_empty_frame"] = dto.IsEmptyFrame.ToString(),
+                ["meter"] = dto.Meter?.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) ?? "",
+                ["pipe_material"] = dto.PipeMaterial ?? "",
+                ["findings"] = findings.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            }
+        });
 
         return new EnhancedFrameAnalysis(
             Meter: dto.Meter,
@@ -867,6 +960,10 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
             Error: null,
             ViewType: viewType);
     }
+
+    private static string FormatFindingsForDiagnostics(IEnumerable<EnhancedFinding> findings)
+        => string.Join(Environment.NewLine, findings.Select(f =>
+            $"{f.VsaCodeHint ?? "-"} label={f.Label} severity={f.Severity} clock={f.PositionClock ?? "-"} notes={f.Notes ?? ""}"));
 
     /// <summary>
     /// Enhanced analysis that takes DINO/SAM context to improve VSA code assignment.
@@ -1052,6 +1149,11 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
         // Erweiterter Prompt basierend auf dem Fehlergrund
         var enhancedHint = reason switch
         {
+            EscalationReason.NoFindings =>
+                "\nWICHTIG: Der erste Versuch hat keine Befunde geliefert. " +
+                "Pruefe den Frame NOCHMAL sorgfaeltig: erkennbare Rohrverbindungen, Risse, Bruchstellen, " +
+                "Ablagerungen, Infiltration, Anschluesse, Bogen sowie Rohranfang/Rohrende. " +
+                "Wenn ein VSA-Befund oder Steuercode sichtbar ist, MUSS findings[] mindestens einen Eintrag enthalten.",
             EscalationReason.AllCodesNull =>
                 "\nWICHTIG: Der erste Versuch konnte keinen VSA-Code zuordnen. " +
                 "Pruefe NOCHMAL sorgfaeltig: Rohranfang (BCD), Rohrende (BCE), Anschluss (BCA), " +
@@ -1097,7 +1199,10 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
     /// </summary>
     private static EscalationReason GetEscalationReason(EnhancedFrameAnalysis fast)
     {
-        if (fast.IsEmptyFrame) return EscalationReason.None;
+        // Ein Frame mit gelesenem OSD-Meter ist nicht wirklich "leer".
+        // Qwen markiert sichtbare Rohrframes bei verpassten Befunden manchmal
+        // trotzdem als is_empty_frame=true; dann muss der Einzelbild-Retry greifen.
+        if (fast.IsEmptyFrame && fast.Meter is null) return EscalationReason.None;
 
         // Kein leerer Frame, aber keine Findings: fuer BBox-/Einzelframe-Analyse kritisch.
         if (!fast.HasFindings) return EscalationReason.NoFindings;
@@ -1201,11 +1306,19 @@ WICHTIG: Setze view_type IMMER korrekt — bei Nahaufnahme/Schwenk werden Findin
 
         if (ctx.SamMasks.Count > 0)
         {
+            var ringScanOnly = ctx.DinoDetections.Count == 0
+                && ctx.SamMasks.All(m => (m.Label ?? string.Empty)
+                    .StartsWith("ring_segment_", StringComparison.OrdinalIgnoreCase));
             var quantified = MaskQuantificationService.QuantifyAll(
                 new SamResponse(ctx.SamMasks, ctx.ImageWidth, ctx.ImageHeight, 0),
                 pipeDiameterMm);
 
             sb.AppendLine("SEGMENTIERUNGSERGEBNISSE (SAM – pixelgenaue Masken):");
+            if (ringScanOnly)
+            {
+                sb.AppendLine("HINWEIS: ring_segment_* sind nur SAM-Ring-Scan-Kandidaten, keine VSA-Codes. " +
+                    "Pruefe diese Bildbereiche visuell und gib nur echte sichtbare Rohrbefunde in findings[] zurueck.");
+            }
             foreach (var q in quantified)
             {
                 sb.AppendLine($"  - {q.Label}: Höhe={q.HeightMm}mm, Breite={q.WidthMm}mm, " +

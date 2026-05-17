@@ -51,7 +51,8 @@ public sealed record PipelineProgress(
     int? ItemsDone = null,
     int? ItemsTotal = null,
     byte[]? FramePreviewPng = null,
-    IReadOnlyList<LiveFrameFinding>? LiveFindings = null);
+    IReadOnlyList<LiveFrameFinding>? LiveFindings = null,
+    double? TimestampSeconds = null);
 
 public enum PipelinePhase
 {

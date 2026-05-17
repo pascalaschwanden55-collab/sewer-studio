@@ -29,7 +29,8 @@ public sealed record VideoAnalysisProgress(
     int FramesTotal,
     string Status,
     byte[]? FramePreviewPng = null,
-    IReadOnlyList<LiveFrameFinding>? LiveFindings = null)
+    IReadOnlyList<LiveFrameFinding>? LiveFindings = null,
+    double? TimestampSeconds = null)
 {
     public double Percent => FramesTotal > 0 ? (double)FramesDone / FramesTotal * 100.0 : 0;
 }
@@ -69,7 +70,8 @@ public sealed record RawVideoDetection(
     double? BboxX1 = null,
     double? BboxY1 = null,
     double? BboxX2 = null,
-    double? BboxY2 = null
+    double? BboxY2 = null,
+    double? TimestampSeconds = null
 )
 {
     // Für UI-Bindings / Mapping

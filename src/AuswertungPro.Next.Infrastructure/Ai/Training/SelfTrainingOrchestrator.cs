@@ -560,7 +560,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             findings.Add(new EnhancedFinding(
                 Label: q.Label,
                 VsaCodeHint: VsaCodeResolver.InferCodeFromLabel(q.Label),
-                Severity: EstimateSeverity(q),
+                Severity: SeverityEstimator.Estimate(q),
                 PositionClock: VsaCodeResolver.NormalizeClock(q.ClockPosition),
                 ExtentPercent: q.ExtentPercent,
                 HeightMm: q.HeightMm,
@@ -584,16 +584,8 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         return string.IsNullOrWhiteSpace(clock) ? code : $"{code}|{clock}";
     }
 
-    private static int EstimateSeverity(MaskQuantificationService.QuantifiedMask q)
-    {
-        if (q.CrossSectionReductionPercent is > 50) return 5;
-        if (q.CrossSectionReductionPercent is > 25) return 4;
-        if (q.ExtentPercent is > 50) return 4;
-        if (q.HeightMm is > 50) return 3;
-        if (q.ExtentPercent is > 25) return 3;
-        if (q.HeightMm is > 10) return 2;
-        return 1;
-    }
+    // Audit 2026-05-13 M1-Folge: EstimateSeverity nach
+    // AuswertungPro.Next.Application.Ai.Pipeline.SeverityEstimator migriert.
 
     private static bool ShouldAttemptGuidedVerification(ComparisonResult comparison, bool isPdfPhoto)
     {

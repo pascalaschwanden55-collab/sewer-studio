@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.Diagnostics;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Retry;
@@ -42,6 +44,9 @@ public sealed class OllamaClient : IDisposable
     // verschraenkte Zeilen bekommen. STAB-H2 (Audit 2026-04-23).
     private static readonly object _diagLogLock = new();
 
+    // Default bleibt aus: Tests, CLI und Tools sollen ohne explizites Opt-in
+    // keine qwen_raw_responses.log schreiben. Die App reicht
+    // AppSettings.EnableDiagnostics ueber die Runtime-Konfiguration durch.
     public OllamaClient(Uri baseUri, HttpClient? http = null, TimeSpan? ownedTimeout = null, string keepAlive = "24h", int numCtx = 0, bool diagnosticsEnabled = false)
     {
         _ownsHttp = http is null;
@@ -456,12 +461,28 @@ public sealed class OllamaClient : IDisposable
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
 
+            // 2026-05-11 Diagnostik-Stoppuhr: misst den Roundtrip inkl. Body-Lesen
+            // damit der Recorder eine ehrliche Latenz bekommt (vor Schema-Parsing).
+            var sw = Stopwatch.StartNew();
+
             using var resp = await _http.SendAsync(req, token).ConfigureAwait(false);
             var body = await resp.Content.ReadAsStringAsync(token).ConfigureAwait(false);
 
             if (!resp.IsSuccessStatusCode)
+            {
+                sw.Stop();
+                AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+                {
+                    Stage = AiDiagnosticStage.QwenError,
+                    Source = nameof(OllamaClient) + "." + nameof(ChatStructuredWithOptionsAsync),
+                    Model = model,
+                    Summary = $"HTTP {(int)resp.StatusCode}",
+                    RawOutput = body,
+                    LatencyMs = sw.Elapsed.TotalMilliseconds
+                });
                 throw new HttpRequestException(
                     $"Ollama /api/chat {(int)resp.StatusCode}: {Truncate(body, 300)}");
+            }
 
         using var doc = JsonDocument.Parse(body);
 
@@ -470,14 +491,49 @@ public sealed class OllamaClient : IDisposable
             !msg.TryGetProperty("content", out var contentEl) ||
             contentEl.ValueKind != JsonValueKind.String)
         {
+            sw.Stop();
+            AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+            {
+                Stage = AiDiagnosticStage.QwenError,
+                Source = nameof(OllamaClient) + "." + nameof(ChatStructuredWithOptionsAsync),
+                Model = model,
+                Summary = "Antwort ohne message.content",
+                RawOutput = body,
+                LatencyMs = sw.Elapsed.TotalMilliseconds
+            });
             throw new InvalidOperationException("Ollama /api/chat Antwort ohne message.content");
         }
 
         var content = contentEl.GetString() ?? "";
         if (string.IsNullOrWhiteSpace(content))
+        {
+            sw.Stop();
+            AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+            {
+                Stage = AiDiagnosticStage.QwenError,
+                Source = nameof(OllamaClient) + "." + nameof(ChatStructuredWithOptionsAsync),
+                Model = model,
+                Summary = "Antwort: content leer",
+                LatencyMs = sw.Elapsed.TotalMilliseconds
+            });
             throw new InvalidOperationException("Ollama /api/chat Antwort: content leer");
+        }
 
-        // Debug-Log: Qwen-Rohantwort speichern (nur bei Diagnostics)
+        sw.Stop();
+
+        // Diagnostik: Qwen-Rohantwort in den Recorder einspeisen (immer, unabhaengig
+        // vom File-Log unten). UI/Diagnose-Panel kann das ohne Datei-IO live anzeigen.
+        AiDiagnosticsRecorderProvider.Current.Record(new AiDiagnosticEvent
+        {
+            Stage = AiDiagnosticStage.QwenRaw,
+            Source = nameof(OllamaClient) + "." + nameof(ChatStructuredWithOptionsAsync),
+            Model = model,
+            Summary = $"content {content.Length} chars",
+            RawOutput = content,
+            LatencyMs = sw.Elapsed.TotalMilliseconds
+        });
+
+        // Debug-Log: Qwen-Rohantwort in Datei speichern (nur bei Diagnostics aktiv)
         if (System.Diagnostics.Debugger.IsAttached || _diagnosticsEnabled)
         {
             try

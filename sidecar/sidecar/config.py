@@ -62,6 +62,7 @@ class SidecarSettings(BaseSettings):
     dino_box_threshold: float = 0.25   # Grounding DINO box threshold (primary)
     dino_text_threshold: float = 0.20  # Grounding DINO text threshold (primary)
     dino_labels: str = (
+        # === Schaeden (BA/BB) ===
         "crack . fracture . break . deformation . "
         "corrosion . surface damage . erosion . "
         "root intrusion . roots . "
@@ -72,7 +73,21 @@ class SidecarSettings(BaseSettings):
         "hole . collapse . missing wall . "
         "connection defect . pipe defect . "
         "intruding connection . protruding seal . "
-        "lateral connection . pipe junction"
+        "lateral connection . pipe junction . "
+        # === Strukturen (BC) — 2026-05-12 nachgepflegt ===
+        # Ohne diese Begriffe konnte DINO Boegen/Anschluesse/Rohrenden nie finden;
+        # die VsaCodeResolver-Keywords sind bereits vorhanden, nur die Detektion fehlte.
+        #
+        # TODO (Audit 2026-05-13 L5): "manhole" / "shaft" empirisch gegen reale
+        # Frames pruefen — DINO-Text-Tokens koennen auf Nicht-Englisch-Frames
+        # falsch matchen und BCD/BCE-False-Positives erzeugen. Vor Erweiterung
+        # einen Mini-Benchmark gegen das Eval-Set fahren (eval_set-warden); ggf.
+        # spezifischere Wendungen ("vertical shaft", "manhole opening visible")
+        # verwenden und die generischen Tokens entfernen. Keine blinden Aenderungen.
+        "bend . curve . elbow . pipe bend . change of direction . "
+        "pipe inlet . pipe outlet . pipe start . pipe end . "
+        "manhole . shaft . manhole opening . "
+        "lateral inlet . branch connection . saddle connection"
     )
 
     # SAM 2 (ersetzt SAM 3)

@@ -431,7 +431,10 @@ public sealed class FullProtocolGenerationService : IDisposable
             MeterStart = det.MeterStart,
             MeterEnd = det.MeterEnd > det.MeterStart ? det.MeterEnd : det.MeterStart,
             IsStreckenschaden = det.MeterEnd - det.MeterStart > 0.05,
-            Source = ProtocolEntrySource.Manual,
+            Zeit = det.TimestampSeconds.HasValue
+                ? TimeSpan.FromSeconds(Math.Max(0, det.TimestampSeconds.Value))
+                : null,
+            Source = ProtocolEntrySource.Ai,
             Ai = new ProtocolEntryAiMeta
             {
                 SuggestedCode = mapped.SuggestedCode,

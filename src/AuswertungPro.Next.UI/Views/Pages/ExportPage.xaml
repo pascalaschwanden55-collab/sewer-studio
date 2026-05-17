@@ -40,6 +40,22 @@
                         <TextBlock Text="Export Schächte.xlsx" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
+                <Button Command="{Binding ExportNpkAusmassCommand}"
+                        Style="{StaticResource ToolbarButtonAccent}" Margin="10,0,4,0"
+                        ToolTip="Gespeicherte Haltungskosten als NPK-135-Ausmass mit Preisen exportieren">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE9D2;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBody}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="NPK-Ausmass mit Kosten" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding ExportNpkTenderCommand}"
+                        Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
+                        ToolTip="Gespeicherte Haltungskosten als Ausschreibungs-Ausmass ohne Preise exportieren">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource TypeBody}" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="Ausschreibung ohne Preise" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
             </StackPanel>
         </Border>
 

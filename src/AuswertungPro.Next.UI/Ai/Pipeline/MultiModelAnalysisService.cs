@@ -16,6 +16,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using AuswertungPro.Next.Application.Ai.Training.Models;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.UI.Common;
 
 namespace AuswertungPro.Next.UI.Ai.Pipeline;
 
@@ -135,6 +136,8 @@ public sealed partial class MultiModelAnalysisService
         // Peak-Frame-Cache: Speichert die Frame-Bytes des aktuell hoechsten Confidence-Frames
         // pro aktiver Detektion. Key = "classId_meterStart", Value = PNG-Bytes.
         var peakFrameCache = new Dictionary<string, byte[]>();
+        var pipeAxisHistory = new Queue<(PipeAxisResult Axis, double Position)>();
+        var pipeAxisBendDetector = new PipeAxisBendDetector();
 
         // Pipe diameter: from config override or default 300mm
         int pipeDiameterMm = _config.PipeDiameterMmOverride ?? 300;
@@ -177,7 +180,7 @@ public sealed partial class MultiModelAnalysisService
             var extractionMs = frameSw.ElapsedMilliseconds;
             var frameBytes = frame.PngBytes;
 
-            if (frameBytes is null or { Length: 0 })
+            if (!FrameValidation.IsFrameValid(frameBytes))
             {
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
                 AdvanceAll(active, detections, DedupWindowFrames);
@@ -229,6 +232,13 @@ public sealed partial class MultiModelAnalysisService
             // Jeden 5. Frame immer analysieren (Balance: Recall vs. Geschwindigkeit)
             bool isPeriodicSweep = isAfterOsd && (frameIndex % 5 == 0);
             bool telemetryBypass = isBcdZone || isBceZone || isPeriodicSweep;
+            var geometricFindings = await AnalyzePipeAxisGeometryAsync(
+                frameBase64,
+                estimatedMeter,
+                pipeDiameterMm,
+                pipeAxisHistory,
+                pipeAxisBendDetector,
+                frameCts.Token).ConfigureAwait(false);
 
             // ── Step 1: YOLO Pre-Screening ──
             var phaseSw = Stopwatch.StartNew();
@@ -259,7 +269,7 @@ public sealed partial class MultiModelAnalysisService
                 if (UseClsPrefilter) try
                 {
                     var clsResult = await _client.ClassifyYoloAsync(
-                        new YoloClassifyRequest(frameBase64, 3), ct).ConfigureAwait(false);
+                        new YoloClassifyRequest(frameBase64, 3), frameCts.Token).ConfigureAwait(false);
                     var topPred = clsResult.Predictions.Count > 0 ? clsResult.Predictions[0] : null;
 
                     if (topPred?.ClassName is "OTHER" or "other" or "NORMAL" or "normal"
@@ -273,6 +283,9 @@ public sealed partial class MultiModelAnalysisService
                             $"Frame {frameIndex}/{totalFrames} – cls: {topPred.ClassName} ({topPred.Confidence:P0}) → skip"));
                         telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0,
                             frameSw.ElapsedMilliseconds, Skipped: true));
+                        if (TryEmitGeometryOnlyFrame(geometricFindings, active, detections, estimatedMeter, t,
+                            frameIndex, totalFrames, frameBytes, progress, "YOLO-cls skip"))
+                            continue;
                         AdvanceAll(active, detections, DedupWindowFrames);
                         continue;
                     }
@@ -297,7 +310,7 @@ public sealed partial class MultiModelAnalysisService
                     // dann in C# pro Klasse nachfiltern
                     double minConf = _minClassConfidence;
                     yoloResult = await _client.DetectYoloAsync(
-                        new YoloRequest(frameBase64, minConf), ct).ConfigureAwait(false);
+                        new YoloRequest(frameBase64, minConf), frameCts.Token).ConfigureAwait(false);
 
                     // Klassenspezifische Filterung: Jede Klasse hat ihren eigenen Schwellenwert
                     if (yoloResult.Detections.Count > 0 && _config.YoloClassConfidence.Count > 0)
@@ -366,11 +379,16 @@ public sealed partial class MultiModelAnalysisService
                     progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                         $"Frame {frameIndex} – YOLO Fehler: {ex.Message}"));
                     telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, phaseSw.ElapsedMilliseconds, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                    if (TryEmitGeometryOnlyFrame(geometricFindings, active, detections, estimatedMeter, t,
+                        frameIndex, totalFrames, frameBytes, progress, "YOLO Fehler"))
+                        continue;
                     AdvanceAll(active, detections, DedupWindowFrames);
                     continue;
                 }
                 yoloMs = phaseSw.ElapsedMilliseconds;
             }
+
+            RecordYoloRawDiagnostics(frameIndex, t, estimatedMeter, yoloResult, yoloMs, nameof(MultiModelAnalysisService));
 
             // ── DetectionAggregator: YOLO-Detektionen einspeisen ──
             // Jede YOLO-Detektion wird als FrameDetection an den Aggregator uebergeben.
@@ -428,6 +446,9 @@ public sealed partial class MultiModelAnalysisService
                     progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                         $"Frame {frameIndex}/{totalFrames} – übersprungen (YOLO: irrelevant, {skippedFrames} gesamt)"));
                     telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                    if (TryEmitGeometryOnlyFrame(geometricFindings, active, detections, estimatedMeter, t,
+                        frameIndex, totalFrames, frameBytes, progress, "YOLO irrelevant"))
+                        continue;
                     AdvanceAll(active, detections, DedupWindowFrames);
                     continue;
                 }
@@ -455,7 +476,7 @@ public sealed partial class MultiModelAnalysisService
                         frameBase64,
                         null, // use default labels from sidecar config
                         _config.DinoBoxThreshold,
-                        _config.DinoTextThreshold), ct).ConfigureAwait(false);
+                        _config.DinoTextThreshold), frameCts.Token).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -463,10 +484,14 @@ public sealed partial class MultiModelAnalysisService
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex} – DINO Fehler: {ex.Message}"));
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, phaseSw.ElapsedMilliseconds, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                if (TryEmitGeometryOnlyFrame(geometricFindings, active, detections, estimatedMeter, t,
+                    frameIndex, totalFrames, frameBytes, progress, "DINO Fehler"))
+                    continue;
                 AdvanceAll(active, detections, DedupWindowFrames);
                 continue;
             }
             var dinoMs = phaseSw.ElapsedMilliseconds;
+            RecordDinoRawDiagnostics(frameIndex, t, estimatedMeter, dinoResult, dinoResult.Detections, dinoMs, nameof(MultiModelAnalysisService));
 
             // YOLO-Fallback: Wenn DINO nichts findet, YOLO-Detektionen als Ersatz.
             // WICHTIG: IsFallbackFromYolo=true markiert diese Detektionen als abgeleitete Evidenz,
@@ -484,12 +509,7 @@ public sealed partial class MultiModelAnalysisService
                     frameIndex, yoloDinos.Count);
             }
 
-            if (dinoResult.Detections.Count == 0)
-            {
-                telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, 0, 0, frameSw.ElapsedMilliseconds, Skipped: false));
-                AdvanceAll(active, detections, DedupWindowFrames);
-                continue;
-            }
+            var hasDetectorBoxes = dinoResult.Detections.Count > 0;
 
             // ── Tiefenfilter: Punkt vs. Streckenschaden unterscheiden ──
             // VSA-Konvention: Metrierung bei Oberkante des Ereignisses im Bild.
@@ -499,7 +519,7 @@ public sealed partial class MultiModelAnalysisService
             //   → Tief schauen erlaubt — Ausdehnung des Schadens muss erfasst werden.
             // Punktereignis (BC=Anschluss/Bogen, BD ohne BDD, AE=Aenderungen):
             //   → Muss auf Kamerahoehe sein — obere 30% des Bildes filtern.
-            var estimatedImageH = dinoResult.Detections.Max(d => d.Y2);
+            var estimatedImageH = hasDetectorBoxes ? dinoResult.Detections.Max(d => d.Y2) : 720;
             if (estimatedImageH < 100) estimatedImageH = 720; // Fallback
             const double MinYCenterRatio = 0.30; // Obere 30% des Bildes = zu weit weg
 
@@ -526,13 +546,7 @@ public sealed partial class MultiModelAnalysisService
                 _logger.LogDebug("Frame {Frame}: {Removed} DINO-Boxen zu tief im Rohr gefiltert (Y < {Thresh:P0})",
                     frameIndex, dinoResult.Detections.Count - filteredDino.Count, MinYCenterRatio);
             }
-
-            if (filteredDino.Count == 0)
-            {
-                telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, 0, 0, frameSw.ElapsedMilliseconds, Skipped: false));
-                AdvanceAll(active, detections, DedupWindowFrames);
-                continue;
-            }
+            RecordDinoRawDiagnostics(frameIndex, t, estimatedMeter, dinoResult, filteredDino, dinoMs, $"{nameof(MultiModelAnalysisService)}.filtered");
 
             // ── Step 3: SAM Segmentation ──
             progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
@@ -543,12 +557,36 @@ public sealed partial class MultiModelAnalysisService
                 .Select(d => new SamBoundingBox(d.X1, d.Y1, d.X2, d.Y2, d.Label, d.Confidence))
                 .ToList();
 
+            var (imgWidth, imgHeight) = ReadPngDimensions(frameBytes);
+            var latestAxis = pipeAxisHistory.Count > 0 ? pipeAxisHistory.Last().Axis : null;
+            var ringScan = samBoxes.Count == 0
+                ? PipeAxisRingScanFactory.Create(latestAxis, imgWidth, imgHeight)
+                : null;
+            var usedRingScan = ringScan is not null;
+
+            if (samBoxes.Count == 0 && ringScan is null)
+            {
+                telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, 0, 0, frameSw.ElapsedMilliseconds, Skipped: false));
+                if (TryEmitGeometryOnlyFrame(geometricFindings, active, detections, estimatedMeter, t,
+                    frameIndex, totalFrames, frameBytes, progress, hasDetectorBoxes ? "DINO Tiefenfilter" : "DINO leer"))
+                    continue;
+                AdvanceAll(active, detections, DedupWindowFrames);
+                continue;
+            }
+
+            if (usedRingScan)
+            {
+                progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                    $"Frame {frameIndex}/{totalFrames} - SAM Ring-Scan...",
+                    FramePreviewPng: frameBytes));
+            }
+
             phaseSw.Restart();
             SamResponse samResult;
             try
             {
                 samResult = await _client.SegmentSamAsync(
-                    new SamRequest(frameBase64, samBoxes, PipeDiameterMm: pipeDiameterMm), ct).ConfigureAwait(false);
+                    new SamRequest(frameBase64, samBoxes, PipeDiameterMm: pipeDiameterMm, RingScan: ringScan), frameCts.Token).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -556,10 +594,14 @@ public sealed partial class MultiModelAnalysisService
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex} – SAM Fehler: {ex.Message}"));
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, phaseSw.ElapsedMilliseconds, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                if (TryEmitGeometryOnlyFrame(geometricFindings, active, detections, estimatedMeter, t,
+                    frameIndex, totalFrames, frameBytes, progress, "SAM Fehler"))
+                    continue;
                 AdvanceAll(active, detections, DedupWindowFrames);
                 continue;
             }
             var samMs = phaseSw.ElapsedMilliseconds;
+            RecordSamRawDiagnostics(frameIndex, t, estimatedMeter, samResult, samBoxes.Count, usedRingScan, samMs, nameof(MultiModelAnalysisService));
 
             // ── Step 4: Quantification ──
             var quantified = MaskQuantificationService.QuantifyAll(samResult, pipeDiameterMm, pipeCalibration);
@@ -579,7 +621,8 @@ public sealed partial class MultiModelAnalysisService
             }
 
             // Build findings from quantified masks
-            var findings = new List<EnhancedFinding>(quantified.Count);
+            var findings = new List<EnhancedFinding>(geometricFindings.Count + quantified.Count);
+            findings.AddRange(geometricFindings);
             for (var i = 0; i < quantified.Count; i++)
             {
                 var q = quantified[i];
@@ -631,7 +674,7 @@ public sealed partial class MultiModelAnalysisService
             // Wenn YOLO Findings hat → Qwen NICHT aufrufen (spart 3s/Frame)
             long qwenMs = 0;
             bool yoloFoundSomething = findings.Count > 0;
-            bool needsQwen = !yoloFoundSomething || telemetryBypass;
+            bool needsQwen = !yoloFoundSomething || telemetryBypass || usedRingScan;
             if (_qwenVision is not null && needsQwen)
             {
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
@@ -654,7 +697,7 @@ public sealed partial class MultiModelAnalysisService
                         DinoTimeMs: dinoResult.InferenceTimeMs,
                         SamTimeMs: samResult.InferenceTimeMs);
 
-                    using var qwenCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    using var qwenCts = CancellationTokenSource.CreateLinkedTokenSource(frameCts.Token);
                     qwenCts.CancelAfter(QwenFrameTimeout);
                     // Vorherigen Befund als Kontext uebergeben (nur wenn < 1m entfernt)
                     (string Code, string Description, double Meter, double Confidence)? prevCtx;
@@ -672,7 +715,7 @@ public sealed partial class MultiModelAnalysisService
                         frameIndex, QwenFrameTimeout.TotalSeconds);
                     try
                     {
-                        using var fallbackCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                        using var fallbackCts = CancellationTokenSource.CreateLinkedTokenSource(frameCts.Token);
                         fallbackCts.CancelAfter(TimeSpan.FromSeconds(20));
                         qwenResult = await _qwenVision.AnalyzeWithFastModelAsync(
                             frameBase64,
@@ -756,7 +799,8 @@ public sealed partial class MultiModelAnalysisService
                     // ImageQuality-Gate (recall-optimiert):
                     // Bei schlechter Bildqualitaet nur dann verwerfen, wenn auch DINO schwach ist.
                     // So bleiben plausible SAM/DINO-Treffer erhalten.
-                    if (ShouldSuppressByImageQuality(qwenResult.ImageQuality, maxDinoConf))
+                    var qwenSuppressedByImageQuality = ShouldSuppressByImageQuality(qwenResult.ImageQuality, maxDinoConf);
+                    if (qwenSuppressedByImageQuality)
                     {
                         _logger.LogDebug(
                             "Frame {Frame}: ImageQuality=schlecht + DINO={Dino:F2} -> {Count} Findings verworfen",
@@ -779,6 +823,10 @@ public sealed partial class MultiModelAnalysisService
                                 var idx = findings.IndexOf(match);
                                 // Replace with enriched finding (keep SAM quantification, add Qwen VSA code)
                                 findings[idx] = match with { VsaCodeHint = qf.VsaCodeHint };
+                            }
+                            else if (!qwenSuppressedByImageQuality && !string.IsNullOrWhiteSpace(qf.VsaCodeHint))
+                            {
+                                findings.Add(qf);
                             }
                         }
 
@@ -821,13 +869,12 @@ public sealed partial class MultiModelAnalysisService
                 DiameterReductionMm: f.DiameterReductionMm
             )).ToList();
 
-            // ── BCD-Regel: Erster Befund bei 0.00m ist immer Rohranfang ──
-            // In der BCD-Zone (Meter < 1.5, Anfang Video) sieht die Kamera den
-            // Schacht: Wasser, Schmutz, Rohrwand — keine echten Schaeden.
-            // Alle Findings werden zu einem BCD konsolidiert.
-            if (isBcdZone && findings.Count > 0)
+            // ── BCD-Heuristik: nach KI, nicht davor ──
+            // Vorher: alle KI-Findings wurden in der BCD-Zone (<1.5m) zwangsweise durch
+            // BCD ersetzt. Echte Befunde (z.B. BCC-Bogen bei 0.71m) gingen verloren.
+            // Jetzt: KI hat ersten Zugriff. Heuristik nur als FALLBACK wenn KI nichts liefert.
+            if (isBcdZone && findings.Count == 0)
             {
-                findings.Clear();
                 findings.Add(new EnhancedFinding(
                     Label: "pipe_start",
                     VsaCodeHint: "BCD",
@@ -838,17 +885,18 @@ public sealed partial class MultiModelAnalysisService
                     IntrusionPercent: null,
                     CrossSectionReductionPercent: null,
                     DiameterReductionMm: null,
-                    Notes: "BCD-Regel: Rohranfang bei 0.00m"));
+                    Notes: "BCD-Fallback: keine KI-Erkennung in Anfangszone"));
             }
 
             // Update active findings (dedup)
-            UpdateActive(active, findings, meter, detections, frameEvidence);
+            UpdateActive(active, findings, meter, t, detections, frameEvidence);
 
             progress?.Report(new VideoAnalysisProgress(
                 frameIndex, totalFrames,
                 $"Frame {frameIndex}/{totalFrames} @ {meter:0.0}m – {findings.Count} Befunde (Multi-Model)",
                 FramePreviewPng: frameBytes,
-                LiveFindings: liveFindings));
+                LiveFindings: liveFindings,
+                TimestampSeconds: t));
 
             } // end try (Per-Frame-Timeout)
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
@@ -983,7 +1031,8 @@ public sealed partial class MultiModelAnalysisService
                 BboxX1: evt.PeakBbox?[0],
                 BboxY1: evt.PeakBbox?[1],
                 BboxX2: evt.PeakBbox?[2],
-                BboxY2: evt.PeakBbox?[3]
+                BboxY2: evt.PeakBbox?[3],
+                TimestampSeconds: evt.PeakTimeSeconds
             ));
         }
 
@@ -1082,6 +1131,8 @@ public sealed partial class MultiModelAnalysisService
         // Aggregierte Schadensereignisse (NVDEC-Pfad)
         var aggregatorNvdec = CreateAggregator();
         var aggregatedEventsNvdec = new List<DetectionEvent>();
+        var pipeAxisHistoryNvdec = new Queue<(PipeAxisResult Axis, double Position)>();
+        var pipeAxisBendDetectorNvdec = new PipeAxisBendDetector();
 
         int pipeDiameterMm = _config.PipeDiameterMmOverride ?? 300;
 
@@ -1198,6 +1249,7 @@ public sealed partial class MultiModelAnalysisService
             bool isAfterOsd = t > DinoFallbackStartSeconds;
             bool isBcdZone = isAfterOsd && estimatedMeter < 1.5 && frameIndex <= 10;
             bool isBceZone = duration > 10 && t > (duration - FrameStepSeconds * 2);
+            RecordYoloRawDiagnostics(frameIndex, t, estimatedMeter, yoloResult, yoloMs, $"{nameof(MultiModelAnalysisService)}.nvdec");
 
             // ── DetectionAggregator: YOLO-Detektionen einspeisen (NVDEC-Pfad) ──
             if (yoloResult.Detections.Count > 0)
@@ -1238,6 +1290,22 @@ public sealed partial class MultiModelAnalysisService
                 frameBytes = Convert.FromBase64String(frameBase64);
             }
             catch { /* preview optional */ }
+
+            if (!FrameValidation.IsFrameValid(frameBytes))
+            {
+                _logger.LogDebug("Frame {Frame}: unbrauchbares/gleichfoermiges Bild (NVDEC) uebersprungen", frameIndex);
+                telemetry.RecordFrame(new FrameTiming(frameIndex, t, 0, yoloMs, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                AdvanceAll(active, detections, DedupWindowFrames);
+                continue;
+            }
+
+            var geometricFindingsNvdec = await AnalyzePipeAxisGeometryAsync(
+                frameBase64,
+                estimatedMeter,
+                pipeDiameterMm,
+                pipeAxisHistoryNvdec,
+                pipeAxisBendDetectorNvdec,
+                frameCtsNvdec.Token).ConfigureAwait(false);
 
             // K3: Auto-Kalibrierung beim ersten brauchbaren Frame (einmalig pro Video).
             if (!calibrationAttemptedNvdec && frameBytes != null && frameBytes.Length > 1000)
@@ -1282,24 +1350,23 @@ public sealed partial class MultiModelAnalysisService
                         frameBase64,
                         null,
                         _config.DinoBoxThreshold,
-                        _config.DinoTextThreshold), ct).ConfigureAwait(false);
+                        _config.DinoTextThreshold), frameCtsNvdec.Token).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Frame {Frame}: DINO detection failed (NVDEC-Pfad)", frameIndex);
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, 0, yoloMs, phaseSw.ElapsedMilliseconds, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                if (TryEmitGeometryOnlyFrame(geometricFindingsNvdec, active, detections, estimatedMeter, t,
+                    frameIndex, totalFrames, frameBytes, progress, "DINO Fehler NVDEC"))
+                    continue;
                 AdvanceAll(active, detections, DedupWindowFrames);
                 continue;
             }
             var dinoMs = phaseSw.ElapsedMilliseconds;
+            RecordDinoRawDiagnostics(frameIndex, t, estimatedMeter, dinoResult, dinoResult.Detections, dinoMs, $"{nameof(MultiModelAnalysisService)}.nvdec");
 
             // NVDEC: YOLO-Batch hat keine Box-Daten im item → kein Fallback moeglich
-            if (dinoResult.Detections.Count == 0)
-            {
-                telemetry.RecordFrame(new FrameTiming(frameIndex, t, 0, yoloMs, dinoMs, 0, 0, frameSw.ElapsedMilliseconds, Skipped: false));
-                AdvanceAll(active, detections, DedupWindowFrames);
-                continue;
-            }
+            var hasDetectorBoxesNvdec = dinoResult.Detections.Count > 0;
 
             // ── Step 3: SAM Segmentation ──
             progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
@@ -1310,21 +1377,49 @@ public sealed partial class MultiModelAnalysisService
                 .Select(d => new SamBoundingBox(d.X1, d.Y1, d.X2, d.Y2, d.Label, d.Confidence))
                 .ToList();
 
+            var (imgWidthNvdec, imgHeightNvdec) = ReadPngDimensions(frameBytes);
+            var latestAxisNvdec = pipeAxisHistoryNvdec.Count > 0 ? pipeAxisHistoryNvdec.Last().Axis : null;
+            var ringScanNvdec = samBoxes.Count == 0
+                ? PipeAxisRingScanFactory.Create(latestAxisNvdec, imgWidthNvdec, imgHeightNvdec)
+                : null;
+            var usedRingScanNvdec = ringScanNvdec is not null;
+
+            if (samBoxes.Count == 0 && ringScanNvdec is null)
+            {
+                telemetry.RecordFrame(new FrameTiming(frameIndex, t, 0, yoloMs, dinoMs, 0, 0, frameSw.ElapsedMilliseconds, Skipped: false));
+                if (TryEmitGeometryOnlyFrame(geometricFindingsNvdec, active, detections, estimatedMeter, t,
+                    frameIndex, totalFrames, frameBytes, progress, hasDetectorBoxesNvdec ? "DINO Tiefenfilter NVDEC" : "DINO leer NVDEC"))
+                    continue;
+                AdvanceAll(active, detections, DedupWindowFrames);
+                continue;
+            }
+
+            if (usedRingScanNvdec)
+            {
+                progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                    $"Frame {frameIndex}/{totalFrames} - SAM Ring-Scan (NVDEC)...",
+                    FramePreviewPng: frameBytes));
+            }
+
             phaseSw.Restart();
             SamResponse samResult;
             try
             {
                 samResult = await _client.SegmentSamAsync(
-                    new SamRequest(frameBase64, samBoxes, PipeDiameterMm: pipeDiameterMm), ct).ConfigureAwait(false);
+                    new SamRequest(frameBase64, samBoxes, PipeDiameterMm: pipeDiameterMm, RingScan: ringScanNvdec), frameCtsNvdec.Token).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Frame {Frame}: SAM segmentation failed (NVDEC-Pfad)", frameIndex);
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, 0, yoloMs, dinoMs, phaseSw.ElapsedMilliseconds, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                if (TryEmitGeometryOnlyFrame(geometricFindingsNvdec, active, detections, estimatedMeter, t,
+                    frameIndex, totalFrames, frameBytes, progress, "SAM Fehler NVDEC"))
+                    continue;
                 AdvanceAll(active, detections, DedupWindowFrames);
                 continue;
             }
             var samMs = phaseSw.ElapsedMilliseconds;
+            RecordSamRawDiagnostics(frameIndex, t, estimatedMeter, samResult, samBoxes.Count, usedRingScanNvdec, samMs, $"{nameof(MultiModelAnalysisService)}.nvdec");
 
             // ── Step 4: Quantification ──
             // K3: pipeCalibrationNvdec (einmalig am Video-Anfang bestimmt) wird hier
@@ -1337,7 +1432,8 @@ public sealed partial class MultiModelAnalysisService
             var maxDinoConf = nonFallbackDinoNvdec.Count > 0
                 ? nonFallbackDinoNvdec.Max(d => d.Confidence) : 0.0;
 
-            var findings = new List<EnhancedFinding>(quantified.Count);
+            var findings = new List<EnhancedFinding>(geometricFindingsNvdec.Count + quantified.Count);
+            findings.AddRange(geometricFindingsNvdec);
             for (var i = 0; i < quantified.Count; i++)
             {
                 var q = quantified[i];
@@ -1387,7 +1483,7 @@ public sealed partial class MultiModelAnalysisService
             // YOLO26l-seg erkennt Klassen direkt. Qwen nur bei niedriger Confidence.
             long qwenMs = 0;
             bool yoloFoundNvdec = findings.Count > 0;
-            bool needsQwenNvdec = !yoloFoundNvdec;
+            bool needsQwenNvdec = !yoloFoundNvdec || usedRingScanNvdec;
             if (_qwenVision is not null && needsQwenNvdec)
             {
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
@@ -1409,7 +1505,7 @@ public sealed partial class MultiModelAnalysisService
                         DinoTimeMs: dinoResult.InferenceTimeMs,
                         SamTimeMs: samResult.InferenceTimeMs);
 
-                    using var qwenCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    using var qwenCts = CancellationTokenSource.CreateLinkedTokenSource(frameCtsNvdec.Token);
                     qwenCts.CancelAfter(QwenFrameTimeout);
 
                     var qwenResult = await _qwenVision.AnalyzeWithContextAsync(
@@ -1426,7 +1522,8 @@ public sealed partial class MultiModelAnalysisService
                         lastMeter = meter;
                     }
 
-                    if (ShouldSuppressByImageQuality(qwenResult.ImageQuality, maxDinoConf))
+                    var qwenSuppressedByImageQualityNvdec = ShouldSuppressByImageQuality(qwenResult.ImageQuality, maxDinoConf);
+                    if (qwenSuppressedByImageQualityNvdec)
                         findings.Clear();
 
                     if (qwenResult.HasFindings)
@@ -1442,6 +1539,10 @@ public sealed partial class MultiModelAnalysisService
                             {
                                 var idx = findings.IndexOf(match);
                                 findings[idx] = match with { VsaCodeHint = qf.VsaCodeHint };
+                            }
+                            else if (!qwenSuppressedByImageQualityNvdec && !string.IsNullOrWhiteSpace(qf.VsaCodeHint))
+                            {
+                                findings.Add(qf);
                             }
                         }
                     }
@@ -1472,13 +1573,14 @@ public sealed partial class MultiModelAnalysisService
                 DiameterReductionMm: f.DiameterReductionMm
             )).ToList();
 
-            UpdateActive(active, findings, meter, detections, frameEvidence);
+            UpdateActive(active, findings, meter, t, detections, frameEvidence);
 
             progress?.Report(new VideoAnalysisProgress(
                 frameIndex, totalFrames,
                 $"Frame {frameIndex}/{totalFrames} @ {meter:0.0}m – {findings.Count} Befunde (NVDEC)",
                 FramePreviewPng: frameBytes,
-                LiveFindings: liveFindings));
+                LiveFindings: liveFindings,
+                TimestampSeconds: t));
 
             } // end try (Per-Frame-Timeout NVDEC)
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
@@ -1515,7 +1617,8 @@ public sealed partial class MultiModelAnalysisService
                 BboxX1: evt.PeakBbox?[0],
                 BboxY1: evt.PeakBbox?[1],
                 BboxX2: evt.PeakBbox?[2],
-                BboxY2: evt.PeakBbox?[3]
+                BboxY2: evt.PeakBbox?[3],
+                TimestampSeconds: evt.PeakTimeSeconds
             ));
 
             _logger.LogDebug(
@@ -1556,5 +1659,3 @@ public sealed partial class MultiModelAnalysisService
             detections.OrderBy(d => d.MeterStart).ToList(), null, summary);
     }
 }
-
-

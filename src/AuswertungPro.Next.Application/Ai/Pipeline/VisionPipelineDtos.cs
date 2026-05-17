@@ -364,6 +364,25 @@ public sealed record PipeAxisResult(
     [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs
 );
 
+/// <summary>Batch-Request: Mehrere Frames in einem Aufruf an /analyze/pipe-axis/batch.</summary>
+/// <remarks>
+/// TODO (Audit 2026-05-13 M5): Phase-2-Vorbereitung — aktuell ohne Aufrufer.
+/// Siehe <c>VisionPipelineClient.AnalyzePipeAxisBatchAsync</c>.
+/// </remarks>
+public sealed record PipeAxisBatchRequest(
+    [property: JsonPropertyName("frames")] IReadOnlyList<PipeAxisRequest> Frames
+);
+
+/// <summary>Batch-Response: Ergebnisse aller analysierten Frames + Gesamtzeit.</summary>
+/// <remarks>
+/// TODO (Audit 2026-05-13 M5): Phase-2-Vorbereitung — aktuell ohne Aufrufer.
+/// Siehe <c>VisionPipelineClient.AnalyzePipeAxisBatchAsync</c>.
+/// </remarks>
+public sealed record PipeAxisBatchResponse(
+    [property: JsonPropertyName("results")] IReadOnlyList<PipeAxisResult> Results,
+    [property: JsonPropertyName("total_time_ms")] double TotalTimeMs
+);
+
 // ── NVDEC / Video-Processing ────────────────────────────────────────────────
 
 public sealed record VideoProcessRequest(

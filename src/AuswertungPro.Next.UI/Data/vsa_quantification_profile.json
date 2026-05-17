@@ -1,0 +1,108 @@
+{
+  "_comment": "VSA-Quantifizierungs-Profil v0.1 — Pilot mit BBA, BBC, BCD, BCE. Diese Datei sagt NUR wie Q1/Q2/Uhrlage/Range-Kandidat aus Bilddaten entstehen. Bewertung (Q1 -> EZ -> ZN/DZ) bleibt in classification_channels.json. Streckenschaden-min_length_m hier ist Erkennungs-Trigger, NICHT VSA-Bewertungs-Schwelle (siehe defaultMinLength_m=3.0 in classification_channels.json).",
+  "schema_version": "0.1",
+  "profiles": [
+    {
+      "code": "BBA",
+      "label": "Wurzeln",
+      "visual_family": "root",
+      "q1": {
+        "source": "sam_cross_section_percent",
+        "unit": "%",
+        "fallback": "manual"
+      },
+      "q2": { "source": "none" },
+      "clock": {
+        "required": true,
+        "source": "sam_clock_range",
+        "fallback": "manual"
+      },
+      "range_tracking": {
+        "enabled": true,
+        "min_length_m": 1.0,
+        "max_gap_m": 0.7,
+        "final_decision": "operator_review"
+      },
+      "char1": {
+        "source": "qwen_classification",
+        "fallback": "manual",
+        "allowed_values": "from_catalog"
+      },
+      "char2": { "source": "manual" },
+      "_comment": "Querschnittsverminderung aus SAM-Maske / projizierter Rohrflaeche (2D-Projektion). Funktioniert nur bei axialer Sicht — bei view_type=nahaufnahme/schwenk faellt q1 auf manual."
+    },
+    {
+      "code": "BBC",
+      "label": "Ablagerung",
+      "visual_family": "deposit",
+      "q1": {
+        "source": "sam_deposit_height_percent",
+        "unit": "%",
+        "fallback": "manual"
+      },
+      "q2": { "source": "none" },
+      "clock": {
+        "required": false,
+        "source": "none"
+      },
+      "range_tracking": {
+        "enabled": true,
+        "min_length_m": 1.0,
+        "max_gap_m": 0.7,
+        "final_decision": "operator_review"
+      },
+      "char1": {
+        "source": "manual",
+        "ai_hint": "qwen_classification",
+        "fallback": "manual",
+        "allowed_values": "from_catalog"
+      },
+      "char2": { "source": "manual" },
+      "_comment": "Ablagerungshoehe in % der lichten Hoehe (Sohle bis Maskenoberkante / 2*pipeRadius). Char1 (Sand/Kies/verfestigt) ist visuell schwer unterscheidbar — KI gibt nur Hinweis, Operator entscheidet."
+    },
+    {
+      "code": "BCD",
+      "label": "Rohranfang",
+      "visual_family": "pipe_start",
+      "q1": { "source": "none" },
+      "q2": { "source": "none" },
+      "clock": {
+        "required": false,
+        "source": "none"
+      },
+      "range_tracking": {
+        "enabled": false
+      },
+      "required_per_haltung": {
+        "enabled": true,
+        "count": 1,
+        "validator_action": "warn_if_missing"
+      },
+      "char1": { "source": "none" },
+      "char2": { "source": "none" },
+      "_implementation_note": "MultiModelAnalysisService.cs:824 hat aktuell einen Fallback-Setter (Auto-BCD wenn findings.Count==0 in isBcdZone). Uebergangscode — entfernen sobald HaltungCompletenessValidator (warn_if_missing) aktiv ist. Sonst entstehen kurzzeitig BCD-Luecken bei Haltungen ohne KI-Erkennung am Anfang."
+    },
+    {
+      "code": "BCE",
+      "label": "Rohrende",
+      "visual_family": "pipe_end",
+      "q1": { "source": "none" },
+      "q2": { "source": "none" },
+      "clock": {
+        "required": false,
+        "source": "none"
+      },
+      "range_tracking": {
+        "enabled": false
+      },
+      "required_per_haltung": {
+        "enabled": true,
+        "count": 1,
+        "validator_action": "warn_if_missing"
+      },
+      "char1": { "source": "none" },
+      "char2": { "source": "none" },
+      "_implementation_note": "Aktuell kein BCE-Detektor in der Pipeline. HaltungCompletenessValidator wird nach Session-Ende warnen wenn BCE fehlt. Spaeter optional: Telemetrie-Heuristik analog BCD-Zone, aber am Videoende (isBceZone existiert bereits in MultiModelAnalysisService.cs)."
+    }
+  ]
+}

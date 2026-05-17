@@ -252,7 +252,8 @@ public sealed class VideoSelfTrainingOrchestrator : ITrainingOrchestrator
                         IntrusionPercent: f.IntrusionPercent,
                         CrossSectionReductionPercent: f.CrossSectionReductionPercent,
                         DiameterReductionMm: f.DiameterReductionMm,
-                        FramePath: a.FramePath);
+                        FramePath: a.FramePath,
+                        TimestampSeconds: a.TimestampSeconds);
                 }
 
                 var detections = batchResult.Analyses

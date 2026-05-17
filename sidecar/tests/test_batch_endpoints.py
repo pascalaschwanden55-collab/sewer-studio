@@ -101,3 +101,64 @@ class TestSamBatch:
             ],
         })
         assert resp.status_code == 200
+
+
+class TestPipeAxisBatch:
+    """Audit 2026-05-13 M4: Batch-Endpunkt nutzt asyncio.to_thread."""
+
+    def test_batch_returns_results_in_input_order(self, client, image_b64):
+        resp = client.post("/analyze/pipe-axis/batch", json={
+            "frames": [
+                {"image_base64": image_b64, "pipe_diameter_mm": 300},
+                {"image_base64": image_b64, "pipe_diameter_mm": 300},
+                {"image_base64": image_b64, "pipe_diameter_mm": 300},
+            ],
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["results"]) == 3
+        assert data["total_time_ms"] > 0
+        # Alle Ergebnisse haben das Pflicht-Schema (Smoke-Check)
+        for r in data["results"]:
+            assert "vanishing_x" in r
+            assert "vanishing_y" in r
+            assert "confidence" in r
+
+    def test_batch_single_frame(self, client, image_b64):
+        resp = client.post("/analyze/pipe-axis/batch", json={
+            "frames": [{"image_base64": image_b64, "pipe_diameter_mm": 300}],
+        })
+        assert resp.status_code == 200
+        assert len(resp.json()["results"]) == 1
+
+    def test_health_responds_while_batch_runs(self, client, image_b64):
+        """Event-Loop bleibt waehrend Batch ansprechbar (Audit M4):
+        Ein 30-Frame-Batch laeuft, parallel muss /health unter 2s antworten.
+        Vor M4 blockierte der List-Comprehension-Pfad den Worker.
+        """
+        import threading
+        import time
+
+        result = {"health_ms": None, "health_status": None}
+
+        def hit_health():
+            time.sleep(0.2)  # Batch ein paar Frames laufen lassen
+            t0 = time.perf_counter()
+            r = client.get("/health")
+            result["health_ms"] = (time.perf_counter() - t0) * 1000
+            result["health_status"] = r.status_code
+
+        t = threading.Thread(target=hit_health, daemon=True)
+        t.start()
+
+        batch_resp = client.post("/analyze/pipe-axis/batch", json={
+            "frames": [{"image_base64": image_b64, "pipe_diameter_mm": 300}
+                       for _ in range(30)],
+        })
+        t.join(timeout=60)
+
+        assert batch_resp.status_code == 200
+        assert result["health_status"] == 200, "Health-Endpunkt war waehrend Batch nicht erreichbar"
+        # Health darf nicht durch Batch ausgebremst werden — < 2s ist grosszuegig.
+        assert result["health_ms"] is not None
+        assert result["health_ms"] < 2000, f"Health-Latenz {result['health_ms']:.0f}ms zu hoch"

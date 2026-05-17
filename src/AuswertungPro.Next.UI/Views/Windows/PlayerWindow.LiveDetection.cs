@@ -110,7 +110,8 @@ public partial class PlayerWindow
         {
             var client = new OllamaClient(cfg.OllamaBaseUri,
                 ownedTimeout: cfg.OllamaRequestTimeout > TimeSpan.Zero ? cfg.OllamaRequestTimeout : TimeSpan.FromMinutes(10),
-                keepAlive: cfg.OllamaKeepAlive, numCtx: cfg.OllamaNumCtx);
+                keepAlive: cfg.OllamaKeepAlive, numCtx: cfg.OllamaNumCtx,
+                diagnosticsEnabled: cfg.EnableDiagnostics);
 
             // Auto-detect vision model: check if configured model exists, fallback to first *vl* model
             var visionModel = cfg.VisionModel;

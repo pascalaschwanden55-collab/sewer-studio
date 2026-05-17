@@ -29,10 +29,101 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 // von CodingEvents mit DamageMarkern und die Protokoll-Vorschau nach Codierung.
 public partial class PlayerWindow
 {
+    private bool _isImportEditorOpen;
+
     private void ImportEvents_DoubleClick(object sender, MouseButtonEventArgs e)
     {
+        e.Handled = true;
+        if (_isImportEditorOpen) return;
         if (LstImportEvents.SelectedItem is not CodingEvent importEvent) return;
         SeekToImportEvent(importEvent);
+
+        // 2026-05-11 User-Wunsch: Doppelklick auf bestehende codierte
+        // Beobachtung soll den Edit-Dialog mit Pre-Population oeffnen
+        // (analog CodingEvents_DoubleClick in PlayerWindow.CodingEvents.cs).
+        // Damit kann der User die Codierung bestaetigen oder korrigieren,
+        // statt von vorne anzufangen.
+        OpenImportEditorForExistingEvent(importEvent);
+    }
+
+    /// <summary>Einfach-Klick auf einen Import-Eintrag springt zur Original-
+    /// Videozeit (exakte Protokollstelle), oeffnet aber KEINEN Edit-Dialog.
+    /// User-Wunsch 2026-05-11: "wenn ich mit einem klick im import auf ein
+    /// ereignis drücke wird das feld grösser und das video springt auf das
+    /// entsprechende punkt. nimm nicht die meter als punkt sondern die
+    /// videozeit. dann weiss ich das er genau dort protokoliert hat exakte
+    /// stelle."</summary>
+    private void ImportEvents_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isImportEditorOpen) return;
+        if (e.AddedItems.Count == 0) return;
+        if (e.AddedItems[0] is not CodingEvent importEvent) return;
+        SeekToImportEvent(importEvent);
+    }
+
+    /// <summary>Oeffnet den VsaCodeExplorer-Dialog mit pre-populated Werten
+    /// aus dem existierenden Import-Event. Bei OK werden die Aenderungen
+    /// direkt in den HaltungRecord.Protocol-Entry zurueckgeschrieben (das
+    /// importEvent.Entry IST schon die Original-Referenz).</summary>
+    private void OpenImportEditorForExistingEvent(CodingEvent importEvent)
+    {
+        if (_isImportEditorOpen) return;
+        if (_player is null) return;
+
+        _isImportEditorOpen = true;
+        try
+        {
+            _player.SetPause(true);
+            SuspendCodingOverlayInput();
+
+            var entry = importEvent.Entry;
+            var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+                entry, entry.MeterStart, entry.Zeit);
+
+            var dlg = new VsaCodeExplorerWindow(explorerVm, _videoPath,
+                System.TimeSpan.FromMilliseconds(_player.Time))
+            {
+                Owner = this,
+                LiveSnapshotProvider = () =>
+                {
+                    var snapPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+                        $"import_live_{System.Guid.NewGuid():N}.png");
+                    return TakeSnapshotSafe(snapPath) ? snapPath : null;
+                }
+            };
+
+            var dialogResult = dlg.ShowDialog();
+
+            if (dialogResult != true || dlg.SelectedEntry is null) return;
+
+            var result = dlg.SelectedEntry;
+            entry.Code = result.Code;
+            entry.Beschreibung = result.Beschreibung;
+            entry.CodeMeta = result.CodeMeta;
+            entry.MeterStart = result.MeterStart;
+            entry.MeterEnd = result.MeterEnd;
+            entry.Zeit = result.Zeit;
+            entry.IsStreckenschaden = result.IsStreckenschaden;
+            entry.FotoPaths = result.FotoPaths;
+
+            importEvent.MeterAtCapture = entry.MeterStart ?? entry.MeterEnd ?? importEvent.MeterAtCapture;
+            importEvent.VideoTimestamp = entry.Zeit ?? importEvent.VideoTimestamp;
+
+            // UI-Refresh: CodingEvent hat kein INPC, ListBox erkennt
+            // Entry-Aenderungen nicht. Remove+Insert an gleicher Position
+            // erzwingt Re-Render.
+            var idx = _codingImportEvents.IndexOf(importEvent);
+            if (idx >= 0)
+            {
+                _codingImportEvents.RemoveAt(idx);
+                _codingImportEvents.Insert(idx, importEvent);
+            }
+        }
+        finally
+        {
+            ResumeCodingOverlayInput();
+            _isImportEditorOpen = false;
+        }
     }
 
     /// <summary>Context-Menü: Zum Zeitpunkt springen.</summary>
@@ -42,16 +133,66 @@ public partial class PlayerWindow
         SeekToImportEvent(importEvent);
     }
 
+    /// <summary>Context-Menü: Workflow zum Markieren mit BBox + SAM als
+    /// Training-Beispiel fuer einen bestehenden Import-Eintrag.
+    /// 2026-05-11 User-Wunsch: Doppelklick fuer Edit, Rechtsklick fuer Training.
+    /// Schritt 1 (heute): Spring zum Meter + Markieren-Tool aktivieren +
+    /// State setzen, damit der naechste BBox-Save-Pfad den Code aus dem
+    /// Original-Entry uebernimmt. Step 2 (separater Slice) verdrahtet die
+    /// KB-Speicherung mit BBox + SAM-Maske + Code.</summary>
+    private void ImportTrainingWithBbox_Click(object sender, RoutedEventArgs e)
+    {
+        if (LstImportEvents.SelectedItem is not CodingEvent importEvent) return;
+        StartTrainingFromExistingEvent(importEvent, source: "import");
+    }
+
+    /// <summary>Context-Menü auf KI-Befund-Liste: gleicher Training-Workflow
+    /// fuer einen bestehenden KI-Befund. Aufrufpfad ist identisch zu
+    /// ImportTrainingWithBbox_Click — nur die Quell-Liste unterscheidet sich.</summary>
+    private void CodingTrainingWithBbox_Click(object sender, RoutedEventArgs e)
+    {
+        if (LstCodingEvents.SelectedItem is not CodingEvent codingEvent) return;
+        StartTrainingFromExistingEvent(codingEvent, source: "befund");
+    }
+
+    /// <summary>Gemeinsame Helper-Methode: Spring zum Meter, Markieren-Tool
+    /// aktivieren, Pending-Training-State setzen. Der eigentliche Save-Pfad
+    /// (BBox + SAM + TeacherAnnotation) wird im naechsten Sub-Slice
+    /// verdrahtet.</summary>
+    private void StartTrainingFromExistingEvent(CodingEvent ev, string source)
+    {
+        SeekToImportEvent(ev);
+
+        // State fuer Folge-Workflow setzen — Feld wird im Hauptpartial
+        // deklariert (PlayerWindow.xaml.cs), Save-Pfad verwendet es.
+        _pendingTrainingFromExistingEntry = ev.Entry;
+
+        // User-sichtbarer Hinweis welcher Code uebernommen wird.
+        var code = string.IsNullOrWhiteSpace(ev.Entry?.Code) ? "(kein Code)" : ev.Entry!.Code;
+        ShowOverlay(
+            $"Training-Modus: Code {code} aus {source}. Ziehe BBox um den Bereich, dann mit SAM bestaetigen.",
+            System.TimeSpan.FromSeconds(6));
+
+        // Falls Codier-Modus noch nicht aktiv ist: Hinweis statt automatisch
+        // aktivieren (Codier-Modus-Aktivierung ist groesserer Lifecycle-
+        // Eingriff — separater Slice).
+        if (!_isCodingMode)
+        {
+            ShowOverlay(
+                "Bitte erst den Codier-Modus aktivieren, dann das Markieren-Tool waehlen.",
+                System.TimeSpan.FromSeconds(4));
+        }
+    }
+
     private void SeekToImportEvent(CodingEvent importEvent)
     {
-        if (_player != null && importEvent.VideoTimestamp.TotalMilliseconds > 0)
+        // 2026-05-11 User-Wunsch: ausschliesslich Video-Zeit verwenden, kein
+        // Meter-Fallback — die Original-Protokoll-Stelle soll exakt getroffen
+        // werden. Wenn keine Video-Zeit hinterlegt ist: kein Sprung (statt
+        // ungenauer Meter-Umrechnung).
+        if (_player == null) return;
+        if (importEvent.VideoTimestamp.TotalMilliseconds > 0)
             _player.Time = (long)importEvent.VideoTimestamp.TotalMilliseconds;
-        else if (_codingSessionService != null && importEvent.MeterAtCapture > 0)
-        {
-            _codingSessionService.MoveToMeter(importEvent.MeterAtCapture);
-            _codingNavPending = true;
-            SyncVideoToCodingMeter();
-        }
     }
 
     /// <summary>

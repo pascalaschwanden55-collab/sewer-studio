@@ -16,7 +16,7 @@
       "name": "Installation UV-Anlage",
       "unit": "pl",
       "type": "Fixed",
-      "price": 1500.00,
+      "price": 3050.00,
       "active": true,
       "aliases": []
     },
@@ -41,9 +41,9 @@
     {
       "key": "VORARBEIT_REINIGUNG",
       "name": "Kanalreinigung Vorreinigung",
-      "unit": "h",
+      "unit": "m",
       "type": "Fixed",
-      "price": 250.00,
+      "price": 5.00,
       "active": true,
       "aliases": ["Kanalreinigung"]
     },
@@ -61,7 +61,7 @@
       "name": "Fräsen",
       "unit": "h",
       "type": "Fixed",
-      "price": 290.00,
+      "price": 295.00,
       "active": true,
       "aliases": []
     },
@@ -77,9 +77,9 @@
     {
       "key": "VORARBEIT_TV_VORKONTROLLE",
       "name": "TV Vorkontrolle",
-      "unit": "stk",
+      "unit": "m",
       "type": "Fixed",
-      "price": 210.00,
+      "price": 3.00,
       "active": true,
       "aliases": []
     },
@@ -88,18 +88,32 @@
       "name": "Seitlicher Anschluss einmessen",
       "unit": "stk",
       "type": "Fixed",
-      "price": 80.00,
+      "price": 40.00,
       "active": true,
       "aliases": []
     },
     {
       "key": "VORARBEIT_WASSERHALTUNG",
       "name": "Wasserhaltung",
-      "unit": "stk",
+      "unit": "Pau",
       "type": "Fixed",
-      "price": 500.00,
+      "price": 5000.00,
       "active": true,
       "aliases": []
+    },
+    {
+      "key": "SCHLAUCHLINER_PRELINER",
+      "name": "Preliner / Schutzfolie",
+      "unit": "m",
+      "type": "ByDN",
+      "active": true,
+      "aliases": ["Preliner", "Schutzfolie"],
+      "dnPrices": [
+        { "dnFrom": 100, "dnTo": 200, "price": 2.40 },
+        { "dnFrom": 250, "dnTo": 250, "price": 2.90 },
+        { "dnFrom": 300, "dnTo": 300, "price": 3.10 },
+        { "dnFrom": 400, "dnTo": 400, "price": 3.60 }
+      ]
     },
     {
       "key": "SCHLAUCHLINER_NADELFILZ",
@@ -141,10 +155,10 @@
       "active": true,
       "aliases": ["GFK-Schlauchliner"],
       "dnPrices": [
-        { "dnFrom": 250, "dnTo": 250, "price": 200.00 },
-        { "dnFrom": 300, "dnTo": 300, "price": 220.00 },
-        { "dnFrom": 350, "dnTo": 350, "price": 230.00 },
-        { "dnFrom": 400, "dnTo": 400, "price": 275.00 },
+        { "dnFrom": 250, "dnTo": 250, "price": 130.90 },
+        { "dnFrom": 300, "dnTo": 300, "price": 137.00 },
+        { "dnFrom": 350, "dnTo": 350, "price": 148.00 },
+        { "dnFrom": 400, "dnTo": 400, "price": 163.15 },
         { "dnFrom": 450, "dnTo": 450, "price": 280.00 },
         { "dnFrom": 500, "dnTo": 500, "price": 300.00 },
         { "dnFrom": 600, "dnTo": 600, "price": 400.00 },
@@ -162,11 +176,11 @@
       "aliases": ["LEM", "Endmanschette"],
       "dnPrices": [
         { "dnFrom": 150, "dnTo": 150, "price": 420.00 },
-        { "dnFrom": 200, "dnTo": 200, "price": 450.00 },
-        { "dnFrom": 250, "dnTo": 250, "price": 490.00 },
-        { "dnFrom": 300, "dnTo": 300, "price": 500.00 },
+        { "dnFrom": 200, "dnTo": 200, "price": 305.00 },
+        { "dnFrom": 250, "dnTo": 250, "price": 449.20 },
+        { "dnFrom": 300, "dnTo": 300, "price": 497.40 },
         { "dnFrom": 350, "dnTo": 350, "price": 580.00 },
-        { "dnFrom": 400, "dnTo": 400, "price": 640.00 },
+        { "dnFrom": 400, "dnTo": 400, "price": 566.20 },
         { "dnFrom": 450, "dnTo": 450, "price": 720.00 },
         { "dnFrom": 500, "dnTo": 500, "price": 780.00 },
         { "dnFrom": 600, "dnTo": 600, "price": 850.00 },
@@ -213,7 +227,7 @@
       "name": "Anschluss auffräsen",
       "unit": "stk",
       "type": "Fixed",
-      "price": 100.00,
+      "price": 150.00,
       "active": true,
       "aliases": []
     },
@@ -222,7 +236,7 @@
       "name": "Anschlusseinbinden (verpressen)",
       "unit": "stk",
       "type": "Fixed",
-      "price": 900.00,
+      "price": 700.00,
       "active": true,
       "aliases": ["Anschluss verpressen"]
     },
@@ -240,16 +254,16 @@
       "name": "Dichtheitsprüfung (Luft nach SIA190/VSA)",
       "unit": "stk",
       "type": "Fixed",
-      "price": 220.00,
+      "price": 245.00,
       "active": true,
       "aliases": ["Dichtheitsprüfung"]
     },
     {
       "key": "QK_TV_ABNAHME",
       "name": "TV Abnahme",
-      "unit": "stk",
+      "unit": "m",
       "type": "Fixed",
-      "price": 260.00,
+      "price": 3.00,
       "active": true,
       "aliases": []
     },
@@ -258,7 +272,7 @@
       "name": "Dokumentation",
       "unit": "stk",
       "type": "Fixed",
-      "price": 200.00,
+      "price": 450.00,
       "active": true,
       "aliases": []
     }

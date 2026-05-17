@@ -1,5 +1,7 @@
 """SAM segmentation endpoint."""
 
+import asyncio
+
 from fastapi import APIRouter
 from ..schemas.segmentation import (
     SamRequest,
@@ -15,7 +17,8 @@ router = APIRouter()
 
 @router.post("/segment/sam", response_model=SamResponse)
 async def segment_sam(req: SamRequest) -> SamResponse:
-    return sam_wrapper.segment(
+    return await asyncio.to_thread(
+        sam_wrapper.segment,
         image_base64=req.image_base64,
         bounding_boxes=req.bounding_boxes,
         pipe_diameter_mm=req.pipe_diameter_mm,
@@ -28,6 +31,12 @@ async def segment_sam(req: SamRequest) -> SamResponse:
 async def segment_sam_batch(req: SamBatchRequest) -> SamBatchResponse:
     """Batch-SAM: mehrere Bilder mit je N Boxen segmentieren.
     Innerhalb jedes Bildes sind die Boxen gebatched (ein Forward Pass).
+
+    Audit 2026-05-13 (M4-Folge): Pro-Item-Inference ueber ``asyncio.to_thread``
+    auslagern, damit der Event-Loop zwischen den Bildern andere Requests
+    (z.B. /health) bedienen kann. Reihenfolge bleibt sequenziell — kein
+    ``asyncio.gather``: SAM teilt einen GPU-Model-State, paralleler Zugriff
+    waere unsicher. API-Shape und Latenzverhalten sind unveraendert.
     """
     import time
 
@@ -35,7 +44,8 @@ async def segment_sam_batch(req: SamBatchRequest) -> SamBatchResponse:
 
     results = []
     for item in req.items:
-        resp = sam_wrapper.segment(
+        resp = await asyncio.to_thread(
+            sam_wrapper.segment,
             image_base64=item.image_base64,
             bounding_boxes=item.bounding_boxes,
             pipe_diameter_mm=item.pipe_diameter_mm,

@@ -49,7 +49,11 @@
         { "group": "Vorarbeiten", "itemKey": "VORARBEIT_ANSCHLUSS_EINMESSEN", "enabled": true, "defaultQty": 1 },
         { "group": "Vorarbeiten", "itemKey": "VORARBEIT_TV_VORKONTROLLE", "enabled": true, "defaultQty": 1 },
         { "group": "Vorarbeiten", "itemKey": "VORARBEIT_WASSERHALTUNG", "enabled": false, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "SCHLAUCHLINER_PRELINER", "enabled": true, "defaultQty": 1 },
         { "group": "Hauptarbeit", "itemKey": "SCHLAUCHLINER_GFK", "enabled": true, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "ANSCHLUSS_AUFFRAESEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "ANSCHLUSS_EINBINDEN", "enabled": true, "defaultQty": 1 },
+        { "group": "Hauptarbeit", "itemKey": "LINERENDMANSCHETTE_LEM", "enabled": true, "defaultQty": 2 },
         { "group": "Qualitaetskontrolle", "itemKey": "QK_DICHTHEITSPRUEFUNG", "enabled": true, "defaultQty": 1 },
         { "group": "Qualitaetskontrolle", "itemKey": "QK_TV_ABNAHME", "enabled": true, "defaultQty": 1 },
         { "group": "Qualitaetskontrolle", "itemKey": "QK_DOKUMENTATION", "enabled": true, "defaultQty": 1 }

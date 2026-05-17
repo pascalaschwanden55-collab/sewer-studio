@@ -13,6 +13,8 @@
 
             <!-- App-Resourcen (global, von allen Pages/UserControls erreichbar). -->
             <ctrl:InvertedBoolConverter x:Key="InvertedBoolConverter"/>
+            <ctrl:ProtocolEntrySourceToIconConverter x:Key="ProtocolEntrySourceToIconConverter"/>
+            <ctrl:ProtocolEntrySourceToTooltipConverter x:Key="ProtocolEntrySourceToTooltipConverter"/>
 
             <!-- MVVM: ViewModel -> View -->
             <DataTemplate DataType="{x:Type vm:ProjectPageViewModel}">

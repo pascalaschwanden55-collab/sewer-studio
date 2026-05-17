@@ -1,0 +1,110 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.AiDiagnosticsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="KI-Diagnose-Cockpit"
+        Width="1200" Height="700"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBackgroundBrush}">
+
+    <DockPanel Margin="8">
+
+        <!-- Toolbar oben: Filter + Live-Toggle + Buttons + Counter -->
+        <Border DockPanel.Dock="Top" Padding="8" Margin="0,0,0,8"
+                Background="{DynamicResource CardBrush}"
+                CornerRadius="6">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Stage:" VerticalAlignment="Center" Margin="0,0,6,0"
+                           Foreground="{DynamicResource TextBrush}"/>
+                <ComboBox x:Name="CmbStageFilter" Width="220" Margin="0,0,16,0"
+                          SelectionChanged="CmbStageFilter_SelectionChanged"
+                          VerticalAlignment="Center"/>
+
+                <TextBlock Text="Drop-Grund:" VerticalAlignment="Center" Margin="0,0,6,0"
+                           Foreground="{DynamicResource TextBrush}"/>
+                <ComboBox x:Name="CmbReasonFilter" Width="200" Margin="0,0,16,0"
+                          SelectionChanged="CmbReasonFilter_SelectionChanged"
+                          VerticalAlignment="Center"/>
+
+                <ToggleButton x:Name="BtnLive" Content="🔴 Live (1s)" IsChecked="True"
+                              Margin="0,0,8,0" Padding="10,4"
+                              Click="BtnLive_Click"/>
+                <Button x:Name="BtnRefresh" Content="Aktualisieren" Margin="0,0,8,0" Padding="10,4"
+                        Click="BtnRefresh_Click"/>
+                <Button x:Name="BtnClear" Content="Leeren" Margin="0,0,16,0" Padding="10,4"
+                        Click="BtnClear_Click"/>
+
+                <TextBlock x:Name="TxtCount" Text="0 Einträge" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           FontWeight="SemiBold"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Statuszeile unten: zeigt den selektierten Eintrag im Detail -->
+        <Border DockPanel.Dock="Bottom" Padding="8" Margin="0,8,0,0"
+                Background="{DynamicResource CardBrush}"
+                CornerRadius="6"
+                MinHeight="160">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.ColumnSpan="2"
+                           Text="Details (Roh-Ausgabe + Metadata)"
+                           FontWeight="SemiBold" Margin="0,0,0,4"
+                           Foreground="{DynamicResource TextBrush}"/>
+
+                <!-- Roh-Ausgabe links -->
+                <TextBox Grid.Row="1" Grid.Column="0"
+                         x:Name="TxtRawOutput"
+                         IsReadOnly="True"
+                         AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Auto"
+                         FontFamily="Consolas" FontSize="11"
+                         Margin="0,0,4,0"
+                         Background="{DynamicResource WindowBackgroundBrush}"
+                         Foreground="{DynamicResource TextBrush}"/>
+
+                <!-- Metadata rechts -->
+                <ListBox Grid.Row="1" Grid.Column="1"
+                         x:Name="LstMetadata"
+                         FontFamily="Consolas" FontSize="11"
+                         Margin="4,0,0,0"
+                         Background="{DynamicResource WindowBackgroundBrush}"
+                         Foreground="{DynamicResource TextBrush}"/>
+            </Grid>
+        </Border>
+
+        <!-- Event-Liste -->
+        <DataGrid x:Name="GridEvents"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  AlternatingRowBackground="{DynamicResource CardBrush}"
+                  SelectionChanged="GridEvents_SelectionChanged"
+                  Background="{DynamicResource WindowBackgroundBrush}"
+                  Foreground="{DynamicResource TextBrush}"
+                  RowBackground="{DynamicResource WindowBackgroundBrush}"
+                  BorderBrush="{DynamicResource HeaderBrush}"
+                  FontFamily="Consolas" FontSize="11">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Zeit"     Binding="{Binding TimeLocal}"   Width="100"/>
+                <DataGridTextColumn Header="Stage"    Binding="{Binding Stage}"       Width="160"/>
+                <DataGridTextColumn Header="Quelle"   Binding="{Binding Source}"      Width="220"/>
+                <DataGridTextColumn Header="Modell"   Binding="{Binding Model}"       Width="160"/>
+                <DataGridTextColumn Header="Latenz"   Binding="{Binding LatencyText}" Width="70"/>
+                <DataGridTextColumn Header="Beschreibung" Binding="{Binding Summary}" Width="*"/>
+                <DataGridTextColumn Header="Drop-Grund" Binding="{Binding DroppedReason}" Width="160"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

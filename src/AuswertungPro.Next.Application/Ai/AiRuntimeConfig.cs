@@ -16,5 +16,6 @@ public sealed record AiRuntimeConfig(
     string? ReferenceVisionModel = null,
     TimeSpan OllamaRequestTimeout = default,
     string OllamaKeepAlive = "24h",
-    int OllamaNumCtx = 8192
+    int OllamaNumCtx = 8192,
+    bool EnableDiagnostics = false
 );

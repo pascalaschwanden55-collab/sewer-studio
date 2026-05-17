@@ -76,6 +76,10 @@ public static class VsaCodeResolver
         if (string.IsNullOrWhiteSpace(label))
             return null;
 
+        var directCode = NormalizeFindingCode(label);
+        if (directCode != null)
+            return directCode;
+
         var text = label.Trim().ToLowerInvariant()
             .Replace("ä", "ae").Replace("ö", "oe")
             .Replace("ü", "ue").Replace("ß", "ss");

@@ -25,6 +25,7 @@ public sealed class AiPlatformConfigTests
             ?? OllamaConfig.DefaultVisionModel;
 
         Assert.False(config.Enabled);
+        Assert.False(config.EnableDiagnostics);
         Assert.Equal(new Uri("http://localhost:11434"), config.OllamaBaseUri);
         Assert.Equal(expectedVision, config.VisionModel);
         Assert.Equal(OllamaConfig.DefaultTextModel, config.TextModel);
@@ -70,6 +71,7 @@ public sealed class AiPlatformConfigTests
         var config = AiPlatformConfig.Load(settings: null);
 
         Assert.True(config.Enabled);
+        Assert.False(config.EnableDiagnostics);
         Assert.Equal(new Uri("http://127.0.0.1:11435"), config.OllamaBaseUri);
         Assert.Equal("vision-x", config.VisionModel);
         Assert.Equal("text-x", config.TextModel);
@@ -111,6 +113,7 @@ public sealed class AiPlatformConfigTests
         var settings = new AppSettings
         {
             AiEnabled = true,
+            EnableDiagnostics = true,
             AiOllamaUrl = "http://settings-host:11436",
             AiVisionModel = "settings-vision",
             AiTextModel = "settings-text",
@@ -130,6 +133,7 @@ public sealed class AiPlatformConfigTests
         var config = AiPlatformConfig.Load(settings);
 
         Assert.True(config.Enabled);
+        Assert.True(config.EnableDiagnostics);
         Assert.Equal(new Uri("http://settings-host:11436"), config.OllamaBaseUri);
         Assert.Equal("settings-vision", config.VisionModel);
         Assert.Equal("settings-text", config.TextModel);
@@ -178,7 +182,8 @@ public sealed class AiPlatformConfigTests
             FfmpegPath: "ffmpeg-custom",
             ReferenceVisionModel: "fallback-vision",
             OllamaRequestTimeout: TimeSpan.FromMinutes(12),
-            OllamaKeepAlive: "24h"), runtime);
+            OllamaKeepAlive: "24h",
+            EnableDiagnostics: true), runtime);
     }
 
     [Fact]
@@ -281,6 +286,7 @@ public sealed class AiPlatformConfigTests
 
     private static AiPlatformConfig CreateConfig() => new(
         Enabled: true,
+        EnableDiagnostics: true,
         OllamaBaseUri: new Uri("http://localhost:11434"),
         VisionModel: "vision-model",
         TextModel: "text-model",

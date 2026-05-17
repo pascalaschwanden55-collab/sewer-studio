@@ -83,7 +83,9 @@ public sealed record DamageMarkerInfo(
     string? Description,
     double MeterStart,
     double? MeterEnd,
-    bool IsStreckenschaden);
+    bool IsStreckenschaden,
+    TimeSpan? TimeStart = null,
+    TimeSpan? TimeEnd = null);
 
 public sealed record PlayerDamageOverlayData(
     double PipeLengthMeters,
@@ -134,6 +136,15 @@ public partial class PlayerWindow : Window, IVlcSurface
     private readonly Action<ProtocolEntry>? _onEntryCreated;
     private readonly HaltungRecord? _haltungRecord;
 
+    // 2026-05-11 Training-from-existing-Event-Workflow:
+    // Wenn der User im Rechtsklick-Menue der IMPORT- oder KI-BEFUND-Liste
+    // "Mit BBox als Training markieren" waehlt, springt der Player zum
+    // Meter und der Code des Original-Eintrags wird hier gemerkt. Der
+    // BBox+SAM-Save-Pfad in PlayerWindow.MarkTool.cs uebernimmt diesen
+    // Code, fragt im Multi-BBox-Modus nach Folgemarkierungen und schreibt
+    // die Annotation als Trainings-Sample weg.
+    private ProtocolEntry? _pendingTrainingFromExistingEntry;
+
     private static PlayerWindow? _lastOpened;
 
     public PlayerWindow(
@@ -167,6 +178,14 @@ public partial class PlayerWindow : Window, IVlcSurface
             if (_codingOverlaySuspendDepth > 0) return;
             _deactivatedByExternalWindow = true;
             SuspendCodingOverlayInput();
+
+            // 2026-05-15 Audit: Zusatz-Sicherung gegen "Masken haengen ueber anderen
+            // Fenstern fest". Suspend versteckt das Popup, aber StaysOpen=True +
+            // ein paralleler Live-AI-Tick kann es kurz danach wieder oeffnen.
+            // Canvas explizit leeren — auch wenn das Popup gleich wieder aufgeht,
+            // sind die alten Masken dann weg statt eingefroren ueber VS Code zu liegen.
+            try { Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas); }
+            catch { /* best-effort, Canvas evtl. noch nicht initialisiert */ }
         };
         Activated += (_, _) =>
         {
@@ -488,7 +507,8 @@ public partial class PlayerWindow : Window, IVlcSurface
         var ffmpegPath = cfg.FfmpegPath ?? FfmpegLocator.ResolveFfmpeg();
         using var client = new OllamaClient(cfg.OllamaBaseUri,
             ownedTimeout: cfg.OllamaRequestTimeout > TimeSpan.Zero ? cfg.OllamaRequestTimeout : TimeSpan.FromMinutes(10),
-            keepAlive: cfg.OllamaKeepAlive, numCtx: cfg.OllamaNumCtx);
+            keepAlive: cfg.OllamaKeepAlive, numCtx: cfg.OllamaNumCtx,
+            diagnosticsEnabled: cfg.EnableDiagnostics);
         var service = new QuickScanService(client, cfg.VisionModel, ffmpegPath);
 
         _quickScanCts = new CancellationTokenSource();

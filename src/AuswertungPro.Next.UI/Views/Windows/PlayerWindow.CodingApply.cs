@@ -150,6 +150,12 @@ public partial class PlayerWindow
     private AuswertungPro.Next.Infrastructure.Ai.Pipeline.SingleFrameMultiModelService? _codingMultiModel;
     private AuswertungPro.Next.Infrastructure.Ai.Pipeline.VisionPipelineClient? _codingVisionClient;
 
+    // 2026-05-13 (Audit H4) Pipe-Axis-Diagnose ausgelagert in
+    // AuswertungPro.Next.Application.Ai.Pipeline.PipeAxisDiagnosticsService
+    // (Ringbuffer + Detektor + Recorder-Push). UI haelt nur die Instanz.
+    // STAND: Nur Diagnose-Records in den AiDiagnosticsRecorder — KEINE Auto-Events.
+    private AuswertungPro.Next.Application.Ai.Pipeline.PipeAxisDiagnosticsService? _pipeAxisService;
+
     // Import-Beobachtungen (Referenz-Spalte, nur-lesen)
     private readonly ObservableCollection<CodingEvent> _codingImportEvents = new();
 

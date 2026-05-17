@@ -84,7 +84,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 FramesDone: p.FramesDone,
                 FramesTotal: p.FramesTotal,
                 FramePreviewPng: p.FramePreviewPng,
-                LiveFindings: p.LiveFindings)));
+                LiveFindings: p.LiveFindings,
+                TimestampSeconds: p.TimestampSeconds)));
 
         VideoAnalysisResult videoResult;
 
@@ -112,6 +113,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 qwenVision: qwenVision);
             multiModel.FrameStepSeconds = request.FrameStepSeconds;
             multiModel.DedupWindowFrames = request.DedupWindowFrames;
+            multiModel.DinoFallbackEveryNIrrelevantFrames = 3;
+            multiModel.DinoFallbackStartSeconds = 5.0;
 
             videoResult = await multiModel.AnalyzeAsync(
                 request.VideoPath, analysisProgress, ct).ConfigureAwait(false);
@@ -131,19 +134,23 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             videoService.DedupWindowFrames = request.DedupWindowFrames;
 
             // Knick-Erkennung (BAG) einhaengen NUR wenn Sidecar wirklich aktiv ist.
-            // Wichtig: Bisheriger Code pruefte `sidecarCfg is not null`, aber AiPlatformConfig.Load().ToPipelineConfig()
-            // gibt nie null zurueck -> Knick-HTTP lief auch im OllamaOnly-Modus mit Timeouts pro Frame.
-            // Jetzt: nur wenn ShouldUseMultiModel wirklich Sidecar-Modus signalisiert.
+            // Audit 2026-05-13 M2: useMultiModel/pipelineCfg sind hier identisch mit
+            // dem Ergebnis aus Zeile 54 — kein zweiter Health-Roundtrip noetig.
             // knickHttp darf NICHT via `using` im if-Scope leben — Dispose erst nach AnalyzeAsync.
             System.Net.Http.HttpClient? knickHttp = null;
             try
             {
-                var (sidecarActive, sidecarCfg) = await ShouldUseMultiModelAsync(ct).ConfigureAwait(false);
-                if (sidecarActive && sidecarCfg is not null)
+                if (useMultiModel && pipelineCfg is not null)
                 {
                     knickHttp = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-                    var knickClient = new VisionPipelineClient(sidecarCfg.SidecarUrl, knickHttp);
-                    videoService.KnickDetection = new KnickDetectionService(knickClient);
+                    var knickClient = new VisionPipelineClient(pipelineCfg.SidecarUrl, knickHttp);
+                    var knickService = new KnickDetectionService(knickClient)
+                    {
+                        // Bogen-Detektor parallel einhaengen: Geometrische BCC-Erkennung
+                        // ueber die selbe Fluchtpunkt-Historie, kein zusaetzlicher Sidecar-Call.
+                        BendDetector = new AuswertungPro.Next.Application.Ai.Pipeline.PipeAxisBendDetector()
+                    };
+                    videoService.KnickDetection = knickService;
                 }
                 else
                 {
@@ -151,7 +158,13 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                         "[Pipeline] Knick-Erkennung deaktiviert (Sidecar nicht aktiv im aktuellen Modus).");
                 }
             }
-            catch { /* Knick-Erkennung optional */ }
+            catch (Exception ex)
+            {
+                // Audit 2026-05-13 L4: Knick-Erkennung bleibt optional, aber der Grund
+                // muss sichtbar sein (Trace), sonst sind Sidecar-/HttpClient-Faults stumm.
+                System.Diagnostics.Debug.WriteLine(
+                    $"[Pipeline] Knick-Erkennung init fehlgeschlagen: {ex.Message}");
+            }
 
             try
             {

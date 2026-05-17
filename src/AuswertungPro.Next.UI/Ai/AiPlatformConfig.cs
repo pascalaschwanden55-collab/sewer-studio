@@ -13,6 +13,7 @@ namespace AuswertungPro.Next.UI.Ai;
 public sealed record AiPlatformConfig(
     // ── Flags ──
     bool Enabled,
+    bool EnableDiagnostics,
 
     // ── Ollama ──
     Uri OllamaBaseUri,
@@ -53,7 +54,8 @@ public sealed record AiPlatformConfig(
         ReferenceVisionModel:  ReferenceVisionModel,
         OllamaRequestTimeout: OllamaRequestTimeout,
         OllamaKeepAlive:      OllamaKeepAlive,
-        OllamaNumCtx:         OllamaNumCtx);
+        OllamaNumCtx:         OllamaNumCtx,
+        EnableDiagnostics:    EnableDiagnostics);
 
     public OllamaConfig ToOllamaConfig() => new(
         BaseUri:              OllamaBaseUri,
@@ -97,6 +99,7 @@ public sealed record AiPlatformConfig(
         // ── Flags ──
         var enabled = settings?.AiEnabled
             ?? ParseBool(Env("SEWERSTUDIO_AI_ENABLED"));
+        var enableDiagnostics = settings?.EnableDiagnostics ?? false;
 
         // ── Ollama ──
         var ollamaUrl = FirstNonEmpty(
@@ -231,6 +234,7 @@ public sealed record AiPlatformConfig(
 
         return new AiPlatformConfig(
             Enabled:                enabled,
+            EnableDiagnostics:      enableDiagnostics,
             OllamaBaseUri:          new Uri(ollamaUrl),
             VisionModel:            vision,
             TextModel:              text,

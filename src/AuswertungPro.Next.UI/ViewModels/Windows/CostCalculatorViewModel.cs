@@ -225,13 +225,6 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
     private void Save()
     {
-        if (string.IsNullOrWhiteSpace(_projectPath))
-        {
-            _dialogs.ShowMessage("Projekt bitte speichern, um Kosten abzulegen.", "Kosten",
-                MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
-
         var key = Holding?.Trim() ?? "";
         if (string.IsNullOrWhiteSpace(key))
         {
@@ -241,17 +234,11 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         }
 
         var holdingCost = BuildHoldingCost(key);
-        _store.ByHolding[key] = holdingCost;
-
-        if (!_costRepo.Save(_projectPath, _store, out var error))
-        {
-            _dialogs.ShowMessage($"Speichern fehlgeschlagen: {error}", "Kosten",
-                MessageBoxButton.OK, MessageBoxImage.Error);
+        if (!TryPersistHoldingCost(holdingCost, showErrors: true))
             return;
-        }
 
         // Keep record fields in sync when user saves from the calculator window.
-        _applyTotal?.Invoke(BuildHoldingCost(key));
+        _applyTotal?.Invoke(holdingCost);
         Saved?.Invoke();
     }
 
@@ -264,7 +251,10 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             return;
         }
 
-        _applyTotal(BuildHoldingCost(Holding));
+        var holdingCost = BuildHoldingCost(Holding);
+        TryPersistHoldingCost(holdingCost, showErrors: false);
+        _applyTotal(holdingCost);
+        Saved?.Invoke();
     }
 
     private async Task ExportPdfAsync(Window? owner)
@@ -453,6 +443,41 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             MwstAmount = mwst,
             TotalInclMwst = Math.Round(total + mwst, 2)
         };
+    }
+
+    private bool TryPersistHoldingCost(HoldingCost holdingCost, bool showErrors)
+    {
+        if (string.IsNullOrWhiteSpace(_projectPath))
+        {
+            if (showErrors)
+            {
+                _dialogs.ShowMessage("Projekt bitte speichern, um Kosten abzulegen.", "Kosten",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            return false;
+        }
+
+        var key = holdingCost.Holding?.Trim() ?? "";
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            if (showErrors)
+            {
+                _dialogs.ShowMessage("Haltungsname fehlt.", "Kosten",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            return false;
+        }
+
+        _store.ByHolding[key] = holdingCost;
+        if (_costRepo.Save(_projectPath, _store, out var error))
+            return true;
+
+        if (showErrors)
+        {
+            _dialogs.ShowMessage($"Speichern fehlgeschlagen: {error}", "Kosten",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        return false;
     }
 
     private void LoadExisting(HoldingCost cost)

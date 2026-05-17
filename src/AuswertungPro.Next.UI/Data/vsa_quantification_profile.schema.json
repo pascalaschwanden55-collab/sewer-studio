@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sewerstudio.local/schemas/vsa_quantification_profile.schema.json",
+  "title": "VSA-Quantifizierungs-Profil",
+  "description": "Definiert wie Q1/Q2/Uhrlage/Range-Kandidat aus Bilddaten entstehen. Bewertung (Q1 -> EZ -> ZN/DZ) bleibt in classification_channels.json. Schwellen hier sind Erkennungs-Trigger, nicht Bewertungsregeln.",
+  "type": "object",
+  "required": ["schema_version", "profiles"],
+  "additionalProperties": false,
+  "properties": {
+    "_comment": { "type": "string" },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$"
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/CodeProfile" }
+    }
+  },
+  "$defs": {
+    "CodeProfile": {
+      "type": "object",
+      "required": ["code", "label", "visual_family", "q1", "q2", "clock"],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z]{3,5}$",
+          "description": "VSA-Code als Hauptcode (3 Zeichen) oder Untercode (4-5 Zeichen). Punkte werden in Untercode-Notation nicht zugelassen."
+        },
+        "label": { "type": "string", "minLength": 1 },
+        "visual_family": {
+          "type": "string",
+          "description": "Visuelle Kategorie fuer KI-Erkennung (z.B. root, deposit, crack). KI nennt diese, Code-Mapping erfolgt programmtisch."
+        },
+        "q1": { "$ref": "#/$defs/Quantification" },
+        "q2": { "$ref": "#/$defs/Quantification" },
+        "clock": { "$ref": "#/$defs/ClockSpec" },
+        "range_tracking": { "$ref": "#/$defs/RangeTracking" },
+        "required_per_haltung": { "$ref": "#/$defs/RequiredPerHaltung" },
+        "char1": { "$ref": "#/$defs/CharSpec" },
+        "char2": { "$ref": "#/$defs/CharSpec" },
+        "_comment": { "type": "string" },
+        "_implementation_note": { "type": "string" }
+      }
+    },
+    "Quantification": {
+      "type": "object",
+      "required": ["source"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "$ref": "#/$defs/QuantSource" },
+        "unit": { "$ref": "#/$defs/QuantUnit" },
+        "fallback": { "$ref": "#/$defs/QuantSource" }
+      }
+    },
+    "ClockSpec": {
+      "type": "object",
+      "required": ["required", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "required": { "type": "boolean" },
+        "source": { "$ref": "#/$defs/QuantSource" },
+        "fallback": { "$ref": "#/$defs/QuantSource" }
+      }
+    },
+    "RangeTracking": {
+      "type": "object",
+      "required": ["enabled"],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "min_length_m": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Mindestlaenge fuer Streckenschaden-Kandidat. ERKENNUNGS-Trigger, nicht VSA-Bewertung."
+        },
+        "max_gap_m": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Maximale Luecke zwischen aufeinanderfolgenden Detektionen, die noch als zusammenhaengender Streckenschaden gilt."
+        },
+        "final_decision": {
+          "enum": ["auto", "operator_review", "manual"],
+          "description": "Wer entscheidet ueber das endgueltige Streckenschaden-Ergebnis."
+        }
+      },
+      "if": { "properties": { "enabled": { "const": true } }, "required": ["enabled"] },
+      "then": { "required": ["enabled", "min_length_m", "max_gap_m", "final_decision"] }
+    },
+    "RequiredPerHaltung": {
+      "type": "object",
+      "required": ["enabled"],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "count": { "type": "integer", "minimum": 1 },
+        "validator_action": {
+          "enum": ["warn_if_missing", "block_if_missing"],
+          "description": "Aktion eines HaltungCompletenessValidator wenn Pflicht-Code fehlt."
+        }
+      },
+      "if": { "properties": { "enabled": { "const": true } }, "required": ["enabled"] },
+      "then": { "required": ["enabled", "count", "validator_action"] }
+    },
+    "CharSpec": {
+      "type": "object",
+      "required": ["source"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "$ref": "#/$defs/QuantSource" },
+        "ai_hint": {
+          "$ref": "#/$defs/QuantSource",
+          "description": "Wenn source=manual: KI darf einen Hinweis fuer den Operator vorschlagen, aber nicht final setzen."
+        },
+        "fallback": { "$ref": "#/$defs/QuantSource" },
+        "allowed_values": {
+          "oneOf": [
+            { "const": "from_catalog" },
+            { "type": "array", "items": { "type": "string" } }
+          ],
+          "description": "from_catalog = aus vsa_codes.json (Untercodes); Array = explizite Liste."
+        },
+        "required": { "type": "boolean" }
+      }
+    },
+    "QuantSource": {
+      "enum": [
+        "none",
+        "manual",
+        "qwen_classification",
+        "qwen_estimate",
+        "sam_mask_area_percent",
+        "sam_cross_section_percent",
+        "sam_deposit_height_percent",
+        "sam_water_level_percent",
+        "sam_clock_range",
+        "sam_orientation",
+        "pipe_axis_bend_angle",
+        "pipe_axis_direction",
+        "dn_relative_measurement",
+        "horizontal_line_detector"
+      ],
+      "description": "Quelle eines Quantifizierungs-Werts. Pro Strategie muss in C# eine Berechnungs-Funktion existieren."
+    },
+    "QuantUnit": {
+      "enum": ["%", "mm", "deg", "count", "none"]
+    }
+  }
+}

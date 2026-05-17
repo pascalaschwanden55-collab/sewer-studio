@@ -129,3 +129,11 @@ yolo_sewer_v*/
 
 # Config-Backups
 src/**/Config/*.bak_*.json
+
+# Audit 2026-05-15: generierte Artefakte / RAG-Korpus / Diagnose-Output
+Knowledge/fachwissen/
+.coverage
+coverage.xml
+skills.pdf
+CODEX_SKILLS.md
+.tmp/

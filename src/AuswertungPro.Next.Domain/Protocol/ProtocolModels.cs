@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace AuswertungPro.Next.Domain.Protocol;
 
-public enum ProtocolEntrySource { Imported, Manual, Ai }
+public enum ProtocolEntrySource { Imported, Manual, Ai, Heuristic }
 public enum ProtocolChangeKind { Add, Edit, Delete, Restore, Reorder, AttachPhoto, DetachPhoto }
 
 public sealed class ProtocolEntry
