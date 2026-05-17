@@ -137,3 +137,11 @@ coverage.xml
 skills.pdf
 CODEX_SKILLS.md
 .tmp/
+
+# Audit 2026-05-17 (Nachzieh-v2): pytest-Cache nicht committen.
+# Pytest legt das default in sidecar/.pytest_cache/ an; auf Windows kann
+# das Permission-Probleme in git status erzeugen wenn die venv parallel laeuft.
+.pytest_cache/
+**/.pytest_cache/
+.pytest_tmp/
+**/.pytest_tmp/

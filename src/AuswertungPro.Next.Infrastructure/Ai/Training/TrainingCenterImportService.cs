@@ -149,10 +149,10 @@ public sealed class TrainingCenterImportService
 
     private static IEnumerable<string> EnumerateFolders(string rootFolder)
     {
-        yield return rootFolder;
-
-        foreach (var dir in Directory.EnumerateDirectories(rootFolder, "*", SearchOption.AllDirectories))
-            yield return dir;
+        // Audit 2026-05-17 (Nachzieh-v2): SafeFileEnumeration.EnumerateDirectoriesSafe
+        // ueberspringt gesperrte Unterordner statt den ganzen Lauf abzubrechen.
+        // Liefert root selbst als erstes Element (Pre-Order-Traversal).
+        return SafeFileEnumeration.EnumerateDirectoriesSafe(rootFolder);
     }
 
     // Dateinamen-Muster fuer Protokoll-PDFs (bevorzugt)

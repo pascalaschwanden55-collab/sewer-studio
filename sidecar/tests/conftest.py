@@ -1,26 +1,28 @@
 """Pytest fixtures + global setup fuer den Sidecar.
 
-Audit 2026-05-17 (Nachzieh):
+Audit 2026-05-17 (Nachzieh-v2):
 - Auth-Bypass: ``SEWER_SIDECAR_AUTH=disabled`` wird VOR dem Import von
   ``sidecar.main`` gesetzt. Sonst aktiviert die Middleware Token-Auth
   (Token aus %LOCALAPPDATA%/SewerStudio/.sidecar_token), und alle
   TestClient-Tests scheitern mit 401.
 - Marker ``live``: Tests die einen laufenden Sidecar auf localhost:8100
-  brauchen (test_batch_endpoints.py). Werden per Default uebersprungen
-  ausser ``--run-live`` ist gesetzt.
-- Marker ``model``: Tests die echte Modellgewichte laden (YOLO, SAM,
-  DINO via TestClient + Lifespan). Werden per Default uebersprungen
-  ausser ``--run-model`` ist gesetzt. Damit ist ``pytest sidecar/tests``
-  auf einer frischen Linux-Station ohne Modelle reproduzierbar gruen.
-- Pytest-Cache + basetemp: ``pyproject.toml`` setzt ``--basetemp`` auf
-  ``.tmp/pytest/basetemp``. Diese conftest sorgt zusaetzlich dafuer dass
-  der Ordner existiert und der Cache nicht in ``sidecar/.pytest_cache``
-  landet (Permission-Probleme unter Windows mit aktiver venv).
+  brauchen. Skip ausser ``--run-live``.
+- Marker ``model``: Tests die echte Modellgewichte laden. Skip ausser
+  ``--run-model``. Damit ist ``pytest sidecar/tests`` auf einer frischen
+  Maschine ohne Modelle reproduzierbar gruen.
+- basetemp: NICHT mehr in pyproject.toml hartkodiert. Pytest-Default
+  wird bevorzugt; wenn dessen Temp-Root nicht les-/schreibbar ist, setzt
+  diese conftest einen lokalen Fallback unter ``sidecar/.pytest_tmp``.
+- Cache-Redirect ist best-effort: erst Repo-``.tmp``, dann lokaler
+  ``sidecar/.pytest_tmp``-Fallback. Wenn beides nicht geht, bleibt pytest
+  bei seinem Default.
 """
 
 from __future__ import annotations
 
+import getpass
 import os
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -28,11 +30,46 @@ import pytest
 # Auth komplett deaktivieren — VOR sidecar.main importiert wird.
 os.environ.setdefault("SEWER_SIDECAR_AUTH", "disabled")
 
-# basetemp-Ordner sicherstellen (pyproject.toml setzt nur den Pfad,
-# pytest legt das Verzeichnis erst beim Bedarf an — wir sorgen vor).
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-_BASE_TMP = _REPO_ROOT / ".tmp" / "pytest" / "basetemp"
-_BASE_TMP.mkdir(parents=True, exist_ok=True)
+_SIDECAR_ROOT = Path(__file__).resolve().parents[1]
+_REPO_ROOT = _SIDECAR_ROOT.parent
+
+
+def _is_writable_dir(path: Path) -> bool:
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        probe = path / ".probe"
+        probe.write_text("ok", encoding="utf-8")
+        probe.unlink()
+        return True
+    except Exception:
+        return False
+
+
+def _default_pytest_temproot_is_usable() -> bool:
+    root = Path(tempfile.gettempdir()) / f"pytest-of-{getpass.getuser()}"
+    try:
+        root.mkdir(mode=0o700, exist_ok=True)
+        # Pytest scans this directory before creating numbered temp dirs.
+        list(root.iterdir())
+        return _is_writable_dir(root)
+    except Exception:
+        return False
+
+
+def _configure_temproot_fallback() -> None:
+    if os.environ.get("PYTEST_DEBUG_TEMPROOT") or _default_pytest_temproot_is_usable():
+        return
+
+    for candidate in (
+        _REPO_ROOT / ".tmp" / "pytest" / "temproot",
+        _SIDECAR_ROOT / ".pytest_tmp" / "temproot",
+    ):
+        if _is_writable_dir(candidate):
+            os.environ["PYTEST_DEBUG_TEMPROOT"] = str(candidate)
+            return
+
+
+_configure_temproot_fallback()
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -51,13 +88,16 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    # Marker werden zentral via pyproject.toml [tool.pytest.ini_options].markers
-    # registriert, damit "pytest --markers" sie auch ohne diesen Hook listet.
-    # Hier nur Cache-Redirect.
-    cache_dir = _REPO_ROOT / ".tmp" / "pytest" / "sidecar-cache"
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    # Private API, aber bewusst: keine offizielle Schnittstelle fuer Cache-Path.
-    config.cache._cachedir = cache_dir  # type: ignore[attr-defined]
+    """Cache-Redirect best-effort. Marker werden via pyproject.toml registriert."""
+    for cache_dir in (
+        _REPO_ROOT / ".tmp" / "pytest" / "sidecar-cache",
+        _SIDECAR_ROOT / ".pytest_tmp" / "cache",
+    ):
+        if not _is_writable_dir(cache_dir):
+            continue
+
+        config.cache._cachedir = cache_dir  # type: ignore[attr-defined]
+        return
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
