@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using AuswertungPro.Next.Infrastructure.Common;
 
 namespace AuswertungPro.Next.Infrastructure;
 
@@ -119,7 +120,8 @@ public static partial class HoldingFolderDistributor
             };
         }
 
-        var txtFiles = Directory.EnumerateFiles(txtSourceFolder, "kiDVDaten*.txt", SearchOption.AllDirectories)
+        // Audit 2026-05-17: SafeFileEnumeration tolerant gegen gesperrte Unterordner.
+        var txtFiles = SafeFileEnumeration.EnumerateFilesSafe(txtSourceFolder, "kiDVDaten*.txt", recursive: true)
             .ToList();
 
         if (txtFiles.Count == 0)

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using UglyToad.PdfPig;
+using AuswertungPro.Next.Infrastructure.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 
@@ -48,7 +49,8 @@ public static class PdfTextExtractor
             var winget = Path.Combine(local, "Microsoft", "WinGet", "Packages");
             if (Directory.Exists(winget))
             {
-                var match = Directory.EnumerateFiles(winget, "pdftotext.exe", SearchOption.AllDirectories)
+                // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration.
+                var match = SafeFileEnumeration.EnumerateFilesSafe(winget, "pdftotext.exe", recursive: true)
                     .FirstOrDefault();
                 if (!string.IsNullOrWhiteSpace(match))
                     return match;

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using AuswertungPro.Next.Infrastructure.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 
@@ -152,7 +153,8 @@ internal static class PdfOcrExtractor
             var winget = Path.Combine(local, "Microsoft", "WinGet", "Packages");
             if (Directory.Exists(winget))
             {
-                return Directory.EnumerateFiles(winget, executableName, SearchOption.AllDirectories)
+                // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration.
+                return SafeFileEnumeration.EnumerateFilesSafe(winget, executableName, recursive: true)
                     .FirstOrDefault();
             }
         }

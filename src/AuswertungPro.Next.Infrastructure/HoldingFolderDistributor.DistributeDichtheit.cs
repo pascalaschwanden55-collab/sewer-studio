@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Common;
 
 namespace AuswertungPro.Next.Infrastructure;
 
@@ -35,7 +36,8 @@ public static partial class HoldingFolderDistributor
         if (!Directory.Exists(pdfSourceFolder))
             return new[] { new DistributionResult(false, $"PDF folder not found: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) };
 
-        var pdfFiles = Directory.EnumerateFiles(pdfSourceFolder, "*.pdf", SearchOption.AllDirectories)
+        // Audit 2026-05-17: SafeFileEnumeration statt Directory.EnumerateFiles.
+        var pdfFiles = SafeFileEnumeration.EnumerateFilesSafe(pdfSourceFolder, "*.pdf", recursive: true)
             .Where(p => !Path.GetFileName(p).StartsWith("split_", StringComparison.OrdinalIgnoreCase))
             .ToList();
 

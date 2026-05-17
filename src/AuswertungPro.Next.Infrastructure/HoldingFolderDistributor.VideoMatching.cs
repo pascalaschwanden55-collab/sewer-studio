@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using AuswertungPro.Next.Infrastructure.Common;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Infrastructure.Media;
 
@@ -40,10 +41,11 @@ public static partial class HoldingFolderDistributor
 
         // Rekursiv suchen: M150/XML liegen in der Praxis oft in Unterordnern.
         // XML nicht mehr über Dateinamen filtern, da viele Exporte generische Namen haben.
-        try { sidecarFiles.AddRange(Directory.EnumerateFiles(folder, "*.xtf", SearchOption.AllDirectories)); } catch { }
-        try { sidecarFiles.AddRange(Directory.EnumerateFiles(folder, "*.m150", SearchOption.AllDirectories)); } catch { }
-        try { sidecarFiles.AddRange(Directory.EnumerateFiles(folder, "*.mdb", SearchOption.AllDirectories)); } catch { }
-        try { sidecarFiles.AddRange(Directory.EnumerateFiles(folder, "*.xml", SearchOption.AllDirectories)); } catch { }
+        // Audit 2026-05-17: SafeFileEnumeration ueberspringt gesperrte Unterordner.
+        try { sidecarFiles.AddRange(SafeFileEnumeration.EnumerateFilesSafe(folder, "*.xtf", recursive: true)); } catch { }
+        try { sidecarFiles.AddRange(SafeFileEnumeration.EnumerateFilesSafe(folder, "*.m150", recursive: true)); } catch { }
+        try { sidecarFiles.AddRange(SafeFileEnumeration.EnumerateFilesSafe(folder, "*.mdb", recursive: true)); } catch { }
+        try { sidecarFiles.AddRange(SafeFileEnumeration.EnumerateFilesSafe(folder, "*.xml", recursive: true)); } catch { }
 
         return sidecarFiles
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -187,7 +189,8 @@ public static partial class HoldingFolderDistributor
         {
             try
             {
-                foreach (var path in Directory.EnumerateFiles(folder, "CDIndex.txt", SearchOption.AllDirectories))
+                // Audit 2026-05-17: SafeFileEnumeration statt Directory.EnumerateFiles.
+                foreach (var path in SafeFileEnumeration.EnumerateFilesSafe(folder, "CDIndex.txt", recursive: true))
                     cdIndexPaths.Add(path);
             }
             catch

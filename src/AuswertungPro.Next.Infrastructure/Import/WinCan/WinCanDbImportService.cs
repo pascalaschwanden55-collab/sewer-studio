@@ -8,6 +8,7 @@ using Microsoft.Data.Sqlite;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Infrastructure.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
@@ -435,7 +436,8 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         var dict = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var dir in GetMediaRoots(root))
         {
-            foreach (var file in Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories))
+            // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration.
+            foreach (var file in SafeFileEnumeration.EnumerateFilesSafe(dir, "*.*", recursive: true))
             {
                 var ext = Path.GetExtension(file);
                 if (!MediaExtensions.Contains(ext))
@@ -971,7 +973,8 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             return score;
         }
 
-        var candidates = Directory.EnumerateFiles(exportRoot, "*.mdb", SearchOption.AllDirectories).ToList();
+        // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration.
+        var candidates = SafeFileEnumeration.EnumerateFilesSafe(exportRoot, "*.mdb", recursive: true).ToList();
         if (candidates.Count == 0)
             return Array.Empty<string>();
 

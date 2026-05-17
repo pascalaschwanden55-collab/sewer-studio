@@ -1,9 +1,16 @@
-"""Smoke-Tests fuer Batch-Endpunkte (braucht laufenden Sidecar)."""
+"""Smoke-Tests fuer Batch-Endpunkte (braucht laufenden Sidecar).
+
+Audit 2026-05-17: alle Tests in diesem Modul brauchen einen lebenden Sidecar
+auf SIDECAR_URL (Default localhost:8100). Werden ohne `--run-live` ueber-
+sprungen (siehe conftest.py).
+"""
 
 import base64
 import os
 import pytest
 import httpx
+
+pytestmark = pytest.mark.live
 
 SIDECAR_URL = os.environ.get("SIDECAR_URL", "http://localhost:8100")
 TEST_IMAGE_DIR = os.environ.get("TEST_IMAGE_DIR", r"C:\KI_BRAIN\fewshot_images")

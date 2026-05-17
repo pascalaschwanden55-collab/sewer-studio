@@ -66,22 +66,29 @@ public sealed class PlaywrightInstallService : IPlaywrightInstallService
 
     private async Task<PlaywrightInstallResult> RunInstallAsync(string tool, string scriptPath, CancellationToken ct)
     {
-        var args = $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptPath}\" install chromium";
-
+        // Audit 2026-05-17: ArgumentList statt String-Konkatenation.
+        // Vorher: $"-File \"{scriptPath}\" ..." mit eingebettetem Pfad → Argument-Injection-
+        // Risiko falls scriptPath jemals von aussen kommt. ArgumentList escaped korrekt.
         var psi = new ProcessStartInfo
         {
             FileName = tool,
-            Arguments = args,
             WorkingDirectory = AppContext.BaseDirectory,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
+        psi.ArgumentList.Add("-NoProfile");
+        psi.ArgumentList.Add("-ExecutionPolicy");
+        psi.ArgumentList.Add("Bypass");
+        psi.ArgumentList.Add("-File");
+        psi.ArgumentList.Add(scriptPath);
+        psi.ArgumentList.Add("install");
+        psi.ArgumentList.Add("chromium");
 
         using var p = new Process { StartInfo = psi, EnableRaisingEvents = true };
 
-        _logger.LogInformation("Installing Playwright Chromium via {Tool}: {Args}", tool, args);
+        _logger.LogInformation("Installing Playwright Chromium via {Tool} (Script: {Script})", tool, scriptPath);
 
         try
         {

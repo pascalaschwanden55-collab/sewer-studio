@@ -1,4 +1,10 @@
-"""Tests for SAM segmentation endpoint."""
+"""Tests for SAM segmentation endpoint.
+
+Audit 2026-05-17 (Nachzieh): mit @pytest.mark.model markiert, weil TestClient+
+Lifespan SAM2 laedt (Checkpoint models/sam2/sam2.1_hiera_large.pt). Auf einer
+frischen Maschine ohne lokale Gewichte timeoutet das. Aktivieren mit
+``pytest --run-model``.
+"""
 
 import base64
 import io
@@ -6,6 +12,8 @@ import io
 import pytest
 from PIL import Image
 from fastapi.testclient import TestClient
+
+pytestmark = pytest.mark.model
 
 
 def _make_test_image(w: int = 320, h: int = 240) -> str:

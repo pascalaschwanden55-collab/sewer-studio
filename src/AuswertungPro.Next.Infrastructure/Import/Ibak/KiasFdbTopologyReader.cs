@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FirebirdSql.Data.FirebirdClient;
+using AuswertungPro.Next.Infrastructure.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Ibak;
 
@@ -181,7 +182,8 @@ public static class KiasFdbTopologyReader
     {
         try
         {
-            var candidates = Directory.EnumerateFiles(exportRoot, "*.fdb", SearchOption.AllDirectories).ToList();
+            // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration.
+            var candidates = SafeFileEnumeration.EnumerateFilesSafe(exportRoot, "*.fdb", recursive: true).ToList();
             // Bevorzuge Arizona.fdb (KIAS-Standard).
             return candidates.FirstOrDefault(p => string.Equals(Path.GetFileName(p), "Arizona.fdb", StringComparison.OrdinalIgnoreCase))
                    ?? candidates.FirstOrDefault();

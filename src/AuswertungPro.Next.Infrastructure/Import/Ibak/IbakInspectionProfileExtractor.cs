@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Infrastructure.Common;
 using AuswertungPro.Next.Infrastructure.Import.WinCan;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Ibak;
@@ -277,7 +278,8 @@ public static class IbakInspectionProfileExtractor
         if (!Directory.Exists(film))
             return new List<string>();
         var exts = new[] { ".mpg", ".mpeg", ".mp4", ".avi", ".mov", ".mkv" };
-        return Directory.EnumerateFiles(film, "*.*", SearchOption.AllDirectories)
+        // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration.
+        return SafeFileEnumeration.EnumerateFilesSafe(film, "*.*", recursive: true)
             .Where(p => exts.Contains(Path.GetExtension(p), StringComparer.OrdinalIgnoreCase))
             .ToList();
     }
@@ -316,7 +318,8 @@ public static class IbakInspectionProfileExtractor
     {
         try
         {
-            var candidates = Directory.EnumerateFiles(exportRoot, "Daten.txt", SearchOption.AllDirectories).ToList();
+            // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration.
+            var candidates = SafeFileEnumeration.EnumerateFilesSafe(exportRoot, "Daten.txt", recursive: true).ToList();
             return candidates.FirstOrDefault(p => p.IndexOf(Path.DirectorySeparatorChar + "Film" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) >= 0)
                    ?? candidates.FirstOrDefault();
         }

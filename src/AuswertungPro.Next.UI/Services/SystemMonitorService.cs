@@ -124,18 +124,26 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     {
         try
         {
+            // Audit 2026-05-17: ArgumentList statt manuell verkettete Argumente-Strings.
+            // Vorher String-Konkatenation mit eingebetteten Quotes; bei PowerShell
+            // wird der Command-Block ueber ein separates Argument uebergeben, kein
+            // Escaping-Risiko mehr.
+            const string ramQuery =
+                "$m = Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue; "
+                + "if ($m) { ($m | ForEach-Object { if ($_.ConfiguredClockSpeed) { $_.ConfiguredClockSpeed } else { $_.Speed } } | Measure-Object -Maximum).Maximum } "
+                + "else { '0' }";
             var psi = new ProcessStartInfo
             {
                 FileName = "powershell.exe",
-                Arguments = "-NoProfile -NoLogo -Command \""
-                    + "$m = Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue; "
-                    + "if ($m) { ($m | ForEach-Object { if ($_.ConfiguredClockSpeed) { $_.ConfiguredClockSpeed } else { $_.Speed } } | Measure-Object -Maximum).Maximum } "
-                    + "else { '0' }\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+            psi.ArgumentList.Add("-NoProfile");
+            psi.ArgumentList.Add("-NoLogo");
+            psi.ArgumentList.Add("-Command");
+            psi.ArgumentList.Add(ramQuery);
             using var proc = Process.Start(psi);
             if (proc is null) return;
             var output = proc.StandardOutput.ReadToEnd().Trim();
@@ -1014,19 +1022,24 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             // Liest ALLE ThermalZones, gibt MAX und MIN zurueck. Konstant-niedrige Mainboard-
             // Floor-Werte (~28-30 °C, nicht reagierend auf CPU-Last) werden als nicht plausibel
             // gefiltert. Nur wenn die Spreizung >= 5 °C ueber Min-Floor liegt, gilt MAX als CPU-Temp.
+            // Audit 2026-05-17 (Nachzieh): ArgumentList statt String-Konkatenation.
+            const string thermalQuery =
+                "$zones = Get-CimInstance Win32_PerfFormattedData_Counters_ThermalZoneInformation -ErrorAction SilentlyContinue | "
+                + "Where-Object { $_.Temperature -gt 200 -and $_.Temperature -lt 420 } | "
+                + "ForEach-Object { [math]::Round($_.Temperature - 273.15) }; "
+                + "if ($zones) { $max = ($zones | Measure-Object -Maximum).Maximum; $min = ($zones | Measure-Object -Minimum).Minimum; \"$max;$min\" } else { '0;0' }";
             var psi = new ProcessStartInfo
             {
                 FileName = "powershell.exe",
-                Arguments = "-NoProfile -NoLogo -Command \""
-                    + "$zones = Get-CimInstance Win32_PerfFormattedData_Counters_ThermalZoneInformation -ErrorAction SilentlyContinue | "
-                    + "Where-Object { $_.Temperature -gt 200 -and $_.Temperature -lt 420 } | "
-                    + "ForEach-Object { [math]::Round($_.Temperature - 273.15) }; "
-                    + "if ($zones) { $max = ($zones | Measure-Object -Maximum).Maximum; $min = ($zones | Measure-Object -Minimum).Minimum; \"$max;$min\" } else { '0;0' }\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+            psi.ArgumentList.Add("-NoProfile");
+            psi.ArgumentList.Add("-NoLogo");
+            psi.ArgumentList.Add("-Command");
+            psi.ArgumentList.Add(thermalQuery);
 
             using var proc = Process.Start(psi);
             if (proc is null) return;
@@ -1090,15 +1103,22 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     {
         try
         {
+            // Audit 2026-05-17 (Nachzieh): ArgumentList statt String-Konkatenation.
+            const string acpiQuery =
+                "$t = Get-CimInstance -Namespace root/WMI -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction SilentlyContinue | Select-Object -First 1; "
+                + "if($t){$t.CurrentTemperature}else{'0'}";
             var psi = new ProcessStartInfo
             {
                 FileName = "powershell.exe",
-                Arguments = "-NoProfile -NoLogo -Command \"$t = Get-CimInstance -Namespace root/WMI -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction SilentlyContinue | Select-Object -First 1; if($t){$t.CurrentTemperature}else{'0'}\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+            psi.ArgumentList.Add("-NoProfile");
+            psi.ArgumentList.Add("-NoLogo");
+            psi.ArgumentList.Add("-Command");
+            psi.ArgumentList.Add(acpiQuery);
 
             using var proc = Process.Start(psi);
             if (proc is null) return;
@@ -1272,15 +1292,17 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         {
             try
             {
+                // Audit 2026-05-17 (Nachzieh): ArgumentList fuer nvidia-smi.
                 var psi = new ProcessStartInfo
                 {
                     FileName = _nvidiaSmiPath!,
-                    Arguments = "--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,clocks.current.graphics,name --format=csv,noheader,nounits",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true
                 };
+                psi.ArgumentList.Add("--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,clocks.current.graphics,name");
+                psi.ArgumentList.Add("--format=csv,noheader,nounits");
 
                 using var proc = Process.Start(psi);
                 if (proc is null) return;
@@ -1367,15 +1389,16 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         // Fallback: try from PATH
         try
         {
+            // Audit 2026-05-17 (Nachzieh): ArgumentList fuer Konsistenz.
             var psi = new ProcessStartInfo
             {
                 FileName = "nvidia-smi",
-                Arguments = "--version",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+            psi.ArgumentList.Add("--version");
             using var proc = Process.Start(psi);
             if (proc is not null)
             {

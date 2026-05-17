@@ -1,4 +1,8 @@
-"""Tests for Grounding DINO detection endpoint."""
+"""Tests for Grounding DINO detection endpoint.
+
+Audit 2026-05-17 (Nachzieh): mit @pytest.mark.model markiert, weil TestClient+
+Lifespan Grounding-DINO laedt. Aktivieren mit ``pytest --run-model``.
+"""
 
 import base64
 import io
@@ -6,6 +10,8 @@ import io
 import pytest
 from PIL import Image
 from fastapi.testclient import TestClient
+
+pytestmark = pytest.mark.model
 
 
 def _make_test_image(w: int = 320, h: int = 240) -> str:

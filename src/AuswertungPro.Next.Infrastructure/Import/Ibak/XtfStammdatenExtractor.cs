@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+using AuswertungPro.Next.Infrastructure.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Ibak;
 
@@ -152,7 +153,8 @@ public static class XtfStammdatenExtractor
     {
         try
         {
-            return Directory.EnumerateFiles(root, "*.xtf", SearchOption.AllDirectories).ToList();
+            // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration.
+            return SafeFileEnumeration.EnumerateFilesSafe(root, "*.xtf", recursive: true).ToList();
         }
         catch
         {

@@ -1,4 +1,9 @@
-"""End-to-end pipeline test."""
+"""End-to-end pipeline test.
+
+Audit 2026-05-17 (Nachzieh): mit @pytest.mark.model markiert, weil TestClient+
+Lifespan alle Modelle laedt (YOLO + DINO + SAM). Aktivieren mit
+``pytest --run-model``.
+"""
 
 import base64
 import io
@@ -6,6 +11,8 @@ import io
 import pytest
 from PIL import Image
 from fastapi.testclient import TestClient
+
+pytestmark = pytest.mark.model
 
 
 def _make_test_image(w: int = 640, h: int = 480) -> str:

@@ -1179,18 +1179,41 @@ public sealed class BatchSelfTrainingOrchestrator : AuswertungPro.Next.Applicati
             return;
         }
 
+        // Audit 2026-05-17: Host/Port aus _sidecarUrl parsen statt hartkodieren.
+        // Vorher startete der Prozess immer auf 127.0.0.1:8100, der Health-Check
+        // pollte aber auf der konfigurierten URL → Mismatch bei abweichendem Port.
+        string sidecarHost = "127.0.0.1";
+        int sidecarPort = 8100;
+        if (Uri.TryCreate(_sidecarUrl, UriKind.Absolute, out var parsedUri))
+        {
+            sidecarHost = string.IsNullOrEmpty(parsedUri.Host) ? sidecarHost : parsedUri.Host;
+            if (parsedUri.Port > 0) sidecarPort = parsedUri.Port;
+        }
+        else
+        {
+            _log?.LogWarning(
+                "Batch: _sidecarUrl konnte nicht geparst werden ({Url}) — Fallback {Host}:{Port}",
+                _sidecarUrl, sidecarHost, sidecarPort);
+        }
+
         try
         {
             var psi = new ProcessStartInfo
             {
                 FileName = venvPython,
-                Arguments = "-m uvicorn sidecar.main:app --host 127.0.0.1 --port 8100",
                 WorkingDirectory = sidecarDir,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true
             };
+            psi.ArgumentList.Add("-m");
+            psi.ArgumentList.Add("uvicorn");
+            psi.ArgumentList.Add("sidecar.main:app");
+            psi.ArgumentList.Add("--host");
+            psi.ArgumentList.Add(sidecarHost);
+            psi.ArgumentList.Add("--port");
+            psi.ArgumentList.Add(sidecarPort.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
             // V4.2 Fix: Process-Object disposen (Subprozess laeuft weiter, nur Management-Handles werden freigegeben).
             using var proc = Process.Start(psi);

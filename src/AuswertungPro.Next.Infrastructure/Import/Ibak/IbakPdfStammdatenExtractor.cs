@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Infrastructure.Common;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Ibak;
@@ -210,9 +211,10 @@ public static class IbakPdfStammdatenExtractor
         {
             // Bevorzuge Report-Unterordner, falle sonst auf alles im Root zurueck.
             var report = Path.Combine(root, "Report");
+            // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration ueberspringt gesperrte Unterordner.
             if (Directory.Exists(report))
-                return Directory.EnumerateFiles(report, "*.pdf", SearchOption.AllDirectories);
-            return Directory.EnumerateFiles(root, "*.pdf", SearchOption.AllDirectories);
+                return SafeFileEnumeration.EnumerateFilesSafe(report, "*.pdf", recursive: true);
+            return SafeFileEnumeration.EnumerateFilesSafe(root, "*.pdf", recursive: true);
         }
         catch
         {

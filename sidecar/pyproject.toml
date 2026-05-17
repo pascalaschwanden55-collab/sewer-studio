@@ -23,3 +23,27 @@ dev = ["pytest>=8.0", "httpx>=0.27"]
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.backends._legacy:_Backend"
+
+# Audit 2026-05-17 (Nachzieh): pytest-Defaults, damit `pytest sidecar/tests`
+# auf einer frischen Maschine reproduzierbar gruen laeuft.
+#
+# - basetemp landet im Repo-`.tmp/pytest/basetemp/` (nicht in `%TEMP%/pytest-of-{user}/`,
+#   wo unter Windows Permission-/Lock-Probleme passieren).
+# - Marker `unit`, `live`, `model` machen die Test-Schichten explizit:
+#   * unit  → reine Pure-Function-Tests, immer aktiv
+#   * live  → braucht laufenden Sidecar auf localhost:8100, skipped ohne `--run-live`
+#   * model → braucht echte Modellgewichte + GPU, skipped ohne `--run-model`
+# - Default-Lauf (`pytest tests/`) faehrt nur Unit-Tests; CI/Smoke-Pruefungen muessen
+#   die Flags explizit setzen.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "unit: reine Pure-Function-Tests ohne Sidecar/Modelle",
+    "live: braucht laufenden Sidecar auf localhost:8100 (mit --run-live aktivieren)",
+    "model: braucht echte Modellgewichte (YOLO/SAM/DINO) + GPU (mit --run-model aktivieren)",
+]
+addopts = [
+    # Pfad ist relativ zum sidecar/-CWD (= rootdir), zeigt also auf
+    # Repo-Root/.tmp/pytest/basetemp. conftest.py legt den Ordner an.
+    "--basetemp=../.tmp/pytest/basetemp",
+]

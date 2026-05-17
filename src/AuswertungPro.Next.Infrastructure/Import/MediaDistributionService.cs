@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Common;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -351,7 +352,8 @@ public sealed class MediaDistributionService
         try
         {
             // Direkte Suche nach Dateiname in allen Unterordnern
-            return Directory.EnumerateFiles(haltungenRoot, fileName, SearchOption.AllDirectories)
+            // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration.
+            return SafeFileEnumeration.EnumerateFilesSafe(haltungenRoot, fileName, recursive: true)
                 .FirstOrDefault();
         }
         catch

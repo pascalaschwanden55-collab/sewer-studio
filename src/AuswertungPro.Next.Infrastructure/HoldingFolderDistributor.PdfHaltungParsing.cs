@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using AuswertungPro.Next.Infrastructure.Common;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 
@@ -153,7 +154,8 @@ public static partial class HoldingFolderDistributor
                 {
                     if (!XtfFilesCache.TryGetValue(dir, out xtfFiles!))
                     {
-                        xtfFiles = Directory.GetFiles(dir, "*.xtf", SearchOption.AllDirectories);
+                        // Audit 2026-05-17: SafeFileEnumeration statt Directory.GetFiles.
+                        xtfFiles = SafeFileEnumeration.EnumerateFilesSafe(dir, "*.xtf", recursive: true).ToArray();
                         XtfFilesCache[dir] = xtfFiles;
                     }
                 }

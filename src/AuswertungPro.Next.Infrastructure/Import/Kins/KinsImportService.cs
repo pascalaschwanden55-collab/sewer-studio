@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Protocol;
+using SafeFs = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Media;
@@ -281,7 +282,9 @@ public sealed class KinsImportService : IKinsImportService
         bool hasDb3 = false, hasMdb = false, hasFdb = false, hasDatenTxt = false, hasKiDvDataTxt = false;
         try
         {
-            foreach (var file in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
+            // Audit 2026-05-17 (Nachzieh): SafeFs (alias fuer SafeFileEnumeration; vermeidet
+            // Namenskonflikt mit der lokalen private EnumerateFilesSafe-Methode).
+            foreach (var file in SafeFs.EnumerateFilesSafe(root, "*.*", recursive: true))
             {
                 var ext = Path.GetExtension(file);
                 var name = Path.GetFileName(file);
@@ -303,7 +306,7 @@ public sealed class KinsImportService : IKinsImportService
     {
         try
         {
-            return Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories).Any();
+            return SafeFs.EnumerateFilesSafe(root, pattern, recursive: true).Any();
         }
         catch
         {
@@ -315,7 +318,7 @@ public sealed class KinsImportService : IKinsImportService
     {
         try
         {
-            return Directory.EnumerateFiles(root, fileName, SearchOption.AllDirectories).Any();
+            return SafeFs.EnumerateFilesSafe(root, fileName, recursive: true).Any();
         }
         catch
         {
@@ -342,7 +345,8 @@ public sealed class KinsImportService : IKinsImportService
     {
         try
         {
-            return Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories).ToList();
+            // Audit 2026-05-17 (Nachzieh): nutzt zentrale Implementation aus Infrastructure.Common.
+            return SafeFs.EnumerateFilesSafe(root, pattern, recursive: true).ToList();
         }
         catch
         {
@@ -485,7 +489,8 @@ public sealed class KinsImportService : IKinsImportService
         IEnumerable<string> files;
         try
         {
-            files = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories);
+            // Audit 2026-05-17 (Nachzieh): SafeFs.
+            files = SafeFs.EnumerateFilesSafe(root, "*.*", recursive: true);
         }
         catch
         {

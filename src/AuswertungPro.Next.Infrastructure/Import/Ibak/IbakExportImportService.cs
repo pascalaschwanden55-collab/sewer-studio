@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using FirebirdSql.Data.FirebirdClient;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Infrastructure.Common;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -682,7 +683,8 @@ public sealed class IbakExportImportService : IIbakImportService
 
     private static string? FindFdb(string root)
     {
-        var candidates = Directory.EnumerateFiles(root, "*.fdb", SearchOption.AllDirectories).ToList();
+        // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration ueberspringt gesperrte Unterordner.
+        var candidates = SafeFileEnumeration.EnumerateFilesSafe(root, "*.fdb", recursive: true).ToList();
         if (candidates.Count == 0)
             return null;
         var preferred = candidates.FirstOrDefault(p => p.IndexOf(Path.DirectorySeparatorChar + "Data" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) >= 0);
@@ -763,7 +765,8 @@ public sealed class IbakExportImportService : IIbakImportService
     private static Dictionary<string, List<string>> BuildFileIndex(string root)
     {
         var dict = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var file in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
+        // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration.
+        foreach (var file in SafeFileEnumeration.EnumerateFilesSafe(root, "*.*", recursive: true))
         {
             var ext = Path.GetExtension(file);
             if (!MediaExtensions.Contains(ext))
@@ -791,7 +794,8 @@ public sealed class IbakExportImportService : IIbakImportService
 
     private static string? FindDatenTxt(string root)
     {
-        var candidates = Directory.EnumerateFiles(root, "Daten.txt", SearchOption.AllDirectories)
+        // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration.
+        var candidates = SafeFileEnumeration.EnumerateFilesSafe(root, "Daten.txt", recursive: true)
             .ToList();
 
         if (candidates.Count == 0)

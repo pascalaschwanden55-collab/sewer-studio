@@ -860,26 +860,17 @@ WICHTIG: Setze view_type konservativ. Falsches nahaufnahme/schwenk unterdrueckt 
         // Audit-Trail: Unterdrueckte Findings werden in SuppressedFindings gespeichert
         var suppressedFindings = new List<EnhancedFinding>();
 
-        static bool IsMandatoryBcFinding(EnhancedFinding finding)
-        {
-            var code = finding.VsaCodeHint?.Trim();
-            return !string.IsNullOrEmpty(code)
-                   && (code.StartsWith("BCD", StringComparison.OrdinalIgnoreCase)
-                       || code.StartsWith("BCE", StringComparison.OrdinalIgnoreCase)
-                       || code.StartsWith("BCC", StringComparison.OrdinalIgnoreCase)
-                       || code.StartsWith("BCA", StringComparison.OrdinalIgnoreCase));
-        }
-
         if (viewType is "nahaufnahme" or "schwenk")
         {
             // Soft-Filter: Severity hart auf 1 (= optisch/Beobachtung) abstufen
             // und Audit-Notes ergaenzen. Findings bleiben in der Liste, koennen aber
             // QualityGate nicht mehr triggern.
             // BC-Codes sind VSA-KEK-Pflichtmeldungen mit Severity 1 und duerfen
-            // nie wegen view_type=nahaufnahme/schwenk gefiltert werden.
+            // nie wegen view_type=nahaufnahme/schwenk gefiltert werden — siehe
+            // Application.Ai.Pipeline.BcCodeWhitelist (Audit 2026-05-17 extrahiert).
             findings = findings.Select(f =>
             {
-                if (IsMandatoryBcFinding(f))
+                if (AuswertungPro.Next.Application.Ai.Pipeline.BcCodeWhitelist.IsMandatory(f.VsaCodeHint))
                     return f;
 
                 suppressedFindings.Add(f);

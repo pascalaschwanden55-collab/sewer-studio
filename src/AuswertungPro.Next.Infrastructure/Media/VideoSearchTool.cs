@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Media;
 
@@ -204,7 +205,8 @@ public sealed class VideoSearchTool
         {
             try
             {
-                foreach (var f in Directory.EnumerateFiles(_root, "*", SearchOption.AllDirectories))
+                // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration.
+                foreach (var f in SafeFileEnumeration.EnumerateFilesSafe(_root, "*", recursive: true))
                 {
                     if (videoExt.Contains(Path.GetExtension(f))) yield return f;
                 }

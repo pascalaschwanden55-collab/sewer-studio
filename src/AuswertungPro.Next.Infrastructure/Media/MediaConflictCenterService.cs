@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Media;
 
@@ -171,7 +172,8 @@ public sealed class MediaConflictCenterService
         // 4) Last fallback: targeted search in preferred root.
         if (!string.IsNullOrWhiteSpace(preferredVideoRoot) && Directory.Exists(preferredVideoRoot))
         {
-            var found = Directory.EnumerateFiles(preferredVideoRoot, learned.SelectedFileName, SearchOption.AllDirectories)
+            // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration.
+            var found = SafeFileEnumeration.EnumerateFilesSafe(preferredVideoRoot, learned.SelectedFileName, recursive: true)
                 .FirstOrDefault(File.Exists);
             if (!string.IsNullOrWhiteSpace(found))
                 return found;

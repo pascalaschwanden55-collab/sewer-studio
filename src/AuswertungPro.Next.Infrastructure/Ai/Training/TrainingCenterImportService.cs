@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Infrastructure.Common;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 using AuswertungPro.Next.Application.Ai.Training;
 
@@ -339,7 +340,8 @@ public sealed class TrainingCenterImportService
             StringComparer.OrdinalIgnoreCase)
         { ".ts", ".m4v" };
 
-        foreach (var file in Directory.EnumerateFiles(videoFolder, "*.*", SearchOption.AllDirectories))
+        // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration ueberspringt gesperrte Unterordner.
+        foreach (var file in SafeFileEnumeration.EnumerateFilesSafe(videoFolder, "*.*", recursive: true))
         {
             if (!videoExts.Contains(Path.GetExtension(file)))
                 continue;
