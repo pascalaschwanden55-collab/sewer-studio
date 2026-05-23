@@ -1,6 +1,6 @@
 using System.Globalization;
+using System.Xml;
 using System.Xml.Linq;
-using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Geometry;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
@@ -77,6 +77,14 @@ public static class XtfGeometryExtractor
 
     // --- Helpers --------------------------------------------------------
 
+    // DTD prohibited + XmlResolver=null schuetzt vor XXE-Attacken bei
+    // XTF-Quellen aus fremden Tools (Goldstandard fuer System.Xml-Loader).
+    private static readonly XmlReaderSettings _xmlSettings = new()
+    {
+        DtdProcessing = DtdProcessing.Prohibit,
+        XmlResolver = null,
+    };
+
     private static bool TryLoadXtf(string xtfPath, out XDocument? doc)
     {
         doc = null;
@@ -85,7 +93,9 @@ public static class XtfGeometryExtractor
 
         try
         {
-            doc = SafeXmlLoader.Load(xtfPath);
+            using var stream = File.OpenRead(xtfPath);
+            using var reader = XmlReader.Create(stream, _xmlSettings);
+            doc = XDocument.Load(reader);
             return true;
         }
         catch
