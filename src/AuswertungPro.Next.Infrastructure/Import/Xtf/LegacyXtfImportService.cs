@@ -124,6 +124,19 @@ public sealed class LegacyXtfImportService
                 });
 
                 stats.Messages.Add(new ImportMessage { Level = "Info", Context = "XTF405", Message = $"Importiert {records.Count} Haltungen aus {Path.GetFileName(path)}" });
+
+                // Phase 1 (2026-05-23): LV95-Geometrien (Haltungs-Verlauf + Schacht-Lage)
+                // aus derselben Datei extrahieren und auf das Project anwenden.
+                var geomResult = XtfGeometryApplier.Apply(path, project);
+                if (geomResult.HaltungenMitGeometrie > 0 || geomResult.SchaechteMitLage > 0)
+                {
+                    stats.Messages.Add(new ImportMessage
+                    {
+                        Level = "Info",
+                        Context = "XTF405",
+                        Message = $"Geometrie (LV95): {geomResult.HaltungenMitGeometrie} Haltungen mit Verlauf, {geomResult.SchaechteMitLage} Schaechte mit Lage."
+                    });
+                }
             }
             else if (isVsa)
             {
