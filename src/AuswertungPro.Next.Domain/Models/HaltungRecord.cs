@@ -20,6 +20,12 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
     // Protokolldokument (mehrere Beobachtungen + Historie).
     public AuswertungPro.Next.Domain.Protocol.ProtocolDocument? Protocol { get; set; }
 
+    /// <summary>
+    /// Liniengeometrie der Haltung in LV95. null = keine Geometrie bekannt
+    /// (z.B. nur aus PDF importiert). Phase 1 (Geometrie-Fundament 2026-05).
+    /// </summary>
+    public AuswertungPro.Next.Domain.Geometry.HaltungGeometrie? Geometrie { get; set; }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime ModifiedAtUtc { get; set; } = DateTime.UtcNow;
     public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;

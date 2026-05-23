@@ -8,6 +8,12 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
     // Protokolldokument (Beobachtungen pro Bauteil).
     public AuswertungPro.Next.Domain.Protocol.ProtocolDocument? Protocol { get; set; }
 
+    /// <summary>
+    /// Punktgeometrie des Schachts in LV95. null = keine Lage bekannt.
+    /// Phase 1 (Geometrie-Fundament 2026-05).
+    /// </summary>
+    public AuswertungPro.Next.Domain.Geometry.SchachtLage? Lage { get; set; }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime ModifiedAtUtc { get; set; } = DateTime.UtcNow;
 
