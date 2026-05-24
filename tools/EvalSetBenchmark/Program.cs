@@ -34,6 +34,7 @@ try
     Console.WriteLine($"Frames:   {cases.Count}/{allCases.Count}");
     Console.WriteLine($"Ollama:   {baseUri}");
     Console.WriteLine($"Modell:   {model}");
+    Console.WriteLine($"Kontext:  {(options.UseOracleContext ? "Oracle aus Eval-Set" : "kein Kontext")}");
     Console.WriteLine();
 
     using var client = new OllamaClient(
@@ -63,7 +64,12 @@ try
         try
         {
             var b64 = Convert.ToBase64String(File.ReadAllBytes(c.ImagePath));
-            var analysis = await service.AnalyzeAsync(b64, cts.Token).ConfigureAwait(false);
+            var context = options.UseOracleContext
+                ? EvalSetBenchmarkContext.BuildOracleImportContext(c)
+                : null;
+            var analysis = context is null
+                ? await service.AnalyzeAsync(b64, cts.Token).ConfigureAwait(false)
+                : await service.AnalyzeAsync(b64, context, cts.Token).ConfigureAwait(false);
             sw.Stop();
 
             var finding = analysis.Findings
@@ -110,10 +116,11 @@ try
     var confusion = EvalSetBenchmarkScorer.BuildConfusionMatrix(rows);
     var stamp = DateTimeOffset.Now.ToString("yyyyMMdd_HHmmss");
     var modelSlug = Slug(model);
-    var csvPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{modelSlug}.csv");
-    var jsonPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{modelSlug}.json");
-    var byCodePath = Path.Combine(options.OutputDir, $"eval_{stamp}_{modelSlug}_by_code.csv");
-    var confusionPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{modelSlug}_confusion.csv");
+    var runSlug = options.UseOracleContext ? $"{modelSlug}_oracle_context" : modelSlug;
+    var csvPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{runSlug}.csv");
+    var jsonPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{runSlug}.json");
+    var byCodePath = Path.Combine(options.OutputDir, $"eval_{stamp}_{runSlug}_by_code.csv");
+    var confusionPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{runSlug}_confusion.csv");
 
     EvalSetBenchmarkScorer.WriteCsv(csvPath, rows);
     EvalSetBenchmarkScorer.WriteByCodeCsv(byCodePath, byCode);
@@ -126,6 +133,7 @@ try
         frames_run = cases.Count,
         model,
         ollama_url = baseUri.ToString(),
+        oracle_context = options.UseOracleContext,
         manifest = TryReadManifestInfo(options.EvalSetRoot)
     });
 
@@ -229,6 +237,7 @@ Optionen:
   --ollama-url <url>    Standard: App-Konfiguration
   --timeout-min <zahl>  Standard: App-Konfiguration
   --max <zahl>          Nur erste N Frames laufen lassen
+  --oracle-context      Testmodus: gibt Qwen den erwarteten Code als Kontext
   --help                Hilfe anzeigen
 """);
 }
@@ -240,6 +249,7 @@ internal sealed record BenchmarkOptions(
     Uri? OllamaUrl,
     int TimeoutMinutes,
     int MaxFrames,
+    bool UseOracleContext,
     bool ShowHelp)
 {
     public static BenchmarkOptions Parse(string[] args)
@@ -250,6 +260,7 @@ internal sealed record BenchmarkOptions(
         Uri? url = null;
         var timeoutMin = 0;
         var max = 0;
+        var oracleContext = false;
         var help = false;
 
         for (var i = 0; i < args.Length; i++)
@@ -278,12 +289,15 @@ internal sealed record BenchmarkOptions(
                 case "--max":
                     max = int.Parse(RequireValue(args, ref i, arg));
                     break;
+                case "--oracle-context":
+                    oracleContext = true;
+                    break;
                 default:
                     throw new ArgumentException($"Unbekannte Option: {arg}");
             }
         }
 
-        return new BenchmarkOptions(root, output, model, url, timeoutMin, max, help);
+        return new BenchmarkOptions(root, output, model, url, timeoutMin, max, oracleContext, help);
     }
 
     private static string RequireValue(string[] args, ref int index, string option)

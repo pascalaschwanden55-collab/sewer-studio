@@ -349,3 +349,25 @@ public static class EvalSetBenchmarkScorer
         return "\"" + value.Replace("\"", "\"\"") + "\"";
     }
 }
+
+public static class EvalSetBenchmarkContext
+{
+    public static IReadOnlyList<(string Code, string Description, double Meter)> BuildOracleImportContext(
+        EvalSetBenchmarkCase benchmarkCase)
+    {
+        if (string.Equals(benchmarkCase.ExpectedFullCode, "LEER", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(benchmarkCase.ExpectedFullCode))
+        {
+            return Array.Empty<(string Code, string Description, double Meter)>();
+        }
+
+        var meter = benchmarkCase.Meter ?? 0;
+        return
+        [
+            (
+                benchmarkCase.ExpectedFullCode,
+                $"Eval-Set Erwartung {benchmarkCase.ExpectedFullCode}",
+                meter)
+        ];
+    }
+}

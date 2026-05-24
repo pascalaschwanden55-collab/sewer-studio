@@ -169,4 +169,41 @@ public sealed class EvalSetBenchmarkTests : IDisposable
         Assert.Contains(confusion, c => c.ExpectedCode == "BDDC" && c.PredictedCode == "LEER" && c.Count == 2);
         Assert.Contains(confusion, c => c.ExpectedCode == "BDDC" && c.PredictedCode == "BDDC" && c.Count == 1);
     }
+
+    [Fact]
+    public void BuildOracleImportContext_returns_expected_code_for_positive_case()
+    {
+        var c = new EvalSetBenchmarkCase(
+            Id: "x",
+            FrameFileName: "frame.png",
+            ImagePath: "frame.png",
+            ExpectedFullCode: "BDDC",
+            ExpectedMainCode: "BDDC",
+            Category: "top5",
+            Meter: 12.3);
+
+        var context = EvalSetBenchmarkContext.BuildOracleImportContext(c);
+
+        Assert.Single(context);
+        Assert.Equal("BDDC", context[0].Code);
+        Assert.Contains("Eval-Set", context[0].Description);
+        Assert.Equal(12.3, context[0].Meter);
+    }
+
+    [Fact]
+    public void BuildOracleImportContext_returns_empty_for_negative_case()
+    {
+        var c = new EvalSetBenchmarkCase(
+            Id: "x",
+            FrameFileName: "frame.png",
+            ImagePath: "frame.png",
+            ExpectedFullCode: "LEER",
+            ExpectedMainCode: "LEER",
+            Category: "negative",
+            Meter: null);
+
+        var context = EvalSetBenchmarkContext.BuildOracleImportContext(c);
+
+        Assert.Empty(context);
+    }
 }
