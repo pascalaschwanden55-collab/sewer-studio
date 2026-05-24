@@ -9,6 +9,38 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 public sealed class EnhancedVisionAnalysisServiceTests
 {
     [Fact]
+    public async Task AnalyzeAsync_with_import_context_prompt_discourages_empty_frame_for_known_findings()
+    {
+        var content = """
+            {
+              "meter": null,
+              "time_in_video": null,
+              "pipe_material": "unbekannt",
+              "pipe_diameter_mm": null,
+              "findings": [],
+              "image_quality": "mittel",
+              "is_empty_frame": true
+            }
+            """;
+        using var http = new HttpClient(new StaticOllamaHandler(content))
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+        using var client = new OllamaClient(new Uri("http://localhost:11434"), http);
+        var service = new EnhancedVisionAnalysisService(client, "qwen-test");
+
+        await service.AnalyzeAsync(
+            Convert.ToBase64String([1, 2, 3]),
+            [("BDDC", "Wasserstand sichtbar", 12.3)]);
+
+        Assert.Contains("BEKANNTE BEFUNDE", StaticOllamaHandler.LastRequestJson);
+        Assert.Contains("is_empty_frame=true nur dann setzen", StaticOllamaHandler.LastRequestJson);
+        Assert.Contains("bekannten Befunde sichtbar", StaticOllamaHandler.LastRequestJson);
+        Assert.Contains("Wasserstand", StaticOllamaHandler.LastRequestJson);
+        Assert.Contains("BDDC", StaticOllamaHandler.LastRequestJson);
+    }
+
+    [Fact]
     public async Task AnalyzeAsync_maps_snake_case_structured_json_fields()
     {
         var content = """
@@ -60,10 +92,14 @@ public sealed class EnhancedVisionAnalysisServiceTests
 
     private sealed class StaticOllamaHandler(string structuredContent) : HttpMessageHandler
     {
+        public static string LastRequestJson { get; private set; } = "";
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
+            LastRequestJson = request.Content?.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult() ?? "";
+
             var responseJson = $$"""
                 {
                   "message": {

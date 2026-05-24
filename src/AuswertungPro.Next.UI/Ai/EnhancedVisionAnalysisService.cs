@@ -230,6 +230,8 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         sb.AppendLine();
         sb.AppendLine("WICHTIG: Wenn du einen Schaden erkennst der zu einem dieser Codes passt,");
         sb.AppendLine("verwende EXAKT diesen Code als vsa_code_hint (nicht erfinden, nicht ??? verwenden).");
+        sb.AppendLine("is_empty_frame=true nur dann setzen, wenn keiner dieser bekannten Befunde sichtbar ist.");
+        sb.AppendLine("Bekannte Befunde koennen auch Rohranfang, Rohrende, Wasserstand, Anschluss oder Bogen sein - nicht nur klassische Schaeden.");
         return sb.ToString();
     }
 
