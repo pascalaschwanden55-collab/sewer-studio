@@ -33,7 +33,7 @@ public sealed class FileLoggerProvider : ILoggerProvider
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
             var msg = formatter(state, exception);
-            var line = $"{DateTime.Now:O} [{logLevel}] {_category}: {msg}";
+            var line = $"{DateTimeOffset.UtcNow:O} [{logLevel}] {_category}: {msg}";
             if (exception is not null)
                 line += Environment.NewLine + exception;
 

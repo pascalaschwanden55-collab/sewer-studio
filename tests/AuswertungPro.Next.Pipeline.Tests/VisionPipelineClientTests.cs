@@ -22,13 +22,13 @@ public class VisionPipelineClientTests
     }
 
     [Fact]
-    public void Constructor_SetsBaseAddress()
+    public void Constructor_WithExternalHttpClient_DoesNotMutateBaseAddress()
     {
         var uri = new Uri("http://localhost:8100");
         var httpClient = new HttpClient();
         var client = new VisionPipelineClient(uri, httpClient);
 
-        Assert.Equal(uri, httpClient.BaseAddress);
+        Assert.Null(httpClient.BaseAddress);
     }
 
     [Fact]

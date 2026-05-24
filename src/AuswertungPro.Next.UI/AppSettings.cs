@@ -10,6 +10,7 @@ namespace AuswertungPro.Next.UI;
 
 public sealed class AppSettings
 {
+    public const string AppDataDirEnvironmentVariable = "SEWERSTUDIO_APPDATA_DIR";
     private const int SaveDebounceMs = 750;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -81,8 +82,7 @@ public sealed class AppSettings
     // Hydraulik-Panel letzte Eingaben
     public HydraulikPanelSettings HydraulikPanel { get; set; } = new();
 
-    public static string AppDataDir =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.ProductName);
+    public static string AppDataDir => ResolveAppDataDir();
 
     private static string LegacyAppDataDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.LegacyLocalDataFolder);
@@ -90,6 +90,24 @@ public sealed class AppSettings
     private static string SettingsPath => Path.Combine(AppDataDir, "settings.json");
     private static string LegacySettingsPath => Path.Combine(LegacyAppDataDir, "settings.json");
     private static string LogsDir => Path.Combine(AppDataDir, "logs");
+
+    private static string ResolveAppDataDir()
+    {
+        var overridePath = Environment.GetEnvironmentVariable(AppDataDirEnvironmentVariable);
+        if (!string.IsNullOrWhiteSpace(overridePath))
+        {
+            try
+            {
+                return Path.GetFullPath(overridePath);
+            }
+            catch
+            {
+                // Fall back to the standard location if the override is malformed.
+            }
+        }
+
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.ProductName);
+    }
 
     public static AppSettings Load()
     {
@@ -323,7 +341,7 @@ public sealed class AppSettings
             Directory.CreateDirectory(LogsDir);
             var logPath = Path.Combine(LogsDir, $"app-{DateTime.Now:yyyyMMdd}.log");
             var builder = new StringBuilder()
-                .Append(DateTimeOffset.Now.ToString("O"))
+                .Append(DateTimeOffset.UtcNow.ToString("O"))
                 .Append(" [Settings] ")
                 .AppendLine(message);
 

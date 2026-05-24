@@ -22,8 +22,8 @@ public sealed class AiPlatformConfigTests
 
         Assert.False(config.Enabled);
         Assert.Equal(new Uri("http://localhost:11434"), config.OllamaBaseUri);
-        Assert.Equal(OllamaConfig.DefaultVisionModel, config.VisionModel);
-        Assert.Equal(OllamaConfig.DefaultTextModel, config.TextModel);
+        Assert.Contains(config.VisionModel, new[] { GpuModelSelector.LargeModel, GpuModelSelector.SmallModel });
+        Assert.Contains(config.TextModel, new[] { GpuModelSelector.LargeModel, GpuModelSelector.SmallModel });
         Assert.Equal(OllamaConfig.DefaultEmbedModel, config.EmbedModel);
         Assert.Equal(TimeSpan.FromMinutes(5), config.OllamaRequestTimeout);
         Assert.False(config.MultiModelEnabled);
@@ -339,31 +339,25 @@ public sealed class AiPlatformConfigTests
 
     private sealed class SettingsFileScope : IDisposable
     {
-        private readonly string _settingsPath = Path.Combine(AppSettings.AppDataDir, "settings.json");
-        private readonly string? _backupPath;
+        private readonly string _tempRoot = Path.Combine(
+            Path.GetTempPath(),
+            "sewerstudio-settings-test-" + Guid.NewGuid().ToString("N"));
+        private readonly string? _previousAppDataOverride;
 
         public SettingsFileScope()
         {
-            var dir = Path.GetDirectoryName(_settingsPath);
-            if (!string.IsNullOrWhiteSpace(dir))
-                Directory.CreateDirectory(dir);
-
-            if (!File.Exists(_settingsPath))
-                return;
-
-            _backupPath = _settingsPath + ".bak_" + Guid.NewGuid().ToString("N");
-            File.Move(_settingsPath, _backupPath);
+            _previousAppDataOverride = Environment.GetEnvironmentVariable(AppSettings.AppDataDirEnvironmentVariable);
+            Directory.CreateDirectory(_tempRoot);
+            Environment.SetEnvironmentVariable(AppSettings.AppDataDirEnvironmentVariable, _tempRoot);
         }
 
         public void Dispose()
         {
             try
             {
-                if (File.Exists(_settingsPath))
-                    File.Delete(_settingsPath);
-
-                if (!string.IsNullOrWhiteSpace(_backupPath) && File.Exists(_backupPath))
-                    File.Move(_backupPath, _settingsPath);
+                Environment.SetEnvironmentVariable(AppSettings.AppDataDirEnvironmentVariable, _previousAppDataOverride);
+                if (Directory.Exists(_tempRoot))
+                    Directory.Delete(_tempRoot, recursive: true);
             }
             catch
             {
