@@ -1960,7 +1960,10 @@ public partial class PlayerWindow : Window
         if (_codingVm == null)
         {
             _codingSessionService ??= new Ai.CodingSessionService();
-            _codingVm = new ViewModels.Windows.CodingSessionViewModel(_codingSessionService, _codingOverlayService);
+            _codingVm = new ViewModels.Windows.CodingSessionViewModel(
+                _codingSessionService,
+                _codingOverlayService,
+                new Ai.SelfImproving.CodingFeedbackRecorder());
         }
     }
 
@@ -2636,7 +2639,10 @@ public partial class PlayerWindow : Window
         _codingOverlayService = new OverlayToolService();
         _codingSchemaManager.Cancel();
         _codingSchemaType = null;
-        _codingVm = new CodingSessionViewModel(_codingSessionService, _codingOverlayService);
+        _codingVm = new CodingSessionViewModel(
+            _codingSessionService,
+            _codingOverlayService,
+            new Ai.SelfImproving.CodingFeedbackRecorder());
         _codingVm.VideoPath = _videoPath;
         _codingVm.PropertyChanged += CodingVm_PropertyChanged;
 

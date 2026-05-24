@@ -72,7 +72,10 @@ public partial class CodingModeWindow : Window
         _haltung = haltung;
         _sessionService = new CodingSessionService();
         _overlayService = new OverlayToolService();
-        _vm = new CodingSessionViewModel(_sessionService, _overlayService);
+        _vm = new CodingSessionViewModel(
+            _sessionService,
+            _overlayService,
+            new Ai.SelfImproving.CodingFeedbackRecorder());
         _vm.VideoPath = videoPath;
 
         DataContext = _vm;

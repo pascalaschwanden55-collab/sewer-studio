@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.UI.Helpers;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -41,12 +42,17 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
 {
     private readonly ICodingSessionService _sessionService;
     private readonly IOverlayToolService _overlayService;
+    private readonly ICodingFeedbackRecorder? _feedbackRecorder;
     private bool _disposed;
 
-    public CodingSessionViewModel(ICodingSessionService sessionService, IOverlayToolService overlayService)
+    public CodingSessionViewModel(
+        ICodingSessionService sessionService,
+        IOverlayToolService overlayService,
+        ICodingFeedbackRecorder? feedbackRecorder = null)
     {
         _sessionService = sessionService;
         _overlayService = overlayService;
+        _feedbackRecorder = feedbackRecorder;
 
         _sessionService.StateChanged += OnSessionStateChanged;
         _sessionService.MeterChanged += OnSessionMeterChanged;
@@ -499,6 +505,8 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     private void AcceptDefect()
     {
         if (SelectedDefect == null) return;
+        var wasAiEvent = SelectedDefect.AiContext is not null;
+
         // AiContext anlegen falls noch nicht vorhanden (manuell codierte Events)
         SelectedDefect.AiContext ??= new CodingEventAiContext
         {
@@ -509,12 +517,15 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         SelectedDefect.AiContext.Decision = CodingUserDecision.Accepted;
         OnSelectedDefectChanged(SelectedDefect);
         RefreshStatistics();
+        RecordFeedbackIfAiEvent(SelectedDefect, wasAiEvent);
     }
 
     [RelayCommand]
     private void EditDefect()
     {
         if (SelectedDefect == null) return;
+        var wasAiEvent = SelectedDefect.AiContext is not null;
+
         SelectedDefect.AiContext ??= new CodingEventAiContext
         {
             SuggestedCode = SelectedDefect.Entry.Code,
@@ -526,12 +537,15 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         RefreshStatistics();
         // Window oeffnet den ProtocolEntryEditorDialog
         DefectEditRequested?.Invoke(this, SelectedDefect);
+        RecordFeedbackIfAiEvent(SelectedDefect, wasAiEvent);
     }
 
     [RelayCommand]
     private void RejectDefect()
     {
         if (SelectedDefect == null) return;
+        var wasAiEvent = SelectedDefect.AiContext is not null;
+
         SelectedDefect.AiContext ??= new CodingEventAiContext
         {
             SuggestedCode = SelectedDefect.Entry.Code,
@@ -541,6 +555,17 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         SelectedDefect.AiContext.Decision = CodingUserDecision.Rejected;
         OnSelectedDefectChanged(SelectedDefect);
         RefreshStatistics();
+        RecordFeedbackIfAiEvent(SelectedDefect, wasAiEvent);
+    }
+
+    private void RecordFeedbackIfAiEvent(CodingEvent ev, bool wasAiEventBeforeDecision)
+    {
+        if (!wasAiEventBeforeDecision || _feedbackRecorder is null)
+            return;
+
+        _feedbackRecorder
+            .RecordDecisionAsync(ev, HaltungName)
+            .SafeFireAndForget("CodingFeedback");
     }
 
     /// <summary>Event fuer Window: Defekt soll im Editor bearbeitet werden.</summary>
