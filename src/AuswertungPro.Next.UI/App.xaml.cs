@@ -58,6 +58,7 @@ namespace AuswertungPro.Next.UI
                 // Logging
                 var logDir = Path.Combine(AppSettings.AppDataDir, "logs");
                 Directory.CreateDirectory(logDir);
+                LogFileRetentionService.Apply(logDir, TimeSpan.FromDays(30), DateTimeOffset.UtcNow);
                 logPath = Path.Combine(logDir, $"app-{DateTime.Now:yyyyMMdd}.log");
                 var loggerFactory = LoggerFactory.Create(b =>
                 {
