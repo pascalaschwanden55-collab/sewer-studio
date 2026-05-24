@@ -11,12 +11,14 @@ def restore_yolo_settings():
     original_models_dir = settings.models_dir
     original_model_name = settings.yolo_model_name
     original_require = settings.require_custom_yolo
+    original_cls_model_path = settings.yolo_cls_model_path
     try:
         yield
     finally:
         settings.models_dir = original_models_dir
         settings.yolo_model_name = original_model_name
         settings.require_custom_yolo = original_require
+        settings.yolo_cls_model_path = original_cls_model_path
 
 
 def test_resolve_yolo_model_path_uses_custom_weights(tmp_path: Path, restore_yolo_settings):
@@ -42,3 +44,23 @@ def test_resolve_yolo_model_path_strict_mode_raises_without_weights(tmp_path: Pa
 
     with pytest.raises(FileNotFoundError):
         yolo_wrapper._resolve_yolo_model_path()
+
+
+def test_resolve_cls_model_path_uses_configured_weights(tmp_path: Path, restore_yolo_settings):
+    weights = tmp_path / "manual1286.pt"
+    weights.write_bytes(b"weights")
+
+    settings.yolo_cls_model_path = str(weights)
+
+    model_path = yolo_wrapper._resolve_cls_model_path()
+
+    assert model_path == str(weights)
+
+
+def test_resolve_cls_model_path_ignores_missing_configured_weights(tmp_path: Path, restore_yolo_settings):
+    settings.models_dir = str(tmp_path)
+    settings.yolo_cls_model_path = str(tmp_path / "missing.pt")
+
+    model_path = yolo_wrapper._resolve_cls_model_path()
+
+    assert model_path is None

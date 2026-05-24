@@ -55,6 +55,16 @@ if (-not $env:SEWER_SIDECAR_HOST) { $env:SEWER_SIDECAR_HOST = "127.0.0.1" }
 if (-not $env:SEWER_SIDECAR_PORT) { $env:SEWER_SIDECAR_PORT = "8100" }
 $env:SEWER_SIDECAR_MODELS_DIR = $modelsDir
 if (-not $env:SEWER_SIDECAR_YOLO_MODEL_NAME) { $env:SEWER_SIDECAR_YOLO_MODEL_NAME = "yolo26m.pt" }
+if (-not $env:SEWER_SIDECAR_YOLO_CLS_MODEL_PATH) {
+    $candidateCls = Get-ChildItem -Path (Join-Path $modelsDir "candidates\classification") -Recurse -Filter "best.pt" -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+    if ($candidateCls) {
+        Write-Host "  YOLO-cls Kandidat gefunden, aber nicht automatisch aktiviert:" -ForegroundColor Yellow
+        Write-Host "    $($candidateCls.FullName)" -ForegroundColor DarkGray
+        Write-Host "  Aktivieren mit: `$env:SEWER_SIDECAR_YOLO_CLS_MODEL_PATH = `"$($candidateCls.FullName)`"" -ForegroundColor DarkGray
+    }
+}
 if (-not $env:SEWER_SIDECAR_REQUIRE_CUSTOM_YOLO) {
     $env:SEWER_SIDECAR_REQUIRE_CUSTOM_YOLO = if ($yoloOk) { "1" } else { "0" }
 }
@@ -62,6 +72,7 @@ if (-not $env:SEWER_SIDECAR_REQUIRE_CUSTOM_YOLO) {
 Write-Host ""
 Write-Host "  Starte auf http://$($env:SEWER_SIDECAR_HOST):$($env:SEWER_SIDECAR_PORT)" -ForegroundColor Green
 Write-Host "  YOLO Modell: $($env:SEWER_SIDECAR_YOLO_MODEL_NAME)" -ForegroundColor White
+Write-Host "  YOLO-cls Modell: $(if ($env:SEWER_SIDECAR_YOLO_CLS_MODEL_PATH) { $env:SEWER_SIDECAR_YOLO_CLS_MODEL_PATH } else { 'auto/fallback' })" -ForegroundColor White
 Write-Host "  Require custom YOLO: $($env:SEWER_SIDECAR_REQUIRE_CUSTOM_YOLO)" -ForegroundColor $(if ($env:SEWER_SIDECAR_REQUIRE_CUSTOM_YOLO -eq "1") { "Green" } else { "Yellow" })
 if ($env:SEWER_SIDECAR_REQUIRE_CUSTOM_YOLO -eq "1" -and -not $yoloOk) {
     Write-Host "  FEHLER: RequireCustomYOLO=1, aber keine YOLO26-Gewichte gefunden." -ForegroundColor Red

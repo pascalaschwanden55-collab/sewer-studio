@@ -269,6 +269,10 @@ def _resolve_cls_model_path() -> str | None:
     """Suche best.pt aus dem YOLO-cls Trainingslauf."""
     # Relativer Pfad vom Sidecar-Root (portabel, kein absoluter Pfad)
     project_root = Path(__file__).resolve().parent.parent.parent.parent
+    configured_path = Path(settings.yolo_cls_model_path) if settings.yolo_cls_model_path else None
+    if configured_path is not None:
+        return str(configured_path) if configured_path.exists() else None
+
     candidates = [
         Path(settings.models_dir) / "yolo_cls_best.pt",
         project_root / "yolo_cls_runs" / "grundgeruest_v2" / "weights" / "best.pt",

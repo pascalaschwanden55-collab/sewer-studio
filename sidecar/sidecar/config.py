@@ -31,6 +31,7 @@ class SidecarSettings(BaseSettings):
     # YOLO
     yolo_confidence: float = 0.25
     yolo_model_name: str = "yolo26m.pt"
+    yolo_cls_model_path: str = ""
     require_custom_yolo: bool = False
 
     # Grounding DINO
