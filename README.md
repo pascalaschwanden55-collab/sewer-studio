@@ -44,4 +44,6 @@ Snapshot aus einem alten Metrikpfad). Eine aktuelle belastbare Messung steht aus
 Die Feedback- und Benchmark-Pflegekette wird reaktiviert, bevor neue
 Qualitaetszahlen nach aussen kommuniziert werden.
 
-Details: `docs/KI_DIAGNOSE_2026-05-24.md`
+Details:
+- `docs/KI_DIAGNOSE_2026-05-24.md`
+- `docs/KI_CLASSIFIER_EVALSET_GAP_2026-05-24.md`

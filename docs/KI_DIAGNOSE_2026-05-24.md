@@ -134,6 +134,29 @@ schlechter wird, und auch keine Garantie dass das Eval-Set nicht verfaelscht wur
 | KB-Daten sind sauber indexiert | gruen |
 | KB-Inhalt-Balance | gelb — BB schwach |
 
+## Nachtrag E — YOLO-Kandidat passt nicht zum Eval-Set
+
+Am Abend des 2026-05-24 wurde der Kandidat
+`manual1286_fixedval_round3train_v8n_320_dropout02` gegen das Eval-Set geprueft.
+
+Wichtiger Befund:
+
+- Der Kandidat kennt nur 8 grobe Schadensgruppen.
+- Das Eval-Set prueft viele konkrete VSA-Codes und 30 Leerbilder.
+- Damit kann der Kandidat viele Eval-Bilder fachlich nicht korrekt loesen.
+
+Der schlechte Eval-Wert ist deshalb nicht nur ein Prompt-Problem.
+Es ist vor allem ein Klassen-Mismatch zwischen Training und Test.
+
+Konkrete Entscheidung:
+
+- Kandidat **nicht** nach `sidecar/models/yolo_cls_best.pt` kopieren.
+- Nur als Test-Kandidat verwenden.
+- Naechsten Trainingsblock als Router-Modell planen.
+
+Details:
+`docs/KI_CLASSIFIER_EVALSET_GAP_2026-05-24.md`
+
 ## Aktionsplan
 
 Vorgeschlagene Reihenfolge fuer die naechsten Sessions:
