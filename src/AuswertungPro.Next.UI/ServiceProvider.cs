@@ -18,6 +18,7 @@ using AuswertungPro.Next.Application.Vsa;
 using AuswertungPro.Next.Infrastructure.Devis;
 using AuswertungPro.Next.Infrastructure.Export;
 using AuswertungPro.Next.Infrastructure.Export.Excel;
+using AuswertungPro.Next.Infrastructure.Export.GeoPackage;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Infrastructure.Import.WinCan;
@@ -59,6 +60,7 @@ namespace AuswertungPro.Next.UI
         public IIbakImportService IbakImport { get; }
         public IKinsImportService KinsImport { get; }
         public IExcelExportService ExcelExport { get; }
+        public GeoPackageExporter GeoPackageExport { get; }
         public IVsaEvaluationService Vsa { get; }
 
         // Protocol/Photo/PDF services
@@ -98,6 +100,7 @@ namespace AuswertungPro.Next.UI
             IbakImport = new IbakExportImportService();
             KinsImport = new KinsImportService(WinCanImport, IbakImport);
             ExcelExport = new ExcelTemplateExportService();
+            GeoPackageExport = new GeoPackageExporter();
 
             // Register protocol/photo/pdf services
             Protocols = new ProtocolService();

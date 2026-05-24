@@ -28,6 +28,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     public IAsyncRelayCommand ExportCommand { get; }
     public IAsyncRelayCommand ExportSchaechteCommand { get; }
+    public IAsyncRelayCommand ExportGeoPackageCommand { get; }
     public IAsyncRelayCommand DistributeHoldingsCommand { get; }
     public IAsyncRelayCommand DistributeShaftsCommand { get; }
     public IAsyncRelayCommand DistributeDichtheitCommand { get; }
@@ -38,6 +39,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         _sp = sp;
         ExportCommand = new AsyncRelayCommand(ExportAsync, CanRunProjectExportCommands);
         ExportSchaechteCommand = new AsyncRelayCommand(ExportSchaechteAsync, CanRunProjectExportCommands);
+        ExportGeoPackageCommand = new AsyncRelayCommand(ExportGeoPackageAsync, CanRunProjectExportCommands);
         DistributeHoldingsCommand = new AsyncRelayCommand(DistributeHoldingsAsync, CanRunDistributeCommands);
         DistributeShaftsCommand = new AsyncRelayCommand(DistributeShaftsAsync, CanRunDistributeCommands);
         DistributeDichtheitCommand = new AsyncRelayCommand(DistributeDichtheitAsync, CanRunDistributeCommands);
@@ -65,6 +67,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
     {
         ExportCommand.NotifyCanExecuteChanged();
         ExportSchaechteCommand.NotifyCanExecuteChanged();
+        ExportGeoPackageCommand.NotifyCanExecuteChanged();
         DistributeHoldingsCommand.NotifyCanExecuteChanged();
         DistributeShaftsCommand.NotifyCanExecuteChanged();
         DistributeDichtheitCommand.NotifyCanExecuteChanged();
@@ -83,6 +86,39 @@ public sealed partial class ExportPageViewModel : ObservableObject
                 _sp.ExcelExport.ExportToTemplate(_shell.Project, templatePath, outPath, headerRow: 11, startRow: 12));
             LastResult = res.Ok ? $"Exportiert: {outPath}" : $"Fehler: {res.ErrorMessage}";
             _shell.SetStatus(res.Ok ? "Exportiert" : "Export fehlgeschlagen");
+        }
+        finally
+        {
+            IsPageBusy = false;
+        }
+    }
+
+    /// <summary>
+    /// Exportiert das Project als OGC GeoPackage (.gpkg) fuer QGIS / GIS-Tools.
+    /// Phase 2b (UI-Anbindung 2026-05-24).
+    /// </summary>
+    private async Task ExportGeoPackageAsync()
+    {
+        var outPath = _sp.Dialogs.SaveFile("Als GeoPackage exportieren", "GeoPackage (*.gpkg)|*.gpkg", ".gpkg");
+        if (outPath is null) return;
+
+        try
+        {
+            IsPageBusy = true;
+            var res = await Task.Run(() => _sp.GeoPackageExport.Export(_shell.Project!, outPath));
+
+            LastResult = $"GeoPackage exportiert: {outPath}\n"
+                       + $"  Haltungen mit Geometrie: {res.HaltungenExportiert}"
+                       + (res.HaltungenOhneGeometrie > 0 ? $" (ohne Geometrie uebersprungen: {res.HaltungenOhneGeometrie})" : "")
+                       + $"\n  Schaechte mit Lage:      {res.SchaechteExportiert}"
+                       + (res.SchaechteOhneLage > 0 ? $" (ohne Lage uebersprungen: {res.SchaechteOhneLage})" : "");
+
+            _shell.SetStatus($"GeoPackage exportiert ({res.HaltungenExportiert} Haltungen, {res.SchaechteExportiert} Schaechte)");
+        }
+        catch (Exception ex)
+        {
+            LastResult = $"GeoPackage-Export fehlgeschlagen: {ex.Message}";
+            _shell.SetStatus("GeoPackage-Export fehlgeschlagen");
         }
         finally
         {
