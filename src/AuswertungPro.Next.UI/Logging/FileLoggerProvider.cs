@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using System.IO;
+using System.Text;
 
 namespace AuswertungPro.Next.UI;
 
@@ -39,7 +40,7 @@ public sealed class FileLoggerProvider : ILoggerProvider
 
             lock (_lock)
             {
-                File.AppendAllText(_path, line + Environment.NewLine);
+                File.AppendAllText(_path, line + Environment.NewLine, Encoding.UTF8);
             }
         }
     }

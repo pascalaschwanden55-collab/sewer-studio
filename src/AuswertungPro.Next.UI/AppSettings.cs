@@ -119,7 +119,7 @@ public sealed class AppSettings
             if (!File.Exists(SettingsPath))
                 return new AppSettings();
 
-            var json = File.ReadAllText(SettingsPath);
+            var json = File.ReadAllText(SettingsPath, Encoding.UTF8);
             var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions)
                 ?? throw new JsonException("settings.json enthaelt kein gueltiges Settings-Objekt.");
             return NormalizeAfterLoad(settings);
@@ -254,7 +254,7 @@ public sealed class AppSettings
             }
 
             tempPath = Path.Combine(AppDataDir, $".{Path.GetFileName(SettingsPath)}.{Guid.NewGuid():N}.tmp");
-            File.WriteAllText(tempPath, json);
+            File.WriteAllText(tempPath, json, Encoding.UTF8);
 
             if (File.Exists(SettingsPath))
             {
@@ -348,7 +348,7 @@ public sealed class AppSettings
             if (ex is not null)
                 builder.AppendLine(ex.ToString());
 
-            File.AppendAllText(logPath, builder.ToString());
+            File.AppendAllText(logPath, builder.ToString(), Encoding.UTF8);
         }
         catch
         {

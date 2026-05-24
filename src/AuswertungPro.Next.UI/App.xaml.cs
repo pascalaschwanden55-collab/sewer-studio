@@ -152,7 +152,7 @@ namespace AuswertungPro.Next.UI
                         fallbackLog = Path.Combine(logDir, $"app-{DateTime.Now:yyyyMMdd}.log");
                     }
 
-                    File.AppendAllText(fallbackLog, $"{DateTimeOffset.UtcNow:O} [Fatal] Startup exception: {ex}\n");
+                    File.AppendAllText(fallbackLog, $"{DateTimeOffset.UtcNow:O} [Fatal] Startup exception: {ex}\n", Encoding.UTF8);
                 }
                 catch
                 {
