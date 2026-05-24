@@ -64,3 +64,34 @@ yolo_cls_runs/
 
 # Tools
 tools/PdfImageAnalyzer/
+
+# Coverage-Reports (lokal)
+.coverage
+coverage.xml
+
+# Roslyn / MSBuild lscache (lokaler Compiler-Cache)
+*.csproj.lscache
+
+# Test-Output
+**/TestResults/
+
+# Python-Caches (tools/ enthaelt python-Skripte und uses)
+**/__pycache__/
+**/*.pyc
+
+# Pytest-Temp + Florence2-Shadow-Log im Sidecar
+sidecar/.pytest_tmp/
+sidecar/florence2_shadow_log/
+
+# TensorRT-Engines (gross, GPU-spezifisch, nicht reproduzierbar)
+**/*.engine
+
+# ONNX-Modelle direkt im Sidecar-Root (war nur sidecar/models/**/*.onnx abgedeckt)
+sidecar/*.onnx
+
+# Lokale Modell-Verzeichnisse (Kandidaten / nicht-promoted)
+sidecar/models/candidates/
+sidecar/models/yolo26l-seg/
+
+# Devis-Mapping-Backups (von Tools automatisch erzeugt)
+src/AuswertungPro.Next.UI/Config/devis_mappings.bak_*.json
