@@ -10,8 +10,8 @@ Die KI-Pipeline-Infrastruktur (Sidecar, Ollama, KnowledgeBase) ist **lauffaehig 
 funktional**. Die KB enthaelt 21'856 indexierte Samples (100% Embeddings, konsistentes
 Modell). Aber die Metrik-Schicht, die ueberpruefen soll wie gut die KI tatsaechlich ist,
 ist **nicht aktiv gepflegt**: das Feedback-Logging hat keinen Aufrufer mehr, der letzte
-Eval-Set-Lauf ist 20 Tage alt und war ein Modell-Failure-Lauf, und der im README
-genannte 52%-Wert ist ein Snapshot eines abgeklemmten Code-Pfades.
+Eval-Set-Lauf ist 20 Tage alt und war ein Modell-Failure-Lauf, und der bisher
+kommunizierte 52%-Wert ist ein Snapshot eines abgeklemmten Code-Pfades.
 
 **Konsequenz:** Aussagen ueber die KI-Genauigkeit sind aktuell nicht belastbar.
 Bevor wieder Inhalt-Arbeit (Active Learning, Training, externe Tests) priorisiert
@@ -113,12 +113,14 @@ Es gibt also keine Moeglichkeit, ueber Zeit zu verfolgen ob die KI besser oder
 schlechter wird, und auch keine Garantie dass das Eval-Set nicht verfaelscht wurde
 (Hash-Pruefung nicht moeglich).
 
-**D4. 52%-Wert im README ist veraltet.**
-- README sagt (Stand 2026-05-07): "Die KI-Erkennung liegt aktuell bei rund 52 %
-  ValidationLog-Accuracy."
+**D4. 52%-Wert darf nicht als aktuelle Messung kommuniziert werden.**
+- Der aktuelle `README.md`-Stand dieses Branches enthielt den alten 52%-Satz nicht
+  mehr. Falls der Wert in README, Uebergabeunterlagen oder externen Notizen
+  verwendet wird, muss er als historischer Snapshot gekennzeichnet werden.
 - Realitaet: ValidationLog wird nicht mehr aktiv geschrieben (D1). Der Wert ist
   ein historischer Snapshot, keine aktuelle Messung.
-- Externe Tester die das README lesen, bekommen einen falschen Eindruck.
+- Externe Tester wuerden bei einem unmarkierten 52%-Wert einen falschen Eindruck
+  bekommen.
 
 ## Konsolidierte Bewertung
 
@@ -138,13 +140,10 @@ Vorgeschlagene Reihenfolge fuer die naechsten Sessions:
 
 ### Ticket 1 — README-Hinweis "Messung steht aus" (klein, ~10 Min)
 
-`README.md` Reifegrad-Block aktualisieren. Statt:
+`README.md` um einen klaren KI-Messstands-Hinweis ergaenzen. Keine aktuelle
+Accuracy behaupten. Wenn der alte Wert genannt wird, nur so:
 
-> "Die KI-Erkennung liegt aktuell bei rund 52 % ValidationLog-Accuracy."
-
-besser:
-
-> "Letzter dokumentierter ValidationLog-Wert: 52 % (Stand Mai 2026, historischer Snapshot).
+> "Letzter dokumentierter ValidationLog-Wert: ca. 52 % (Stand Mai 2026, historischer Snapshot).
 > Aktuelle Messung steht aus — Metrik-Pflegekette wird in Q2 2026 reaktiviert."
 
 ### Ticket 2 — Eval-Set Hash-Block einfuehren (klein, ~30 Min)

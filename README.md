@@ -37,3 +37,11 @@ und daraus diese JSON-Dateien generiert, oder du pflegst die Tabellen direkt.
 ## Diagnose / Fehlercodes
 - In **Einstellungen** kann `EnableDiagnostics` deaktiviert werden.
 - Wenn aktiv: bei Exceptions wird ein Fehlercode angezeigt + in Log gespeichert.
+
+## KI-Messstand
+Letzter dokumentierter ValidationLog-Wert: ca. 52 % (Stand Mai 2026, historischer
+Snapshot aus einem alten Metrikpfad). Eine aktuelle belastbare Messung steht aus.
+Die Feedback- und Benchmark-Pflegekette wird reaktiviert, bevor neue
+Qualitaetszahlen nach aussen kommuniziert werden.
+
+Details: `docs/KI_DIAGNOSE_2026-05-24.md`
