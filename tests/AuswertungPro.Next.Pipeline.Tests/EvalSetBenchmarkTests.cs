@@ -125,4 +125,48 @@ public sealed class EvalSetBenchmarkTests : IDisposable
         Assert.Equal(0, summary.NullResponses);
         Assert.Equal(1.0, summary.ExactAccuracy);
     }
+
+    [Fact]
+    public void SummarizeByExpectedCode_counts_top_prediction_and_nulls()
+    {
+        var rows = new[]
+        {
+            new EvalSetBenchmarkRow("a.png", "BDDC", "BDDC", "top5", "BDDC", true, true, true, false, false, 100, 3, null),
+            new EvalSetBenchmarkRow("b.png", "BDDC", "BDDC", "top5", "LEER", false, false, false, false, false, 100, 0, null),
+            new EvalSetBenchmarkRow("c.png", "BDDC", "BDDC", "top5", "LEER", false, false, false, false, false, 100, 0, null),
+            new EvalSetBenchmarkRow("d.png", "BCE", "BCE", "top5", "", false, false, false, true, false, 100, 0, "timeout"),
+        };
+
+        var byCode = EvalSetBenchmarkScorer.SummarizeByExpectedCode(rows);
+
+        Assert.Equal(2, byCode.Count);
+        Assert.Equal("BDDC", byCode[0].ExpectedCode);
+        Assert.Equal(3, byCode[0].Total);
+        Assert.Equal(1, byCode[0].ExactCorrect);
+        Assert.Equal(2, byCode[0].PredictedLeer);
+        Assert.Equal(0, byCode[0].NullResponses);
+        Assert.Equal("LEER", byCode[0].TopPrediction);
+        Assert.Equal(2, byCode[0].TopPredictionCount);
+
+        Assert.Equal("BCE", byCode[1].ExpectedCode);
+        Assert.Equal(1, byCode[1].NullResponses);
+        Assert.Equal("NULL", byCode[1].TopPrediction);
+    }
+
+    [Fact]
+    public void BuildConfusionMatrix_groups_expected_and_predicted_codes()
+    {
+        var rows = new[]
+        {
+            new EvalSetBenchmarkRow("a.png", "BDDC", "BDDC", "top5", "BDDC", true, true, true, false, false, 100, 3, null),
+            new EvalSetBenchmarkRow("b.png", "BDDC", "BDDC", "top5", "LEER", false, false, false, false, false, 100, 0, null),
+            new EvalSetBenchmarkRow("c.png", "BDDC", "BDDC", "top5", "LEER", false, false, false, false, false, 100, 0, null),
+        };
+
+        var confusion = EvalSetBenchmarkScorer.BuildConfusionMatrix(rows);
+
+        Assert.Equal(2, confusion.Count);
+        Assert.Contains(confusion, c => c.ExpectedCode == "BDDC" && c.PredictedCode == "LEER" && c.Count == 2);
+        Assert.Contains(confusion, c => c.ExpectedCode == "BDDC" && c.PredictedCode == "BDDC" && c.Count == 1);
+    }
 }

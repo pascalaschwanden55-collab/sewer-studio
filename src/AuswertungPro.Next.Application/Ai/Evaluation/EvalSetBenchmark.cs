@@ -48,6 +48,23 @@ public sealed record EvalSetBenchmarkSummary(
     double NegativeAccuracy,
     double AverageTimeMs);
 
+public sealed record EvalSetCodeSummary(
+    string ExpectedCode,
+    int Total,
+    int ExactCorrect,
+    int MainCorrect,
+    int GroupCorrect,
+    int NullResponses,
+    int PredictedLeer,
+    double ExactAccuracy,
+    string TopPrediction,
+    int TopPredictionCount);
+
+public sealed record EvalSetConfusionEntry(
+    string ExpectedCode,
+    string PredictedCode,
+    int Count);
+
 public static class EvalSetBenchmarkDataset
 {
     public static IReadOnlyList<EvalSetBenchmarkCase> Load(string evalSetRoot)
@@ -195,6 +212,53 @@ public static class EvalSetBenchmarkScorer
             AverageTimeMs: total == 0 ? 0 : rows.Average(r => r.TimeMs));
     }
 
+    public static IReadOnlyList<EvalSetCodeSummary> SummarizeByExpectedCode(
+        IReadOnlyList<EvalSetBenchmarkRow> rows)
+        => rows
+            .GroupBy(r => r.ExpectedFullCode, StringComparer.OrdinalIgnoreCase)
+            .Select(g =>
+            {
+                var total = g.Count();
+                var top = g
+                    .GroupBy(r => DisplayPrediction(r.PredictedCode), StringComparer.OrdinalIgnoreCase)
+                    .Select(pg => new { Prediction = pg.Key, Count = pg.Count() })
+                    .OrderByDescending(x => x.Count)
+                    .ThenBy(x => x.Prediction, StringComparer.OrdinalIgnoreCase)
+                    .First();
+
+                return new EvalSetCodeSummary(
+                    ExpectedCode: g.Key,
+                    Total: total,
+                    ExactCorrect: g.Count(r => r.Exact),
+                    MainCorrect: g.Count(r => r.Main),
+                    GroupCorrect: g.Count(r => r.Group || r.Exact || r.Main),
+                    NullResponses: g.Count(r => r.NullResponse),
+                    PredictedLeer: g.Count(r => string.Equals(r.PredictedCode, "LEER", StringComparison.OrdinalIgnoreCase)),
+                    ExactAccuracy: Ratio(g.Count(r => r.Exact), total),
+                    TopPrediction: top.Prediction,
+                    TopPredictionCount: top.Count);
+            })
+            .OrderByDescending(s => s.Total)
+            .ThenBy(s => s.ExpectedCode, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    public static IReadOnlyList<EvalSetConfusionEntry> BuildConfusionMatrix(
+        IReadOnlyList<EvalSetBenchmarkRow> rows)
+        => rows
+            .GroupBy(r => new
+            {
+                Expected = r.ExpectedFullCode,
+                Predicted = DisplayPrediction(r.PredictedCode)
+            })
+            .Select(g => new EvalSetConfusionEntry(
+                ExpectedCode: g.Key.Expected,
+                PredictedCode: g.Key.Predicted,
+                Count: g.Count()))
+            .OrderByDescending(c => c.Count)
+            .ThenBy(c => c.ExpectedCode, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(c => c.PredictedCode, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
     public static void WriteCsv(string path, IReadOnlyList<EvalSetBenchmarkRow> rows)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
@@ -226,6 +290,41 @@ public static class EvalSetBenchmarkScorer
         File.WriteAllText(path, json, new UTF8Encoding(false));
     }
 
+    public static void WriteByCodeCsv(string path, IReadOnlyList<EvalSetCodeSummary> summaries)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        using var writer = new StreamWriter(path, false, new UTF8Encoding(false));
+        writer.WriteLine("expected,total,exact_correct,main_correct,group_correct,null_responses,predicted_leer,exact_accuracy,top_prediction,top_prediction_count");
+        foreach (var s in summaries)
+        {
+            writer.WriteLine(string.Join(",",
+                Csv(s.ExpectedCode),
+                s.Total.ToString(CultureInfo.InvariantCulture),
+                s.ExactCorrect.ToString(CultureInfo.InvariantCulture),
+                s.MainCorrect.ToString(CultureInfo.InvariantCulture),
+                s.GroupCorrect.ToString(CultureInfo.InvariantCulture),
+                s.NullResponses.ToString(CultureInfo.InvariantCulture),
+                s.PredictedLeer.ToString(CultureInfo.InvariantCulture),
+                s.ExactAccuracy.ToString(CultureInfo.InvariantCulture),
+                Csv(s.TopPrediction),
+                s.TopPredictionCount.ToString(CultureInfo.InvariantCulture)));
+        }
+    }
+
+    public static void WriteConfusionCsv(string path, IReadOnlyList<EvalSetConfusionEntry> entries)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        using var writer = new StreamWriter(path, false, new UTF8Encoding(false));
+        writer.WriteLine("expected,predicted,count");
+        foreach (var c in entries)
+        {
+            writer.WriteLine(string.Join(",",
+                Csv(c.ExpectedCode),
+                Csv(c.PredictedCode),
+                c.Count.ToString(CultureInfo.InvariantCulture)));
+        }
+    }
+
     private static bool SameGroup(string predicted, string expected)
         => predicted.Length >= 3 &&
            expected.Length >= 3 &&
@@ -238,6 +337,9 @@ public static class EvalSetBenchmarkScorer
         => total == 0 ? 0 : (double)part / total;
 
     private static string Bool(bool value) => value ? "True" : "False";
+
+    private static string DisplayPrediction(string? predicted)
+        => string.IsNullOrWhiteSpace(predicted) ? "NULL" : predicted.Trim().ToUpperInvariant();
 
     private static string Csv(string value)
     {

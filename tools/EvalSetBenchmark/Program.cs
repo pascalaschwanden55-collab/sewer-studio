@@ -106,12 +106,18 @@ try
 
     var rows = EvalSetBenchmarkScorer.Evaluate(cases, predictions);
     var summary = EvalSetBenchmarkScorer.Summarize(rows);
+    var byCode = EvalSetBenchmarkScorer.SummarizeByExpectedCode(rows);
+    var confusion = EvalSetBenchmarkScorer.BuildConfusionMatrix(rows);
     var stamp = DateTimeOffset.Now.ToString("yyyyMMdd_HHmmss");
     var modelSlug = Slug(model);
     var csvPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{modelSlug}.csv");
     var jsonPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{modelSlug}.json");
+    var byCodePath = Path.Combine(options.OutputDir, $"eval_{stamp}_{modelSlug}_by_code.csv");
+    var confusionPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{modelSlug}_confusion.csv");
 
     EvalSetBenchmarkScorer.WriteCsv(csvPath, rows);
+    EvalSetBenchmarkScorer.WriteByCodeCsv(byCodePath, byCode);
+    EvalSetBenchmarkScorer.WriteConfusionCsv(confusionPath, confusion);
     EvalSetBenchmarkScorer.WriteSummaryJson(jsonPath, summary, new
     {
         created_at = DateTimeOffset.Now.ToString("O"),
@@ -132,6 +138,18 @@ try
     Console.WriteLine($"  Null:    {summary.NullResponses}");
     Console.WriteLine($"  CSV:     {csvPath}");
     Console.WriteLine($"  JSON:    {jsonPath}");
+    Console.WriteLine($"  Codes:   {byCodePath}");
+    Console.WriteLine($"  Matrix:  {confusionPath}");
+    Console.WriteLine();
+    Console.WriteLine("Schwaechste Codes:");
+    foreach (var s in byCode
+                 .Where(x => !string.Equals(x.ExpectedCode, "LEER", StringComparison.OrdinalIgnoreCase))
+                 .OrderBy(x => x.ExactAccuracy)
+                 .ThenByDescending(x => x.Total)
+                 .Take(8))
+    {
+        Console.WriteLine($"  {s.ExpectedCode}: {s.ExactCorrect}/{s.Total} = {s.ExactAccuracy:P0}, haeufig: {s.TopPrediction} ({s.TopPredictionCount})");
+    }
     return 0;
 }
 catch (OperationCanceledException)
