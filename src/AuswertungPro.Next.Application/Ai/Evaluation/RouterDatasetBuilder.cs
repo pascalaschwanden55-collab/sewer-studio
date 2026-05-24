@@ -6,12 +6,17 @@ public sealed record RouterDatasetBuilderOptions(
     IReadOnlyList<string> SourceDatasetRoots,
     string OutputRoot,
     string? EvalSetRoot,
-    bool DryRun);
+    bool DryRun,
+    IReadOnlyList<string>? SourceFileLists = null,
+    double SourceFileListValidationRatio = 0,
+    int MaxPerClassPerSplit = 0);
 
 public sealed record RouterDatasetBuilderResult(
     int Copied,
     int SkippedEvalSet,
     int SkippedUnknownClass,
+    int SkippedMissingFiles,
+    int SkippedClassCap,
     IReadOnlyList<RouterDatasetBuilderClassCount> Classes);
 
 public sealed record RouterDatasetBuilderClassCount(
@@ -72,8 +77,9 @@ public static class RouterDatasetBuilder
     public static RouterDatasetBuilderResult Build(RouterDatasetBuilderOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        if (options.SourceDatasetRoots.Count == 0)
-            throw new ArgumentException("Mindestens ein Quell-Dataset ist noetig.", nameof(options));
+        var sourceFileLists = options.SourceFileLists ?? Array.Empty<string>();
+        if (options.SourceDatasetRoots.Count == 0 && sourceFileLists.Count == 0)
+            throw new ArgumentException("Mindestens ein Quell-Dataset oder eine Pfadliste ist noetig.", nameof(options));
         if (string.IsNullOrWhiteSpace(options.OutputRoot))
             throw new ArgumentException("OutputRoot fehlt.", nameof(options));
 
@@ -82,46 +88,60 @@ public static class RouterDatasetBuilder
         var copied = 0;
         var skippedEvalSet = 0;
         var skippedUnknownClass = 0;
+        var skippedMissingFiles = 0;
+        var skippedClassCap = 0;
 
-        foreach (var sourceRoot in options.SourceDatasetRoots)
+        foreach (var source in EnumerateAllSources(options.SourceDatasetRoots, sourceFileLists, options.SourceFileListValidationRatio))
         {
-            foreach (var source in EnumerateSourceImages(sourceRoot))
+            if (!File.Exists(source.Path))
             {
-                var routerClass = MapSourceClassToRouterClass(source.SourceClass);
-                if (routerClass is null)
-                {
-                    skippedUnknownClass++;
-                    continue;
-                }
-
-                var hash = ComputeSha256(source.Path);
-                if (evalHashes.Contains(hash))
-                {
-                    skippedEvalSet++;
-                    continue;
-                }
-
-                copied++;
-                var key = (source.Split, routerClass);
-                counts[key] = counts.GetValueOrDefault(key) + 1;
-
-                if (options.DryRun)
-                    continue;
-
-                var dest = EnsureUniquePath(Path.Combine(
-                    options.OutputRoot,
-                    source.Split,
-                    routerClass,
-                    Path.GetFileName(source.Path)));
-                Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-                File.Copy(source.Path, dest);
+                skippedMissingFiles++;
+                continue;
             }
+
+            var routerClass = MapSourceClassToRouterClass(source.SourceClass);
+            if (routerClass is null)
+            {
+                skippedUnknownClass++;
+                continue;
+            }
+
+            var hash = ComputeSha256(source.Path);
+            if (evalHashes.Contains(hash))
+            {
+                skippedEvalSet++;
+                continue;
+            }
+
+            var key = (source.Split, routerClass);
+            if (options.MaxPerClassPerSplit > 0 &&
+                counts.GetValueOrDefault(key) >= options.MaxPerClassPerSplit)
+            {
+                skippedClassCap++;
+                continue;
+            }
+
+            copied++;
+            counts[key] = counts.GetValueOrDefault(key) + 1;
+
+            if (options.DryRun)
+                continue;
+
+            var dest = EnsureUniquePath(Path.Combine(
+                options.OutputRoot,
+                source.Split,
+                routerClass,
+                Path.GetFileName(source.Path)));
+            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+            File.Copy(source.Path, dest);
         }
 
         return new RouterDatasetBuilderResult(
             copied,
             skippedEvalSet,
             skippedUnknownClass,
+            skippedMissingFiles,
+            skippedClassCap,
             counts
                 .Select(c => new RouterDatasetBuilderClassCount(c.Key.Split, c.Key.RouterClass, c.Value))
                 .OrderBy(c => c.Split, StringComparer.OrdinalIgnoreCase)
@@ -180,6 +200,76 @@ public static class RouterDatasetBuilder
                         Split: split.Item1,
                         SourceClass: Path.GetFileName(classDir) ?? ""))))
             .ToList();
+    }
+
+    private static IReadOnlyList<SourceImage> EnumerateAllSources(
+        IReadOnlyList<string> sourceDatasetRoots,
+        IReadOnlyList<string> sourceFileLists,
+        double sourceFileListValidationRatio)
+        => sourceDatasetRoots
+            .SelectMany(EnumerateSourceImages)
+            .Concat(sourceFileLists.SelectMany(path => EnumerateSourceFileList(path, sourceFileListValidationRatio)))
+            .ToList();
+
+    private static IReadOnlyList<SourceImage> EnumerateSourceFileList(
+        string fileListPath,
+        double validationRatio)
+    {
+        if (string.IsNullOrWhiteSpace(fileListPath))
+            return Array.Empty<SourceImage>();
+        if (!File.Exists(fileListPath))
+            throw new FileNotFoundException("Pfadliste nicht gefunden.", fileListPath);
+
+        return File.ReadLines(fileListPath)
+            .Select(line => line.Trim())
+            .Where(line => line.StartsWith(@"D:\", StringComparison.OrdinalIgnoreCase) ||
+                           line.StartsWith(@"C:\", StringComparison.OrdinalIgnoreCase))
+            .Where(line => IsImageFile(line))
+            .Select(path => new SourceImage(
+                Path: path,
+                Split: ChooseSplit(path, validationRatio),
+                SourceClass: ExtractClassFromFileName(path) ?? ""))
+            .ToList();
+    }
+
+    private static string ChooseSplit(string path, double validationRatio)
+    {
+        if (validationRatio <= 0)
+            return "train";
+        if (validationRatio >= 1)
+            return "val";
+
+        var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(path.ToUpperInvariant()));
+        var value = BitConverter.ToUInt32(hash, 0) / (double)uint.MaxValue;
+        return value < validationRatio ? "val" : "train";
+    }
+
+    private static string? ExtractClassFromFileName(string path)
+    {
+        var stem = Path.GetFileNameWithoutExtension(path);
+        if (string.IsNullOrWhiteSpace(stem))
+            return null;
+
+        var parts = stem.Split('_', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var part in parts)
+        {
+            var code = EvalSetBenchmarkDataset.NormalizeCode(part);
+            if (!string.IsNullOrWhiteSpace(code) &&
+                (string.Equals(code, "LEER", StringComparison.OrdinalIgnoreCase) ||
+                 (code.Length >= 3 && code.Length <= 6 && code.StartsWith("B", StringComparison.OrdinalIgnoreCase))))
+            {
+                return code;
+            }
+        }
+
+        if (stem.Contains("kein_schaden", StringComparison.OrdinalIgnoreCase) ||
+            stem.Contains("no_damage", StringComparison.OrdinalIgnoreCase) ||
+            stem.Contains("leer", StringComparison.OrdinalIgnoreCase))
+        {
+            return "LEER";
+        }
+
+        return null;
     }
 
     private static HashSet<string> LoadEvalSetImageHashes(string? evalSetRoot)

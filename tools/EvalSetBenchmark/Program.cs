@@ -28,8 +28,8 @@ try
 
     if (options.BuildRouterDataset)
     {
-        if (options.SourceDatasets.Count == 0)
-            throw new ArgumentException("--source-dataset ist fuer --build-router-dataset noetig.");
+        if (options.SourceDatasets.Count == 0 && options.SourceFileLists.Count == 0)
+            throw new ArgumentException("--source-dataset oder --source-file-list ist fuer --build-router-dataset noetig.");
         if (string.IsNullOrWhiteSpace(options.RouterOutput))
             throw new ArgumentException("--router-output ist fuer --build-router-dataset noetig.");
 
@@ -37,7 +37,10 @@ try
             SourceDatasetRoots: options.SourceDatasets,
             OutputRoot: options.RouterOutput,
             EvalSetRoot: options.EvalSetRoot,
-            DryRun: options.DryRun));
+            DryRun: options.DryRun,
+            SourceFileLists: options.SourceFileLists,
+            SourceFileListValidationRatio: options.SourceFileListValidationRatio,
+            MaxPerClassPerSplit: options.MaxPerClassPerSplit));
 
         PrintRouterDatasetBuildResult(options.RouterOutput, options.DryRun, buildResult);
         return 0;
@@ -385,6 +388,12 @@ Optionen:
                         Router-Dataset aus ImageFolder-Quellen bauen
   --source-dataset <pfad>
                         Quell-Dataset, mehrfach erlaubt
+  --source-file-list <pfad>
+                        Textdatei mit Bildpfaden, mehrfach erlaubt
+  --source-file-list-val-ratio <x>
+                        Val-Anteil fuer Pfadlisten, z.B. 0.15
+  --max-per-class-split <zahl>
+                        Max. Bilder je Split/Klasse, 0 = kein Limit
   --router-output <pfad>
                         Zielordner fuer Router-Dataset
   --dry-run             Nur zaehlen, nicht kopieren
@@ -404,6 +413,8 @@ static void PrintRouterDatasetBuildResult(
     Console.WriteLine($"  Kopiert:           {result.Copied}");
     Console.WriteLine($"  Eval-Set skipped:  {result.SkippedEvalSet}");
     Console.WriteLine($"  Unbekannt skipped: {result.SkippedUnknownClass}");
+    Console.WriteLine($"  Fehlend skipped:   {result.SkippedMissingFiles}");
+    Console.WriteLine($"  Limit skipped:     {result.SkippedClassCap}");
 
     foreach (var split in result.Classes.GroupBy(c => c.Split, StringComparer.OrdinalIgnoreCase))
     {
@@ -474,6 +485,9 @@ internal sealed record BenchmarkOptions(
     bool RouterPlanOnly,
     bool BuildRouterDataset,
     IReadOnlyList<string> SourceDatasets,
+    IReadOnlyList<string> SourceFileLists,
+    double SourceFileListValidationRatio,
+    int MaxPerClassPerSplit,
     string? RouterOutput,
     bool DryRun,
     bool ShowHelp)
@@ -498,6 +512,9 @@ internal sealed record BenchmarkOptions(
         var routerPlanOnly = false;
         var buildRouterDataset = false;
         var sourceDatasets = new List<string>();
+        var sourceFileLists = new List<string>();
+        var sourceFileListValidationRatio = 0.0;
+        var maxPerClassPerSplit = 0;
         string? routerOutput = null;
         var dryRun = false;
         var help = false;
@@ -565,6 +582,15 @@ internal sealed record BenchmarkOptions(
                 case "--source-dataset":
                     sourceDatasets.Add(RequireValue(args, ref i, arg));
                     break;
+                case "--source-file-list":
+                    sourceFileLists.Add(RequireValue(args, ref i, arg));
+                    break;
+                case "--source-file-list-val-ratio":
+                    sourceFileListValidationRatio = double.Parse(RequireValue(args, ref i, arg), CultureInfo.InvariantCulture);
+                    break;
+                case "--max-per-class-split":
+                    maxPerClassPerSplit = int.Parse(RequireValue(args, ref i, arg), CultureInfo.InvariantCulture);
+                    break;
                 case "--router-output":
                     routerOutput = RequireValue(args, ref i, arg);
                     break;
@@ -583,6 +609,10 @@ internal sealed record BenchmarkOptions(
             throw new ArgumentException("--yolo-top-k muss groesser als 0 sein.");
         if (yoloMinConf < 0 || yoloMinConf > 1)
             throw new ArgumentException("--yolo-min-conf muss zwischen 0 und 1 liegen.");
+        if (sourceFileListValidationRatio < 0 || sourceFileListValidationRatio > 1)
+            throw new ArgumentException("--source-file-list-val-ratio muss zwischen 0 und 1 liegen.");
+        if (maxPerClassPerSplit < 0)
+            throw new ArgumentException("--max-per-class-split darf nicht negativ sein.");
 
         return new BenchmarkOptions(
             root,
@@ -603,6 +633,9 @@ internal sealed record BenchmarkOptions(
             routerPlanOnly,
             buildRouterDataset,
             sourceDatasets,
+            sourceFileLists,
+            sourceFileListValidationRatio,
+            maxPerClassPerSplit,
             routerOutput,
             dryRun,
             help);

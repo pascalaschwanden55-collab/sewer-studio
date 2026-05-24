@@ -381,6 +381,83 @@ public sealed class EvalSetBenchmarkTests : IDisposable
         Assert.False(File.Exists(Path.Combine(outputRoot, "train", "sonstiges", "unknown.png")));
     }
 
+    [Fact]
+    public void RouterDatasetBuilder_reads_source_file_list_and_maps_codes_from_file_names()
+    {
+        var listRoot = Path.Combine(_root, "list_source");
+        var listPath = Path.Combine(_root, "router_file_list.txt");
+        var outputRoot = Path.Combine(_root, "router_file_list_output");
+
+        var bcd = Path.Combine(listRoot, "haltung_BCD_0.00_a.png");
+        var bba = Path.Combine(listRoot, "haltung_BBAA_1.20_b.jpg");
+        var evalCopy = Path.Combine(listRoot, "haltung_BDDC_1.20_eval.png");
+        var unknown = Path.Combine(listRoot, "haltung_ABC_1.20_unknown.png");
+
+        WriteBytes(bcd, [40, 41, 42]);
+        WriteBytes(bba, [50, 51, 52]);
+        WriteBytes(evalCopy, [4, 5, 6]);
+        WriteBytes(unknown, [60, 61, 62]);
+
+        File.WriteAllLines(listPath,
+        [
+            "FullName",
+            "--------",
+            bcd,
+            bba,
+            evalCopy,
+            unknown,
+            Path.Combine(listRoot, "missing_BCD.png"),
+        ]);
+
+        var result = RouterDatasetBuilder.Build(new RouterDatasetBuilderOptions(
+            SourceDatasetRoots: [],
+            OutputRoot: outputRoot,
+            EvalSetRoot: _root,
+            DryRun: false,
+            SourceFileLists: [listPath]));
+
+        Assert.Equal(2, result.Copied);
+        Assert.Equal(1, result.SkippedEvalSet);
+        Assert.Equal(1, result.SkippedUnknownClass);
+        Assert.Equal(1, result.SkippedMissingFiles);
+
+        Assert.True(File.Exists(Path.Combine(outputRoot, "train", "beginn_ende", "haltung_BCD_0.00_a.png")));
+        Assert.True(File.Exists(Path.Combine(outputRoot, "train", "wurzeln", "haltung_BBAA_1.20_b.jpg")));
+        Assert.False(File.Exists(Path.Combine(outputRoot, "train", "wasserstand", "haltung_BDDC_1.20_eval.png")));
+    }
+
+    [Fact]
+    public void RouterDatasetBuilder_can_put_file_list_entries_into_val_and_cap_per_class()
+    {
+        var listRoot = Path.Combine(_root, "list_source_cap");
+        var listPath = Path.Combine(_root, "router_file_list_cap.txt");
+        var outputRoot = Path.Combine(_root, "router_file_list_cap_output");
+        var paths = new[]
+        {
+            Path.Combine(listRoot, "haltung_BCD_0.00_a.png"),
+            Path.Combine(listRoot, "haltung_BCD_0.00_b.png"),
+            Path.Combine(listRoot, "haltung_BCD_0.00_c.png"),
+        };
+
+        foreach (var p in paths)
+            WriteBytes(p, [70, 71, 72, (byte)p[^5]]);
+        File.WriteAllLines(listPath, paths);
+
+        var result = RouterDatasetBuilder.Build(new RouterDatasetBuilderOptions(
+            SourceDatasetRoots: [],
+            OutputRoot: outputRoot,
+            EvalSetRoot: _root,
+            DryRun: false,
+            SourceFileLists: [listPath],
+            SourceFileListValidationRatio: 1.0,
+            MaxPerClassPerSplit: 2));
+
+        Assert.Equal(2, result.Copied);
+        Assert.Equal(1, result.SkippedClassCap);
+        Assert.Equal(2, Directory.GetFiles(Path.Combine(outputRoot, "val", "beginn_ende")).Length);
+        Assert.False(Directory.Exists(Path.Combine(outputRoot, "train", "beginn_ende")));
+    }
+
     private static void WriteBytes(string path, byte[] bytes)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
