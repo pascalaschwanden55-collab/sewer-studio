@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,6 +30,36 @@ public class VisionPipelineClientTests
         var client = new VisionPipelineClient(uri, httpClient);
 
         Assert.Equal(uri, httpClient.BaseAddress);
+    }
+
+    [Fact]
+    public async Task ClassifyYoloAsync_AddsTokenHeader_ForLoopbackUrl()
+    {
+        var handler = new CaptureHandler("""{"predictions":[],"inference_time_ms":1}""");
+        var httpClient = new HttpClient(handler);
+        var client = new VisionPipelineClient(
+            new Uri("http://localhost:8100"),
+            httpClient,
+            sidecarToken: "test-token");
+
+        await client.ClassifyYoloAsync(new YoloClassifyRequest("abc", 1));
+
+        Assert.Equal("test-token", handler.LastSidecarToken);
+    }
+
+    [Fact]
+    public async Task ClassifyYoloAsync_DoesNotSendToken_ToExternalUrl()
+    {
+        var handler = new CaptureHandler("""{"predictions":[],"inference_time_ms":1}""");
+        var httpClient = new HttpClient(handler);
+        var client = new VisionPipelineClient(
+            new Uri("http://example.com"),
+            httpClient,
+            sidecarToken: "test-token");
+
+        await client.ClassifyYoloAsync(new YoloClassifyRequest("abc", 1));
+
+        Assert.Null(handler.LastSidecarToken);
     }
 
     [Fact]
@@ -125,5 +156,25 @@ public class VisionPipelineClientTests
         Assert.Equal(10.5, result.Meter);
         Assert.True(result.IsRelevant);
         Assert.Equal(640, result.ImageWidth);
+    }
+
+    private sealed class CaptureHandler(string json) : HttpMessageHandler
+    {
+        public string? LastSidecarToken { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            LastSidecarToken = request.Headers.TryGetValues("X-Sidecar-Token", out var values)
+                ? values.SingleOrDefault()
+                : null;
+
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+            return Task.FromResult(response);
+        }
     }
 }

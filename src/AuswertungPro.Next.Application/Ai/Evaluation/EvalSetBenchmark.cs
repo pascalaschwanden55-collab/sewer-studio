@@ -20,6 +20,10 @@ public sealed record EvalSetPrediction(
     long TimeMs,
     string? Error = null);
 
+public sealed record EvalSetCandidatePrediction(
+    string ClassName,
+    double Confidence);
+
 public sealed record EvalSetBenchmarkRow(
     string FrameFileName,
     string ExpectedFullCode,
@@ -352,6 +356,33 @@ public static class EvalSetBenchmarkScorer
 
 public static class EvalSetBenchmarkContext
 {
+    private static readonly IReadOnlyDictionary<string, string> ClassToVsaCode =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["oberflaeche"] = "BAJ",
+            ["versatz"] = "BAH",
+            ["riss_bruch"] = "BAB",
+            ["rissbruch"] = "BAB",
+            ["bruch"] = "BAC",
+            ["ablagerung"] = "BBC",
+            ["anschluss"] = "BCA",
+            ["infiltration"] = "BBF",
+            ["deformation"] = "BAA",
+            ["dichtung"] = "BAI",
+        };
+
+    private static readonly HashSet<string> NegativeClasses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "leer",
+        "empty",
+        "negative",
+        "no_damage",
+        "no_schaden",
+        "meta",
+        "start",
+        "ende",
+    };
+
     public static IReadOnlyList<(string Code, string Description, double Meter)> BuildOracleImportContext(
         EvalSetBenchmarkCase benchmarkCase)
     {
@@ -369,5 +400,77 @@ public static class EvalSetBenchmarkContext
                 $"Eval-Set Erwartung {benchmarkCase.ExpectedFullCode}",
                 meter)
         ];
+    }
+
+    public static IReadOnlyList<(string Code, string Description, double Meter)> BuildClassifierImportContext(
+        IReadOnlyList<EvalSetCandidatePrediction> predictions,
+        double meter = 0,
+        double minConfidence = 0.05,
+        int maxCandidates = 3)
+    {
+        ArgumentNullException.ThrowIfNull(predictions);
+        if (maxCandidates <= 0)
+            return Array.Empty<(string Code, string Description, double Meter)>();
+
+        var result = new List<(string Code, string Description, double Meter)>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var p in predictions
+                     .Where(p => p.Confidence >= minConfidence)
+                     .OrderByDescending(p => p.Confidence))
+        {
+            var code = TryMapClassifierClassToVsaCode(p.ClassName);
+            if (string.IsNullOrWhiteSpace(code) || !seen.Add(code))
+                continue;
+
+            result.Add((
+                code,
+                $"YOLO-Kandidat {p.ClassName.Trim()} ({p.Confidence.ToString("P0", CultureInfo.InvariantCulture)})",
+                meter));
+
+            if (result.Count >= maxCandidates)
+                break;
+        }
+
+        return result;
+    }
+
+    private static string? TryMapClassifierClassToVsaCode(string? className)
+    {
+        if (string.IsNullOrWhiteSpace(className))
+            return null;
+
+        var raw = className.Trim();
+        var directCode = NormalizeDirectVsaCode(raw);
+        if (directCode is not null)
+            return directCode;
+
+        var key = raw
+            .Replace('-', '_')
+            .Replace(' ', '_')
+            .Trim()
+            .ToLowerInvariant();
+
+        if (NegativeClasses.Contains(key))
+            return null;
+
+        return ClassToVsaCode.TryGetValue(key, out var code)
+            ? code
+            : null;
+    }
+
+    private static string? NormalizeDirectVsaCode(string value)
+    {
+        var compact = new string(value
+            .Where(char.IsLetterOrDigit)
+            .Select(char.ToUpperInvariant)
+            .ToArray());
+
+        if (compact.Length < 3 || compact.Length > 6 || compact[0] != 'B')
+            return null;
+
+        return compact.All(char.IsLetterOrDigit)
+            ? compact
+            : null;
     }
 }

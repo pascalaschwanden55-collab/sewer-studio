@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -15,17 +16,23 @@ public sealed class VisionPipelineClient
 {
     private readonly HttpClient _http;
     private readonly Uri _baseUri;
+    private readonly string? _sidecarToken;
+    private readonly bool _sendSidecarToken;
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         PropertyNameCaseInsensitive = true,
     };
 
-    public VisionPipelineClient(Uri baseUri, HttpClient? httpClient = null)
+    public VisionPipelineClient(Uri baseUri, HttpClient? httpClient = null, string? sidecarToken = null)
     {
         _baseUri = baseUri;
         _http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
         _http.BaseAddress = baseUri;
+        _sendSidecarToken = IsLoopbackUri(baseUri);
+        _sidecarToken = _sendSidecarToken
+            ? NormalizeToken(sidecarToken) ?? TryLoadSidecarToken()
+            : null;
     }
 
     /// <summary>
@@ -98,6 +105,9 @@ public sealed class VisionPipelineClient
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
+        if (_sendSidecarToken && !string.IsNullOrWhiteSpace(_sidecarToken))
+            req.Headers.TryAddWithoutValidation("X-Sidecar-Token", _sidecarToken);
+
         using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
 
         var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
@@ -115,4 +125,41 @@ public sealed class VisionPipelineClient
         var baseStr = _baseUri.ToString().TrimEnd('/');
         return new Uri($"{baseStr}{endpoint}");
     }
+
+    private static bool IsLoopbackUri(Uri uri)
+    {
+        if (uri.IsLoopback)
+            return true;
+
+        var host = uri.Host.Trim();
+        return string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(host, "127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(host, "::1", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? TryLoadSidecarToken()
+    {
+        var env = NormalizeToken(Environment.GetEnvironmentVariable("SEWER_SIDECAR_TOKEN"));
+        if (env is not null)
+            return env;
+
+        try
+        {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (string.IsNullOrWhiteSpace(localAppData))
+                return null;
+
+            var path = Path.Combine(localAppData, "SewerStudio", ".sidecar_token");
+            return File.Exists(path)
+                ? NormalizeToken(File.ReadAllText(path))
+                : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? NormalizeToken(string? token)
+        => string.IsNullOrWhiteSpace(token) ? null : token.Trim();
 }

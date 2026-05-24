@@ -206,4 +206,62 @@ public sealed class EvalSetBenchmarkTests : IDisposable
 
         Assert.Empty(context);
     }
+
+    [Fact]
+    public void BuildClassifierImportContext_maps_manual_groups_to_vsa_candidates()
+    {
+        var predictions = new[]
+        {
+            new EvalSetCandidatePrediction("riss_bruch", 0.72),
+            new EvalSetCandidatePrediction("ablagerung", 0.31),
+            new EvalSetCandidatePrediction("leer", 0.95),
+        };
+
+        var context = EvalSetBenchmarkContext.BuildClassifierImportContext(
+            predictions,
+            meter: 8.4,
+            minConfidence: 0.05,
+            maxCandidates: 3);
+
+        Assert.Equal(2, context.Count);
+        Assert.Equal("BAB", context[0].Code);
+        Assert.Equal("BBC", context[1].Code);
+        Assert.All(context, c => Assert.Equal(8.4, c.Meter));
+        Assert.All(context, c => Assert.Contains("YOLO", c.Description));
+    }
+
+    [Fact]
+    public void BuildClassifierImportContext_accepts_direct_vsa_class_names()
+    {
+        var predictions = new[]
+        {
+            new EvalSetCandidatePrediction("BDDC", 0.61),
+        };
+
+        var context = EvalSetBenchmarkContext.BuildClassifierImportContext(predictions);
+
+        Assert.Single(context);
+        Assert.Equal("BDDC", context[0].Code);
+    }
+
+    [Fact]
+    public void BuildClassifierImportContext_filters_confidence_duplicates_and_max_count()
+    {
+        var predictions = new[]
+        {
+            new EvalSetCandidatePrediction("riss_bruch", 0.80),
+            new EvalSetCandidatePrediction("BAB", 0.70),
+            new EvalSetCandidatePrediction("anschluss", 0.60),
+            new EvalSetCandidatePrediction("infiltration", 0.01),
+        };
+
+        var context = EvalSetBenchmarkContext.BuildClassifierImportContext(
+            predictions,
+            minConfidence: 0.05,
+            maxCandidates: 2);
+
+        Assert.Equal(2, context.Count);
+        Assert.Equal("BAB", context[0].Code);
+        Assert.Equal("BCA", context[1].Code);
+    }
 }
