@@ -193,6 +193,33 @@ Stattdessen:
 - gleiche Klassenstruktur wie oben verwenden
 - danach gegen das unveraenderte Eval-Set pruefen
 
+Zum Bauen eines Router-Datasets gibt es jetzt einen sicheren Builder.
+Er vergleicht Bild-Hashes mit dem Eval-Set und ueberspringt Treffer automatisch:
+
+```powershell
+dotnet run --project tools\EvalSetBenchmark -- `
+  --build-router-dataset `
+  --source-dataset "D:\sewer_pdf_manual_classification_round1_round2_fixedval_round3train_plus_teacher" `
+  --router-output "D:\sewer_router_dataset_candidate" `
+  --dry-run
+```
+
+Dry-Run vom 2026-05-24:
+
+| Klasse | Train | Val |
+|---|---:|---:|
+| `riss_bruch` | 249 | 17 |
+| `oberflaeche` | 197 | 14 |
+| `versatz` | 161 | 14 |
+| `ablagerung` | 153 | 5 |
+| `anschluss` | 129 | 33 |
+| `deformation` | 103 | 22 |
+| `dichtung` | 91 | 12 |
+| `infiltration` | 76 | 10 |
+
+Der Builder ist also bereit, aber diese Quelle deckt noch nicht alle Router-Klassen ab.
+Es fehlen vor allem `leer`, `beginn_ende`, `wasserstand` und `wurzeln`.
+
 ### Schritt 4: Benchmark-Ziel klar trennen
 
 Es braucht zwei verschiedene Messungen:

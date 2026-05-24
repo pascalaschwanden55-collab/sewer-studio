@@ -353,4 +353,37 @@ public sealed class EvalSetBenchmarkTests : IDisposable
         Assert.Contains(plan, p => p.RouterClass == "wurzeln" && p.Count == 1 && p.ExpectedCodes.Contains("BBAA"));
         Assert.Contains(plan, p => p.RouterClass == "sonstiges" && p.Count == 1 && p.ExpectedCodes.Contains("XYZ"));
     }
+
+    [Fact]
+    public void RouterDatasetBuilder_copies_router_classes_and_skips_eval_set_images()
+    {
+        var sourceRoot = Path.Combine(_root, "router_source");
+        var outputRoot = Path.Combine(_root, "router_output");
+
+        WriteBytes(Path.Combine(sourceRoot, "train", "riss_bruch", "riss.png"), [10, 11, 12]);
+        WriteBytes(Path.Combine(sourceRoot, "val", "BCE", "rohrende.jpg"), [20, 21, 22]);
+        WriteBytes(Path.Combine(sourceRoot, "train", "BDDC", "eval_copy.png"), [4, 5, 6]);
+        WriteBytes(Path.Combine(sourceRoot, "train", "irgendwas", "unknown.png"), [30, 31, 32]);
+
+        var result = RouterDatasetBuilder.Build(new RouterDatasetBuilderOptions(
+            SourceDatasetRoots: [sourceRoot],
+            OutputRoot: outputRoot,
+            EvalSetRoot: _root,
+            DryRun: false));
+
+        Assert.Equal(2, result.Copied);
+        Assert.Equal(1, result.SkippedEvalSet);
+        Assert.Equal(1, result.SkippedUnknownClass);
+
+        Assert.True(File.Exists(Path.Combine(outputRoot, "train", "riss_bruch", "riss.png")));
+        Assert.True(File.Exists(Path.Combine(outputRoot, "val", "beginn_ende", "rohrende.jpg")));
+        Assert.False(File.Exists(Path.Combine(outputRoot, "train", "wasserstand", "eval_copy.png")));
+        Assert.False(File.Exists(Path.Combine(outputRoot, "train", "sonstiges", "unknown.png")));
+    }
+
+    private static void WriteBytes(string path, byte[] bytes)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllBytes(path, bytes);
+    }
 }

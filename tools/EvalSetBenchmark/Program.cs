@@ -26,6 +26,23 @@ try
 
     Directory.CreateDirectory(options.OutputDir);
 
+    if (options.BuildRouterDataset)
+    {
+        if (options.SourceDatasets.Count == 0)
+            throw new ArgumentException("--source-dataset ist fuer --build-router-dataset noetig.");
+        if (string.IsNullOrWhiteSpace(options.RouterOutput))
+            throw new ArgumentException("--router-output ist fuer --build-router-dataset noetig.");
+
+        var buildResult = RouterDatasetBuilder.Build(new RouterDatasetBuilderOptions(
+            SourceDatasetRoots: options.SourceDatasets,
+            OutputRoot: options.RouterOutput,
+            EvalSetRoot: options.EvalSetRoot,
+            DryRun: options.DryRun));
+
+        PrintRouterDatasetBuildResult(options.RouterOutput, options.DryRun, buildResult);
+        return 0;
+    }
+
     var config = AiPlatformConfig.Load();
     var baseUri = options.OllamaUrl ?? config.OllamaBaseUri;
     var model = options.Model ?? config.VisionModel;
@@ -364,8 +381,36 @@ Optionen:
   --coverage-only       Nur Classifier/Eval-Set-Abdeckung pruefen, kein Qwen-Lauf
   --router-plan         Router-Klassenverteilung fuer das Eval-Set anzeigen
   --router-plan-only    Nur Router-Klassenverteilung anzeigen, kein Qwen-Lauf
+  --build-router-dataset
+                        Router-Dataset aus ImageFolder-Quellen bauen
+  --source-dataset <pfad>
+                        Quell-Dataset, mehrfach erlaubt
+  --router-output <pfad>
+                        Zielordner fuer Router-Dataset
+  --dry-run             Nur zaehlen, nicht kopieren
   --help                Hilfe anzeigen
 """);
+}
+
+static void PrintRouterDatasetBuildResult(
+    string outputRoot,
+    bool dryRun,
+    RouterDatasetBuilderResult result)
+{
+    Console.WriteLine(dryRun
+        ? "Router-Dataset Dry-Run:"
+        : "Router-Dataset gebaut:");
+    Console.WriteLine($"  Ziel:              {outputRoot}");
+    Console.WriteLine($"  Kopiert:           {result.Copied}");
+    Console.WriteLine($"  Eval-Set skipped:  {result.SkippedEvalSet}");
+    Console.WriteLine($"  Unbekannt skipped: {result.SkippedUnknownClass}");
+
+    foreach (var split in result.Classes.GroupBy(c => c.Split, StringComparer.OrdinalIgnoreCase))
+    {
+        Console.WriteLine($"  Split {split.Key}:");
+        foreach (var c in split.OrderByDescending(x => x.Count).ThenBy(x => x.RouterClass, StringComparer.OrdinalIgnoreCase))
+            Console.WriteLine($"    {c.RouterClass,-13} {c.Count,5}");
+    }
 }
 
 static void PrintRouterPlan(IReadOnlyList<EvalSetRouterClassSummary> plan)
@@ -427,6 +472,10 @@ internal sealed record BenchmarkOptions(
     bool CoverageOnly,
     bool RouterPlan,
     bool RouterPlanOnly,
+    bool BuildRouterDataset,
+    IReadOnlyList<string> SourceDatasets,
+    string? RouterOutput,
+    bool DryRun,
     bool ShowHelp)
 {
     public static BenchmarkOptions Parse(string[] args)
@@ -447,6 +496,10 @@ internal sealed record BenchmarkOptions(
         var coverageOnly = false;
         var routerPlan = false;
         var routerPlanOnly = false;
+        var buildRouterDataset = false;
+        var sourceDatasets = new List<string>();
+        string? routerOutput = null;
+        var dryRun = false;
         var help = false;
 
         for (var i = 0; i < args.Length; i++)
@@ -506,6 +559,18 @@ internal sealed record BenchmarkOptions(
                     routerPlan = true;
                     routerPlanOnly = true;
                     break;
+                case "--build-router-dataset":
+                    buildRouterDataset = true;
+                    break;
+                case "--source-dataset":
+                    sourceDatasets.Add(RequireValue(args, ref i, arg));
+                    break;
+                case "--router-output":
+                    routerOutput = RequireValue(args, ref i, arg);
+                    break;
+                case "--dry-run":
+                    dryRun = true;
+                    break;
                 default:
                     throw new ArgumentException($"Unbekannte Option: {arg}");
             }
@@ -536,6 +601,10 @@ internal sealed record BenchmarkOptions(
             coverageOnly,
             routerPlan,
             routerPlanOnly,
+            buildRouterDataset,
+            sourceDatasets,
+            routerOutput,
+            dryRun,
             help);
     }
 
