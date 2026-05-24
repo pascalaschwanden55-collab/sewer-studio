@@ -56,11 +56,12 @@ try
         Console.WriteLine("Abbruch angefordert...");
     };
 
-    using var yoloHttpClient = options.UseYoloContext
+    var needsYolo = options.UseYoloContext || options.UseYoloPresenceContext;
+    using var yoloHttpClient = needsYolo
         ? new HttpClient { Timeout = TimeSpan.FromSeconds(Math.Max(5, config.SidecarTimeoutSec)) }
         : null;
     VisionPipelineClient? yoloClient = null;
-    if (options.UseYoloContext)
+    if (needsYolo)
     {
         var sidecarUrl = options.SidecarUrl ?? config.SidecarUrl;
         yoloClient = new VisionPipelineClient(sidecarUrl, yoloHttpClient);
@@ -86,11 +87,12 @@ try
         {
             var b64 = Convert.ToBase64String(File.ReadAllBytes(c.ImagePath));
             IReadOnlyList<(string Code, string Description, double Meter)>? context = null;
+            IReadOnlyList<string>? observationHints = null;
             if (options.UseOracleContext)
             {
                 context = EvalSetBenchmarkContext.BuildOracleImportContext(c);
             }
-            else if (options.UseYoloContext && yoloClient is not null)
+            else if ((options.UseYoloContext || options.UseYoloPresenceContext) && yoloClient is not null)
             {
                 var yolo = await yoloClient.ClassifyYoloAsync(
                     new YoloClassifyRequest(b64, options.YoloTopK),
@@ -98,19 +100,35 @@ try
                 var candidates = yolo.Predictions
                     .Select(p => new EvalSetCandidatePrediction(p.ClassName, p.Confidence))
                     .ToList();
-                context = EvalSetBenchmarkContext.BuildClassifierImportContext(
-                    candidates,
-                    meter: c.Meter ?? 0,
-                    minConfidence: options.YoloMinConfidence,
-                    maxCandidates: options.YoloTopK);
-                contextInfo = context.Count > 0
-                    ? "  CTX=" + string.Join("/", context.Select(x => x.Code))
-                    : "  CTX=-";
+
+                if (options.UseYoloContext)
+                {
+                    context = EvalSetBenchmarkContext.BuildClassifierImportContext(
+                        candidates,
+                        meter: c.Meter ?? 0,
+                        minConfidence: options.YoloMinConfidence,
+                        maxCandidates: options.YoloTopK);
+                    contextInfo = context.Count > 0
+                        ? "  CTX=" + string.Join("/", context.Select(x => x.Code))
+                        : "  CTX=-";
+                }
+                else
+                {
+                    observationHints = EvalSetBenchmarkContext.BuildClassifierObservationHints(
+                        candidates,
+                        minConfidence: options.YoloMinConfidence,
+                        maxHints: options.YoloTopK);
+                    contextInfo = observationHints.Count > 0
+                        ? "  HINT=" + string.Join("/", observationHints.Select(ShortHint))
+                        : "  HINT=-";
+                }
             }
 
             var analysis = context is { Count: > 0 }
                 ? await service.AnalyzeAsync(b64, context, cts.Token).ConfigureAwait(false)
-                : await service.AnalyzeAsync(b64, cts.Token).ConfigureAwait(false);
+                : observationHints is { Count: > 0 }
+                    ? await service.AnalyzeWithObservationHintsAsync(b64, observationHints, cts.Token).ConfigureAwait(false)
+                    : await service.AnalyzeAsync(b64, cts.Token).ConfigureAwait(false);
             sw.Stop();
 
             var finding = analysis.Findings
@@ -161,7 +179,9 @@ try
         ? $"{modelSlug}_oracle_context"
         : options.UseYoloContext
             ? $"{modelSlug}_yolo_context"
-            : modelSlug;
+            : options.UseYoloPresenceContext
+                ? $"{modelSlug}_yolo_presence_context"
+                : modelSlug;
     var csvPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{runSlug}.csv");
     var jsonPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{runSlug}.json");
     var byCodePath = Path.Combine(options.OutputDir, $"eval_{stamp}_{runSlug}_by_code.csv");
@@ -180,6 +200,7 @@ try
         ollama_url = baseUri.ToString(),
         oracle_context = options.UseOracleContext,
         yolo_context = options.UseYoloContext,
+        yolo_presence_context = options.UseYoloPresenceContext,
         sidecar_url = (options.SidecarUrl ?? config.SidecarUrl).ToString(),
         yolo_top_k = options.YoloTopK,
         yolo_min_confidence = options.YoloMinConfidence,
@@ -226,7 +247,19 @@ static string DescribeContextMode(BenchmarkOptions options)
         return "Oracle aus Eval-Set";
     if (options.UseYoloContext)
         return "YOLO-Kandidaten";
+    if (options.UseYoloPresenceContext)
+        return "YOLO-Bildhinweise";
     return "kein Kontext";
+}
+
+static string ShortHint(string hint)
+{
+    const string prefix = "YOLO sieht eventuell ";
+    var text = hint.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+        ? hint[prefix.Length..]
+        : hint;
+    var bracket = text.IndexOf(" (", StringComparison.Ordinal);
+    return bracket > 0 ? text[..bracket] : text;
 }
 
 static object? TryReadManifestInfo(string evalSetRoot)
@@ -297,6 +330,8 @@ Optionen:
   --max <zahl>          Nur erste N Frames laufen lassen
   --oracle-context      Testmodus: gibt Qwen den erwarteten Code als Kontext
   --yolo-context        Testmodus: YOLO-cls liefert 1-3 Kandidaten fuer Qwen
+  --yolo-presence-context
+                        Testmodus: YOLO-cls liefert nur unsichere Bildhinweise
   --sidecar-url <url>   Standard: App-Konfiguration
   --yolo-top-k <zahl>   Standard: 3
   --yolo-min-conf <x>   Standard: 0.05
@@ -314,6 +349,7 @@ internal sealed record BenchmarkOptions(
     int MaxFrames,
     bool UseOracleContext,
     bool UseYoloContext,
+    bool UseYoloPresenceContext,
     int YoloTopK,
     double YoloMinConfidence,
     bool ShowHelp)
@@ -329,6 +365,7 @@ internal sealed record BenchmarkOptions(
         var max = 0;
         var oracleContext = false;
         var yoloContext = false;
+        var yoloPresenceContext = false;
         var yoloTopK = 3;
         var yoloMinConf = 0.05;
         var help = false;
@@ -368,6 +405,9 @@ internal sealed record BenchmarkOptions(
                 case "--yolo-context":
                     yoloContext = true;
                     break;
+                case "--yolo-presence-context":
+                    yoloPresenceContext = true;
+                    break;
                 case "--yolo-top-k":
                     yoloTopK = int.Parse(RequireValue(args, ref i, arg));
                     break;
@@ -379,8 +419,9 @@ internal sealed record BenchmarkOptions(
             }
         }
 
-        if (oracleContext && yoloContext)
-            throw new ArgumentException("--oracle-context und --yolo-context koennen nicht gleichzeitig genutzt werden.");
+        var contextModeCount = (oracleContext ? 1 : 0) + (yoloContext ? 1 : 0) + (yoloPresenceContext ? 1 : 0);
+        if (contextModeCount > 1)
+            throw new ArgumentException("--oracle-context, --yolo-context und --yolo-presence-context koennen nicht gleichzeitig genutzt werden.");
         if (yoloTopK <= 0)
             throw new ArgumentException("--yolo-top-k muss groesser als 0 sein.");
         if (yoloMinConf < 0 || yoloMinConf > 1)
@@ -396,6 +437,7 @@ internal sealed record BenchmarkOptions(
             max,
             oracleContext,
             yoloContext,
+            yoloPresenceContext,
             yoloTopK,
             yoloMinConf,
             help);

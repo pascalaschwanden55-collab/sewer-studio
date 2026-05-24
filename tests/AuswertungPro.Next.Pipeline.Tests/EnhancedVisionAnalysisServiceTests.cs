@@ -41,6 +41,37 @@ public sealed class EnhancedVisionAnalysisServiceTests
     }
 
     [Fact]
+    public async Task AnalyzeWithObservationHintsAsync_adds_non_binding_yolo_hint_to_prompt()
+    {
+        var content = """
+            {
+              "meter": null,
+              "time_in_video": null,
+              "pipe_material": "unbekannt",
+              "pipe_diameter_mm": null,
+              "findings": [],
+              "image_quality": "mittel",
+              "is_empty_frame": true
+            }
+            """;
+        using var http = new HttpClient(new StaticOllamaHandler(content))
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+        using var client = new OllamaClient(new Uri("http://localhost:11434"), http);
+        var service = new EnhancedVisionAnalysisService(client, "qwen-test");
+
+        await service.AnalyzeWithObservationHintsAsync(
+            Convert.ToBase64String([1, 2, 3]),
+            ["YOLO sieht eventuell riss_bruch (72 %)"]);
+
+        Assert.Contains("ZUSAETZLICHE BILD-HINWEISE", StaticOllamaHandler.LastRequestJson);
+        Assert.Contains("riss_bruch", StaticOllamaHandler.LastRequestJson);
+        Assert.Contains("nicht als VSA-Code", StaticOllamaHandler.LastRequestJson);
+        Assert.Contains("is_empty_frame=true nur dann setzen", StaticOllamaHandler.LastRequestJson);
+    }
+
+    [Fact]
     public async Task AnalyzeAsync_maps_snake_case_structured_json_fields()
     {
         var content = """

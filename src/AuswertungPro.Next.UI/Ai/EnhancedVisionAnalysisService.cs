@@ -134,7 +134,27 @@ SONSTIGES:
         CancellationToken ct = default)
     {
         var prompt = BuildPrompt(importContext);
+        return await AnalyzeWithPromptAsync(framePngBase64, prompt, ct).ConfigureAwait(false);
+    }
 
+    /// <summary>
+    /// Analyse mit unsicheren Bild-Hinweisen, z.B. aus YOLO-cls.
+    /// Diese Hinweise sind bewusst keine VSA-Code-Vorgabe.
+    /// </summary>
+    public async Task<EnhancedFrameAnalysis> AnalyzeWithObservationHintsAsync(
+        string framePngBase64,
+        IReadOnlyList<string>? observationHints,
+        CancellationToken ct = default)
+    {
+        var prompt = BuildPrompt(importContext: null, observationHints: observationHints);
+        return await AnalyzeWithPromptAsync(framePngBase64, prompt, ct).ConfigureAwait(false);
+    }
+
+    private async Task<EnhancedFrameAnalysis> AnalyzeWithPromptAsync(
+        string framePngBase64,
+        string prompt,
+        CancellationToken ct)
+    {
         EnhancedVisionDto dto;
         try
         {
@@ -166,9 +186,12 @@ SONSTIGES:
         return MapToAnalysis(dto);
     }
 
-    private string BuildPrompt(IReadOnlyList<(string Code, string Description, double Meter)>? importContext = null)
+    private string BuildPrompt(
+        IReadOnlyList<(string Code, string Description, double Meter)>? importContext = null,
+        IReadOnlyList<string>? observationHints = null)
     {
         var contextSection = BuildImportContextSection(importContext);
+        var observationHintsSection = BuildObservationHintsSection(observationHints);
 
         return $"""
 Du analysierst einen Frame aus einem Kanalinspektion-Video (TV-Inspektion Abwasserkanal).
@@ -185,6 +208,7 @@ AUFGABEN:
 8. Wenn der exakte Untertyp unklar ist, verwende den passenden HAUPTCODE statt "???".
    Beispiele: Anschluss -> BCA, Bogen -> BCC, Ablagerung -> BBC.
 {contextSection}
+{observationHintsSection}
 {DamageClassesPrompt}
 
 SCHWEREGRAD-SKALA (entspricht VSA Zustandsklasse):
@@ -232,6 +256,26 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         sb.AppendLine("verwende EXAKT diesen Code als vsa_code_hint (nicht erfinden, nicht ??? verwenden).");
         sb.AppendLine("is_empty_frame=true nur dann setzen, wenn keiner dieser bekannten Befunde sichtbar ist.");
         sb.AppendLine("Bekannte Befunde koennen auch Rohranfang, Rohrende, Wasserstand, Anschluss oder Bogen sein - nicht nur klassische Schaeden.");
+        return sb.ToString();
+    }
+
+    private static string BuildObservationHintsSection(IReadOnlyList<string>? observationHints)
+    {
+        if (observationHints is null || observationHints.Count == 0)
+            return "";
+
+        var sb = new StringBuilder();
+        sb.AppendLine();
+        sb.AppendLine("ZUSAETZLICHE BILD-HINWEISE (unsicher, nicht als VSA-Code uebernehmen):");
+        foreach (var hint in observationHints)
+        {
+            if (!string.IsNullOrWhiteSpace(hint))
+                sb.AppendLine($"  - {hint.Trim()}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("Diese Hinweise sind nur ein Suchhinweis. Verwende sie nicht als VSA-Code.");
+        sb.AppendLine("is_empty_frame=true nur dann setzen, wenn trotz Hinweis keine sichtbare Auffaelligkeit vorhanden ist.");
         return sb.ToString();
     }
 

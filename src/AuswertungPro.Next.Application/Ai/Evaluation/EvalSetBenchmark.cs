@@ -435,6 +435,30 @@ public static class EvalSetBenchmarkContext
         return result;
     }
 
+    public static IReadOnlyList<string> BuildClassifierObservationHints(
+        IReadOnlyList<EvalSetCandidatePrediction> predictions,
+        double minConfidence = 0.05,
+        int maxHints = 3)
+    {
+        ArgumentNullException.ThrowIfNull(predictions);
+        if (maxHints <= 0)
+            return Array.Empty<string>();
+
+        return predictions
+            .Where(p => p.Confidence >= minConfidence)
+            .OrderByDescending(p => p.Confidence)
+            .Select(p => new
+            {
+                Raw = p.ClassName.Trim(),
+                Key = NormalizeClassKey(p.ClassName),
+                p.Confidence
+            })
+            .Where(p => !string.IsNullOrWhiteSpace(p.Raw) && !NegativeClasses.Contains(p.Key))
+            .Take(maxHints)
+            .Select(p => $"YOLO sieht eventuell {p.Raw} ({p.Confidence.ToString("P0", CultureInfo.InvariantCulture)})")
+            .ToList();
+    }
+
     private static string? TryMapClassifierClassToVsaCode(string? className)
     {
         if (string.IsNullOrWhiteSpace(className))
@@ -445,11 +469,7 @@ public static class EvalSetBenchmarkContext
         if (directCode is not null)
             return directCode;
 
-        var key = raw
-            .Replace('-', '_')
-            .Replace(' ', '_')
-            .Trim()
-            .ToLowerInvariant();
+        var key = NormalizeClassKey(raw);
 
         if (NegativeClasses.Contains(key))
             return null;
@@ -458,6 +478,13 @@ public static class EvalSetBenchmarkContext
             ? code
             : null;
     }
+
+    private static string NormalizeClassKey(string className)
+        => className
+            .Replace('-', '_')
+            .Replace(' ', '_')
+            .Trim()
+            .ToLowerInvariant();
 
     private static string? NormalizeDirectVsaCode(string value)
     {

@@ -264,4 +264,26 @@ public sealed class EvalSetBenchmarkTests : IDisposable
         Assert.Equal("BAB", context[0].Code);
         Assert.Equal("BCA", context[1].Code);
     }
+
+    [Fact]
+    public void BuildClassifierObservationHints_returns_non_binding_non_empty_hints()
+    {
+        var predictions = new[]
+        {
+            new EvalSetCandidatePrediction("leer", 0.95),
+            new EvalSetCandidatePrediction("riss_bruch", 0.72),
+            new EvalSetCandidatePrediction("ablagerung", 0.31),
+            new EvalSetCandidatePrediction("anschluss", 0.01),
+        };
+
+        var hints = EvalSetBenchmarkContext.BuildClassifierObservationHints(
+            predictions,
+            minConfidence: 0.05,
+            maxHints: 2);
+
+        Assert.Equal(2, hints.Count);
+        Assert.Contains("riss_bruch", hints[0]);
+        Assert.Contains("ablagerung", hints[1]);
+        Assert.DoesNotContain(hints, h => h.Contains("leer", StringComparison.OrdinalIgnoreCase));
+    }
 }
