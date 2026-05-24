@@ -35,6 +35,7 @@ public sealed class KnowledgeBaseManager(
         var versionId = GetOrCreateCurrentVersionId();
         UpsertSample(sample, versionId);
         UpsertEmbedding(sample.SampleId, vector);
+        UpdateVersionSampleCount(versionId);
         return true;
     }
 
@@ -179,6 +180,22 @@ public sealed class KnowledgeBaseManager(
                 ("$v", _currentVersionId));
             _currentVersionId = null;
         }
+    }
+
+    private void UpdateVersionSampleCount(string versionId)
+    {
+        using var cmd = db.Connection.CreateCommand();
+        cmd.CommandText = """
+            UPDATE Versions
+            SET SampleCount = (
+                SELECT COUNT(*)
+                FROM Samples
+                WHERE VersionId = $v
+            )
+            WHERE VersionId = $v
+            """;
+        cmd.Parameters.AddWithValue("$v", versionId);
+        cmd.ExecuteNonQuery();
     }
 
     private void UpsertSample(TrainingSample s, string versionId)
