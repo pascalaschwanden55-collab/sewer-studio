@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai.Pipeline;
@@ -372,26 +373,45 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
     // ── DTOs (für JSON-Deserialisierung) ──────────────────────────────────────
 
     private sealed record EnhancedVisionDto(
+        [property: JsonPropertyName("meter")]
         double? Meter,
+        [property: JsonPropertyName("time_in_video")]
         double? TimeInVideo,
+        [property: JsonPropertyName("pipe_material")]
         string? PipeMaterial,
+        [property: JsonPropertyName("pipe_diameter_mm")]
         int? PipeDiameterMm,
+        [property: JsonPropertyName("findings")]
         IReadOnlyList<EnhancedFindingDto>? Findings,
+        [property: JsonPropertyName("image_quality")]
         string? ImageQuality,
+        [property: JsonPropertyName("is_empty_frame")]
         bool IsEmptyFrame);
 
     private sealed record EnhancedFindingDto(
+        [property: JsonPropertyName("label")]
         string Label,
+        [property: JsonPropertyName("vsa_code_hint")]
         string? VsaCodeHint,
+        [property: JsonPropertyName("severity")]
         int Severity,
+        [property: JsonPropertyName("position_clock")]
         string? PositionClock,
+        [property: JsonPropertyName("extent_percent")]
         int? ExtentPercent,
+        [property: JsonPropertyName("height_mm")]
         int? HeightMm,
+        [property: JsonPropertyName("width_mm")]
         int? WidthMm,
+        [property: JsonPropertyName("intrusion_percent")]
         int? IntrusionPercent,
+        [property: JsonPropertyName("cross_section_reduction_percent")]
         int? CrossSectionReductionPercent,
+        [property: JsonPropertyName("diameter_reduction_mm")]
         int? DiameterReductionMm,
+        [property: JsonPropertyName("bbox")]
         IReadOnlyList<double>? Bbox,
+        [property: JsonPropertyName("notes")]
         string? Notes);
 }
 
