@@ -31,6 +31,14 @@
                         <TextBlock Text="Export Schächte.xlsx" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
+                <Button Command="{Binding ExportGeoPackageCommand}"
+                        Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
+                        ToolTip="Als OGC GeoPackage (.gpkg) fuer QGIS exportieren">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE909;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="Als GeoPackage exportieren" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
             </StackPanel>
         </Border>
 
