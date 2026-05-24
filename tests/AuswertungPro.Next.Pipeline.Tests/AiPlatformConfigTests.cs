@@ -338,31 +338,26 @@ public sealed class AiPlatformConfigTests
 
     private sealed class SettingsFileScope : IDisposable
     {
-        private readonly string _settingsPath = Path.Combine(AppSettings.AppDataDir, "settings.json");
-        private readonly string? _backupPath;
+        private readonly string? _previousAppDataDir;
+        private readonly string _tempAppDataDir;
 
         public SettingsFileScope()
         {
-            var dir = Path.GetDirectoryName(_settingsPath);
-            if (!string.IsNullOrWhiteSpace(dir))
-                Directory.CreateDirectory(dir);
-
-            if (!File.Exists(_settingsPath))
-                return;
-
-            _backupPath = _settingsPath + ".bak_" + Guid.NewGuid().ToString("N");
-            File.Move(_settingsPath, _backupPath);
+            _previousAppDataDir = Environment.GetEnvironmentVariable("SEWERSTUDIO_APPDATA_DIR");
+            _tempAppDataDir = Path.Combine(
+                Path.GetTempPath(),
+                "sewerstudio-ai-config-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_tempAppDataDir);
+            Environment.SetEnvironmentVariable("SEWERSTUDIO_APPDATA_DIR", _tempAppDataDir);
         }
 
         public void Dispose()
         {
             try
             {
-                if (File.Exists(_settingsPath))
-                    File.Delete(_settingsPath);
-
-                if (!string.IsNullOrWhiteSpace(_backupPath) && File.Exists(_backupPath))
-                    File.Move(_backupPath, _settingsPath);
+                Environment.SetEnvironmentVariable("SEWERSTUDIO_APPDATA_DIR", _previousAppDataDir);
+                if (Directory.Exists(_tempAppDataDir))
+                    Directory.Delete(_tempAppDataDir, recursive: true);
             }
             catch
             {

@@ -96,8 +96,16 @@ public sealed class AppSettings
     // Hydraulik-Panel letzte Eingaben
     public HydraulikPanelSettings HydraulikPanel { get; set; } = new();
 
-    public static string AppDataDir =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.ProductName);
+    public static string AppDataDir
+    {
+        get
+        {
+            var overridePath = Environment.GetEnvironmentVariable("SEWERSTUDIO_APPDATA_DIR");
+            return string.IsNullOrWhiteSpace(overridePath)
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.ProductName)
+                : overridePath;
+        }
+    }
 
     private static string LegacyAppDataDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.LegacyLocalDataFolder);

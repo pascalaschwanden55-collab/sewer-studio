@@ -148,7 +148,7 @@ public sealed class VsaCodeResolverTests
     {
         var label = VsaCodeResolver.LookupLabel("BCD");
         Assert.NotNull(label);
-        Assert.Contains("Anfangsknoten", label);
+        Assert.Contains("Rohranfang", label);
     }
 
     [Fact]
