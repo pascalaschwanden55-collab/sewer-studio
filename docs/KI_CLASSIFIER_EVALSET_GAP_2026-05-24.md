@@ -82,6 +82,31 @@ Der Klassifikator hat schlicht keine Klasse fuer viele Eval-Set-Ziele:
 Wenn das Modell ein Leerbild sieht, muss es trotzdem eine der 8 Schadensgruppen
 waehlen. Dadurch entsteht falscher Kontext fuer Qwen.
 
+## Reproduzierbare Vorpruefung
+
+Der Gap kann ohne Qwen, ohne Ollama und ohne Sidecar gemessen werden:
+
+```powershell
+dotnet run --project tools\EvalSetBenchmark -- `
+  --coverage-only `
+  --classifier-dataset "D:\sewer_pdf_manual_classification_round1_round2_fixedval_round3train_plus_teacher"
+```
+
+Ergebnis vom 2026-05-24:
+
+```text
+Eval-Abdeckung: 29/120 (24.2 %)
+Fehlende Eval-Codes (Top):
+  LEER      30 Bilder
+  BCD       15 Bilder
+  BCE       12 Bilder
+  BDA       12 Bilder
+  BDDC      12 Bilder
+```
+
+Diese Zahl ist wichtiger als die 61.417 % Training-Val-Accuracy.
+Sie sagt: Das Modell passt nur zu rund einem Viertel des aktuellen Eval-Sets.
+
 ## Technische Schlussfolgerung
 
 Der YOLO-Kandidat darf aktuell nur als **unsicherer Bildhinweis** verwendet werden.
@@ -165,4 +190,3 @@ Fuer den naechsten Entwicklungsstand gilt:
 3. Die App darf keine hohe KI-Genauigkeit aus diesem Kandidaten ableiten.
 4. Der naechste Trainingsblock sollte ein Router-Datensatz sein, nicht ein weiterer
    Lauf mit denselben 8 Gruppen.
-

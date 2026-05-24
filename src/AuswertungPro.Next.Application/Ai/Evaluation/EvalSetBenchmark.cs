@@ -69,6 +69,99 @@ public sealed record EvalSetConfusionEntry(
     string PredictedCode,
     int Count);
 
+public sealed record EvalSetClassifierCoverageSummary(
+    int TotalEvalCases,
+    int CoveredEvalCases,
+    int MissingEvalCases,
+    double CoverageRatio,
+    IReadOnlyList<EvalSetClassifierCoverageCode> Codes);
+
+public sealed record EvalSetClassifierCoverageCode(
+    string ExpectedCode,
+    int Count,
+    bool Covered,
+    string? CoveredBy);
+
+internal static class EvalSetClassifierClassMapper
+{
+    private static readonly IReadOnlyDictionary<string, string> ClassToVsaCode =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["oberflaeche"] = "BAJ",
+            ["versatz"] = "BAH",
+            ["riss_bruch"] = "BAB",
+            ["rissbruch"] = "BAB",
+            ["bruch"] = "BAC",
+            ["ablagerung"] = "BBC",
+            ["anschluss"] = "BCA",
+            ["infiltration"] = "BBF",
+            ["deformation"] = "BAA",
+            ["dichtung"] = "BAI",
+        };
+
+    private static readonly HashSet<string> NegativeClasses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "leer",
+        "empty",
+        "negative",
+        "no_damage",
+        "no_schaden",
+        "meta",
+        "start",
+        "ende",
+    };
+
+    public static bool IsNegativeClass(string? className)
+        => !string.IsNullOrWhiteSpace(className) &&
+           NegativeClasses.Contains(NormalizeClassKey(className));
+
+    public static string? TryMapToVsaCode(string? className)
+    {
+        if (string.IsNullOrWhiteSpace(className))
+            return null;
+
+        var raw = className.Trim();
+        var directCode = NormalizeDirectVsaCode(raw);
+        if (directCode is not null)
+            return directCode;
+
+        var key = NormalizeClassKey(raw);
+        if (NegativeClasses.Contains(key))
+            return null;
+
+        return ClassToVsaCode.TryGetValue(key, out var code)
+            ? code
+            : null;
+    }
+
+    public static string? TryMapToCoverageCode(string? className)
+        => IsNegativeClass(className)
+            ? "LEER"
+            : TryMapToVsaCode(className);
+
+    private static string NormalizeClassKey(string className)
+        => className
+            .Replace('-', '_')
+            .Replace(' ', '_')
+            .Trim()
+            .ToLowerInvariant();
+
+    private static string? NormalizeDirectVsaCode(string value)
+    {
+        var compact = new string(value
+            .Where(char.IsLetterOrDigit)
+            .Select(char.ToUpperInvariant)
+            .ToArray());
+
+        if (compact.Length < 3 || compact.Length > 6 || compact[0] != 'B')
+            return null;
+
+        return compact.All(char.IsLetterOrDigit)
+            ? compact
+            : null;
+    }
+}
+
 public static class EvalSetBenchmarkDataset
 {
     public static IReadOnlyList<EvalSetBenchmarkCase> Load(string evalSetRoot)
@@ -354,34 +447,81 @@ public static class EvalSetBenchmarkScorer
     }
 }
 
+public static class EvalSetClassifierCoverageAnalyzer
+{
+    public static IReadOnlyList<string> LoadClassifierClassesFromImageFolderDataset(string datasetRoot)
+    {
+        if (string.IsNullOrWhiteSpace(datasetRoot))
+            throw new ArgumentException("Dataset-Pfad fehlt.", nameof(datasetRoot));
+        if (!Directory.Exists(datasetRoot))
+            throw new DirectoryNotFoundException(datasetRoot);
+
+        var trainRoot = Path.Combine(datasetRoot, "train");
+        var classRoot = Directory.Exists(trainRoot) ? trainRoot : datasetRoot;
+
+        return Directory.EnumerateDirectories(classRoot)
+            .Select(Path.GetFileName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name!)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    public static EvalSetClassifierCoverageSummary Analyze(
+        IReadOnlyList<EvalSetBenchmarkCase> cases,
+        IEnumerable<string> classifierClasses)
+    {
+        ArgumentNullException.ThrowIfNull(cases);
+        ArgumentNullException.ThrowIfNull(classifierClasses);
+
+        var supported = classifierClasses
+            .Select(raw => new
+            {
+                Raw = raw.Trim(),
+                Code = EvalSetClassifierClassMapper.TryMapToCoverageCode(raw)
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.Raw) && !string.IsNullOrWhiteSpace(x.Code))
+            .ToList();
+
+        var codes = cases
+            .GroupBy(c => c.ExpectedFullCode, StringComparer.OrdinalIgnoreCase)
+            .Select(g =>
+            {
+                var expected = EvalSetBenchmarkDataset.NormalizeCode(g.Key) ?? "";
+                var match = supported.FirstOrDefault(s => IsCovered(expected, s.Code!));
+                return new EvalSetClassifierCoverageCode(
+                    ExpectedCode: expected,
+                    Count: g.Count(),
+                    Covered: match is not null,
+                    CoveredBy: match?.Raw);
+            })
+            .OrderByDescending(c => c.Count)
+            .ThenBy(c => c.ExpectedCode, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var total = cases.Count;
+        var covered = codes.Where(c => c.Covered).Sum(c => c.Count);
+        return new EvalSetClassifierCoverageSummary(
+            TotalEvalCases: total,
+            CoveredEvalCases: covered,
+            MissingEvalCases: total - covered,
+            CoverageRatio: total == 0 ? 0 : (double)covered / total,
+            Codes: codes);
+    }
+
+    private static bool IsCovered(string expectedCode, string supportedCode)
+    {
+        if (string.Equals(expectedCode, "LEER", StringComparison.OrdinalIgnoreCase))
+            return string.Equals(supportedCode, "LEER", StringComparison.OrdinalIgnoreCase);
+
+        return supportedCode.Length == 3
+            ? expectedCode.StartsWith(supportedCode, StringComparison.OrdinalIgnoreCase)
+            : string.Equals(expectedCode, supportedCode, StringComparison.OrdinalIgnoreCase);
+    }
+}
+
 public static class EvalSetBenchmarkContext
 {
-    private static readonly IReadOnlyDictionary<string, string> ClassToVsaCode =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["oberflaeche"] = "BAJ",
-            ["versatz"] = "BAH",
-            ["riss_bruch"] = "BAB",
-            ["rissbruch"] = "BAB",
-            ["bruch"] = "BAC",
-            ["ablagerung"] = "BBC",
-            ["anschluss"] = "BCA",
-            ["infiltration"] = "BBF",
-            ["deformation"] = "BAA",
-            ["dichtung"] = "BAI",
-        };
-
-    private static readonly HashSet<string> NegativeClasses = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "leer",
-        "empty",
-        "negative",
-        "no_damage",
-        "no_schaden",
-        "meta",
-        "start",
-        "ende",
-    };
 
     public static IReadOnlyList<(string Code, string Description, double Meter)> BuildOracleImportContext(
         EvalSetBenchmarkCase benchmarkCase)
@@ -450,54 +590,14 @@ public static class EvalSetBenchmarkContext
             .Select(p => new
             {
                 Raw = p.ClassName.Trim(),
-                Key = NormalizeClassKey(p.ClassName),
                 p.Confidence
             })
-            .Where(p => !string.IsNullOrWhiteSpace(p.Raw) && !NegativeClasses.Contains(p.Key))
+            .Where(p => !string.IsNullOrWhiteSpace(p.Raw) && !EvalSetClassifierClassMapper.IsNegativeClass(p.Raw))
             .Take(maxHints)
             .Select(p => $"YOLO sieht eventuell {p.Raw} ({p.Confidence.ToString("P0", CultureInfo.InvariantCulture)})")
             .ToList();
     }
 
     private static string? TryMapClassifierClassToVsaCode(string? className)
-    {
-        if (string.IsNullOrWhiteSpace(className))
-            return null;
-
-        var raw = className.Trim();
-        var directCode = NormalizeDirectVsaCode(raw);
-        if (directCode is not null)
-            return directCode;
-
-        var key = NormalizeClassKey(raw);
-
-        if (NegativeClasses.Contains(key))
-            return null;
-
-        return ClassToVsaCode.TryGetValue(key, out var code)
-            ? code
-            : null;
-    }
-
-    private static string NormalizeClassKey(string className)
-        => className
-            .Replace('-', '_')
-            .Replace(' ', '_')
-            .Trim()
-            .ToLowerInvariant();
-
-    private static string? NormalizeDirectVsaCode(string value)
-    {
-        var compact = new string(value
-            .Where(char.IsLetterOrDigit)
-            .Select(char.ToUpperInvariant)
-            .ToArray());
-
-        if (compact.Length < 3 || compact.Length > 6 || compact[0] != 'B')
-            return null;
-
-        return compact.All(char.IsLetterOrDigit)
-            ? compact
-            : null;
-    }
+        => EvalSetClassifierClassMapper.TryMapToVsaCode(className);
 }

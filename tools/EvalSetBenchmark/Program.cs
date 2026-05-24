@@ -35,6 +35,19 @@ try
 
     Console.WriteLine($"Eval-Set: {options.EvalSetRoot}");
     Console.WriteLine($"Frames:   {cases.Count}/{allCases.Count}");
+
+    if (!string.IsNullOrWhiteSpace(options.ClassifierDataset))
+    {
+        var classifierClasses = EvalSetClassifierCoverageAnalyzer.LoadClassifierClassesFromImageFolderDataset(options.ClassifierDataset);
+        var coverage = EvalSetClassifierCoverageAnalyzer.Analyze(cases, classifierClasses);
+        PrintClassifierCoverage(options.ClassifierDataset, classifierClasses, coverage);
+
+        if (options.CoverageOnly)
+            return 0;
+
+        Console.WriteLine();
+    }
+
     Console.WriteLine($"Ollama:   {baseUri}");
     Console.WriteLine($"Modell:   {model}");
     Console.WriteLine($"Kontext:  {DescribeContextMode(options)}");
@@ -335,8 +348,40 @@ Optionen:
   --sidecar-url <url>   Standard: App-Konfiguration
   --yolo-top-k <zahl>   Standard: 3
   --yolo-min-conf <x>   Standard: 0.05
+  --classifier-dataset <pfad>
+                        YOLO-ImageFolder-Dataset (train/<klasse>) gegen Eval-Set pruefen
+  --coverage-only       Nur Classifier/Eval-Set-Abdeckung pruefen, kein Qwen-Lauf
   --help                Hilfe anzeigen
 """);
+}
+
+static void PrintClassifierCoverage(
+    string classifierDataset,
+    IReadOnlyList<string> classifierClasses,
+    EvalSetClassifierCoverageSummary coverage)
+{
+    Console.WriteLine($"Classifier-Dataset: {classifierDataset}");
+    Console.WriteLine($"Classifier-Klassen: {classifierClasses.Count}");
+    Console.WriteLine(
+        $"Eval-Abdeckung: {coverage.CoveredEvalCases}/{coverage.TotalEvalCases} " +
+        $"({coverage.CoverageRatio.ToString("P1", CultureInfo.InvariantCulture)})");
+
+    var missing = coverage.Codes
+        .Where(c => !c.Covered)
+        .OrderByDescending(c => c.Count)
+        .ThenBy(c => c.ExpectedCode, StringComparer.OrdinalIgnoreCase)
+        .Take(12)
+        .ToList();
+
+    if (missing.Count == 0)
+    {
+        Console.WriteLine("Fehlende Eval-Codes: keine");
+        return;
+    }
+
+    Console.WriteLine("Fehlende Eval-Codes (Top):");
+    foreach (var code in missing)
+        Console.WriteLine($"  {code.ExpectedCode,-8} {code.Count,3} Bilder");
 }
 
 internal sealed record BenchmarkOptions(
@@ -352,6 +397,8 @@ internal sealed record BenchmarkOptions(
     bool UseYoloPresenceContext,
     int YoloTopK,
     double YoloMinConfidence,
+    string? ClassifierDataset,
+    bool CoverageOnly,
     bool ShowHelp)
 {
     public static BenchmarkOptions Parse(string[] args)
@@ -368,6 +415,8 @@ internal sealed record BenchmarkOptions(
         var yoloPresenceContext = false;
         var yoloTopK = 3;
         var yoloMinConf = 0.05;
+        string? classifierDataset = null;
+        var coverageOnly = false;
         var help = false;
 
         for (var i = 0; i < args.Length; i++)
@@ -414,6 +463,12 @@ internal sealed record BenchmarkOptions(
                 case "--yolo-min-conf":
                     yoloMinConf = double.Parse(RequireValue(args, ref i, arg), CultureInfo.InvariantCulture);
                     break;
+                case "--classifier-dataset":
+                    classifierDataset = RequireValue(args, ref i, arg);
+                    break;
+                case "--coverage-only":
+                    coverageOnly = true;
+                    break;
                 default:
                     throw new ArgumentException($"Unbekannte Option: {arg}");
             }
@@ -440,6 +495,8 @@ internal sealed record BenchmarkOptions(
             yoloPresenceContext,
             yoloTopK,
             yoloMinConf,
+            classifierDataset,
+            coverageOnly,
             help);
     }
 

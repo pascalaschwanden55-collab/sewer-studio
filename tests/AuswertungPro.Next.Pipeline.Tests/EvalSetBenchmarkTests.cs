@@ -286,4 +286,43 @@ public sealed class EvalSetBenchmarkTests : IDisposable
         Assert.Contains("ablagerung", hints[1]);
         Assert.DoesNotContain(hints, h => h.Contains("leer", StringComparison.OrdinalIgnoreCase));
     }
+
+    [Fact]
+    public void AnalyzeClassifierCoverage_marks_eval_codes_missing_when_classifier_has_no_matching_class()
+    {
+        var cases = new[]
+        {
+            new EvalSetBenchmarkCase("a", "a.png", "a.png", "LEER", "LEER", "negativ", null),
+            new EvalSetBenchmarkCase("b", "b.png", "b.png", "BDDC", "BDDC", "top5", 1),
+            new EvalSetBenchmarkCase("c", "c.png", "c.png", "BAIZ", "BAIZ", "top5", 2),
+            new EvalSetBenchmarkCase("d", "d.png", "d.png", "BABBA", "BABBA", "top5", 3),
+        };
+
+        var coverage = EvalSetClassifierCoverageAnalyzer.Analyze(
+            cases,
+            ["leer", "dichtung", "riss_bruch"]);
+
+        Assert.Equal(4, coverage.TotalEvalCases);
+        Assert.Equal(3, coverage.CoveredEvalCases);
+        Assert.Equal(1, coverage.MissingEvalCases);
+        Assert.Equal(0.75, coverage.CoverageRatio);
+
+        Assert.Contains(coverage.Codes, c => c.ExpectedCode == "LEER" && c.Covered && c.CoveredBy == "leer");
+        Assert.Contains(coverage.Codes, c => c.ExpectedCode == "BAIZ" && c.Covered && c.CoveredBy == "dichtung");
+        Assert.Contains(coverage.Codes, c => c.ExpectedCode == "BABBA" && c.Covered && c.CoveredBy == "riss_bruch");
+        Assert.Contains(coverage.Codes, c => c.ExpectedCode == "BDDC" && !c.Covered);
+    }
+
+    [Fact]
+    public void LoadClassifierClassesFromImageFolderDataset_reads_train_class_directories()
+    {
+        var datasetRoot = Path.Combine(_root, "classifier_dataset");
+        Directory.CreateDirectory(Path.Combine(datasetRoot, "train", "riss_bruch"));
+        Directory.CreateDirectory(Path.Combine(datasetRoot, "train", "leer"));
+        Directory.CreateDirectory(Path.Combine(datasetRoot, "val", "darf_nicht_zaehlen"));
+
+        var classes = EvalSetClassifierCoverageAnalyzer.LoadClassifierClassesFromImageFolderDataset(datasetRoot);
+
+        Assert.Equal(["leer", "riss_bruch"], classes);
+    }
 }
