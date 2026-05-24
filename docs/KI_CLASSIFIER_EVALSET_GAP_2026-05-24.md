@@ -200,7 +200,10 @@ Er vergleicht Bild-Hashes mit dem Eval-Set und ueberspringt Treffer automatisch:
 dotnet run --project tools\EvalSetBenchmark -- `
   --build-router-dataset `
   --source-dataset "D:\sewer_pdf_manual_classification_round1_round2_fixedval_round3train_plus_teacher" `
+  --source-file-list "C:\Users\Besitzer\Downloads\router_missing_candidates.txt" `
   --router-output "D:\sewer_router_dataset_candidate" `
+  --source-file-list-val-ratio 0.15 `
+  --max-per-class-split 800 `
   --dry-run
 ```
 
@@ -219,6 +222,40 @@ Dry-Run vom 2026-05-24:
 
 Der Builder ist also bereit, aber diese Quelle deckt noch nicht alle Router-Klassen ab.
 Es fehlen vor allem `leer`, `beginn_ende`, `wasserstand` und `wurzeln`.
+
+Nach Hinzunahme von `router_missing_candidates.txt` wurde ein erster Router-Datensatz
+gebaut:
+
+```text
+D:\sewer_router_dataset_candidate
+```
+
+Groesse:
+
+| Split | Bilder |
+|---|---:|
+| train | 4'437 |
+| val | 1'843 |
+| total | 6'280 |
+
+Trainingslauf:
+
+```powershell
+sidecar\.venv\Scripts\python.exe -c "from ultralytics import YOLO; YOLO('yolov8n-cls.pt').train(data=r'D:\sewer_router_dataset_candidate', imgsz=320, epochs=60, batch=32, dropout=0.2, patience=10, project=r'D:\sewer_cls_runs', name='router6280_11classes_v8n_320_dropout02')"
+```
+
+Ergebnis:
+
+| Messung | Wert |
+|---|---:|
+| Dataset-Val Top-1 | 47.8 % |
+| Dataset-Val Top-5 | 81.5 % |
+| Eval-Set Router-Accuracy | 35 / 120 = 29.2 % |
+
+Bewertung: **nicht aktivieren**.
+Das Modell ist noch zu schwach. Hauptproblem: die Klasse `leer` fehlt im Trainingsdatensatz.
+Auf dem Eval-Set werden viele Leerbilder als `wasserstand`, `oberflaeche` oder
+andere Schadensklassen erkannt.
 
 ### Schritt 4: Benchmark-Ziel klar trennen
 
