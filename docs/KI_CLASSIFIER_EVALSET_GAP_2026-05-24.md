@@ -152,12 +152,35 @@ Ein neues kleines Modell sollte zuerst grob unterscheiden:
 | `riss_bruch` | Riss / Bruch |
 | `versatz` | Versatz / Lageabweichung |
 | `ablagerung` | Ablagerung / Inkrustation |
+| `wurzeln` | Wurzeleinwuchs |
 | `dichtung` | Dichtung / Fuge |
 | `infiltration` | Wasserzutritt |
 | `sonstiges` | nicht sicher einordenbar |
 
 Das passt besser zur echten App-Entscheidung:
 erst Bildtyp erkennen, dann VSA-Code bestimmen.
+
+Der Router-Plan kann direkt aus dem Eval-Set angezeigt werden:
+
+```powershell
+dotnet run --project tools\EvalSetBenchmark -- --router-plan-only
+```
+
+Aktueller Plan vom 2026-05-24:
+
+| Router-Klasse | Eval-Bilder | Codes |
+|---|---:|---|
+| `leer` | 30 | LEER |
+| `beginn_ende` | 27 | BCD, BCE |
+| `wasserstand` | 26 | BDA, BDB, BDCZC, BDDC |
+| `dichtung` | 12 | BAIZ |
+| `oberflaeche` | 7 | BAFCE, BAJA, BAJB |
+| `anschluss` | 5 | BCADA, BCAEA, BCCYA |
+| `ablagerung` | 3 | BBBZ, BBCC, BBCZ |
+| `riss_bruch` | 3 | BABAC, BABBA |
+| `versatz` | 3 | BAHC |
+| `deformation` | 2 | BAAA |
+| `wurzeln` | 2 | BBAA, BBAB |
 
 ### Schritt 3: Eval-Set nicht als Trainingsdaten verwenden
 

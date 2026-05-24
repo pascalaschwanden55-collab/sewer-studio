@@ -36,6 +36,17 @@ try
     Console.WriteLine($"Eval-Set: {options.EvalSetRoot}");
     Console.WriteLine($"Frames:   {cases.Count}/{allCases.Count}");
 
+    if (options.RouterPlan || options.RouterPlanOnly)
+    {
+        var routerPlan = EvalSetRouterPlanner.BuildPlan(cases);
+        PrintRouterPlan(routerPlan);
+
+        if (options.RouterPlanOnly)
+            return 0;
+
+        Console.WriteLine();
+    }
+
     if (!string.IsNullOrWhiteSpace(options.ClassifierDataset))
     {
         var classifierClasses = EvalSetClassifierCoverageAnalyzer.LoadClassifierClassesFromImageFolderDataset(options.ClassifierDataset);
@@ -351,8 +362,23 @@ Optionen:
   --classifier-dataset <pfad>
                         YOLO-ImageFolder-Dataset (train/<klasse>) gegen Eval-Set pruefen
   --coverage-only       Nur Classifier/Eval-Set-Abdeckung pruefen, kein Qwen-Lauf
+  --router-plan         Router-Klassenverteilung fuer das Eval-Set anzeigen
+  --router-plan-only    Nur Router-Klassenverteilung anzeigen, kein Qwen-Lauf
   --help                Hilfe anzeigen
 """);
+}
+
+static void PrintRouterPlan(IReadOnlyList<EvalSetRouterClassSummary> plan)
+{
+    Console.WriteLine("Router-Plan:");
+    foreach (var entry in plan)
+    {
+        var codes = string.Join("/", entry.ExpectedCodes.Take(8));
+        if (entry.ExpectedCodes.Count > 8)
+            codes += "/...";
+
+        Console.WriteLine($"  {entry.RouterClass,-13} {entry.Count,3} Bilder  Codes: {codes}");
+    }
 }
 
 static void PrintClassifierCoverage(
@@ -399,6 +425,8 @@ internal sealed record BenchmarkOptions(
     double YoloMinConfidence,
     string? ClassifierDataset,
     bool CoverageOnly,
+    bool RouterPlan,
+    bool RouterPlanOnly,
     bool ShowHelp)
 {
     public static BenchmarkOptions Parse(string[] args)
@@ -417,6 +445,8 @@ internal sealed record BenchmarkOptions(
         var yoloMinConf = 0.05;
         string? classifierDataset = null;
         var coverageOnly = false;
+        var routerPlan = false;
+        var routerPlanOnly = false;
         var help = false;
 
         for (var i = 0; i < args.Length; i++)
@@ -469,6 +499,13 @@ internal sealed record BenchmarkOptions(
                 case "--coverage-only":
                     coverageOnly = true;
                     break;
+                case "--router-plan":
+                    routerPlan = true;
+                    break;
+                case "--router-plan-only":
+                    routerPlan = true;
+                    routerPlanOnly = true;
+                    break;
                 default:
                     throw new ArgumentException($"Unbekannte Option: {arg}");
             }
@@ -497,6 +534,8 @@ internal sealed record BenchmarkOptions(
             yoloMinConf,
             classifierDataset,
             coverageOnly,
+            routerPlan,
+            routerPlanOnly,
             help);
     }
 

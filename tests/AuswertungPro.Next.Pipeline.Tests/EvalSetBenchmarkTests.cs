@@ -325,4 +325,32 @@ public sealed class EvalSetBenchmarkTests : IDisposable
 
         Assert.Equal(["leer", "riss_bruch"], classes);
     }
+
+    [Fact]
+    public void BuildRouterPlan_groups_eval_codes_into_router_classes()
+    {
+        var cases = new[]
+        {
+            new EvalSetBenchmarkCase("a", "a.png", "a.png", "LEER", "LEER", "negativ", null),
+            new EvalSetBenchmarkCase("b", "b.png", "b.png", "BCD", "BCD", "meta", 0),
+            new EvalSetBenchmarkCase("c", "c.png", "c.png", "BCE", "BCE", "meta", 10),
+            new EvalSetBenchmarkCase("d", "d.png", "d.png", "BDDC", "BDDC", "top5", 1),
+            new EvalSetBenchmarkCase("e", "e.png", "e.png", "BAIZ", "BAIZ", "top5", 2),
+            new EvalSetBenchmarkCase("f", "f.png", "f.png", "BABBA", "BABBA", "top5", 3),
+            new EvalSetBenchmarkCase("g", "g.png", "g.png", "BCAEA", "BCAEA", "top5", 4),
+            new EvalSetBenchmarkCase("h", "h.png", "h.png", "BBAA", "BBAA", "top5", 5),
+            new EvalSetBenchmarkCase("i", "i.png", "i.png", "XYZ", "XYZ", "unknown", 6),
+        };
+
+        var plan = EvalSetRouterPlanner.BuildPlan(cases);
+
+        Assert.Contains(plan, p => p.RouterClass == "leer" && p.Count == 1);
+        Assert.Contains(plan, p => p.RouterClass == "beginn_ende" && p.Count == 2 && p.ExpectedCodes.Contains("BCD") && p.ExpectedCodes.Contains("BCE"));
+        Assert.Contains(plan, p => p.RouterClass == "wasserstand" && p.Count == 1 && p.ExpectedCodes.Contains("BDDC"));
+        Assert.Contains(plan, p => p.RouterClass == "dichtung" && p.Count == 1 && p.ExpectedCodes.Contains("BAIZ"));
+        Assert.Contains(plan, p => p.RouterClass == "riss_bruch" && p.Count == 1 && p.ExpectedCodes.Contains("BABBA"));
+        Assert.Contains(plan, p => p.RouterClass == "anschluss" && p.Count == 1 && p.ExpectedCodes.Contains("BCAEA"));
+        Assert.Contains(plan, p => p.RouterClass == "wurzeln" && p.Count == 1 && p.ExpectedCodes.Contains("BBAA"));
+        Assert.Contains(plan, p => p.RouterClass == "sonstiges" && p.Count == 1 && p.ExpectedCodes.Contains("XYZ"));
+    }
 }
