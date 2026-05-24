@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 
 namespace AuswertungPro.Next.UI.Services.CodeCatalog;
@@ -53,7 +54,7 @@ public class JsonCodeCatalogProvider : ILocalCodeCatalogProvider
             throw new FileNotFoundException($"VSA Code-Katalog nicht gefunden: {_catalogPath}");
         }
 
-        var json = File.ReadAllText(_catalogPath);
+        var json = File.ReadAllText(_catalogPath, Encoding.UTF8);
 
         _catalog = JsonSerializer.Deserialize<CodeCatalog>(json,
             Application.Common.JsonDefaults.Lenient) ?? new CodeCatalog();

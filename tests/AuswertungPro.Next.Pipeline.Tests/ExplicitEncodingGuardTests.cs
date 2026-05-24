@@ -19,6 +19,42 @@ public sealed class ExplicitEncodingGuardTests
             Path.Combine(root, "src", "AuswertungPro.Next.UI", "Logging", "FileLoggerProvider.cs"),
         };
 
+        var violations = FindImplicitEncodingViolations(root, files);
+
+        Assert.True(
+            violations.Count == 0,
+            "File text IO in settings/logging code must specify Encoding explicitly:" +
+            Environment.NewLine +
+            string.Join(Environment.NewLine, violations));
+    }
+
+    [Fact]
+    public void Json_stores_and_catalogs_use_explicit_encoding()
+    {
+        var root = FindSolutionRoot();
+        var files = new[]
+        {
+            Path.Combine(root, "src", "AuswertungPro.Next.UI", "Services", "ProtocolTrainingStore.cs"),
+            Path.Combine(root, "src", "AuswertungPro.Next.UI", "Services", "PresetCatalogStore.cs"),
+            Path.Combine(root, "src", "AuswertungPro.Next.UI", "Services", "DropdownOptionsStore.cs"),
+            Path.Combine(root, "src", "AuswertungPro.Next.UI", "Services", "CodeCatalog", "JsonCodeCatalogProvider.cs"),
+            Path.Combine(root, "src", "AuswertungPro.Next.UI", "Ai", "Training", "TrainingSampleGenerator.cs"),
+            Path.Combine(root, "src", "AuswertungPro.Next.UI", "Ai", "Training", "Services", "PdfProtocolExtractor.cs"),
+            Path.Combine(root, "src", "AuswertungPro.Next.UI", "ViewModels", "Protocol", "ProtocolAiServices.cs"),
+            Path.Combine(root, "src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "DataPageViewModel.cs"),
+        };
+
+        var violations = FindImplicitEncodingViolations(root, files);
+
+        Assert.True(
+            violations.Count == 0,
+            "JSON/catalog/log text IO must specify Encoding explicitly:" +
+            Environment.NewLine +
+            string.Join(Environment.NewLine, violations));
+    }
+
+    private static List<string> FindImplicitEncodingViolations(string root, IReadOnlyList<string> files)
+    {
         var violations = new List<string>();
         foreach (var file in files)
         {
@@ -29,18 +65,18 @@ public sealed class ExplicitEncodingGuardTests
                 if (!Regex.IsMatch(line, @"File\.(ReadAllText|WriteAllText|AppendAllText)\("))
                     continue;
 
-                if (line.Contains("Encoding.", StringComparison.Ordinal))
+                var statement = line;
+                for (var j = i + 1; j < lines.Length && !statement.Contains(';'); j++)
+                    statement += " " + lines[j].Trim();
+
+                if (statement.Contains("Encoding.", StringComparison.Ordinal))
                     continue;
 
                 violations.Add($"{Path.GetRelativePath(root, file)}:{i + 1}: {line.Trim()}");
             }
         }
 
-        Assert.True(
-            violations.Count == 0,
-            "File text IO in settings/logging code must specify Encoding explicitly:" +
-            Environment.NewLine +
-            string.Join(Environment.NewLine, violations));
+        return violations;
     }
 
     private static string FindSolutionRoot()

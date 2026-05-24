@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 
 namespace AuswertungPro.Next.UI.Services;
@@ -37,7 +38,7 @@ public static class PresetCatalogStore
             if (!File.Exists(PresetPath))
                 return DefaultCatalog();
 
-            var json = File.ReadAllText(PresetPath);
+            var json = File.ReadAllText(PresetPath, Encoding.UTF8);
             var model = JsonSerializer.Deserialize<PresetCatalog>(json,
                 Application.Common.JsonDefaults.CaseInsensitive);
 
@@ -56,7 +57,7 @@ public static class PresetCatalogStore
             Directory.CreateDirectory(dir);
 
         var json = JsonSerializer.Serialize(catalog, Application.Common.JsonDefaults.Indented);
-        File.WriteAllText(PresetPath, json);
+        File.WriteAllText(PresetPath, json, Encoding.UTF8);
     }
 
     private static void MigrateLegacyIfNeeded()

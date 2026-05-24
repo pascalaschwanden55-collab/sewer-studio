@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Globalization;
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -1533,7 +1534,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
                 $"Time: {DateTime.Now:O}{Environment.NewLine}" +
                 $"VideoPath: {path}{Environment.NewLine}" +
                 $"Exception:{Environment.NewLine}{ex}{Environment.NewLine}";
-            File.WriteAllText(logPath, content);
+            File.WriteAllText(logPath, content, Encoding.UTF8);
             return logPath;
         }
         catch

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -101,7 +102,7 @@ public sealed class PdfProtocolExtractor
     {
         try
         {
-            var json = File.ReadAllText(path);
+            var json = File.ReadAllText(path, Encoding.UTF8);
             using var doc = System.Text.Json.JsonDocument.Parse(json);
 
             var results = new List<GroundTruthEntry>();
@@ -172,7 +173,8 @@ public sealed class PdfProtocolExtractor
                 var safeName = Regex.Replace(Path.GetFileNameWithoutExtension(path), @"[^\w\-]", "_");
                 File.WriteAllText(
                     Path.Combine(diagDir, $"pdf_text_{safeName}.txt"),
-                    text);
+                    text,
+                    Encoding.UTF8);
             }
             catch { /* Diagnose ist optional */ }
 

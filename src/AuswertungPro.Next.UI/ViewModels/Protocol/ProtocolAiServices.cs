@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -69,7 +70,7 @@ public sealed class DefaultCodeCatalogProvider : IAiAllowedCodeCatalogProvider
         {
             try
             {
-                var json = File.ReadAllText(_catalogPath);
+                var json = File.ReadAllText(_catalogPath, Encoding.UTF8);
                 using var doc = JsonDocument.Parse(json);
                 if (doc.RootElement.TryGetProperty("codes", out var codesEl) && codesEl.ValueKind == JsonValueKind.Array)
                 {
@@ -101,7 +102,7 @@ public sealed class DefaultCodeCatalogProvider : IAiAllowedCodeCatalogProvider
             {
                 try
                 {
-                    var txt = File.ReadAllText(file);
+                    var txt = File.ReadAllText(file, Encoding.UTF8);
                     foreach (Match m in rx.Matches(txt))
                     {
                         var c = m.Groups["c"].Value;

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -314,7 +315,7 @@ public sealed class TrainingSampleGenerator
         {
             try
             {
-                var json = File.ReadAllText(path);
+                var json = File.ReadAllText(path, Encoding.UTF8);
                 var doc  = JsonSerializer.Deserialize<ProtocolDocument>(json, JsonOpts);
                 if (doc?.Current?.Entries?.Count > 0)
                     return doc;

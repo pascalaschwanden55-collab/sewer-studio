@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text;
 using System.Text.Json;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -59,7 +60,7 @@ public static class ProtocolTrainingStore
         {
             if (!File.Exists(StorePath))
                 return new ProtocolTrainingData();
-            var json = File.ReadAllText(StorePath);
+            var json = File.ReadAllText(StorePath, Encoding.UTF8);
             return JsonSerializer.Deserialize<ProtocolTrainingData>(json, Opt) ?? new ProtocolTrainingData();
         }
         catch
@@ -75,7 +76,7 @@ public static class ProtocolTrainingStore
             Directory.CreateDirectory(dir);
 
         var json = JsonSerializer.Serialize(data, Opt);
-        File.WriteAllText(StorePath, json);
+        File.WriteAllText(StorePath, json, Encoding.UTF8);
     }
 
     public sealed class ProtocolTrainingData

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 
 namespace AuswertungPro.Next.UI.Services;
@@ -91,7 +92,7 @@ public static class DropdownOptionsStore
             if (!File.Exists(path))
                 return new List<string>(defaults);
 
-            var json = File.ReadAllText(path);
+            var json = File.ReadAllText(path, Encoding.UTF8);
             var list = JsonSerializer.Deserialize<List<string>>(json,
                 Application.Common.JsonDefaults.CaseInsensitive);
 
@@ -115,7 +116,7 @@ public static class DropdownOptionsStore
         Directory.CreateDirectory(OptionsDir);
         var path = Path.Combine(OptionsDir, $"{key}.json");
         var json = JsonSerializer.Serialize(options, Application.Common.JsonDefaults.Indented);
-        File.WriteAllText(path, json);
+        File.WriteAllText(path, json, Encoding.UTF8);
     }
 
     private static void EnsureMigrated()
@@ -152,7 +153,7 @@ public static class DropdownOptionsStore
 
             try
             {
-                var json = File.ReadAllText(LegacyOptionsPath);
+                var json = File.ReadAllText(LegacyOptionsPath, Encoding.UTF8);
                 var model = JsonSerializer.Deserialize<DropdownOptionsModel>(json,
                     Application.Common.JsonDefaults.CaseInsensitive);
 
