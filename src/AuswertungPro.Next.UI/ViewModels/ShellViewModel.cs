@@ -85,6 +85,7 @@ public sealed partial class ShellViewModel : ObservableObject
             new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(_sp)),
             new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(_sp))
         };
+        RefreshNavigationAvailability();
 
         SaveCommand = new RelayCommand(SaveProject);
         NewProjectCommand = new RelayCommand(NewProject);
@@ -139,7 +140,14 @@ public sealed partial class ShellViewModel : ObservableObject
 
     partial void OnIsProjectReadyChanged(bool value)
     {
+        RefreshNavigationAvailability();
         ApplyGuideStep();
+    }
+
+    private void RefreshNavigationAvailability()
+    {
+        foreach (var item in NavItems)
+            item.UpdateAvailability(IsProjectReady);
     }
 
     private void RestartGuide()
@@ -424,11 +432,41 @@ public sealed partial class ShellViewModel : ObservableObject
         window.ShowDialog();
     }
 
-    public sealed record NavItem(string Icon, string Title, Func<object> CreatePage)
+    public sealed partial class NavItem : ObservableObject
     {
+        private bool _isAvailable = true;
+
+        public NavItem(string icon, string title, Func<object> createPage)
+        {
+            Icon = icon;
+            Title = title;
+            CreatePage = createPage;
+        }
+
+        public string Icon { get; }
+
+        public string Title { get; }
+
+        public Func<object> CreatePage { get; }
+
         public bool CanOpenWithoutProject => ShellNavigationPolicy.CanOpenWithoutProject(Title);
 
         public bool RequiresProject => ShellNavigationPolicy.RequiresProject(Title);
+
+        public bool IsAvailable
+        {
+            get => _isAvailable;
+            private set
+            {
+                if (SetProperty(ref _isAvailable, value))
+                    OnPropertyChanged(nameof(AvailabilityOpacity));
+            }
+        }
+
+        public double AvailabilityOpacity => IsAvailable ? 1.0 : 0.5;
+
+        public void UpdateAvailability(bool isProjectReady)
+            => IsAvailable = isProjectReady || CanOpenWithoutProject;
     }
 
     private sealed record GuideStep(string Title, string Message, string? NavTitle = null, bool RequiresProject = false);

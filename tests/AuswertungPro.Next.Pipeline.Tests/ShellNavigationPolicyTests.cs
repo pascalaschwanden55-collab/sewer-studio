@@ -17,6 +17,10 @@ public sealed class ShellNavigationPolicyTests
         Assert.False(ShellNavigationPolicy.RequiresProject(title));
         Assert.True(item.CanOpenWithoutProject);
         Assert.False(item.RequiresProject);
+
+        item.UpdateAvailability(isProjectReady: false);
+        Assert.True(item.IsAvailable);
+        Assert.Equal(1.0, item.AvailabilityOpacity);
     }
 
     [Theory]
@@ -32,5 +36,13 @@ public sealed class ShellNavigationPolicyTests
         Assert.True(ShellNavigationPolicy.RequiresProject(title));
         Assert.False(item.CanOpenWithoutProject);
         Assert.True(item.RequiresProject);
+
+        item.UpdateAvailability(isProjectReady: false);
+        Assert.False(item.IsAvailable);
+        Assert.Equal(0.5, item.AvailabilityOpacity);
+
+        item.UpdateAvailability(isProjectReady: true);
+        Assert.True(item.IsAvailable);
+        Assert.Equal(1.0, item.AvailabilityOpacity);
     }
 }

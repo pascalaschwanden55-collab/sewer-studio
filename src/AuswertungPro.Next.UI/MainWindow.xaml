@@ -626,7 +626,8 @@
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                            <Setter Property="IsEnabled" Value="True"/>
+                            <Setter Property="IsEnabled" Value="{Binding IsAvailable}"/>
+                            <Setter Property="Opacity" Value="{Binding AvailabilityOpacity}"/>
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListBoxItem">
@@ -657,16 +658,6 @@
                                     </ControlTemplate>
                                 </Setter.Value>
                             </Setter>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding DataContext.IsProjectReady, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="False">
-                                    <Setter Property="IsEnabled" Value="False"/>
-                                    <Setter Property="Opacity" Value="0.5"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding CanOpenWithoutProject}" Value="True">
-                                    <Setter Property="IsEnabled" Value="True"/>
-                                    <Setter Property="Opacity" Value="1"/>
-                                </DataTrigger>
-                            </Style.Triggers>
                         </Style>
                     </ListBox.ItemContainerStyle>
                 </ListBox>
@@ -694,11 +685,8 @@
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsProjectReady}" Value="False">
+                                    <DataTrigger Binding="{Binding SelectedNavItem.IsAvailable}" Value="False">
                                         <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding SelectedNavItem.CanOpenWithoutProject}" Value="True">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
