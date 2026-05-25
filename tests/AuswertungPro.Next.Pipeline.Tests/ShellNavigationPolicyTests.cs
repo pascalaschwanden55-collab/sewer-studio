@@ -45,4 +45,17 @@ public sealed class ShellNavigationPolicyTests
         Assert.True(item.IsAvailable);
         Assert.Equal(1.0, item.AvailabilityOpacity);
     }
+
+    [Fact]
+    public void NavItemCanBeExplicitlyAvailableWithoutProject()
+    {
+        var item = new ShellViewModel.NavItem("", "Custom", () => new object(), canOpenWithoutProject: true);
+
+        item.UpdateAvailability(isProjectReady: false);
+
+        Assert.True(item.CanOpenWithoutProject);
+        Assert.False(item.RequiresProject);
+        Assert.True(item.IsAvailable);
+        Assert.Equal(1.0, item.AvailabilityOpacity);
+    }
 }

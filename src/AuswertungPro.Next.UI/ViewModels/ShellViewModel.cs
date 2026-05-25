@@ -71,19 +71,19 @@ public sealed partial class ShellViewModel : ObservableObject
 
         NavItems = new List<NavItem>
         {
-            new("\uE80F", "Uebersicht", () => new Pages.OverviewPageViewModel(this, _sp)),
-            new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this)),
+            new("\uE80F", "Uebersicht", () => new Pages.OverviewPageViewModel(this, _sp), canOpenWithoutProject: true),
+            new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this), canOpenWithoutProject: true),
             new("\uE8FD", "Haltungen", () => new Pages.DataPageViewModel(this)),
             new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(this)),
             // Segoe MDL2: Import = Download, Export = Upload
             new("\uE896", "Import", () => new Pages.ImportPageViewModel(this, _sp)),
-            new("\uE898", "Export", () => new Pages.ExportPageViewModel(this, _sp)),
+            new("\uE898", "Export", () => new Pages.ExportPageViewModel(this, _sp), canOpenWithoutProject: true),
             new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(this, _sp)),
             new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(this)),
             new("\uE128", "VSA", () => new Pages.VsaPageViewModel(this, _sp)),
             new("\uE8A1", "Eigendevis", () => new Pages.EigendevisPageViewModel(this, _sp)),
             new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(_sp)),
-            new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(_sp))
+            new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(_sp), canOpenWithoutProject: true)
         };
         RefreshNavigationAvailability();
 
@@ -436,11 +436,12 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         private bool _isAvailable = true;
 
-        public NavItem(string icon, string title, Func<object> createPage)
+        public NavItem(string icon, string title, Func<object> createPage, bool? canOpenWithoutProject = null)
         {
             Icon = icon;
             Title = title;
             CreatePage = createPage;
+            CanOpenWithoutProject = canOpenWithoutProject ?? ShellNavigationPolicy.CanOpenWithoutProject(title);
         }
 
         public string Icon { get; }
@@ -449,9 +450,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
         public Func<object> CreatePage { get; }
 
-        public bool CanOpenWithoutProject => ShellNavigationPolicy.CanOpenWithoutProject(Title);
+        public bool CanOpenWithoutProject { get; }
 
-        public bool RequiresProject => ShellNavigationPolicy.RequiresProject(Title);
+        public bool RequiresProject => !CanOpenWithoutProject;
 
         public bool IsAvailable
         {
