@@ -211,7 +211,7 @@ public sealed class CodingSessionService : ICodingSessionService
             var embedder = new InfraKnowledgeBase.EmbeddingService(http, cfg);
 
             using var db = new InfraKnowledgeBase.KnowledgeBaseContext();
-            var kbManager = new KnowledgeBase.KnowledgeBaseManager(db, embedder);
+            var kbManager = new InfraKnowledgeBase.KnowledgeBaseManager(db, embedder);
 
             foreach (var sample in approved)
             {

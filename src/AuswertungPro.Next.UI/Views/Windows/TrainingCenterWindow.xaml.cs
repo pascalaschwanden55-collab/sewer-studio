@@ -208,7 +208,7 @@ public partial class TrainingCenterWindow : Window
         var weights = new AuswertungPro.Next.Infrastructure.Ai.QualityGate.WeightLearningService(db.Connection);
 
         // KbManager optional — wenn Ollama offline, wird nur geloggt
-        Ai.KnowledgeBase.KnowledgeBaseManager? kbManager = null;
+        InfraKnowledgeBase.KnowledgeBaseManager? kbManager = null;
         try
         {
             var cfg = new AppSettingsAiSettingsProvider()
@@ -216,7 +216,7 @@ public partial class TrainingCenterWindow : Window
                 .ToOllamaConfig();
             var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
             var embedder = new InfraKnowledgeBase.EmbeddingService(http, cfg);
-            kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(db, embedder);
+            kbManager = new InfraKnowledgeBase.KnowledgeBaseManager(db, embedder);
         }
         catch { /* Ollama nicht verfuegbar — Feedback wird geloggt, KB-Update uebersprungen */ }
 

@@ -9,9 +9,8 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.VsaCatalog;
-using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
-namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
+namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 /// <summary>
 /// Orchestriert das Indizieren, Deindizieren und Neuaufbauen der KI-Wissensdatenbank.

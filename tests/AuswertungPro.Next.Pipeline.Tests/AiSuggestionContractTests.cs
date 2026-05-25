@@ -244,6 +244,7 @@ public sealed class AiSuggestionContractTests
     public void KnowledgePaths_LiveOutsideUiLayer()
     {
         AssertSimpleTypeNamespace("KnowledgeBasePaths", "AuswertungPro.Next.Infrastructure");
+        AssertSimpleTypeNamespace("KnowledgeBaseManager", "AuswertungPro.Next.Infrastructure");
         AssertNoUiType("KnowledgeRoot");
     }
 

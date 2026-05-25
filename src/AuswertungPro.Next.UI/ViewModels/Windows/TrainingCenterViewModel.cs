@@ -15,7 +15,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
