@@ -31,6 +31,9 @@ public sealed record GroundTruthEntry
     /// <summary>Uhrzeigerposition Anschluss (bei Anschlussschäden).</summary>
     public string? ConnectionClock { get; init; }
 
+    /// <summary>Schadensstufe/Schweregrad aus dem Protokoll, falls vorhanden.</summary>
+    public string? Severity { get; init; }
+
     /// <summary>True wenn der Schaden eine Strecke (MeterStart bis MeterEnd) betrifft.</summary>
     public bool IsStreckenschaden { get; init; }
 

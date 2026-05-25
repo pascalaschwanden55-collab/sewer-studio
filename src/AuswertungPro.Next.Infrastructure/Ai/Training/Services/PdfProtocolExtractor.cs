@@ -79,6 +79,14 @@ public sealed class PdfProtocolExtractor
         @"(?<val>\d+(?:[.,]\d+)?)\s*(?<unit>mm|cm|%|Stück|Stueck)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    private static readonly Regex ClockPattern = new(
+        @"(?<!\d)(?<clock>1[0-2]|[1-9])\s*(?:Uhr|h)\b",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    private static readonly Regex SeverityPattern = new(
+        @"\b(?:Schadensstufe|Schadenstufe|Schweregrad|Severity|Stufe|Klasse)\s*[:=]?\s*(?<severity>[1-5]|low|mid|mittel|high|hoch|niedrig|leicht|stark)\b|\bS(?<short>[1-5])\b",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     // ── Öffentliche API ─────────────────────────────────────────────────────
 
     /// <param name="filePath">Pfad zur Protokoll-Datei (PDF oder JSON).</param>
@@ -648,7 +656,9 @@ public sealed class PdfProtocolExtractor
             _                         => null
         };
 
-        var quant = TryParseQuantification(text);
+        var clock = TryParseClockPosition(text);
+        var quant = TryParseQuantification(text, clock);
+        var severity = TryParseSeverity(text);
 
         return new GroundTruthEntry
         {
@@ -658,6 +668,8 @@ public sealed class PdfProtocolExtractor
             Text              = text,
             Characterization  = characterization,
             Quantification    = quant,
+            ClockPosition     = clock,
+            Severity          = severity,
             IsStreckenschaden = mEnd > mStart + 0.05,
             Zeit              = zeit
         };
@@ -674,6 +686,8 @@ public sealed class PdfProtocolExtractor
         text = text.Trim();
         if (text.Length < 2) text = code; // Fallback: Code als Beschreibung
 
+        var clock = TryParseClockPosition(text);
+
         return new GroundTruthEntry
         {
             MeterStart        = meterStart,
@@ -681,13 +695,15 @@ public sealed class PdfProtocolExtractor
             VsaCode           = code,
             Text              = text,
             Characterization  = null,
-            Quantification    = TryParseQuantification(text),
+            Quantification    = TryParseQuantification(text, clock),
+            ClockPosition     = clock,
+            Severity          = TryParseSeverity(text),
             IsStreckenschaden = meterEnd > meterStart + 0.05,
             Zeit              = zeit
         };
     }
 
-    private static QuantificationDetail? TryParseQuantification(string text)
+    private static QuantificationDetail? TryParseQuantification(string text, string? clockPosition = null)
     {
         var m = QuantPattern.Match(text);
         if (!m.Success) return null;
@@ -711,7 +727,44 @@ public sealed class PdfProtocolExtractor
             _        => "Unbekannt"
         };
 
-        return new QuantificationDetail { Value = val, Unit = unit, Type = type };
+        return new QuantificationDetail
+        {
+            Value = val,
+            Unit = unit,
+            Type = type,
+            ClockPosition = clockPosition
+        };
+    }
+
+    private static string? TryParseClockPosition(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+
+        var match = ClockPattern.Match(text);
+        return match.Success ? match.Groups["clock"].Value : null;
+    }
+
+    private static string? TryParseSeverity(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+
+        var match = SeverityPattern.Match(text);
+        if (!match.Success)
+            return null;
+
+        var raw = match.Groups["severity"].Success
+            ? match.Groups["severity"].Value
+            : match.Groups["short"].Value;
+
+        return raw.Trim().ToLowerInvariant() switch
+        {
+            "niedrig" or "leicht" => "low",
+            "mittel" => "mid",
+            "hoch" or "stark" => "high",
+            _ => raw.Trim()
+        };
     }
 
     private static bool TryParseMeter(string raw, out double value)

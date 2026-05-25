@@ -66,13 +66,16 @@ public static class GroundTruthProtocolEntryMapper
         Add(parameters, "vsa.charakterisierung", characterization);
         Add(parameters, "Char1", characterization);
 
-        if (parameters.Count == 0)
+        var severity = NormalizeSeverity(source.Severity);
+
+        if (parameters.Count == 0 && string.IsNullOrWhiteSpace(severity))
             return null;
 
         return new ProtocolEntryCodeMeta
         {
             Code = source.VsaCode,
             Parameters = parameters,
+            Severity = severity,
             UpdatedAt = DateTimeOffset.UtcNow
         };
     }
@@ -94,6 +97,21 @@ public static class GroundTruthProtocolEntryMapper
             return null;
 
         return value.Trim().ToUpperInvariant();
+    }
+
+    private static string? NormalizeSeverity(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var trimmed = value.Trim();
+        return trimmed.ToLowerInvariant() switch
+        {
+            "niedrig" or "leicht" => "low",
+            "mittel" => "mid",
+            "hoch" or "stark" => "high",
+            _ => trimmed
+        };
     }
 
     private static void Add(Dictionary<string, string> parameters, string key, string? value)

@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
@@ -31,6 +33,7 @@ public sealed class TrainingSampleGeneratorCodeMetaTests
                 Type = "Spaltbreite",
                 ClockPosition = "4"
             },
+            Severity = "4",
             IsStreckenschaden = false,
             Zeit = TimeSpan.FromSeconds(7)
         };
@@ -50,6 +53,42 @@ public sealed class TrainingSampleGeneratorCodeMetaTests
         Assert.Equal("A", entry.CodeMeta.Parameters["Char1"]);
         Assert.Equal("Spaltbreite", entry.CodeMeta.Parameters["vsa.q1.type"]);
         Assert.Equal("4", entry.CodeMeta.Parameters["vsa.q1.uhr"]);
+        Assert.Equal("4", entry.CodeMeta.Severity);
+    }
+
+    [Fact]
+    public void PdfProtocolExtractor_BuildEntry_RettetUhrlageUndSchadensstufeInCodeMeta()
+    {
+        var method = typeof(PdfProtocolExtractor).GetMethod(
+            "BuildEntry",
+            BindingFlags.NonPublic | BindingFlags.Static);
+
+        Assert.NotNull(method);
+
+        var entry = (GroundTruthEntry?)method!.Invoke(
+            null,
+            [
+                "12.30",
+                "",
+                "BAB",
+                "A",
+                "Riss bei 3 Uhr Schadensstufe 4, Spaltbreite 3 mm",
+                TimeSpan.FromSeconds(12)
+            ]);
+
+        Assert.NotNull(entry);
+        Assert.Equal("3", entry!.ClockPosition);
+        Assert.Equal("4", entry.Severity);
+        Assert.NotNull(entry.Quantification);
+        Assert.Equal("3", entry.Quantification!.ClockPosition);
+
+        var protocolEntry = GroundTruthProtocolEntryMapper.ToProtocolEntry(entry);
+
+        Assert.NotNull(protocolEntry.CodeMeta);
+        Assert.Equal("3", protocolEntry.CodeMeta!.Parameters["vsa.uhr.von"]);
+        Assert.Equal("3", protocolEntry.CodeMeta.Parameters["ClockPos1"]);
+        Assert.Equal("3", protocolEntry.CodeMeta.Parameters["vsa.q1.uhr"]);
+        Assert.Equal("4", protocolEntry.CodeMeta.Severity);
     }
 
     [Fact]
