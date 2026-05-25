@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace AuswertungPro.Next.UI.Services.CodeCatalog;
+namespace AuswertungPro.Next.Domain.VsaCatalog;
 
 // ═══════════════════════════════════════════════════════════════
 // Statischer VSA-Code-Baum (EN 13508-2 / VSA-KEK 2018)
@@ -74,22 +74,6 @@ public sealed record ClockRule
 // ═══════════════════════════════════════════════════════════════
 // Kachel-Element (fuer ViewModel)
 // ═══════════════════════════════════════════════════════════════
-
-public sealed record TileItem
-{
-    public string Key { get; init; } = "";
-    public string Label { get; init; } = "";
-    public string? Description { get; init; }
-    public string? BadgeText { get; init; }
-    public string? BadgeColor { get; init; }
-    public bool IsInvalid { get; init; }
-    public bool IsFinal { get; init; }
-    public bool IsSteuer { get; init; }
-    public string? GroupColor { get; init; }
-    public string? Icon { get; init; }
-    /// <summary>Markiert das aktuell gewaehlte Element in der Multi-Column Ansicht.</summary>
-    public bool IsSelected { get; init; }
-}
 
 // ═══════════════════════════════════════════════════════════════
 // Statische Daten

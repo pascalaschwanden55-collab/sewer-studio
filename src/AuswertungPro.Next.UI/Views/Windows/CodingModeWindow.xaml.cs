@@ -2749,7 +2749,7 @@ public partial class CodingModeWindow : Window
         for (var i = 0; i < findings.Count && i < 8; i++)
         {
             var f = findings[i];
-            var normalizedClock = Ai.VsaCodeResolver.NormalizeClock(f.PositionClock);
+            var normalizedClock = VsaCodeResolver.NormalizeClock(f.PositionClock);
             var clockMatch = System.Text.RegularExpressions.Regex.Match(normalizedClock ?? "", @"(\d{1,2})");
             int parsedClock = clockMatch.Success && int.TryParse(clockMatch.Groups[1].Value, out var ch) ? ch : 0;
             if (parsedClock == 0) parsedClock = 12;
@@ -2834,18 +2834,18 @@ public sealed class AiFindingDisplayItem
     {
         Label = f.Label;
         // Gemeinsamer Resolver: VsaCodeHint normalisieren, bei Fehlschlag Label-Heuristik
-        VsaCode = Ai.VsaCodeResolver.NormalizeFindingCode(f.VsaCodeHint)
-                   ?? Ai.VsaCodeResolver.InferCodeFromLabel(f.Label)
+        VsaCode = VsaCodeResolver.NormalizeFindingCode(f.VsaCodeHint)
+                   ?? VsaCodeResolver.InferCodeFromLabel(f.Label)
                    ?? "";
         Severity = f.Severity;
         SeverityText = f.Severity.ToString();
 
         // VSA-Klartext aus Katalog (z.B. "BCAEB" → "Seitl. Anschluss, einmuendend, Bogen")
-        Description = Ai.VsaCodeResolver.LookupLabel(VsaCode) ?? f.Label;
+        Description = VsaCodeResolver.LookupLabel(VsaCode) ?? f.Label;
 
         // Position: Meter + Uhrzeit zusammengefasst
         var posParts = new List<string>();
-        var normalizedClock = Ai.VsaCodeResolver.NormalizeClock(f.PositionClock);
+        var normalizedClock = VsaCodeResolver.NormalizeClock(f.PositionClock);
         if (!string.IsNullOrWhiteSpace(normalizedClock))
             posParts.Add(normalizedClock);
         if (f.ExtentPercent.HasValue)

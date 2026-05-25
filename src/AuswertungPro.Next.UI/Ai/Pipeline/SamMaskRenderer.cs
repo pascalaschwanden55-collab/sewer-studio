@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Ai.Pipeline;
@@ -279,7 +280,7 @@ public static class SamMaskRenderer
         double x, double y)
     {
         // Klartext-Label bauen
-        var label = Services.CodeCatalog.VsaCodeTree.LookupLabel(quant.Label) ?? quant.Label;
+        var label = VsaCodeTree.LookupLabel(quant.Label) ?? quant.Label;
         var measurements = BuildMeasurementText(quant);
 
         var textBlock = new TextBlock

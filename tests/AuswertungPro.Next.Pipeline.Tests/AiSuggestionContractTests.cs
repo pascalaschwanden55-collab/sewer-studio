@@ -4,6 +4,7 @@ using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Monitoring;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
@@ -244,6 +245,13 @@ public sealed class AiSuggestionContractTests
     {
         AssertSimpleTypeNamespace("KnowledgeBasePaths", "AuswertungPro.Next.Infrastructure");
         AssertNoUiType("KnowledgeRoot");
+    }
+
+    [Fact]
+    public void VsaCatalogAndResolver_LiveOutsideUiLayer()
+    {
+        AssertSimpleTypeNamespace("VsaCodeTree", "AuswertungPro.Next.Domain");
+        AssertSimpleTypeNamespace("VsaCodeResolver", "AuswertungPro.Next.Infrastructure");
     }
 
     [Fact]
@@ -500,7 +508,8 @@ public sealed class AiSuggestionContractTests
         {
             typeof(AiSuggestionResultDto).Assembly,
             typeof(OllamaClient).Assembly,
-            typeof(VsaCodeResolver).Assembly
+            typeof(HaltungRecord).Assembly,
+            typeof(SamMaskRenderer).Assembly
         };
 
         var matches = assemblies
@@ -519,7 +528,8 @@ public sealed class AiSuggestionContractTests
         {
             typeof(AiSuggestionResultDto).Assembly,
             typeof(OllamaClient).Assembly,
-            typeof(VsaCodeResolver).Assembly
+            typeof(HaltungRecord).Assembly,
+            typeof(SamMaskRenderer).Assembly
         };
 
         var matches = assemblies

@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
-using AuswertungPro.Next.UI.Ai.Pipeline;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Infrastructure.Ai;
 
 /// <summary>
 /// Zentraler VSA-Code-Resolver fuer KI-Findings.
@@ -36,14 +36,14 @@ public static class VsaCodeResolver
             return null;
 
         // 1. Exakter Katalog-Lookup
-        if (Services.CodeCatalog.VsaCodeTree.LookupLabel(normalized) != null)
+        if (VsaCodeTree.LookupLabel(normalized) != null)
             return normalized;
 
         // 2. Hauptcode (3 Zeichen) validieren — Untercodes akzeptieren
         if (normalized.Length >= 3)
         {
             var main = normalized[..3];
-            if (Services.CodeCatalog.VsaCodeTree.LookupLabel(main) != null)
+            if (VsaCodeTree.LookupLabel(main) != null)
                 return normalized;
         }
 
@@ -56,15 +56,15 @@ public static class VsaCodeResolver
     public static string? LookupLabel(string code)
     {
         if (string.IsNullOrWhiteSpace(code)) return null;
-        var label = Services.CodeCatalog.VsaCodeTree.LookupLabel(code);
+        var label = VsaCodeTree.LookupLabel(code);
         if (label != null) return label;
         if (code.Length >= 3)
         {
-            label = Services.CodeCatalog.VsaCodeTree.LookupLabel(code[..3]);
+            label = VsaCodeTree.LookupLabel(code[..3]);
             if (label != null) return label;
         }
         if (code.Length >= 2)
-            return Services.CodeCatalog.VsaCodeTree.LookupLabel(code[..2]);
+            return VsaCodeTree.LookupLabel(code[..2]);
         return null;
     }
 

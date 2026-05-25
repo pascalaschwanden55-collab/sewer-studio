@@ -28,6 +28,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.UI.ViewModels.Protocol;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Reports;
@@ -6205,7 +6206,7 @@ public partial class PlayerWindow : Window
             "WASSERSTAND" => "BDDC",
             "ABBRUCH" => "BDC",
             // Kein exaktes Stichwort → Freitext-Heuristik (z.B. "beule unten", "riss bei 3 uhr")
-            _ => Ai.VsaCodeResolver.InferCodeFromLabel(keyword)
+            _ => VsaCodeResolver.InferCodeFromLabel(keyword)
         };
 
         try
@@ -6860,7 +6861,7 @@ public partial class PlayerWindow : Window
     /// Voller Code → 3-Zeichen-Hauptcode → 2-Zeichen-Gruppe → null.
     /// </summary>
     /// <summary>Delegiert an VsaCodeResolver.LookupLabel.</summary>
-    private static string? LookupVsaLabel(string code) => Ai.VsaCodeResolver.LookupLabel(code);
+    private static string? LookupVsaLabel(string code) => VsaCodeResolver.LookupLabel(code);
 
     /// <summary>
     /// Traegt SAM-Quantifizierungsdaten in ProtocolEntry.CodeMeta ein.
@@ -6912,7 +6913,7 @@ public partial class PlayerWindow : Window
     }
 
     /// <summary>Delegiert an VsaCodeResolver.NormalizeClock.</summary>
-    private static string? NormalizeClockPosition(string? raw) => Ai.VsaCodeResolver.NormalizeClock(raw);
+    private static string? NormalizeClockPosition(string? raw) => VsaCodeResolver.NormalizeClock(raw);
 
     /// <summary>
     /// Einzige Quelle fuer VSA-Code-Aufloesung eines KI-Findings.
@@ -6922,12 +6923,12 @@ public partial class PlayerWindow : Window
     private string? ResolveFindingCodeForCoding(LiveFrameFinding finding, double currentMeter)
     {
         // 1. VsaCodeHint normalisieren
-        var hinted = Ai.VsaCodeResolver.NormalizeFindingCode(finding.VsaCodeHint);
+        var hinted = VsaCodeResolver.NormalizeFindingCode(finding.VsaCodeHint);
         if (hinted != null)
             return RefineGenericCodeFromImport(hinted, currentMeter) ?? hinted;
 
         // 2. Label-Heuristik
-        var coarse = Ai.VsaCodeResolver.InferCodeFromLabel(finding.Label);
+        var coarse = VsaCodeResolver.InferCodeFromLabel(finding.Label);
         if (coarse != null)
             return RefineGenericCodeFromImport(coarse, currentMeter) ?? coarse;
 
@@ -7083,7 +7084,7 @@ public partial class PlayerWindow : Window
 
             // Streckenschaden-Erkennung: Codes die typischerweise ueber eine Strecke auftreten
             // (z.B. Wasserrueckstau, Wurzeleinwuchs, Ablagerung, Korrosion)
-            bool isStrecke = Services.CodeCatalog.VsaCodeTree.IsStreckenschadenCode(code);
+            bool isStrecke = VsaCodeTree.IsStreckenschadenCode(code);
 
             var entry = new ProtocolEntry
             {
@@ -7710,7 +7711,7 @@ public partial class PlayerWindow : Window
             rohranfangTime = importBcd.VideoTimestamp;
         }
 
-        var label = Services.CodeCatalog.VsaCodeTree.LookupLabel("BCD") ?? "Rohranfang";
+        var label = VsaCodeTree.LookupLabel("BCD") ?? "Rohranfang";
         var entry = new ProtocolEntry
         {
             Source = ProtocolEntrySource.Ai,
@@ -7814,7 +7815,7 @@ public partial class PlayerWindow : Window
             rohrEndTime = importBce.VideoTimestamp;
         }
 
-        var label = Services.CodeCatalog.VsaCodeTree.LookupLabel("BCE") ?? "Rohrende";
+        var label = VsaCodeTree.LookupLabel("BCE") ?? "Rohrende";
         var entry = new ProtocolEntry
         {
             Source = ProtocolEntrySource.Ai,

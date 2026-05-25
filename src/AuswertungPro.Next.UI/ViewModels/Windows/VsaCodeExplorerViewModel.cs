@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.UI.Services.CodeCatalog;
+using AuswertungPro.Next.Domain.VsaCatalog;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 

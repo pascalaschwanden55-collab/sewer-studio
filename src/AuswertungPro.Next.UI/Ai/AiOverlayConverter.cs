@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 
