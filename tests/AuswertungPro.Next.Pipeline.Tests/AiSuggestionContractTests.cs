@@ -238,6 +238,9 @@ public sealed class AiSuggestionContractTests
             "AuswertungPro.Next.Infrastructure",
             typeof(PipeBendSchema).Namespace!,
             StringComparison.Ordinal);
+        AssertSimpleTypeNamespace("AiOverlayConverter", "AuswertungPro.Next.Infrastructure");
+        AssertSimpleTypeNamespace("AiOverlay", "AuswertungPro.Next.Infrastructure");
+        AssertSimpleTypeNamespace("AiOverlaySource", "AuswertungPro.Next.Infrastructure");
     }
 
     [Fact]
