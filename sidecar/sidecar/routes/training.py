@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import io
-import os
 import random
 import logging
 from pathlib import Path
 
 from PIL import Image
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 
+from ..config import settings
 from ..schemas.segmentation import TrainingExportRequest, TrainingExportResponse
 
 router = APIRouter()
@@ -21,7 +22,9 @@ logger = logging.getLogger(__name__)
 @router.post("/training/export-yolo", response_model=TrainingExportResponse)
 async def export_yolo(req: TrainingExportRequest) -> TrainingExportResponse:
     """Export training samples to YOLO format (images + labels + data.yaml)."""
-    out = Path(req.output_dir)
+    out = _resolve_output_dir(req.output_dir)
+    decoded_images = [_decode_training_image(sample.image_base64) for sample in req.samples]
+
     img_train = out / "images" / "train"
     img_val = out / "images" / "val"
     lbl_train = out / "labels" / "train"
@@ -53,8 +56,7 @@ async def export_yolo(req: TrainingExportRequest) -> TrainingExportResponse:
         lbl_dir = lbl_train if is_train else lbl_val
 
         # Save image
-        raw = base64.b64decode(sample.image_base64)
-        img = Image.open(io.BytesIO(raw)).convert("RGB")
+        img = decoded_images[i]
         img_path = img_dir / f"sample_{i:06d}.jpg"
         img.save(str(img_path), "JPEG", quality=95)
 
@@ -94,3 +96,51 @@ async def export_yolo(req: TrainingExportRequest) -> TrainingExportResponse:
         classes_used=class_list,
         data_yaml_path=str(data_yaml.resolve()),
     )
+
+
+def _resolve_output_dir(output_dir: str) -> Path:
+    root = Path(settings.training_export_root).expanduser().resolve()
+    requested = Path(output_dir or ".").expanduser()
+    candidate = requested if requested.is_absolute() else root / requested
+    resolved = candidate.resolve()
+
+    if resolved != root and root not in resolved.parents:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="output_dir must stay inside the training export root",
+        )
+
+    return resolved
+
+
+def _decode_training_image(image_base64: str) -> Image.Image:
+    max_bytes = max(1, int(settings.training_max_image_bytes))
+    max_base64_chars = ((max_bytes + 2) // 3) * 4
+    if len(image_base64) > max_base64_chars:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="training image exceeds size limit",
+        )
+
+    try:
+        raw = base64.b64decode(image_base64, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="training image is not valid base64",
+        ) from exc
+
+    if len(raw) > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="training image exceeds size limit",
+        )
+
+    try:
+        with Image.open(io.BytesIO(raw)) as img:
+            return img.convert("RGB")
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="training image is not a supported image",
+        ) from exc

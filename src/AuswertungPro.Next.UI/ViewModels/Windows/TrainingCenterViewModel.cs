@@ -1001,7 +1001,17 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             StatusText = $"YOLO-Export: Sende {exportSamples.Count} Samples an Sidecar...";
             var request = new TrainingExportRequestDto(exportSamples, outputDir, 0.8);
-            var response = await client.ExportTrainingAsync(request, ct).ConfigureAwait(false);
+            TrainingExportResponseDto response;
+            try
+            {
+                response = await client.ExportTrainingAsync(request, ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                Log($"Sidecar-Export nicht moeglich ({ex.Message}). Lokaler Export wird verwendet...");
+                await ExportYoloLocalAsync(approved, outputDir, ct).ConfigureAwait(false);
+                return;
+            }
 
             // Samples als exportiert markieren
             foreach (var s in approved)

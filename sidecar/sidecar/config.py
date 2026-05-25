@@ -11,6 +11,10 @@ class SidecarSettings(BaseSettings):
     models_dir: str = "./models"
     gpu_device: str = "cuda:0"
 
+    # Training export sandbox. output_dir in /training/export-yolo must stay inside this root.
+    training_export_root: str = "./training_export"
+    training_max_image_bytes: int = 25 * 1024 * 1024
+
     # Per-model device overrides (empty = fallback to gpu_device)
     yolo_device: str = ""
     dino_device: str = ""
