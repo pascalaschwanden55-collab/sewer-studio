@@ -177,6 +177,7 @@ public sealed class AiSuggestionContractTests
             "AuswertungPro.Next.Application",
             typeof(TeacherAnnotation).Namespace!,
             StringComparison.Ordinal);
+        AssertSimpleTypeNamespace("TrainingCaseInput", "AuswertungPro.Next.Application");
     }
 
     [Fact]
@@ -294,6 +295,9 @@ public sealed class AiSuggestionContractTests
             typeof(YoloExportResult).Namespace!,
             StringComparison.Ordinal);
         AssertSimpleTypeNamespace("MeterTimelineService", "AuswertungPro.Next.Infrastructure");
+        AssertSimpleTypeNamespace("TrainingSampleGenerator", "AuswertungPro.Next.Infrastructure");
+        AssertSimpleTypeNamespace("TrainingSampleGenerationResult", "AuswertungPro.Next.Infrastructure");
+        AssertSimpleTypeNamespace("TrainingSampleGenerationOutcome", "AuswertungPro.Next.Infrastructure");
     }
 
     [Fact]

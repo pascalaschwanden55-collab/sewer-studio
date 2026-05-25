@@ -11,13 +11,12 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 /// <summary>
-/// Erstellt TrainingSamples aus einem TrainingCase (Video + ProtocolDocument).
+/// Erstellt TrainingSamples aus einem Trainingsfall (Video + ProtocolDocument).
 ///
 /// Features (Phase 2 + 2.5):
 /// - Range Sampling: Streckenschaden → N Samples entlang MeterStart-End
@@ -59,7 +58,7 @@ public sealed class TrainingSampleGenerator
     }
 
     public async Task<List<TrainingSample>> GenerateAsync(
-        TrainingCase tc,
+        TrainingCaseInput tc,
         IReadOnlyCollection<string>? existingSignatures = null,
         string? framesDir = null,
         CancellationToken ct = default)
@@ -70,7 +69,7 @@ public sealed class TrainingSampleGenerator
     }
 
     public async Task<TrainingSampleGenerationResult> GenerateWithDiagnosticsAsync(
-        TrainingCase tc,
+        TrainingCaseInput tc,
         IReadOnlyCollection<string>? existingSignatures = null,
         string? framesDir = null,
         CancellationToken ct = default)

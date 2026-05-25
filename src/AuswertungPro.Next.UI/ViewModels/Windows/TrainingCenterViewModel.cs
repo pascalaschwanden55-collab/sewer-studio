@@ -806,7 +806,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             var existingSigs = existing.Select(s => s.Signature).ToHashSet(StringComparer.Ordinal);
 
             var generation = await generator.GenerateWithDiagnosticsAsync(
-                SelectedCase, existingSigs, framesDir: null, ct);
+                ToTrainingCaseInput(SelectedCase), existingSigs, framesDir: null, ct);
             var newSamples = generation.Samples;
 
             if (newSamples.Count == 0)
@@ -1363,7 +1363,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                     else
                         UpdateLivePreview(tc.CaseId, "Verarbeite...", "—", null);
 
-                    var generation = await generator.GenerateWithDiagnosticsAsync(tc, existingSigs, framesDir: null, ct);
+                    var generation = await generator.GenerateWithDiagnosticsAsync(
+                        ToTrainingCaseInput(tc), existingSigs, framesDir: null, ct);
                     var newSamples = generation.Samples;
 
                     if (newSamples.Count == 0)
@@ -1708,6 +1709,9 @@ public partial class TrainingCenterViewModel : ObservableObject
         var osd = new OsdMeterDetectionService(vision);
         return new MeterTimelineService(cfg, osd, concurrency);
     }
+
+    private static TrainingCaseInput ToTrainingCaseInput(TrainingCase tc)
+        => new(tc.CaseId, tc.FolderPath, tc.VideoPath, tc.ProtocolPath);
 
     /// <summary>
     /// Speichert alle Samples und indexiert optional ein gerade geaendertes Sample in die KB.

@@ -7,7 +7,6 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
-using AuswertungPro.Next.UI.Ai.Training;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
@@ -106,12 +105,11 @@ public sealed class TrainingSampleGeneratorCodeMetaTests
                 new MeterTimelineService(cfg),
                 new TrainingCenterSettings());
 
-            var result = await generator.GenerateWithDiagnosticsAsync(new TrainingCase
-            {
-                CaseId = "H-1",
-                ProtocolPath = protocolPath,
-                VideoPath = Path.Combine(tempDir, "missing.mp4")
-            });
+            var result = await generator.GenerateWithDiagnosticsAsync(new TrainingCaseInput(
+                CaseId: "H-1",
+                FolderPath: tempDir,
+                VideoPath: Path.Combine(tempDir, "missing.mp4"),
+                ProtocolPath: protocolPath));
 
             var sample = Assert.Single(result.Samples);
             Assert.NotNull(sample.CodeMeta);
