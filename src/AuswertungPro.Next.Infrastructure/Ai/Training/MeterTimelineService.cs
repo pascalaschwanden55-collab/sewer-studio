@@ -5,12 +5,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Infrastructure.Ai;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 /// <summary>
 /// Baut eine OSD-Meter-Zeitreihe aus einem Video auf.
-/// Nur aktiv wenn AiRuntimeSettings.Enabled = true und ein OsdMeterDetectionService vorhanden.
 /// </summary>
 public sealed class MeterTimelineService
 {
@@ -25,9 +25,6 @@ public sealed class MeterTimelineService
         _concurrency = Math.Max(1, concurrency);
     }
 
-    /// <summary>
-    /// Interpoliert Meterstand aus einer Timeline für einen Zeitpunkt.
-    /// </summary>
     public static double? InterpolateMeter(
         IReadOnlyList<(double TimeSeconds, double Meter)> timeline,
         double timeSeconds)
@@ -51,11 +48,6 @@ public sealed class MeterTimelineService
             : timeline[^1].Meter;
     }
 
-    /// <summary>
-    /// Baut Timeline aus dem Video: sampelt alle stepSeconds Sekunden,
-    /// liest OSD-Meter (wenn enabled), gibt geglättete Zeitreihe zurück.
-    /// Gibt leere Liste zurück wenn AI deaktiviert oder kein OSD-Service vorhanden.
-    /// </summary>
     public async Task<IReadOnlyList<(double TimeSeconds, double Meter)>> BuildTimelineAsync(
         string videoPath,
         double videoDurationSeconds,
@@ -66,10 +58,8 @@ public sealed class MeterTimelineService
             return Array.Empty<(double, double)>();
 
         var ffmpeg = _cfg.FfmpegPath ?? "ffmpeg";
-
-        // Collect all frames first (fast — ffmpeg decodes, no GPU needed)
         var frames = new List<(int Index, FrameData Frame)>();
-        int idx = 0;
+        var idx = 0;
 
         await using var stream = VideoFrameStream.Open(
             ffmpeg, videoPath, stepSeconds, videoDurationSeconds, ct);
@@ -80,7 +70,6 @@ public sealed class MeterTimelineService
             frames.Add((idx++, frame));
         }
 
-        // Parallel OSD reads — keeps GPU busy with multiple concurrent requests
         var results = new ConcurrentDictionary<int, (double Time, double? Meter)>();
 
         await Parallel.ForEachAsync(frames, new ParallelOptions
@@ -97,10 +86,10 @@ public sealed class MeterTimelineService
                 if (result.Source != MeterSource.Unknown)
                     meter = result.Value;
             }
+
             results[item.Index] = (item.Frame.TimestampSeconds, meter);
         });
 
-        // Reassemble in original order
         var raw = results.OrderBy(kv => kv.Key)
             .Select(kv => (kv.Value.Time, kv.Value.Meter))
             .ToList();

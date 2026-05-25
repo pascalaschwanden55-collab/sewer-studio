@@ -281,6 +281,7 @@ public sealed class AiSuggestionContractTests
             "AuswertungPro.Next.Infrastructure",
             typeof(YoloExportResult).Namespace!,
             StringComparison.Ordinal);
+        AssertSimpleTypeNamespace("MeterTimelineService", "AuswertungPro.Next.Infrastructure");
     }
 
     [Fact]

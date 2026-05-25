@@ -4,9 +4,10 @@ using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.UI.Ai.Training;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
