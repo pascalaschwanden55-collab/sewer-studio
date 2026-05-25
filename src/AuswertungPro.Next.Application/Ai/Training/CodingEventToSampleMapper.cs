@@ -54,7 +54,7 @@ public static class CodingEventToSampleMapper
             KiCode = ev.AiContext?.SuggestedCode,
             MatchLevel = ev.AiContext != null
                 ? DetermineMatchLevel(ev.AiContext)
-                : MatchLevelNames.ExactMatch,
+                : null,
             Notes = ev.AiContext?.Reason ?? string.Empty,
             CodeMeta = GroundTruthProtocolEntryMapper.CloneCodeMeta(ev.Entry.CodeMeta),
             Signature = TrainingSample.BuildCanonicalSignature(caseId, ev.Entry.Code, meterStart, meterEnd),

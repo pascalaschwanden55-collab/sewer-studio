@@ -23,6 +23,21 @@ public sealed class CodingEventToSampleMapperTests
     }
 
     [Fact]
+    public void OhneKiKontext_setzt_keinen_ExactMatch()
+    {
+        var ev = new CodingEvent
+        {
+            Entry = new ProtocolEntry { Code = "BABAC" },
+            AiContext = null,
+            MeterAtCapture = 12.3
+        };
+
+        var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId: "case-1", framePath: null);
+
+        Assert.Null(sample.MatchLevel);
+    }
+
+    [Fact]
     public void MitKiKontext_Accepted_setzt_Status_Approved()
     {
         var ev = new CodingEvent
