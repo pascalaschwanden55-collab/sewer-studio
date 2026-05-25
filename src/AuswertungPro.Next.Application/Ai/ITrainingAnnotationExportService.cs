@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Domain.Models;
@@ -49,9 +50,16 @@ public sealed class NormalizedBoundingBox
     public double Width { get; set; }
     public double Height { get; set; }
 
-    /// <summary>YOLO-Zeile: "class_id x_center y_center width height".</summary>
+    /// <summary>YOLO-Zeile: "class_id x_center y_center width height". Immer mit Punkt als Dezimaltrenner.</summary>
     public string ToYoloLine(int classId)
-        => $"{classId} {XCenter:F6} {YCenter:F6} {Width:F6} {Height:F6}";
+        => string.Format(
+            CultureInfo.InvariantCulture,
+            "{0} {1:F6} {2:F6} {3:F6} {4:F6}",
+            classId,
+            XCenter,
+            YCenter,
+            Width,
+            Height);
 
     /// <summary>Berechnet BoundingBox aus einer Liste normierter Punkte.</summary>
     public static NormalizedBoundingBox FromPoints(IReadOnlyList<NormalizedPoint> points)
