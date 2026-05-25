@@ -132,7 +132,7 @@ public sealed class CodingEventAiContext
     public string? SuggestedCode { get; set; }
     public double Confidence { get; set; }
     public string? Reason { get; set; }
-    public CodingUserDecision Decision { get; set; }
+    public CodingUserDecision Decision { get; set; } = CodingUserDecision.Ignored;
 }
 
 public enum CodingUserDecision

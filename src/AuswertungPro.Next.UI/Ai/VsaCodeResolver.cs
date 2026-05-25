@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Ai;

@@ -1,7 +1,7 @@
 using System;
 using System.Net.Http;
 using System.Reflection;
-using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 

@@ -18,8 +18,13 @@ using Rectangle = System.Windows.Shapes.Rectangle;
 using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 using LibVLCSharp.Shared;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.QualityGate;
-using AuswertungPro.Next.UI.Ai.Shared;
+using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Ai.QualityGate;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
+using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -28,6 +33,8 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
+using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
+using InfraTraining = AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -1956,7 +1963,7 @@ public partial class PlayerWindow : Window
         if (_codingOverlayService != null && _codingVm != null) return;
 
         // Lazy-Init: minimales Setup fuer Overlay-Zeichnung
-        _codingOverlayService ??= new Ai.OverlayToolService();
+        _codingOverlayService ??= new OverlayToolService();
         if (_codingVm == null)
         {
             _codingSessionService ??= new Ai.CodingSessionService();
@@ -2081,7 +2088,7 @@ public partial class PlayerWindow : Window
             if (bbox.Width < 0.01 || bbox.Height < 0.01) return false;
 
             // 4. YOLO-Export
-            int classId = Ai.Teacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
+            int classId = InfraTeacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
             var annotationId = Guid.NewGuid().ToString("N")[..12];
             var baseName = $"mark_{annotationId}";
 
@@ -2090,7 +2097,7 @@ public partial class PlayerWindow : Window
                 System.IO.Path.GetTempPath(), $"sewer_studio_mark_{annotationId}.png");
             await System.IO.File.WriteAllBytesAsync(tempFrame, frameBytes);
 
-            var exportService = new Ai.Teacher.TrainingAnnotationExportService();
+            var exportService = Ai.Teacher.TrainingAnnotationExportServiceFactory.Create();
             var exportResult = await exportService.ExportAsync(tempFrame, bbox, selectedEntry.Code, classId, baseName);
 
             // Temp aufräumen
@@ -2102,7 +2109,7 @@ public partial class PlayerWindow : Window
                 System.Globalization.CultureInfo.InvariantCulture, out var parsedMeter))
                 captureMeter = parsedMeter;
 
-            var annotation = new Ai.Teacher.TeacherAnnotation
+            var annotation = new TeacherAnnotation
             {
                 AnnotationId = annotationId,
                 VsaCode = selectedEntry.Code,
@@ -2121,7 +2128,7 @@ public partial class PlayerWindow : Window
                 HeightMm = overlay.Q1Mm
             };
 
-            await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+            await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 
             // Markierung AUCH als CodingEvent in die KI-Befunde-Liste eintragen
             if (_codingSessionService != null && _codingVm != null)
@@ -2242,12 +2249,12 @@ public partial class PlayerWindow : Window
             }
 
             var timestampSec = _detectionPendingTimestampSec ?? (_player.Time / 1000.0);
-            var exportService = new Ai.Teacher.TrainingAnnotationExportService();
+            var exportService = Ai.Teacher.TrainingAnnotationExportServiceFactory.Create();
 
             foreach (var finding in _detectionPendingFindings)
             {
                 var code = finding.VsaCodeHint ?? finding.Label;
-                int classId = Ai.Teacher.VsaYoloClassMap.GetClassId(code);
+                int classId = InfraTeacher.VsaYoloClassMap.GetClassId(code);
                 var annotationId = Guid.NewGuid().ToString("N")[..12];
                 var baseName = $"det_{annotationId}";
 
@@ -2263,7 +2270,7 @@ public partial class PlayerWindow : Window
                 try { System.IO.File.Delete(tempFrame); } catch { }
 
                 // TeacherAnnotation erstellen
-                var annotation = new Ai.Teacher.TeacherAnnotation
+                var annotation = new TeacherAnnotation
                 {
                     AnnotationId = annotationId,
                     VsaCode = code,
@@ -2280,7 +2287,7 @@ public partial class PlayerWindow : Window
                     WidthMm = finding.WidthMm,
                     HeightMm = finding.HeightMm
                 };
-                await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+                await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
             }
 
             // Dezente Bestaetigung im OSD-Badge
@@ -2347,7 +2354,7 @@ public partial class PlayerWindow : Window
             var timestampSecForFrame = _detectionPendingTimestampSec ?? timestampSec;
             var bbox = BBoxFromClockPosition(primary);
 
-            int classId = Ai.Teacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
+            int classId = InfraTeacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
             var annotationId = Guid.NewGuid().ToString("N")[..12];
             var baseName = $"det_corr_{annotationId}";
 
@@ -2355,11 +2362,11 @@ public partial class PlayerWindow : Window
                 System.IO.Path.GetTempPath(), $"sewer_studio_det_{annotationId}.png");
             await System.IO.File.WriteAllBytesAsync(tempFrame, frameBytes);
 
-            var exportService = new Ai.Teacher.TrainingAnnotationExportService();
+            var exportService = Ai.Teacher.TrainingAnnotationExportServiceFactory.Create();
             var exportResult = await exportService.ExportAsync(tempFrame, bbox, selectedEntry.Code, classId, baseName);
             try { System.IO.File.Delete(tempFrame); } catch { }
 
-            var annotation = new Ai.Teacher.TeacherAnnotation
+            var annotation = new TeacherAnnotation
             {
                 AnnotationId = annotationId,
                 VsaCode = selectedEntry.Code,
@@ -2376,7 +2383,7 @@ public partial class PlayerWindow : Window
                 WidthMm = primary.WidthMm,
                 HeightMm = primary.HeightMm
             };
-            await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+            await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 
             OsdMeterBadge.Visibility = Visibility.Visible;
             TxtOsdMeter.Text = $"✓ Training: {selectedEntry.Code} (korrigiert)";
@@ -2585,8 +2592,8 @@ public partial class PlayerWindow : Window
     private System.Windows.Shapes.Rectangle? _eingabemarkerPreviewRect;
 
     // Multi-Model Pipeline (YOLO → DINO → SAM) fuer Einzelframe-Analyse
-    private Ai.Pipeline.SingleFrameMultiModelService? _codingMultiModel;
-    private Ai.Pipeline.VisionPipelineClient? _codingVisionClient;
+    private SingleFrameMultiModelService? _codingMultiModel;
+    private VisionPipelineClient? _codingVisionClient;
     private bool _codingUseMultiModel;
 
     // Import-Beobachtungen (Referenz-Spalte, nur-lesen)
@@ -2972,14 +2979,14 @@ public partial class PlayerWindow : Window
         {
             var caseId = _codingVm?.HaltungName ?? "unknown";
             var framePath = ev.Entry.FotoPaths.Count > 0 ? ev.Entry.FotoPaths[0] : null;
-            var sample = Ai.Training.CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath);
+            var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath);
             if (ev.Entry.FotoPaths.Count > 1)
             {
                 sample.AdditionalFramePaths ??= new System.Collections.Generic.List<string>();
                 for (int i = 1; i < ev.Entry.FotoPaths.Count; i++)
                     sample.AdditionalFramePaths.Add(ev.Entry.FotoPaths[i]);
             }
-            Ai.Training.TrainingSamplesStore.MergeAndSaveAsync(new List<Ai.Training.TrainingSample> { sample })
+            InfraTraining.TrainingSamplesStore.MergeAndSaveAsync(new List<TrainingSample> { sample })
                 .SafeFireAndForget("TrainingSaveSingle");
         }
         catch (Exception ex)
@@ -2994,11 +3001,11 @@ public partial class PlayerWindow : Window
         try
         {
             var caseId = _codingVm.HaltungName ?? "unknown";
-            var samples = new System.Collections.Generic.List<Ai.Training.TrainingSample>();
+            var samples = new List<TrainingSample>();
             foreach (var ev in _codingVm.Events)
             {
                 var framePath = ev.Entry.FotoPaths.Count > 0 ? ev.Entry.FotoPaths[0] : null;
-                var sample = Ai.Training.CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath);
+                var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath);
 
                 // Alle Fotos als zusaetzliche Lernbilder referenzieren
                 // (Foto 1 = FramePath, Foto 2+ = AdditionalFrames)
@@ -3012,7 +3019,7 @@ public partial class PlayerWindow : Window
                 samples.Add(sample);
             }
             if (samples.Count > 0)
-                Ai.Training.TrainingSamplesStore.MergeAndSaveAsync(samples)
+                InfraTraining.TrainingSamplesStore.MergeAndSaveAsync(samples)
                     .SafeFireAndForget("TrainingSave");
         }
         catch (Exception ex)
@@ -5526,13 +5533,13 @@ public partial class PlayerWindow : Window
         }
 
         // 3. Bild in teacher_images kopieren
-        var imagesDir = Ai.Teacher.TeacherAnnotationStore.GetImagesDir();
+        var imagesDir = InfraTeacher.TeacherAnnotationStore.GetImagesDir();
         var annotationId = Guid.NewGuid().ToString("N")[..12];
         var destFrame = System.IO.Path.Combine(imagesDir, $"mark_{annotationId}.png");
         System.IO.File.Copy(snapshotPath, destFrame, overwrite: true);
 
         // 4. Lehrer-Annotation erstellen
-        var annotation = new Ai.Teacher.TeacherAnnotation
+        var annotation = new TeacherAnnotation
         {
             AnnotationId = annotationId,
             VsaCode = importEvent.Entry.Code,
@@ -5543,7 +5550,7 @@ public partial class PlayerWindow : Window
             FullFramePath = destFrame,
         };
 
-        await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+        await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 
         // 5. Visuelles Feedback
         try { System.IO.File.Delete(snapshotPath); } catch { }
@@ -5975,11 +5982,11 @@ public partial class PlayerWindow : Window
             {
                 var sidecarUrl = Environment.GetEnvironmentVariable("SEWERSTUDIO_SIDECAR_URL")
                     ?? "http://localhost:8100";
-                _codingVisionClient = new Ai.Pipeline.VisionPipelineClient(new Uri(sidecarUrl));
+                _codingVisionClient = new VisionPipelineClient(new Uri(sidecarUrl));
                 var health = await _codingVisionClient.HealthCheckAsync();
                 if (health != null)
                 {
-                    _codingMultiModel = new Ai.Pipeline.SingleFrameMultiModelService(_codingVisionClient);
+                    _codingMultiModel = new SingleFrameMultiModelService(_codingVisionClient);
                     _codingUseMultiModel = true;
                     SetCodingAiState("Kuenstliche Intelligenz bereit (Multi-Model)", Color.FromRgb(0x22, 0xC5, 0x5E),
                         $"YOLO+DINO+SAM + {CompactModelName(_codingAiModelName)}");
@@ -6379,7 +6386,7 @@ public partial class PlayerWindow : Window
                     var importContext = GatherImportContext();
                     var enhanced = await _codingEnhancedVision.AnalyzeAsync(
                         b64, importContext, _codingAnalysisCts.Token);
-                    result = Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, captureTimestampSec);
+                    result = LiveDetectionMapper.FromEnhancedAnalysis(enhanced, captureTimestampSec);
                 }
                 else
                 {
@@ -6414,7 +6421,7 @@ public partial class PlayerWindow : Window
     /// <summary>
     /// Rendert Multi-Model Ergebnisse: SAM-Masken (gruene Konturen) + Label-Badges mit Messungen.
     /// </summary>
-    private void ShowMultiModelResults(Ai.Pipeline.SingleFrameResult mmResult)
+    private void ShowMultiModelResults(SingleFrameResult mmResult)
     {
         // Alte Masken entfernen
         Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
@@ -6443,7 +6450,7 @@ public partial class PlayerWindow : Window
     /// und Label-Pfad wie der Qwen/Enhanced-Pfad (ResolveFindingCodeForCoding, LookupVsaLabel).
     /// </summary>
     private void AddMultiModelFindingsAsEvents(
-        Ai.Pipeline.SingleFrameResult mmResult, double captureTimestampSec)
+        SingleFrameResult mmResult, double captureTimestampSec)
     {
         if (_codingVm == null || _codingSessionService == null) return;
 
@@ -6846,7 +6853,7 @@ public partial class PlayerWindow : Window
     /// Gemeinsam genutzt von Qwen- und Multi-Model-Pfad.
     /// </summary>
     private static void ApplyQuantificationToEntry(
-        ProtocolEntry entry, string code, Ai.Pipeline.MaskQuantificationService.QuantifiedMask quant)
+        ProtocolEntry entry, string code, MaskQuantificationService.QuantifiedMask quant)
     {
         if (!string.IsNullOrEmpty(quant.ClockPosition))
         {
@@ -6875,7 +6882,7 @@ public partial class PlayerWindow : Window
     /// Schaetzt Severity (1-5) aus SAM-Quantifizierung.
     /// Groesse der Maske relativ zum Rohrquerschnitt.
     /// </summary>
-    private static int EstimateSeverityFromQuantification(Ai.Pipeline.MaskQuantificationService.QuantifiedMask q)
+    private static int EstimateSeverityFromQuantification(MaskQuantificationService.QuantifiedMask q)
     {
         // Querschnittsreduktion als primaerer Indikator
         if (q.CrossSectionReductionPercent is > 30) return 5;

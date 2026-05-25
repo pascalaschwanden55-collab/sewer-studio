@@ -1,9 +1,10 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.UI.Ai.KnowledgeBase;
-using AuswertungPro.Next.UI.Ai.QualityGate;
-using AuswertungPro.Next.UI.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 
 namespace AuswertungPro.Next.UI.Ai.SelfImproving;
 

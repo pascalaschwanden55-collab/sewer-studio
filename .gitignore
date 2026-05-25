@@ -29,6 +29,8 @@ artifacts/
 *.log
 buildlog.txt
 *.tmp
+*.lscache
+.lscache/
 
 # Python Sidecar
 sidecar/.venv/

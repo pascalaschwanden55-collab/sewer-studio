@@ -1,5 +1,6 @@
 using System;
-using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Infrastructure.Ai;
 using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;

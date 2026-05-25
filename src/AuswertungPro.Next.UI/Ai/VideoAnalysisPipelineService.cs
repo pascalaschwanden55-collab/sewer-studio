@@ -1,21 +1,23 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.UI.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Ai;
 
 /// <summary>
-/// Haupt-Einstiegspunkt für den kombinierten Videoanalyse-Workflow.
+/// Haupt-Einstiegspunkt fÃ¼r den kombinierten Videoanalyse-Workflow.
 ///
 /// BUG 1.3 FIX: Video wird nur EINMAL analysiert.
 /// Ablauf:
-///   1) VideoFullAnalysisService.AnalyzeAsync()  → RawVideoDetections
-///   2) FullProtocolGenerationService.GenerateFromDetectionsAsync()  → ProtocolDocument
+///   1) VideoFullAnalysisService.AnalyzeAsync()  â†’ RawVideoDetections
+///   2) FullProtocolGenerationService.GenerateFromDetectionsAsync()  â†’ ProtocolDocument
 ///      (kein eigenes AnalyzeAsync mehr!)
 /// </summary>
 public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
@@ -42,10 +44,10 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         if (!_cfg.Enabled)
             return PipelineResult.Failed("KI ist deaktiviert (SEWERSTUDIO_AI_ENABLED=0).");
 
-        // ── Decide: Multi-Model or Ollama-Only ────────────────────────────────
+        // â”€â”€ Decide: Multi-Model or Ollama-Only â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var (useMultiModel, pipelineCfg) = await ShouldUseMultiModelAsync(ct).ConfigureAwait(false);
 
-        // ── Phase 1: Video-Analyse ────────────────────────────────────────────
+        // â”€â”€ Phase 1: Video-Analyse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         progress?.Report(new PipelineProgress(
             useMultiModel ? PipelinePhase.MultiModelDetection : PipelinePhase.VideoAnalysis,
             0, useMultiModel ? "Starte Multi-Model Pipeline..." : "Starte Video-Analyse...",
@@ -64,7 +66,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 
         if (useMultiModel)
         {
-            // ── Multi-Model Path: YOLO -> DINO -> SAM -> Qwen ──
+            // â”€â”€ Multi-Model Path: YOLO -> DINO -> SAM -> Qwen â”€â”€
             var pipelineClient = new VisionPipelineClient(pipelineCfg.SidecarUrl, _httpClient);
 
             // Create Qwen vision service for VSA-Code enrichment
@@ -83,7 +85,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         }
         else
         {
-            // ── Ollama-Only Path (existing behavior) ──
+            // â”€â”€ Ollama-Only Path (existing behavior) â”€â”€
             var client = _cfg.CreateOllamaClient(_httpClient);
             var videoService = VideoFullAnalysisService.Create(
                 client: client,
@@ -101,13 +103,13 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             return PipelineResult.Failed($"Video-Analyse fehlgeschlagen: {videoResult.Error}");
 
         progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 100,
-            $"{videoResult.Detections.Count} Schäden erkannt in {videoResult.FramesAnalyzed} Frames.",
+            $"{videoResult.Detections.Count} SchÃ¤den erkannt in {videoResult.FramesAnalyzed} Frames.",
             FramesDone: videoResult.FramesAnalyzed,
             FramesTotal: videoResult.FramesAnalyzed));
 
-        // ── Phase 2: Code-Mapping (mit bereits analysierten Detections) ───────
+        // â”€â”€ Phase 2: Code-Mapping (mit bereits analysierten Detections) â”€â”€â”€â”€â”€â”€â”€
         // BUG 1.3 FIX: GenerateFromDetectionsAsync statt GenerateAsync
-        // → kein zweites AnalyzeAsync mehr!
+        // â†’ kein zweites AnalyzeAsync mehr!
         progress?.Report(new PipelineProgress(PipelinePhase.CodeMapping, 0,
             "Starte Code-Mapping..."));
 
@@ -126,7 +128,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             ProjectFolderAbs: request.ProjectFolderAbs,
             RequestedBy: request.RequestedBy);
 
-        // BUG 1.3 FIX: Detections direkt übergeben
+        // BUG 1.3 FIX: Detections direkt Ã¼bergeben
         var genResult = await generator.GenerateFromDetectionsAsync(
             videoResult.Detections, genRequest, mappingProgress, ct).ConfigureAwait(false);
 
@@ -134,7 +136,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             return PipelineResult.Failed($"Code-Mapping fehlgeschlagen: {genResult.Error}");
 
         progress?.Report(new PipelineProgress(PipelinePhase.CodeMapping, 100,
-            $"{genResult.MappedEntries.Count(e => e.SuggestedCode != null)} Einträge gemappt.",
+            $"{genResult.MappedEntries.Count(e => e.SuggestedCode != null)} EintrÃ¤ge gemappt.",
             ItemsDone: genResult.MappedEntries.Count,
             ItemsTotal: genResult.MappedEntries.Count));
 
@@ -163,13 +165,13 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
     /// </summary>
     private async Task<(bool UseMultiModel, PipelineConfig Config)> ShouldUseMultiModelAsync(CancellationToken ct)
     {
-        var pipelineCfg = PipelineConfig.Load();
+        var pipelineCfg = AiPlatformConfig.Load().ToPipelineConfig();
 
         if (pipelineCfg.Mode == PipelineMode.OllamaOnly)
             return (false, pipelineCfg);
 
         // MultiModelEnabled ist ein Master-Kill-Switch.
-        // Nur ein explizites Mode=MultiModel übersteuert ihn.
+        // Nur ein explizites Mode=MultiModel Ã¼bersteuert ihn.
         if (!pipelineCfg.MultiModelEnabled && pipelineCfg.Mode != PipelineMode.MultiModel)
             return (false, pipelineCfg);
 
@@ -199,58 +201,5 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
     }
 }
 
-// ── Request / Result ──────────────────────────────────────────────────────────
+// â”€â”€ Request / Result â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-public sealed record PipelineRequest(
-    string HaltungId,
-    string VideoPath,
-    IReadOnlyList<string> AllowedCodes,
-    string? ProjectFolderAbs = null,
-    string? RequestedBy = null,
-    double FrameStepSeconds = 3.0,
-    int DedupWindowFrames = 3
-);
-
-public sealed record PipelineResult(
-    ProtocolDocument? Document,
-    IReadOnlyList<RawVideoDetection> Detections,
-    IReadOnlyList<MappedProtocolEntry> MappedEntries,
-    PipelineStats? Stats,
-    IReadOnlyList<string> Warnings,
-    string? Error,
-    Pipeline.TelemetrySummary? Telemetry = null)
-{
-    public bool IsSuccess => Error is null;
-
-    public static PipelineResult Failed(string error) =>
-        new(null, Array.Empty<RawVideoDetection>(),
-            Array.Empty<MappedProtocolEntry>(), null,
-            Array.Empty<string>(), error);
-}
-
-public sealed record PipelineStats(
-    int FramesAnalyzed,
-    double DurationSeconds,
-    int DetectionsRaw,
-    int EntriesGenerated,
-    int EntriesWithHighConfidence
-);
-
-public sealed record PipelineProgress(
-    PipelinePhase Phase,
-    double PercentInPhase,
-    string Status,
-    int? FramesDone = null,
-    int? FramesTotal = null,
-    int? ItemsDone = null,
-    int? ItemsTotal = null,
-    byte[]? FramePreviewPng = null,
-    IReadOnlyList<LiveFrameFinding>? LiveFindings = null);
-
-public enum PipelinePhase
-{
-    VideoAnalysis,
-    MultiModelDetection,
-    CodeMapping,
-    Done
-}

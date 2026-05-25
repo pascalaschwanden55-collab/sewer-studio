@@ -13,13 +13,20 @@ using Microsoft.Win32;
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.UI.Ai.KnowledgeBase;
-using AuswertungPro.Next.UI.Ai.Ollama;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai.Teacher;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Training;
-using AuswertungPro.Next.UI.Ai.Training.Services;
 using AuswertungPro.Next.UI.Services;
 using AiTrack = AuswertungPro.Next.UI.Services.AiActivityTracker;
+using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 public partial class TrainingCenterViewModel : ObservableObject
 {
@@ -30,7 +37,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     private System.Net.Http.HttpClient? _kbHttpClient;
 
     /// <summary>Optionale Referenz auf die Review Queue (gesetzt von Window).</summary>
-    public Ai.SelfImproving.ReviewQueueService? ReviewQueueServiceRef { get; set; }
+    public InfraSelfImproving.ReviewQueueService? ReviewQueueServiceRef { get; set; }
 
     public ObservableCollection<TrainingCase> Cases { get; } = new();
     public ObservableCollection<TrainingSample> Samples { get; } = new();
@@ -81,8 +88,8 @@ public partial class TrainingCenterViewModel : ObservableObject
     [ObservableProperty] private string _kbTrendDirection = "";
 
     // Review Queue (Self-Improving Loop)
-    public ObservableCollection<Ai.SelfImproving.ReviewQueueItem> ReviewQueue { get; } = new();
-    [ObservableProperty] private Ai.SelfImproving.ReviewQueueItem? _selectedReviewItem;
+    public ObservableCollection<InfraSelfImproving.ReviewQueueItem> ReviewQueue { get; } = new();
+    [ObservableProperty] private InfraSelfImproving.ReviewQueueItem? _selectedReviewItem;
     [ObservableProperty] private int _reviewQueueCount;
     [ObservableProperty] private string _reviewStatusText = "";
 
@@ -423,7 +430,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 string accText;
                 try
                 {
-                    var accSvc = new Ai.Monitoring.AccuracyDashboardService(db.Connection);
+                    var accSvc = new AuswertungPro.Next.Infrastructure.Ai.Monitoring.AccuracyDashboardService(db.Connection);
                     var metrics = accSvc.ComputeMetrics();
                     accText = metrics.Count > 0
                         ? string.Join("\n", metrics
@@ -439,7 +446,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 int staleCount = 0;
                 try
                 {
-                    var kbq = new Ai.SelfImproving.KbQualityService(db.Connection);
+                    var kbq = new AuswertungPro.Next.Infrastructure.Ai.SelfImproving.KbQualityService(db.Connection);
                     staleCount = kbq.FindStaleCandidates().Count;
                 }
                 catch { }
@@ -448,7 +455,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             });
 
             // Trend (aus JSON, kein DB-Zugriff)
-            var runs = await Ai.Training.SelfTrainingHistoryStore.LoadAsync();
+            var runs = await SelfTrainingHistoryStore.LoadAsync();
             var last5 = runs.TakeLast(5).ToList();
             var trendText = last5.Count > 0
                 ? string.Join("\n", last5.Select(r =>
@@ -946,7 +953,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             StatusText = $"YOLO-Export: {approved.Count} Samples werden vorbereitet...";
 
             // Sidecar-Verbindung prüfen
-            var pipelineCfg = PipelineConfig.Load();
+            var pipelineCfg = AiPlatformConfig.Load().ToPipelineConfig();
             var client = new VisionPipelineClient(pipelineCfg.SidecarUrl);
 
             var health = await client.HealthCheckAsync(ct).ConfigureAwait(false);
@@ -1030,7 +1037,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         List<TrainingSample> approved, string outputDir, CancellationToken ct)
     {
         // TeacherAnnotations laden (echte BBoxen)
-        var annotations = await Ai.Teacher.TeacherAnnotationStore.LoadAsync();
+        var annotations = await TeacherAnnotationStore.LoadAsync();
         var annotationsWithImages = annotations
             .Where(a => !string.IsNullOrWhiteSpace(a.FullFramePath) && File.Exists(a.FullFramePath))
             .ToList();
@@ -1069,7 +1076,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 File.Copy(a.FullFramePath!, imgDst, overwrite: true);
 
                 // Label mit echten BBoxen schreiben
-                var clsIdx = Ai.Teacher.VsaYoloClassMap.GetClassId(a.VsaCode);
+                var clsIdx = VsaYoloClassMap.GetClassId(a.VsaCode);
                 var bbox = a.BoundingBox;
                 var lblPath = Path.Combine(lblDir, $"teacher_{a.AnnotationId}.txt");
                 if (bbox is not null && bbox.Width > 0 && bbox.Height > 0)
@@ -1114,7 +1121,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 try { File.Copy(s.FramePath, imgDst, overwrite: true); }
                 catch (IOException) { continue; } // Datei gesperrt oder nicht mehr vorhanden
 
-                var clsIdx = Ai.Teacher.VsaYoloClassMap.GetClassId(s.Code);
+                var clsIdx = VsaYoloClassMap.GetClassId(s.Code);
                 var lblPath = Path.Combine(lblDir, $"sample_{i:D6}.txt");
 
                 // Echte BBox aus Eingabemarker nutzen, sonst Fallback
@@ -1138,7 +1145,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
 
         // ── data.yaml mit exaktem Klassenmapping ──
-        var fullMap = Ai.Teacher.VsaYoloClassMap.GetFullMap();
+        var fullMap = VsaYoloClassMap.GetFullMap();
         var sortedClasses = fullMap.OrderBy(kv => kv.Value).Select(kv => kv.Key).ToList();
 
         var yamlPath = Path.Combine(outputDir, "data.yaml");
@@ -1153,7 +1160,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         await File.WriteAllLinesAsync(yamlPath, yamlLines, ct);
 
         // classes.txt exportieren
-        await Ai.Teacher.VsaYoloClassMap.ExportClassesTxtAsync(
+        await VsaYoloClassMap.ExportClassesTxtAsync(
             Path.Combine(outputDir, "classes.txt"));
 
         var msg = $"YOLO-Export fertig: {totalExported} Samples " +
@@ -1250,7 +1257,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             var casesToProcess = casesWithProtocol;
 
             // Ollama-Verbindung einmalig pruefen + KB-Objekte vorbereiten
-            var ollamaConfig = OllamaConfig.Load();
+            var ollamaConfig = AiPlatformConfig.Load().ToOllamaConfig();
             var ollamaReachable = await CheckOllamaReachableAsync(ollamaConfig, ct);
             KnowledgeBaseContext? kbCtx = null;
             KnowledgeBaseManager? kbManager = null;
@@ -1738,7 +1745,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     // ── Review Queue (Self-Improving Loop) ──────────────────────────────
 
     /// <summary>Loads pending review items into the queue.</summary>
-    public void LoadReviewQueue(Ai.SelfImproving.ReviewQueueService queueService)
+    public void LoadReviewQueue(InfraSelfImproving.ReviewQueueService queueService)
     {
         ReviewQueue.Clear();
         foreach (var item in queueService.GetAll())
@@ -1749,9 +1756,9 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     /// <summary>Approve a review item (accept the suggested code).</summary>
     public async Task ApproveReviewItemAsync(
-        Ai.SelfImproving.ReviewQueueItem item,
+        InfraSelfImproving.ReviewQueueItem item,
         Ai.SelfImproving.FeedbackIngestionService feedback,
-        Ai.SelfImproving.ReviewQueueService queueService,
+        InfraSelfImproving.ReviewQueueService queueService,
         CancellationToken ct = default)
     {
         if (item.Entry is not null)
@@ -1775,10 +1782,10 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     /// <summary>Reject a review item with a corrected code.</summary>
     public async Task RejectReviewItemAsync(
-        Ai.SelfImproving.ReviewQueueItem item,
+        InfraSelfImproving.ReviewQueueItem item,
         string correctedCode,
         Ai.SelfImproving.FeedbackIngestionService feedback,
-        Ai.SelfImproving.ReviewQueueService queueService,
+        InfraSelfImproving.ReviewQueueService queueService,
         CancellationToken ct = default)
     {
         if (item.Entry is not null)
@@ -2108,7 +2115,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         var indexedIds = new List<string>();
         try
         {
-            var ollamaConfig = OllamaConfig.Load();
+            var ollamaConfig = AiPlatformConfig.Load().ToOllamaConfig();
             var ollamaReachable = await CheckOllamaReachableAsync(ollamaConfig, ct);
             if (!ollamaReachable)
             {

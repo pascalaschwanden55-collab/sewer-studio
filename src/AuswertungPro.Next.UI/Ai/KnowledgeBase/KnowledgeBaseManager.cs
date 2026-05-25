@@ -6,7 +6,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AuswertungPro.Next.UI.Ai.Training;
+using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Services.CodeCatalog;
 
 namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;

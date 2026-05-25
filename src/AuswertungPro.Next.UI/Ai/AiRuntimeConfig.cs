@@ -1,5 +1,5 @@
 using System;
-using AuswertungPro.Next.UI.Ai.Ollama;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 
 namespace AuswertungPro.Next.UI.Ai;
 

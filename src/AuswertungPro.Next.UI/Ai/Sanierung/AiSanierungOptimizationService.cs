@@ -2,6 +2,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Ai.Sanierung;
+using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 
 namespace AuswertungPro.Next.UI.Ai.Sanierung;
 

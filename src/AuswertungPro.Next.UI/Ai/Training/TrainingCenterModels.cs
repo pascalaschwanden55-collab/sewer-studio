@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using AuswertungPro.Next.Application.Ai.Training;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AuswertungPro.Next.UI.Ai.Training;

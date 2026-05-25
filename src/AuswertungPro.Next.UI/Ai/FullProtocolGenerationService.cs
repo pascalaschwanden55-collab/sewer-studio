@@ -1,25 +1,27 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
-using AuswertungPro.Next.UI.Ai.Ollama;
-using AuswertungPro.Next.UI.Ai.QualityGate;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 
 namespace AuswertungPro.Next.UI.Ai;
 
 /// <summary>
-/// Workflow: Detections -> vollständiges ProtocolDocument
+/// Workflow: Detections -> vollstÃ¤ndiges ProtocolDocument
 ///
 /// BUG 1.3 FIX: GenerateAsync analysiert das Video NICHT mehr selbst.
 /// Stattdessen akzeptiert GenerateFromDetectionsAsync bereits analysierte
-/// RawVideoDetections. VideoAnalysisPipelineService übergibt diese.
-/// Damit wird jede Video-Analyse nur noch einmal durchgeführt.
+/// RawVideoDetections. VideoAnalysisPipelineService Ã¼bergibt diese.
+/// Damit wird jede Video-Analyse nur noch einmal durchgefÃ¼hrt.
 /// </summary>
 public sealed class FullProtocolGenerationService : IDisposable
 {
@@ -50,7 +52,7 @@ public sealed class FullProtocolGenerationService : IDisposable
         {
             try
             {
-                var ollamaConfig = OllamaConfig.Load();
+                var ollamaConfig = AiPlatformConfig.Load().ToOllamaConfig();
                 _ownedKbContext = new KnowledgeBaseContext();
                 var embedder = new EmbeddingService(httpClient, ollamaConfig);
                 _retrieval = new RetrievalService(_ownedKbContext, embedder);
@@ -65,7 +67,7 @@ public sealed class FullProtocolGenerationService : IDisposable
 
     public void Dispose() => _ownedKbContext?.Dispose();
 
-    // ── BUG 1.3 FIX: Nimmt bereits analysierte Detections entgegen ───────────
+    // â”€â”€ BUG 1.3 FIX: Nimmt bereits analysierte Detections entgegen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     /// <summary>
     /// Mappt bereits erkannte Detections auf VSA-Codes und baut ein ProtocolDocument.
@@ -89,7 +91,7 @@ public sealed class FullProtocolGenerationService : IDisposable
                 Document: BuildEmptyDocument(request),
                 MappedEntries: Array.Empty<MappedProtocolEntry>(),
                 Error: null,
-                Warnings: new[] { "Keine Schäden erkannt." });
+                Warnings: new[] { "Keine SchÃ¤den erkannt." });
         }
 
         var mappedEntries = new List<MappedProtocolEntry>();
@@ -118,7 +120,7 @@ public sealed class FullProtocolGenerationService : IDisposable
             .ToArray();
 
         progress?.Report(new CodeMappingProgress(total, total,
-            $"Fertig – {protocolEntries.Count} Einträge gemappt."));
+            $"Fertig â€“ {protocolEntries.Count} EintrÃ¤ge gemappt."));
 
         return new FullProtocolGenerationResult(
             Document: BuildDocument(request, protocolEntries),
@@ -127,7 +129,7 @@ public sealed class FullProtocolGenerationService : IDisposable
             Warnings: warnings);
     }
 
-    // ── Private ───────────────────────────────────────────────────────────────
+    // â”€â”€ Private â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private async Task<MappedProtocolEntry> MapDetectionAsync(
         RawVideoDetection detection,
@@ -137,7 +139,7 @@ public sealed class FullProtocolGenerationService : IDisposable
         var kbExamples = await GetKnowledgeExamplesAsync(detection, request, ct).ConfigureAwait(false);
 
         // Wenn EnhancedVision bereits einen Code-Hinweis geliefert hat,
-        // diesen im Prompt priorisieren → spart LLM-Aufwand
+        // diesen im Prompt priorisieren â†’ spart LLM-Aufwand
         var vsaHint = !string.IsNullOrWhiteSpace(detection.VsaCodeHint)
             ? $"\nVision-Code-Hinweis (priorisiere falls plausibel): {detection.VsaCodeHint}"
             : string.Empty;
@@ -196,10 +198,10 @@ public sealed class FullProtocolGenerationService : IDisposable
             reason = string.IsNullOrWhiteSpace(reason)
                 ? $"KB-Fallback: {fallback.Code}"
                 : $"{reason} | KB-Fallback: {fallback.Code}";
-            warnings.Add("LLM lieferte keinen gültigen Code, KB-Fallback verwendet.");
+            warnings.Add("LLM lieferte keinen gÃ¼ltigen Code, KB-Fallback verwendet.");
         }
 
-        // ── QualityGate: build EvidenceVector and evaluate ──
+        // â”€â”€ QualityGate: build EvidenceVector and evaluate â”€â”€
         var kbTopScore = kbExamples.Count > 0 ? kbExamples[0].Score : (double?)null;
         var kbAgrees = kbExamples.Count > 0 && !string.IsNullOrWhiteSpace(suggestedCode)
             && kbExamples[0].Code.Equals(suggestedCode, StringComparison.OrdinalIgnoreCase);
@@ -237,18 +239,18 @@ public sealed class FullProtocolGenerationService : IDisposable
         IReadOnlyList<KbExample> kbExamples)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("Antworte ausschließlich im vorgegebenen JSON-Schema.");
-        sb.AppendLine("Wähle nur EINEN Basiscode aus 'Erlaubte Codes'.");
+        sb.AppendLine("Antworte ausschlieÃŸlich im vorgegebenen JSON-Schema.");
+        sb.AppendLine("WÃ¤hle nur EINEN Basiscode aus 'Erlaubte Codes'.");
         sb.AppendLine();
         sb.AppendLine($"Befund: {detection.FindingLabel}");
         sb.AppendLine($"Schweregrad: {detection.Severity}");
-        sb.AppendLine($"Meterbereich: {detection.MeterStart:0.00}m – {detection.MeterEnd:0.00}m");
+        sb.AppendLine($"Meterbereich: {detection.MeterStart:0.00}m â€“ {detection.MeterEnd:0.00}m");
         if (!string.IsNullOrWhiteSpace(detection.PositionClock))
             sb.AppendLine($"Uhrlage: {detection.PositionClock}");
         if (detection.ExtentPercent is > 0)
             sb.AppendLine($"Ausdehnung: {detection.ExtentPercent}% Umfang");
         if (detection.HeightMm is > 0)
-            sb.AppendLine($"Schadenshöhe: {detection.HeightMm}mm");
+            sb.AppendLine($"SchadenshÃ¶he: {detection.HeightMm}mm");
         if (detection.WidthMm is > 0)
             sb.AppendLine($"Schadensbreite: {detection.WidthMm}mm");
         if (detection.IntrusionPercent is > 0)
@@ -263,7 +265,7 @@ public sealed class FullProtocolGenerationService : IDisposable
         if (kbExamples.Count > 0)
         {
             sb.AppendLine();
-            sb.AppendLine("Ähnliche Fälle aus Wissensdatenbank:");
+            sb.AppendLine("Ã„hnliche FÃ¤lle aus Wissensdatenbank:");
             foreach (var ex in kbExamples.Take(3))
             {
                 sb.AppendLine(
@@ -345,7 +347,7 @@ public sealed class FullProtocolGenerationService : IDisposable
             parts.Add($"VisionCode {detection.VsaCodeHint}");
 
         if (detection.HeightMm is > 0)
-            parts.Add($"Höhe {detection.HeightMm}mm");
+            parts.Add($"HÃ¶he {detection.HeightMm}mm");
         if (detection.IntrusionPercent is > 0)
             parts.Add($"Einragung {detection.IntrusionPercent}%");
         if (detection.CrossSectionReductionPercent is > 0)
@@ -358,7 +360,7 @@ public sealed class FullProtocolGenerationService : IDisposable
     {
         var basePrompt = "Du bist ein Kanalinspektion-Experte nach DIN EN 13508-2 / VSA-DSS. " +
             "Mappe einen erkannten Befund auf den korrekten Schadenskode. " +
-            "Antworte nur mit gültigem JSON.";
+            "Antworte nur mit gÃ¼ltigem JSON.";
 
         return basePrompt;
     }
@@ -420,7 +422,7 @@ public sealed class FullProtocolGenerationService : IDisposable
             RevisionId = Guid.NewGuid(),
             CreatedAt = DateTimeOffset.UtcNow,
             CreatedBy = "KI (FullProtocolGeneration)",
-            Comment = "Keine Schäden erkannt",
+            Comment = "Keine SchÃ¤den erkannt",
             Entries = new List<ProtocolEntry>()
         };
         return new ProtocolDocument
@@ -432,39 +434,5 @@ public sealed class FullProtocolGenerationService : IDisposable
     }
 }
 
-// ── DTOs ──────────────────────────────────────────────────────────────────────
+// â”€â”€ DTOs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-public sealed record FullProtocolGenerationRequest(
-    string HaltungId,
-    string VideoPath,
-    IReadOnlyList<string> AllowedCodes,
-    string? ProjectFolderAbs = null,
-    string? RequestedBy = null
-);
-
-public sealed record FullProtocolGenerationResult(
-    ProtocolDocument? Document,
-    IReadOnlyList<MappedProtocolEntry> MappedEntries,
-    string? Error,
-    IReadOnlyList<string> Warnings)
-{
-    public bool IsSuccess => Error is null;
-
-    public static FullProtocolGenerationResult Failed(string error) =>
-        new(null, Array.Empty<MappedProtocolEntry>(), error, Array.Empty<string>());
-}
-
-public sealed record MappedProtocolEntry(
-    RawVideoDetection Detection,
-    string? SuggestedCode,
-    double Confidence,
-    string? Reason,
-    IReadOnlyList<string> Warnings,
-    QualityGate.QualityGateResult? QualityGateResult = null,
-    QualityGate.UncertaintyEstimate? Uncertainty = null
-);
-
-public sealed record CodeMappingProgress(int Done, int Total, string Status)
-{
-    public double Percent => Total > 0 ? (double)Done / Total * 100.0 : 0;
-}

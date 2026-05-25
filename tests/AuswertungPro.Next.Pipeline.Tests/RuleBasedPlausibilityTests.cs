@@ -1,4 +1,5 @@
-using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 

@@ -8,8 +8,10 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.UI.Ai.Training.Services;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
@@ -208,7 +210,8 @@ public sealed class TrainingSampleGenerator
                     HasOsdMismatch = hasOsdMismatch,
                     Signature = sig,
                     FrameIndex = frameIndex,
-                    SourceType = SourceTypeNames.BatchImport
+                    SourceType = SourceTypeNames.BatchImport,
+                    CodeMeta = GroundTruthProtocolEntryMapper.CloneCodeMeta(entry.CodeMeta)
                 });
             }
         }
@@ -309,19 +312,7 @@ public sealed class TrainingSampleGenerator
                 if (entries.Count == 0) return null;
 
                 var protocolEntries = entries
-                    .Select(e => new ProtocolEntry
-                    {
-                        Code             = e.VsaCode,
-                        Beschreibung     = e.Text,
-                        MeterStart       = e.MeterStart,
-                        MeterEnd         = e.MeterEnd,
-                        IsStreckenschaden = e.IsStreckenschaden,
-                        Zeit             = e.Zeit,
-                        Source           = ProtocolEntrySource.Imported,
-                        FotoPaths        = e.ExtractedFramePath is not null
-                            ? new List<string> { e.ExtractedFramePath }
-                            : new List<string>()
-                    })
+                    .Select(GroundTruthProtocolEntryMapper.ToProtocolEntry)
                     .ToList();
 
                 return new ProtocolDocument

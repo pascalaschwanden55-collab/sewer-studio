@@ -12,14 +12,17 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using CommunityToolkit.Mvvm.Input;
 using LibVLCSharp.Shared;
 using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
+using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -1708,7 +1711,7 @@ public partial class CodingModeWindow : Window
 
             // Frame temporaer speichern (annotationId = kollisionsfrei)
             var tempFrame = System.IO.Path.Combine(
-                Ai.Teacher.TeacherAnnotationStore.GetImagesDir(),
+                InfraTeacher.TeacherAnnotationStore.GetImagesDir(),
                 $"frame_temp_{annotationId}.png");
             await System.IO.File.WriteAllBytesAsync(tempFrame, pngBytes);
 
@@ -1729,10 +1732,10 @@ public partial class CodingModeWindow : Window
             var baseName = $"{selectedEntry.Code}_{captureMeter:F1}m_{annotationId}";
 
             // Fix 1: VSA-Code → YOLO classId ueber persistiertes Mapping
-            int classId = Ai.Teacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
+            int classId = InfraTeacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
 
             // 4. YOLO-Export (Crop + Annotation)
-            var exportService = new Ai.Teacher.TrainingAnnotationExportService();
+            var exportService = Ai.Teacher.TrainingAnnotationExportServiceFactory.Create();
             var exportResult = await exportService.ExportAsync(
                 tempFrame, bbox, selectedEntry.Code, classId, baseName);
 
@@ -1747,7 +1750,7 @@ public partial class CodingModeWindow : Window
             }
 
             // 5. TeacherAnnotation erstellen und speichern (nur bei Erfolg)
-            var annotation = new Ai.Teacher.TeacherAnnotation
+            var annotation = new TeacherAnnotation
             {
                 AnnotationId = annotationId,
                 VsaCode = selectedEntry.Code,
@@ -1768,7 +1771,7 @@ public partial class CodingModeWindow : Window
                 HeightMm = _vm.CurrentOverlay.Q1Mm
             };
 
-            await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+            await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 
             // Temporaeres Frame aufraeumen (wurde nach teacher_images kopiert)
             try { System.IO.File.Delete(tempFrame); } catch { }
@@ -1781,7 +1784,7 @@ public partial class CodingModeWindow : Window
                 BtnSaveAsTraining.IsEnabled = false;
             UpdateOverlayInfo(null);
 
-            var count = await Ai.Teacher.TeacherAnnotationStore.CountAsync();
+            var count = await InfraTeacher.TeacherAnnotationStore.CountAsync();
             MessageBox.Show(
                 $"Lehrer-Annotation gespeichert:\n" +
                 $"Code: {selectedEntry.Code}\n" +
@@ -2428,7 +2431,7 @@ public partial class CodingModeWindow : Window
             {
                 var b64 = Convert.ToBase64String(pngBytes);
                 var enhanced = await _enhancedVision.AnalyzeAsync(b64, null, _analysisCts.Token);
-                result = Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, timestampSec);
+                result = LiveDetectionMapper.FromEnhancedAnalysis(enhanced, timestampSec);
             }
             else
             {

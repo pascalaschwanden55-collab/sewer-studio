@@ -20,6 +20,7 @@ using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
+using AuswertungPro.Next.Infrastructure.Ai;
 using System.Net.Http;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Training;

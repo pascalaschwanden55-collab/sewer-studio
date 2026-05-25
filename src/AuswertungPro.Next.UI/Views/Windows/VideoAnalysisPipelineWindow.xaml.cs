@@ -11,6 +11,8 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Services;

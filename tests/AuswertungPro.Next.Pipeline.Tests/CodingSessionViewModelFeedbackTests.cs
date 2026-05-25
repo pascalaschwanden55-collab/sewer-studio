@@ -15,6 +15,15 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 public sealed class CodingSessionViewModelFeedbackTests
 {
     [Fact]
+    public void NewAiContext_DefaultsToIgnoredDecision()
+    {
+        var ev = MakeAiEvent("BBA", "BBA");
+
+        Assert.Equal(CodingUserDecision.Ignored, ev.AiContext!.Decision);
+        Assert.Equal(DefectStatus.Pending, CodingSessionViewModel.GetDefectStatus(ev));
+    }
+
+    [Fact]
     public async Task CodingFeedbackRecorder_writes_validation_log_entry()
     {
         var dbPath = Path.Combine(Path.GetTempPath(), $"sewer-feedback-{Guid.NewGuid():N}.sqlite");
@@ -112,7 +121,7 @@ public sealed class CodingSessionViewModelFeedbackTests
         Assert.Equal(CodingUserDecision.Accepted, vm.SelectedDefect!.AiContext!.Decision);
     }
 
-    private static CodingEvent MakeAiEvent(string suggestedCode, string finalCode)
+    private static CodingEvent MakeAiEvent(string? suggestedCode, string finalCode)
         => new()
         {
             Entry = new ProtocolEntry

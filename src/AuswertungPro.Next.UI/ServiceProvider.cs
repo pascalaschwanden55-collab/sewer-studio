@@ -25,14 +25,13 @@ using AuswertungPro.Next.Infrastructure.Import.Ibak;
 using AuswertungPro.Next.Infrastructure.Import.Kins;
 using AuswertungPro.Next.Infrastructure.Projects;
 using AuswertungPro.Next.Infrastructure.Vsa;
+using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
-// AI/CodeCatalog services are currently defined in this UI namespace:
-using AuswertungPro.Next.UI.ViewModels.Protocol;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
-using AuswertungPro.Next.UI.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Sanierung;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Sanierung;
@@ -146,9 +145,16 @@ namespace AuswertungPro.Next.UI
 
             var allowedCodeSet = new HashSet<string>(CodeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
             IAiSuggestionPlausibilityService plausibility = new RuleBasedAiSuggestionPlausibilityService(allowedCodeSet);
+            var protocolTrainingSamples = new ProtocolTrainingSampleProvider();
 
             ProtocolAi = cfg.Enabled
-                ? new OllamaProtocolAiService(cfg, retrieval, plausibility)
+                ? new OllamaProtocolAiService(
+                    cfg.Enabled,
+                    aiPlatform.ToOllamaConfig(),
+                    cfg.FfmpegPath,
+                    protocolTrainingSamples,
+                    retrieval,
+                    plausibility)
                 : new NoopProtocolAiService();
 
             LogCodeCatalogWarnings(CodeCatalog, xmlCatalogPath ?? codeCatalogPath);
@@ -158,8 +164,8 @@ namespace AuswertungPro.Next.UI
             Vsa = new VsaEvaluationService(channelsTable, manholesTable);
 
             MeasureRecommendation = new Infrastructure.Ai.MeasureRecommendationService(
-                Ai.KnowledgeRoot.GetMeasuresLearningPath(),
-                Ai.KnowledgeRoot.GetMeasuresModelPath());
+                KnowledgeBasePaths.GetMeasuresLearningPath(),
+                KnowledgeBasePaths.GetMeasuresModelPath());
 
             // Eigendevis
             var devisMappingPath = Path.Combine(AppContext.BaseDirectory, "Config", "devis_mappings.json");

@@ -2,11 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Helpers;
+using InfraKnowledgeBase = AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -192,18 +195,18 @@ public sealed class CodingSessionService : ICodingSessionService
     /// Indexiert Approved-Samples in die KB (Embedding + SQLite).
     /// Nur wenn Ollama verfuegbar — stilles Fehlschlagen bei Offline.
     /// </summary>
-    private static async Task IndexApprovedSamplesToKbAsync(List<Training.TrainingSample> samples)
+    private static async Task IndexApprovedSamplesToKbAsync(List<TrainingSample> samples)
     {
         try
         {
-            var approved = samples.Where(s => s.Status == Training.TrainingSampleStatus.Approved).ToList();
+            var approved = samples.Where(s => s.Status == TrainingSampleStatus.Approved).ToList();
             if (approved.Count == 0) return;
 
-            var cfg = Ai.Ollama.OllamaConfig.Load();
+            var cfg = AiPlatformConfig.Load().ToOllamaConfig();
             var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
-            var embedder = new KnowledgeBase.EmbeddingService(http, cfg);
+            var embedder = new InfraKnowledgeBase.EmbeddingService(http, cfg);
 
-            using var db = new KnowledgeBase.KnowledgeBaseContext();
+            using var db = new InfraKnowledgeBase.KnowledgeBaseContext();
             var kbManager = new KnowledgeBase.KnowledgeBaseManager(db, embedder);
 
             foreach (var sample in approved)

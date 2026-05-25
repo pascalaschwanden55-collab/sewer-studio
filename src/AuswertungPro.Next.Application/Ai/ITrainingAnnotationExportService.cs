@@ -33,6 +33,11 @@ public interface ITrainingAnnotationExportService
         CancellationToken ct = default);
 }
 
+public interface ITrainingImageCropper
+{
+    void CropAndSave(string sourceFramePath, NormalizedBoundingBox bbox, string outputPath);
+}
+
 /// <summary>
 /// BoundingBox im YOLO-Format (normalisiert 0.0-1.0).
 /// Einheitliches Modell fuer Export-Service und Teacher-Annotationen.

@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Protocol;

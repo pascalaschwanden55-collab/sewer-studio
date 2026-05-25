@@ -3,8 +3,9 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.QualityGate;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
