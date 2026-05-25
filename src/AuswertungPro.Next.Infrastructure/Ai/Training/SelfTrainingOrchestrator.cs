@@ -10,33 +10,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
-using AuswertungPro.Next.UI.Services;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
-
-/// <summary>
-/// Durchlaeuft das PDF-Protokoll, nimmt die eingebetteten Fotos als Ground Truth,
-/// laesst die KI blind analysieren und vergleicht deterministisch.
-/// </summary>
-public interface ISelfTrainingOrchestrator
-{
-    /// <summary>Startet autonomes Training fuer einen Fall.</summary>
-    Task<SelfTrainingResult> RunAsync(
-        TrainingCase tc,
-        IProgress<SelfTrainingStep> progress,
-        CancellationToken ct);
-
-    /// <summary>Pausiert den laufenden Trainingslauf.</summary>
-    void Pause();
-
-    /// <summary>Setzt nach Pause fort.</summary>
-    void Resume();
-
-    /// <summary>True wenn gerade pausiert.</summary>
-    bool IsPaused { get; }
-}
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
 {
@@ -45,6 +21,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     private readonly ITechniqueAssessmentService _technique;
     private readonly PdfProtocolExtractor _pdfExtractor;
     private readonly TrainingCenterSettings _settings;
+    private readonly string _ffmpegPath;
 
     private readonly ManualResetEventSlim _pauseGate = new(true);
 
@@ -55,20 +32,22 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         ISelfTrainingComparisonService comparison,
         ITechniqueAssessmentService technique,
         PdfProtocolExtractor pdfExtractor,
-        TrainingCenterSettings? settings = null)
+        TrainingCenterSettings? settings = null,
+        string? ffmpegPath = null)
     {
         _vision = vision;
         _comparison = comparison;
         _technique = technique;
         _pdfExtractor = pdfExtractor;
         _settings = settings ?? new TrainingCenterSettings();
+        _ffmpegPath = string.IsNullOrWhiteSpace(ffmpegPath) ? "ffmpeg" : ffmpegPath;
     }
 
     public void Pause() => _pauseGate.Reset();
     public void Resume() => _pauseGate.Set();
 
     public async Task<SelfTrainingResult> RunAsync(
-        TrainingCase tc,
+        TrainingCaseInput tc,
         IProgress<SelfTrainingStep> progress,
         CancellationToken ct)
     {
@@ -102,7 +81,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 0, allEntries.Count, "", 0, SelfTrainingStage.ExtractingFrame, null, null, null,
                 "Keine Fotos im PDF — extrahiere Frames aus Video..."));
 
-            var ffmpeg = FindFfmpeg();
+            var ffmpeg = _ffmpegPath;
 
             // Videodauer ermitteln fuer Meter→Zeit-Mapping
             var probe = new VideoProbeService(ffmpegPath: ffmpeg);
@@ -341,18 +320,4 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             SamplesGenerated: generatedSamples.Count);
     }
 
-    /// <summary>ffmpeg-Pfad aus AiRuntimeSettings oder Fallback.</summary>
-    private static string FindFfmpeg()
-    {
-        try
-        {
-            var cfg = new AppSettingsAiSettingsProvider()
-                .Load()
-                .ToRuntimeSettings();
-            if (!string.IsNullOrEmpty(cfg.FfmpegPath) && File.Exists(cfg.FfmpegPath))
-                return cfg.FfmpegPath;
-        }
-        catch { }
-        return "ffmpeg";
-    }
 }

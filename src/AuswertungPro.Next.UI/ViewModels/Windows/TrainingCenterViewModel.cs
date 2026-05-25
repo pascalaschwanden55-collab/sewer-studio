@@ -1724,6 +1724,16 @@ public partial class TrainingCenterViewModel : ObservableObject
             CreatedUtc = DateTime.UtcNow
         };
 
+    private static string ResolveFfmpegPath(string? ffmpegPath)
+    {
+        if (string.IsNullOrWhiteSpace(ffmpegPath))
+            return "ffmpeg";
+
+        return File.Exists(ffmpegPath) || string.Equals(ffmpegPath, "ffmpeg", StringComparison.OrdinalIgnoreCase)
+            ? ffmpegPath
+            : "ffmpeg";
+    }
+
     /// <summary>
     /// Speichert alle Samples und indexiert optional ein gerade geaendertes Sample in die KB.
     /// </summary>
@@ -2021,13 +2031,13 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             var stSettings = await TrainingCenterSettingsStore.LoadAsync();
             _selfTrainingOrchestrator = new SelfTrainingOrchestrator(
-                vision, comparison, technique, pdfExtractor, stSettings);
+                vision, comparison, technique, pdfExtractor, stSettings, ResolveFfmpegPath(cfg.FfmpegPath));
 
             // Progress-Callback verbindet Orchestrator → ViewModel-Visualisierungen
             var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);
 
             Log("Pipeline gestartet: OSD-Scan → Frame → KI-Analyse → Vergleich → Technik");
-            var result = await _selfTrainingOrchestrator.RunAsync(SelectedCase, progress, ct);
+            var result = await _selfTrainingOrchestrator.RunAsync(ToTrainingCaseInput(SelectedCase), progress, ct);
 
             // Ergebnis loggen
             Log($"--- Selbsttraining abgeschlossen ---");

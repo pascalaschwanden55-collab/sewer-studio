@@ -143,6 +143,7 @@ public sealed class AiSuggestionContractTests
             "AuswertungPro.Next.Application",
             typeof(SelfTrainingRunSnapshot).Namespace!,
             StringComparison.Ordinal);
+        AssertSimpleTypeNamespace("ISelfTrainingOrchestrator", "AuswertungPro.Next.Application");
         Assert.StartsWith(
             "AuswertungPro.Next.Application",
             typeof(TrainingSample).Namespace!,
@@ -296,6 +297,7 @@ public sealed class AiSuggestionContractTests
             "AuswertungPro.Next.Infrastructure",
             typeof(SelfTrainingComparisonService).Namespace!,
             StringComparison.Ordinal);
+        AssertSimpleTypeNamespace("SelfTrainingOrchestrator", "AuswertungPro.Next.Infrastructure");
         Assert.StartsWith(
             "AuswertungPro.Next.Infrastructure",
             typeof(YoloDatasetExportService).Namespace!,
