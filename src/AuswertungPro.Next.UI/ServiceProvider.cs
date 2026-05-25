@@ -29,10 +29,10 @@ using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Configuration;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Pipeline;
-using AuswertungPro.Next.UI.Ai.Sanierung;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;

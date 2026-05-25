@@ -194,6 +194,7 @@ public sealed class AiSuggestionContractTests
             typeof(SanierungValidationService).Namespace!,
             StringComparison.Ordinal);
         AssertSimpleTypeNamespace("AiOptimizationSessionStore", "AuswertungPro.Next.Infrastructure");
+        AssertSimpleTypeNamespace("AiSanierungOptimizationService", "AuswertungPro.Next.Infrastructure");
     }
 
     [Fact]

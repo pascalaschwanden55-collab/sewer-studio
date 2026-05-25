@@ -6,7 +6,7 @@ using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 
-namespace AuswertungPro.Next.UI.Ai.Sanierung;
+namespace AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 
 public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationService
 {
