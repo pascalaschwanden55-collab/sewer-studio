@@ -25,9 +25,11 @@ public static class CodingEventToSampleMapper
     /// </summary>
     public static TrainingSample FromCodingEvent(CodingEvent ev, string caseId, string? framePath)
     {
+        // Ohne KI-Kontext landet das Sample in der Review-Queue (New), nicht direkt im Training.
+        // Verhindert dass rein manuelle Codiereintraege ungesehen die Trainingsdaten erweitern.
         var status = ev.AiContext != null
             ? MapDecision(ev.AiContext.Decision)
-            : TrainingSampleStatus.Approved;
+            : TrainingSampleStatus.New;
 
         var sourceType = ev.Overlay != null
             ? SourceTypeNames.TeacherAnnotation
