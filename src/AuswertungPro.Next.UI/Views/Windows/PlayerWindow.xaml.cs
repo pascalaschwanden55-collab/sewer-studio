@@ -33,6 +33,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
+using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using InfraTraining = AuswertungPro.Next.Infrastructure.Ai.Training;
 
@@ -1977,7 +1978,7 @@ public partial class PlayerWindow : Window
             _codingVm = new ViewModels.Windows.CodingSessionViewModel(
                 _codingSessionService,
                 _codingOverlayService,
-                new Ai.SelfImproving.CodingFeedbackRecorder());
+                new InfraSelfImproving.CodingFeedbackRecorder());
         }
     }
 
@@ -2656,7 +2657,7 @@ public partial class PlayerWindow : Window
         _codingVm = new CodingSessionViewModel(
             _codingSessionService,
             _codingOverlayService,
-            new Ai.SelfImproving.CodingFeedbackRecorder());
+            new InfraSelfImproving.CodingFeedbackRecorder());
         _codingVm.VideoPath = _videoPath;
         _codingVm.PropertyChanged += CodingVm_PropertyChanged;
 

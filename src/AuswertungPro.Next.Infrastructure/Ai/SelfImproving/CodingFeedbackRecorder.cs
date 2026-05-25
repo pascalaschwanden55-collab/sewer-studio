@@ -6,7 +6,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 
-namespace AuswertungPro.Next.UI.Ai.SelfImproving;
+namespace AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 /// <summary>
 /// Bruecke vom interaktiven Coding-Modus in den bestehenden FeedbackIngestionService.

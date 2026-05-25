@@ -2,11 +2,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 
-namespace AuswertungPro.Next.UI.Ai.SelfImproving;
+namespace AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 /// <summary>
 /// Processes Accept/Reject feedback:
@@ -21,17 +21,17 @@ public sealed class FeedbackIngestionService
 
     private readonly ValidationLogger _logger;
     private readonly WeightLearningService _weightLearner;
-    private readonly KnowledgeBaseManager? _kbManager;
+    private readonly ITrainingSampleIndexer? _sampleIndexer;
     private int _feedbackCount;
 
     public FeedbackIngestionService(
         ValidationLogger logger,
         WeightLearningService weightLearner,
-        KnowledgeBaseManager? kbManager = null)
+        ITrainingSampleIndexer? sampleIndexer = null)
     {
         _logger = logger;
         _weightLearner = weightLearner;
-        _kbManager = kbManager;
+        _sampleIndexer = sampleIndexer;
     }
 
     /// <summary>Process user feedback for a detection.</summary>
@@ -45,11 +45,9 @@ public sealed class FeedbackIngestionService
         var vsaCode = !string.IsNullOrWhiteSpace(finalCode) ? finalCode : suggestedCode;
         var wasCorrect = accepted && string.Equals(suggestedCode, finalCode, StringComparison.OrdinalIgnoreCase);
 
-        // 1. Log to ValidationLog
         _logger.Log(vsaCode, suggestedCode, finalCode, wasCorrect, entry.Detection.Evidence);
 
-        // 2. On Accept: re-index corrected code in KB for future retrieval
-        if (accepted && _kbManager is not null && !string.IsNullOrWhiteSpace(vsaCode))
+        if (accepted && _sampleIndexer is not null && !string.IsNullOrWhiteSpace(vsaCode))
         {
             try
             {
@@ -63,17 +61,16 @@ public sealed class FeedbackIngestionService
                     MeterStart = det.MeterStart,
                     MeterEnd = det.MeterEnd
                 };
-                await _kbManager.IndexSampleAsync(sample, ct).ConfigureAwait(false);
+                await _sampleIndexer.IndexSampleAsync(sample, ct).ConfigureAwait(false);
             }
             catch
             {
-                // KB re-indexing failure is non-critical
+                // KB re-indexing failure is non-critical.
             }
         }
 
         _feedbackCount++;
 
-        // 3. Every N validations: re-learn weights
         if (_feedbackCount % ReLearnInterval == 0)
         {
             try
@@ -82,7 +79,7 @@ public sealed class FeedbackIngestionService
             }
             catch
             {
-                // Weight learning failure is non-critical
+                // Weight learning failure is non-critical.
             }
         }
     }

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.UI.Ai.SelfImproving;
+using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using Microsoft.Data.Sqlite;
 

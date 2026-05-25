@@ -23,6 +23,7 @@ using AuswertungPro.Next.UI.ViewModels.Windows;
 using CommunityToolkit.Mvvm.Input;
 using LibVLCSharp.Shared;
 using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
+using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -79,7 +80,7 @@ public partial class CodingModeWindow : Window
         _vm = new CodingSessionViewModel(
             _sessionService,
             _overlayService,
-            new Ai.SelfImproving.CodingFeedbackRecorder());
+            new InfraSelfImproving.CodingFeedbackRecorder());
         _vm.VideoPath = videoPath;
 
         DataContext = _vm;

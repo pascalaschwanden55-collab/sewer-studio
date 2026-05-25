@@ -15,7 +15,6 @@ using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Pipeline;
-using AuswertungPro.Next.UI.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
@@ -368,6 +367,14 @@ public sealed class AiSuggestionContractTests
         Assert.StartsWith(
             "AuswertungPro.Next.Infrastructure",
             typeof(ActiveLearningSelector).Namespace!,
+            StringComparison.Ordinal);
+        Assert.StartsWith(
+            "AuswertungPro.Next.Infrastructure",
+            typeof(CodingFeedbackRecorder).Namespace!,
+            StringComparison.Ordinal);
+        Assert.StartsWith(
+            "AuswertungPro.Next.Infrastructure",
+            typeof(FeedbackIngestionService).Namespace!,
             StringComparison.Ordinal);
     }
 

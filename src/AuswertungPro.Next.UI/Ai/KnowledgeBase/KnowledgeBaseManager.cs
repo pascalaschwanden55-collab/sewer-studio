@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Services.CodeCatalog;
@@ -18,7 +19,7 @@ namespace AuswertungPro.Next.UI.Ai.KnowledgeBase;
 /// </summary>
 public sealed class KnowledgeBaseManager(
     KnowledgeBaseContext db,
-    EmbeddingService embedder)
+    EmbeddingService embedder) : ITrainingSampleIndexer
 {
     // ── Öffentliche API ───────────────────────────────────────────────────
 

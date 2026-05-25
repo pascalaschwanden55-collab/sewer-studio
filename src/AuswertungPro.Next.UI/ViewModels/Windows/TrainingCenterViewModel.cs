@@ -1769,7 +1769,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// <summary>Approve a review item (accept the suggested code).</summary>
     public async Task ApproveReviewItemAsync(
         InfraSelfImproving.ReviewQueueItem item,
-        Ai.SelfImproving.FeedbackIngestionService feedback,
+        InfraSelfImproving.FeedbackIngestionService feedback,
         InfraSelfImproving.ReviewQueueService queueService,
         CancellationToken ct = default)
     {
@@ -1796,7 +1796,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     public async Task RejectReviewItemAsync(
         InfraSelfImproving.ReviewQueueItem item,
         string correctedCode,
-        Ai.SelfImproving.FeedbackIngestionService feedback,
+        InfraSelfImproving.FeedbackIngestionService feedback,
         InfraSelfImproving.ReviewQueueService queueService,
         CancellationToken ct = default)
     {

@@ -201,7 +201,7 @@ public partial class TrainingCenterWindow : Window
     // ── Review Queue Event Handlers ──
 
     /// <summary>Erzeugt FeedbackIngestionService mit optionalem KbManager fuer KB-Re-Indexierung.</summary>
-    private static Ai.SelfImproving.FeedbackIngestionService CreateFeedbackService(
+    private static InfraSelfImproving.FeedbackIngestionService CreateFeedbackService(
         InfraKnowledgeBase.KnowledgeBaseContext db)
     {
         var logger = new AuswertungPro.Next.Infrastructure.Ai.QualityGate.ValidationLogger(db.Connection);
@@ -220,7 +220,7 @@ public partial class TrainingCenterWindow : Window
         }
         catch { /* Ollama nicht verfuegbar — Feedback wird geloggt, KB-Update uebersprungen */ }
 
-        return new Ai.SelfImproving.FeedbackIngestionService(logger, weights, kbManager);
+        return new InfraSelfImproving.FeedbackIngestionService(logger, weights, kbManager);
     }
 
     private async void ReviewApprove_Click(object sender, RoutedEventArgs e)
