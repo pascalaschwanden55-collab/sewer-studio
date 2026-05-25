@@ -16,6 +16,7 @@ using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.UI.Services;
@@ -75,7 +76,8 @@ public partial class CodingModeWindow : Window
         InitializeComponent();
 
         _haltung = haltung;
-        _sessionService = new CodingSessionService();
+        _sessionService = new CodingSessionService(
+            () => new AppSettingsAiSettingsProvider().Load().ToOllamaConfig());
         _overlayService = new OverlayToolService();
         _vm = new CodingSessionViewModel(
             _sessionService,

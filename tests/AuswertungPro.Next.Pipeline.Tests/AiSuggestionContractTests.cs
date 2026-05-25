@@ -72,6 +72,16 @@ public sealed class AiSuggestionContractTests
     }
 
     [Fact]
+    public void CodingSessionService_LivesInInfrastructureLayer()
+    {
+        Assert.StartsWith(
+            "AuswertungPro.Next.Application",
+            typeof(ICodingSessionService).Namespace!,
+            StringComparison.Ordinal);
+        AssertSimpleTypeNamespace("CodingSessionService", "AuswertungPro.Next.Infrastructure");
+    }
+
+    [Fact]
     public void PipelineConfig_LivesInApplicationLayer()
     {
         Assert.StartsWith(

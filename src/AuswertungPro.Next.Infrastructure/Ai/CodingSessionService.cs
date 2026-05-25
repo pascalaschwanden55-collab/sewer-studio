@@ -8,19 +8,22 @@ using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
-using AuswertungPro.Next.UI.Ai.Training;
-using AuswertungPro.Next.UI.Helpers;
-using AuswertungPro.Next.UI.Services;
 using InfraKnowledgeBase = AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Infrastructure.Ai;
 
 /// <summary>
 /// Steuert den Codier-Durchlauf einer Haltung von 0.00m bis Haltungsende.
 /// </summary>
 public sealed class CodingSessionService : ICodingSessionService
 {
+    private readonly Func<OllamaConfig?> _ollamaConfigProvider;
     private CodingSession? _session;
+
+    public CodingSessionService(Func<OllamaConfig?>? ollamaConfigProvider = null)
+    {
+        _ollamaConfigProvider = ollamaConfigProvider ?? (() => null);
+    }
 
     // --- Session-Lifecycle ---
 
@@ -156,7 +159,7 @@ public sealed class CodingSessionService : ICodingSessionService
     /// und speichert sie via TrainingSamplesStore.
     /// Schliesst den Feedback-Loop: KI-Vorschlag → User-Entscheidung → Trainingsdaten.
     /// </summary>
-    private static void PersistTrainingSamplesFromEvents(CodingSession session)
+    private void PersistTrainingSamplesFromEvents(CodingSession session)
     {
         try
         {
@@ -182,7 +185,7 @@ public sealed class CodingSessionService : ICodingSessionService
                     .GetAwaiter().GetResult();
 
                 // KB-Indexierung weiterhin fire-and-forget (optional, nicht kritisch)
-                IndexApprovedSamplesToKbAsync(samples).SafeFireAndForget("KbIndex");
+                _ = IndexApprovedSamplesToKbAsync(samples);
             }
         }
         catch (Exception ex)
@@ -197,16 +200,16 @@ public sealed class CodingSessionService : ICodingSessionService
     /// Indexiert Approved-Samples in die KB (Embedding + SQLite).
     /// Nur wenn Ollama verfuegbar — stilles Fehlschlagen bei Offline.
     /// </summary>
-    private static async Task IndexApprovedSamplesToKbAsync(List<TrainingSample> samples)
+    private async Task IndexApprovedSamplesToKbAsync(List<TrainingSample> samples)
     {
         try
         {
             var approved = samples.Where(s => s.Status == TrainingSampleStatus.Approved).ToList();
             if (approved.Count == 0) return;
 
-            var cfg = new AppSettingsAiSettingsProvider()
-                .Load()
-                .ToOllamaConfig();
+            var cfg = _ollamaConfigProvider();
+            if (cfg is null) return;
+
             var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
             var embedder = new InfraKnowledgeBase.EmbeddingService(http, cfg);
 

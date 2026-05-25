@@ -19,6 +19,7 @@ using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 using LibVLCSharp.Shared;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.QualityGate;
@@ -1967,6 +1968,12 @@ public partial class PlayerWindow : Window
     /// <summary>
     /// Stellt sicher dass OverlayService + ViewModel bereitstehen (auch ausserhalb Codier-Modus).
     /// </summary>
+    private static ICodingSessionService CreateCodingSessionService()
+    {
+        return new CodingSessionService(
+            () => new AppSettingsAiSettingsProvider().Load().ToOllamaConfig());
+    }
+
     private void EnsureMarkOverlayReady()
     {
         if (_codingOverlayService != null && _codingVm != null) return;
@@ -1975,7 +1982,7 @@ public partial class PlayerWindow : Window
         _codingOverlayService ??= new OverlayToolService();
         if (_codingVm == null)
         {
-            _codingSessionService ??= new Ai.CodingSessionService();
+            _codingSessionService ??= CreateCodingSessionService();
             _codingVm = new ViewModels.Windows.CodingSessionViewModel(
                 _codingSessionService,
                 _codingOverlayService,
@@ -2651,7 +2658,7 @@ public partial class PlayerWindow : Window
         LiveDetectionStatusText.Visibility = Visibility.Collapsed;
 
         // Session-Services erstellen
-        _codingSessionService = new CodingSessionService();
+        _codingSessionService = CreateCodingSessionService();
         _codingOverlayService = new OverlayToolService();
         _codingSchemaManager.Cancel();
         _codingSchemaType = null;
