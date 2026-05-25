@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.Infrastructure.Ai;
 
@@ -41,7 +41,7 @@ public sealed class OllamaVisionFindingsService
             "Wenn nichts erkennbar: findings=[], severity=\"low\".";
 
         var raw = await _client.GenerateAsync(_model, prompt, new[] { framePngBase64 }, ct).ConfigureAwait(false);
-        var json = TryExtractFirstJsonObject(raw) ?? "{}";
+        var json = JsonObjectExtractor.TryExtractFirstObject(raw) ?? "{}";
 
         try
         {
@@ -74,10 +74,4 @@ public sealed class OllamaVisionFindingsService
         }
     }
 
-    private static string? TryExtractFirstJsonObject(string raw)
-    {
-        var rx = new Regex(@"{[\s\S]*?}");
-        var m = rx.Match(raw);
-        return m.Success ? m.Value : null;
-    }
 }
