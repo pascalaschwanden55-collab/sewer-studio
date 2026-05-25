@@ -8,6 +8,15 @@ using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels;
 
+public static class ShellNavigationPolicy
+{
+    public static bool RequiresProject(string? title)
+        => !CanOpenWithoutProject(title);
+
+    public static bool CanOpenWithoutProject(string? title)
+        => title is "Uebersicht" or "Projekt" or "Export" or "Einstellungen";
+}
+
 public sealed partial class ShellViewModel : ObservableObject
 {
     private readonly ServiceProvider _sp = (ServiceProvider)App.Services;
@@ -415,6 +424,10 @@ public sealed partial class ShellViewModel : ObservableObject
         window.ShowDialog();
     }
 
-    public sealed record NavItem(string Icon, string Title, Func<object> CreatePage);
+    public sealed record NavItem(string Icon, string Title, Func<object> CreatePage)
+    {
+        public bool RequiresProject => ShellNavigationPolicy.RequiresProject(Title);
+    }
+
     private sealed record GuideStep(string Title, string Message, string? NavTitle = null, bool RequiresProject = false);
 }
