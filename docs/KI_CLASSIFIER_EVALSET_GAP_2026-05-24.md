@@ -257,6 +257,103 @@ Das Modell ist noch zu schwach. Hauptproblem: die Klasse `leer` fehlt im Trainin
 Auf dem Eval-Set werden viele Leerbilder als `wasserstand`, `oberflaeche` oder
 andere Schadensklassen erkannt.
 
+### Nachtrag 2026-05-25: Router mit echten `leer`-Bildern
+
+Es wurden 888 echte `kein_schaden`-Bilder aus
+`C:\KI_BRAIN\training_frames` gefunden. Diese Bilder sind als Quelle fuer `leer`
+besser geeignet als `manual_decision=nein` aus den Review-CSV-Dateien.
+Grund: `nein` bedeutet dort nicht automatisch "kein Schaden sichtbar".
+
+Neuer Router-Datensatz:
+
+```text
+D:\sewer_router_dataset_candidate_with_leer
+```
+
+Quelle:
+
+- `D:\sewer_pdf_manual_classification_round1_round2_fixedval_round3train_plus_teacher`
+- `C:\Users\Besitzer\Downloads\router_missing_candidates.txt`
+- `C:\Sewer-Studio_KI_4.3\.tmp\router_leer_candidates.txt`
+
+Groesse:
+
+| Split | Bilder |
+|---|---:|
+| train | 5'144 |
+| val | 1'994 |
+| total | 7'138 |
+
+Wichtige Klassen:
+
+| Klasse | Train | Val |
+|---|---:|---:|
+| `beginn_ende` | 800 | 800 |
+| `wasserstand` | 800 | 588 |
+| `leer` | 707 | 151 |
+| `ablagerung` | 769 | 131 |
+| `riss_bruch` | 681 | 98 |
+
+Trainingslaeufe:
+
+| Modell | Dataset-Val Top-1 | Eval-Set Router-Accuracy | Bewertung |
+|---|---:|---:|---|
+| `router7138_12classes_v8n_320_dropout02` | 49.7 % | 53 / 120 = 44.2 % | besser, aber nicht aktivieren |
+| `router7138_12classes_v8s_320_dropout02` | 50.4 % | 51 / 120 = 42.5 % | schlechter als v8n |
+
+`leer` wurde dadurch deutlich besser:
+
+| Modell | `leer` korrekt im Eval-Set |
+|---|---:|
+| Router ohne `leer` | nicht sinnvoll messbar |
+| `router7138_12classes_v8n_320_dropout02` | 22 / 30 = 73.3 % |
+| `router7138_12classes_v8s_320_dropout02` | 22 / 30 = 73.3 % |
+
+Aber: Viele echte Befund-Bilder werden weiterhin als `leer` erkannt.
+Beim v8n-Router waren die groessten Fehler:
+
+```text
+wasserstand -> leer        14
+beginn_ende -> leer         6
+anschluss -> leer           5
+dichtung -> leer            5
+```
+
+Zusaetzlich wurde ein einfacher `leer`-gegen-`befund`-Waechter getestet:
+
+```text
+D:\sewer_router_binary_empty_guard
+D:\sewer_cls_runs\empty_guard1414_v8n_320_dropout02
+```
+
+Ergebnis auf dem Eval-Set:
+
+| Klasse | Treffer |
+|---|---:|
+| `leer` | 28 / 30 = 93.3 % |
+| `befund` | 42 / 90 = 46.7 % |
+| Gesamt | 70 / 120 = 58.3 % |
+
+Bewertung: **nicht aktivieren**. Der Waechter erkennt zwar Leerbilder gut,
+uebersieht aber zu viele echte Befunde.
+
+Stichproben der Fehler zeigen ein zweites Problem:
+Einige Eval-Bilder sind zwar als Befund beschriftet, zeigen visuell aber kaum
+erkennbaren Schaden. Beispiel: mehrere Bilder aus `81030-80945` sehen fuer einen
+Bildklassifikator wie normale Rohrbilder aus, obwohl der Dateiname einen Code
+enthaelt. Das ist kein Softwarefehler, sondern eine Datenfrage.
+
+Konkrete Schlussfolgerung:
+
+1. Der Router ist mit echten `leer`-Bildern messbar besser.
+2. Er ist aber noch nicht robust genug fuer die App.
+3. Der naechste Datenblock muss visuell gepruefte Befundbilder enthalten.
+4. Das Eval-Set sollte in zwei Gruppen getrennt werden:
+   - `sichtbar`: Schaden im Bild wirklich sichtbar
+   - `protokolliert`: Code steht im Protokoll, Schaden im Einzelbild eventuell kaum sichtbar
+
+Erst danach ist eine faire Modellentscheidung moeglich.
+
 ### Schritt 4: Benchmark-Ziel klar trennen
 
 Es braucht zwei verschiedene Messungen:
