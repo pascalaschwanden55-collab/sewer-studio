@@ -31,6 +31,7 @@ try
     Console.WriteLine($"  Fehlend/kaputt raus: {result.SkippedMissingOrCorrupt}");
     Console.WriteLine($"  Ungueltiger Code:    {result.SkippedInvalidCode}");
     Console.WriteLine($"  Ohne echte Box raus: {result.SkippedWithoutBoundingBox}");
+    Console.WriteLine($"  Doppelte Bilder raus:{result.SkippedDuplicateImage}");
     Console.WriteLine($"  Final:               {result.FinalSamples}");
     Console.WriteLine($"  Train:               {result.TrainSamples}");
     Console.WriteLine($"  Val:                 {result.ValidationSamples}");

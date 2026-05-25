@@ -24,6 +24,7 @@ public sealed record StageAExportResult(
     int SkippedMissingOrCorrupt,
     int SkippedInvalidCode,
     int SkippedWithoutBoundingBox,
+    int SkippedDuplicateImage,
     int FinalSamples,
     int TrainSamples,
     int ValidationSamples,
@@ -80,9 +81,11 @@ public sealed class StageAExporter
             .OrderBy(a => a.Index)
             .ToList();
 
-        var accepted = analyses
+        var acceptedRaw = analyses
             .Where(a => a.Decision == StageASampleDecision.Accepted)
             .ToList();
+        var accepted = RemoveDuplicateImages(acceptedRaw);
+        var skippedDuplicateImage = acceptedRaw.Count - accepted.Count;
 
         var classNames = accepted
             .Select(a => a.ClassName!)
@@ -135,6 +138,7 @@ public sealed class StageAExporter
                     analyses,
                     splitItems,
                     classCounts,
+                    skippedDuplicateImage,
                     evalHashes.Count,
                     evalHashListSha256,
                     cleanSamplesPath,
@@ -152,6 +156,7 @@ public sealed class StageAExporter
             SkippedMissingOrCorrupt: analyses.Count(a => a.Decision == StageASampleDecision.MissingOrCorrupt),
             SkippedInvalidCode: analyses.Count(a => a.Decision == StageASampleDecision.InvalidCode),
             SkippedWithoutBoundingBox: analyses.Count(a => a.Decision == StageASampleDecision.WithoutBoundingBox),
+            SkippedDuplicateImage: skippedDuplicateImage,
             FinalSamples: splitItems.Count,
             TrainSamples: splitItems.Count(s => s.Split == "train"),
             ValidationSamples: splitItems.Count(s => s.Split == "val"),
@@ -247,6 +252,26 @@ public sealed class StageAExporter
             .ThenBy(c => c.ClassName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+    private static IReadOnlyList<StageASampleAnalysis> RemoveDuplicateImages(
+        IReadOnlyList<StageASampleAnalysis> accepted)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var unique = new List<StageASampleAnalysis>(accepted.Count);
+
+        foreach (var item in accepted)
+        {
+            if (string.IsNullOrWhiteSpace(item.Sha256))
+                continue;
+
+            if (!seen.Add(item.Sha256))
+                continue;
+
+            unique.Add(item);
+        }
+
+        return unique;
+    }
+
     private static async Task<StageAFileExportResult> ExportFilesAsync(
         IReadOnlyList<StageASplitSample> splitItems,
         IReadOnlyList<string> classNames,
@@ -320,6 +345,7 @@ public sealed class StageAExporter
         IReadOnlyList<StageASampleAnalysis> analyses,
         IReadOnlyList<StageASplitSample> splitItems,
         IReadOnlyList<StageAExportClassCount> classCounts,
+        int skippedDuplicateImage,
         int evalHashesCount,
         string evalHashListSha256,
         string cleanSamplesPath,
@@ -343,6 +369,7 @@ public sealed class StageAExporter
             skipped_missing_or_corrupt = analyses.Count(a => a.Decision == StageASampleDecision.MissingOrCorrupt),
             skipped_invalid_code = analyses.Count(a => a.Decision == StageASampleDecision.InvalidCode),
             skipped_without_bounding_box = analyses.Count(a => a.Decision == StageASampleDecision.WithoutBoundingBox),
+            skipped_duplicate_image = skippedDuplicateImage,
             final_samples = splitItems.Count,
             train_samples = splitItems.Count(s => s.Split == "train"),
             val_samples = splitItems.Count(s => s.Split == "val"),

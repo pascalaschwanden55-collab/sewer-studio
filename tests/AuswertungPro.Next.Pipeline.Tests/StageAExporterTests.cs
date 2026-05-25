@@ -124,6 +124,28 @@ public sealed class StageAExporterTests : IDisposable
         Assert.False(Directory.Exists(output));
     }
 
+    [Fact]
+    public async Task DryRun_entfernt_doppelte_Bilder_per_Hash()
+    {
+        var source = PrepareSourceWithDuplicateImages();
+        var output = Path.Combine(_root, "dedupe-out");
+
+        var result = await new StageAExporter().ExportAsync(new StageAExportOptions(
+            SourceSamplesPath: source.SamplesPath,
+            EvalSetRoot: source.EvalRoot,
+            OutputRoot: output,
+            DryRun: true,
+            ValidationRatio: 0,
+            DegreeOfParallelism: 2,
+            RequireBoundingBox: true));
+
+        Assert.Equal(3, result.InputSamples);
+        Assert.Equal(2, result.SkippedDuplicateImage);
+        Assert.Equal(1, result.FinalSamples);
+        Assert.Equal("BDD", Assert.Single(result.Classes).ClassName);
+        Assert.False(Directory.Exists(output));
+    }
+
     private (string SamplesPath, string EvalRoot) PrepareSourceWithEvalOverlap()
     {
         Directory.CreateDirectory(_root);
@@ -203,6 +225,55 @@ public sealed class StageAExporterTests : IDisposable
         File.WriteAllText(samplesPath, JsonSerializer.Serialize(samples, StageAExporter.JsonOptions));
         return (samplesPath, evalRoot);
     }
+
+    private (string SamplesPath, string EvalRoot) PrepareSourceWithDuplicateImages()
+    {
+        Directory.CreateDirectory(_root);
+        var frameRoot = Path.Combine(_root, "dedupe-frames");
+        Directory.CreateDirectory(frameRoot);
+
+        var imageA = Path.Combine(frameRoot, "a.png");
+        var imageB = Path.Combine(frameRoot, "b.png");
+        var imageC = Path.Combine(frameRoot, "c.png");
+        File.WriteAllBytes(imageA, [7, 7, 7, 7]);
+        File.WriteAllBytes(imageB, [7, 7, 7, 7]);
+        File.WriteAllBytes(imageC, [7, 7, 7, 7]);
+
+        var evalRoot = Path.Combine(_root, "dedupe-eval");
+        Directory.CreateDirectory(Path.Combine(evalRoot, "images"));
+        File.WriteAllText(
+            Path.Combine(evalRoot, "_manifest.json"),
+            new JsonObject
+            {
+                ["frozen"] = true,
+                ["hash_algorithm"] = "sha256",
+                ["hashes"] = new JsonObject()
+            }.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+
+        var samples = new[]
+        {
+            MakeBddSample("first", imageA),
+            MakeBddSample("duplicate-1", imageB),
+            MakeBddSample("duplicate-2", imageC),
+        };
+
+        var samplesPath = Path.Combine(_root, "dedupe_training_samples.json");
+        File.WriteAllText(samplesPath, JsonSerializer.Serialize(samples, StageAExporter.JsonOptions));
+        return (samplesPath, evalRoot);
+    }
+
+    private static TrainingSample MakeBddSample(string sampleId, string framePath)
+        => new()
+        {
+            SampleId = sampleId,
+            Code = "BDDC",
+            FramePath = framePath,
+            Status = TrainingSampleStatus.Approved,
+            BboxXCenter = 0.5,
+            BboxYCenter = 0.5,
+            BboxWidth = 0.2,
+            BboxHeight = 0.3,
+        };
 
     private static void WriteEvalManifest(string evalRoot, string evalImage)
     {
