@@ -658,14 +658,14 @@
                                 </Setter.Value>
                             </Setter>
                             <Style.Triggers>
-                                <MultiDataTrigger>
-                                    <MultiDataTrigger.Conditions>
-                                        <Condition Binding="{Binding DataContext.IsProjectReady, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="False"/>
-                                        <Condition Binding="{Binding RequiresProject}" Value="True"/>
-                                    </MultiDataTrigger.Conditions>
+                                <DataTrigger Binding="{Binding DataContext.IsProjectReady, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="False">
                                     <Setter Property="IsEnabled" Value="False"/>
                                     <Setter Property="Opacity" Value="0.5"/>
-                                </MultiDataTrigger>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding CanOpenWithoutProject}" Value="True">
+                                    <Setter Property="IsEnabled" Value="True"/>
+                                    <Setter Property="Opacity" Value="1"/>
+                                </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </ListBox.ItemContainerStyle>
@@ -694,13 +694,12 @@
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                                 <Style.Triggers>
-                                    <MultiDataTrigger>
-                                        <MultiDataTrigger.Conditions>
-                                            <Condition Binding="{Binding IsProjectReady}" Value="False"/>
-                                            <Condition Binding="{Binding SelectedNavItem.RequiresProject}" Value="True"/>
-                                        </MultiDataTrigger.Conditions>
+                                    <DataTrigger Binding="{Binding IsProjectReady}" Value="False">
                                         <Setter Property="Visibility" Value="Visible"/>
-                                    </MultiDataTrigger>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding SelectedNavItem.CanOpenWithoutProject}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Border.Style>

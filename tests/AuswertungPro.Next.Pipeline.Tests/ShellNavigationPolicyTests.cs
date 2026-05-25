@@ -11,7 +11,12 @@ public sealed class ShellNavigationPolicyTests
     [InlineData("Einstellungen")]
     public void CorePagesStayAvailableWithoutProject(string title)
     {
+        var item = new ShellViewModel.NavItem("", title, () => new object());
+
+        Assert.True(ShellNavigationPolicy.CanOpenWithoutProject(title));
         Assert.False(ShellNavigationPolicy.RequiresProject(title));
+        Assert.True(item.CanOpenWithoutProject);
+        Assert.False(item.RequiresProject);
     }
 
     [Theory]
@@ -21,6 +26,11 @@ public sealed class ShellNavigationPolicyTests
     [InlineData("VSA")]
     public void DataPagesStillRequireProject(string title)
     {
+        var item = new ShellViewModel.NavItem("", title, () => new object());
+
+        Assert.False(ShellNavigationPolicy.CanOpenWithoutProject(title));
         Assert.True(ShellNavigationPolicy.RequiresProject(title));
+        Assert.False(item.CanOpenWithoutProject);
+        Assert.True(item.RequiresProject);
     }
 }

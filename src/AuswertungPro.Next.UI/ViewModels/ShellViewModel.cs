@@ -426,6 +426,8 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public sealed record NavItem(string Icon, string Title, Func<object> CreatePage)
     {
+        public bool CanOpenWithoutProject => ShellNavigationPolicy.CanOpenWithoutProject(Title);
+
         public bool RequiresProject => ShellNavigationPolicy.RequiresProject(Title);
     }
 
