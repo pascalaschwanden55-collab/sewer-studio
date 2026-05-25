@@ -474,6 +474,8 @@ public sealed class StageAExporter
     private static double Clamp01(double value)
         => Math.Min(1, Math.Max(0, value));
 
+    // Voller VSA-Code (z. B. BABAC) bleibt erhalten — Char1/Char2 nicht verwerfen.
+    // Fuer Grobklassen-Training spaeter optionalen ClassGranularity-Schalter ergaenzen.
     private static string NormalizeClassName(string code)
     {
         if (string.IsNullOrWhiteSpace(code))
@@ -484,9 +486,7 @@ public sealed class StageAExporter
         if (dotIdx > 0)
             trimmed = trimmed[..dotIdx];
 
-        return trimmed.Length >= 3
-            ? trimmed[..3].ToUpperInvariant()
-            : trimmed.ToUpperInvariant();
+        return trimmed.ToUpperInvariant();
     }
 
     private static string SanitizeFileName(string value)

@@ -93,7 +93,7 @@ public sealed class StageAExporterTests : IDisposable
 
         var dataYaml = await File.ReadAllTextAsync(result.DataYamlPath!);
         Assert.Contains("nc: 1", dataYaml);
-        Assert.Contains("'BAB'", dataYaml);
+        Assert.Contains("'BABAC'", dataYaml);
 
         var manifest = JsonNode.Parse(await File.ReadAllTextAsync(result.ManifestPath!))!.AsObject();
         Assert.Equal(5, manifest["input_samples"]!.GetValue<int>());
@@ -120,7 +120,7 @@ public sealed class StageAExporterTests : IDisposable
         Assert.Equal(2, result.InputSamples);
         Assert.Equal(1, result.SkippedWithoutBoundingBox);
         Assert.Equal(1, result.FinalSamples);
-        Assert.Equal("BAB", Assert.Single(result.Classes).ClassName);
+        Assert.Equal("BABAC", Assert.Single(result.Classes).ClassName);
         Assert.False(Directory.Exists(output));
     }
 
@@ -142,7 +142,7 @@ public sealed class StageAExporterTests : IDisposable
         Assert.Equal(3, result.InputSamples);
         Assert.Equal(2, result.SkippedDuplicateImage);
         Assert.Equal(1, result.FinalSamples);
-        Assert.Equal("BDD", Assert.Single(result.Classes).ClassName);
+        Assert.Equal("BDDC", Assert.Single(result.Classes).ClassName);
         Assert.False(Directory.Exists(output));
     }
 
