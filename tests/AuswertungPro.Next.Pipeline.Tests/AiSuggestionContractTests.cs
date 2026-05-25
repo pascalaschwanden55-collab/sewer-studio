@@ -353,6 +353,7 @@ public sealed class AiSuggestionContractTests
             typeof(MultiModelAnalysisService).Namespace!,
             StringComparison.Ordinal);
         AssertSimpleTypeNamespace("LiveDetectionMapper", "AuswertungPro.Next.Infrastructure");
+        AssertSimpleTypeNamespace("FullProtocolGenerationService", "AuswertungPro.Next.Infrastructure");
     }
 
     [Fact]

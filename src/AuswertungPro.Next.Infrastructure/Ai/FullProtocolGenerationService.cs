@@ -12,9 +12,8 @@ using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
-using AuswertungPro.Next.UI.Services;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Infrastructure.Ai;
 
 /// <summary>
 /// Workflow: Detections -> vollstÃ¤ndiges ProtocolDocument
@@ -58,9 +57,14 @@ public sealed class FullProtocolGenerationService : IDisposable
         {
             try
             {
-                var ollamaConfig = new AppSettingsAiSettingsProvider()
-                    .Load()
-                    .ToOllamaConfig();
+                var ollamaConfig = new OllamaConfig(
+                    cfg.OllamaBaseUri,
+                    cfg.VisionModel,
+                    cfg.TextModel,
+                    cfg.EmbedModel ?? OllamaConfig.DefaultEmbedModel,
+                    cfg.OllamaRequestTimeout,
+                    cfg.OllamaKeepAlive,
+                    cfg.OllamaNumCtx);
                 _ownedKbContext = new KnowledgeBaseContext();
                 var embedder = new EmbeddingService(httpClient, ollamaConfig);
                 _retrieval = new RetrievalService(_ownedKbContext, embedder);
