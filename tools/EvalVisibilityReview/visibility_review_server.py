@@ -258,10 +258,12 @@ img { max-width: 100%; max-height: calc(100vh - 180px); object-fit: contain; bac
 .muted { color: #9aa4b2; font-size: 13px; word-break: break-all; }
 button { border: 1px solid #3b4655; background: #242b35; color: #f1f5f9; border-radius: 6px; padding: 12px 18px; font-size: 16px; cursor: pointer; }
 button:hover { background: #303947; }
+button:disabled { opacity: .55; cursor: wait; }
 .yes { background: #166534; border-color: #22c55e; }
 .no { background: #7f1d1d; border-color: #ef4444; }
 .maybe { background: #7c5a12; border-color: #f59e0b; }
 .nav { font-size: 14px; padding: 8px 12px; }
+.small { font-size: 13px; padding: 8px 10px; }
 textarea { width: 100%; box-sizing: border-box; min-height: 80px; background: #0b0f14; color: #f1f5f9; border: 1px solid #3b4655; border-radius: 6px; padding: 8px; resize: vertical; }
 .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; border: 1px solid #3b4655; background: #202733; }
 @media (max-width: 900px) { main { grid-template-columns: 1fr; } .side { border-left: 0; border-top: 1px solid #2e3440; } }
@@ -297,18 +299,25 @@ textarea { width: 100%; box-sizing: border-box; min-height: 80px; background: #0
   <button class="no" onclick="labelCurrent('nein')">2 Nein</button>
   <button class="maybe" onclick="labelCurrent('unsicher')">3 Unsicher</button>
   <button class="nav" onclick="nextImage()">Weiter</button>
+  <button class="nav small" onclick="labelCurrent('unsicher')">Haengt? Unsicher + weiter</button>
 </footer>
 <script>
 let items = [];
 let index = 0;
+let busy = false;
+let imageTimer = null;
 
 async function loadState() {
-  const res = await fetch('/api/state');
-  const state = await res.json();
-  items = state.items || [];
-  const firstOpen = items.findIndex(x => !x.visibility_label);
-  index = firstOpen >= 0 ? firstOpen : 0;
-  render(state);
+  try {
+    const res = await fetch('/api/state');
+    const state = await res.json();
+    items = state.items || [];
+    const firstOpen = items.findIndex(x => !x.visibility_label);
+    index = firstOpen >= 0 ? firstOpen : 0;
+    render(state);
+  } catch (err) {
+    document.getElementById('status').textContent = 'Server nicht erreichbar. Seite neu laden.';
+  }
 }
 
 function render(state) {
@@ -317,7 +326,24 @@ function render(state) {
     return;
   }
   const item = items[index];
-  document.getElementById('photo').src = item.image_url;
+  const photo = document.getElementById('photo');
+  photo.onload = () => {
+    if (imageTimer) clearTimeout(imageTimer);
+    const done = items.filter(x => x.visibility_label).length;
+    document.getElementById('status').textContent =
+      `Bild ${index + 1} / ${items.length} | bewertet: ${done} | offen: ${items.length - done}`;
+  };
+  photo.onerror = () => {
+    if (imageTimer) clearTimeout(imageTimer);
+    document.getElementById('status').textContent =
+      `Bild kann nicht geladen werden: ${item.image_name}. Druecke 3 fuer Unsicher.`;
+  };
+  if (imageTimer) clearTimeout(imageTimer);
+  imageTimer = setTimeout(() => {
+    document.getElementById('status').textContent =
+      `Bild laedt langsam: ${item.image_name}. Wenn es haengt, druecke 3.`;
+  }, 5000);
+  photo.src = item.image_url;
   document.getElementById('code').textContent = item.expected_code || '-';
   document.getElementById('klass').textContent = item.router_class || '-';
   document.getElementById('name').textContent = item.image_name || '-';
@@ -327,27 +353,38 @@ function render(state) {
     : 'Noch nicht bewertet';
   const done = items.filter(x => x.visibility_label).length;
   document.getElementById('status').textContent =
-    `Bild ${index + 1} / ${items.length} | bewertet: ${done} | offen: ${items.length - done}`;
+    `Lade Bild ${index + 1} / ${items.length} | bewertet: ${done} | offen: ${items.length - done}`;
 }
 
 async function labelCurrent(label) {
+  if (busy) return;
+  busy = true;
+  setButtonsDisabled(true);
   const item = items[index];
   const comment = document.getElementById('comment').value || '';
-  const res = await fetch('/api/label', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({image_name: item.image_name, visibility_label: label, comment})
-  });
-  const state = await res.json();
-  if (state.error) {
-    alert(state.error);
-    return;
+  document.getElementById('status').textContent = 'Speichere Bewertung...';
+  try {
+    const res = await fetch('/api/label', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({image_name: item.image_name, visibility_label: label, comment})
+    });
+    const state = await res.json();
+    if (state.error) {
+      alert(state.error);
+      return;
+    }
+    items = state.items || items;
+    const nextOpen = items.findIndex((x, i) => i > index && !x.visibility_label);
+    if (nextOpen >= 0) index = nextOpen;
+    else if (index < items.length - 1) index++;
+    render(state);
+  } catch (err) {
+    document.getElementById('status').textContent = 'Speichern fehlgeschlagen. Bitte F5 druecken.';
+  } finally {
+    busy = false;
+    setButtonsDisabled(false);
   }
-  items = state.items || items;
-  const nextOpen = items.findIndex((x, i) => i > index && !x.visibility_label);
-  if (nextOpen >= 0) index = nextOpen;
-  else if (index < items.length - 1) index++;
-  render(state);
 }
 
 function nextImage() {
@@ -362,12 +399,17 @@ function previousImage() {
 
 document.addEventListener('keydown', e => {
   if (e.target && e.target.tagName === 'TEXTAREA') return;
+  if (busy) return;
   if (e.key === '1' || e.key.toLowerCase() === 'j') labelCurrent('ja');
   if (e.key === '2' || e.key.toLowerCase() === 'n') labelCurrent('nein');
   if (e.key === '3' || e.key.toLowerCase() === 'u') labelCurrent('unsicher');
   if (e.key === 'ArrowRight') nextImage();
   if (e.key === 'ArrowLeft') previousImage();
 });
+
+function setButtonsDisabled(disabled) {
+  document.querySelectorAll('button').forEach(btn => btn.disabled = disabled);
+}
 
 loadState();
 </script>
