@@ -35,6 +35,9 @@ sidecar/.venv/
 sidecar/__pycache__/
 sidecar/**/__pycache__/
 sidecar/**/*.pyc
+__pycache__/
+**/__pycache__/
+*.pyc
 sidecar/models/**/*.pt
 sidecar/models/**/*.pth
 sidecar/models/**/*.bin
