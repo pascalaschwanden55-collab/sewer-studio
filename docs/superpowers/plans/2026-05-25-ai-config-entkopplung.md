@@ -31,18 +31,23 @@ Nach dieser Migration gilt:
 
 - Create: `src/AuswertungPro.Next.Application/Ai/AiSettings.cs`
 - Create: `src/AuswertungPro.Next.Infrastructure/Ai/Configuration/AiSettingsFactory.cs`
+- Create: `src/AuswertungPro.Next.Infrastructure/Ai/Ollama/AiSettingsOllamaExtensions.cs`
 - Create: `src/AuswertungPro.Next.UI/Services/AppSettingsAiSettingsProvider.cs`
 - Modify: `src/AuswertungPro.Next.UI/ServiceProvider.cs`
+- Modify: `src/AuswertungPro.Next.UI/ViewModels/ShellViewModel.cs`
 - Modify: `src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml.cs`
 - Modify: `src/AuswertungPro.Next.UI/Views/Windows/CodingModeWindow.xaml.cs`
+- Modify: `src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml.cs`
 - Modify: `src/AuswertungPro.Next.UI/ViewModels/Windows/TrainingCenterViewModel.cs`
 - Modify: `src/AuswertungPro.Next.UI/ViewModels/Pages/DataPageViewModel.cs`
+- Modify: `src/AuswertungPro.Next.UI/Ai/CodingSessionService.cs`
 - Modify: `src/AuswertungPro.Next.UI/Ai/VideoAnalysisPipelineService.cs`
 - Modify: `src/AuswertungPro.Next.UI/Ai/FullProtocolGenerationService.cs`
 - Modify: `src/AuswertungPro.Next.UI/Ai/Training/TrainingSampleGenerator.cs`
 - Modify: `src/AuswertungPro.Next.UI/Ai/Training/MeterTimelineService.cs`
 - Modify: `src/AuswertungPro.Next.UI/Ai/Training/SelfTrainingOrchestrator.cs`
 - Modify: `src/AuswertungPro.Next.UI/Ai/Sanierung/AiSanierungOptimizationService.cs`
+- Modify: `tools/EvalSetBenchmark/Program.cs`
 - Delete: `src/AuswertungPro.Next.UI/Ai/AiRuntimeConfig.cs`
 - Delete: `src/AuswertungPro.Next.UI/Ai/AiPlatformConfig.cs`
 - Test: `tests/AuswertungPro.Next.Pipeline.Tests/AiSettingsTests.cs`
@@ -61,6 +66,8 @@ Nach dieser Migration gilt:
 Create `tests/AuswertungPro.Next.Pipeline.Tests/AiSettingsTests.cs`:
 
 ```csharp
+using System;
+using System.Collections.Generic;
 using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
@@ -135,6 +142,9 @@ CS0246: Der Typ- oder Namespacename "AiRuntimeSettings" wurde nicht gefunden
 Create `src/AuswertungPro.Next.Application/Ai/AiSettings.cs`:
 
 ```csharp
+using System;
+using System.Collections.Generic;
+
 namespace AuswertungPro.Next.Application.Ai;
 
 public sealed record AiRuntimeSettings(
@@ -291,8 +301,9 @@ public void AiSettingsFactory_UsesSourceOverEnvironmentAndDefaults()
 [InlineData("ollama", PipelineMode.OllamaOnly)]
 [InlineData("ollamaonly", PipelineMode.OllamaOnly)]
 [InlineData("auto", PipelineMode.Auto)]
-[InlineData("unknown", PipelineMode.Auto)]
-public void AiSettingsFactory_ParsesPipelineMode(string value, PipelineMode expected)
+[InlineData("unknown", PipelineMode.OllamaOnly)]
+[InlineData(null, PipelineMode.OllamaOnly)]
+public void AiSettingsFactory_ParsesPipelineMode(string? value, PipelineMode expected)
 {
     var settings = AiSettingsFactory.Load(new AiSettingsSource(PipelineMode: value));
 
@@ -319,6 +330,8 @@ CS0234: Der Typ- oder Namespacename "Configuration" ist im Namespace "Auswertung
 Create `src/AuswertungPro.Next.Infrastructure/Ai/Configuration/AiSettingsFactory.cs`:
 
 ```csharp
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
@@ -393,11 +406,12 @@ public static class AiSettingsFactory
 
     public static PipelineMode ParsePipelineMode(string? value)
     {
-        return (value ?? "auto").Trim().ToLowerInvariant() switch
+        return (value ?? "ollamaonly").Trim().ToLowerInvariant() switch
         {
             "multimodel" or "multi" => PipelineMode.MultiModel,
             "ollama" or "ollamaonly" => PipelineMode.OllamaOnly,
-            _ => PipelineMode.Auto
+            "auto" => PipelineMode.Auto,
+            _ => PipelineMode.OllamaOnly
         };
     }
 
@@ -442,6 +456,79 @@ public static class AiSettingsFactory
 ```
 
 - [ ] **Step 4: Test gruen laufen lassen**
+
+Run:
+
+```powershell
+dotnet test tests/AuswertungPro.Next.Pipeline.Tests/AuswertungPro.Next.Pipeline.Tests.csproj --filter "FullyQualifiedName~AiSettingsTests" -v minimal --no-restore
+```
+
+Expected:
+
+```text
+Bestanden!
+```
+
+- [ ] **Step 5: OllamaConfig-Extension implementieren**
+
+Create `src/AuswertungPro.Next.Infrastructure/Ai/Ollama/AiSettingsOllamaExtensions.cs`:
+
+```csharp
+using AuswertungPro.Next.Application.Ai;
+
+namespace AuswertungPro.Next.Infrastructure.Ai.Ollama;
+
+public static class AiSettingsOllamaExtensions
+{
+    public static OllamaConfig ToOllamaConfig(this AiPlatformSettings settings) => new(
+        BaseUri: settings.OllamaBaseUri,
+        VisionModel: settings.VisionModel,
+        TextModel: settings.TextModel,
+        EmbedModel: settings.EmbedModel,
+        RequestTimeout: settings.OllamaRequestTimeout,
+        KeepAlive: settings.OllamaKeepAlive,
+        NumCtx: settings.OllamaNumCtx);
+}
+```
+
+Do not add `ToOllamaConfig()` to Application. `OllamaConfig` is Infrastructure.
+
+- [ ] **Step 6: Extension-Test ergaenzen**
+
+Append to `AiSettingsTests`:
+
+```csharp
+[Fact]
+public void AiPlatformSettings_MapsToInfrastructureOllamaConfig()
+{
+    var platform = AiSettingsFactory.Load(new AiSettingsSource(
+        OllamaUrl: "http://127.0.0.1:11434",
+        VisionModel: "vision",
+        TextModel: "text",
+        EmbedModel: "embed",
+        OllamaTimeoutMin: 7,
+        OllamaKeepAlive: "6h",
+        OllamaNumCtx: 4096));
+
+    var ollama = platform.ToOllamaConfig();
+
+    Assert.Equal(new Uri("http://127.0.0.1:11434"), ollama.BaseUri);
+    Assert.Equal("vision", ollama.VisionModel);
+    Assert.Equal("text", ollama.TextModel);
+    Assert.Equal("embed", ollama.EmbedModel);
+    Assert.Equal(TimeSpan.FromMinutes(7), ollama.RequestTimeout);
+    Assert.Equal("6h", ollama.KeepAlive);
+    Assert.Equal(4096, ollama.NumCtx);
+}
+```
+
+Add this using at the top of `AiSettingsTests.cs`:
+
+```csharp
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+```
+
+- [ ] **Step 7: Tests gruen laufen lassen**
 
 Run:
 
@@ -571,7 +658,7 @@ public sealed class AppSettingsAiSettingsProvider : IAiSettingsProvider
 }
 ```
 
-- [ ] **Step 4: ServiceProvider auf Provider umstellen**
+- [ ] **Step 4: ServiceProvider auf vorhandene AppSettings umstellen**
 
 In `src/AuswertungPro.Next.UI/ServiceProvider.cs`, ersetze direkte Config-Ladung:
 
@@ -583,9 +670,17 @@ var cfg = aiPlatform.ToRuntimeConfig();
 durch:
 
 ```csharp
-var aiSettingsProvider = new AppSettingsAiSettingsProvider();
-var aiPlatform = aiSettingsProvider.Load();
+var aiPlatform = AiSettingsFactory.Load(AppSettingsAiSettingsProvider.ToSource(settings));
 var cfg = aiPlatform.ToRuntimeSettings();
+```
+
+Important: `ServiceProvider` already has `settings`. Do not call `AppSettings.Load()` again through the provider here.
+
+Add these usings if missing:
+
+```csharp
+using AuswertungPro.Next.Infrastructure.Ai.Configuration;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 ```
 
 - [ ] **Step 5: Build laufen lassen**
@@ -613,6 +708,13 @@ Expected:
 - Modify: `src/AuswertungPro.Next.UI/Ai/FullProtocolGenerationService.cs`
 - Modify: `src/AuswertungPro.Next.UI/Ai/Sanierung/AiSanierungOptimizationService.cs`
 - Modify: `src/AuswertungPro.Next.UI/Ai/Training/SelfTrainingOrchestrator.cs`
+- Modify: `src/AuswertungPro.Next.UI/Ai/CodingSessionService.cs`
+- Modify: `src/AuswertungPro.Next.UI/ViewModels/ShellViewModel.cs`
+- Modify: `src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml.cs`
+- Modify: `src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml.cs`
+- Modify: `src/AuswertungPro.Next.UI/ViewModels/Windows/TrainingCenterViewModel.cs`
+- Modify: `src/AuswertungPro.Next.UI/ViewModels/Pages/DataPageViewModel.cs`
+- Modify: `tools/EvalSetBenchmark/Program.cs`
 - Modify: affected tests
 
 - [ ] **Step 1: Failing Architekturtest schreiben**
@@ -731,6 +833,30 @@ var pipelineCfg = new AppSettingsAiSettingsProvider()
     .ToPipelineConfig();
 ```
 
+Apply this search and fix every match:
+
+```powershell
+rg "AiRuntimeConfig\.Load|AiPlatformConfig\.Load|ToRuntimeConfig|ToOllamaConfig" src tests tools -g "*.cs"
+```
+
+Known call-sites to check:
+
+```text
+src/AuswertungPro.Next.UI/ViewModels/ShellViewModel.cs
+src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml.cs
+src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml.cs
+src/AuswertungPro.Next.UI/ViewModels/Windows/TrainingCenterViewModel.cs
+src/AuswertungPro.Next.UI/ViewModels/Pages/DataPageViewModel.cs
+src/AuswertungPro.Next.UI/Ai/CodingSessionService.cs
+src/AuswertungPro.Next.UI/Ai/VideoAnalysisPipelineService.cs
+src/AuswertungPro.Next.UI/Ai/FullProtocolGenerationService.cs
+src/AuswertungPro.Next.UI/Ai/Training/SelfTrainingOrchestrator.cs
+tools/EvalSetBenchmark/Program.cs
+tests/AuswertungPro.Next.Pipeline.Tests/AiPlatformConfigTests.cs
+tests/AuswertungPro.Next.Pipeline.Tests/PipelineConfigTests.cs
+tests/AuswertungPro.Next.Pipeline.Tests/TrainingSampleGeneratorCodeMetaTests.cs
+```
+
 - [ ] **Step 6: Tests anpassen**
 
 Replace test setup:
@@ -790,7 +916,68 @@ Bestanden!
 
 ---
 
-### Task 5: AiPlatformConfig entfernen
+### Task 5: AiRuntimeConfig entfernen
+
+**Files:**
+- Delete: `src/AuswertungPro.Next.UI/Ai/AiRuntimeConfig.cs`
+- Modify: all remaining call-sites from Task 4 if any are still present
+- Test: `tests/AuswertungPro.Next.Pipeline.Tests/AiSuggestionContractTests.cs`
+
+- [ ] **Step 1: Rest-Suche ausfuehren**
+
+Run:
+
+```powershell
+rg "AiRuntimeConfig" src tests tools -g "*.cs"
+```
+
+Expected before deletion:
+
+```text
+src/AuswertungPro.Next.UI/Ai/AiRuntimeConfig.cs
+```
+
+If other matches appear, update them to `AiRuntimeSettings` or `AppSettingsAiSettingsProvider` first.
+
+- [ ] **Step 2: Datei loeschen**
+
+Delete:
+
+```text
+src/AuswertungPro.Next.UI/Ai/AiRuntimeConfig.cs
+```
+
+- [ ] **Step 3: Architekturtest laufen lassen**
+
+Run:
+
+```powershell
+dotnet test tests/AuswertungPro.Next.Pipeline.Tests/AuswertungPro.Next.Pipeline.Tests.csproj --filter "FullyQualifiedName~AiSuggestionContractTests.RuntimeSettings_LiveOutsideUiLayer" -v minimal --no-restore
+```
+
+Expected:
+
+```text
+Bestanden!
+```
+
+- [ ] **Step 4: Build laufen lassen**
+
+Run:
+
+```powershell
+dotnet build src/AuswertungPro.Next.UI/AuswertungPro.Next.UI.csproj -v minimal -p:UseAppHost=false
+```
+
+Expected:
+
+```text
+0 Fehler
+```
+
+---
+
+### Task 6: AiPlatformConfig entfernen
 
 **Files:**
 - Delete: `src/AuswertungPro.Next.UI/Ai/AiPlatformConfig.cs`
@@ -890,7 +1077,7 @@ Bestanden!
 
 ---
 
-### Task 6: Abschlusspruefung
+### Task 7: Abschlusspruefung
 
 **Files:**
 - No production code unless failures are found.
@@ -916,7 +1103,7 @@ The count may differ by 1 if another branch changed nearby files. Important is t
 Run:
 
 ```powershell
-rg "AiRuntimeConfig|AiPlatformConfig" src tests -g "*.cs"
+rg "AiRuntimeConfig|AiPlatformConfig" src tests tools -g "*.cs"
 ```
 
 Expected:
