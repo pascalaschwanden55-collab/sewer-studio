@@ -31,7 +31,6 @@ using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 
-using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Application.Ai;
@@ -181,7 +180,7 @@ namespace AuswertungPro.Next.UI
             IAiSuggestionPlausibilityService plausibility,
             HttpClient http)
         {
-            return new VideoAnalysisPipelineService(cfg, plausibility, http);
+            return new VideoAnalysisPipelineService(cfg, PipelineCfg, plausibility, http);
         }
 
         public IAiSanierungOptimizationService CreateSanierungOptimization(

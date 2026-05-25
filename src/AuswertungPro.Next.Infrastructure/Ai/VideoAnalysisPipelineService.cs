@@ -8,9 +8,8 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
-using AuswertungPro.Next.UI.Services;
 
-namespace AuswertungPro.Next.UI.Ai;
+namespace AuswertungPro.Next.Infrastructure.Ai;
 
 /// <summary>
 /// Haupt-Einstiegspunkt fÃ¼r den kombinierten Videoanalyse-Workflow.
@@ -24,15 +23,18 @@ namespace AuswertungPro.Next.UI.Ai;
 public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 {
     private readonly AiRuntimeSettings _cfg;
+    private readonly PipelineConfig _pipelineCfg;
     private readonly IAiSuggestionPlausibilityService _plausibility;
     private readonly HttpClient _httpClient;
 
     public VideoAnalysisPipelineService(
         AiRuntimeSettings cfg,
+        PipelineConfig pipelineCfg,
         IAiSuggestionPlausibilityService plausibility,
         HttpClient httpClient)
     {
         _cfg = cfg;
+        _pipelineCfg = pipelineCfg;
         _plausibility = plausibility;
         _httpClient = httpClient;
     }
@@ -166,9 +168,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
     /// </summary>
     private async Task<(bool UseMultiModel, PipelineConfig Config)> ShouldUseMultiModelAsync(CancellationToken ct)
     {
-        var pipelineCfg = new AppSettingsAiSettingsProvider()
-            .Load()
-            .ToPipelineConfig();
+        var pipelineCfg = _pipelineCfg;
 
         if (pipelineCfg.Mode == PipelineMode.OllamaOnly)
             return (false, pipelineCfg);

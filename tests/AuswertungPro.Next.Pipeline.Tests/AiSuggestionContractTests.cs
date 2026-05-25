@@ -354,6 +354,7 @@ public sealed class AiSuggestionContractTests
             StringComparison.Ordinal);
         AssertSimpleTypeNamespace("LiveDetectionMapper", "AuswertungPro.Next.Infrastructure");
         AssertSimpleTypeNamespace("FullProtocolGenerationService", "AuswertungPro.Next.Infrastructure");
+        AssertSimpleTypeNamespace("VideoAnalysisPipelineService", "AuswertungPro.Next.Infrastructure");
     }
 
     [Fact]
