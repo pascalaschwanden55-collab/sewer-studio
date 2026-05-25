@@ -13,6 +13,7 @@ using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using InfraKnowledgeBase = AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
@@ -210,7 +211,9 @@ public partial class TrainingCenterWindow : Window
         Ai.KnowledgeBase.KnowledgeBaseManager? kbManager = null;
         try
         {
-            var cfg = Ai.AiPlatformConfig.Load().ToOllamaConfig();
+            var cfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToOllamaConfig();
             var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
             var embedder = new InfraKnowledgeBase.EmbeddingService(http, cfg);
             kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(db, embedder);

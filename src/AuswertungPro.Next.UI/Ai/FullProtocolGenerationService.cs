@@ -12,6 +12,7 @@ using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -27,7 +28,7 @@ public sealed class FullProtocolGenerationService : IDisposable
 {
     private readonly OllamaClient _client;
     private readonly IAiSuggestionPlausibilityService _plausibility;
-    private readonly AiRuntimeConfig _cfg;
+    private readonly AiRuntimeSettings _cfg;
     private readonly IRetrievalService? _retrieval;
     private readonly KnowledgeBaseContext? _ownedKbContext;
     private readonly QualityGateService _qualityGate;
@@ -35,7 +36,7 @@ public sealed class FullProtocolGenerationService : IDisposable
         new(StringComparer.OrdinalIgnoreCase);
 
     public FullProtocolGenerationService(
-        AiRuntimeConfig cfg,
+        AiRuntimeSettings cfg,
         IAiSuggestionPlausibilityService plausibility,
         HttpClient httpClient,
         IRetrievalService? retrieval = null,
@@ -43,7 +44,12 @@ public sealed class FullProtocolGenerationService : IDisposable
     {
         _cfg = cfg;
         _plausibility = plausibility;
-        _client = cfg.CreateOllamaClient(httpClient);
+        _client = new OllamaClient(
+            cfg.OllamaBaseUri,
+            httpClient,
+            cfg.OllamaRequestTimeout,
+            keepAlive: cfg.OllamaKeepAlive,
+            numCtx: cfg.OllamaNumCtx);
         _retrieval = retrieval;
         _qualityGate = qualityGate ?? new QualityGateService();
 
@@ -52,7 +58,9 @@ public sealed class FullProtocolGenerationService : IDisposable
         {
             try
             {
-                var ollamaConfig = AiPlatformConfig.Load().ToOllamaConfig();
+                var ollamaConfig = new AppSettingsAiSettingsProvider()
+                    .Load()
+                    .ToOllamaConfig();
                 _ownedKbContext = new KnowledgeBaseContext();
                 var embedder = new EmbeddingService(httpClient, ollamaConfig);
                 _retrieval = new RetrievalService(_ownedKbContext, embedder);

@@ -1022,10 +1022,12 @@ public partial class PlayerWindow : Window
             return;
         }
 
-        AiRuntimeConfig cfg;
+        AiRuntimeSettings cfg;
         try
         {
-            cfg = AiRuntimeConfig.Load();
+            cfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
         }
         catch
         {
@@ -1326,8 +1328,13 @@ public partial class PlayerWindow : Window
 
     private async Task StartLiveDetectionAsync()
     {
-        AiRuntimeConfig cfg;
-        try { cfg = AiRuntimeConfig.Load(); }
+        AiRuntimeSettings cfg;
+        try
+        {
+            cfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
+        }
         catch
         {
             MessageBox.Show("KI-Konfiguration konnte nicht geladen werden.", "Live-KI",
@@ -5963,7 +5970,9 @@ public partial class PlayerWindow : Window
     {
         try
         {
-            var config = AiRuntimeConfig.Load();
+            var config = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
             _codingAiModelName = config.VisionModel;
             if (!config.Enabled)
             {
@@ -5972,7 +5981,11 @@ public partial class PlayerWindow : Window
                 return;
             }
 
-            var client = config.CreateOllamaClient();
+            var client = new OllamaClient(
+                config.OllamaBaseUri,
+                ownedTimeout: config.OllamaRequestTimeout,
+                keepAlive: config.OllamaKeepAlive,
+                numCtx: config.OllamaNumCtx);
             _codingLiveDetection = new LiveDetectionService(client, config.VisionModel);
             _codingEnhancedVision = new EnhancedVisionAnalysisService(client, config.VisionModel);
             _codingQualityGate = new QualityGateService();
@@ -7974,8 +7987,14 @@ public partial class PlayerWindow : Window
             if (pngBytes == null || pngBytes.Length == 0) return null;
 
             // Leichtgewichtiger OSD-Request: nur Meterstand, keine volle Analyse
-            var config = AiRuntimeConfig.Load();
-            var client = config.CreateOllamaClient();
+            var config = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
+            var client = new OllamaClient(
+                config.OllamaBaseUri,
+                ownedTimeout: config.OllamaRequestTimeout,
+                keepAlive: config.OllamaKeepAlive,
+                numCtx: config.OllamaNumCtx);
             var b64 = Convert.ToBase64String(pngBytes);
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));

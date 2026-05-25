@@ -9,10 +9,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
@@ -341,12 +341,14 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             SamplesGenerated: generatedSamples.Count);
     }
 
-    /// <summary>ffmpeg-Pfad aus AiRuntimeConfig oder Fallback.</summary>
+    /// <summary>ffmpeg-Pfad aus AiRuntimeSettings oder Fallback.</summary>
     private static string FindFfmpeg()
     {
         try
         {
-            var cfg = AiRuntimeConfig.Load();
+            var cfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
             if (!string.IsNullOrEmpty(cfg.FfmpegPath) && File.Exists(cfg.FfmpegPath))
                 return cfg.FfmpegPath;
         }

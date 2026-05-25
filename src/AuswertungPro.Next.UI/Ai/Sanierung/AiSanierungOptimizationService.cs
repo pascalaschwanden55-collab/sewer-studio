@@ -1,14 +1,16 @@
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Sanierung;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 
 namespace AuswertungPro.Next.UI.Ai.Sanierung;
 
 public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationService
 {
-    private readonly AiRuntimeConfig _cfg;
+    private readonly AiRuntimeSettings _cfg;
     private readonly OllamaClient _client;
     private readonly SanierungValidationService _validation = new();
     private readonly CostOptimizationEngine _costEngine = new();
@@ -28,10 +30,15 @@ public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationSer
         }
         """).RootElement;
 
-    public AiSanierungOptimizationService(AiRuntimeConfig cfg, HttpClient? http = null)
+    public AiSanierungOptimizationService(AiRuntimeSettings cfg, HttpClient? http = null)
     {
         _cfg    = cfg;
-        _client = cfg.CreateOllamaClient(http);
+        _client = new OllamaClient(
+            cfg.OllamaBaseUri,
+            http,
+            cfg.OllamaRequestTimeout,
+            keepAlive: cfg.OllamaKeepAlive,
+            numCtx: cfg.OllamaNumCtx);
     }
 
     public async Task<SanierungOptimizationResult> OptimizeAsync(

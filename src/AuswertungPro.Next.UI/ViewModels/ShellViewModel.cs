@@ -103,7 +103,9 @@ public sealed partial class ShellViewModel : ObservableObject
             {
                 try
                 {
-                    var cfg = Ai.AiRuntimeConfig.Load();
+                    var cfg = new AppSettingsAiSettingsProvider()
+                        .Load()
+                        .ToRuntimeSettings();
                     AiLoadedModels = cfg.VisionModel ?? "Qwen2.5-VL";
                 }
                 catch { AiLoadedModels = ""; }

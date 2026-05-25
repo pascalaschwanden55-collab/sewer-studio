@@ -796,7 +796,9 @@ public partial class TrainingCenterViewModel : ObservableObject
             IsBusy = true;
             StatusText = $"Generiere Samples für {SelectedCase.CaseId}...";
 
-            var cfg = AiRuntimeConfig.Load();
+            var cfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
             var settings = await TrainingCenterSettingsStore.LoadAsync();
             var meterSvc = CreateMeterTimelineService(cfg, settings.GpuConcurrency);
             var generator = new TrainingSampleGenerator(cfg, meterSvc, settings);
@@ -953,7 +955,9 @@ public partial class TrainingCenterViewModel : ObservableObject
             StatusText = $"YOLO-Export: {approved.Count} Samples werden vorbereitet...";
 
             // Sidecar-Verbindung prüfen
-            var pipelineCfg = AiPlatformConfig.Load().ToPipelineConfig();
+            var pipelineCfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToPipelineConfig();
             var client = new VisionPipelineClient(pipelineCfg.SidecarUrl);
 
             var health = await client.HealthCheckAsync(ct).ConfigureAwait(false);
@@ -1240,7 +1244,9 @@ public partial class TrainingCenterViewModel : ObservableObject
             }
 
             // 2. Generate samples for all cases
-            var cfg = AiRuntimeConfig.Load();
+            var cfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
             Log($"AI Config: Enabled={cfg.Enabled}, ffmpeg={cfg.FfmpegPath}");
 
             var settings = await TrainingCenterSettingsStore.LoadAsync();
@@ -1257,7 +1263,9 @@ public partial class TrainingCenterViewModel : ObservableObject
             var casesToProcess = casesWithProtocol;
 
             // Ollama-Verbindung einmalig pruefen + KB-Objekte vorbereiten
-            var ollamaConfig = AiPlatformConfig.Load().ToOllamaConfig();
+            var ollamaConfig = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToOllamaConfig();
             var ollamaReachable = await CheckOllamaReachableAsync(ollamaConfig, ct);
             KnowledgeBaseContext? kbCtx = null;
             KnowledgeBaseManager? kbManager = null;
@@ -1670,7 +1678,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// Extrahiert einen einzelnen Preview-Frame aus dem Video (bei Sekunde 2).
     /// Wird für die Live-Vorschau genutzt, auch wenn keine neuen Samples generiert werden.
     /// </summary>
-    private static async Task<string?> ExtractPreviewFrameAsync(TrainingCase tc, AiRuntimeConfig cfg, CancellationToken ct)
+    private static async Task<string?> ExtractPreviewFrameAsync(TrainingCase tc, AiRuntimeSettings cfg, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(tc.VideoPath) || !File.Exists(tc.VideoPath))
             return null;
@@ -1687,12 +1695,16 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
     }
 
-    private static MeterTimelineService CreateMeterTimelineService(AiRuntimeConfig cfg, int concurrency = 1)
+    private static MeterTimelineService CreateMeterTimelineService(AiRuntimeSettings cfg, int concurrency = 1)
     {
         if (!cfg.Enabled)
             return new MeterTimelineService(cfg);
 
-        var ollamaClient = cfg.CreateOllamaClient();
+        var ollamaClient = new OllamaClient(
+            cfg.OllamaBaseUri,
+            ownedTimeout: cfg.OllamaRequestTimeout,
+            keepAlive: cfg.OllamaKeepAlive,
+            numCtx: cfg.OllamaNumCtx);
         var vision = new OllamaVisionFindingsService(ollamaClient, cfg.VisionModel);
         var osd = new OsdMeterDetectionService(vision);
         return new MeterTimelineService(cfg, osd, concurrency);
@@ -1976,12 +1988,18 @@ public partial class TrainingCenterViewModel : ObservableObject
             Log($"  Protokoll: {SelectedCase.ProtocolPath}");
 
             // Services instanziieren (gleicher Pattern wie BatchImport)
-            var cfg = AiRuntimeConfig.Load();
+            var cfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
             Log($"Ollama: {cfg.OllamaBaseUri}, Modell: {cfg.VisionModel}");
 
             var visionModel = cfg.VisionModel ?? "Qwen2.5-VL";
             _activeVisionModel = visionModel;
-            var ollamaClient = cfg.CreateOllamaClient();
+            var ollamaClient = new OllamaClient(
+                cfg.OllamaBaseUri,
+                ownedTimeout: cfg.OllamaRequestTimeout,
+                keepAlive: cfg.OllamaKeepAlive,
+                numCtx: cfg.OllamaNumCtx);
             var vision = new EnhancedVisionAnalysisService(ollamaClient, visionModel);
             var comparison = new SelfTrainingComparisonService();
             var technique = new TechniqueAssessmentService(ollamaClient, visionModel);
@@ -2115,7 +2133,9 @@ public partial class TrainingCenterViewModel : ObservableObject
         var indexedIds = new List<string>();
         try
         {
-            var ollamaConfig = AiPlatformConfig.Load().ToOllamaConfig();
+            var ollamaConfig = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToOllamaConfig();
             var ollamaReachable = await CheckOllamaReachableAsync(ollamaConfig, ct);
             if (!ollamaReachable)
             {

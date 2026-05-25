@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
@@ -42,13 +43,13 @@ public sealed class TrainingSampleGenerator
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
 
-    private readonly AiRuntimeConfig _cfg;
+    private readonly AiRuntimeSettings _cfg;
     private readonly MeterTimelineService _meterTimeline;
     private readonly TrainingCenterSettings _settings;
     private string? _pdfFramesDir;
 
     public TrainingSampleGenerator(
-        AiRuntimeConfig cfg,
+        AiRuntimeSettings cfg,
         MeterTimelineService meterTimeline,
         TrainingCenterSettings? settings = null)
     {

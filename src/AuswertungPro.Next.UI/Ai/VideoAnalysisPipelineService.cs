@@ -8,6 +8,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -22,12 +23,12 @@ namespace AuswertungPro.Next.UI.Ai;
 /// </summary>
 public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 {
-    private readonly AiRuntimeConfig _cfg;
+    private readonly AiRuntimeSettings _cfg;
     private readonly IAiSuggestionPlausibilityService _plausibility;
     private readonly HttpClient _httpClient;
 
     public VideoAnalysisPipelineService(
-        AiRuntimeConfig cfg,
+        AiRuntimeSettings cfg,
         IAiSuggestionPlausibilityService plausibility,
         HttpClient httpClient)
     {
@@ -70,7 +71,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             var pipelineClient = new VisionPipelineClient(pipelineCfg.SidecarUrl, _httpClient);
 
             // Create Qwen vision service for VSA-Code enrichment
-            var ollamaClient = _cfg.CreateOllamaClient(_httpClient);
+            var ollamaClient = CreateOllamaClient();
             var qwenVision = new EnhancedVisionAnalysisService(ollamaClient, _cfg.VisionModel);
 
             var multiModel = new MultiModelAnalysisService(
@@ -86,7 +87,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         else
         {
             // â”€â”€ Ollama-Only Path (existing behavior) â”€â”€
-            var client = _cfg.CreateOllamaClient(_httpClient);
+            var client = CreateOllamaClient();
             var videoService = VideoFullAnalysisService.Create(
                 client: client,
                 visionModel: _cfg.VisionModel,
@@ -165,7 +166,9 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
     /// </summary>
     private async Task<(bool UseMultiModel, PipelineConfig Config)> ShouldUseMultiModelAsync(CancellationToken ct)
     {
-        var pipelineCfg = AiPlatformConfig.Load().ToPipelineConfig();
+        var pipelineCfg = new AppSettingsAiSettingsProvider()
+            .Load()
+            .ToPipelineConfig();
 
         if (pipelineCfg.Mode == PipelineMode.OllamaOnly)
             return (false, pipelineCfg);
@@ -199,6 +202,13 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             return (false, pipelineCfg);
         }
     }
+
+    private OllamaClient CreateOllamaClient() => new(
+        _cfg.OllamaBaseUri,
+        _httpClient,
+        _cfg.OllamaRequestTimeout,
+        keepAlive: _cfg.OllamaKeepAlive,
+        numCtx: _cfg.OllamaNumCtx);
 }
 
 // â”€â”€ Request / Result â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

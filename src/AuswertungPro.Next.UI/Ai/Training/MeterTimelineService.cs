@@ -4,20 +4,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
 /// <summary>
 /// Baut eine OSD-Meter-Zeitreihe aus einem Video auf.
-/// Nur aktiv wenn AiRuntimeConfig.Enabled = true und ein OsdMeterDetectionService vorhanden.
+/// Nur aktiv wenn AiRuntimeSettings.Enabled = true und ein OsdMeterDetectionService vorhanden.
 /// </summary>
 public sealed class MeterTimelineService
 {
-    private readonly AiRuntimeConfig _cfg;
+    private readonly AiRuntimeSettings _cfg;
     private readonly OsdMeterDetectionService? _osd;
     private readonly int _concurrency;
 
-    public MeterTimelineService(AiRuntimeConfig cfg, OsdMeterDetectionService? osd = null, int concurrency = 1)
+    public MeterTimelineService(AiRuntimeSettings cfg, OsdMeterDetectionService? osd = null, int concurrency = 1)
     {
         _cfg = cfg;
         _osd = osd;

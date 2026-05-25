@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.Configuration;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
@@ -60,7 +60,7 @@ public class PipelineConfigTests
     [InlineData("ollamaonly", PipelineMode.OllamaOnly)]
     [InlineData("auto", PipelineMode.Auto)]
     [InlineData("", PipelineMode.OllamaOnly)]
-    [InlineData("unknown", PipelineMode.Auto)]
+    [InlineData("unknown", PipelineMode.OllamaOnly)]
     public void Load_PipelineMode_ParsesCorrectly(string modeStr, PipelineMode expected)
     {
         var backup = BackupEnvVars();
@@ -107,7 +107,7 @@ public class PipelineConfigTests
     // ── Helpers ──
 
     private static PipelineConfig LoadPipelineConfig() =>
-        AiPlatformConfig.Load().ToPipelineConfig();
+        AiSettingsFactory.Load().ToPipelineConfig();
 
     private static readonly string[] EnvKeys =
     [

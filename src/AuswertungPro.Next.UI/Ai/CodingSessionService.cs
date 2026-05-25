@@ -6,9 +6,11 @@ using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.UI.Helpers;
+using AuswertungPro.Next.UI.Services;
 using InfraKnowledgeBase = AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.UI.Ai;
@@ -202,7 +204,9 @@ public sealed class CodingSessionService : ICodingSessionService
             var approved = samples.Where(s => s.Status == TrainingSampleStatus.Approved).ToList();
             if (approved.Count == 0) return;
 
-            var cfg = AiPlatformConfig.Load().ToOllamaConfig();
+            var cfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToOllamaConfig();
             var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
             var embedder = new InfraKnowledgeBase.EmbeddingService(http, cfg);
 

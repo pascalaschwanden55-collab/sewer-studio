@@ -3,23 +3,23 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.UI;
-using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.Configuration;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
-using Xunit;
+using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.Services;
 
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
-public sealed class AiPlatformConfigTests
+public sealed class AiSettingsFactoryTests
 {
     [Fact]
     public void Load_WithoutEnvOrSettings_ReturnsDefaults()
     {
         using var env = new EnvVarScope();
 
-        var config = AiPlatformConfig.Load(settings: null);
+        var config = AiSettingsFactory.Load();
         var expectedVision = GpuModelSelector.DetectAndSelect()?.ResolvedModel
             ?? OllamaConfig.DefaultVisionModel;
 
@@ -50,6 +50,8 @@ public sealed class AiPlatformConfigTests
         env.Set("SEWERSTUDIO_AI_TEXT_MODEL", "text-x");
         env.Set("SEWERSTUDIO_AI_EMBED_MODEL", "embed-x");
         env.Set("SEWERSTUDIO_AI_TIMEOUT_MIN", "42");
+        env.Set("SEWERSTUDIO_OLLAMA_KEEP_ALIVE", "12h");
+        env.Set("SEWERSTUDIO_OLLAMA_NUM_CTX", "4096");
         env.Set("SEWERSTUDIO_MULTIMODEL_ENABLED", "true");
         env.Set("SEWERSTUDIO_SIDECAR_URL", "http://127.0.0.1:8101");
         env.Set("SEWERSTUDIO_PIPELINE_MODE", "multi");
@@ -58,9 +60,9 @@ public sealed class AiPlatformConfigTests
         env.Set("SEWERSTUDIO_DINO_TEXT_THRESHOLD", "0.35");
         env.Set("SEWERSTUDIO_SIDECAR_TIMEOUT_SEC", "222");
         env.Set("SEWERSTUDIO_PIPE_DIAMETER_MM", "500");
-        env.Set("SEWERSTUDIO_FFMPEG", "C:\\tools\\ffmpeg.exe");
+        env.Set("SEWERSTUDIO_FFMPEG", @"C:\tools\ffmpeg.exe");
 
-        var config = AiPlatformConfig.Load(settings: null);
+        var config = AiSettingsFactory.Load();
 
         Assert.True(config.Enabled);
         Assert.Equal(new Uri("http://127.0.0.1:11435"), config.OllamaBaseUri);
@@ -68,6 +70,8 @@ public sealed class AiPlatformConfigTests
         Assert.Equal("text-x", config.TextModel);
         Assert.Equal("embed-x", config.EmbedModel);
         Assert.Equal(TimeSpan.FromMinutes(42), config.OllamaRequestTimeout);
+        Assert.Equal("12h", config.OllamaKeepAlive);
+        Assert.Equal(4096, config.OllamaNumCtx);
         Assert.True(config.MultiModelEnabled);
         Assert.Equal(new Uri("http://127.0.0.1:8101"), config.SidecarUrl);
         Assert.Equal(PipelineMode.MultiModel, config.PipelineMode);
@@ -76,7 +80,7 @@ public sealed class AiPlatformConfigTests
         Assert.Equal(0.35, config.DinoTextThreshold);
         Assert.Equal(222, config.SidecarTimeoutSec);
         Assert.Equal(500, config.PipeDiameterMmOverride);
-        Assert.Equal("C:\\tools\\ffmpeg.exe", config.FfmpegPath);
+        Assert.Equal(@"C:\tools\ffmpeg.exe", config.FfmpegPath);
     }
 
     [Fact]
@@ -117,7 +121,7 @@ public sealed class AiPlatformConfigTests
             PipelinePipeDiameterMm = 700
         };
 
-        var config = AiPlatformConfig.Load(settings);
+        var config = AiSettingsFactory.Load(AppSettingsAiSettingsProvider.ToSource(settings));
 
         Assert.True(config.Enabled);
         Assert.Equal(new Uri("http://settings-host:11436"), config.OllamaBaseUri);
@@ -144,7 +148,7 @@ public sealed class AiPlatformConfigTests
         env.Set("SEWERSTUDIO_AI_TEXT_MODEL", "env-only-text");
         env.Set("SEWERSTUDIO_PIPELINE_MODE", "ollamaonly");
 
-        var config = AiPlatformConfig.Load(null);
+        var config = AiSettingsFactory.Load();
 
         Assert.True(config.Enabled);
         Assert.Equal("env-only-text", config.TextModel);
@@ -152,13 +156,13 @@ public sealed class AiPlatformConfigTests
     }
 
     [Fact]
-    public void ToRuntimeConfig_ProjectsCorrectly()
+    public void ToRuntimeSettings_ProjectsCorrectly()
     {
         var config = CreateConfig();
 
-        var runtime = config.ToRuntimeConfig();
+        var runtime = config.ToRuntimeSettings();
 
-        Assert.Equal(new AiRuntimeConfig(
+        Assert.Equal(new AiRuntimeSettings(
             Enabled: true,
             OllamaBaseUri: new Uri("http://localhost:11434"),
             VisionModel: "vision-model",
@@ -166,7 +170,8 @@ public sealed class AiPlatformConfigTests
             EmbedModel: "embed-model",
             FfmpegPath: "ffmpeg-custom",
             OllamaRequestTimeout: TimeSpan.FromMinutes(12),
-            OllamaKeepAlive: "24h"), runtime);
+            OllamaKeepAlive: "24h",
+            OllamaNumCtx: 8192), runtime);
     }
 
     [Fact]
@@ -215,7 +220,7 @@ public sealed class AiPlatformConfigTests
     [InlineData(" True ", true)]
     public void ParseBool_HandlesEdgeCases(string? value, bool expected)
     {
-        Assert.Equal(expected, AiPlatformConfig.ParseBool(value));
+        Assert.Equal(expected, AiSettingsFactory.ParseBool(value));
     }
 
     [Theory]
@@ -229,7 +234,7 @@ public sealed class AiPlatformConfigTests
     [InlineData("abc", null)]
     public void ParseDouble_HandlesEdgeCases(string? value, double? expected)
     {
-        Assert.Equal(expected, AiPlatformConfig.ParseDouble(value));
+        Assert.Equal(expected, AiSettingsFactory.ParseDouble(value));
     }
 
     [Theory]
@@ -242,11 +247,11 @@ public sealed class AiPlatformConfigTests
     [InlineData("abc", null)]
     public void ParseInt_HandlesEdgeCases(string? value, int? expected)
     {
-        Assert.Equal(expected, AiPlatformConfig.ParseInt(value));
+        Assert.Equal(expected, AiSettingsFactory.ParseInt(value));
     }
 
     [Fact]
-    public void AiRuntimeConfig_Load_MatchesAiPlatformProjection()
+    public void AppSettingsProvider_Load_MatchesFactoryProjection()
     {
         using var settings = new SettingsFileScope();
         using var env = new EnvVarScope();
@@ -257,13 +262,13 @@ public sealed class AiPlatformConfigTests
         env.Set("SEWERSTUDIO_AI_EMBED_MODEL", "embed-wrapper");
         env.Set("SEWERSTUDIO_FFMPEG", "wrapper-ffmpeg");
 
-        var actual = AiRuntimeConfig.Load();
-        var expected = AiPlatformConfig.Load().ToRuntimeConfig();
+        var actual = new AppSettingsAiSettingsProvider().Load().ToRuntimeSettings();
+        var expected = AiSettingsFactory.Load().ToRuntimeSettings();
 
         Assert.Equal(expected, actual);
     }
 
-    private static AiPlatformConfig CreateConfig() => new(
+    private static AiPlatformSettings CreateConfig() => new(
         Enabled: true,
         OllamaBaseUri: new Uri("http://localhost:11434"),
         VisionModel: "vision-model",
@@ -294,6 +299,7 @@ public sealed class AiPlatformConfigTests
             "SEWERSTUDIO_AI_EMBED_MODEL",
             "SEWERSTUDIO_AI_TIMEOUT_MIN",
             "SEWERSTUDIO_OLLAMA_KEEP_ALIVE",
+            "SEWERSTUDIO_OLLAMA_NUM_CTX",
             "SEWERSTUDIO_MULTIMODEL_ENABLED",
             "SEWERSTUDIO_SIDECAR_URL",
             "SEWERSTUDIO_PIPELINE_MODE",
@@ -305,15 +311,9 @@ public sealed class AiPlatformConfigTests
             "SEWERSTUDIO_FFMPEG"
         ];
 
-        private static readonly string[] LegacyKeys;
-
-        static EnvVarScope()
-        {
-            LegacyKeys = Keys
-                .Where(k => k.StartsWith("SEWERSTUDIO_", StringComparison.Ordinal))
-                .Select(k => "AUSWERTUNGPRO_" + k["SEWERSTUDIO_".Length..])
-                .ToArray();
-        }
+        private static readonly string[] LegacyKeys = Keys
+            .Select(static k => "AUSWERTUNGPRO_" + k["SEWERSTUDIO_".Length..])
+            .ToArray();
 
         private readonly Dictionary<string, string?> _backup = new(StringComparer.Ordinal);
 
@@ -334,7 +334,6 @@ public sealed class AiPlatformConfigTests
             foreach (var pair in _backup)
                 Environment.SetEnvironmentVariable(pair.Key, pair.Value);
         }
-
     }
 
     private sealed class SettingsFileScope : IDisposable

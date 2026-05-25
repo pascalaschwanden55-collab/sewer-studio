@@ -4,8 +4,9 @@ using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Ai.Evaluation;
-using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.Configuration;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 var options = BenchmarkOptions.Parse(args);
 if (options.ShowHelp)
@@ -46,7 +47,7 @@ try
         return 0;
     }
 
-    var config = AiPlatformConfig.Load();
+    var config = AiSettingsFactory.Load();
     var baseUri = options.OllamaUrl ?? config.OllamaBaseUri;
     var model = options.Model ?? config.VisionModel;
     var timeout = options.TimeoutMinutes > 0

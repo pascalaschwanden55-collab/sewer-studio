@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Training;
 
@@ -90,13 +90,16 @@ public sealed class TrainingSampleGeneratorCodeMetaTests
             };
             await File.WriteAllTextAsync(protocolPath, JsonSerializer.Serialize(doc));
 
-            var cfg = new AiRuntimeConfig(
+            var cfg = new AiRuntimeSettings(
                 Enabled: false,
                 OllamaBaseUri: new Uri("http://localhost:11434"),
                 VisionModel: "",
                 TextModel: "",
                 EmbedModel: null,
-                FfmpegPath: null);
+                FfmpegPath: null,
+                OllamaRequestTimeout: TimeSpan.FromMinutes(5),
+                OllamaKeepAlive: "24h",
+                OllamaNumCtx: 8192);
             var generator = new TrainingSampleGenerator(
                 cfg,
                 new MeterTimelineService(cfg),

@@ -85,6 +85,20 @@ public sealed class AiSuggestionContractTests
     }
 
     [Fact]
+    public void RuntimeSettings_LiveOutsideUiLayer()
+    {
+        Assert.StartsWith("AuswertungPro.Next.Application", typeof(AiRuntimeSettings).Namespace);
+        AssertNoUiType("Ai" + "RuntimeConfig");
+    }
+
+    [Fact]
+    public void PlatformSettings_LiveOutsideUiLayer()
+    {
+        Assert.StartsWith("AuswertungPro.Next.Application", typeof(AiPlatformSettings).Namespace);
+        AssertNoUiType("Ai" + "PlatformConfig");
+    }
+
+    [Fact]
     public void GroundTruthTrainingModels_LiveInApplicationLayer()
     {
         Assert.StartsWith(

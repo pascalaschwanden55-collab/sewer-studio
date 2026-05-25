@@ -26,7 +26,9 @@ using AuswertungPro.Next.Infrastructure.Import.Kins;
 using AuswertungPro.Next.Infrastructure.Projects;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.Configuration;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Pipeline;
@@ -108,11 +110,11 @@ namespace AuswertungPro.Next.UI
 
 
             // Einheitliche KI-Konfiguration (1x laden, 3x projizieren)
-            var aiPlatform = AiPlatformConfig.Load(settings);
+            var aiPlatform = AiSettingsFactory.Load(AppSettingsAiSettingsProvider.ToSource(settings));
             PipelineCfg = aiPlatform.ToPipelineConfig();
 
             // AI/CodeCatalog Init (AiLocalPack)
-            var cfg = aiPlatform.ToRuntimeConfig();
+            var cfg = aiPlatform.ToRuntimeSettings();
             var codeCatalogPath = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_codes.json");
             EnsureEmbeddedCatalogFile(codeCatalogPath);
             var nodCatalogPath = ResolveVsaCatalogNodPath(settings);
@@ -175,7 +177,7 @@ namespace AuswertungPro.Next.UI
         }
 
         public IVideoAnalysisPipelineService CreateVideoAnalysisPipeline(
-            AiRuntimeConfig cfg,
+            AiRuntimeSettings cfg,
             IAiSuggestionPlausibilityService plausibility,
             HttpClient http)
         {
@@ -183,7 +185,7 @@ namespace AuswertungPro.Next.UI
         }
 
         public IAiSanierungOptimizationService CreateSanierungOptimization(
-            AiRuntimeConfig cfg,
+            AiRuntimeSettings cfg,
             HttpClient? http = null)
         {
             return new AiSanierungOptimizationService(cfg, http);

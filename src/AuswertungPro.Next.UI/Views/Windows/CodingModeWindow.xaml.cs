@@ -18,6 +18,7 @@ using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using CommunityToolkit.Mvvm.Input;
 using LibVLCSharp.Shared;
@@ -58,7 +59,7 @@ public partial class CodingModeWindow : Window
     // KI Live-Analyse
     private LiveDetectionService? _liveDetection;
     private EnhancedVisionAnalysisService? _enhancedVision;
-    private AiRuntimeConfig? _aiConfig;
+    private AiRuntimeSettings? _aiConfig;
     private OllamaClient? _ollamaClient;
     private CancellationTokenSource? _analysisCts;
     private bool _isAnalyzing;
@@ -2275,7 +2276,9 @@ public partial class CodingModeWindow : Window
     {
         try
         {
-            _aiConfig = AiRuntimeConfig.Load();
+            _aiConfig = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
             _aiModelName = _aiConfig.VisionModel;
             if (!_aiConfig.Enabled)
             {
@@ -2284,7 +2287,11 @@ public partial class CodingModeWindow : Window
                 return;
             }
 
-            _ollamaClient = _aiConfig.CreateOllamaClient();
+            _ollamaClient = new OllamaClient(
+                _aiConfig.OllamaBaseUri,
+                ownedTimeout: _aiConfig.OllamaRequestTimeout,
+                keepAlive: _aiConfig.OllamaKeepAlive,
+                numCtx: _aiConfig.OllamaNumCtx);
             _liveDetection = new LiveDetectionService(_ollamaClient, _aiConfig.VisionModel);
             _enhancedVision = new EnhancedVisionAnalysisService(_ollamaClient, _aiConfig.VisionModel);
             SetAiStatus("Bereit", "#22C55E",
