@@ -308,6 +308,7 @@ public sealed class AiSuggestionContractTests
         AssertSimpleTypeNamespace("TrainingSampleGenerator", "AuswertungPro.Next.Infrastructure");
         AssertSimpleTypeNamespace("TrainingSampleGenerationResult", "AuswertungPro.Next.Infrastructure");
         AssertSimpleTypeNamespace("TrainingSampleGenerationOutcome", "AuswertungPro.Next.Infrastructure");
+        AssertSimpleTypeNamespace("TrainingCenterImportService", "AuswertungPro.Next.Infrastructure");
     }
 
     [Fact]

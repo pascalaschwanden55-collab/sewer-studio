@@ -670,7 +670,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             {
                 if (!Directory.Exists(folder)) continue;
                 var found = await _import.ScanAsync(folder);
-                foreach (var c in found)
+                foreach (var c in found.Select(ToTrainingCase))
                     Cases.Add(c);
             }
 
@@ -1217,7 +1217,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 }
                 Log($"  Scanne: {folder}");
                 var result = await _import.ScanAsync(folder);
-                found.AddRange(result);
+                found.AddRange(result.Select(ToTrainingCase));
             }
             var casesWithProtocol = found.Where(c => !string.IsNullOrEmpty(c.ProtocolPath)).ToList();
 
@@ -1713,6 +1713,17 @@ public partial class TrainingCenterViewModel : ObservableObject
     private static TrainingCaseInput ToTrainingCaseInput(TrainingCase tc)
         => new(tc.CaseId, tc.FolderPath, tc.VideoPath, tc.ProtocolPath);
 
+    private static TrainingCase ToTrainingCase(TrainingCaseInput input)
+        => new()
+        {
+            CaseId = input.CaseId,
+            FolderPath = input.FolderPath,
+            VideoPath = input.VideoPath,
+            ProtocolPath = input.ProtocolPath,
+            Status = TrainingCaseStatus.New,
+            CreatedUtc = DateTime.UtcNow
+        };
+
     /// <summary>
     /// Speichert alle Samples und indexiert optional ein gerade geaendertes Sample in die KB.
     /// </summary>
@@ -1942,7 +1953,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             {
                 if (!Directory.Exists(folder)) continue;
                 var found = await _import.ScanAsync(folder);
-                foreach (var c in found)
+                foreach (var c in found.Select(ToTrainingCase))
                     Cases.Add(c);
             }
         }

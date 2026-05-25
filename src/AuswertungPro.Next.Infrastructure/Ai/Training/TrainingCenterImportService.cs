@@ -5,23 +5,24 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 
-namespace AuswertungPro.Next.UI.Ai.Training;
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 public sealed class TrainingCenterImportService
 {
     private static readonly string[] VideoExts = [..AuswertungPro.Next.Infrastructure.Media.MediaFileTypes.VideoExtensions, ".ts", ".m4v"];
     private static readonly string[] ProtocolExts = [".json", ".xml", ".pdf"];
 
-    public Task<List<TrainingCase>> ScanAsync(string rootFolder)
+    public Task<List<TrainingCaseInput>> ScanAsync(string rootFolder)
     {
         if (string.IsNullOrWhiteSpace(rootFolder) || !Directory.Exists(rootFolder))
-            return Task.FromResult(new List<TrainingCase>());
+            return Task.FromResult(new List<TrainingCaseInput>());
 
         var folders = EnumerateFolders(rootFolder);
 
-        var cases = new List<TrainingCase>();
+        var cases = new List<TrainingCaseInput>();
 
         foreach (var folder in folders)
         {
@@ -42,15 +43,11 @@ public sealed class TrainingCenterImportService
                 var bestVideo = videos.Count > 0 ? PickBestVideo(videos, caseId) : "";
                 var bestProto = protos.Count > 0 ? PickBestProtocol(protos) ?? "" : "";
 
-                cases.Add(new TrainingCase
-                {
-                    CaseId = caseId,
-                    FolderPath = folder,
-                    VideoPath = bestVideo,
-                    ProtocolPath = bestProto,
-                    Status = TrainingCaseStatus.New,
-                    CreatedUtc = DateTime.UtcNow
-                });
+                cases.Add(new TrainingCaseInput(
+                    CaseId: caseId,
+                    FolderPath: folder,
+                    VideoPath: bestVideo,
+                    ProtocolPath: bestProto));
             }
             catch
             {
@@ -67,13 +64,13 @@ public sealed class TrainingCenterImportService
     /// Scannt nur nach Protokollen (PDF/JSON), Video ist nicht erforderlich.
     /// Fuer den reinen Protokoll-Import ohne Videoanalyse.
     /// </summary>
-    public Task<List<TrainingCase>> ScanProtocolOnlyAsync(string rootFolder)
+    public Task<List<TrainingCaseInput>> ScanProtocolOnlyAsync(string rootFolder)
     {
         if (string.IsNullOrWhiteSpace(rootFolder) || !Directory.Exists(rootFolder))
-            return Task.FromResult(new List<TrainingCase>());
+            return Task.FromResult(new List<TrainingCaseInput>());
 
         var folders = EnumerateFolders(rootFolder);
-        var cases = new List<TrainingCase>();
+        var cases = new List<TrainingCaseInput>();
 
         foreach (var folder in folders)
         {
@@ -92,15 +89,11 @@ public sealed class TrainingCenterImportService
                 var proto = PickBestProtocol(protos);
                 if (proto is null) continue; // Nur Non-Protocol-Dateien → ueberspringen
 
-                cases.Add(new TrainingCase
-                {
-                    CaseId = caseId,
-                    FolderPath = folder,
-                    VideoPath = bestVideo,
-                    ProtocolPath = proto,
-                    Status = TrainingCaseStatus.New,
-                    CreatedUtc = DateTime.UtcNow
-                });
+                cases.Add(new TrainingCaseInput(
+                    CaseId: caseId,
+                    FolderPath: folder,
+                    VideoPath: bestVideo,
+                    ProtocolPath: proto));
             }
             catch { }
         }
