@@ -102,6 +102,28 @@ public sealed class StageAExporterTests : IDisposable
         Assert.Equal(result.EvalHashListSha256, manifest["eval_hash_list_sha256"]!.GetValue<string>());
     }
 
+    [Fact]
+    public async Task DryRun_require_bbox_filtert_samples_ohne_echte_box()
+    {
+        var source = PrepareSourceWithBboxAndNoBbox();
+        var output = Path.Combine(_root, "bbox-out");
+
+        var result = await new StageAExporter().ExportAsync(new StageAExportOptions(
+            SourceSamplesPath: source.SamplesPath,
+            EvalSetRoot: source.EvalRoot,
+            OutputRoot: output,
+            DryRun: true,
+            ValidationRatio: 0,
+            DegreeOfParallelism: 2,
+            RequireBoundingBox: true));
+
+        Assert.Equal(2, result.InputSamples);
+        Assert.Equal(1, result.SkippedWithoutBoundingBox);
+        Assert.Equal(1, result.FinalSamples);
+        Assert.Equal("BAB", Assert.Single(result.Classes).ClassName);
+        Assert.False(Directory.Exists(output));
+    }
+
     private (string SamplesPath, string EvalRoot) PrepareSourceWithEvalOverlap()
     {
         Directory.CreateDirectory(_root);
@@ -129,6 +151,55 @@ public sealed class StageAExporterTests : IDisposable
         };
 
         var samplesPath = Path.Combine(_root, "training_samples.json");
+        File.WriteAllText(samplesPath, JsonSerializer.Serialize(samples, StageAExporter.JsonOptions));
+        return (samplesPath, evalRoot);
+    }
+
+    private (string SamplesPath, string EvalRoot) PrepareSourceWithBboxAndNoBbox()
+    {
+        Directory.CreateDirectory(_root);
+        var frameRoot = Path.Combine(_root, "bbox-frames");
+        Directory.CreateDirectory(frameRoot);
+
+        var withBox = Path.Combine(frameRoot, "with-box.png");
+        var noBox = Path.Combine(frameRoot, "no-box.png");
+        File.WriteAllBytes(withBox, [1, 1, 1, 1]);
+        File.WriteAllBytes(noBox, [2, 2, 2, 2]);
+
+        var evalRoot = Path.Combine(_root, "bbox-eval");
+        Directory.CreateDirectory(Path.Combine(evalRoot, "images"));
+        File.WriteAllText(
+            Path.Combine(evalRoot, "_manifest.json"),
+            new JsonObject
+            {
+                ["frozen"] = true,
+                ["hash_algorithm"] = "sha256",
+                ["hashes"] = new JsonObject()
+            }.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+
+        var samples = new[]
+        {
+            new TrainingSample
+            {
+                SampleId = "with-box",
+                Code = "BABAC",
+                FramePath = withBox,
+                Status = TrainingSampleStatus.Approved,
+                BboxXCenter = 0.5,
+                BboxYCenter = 0.5,
+                BboxWidth = 0.2,
+                BboxHeight = 0.3,
+            },
+            new TrainingSample
+            {
+                SampleId = "no-box",
+                Code = "BCAAA",
+                FramePath = noBox,
+                Status = TrainingSampleStatus.Approved,
+            },
+        };
+
+        var samplesPath = Path.Combine(_root, "bbox_training_samples.json");
         File.WriteAllText(samplesPath, JsonSerializer.Serialize(samples, StageAExporter.JsonOptions));
         return (samplesPath, evalRoot);
     }

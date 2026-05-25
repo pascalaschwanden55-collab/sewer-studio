@@ -12,7 +12,8 @@ public sealed record StageAExportOptions(
     string OutputRoot,
     bool DryRun,
     double ValidationRatio = 0.2,
-    int DegreeOfParallelism = 0);
+    int DegreeOfParallelism = 0,
+    bool RequireBoundingBox = false);
 
 public sealed record StageAExportResult(
     bool DryRun,
@@ -22,6 +23,7 @@ public sealed record StageAExportResult(
     int SkippedEvalSet,
     int SkippedMissingOrCorrupt,
     int SkippedInvalidCode,
+    int SkippedWithoutBoundingBox,
     int FinalSamples,
     int TrainSamples,
     int ValidationSamples,
@@ -74,7 +76,7 @@ public sealed class StageAExporter
             .Select((sample, index) => new IndexedSample(index, sample))
             .AsParallel()
             .WithDegreeOfParallelism(GetDegreeOfParallelism(options.DegreeOfParallelism))
-            .Select(s => AnalyzeSample(s, evalHashes))
+            .Select(s => AnalyzeSample(s, evalHashes, options.RequireBoundingBox))
             .OrderBy(a => a.Index)
             .ToList();
 
@@ -149,6 +151,7 @@ public sealed class StageAExporter
             SkippedEvalSet: analyses.Count(a => a.Decision == StageASampleDecision.EvalSet),
             SkippedMissingOrCorrupt: analyses.Count(a => a.Decision == StageASampleDecision.MissingOrCorrupt),
             SkippedInvalidCode: analyses.Count(a => a.Decision == StageASampleDecision.InvalidCode),
+            SkippedWithoutBoundingBox: analyses.Count(a => a.Decision == StageASampleDecision.WithoutBoundingBox),
             FinalSamples: splitItems.Count,
             TrainSamples: splitItems.Count(s => s.Split == "train"),
             ValidationSamples: splitItems.Count(s => s.Split == "val"),
@@ -194,7 +197,8 @@ public sealed class StageAExporter
 
     private static StageASampleAnalysis AnalyzeSample(
         IndexedSample indexed,
-        IReadOnlySet<string> evalHashes)
+        IReadOnlySet<string> evalHashes,
+        bool requireBoundingBox)
     {
         var sample = indexed.Sample;
 
@@ -204,6 +208,9 @@ public sealed class StageAExporter
         var className = NormalizeClassName(sample.Code);
         if (string.IsNullOrWhiteSpace(className))
             return StageASampleAnalysis.InvalidCode(indexed);
+
+        if (requireBoundingBox && !sample.HasBbox)
+            return StageASampleAnalysis.WithoutBoundingBox(indexed, className);
 
         if (string.IsNullOrWhiteSpace(sample.FramePath) ||
             !ImageExtensions.Contains(Path.GetExtension(sample.FramePath)) ||
@@ -335,6 +342,7 @@ public sealed class StageAExporter
             skipped_eval_set = analyses.Count(a => a.Decision == StageASampleDecision.EvalSet),
             skipped_missing_or_corrupt = analyses.Count(a => a.Decision == StageASampleDecision.MissingOrCorrupt),
             skipped_invalid_code = analyses.Count(a => a.Decision == StageASampleDecision.InvalidCode),
+            skipped_without_bounding_box = analyses.Count(a => a.Decision == StageASampleDecision.WithoutBoundingBox),
             final_samples = splitItems.Count,
             train_samples = splitItems.Count(s => s.Split == "train"),
             val_samples = splitItems.Count(s => s.Split == "val"),
@@ -527,6 +535,9 @@ public sealed class StageAExporter
         public static StageASampleAnalysis MissingOrCorrupt(IndexedSample source, string? className)
             => new(source.Index, source.Sample, StageASampleDecision.MissingOrCorrupt, className, null);
 
+        public static StageASampleAnalysis WithoutBoundingBox(IndexedSample source, string className)
+            => new(source.Index, source.Sample, StageASampleDecision.WithoutBoundingBox, className, null);
+
         public static StageASampleAnalysis EvalSet(IndexedSample source, string className, string sha256)
             => new(source.Index, source.Sample, StageASampleDecision.EvalSet, className, sha256);
 
@@ -550,5 +561,6 @@ public sealed class StageAExporter
         EvalSet,
         MissingOrCorrupt,
         InvalidCode,
+        WithoutBoundingBox,
     }
 }

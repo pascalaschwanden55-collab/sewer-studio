@@ -15,7 +15,8 @@ try
         OutputRoot: options.OutputRoot,
         DryRun: options.DryRun,
         ValidationRatio: options.ValidationRatio,
-        DegreeOfParallelism: options.Workers));
+        DegreeOfParallelism: options.Workers,
+        RequireBoundingBox: options.RequireBoundingBox));
 
     Console.WriteLine(options.DryRun
         ? "Stage-A Dry-Run:"
@@ -29,6 +30,7 @@ try
     Console.WriteLine($"  Eval-Treffer raus:   {result.SkippedEvalSet}");
     Console.WriteLine($"  Fehlend/kaputt raus: {result.SkippedMissingOrCorrupt}");
     Console.WriteLine($"  Ungueltiger Code:    {result.SkippedInvalidCode}");
+    Console.WriteLine($"  Ohne echte Box raus: {result.SkippedWithoutBoundingBox}");
     Console.WriteLine($"  Final:               {result.FinalSamples}");
     Console.WriteLine($"  Train:               {result.TrainSamples}");
     Console.WriteLine($"  Val:                 {result.ValidationSamples}");
@@ -62,6 +64,7 @@ internal sealed record StageAExporterCliOptions(
     bool DryRun,
     double ValidationRatio,
     int Workers,
+    bool RequireBoundingBox,
     bool ShowHelp)
 {
     public static StageAExporterCliOptions Parse(string[] args)
@@ -72,6 +75,7 @@ internal sealed record StageAExporterCliOptions(
         var dryRun = false;
         var validationRatio = 0.2;
         var workers = 0;
+        var requireBoundingBox = false;
         var help = false;
 
         for (var i = 0; i < args.Length; i++)
@@ -101,6 +105,9 @@ internal sealed record StageAExporterCliOptions(
                 case "--workers":
                     workers = int.Parse(RequireValue(args, ref i, "--workers"));
                     break;
+                case "--require-bbox":
+                    requireBoundingBox = true;
+                    break;
                 default:
                     throw new ArgumentException($"Unbekannte Option: {args[i]}");
             }
@@ -118,6 +125,7 @@ internal sealed record StageAExporterCliOptions(
             dryRun,
             validationRatio,
             workers,
+            requireBoundingBox,
             help);
     }
 
@@ -139,6 +147,11 @@ internal sealed record StageAExporterCliOptions(
             --out D:\stage_a_clean `
             --val-ratio 0.2
 
+          dotnet run --project tools\StageAExporter -- `
+            --dry-run `
+            --require-bbox `
+            --out D:\stage_a_bbox_clean
+
         Optionen:
           --source <pfad>     Standard: C:\KI_BRAIN\training_samples.json
           --eval-set <pfad>   Standard: C:\KI_BRAIN\eval_set
@@ -146,6 +159,7 @@ internal sealed record StageAExporterCliOptions(
           --dry-run           Nur zaehlen, nichts kopieren
           --val-ratio <zahl>  Standard: 0.2
           --workers <zahl>    0 = automatisch
+          --require-bbox      Nur Samples mit echter Bounding-Box exportieren
         """);
     }
 
