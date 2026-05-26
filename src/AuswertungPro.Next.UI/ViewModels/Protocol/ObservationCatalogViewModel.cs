@@ -528,9 +528,9 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
 
     private string ResolveSubCategoryLabel(string prefix)
     {
-        // Versuche den 3-Zeichen-Prefix als eigenstaendigen Code zu finden
-        if (_codeIndex.TryGetValue(prefix, out var def))
-            return $"{def.Code}  {def.Title}";
+        // Der VSA-KEK-Katalog ist die Quelle der Wahrheit fuer Code-Titel.
+        if (_catalog.TryGet(prefix, out var def))
+            return FormatCatalogLabel(prefix, def);
 
         // Sonst: finde den ersten Code mit diesem Prefix und nutze dessen Gruppen-Info
         var first = _allCodes.FirstOrDefault(c =>
@@ -538,7 +538,7 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
         if (first is not null && !string.IsNullOrWhiteSpace(first.Title))
         {
             // Extrahiere einen kurzen Label aus dem Titel des ersten Codes
-            var groupPart = ExtractSubGroupName(prefix, first);
+            var groupPart = ExtractSubGroupName(first);
             if (!string.IsNullOrWhiteSpace(groupPart))
                 return $"{prefix}  {groupPart}";
         }
@@ -546,38 +546,15 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
         return prefix;
     }
 
-    private static string ExtractSubGroupName(string prefix, AppProtocol.CodeDefinition firstCode)
+    private static string FormatCatalogLabel(string requestedCode, AppProtocol.CodeDefinition def)
     {
-        // SN EN 13508-2 Unterkategorie-Labels
-        var subLabels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            // BA - Struktur
-            ["BAA"] = "Verformung", ["BAB"] = "Bruch/Einsturz", ["BAC"] = "Rissbildung",
-            ["BAD"] = "Oberflaeche schadhaft", ["BAE"] = "Verbindung schadhaft",
-            ["BAF"] = "Oberflaechenschaden", ["BAG"] = "Inliner schadhaft",
-            ["BAH"] = "Korrosion", ["BAI"] = "Verschiebung / Lageabweichung",
-            ["BAJ"] = "Schweissnaht/Verbindung", ["BAK"] = "Wanddicke",
-            // BB - Betrieb
-            ["BBA"] = "Wurzeln", ["BBB"] = "Anhaftende Stoffe", ["BBC"] = "Ablagerungen",
-            ["BBD"] = "Eindringen von Bodenmaterial", ["BBE"] = "Andere Hindernisse",
-            ["BBF"] = "Infiltration", ["BBG"] = "Exfiltration", ["BBH"] = "Ungeziefer",
-            // BC - Bestandsaufnahme
-            ["BCA"] = "Anschluss", ["BCB"] = "Punktuelle Reparatur", ["BCC"] = "Krümmung der Leitung",
-            ["BCD"] = "Anfangspunkte", ["BCE"] = "Endpunkte",
-            // BD - Sonstiges
-            ["BDA"] = "Allgemeine Fotografie", ["BDB"] = "Allgemeine Anmerkung",
-            ["BDC"] = "Abbruch der Inspektion",
-            // AE - Aenderungen
-            ["AEC"] = "Profilwechsel", ["AED"] = "Materialwechsel",
-            // D - Schacht
-            ["DAA"] = "Verformung Schacht", ["DBA"] = "Wurzeln Schacht",
-            ["DCA"] = "Anschluss Schacht", ["DDA"] = "Allgemein Schacht",
-            ["DDB"] = "Allgemeine Anmerkung Schacht",
-        };
+        var code = string.IsNullOrWhiteSpace(def.Code) ? requestedCode : def.Code.Trim();
+        var title = def.Title?.Trim();
+        return string.IsNullOrWhiteSpace(title) ? code : $"{code}  {title}";
+    }
 
-        if (subLabels.TryGetValue(prefix, out var label))
-            return label;
-
+    private static string ExtractSubGroupName(AppProtocol.CodeDefinition firstCode)
+    {
         // Fallback: Titel des ersten Codes kuerzen
         var title = firstCode.Title ?? string.Empty;
         if (title.Contains(':'))
