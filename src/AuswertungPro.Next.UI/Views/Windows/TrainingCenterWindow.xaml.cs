@@ -38,10 +38,14 @@ public partial class TrainingCenterWindow : Window
         WindowStateManager.Track(this);
 
         var codeCatalog = App.Services is ServiceProvider sp ? sp.CodeCatalog : null;
+        var kbDiagnostics = App.Services is ServiceProvider services
+            ? services.KnowledgeBaseDiagnostics
+            : new InfraKnowledgeBase.KnowledgeBaseDiagnosticsRunner();
         Vm = new TrainingCenterViewModel(
             new TrainingCenterStore(),
             new TrainingCenterImportService(),
-            codeCatalog);
+            codeCatalog,
+            kbDiagnostics);
 
         DataContext = Vm;
 

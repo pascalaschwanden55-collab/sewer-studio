@@ -14,6 +14,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
@@ -33,6 +34,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     private readonly TrainingCenterStore _store;
     private readonly TrainingCenterImportService _import;
     private readonly ICodeCatalogProvider? _codeCatalog;
+    private readonly IKnowledgeBaseDiagnosticsRunner _kbDiagnostics;
 
     /// <summary>Wiederverwendbarer HttpClient fuer KB-Operationen (Embedding-Requests).</summary>
     private System.Net.Http.HttpClient? _kbHttpClient;
@@ -339,42 +341,21 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         try
         {
-            var (summary, totalDistinctCodes, errorCount, newCount) = await Task.Run(() =>
-            {
-                using var db = new KnowledgeBaseContext();
-                var diag = new KnowledgeBaseDiagnosticsService(db);
-                var s = diag.ReadSummary(20);
-                var allCodes = diag.ReadAllCodeCounts().Count;
-
-                // Sample-Statistik aus JSON fuer Diagnose-Anzeige
-                int errors = 0, news = 0;
-                try
-                {
-                    var samples = TrainingSamplesStore.LoadAsync().GetAwaiter().GetResult();
-                    foreach (var sample in samples)
-                    {
-                        if (sample.KbIndexState == KbIndexState.Error) errors++;
-                        else if (sample.Status == TrainingSampleStatus.New) news++;
-                    }
-                }
-                catch { /* optional */ }
-
-                return (s, allCodes, errors, news);
-            });
+            var status = await _kbDiagnostics.ReadStatusAsync(20).ConfigureAwait(false);
 
             void Apply()
             {
-                KbSampleCount = summary.SampleCount;
-                KbErrorCount = errorCount;
-                KbNewCount = newCount;
-                KbEmbeddingCount = summary.EmbeddingCount;
-                KbCodesCovered = totalDistinctCodes;
-                KbLastUpdate = summary.LatestVersionAtUtc?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "\u2014";
+                KbSampleCount = status.SampleCount;
+                KbErrorCount = status.ErrorCount;
+                KbNewCount = status.NewCount;
+                KbEmbeddingCount = status.EmbeddingCount;
+                KbCodesCovered = status.CodesCovered;
+                KbLastUpdate = status.LatestVersionAtUtc?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "\u2014";
 
                 static System.Windows.Media.SolidColorBrush Rgb(byte r, byte g, byte b)
                     => new(System.Windows.Media.Color.FromRgb(r, g, b));
 
-                (KbReadinessLabel, KbReadinessBrush) = summary.SampleCount switch
+                (KbReadinessLabel, KbReadinessBrush) = status.SampleCount switch
                 {
                     >= 100 => ("KI-Modell einsatzbereit", Rgb(0x4A, 0xDE, 0x80)),
                     >= 25  => ("Lernbasis grundlegend",   Rgb(0xFA, 0xCC, 0x15)),
@@ -382,7 +363,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                     _      => ("Keine Trainingsdaten",    Rgb(0x94, 0xA3, 0xB8))
                 };
 
-                KbTopCodesText = string.Join("\n", summary.TopCodes
+                KbTopCodesText = string.Join("\n", status.TopCodes
                     .Select(c => $"{c.VsaCode}: {c.Count} Samples"));
             }
 
@@ -402,58 +383,12 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     /// <summary>
     /// Laedt KB-Qualitaetsmetriken: Coverage-Luecken, Accuracy, Stale Samples, Trend.
-    /// Eigener KnowledgeBaseContext (unabhaengig von RefreshKbStatusAsync).
     /// </summary>
     private async Task RefreshKbQualityAsync()
     {
         try
         {
-            var (gaps, gapCount, accuracy, stale) = await Task.Run(() =>
-            {
-                // Leere KB abfangen: DB existiert evtl. noch nicht
-                var dbPath = KnowledgeBaseContext.DefaultDbPath;
-                if (!System.IO.File.Exists(dbPath))
-                    return ("KB noch nicht erstellt", 0, "Noch keine Validierungsdaten", 0);
-
-                using var db = new KnowledgeBaseContext();
-                var diag = new KnowledgeBaseDiagnosticsService(db);
-
-                // Coverage: ALLE Codes abfragen, nicht nur Top-N
-                var allCodes = diag.ReadAllCodeCounts();
-                var underRep = allCodes.Where(c => c.Count < 3).ToList();
-                var gapsText = allCodes.Count == 0
-                    ? "KB leer — noch keine Samples indexiert"
-                    : underRep.Count > 0
-                        ? string.Join("\n", underRep.Select(c => $"{c.VsaCode}: {c.Count} Samples"))
-                        : "Keine Luecken (alle Codes >= 3 Samples)";
-
-                // Accuracy (aus ValidationLog)
-                string accText;
-                try
-                {
-                    var accSvc = new AuswertungPro.Next.Infrastructure.Ai.Monitoring.AccuracyDashboardService(db.Connection);
-                    var metrics = accSvc.ComputeMetrics();
-                    accText = metrics.Count > 0
-                        ? string.Join("\n", metrics
-                            .OrderByDescending(m => m.TruePositives + m.FalsePositives + m.FalseNegatives)
-                            .Take(8)
-                            .Select(m =>
-                                $"{m.VsaCode}: F1={m.F1Score:F2}  P={m.Precision:F2}  R={m.Recall:F2}  (n={m.TruePositives + m.FalsePositives + m.FalseNegatives})"))
-                        : "Noch keine Validierungsdaten";
-                }
-                catch { accText = "Validierungsdaten nicht verfuegbar"; }
-
-                // Stale Samples
-                int staleCount = 0;
-                try
-                {
-                    var kbq = new AuswertungPro.Next.Infrastructure.Ai.SelfImproving.KbQualityService(db.Connection);
-                    staleCount = kbq.FindStaleCandidates().Count;
-                }
-                catch { }
-
-                return (gapsText, underRep.Count, accText, staleCount);
-            });
+            var quality = await _kbDiagnostics.ReadQualityAsync().ConfigureAwait(false);
 
             // Trend (aus JSON, kein DB-Zugriff)
             var runs = await SelfTrainingHistoryStore.LoadAsync();
@@ -474,16 +409,16 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             void Apply()
             {
-                KbCoverageGapsText = gaps;
-                KbCoverageGapsCount = gapCount;
-                KbAccuracyText = accuracy;
-                KbStaleSampleCount = stale;
+                KbCoverageGapsText = quality.CoverageGapsText;
+                KbCoverageGapsCount = quality.CoverageGapsCount;
+                KbAccuracyText = quality.AccuracyText;
+                KbStaleSampleCount = quality.StaleSampleCount;
                 KbTrendText = trendText;
                 KbTrendDirection = direction;
 
                 // Stale-Sample Warnung im Log (E1)
-                if (stale > 0)
-                    Log($"KB-Qualitaet: {stale} veraltete Samples erkannt (manuell pruefen im Tab 'Samples')");
+                if (quality.StaleSampleCount > 0)
+                    Log($"KB-Qualitaet: {quality.StaleSampleCount} veraltete Samples erkannt (manuell pruefen im Tab 'Samples')");
             }
             if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
                 d.Invoke(Apply);
@@ -496,11 +431,13 @@ public partial class TrainingCenterViewModel : ObservableObject
     public TrainingCenterViewModel(
         TrainingCenterStore store,
         TrainingCenterImportService import,
-        ICodeCatalogProvider? codeCatalog = null)
+        ICodeCatalogProvider? codeCatalog,
+        IKnowledgeBaseDiagnosticsRunner kbDiagnostics)
     {
         _store = store;
         _import = import;
         _codeCatalog = codeCatalog;
+        _kbDiagnostics = kbDiagnostics;
     }
 
     // ── Cases ────────────────────────────────────────────────────────────────
@@ -1641,12 +1578,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             IsBusy = true;
             StatusText = "Prüfe Knowledge Base...";
 
-            var summary = await Task.Run(() =>
-            {
-                using var db = new KnowledgeBaseContext();
-                var diag = new KnowledgeBaseDiagnosticsService(db);
-                return diag.ReadSummary(12);
-            });
+            var summary = await _kbDiagnostics.ReadSummaryAsync(12).ConfigureAwait(false);
 
             Log($"KB-Stand: Samples={summary.SampleCount}, Embeddings={summary.EmbeddingCount}, Versionen={summary.VersionCount}");
             if (summary.LatestVersionAtUtc is not null)

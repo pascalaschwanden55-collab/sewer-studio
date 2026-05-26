@@ -79,6 +79,7 @@ namespace AuswertungPro.Next.UI
 
         public IMeasureRecommendationService MeasureRecommendation { get; }
         public IRetrievalService? Retrieval { get; }
+        public IKnowledgeBaseDiagnosticsRunner KnowledgeBaseDiagnostics { get; }
 
         // Eigendevis
         public IDevisGenerator DevisGenerator { get; }
@@ -154,6 +155,7 @@ namespace AuswertungPro.Next.UI
             }
 
             Retrieval = retrieval;
+            KnowledgeBaseDiagnostics = new KnowledgeBaseDiagnosticsRunner();
 
             var allowedCodeSet = new HashSet<string>(CodeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
             IAiSuggestionPlausibilityService plausibility = new RuleBasedAiSuggestionPlausibilityService(allowedCodeSet);
@@ -411,6 +413,7 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IExcelExportService)) return ExcelExport;
             if (serviceType == typeof(IVsaEvaluationService)) return Vsa;
             if (serviceType == typeof(IProtocolService)) return Protocols;
+            if (serviceType == typeof(IKnowledgeBaseDiagnosticsRunner)) return KnowledgeBaseDiagnostics;
             if (serviceType == typeof(ILogger)) return Logger;
             if (serviceType == typeof(ILoggerFactory)) return LoggerFactory;
             return null;
