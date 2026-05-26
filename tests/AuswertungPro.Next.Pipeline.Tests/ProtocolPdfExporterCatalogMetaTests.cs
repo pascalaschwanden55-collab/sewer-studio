@@ -17,7 +17,7 @@ public sealed class ProtocolPdfExporterCatalogMetaTests
                 Code = "BAGA",
                 Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["catalog.source"] = "IKAS-ILI",
+                    ["catalog.source"] = "VSA-KEK-2020-ILI",
                     ["catalog.canonicalCode"] = "BAG",
                     ["catalog.standardAnnotation"] = "A",
                     ["vsa.q1"] = "12 mm"
@@ -30,7 +30,7 @@ public sealed class ProtocolPdfExporterCatalogMetaTests
         Assert.StartsWith("BAGA", caption, StringComparison.Ordinal);
         Assert.Contains("Q1=12 mm", caption, StringComparison.Ordinal);
         Assert.DoesNotContain("catalog.", caption, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("IKAS-ILI", caption, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("VSA-KEK-2020-ILI", caption, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("canonicalCode", caption, StringComparison.OrdinalIgnoreCase);
     }
 

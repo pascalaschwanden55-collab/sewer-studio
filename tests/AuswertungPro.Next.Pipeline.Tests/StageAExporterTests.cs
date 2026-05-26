@@ -149,10 +149,10 @@ public sealed class StageAExporterTests : IDisposable
     }
 
     [Fact]
-    public async Task Export_preserves_ikas_codes_and_catalog_metadata_in_clean_samples()
+    public async Task Export_preserves_vsa_kek_codes_and_catalog_metadata_in_clean_samples()
     {
-        var source = PrepareIkasCatalogSamples();
-        var output = Path.Combine(_root, "ikas-out");
+        var source = PrepareVsaKekCatalogSamples();
+        var output = Path.Combine(_root, "vsa-kek-out");
 
         var result = await new StageAExporter().ExportAsync(new StageAExportOptions(
             SourceSamplesPath: source.SamplesPath,
@@ -180,7 +180,7 @@ public sealed class StageAExporterTests : IDisposable
         Assert.Contains(clean, s =>
             s.Code == "BCCYY"
             && s.CodeMeta?.Code == "BCCYY"
-            && s.CodeMeta.Parameters["catalog.source"] == IkasCatalogSources.IkasXtfObserved);
+            && s.CodeMeta.Parameters["catalog.source"] == VsaKekCatalogSources.XtfObserved);
     }
 
     private (string SamplesPath, string EvalRoot) PrepareSourceWithEvalOverlap()
@@ -299,10 +299,10 @@ public sealed class StageAExporterTests : IDisposable
         return (samplesPath, evalRoot);
     }
 
-    private (string SamplesPath, string EvalRoot) PrepareIkasCatalogSamples()
+    private (string SamplesPath, string EvalRoot) PrepareVsaKekCatalogSamples()
     {
         Directory.CreateDirectory(_root);
-        var frameRoot = Path.Combine(_root, "ikas-frames");
+        var frameRoot = Path.Combine(_root, "vsa-kek-frames");
         Directory.CreateDirectory(frameRoot);
 
         var imageBaga = Path.Combine(frameRoot, "baga.png");
@@ -312,7 +312,7 @@ public sealed class StageAExporterTests : IDisposable
         File.WriteAllBytes(imageBdba, [4, 5, 6]);
         File.WriteAllBytes(imageBccyy, [7, 8, 9]);
 
-        var evalRoot = Path.Combine(_root, "ikas-eval");
+        var evalRoot = Path.Combine(_root, "vsa-kek-eval");
         Directory.CreateDirectory(Path.Combine(evalRoot, "images"));
         File.WriteAllText(
             Path.Combine(evalRoot, "_manifest.json"),
@@ -325,12 +325,12 @@ public sealed class StageAExporterTests : IDisposable
 
         var samples = new[]
         {
-            MakeIkasSample("baga", "BAGA", imageBaga, IkasCatalogSources.IkasIli, "BAG", null),
-            MakeIkasSample("bdba", "BDBA", imageBdba, IkasCatalogSources.IkasIli, "BDB", "A"),
-            MakeIkasSample("bccyy", "BCCYY", imageBccyy, IkasCatalogSources.IkasXtfObserved, "BCCYY", null),
+            MakeVsaKekSample("baga", "BAGA", imageBaga, VsaKekCatalogSources.Ili, "BAG", null),
+            MakeVsaKekSample("bdba", "BDBA", imageBdba, VsaKekCatalogSources.Ili, "BDB", "A"),
+            MakeVsaKekSample("bccyy", "BCCYY", imageBccyy, VsaKekCatalogSources.XtfObserved, "BCCYY", null),
         };
 
-        var samplesPath = Path.Combine(_root, "ikas_training_samples.json");
+        var samplesPath = Path.Combine(_root, "vsa_kek_training_samples.json");
         File.WriteAllText(samplesPath, JsonSerializer.Serialize(samples, StageAExporter.JsonOptions));
         return (samplesPath, evalRoot);
     }
@@ -348,7 +348,7 @@ public sealed class StageAExporterTests : IDisposable
             BboxHeight = 0.3,
         };
 
-    private static TrainingSample MakeIkasSample(
+    private static TrainingSample MakeVsaKekSample(
         string sampleId,
         string code,
         string framePath,

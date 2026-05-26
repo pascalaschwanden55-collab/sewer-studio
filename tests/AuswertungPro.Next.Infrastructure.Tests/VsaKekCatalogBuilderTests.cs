@@ -3,26 +3,26 @@ using AuswertungPro.Next.Domain.VsaCatalog;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
-public sealed class IkasVsaCatalogBuilderTests
+public sealed class VsaKekCatalogBuilderTests
 {
-    private const string IkasArchivePath =
+    private const string VsaKekArchivePath =
         @"D:\Videoprojekte\Erstfeld_Jagdmatt_38454_0426\Erstfeld_Jagdmatt_38454_0426_Export\Bin\Bin.7z";
 
-    private const string IkasXtfPath =
+    private const string VsaKekXtfPath =
         @"D:\Videoprojekte\Erstfeld_Jagdmatt_38454_0426\Erstfeld_Jagdmatt_38454_0426_Export\Erstfeld_Jagdmatt_38454_0426.xtf";
 
     [Fact]
-    public void BuildFromIkasArchive_ProducesExpectedManifestRules()
+    public void BuildFromVsaKekArchive_ProducesExpectedManifestRules()
     {
-        if (!File.Exists(IkasArchivePath) || !File.Exists(IkasXtfPath))
+        if (!File.Exists(VsaKekArchivePath) || !File.Exists(VsaKekXtfPath))
             return;
 
-        var manifest = BuildManifestFromIkasExport();
+        var manifest = BuildManifestFromVsaKekExport();
 
         Assert.Equal(322, manifest.Codes.Count(c =>
-            string.Equals(c.Source, IkasCatalogSources.IkasIli, StringComparison.OrdinalIgnoreCase)
+            string.Equals(c.Source, VsaKekCatalogSources.Ili, StringComparison.OrdinalIgnoreCase)
             && c.CategoryPath.Contains("Kanal", StringComparer.OrdinalIgnoreCase)));
-        Assert.Equal(IkasCatalogSources.IkasIcm, RequireCode(manifest, "BAG").Source);
+        Assert.Equal(VsaKekCatalogSources.Icm, RequireCode(manifest, "BAG").Source);
 
         var baga = RequireCode(manifest, "BAGA");
         Assert.Equal("BAG", baga.CanonicalCode);
@@ -39,7 +39,7 @@ public sealed class IkasVsaCatalogBuilderTests
         Assert.Equal("D", RequireCode(manifest, "BDBD").StandardAnnotation);
 
         var bccyy = RequireCode(manifest, "BCCYY");
-        Assert.Equal(IkasCatalogSources.IkasXtfObserved, bccyy.Source);
+        Assert.Equal(VsaKekCatalogSources.XtfObserved, bccyy.Source);
         Assert.True(bccyy.IsObservedExtension);
         Assert.False(bccyy.IsSelectable);
 
@@ -80,15 +80,15 @@ public sealed class IkasVsaCatalogBuilderTests
     }
 
     [Fact]
-    public void CompositeProvider_KeepsIkasFirstAndMarksWinCanFallback()
+    public void CompositeProvider_KeepsVsaKekFirstAndMarksWinCanFallback()
     {
-        var ikas = new InMemoryCodeCatalogProvider(new[]
+        var vsaKek = new InMemoryCodeCatalogProvider(new[]
         {
             new CodeDefinition
             {
                 Code = "BAGA",
-                Title = "IKAS BAG",
-                Source = IkasCatalogSources.IkasIli,
+                Title = "VSA-KEK BAG",
+                Source = VsaKekCatalogSources.Ili,
                 CanonicalCode = "BAG"
             }
         });
@@ -98,26 +98,26 @@ public sealed class IkasVsaCatalogBuilderTests
                 new CodeDefinition { Code = "BAGA", Title = "WinCan BAG" },
                 new CodeDefinition { Code = "ZZZ", Title = "WinCan only" }
             }),
-            IkasCatalogSources.WinCanFallback);
+            VsaKekCatalogSources.WinCanFallback);
 
-        var provider = new CompositeCodeCatalogProvider(new ICodeCatalogProvider[] { ikas, wincan });
+        var provider = new CompositeCodeCatalogProvider(new ICodeCatalogProvider[] { vsaKek, wincan });
 
         Assert.True(provider.TryGet("BAGA", out var baga));
-        Assert.Equal("IKAS BAG", baga.Title);
-        Assert.Equal(IkasCatalogSources.IkasIli, baga.Source);
+        Assert.Equal("VSA-KEK BAG", baga.Title);
+        Assert.Equal(VsaKekCatalogSources.Ili, baga.Source);
 
         Assert.True(provider.TryGet("ZZZ", out var fallback));
-        Assert.Equal(IkasCatalogSources.WinCanFallback, fallback.Source);
+        Assert.Equal(VsaKekCatalogSources.WinCanFallback, fallback.Source);
     }
 
-    private static CodeCatalogDocument BuildManifestFromIkasExport()
+    private static CodeCatalogDocument BuildManifestFromVsaKekExport()
     {
-        var ili = IkasCatalogArchiveReader.ReadTextEntry(IkasArchivePath, IkasCatalogArchiveReader.IliEntryName);
-        var sectionIcm = IkasCatalogArchiveReader.ReadTextEntry(IkasArchivePath, IkasCatalogArchiveReader.SectionIcmEntryName);
-        var manholeIcm = IkasCatalogArchiveReader.ReadTextEntry(IkasArchivePath, IkasCatalogArchiveReader.ManholeIcmEntryName);
-        var xtf = File.ReadAllText(IkasXtfPath);
+        var ili = VsaKekCatalogArchiveReader.ReadTextEntry(VsaKekArchivePath, VsaKekCatalogArchiveReader.IliEntryName);
+        var sectionIcm = VsaKekCatalogArchiveReader.ReadTextEntry(VsaKekArchivePath, VsaKekCatalogArchiveReader.SectionIcmEntryName);
+        var manholeIcm = VsaKekCatalogArchiveReader.ReadTextEntry(VsaKekArchivePath, VsaKekCatalogArchiveReader.ManholeIcmEntryName);
+        var xtf = File.ReadAllText(VsaKekXtfPath);
 
-        return IkasVsaCatalogBuilder.Build(ili, sectionIcm, manholeIcm, new[] { xtf });
+        return VsaKekCatalogBuilder.Build(ili, sectionIcm, manholeIcm, new[] { xtf });
     }
 
     private static CodeDefinition RequireCode(CodeCatalogDocument manifest, string code)

@@ -41,7 +41,7 @@ public sealed class ManifestCodeCatalogProvider : ICodeCatalogProvider
 
     public void Save(IReadOnlyList<CodeDefinition> codes)
     {
-        throw new InvalidOperationException("Manifest-Katalog ist read-only. Bitte das IKAS-Manifest neu generieren.");
+        throw new InvalidOperationException("Manifest-Katalog ist read-only. Bitte das VSA-KEK-2020-Manifest neu generieren.");
     }
 
     public IReadOnlyList<string> AllowedCodes()

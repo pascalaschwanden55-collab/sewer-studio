@@ -150,7 +150,7 @@ public class RuleBasedPlausibilityTests
     }
 
     [Fact]
-    public void CatalogCode_IkasFullCode_PassesWithoutFormatPenalty()
+    public void CatalogCode_VsaKekFullCode_PassesWithoutFormatPenalty()
     {
         var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "BAGA", "BABAC", "DCA" };
         var sut = new RuleBasedAiSuggestionPlausibilityService(allowed);

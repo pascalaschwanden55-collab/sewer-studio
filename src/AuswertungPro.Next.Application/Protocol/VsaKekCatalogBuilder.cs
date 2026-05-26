@@ -5,15 +5,15 @@ using System.Xml.Linq;
 
 namespace AuswertungPro.Next.Application.Protocol;
 
-public static class IkasCatalogSources
+public static class VsaKekCatalogSources
 {
-    public const string IkasIli = "IKAS-ILI";
-    public const string IkasIcm = "IKAS-ICM";
-    public const string IkasXtfObserved = "IKAS-XTF-Observed";
+    public const string Ili = "VSA-KEK-2020-ILI";
+    public const string Icm = "VSA-KEK-2020-ICM";
+    public const string XtfObserved = "VSA-XTF-Observed";
     public const string WinCanFallback = "WinCan-Fallback";
 }
 
-public static partial class IkasVsaCatalogBuilder
+public static partial class VsaKekCatalogBuilder
 {
     private const string ChannelType = "Kanal";
     private const string ManholeType = "Schacht";
@@ -36,7 +36,7 @@ public static partial class IkasVsaCatalogBuilder
         if (string.IsNullOrWhiteSpace(iliText))
             throw new ArgumentException("ILI-Inhalt fehlt.", nameof(iliText));
 
-        var rules = new Dictionary<string, IkasParameterRule>(StringComparer.OrdinalIgnoreCase);
+        var rules = new Dictionary<string, VsaKekParameterRule>(StringComparer.OrdinalIgnoreCase);
         MergeRules(rules, ParseIcmRules(sectionIcmText, ChannelType));
         MergeRules(rules, ParseIcmRules(manholeIcmText, ManholeType));
         ApplyFallbackQuantificationRules(rules);
@@ -60,7 +60,7 @@ public static partial class IkasVsaCatalogBuilder
         };
     }
 
-    private static CodeDefinition BuildIliDefinition(IliCodeItem item, IReadOnlyDictionary<string, IkasParameterRule> rules)
+    private static CodeDefinition BuildIliDefinition(IliCodeItem item, IReadOnlyDictionary<string, VsaKekParameterRule> rules)
     {
         var canonicalCode = ResolveCanonicalCode(item.Code);
         var baseCode = ResolveBaseCode(item.Code, canonicalCode);
@@ -72,11 +72,11 @@ public static partial class IkasVsaCatalogBuilder
             Code = item.Code,
             Title = title,
             CanonicalCode = canonicalCode,
-            Source = IkasCatalogSources.IkasIli,
+            Source = VsaKekCatalogSources.Ili,
             IsSelectable = true,
             StandardAnnotation = standardAnnotation,
-            Group = $"IKAS/{item.ObjectType}/{baseCode}",
-            CategoryPath = ["IKAS", item.ObjectType, baseCode],
+            Group = $"VSA-KEK 2020/{item.ObjectType}/{baseCode}",
+            CategoryPath = ["VSA-KEK 2020", item.ObjectType, baseCode],
             Description = item.Title
         };
 
@@ -86,7 +86,7 @@ public static partial class IkasVsaCatalogBuilder
 
     private static void AddRuleOnlyDefinitions(
         IDictionary<string, CodeDefinition> byCode,
-        IReadOnlyDictionary<string, IkasParameterRule> rules)
+        IReadOnlyDictionary<string, VsaKekParameterRule> rules)
     {
         foreach (var rule in rules.Values.OrderBy(r => r.BaseCode, StringComparer.OrdinalIgnoreCase))
         {
@@ -106,11 +106,11 @@ public static partial class IkasVsaCatalogBuilder
                 Code = rule.BaseCode,
                 Title = title,
                 CanonicalCode = rule.BaseCode,
-                Source = IkasCatalogSources.IkasIcm,
+                Source = VsaKekCatalogSources.Icm,
                 IsSelectable = !string.Equals(rule.BaseCode, "BAG", StringComparison.OrdinalIgnoreCase),
-                Group = $"IKAS/{rule.ObjectType}/{rule.BaseCode}",
-                CategoryPath = ["IKAS", rule.ObjectType, rule.BaseCode],
-                Description = "Regelbasis aus IKAS/IBAK ICM-Mapping."
+                Group = $"VSA-KEK 2020/{rule.ObjectType}/{rule.BaseCode}",
+                CategoryPath = ["VSA-KEK 2020", rule.ObjectType, rule.BaseCode],
+                Description = "Regelbasis aus VSA-KEK 2020 ICM-Mapping."
             };
             ApplyParameters(def, rules);
             AddOrMerge(byCode, def);
@@ -143,14 +143,14 @@ public static partial class IkasVsaCatalogBuilder
                 AddOrMerge(byCode, new CodeDefinition
                 {
                     Code = code,
-                    Title = $"Beobachteter IKAS-XTF-Code {code}",
+                    Title = $"Beobachteter XTF-Code {code}",
                     CanonicalCode = code,
-                    Source = IkasCatalogSources.IkasXtfObserved,
+                    Source = VsaKekCatalogSources.XtfObserved,
                     IsObservedExtension = true,
                     IsSelectable = false,
-                    Group = $"IKAS-XTF-Observed/{objectType}/{baseCode}",
-                    CategoryPath = ["IKAS-XTF-Observed", objectType, baseCode],
-                    Description = "Im IKAS-XTF beobachtet, aber nicht in der IKAS-ILI-Code-Liste enthalten."
+                    Group = $"VSA-XTF-Observed/{objectType}/{baseCode}",
+                    CategoryPath = ["VSA-XTF-Observed", objectType, baseCode],
+                    Description = "Im XTF beobachtet, aber nicht in der VSA-KEK-2020-ILI-Code-Liste enthalten."
                 });
             }
         }
@@ -172,7 +172,7 @@ public static partial class IkasVsaCatalogBuilder
             return;
         }
 
-        if (string.Equals(existing.Source, IkasCatalogSources.IkasIli, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(existing.Source, VsaKekCatalogSources.Ili, StringComparison.OrdinalIgnoreCase))
             return;
 
         byCode[def.Code] = def;
@@ -240,7 +240,7 @@ public static partial class IkasVsaCatalogBuilder
         return line[(firstQuote + 1)..lastQuote].Trim();
     }
 
-    private static IEnumerable<IkasParameterRule> ParseIcmRules(string? icmText, string objectType)
+    private static IEnumerable<VsaKekParameterRule> ParseIcmRules(string? icmText, string objectType)
     {
         if (string.IsNullOrWhiteSpace(icmText))
             yield break;
@@ -282,7 +282,7 @@ public static partial class IkasVsaCatalogBuilder
 
             foreach (var code in codes)
             {
-                yield return new IkasParameterRule(
+                yield return new VsaKekParameterRule(
                     BaseCode: code,
                     ObjectType: objectType,
                     Q1: q1,
@@ -293,7 +293,7 @@ public static partial class IkasVsaCatalogBuilder
         }
     }
 
-    private static IkasRulePresence ResolveParameterPresence(XElement station, string key)
+    private static VsaKekRulePresence ResolveParameterPresence(XElement station, string key)
     {
         var elements = station.Descendants().Where(e =>
             (e.Name.LocalName == "setAttribute" && string.Equals((string?)e.Attribute("name"), key, StringComparison.OrdinalIgnoreCase))
@@ -301,37 +301,37 @@ public static partial class IkasVsaCatalogBuilder
 
         var list = elements.ToList();
         if (list.Count == 0)
-            return IkasRulePresence.None;
+            return VsaKekRulePresence.None;
 
         return list.All(e => string.Equals((string?)e.Attribute("isOptional"), "true", StringComparison.OrdinalIgnoreCase))
-            ? IkasRulePresence.Optional
-            : IkasRulePresence.Required;
+            ? VsaKekRulePresence.Optional
+            : VsaKekRulePresence.Required;
     }
 
-    private static void ApplyFallbackQuantificationRules(IDictionary<string, IkasParameterRule> rules)
+    private static void ApplyFallbackQuantificationRules(IDictionary<string, VsaKekParameterRule> rules)
     {
         foreach (var code in RequiredChannelQ1)
-            MergeRule(rules, new IkasParameterRule(code, ChannelType, IkasRulePresence.Required, IkasRulePresence.None, false, false));
+            MergeRule(rules, new VsaKekParameterRule(code, ChannelType, VsaKekRulePresence.Required, VsaKekRulePresence.None, false, false));
 
         foreach (var code in OptionalChannelQ2)
-            MergeRule(rules, new IkasParameterRule(code, ChannelType, IkasRulePresence.None, IkasRulePresence.Optional, false, false));
+            MergeRule(rules, new VsaKekParameterRule(code, ChannelType, VsaKekRulePresence.None, VsaKekRulePresence.Optional, false, false));
 
         foreach (var code in RequiredManholeQ1)
-            MergeRule(rules, new IkasParameterRule(code, ManholeType, IkasRulePresence.Required, IkasRulePresence.None, false, false));
+            MergeRule(rules, new VsaKekParameterRule(code, ManholeType, VsaKekRulePresence.Required, VsaKekRulePresence.None, false, false));
 
         foreach (var code in OptionalManholeQ2)
-            MergeRule(rules, new IkasParameterRule(code, ManholeType, IkasRulePresence.None, IkasRulePresence.Optional, false, false));
+            MergeRule(rules, new VsaKekParameterRule(code, ManholeType, VsaKekRulePresence.None, VsaKekRulePresence.Optional, false, false));
     }
 
     private static void MergeRules(
-        IDictionary<string, IkasParameterRule> target,
-        IEnumerable<IkasParameterRule> source)
+        IDictionary<string, VsaKekParameterRule> target,
+        IEnumerable<VsaKekParameterRule> source)
     {
         foreach (var rule in source)
             MergeRule(target, rule);
     }
 
-    private static void MergeRule(IDictionary<string, IkasParameterRule> target, IkasParameterRule rule)
+    private static void MergeRule(IDictionary<string, VsaKekParameterRule> target, VsaKekParameterRule rule)
     {
         if (!target.TryGetValue(rule.BaseCode, out var existing))
         {
@@ -339,7 +339,7 @@ public static partial class IkasVsaCatalogBuilder
             return;
         }
 
-        target[rule.BaseCode] = new IkasParameterRule(
+        target[rule.BaseCode] = new VsaKekParameterRule(
             rule.BaseCode,
             string.Equals(existing.ObjectType, ManholeType, StringComparison.OrdinalIgnoreCase)
                 ? existing.ObjectType
@@ -350,16 +350,16 @@ public static partial class IkasVsaCatalogBuilder
             existing.HasConnection || rule.HasConnection);
     }
 
-    private static IkasRulePresence MergePresence(IkasRulePresence left, IkasRulePresence right)
+    private static VsaKekRulePresence MergePresence(VsaKekRulePresence left, VsaKekRulePresence right)
     {
-        if (left == IkasRulePresence.Required || right == IkasRulePresence.Required)
-            return IkasRulePresence.Required;
-        if (left == IkasRulePresence.Optional || right == IkasRulePresence.Optional)
-            return IkasRulePresence.Optional;
-        return IkasRulePresence.None;
+        if (left == VsaKekRulePresence.Required || right == VsaKekRulePresence.Required)
+            return VsaKekRulePresence.Required;
+        if (left == VsaKekRulePresence.Optional || right == VsaKekRulePresence.Optional)
+            return VsaKekRulePresence.Optional;
+        return VsaKekRulePresence.None;
     }
 
-    private static void ApplyParameters(CodeDefinition def, IReadOnlyDictionary<string, IkasParameterRule> rules)
+    private static void ApplyParameters(CodeDefinition def, IReadOnlyDictionary<string, VsaKekParameterRule> rules)
     {
         var baseCode = ResolveBaseCode(def.Code, def.CanonicalCode);
         if (!rules.TryGetValue(baseCode, out var rule))
@@ -398,9 +398,9 @@ public static partial class IkasVsaCatalogBuilder
         }
     }
 
-    private static void AddQuantification(CodeDefinition def, string name, string dataKey, IkasRulePresence presence)
+    private static void AddQuantification(CodeDefinition def, string name, string dataKey, VsaKekRulePresence presence)
     {
-        if (presence == IkasRulePresence.None)
+        if (presence == VsaKekRulePresence.None)
             return;
 
         AddParameter(def, new CodeParameter
@@ -408,7 +408,7 @@ public static partial class IkasVsaCatalogBuilder
             Name = name,
             DataKey = dataKey,
             Type = "number",
-            Required = presence == IkasRulePresence.Required
+            Required = presence == VsaKekRulePresence.Required
         });
     }
 
@@ -483,15 +483,15 @@ public static partial class IkasVsaCatalogBuilder
 
     private sealed record IliCodeItem(string Code, string Title, string ObjectType);
 
-    private sealed record IkasParameterRule(
+    private sealed record VsaKekParameterRule(
         string BaseCode,
         string ObjectType,
-        IkasRulePresence Q1,
-        IkasRulePresence Q2,
+        VsaKekRulePresence Q1,
+        VsaKekRulePresence Q2,
         bool HasPosition,
         bool HasConnection);
 
-    private enum IkasRulePresence
+    private enum VsaKekRulePresence
     {
         None,
         Optional,
@@ -499,7 +499,7 @@ public static partial class IkasVsaCatalogBuilder
     }
 }
 
-public static class IkasCatalogArchiveReader
+public static class VsaKekCatalogArchiveReader
 {
     public const string IliEntryName =
         "Bin/Data/Export/CSharp/Interlis/models23_2020_LV95_update2021/VSA_KEK_2020_2_d_LV95-20210503.ili";
@@ -515,7 +515,7 @@ public static class IkasCatalogArchiveReader
         if (string.IsNullOrWhiteSpace(archivePath))
             throw new ArgumentException("Archivpfad fehlt.", nameof(archivePath));
         if (!File.Exists(archivePath))
-            throw new FileNotFoundException($"IKAS/IBAK-Archiv nicht gefunden: {archivePath}", archivePath);
+            throw new FileNotFoundException($"VSA-KEK-2020-Archiv nicht gefunden: {archivePath}", archivePath);
         if (string.IsNullOrWhiteSpace(entryName))
             throw new ArgumentException("Archiveintrag fehlt.", nameof(entryName));
 

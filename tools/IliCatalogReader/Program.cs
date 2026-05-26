@@ -25,9 +25,9 @@ try
         return 2;
     }
 
-    var ili = IkasCatalogArchiveReader.ReadTextEntry(archivePath, IkasCatalogArchiveReader.IliEntryName);
-    var sectionIcm = IkasCatalogArchiveReader.ReadTextEntry(archivePath, IkasCatalogArchiveReader.SectionIcmEntryName);
-    var manholeIcm = IkasCatalogArchiveReader.ReadTextEntry(archivePath, IkasCatalogArchiveReader.ManholeIcmEntryName);
+    var ili = VsaKekCatalogArchiveReader.ReadTextEntry(archivePath, VsaKekCatalogArchiveReader.IliEntryName);
+    var sectionIcm = VsaKekCatalogArchiveReader.ReadTextEntry(archivePath, VsaKekCatalogArchiveReader.SectionIcmEntryName);
+    var manholeIcm = VsaKekCatalogArchiveReader.ReadTextEntry(archivePath, VsaKekCatalogArchiveReader.ManholeIcmEntryName);
 
     var xtfTexts = new List<string>();
     var xtfPaths = options.XtfPaths.Count > 0 ? options.XtfPaths : [defaultXtfPath];
@@ -38,7 +38,7 @@ try
         xtfTexts.Add(File.ReadAllText(xtfPath));
     }
 
-    var manifest = IkasVsaCatalogBuilder.Build(ili, sectionIcm, manholeIcm, xtfTexts);
+    var manifest = VsaKekCatalogBuilder.Build(ili, sectionIcm, manholeIcm, xtfTexts);
     var directory = Path.GetDirectoryName(outputPath);
     if (!string.IsNullOrWhiteSpace(directory))
         Directory.CreateDirectory(directory);
@@ -50,11 +50,11 @@ try
     File.WriteAllText(outputPath, json);
 
     var channelIliCount = manifest.Codes.Count(c =>
-        string.Equals(c.Source, IkasCatalogSources.IkasIli, StringComparison.OrdinalIgnoreCase)
+        string.Equals(c.Source, VsaKekCatalogSources.Ili, StringComparison.OrdinalIgnoreCase)
         && c.CategoryPath.Contains("Kanal", StringComparer.OrdinalIgnoreCase));
     var observedCount = manifest.Codes.Count(c => c.IsObservedExtension);
     Console.WriteLine($"Manifest geschrieben: {outputPath}");
-    Console.WriteLine($"IKAS-ILI Kanalcodes: {channelIliCount}");
+    Console.WriteLine($"VSA-KEK-2020-ILI Kanalcodes: {channelIliCount}");
     Console.WriteLine($"Observed XTF Extensions: {observedCount}");
     Console.WriteLine($"Gesamtcodes: {manifest.Codes.Count}");
     return 0;
@@ -69,10 +69,10 @@ static void PrintHelp()
 {
     Console.WriteLine("""
         IliCatalogReader
-        Baut das neutrale Sewer-Studio VSA-Code-Manifest aus IKAS/IBAK ILI + ICM + XTF.
+        Baut das neutrale Sewer-Studio VSA-Code-Manifest aus VSA-KEK 2020 ILI + ICM + XTF.
 
         Optionen:
-          --archive <Bin.7z>   IKAS/IBAK Bin.7z. Default ist der Erstfeld/Jagdmatt-Export.
+          --archive <Bin.7z>   VSA-KEK-2020 Bin.7z. Default ist der Erstfeld/Jagdmatt-Export.
           --xtf <file>         XTF mit beobachteten Codes. Mehrfach erlaubt.
           --output <file>      Zielpfad fuer das JSON-Manifest.
           --help               Hilfe anzeigen.

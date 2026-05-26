@@ -166,7 +166,7 @@ public sealed class TrainingSampleGeneratorCodeMetaTests
     }
 
     [Fact]
-    public async Task GenerateWithDiagnosticsAsync_EnrichesIkasMetadataAndKeepsOriginalCodes()
+    public async Task GenerateWithDiagnosticsAsync_EnrichesVsaKekMetadataAndKeepsOriginalCodes()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "AuswertungProTests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDir);
@@ -182,7 +182,7 @@ public sealed class TrainingSampleGeneratorCodeMetaTests
                     [
                         CreateEntry("BAGA", "Anschluss einragend", 1.0),
                         CreateEntry("BDBA", "Wasserstand Standard A", 2.0),
-                        CreateEntry("BCCYY", "Beobachteter IKAS-XTF-Code", 3.0)
+                        CreateEntry("BCCYY", "Beobachteter XTF-Code", 3.0)
                     ]
                 }
             };
@@ -199,22 +199,22 @@ public sealed class TrainingSampleGeneratorCodeMetaTests
                     {
                         Code = "BAGA",
                         Title = "Anschluss einragend",
-                        Source = IkasCatalogSources.IkasIli,
+                        Source = VsaKekCatalogSources.Ili,
                         CanonicalCode = "BAG"
                     },
                     new CodeDefinition
                     {
                         Code = "BDBA",
                         Title = "Wasserstand Standard A",
-                        Source = IkasCatalogSources.IkasIli,
+                        Source = VsaKekCatalogSources.Ili,
                         CanonicalCode = "BDB",
                         StandardAnnotation = "A"
                     },
                     new CodeDefinition
                     {
                         Code = "BCCYY",
-                        Title = "IKAS-XTF beobachtet",
-                        Source = IkasCatalogSources.IkasXtfObserved,
+                        Title = "XTF beobachtet",
+                        Source = VsaKekCatalogSources.XtfObserved,
                         CanonicalCode = "BCCYY",
                         IsObservedExtension = true,
                         IsSelectable = false
@@ -222,7 +222,7 @@ public sealed class TrainingSampleGeneratorCodeMetaTests
                 }));
 
             var result = await generator.GenerateWithDiagnosticsAsync(new TrainingCaseInput(
-                CaseId: "IKAS-E2E",
+                CaseId: "VSA-KEK-E2E",
                 FolderPath: tempDir,
                 VideoPath: Path.Combine(tempDir, "missing.mp4"),
                 ProtocolPath: protocolPath));
@@ -231,7 +231,7 @@ public sealed class TrainingSampleGeneratorCodeMetaTests
 
             var baga = result.Samples.Single(s => s.Code == "BAGA");
             Assert.Equal("BAGA", baga.CodeMeta!.Code);
-            Assert.Equal(IkasCatalogSources.IkasIli, baga.CodeMeta.Parameters["catalog.source"]);
+            Assert.Equal(VsaKekCatalogSources.Ili, baga.CodeMeta.Parameters["catalog.source"]);
             Assert.Equal("BAG", baga.CodeMeta.Parameters["catalog.canonicalCode"]);
 
             var bdba = result.Samples.Single(s => s.Code == "BDBA");
@@ -241,7 +241,7 @@ public sealed class TrainingSampleGeneratorCodeMetaTests
 
             var bccyy = result.Samples.Single(s => s.Code == "BCCYY");
             Assert.Equal("BCCYY", bccyy.CodeMeta!.Code);
-            Assert.Equal(IkasCatalogSources.IkasXtfObserved, bccyy.CodeMeta.Parameters["catalog.source"]);
+            Assert.Equal(VsaKekCatalogSources.XtfObserved, bccyy.CodeMeta.Parameters["catalog.source"]);
         }
         finally
         {

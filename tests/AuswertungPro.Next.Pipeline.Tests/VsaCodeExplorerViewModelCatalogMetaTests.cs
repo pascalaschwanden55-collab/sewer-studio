@@ -16,7 +16,7 @@ public sealed class VsaCodeExplorerViewModelCatalogMetaTests
                 {
                     Code = "BDBA",
                     Title = "Wasserstand Standard A",
-                    Source = IkasCatalogSources.IkasIli,
+                    Source = VsaKekCatalogSources.Ili,
                     CanonicalCode = "BDB",
                     StandardAnnotation = "A",
                     IsSelectable = true,
@@ -34,7 +34,7 @@ public sealed class VsaCodeExplorerViewModelCatalogMetaTests
             Assert.Equal("BDBA", entry.Code);
             Assert.NotNull(entry.CodeMeta);
             Assert.Equal("BDBA", entry.CodeMeta!.Code);
-            Assert.Equal(IkasCatalogSources.IkasIli, entry.CodeMeta.Parameters["catalog.source"]);
+            Assert.Equal(VsaKekCatalogSources.Ili, entry.CodeMeta.Parameters["catalog.source"]);
             Assert.Equal("BDB", entry.CodeMeta.Parameters["catalog.canonicalCode"]);
             Assert.Equal("A", entry.CodeMeta.Parameters["catalog.standardAnnotation"]);
         }

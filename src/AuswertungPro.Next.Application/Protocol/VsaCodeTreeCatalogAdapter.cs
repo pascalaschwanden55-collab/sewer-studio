@@ -88,16 +88,16 @@ public static class VsaCodeTreeCatalogAdapter
             string.Equals(x, "Kanal", StringComparison.OrdinalIgnoreCase)
             || string.Equals(x, "Schacht", StringComparison.OrdinalIgnoreCase));
 
-        return string.IsNullOrWhiteSpace(type) ? "IKAS" : $"IKAS {type}";
+        return string.IsNullOrWhiteSpace(type) ? "VSA-KEK 2020" : $"VSA-KEK 2020 {type}";
     }
 
     private static string? ResolveWarning(CodeDefinition def)
     {
-        if (string.Equals(def.Source, IkasCatalogSources.WinCanFallback, StringComparison.OrdinalIgnoreCase))
-            return "WinCan-Fallback: nicht im IKAS-Hauptkatalog gefunden.";
+        if (string.Equals(def.Source, VsaKekCatalogSources.WinCanFallback, StringComparison.OrdinalIgnoreCase))
+            return "WinCan-Fallback: nicht im VSA-KEK-2020-Hauptkatalog gefunden.";
 
-        if (string.Equals(def.Source, IkasCatalogSources.IkasIcm, StringComparison.OrdinalIgnoreCase))
-            return "IKAS-ICM-Regelcode.";
+        if (string.Equals(def.Source, VsaKekCatalogSources.Icm, StringComparison.OrdinalIgnoreCase))
+            return "VSA-KEK-2020-ICM-Regelcode.";
 
         return null;
     }
@@ -123,7 +123,7 @@ public static class VsaCodeTreeCatalogAdapter
             || string.Equals(p.DataKey, "SchadenlageEnde", StringComparison.OrdinalIgnoreCase));
 
         VsaCodeTree.ClockRules[code] = hasClock
-            ? new ClockRule { Mode = "range", Hint = "Lage am Umfang (IKAS)" }
+            ? new ClockRule { Mode = "range", Hint = "Lage am Umfang (VSA-KEK 2020)" }
             : new ClockRule { Mode = "none" };
     }
 

@@ -76,7 +76,7 @@ public sealed class ProtocolCodePickerViewModelTests
         Assert.Equal("BDBA", entry.Code);
         Assert.NotNull(entry.CodeMeta);
         Assert.Equal("BDBA", entry.CodeMeta!.Code);
-        Assert.Equal(IkasCatalogSources.IkasIli, entry.CodeMeta.Parameters["catalog.source"]);
+        Assert.Equal(VsaKekCatalogSources.Ili, entry.CodeMeta.Parameters["catalog.source"]);
         Assert.Equal("BDB", entry.CodeMeta.Parameters["catalog.canonicalCode"]);
         Assert.Equal("A", entry.CodeMeta.Parameters["catalog.standardAnnotation"]);
     }
@@ -92,7 +92,7 @@ public sealed class ProtocolCodePickerViewModelTests
                 Code = "BAGA",
                 Title = "Anschluss einragend",
                 CanonicalCode = "BAG",
-                Source = IkasCatalogSources.IkasIli,
+                Source = VsaKekCatalogSources.Ili,
                 IsSelectable = true,
                 Group = "Kanal/Anschluesse"
             },
@@ -101,7 +101,7 @@ public sealed class ProtocolCodePickerViewModelTests
                 Code = "BDBA",
                 Title = "Wasserstand Standard A",
                 CanonicalCode = "BDB",
-                Source = IkasCatalogSources.IkasIli,
+                Source = VsaKekCatalogSources.Ili,
                 StandardAnnotation = "A",
                 IsSelectable = true,
                 Group = "Kanal/Anmerkung"
@@ -110,7 +110,7 @@ public sealed class ProtocolCodePickerViewModelTests
             {
                 Code = "BAB",
                 Title = "Verformung",
-                Source = IkasCatalogSources.IkasIcm,
+                Source = VsaKekCatalogSources.Icm,
                 IsSelectable = true,
                 Group = "Kanal/Form"
             },
@@ -118,15 +118,15 @@ public sealed class ProtocolCodePickerViewModelTests
             {
                 Code = "BAG",
                 Title = "Anschluss einragend Regelcode",
-                Source = IkasCatalogSources.IkasIcm,
+                Source = VsaKekCatalogSources.Icm,
                 IsSelectable = false,
                 Group = "Kanal/Anschluesse"
             },
             new CodeDefinition
             {
                 Code = "BCCYY",
-                Title = "IKAS beobachtete Erweiterung",
-                Source = IkasCatalogSources.IkasXtfObserved,
+                Title = "XTF beobachtete Erweiterung",
+                Source = VsaKekCatalogSources.XtfObserved,
                 IsObservedExtension = true,
                 IsSelectable = false,
                 Group = "Kanal/Beobachtet"
@@ -135,7 +135,7 @@ public sealed class ProtocolCodePickerViewModelTests
             {
                 Code = "WZZ",
                 Title = "Alter WinCan-Code",
-                Source = IkasCatalogSources.WinCanFallback,
+                Source = VsaKekCatalogSources.WinCanFallback,
                 IsSelectable = true,
                 Group = "WinCan/Legacy"
             }

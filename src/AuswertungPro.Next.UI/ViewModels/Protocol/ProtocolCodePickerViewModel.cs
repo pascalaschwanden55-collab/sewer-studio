@@ -455,10 +455,10 @@ public sealed class CodeTreeNode
 
         return source.Trim() switch
         {
-            AppProtocol.IkasCatalogSources.IkasIli => string.Empty,
-            AppProtocol.IkasCatalogSources.IkasIcm => "ICM",
-            AppProtocol.IkasCatalogSources.IkasXtfObserved => "XTF",
-            AppProtocol.IkasCatalogSources.WinCanFallback => "WinCan",
+            AppProtocol.VsaKekCatalogSources.Ili => string.Empty,
+            AppProtocol.VsaKekCatalogSources.Icm => "ICM",
+            AppProtocol.VsaKekCatalogSources.XtfObserved => "XTF",
+            AppProtocol.VsaKekCatalogSources.WinCanFallback => "WinCan",
             var other => other
         };
     }

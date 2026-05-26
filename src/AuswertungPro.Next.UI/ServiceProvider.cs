@@ -49,7 +49,7 @@ namespace AuswertungPro.Next.UI
         public ILogger Logger { get; }
         public ILoggerFactory LoggerFactory { get; }
         public ErrorCodeGenerator ErrorCodes { get; } = new();
-        private const string IkasManifestFileName = "ikas_vsa_catalog_manifest.json";
+        private const string VsaKekManifestFileName = "vsa_kek_2020_catalog_manifest.json";
 
 
         public IProjectRepository Projects { get; }
@@ -116,13 +116,13 @@ namespace AuswertungPro.Next.UI
             var cfg = aiPlatform.ToRuntimeSettings();
             var secCatalogPath = ResolveVsaCatalogPath(settings);
             var nodCatalogPath = ResolveVsaCatalogNodPath(settings);
-            var ikasManifestPath = ResolveIkasCatalogManifestPath();
+            var vsaKekManifestPath = ResolveVsaKekCatalogManifestPath();
             var xmlCatalogPaths = new[] { secCatalogPath, nodCatalogPath }
                 .Where(p => !string.IsNullOrWhiteSpace(p))
                 .Select(p => p!)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
-            var catalogSourcePaths = new[] { ikasManifestPath }
+            var catalogSourcePaths = new[] { vsaKekManifestPath }
                 .Where(p => !string.IsNullOrWhiteSpace(p))
                 .Select(p => p!)
                 .Concat(xmlCatalogPaths)
@@ -130,7 +130,7 @@ namespace AuswertungPro.Next.UI
             VsaCatalogResolvedPath = catalogSourcePaths.Count > 0
                 ? string.Join(" | ", catalogSourcePaths)
                 : null;
-            CodeCatalog = CreateCodeCatalog(settings, ikasManifestPath, xmlCatalogPaths);
+            CodeCatalog = CreateCodeCatalog(settings, vsaKekManifestPath, xmlCatalogPaths);
             VsaCodeTreeCatalogAdapter.Apply(CodeCatalog);
             VsaCodeResolver.ConfigureCatalog(CodeCatalog);
             RetrievalService? retrieval = null;
@@ -289,13 +289,13 @@ namespace AuswertungPro.Next.UI
             return null;
         }
 
-        private static string? ResolveIkasCatalogManifestPath()
+        private static string? ResolveVsaKekCatalogManifestPath()
         {
-            var env = Environment.GetEnvironmentVariable("IKAS_VSA_CATALOG_MANIFEST");
+            var env = Environment.GetEnvironmentVariable("VSA_KEK_2020_CATALOG_MANIFEST");
             if (!string.IsNullOrWhiteSpace(env) && File.Exists(env))
                 return env;
 
-            var fromData = Path.Combine(AppContext.BaseDirectory, "Data", IkasManifestFileName);
+            var fromData = Path.Combine(AppContext.BaseDirectory, "Data", VsaKekManifestFileName);
             if (File.Exists(fromData))
                 return fromData;
 
@@ -377,14 +377,14 @@ namespace AuswertungPro.Next.UI
 
         private static AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CreateCodeCatalog(
             AppSettings settings,
-            string? ikasManifestPath,
+            string? vsaKekManifestPath,
             IReadOnlyList<string> xmlCatalogPaths)
         {
             var providers = new List<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>();
 
-            if (!string.IsNullOrWhiteSpace(ikasManifestPath) && File.Exists(ikasManifestPath))
+            if (!string.IsNullOrWhiteSpace(vsaKekManifestPath) && File.Exists(vsaKekManifestPath))
             {
-                providers.Add(new AuswertungPro.Next.Application.Protocol.ManifestCodeCatalogProvider(ikasManifestPath));
+                providers.Add(new AuswertungPro.Next.Application.Protocol.ManifestCodeCatalogProvider(vsaKekManifestPath));
             }
 
             providers.AddRange(xmlCatalogPaths
@@ -393,7 +393,7 @@ namespace AuswertungPro.Next.UI
                     path,
                     fallbackJsonPath: null,
                     fallbackTextXmlPath: ResolveVsaCatalogTextPath(settings, path)),
-                    AuswertungPro.Next.Application.Protocol.IkasCatalogSources.WinCanFallback))
+                    AuswertungPro.Next.Application.Protocol.VsaKekCatalogSources.WinCanFallback))
                 .Cast<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>());
 
             return new AuswertungPro.Next.Application.Protocol.CompositeCodeCatalogProvider(providers);
