@@ -32,6 +32,7 @@ public sealed class AiSettingsTests
             OllamaNumCtx: 8192,
             MultiModelEnabled: true,
             SidecarUrl: new Uri("http://localhost:8100"),
+            SidecarToken: "secret-token",
             PipelineMode: PipelineMode.Auto,
             YoloConfidence: 0.25,
             YoloClassConfidence: new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
@@ -52,6 +53,7 @@ public sealed class AiSettingsTests
         Assert.Equal("qwen2.5:14b", runtime.TextModel);
         Assert.Equal("ffmpeg", runtime.FfmpegPath);
         Assert.True(pipeline.MultiModelEnabled);
+        Assert.Equal("secret-token", pipeline.SidecarToken);
         Assert.Equal(PipelineMode.Auto, pipeline.Mode);
         Assert.Equal(0.25, pipeline.YoloConfidence);
     }
@@ -73,6 +75,7 @@ public sealed class AiSettingsTests
             OllamaNumCtx: 4096,
             MultiModelEnabled: true,
             SidecarUrl: "http://127.0.0.1:8100",
+            SidecarToken: "source-token",
             PipelineMode: "multi",
             YoloConfidence: 0.42,
             DinoBoxThreshold: 0.50,
@@ -92,6 +95,7 @@ public sealed class AiSettingsTests
         Assert.Equal(4096, settings.OllamaNumCtx);
         Assert.True(settings.MultiModelEnabled);
         Assert.Equal(new Uri("http://127.0.0.1:8100"), settings.SidecarUrl);
+        Assert.Equal("source-token", settings.SidecarToken);
         Assert.Equal(PipelineMode.MultiModel, settings.PipelineMode);
         Assert.Equal(0.42, settings.YoloConfidence);
         Assert.Equal(0.50, settings.DinoBoxThreshold);
@@ -115,6 +119,18 @@ public sealed class AiSettingsTests
         var settings = AiSettingsFactory.Load(new AiSettingsSource(PipelineMode: value));
 
         Assert.Equal(expected, settings.PipelineMode);
+    }
+
+    [Fact]
+    public void AiSettingsFactory_ReadsSidecarAuthTokenFromEnvironment()
+    {
+        using var env = new AiSettingsEnvScope();
+        env.Set("SEWER_SIDECAR_AUTH_TOKEN", "env-token");
+
+        var settings = AiSettingsFactory.Load();
+
+        Assert.Equal("env-token", settings.SidecarToken);
+        Assert.Equal("env-token", settings.ToPipelineConfig().SidecarToken);
     }
 
     [Fact]
@@ -155,6 +171,7 @@ public sealed class AiSettingsTests
             "SEWERSTUDIO_OLLAMA_NUM_CTX",
             "SEWERSTUDIO_MULTIMODEL_ENABLED",
             "SEWERSTUDIO_SIDECAR_URL",
+            "SEWERSTUDIO_SIDECAR_TOKEN",
             "SEWERSTUDIO_PIPELINE_MODE",
             "SEWERSTUDIO_YOLO_CONFIDENCE",
             "SEWERSTUDIO_DINO_BOX_THRESHOLD",
@@ -162,6 +179,12 @@ public sealed class AiSettingsTests
             "SEWERSTUDIO_SIDECAR_TIMEOUT_SEC",
             "SEWERSTUDIO_PIPE_DIAMETER_MM",
             "SEWERSTUDIO_FFMPEG"
+        ];
+
+        private static readonly string[] RawKeys =
+        [
+            "SEWER_SIDECAR_AUTH_TOKEN",
+            "SEWER_SIDECAR_TOKEN"
         ];
 
         private static readonly string[] LegacyKeys = Keys
@@ -172,7 +195,7 @@ public sealed class AiSettingsTests
 
         public AiSettingsEnvScope()
         {
-            foreach (var key in Keys.Concat(LegacyKeys))
+            foreach (var key in Keys.Concat(LegacyKeys).Concat(RawKeys))
             {
                 _backup[key] = Environment.GetEnvironmentVariable(key);
                 Environment.SetEnvironmentVariable(key, null);

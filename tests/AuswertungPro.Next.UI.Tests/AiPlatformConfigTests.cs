@@ -54,6 +54,7 @@ public sealed class AiSettingsFactoryTests
         env.Set("SEWERSTUDIO_OLLAMA_NUM_CTX", "4096");
         env.Set("SEWERSTUDIO_MULTIMODEL_ENABLED", "true");
         env.Set("SEWERSTUDIO_SIDECAR_URL", "http://127.0.0.1:8101");
+        env.Set("SEWERSTUDIO_SIDECAR_TOKEN", "ui-env-token");
         env.Set("SEWERSTUDIO_PIPELINE_MODE", "multi");
         env.Set("SEWERSTUDIO_YOLO_CONFIDENCE", "0.55");
         env.Set("SEWERSTUDIO_DINO_BOX_THRESHOLD", "0.45");
@@ -74,6 +75,7 @@ public sealed class AiSettingsFactoryTests
         Assert.Equal(4096, config.OllamaNumCtx);
         Assert.True(config.MultiModelEnabled);
         Assert.Equal(new Uri("http://127.0.0.1:8101"), config.SidecarUrl);
+        Assert.Equal("ui-env-token", config.SidecarToken);
         Assert.Equal(PipelineMode.MultiModel, config.PipelineMode);
         Assert.Equal(0.55, config.YoloConfidence);
         Assert.Equal(0.45, config.DinoBoxThreshold);
@@ -95,6 +97,7 @@ public sealed class AiSettingsFactoryTests
         env.Set("SEWERSTUDIO_AI_TIMEOUT_MIN", "15");
         env.Set("SEWERSTUDIO_MULTIMODEL_ENABLED", "0");
         env.Set("SEWERSTUDIO_SIDECAR_URL", "http://env-sidecar:8100");
+        env.Set("SEWERSTUDIO_SIDECAR_TOKEN", "env-token");
         env.Set("SEWERSTUDIO_PIPELINE_MODE", "ollama");
         env.Set("SEWERSTUDIO_YOLO_CONFIDENCE", "0.10");
         env.Set("SEWERSTUDIO_DINO_BOX_THRESHOLD", "0.11");
@@ -114,6 +117,7 @@ public sealed class AiSettingsFactoryTests
             AiFfmpegPath = "settings-ffmpeg",
             PipelineMultiModelEnabled = true,
             PipelineSidecarUrl = "http://settings-sidecar:8102",
+            PipelineSidecarToken = "settings-token",
             PipelineMode = "multi",
             PipelineYoloConfidence = 0.61,
             PipelineDinoBoxThreshold = 0.62,
@@ -131,6 +135,7 @@ public sealed class AiSettingsFactoryTests
         Assert.Equal(TimeSpan.FromMinutes(99), config.OllamaRequestTimeout);
         Assert.True(config.MultiModelEnabled);
         Assert.Equal(new Uri("http://settings-sidecar:8102"), config.SidecarUrl);
+        Assert.Equal("settings-token", config.SidecarToken);
         Assert.Equal(PipelineMode.MultiModel, config.PipelineMode);
         Assert.Equal(0.61, config.YoloConfidence);
         Assert.Equal(0.62, config.DinoBoxThreshold);
@@ -201,6 +206,7 @@ public sealed class AiSettingsFactoryTests
         Assert.Equal(0.45, pipeline.DinoBoxThreshold);
         Assert.Equal(0.46, pipeline.DinoTextThreshold);
         Assert.Equal(123, pipeline.SidecarTimeoutSec);
+        Assert.Equal("config-token", pipeline.SidecarToken);
         Assert.Equal(600, pipeline.PipeDiameterMmOverride);
         Assert.NotNull(pipeline.YoloClassConfidence);
         Assert.True(pipeline.YoloClassConfidence.Count > 0);
@@ -279,6 +285,7 @@ public sealed class AiSettingsFactoryTests
         OllamaNumCtx: 8192,
         MultiModelEnabled: true,
         SidecarUrl: new Uri("http://localhost:8100"),
+        SidecarToken: "config-token",
         PipelineMode: PipelineMode.MultiModel,
         YoloConfidence: 0.44,
         YoloClassConfidence: new Dictionary<string, double> { ["BAB"] = 0.15, ["BCA"] = 0.40 },
@@ -302,6 +309,7 @@ public sealed class AiSettingsFactoryTests
             "SEWERSTUDIO_OLLAMA_NUM_CTX",
             "SEWERSTUDIO_MULTIMODEL_ENABLED",
             "SEWERSTUDIO_SIDECAR_URL",
+            "SEWERSTUDIO_SIDECAR_TOKEN",
             "SEWERSTUDIO_PIPELINE_MODE",
             "SEWERSTUDIO_YOLO_CONFIDENCE",
             "SEWERSTUDIO_DINO_BOX_THRESHOLD",
@@ -309,6 +317,12 @@ public sealed class AiSettingsFactoryTests
             "SEWERSTUDIO_SIDECAR_TIMEOUT_SEC",
             "SEWERSTUDIO_PIPE_DIAMETER_MM",
             "SEWERSTUDIO_FFMPEG"
+        ];
+
+        private static readonly string[] RawKeys =
+        [
+            "SEWER_SIDECAR_AUTH_TOKEN",
+            "SEWER_SIDECAR_TOKEN"
         ];
 
         private static readonly string[] LegacyKeys = Keys
@@ -319,7 +333,7 @@ public sealed class AiSettingsFactoryTests
 
         public EnvVarScope()
         {
-            foreach (var key in Keys.Concat(LegacyKeys))
+            foreach (var key in Keys.Concat(LegacyKeys).Concat(RawKeys))
             {
                 _backup[key] = Environment.GetEnvironmentVariable(key);
                 Environment.SetEnvironmentVariable(key, null);

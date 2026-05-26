@@ -109,7 +109,7 @@ try
     if (needsYolo)
     {
         var sidecarUrl = options.SidecarUrl ?? config.SidecarUrl;
-        yoloClient = new VisionPipelineClient(sidecarUrl, yoloHttpClient);
+        yoloClient = new VisionPipelineClient(sidecarUrl, yoloHttpClient, config.SidecarToken);
         var health = await yoloClient.HealthCheckAsync(cts.Token).ConfigureAwait(false);
         if (health is null)
             throw new InvalidOperationException($"Sidecar nicht erreichbar: {sidecarUrl}");

@@ -963,7 +963,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             var pipelineCfg = new AppSettingsAiSettingsProvider()
                 .Load()
                 .ToPipelineConfig();
-            var client = new VisionPipelineClient(pipelineCfg.SidecarUrl);
+            var client = new VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarToken: pipelineCfg.SidecarToken);
 
             var health = await client.HealthCheckAsync(ct).ConfigureAwait(false);
             if (health is null)

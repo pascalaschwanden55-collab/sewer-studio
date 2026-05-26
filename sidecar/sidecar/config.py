@@ -10,6 +10,8 @@ class SidecarSettings(BaseSettings):
     port: int = 8100
     models_dir: str = "./models"
     gpu_device: str = "cuda:0"
+    trusted_hosts: str = "127.0.0.1,localhost"
+    auth_token: str = ""
 
     # Training export sandbox. output_dir in /training/export-yolo must stay inside this root.
     training_export_root: str = "./training_export"

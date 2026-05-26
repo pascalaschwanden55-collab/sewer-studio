@@ -36,6 +36,7 @@ public sealed class AppSettingsAiSettingsProvider : IAiSettingsProvider
             OllamaNumCtx: settings.AiOllamaNumCtx,
             MultiModelEnabled: settings.PipelineMultiModelEnabled,
             SidecarUrl: settings.PipelineSidecarUrl,
+            SidecarToken: settings.PipelineSidecarToken,
             PipelineMode: settings.PipelineMode,
             YoloConfidence: settings.PipelineYoloConfidence,
             DinoBoxThreshold: settings.PipelineDinoBoxThreshold,

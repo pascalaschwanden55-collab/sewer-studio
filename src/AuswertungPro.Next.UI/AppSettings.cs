@@ -76,6 +76,7 @@ public sealed class AppSettings
     // Multi-Model Pipeline Thresholds (overrides env vars if set)
     public bool? PipelineMultiModelEnabled { get; set; }
     public string? PipelineSidecarUrl { get; set; }
+    public string? PipelineSidecarToken { get; set; }
     public string? PipelineMode { get; set; }
     public double? PipelineYoloConfidence { get; set; }
     public double? PipelineDinoBoxThreshold { get; set; }

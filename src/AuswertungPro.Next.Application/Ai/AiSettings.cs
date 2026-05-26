@@ -25,6 +25,7 @@ public sealed record AiSettingsSource(
     int? OllamaNumCtx = null,
     bool? MultiModelEnabled = null,
     string? SidecarUrl = null,
+    string? SidecarToken = null,
     string? PipelineMode = null,
     double? YoloConfidence = null,
     double? DinoBoxThreshold = null,
@@ -43,6 +44,7 @@ public sealed record AiPlatformSettings(
     int OllamaNumCtx,
     bool MultiModelEnabled,
     Uri SidecarUrl,
+    string? SidecarToken,
     PipelineMode PipelineMode,
     double YoloConfidence,
     Dictionary<string, double> YoloClassConfidence,
@@ -66,6 +68,7 @@ public sealed record AiPlatformSettings(
     public PipelineConfig ToPipelineConfig() => new(
         MultiModelEnabled,
         SidecarUrl,
+        SidecarToken,
         PipelineMode,
         YoloConfidence,
         YoloClassConfidence,

@@ -21,6 +21,7 @@ public class PipelineConfigTests
 
             Assert.False(config.MultiModelEnabled);
             Assert.Equal(new Uri("http://localhost:8100"), config.SidecarUrl);
+            Assert.Null(config.SidecarToken);
             Assert.Equal(PipelineMode.OllamaOnly, config.Mode);
             Assert.Equal(0.25, config.YoloConfidence);
             Assert.Equal(0.30, config.DinoBoxThreshold);
@@ -104,6 +105,25 @@ public class PipelineConfigTests
         }
     }
 
+    [Fact]
+    public void Load_SidecarAuthTokenEnvVar_MapsToPipelineConfig()
+    {
+        var backup = BackupEnvVars();
+        try
+        {
+            ClearEnvVars();
+            Environment.SetEnvironmentVariable("SEWER_SIDECAR_AUTH_TOKEN", "env-token");
+
+            var config = LoadPipelineConfig();
+
+            Assert.Equal("env-token", config.SidecarToken);
+        }
+        finally
+        {
+            RestoreEnvVars(backup);
+        }
+    }
+
     // ── Helpers ──
 
     private static PipelineConfig LoadPipelineConfig() =>
@@ -119,6 +139,9 @@ public class PipelineConfigTests
         "SEWERSTUDIO_DINO_TEXT_THRESHOLD",
         "SEWERSTUDIO_SIDECAR_TIMEOUT_SEC",
         "SEWERSTUDIO_PIPE_DIAMETER_MM",
+        "SEWERSTUDIO_SIDECAR_TOKEN",
+        "SEWER_SIDECAR_AUTH_TOKEN",
+        "SEWER_SIDECAR_TOKEN",
     ];
 
     private static readonly string[] LegacyKeys = EnvKeys

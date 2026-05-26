@@ -385,6 +385,10 @@ internal static class SidecarTokenResolver
 {
     public static ResolvedSidecarToken Resolve()
     {
+        var authEnvToken = Environment.GetEnvironmentVariable("SEWER_SIDECAR_AUTH_TOKEN")?.Trim();
+        if (!string.IsNullOrWhiteSpace(authEnvToken))
+            return new ResolvedSidecarToken(authEnvToken, "SEWER_SIDECAR_AUTH_TOKEN");
+
         var envToken = Environment.GetEnvironmentVariable("SEWER_SIDECAR_TOKEN")?.Trim();
         if (!string.IsNullOrWhiteSpace(envToken))
             return new ResolvedSidecarToken(envToken, "SEWER_SIDECAR_TOKEN");

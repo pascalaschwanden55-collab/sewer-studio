@@ -63,6 +63,22 @@ public class VisionPipelineClientTests
     }
 
     [Fact]
+    public async Task HealthCheckAsync_AddsTokenHeader_ForLoopbackUrl()
+    {
+        var handler = new CaptureHandler("""{"status":"ok","version":"1.1.0","gpu":null}""");
+        var httpClient = new HttpClient(handler);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            httpClient,
+            sidecarToken: "health-token");
+
+        var result = await client.HealthCheckAsync(CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal("health-token", handler.LastSidecarToken);
+    }
+
+    [Fact]
     public void YoloRequest_SerializesCorrectly()
     {
         var request = new YoloRequest("base64data==", 0.3);

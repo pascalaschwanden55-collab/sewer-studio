@@ -10,6 +10,7 @@ namespace AuswertungPro.Next.Application.Ai;
 public sealed record PipelineConfig(
     bool MultiModelEnabled,
     Uri SidecarUrl,
+    string? SidecarToken,
     PipelineMode Mode,
     double YoloConfidence,
     Dictionary<string, double> YoloClassConfidence,

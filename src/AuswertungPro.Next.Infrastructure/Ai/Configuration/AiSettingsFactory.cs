@@ -64,6 +64,11 @@ public static class AiSettingsFactory
             OllamaNumCtx: source.OllamaNumCtx ?? ParseInt(Env("SEWERSTUDIO_OLLAMA_NUM_CTX")) ?? numCtxDefault,
             MultiModelEnabled: source.MultiModelEnabled ?? ParseBool(Env("SEWERSTUDIO_MULTIMODEL_ENABLED")),
             SidecarUrl: new Uri(FirstNonEmpty(source.SidecarUrl, Env("SEWERSTUDIO_SIDECAR_URL")) ?? "http://localhost:8100"),
+            SidecarToken: FirstNonEmpty(
+                source.SidecarToken,
+                Env("SEWERSTUDIO_SIDECAR_TOKEN"),
+                RawEnv("SEWER_SIDECAR_AUTH_TOKEN"),
+                RawEnv("SEWER_SIDECAR_TOKEN")),
             PipelineMode: ParsePipelineMode(FirstNonEmpty(source.PipelineMode, Env("SEWERSTUDIO_PIPELINE_MODE"))),
             YoloConfidence: source.YoloConfidence ?? ParseDouble(Env("SEWERSTUDIO_YOLO_CONFIDENCE")) ?? 0.25,
             YoloClassConfidence: yoloClassConf,
@@ -115,6 +120,12 @@ public static class AiSettingsFactory
         }
 
         return null;
+    }
+
+    private static string? RawEnv(string name)
+    {
+        var value = Environment.GetEnvironmentVariable(name)?.Trim();
+        return string.IsNullOrEmpty(value) ? null : value;
     }
 
     private static string? FirstNonEmpty(params string?[] values)

@@ -70,7 +70,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         if (useMultiModel)
         {
             // â”€â”€ Multi-Model Path: YOLO -> DINO -> SAM -> Qwen â”€â”€
-            var pipelineClient = new VisionPipelineClient(pipelineCfg.SidecarUrl, _httpClient);
+            var pipelineClient = new VisionPipelineClient(pipelineCfg.SidecarUrl, _httpClient, pipelineCfg.SidecarToken);
 
             // Create Qwen vision service for VSA-Code enrichment
             var ollamaClient = CreateOllamaClient();
@@ -181,7 +181,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         // Check sidecar health
         try
         {
-            var client = new VisionPipelineClient(pipelineCfg.SidecarUrl, _httpClient);
+            var client = new VisionPipelineClient(pipelineCfg.SidecarUrl, _httpClient, pipelineCfg.SidecarToken);
             var health = await client.HealthCheckAsync(ct).ConfigureAwait(false);
 
             if (health is null || health.Status != "ok")

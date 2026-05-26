@@ -42,7 +42,10 @@ public sealed class VisionPipelineClient
     {
         try
         {
-            using var resp = await _http.GetAsync(BuildUri("/health"), ct).ConfigureAwait(false);
+            using var req = new HttpRequestMessage(HttpMethod.Get, BuildUri("/health"));
+            AddSidecarTokenHeader(req);
+
+            using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode)
                 return null;
 
@@ -105,8 +108,7 @@ public sealed class VisionPipelineClient
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
-        if (_sendSidecarToken && !string.IsNullOrWhiteSpace(_sidecarToken))
-            req.Headers.TryAddWithoutValidation("X-Sidecar-Token", _sidecarToken);
+        AddSidecarTokenHeader(req);
 
         using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
 
@@ -126,6 +128,12 @@ public sealed class VisionPipelineClient
         return new Uri($"{baseStr}{endpoint}");
     }
 
+    private void AddSidecarTokenHeader(HttpRequestMessage request)
+    {
+        if (_sendSidecarToken && !string.IsNullOrWhiteSpace(_sidecarToken))
+            request.Headers.TryAddWithoutValidation("X-Sidecar-Token", _sidecarToken);
+    }
+
     private static bool IsLoopbackUri(Uri uri)
     {
         if (uri.IsLoopback)
@@ -139,6 +147,10 @@ public sealed class VisionPipelineClient
 
     private static string? TryLoadSidecarToken()
     {
+        var authEnv = NormalizeToken(Environment.GetEnvironmentVariable("SEWER_SIDECAR_AUTH_TOKEN"));
+        if (authEnv is not null)
+            return authEnv;
+
         var env = NormalizeToken(Environment.GetEnvironmentVariable("SEWER_SIDECAR_TOKEN"));
         if (env is not null)
             return env;
