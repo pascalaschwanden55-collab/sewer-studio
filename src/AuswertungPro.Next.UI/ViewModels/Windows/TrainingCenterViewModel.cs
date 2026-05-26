@@ -1659,7 +1659,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     }
 
     private static TrainingCaseInput ToTrainingCaseInput(TrainingCase tc)
-        => new(tc.CaseId, tc.FolderPath, tc.VideoPath, tc.ProtocolPath);
+        => new(tc.CaseId, tc.FolderPath, tc.VideoPath, tc.ProtocolPath, tc.InspectionDate);
 
     private static TrainingCase ToTrainingCase(TrainingCaseInput input)
         => new()
@@ -1668,6 +1668,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             FolderPath = input.FolderPath,
             VideoPath = input.VideoPath,
             ProtocolPath = input.ProtocolPath,
+            InspectionDate = input.InspectionDate,
             Status = TrainingCaseStatus.New,
             CreatedUtc = DateTime.UtcNow
         };
@@ -1859,6 +1860,9 @@ public partial class TrainingCenterViewModel : ObservableObject
                         SourceType = match.SourceType,
                         TechniqueGrade = match.TechniqueGrade,
                         KiCode = match.KiCode,
+                        InspectionDate = match.InspectionDate,
+                        TrainingEligible = match.TrainingEligible,
+                        TrainingEligibilityReason = match.TrainingEligibilityReason,
                         Notes = $"Korrektur aus Review: {vsaCode} → {correctedCode}"
                     };
                     // Korrigiertes Sample per Merge speichern (Race-Condition-sicher)

@@ -157,6 +157,8 @@ public sealed class TrainingSampleGeneratorCodeMetaTests
             Assert.Equal("3 mm", sample.CodeMeta.Parameters["vsa.q1"]);
             Assert.Equal("3", sample.CodeMeta.Parameters["vsa.uhr.von"]);
             Assert.Equal("A", sample.CodeMeta.Parameters["Char1"]);
+            Assert.False(sample.TrainingEligible);
+            Assert.Equal(TrainingSampleEligibility.MissingInspectionDateReason, sample.TrainingEligibilityReason);
         }
         finally
         {
@@ -225,11 +227,14 @@ public sealed class TrainingSampleGeneratorCodeMetaTests
                 CaseId: "VSA-KEK-E2E",
                 FolderPath: tempDir,
                 VideoPath: Path.Combine(tempDir, "missing.mp4"),
-                ProtocolPath: protocolPath));
+                ProtocolPath: protocolPath,
+                InspectionDate: new DateTime(2022, 1, 1)));
 
             Assert.Equal(3, result.Samples.Count);
 
             var baga = result.Samples.Single(s => s.Code == "BAGA");
+            Assert.True(baga.TrainingEligible);
+            Assert.Equal(new DateTime(2022, 1, 1), baga.InspectionDate);
             Assert.Equal("BAGA", baga.CodeMeta!.Code);
             Assert.Equal(VsaKekCatalogSources.Ili, baga.CodeMeta.Parameters["catalog.source"]);
             Assert.Equal("BAG", baga.CodeMeta.Parameters["catalog.canonicalCode"]);

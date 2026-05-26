@@ -42,12 +42,14 @@ public sealed class TrainingCenterImportService
                 var caseId = SafeRelativeId(rootFolder, folder);
                 var bestVideo = videos.Count > 0 ? PickBestVideo(videos, caseId) : "";
                 var bestProto = protos.Count > 0 ? PickBestProtocol(protos) ?? "" : "";
+                var inspectionDate = ResolveInspectionDate(folder, bestProto, bestVideo);
 
                 cases.Add(new TrainingCaseInput(
                     CaseId: caseId,
                     FolderPath: folder,
                     VideoPath: bestVideo,
-                    ProtocolPath: bestProto));
+                    ProtocolPath: bestProto,
+                    InspectionDate: inspectionDate));
             }
             catch
             {
@@ -87,13 +89,15 @@ public sealed class TrainingCenterImportService
                 var bestVideo = videos.Count > 0 ? PickBestVideo(videos, caseId) : "";
 
                 var proto = PickBestProtocol(protos);
+                var inspectionDate = ResolveInspectionDate(folder, proto ?? string.Empty, bestVideo);
                 if (proto is null) continue; // Nur Non-Protocol-Dateien → ueberspringen
 
                 cases.Add(new TrainingCaseInput(
                     CaseId: caseId,
                     FolderPath: folder,
                     VideoPath: bestVideo,
-                    ProtocolPath: proto));
+                    ProtocolPath: proto,
+                    InspectionDate: inspectionDate));
             }
             catch { }
         }
@@ -130,6 +134,54 @@ public sealed class TrainingCenterImportService
         return filtered.Select(p => new FileInfo(p))
             .OrderByDescending(fi => fi.Length)
             .First().FullName;
+    }
+
+    private static DateTime? ResolveInspectionDate(string folder, string protocolPath, string videoPath)
+    {
+        foreach (var candidate in EnumerateDateCandidates(folder, protocolPath, videoPath))
+        {
+            var parsed = TrainingSampleEligibility.TryParseInspectionDate(candidate);
+            if (parsed is not null)
+                return parsed.Value;
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<string> EnumerateDateCandidates(string folder, string protocolPath, string videoPath)
+    {
+        yield return Path.GetFileName(folder);
+        yield return folder;
+
+        if (!string.IsNullOrWhiteSpace(protocolPath))
+        {
+            yield return Path.GetFileName(protocolPath);
+            foreach (var line in ReadTextDateCandidates(protocolPath))
+                yield return line;
+        }
+
+        if (!string.IsNullOrWhiteSpace(videoPath))
+            yield return Path.GetFileName(videoPath);
+    }
+
+    private static IEnumerable<string> ReadTextDateCandidates(string path)
+    {
+        var ext = Path.GetExtension(path);
+        if (!string.Equals(ext, ".json", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(ext, ".xml", StringComparison.OrdinalIgnoreCase))
+        {
+            yield break;
+        }
+
+        foreach (var line in File.ReadLines(path).Take(200))
+        {
+            if (line.Contains("datum", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("date", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("aufnahme", StringComparison.OrdinalIgnoreCase))
+            {
+                yield return line;
+            }
+        }
     }
 
     private static IEnumerable<string> EnumerateFolders(string rootFolder)

@@ -24,6 +24,7 @@ public sealed record StageAExportResult(
     int SkippedMissingOrCorrupt,
     int SkippedInvalidCode,
     int SkippedWithoutBoundingBox,
+    int SkippedTrainingIneligible,
     int SkippedDuplicateImage,
     int FinalSamples,
     int TrainSamples,
@@ -156,6 +157,7 @@ public sealed class StageAExporter
             SkippedMissingOrCorrupt: analyses.Count(a => a.Decision == StageASampleDecision.MissingOrCorrupt),
             SkippedInvalidCode: analyses.Count(a => a.Decision == StageASampleDecision.InvalidCode),
             SkippedWithoutBoundingBox: analyses.Count(a => a.Decision == StageASampleDecision.WithoutBoundingBox),
+            SkippedTrainingIneligible: analyses.Count(a => a.Decision == StageASampleDecision.TrainingIneligible),
             SkippedDuplicateImage: skippedDuplicateImage,
             FinalSamples: splitItems.Count,
             TrainSamples: splitItems.Count(s => s.Split == "train"),
@@ -209,6 +211,9 @@ public sealed class StageAExporter
 
         if (sample.Status != TrainingSampleStatus.Approved)
             return StageASampleAnalysis.NotApproved(indexed);
+
+        if (!TrainingSampleEligibility.Evaluate(sample).IsEligible)
+            return StageASampleAnalysis.TrainingIneligible(indexed);
 
         var className = NormalizeClassName(sample.Code);
         if (string.IsNullOrWhiteSpace(className))
@@ -369,6 +374,7 @@ public sealed class StageAExporter
             skipped_missing_or_corrupt = analyses.Count(a => a.Decision == StageASampleDecision.MissingOrCorrupt),
             skipped_invalid_code = analyses.Count(a => a.Decision == StageASampleDecision.InvalidCode),
             skipped_without_bounding_box = analyses.Count(a => a.Decision == StageASampleDecision.WithoutBoundingBox),
+            skipped_training_ineligible = analyses.Count(a => a.Decision == StageASampleDecision.TrainingIneligible),
             skipped_duplicate_image = skippedDuplicateImage,
             final_samples = splitItems.Count,
             train_samples = splitItems.Count(s => s.Split == "train"),
@@ -533,6 +539,9 @@ public sealed class StageAExporter
             TechniqueGrade = source.TechniqueGrade,
             AdditionalFramePaths = source.AdditionalFramePaths is null ? null : [.. source.AdditionalFramePaths],
             KbIndexState = source.KbIndexState,
+            InspectionDate = source.InspectionDate,
+            TrainingEligible = source.TrainingEligible,
+            TrainingEligibilityReason = source.TrainingEligibilityReason,
             BboxXCenter = source.BboxXCenter,
             BboxYCenter = source.BboxYCenter,
             BboxWidth = source.BboxWidth,
@@ -555,6 +564,9 @@ public sealed class StageAExporter
     {
         public static StageASampleAnalysis NotApproved(IndexedSample source)
             => new(source.Index, source.Sample, StageASampleDecision.NotApproved, null, null);
+
+        public static StageASampleAnalysis TrainingIneligible(IndexedSample source)
+            => new(source.Index, source.Sample, StageASampleDecision.TrainingIneligible, null, null);
 
         public static StageASampleAnalysis InvalidCode(IndexedSample source)
             => new(source.Index, source.Sample, StageASampleDecision.InvalidCode, null, null);
@@ -589,5 +601,6 @@ public sealed class StageAExporter
         MissingOrCorrupt,
         InvalidCode,
         WithoutBoundingBox,
+        TrainingIneligible,
     }
 }

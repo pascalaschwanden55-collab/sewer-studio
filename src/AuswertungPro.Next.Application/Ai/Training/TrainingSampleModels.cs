@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Application.Ai.Training;
@@ -86,6 +88,15 @@ public sealed class TrainingSample
     /// <summary>KB-Indexierungszustand.</summary>
     public KbIndexState KbIndexState { get; set; } = KbIndexState.None;
 
+    /// <summary>Aufnahme-/Inspektionsdatum. Null = nicht trainingsfaehig.</summary>
+    public DateTime? InspectionDate { get; set; }
+
+    /// <summary>Harte Trainingsfreigabe nach Datum und Datenherkunft.</summary>
+    public bool TrainingEligible { get; set; }
+
+    /// <summary>Grund, warum ein Sample nicht ins Training darf.</summary>
+    public string? TrainingEligibilityReason { get; set; }
+
     /// <summary>BBox X-Center, normiert 0-1. Null = keine BBox vorhanden.</summary>
     public double? BboxXCenter { get; set; }
 
@@ -110,5 +121,104 @@ public sealed class TrainingSample
         var rc = Math.Round(meterCenter, 1);
         var re = Math.Round(meterEnd, 1);
         return $"{caseId}|{code}|{rc:F1}|{re:F1}";
+    }
+}
+
+public readonly record struct TrainingEligibilityResult(bool IsEligible, string? Reason);
+
+public static class TrainingSampleEligibility
+{
+    public static readonly DateTime MinimumInspectionDate = new(2022, 1, 1);
+    public const string MissingInspectionDateReason = "missing-inspection-date";
+    public const string LegacyBeforeCutoffReason = "legacy-before-2022";
+
+    public static TrainingEligibilityResult Evaluate(DateTime? inspectionDate)
+    {
+        if (inspectionDate is null)
+            return new TrainingEligibilityResult(false, MissingInspectionDateReason);
+
+        return inspectionDate.Value.Date >= MinimumInspectionDate
+            ? new TrainingEligibilityResult(true, null)
+            : new TrainingEligibilityResult(false, LegacyBeforeCutoffReason);
+    }
+
+    public static TrainingEligibilityResult Evaluate(TrainingSample sample)
+    {
+        var result = Evaluate(sample.InspectionDate);
+        if (!result.IsEligible)
+            return result;
+
+        return sample.TrainingEligible
+            ? result
+            : new TrainingEligibilityResult(false, sample.TrainingEligibilityReason ?? MissingInspectionDateReason);
+    }
+
+    public static DateTime? TryParseInspectionDate(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        var text = raw.Trim();
+        var formats = new[]
+        {
+            "dd.MM.yyyy", "d.M.yyyy", "dd.MM.yy", "d.M.yy",
+            "dd/MM/yyyy", "d/M/yyyy", "dd/MM/yy", "d/M/yy",
+            "yyyy-MM-dd", "yyyy/MM/dd", "yyyyMMdd"
+        };
+
+        if (DateTime.TryParseExact(
+                text,
+                formats,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeLocal,
+                out var exact))
+        {
+            return exact.Date;
+        }
+
+        var dateMatch = Regex.Match(text, @"\b(?<d>\d{1,2})[./-](?<m>\d{1,2})[./-](?<y>\d{2,4})\b");
+        if (dateMatch.Success)
+        {
+            var day = int.Parse(dateMatch.Groups["d"].Value, CultureInfo.InvariantCulture);
+            var month = int.Parse(dateMatch.Groups["m"].Value, CultureInfo.InvariantCulture);
+            var year = int.Parse(dateMatch.Groups["y"].Value, CultureInfo.InvariantCulture);
+            if (year < 100)
+                year += year >= 70 ? 1900 : 2000;
+            if (TryCreateDate(year, month, day, out var parsed))
+                return parsed;
+        }
+
+        var isoMatch = Regex.Match(text, @"\b(?<y>\d{4})[-/](?<m>\d{1,2})[-/](?<d>\d{1,2})\b");
+        if (isoMatch.Success)
+        {
+            var year = int.Parse(isoMatch.Groups["y"].Value, CultureInfo.InvariantCulture);
+            var month = int.Parse(isoMatch.Groups["m"].Value, CultureInfo.InvariantCulture);
+            var day = int.Parse(isoMatch.Groups["d"].Value, CultureInfo.InvariantCulture);
+            if (TryCreateDate(year, month, day, out var parsed))
+                return parsed;
+        }
+
+        var yearMatch = Regex.Match(text, @"\b(?<y>19\d{2}|20\d{2})\b");
+        if (yearMatch.Success)
+        {
+            var year = int.Parse(yearMatch.Groups["y"].Value, CultureInfo.InvariantCulture);
+            return new DateTime(year, 1, 1);
+        }
+
+        return null;
+    }
+
+    private static bool TryCreateDate(int year, int month, int day, out DateTime date)
+    {
+        try
+        {
+            date = new DateTime(year, month, day);
+            return true;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            date = default;
+            return false;
+        }
     }
 }

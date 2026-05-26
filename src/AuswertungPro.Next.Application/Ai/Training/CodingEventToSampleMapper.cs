@@ -23,7 +23,7 @@ public static class CodingEventToSampleMapper
     /// Erstellt ein TrainingSample aus einem CodingEvent.
     /// Enthaelt finalen Code, Meter-Position und KI-Kontext.
     /// </summary>
-    public static TrainingSample FromCodingEvent(CodingEvent ev, string caseId, string? framePath)
+    public static TrainingSample FromCodingEvent(CodingEvent ev, string caseId, string? framePath, DateTime? inspectionDate = null)
     {
         // Ohne KI-Kontext landet das Sample in der Review-Queue (New), nicht direkt im Training.
         // Verhindert dass rein manuelle Codiereintraege ungesehen die Trainingsdaten erweitern.
@@ -37,6 +37,7 @@ public static class CodingEventToSampleMapper
 
         var meterStart = Math.Round(ev.Entry.MeterStart ?? ev.MeterAtCapture, 1);
         var meterEnd = Math.Round(ev.Entry.MeterEnd ?? ev.MeterAtCapture, 1);
+        var eligibility = TrainingSampleEligibility.Evaluate(inspectionDate);
 
         return new TrainingSample
         {
@@ -56,6 +57,9 @@ public static class CodingEventToSampleMapper
                 ? DetermineMatchLevel(ev.AiContext)
                 : null,
             Notes = ev.AiContext?.Reason ?? string.Empty,
+            InspectionDate = inspectionDate,
+            TrainingEligible = eligibility.IsEligible,
+            TrainingEligibilityReason = eligibility.Reason,
             CodeMeta = GroundTruthProtocolEntryMapper.CloneCodeMeta(ev.Entry.CodeMeta),
             Signature = TrainingSample.BuildCanonicalSignature(caseId, ev.Entry.Code, meterStart, meterEnd),
             BboxXCenter = ExtractBboxField(ev.Overlay, bboxCenter: true, isX: true),

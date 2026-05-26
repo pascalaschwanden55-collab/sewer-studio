@@ -1,3 +1,4 @@
+using System;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -50,5 +51,25 @@ public sealed class CodingEventToSampleMapperTests
         var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId: "case-1", framePath: null);
 
         Assert.Equal(TrainingSampleStatus.Approved, sample.Status);
+    }
+
+    [Fact]
+    public void MitAufnahmedatumAb2022_ist_trainingsfaehig()
+    {
+        var ev = new CodingEvent
+        {
+            Entry = new ProtocolEntry { Code = "BABAC" },
+            AiContext = new CodingEventAiContext { Decision = CodingUserDecision.Accepted },
+            MeterAtCapture = 12.3
+        };
+
+        var sample = CodingEventToSampleMapper.FromCodingEvent(
+            ev,
+            caseId: "case-1",
+            framePath: null,
+            inspectionDate: new DateTime(2022, 1, 1));
+
+        Assert.True(sample.TrainingEligible);
+        Assert.Null(sample.TrainingEligibilityReason);
     }
 }

@@ -3016,7 +3016,7 @@ public partial class PlayerWindow : Window
         {
             var caseId = _codingVm?.HaltungName ?? "unknown";
             var framePath = ev.Entry.FotoPaths.Count > 0 ? ev.Entry.FotoPaths[0] : null;
-            var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath);
+            var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath, ResolveTrainingInspectionDate());
             if (ev.Entry.FotoPaths.Count > 1)
             {
                 sample.AdditionalFramePaths ??= new System.Collections.Generic.List<string>();
@@ -3042,7 +3042,7 @@ public partial class PlayerWindow : Window
             foreach (var ev in _codingVm.Events)
             {
                 var framePath = ev.Entry.FotoPaths.Count > 0 ? ev.Entry.FotoPaths[0] : null;
-                var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath);
+                var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath, ResolveTrainingInspectionDate());
 
                 // Alle Fotos als zusaetzliche Lernbilder referenzieren
                 // (Foto 1 = FramePath, Foto 2+ = AdditionalFrames)
@@ -3065,6 +3065,9 @@ public partial class PlayerWindow : Window
             System.Diagnostics.Debug.WriteLine($"[Training] Fehler: {ex.Message}");
         }
     }
+
+    private DateTime? ResolveTrainingInspectionDate()
+        => TrainingSampleEligibility.TryParseInspectionDate(_haltungRecord?.GetFieldValue("Datum_Jahr"));
 
     /// <summary>
     /// Stellt sicher, dass Haltungslaenge_m gesetzt ist.

@@ -135,6 +135,7 @@ public sealed class TrainingSampleGenerator
         var seen = new HashSet<string>(
             existingSignatures ?? Array.Empty<string>(),
             StringComparer.Ordinal);
+        var eligibility = TrainingSampleEligibility.Evaluate(tc.InspectionDate);
 
         foreach (var entry in entries)
         {
@@ -216,6 +217,9 @@ public sealed class TrainingSampleGenerator
                     Signature = sig,
                     FrameIndex = frameIndex,
                     SourceType = SourceTypeNames.BatchImport,
+                    InspectionDate = tc.InspectionDate,
+                    TrainingEligible = eligibility.IsEligible,
+                    TrainingEligibilityReason = eligibility.Reason,
                     CodeMeta = BuildSampleCodeMeta(entry, sampleCode)
                 });
             }

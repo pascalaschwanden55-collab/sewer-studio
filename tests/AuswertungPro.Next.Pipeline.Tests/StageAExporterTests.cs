@@ -127,6 +127,27 @@ public sealed class StageAExporterTests : IDisposable
     }
 
     [Fact]
+    public async Task DryRun_sperrt_legacy_und_unbekannte_aufnahmedaten()
+    {
+        var source = PrepareSourceWithTrainingEligibility();
+        var output = Path.Combine(_root, "eligibility-out");
+
+        var result = await new StageAExporter().ExportAsync(new StageAExportOptions(
+            SourceSamplesPath: source.SamplesPath,
+            EvalSetRoot: source.EvalRoot,
+            OutputRoot: output,
+            DryRun: true,
+            ValidationRatio: 0,
+            DegreeOfParallelism: 2));
+
+        Assert.Equal(3, result.InputSamples);
+        Assert.Equal(2, result.SkippedTrainingIneligible);
+        Assert.Equal(1, result.FinalSamples);
+        Assert.Equal("BCAEA", Assert.Single(result.Classes).ClassName);
+        Assert.False(Directory.Exists(output));
+    }
+
+    [Fact]
     public async Task DryRun_entfernt_doppelte_Bilder_per_Hash()
     {
         var source = PrepareSourceWithDuplicateImages();
@@ -203,10 +224,10 @@ public sealed class StageAExporterTests : IDisposable
         var samples = new[]
         {
             new TrainingSample { SampleId = "rejected", Code = "BCE", FramePath = good, Status = TrainingSampleStatus.Rejected },
-            new TrainingSample { SampleId = "eval", Code = "BCAAA", FramePath = eval, Status = TrainingSampleStatus.Approved },
-            new TrainingSample { SampleId = "missing", Code = "BAHC", FramePath = Path.Combine(frameRoot, "missing.png"), Status = TrainingSampleStatus.Approved },
-            new TrainingSample { SampleId = "badcode", Code = "", FramePath = good, Status = TrainingSampleStatus.Approved },
-            new TrainingSample { SampleId = "ok", Code = "BABAC", FramePath = good, Status = TrainingSampleStatus.Approved },
+            MarkEligible(new TrainingSample { SampleId = "eval", Code = "BCAAA", FramePath = eval, Status = TrainingSampleStatus.Approved }),
+            MarkEligible(new TrainingSample { SampleId = "missing", Code = "BAHC", FramePath = Path.Combine(frameRoot, "missing.png"), Status = TrainingSampleStatus.Approved }),
+            MarkEligible(new TrainingSample { SampleId = "badcode", Code = "", FramePath = good, Status = TrainingSampleStatus.Approved }),
+            MarkEligible(new TrainingSample { SampleId = "ok", Code = "BABAC", FramePath = good, Status = TrainingSampleStatus.Approved }),
         };
 
         var samplesPath = Path.Combine(_root, "training_samples.json");
@@ -238,7 +259,7 @@ public sealed class StageAExporterTests : IDisposable
 
         var samples = new[]
         {
-            new TrainingSample
+            MarkEligible(new TrainingSample
             {
                 SampleId = "with-box",
                 Code = "BABAC",
@@ -248,14 +269,14 @@ public sealed class StageAExporterTests : IDisposable
                 BboxYCenter = 0.5,
                 BboxWidth = 0.2,
                 BboxHeight = 0.3,
-            },
-            new TrainingSample
+            }),
+            MarkEligible(new TrainingSample
             {
                 SampleId = "no-box",
                 Code = "BCAAA",
                 FramePath = noBox,
                 Status = TrainingSampleStatus.Approved,
-            },
+            }),
         };
 
         var samplesPath = Path.Combine(_root, "bbox_training_samples.json");
@@ -295,6 +316,67 @@ public sealed class StageAExporterTests : IDisposable
         };
 
         var samplesPath = Path.Combine(_root, "dedupe_training_samples.json");
+        File.WriteAllText(samplesPath, JsonSerializer.Serialize(samples, StageAExporter.JsonOptions));
+        return (samplesPath, evalRoot);
+    }
+
+    private (string SamplesPath, string EvalRoot) PrepareSourceWithTrainingEligibility()
+    {
+        Directory.CreateDirectory(_root);
+        var frameRoot = Path.Combine(_root, "eligibility-frames");
+        Directory.CreateDirectory(frameRoot);
+
+        var oldFrame = Path.Combine(frameRoot, "old.png");
+        var unknownFrame = Path.Combine(frameRoot, "unknown.png");
+        var currentFrame = Path.Combine(frameRoot, "current.png");
+        File.WriteAllBytes(oldFrame, [1, 1, 1]);
+        File.WriteAllBytes(unknownFrame, [2, 2, 2]);
+        File.WriteAllBytes(currentFrame, [3, 3, 3]);
+
+        var evalRoot = Path.Combine(_root, "eligibility-eval");
+        Directory.CreateDirectory(Path.Combine(evalRoot, "images"));
+        File.WriteAllText(
+            Path.Combine(evalRoot, "_manifest.json"),
+            new JsonObject
+            {
+                ["frozen"] = true,
+                ["hash_algorithm"] = "sha256",
+                ["hashes"] = new JsonObject()
+            }.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+
+        var samples = new[]
+        {
+            new TrainingSample
+            {
+                SampleId = "legacy",
+                Code = "BCAEA",
+                FramePath = oldFrame,
+                Status = TrainingSampleStatus.Approved,
+                InspectionDate = new DateTime(2021, 12, 31),
+                TrainingEligible = false,
+                TrainingEligibilityReason = TrainingSampleEligibility.LegacyBeforeCutoffReason,
+            },
+            new TrainingSample
+            {
+                SampleId = "unknown",
+                Code = "BCAEA",
+                FramePath = unknownFrame,
+                Status = TrainingSampleStatus.Approved,
+                TrainingEligible = false,
+                TrainingEligibilityReason = TrainingSampleEligibility.MissingInspectionDateReason,
+            },
+            new TrainingSample
+            {
+                SampleId = "current",
+                Code = "BCAEA",
+                FramePath = currentFrame,
+                Status = TrainingSampleStatus.Approved,
+                InspectionDate = new DateTime(2022, 1, 1),
+                TrainingEligible = true,
+            },
+        };
+
+        var samplesPath = Path.Combine(_root, "eligibility_training_samples.json");
         File.WriteAllText(samplesPath, JsonSerializer.Serialize(samples, StageAExporter.JsonOptions));
         return (samplesPath, evalRoot);
     }
@@ -342,6 +424,8 @@ public sealed class StageAExporterTests : IDisposable
             Code = "BDDC",
             FramePath = framePath,
             Status = TrainingSampleStatus.Approved,
+            InspectionDate = new DateTime(2022, 1, 1),
+            TrainingEligible = true,
             BboxXCenter = 0.5,
             BboxYCenter = 0.5,
             BboxWidth = 0.2,
@@ -361,6 +445,8 @@ public sealed class StageAExporterTests : IDisposable
             Code = code,
             FramePath = framePath,
             Status = TrainingSampleStatus.Approved,
+            InspectionDate = new DateTime(2022, 1, 1),
+            TrainingEligible = true,
             CodeMeta = new ProtocolEntryCodeMeta
             {
                 Code = code,
@@ -376,6 +462,13 @@ public sealed class StageAExporterTests : IDisposable
             BboxWidth = 0.2,
             BboxHeight = 0.3,
         };
+
+    private static TrainingSample MarkEligible(TrainingSample sample)
+    {
+        sample.InspectionDate = new DateTime(2022, 1, 1);
+        sample.TrainingEligible = true;
+        return sample;
+    }
 
     private static void WriteEvalManifest(string evalRoot, string evalImage)
     {

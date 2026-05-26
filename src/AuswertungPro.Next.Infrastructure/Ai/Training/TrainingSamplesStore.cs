@@ -111,6 +111,14 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
                         // Anreicherung: nur ueberschreiben wenn der neue Wert gesetzt ist
                         if (s.SourceType is not null) target.SourceType = s.SourceType;
                         if (s.TechniqueGrade is not null) target.TechniqueGrade = s.TechniqueGrade;
+                        if (s.InspectionDate is not null) target.InspectionDate = s.InspectionDate;
+                        if (s.InspectionDate is not null ||
+                            s.TrainingEligible ||
+                            !string.IsNullOrWhiteSpace(s.TrainingEligibilityReason))
+                        {
+                            target.TrainingEligible = s.TrainingEligible;
+                            target.TrainingEligibilityReason = s.TrainingEligibilityReason;
+                        }
                     }
                     else
                     {

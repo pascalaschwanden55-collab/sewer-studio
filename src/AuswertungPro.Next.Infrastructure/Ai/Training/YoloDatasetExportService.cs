@@ -23,6 +23,7 @@ public sealed class YoloDatasetExportService
     {
         var approved = samples
             .Where(s => s.Status == TrainingSampleStatus.Approved
+                        && TrainingSampleEligibility.Evaluate(s).IsEligible
                         && !string.IsNullOrEmpty(s.FramePath)
                         && File.Exists(s.FramePath))
             .ToList();

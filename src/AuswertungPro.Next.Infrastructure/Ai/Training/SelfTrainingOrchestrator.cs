@@ -263,6 +263,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
 
             // ── TrainingSample erzeugen ──
             var meterCenter = (entry.MeterStart + entry.MeterEnd) / 2.0;
+            var eligibility = TrainingSampleEligibility.Evaluate(tc.InspectionDate);
             var sample = new TrainingSample
             {
                 SampleId = $"{tc.CaseId}_st_{i:D3}_{DateTime.UtcNow:HHmmss}",
@@ -291,7 +292,10 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 SourceType = usedVideoFallback
                     ? (entry.Zeit.HasValue ? SourceTypeNames.VideoTimestamp : SourceTypeNames.VideoLinear)
                     : SourceTypeNames.PdfPhoto,
-                TechniqueGrade = technique?.OverallGrade
+                TechniqueGrade = technique?.OverallGrade,
+                InspectionDate = tc.InspectionDate,
+                TrainingEligible = eligibility.IsEligible,
+                TrainingEligibilityReason = eligibility.Reason
             };
             generatedSamples.Add(sample);
 
