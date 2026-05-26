@@ -710,6 +710,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         entry.CodeMeta.UpdatedAt = DateTimeOffset.UtcNow;
 
         var p = entry.CodeMeta.Parameters;
+        AddCatalogMetadata(p, GetCurrentVsaCodeDef());
         SetOrRemove(p, "vsa.q1", Q1Value);
         SetOrRemove(p, "vsa.q2", Q2Value);
 
@@ -763,6 +764,16 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
             dict.Remove(key);
         else
             dict[key] = value.Trim();
+    }
+
+    private static void AddCatalogMetadata(Dictionary<string, string> parameters, VsaCodeDef? codeDef)
+    {
+        if (codeDef is null)
+            return;
+
+        SetOrRemove(parameters, "catalog.source", codeDef.Source);
+        SetOrRemove(parameters, "catalog.canonicalCode", codeDef.CanonicalCode);
+        SetOrRemove(parameters, "catalog.standardAnnotation", codeDef.StandardAnnotation);
     }
 
     // =================================================================

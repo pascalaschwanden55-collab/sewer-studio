@@ -332,6 +332,8 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
                 parameters[parameter.Name] = parameter.Value.Trim();
         }
 
+        AddCatalogMetadata(parameters, SelectedCode);
+
         _entryVm.ApplyCodeSelection(
             SelectedCode.Code,
             parameters,
@@ -409,6 +411,21 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
 
         var suffix = string.Join(", ", parts);
         return $"{title} ({suffix})";
+    }
+
+    private static void AddCatalogMetadata(
+        Dictionary<string, string> parameters,
+        AppProtocol.CodeDefinition code)
+    {
+        AddIfPresent(parameters, "catalog.source", code.Source);
+        AddIfPresent(parameters, "catalog.canonicalCode", code.CanonicalCode);
+        AddIfPresent(parameters, "catalog.standardAnnotation", code.StandardAnnotation);
+    }
+
+    private static void AddIfPresent(Dictionary<string, string> parameters, string key, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+            parameters[key] = value.Trim();
     }
 }
 

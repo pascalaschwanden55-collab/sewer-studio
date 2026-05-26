@@ -63,7 +63,28 @@ public sealed class ProtocolCodePickerViewModelTests
         Assert.Equal(string.Empty, baga.SourceBadgeText);
     }
 
+    [Fact]
+    public void ApplySelection_writes_catalog_metadata_to_protocol_entry()
+    {
+        var entry = new ProtocolEntry();
+        var vm = CreateViewModel(entry);
+        vm.SelectedCode = vm.Codes.Single(c => c.Code == "BDBA");
+
+        var applied = vm.ApplySelection();
+
+        Assert.True(applied);
+        Assert.Equal("BDBA", entry.Code);
+        Assert.NotNull(entry.CodeMeta);
+        Assert.Equal("BDBA", entry.CodeMeta!.Code);
+        Assert.Equal(IkasCatalogSources.IkasIli, entry.CodeMeta.Parameters["catalog.source"]);
+        Assert.Equal("BDB", entry.CodeMeta.Parameters["catalog.canonicalCode"]);
+        Assert.Equal("A", entry.CodeMeta.Parameters["catalog.standardAnnotation"]);
+    }
+
     private static ProtocolCodePickerViewModel CreateViewModel()
+        => CreateViewModel(new ProtocolEntry());
+
+    private static ProtocolCodePickerViewModel CreateViewModel(ProtocolEntry entry)
         => new(new InMemoryCodeCatalogProvider(new[]
         {
             new CodeDefinition
@@ -74,6 +95,16 @@ public sealed class ProtocolCodePickerViewModelTests
                 Source = IkasCatalogSources.IkasIli,
                 IsSelectable = true,
                 Group = "Kanal/Anschluesse"
+            },
+            new CodeDefinition
+            {
+                Code = "BDBA",
+                Title = "Wasserstand Standard A",
+                CanonicalCode = "BDB",
+                Source = IkasCatalogSources.IkasIli,
+                StandardAnnotation = "A",
+                IsSelectable = true,
+                Group = "Kanal/Anmerkung"
             },
             new CodeDefinition
             {
@@ -108,7 +139,7 @@ public sealed class ProtocolCodePickerViewModelTests
                 IsSelectable = true,
                 Group = "WinCan/Legacy"
             }
-        }), new ProtocolEntryVM(new ProtocolEntry()));
+        }), new ProtocolEntryVM(entry));
 
     private static IEnumerable<CodeTreeNode> Flatten(IEnumerable<CodeTreeNode> nodes)
     {

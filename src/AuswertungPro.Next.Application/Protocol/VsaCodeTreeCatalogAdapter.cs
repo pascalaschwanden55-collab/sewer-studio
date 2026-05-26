@@ -55,6 +55,9 @@ public static class VsaCodeTreeCatalogAdapter
             {
                 Label = label,
                 FinalCode = code,
+                Source = def.Source,
+                CanonicalCode = string.IsNullOrWhiteSpace(def.CanonicalCode) ? code : NormalizeCode(def.CanonicalCode),
+                StandardAnnotation = def.StandardAnnotation,
                 Warn = ResolveWarning(def)
             };
         }

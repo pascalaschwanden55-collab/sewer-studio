@@ -17,6 +17,9 @@ public sealed record VsaCodeDef
     public bool IsSteuer { get; init; }
     public string? Note { get; init; }
     public string? Warn { get; init; }
+    public string? Source { get; init; }
+    public string? CanonicalCode { get; init; }
+    public string? StandardAnnotation { get; init; }
     public bool XPrefix { get; init; }
     /// <summary>Char1 → Label. Wenn null, ist der Code ein Endcode.</summary>
     public Dictionary<string, CharDef>? Char1 { get; init; }
