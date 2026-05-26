@@ -2,14 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Infrastructure.Ai.Shared;
 
 namespace AuswertungPro.Next.Infrastructure.Ai;
 
 /// <summary>
 /// Deterministische, regelbasierte Plausibilitaetspruefung fuer KI-Codevorschlaege.
-/// Validiert den vorgeschlagenen VSA-Code gegen den dynamischen Katalog (AllowedCodes)
-/// und optional gegen den statischen 24er-Katalog (VsaCatalog) als Fallback.
+/// Validiert den vorgeschlagenen VSA-Code gegen den geladenen Code-Katalog.
 /// </summary>
 public sealed partial class RuleBasedAiSuggestionPlausibilityService : IAiSuggestionPlausibilityService
 {
@@ -40,7 +38,6 @@ public sealed partial class RuleBasedAiSuggestionPlausibilityService : IAiSugges
 
         var isInAllowedCatalog = _allowedCodes?.Contains(code) ?? false;
         var isVsaFormat = VsaCodePattern().IsMatch(code);
-        var isInStaticCatalog = VsaCatalog.IsKnown(code);
 
         if (!isVsaFormat && !isInAllowedCatalog)
         {
@@ -53,7 +50,7 @@ public sealed partial class RuleBasedAiSuggestionPlausibilityService : IAiSugges
             warnings.Add($"PL01: Code '{code}' hat kein klassisches VSA-Format (B[A-H][A-Z]), ist aber im Katalog bekannt.");
             confidence = Math.Max(0.0, confidence - CatalogNonVsaFormatPenalty);
         }
-        else if (!isInAllowedCatalog && !isInStaticCatalog)
+        else if (!isInAllowedCatalog)
         {
             warnings.Add($"PL02: Code '{code}' ist nicht im Katalog bekannt.");
             confidence = Math.Max(0.0, confidence - UnknownCodePenalty);
@@ -93,20 +90,17 @@ public sealed partial class RuleBasedAiSuggestionPlausibilityService : IAiSugges
         if (suggestedCode is not null && context.Observation is not null)
         {
             var obs = context.Observation.ToLowerInvariant();
-            var codeInfo = VsaCatalog.Get(code);
 
-            if (codeInfo is not null
-                && (obs.Contains("riss") || obs.Contains("crack"))
+            if ((obs.Contains("riss") || obs.Contains("crack"))
                 && !code.StartsWith("BA"))
             {
-                warnings.Add($"PL03: Befund enthaelt 'Riss' aber Code '{code}' ({codeInfo.Label}) ist keine Riss-Kategorie.");
+                warnings.Add($"PL03: Befund enthaelt 'Riss' aber Code '{code}' ist keine Riss-Kategorie.");
             }
 
-            if (codeInfo is not null
-                && (obs.Contains("verformung") || obs.Contains("deformation"))
+            if ((obs.Contains("verformung") || obs.Contains("deformation"))
                 && !code.StartsWith("BB"))
             {
-                warnings.Add($"PL03: Befund enthaelt 'Verformung' aber Code '{code}' ({codeInfo.Label}) ist keine Verformungs-Kategorie.");
+                warnings.Add($"PL03: Befund enthaelt 'Verformung' aber Code '{code}' ist keine Verformungs-Kategorie.");
             }
         }
 

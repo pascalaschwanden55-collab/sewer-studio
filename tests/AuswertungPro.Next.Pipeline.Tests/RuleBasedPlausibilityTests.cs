@@ -5,7 +5,17 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 
 public class RuleBasedPlausibilityTests
 {
-    private readonly RuleBasedAiSuggestionPlausibilityService _sut = new();
+    private static readonly IReadOnlySet<string> KnownCodes =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "BAA",
+            "BBA",
+            "BCD",
+            "BCE",
+            "BDC"
+        };
+
+    private readonly RuleBasedAiSuggestionPlausibilityService _sut = new(KnownCodes);
 
     [Fact]
     public void NullCode_ReturnsUnchanged()
@@ -28,10 +38,23 @@ public class RuleBasedPlausibilityTests
     [Fact]
     public void KnownCode_ReturnsUnchanged()
     {
-        var input = new AiSuggestionResult("BAA", 0.9, "Längsriss", null, null);
-        var result = _sut.ApplyChecks(input, new ObservationContext("Längsriss"));
+        var input = new AiSuggestionResult("BAA", 0.9, "Laengsriss", null, null);
+        var result = _sut.ApplyChecks(input, new ObservationContext("Laengsriss"));
         Assert.Equal("BAA", result.SuggestedCode);
         Assert.Equal(0.9, result.Confidence);
+    }
+
+    [Fact]
+    public void DefaultConstructor_DoesNotUseStaticCatalogFallback()
+    {
+        var sut = new RuleBasedAiSuggestionPlausibilityService();
+        var input = new AiSuggestionResult("BAA", 0.9, "Laengsriss", null, null);
+
+        var result = sut.ApplyChecks(input, new ObservationContext("Laengsriss"));
+
+        Assert.Equal("BAA", result.SuggestedCode);
+        Assert.Equal(0.5, result.Confidence, 2);
+        Assert.Contains(result.Warnings!, w => w.Contains("PL02"));
     }
 
     [Fact]
@@ -47,7 +70,6 @@ public class RuleBasedPlausibilityTests
     [Fact]
     public void UnknownCatalogCode_ReducesConfidence()
     {
-        // BHZ: gültiges Format aber nicht im statischen Katalog
         var input = new AiSuggestionResult("BHZ", 0.9, "test", null, null);
         var result = _sut.ApplyChecks(input, new ObservationContext("unknown"));
         Assert.Equal("BHZ", result.SuggestedCode);
@@ -59,7 +81,7 @@ public class RuleBasedPlausibilityTests
     public void ObservationMismatch_CrackWithNonCrackCode_AddsWarning()
     {
         var input = new AiSuggestionResult("BBA", 0.85, "test", null, null);
-        var result = _sut.ApplyChecks(input, new ObservationContext("Längsriss in der Sohle"));
+        var result = _sut.ApplyChecks(input, new ObservationContext("Laengsriss in der Sohle"));
         Assert.Equal("BBA", result.SuggestedCode);
         Assert.Equal(0.85, result.Confidence);
         Assert.Contains(result.Warnings!, w => w.Contains("PL03"));
@@ -100,8 +122,6 @@ public class RuleBasedPlausibilityTests
         Assert.True(result.Confidence >= 0.0);
     }
 
-    // ── Tests mit dynamischem Katalog (allowedCodes) ────────────────────────
-
     [Fact]
     public void CatalogCode_NonVsaFormat_PassesWithSoftWarning()
     {
@@ -121,7 +141,7 @@ public class RuleBasedPlausibilityTests
     {
         var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "BAA", "BBA" };
         var sut = new RuleBasedAiSuggestionPlausibilityService(allowed);
-        var input = new AiSuggestionResult("BAA", 0.9, "Längsriss", null, null);
+        var input = new AiSuggestionResult("BAA", 0.9, "Laengsriss", null, null);
 
         var result = sut.ApplyChecks(input, new ObservationContext("Riss"));
 

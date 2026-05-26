@@ -162,35 +162,6 @@ public sealed class WinCanCatalogDiscoveryService
     /// </summary>
     public static IReadOnlyList<string> GetDefaultSearchDirectories(string? winCanCatalogDir = null, string? lastProjectPath = null)
     {
-        var dirs = new List<string>();
-
-        // 1. User-configured catalog directory
-        if (!string.IsNullOrWhiteSpace(winCanCatalogDir) && Directory.Exists(winCanCatalogDir))
-            dirs.Add(winCanCatalogDir);
-
-        // 2. Common WinCanVX installation paths
-        var commonPaths = new[]
-        {
-            @"C:\CDLAB\WinCanVX\WinCanMerger\App_Data\Catalogs",
-            @"C:\Program Files\CDLAB\WinCanVX\WinCanMerger\App_Data\Catalogs",
-            @"C:\Program Files (x86)\CDLAB\WinCanVX\WinCanMerger\App_Data\Catalogs",
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "CDLAB", "Common", "Catalogs")
-        };
-
-        foreach (var path in commonPaths)
-        {
-            if (Directory.Exists(path))
-                dirs.Add(path);
-        }
-
-        // 3. Project-embedded catalogs
-        if (!string.IsNullOrWhiteSpace(lastProjectPath))
-        {
-            var projectCatalogPath = Path.Combine(lastProjectPath, "DISK1", "System", "ProgramData", "CDLAB", "Common", "Catalogs");
-            if (Directory.Exists(projectCatalogPath))
-                dirs.Add(projectCatalogPath);
-        }
-
-        return dirs.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        return Vsa2019CatalogResolver.GetDefaultCatalogRoots(winCanCatalogDir, lastProjectPath);
     }
 }

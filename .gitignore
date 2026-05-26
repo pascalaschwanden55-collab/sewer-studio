@@ -29,6 +29,7 @@ artifacts/
 *.log
 buildlog.txt
 *.tmp
+*_wpftmp.csproj
 *.lscache
 .lscache/
 
