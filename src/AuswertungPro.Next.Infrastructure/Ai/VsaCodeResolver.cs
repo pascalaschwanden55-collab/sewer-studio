@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Protocol;
-using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.Infrastructure.Ai;
@@ -37,21 +36,21 @@ public static class VsaCodeResolver
 
         var normalized = rawCode.Trim().Replace(".", "").ToUpperInvariant();
 
-        // IKAS/IBAK-Codes sind meistens 3-5 Zeichen, alte Daten koennen laenger sein.
+        // VSA-KEK-Codes sind meistens 3-5 Zeichen, alte Daten koennen laenger sein.
         if (normalized.Length < 2 || normalized.Length > 8)
             return null;
         if (!Regex.IsMatch(normalized, @"^[A-Z]{2,8}$"))
             return null;
 
         // 1. Exakter Katalog-Lookup
-        if (LookupCatalogLabel(normalized) != null || VsaCodeTree.LookupLabel(normalized) != null)
+        if (TryGetCatalogDefinition(normalized, out _))
             return normalized;
 
         // 2. Hauptcode (3 Zeichen) validieren — Untercodes akzeptieren
         if (normalized.Length >= 3)
         {
             var main = normalized[..3];
-            if (LookupCatalogLabel(main) != null || VsaCodeTree.LookupLabel(main) != null)
+            if (TryGetCatalogDefinition(main, out _))
                 return normalized;
         }
 
@@ -66,22 +65,45 @@ public static class VsaCodeResolver
         if (string.IsNullOrWhiteSpace(code)) return null;
         var catalogLabel = LookupCatalogLabel(code);
         if (catalogLabel != null) return catalogLabel;
-        var label = VsaCodeTree.LookupLabel(code);
-        if (label != null) return label;
         if (code.Length >= 3)
         {
             catalogLabel = LookupCatalogLabel(code[..3]);
             if (catalogLabel != null) return catalogLabel;
-            label = VsaCodeTree.LookupLabel(code[..3]);
-            if (label != null) return label;
         }
         if (code.Length >= 2)
         {
             catalogLabel = LookupCatalogLabel(code[..2]);
             if (catalogLabel != null) return catalogLabel;
-            return VsaCodeTree.LookupLabel(code[..2]);
         }
         return null;
+    }
+
+    public static bool IsStreckenschadenCode(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            return false;
+
+        var normalized = code.Trim().Replace(".", "").ToUpperInvariant();
+        if (TryGetCatalogDefinition(normalized, out var exact) && exact.RequiresRange)
+            return true;
+
+        for (var len = normalized.Length - 1; len >= 3; len--)
+        {
+            var prefix = normalized[..len];
+            if (TryGetCatalogDefinition(prefix, out var def) && def.RequiresRange)
+                return true;
+        }
+
+        if (StreckenschadenCodes.Contains(normalized))
+            return true;
+
+        for (var len = normalized.Length - 1; len >= 3; len--)
+        {
+            if (StreckenschadenCodes.Contains(normalized[..len]))
+                return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -271,14 +293,39 @@ public static class VsaCodeResolver
 
     private static string? LookupCatalogLabel(string code)
     {
-        var catalog = _catalogProvider;
-        if (catalog is null || string.IsNullOrWhiteSpace(code))
+        if (!TryGetCatalogDefinition(code, out var def))
             return null;
 
-        return catalog.TryGet(code, out var def) && !string.IsNullOrWhiteSpace(def.Title)
-            ? def.Title
-            : null;
+        return string.IsNullOrWhiteSpace(def.Title) ? def.Code : def.Title;
     }
+
+    private static bool TryGetCatalogDefinition(string code, out CodeDefinition def)
+    {
+        def = new CodeDefinition();
+        var catalog = _catalogProvider;
+        if (catalog is null || string.IsNullOrWhiteSpace(code))
+            return false;
+
+        var normalized = code.Trim().Replace(".", "").ToUpperInvariant();
+        if (catalog.TryGet(normalized, out def))
+            return true;
+
+        if (normalized.Length >= 3 && catalog.TryGet(normalized[..3], out def))
+            return true;
+
+        if (normalized.Length >= 2 && catalog.TryGet(normalized[..2], out def))
+            return true;
+
+        return false;
+    }
+
+    private static readonly HashSet<string> StreckenschadenCodes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "BABA", "BABAB", "BABAC", "BABB", "BABBA", "BABBB", "BABBC",
+        "BABC", "BABCA", "BAFA", "BAFAE", "BAFB", "BAFC", "BAFD",
+        "BAG", "BAGA", "BBA", "BBAA", "BBAB", "BBB", "BBBA",
+        "BBC", "BBCA", "BBCB", "BBCC", "BBD", "BBDA", "BBDB"
+    };
 
     private static bool HasWord(string text, string word)
     {

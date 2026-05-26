@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai;
 using Xunit;
 
@@ -9,6 +10,24 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// </summary>
 public sealed class VsaCodeResolverTests
 {
+    public VsaCodeResolverTests()
+    {
+        VsaCodeResolver.ConfigureCatalog(new InMemoryCodeCatalogProvider(new[]
+        {
+            Code("BAB", "Risse"),
+            Code("BAC", "Leitungsbruch/Einsturz"),
+            Code("BAF", "Oberflaechenschaden"),
+            Code("BAG", "Einragender Anschluss", requiresRange: true),
+            Code("BCA", "Seitlicher Anschluss"),
+            Code("BCD", "Rohranfang"),
+            Code("BCE", "Rohrende"),
+            Code("BBA", "Wurzeln", requiresRange: true),
+            Code("BBB", "Anhaftende Stoffe"),
+            Code("BBC", "Ablagerungen Sohle"),
+            Code("BDDC", "Wasserstand")
+        }));
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // NormalizeFindingCode
     // ═══════════════════════════════════════════════════════════════
@@ -49,17 +68,9 @@ public sealed class VsaCodeResolverTests
     [Fact]
     public void NormalizeFindingCode_TwoCharGroupAlone_ReturnsNull()
     {
-        // 2-Zeichen-Gruppe allein (z.B. "BA") wird NICHT akzeptiert —
-        // der geschaerfte Validator erfordert entweder exakten Katalog-Match
-        // oder einen 3-Zeichen-Hauptcode. "BA" hat keinen exakten Match
-        // im Katalog (nur die Gruppe).
-        // Allerdings: "BA" IST im Katalog als Gruppenlabel.
-        // Deshalb: 2-Zeichen-Codes die eine Gruppe sind sollten akzeptiert werden.
+        // 2-Zeichen-Gruppen sind keine codierbaren Befunde.
         var result = VsaCodeResolver.NormalizeFindingCode("BA");
-        // BA ist als Gruppe im Katalog → sollte akzeptiert werden
-        // ABER unser Validator erfordert 3Z-Hauptcode als Minimum bei nicht-exaktem Match
-        // und BA hat einen exakten Match via LookupLabel("BA") → "Strukturschäden"
-        Assert.NotNull(result); // BA ist exakt im Katalog
+        Assert.Null(result);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -168,6 +179,15 @@ public sealed class VsaCodeResolverTests
         Assert.Null(VsaCodeResolver.LookupLabel(null!));
     }
 
+    [Fact]
+    public void IsStreckenschadenCode_UsesCatalogRangeFlagAndKnownFallbacks()
+    {
+        Assert.True(VsaCodeResolver.IsStreckenschadenCode("BAG"));
+        Assert.True(VsaCodeResolver.IsStreckenschadenCode("BAGA"));
+        Assert.True(VsaCodeResolver.IsStreckenschadenCode("BBAA"));
+        Assert.False(VsaCodeResolver.IsStreckenschadenCode("BCD"));
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // NormalizeClock — Uhrlage-Normalisierung
     // ═══════════════════════════════════════════════════════════════
@@ -230,5 +250,43 @@ public sealed class VsaCodeResolverTests
         var result = VsaCodeResolver.InferCodeFromLabel("totally unknown thing");
         Assert.True(result == null || !result.Contains("?"),
             "InferCodeFromLabel darf nie '???' zurueckgeben");
+    }
+
+    private static CodeDefinition Code(string code, string title, bool requiresRange = false)
+        => new()
+        {
+            Code = code,
+            Title = title,
+            CanonicalCode = code,
+            Source = VsaKekCatalogSources.Ili,
+            RequiresRange = requiresRange
+        };
+
+    private sealed class InMemoryCodeCatalogProvider : ICodeCatalogProvider
+    {
+        private readonly IReadOnlyList<CodeDefinition> _codes;
+
+        public InMemoryCodeCatalogProvider(IReadOnlyList<CodeDefinition> codes)
+        {
+            _codes = codes;
+        }
+
+        public IReadOnlyList<CodeDefinition> GetAll() => _codes;
+
+        public bool TryGet(string code, out CodeDefinition def)
+        {
+            def = _codes.FirstOrDefault(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase))
+                ?? new CodeDefinition();
+            return !string.IsNullOrWhiteSpace(def.Code);
+        }
+
+        public void Save(IReadOnlyList<CodeDefinition> codes)
+            => throw new NotSupportedException();
+
+        public IReadOnlyList<string> AllowedCodes()
+            => _codes.Select(c => c.Code).ToList();
+
+        public IReadOnlyList<string> Validate(IReadOnlyList<CodeDefinition>? codes = null)
+            => Array.Empty<string>();
     }
 }

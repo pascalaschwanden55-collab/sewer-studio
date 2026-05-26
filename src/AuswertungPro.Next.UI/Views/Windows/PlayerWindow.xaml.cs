@@ -7091,7 +7091,7 @@ public partial class PlayerWindow : Window
 
             // Streckenschaden-Erkennung: Codes die typischerweise ueber eine Strecke auftreten
             // (z.B. Wasserrueckstau, Wurzeleinwuchs, Ablagerung, Korrosion)
-            bool isStrecke = VsaCodeTree.IsStreckenschadenCode(code);
+            bool isStrecke = VsaCodeResolver.IsStreckenschadenCode(code);
 
             var entry = new ProtocolEntry
             {
@@ -7718,7 +7718,7 @@ public partial class PlayerWindow : Window
             rohranfangTime = importBcd.VideoTimestamp;
         }
 
-        var label = VsaCodeTree.LookupLabel("BCD") ?? "Rohranfang";
+        var label = VsaCodeResolver.LookupLabel("BCD") ?? "Rohranfang";
         var entry = new ProtocolEntry
         {
             Source = ProtocolEntrySource.Ai,
@@ -7822,7 +7822,7 @@ public partial class PlayerWindow : Window
             rohrEndTime = importBce.VideoTimestamp;
         }
 
-        var label = VsaCodeTree.LookupLabel("BCE") ?? "Rohrende";
+        var label = VsaCodeResolver.LookupLabel("BCE") ?? "Rohrende";
         var entry = new ProtocolEntry
         {
             Source = ProtocolEntrySource.Ai,
