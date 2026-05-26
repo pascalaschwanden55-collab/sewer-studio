@@ -266,8 +266,10 @@ public sealed class AiSuggestionContractTests
     [Fact]
     public void VsaCatalogAndResolver_LiveOutsideUiLayer()
     {
-        AssertSimpleTypeNamespace("VsaCodeTree", "AuswertungPro.Next.Domain");
+        AssertSimpleTypeNamespace("GroupDef", "AuswertungPro.Next.Domain");
+        AssertSimpleTypeNamespace("CodeCatalogSelectionCatalog", "AuswertungPro.Next.Application");
         AssertSimpleTypeNamespace("VsaCodeResolver", "AuswertungPro.Next.Infrastructure");
+        AssertNoUiType("VsaCodeTree");
     }
 
     [Fact]

@@ -1,6 +1,4 @@
 using AuswertungPro.Next.Application.Protocol;
-using AuswertungPro.Next.Domain.VsaCatalog;
-
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
 public sealed class VsaKekCatalogBuilderTests
@@ -52,12 +50,12 @@ public sealed class VsaKekCatalogBuilderTests
         Assert.DoesNotContain("BCCYY", provider.AllowedCodes());
         Assert.True(provider.TryGet("BCCYY", out _));
 
-        VsaCodeTreeCatalogAdapter.Apply(provider);
-        Assert.Equal("Anschluss einragend", VsaCodeTree.LookupLabel("BAGA"));
-        Assert.True(VsaCodeTree.Groups["BA"].Codes.ContainsKey("BAGA"));
-        Assert.DoesNotContain(VsaCodeTree.Groups.Values.SelectMany(g => g.Codes.Keys),
+        var selectionCatalog = new CodeCatalogSelectionCatalog(provider);
+        Assert.Equal("Anschluss einragend", selectionCatalog.Groups["BA"].Codes["BAGA"].Label);
+        Assert.True(selectionCatalog.Groups["BA"].Codes.ContainsKey("BAGA"));
+        Assert.DoesNotContain(selectionCatalog.Groups.Values.SelectMany(g => g.Codes.Keys),
             code => string.Equals(code, "BCCYY", StringComparison.OrdinalIgnoreCase));
-        var (treeQ1, treeQ2) = VsaCodeTree.GetQuantRule("BAGA", null);
+        var (treeQ1, treeQ2) = selectionCatalog.GetQuantRule("BAGA", null);
         Assert.NotNull(treeQ1);
         Assert.Equal("P", treeQ1!.Pflicht);
         Assert.Null(treeQ2);

@@ -6495,10 +6495,12 @@ public partial class PlayerWindow : Window
     private void AddMultiModelFindingsAsEvents(
         SingleFrameResult mmResult, double captureTimestampSec)
     {
-        if (_codingVm == null || _codingSessionService == null) return;
+        var codingVm = _codingVm;
+        var codingSessionService = _codingSessionService;
+        if (codingVm == null || codingSessionService == null) return;
 
-        double meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
-        var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
+        double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter;
+        var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
         bool anyAdded = false;
 
         // BCD wird NICHT mehr automatisch erzeugt — nur durch Eingabemarker oder Qwen-Erkennung.
@@ -6542,13 +6544,13 @@ public partial class PlayerWindow : Window
             // Primaer gegen session.Events pruefen (wird nie gecleared).
             if ((string.Equals(code, "BCD", StringComparison.OrdinalIgnoreCase)
                  || string.Equals(code, "BCE", StringComparison.OrdinalIgnoreCase))
-                && (_codingSessionService?.ActiveSession?.Events.Any(e =>
+                && (codingSessionService.ActiveSession?.Events.Any(e =>
                         CodesMatchForDedup(e.Entry.Code, code)) == true
-                    || _codingVm.Events.Any(e => CodesMatchForDedup(e.Entry.Code, code))))
+                    || codingVm.Events.Any(e => CodesMatchForDedup(e.Entry.Code, code))))
                 continue;
 
             // Dedup gegen bestehende Events (identisch mit Qwen-Pfad)
-            var coveringEvent = _codingVm.Events.FirstOrDefault(e =>
+            var coveringEvent = codingVm.Events.FirstOrDefault(e =>
                 CodesMatchForDedup(e.Entry.Code, code) &&
                 IsAlreadyCovered(e, meter, pseudoFinding));
             if (coveringEvent != null) continue;
@@ -6577,7 +6579,7 @@ public partial class PlayerWindow : Window
             // Messungen in CodeMeta (gleiche Logik wie Qwen-Pfad)
             ApplyQuantificationToEntry(entry, code, quant);
 
-            var codingEvent = _codingSessionService.AddEvent(entry);
+            var codingEvent = codingSessionService.AddEvent(entry);
             codingEvent.AiContext = new CodingEventAiContext
             {
                 SuggestedCode = code,
@@ -7042,10 +7044,12 @@ public partial class PlayerWindow : Window
     /// </summary>
     private void AddAiFindingsAsEvents(LiveDetection result, IReadOnlyList<LiveFrameFinding> validFindings)
     {
-        if (_codingVm == null || _codingSessionService == null) return;
+        var codingVm = _codingVm;
+        var codingSessionService = _codingSessionService;
+        if (codingVm == null || codingSessionService == null) return;
 
-        double meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
-        var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
+        double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter;
+        var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
         bool anyAdded = false;
         CodingEvent? firstUnsure = null;
         QualityGateResult? firstUnsureGate = null;
@@ -7069,9 +7073,9 @@ public partial class PlayerWindow : Window
             // Primaer gegen session.Events pruefen (wird nie gecleared, im Gegensatz zu _codingVm.Events).
             if ((string.Equals(code, "BCD", StringComparison.OrdinalIgnoreCase)
                  || string.Equals(code, "BCE", StringComparison.OrdinalIgnoreCase))
-                && (_codingSessionService?.ActiveSession?.Events.Any(e =>
+                && (codingSessionService.ActiveSession?.Events.Any(e =>
                         CodesMatchForDedup(e.Entry.Code, code)) == true
-                    || _codingVm.Events.Any(e => CodesMatchForDedup(e.Entry.Code, code))))
+                    || codingVm.Events.Any(e => CodesMatchForDedup(e.Entry.Code, code))))
             {
                 System.Diagnostics.Debug.WriteLine($"[BCD-Dedup] AddFindings: {code} uebersprungen (bereits vorhanden)");
                 continue;
@@ -7085,7 +7089,7 @@ public partial class PlayerWindow : Window
             // 1. Punktschaden: code + meter ±0.3m + gleiche Position
             // 2. Streckenschaden: code faellt in den MeterStart..MeterEnd Bereich
             // 3. Bereits akzeptierter/bearbeiteter Code: nicht nochmal melden
-            var coveringEvent = _codingVm.Events.FirstOrDefault(e =>
+            var coveringEvent = codingVm.Events.FirstOrDefault(e =>
                 CodesMatchForDedup(e.Entry.Code, code) &&
                 IsAlreadyCovered(e, meter, finding));
             if (coveringEvent != null)
@@ -7147,7 +7151,7 @@ public partial class PlayerWindow : Window
             if (fotoPath != null)
                 entry.FotoPaths.Add(fotoPath);
 
-            var codingEvent = _codingSessionService.AddEvent(entry);
+            var codingEvent = codingSessionService.AddEvent(entry);
             codingEvent.AiContext = new CodingEventAiContext
             {
                 SuggestedCode = code,
@@ -7192,8 +7196,8 @@ public partial class PlayerWindow : Window
         {
             RefreshCodingEventsList();
             RenderAiOverlays();
-            if (_codingVm.CurrentOverlay != null)
-                RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: false);
+            if (codingVm.CurrentOverlay != null)
+                RenderOverlayGeometry(codingVm.CurrentOverlay, isPreview: false);
             UpdateToolBadge();
         }
 
