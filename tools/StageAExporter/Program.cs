@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Protocol;
 
 var options = StageAExporterCliOptions.Parse(args);
 if (options.ShowHelp)
@@ -9,7 +10,8 @@ if (options.ShowHelp)
 
 try
 {
-    var result = await new StageAExporter().ExportAsync(new StageAExportOptions(
+    var catalog = new ManifestCodeCatalogProvider(options.CatalogPath);
+    var result = await new StageAExporter(catalog).ExportAsync(new StageAExportOptions(
         SourceSamplesPath: options.SourceSamplesPath,
         EvalSetRoot: options.EvalSetRoot,
         OutputRoot: options.OutputRoot,
@@ -23,6 +25,7 @@ try
         : "Stage-A Export:");
     Console.WriteLine($"  Quelle:              {options.SourceSamplesPath}");
     Console.WriteLine($"  Eval-Set:            {options.EvalSetRoot}");
+    Console.WriteLine($"  VSA-KEK-Katalog:     {options.CatalogPath}");
     Console.WriteLine($"  Ziel:                {options.OutputRoot}");
     Console.WriteLine($"  Eingang:             {result.InputSamples}");
     Console.WriteLine($"  Approved:            {result.ApprovedSamples}");
@@ -30,6 +33,7 @@ try
     Console.WriteLine($"  Eval-Treffer raus:   {result.SkippedEvalSet}");
     Console.WriteLine($"  Fehlend/kaputt raus: {result.SkippedMissingOrCorrupt}");
     Console.WriteLine($"  Ungueltiger Code:    {result.SkippedInvalidCode}");
+    Console.WriteLine($"  Nicht im Katalog:    {result.SkippedInvalidCatalogCode}");
     Console.WriteLine($"  Ohne echte Box raus: {result.SkippedWithoutBoundingBox}");
     Console.WriteLine($"  Doppelte Bilder raus:{result.SkippedDuplicateImage}");
     Console.WriteLine($"  Final:               {result.FinalSamples}");
@@ -62,6 +66,7 @@ internal sealed record StageAExporterCliOptions(
     string SourceSamplesPath,
     string EvalSetRoot,
     string OutputRoot,
+    string CatalogPath,
     bool DryRun,
     double ValidationRatio,
     int Workers,
@@ -73,6 +78,7 @@ internal sealed record StageAExporterCliOptions(
         var source = @"C:\KI_BRAIN\training_samples.json";
         var evalSet = @"C:\KI_BRAIN\eval_set";
         var output = @"D:\stage_a_clean";
+        var catalog = ResolveDefaultCatalogPath();
         var dryRun = false;
         var validationRatio = 0.2;
         var workers = 0;
@@ -94,6 +100,9 @@ internal sealed record StageAExporterCliOptions(
                     break;
                 case "--out":
                     output = RequireValue(args, ref i, "--out");
+                    break;
+                case "--catalog":
+                    catalog = RequireValue(args, ref i, "--catalog");
                     break;
                 case "--dry-run":
                     dryRun = true;
@@ -118,11 +127,14 @@ internal sealed record StageAExporterCliOptions(
             throw new ArgumentException("--val-ratio muss zwischen 0 und 1 liegen.");
         if (workers < 0)
             throw new ArgumentException("--workers darf nicht negativ sein.");
+        if (string.IsNullOrWhiteSpace(catalog) || !File.Exists(catalog))
+            throw new FileNotFoundException("VSA-KEK-Katalogmanifest nicht gefunden.", catalog);
 
         return new StageAExporterCliOptions(
             source,
             evalSet,
             output,
+            catalog,
             dryRun,
             validationRatio,
             workers,
@@ -157,6 +169,7 @@ internal sealed record StageAExporterCliOptions(
           --source <pfad>     Standard: C:\KI_BRAIN\training_samples.json
           --eval-set <pfad>   Standard: C:\KI_BRAIN\eval_set
           --out <pfad>        Standard: D:\stage_a_clean
+          --catalog <pfad>    Standard: VSA_KEK_2020_CATALOG_MANIFEST oder src\AuswertungPro.Next.UI\Data\vsa_kek_2020_catalog_manifest.json
           --dry-run           Nur zaehlen, nichts kopieren
           --val-ratio <zahl>  Standard: 0.2
           --workers <zahl>    0 = automatisch
@@ -171,5 +184,24 @@ internal sealed record StageAExporterCliOptions(
 
         index++;
         return args[index];
+    }
+
+    private static string ResolveDefaultCatalogPath()
+    {
+        var env = Environment.GetEnvironmentVariable("VSA_KEK_2020_CATALOG_MANIFEST");
+        if (!string.IsNullOrWhiteSpace(env) && File.Exists(env))
+            return env;
+
+        var repoPath = Path.GetFullPath(Path.Combine(
+            Environment.CurrentDirectory,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Data",
+            "vsa_kek_2020_catalog_manifest.json"));
+        if (File.Exists(repoPath))
+            return repoPath;
+
+        var appDataPath = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_kek_2020_catalog_manifest.json");
+        return appDataPath;
     }
 }

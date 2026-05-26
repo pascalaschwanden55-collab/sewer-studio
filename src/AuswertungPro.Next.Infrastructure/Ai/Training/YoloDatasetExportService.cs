@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Protocol;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
@@ -14,6 +15,11 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 /// </summary>
 public sealed class YoloDatasetExportService
 {
+    private readonly ICodeCatalogProvider _codeCatalog;
+
+    public YoloDatasetExportService(ICodeCatalogProvider codeCatalog)
+        => _codeCatalog = codeCatalog ?? throw new ArgumentNullException(nameof(codeCatalog));
+
     public async Task<YoloExportResult> ExportAsync(
         IReadOnlyList<TrainingSample> samples,
         string outputDir,
@@ -23,7 +29,7 @@ public sealed class YoloDatasetExportService
     {
         var approved = samples
             .Where(s => s.Status == TrainingSampleStatus.Approved
-                        && TrainingSampleEligibility.Evaluate(s).IsEligible
+                        && IsTrainingExportEligible(s)
                         && !string.IsNullOrEmpty(s.FramePath)
                         && File.Exists(s.FramePath))
             .ToList();
@@ -147,6 +153,14 @@ public sealed class YoloDatasetExportService
         }
 
         return (0.5, 0.5, 0.8, 0.8);
+    }
+
+    private bool IsTrainingExportEligible(TrainingSample sample)
+    {
+        var result = TrainingSampleEligibility.Evaluate(sample, _codeCatalog);
+        sample.TrainingEligible = result.IsEligible;
+        sample.TrainingEligibilityReason = result.Reason;
+        return result.IsEligible;
     }
 
     private static string NormalizeClassName(string code)

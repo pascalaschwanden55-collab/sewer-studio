@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Application.Ai.Training;
@@ -131,6 +132,7 @@ public static class TrainingSampleEligibility
     public static readonly DateTime MinimumInspectionDate = new(2022, 1, 1);
     public const string MissingInspectionDateReason = "missing-inspection-date";
     public const string LegacyBeforeCutoffReason = "legacy-before-2022";
+    public const string InvalidCatalogCodeReason = "code-not-in-catalog";
 
     public static TrainingEligibilityResult Evaluate(DateTime? inspectionDate)
     {
@@ -151,6 +153,25 @@ public static class TrainingSampleEligibility
         return sample.TrainingEligible
             ? result
             : new TrainingEligibilityResult(false, sample.TrainingEligibilityReason ?? MissingInspectionDateReason);
+    }
+
+    public static TrainingEligibilityResult Evaluate(TrainingSample sample, ICodeCatalogProvider catalog)
+    {
+        ArgumentNullException.ThrowIfNull(sample);
+        ArgumentNullException.ThrowIfNull(catalog);
+
+        var result = Evaluate(sample);
+        if (!result.IsEligible)
+            return result;
+
+        if (string.IsNullOrWhiteSpace(sample.Code))
+            return new TrainingEligibilityResult(false, InvalidCatalogCodeReason);
+
+        return catalog.TryGet(sample.Code.Trim(), out var def)
+               && def.IsSelectable
+               && !def.IsObservedExtension
+            ? result
+            : new TrainingEligibilityResult(false, InvalidCatalogCodeReason);
     }
 
     public static DateTime? TryParseInspectionDate(string? raw)

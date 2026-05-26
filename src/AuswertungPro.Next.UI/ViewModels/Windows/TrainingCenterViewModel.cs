@@ -817,9 +817,15 @@ public partial class TrainingCenterViewModel : ObservableObject
         try
         {
             IsBusy = true;
-            var approved = Samples
+            var candidates = Samples
                 .Where(s => s.Status == TrainingSampleStatus.Approved && s.ExportedUtc is null)
                 .ToList();
+            var approved = candidates
+                .Where(IsTrainingExportEligible)
+                .ToList();
+
+            if (candidates.Count != approved.Count)
+                await PersistSamplesAsync();
 
             if (approved.Count == 0)
             {
@@ -865,11 +871,17 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         if (IsBusy) return;
 
-        var approved = Samples
+        var candidates = Samples
             .Where(s => s.Status == TrainingSampleStatus.Approved
                         && !string.IsNullOrWhiteSpace(s.FramePath)
                         && File.Exists(s.FramePath))
             .ToList();
+        var approved = candidates
+            .Where(IsTrainingExportEligible)
+            .ToList();
+
+        if (candidates.Count != approved.Count)
+            await PersistSamplesAsync();
 
         if (approved.Count == 0)
         {
@@ -1126,6 +1138,16 @@ public partial class TrainingCenterViewModel : ObservableObject
         Log($"  data.yaml: {yamlPath}");
         Log($"  Klassen: {string.Join(", ", sortedClasses)}");
         StatusText = msg;
+    }
+
+    private bool IsTrainingExportEligible(TrainingSample sample)
+    {
+        var result = _codeCatalog is null
+            ? TrainingSampleEligibility.Evaluate(sample)
+            : TrainingSampleEligibility.Evaluate(sample, _codeCatalog);
+        sample.TrainingEligible = result.IsEligible;
+        sample.TrainingEligibilityReason = result.Reason;
+        return result.IsEligible;
     }
 
     /// <summary>

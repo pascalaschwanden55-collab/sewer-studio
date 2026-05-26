@@ -37,7 +37,7 @@ public sealed class StageAExporterTests : IDisposable
         var source = PrepareSourceWithEvalOverlap();
         var output = Path.Combine(_root, "out");
 
-        var result = await new StageAExporter().ExportAsync(new StageAExportOptions(
+        var result = await new StageAExporter(CreateTestCatalog()).ExportAsync(new StageAExportOptions(
             SourceSamplesPath: source.SamplesPath,
             EvalSetRoot: source.EvalRoot,
             OutputRoot: output,
@@ -63,7 +63,7 @@ public sealed class StageAExporterTests : IDisposable
         var source = PrepareSourceWithEvalOverlap();
         var output = Path.Combine(_root, "out");
 
-        var result = await new StageAExporter().ExportAsync(new StageAExportOptions(
+        var result = await new StageAExporter(CreateTestCatalog()).ExportAsync(new StageAExportOptions(
             SourceSamplesPath: source.SamplesPath,
             EvalSetRoot: source.EvalRoot,
             OutputRoot: output,
@@ -110,7 +110,7 @@ public sealed class StageAExporterTests : IDisposable
         var source = PrepareSourceWithBboxAndNoBbox();
         var output = Path.Combine(_root, "bbox-out");
 
-        var result = await new StageAExporter().ExportAsync(new StageAExportOptions(
+        var result = await new StageAExporter(CreateTestCatalog()).ExportAsync(new StageAExportOptions(
             SourceSamplesPath: source.SamplesPath,
             EvalSetRoot: source.EvalRoot,
             OutputRoot: output,
@@ -132,7 +132,7 @@ public sealed class StageAExporterTests : IDisposable
         var source = PrepareSourceWithTrainingEligibility();
         var output = Path.Combine(_root, "eligibility-out");
 
-        var result = await new StageAExporter().ExportAsync(new StageAExportOptions(
+        var result = await new StageAExporter(CreateTestCatalog()).ExportAsync(new StageAExportOptions(
             SourceSamplesPath: source.SamplesPath,
             EvalSetRoot: source.EvalRoot,
             OutputRoot: output,
@@ -153,7 +153,7 @@ public sealed class StageAExporterTests : IDisposable
         var source = PrepareSourceWithDuplicateImages();
         var output = Path.Combine(_root, "dedupe-out");
 
-        var result = await new StageAExporter().ExportAsync(new StageAExportOptions(
+        var result = await new StageAExporter(CreateTestCatalog()).ExportAsync(new StageAExportOptions(
             SourceSamplesPath: source.SamplesPath,
             EvalSetRoot: source.EvalRoot,
             OutputRoot: output,
@@ -175,7 +175,7 @@ public sealed class StageAExporterTests : IDisposable
         var source = PrepareVsaKekCatalogSamples();
         var output = Path.Combine(_root, "vsa-kek-out");
 
-        var result = await new StageAExporter().ExportAsync(new StageAExportOptions(
+        var result = await new StageAExporter(CreateTestCatalog()).ExportAsync(new StageAExportOptions(
             SourceSamplesPath: source.SamplesPath,
             EvalSetRoot: source.EvalRoot,
             OutputRoot: output,
@@ -183,8 +183,9 @@ public sealed class StageAExporterTests : IDisposable
             ValidationRatio: 0,
             DegreeOfParallelism: 2));
 
-        Assert.Equal(3, result.FinalSamples);
-        Assert.Equal(new[] { "BAGA", "BCCYY", "BDBA" }, result.Classes.Select(c => c.ClassName).OrderBy(c => c).ToArray());
+        Assert.Equal(2, result.FinalSamples);
+        Assert.Equal(1, result.SkippedInvalidCatalogCode);
+        Assert.Equal(new[] { "BAGA", "BDBA" }, result.Classes.Select(c => c.ClassName).OrderBy(c => c).ToArray());
 
         var clean = JsonSerializer.Deserialize<TrainingSample[]>(
             await File.ReadAllTextAsync(result.CleanTrainingSamplesPath!),
@@ -198,10 +199,28 @@ public sealed class StageAExporterTests : IDisposable
             s.Code == "BDBA"
             && s.CodeMeta?.Code == "BDBA"
             && s.CodeMeta.Parameters["catalog.standardAnnotation"] == "A");
-        Assert.Contains(clean, s =>
-            s.Code == "BCCYY"
-            && s.CodeMeta?.Code == "BCCYY"
-            && s.CodeMeta.Parameters["catalog.source"] == VsaKekCatalogSources.XtfObserved);
+        Assert.DoesNotContain(clean, s => s.Code == "BCCYY");
+    }
+
+    [Fact]
+    public async Task DryRun_sperrt_unbekannte_und_observed_codes_aus_Katalog()
+    {
+        var source = PrepareSourceWithCatalogValidity();
+        var output = Path.Combine(_root, "catalog-validity-out");
+
+        var result = await new StageAExporter(CreateTestCatalog()).ExportAsync(new StageAExportOptions(
+            SourceSamplesPath: source.SamplesPath,
+            EvalSetRoot: source.EvalRoot,
+            OutputRoot: output,
+            DryRun: true,
+            ValidationRatio: 0,
+            DegreeOfParallelism: 2));
+
+        Assert.Equal(3, result.InputSamples);
+        Assert.Equal(2, result.SkippedInvalidCatalogCode);
+        Assert.Equal(1, result.FinalSamples);
+        Assert.Equal("BAGA", Assert.Single(result.Classes).ClassName);
+        Assert.False(Directory.Exists(output));
     }
 
     private (string SamplesPath, string EvalRoot) PrepareSourceWithEvalOverlap()
@@ -417,6 +436,42 @@ public sealed class StageAExporterTests : IDisposable
         return (samplesPath, evalRoot);
     }
 
+    private (string SamplesPath, string EvalRoot) PrepareSourceWithCatalogValidity()
+    {
+        Directory.CreateDirectory(_root);
+        var frameRoot = Path.Combine(_root, "catalog-validity-frames");
+        Directory.CreateDirectory(frameRoot);
+
+        var validFrame = Path.Combine(frameRoot, "valid.png");
+        var unknownFrame = Path.Combine(frameRoot, "unknown.png");
+        var observedFrame = Path.Combine(frameRoot, "observed.png");
+        File.WriteAllBytes(validFrame, [1, 2, 3]);
+        File.WriteAllBytes(unknownFrame, [4, 5, 6]);
+        File.WriteAllBytes(observedFrame, [7, 8, 9]);
+
+        var evalRoot = Path.Combine(_root, "catalog-validity-eval");
+        Directory.CreateDirectory(Path.Combine(evalRoot, "images"));
+        File.WriteAllText(
+            Path.Combine(evalRoot, "_manifest.json"),
+            new JsonObject
+            {
+                ["frozen"] = true,
+                ["hash_algorithm"] = "sha256",
+                ["hashes"] = new JsonObject()
+            }.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+
+        var samples = new[]
+        {
+            MakeVsaKekSample("valid", "BAGA", validFrame, VsaKekCatalogSources.Ili, "BAG", null),
+            MakeVsaKekSample("unknown", "BZZZ", unknownFrame, "Test", "BZZZ", null),
+            MakeVsaKekSample("observed", "BCCYY", observedFrame, VsaKekCatalogSources.XtfObserved, "BCCYY", null),
+        };
+
+        var samplesPath = Path.Combine(_root, "catalog_validity_training_samples.json");
+        File.WriteAllText(samplesPath, JsonSerializer.Serialize(samples, StageAExporter.JsonOptions));
+        return (samplesPath, evalRoot);
+    }
+
     private static TrainingSample MakeBddSample(string sampleId, string framePath)
         => new()
         {
@@ -497,5 +552,45 @@ public sealed class StageAExporterTests : IDisposable
     {
         using var stream = File.OpenRead(path);
         return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+    }
+
+    private static ICodeCatalogProvider CreateTestCatalog()
+        => new InMemoryCodeCatalogProvider(
+        [
+            new CodeDefinition { Code = "BABAC", IsSelectable = true },
+            new CodeDefinition { Code = "BCAAA", IsSelectable = true },
+            new CodeDefinition { Code = "BCAEA", IsSelectable = true },
+            new CodeDefinition { Code = "BAHC", IsSelectable = true },
+            new CodeDefinition { Code = "BDDC", IsSelectable = true },
+            new CodeDefinition { Code = "BAGA", CanonicalCode = "BAG", IsSelectable = true },
+            new CodeDefinition { Code = "BDBA", CanonicalCode = "BDB", IsSelectable = true, StandardAnnotation = "A" },
+            new CodeDefinition { Code = "BCCYY", IsSelectable = false, IsObservedExtension = true }
+        ]);
+
+    private sealed class InMemoryCodeCatalogProvider : ICodeCatalogProvider
+    {
+        private readonly IReadOnlyList<CodeDefinition> _codes;
+
+        public InMemoryCodeCatalogProvider(IReadOnlyList<CodeDefinition> codes)
+            => _codes = codes;
+
+        public IReadOnlyList<CodeDefinition> GetAll()
+            => _codes;
+
+        public bool TryGet(string code, out CodeDefinition def)
+        {
+            def = _codes.FirstOrDefault(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase))
+                ?? new CodeDefinition();
+            return !string.IsNullOrWhiteSpace(def.Code);
+        }
+
+        public void Save(IReadOnlyList<CodeDefinition> codes)
+            => throw new InvalidOperationException("Test catalog is read-only.");
+
+        public IReadOnlyList<string> AllowedCodes()
+            => _codes.Where(c => c.IsSelectable && !c.IsObservedExtension).Select(c => c.Code).ToList();
+
+        public IReadOnlyList<string> Validate(IReadOnlyList<CodeDefinition>? codes = null)
+            => Array.Empty<string>();
     }
 }

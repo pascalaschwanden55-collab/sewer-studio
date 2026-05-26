@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using AuswertungPro.Next.Application.Protocol;
 
 namespace AuswertungPro.Next.Application.Ai.Training;
 
@@ -23,6 +24,7 @@ public sealed record StageAExportResult(
     int SkippedEvalSet,
     int SkippedMissingOrCorrupt,
     int SkippedInvalidCode,
+    int SkippedInvalidCatalogCode,
     int SkippedWithoutBoundingBox,
     int SkippedTrainingIneligible,
     int SkippedDuplicateImage,
@@ -48,11 +50,16 @@ public sealed record StageAExportClassCount(
 /// </summary>
 public sealed class StageAExporter
 {
+    private readonly ICodeCatalogProvider _codeCatalog;
+
     public static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         WriteIndented = true,
     };
+
+    public StageAExporter(ICodeCatalogProvider codeCatalog)
+        => _codeCatalog = codeCatalog ?? throw new ArgumentNullException(nameof(codeCatalog));
 
     private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -78,7 +85,7 @@ public sealed class StageAExporter
             .Select((sample, index) => new IndexedSample(index, sample))
             .AsParallel()
             .WithDegreeOfParallelism(GetDegreeOfParallelism(options.DegreeOfParallelism))
-            .Select(s => AnalyzeSample(s, evalHashes, options.RequireBoundingBox))
+            .Select(s => AnalyzeSample(s, evalHashes, options.RequireBoundingBox, _codeCatalog))
             .OrderBy(a => a.Index)
             .ToList();
 
@@ -156,6 +163,7 @@ public sealed class StageAExporter
             SkippedEvalSet: analyses.Count(a => a.Decision == StageASampleDecision.EvalSet),
             SkippedMissingOrCorrupt: analyses.Count(a => a.Decision == StageASampleDecision.MissingOrCorrupt),
             SkippedInvalidCode: analyses.Count(a => a.Decision == StageASampleDecision.InvalidCode),
+            SkippedInvalidCatalogCode: analyses.Count(a => a.Decision == StageASampleDecision.InvalidCatalogCode),
             SkippedWithoutBoundingBox: analyses.Count(a => a.Decision == StageASampleDecision.WithoutBoundingBox),
             SkippedTrainingIneligible: analyses.Count(a => a.Decision == StageASampleDecision.TrainingIneligible),
             SkippedDuplicateImage: skippedDuplicateImage,
@@ -205,19 +213,33 @@ public sealed class StageAExporter
     private static StageASampleAnalysis AnalyzeSample(
         IndexedSample indexed,
         IReadOnlySet<string> evalHashes,
-        bool requireBoundingBox)
+        bool requireBoundingBox,
+        ICodeCatalogProvider codeCatalog)
     {
         var sample = indexed.Sample;
 
         if (sample.Status != TrainingSampleStatus.Approved)
             return StageASampleAnalysis.NotApproved(indexed);
 
-        if (!TrainingSampleEligibility.Evaluate(sample).IsEligible)
+        var dateEligibility = TrainingSampleEligibility.Evaluate(sample);
+        if (!dateEligibility.IsEligible)
+        {
+            ApplyTrainingEligibility(sample, dateEligibility);
             return StageASampleAnalysis.TrainingIneligible(indexed);
+        }
 
         var className = NormalizeClassName(sample.Code);
         if (string.IsNullOrWhiteSpace(className))
             return StageASampleAnalysis.InvalidCode(indexed);
+
+        var catalogEligibility = TrainingSampleEligibility.Evaluate(sample, codeCatalog);
+        if (!catalogEligibility.IsEligible)
+        {
+            ApplyTrainingEligibility(sample, catalogEligibility);
+            return StageASampleAnalysis.InvalidCatalogCode(indexed);
+        }
+
+        ApplyTrainingEligibility(sample, catalogEligibility);
 
         if (requireBoundingBox && !sample.HasBbox)
             return StageASampleAnalysis.WithoutBoundingBox(indexed, className);
@@ -373,6 +395,7 @@ public sealed class StageAExporter
             skipped_eval_set = analyses.Count(a => a.Decision == StageASampleDecision.EvalSet),
             skipped_missing_or_corrupt = analyses.Count(a => a.Decision == StageASampleDecision.MissingOrCorrupt),
             skipped_invalid_code = analyses.Count(a => a.Decision == StageASampleDecision.InvalidCode),
+            skipped_invalid_catalog_code = analyses.Count(a => a.Decision == StageASampleDecision.InvalidCatalogCode),
             skipped_without_bounding_box = analyses.Count(a => a.Decision == StageASampleDecision.WithoutBoundingBox),
             skipped_training_ineligible = analyses.Count(a => a.Decision == StageASampleDecision.TrainingIneligible),
             skipped_duplicate_image = skippedDuplicateImage,
@@ -440,6 +463,12 @@ public sealed class StageAExporter
     {
         using var stream = File.OpenRead(path);
         return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+    }
+
+    private static void ApplyTrainingEligibility(TrainingSample sample, TrainingEligibilityResult result)
+    {
+        sample.TrainingEligible = result.IsEligible;
+        sample.TrainingEligibilityReason = result.Reason;
     }
 
     private static string ChooseSplit(TrainingSample sample, double validationRatio)
@@ -571,6 +600,9 @@ public sealed class StageAExporter
         public static StageASampleAnalysis InvalidCode(IndexedSample source)
             => new(source.Index, source.Sample, StageASampleDecision.InvalidCode, null, null);
 
+        public static StageASampleAnalysis InvalidCatalogCode(IndexedSample source)
+            => new(source.Index, source.Sample, StageASampleDecision.InvalidCatalogCode, null, null);
+
         public static StageASampleAnalysis MissingOrCorrupt(IndexedSample source, string? className)
             => new(source.Index, source.Sample, StageASampleDecision.MissingOrCorrupt, className, null);
 
@@ -600,6 +632,7 @@ public sealed class StageAExporter
         EvalSet,
         MissingOrCorrupt,
         InvalidCode,
+        InvalidCatalogCode,
         WithoutBoundingBox,
         TrainingIneligible,
     }
