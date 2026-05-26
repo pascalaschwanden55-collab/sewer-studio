@@ -70,6 +70,7 @@ namespace AuswertungPro.Next.UI
         // AI/CodeCatalog Services
         public IProtocolAiService ProtocolAi { get; }
         public AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog { get; }
+        public AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog CodeSelectionCatalog { get; }
         public string? VsaCatalogResolvedPath { get; }
 
         public IDialogService Dialogs { get; } = new DialogService();
@@ -131,6 +132,10 @@ namespace AuswertungPro.Next.UI
                 ? string.Join(" | ", catalogSourcePaths)
                 : null;
             CodeCatalog = CreateCodeCatalog(settings, vsaKekManifestPath, xmlCatalogPaths);
+            var centralSelectionCatalog = new CodeCatalogSelectionCatalog(CodeCatalog);
+            CodeSelectionCatalog = centralSelectionCatalog.Groups.Count > 0
+                ? centralSelectionCatalog
+                : new VsaCodeTreeSelectionCatalog();
             VsaCodeTreeCatalogAdapter.Apply(CodeCatalog);
             VsaCodeResolver.ConfigureCatalog(CodeCatalog);
             RetrievalService? retrieval = null;

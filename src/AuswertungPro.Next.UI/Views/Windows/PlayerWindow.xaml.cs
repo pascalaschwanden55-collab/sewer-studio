@@ -1209,6 +1209,27 @@ public partial class PlayerWindow : Window
         };
     }
 
+    private AppProtocol.IVsaCodeSelectionCatalog? CodeSelectionCatalog
+        => _serviceProvider?.CodeSelectionCatalog ?? TryGetAppServiceProvider()?.CodeSelectionCatalog;
+
+    private static ServiceProvider? TryGetAppServiceProvider()
+    {
+        try
+        {
+            return App.Services as ServiceProvider;
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    private ViewModels.Windows.VsaCodeExplorerViewModel CreateVsaCodeExplorerViewModel(
+        ProtocolEntry entry,
+        double? presetMeter,
+        TimeSpan? presetZeit)
+        => new(entry, presetMeter, presetZeit, CodeSelectionCatalog);
+
     // Ã¢"â‚¬Ã¢"â‚¬ Live Detection Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
 
     private static string CompactModelName(string? model)
@@ -2082,7 +2103,7 @@ public partial class PlayerWindow : Window
             // Meter automatisch aus OSD oder Videoposition berechnen
             var autoMeter = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
             var entry = new ProtocolEntry();
-            var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(entry, autoMeter, TimeSpan.FromSeconds(timestampSec));
+            var explorerVm = CreateVsaCodeExplorerViewModel(entry, autoMeter, TimeSpan.FromSeconds(timestampSec));
             var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
             {
                 Owner = this
@@ -2345,7 +2366,7 @@ public partial class PlayerWindow : Window
             // VsaCodeExplorer oeffnen fuer Korrektur — Meter aus OSD/Video
             var autoMeter2 = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
             var entry = new ProtocolEntry();
-            var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(entry, autoMeter2, TimeSpan.FromSeconds(timestampSec));
+            var explorerVm = CreateVsaCodeExplorerViewModel(entry, autoMeter2, TimeSpan.FromSeconds(timestampSec));
             var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
             {
                 Owner = this
@@ -2535,7 +2556,7 @@ public partial class PlayerWindow : Window
         if (!string.IsNullOrWhiteSpace(clockPosition))
             entry.CodeMeta.Parameters["vsa.uhr.von"] = clockPosition;
 
-        var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+        var explorerVm = CreateVsaCodeExplorerViewModel(
             entry,
             _codingLastOsdMeter ?? GetMeterFromVideoPosition(),
             TimeSpan.FromSeconds(timestampSec));
@@ -4934,7 +4955,7 @@ public partial class PlayerWindow : Window
                 }
             }
 
-            var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+            var explorerVm = CreateVsaCodeExplorerViewModel(
                 entry, meterValue, videoZeit);
 
             var dlg = new VsaCodeExplorerWindow(explorerVm, _videoPath, videoZeit)
@@ -5175,7 +5196,7 @@ public partial class PlayerWindow : Window
         SuspendCodingOverlayInput();
 
         var entry = codingEvent.Entry;
-        var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+        var explorerVm = CreateVsaCodeExplorerViewModel(
             entry, entry.MeterStart, entry.Zeit);
 
         var dlg = new VsaCodeExplorerWindow(explorerVm, _videoPath,
@@ -5601,7 +5622,7 @@ public partial class PlayerWindow : Window
         try
         {
             var entry = ev.Entry;
-            var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+            var explorerVm = CreateVsaCodeExplorerViewModel(
                 entry, entry.MeterStart, entry.Zeit);
 
             var dlg = new VsaCodeExplorerWindow(explorerVm, _codingVm.VideoPath, _codingVm.CurrentVideoTime)

@@ -101,6 +101,27 @@ public partial class CodingModeWindow : Window
         Closing += OnClosing;
     }
 
+    private static IVsaCodeSelectionCatalog? CodeSelectionCatalog
+        => TryGetAppServiceProvider()?.CodeSelectionCatalog;
+
+    private static AuswertungPro.Next.UI.ServiceProvider? TryGetAppServiceProvider()
+    {
+        try
+        {
+            return AuswertungPro.Next.UI.App.Services as AuswertungPro.Next.UI.ServiceProvider;
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    private static VsaCodeExplorerViewModel CreateVsaCodeExplorerViewModel(
+        ProtocolEntry entry,
+        double? presetMeter,
+        TimeSpan? presetZeit)
+        => new(entry, presetMeter, presetZeit, CodeSelectionCatalog);
+
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         // Video initialisieren (pausiert starten, Dauer ermitteln)
@@ -1545,7 +1566,7 @@ public partial class CodingModeWindow : Window
                 entry.CodeMeta.Parameters["vsa.q2"] = _vm.CurrentOverlay.Q2Mm.Value.ToString("F1");
         }
 
-        var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+        var explorerVm = CreateVsaCodeExplorerViewModel(
             entry,
             captureMeter,
             _vm.CurrentVideoTime);
@@ -1683,7 +1704,7 @@ public partial class CodingModeWindow : Window
             Zeit = _vm.CurrentVideoTime
         };
 
-        var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+        var explorerVm = CreateVsaCodeExplorerViewModel(
             entry, captureMeter, _vm.CurrentVideoTime);
 
         var dlg = new VsaCodeExplorerWindow(explorerVm, _vm.VideoPath, _vm.CurrentVideoTime)
@@ -1927,7 +1948,7 @@ public partial class CodingModeWindow : Window
         // ProtocolEntry zum Bearbeiten oeffnen (bestehende Werte vorbelegen)
         var entry = ev.Entry;
 
-        var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+        var explorerVm = CreateVsaCodeExplorerViewModel(
             entry,
             entry.MeterStart,
             entry.Zeit);
@@ -2016,7 +2037,7 @@ public partial class CodingModeWindow : Window
         var ev = selected;
 
         var entry = ev.Entry;
-        var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+        var explorerVm = CreateVsaCodeExplorerViewModel(
             entry, entry.MeterStart, entry.Zeit);
 
         var dlg = new VsaCodeExplorerWindow(explorerVm, _vm.VideoPath, _vm.CurrentVideoTime)
