@@ -1097,6 +1097,8 @@ public sealed class ProtocolPdfExporter
         {
             if (string.IsNullOrWhiteSpace(kv.Value))
                 continue;
+            if (kv.Key.StartsWith("catalog.", StringComparison.OrdinalIgnoreCase))
+                continue;
             if (kv.Key.StartsWith("vsa.", StringComparison.OrdinalIgnoreCase))
                 continue;
             if (string.Equals(kv.Key, "Quantifizierung1", StringComparison.OrdinalIgnoreCase))

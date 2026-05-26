@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
@@ -162,5 +163,138 @@ public sealed class TrainingSampleGeneratorCodeMetaTests
             if (Directory.Exists(tempDir))
                 Directory.Delete(tempDir, recursive: true);
         }
+    }
+
+    [Fact]
+    public async Task GenerateWithDiagnosticsAsync_EnrichesIkasMetadataAndKeepsOriginalCodes()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "AuswertungProTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            var protocolPath = Path.Combine(tempDir, "protocol.json");
+            var doc = new ProtocolDocument
+            {
+                Current = new ProtocolRevision
+                {
+                    Entries =
+                    [
+                        CreateEntry("BAGA", "Anschluss einragend", 1.0),
+                        CreateEntry("BDBA", "Wasserstand Standard A", 2.0),
+                        CreateEntry("BCCYY", "Beobachteter IKAS-XTF-Code", 3.0)
+                    ]
+                }
+            };
+            await File.WriteAllTextAsync(protocolPath, JsonSerializer.Serialize(doc));
+
+            var cfg = CreateRuntimeSettings();
+            var generator = new TrainingSampleGenerator(
+                cfg,
+                new MeterTimelineService(cfg),
+                new TrainingCenterSettings(),
+                new InMemoryCodeCatalogProvider(new[]
+                {
+                    new CodeDefinition
+                    {
+                        Code = "BAGA",
+                        Title = "Anschluss einragend",
+                        Source = IkasCatalogSources.IkasIli,
+                        CanonicalCode = "BAG"
+                    },
+                    new CodeDefinition
+                    {
+                        Code = "BDBA",
+                        Title = "Wasserstand Standard A",
+                        Source = IkasCatalogSources.IkasIli,
+                        CanonicalCode = "BDB",
+                        StandardAnnotation = "A"
+                    },
+                    new CodeDefinition
+                    {
+                        Code = "BCCYY",
+                        Title = "IKAS-XTF beobachtet",
+                        Source = IkasCatalogSources.IkasXtfObserved,
+                        CanonicalCode = "BCCYY",
+                        IsObservedExtension = true,
+                        IsSelectable = false
+                    }
+                }));
+
+            var result = await generator.GenerateWithDiagnosticsAsync(new TrainingCaseInput(
+                CaseId: "IKAS-E2E",
+                FolderPath: tempDir,
+                VideoPath: Path.Combine(tempDir, "missing.mp4"),
+                ProtocolPath: protocolPath));
+
+            Assert.Equal(3, result.Samples.Count);
+
+            var baga = result.Samples.Single(s => s.Code == "BAGA");
+            Assert.Equal("BAGA", baga.CodeMeta!.Code);
+            Assert.Equal(IkasCatalogSources.IkasIli, baga.CodeMeta.Parameters["catalog.source"]);
+            Assert.Equal("BAG", baga.CodeMeta.Parameters["catalog.canonicalCode"]);
+
+            var bdba = result.Samples.Single(s => s.Code == "BDBA");
+            Assert.Equal("BDBA", bdba.CodeMeta!.Code);
+            Assert.Equal("BDB", bdba.CodeMeta.Parameters["catalog.canonicalCode"]);
+            Assert.Equal("A", bdba.CodeMeta.Parameters["catalog.standardAnnotation"]);
+
+            var bccyy = result.Samples.Single(s => s.Code == "BCCYY");
+            Assert.Equal("BCCYY", bccyy.CodeMeta!.Code);
+            Assert.Equal(IkasCatalogSources.IkasXtfObserved, bccyy.CodeMeta.Parameters["catalog.source"]);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    private static ProtocolEntry CreateEntry(string code, string beschreibung, double meter)
+        => new()
+        {
+            Code = code,
+            Beschreibung = beschreibung,
+            MeterStart = meter,
+            MeterEnd = meter,
+            Source = ProtocolEntrySource.Manual
+        };
+
+    private static AiRuntimeSettings CreateRuntimeSettings()
+        => new(
+            Enabled: false,
+            OllamaBaseUri: new Uri("http://localhost:11434"),
+            VisionModel: "",
+            TextModel: "",
+            EmbedModel: null,
+            FfmpegPath: null,
+            OllamaRequestTimeout: TimeSpan.FromMinutes(5),
+            OllamaKeepAlive: "24h",
+            OllamaNumCtx: 8192);
+
+    private sealed class InMemoryCodeCatalogProvider : ICodeCatalogProvider
+    {
+        private readonly IReadOnlyList<CodeDefinition> _codes;
+
+        public InMemoryCodeCatalogProvider(IReadOnlyList<CodeDefinition> codes)
+            => _codes = codes;
+
+        public IReadOnlyList<CodeDefinition> GetAll() => _codes;
+
+        public bool TryGet(string code, out CodeDefinition def)
+        {
+            def = _codes.FirstOrDefault(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase))
+                  ?? new CodeDefinition();
+            return !string.IsNullOrWhiteSpace(def.Code);
+        }
+
+        public void Save(IReadOnlyList<CodeDefinition> codes)
+            => throw new InvalidOperationException("Test catalog is read-only.");
+
+        public IReadOnlyList<string> AllowedCodes()
+            => _codes.Where(c => c.IsSelectable && !c.IsObservedExtension).Select(c => c.Code).ToList();
+
+        public IReadOnlyList<string> Validate(IReadOnlyList<CodeDefinition>? codes = null)
+            => Array.Empty<string>();
     }
 }

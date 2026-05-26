@@ -6,6 +6,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Domain.Protocol;
 using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
@@ -146,6 +148,41 @@ public sealed class StageAExporterTests : IDisposable
         Assert.False(Directory.Exists(output));
     }
 
+    [Fact]
+    public async Task Export_preserves_ikas_codes_and_catalog_metadata_in_clean_samples()
+    {
+        var source = PrepareIkasCatalogSamples();
+        var output = Path.Combine(_root, "ikas-out");
+
+        var result = await new StageAExporter().ExportAsync(new StageAExportOptions(
+            SourceSamplesPath: source.SamplesPath,
+            EvalSetRoot: source.EvalRoot,
+            OutputRoot: output,
+            DryRun: false,
+            ValidationRatio: 0,
+            DegreeOfParallelism: 2));
+
+        Assert.Equal(3, result.FinalSamples);
+        Assert.Equal(new[] { "BAGA", "BCCYY", "BDBA" }, result.Classes.Select(c => c.ClassName).OrderBy(c => c).ToArray());
+
+        var clean = JsonSerializer.Deserialize<TrainingSample[]>(
+            await File.ReadAllTextAsync(result.CleanTrainingSamplesPath!),
+            StageAExporter.JsonOptions)!;
+
+        Assert.Contains(clean, s =>
+            s.Code == "BAGA"
+            && s.CodeMeta?.Code == "BAGA"
+            && s.CodeMeta.Parameters["catalog.canonicalCode"] == "BAG");
+        Assert.Contains(clean, s =>
+            s.Code == "BDBA"
+            && s.CodeMeta?.Code == "BDBA"
+            && s.CodeMeta.Parameters["catalog.standardAnnotation"] == "A");
+        Assert.Contains(clean, s =>
+            s.Code == "BCCYY"
+            && s.CodeMeta?.Code == "BCCYY"
+            && s.CodeMeta.Parameters["catalog.source"] == IkasCatalogSources.IkasXtfObserved);
+    }
+
     private (string SamplesPath, string EvalRoot) PrepareSourceWithEvalOverlap()
     {
         Directory.CreateDirectory(_root);
@@ -262,6 +299,42 @@ public sealed class StageAExporterTests : IDisposable
         return (samplesPath, evalRoot);
     }
 
+    private (string SamplesPath, string EvalRoot) PrepareIkasCatalogSamples()
+    {
+        Directory.CreateDirectory(_root);
+        var frameRoot = Path.Combine(_root, "ikas-frames");
+        Directory.CreateDirectory(frameRoot);
+
+        var imageBaga = Path.Combine(frameRoot, "baga.png");
+        var imageBdba = Path.Combine(frameRoot, "bdba.png");
+        var imageBccyy = Path.Combine(frameRoot, "bccyy.png");
+        File.WriteAllBytes(imageBaga, [1, 2, 3]);
+        File.WriteAllBytes(imageBdba, [4, 5, 6]);
+        File.WriteAllBytes(imageBccyy, [7, 8, 9]);
+
+        var evalRoot = Path.Combine(_root, "ikas-eval");
+        Directory.CreateDirectory(Path.Combine(evalRoot, "images"));
+        File.WriteAllText(
+            Path.Combine(evalRoot, "_manifest.json"),
+            new JsonObject
+            {
+                ["frozen"] = true,
+                ["hash_algorithm"] = "sha256",
+                ["hashes"] = new JsonObject()
+            }.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+
+        var samples = new[]
+        {
+            MakeIkasSample("baga", "BAGA", imageBaga, IkasCatalogSources.IkasIli, "BAG", null),
+            MakeIkasSample("bdba", "BDBA", imageBdba, IkasCatalogSources.IkasIli, "BDB", "A"),
+            MakeIkasSample("bccyy", "BCCYY", imageBccyy, IkasCatalogSources.IkasXtfObserved, "BCCYY", null),
+        };
+
+        var samplesPath = Path.Combine(_root, "ikas_training_samples.json");
+        File.WriteAllText(samplesPath, JsonSerializer.Serialize(samples, StageAExporter.JsonOptions));
+        return (samplesPath, evalRoot);
+    }
+
     private static TrainingSample MakeBddSample(string sampleId, string framePath)
         => new()
         {
@@ -269,6 +342,35 @@ public sealed class StageAExporterTests : IDisposable
             Code = "BDDC",
             FramePath = framePath,
             Status = TrainingSampleStatus.Approved,
+            BboxXCenter = 0.5,
+            BboxYCenter = 0.5,
+            BboxWidth = 0.2,
+            BboxHeight = 0.3,
+        };
+
+    private static TrainingSample MakeIkasSample(
+        string sampleId,
+        string code,
+        string framePath,
+        string source,
+        string canonicalCode,
+        string? standardAnnotation)
+        => new()
+        {
+            SampleId = sampleId,
+            Code = code,
+            FramePath = framePath,
+            Status = TrainingSampleStatus.Approved,
+            CodeMeta = new ProtocolEntryCodeMeta
+            {
+                Code = code,
+                Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["catalog.source"] = source,
+                    ["catalog.canonicalCode"] = canonicalCode,
+                    ["catalog.standardAnnotation"] = standardAnnotation ?? string.Empty
+                }
+            },
             BboxXCenter = 0.5,
             BboxYCenter = 0.5,
             BboxWidth = 0.2,
