@@ -32,9 +32,23 @@ buildlog.txt
 *_wpftmp.csproj
 *.lscache
 .lscache/
+AUDIT_*.md
+coverage.xml
+.coverage
+package-lock.json
+
+# Lokale Review-/Trainingsausgaben
+*Review_*/
+*Review[0-9]_*/
+*Combined_*/
+Wasserstand*Review*/
+WeakClass*Review*/
 
 # Python Sidecar
 sidecar/.venv/
+sidecar/.pytest_cache/
+sidecar/.pytest_tmp/
+sidecar/florence2_shadow_log/
 sidecar/__pycache__/
 sidecar/**/__pycache__/
 sidecar/**/*.pyc
@@ -48,6 +62,14 @@ sidecar/models/**/*.onnx
 sidecar/models/**/*.safetensors
 sidecar/test_export_tmp/
 sidecar/training_export/
+sidecar/yolo11m.engine
+sidecar/yolo11m.onnx
+
+# Lokale UI-Config-Backups
+src/AuswertungPro.Next.UI/Config/*.bak_*.json
+
+# Testausgaben
+tests/**/TestResults/
 
 # Lokale SDK/Runtime-Kopien (gross)
 .dotnet/
