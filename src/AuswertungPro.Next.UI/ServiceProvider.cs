@@ -132,11 +132,7 @@ namespace AuswertungPro.Next.UI
                 ? string.Join(" | ", catalogSourcePaths)
                 : null;
             CodeCatalog = CreateCodeCatalog(settings, vsaKekManifestPath, xmlCatalogPaths);
-            var centralSelectionCatalog = new CodeCatalogSelectionCatalog(CodeCatalog);
-            CodeSelectionCatalog = centralSelectionCatalog.Groups.Count > 0
-                ? centralSelectionCatalog
-                : new VsaCodeTreeSelectionCatalog();
-            VsaCodeTreeCatalogAdapter.Apply(CodeCatalog);
+            CodeSelectionCatalog = new CodeCatalogSelectionCatalog(CodeCatalog);
             VsaCodeResolver.ConfigureCatalog(CodeCatalog);
             RetrievalService? retrieval = null;
             try

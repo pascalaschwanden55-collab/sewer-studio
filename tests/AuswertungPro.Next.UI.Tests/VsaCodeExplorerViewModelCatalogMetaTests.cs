@@ -4,6 +4,15 @@ using AuswertungPro.Next.UI.ViewModels.Windows;
 public sealed class VsaCodeExplorerViewModelCatalogMetaTests
 {
     [Fact]
+    public void Constructor_without_catalog_does_not_load_legacy_static_tree()
+    {
+        var vm = new VsaCodeExplorerViewModel();
+
+        Assert.Empty(vm.CurrentTiles);
+        Assert.False(vm.CanConfirm);
+    }
+
+    [Fact]
     public void BuildProtocolEntry_writes_catalog_metadata_from_selection_catalog()
     {
         var catalog = new CodeCatalogSelectionCatalog(new InMemoryCodeCatalogProvider(new[]

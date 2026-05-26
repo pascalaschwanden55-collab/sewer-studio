@@ -11,21 +11,28 @@ public interface IVsaCodeSelectionCatalog
     bool IsInvalidCombo(VsaCodeDef codeDef, string char1Key, string char2Key);
 }
 
-public sealed class VsaCodeTreeSelectionCatalog : IVsaCodeSelectionCatalog
+public sealed class EmptyVsaCodeSelectionCatalog : IVsaCodeSelectionCatalog
 {
-    public IReadOnlyDictionary<string, GroupDef> Groups => VsaCodeTree.Groups;
+    public static EmptyVsaCodeSelectionCatalog Instance { get; } = new();
+
+    private EmptyVsaCodeSelectionCatalog()
+    {
+    }
+
+    public IReadOnlyDictionary<string, GroupDef> Groups { get; } =
+        new Dictionary<string, GroupDef>(StringComparer.OrdinalIgnoreCase);
 
     public (QuantField? Q1, QuantField? Q2) GetQuantRule(string codeKey, string? char1Key)
-        => VsaCodeTree.GetQuantRule(codeKey, char1Key);
+        => (null, null);
 
     public ClockRule GetClockRule(string codeKey)
-        => VsaCodeTree.GetClockRule(codeKey);
+        => new() { Mode = "none" };
 
     public IReadOnlyDictionary<string, string>? GetChar2Options(VsaCodeDef codeDef, string char1Key)
-        => VsaCodeTree.GetChar2Options(codeDef, char1Key);
+        => null;
 
     public bool IsInvalidCombo(VsaCodeDef codeDef, string char1Key, string char2Key)
-        => VsaCodeTree.IsInvalidCombo(codeDef, char1Key, char2Key);
+        => false;
 }
 
 public sealed class CodeCatalogSelectionCatalog : IVsaCodeSelectionCatalog

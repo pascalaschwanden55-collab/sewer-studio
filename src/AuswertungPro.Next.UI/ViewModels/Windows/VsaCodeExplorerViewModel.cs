@@ -88,7 +88,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
                                      IVsaCodeSelectionCatalog? catalog = null)
     {
         _existingEntry = existingEntry;
-        _catalog = catalog ?? new VsaCodeTreeSelectionCatalog();
+        _catalog = catalog ?? EmptyVsaCodeSelectionCatalog.Instance;
 
         if (presetMeter.HasValue)
             MeterStart = presetMeter.Value.ToString("F2", CultureInfo.InvariantCulture);
