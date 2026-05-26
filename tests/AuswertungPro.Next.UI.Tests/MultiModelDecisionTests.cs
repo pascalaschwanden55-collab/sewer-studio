@@ -1,7 +1,7 @@
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
 
-namespace AuswertungPro.Next.Pipeline.Tests;
+namespace AuswertungPro.Next.UI.Tests;
 
 public class MultiModelDecisionTests
 {

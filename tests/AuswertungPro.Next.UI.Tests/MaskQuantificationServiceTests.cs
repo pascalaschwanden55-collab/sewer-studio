@@ -1,7 +1,7 @@
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 
-namespace AuswertungPro.Next.Pipeline.Tests;
+namespace AuswertungPro.Next.UI.Tests;
 
 public class MaskQuantificationServiceTests
 {

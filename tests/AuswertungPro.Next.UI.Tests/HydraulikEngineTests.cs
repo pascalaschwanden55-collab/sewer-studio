@@ -2,7 +2,7 @@ using System;
 using AuswertungPro.Next.UI.Hydraulik;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
-namespace AuswertungPro.Next.Pipeline.Tests;
+namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class HydraulikEngineTests
 {

@@ -1,6 +1,6 @@
 using AuswertungPro.Next.UI.ViewModels;
 
-namespace AuswertungPro.Next.Pipeline.Tests;
+namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class ShellNavigationPolicyTests
 {

@@ -5,7 +5,7 @@ using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using Xunit;
 
-namespace AuswertungPro.Next.Pipeline.Tests;
+namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class AutoApprovalTests
 {

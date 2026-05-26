@@ -10,7 +10,7 @@ using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using Microsoft.Data.Sqlite;
 
-namespace AuswertungPro.Next.Pipeline.Tests;
+namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class CodingSessionViewModelFeedbackTests
 {

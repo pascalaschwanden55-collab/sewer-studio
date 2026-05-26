@@ -10,7 +10,7 @@ using AuswertungPro.Next.UI.Services;
 
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 
-namespace AuswertungPro.Next.Pipeline.Tests;
+namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class AiSettingsFactoryTests
 {

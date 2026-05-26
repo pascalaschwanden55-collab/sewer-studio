@@ -4,7 +4,7 @@ using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Teacher;
 
-namespace AuswertungPro.Next.Pipeline.Tests;
+namespace AuswertungPro.Next.UI.Tests;
 
 [Collection("EnvironmentVars")]
 public sealed class TrainingAnnotationExportServiceTests
