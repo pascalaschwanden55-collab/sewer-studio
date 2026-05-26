@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
@@ -15,11 +16,18 @@ namespace AuswertungPro.Next.Infrastructure.Ai;
 /// </summary>
 public static class VsaCodeResolver
 {
+    private static ICodeCatalogProvider? _catalogProvider;
+
+    public static void ConfigureCatalog(ICodeCatalogProvider? catalogProvider)
+    {
+        _catalogProvider = catalogProvider;
+    }
+
     /// <summary>
     /// Normalisiert einen rohen VSA-Code-Hint von der KI.
     /// Akzeptiert nur Codes die fachlich plausibel sind:
     /// - Exakt im Katalog (BCD, BCAEB, BABBA)
-    /// - Hauptcode (3Z) im Katalog UND Gesamtlaenge 2-6 Grossbuchstaben
+    /// - Hauptcode (3Z) im Katalog UND Gesamtlaenge 2-8 Grossbuchstaben
     /// Gibt normalisierten Code oder null zurueck.
     /// </summary>
     public static string? NormalizeFindingCode(string? rawCode)
@@ -29,21 +37,21 @@ public static class VsaCodeResolver
 
         var normalized = rawCode.Trim().Replace(".", "").ToUpperInvariant();
 
-        // VSA-Codes sind 2-6 Grossbuchstaben
-        if (normalized.Length < 2 || normalized.Length > 6)
+        // IKAS/IBAK-Codes sind meistens 3-5 Zeichen, alte Daten koennen laenger sein.
+        if (normalized.Length < 2 || normalized.Length > 8)
             return null;
-        if (!Regex.IsMatch(normalized, @"^[A-Z]{2,6}$"))
+        if (!Regex.IsMatch(normalized, @"^[A-Z]{2,8}$"))
             return null;
 
         // 1. Exakter Katalog-Lookup
-        if (VsaCodeTree.LookupLabel(normalized) != null)
+        if (LookupCatalogLabel(normalized) != null || VsaCodeTree.LookupLabel(normalized) != null)
             return normalized;
 
         // 2. Hauptcode (3 Zeichen) validieren — Untercodes akzeptieren
         if (normalized.Length >= 3)
         {
             var main = normalized[..3];
-            if (VsaCodeTree.LookupLabel(main) != null)
+            if (LookupCatalogLabel(main) != null || VsaCodeTree.LookupLabel(main) != null)
                 return normalized;
         }
 
@@ -56,15 +64,23 @@ public static class VsaCodeResolver
     public static string? LookupLabel(string code)
     {
         if (string.IsNullOrWhiteSpace(code)) return null;
+        var catalogLabel = LookupCatalogLabel(code);
+        if (catalogLabel != null) return catalogLabel;
         var label = VsaCodeTree.LookupLabel(code);
         if (label != null) return label;
         if (code.Length >= 3)
         {
+            catalogLabel = LookupCatalogLabel(code[..3]);
+            if (catalogLabel != null) return catalogLabel;
             label = VsaCodeTree.LookupLabel(code[..3]);
             if (label != null) return label;
         }
         if (code.Length >= 2)
+        {
+            catalogLabel = LookupCatalogLabel(code[..2]);
+            if (catalogLabel != null) return catalogLabel;
             return VsaCodeTree.LookupLabel(code[..2]);
+        }
         return null;
     }
 
@@ -252,6 +268,17 @@ public static class VsaCodeResolver
     }
 
     private static bool Has(string text, string term) => text.Contains(term);
+
+    private static string? LookupCatalogLabel(string code)
+    {
+        var catalog = _catalogProvider;
+        if (catalog is null || string.IsNullOrWhiteSpace(code))
+            return null;
+
+        return catalog.TryGet(code, out var def) && !string.IsNullOrWhiteSpace(def.Title)
+            ? def.Title
+            : null;
+    }
 
     private static bool HasWord(string text, string word)
     {

@@ -988,6 +988,11 @@ public sealed class XmlCodeCatalogProvider : ICodeCatalogProvider
         {
             Code = def.Code,
             Title = def.Title,
+            CanonicalCode = def.CanonicalCode,
+            Source = def.Source,
+            IsObservedExtension = def.IsObservedExtension,
+            IsSelectable = def.IsSelectable,
+            StandardAnnotation = def.StandardAnnotation,
             Group = def.Group,
             CategoryPath = def.CategoryPath is null ? new List<string>() : new List<string>(def.CategoryPath),
             Description = def.Description,
@@ -1017,6 +1022,11 @@ public sealed class XmlCodeCatalogProvider : ICodeCatalogProvider
             {
                 Code = NormalizeCode(c.Code),
                 Title = c.Title?.Trim() ?? string.Empty,
+                CanonicalCode = string.IsNullOrWhiteSpace(c.CanonicalCode) ? NormalizeCode(c.Code) : NormalizeCode(c.CanonicalCode),
+                Source = string.IsNullOrWhiteSpace(c.Source) ? null : c.Source.Trim(),
+                IsObservedExtension = c.IsObservedExtension,
+                IsSelectable = c.IsSelectable,
+                StandardAnnotation = string.IsNullOrWhiteSpace(c.StandardAnnotation) ? null : c.StandardAnnotation.Trim(),
                 Group = c.Group?.Trim() ?? "Unbekannt",
                 CategoryPath = (c.CategoryPath ?? new List<string>())
                     .Where(x => !string.IsNullOrWhiteSpace(x))

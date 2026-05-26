@@ -37,9 +37,11 @@ public partial class TrainingCenterWindow : Window
         InitializeComponent();
         WindowStateManager.Track(this);
 
+        var codeCatalog = App.Services is ServiceProvider sp ? sp.CodeCatalog : null;
         Vm = new TrainingCenterViewModel(
             new TrainingCenterStore(),
-            new TrainingCenterImportService());
+            new TrainingCenterImportService(),
+            codeCatalog);
 
         DataContext = Vm;
 

@@ -16,7 +16,7 @@ public sealed partial class RuleBasedAiSuggestionPlausibilityService : IAiSugges
 
     private readonly IReadOnlySet<string>? _allowedCodes;
 
-    [GeneratedRegex(@"^B[A-H][A-Z]$")]
+    [GeneratedRegex(@"^[ABD][A-Z]{2,7}$")]
     private static partial Regex VsaCodePattern();
 
     public RuleBasedAiSuggestionPlausibilityService() { }

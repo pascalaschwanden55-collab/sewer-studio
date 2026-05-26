@@ -46,6 +46,7 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
 
         GroupOptions.Add(AllGroups);
         foreach (var group in Codes
+                     .Where(c => c.IsSelectable && !c.IsObservedExtension)
                      .Select(c => string.IsNullOrWhiteSpace(c.Group) ? "Unbekannt" : c.Group.Trim())
                      .Distinct(StringComparer.OrdinalIgnoreCase)
                      .OrderBy(g => g, StringComparer.OrdinalIgnoreCase))
@@ -201,6 +202,9 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
     private bool FilterCode(AppProtocol.CodeDefinition code)
     {
         var group = string.IsNullOrWhiteSpace(code.Group) ? "Unbekannt" : code.Group.Trim();
+        if (code.IsObservedExtension || !code.IsSelectable)
+            return false;
+
         if (!string.IsNullOrWhiteSpace(SelectedGroup)
             && !string.Equals(SelectedGroup, AllGroups, StringComparison.OrdinalIgnoreCase)
             && !string.Equals(group, SelectedGroup, StringComparison.OrdinalIgnoreCase))

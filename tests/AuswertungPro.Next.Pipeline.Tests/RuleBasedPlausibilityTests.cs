@@ -125,13 +125,13 @@ public class RuleBasedPlausibilityTests
     [Fact]
     public void CatalogCode_NonVsaFormat_PassesWithSoftWarning()
     {
-        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "AECX", "BAA" };
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "ZXZ", "BAA" };
         var sut = new RuleBasedAiSuggestionPlausibilityService(allowed);
-        var input = new AiSuggestionResult("AECX", 0.85, "test", null, null);
+        var input = new AiSuggestionResult("ZXZ", 0.85, "test", null, null);
 
         var result = sut.ApplyChecks(input, new ObservationContext("Grundlageninfo"));
 
-        Assert.Equal("AECX", result.SuggestedCode);
+        Assert.Equal("ZXZ", result.SuggestedCode);
         Assert.True(result.Confidence >= 0.65, "Confidence should only have small penalty");
         Assert.Contains(result.Warnings!, w => w.Contains("PL01") && w.Contains("im Katalog bekannt"));
     }
@@ -147,6 +147,20 @@ public class RuleBasedPlausibilityTests
 
         Assert.Equal("BAA", result.SuggestedCode);
         Assert.Equal(0.9, result.Confidence);
+    }
+
+    [Fact]
+    public void CatalogCode_IkasFullCode_PassesWithoutFormatPenalty()
+    {
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "BAGA", "BABAC", "DCA" };
+        var sut = new RuleBasedAiSuggestionPlausibilityService(allowed);
+        var input = new AiSuggestionResult("BAGA", 0.9, "Anschluss einragend", null, null);
+
+        var result = sut.ApplyChecks(input, new ObservationContext("Anschluss einragend"));
+
+        Assert.Equal("BAGA", result.SuggestedCode);
+        Assert.Equal(0.9, result.Confidence);
+        Assert.DoesNotContain(result.Warnings ?? Array.Empty<string>(), w => w.Contains("PL01"));
     }
 
     [Fact]

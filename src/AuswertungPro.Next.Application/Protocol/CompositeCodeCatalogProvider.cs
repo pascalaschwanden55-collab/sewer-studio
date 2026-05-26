@@ -34,6 +34,7 @@ public sealed class CompositeCodeCatalogProvider : ICodeCatalogProvider
 
     public IReadOnlyList<string> AllowedCodes()
         => GetAll()
+            .Where(c => c.IsSelectable && !c.IsObservedExtension)
             .Select(c => c.Code)
             .Where(c => !string.IsNullOrWhiteSpace(c))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -76,6 +77,12 @@ public sealed class CompositeCodeCatalogProvider : ICodeCatalogProvider
                 case JsonCodeCatalogProvider json:
                     json.Reload();
                     break;
+                case ManifestCodeCatalogProvider manifest:
+                    manifest.Reload();
+                    break;
+                case SourceDecoratingCodeCatalogProvider sourceDecorating:
+                    sourceDecorating.Reload();
+                    break;
                 case CompositeCodeCatalogProvider composite:
                     composite.Reload();
                     break;
@@ -95,6 +102,13 @@ public sealed class CompositeCodeCatalogProvider : ICodeCatalogProvider
                     break;
                 case JsonCodeCatalogProvider json:
                     warnings.AddRange(json.LastLoadWarnings);
+                    break;
+                case ManifestCodeCatalogProvider manifest:
+                    warnings.AddRange(manifest.LastLoadWarnings);
+                    warnings.AddRange(manifest.LastLoadErrors);
+                    break;
+                case SourceDecoratingCodeCatalogProvider sourceDecorating:
+                    warnings.AddRange(sourceDecorating.GetWarnings());
                     break;
                 case CompositeCodeCatalogProvider composite:
                     warnings.AddRange(composite.GetWarnings());
@@ -130,6 +144,11 @@ public sealed class CompositeCodeCatalogProvider : ICodeCatalogProvider
         {
             Code = source.Code ?? string.Empty,
             Title = source.Title ?? string.Empty,
+            CanonicalCode = source.CanonicalCode,
+            Source = source.Source,
+            IsObservedExtension = source.IsObservedExtension,
+            IsSelectable = source.IsSelectable,
+            StandardAnnotation = source.StandardAnnotation,
             Group = source.Group ?? "Unbekannt",
             Description = source.Description,
             CategoryPath = (source.CategoryPath ?? new List<string>()).ToList(),

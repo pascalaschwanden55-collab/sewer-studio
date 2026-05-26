@@ -15,6 +15,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -31,6 +32,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 {
     private readonly TrainingCenterStore _store;
     private readonly TrainingCenterImportService _import;
+    private readonly ICodeCatalogProvider? _codeCatalog;
 
     /// <summary>Wiederverwendbarer HttpClient fuer KB-Operationen (Embedding-Requests).</summary>
     private System.Net.Http.HttpClient? _kbHttpClient;
@@ -491,10 +493,14 @@ public partial class TrainingCenterViewModel : ObservableObject
         catch { /* KB evtl. noch nicht vorhanden */ }
     }
 
-    public TrainingCenterViewModel(TrainingCenterStore store, TrainingCenterImportService import)
+    public TrainingCenterViewModel(
+        TrainingCenterStore store,
+        TrainingCenterImportService import,
+        ICodeCatalogProvider? codeCatalog = null)
     {
         _store = store;
         _import = import;
+        _codeCatalog = codeCatalog;
     }
 
     // ── Cases ────────────────────────────────────────────────────────────────
@@ -800,7 +806,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 .ToRuntimeSettings();
             var settings = await TrainingCenterSettingsStore.LoadAsync();
             var meterSvc = CreateMeterTimelineService(cfg, settings.GpuConcurrency);
-            var generator = new TrainingSampleGenerator(cfg, meterSvc, settings);
+            var generator = new TrainingSampleGenerator(cfg, meterSvc, settings, _codeCatalog);
 
             var existing = await TrainingSamplesStore.LoadAsync();
             var existingSigs = existing.Select(s => s.Signature).ToHashSet(StringComparer.Ordinal);
@@ -1260,7 +1266,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             var settings = await TrainingCenterSettingsStore.LoadAsync();
             var meterSvc = CreateMeterTimelineService(cfg, settings.GpuConcurrency);
-            var generator = new TrainingSampleGenerator(cfg, meterSvc, settings);
+            var generator = new TrainingSampleGenerator(cfg, meterSvc, settings, _codeCatalog);
 
             var allSamples = await TrainingSamplesStore.LoadAsync();
             var existingSigs = allSamples.Select(s => s.Signature)

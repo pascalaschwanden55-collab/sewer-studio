@@ -81,6 +81,8 @@ public sealed record ClockRule
 
 public static class VsaCodeTree
 {
+    public static readonly Dictionary<string, string> CatalogLabels = new(StringComparer.OrdinalIgnoreCase);
+
     // Hilfsfunktion: Einfache Char1-Definition (nur Label, kein eigenes Char2)
     private static CharDef C(string label) => new() { Label = label };
     private static CharDef C(string label, Dictionary<string, string> char2) => new() { Label = label, Char2 = char2 };
@@ -514,6 +516,8 @@ public static class VsaCodeTree
     public static string? LookupLabel(string code)
     {
         if (string.IsNullOrWhiteSpace(code) || code.Length < 2) return null;
+        if (CatalogLabels.TryGetValue(code, out var catalogLabel))
+            return catalogLabel;
 
         var groupKey = code[..2]; // z.B. "BA", "BC", "BD"
         if (!Groups.TryGetValue(groupKey, out var group)) return null;

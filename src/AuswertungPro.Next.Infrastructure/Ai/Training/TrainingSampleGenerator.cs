@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
@@ -45,16 +46,19 @@ public sealed class TrainingSampleGenerator
     private readonly AiRuntimeSettings _cfg;
     private readonly MeterTimelineService _meterTimeline;
     private readonly TrainingCenterSettings _settings;
+    private readonly ICodeCatalogProvider? _codeCatalog;
     private string? _pdfFramesDir;
 
     public TrainingSampleGenerator(
         AiRuntimeSettings cfg,
         MeterTimelineService meterTimeline,
-        TrainingCenterSettings? settings = null)
+        TrainingCenterSettings? settings = null,
+        ICodeCatalogProvider? codeCatalog = null)
     {
         _cfg = cfg;
         _meterTimeline = meterTimeline;
         _settings = settings ?? new TrainingCenterSettings();
+        _codeCatalog = codeCatalog;
     }
 
     public async Task<List<TrainingSample>> GenerateAsync(
@@ -148,7 +152,8 @@ public sealed class TrainingSampleGenerator
             {
                 ct.ThrowIfCancellationRequested();
 
-                var sig = BuildSignature(tc.CaseId, entry.Code, meter, meterEnd);
+                var sampleCode = ResolveCatalogCode(entry.Code);
+                var sig = BuildSignature(tc.CaseId, sampleCode, meter, meterEnd);
                 if (seen.Contains(sig))
                 {
                     duplicateSkipped++;
@@ -157,7 +162,7 @@ public sealed class TrainingSampleGenerator
                 seen.Add(sig);
 
                 var safeCase = Regex.Replace(tc.CaseId, @"[^\w\-]", "_");
-                var sampleId = $"{safeCase}_{entry.Code}_{meter:F2}_{Guid.NewGuid():N}";
+                var sampleId = $"{safeCase}_{sampleCode}_{meter:F2}_{Guid.NewGuid():N}";
 
                 // Frame-Extraktion: Video > PDF-Bildbericht-Foto > kein Frame
                 string? framePath = null;
@@ -195,7 +200,7 @@ public sealed class TrainingSampleGenerator
                 {
                     SampleId = sampleId,
                     CaseId = tc.CaseId,
-                    Code = entry.Code,
+                    Code = sampleCode,
                     Beschreibung = entry.Beschreibung,
                     MeterStart = Math.Round(meterStart, 1),
                     MeterEnd = Math.Round(meterEnd, 1),
@@ -211,7 +216,7 @@ public sealed class TrainingSampleGenerator
                     Signature = sig,
                     FrameIndex = frameIndex,
                     SourceType = SourceTypeNames.BatchImport,
-                    CodeMeta = GroundTruthProtocolEntryMapper.CloneCodeMeta(entry.CodeMeta)
+                    CodeMeta = BuildSampleCodeMeta(entry, sampleCode)
                 });
             }
         }
@@ -277,6 +282,46 @@ public sealed class TrainingSampleGenerator
     /// <summary>Delegiert an die zentrale Signatur-Methode auf TrainingSample.</summary>
     private static string BuildSignature(string caseId, string code, double meterCenter, double meterEnd)
         => TrainingSample.BuildCanonicalSignature(caseId, code, meterCenter, meterEnd);
+
+    private string ResolveCatalogCode(string rawCode)
+    {
+        var code = (rawCode ?? string.Empty).Trim().ToUpperInvariant();
+        if (_codeCatalog is null || code.Length == 0)
+            return code;
+
+        if (_codeCatalog.TryGet(code, out var exact))
+            return exact.Code;
+
+        var normalized = VsaCodeResolver.NormalizeFindingCode(code);
+        return string.IsNullOrWhiteSpace(normalized) ? code : normalized;
+    }
+
+    private ProtocolEntryCodeMeta? BuildSampleCodeMeta(ProtocolEntry entry, string sampleCode)
+    {
+        var meta = GroundTruthProtocolEntryMapper.CloneCodeMeta(entry.CodeMeta);
+        if (_codeCatalog is null || !_codeCatalog.TryGet(sampleCode, out var def))
+            return meta;
+
+        meta ??= new ProtocolEntryCodeMeta
+        {
+            Code = sampleCode,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+        meta.Code = sampleCode;
+        meta.Parameters ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        AddMeta(meta.Parameters, "catalog.source", def.Source);
+        AddMeta(meta.Parameters, "catalog.canonicalCode", def.CanonicalCode);
+        AddMeta(meta.Parameters, "catalog.standardAnnotation", def.StandardAnnotation);
+
+        return meta;
+    }
+
+    private static void AddMeta(Dictionary<string, string> parameters, string key, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+            parameters[key] = value.Trim();
+    }
 
     private async Task<ProtocolDocument?> LoadProtocolAsync(string path)
     {

@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.Domain.VsaCatalog;
+using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
@@ -342,7 +342,7 @@ public sealed class KnowledgeBaseManager(
             return false;
         if (string.IsNullOrWhiteSpace(sample.Code))
             return false;
-        if (VsaCodeTree.LookupLabel(sample.Code) is null)
+        if (VsaCodeResolver.LookupLabel(sample.Code) is null)
             return false;
         return true;
     }

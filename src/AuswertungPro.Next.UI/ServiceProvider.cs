@@ -49,6 +49,7 @@ namespace AuswertungPro.Next.UI
         public ILogger Logger { get; }
         public ILoggerFactory LoggerFactory { get; }
         public ErrorCodeGenerator ErrorCodes { get; } = new();
+        private const string IkasManifestFileName = "ikas_vsa_catalog_manifest.json";
 
 
         public IProjectRepository Projects { get; }
@@ -115,15 +116,23 @@ namespace AuswertungPro.Next.UI
             var cfg = aiPlatform.ToRuntimeSettings();
             var secCatalogPath = ResolveVsaCatalogPath(settings);
             var nodCatalogPath = ResolveVsaCatalogNodPath(settings);
+            var ikasManifestPath = ResolveIkasCatalogManifestPath();
             var xmlCatalogPaths = new[] { secCatalogPath, nodCatalogPath }
                 .Where(p => !string.IsNullOrWhiteSpace(p))
                 .Select(p => p!)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
-            VsaCatalogResolvedPath = xmlCatalogPaths.Count > 0
-                ? string.Join(" | ", xmlCatalogPaths)
+            var catalogSourcePaths = new[] { ikasManifestPath }
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Select(p => p!)
+                .Concat(xmlCatalogPaths)
+                .ToList();
+            VsaCatalogResolvedPath = catalogSourcePaths.Count > 0
+                ? string.Join(" | ", catalogSourcePaths)
                 : null;
-            CodeCatalog = CreateCodeCatalog(settings, xmlCatalogPaths);
+            CodeCatalog = CreateCodeCatalog(settings, ikasManifestPath, xmlCatalogPaths);
+            VsaCodeTreeCatalogAdapter.Apply(CodeCatalog);
+            VsaCodeResolver.ConfigureCatalog(CodeCatalog);
             RetrievalService? retrieval = null;
             try
             {
@@ -280,6 +289,19 @@ namespace AuswertungPro.Next.UI
             return null;
         }
 
+        private static string? ResolveIkasCatalogManifestPath()
+        {
+            var env = Environment.GetEnvironmentVariable("IKAS_VSA_CATALOG_MANIFEST");
+            if (!string.IsNullOrWhiteSpace(env) && File.Exists(env))
+                return env;
+
+            var fromData = Path.Combine(AppContext.BaseDirectory, "Data", IkasManifestFileName);
+            if (File.Exists(fromData))
+                return fromData;
+
+            return null;
+        }
+
         private void LogCodeCatalogWarnings(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider provider, string? sourcePath)
         {
             IReadOnlyList<string>? warnings = provider switch
@@ -355,23 +377,26 @@ namespace AuswertungPro.Next.UI
 
         private static AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CreateCodeCatalog(
             AppSettings settings,
+            string? ikasManifestPath,
             IReadOnlyList<string> xmlCatalogPaths)
         {
-            var providers = xmlCatalogPaths
-                .Select(path => new AuswertungPro.Next.Application.Protocol.XmlCodeCatalogProvider(
+            var providers = new List<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>();
+
+            if (!string.IsNullOrWhiteSpace(ikasManifestPath) && File.Exists(ikasManifestPath))
+            {
+                providers.Add(new AuswertungPro.Next.Application.Protocol.ManifestCodeCatalogProvider(ikasManifestPath));
+            }
+
+            providers.AddRange(xmlCatalogPaths
+                .Select(path => new AuswertungPro.Next.Application.Protocol.SourceDecoratingCodeCatalogProvider(
+                    new AuswertungPro.Next.Application.Protocol.XmlCodeCatalogProvider(
                     path,
                     fallbackJsonPath: null,
-                    fallbackTextXmlPath: ResolveVsaCatalogTextPath(settings, path)))
-                .Cast<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>()
-                .ToList();
+                    fallbackTextXmlPath: ResolveVsaCatalogTextPath(settings, path)),
+                    AuswertungPro.Next.Application.Protocol.IkasCatalogSources.WinCanFallback))
+                .Cast<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>());
 
-            return providers.Count switch
-            {
-                0 => new AuswertungPro.Next.Application.Protocol.CompositeCodeCatalogProvider(
-                    Array.Empty<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>()),
-                1 => providers[0],
-                _ => new AuswertungPro.Next.Application.Protocol.CompositeCodeCatalogProvider(providers)
-            };
+            return new AuswertungPro.Next.Application.Protocol.CompositeCodeCatalogProvider(providers);
         }
 
         public object? GetService(Type serviceType)
