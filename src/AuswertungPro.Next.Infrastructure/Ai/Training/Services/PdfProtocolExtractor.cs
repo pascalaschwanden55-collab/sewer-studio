@@ -14,10 +14,10 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 /// Extrahiert <see cref="GroundTruthEntry"/>-Einträge aus einem Kanalinspektion-PDF.
 ///
 /// Strategien (in Priorität):
-/// 1. IKAS Leitungsgrafik: "Entf. Kode Foto Video Beschreibung" (Zeit VOR Text)
-/// 2. Fretz/IBAK-Tabelle: "Foto Zeit Meter Code Beschreibung" (Zeit VOR Meter)
+/// 1. Leitungsgrafik-Tabelle: "Entf. Kode Foto Video Beschreibung" (Zeit VOR Text)
+/// 2. Fretz-Tabelle: "Foto Zeit Meter Code Beschreibung" (Zeit VOR Meter)
 /// 3. Tabellenzeilen mit Timestamp am Ende (Zeit NACH Text)
-/// 4. IKAS Bildbericht: Label-Value Blöcke (Zustand/Entf./Video)
+/// 4. Bildbericht: Label-Value Blöcke (Zustand/Entf./Video)
 /// 5. Regelbasiertes Fallback (Bereichsmuster / Einzelmeter)
 /// 6. JSON-Protokolldatei als direkter Fallback
 /// </summary>
@@ -28,19 +28,19 @@ public sealed class PdfProtocolExtractor
     // VSA-Code: 2-6 Buchstaben, optional mit Punkt-Suffixen (.A, .C, .AB, .Y.B)
     private const string CodePattern = @"[A-Z]{2,6}(?:\.[A-Z]{1,2})*";
 
-    // IKAS Leitungsgrafik: "[meter]  [CODE]  [foto?]  [HH:MM:SS]  [text]"
+    // Leitungsgrafik-Tabelle: "[meter]  [CODE]  [foto?]  [HH:MM:SS]  [text]"
     // Zeit kommt VOR der Beschreibung
-    private static readonly Regex IkasTablePattern = new(
+    private static readonly Regex SectionGraphicTablePattern = new(
         $@"^[ \t]*(?<meter>\d{{1,4}}[.,]\d{{1,3}})[ \t]+(?<code>{CodePattern})[ \t]+(?:\d{{1,5}}[ \t]+)?(?<time>\d{{2}}:\d{{2}}:\d{{2}})[ \t]+(?<text>[^\r\n]+)",
         RegexOptions.Compiled | RegexOptions.Multiline);
 
-    // IKAS Fortsetzungszeile (kein Meter): "[CODE]  [foto?]  [HH:MM:SS]  [text]"
-    private static readonly Regex IkasContinuationPattern = new(
+    // Leitungsgrafik-Fortsetzungszeile (kein Meter): "[CODE]  [foto?]  [HH:MM:SS]  [text]"
+    private static readonly Regex SectionGraphicContinuationPattern = new(
         $@"^[ \t]{{4,}}(?<code>{CodePattern})[ \t]+(?:\d{{1,5}}[ \t]+)?(?<time>\d{{2}}:\d{{2}}:\d{{2}})[ \t]+(?<text>[^\r\n]+)",
         RegexOptions.Compiled | RegexOptions.Multiline);
 
     // Fretz-Format: "[Foto?]  [HH:MM:SS]  [meter]  [CODE]  [text]"
-    // Foto-Nummer und Timestamp kommen VOR dem Meterwert (Fretz/IBAK-PDFs)
+    // Foto-Nummer und Timestamp kommen VOR dem Meterwert (Fretz-aehnliche PDFs)
     private static readonly Regex FretzTablePattern = new(
         $@"^[ \t]*(?:\d{{1,5}}[ \t]+)?(?<time>\d{{2}}:\d{{2}}:\d{{2}})[ \t]+(?<meter>\d{{1,4}}[.,]\d{{1,3}})[ \t]+(?<code>{CodePattern})[ \t]+(?<text>[^\r\n]+)",
         RegexOptions.Compiled | RegexOptions.Multiline);
@@ -52,11 +52,11 @@ public sealed class PdfProtocolExtractor
         $@"^[ \t]*(?<meter>\d{{1,4}}[.,]\d{{1,3}})[ \t]+(?:[A-Z]\d{{1,3}}[ \t]+)?(?<code>{CodePattern})[ \t]+(?<text>[^\r\n]+?)[ \t]+(?<time>\d{{2}}:\d{{2}}:\d{{2}})\b",
         RegexOptions.Compiled | RegexOptions.Multiline);
 
-    // IKAS Bildbericht: Label-Value Blöcke mit "Zustand" + "Entf."
+    // Bildbericht: Label-Value Blöcke mit "Zustand" + "Entf."
     private static readonly Regex BildberichtCodePattern = new(
         $@"^\s*Zustand\s+(?<code>{CodePattern})\s*$",
         RegexOptions.Compiled | RegexOptions.Multiline);
-    // Meter mit "Entf." - Flie.{1,2}r statt Flie.r wegen Multi-Byte-Encoding (z.B. IKAS ¦ → Â¦)
+    // Meter mit "Entf." - Flie.{1,2}r statt Flie.r wegen Multi-Byte-Encoding.
     private static readonly Regex BildberichtMeterPattern = new(
         @"^\s*Entf\.?\s+(?:gegen\s+Flie.{1,2}r\.?\s+)?(?<meter>\d{1,4}[.,]\d{1,3})\s*m\s*$",
         RegexOptions.Compiled | RegexOptions.Multiline);
@@ -261,7 +261,7 @@ public sealed class PdfProtocolExtractor
             }
         }
 
-        // Erkennung und Korrektur von Custom-Font-Encoding (z.B. IKAS-PDFs)
+        // Erkennung und Korrektur von Custom-Font-Encoding.
         var rawText = sb.ToString();
         return TryDecodeShiftedText(rawText);
     }
@@ -270,7 +270,7 @@ public sealed class PdfProtocolExtractor
 
     /// <summary>
     /// Erkennt PDFs mit verschobener Zeichencodierung (Custom Font Encoding)
-    /// und korrigiert den Text automatisch. Manche PDF-Generatoren (z.B. IKAS)
+    /// und korrigiert den Text automatisch. Manche PDF-Generatoren
     /// verwenden Schriften, bei denen alle Zeichen um einen festen Offset
     /// verschoben sind. PdfPig kann diese nicht korrekt decodieren.
     /// </summary>
@@ -425,10 +425,10 @@ public sealed class PdfProtocolExtractor
         var results = new List<GroundTruthEntry>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // Strategie 1: IKAS Leitungsgrafik (Zeit VOR Beschreibung)
+        // Strategie 1: Leitungsgrafik-Tabelle (Zeit VOR Beschreibung)
         // Format: "0.00  BCD  [1777]  00:00:09  Rohranfang"
         var lastMeter = 0.0;
-        foreach (Match m in IkasTablePattern.Matches(text))
+        foreach (Match m in SectionGraphicTablePattern.Matches(text))
         {
             var entry = BuildEntry(
                 m.Groups["meter"].Value,
@@ -445,10 +445,10 @@ public sealed class PdfProtocolExtractor
             }
         }
 
-        // IKAS Fortsetzungszeilen (kein Meter → vorherigen Meter verwenden)
+        // Leitungsgrafik-Fortsetzungszeilen (kein Meter -> vorherigen Meter verwenden)
         if (results.Count > 0)
         {
-            foreach (Match m in IkasContinuationPattern.Matches(text))
+            foreach (Match m in SectionGraphicContinuationPattern.Matches(text))
             {
                 // Prüfen ob diese Zeile nicht schon als Hauptzeile gematcht wurde
                 var code = m.Groups["code"].Value.Trim().ToUpperInvariant();
@@ -508,7 +508,7 @@ public sealed class PdfProtocolExtractor
         if (results.Count > 0)
             return results;
 
-        // Strategie 4: IKAS Bildbericht (Label-Value Blöcke)
+        // Strategie 4: Bildbericht (Label-Value Blöcke)
         results = ParseBildberichtBlocks(text, seen);
         if (results.Count > 0)
             return results;
@@ -553,7 +553,7 @@ public sealed class PdfProtocolExtractor
     }
 
     /// <summary>
-    /// Parst IKAS Bildbericht-Seiten: Blöcke mit Zustand/Entf./Video Labels.
+    /// Parst Bildbericht-Seiten: Blöcke mit Zustand/Entf./Video Labels.
     /// Findet den jeweils NÄCHSTEN Entf.- und Video-Match zu jedem Zustand-Match.
     /// </summary>
     private static List<GroundTruthEntry> ParseBildberichtBlocks(string text, HashSet<string> seen)
