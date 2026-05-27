@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.Infrastructure.Ai;
@@ -68,53 +69,18 @@ public sealed class EnhancedVisionAnalysisService
     }
     """).RootElement.Clone();
 
-    // Vollständige Schadensklassen nach DIN EN 13508-2 / VSA-DSS
-    // Gruppiert für besseren Prompt, Grundstruktur zuerst
-    private static readonly string DamageClassesPrompt = """
-GRUNDSTRUKTUR DER HALTUNG (HÖCHSTE PRIORITÄT — immer erkennen!):
-- BCD = Rohranfang (Schacht sichtbar, Kamera faehrt in das Rohr ein)
-- BCE = Rohrende (Schacht sichtbar am Ende, Kamera erreicht das Rohrende)
-- BCA/BCAEB = Anschluss (seitliche Rohroeffnung in der Kanalwand, rund oder oval, oft eingespitzt)
-- BAHC = Anschluss unvollstaendig eingebunden (Stutzen ragt in den Kanal hinein)
-- BCC = Bogen (Richtungsaenderung des Kanals, Kamera faehrt um eine Kurve)
-- BCC.Y.B = Bogen nach unten (vertikale Richtungsaenderung)
-- BCC.B.Y = Bogen nach rechts/links (horizontale Richtungsaenderung)
-
-STRUKTURELLE SCHÄDEN:
-- BAB = Riss (laengs BAB.A, quer BAB.B, diagonal BAB.C, ringfoermig BAB.D, verzweigt BAB.E)
-- BAC = Bruch (partiell BAC.A, total BAC.B)
-- BAF = Deformation (vertikal BAF.A, horizontal BAF.B)
-- BAH = Versatz (vertikal BAH.A, horizontal BAH.B)
-- BAI = Einragung Stutzen/Anschluss
-
-OBERFLÄCHENSCHÄDEN:
-- BAJ = Ausbrueche/Abplatzungen
-- BBB = Bewuchs/Wurzeln (BBBA = Wurzeleinwuchs)
-- BBA = Inkrustation/Kalkablagerung
-
-BETRIEBLICHE STÖRUNGEN:
-- BBC = Ablagerung Sohle (BBCA = Sand, BBCB = Kies, BBCC = verfestigt)
-- BBD = Eindringender Boden
-- BDA = Allgemeinzustand (Fotobeispiel)
-
-ANSCHLÜSSE / VERBINDUNGEN:
-- BCAEA = Anschluss eingespitzt, offen
-- BCAEB = Anschluss eingespitzt, verschlossen
-- BAFAE = Raue Rohrwandung
-
-SONSTIGES:
-- BDDC = Wasserspiegel/Wasserstand
-- BABBA = Riss laengs (mit Uhrlage und Breite in mm)
-- BABAA = Riss quer
-""";
-
     private readonly OllamaClient _client;
     private readonly string _model;
+    private readonly ICodeCatalogProvider? _codeCatalog;
 
-    public EnhancedVisionAnalysisService(OllamaClient client, string model)
+    public EnhancedVisionAnalysisService(
+        OllamaClient client,
+        string model,
+        ICodeCatalogProvider? codeCatalog = null)
     {
         _client = client;
         _model = model;
+        _codeCatalog = codeCatalog;
     }
 
     private static readonly TimeSpan FrameTimeout = TimeSpan.FromSeconds(60);
@@ -210,7 +176,7 @@ AUFGABEN:
    Beispiele: Anschluss -> BCA, Bogen -> BCC, Ablagerung -> BBC.
 {contextSection}
 {observationHintsSection}
-{DamageClassesPrompt}
+{BuildDamageClassesPrompt()}
 
 SCHWEREGRAD-SKALA (entspricht VSA Zustandsklasse):
 1 = Optische Auffälligkeit, kein Handlungsbedarf
@@ -224,6 +190,76 @@ SCHWEREGRAD-SKALA (entspricht VSA Zustandsklasse):
 Antworte AUSSCHLIESSLICH mit gültigem JSON gemäß Schema.
 Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
 """;
+    }
+
+    private string BuildDamageClassesPrompt()
+        => BuildDamageClassesPrompt(_codeCatalog);
+
+    internal static string BuildDamageClassesPrompt(ICodeCatalogProvider? codeCatalog)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("VSA-KEK-KATALOGAUSZUG (Code-Wahrheit aus aktivem Katalog):");
+        sb.AppendLine();
+
+        sb.AppendLine("GRUNDSTRUKTUR DER HALTUNG (HOECHSTE PRIORITAET - immer erkennen!):");
+        AppendCodeLine(sb, codeCatalog, "BCD", "Rohranfang", "Schacht sichtbar, Kamera faehrt in das Rohr ein");
+        AppendCodeLine(sb, codeCatalog, "BCE", "Rohrende", "Schacht sichtbar am Ende, Kamera erreicht das Rohrende");
+        AppendCodeLine(sb, codeCatalog, "BCA", "Seitlicher Anschluss", "seitliche Rohroeffnung in der Kanalwand");
+        AppendCodeLine(sb, codeCatalog, "BCAEB", "Anschluss eingespitzt, verschlossen", null);
+        AppendCodeLine(sb, codeCatalog, "BAHC", "Anschluss unvollstaendig eingebunden", "Stutzen ragt in den Kanal hinein");
+        AppendCodeLine(sb, codeCatalog, "BCC", "Bogen", "Richtungsaenderung des Kanals");
+        sb.AppendLine();
+
+        sb.AppendLine("STRUKTURELLE SCHAEDEN:");
+        AppendCodeLine(sb, codeCatalog, "BAB", "Riss", "laengs/quer/diagonal/ringfoermig/verzweigt");
+        AppendCodeLine(sb, codeCatalog, "BAC", "Bruch", "partiell oder total");
+        AppendCodeLine(sb, codeCatalog, "BAF", "Deformation", "vertikal oder horizontal");
+        AppendCodeLine(sb, codeCatalog, "BAH", "Versatz", "vertikal oder horizontal");
+        AppendCodeLine(sb, codeCatalog, "BAI", "Einragung Stutzen/Anschluss", null);
+        sb.AppendLine();
+
+        sb.AppendLine("OBERFLAECHEN / EINWUCHS / ABLAGERUNGEN:");
+        AppendCodeLine(sb, codeCatalog, "BAJ", "Ausbrueche/Abplatzungen", null);
+        AppendCodeLine(sb, codeCatalog, "BBA", "Wurzeln", "Wurzeleinwuchs/Bewuchs");
+        AppendCodeLine(sb, codeCatalog, "BBB", "Anhaftende Stoffe", "Inkrustation/Fett/anhaftende Stoffe");
+        AppendCodeLine(sb, codeCatalog, "BBC", "Ablagerungen", "Sand/Kies/verfestigte Ablagerung");
+        AppendCodeLine(sb, codeCatalog, "BBD", "Eindringendes Bodenmaterial", null);
+        sb.AppendLine();
+
+        sb.AppendLine("SONSTIGES:");
+        AppendCodeLine(sb, codeCatalog, "BDDC", "Wasserspiegel/Wasserstand", null);
+        AppendCodeLine(sb, codeCatalog, "BABBA", "Riss laengs", "mit Uhrlage und Breite in mm");
+        AppendCodeLine(sb, codeCatalog, "BABAA", "Riss quer", null);
+
+        return sb.ToString();
+    }
+
+    private static void AppendCodeLine(
+        StringBuilder sb,
+        ICodeCatalogProvider? codeCatalog,
+        string code,
+        string fallbackTitle,
+        string? hint)
+    {
+        var title = LookupCatalogTitle(codeCatalog, code) ?? fallbackTitle;
+        sb.Append($"- {code} = {title}");
+        if (!string.IsNullOrWhiteSpace(hint))
+            sb.Append($" ({hint})");
+        sb.AppendLine();
+    }
+
+    private static string? LookupCatalogTitle(ICodeCatalogProvider? codeCatalog, string code)
+    {
+        if (codeCatalog is null)
+            return null;
+
+        if (codeCatalog.TryGet(code, out var exact) && !string.IsNullOrWhiteSpace(exact.Title))
+            return exact.Title.Trim();
+
+        if (code.Length > 3 && codeCatalog.TryGet(code[..3], out var main) && !string.IsNullOrWhiteSpace(main.Title))
+            return main.Title.Trim();
+
+        return null;
     }
 
     /// <summary>

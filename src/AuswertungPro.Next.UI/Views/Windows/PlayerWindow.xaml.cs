@@ -1212,6 +1212,9 @@ public partial class PlayerWindow : Window
     private AppProtocol.IVsaCodeSelectionCatalog? CodeSelectionCatalog
         => _serviceProvider?.CodeSelectionCatalog ?? TryGetAppServiceProvider()?.CodeSelectionCatalog;
 
+    private AppProtocol.ICodeCatalogProvider? CodeCatalog
+        => _serviceProvider?.CodeCatalog ?? TryGetAppServiceProvider()?.CodeCatalog;
+
     private static ServiceProvider? TryGetAppServiceProvider()
     {
         try
@@ -6020,7 +6023,7 @@ public partial class PlayerWindow : Window
                 keepAlive: config.OllamaKeepAlive,
                 numCtx: config.OllamaNumCtx);
             _codingLiveDetection = new LiveDetectionService(client, config.VisionModel);
-            _codingEnhancedVision = new EnhancedVisionAnalysisService(client, config.VisionModel);
+            _codingEnhancedVision = new EnhancedVisionAnalysisService(client, config.VisionModel, CodeCatalog);
             _codingQualityGate = new QualityGateService();
 
             // Multi-Model Pipeline (YOLO → DINO → SAM) initialisieren

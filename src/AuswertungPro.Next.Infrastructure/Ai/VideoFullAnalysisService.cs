@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.QualityGate;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.Infrastructure.Ai;
@@ -49,8 +50,9 @@ public sealed class VideoFullAnalysisService
     public static VideoFullAnalysisService Create(
         OllamaClient client,
         string visionModel,
-        string ffmpegPath = "ffmpeg")
-        => new(new EnhancedVisionAnalysisService(client, visionModel), ffmpegPath);
+        string ffmpegPath = "ffmpeg",
+        ICodeCatalogProvider? codeCatalog = null)
+        => new(new EnhancedVisionAnalysisService(client, visionModel, codeCatalog), ffmpegPath);
 
     public async Task<VideoAnalysisResult> AnalyzeAsync(
         string videoPath,

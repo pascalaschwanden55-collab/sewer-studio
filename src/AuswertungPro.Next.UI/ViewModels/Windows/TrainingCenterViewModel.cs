@@ -1998,7 +1998,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 ownedTimeout: cfg.OllamaRequestTimeout,
                 keepAlive: cfg.OllamaKeepAlive,
                 numCtx: cfg.OllamaNumCtx);
-            var vision = new EnhancedVisionAnalysisService(ollamaClient, visionModel);
+            var vision = new EnhancedVisionAnalysisService(ollamaClient, visionModel, _codeCatalog);
             var comparison = new SelfTrainingComparisonService();
             var technique = new TechniqueAssessmentService(ollamaClient, visionModel);
             var pdfExtractor = new PdfProtocolExtractor();

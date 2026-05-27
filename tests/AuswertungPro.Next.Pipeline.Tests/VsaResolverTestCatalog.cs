@@ -7,7 +7,11 @@ internal static class VsaResolverTestCatalog
 {
     public static void ConfigureDefault()
     {
-        VsaCodeResolver.ConfigureCatalog(new InMemoryCodeCatalogProvider(new[]
+        VsaCodeResolver.ConfigureCatalog(CreateDefault());
+    }
+
+    public static ICodeCatalogProvider CreateDefault()
+        => new InMemoryCodeCatalogProvider(new[]
         {
             Code("BAB", "Risse"),
             Code("BAC", "Leitungsbruch/Einsturz"),
@@ -23,8 +27,7 @@ internal static class VsaResolverTestCatalog
             Code("BCD", "Rohranfang"),
             Code("BCE", "Rohrende"),
             Code("BDDC", "Wasserstand")
-        }));
-    }
+        });
 
     private static CodeDefinition Code(string code, string title, bool requiresRange = false)
         => new()

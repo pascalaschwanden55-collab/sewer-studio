@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -26,17 +27,20 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
     private readonly PipelineConfig _pipelineCfg;
     private readonly IAiSuggestionPlausibilityService _plausibility;
     private readonly HttpClient _httpClient;
+    private readonly ICodeCatalogProvider? _codeCatalog;
 
     public VideoAnalysisPipelineService(
         AiRuntimeSettings cfg,
         PipelineConfig pipelineCfg,
         IAiSuggestionPlausibilityService plausibility,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        ICodeCatalogProvider? codeCatalog = null)
     {
         _cfg = cfg;
         _pipelineCfg = pipelineCfg;
         _plausibility = plausibility;
         _httpClient = httpClient;
+        _codeCatalog = codeCatalog;
     }
 
     public async Task<PipelineResult> RunAsync(
@@ -74,7 +78,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 
             // Create Qwen vision service for VSA-Code enrichment
             var ollamaClient = CreateOllamaClient();
-            var qwenVision = new EnhancedVisionAnalysisService(ollamaClient, _cfg.VisionModel);
+            var qwenVision = new EnhancedVisionAnalysisService(ollamaClient, _cfg.VisionModel, _codeCatalog);
 
             var multiModel = new MultiModelAnalysisService(
                 pipelineClient, pipelineCfg,
@@ -93,7 +97,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             var videoService = VideoFullAnalysisService.Create(
                 client: client,
                 visionModel: _cfg.VisionModel,
-                ffmpegPath: _cfg.FfmpegPath ?? "ffmpeg");
+                ffmpegPath: _cfg.FfmpegPath ?? "ffmpeg",
+                codeCatalog: _codeCatalog);
 
             videoService.FrameStepSeconds = request.FrameStepSeconds;
             videoService.DedupWindowFrames = request.DedupWindowFrames;

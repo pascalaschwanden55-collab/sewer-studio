@@ -2317,7 +2317,10 @@ public partial class CodingModeWindow : Window
                 keepAlive: _aiConfig.OllamaKeepAlive,
                 numCtx: _aiConfig.OllamaNumCtx);
             _liveDetection = new LiveDetectionService(_ollamaClient, _aiConfig.VisionModel);
-            _enhancedVision = new EnhancedVisionAnalysisService(_ollamaClient, _aiConfig.VisionModel);
+            _enhancedVision = new EnhancedVisionAnalysisService(
+                _ollamaClient,
+                _aiConfig.VisionModel,
+                ResolveCodeCatalog());
             SetAiStatus("Bereit", "#22C55E",
                 $"Qwen aktiv ({CompactModelName(_aiModelName)})");
         }
@@ -2339,6 +2342,18 @@ public partial class CodingModeWindow : Window
         if (slashIndex >= 0 && slashIndex < trimmed.Length - 1)
             trimmed = trimmed[(slashIndex + 1)..];
         return trimmed;
+    }
+
+    private static ICodeCatalogProvider? ResolveCodeCatalog()
+    {
+        try
+        {
+            return (App.Services as AuswertungPro.Next.UI.ServiceProvider)?.CodeCatalog;
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
     }
 
     private void SetPipelineDots(string? stage, bool busy, bool error)
