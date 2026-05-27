@@ -11,7 +11,8 @@ public sealed record EvalSetBenchmarkCase(
     string ExpectedFullCode,
     string ExpectedMainCode,
     string Category,
-    double? Meter);
+    double? Meter,
+    bool HasYoloLabel = false);
 
 public sealed record EvalSetPrediction(
     string FrameFileName,
@@ -86,6 +87,185 @@ public sealed record EvalSetRouterClassSummary(
     string RouterClass,
     int Count,
     IReadOnlyList<string> ExpectedCodes);
+
+public sealed record YoloDetectBaselineDetection(
+    string ClassName,
+    double Confidence);
+
+public sealed record YoloDetectBaselinePrediction(
+    string FrameFileName,
+    bool IsRelevant,
+    IReadOnlyList<YoloDetectBaselineDetection> Detections,
+    long RoundtripMs,
+    double InferenceTimeMs,
+    double QueueWaitMs,
+    string? ModelName,
+    string? Device,
+    double? VramAllocatedGb,
+    double? VramTotalGb,
+    string? FrameClass,
+    string? Error = null);
+
+public sealed record YoloDetectBaselineRow(
+    string FrameFileName,
+    string ExpectedFullCode,
+    bool ExpectedHasLabel,
+    bool Detected,
+    int DetectionCount,
+    string TopClass,
+    double TopConfidence,
+    long RoundtripMs,
+    double InferenceTimeMs,
+    double QueueWaitMs,
+    string? ModelName,
+    string? Device,
+    double? VramAllocatedGb,
+    double? VramTotalGb,
+    string? FrameClass,
+    string? Error);
+
+public sealed record YoloDetectBaselineSummary(
+    int Total,
+    int ExpectedPositiveFrames,
+    int ExpectedNegativeFrames,
+    int DetectedFrames,
+    int TruePositiveFrames,
+    int FalseNegativeFrames,
+    int FalsePositiveFrames,
+    int TrueNegativeFrames,
+    int TotalDetections,
+    double PositiveRecall,
+    double FalsePositiveRate,
+    double AverageRoundtripMs,
+    double AverageInferenceMs,
+    double AverageQueueWaitMs);
+
+public static class YoloDetectBaselineScorer
+{
+    public static IReadOnlyList<YoloDetectBaselineRow> Evaluate(
+        IReadOnlyList<EvalSetBenchmarkCase> cases,
+        IReadOnlyList<YoloDetectBaselinePrediction> predictions)
+    {
+        ArgumentNullException.ThrowIfNull(cases);
+        ArgumentNullException.ThrowIfNull(predictions);
+
+        var byFrame = predictions.ToDictionary(p => p.FrameFileName, StringComparer.OrdinalIgnoreCase);
+
+        return cases.Select(c =>
+        {
+            byFrame.TryGetValue(c.FrameFileName, out var prediction);
+            var detections = prediction?.Detections ?? Array.Empty<YoloDetectBaselineDetection>();
+            var top = detections
+                .OrderByDescending(d => d.Confidence)
+                .FirstOrDefault();
+            var detected = detections.Count > 0;
+
+            return new YoloDetectBaselineRow(
+                FrameFileName: c.FrameFileName,
+                ExpectedFullCode: c.ExpectedFullCode,
+                ExpectedHasLabel: c.HasYoloLabel,
+                Detected: detected,
+                DetectionCount: detections.Count,
+                TopClass: top?.ClassName ?? "",
+                TopConfidence: top?.Confidence ?? 0,
+                RoundtripMs: prediction?.RoundtripMs ?? 0,
+                InferenceTimeMs: prediction?.InferenceTimeMs ?? 0,
+                QueueWaitMs: prediction?.QueueWaitMs ?? 0,
+                ModelName: prediction?.ModelName,
+                Device: prediction?.Device,
+                VramAllocatedGb: prediction?.VramAllocatedGb,
+                VramTotalGb: prediction?.VramTotalGb,
+                FrameClass: prediction?.FrameClass,
+                Error: prediction?.Error);
+        }).ToList();
+    }
+
+    public static YoloDetectBaselineSummary Summarize(IReadOnlyList<YoloDetectBaselineRow> rows)
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+
+        var total = rows.Count;
+        var expectedPositive = rows.Count(r => r.ExpectedHasLabel);
+        var expectedNegative = total - expectedPositive;
+        var detected = rows.Count(r => r.Detected);
+        var truePositive = rows.Count(r => r.ExpectedHasLabel && r.Detected);
+        var falseNegative = rows.Count(r => r.ExpectedHasLabel && !r.Detected);
+        var falsePositive = rows.Count(r => !r.ExpectedHasLabel && r.Detected);
+        var trueNegative = rows.Count(r => !r.ExpectedHasLabel && !r.Detected);
+
+        return new YoloDetectBaselineSummary(
+            Total: total,
+            ExpectedPositiveFrames: expectedPositive,
+            ExpectedNegativeFrames: expectedNegative,
+            DetectedFrames: detected,
+            TruePositiveFrames: truePositive,
+            FalseNegativeFrames: falseNegative,
+            FalsePositiveFrames: falsePositive,
+            TrueNegativeFrames: trueNegative,
+            TotalDetections: rows.Sum(r => r.DetectionCount),
+            PositiveRecall: Ratio(truePositive, expectedPositive),
+            FalsePositiveRate: Ratio(falsePositive, expectedNegative),
+            AverageRoundtripMs: Average(rows, r => r.RoundtripMs),
+            AverageInferenceMs: Average(rows, r => r.InferenceTimeMs),
+            AverageQueueWaitMs: Average(rows, r => r.QueueWaitMs));
+    }
+
+    public static void WriteCsv(string path, IReadOnlyList<YoloDetectBaselineRow> rows)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        using var writer = new StreamWriter(path, false, new UTF8Encoding(false));
+        writer.WriteLine("frame,expected_code,expected_has_label,detected,detection_count,top_class,top_confidence,roundtrip_ms,inference_ms,queue_wait_ms,model_name,device,vram_allocated_gb,vram_total_gb,frame_class,error");
+        foreach (var r in rows)
+        {
+            writer.WriteLine(string.Join(",",
+                Csv(r.FrameFileName),
+                Csv(r.ExpectedFullCode),
+                Bool(r.ExpectedHasLabel),
+                Bool(r.Detected),
+                r.DetectionCount.ToString(CultureInfo.InvariantCulture),
+                Csv(r.TopClass),
+                r.TopConfidence.ToString(CultureInfo.InvariantCulture),
+                r.RoundtripMs.ToString(CultureInfo.InvariantCulture),
+                r.InferenceTimeMs.ToString(CultureInfo.InvariantCulture),
+                r.QueueWaitMs.ToString(CultureInfo.InvariantCulture),
+                Csv(r.ModelName ?? ""),
+                Csv(r.Device ?? ""),
+                NullableDouble(r.VramAllocatedGb),
+                NullableDouble(r.VramTotalGb),
+                Csv(r.FrameClass ?? ""),
+                Csv(r.Error ?? "")));
+        }
+    }
+
+    public static void WriteSummaryJson(string path, YoloDetectBaselineSummary summary, object metadata)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        var json = JsonSerializer.Serialize(new { metadata, summary }, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(path, json, new UTF8Encoding(false));
+    }
+
+    private static double Ratio(int part, int total)
+        => total == 0 ? 0 : (double)part / total;
+
+    private static double Average<T>(IReadOnlyList<T> rows, Func<T, double> selector)
+        => rows.Count == 0 ? 0 : rows.Average(selector);
+
+    private static double Average<T>(IReadOnlyList<T> rows, Func<T, long> selector)
+        => rows.Count == 0 ? 0 : rows.Average(selector);
+
+    private static string Bool(bool value) => value ? "True" : "False";
+
+    private static string NullableDouble(double? value)
+        => value.HasValue ? value.Value.ToString(CultureInfo.InvariantCulture) : "";
+
+    private static string Csv(string value)
+    {
+        if (value.IndexOfAny([',', '"', '\r', '\n']) < 0)
+            return value;
+
+        return "\"" + value.Replace("\"", "\"\"") + "\"";
+    }
+}
 
 internal static class EvalSetClassifierClassMapper
 {
@@ -293,7 +473,8 @@ public static class EvalSetBenchmarkDataset
                 ExpectedFullCode: expectedFull,
                 ExpectedMainCode: expectedMain,
                 Category: GetString(item, "kategorie") ?? "",
-                Meter: GetDouble(item, "meter")));
+                Meter: GetDouble(item, "meter"),
+                HasYoloLabel: HasNonEmptyYoloLabel(evalSetRoot, frameFileName)));
         }
 
         return result
@@ -310,6 +491,13 @@ public static class EvalSetBenchmarkDataset
         => item.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out var d)
             ? d
             : null;
+
+    private static bool HasNonEmptyYoloLabel(string evalSetRoot, string frameFileName)
+    {
+        var labelFile = Path.ChangeExtension(frameFileName, ".txt");
+        var labelPath = Path.Combine(evalSetRoot, "labels", labelFile);
+        return File.Exists(labelPath) && !string.IsNullOrWhiteSpace(File.ReadAllText(labelPath));
+    }
 
     internal static string? NormalizeCode(string? raw)
     {

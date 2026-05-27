@@ -80,6 +80,9 @@ try
         Console.WriteLine();
     }
 
+    if (options.YoloDetectOnly)
+        return await RunYoloDetectOnlyAsync(options, cases, allCases).ConfigureAwait(false);
+
     Console.WriteLine($"Ollama:   {baseUri}");
     Console.WriteLine($"Modell:   {model}");
     Console.WriteLine($"Kontext:  {DescribeContextMode(options)}");
@@ -355,6 +358,136 @@ static string Slug(string value)
     return new string(chars).Trim('_');
 }
 
+static async Task<int> RunYoloDetectOnlyAsync(
+    BenchmarkOptions options,
+    IReadOnlyList<EvalSetBenchmarkCase> cases,
+    IReadOnlyList<EvalSetBenchmarkCase> allCases)
+{
+    var config = AiSettingsFactory.Load();
+    var sidecarUrl = options.SidecarUrl ?? config.SidecarUrl;
+    using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(Math.Max(5, config.SidecarTimeoutSec)) };
+    var client = new VisionPipelineClient(sidecarUrl, http, config.SidecarToken);
+
+    using var cts = new CancellationTokenSource();
+    Console.CancelKeyPress += (_, e) =>
+    {
+        e.Cancel = true;
+        cts.Cancel();
+        Console.WriteLine("Abbruch angefordert...");
+    };
+
+    var health = await client.HealthCheckAsync(cts.Token).ConfigureAwait(false);
+    if (health is null)
+        throw new InvalidOperationException($"Sidecar nicht erreichbar: {sidecarUrl}");
+
+    Console.WriteLine("YOLO-Detect-Baseline:");
+    Console.WriteLine($"  Eval-Set: {options.EvalSetRoot}");
+    Console.WriteLine($"  Frames:   {cases.Count}/{allCases.Count}");
+    Console.WriteLine($"  Sidecar:  {sidecarUrl}");
+    Console.WriteLine($"  Conf:     {options.YoloMinConfidence.ToString("P0", CultureInfo.InvariantCulture)}");
+    Console.WriteLine();
+
+    var predictions = new List<YoloDetectBaselinePrediction>(cases.Count);
+    for (var i = 0; i < cases.Count; i++)
+    {
+        cts.Token.ThrowIfCancellationRequested();
+
+        var c = cases[i];
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            var b64 = Convert.ToBase64String(File.ReadAllBytes(c.ImagePath));
+            var response = await client.DetectYoloAsync(
+                new YoloRequest(b64, options.YoloMinConfidence),
+                cts.Token).ConfigureAwait(false);
+            sw.Stop();
+
+            var detections = response.Detections
+                .Select(d => new YoloDetectBaselineDetection(d.ClassName, d.Confidence))
+                .ToList();
+
+            predictions.Add(new YoloDetectBaselinePrediction(
+                FrameFileName: c.FrameFileName,
+                IsRelevant: response.IsRelevant,
+                Detections: detections,
+                RoundtripMs: sw.ElapsedMilliseconds,
+                InferenceTimeMs: response.InferenceTimeMs,
+                QueueWaitMs: response.QueueWaitMs,
+                ModelName: response.ModelName,
+                Device: response.Device,
+                VramAllocatedGb: response.VramAllocatedGb,
+                VramTotalGb: response.VramTotalGb,
+                FrameClass: response.FrameClass));
+
+            var top = detections
+                .OrderByDescending(d => d.Confidence)
+                .FirstOrDefault();
+            var topText = top is null
+                ? "-"
+                : $"{top.ClassName}:{top.Confidence.ToString("P0", CultureInfo.InvariantCulture)}";
+            Console.WriteLine($"[{i + 1,3}/{cases.Count}] {c.FrameFileName}  GT_LABEL={BoolText(c.HasYoloLabel)}  DET={detections.Count}  TOP={topText}  {sw.ElapsedMilliseconds} ms");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            predictions.Add(new YoloDetectBaselinePrediction(
+                FrameFileName: c.FrameFileName,
+                IsRelevant: false,
+                Detections: Array.Empty<YoloDetectBaselineDetection>(),
+                RoundtripMs: sw.ElapsedMilliseconds,
+                InferenceTimeMs: 0,
+                QueueWaitMs: 0,
+                ModelName: null,
+                Device: null,
+                VramAllocatedGb: null,
+                VramTotalGb: null,
+                FrameClass: null,
+                Error: ex.Message));
+            Console.WriteLine($"[{i + 1,3}/{cases.Count}] {c.FrameFileName}  FEHLER={ex.Message}");
+        }
+    }
+
+    var rows = YoloDetectBaselineScorer.Evaluate(cases, predictions);
+    var summary = YoloDetectBaselineScorer.Summarize(rows);
+    var stamp = DateTimeOffset.Now.ToString("yyyyMMdd_HHmmss");
+    var modelName = rows.Select(r => r.ModelName).FirstOrDefault(m => !string.IsNullOrWhiteSpace(m)) ?? "yolo";
+    var runSlug = $"yolo_detect_{Slug(modelName)}";
+    var csvPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{runSlug}.csv");
+    var jsonPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{runSlug}.json");
+
+    YoloDetectBaselineScorer.WriteCsv(csvPath, rows);
+    YoloDetectBaselineScorer.WriteSummaryJson(jsonPath, summary, new
+    {
+        created_at = DateTimeOffset.Now.ToString("O"),
+        eval_set_root = options.EvalSetRoot,
+        frames_total = allCases.Count,
+        frames_run = cases.Count,
+        sidecar_url = sidecarUrl.ToString(),
+        yolo_min_confidence = options.YoloMinConfidence,
+        model_name = modelName,
+        manifest = TryReadManifestInfo(options.EvalSetRoot)
+    });
+
+    Console.WriteLine();
+    Console.WriteLine("YOLO-Detect-Ergebnis:");
+    Console.WriteLine($"  Positive Recall:   {summary.TruePositiveFrames}/{summary.ExpectedPositiveFrames} = {summary.PositiveRecall:P1}");
+    Console.WriteLine($"  False Positive:    {summary.FalsePositiveFrames}/{summary.ExpectedNegativeFrames} = {summary.FalsePositiveRate:P1}");
+    Console.WriteLine($"  Detected Frames:   {summary.DetectedFrames}/{summary.Total}");
+    Console.WriteLine($"  Total Detections:  {summary.TotalDetections}");
+    Console.WriteLine($"  Roundtrip Mittel:  {summary.AverageRoundtripMs:F1} ms");
+    Console.WriteLine($"  Inferenz Mittel:   {summary.AverageInferenceMs:F1} ms");
+    Console.WriteLine($"  CSV:               {csvPath}");
+    Console.WriteLine($"  JSON:              {jsonPath}");
+
+    return 0;
+}
+
+static string BoolText(bool value) => value ? "ja" : "nein";
+
 static void PrintHelp()
 {
     Console.WriteLine("""
@@ -365,6 +498,7 @@ Misst ein eingefrorenes Eval-Set gegen das aktuelle Ollama-Vision-Modell.
 Beispiele:
   dotnet run --project tools/EvalSetBenchmark -- --max 5
   dotnet run --project tools/EvalSetBenchmark -- --eval-set C:\KI_BRAIN\eval_set --model qwen3-vl:8b-q8
+  dotnet run --project tools/EvalSetBenchmark -- --yolo-detect-only --yolo-min-conf 0.25
 
 Optionen:
   --eval-set <pfad>     Standard: C:\KI_BRAIN\eval_set
@@ -377,6 +511,7 @@ Optionen:
   --yolo-context        Testmodus: YOLO-cls liefert 1-3 Kandidaten fuer Qwen
   --yolo-presence-context
                         Testmodus: YOLO-cls liefert nur unsichere Bildhinweise
+  --yolo-detect-only    Nur aktuellen Sidecar-YOLO-Detektor messen, kein Qwen/Ollama
   --sidecar-url <url>   Standard: App-Konfiguration
   --yolo-top-k <zahl>   Standard: 3
   --yolo-min-conf <x>   Standard: 0.05
@@ -478,6 +613,7 @@ internal sealed record BenchmarkOptions(
     bool UseOracleContext,
     bool UseYoloContext,
     bool UseYoloPresenceContext,
+    bool YoloDetectOnly,
     int YoloTopK,
     double YoloMinConfidence,
     string? ClassifierDataset,
@@ -505,6 +641,7 @@ internal sealed record BenchmarkOptions(
         var oracleContext = false;
         var yoloContext = false;
         var yoloPresenceContext = false;
+        var yoloDetectOnly = false;
         var yoloTopK = 3;
         var yoloMinConf = 0.05;
         string? classifierDataset = null;
@@ -558,6 +695,9 @@ internal sealed record BenchmarkOptions(
                 case "--yolo-presence-context":
                     yoloPresenceContext = true;
                     break;
+                case "--yolo-detect-only":
+                    yoloDetectOnly = true;
+                    break;
                 case "--yolo-top-k":
                     yoloTopK = int.Parse(RequireValue(args, ref i, arg));
                     break;
@@ -606,6 +746,8 @@ internal sealed record BenchmarkOptions(
         var contextModeCount = (oracleContext ? 1 : 0) + (yoloContext ? 1 : 0) + (yoloPresenceContext ? 1 : 0);
         if (contextModeCount > 1)
             throw new ArgumentException("--oracle-context, --yolo-context und --yolo-presence-context koennen nicht gleichzeitig genutzt werden.");
+        if (yoloDetectOnly && contextModeCount > 0)
+            throw new ArgumentException("--yolo-detect-only kann nicht mit Qwen-Kontextmodi kombiniert werden.");
         if (yoloTopK <= 0)
             throw new ArgumentException("--yolo-top-k muss groesser als 0 sein.");
         if (yoloMinConf < 0 || yoloMinConf > 1)
@@ -626,6 +768,7 @@ internal sealed record BenchmarkOptions(
             oracleContext,
             yoloContext,
             yoloPresenceContext,
+            yoloDetectOnly,
             yoloTopK,
             yoloMinConf,
             classifierDataset,

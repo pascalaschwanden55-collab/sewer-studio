@@ -70,12 +70,14 @@ public sealed class EvalSetBenchmarkTests : IDisposable
         Assert.Equal("BDDC", cases[0].ExpectedMainCode);
         Assert.Equal("top5_code", cases[0].Category);
         Assert.Equal(12.3, cases[0].Meter);
+        Assert.True(cases[0].HasYoloLabel);
         Assert.True(File.Exists(cases[0].ImagePath));
 
         Assert.Equal("case_b_kein_schaden.png", cases[1].FrameFileName);
         Assert.Equal("LEER", cases[1].ExpectedFullCode);
         Assert.Equal("LEER", cases[1].ExpectedMainCode);
         Assert.Equal("negativ", cases[1].Category);
+        Assert.False(cases[1].HasYoloLabel);
     }
 
     [Fact]
@@ -352,6 +354,88 @@ public sealed class EvalSetBenchmarkTests : IDisposable
         Assert.Contains(plan, p => p.RouterClass == "anschluss" && p.Count == 1 && p.ExpectedCodes.Contains("BCAEA"));
         Assert.Contains(plan, p => p.RouterClass == "wurzeln" && p.Count == 1 && p.ExpectedCodes.Contains("BBAA"));
         Assert.Contains(plan, p => p.RouterClass == "sonstiges" && p.Count == 1 && p.ExpectedCodes.Contains("XYZ"));
+    }
+
+    [Fact]
+    public void YoloDetectBaselineScorer_counts_detection_presence_against_yolo_labels()
+    {
+        var cases = new[]
+        {
+            new EvalSetBenchmarkCase("a", "a.png", "a.png", "BABBA", "BABBA", "top5", 1, HasYoloLabel: true),
+            new EvalSetBenchmarkCase("b", "b.png", "b.png", "LEER", "LEER", "negativ", null, HasYoloLabel: false),
+            new EvalSetBenchmarkCase("c", "c.png", "c.png", "BBAA", "BBAA", "top5", 2, HasYoloLabel: true),
+            new EvalSetBenchmarkCase("d", "d.png", "d.png", "LEER", "LEER", "negativ", null, HasYoloLabel: false),
+        };
+        var predictions = new[]
+        {
+            new YoloDetectBaselinePrediction(
+                "a.png",
+                IsRelevant: true,
+                Detections: [new YoloDetectBaselineDetection("crack", 0.91), new YoloDetectBaselineDetection("roots", 0.72)],
+                RoundtripMs: 120,
+                InferenceTimeMs: 80,
+                QueueWaitMs: 3,
+                ModelName: "yolo26m.pt",
+                Device: "cpu",
+                VramAllocatedGb: 0,
+                VramTotalGb: 31.5,
+                FrameClass: "relevant"),
+            new YoloDetectBaselinePrediction(
+                "b.png",
+                IsRelevant: false,
+                Detections: [],
+                RoundtripMs: 60,
+                InferenceTimeMs: 0,
+                QueueWaitMs: 0,
+                ModelName: "yolo26m.pt",
+                Device: "cpu",
+                VramAllocatedGb: 0,
+                VramTotalGb: 31.5,
+                FrameClass: "too_uniform"),
+            new YoloDetectBaselinePrediction(
+                "c.png",
+                IsRelevant: false,
+                Detections: [],
+                RoundtripMs: 70,
+                InferenceTimeMs: 50,
+                QueueWaitMs: 0,
+                ModelName: "yolo26m.pt",
+                Device: "cpu",
+                VramAllocatedGb: 0,
+                VramTotalGb: 31.5,
+                FrameClass: "empty"),
+            new YoloDetectBaselinePrediction(
+                "d.png",
+                IsRelevant: true,
+                Detections: [new YoloDetectBaselineDetection("deposit", 0.62)],
+                RoundtripMs: 90,
+                InferenceTimeMs: 55,
+                QueueWaitMs: 1,
+                ModelName: "yolo26m.pt",
+                Device: "cpu",
+                VramAllocatedGb: 0,
+                VramTotalGb: 31.5,
+                FrameClass: "relevant"),
+        };
+
+        var rows = YoloDetectBaselineScorer.Evaluate(cases, predictions);
+        var summary = YoloDetectBaselineScorer.Summarize(rows);
+
+        Assert.Equal(4, summary.Total);
+        Assert.Equal(2, summary.ExpectedPositiveFrames);
+        Assert.Equal(2, summary.ExpectedNegativeFrames);
+        Assert.Equal(2, summary.DetectedFrames);
+        Assert.Equal(1, summary.TruePositiveFrames);
+        Assert.Equal(1, summary.FalseNegativeFrames);
+        Assert.Equal(1, summary.FalsePositiveFrames);
+        Assert.Equal(1, summary.TrueNegativeFrames);
+        Assert.Equal(0.5, summary.PositiveRecall);
+        Assert.Equal(0.5, summary.FalsePositiveRate);
+        Assert.Equal(3, summary.TotalDetections);
+        Assert.Equal("crack", rows[0].TopClass);
+        Assert.Equal(0.91, rows[0].TopConfidence);
+        Assert.Equal(85, summary.AverageRoundtripMs);
+        Assert.Equal(46.25, summary.AverageInferenceMs);
     }
 
     [Fact]
