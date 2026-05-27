@@ -417,8 +417,8 @@ public sealed class VideoFullAnalysisService
 
     private static string BuildFindingKey(EnhancedFinding finding)
     {
-        var keyBase = NormalizeFindingCode(finding.VsaCodeHint)
-            ?? InferCodeFromLabel(finding.Label)
+        var keyBase = VsaCodeResolver.NormalizeFindingCode(finding.VsaCodeHint)
+            ?? VsaCodeResolver.InferCodeFromLabel(finding.Label)
             ?? finding.Label.Trim();
         var clock = NormalizeClock(finding.PositionClock);
         return string.IsNullOrWhiteSpace(clock) ? keyBase : $"{keyBase}|{clock}";
@@ -462,86 +462,6 @@ public sealed class VideoFullAnalysisService
         }
 
         return raw.Trim();
-    }
-
-    private static string? NormalizeFindingCode(string? rawCode)
-    {
-        if (string.IsNullOrWhiteSpace(rawCode))
-            return null;
-
-        var normalized = rawCode.Trim().Replace(".", "").ToUpperInvariant();
-        if (normalized.Length < 2 || normalized.Length > 6)
-            return null;
-
-        return Regex.IsMatch(normalized, @"^[A-Z]{2,6}$") ? normalized : null;
-    }
-
-    private static string? InferCodeFromLabel(string? label)
-    {
-        if (string.IsNullOrWhiteSpace(label))
-            return null;
-
-        var text = label.Trim().ToLowerInvariant()
-            .Replace("ä", "ae").Replace("ö", "oe")
-            .Replace("ü", "ue").Replace("ß", "ss");
-
-        if (Has(text, "anschluss") || Has(text, "abzweig") || Has(text, "stutzen")
-            || Has(text, "zulauf") || Has(text, "lateral connection") || HasWord(text, "lateral"))
-            return "BCA";
-        if (Has(text, "bogen") || Has(text, "kruemm") || Has(text, "kurve") || HasWord(text, "bend"))
-            return "BCC";
-        if (Has(text, "rohranfang") || Has(text, "pipe start") || Has(text, "anfangsknoten")
-            || Has(text, "einstieg") || HasWord(text, "manhole"))
-            return "BCD";
-        if (Has(text, "rohrende") || Has(text, "pipe end") || Has(text, "endknoten") || Has(text, "ausstieg"))
-            return "BCE";
-
-        if (Has(text, "riss") || HasWord(text, "crack") || Has(text, "fracture") || Has(text, "fissure"))
-            return "BAB";
-        if (Has(text, "bruch") || Has(text, "einsturz") || Has(text, "collapse"))
-            return "BAC";
-        if (Has(text, "deformation") || Has(text, "verformung") || HasWord(text, "oval"))
-            return "BAF";
-        if (Has(text, "versatz") || HasWord(text, "offset") || Has(text, "displaced"))
-            return "BAH";
-        if (Has(text, "einragung") || Has(text, "intrusion") || Has(text, "protruding"))
-            return "BAI";
-
-        if (Has(text, "korrosion") || Has(text, "corrosion") || HasWord(text, "rost") || Has(text, "erosion"))
-            return "BAJ";
-        if (Has(text, "wurzel") || Has(text, "root intrusion") || Has(text, "bewuchs"))
-            return "BBB";
-        if (Has(text, "inkrustation") || Has(text, "encrustation") || Has(text, "kalk")
-            || Has(text, "anhaftung") || Has(text, "sinter") || Has(text, "attached deposit"))
-            return "BBA";
-
-        if (Has(text, "ablagerung") || HasWord(text, "sediment") || Has(text, "schlamm")
-            || HasWord(text, "silt") || HasWord(text, "debris"))
-            return "BBC";
-        if (Has(text, "wasserspiegel") || Has(text, "wasserstand") || Has(text, "wasserlinie")
-            || Has(text, "water level") || Has(text, "waterline") || Has(text, "standing water")
-            || HasWord(text, "puddle") || Has(text, "rueckstau")
-            || (HasWord(text, "water")
-                && (HasWord(text, "level") || HasWord(text, "standing") || Has(text, "sohle") || Has(text, "invert"))))
-            return "BDDC";
-
-        return null;
-    }
-
-    private static bool Has(string text, string term) => text.Contains(term, StringComparison.Ordinal);
-
-    private static bool HasWord(string text, string word)
-    {
-        var idx = text.IndexOf(word, StringComparison.Ordinal);
-        while (idx >= 0)
-        {
-            var leftOk = idx == 0 || !char.IsLetterOrDigit(text[idx - 1]);
-            var rightOk = idx + word.Length >= text.Length || !char.IsLetterOrDigit(text[idx + word.Length]);
-            if (leftOk && rightOk) return true;
-            idx = text.IndexOf(word, idx + 1, StringComparison.Ordinal);
-        }
-
-        return false;
     }
 
     private static string DeriveFFprobePath(string ffmpegPath)

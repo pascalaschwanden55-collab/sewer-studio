@@ -7,6 +7,11 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 
 public sealed class LiveDetectionMapperTests
 {
+    public LiveDetectionMapperTests()
+    {
+        VsaResolverTestCatalog.ConfigureDefault();
+    }
+
     [Fact]
     public void FromEnhancedAnalysis_PreservesMeterAndBoundingBoxes()
     {
@@ -121,5 +126,45 @@ public sealed class LiveDetectionMapperTests
 
         Assert.Empty(result.Findings);
         Assert.Equal(7.0, result.MeterReading);
+    }
+
+    [Theory]
+    [InlineData("Wurzeleinwuchs", "BBA")]
+    [InlineData("root intrusion", "BBA")]
+    [InlineData("Inkrustation verkalkt", "BBB")]
+    [InlineData("attached deposit", "BBB")]
+    public void FromEnhancedAnalysis_BadImageQuality_UsesCentralVsaResolver(string label, string expectedCode)
+    {
+        var analysis = new EnhancedFrameAnalysis(
+            Meter: 8.0,
+            PipeMaterial: "beton",
+            PipeDiameterMm: 300,
+            Findings:
+            [
+                new EnhancedFinding(
+                    Label: label,
+                    VsaCodeHint: null,
+                    Severity: 4,
+                    PositionClock: null,
+                    ExtentPercent: null,
+                    HeightMm: null,
+                    WidthMm: null,
+                    IntrusionPercent: null,
+                    CrossSectionReductionPercent: null,
+                    DiameterReductionMm: null,
+                    BboxX1: null,
+                    BboxY1: null,
+                    BboxX2: null,
+                    BboxY2: null,
+                    Notes: null)
+            ],
+            ImageQuality: "schlecht",
+            IsEmptyFrame: false,
+            Error: null);
+
+        var result = LiveDetectionMapper.FromEnhancedAnalysis(analysis, 2.0);
+
+        var finding = Assert.Single(result.Findings);
+        Assert.Equal(expectedCode, finding.VsaCodeHint);
     }
 }

@@ -12,6 +12,7 @@ using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using VsaCodeResolver = AuswertungPro.Next.Infrastructure.Ai.VsaCodeResolver;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
@@ -319,7 +320,7 @@ public sealed class MultiModelAnalysisService
                 var bbox = i < samResult.Masks.Count ? GetNormalizedBbox(samResult.Masks[i], samResult.ImageWidth, samResult.ImageHeight) : default;
                 findings.Add(new EnhancedFinding(
                     Label: q.Label,
-                    VsaCodeHint: InferCodeFromLabel(q.Label),
+                    VsaCodeHint: VsaCodeResolver.InferCodeFromLabel(q.Label),
                     Severity: EstimateSeverity(q),
                     PositionClock: NormalizeClockPosition(q.ClockPosition),
                     ExtentPercent: q.ExtentPercent,
@@ -518,7 +519,7 @@ public sealed class MultiModelAnalysisService
             var bbox = i < result.SamMasks.Count ? GetNormalizedBbox(result.SamMasks[i], result.ImageWidth, result.ImageHeight) : default;
             findings.Add(new EnhancedFinding(
                 Label: q.Label,
-                VsaCodeHint: InferCodeFromLabel(q.Label),
+                VsaCodeHint: VsaCodeResolver.InferCodeFromLabel(q.Label),
                 Severity: EstimateSeverity(q),
                 PositionClock: NormalizeClockPosition(q.ClockPosition),
                 ExtentPercent: q.ExtentPercent,
@@ -712,8 +713,8 @@ public sealed class MultiModelAnalysisService
     /// </summary>
     private static string BuildFindingKey(EnhancedFinding f)
     {
-        var label = NormalizeFindingCode(f.VsaCodeHint)
-            ?? InferCodeFromLabel(f.Label)
+        var label = VsaCodeResolver.NormalizeFindingCode(f.VsaCodeHint)
+            ?? VsaCodeResolver.InferCodeFromLabel(f.Label)
             ?? NormalizeFindingLabel(f.Label.Trim());
         var clock = NormalizeClockPosition(f.PositionClock);
         return string.IsNullOrEmpty(clock) ? label : $"{label}|{clock}";
@@ -786,70 +787,6 @@ public sealed class MultiModelAnalysisService
 
     // ── ActiveFindingState (mirrors VideoFullAnalysisService.ActiveFinding) ──
 
-    private static string? NormalizeFindingCode(string? rawCode)
-    {
-        if (string.IsNullOrWhiteSpace(rawCode))
-            return null;
-
-        var normalized = rawCode.Trim().Replace(".", "").ToUpperInvariant();
-        if (normalized.Length < 2 || normalized.Length > 6)
-            return null;
-
-        return Regex.IsMatch(normalized, @"^[A-Z]{2,6}$") ? normalized : null;
-    }
-
-    private static string? InferCodeFromLabel(string? label)
-    {
-        if (string.IsNullOrWhiteSpace(label))
-            return null;
-
-        var text = label.Trim().ToLowerInvariant()
-            .Replace("ä", "ae").Replace("ö", "oe")
-            .Replace("ü", "ue").Replace("ß", "ss");
-
-        if (Has(text, "anschluss") || Has(text, "abzweig") || Has(text, "stutzen")
-            || Has(text, "zulauf") || Has(text, "lateral connection") || HasWord(text, "lateral"))
-            return "BCA";
-        if (Has(text, "bogen") || Has(text, "kruemm") || Has(text, "kurve") || HasWord(text, "bend"))
-            return "BCC";
-        if (Has(text, "rohranfang") || Has(text, "pipe start") || Has(text, "anfangsknoten")
-            || Has(text, "einstieg") || HasWord(text, "manhole"))
-            return "BCD";
-        if (Has(text, "rohrende") || Has(text, "pipe end") || Has(text, "endknoten") || Has(text, "ausstieg"))
-            return "BCE";
-
-        if (Has(text, "riss") || HasWord(text, "crack") || Has(text, "fracture") || Has(text, "fissure"))
-            return "BAB";
-        if (Has(text, "bruch") || Has(text, "einsturz") || Has(text, "collapse"))
-            return "BAC";
-        if (Has(text, "deformation") || Has(text, "verformung") || HasWord(text, "oval"))
-            return "BAF";
-        if (Has(text, "versatz") || HasWord(text, "offset") || Has(text, "displaced"))
-            return "BAH";
-        if (Has(text, "einragung") || Has(text, "intrusion") || Has(text, "protruding"))
-            return "BAI";
-
-        if (Has(text, "korrosion") || Has(text, "corrosion") || HasWord(text, "rost") || Has(text, "erosion"))
-            return "BAJ";
-        if (Has(text, "wurzel") || Has(text, "root intrusion") || Has(text, "bewuchs"))
-            return "BBB";
-        if (Has(text, "inkrustation") || Has(text, "encrustation") || Has(text, "kalk")
-            || Has(text, "anhaftung") || Has(text, "sinter") || Has(text, "attached deposit"))
-            return "BBA";
-
-        if (Has(text, "ablagerung") || HasWord(text, "sediment") || Has(text, "schlamm")
-            || HasWord(text, "silt") || HasWord(text, "debris"))
-            return "BBC";
-        if (Has(text, "wasserspiegel") || Has(text, "wasserstand") || Has(text, "wasserlinie")
-            || Has(text, "water level") || Has(text, "waterline") || Has(text, "standing water")
-            || HasWord(text, "puddle") || Has(text, "rueckstau")
-            || (HasWord(text, "water")
-                && (HasWord(text, "level") || HasWord(text, "standing") || Has(text, "sohle") || Has(text, "invert"))))
-            return "BDDC";
-
-        return null;
-    }
-
     private static string? NormalizeClock(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
@@ -873,22 +810,6 @@ public sealed class MultiModelAnalysisService
         }
 
         return raw.Trim();
-    }
-
-    private static bool Has(string text, string term) => text.Contains(term, StringComparison.Ordinal);
-
-    private static bool HasWord(string text, string word)
-    {
-        var idx = text.IndexOf(word, StringComparison.Ordinal);
-        while (idx >= 0)
-        {
-            var leftOk = idx == 0 || !char.IsLetterOrDigit(text[idx - 1]);
-            var rightOk = idx + word.Length >= text.Length || !char.IsLetterOrDigit(text[idx + word.Length]);
-            if (leftOk && rightOk) return true;
-            idx = text.IndexOf(word, idx + 1, StringComparison.Ordinal);
-        }
-
-        return false;
     }
 
     private sealed class ActiveFindingState
