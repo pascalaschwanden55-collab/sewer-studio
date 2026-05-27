@@ -46,6 +46,7 @@ WeakClass*Review*/
 
 # Python Sidecar
 sidecar/.venv/
+sidecar/.uv-cache/
 sidecar/.pytest_cache/
 sidecar/.pytest_tmp/
 sidecar/florence2_shadow_log/

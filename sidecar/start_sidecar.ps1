@@ -21,10 +21,8 @@ Write-Host ""
 $venvPython = Join-Path $scriptDir ".venv\Scripts\python.exe"
 if (-not (Test-Path $venvPython)) {
     Write-Host "  FEHLER: Python venv nicht gefunden!" -ForegroundColor Red
-    Write-Host "  Erstelle venv mit:" -ForegroundColor Yellow
-    Write-Host "    python -m venv .venv" -ForegroundColor White
-    Write-Host "    .venv\Scripts\activate" -ForegroundColor White
-    Write-Host "    pip install -r requirements.txt" -ForegroundColor White
+    Write-Host "  Bitte fuehre zuerst das Setup-Skript aus:" -ForegroundColor Yellow
+    Write-Host "    .\setup.ps1" -ForegroundColor White
     exit 1
 }
 
