@@ -15,7 +15,7 @@ public sealed class VsaPdfExtractorRegexTests
     [Theory]
     [InlineData("BAB Riss laengs", "BAB")]
     [InlineData("BABAC Riss laengs detailliert", "BABAC")]
-    [InlineData("BBA Inkrustation", "BBA")]
+    [InlineData("BBA Wurzeleinwuchs", "BBA")]
     public void Matcht_VSA_Code_am_Zeilenanfang(string line, string expectedCode)
     {
         var match = CodeRx.Match(line);
