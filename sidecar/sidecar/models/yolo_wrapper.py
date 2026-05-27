@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import io
+import json
 import time
 import logging
 import threading
@@ -22,6 +23,9 @@ logger = logging.getLogger(__name__)
 # Flag: True when custom sewer-specific weights are loaded, False for COCO fallback.
 _using_custom_weights = False
 _resolved_model_path: str | None = None
+_tensorrt_class_names: dict[int, str] = {}
+_tensorrt_names_warning_paths: set[str] = set()
+_tensorrt_class_warning_keys: set[tuple[str, int]] = set()
 
 # CPU-mode singleton (bypasses GpuModelManager when YOLO runs on CPU)
 _cpu_model = None
@@ -102,12 +106,13 @@ def _configured_backend() -> str:
 
 def _load_yolo_on(device: str):
     """Load YOLO model onto *device*. Returns (model, None)."""
-    global _using_custom_weights, _resolved_model_path
+    global _using_custom_weights, _resolved_model_path, _tensorrt_class_names
     from ultralytics import YOLO
 
     model_path, using_custom = _resolve_yolo_model_path()
     _using_custom_weights = using_custom
     _resolved_model_path = model_path
+    _tensorrt_class_names = _load_tensorrt_class_names(Path(model_path))
 
     if using_custom:
         logger.info("Loading custom YOLO weights from %s onto %s", model_path, device)
@@ -122,6 +127,103 @@ def _load_yolo_on(device: str):
     if _configured_backend() != "tensorrt":
         model.to(device)
     return model, None
+
+
+def _load_tensorrt_class_names(model_path: str | Path) -> dict[int, str]:
+    """Load YOLO class names for a TensorRT engine sidecar file."""
+    path = Path(model_path)
+    if path.suffix.lower() != ".engine":
+        return {}
+
+    names_path = path.with_suffix(".names.json")
+    warning_key = str(names_path)
+    if not names_path.exists():
+        if warning_key not in _tensorrt_names_warning_paths:
+            logger.warning(
+                "TensorRT class-name file missing: %s. Detection labels will fall back to classN.",
+                names_path,
+            )
+            _tensorrt_names_warning_paths.add(warning_key)
+        return {}
+
+    try:
+        payload = json.loads(names_path.read_text(encoding="utf-8-sig"))
+        raw_names = payload.get("names", {})
+        if isinstance(raw_names, list):
+            return {
+                index: str(name)
+                for index, name in enumerate(raw_names)
+                if str(name).strip()
+            }
+
+        if isinstance(raw_names, dict):
+            class_names: dict[int, str] = {}
+            for key, value in raw_names.items():
+                name = str(value).strip()
+                if not name:
+                    continue
+                class_names[int(key)] = name
+            return class_names
+    except Exception as exc:
+        logger.warning(
+            "TensorRT class-name file could not be read: %s (%s). Detection labels will fall back to classN.",
+            names_path,
+            exc,
+        )
+
+    return {}
+
+
+def _class_name_for_id(
+    cls_id: int,
+    result_names: dict | None,
+    class_names: dict[int, str] | None = None,
+) -> str:
+    mapped_names = _tensorrt_class_names if class_names is None else class_names
+    if cls_id in mapped_names:
+        return mapped_names[cls_id]
+
+    result_name = _name_from_result(cls_id, result_names)
+    if result_name and not _is_generic_class_name(cls_id, result_name):
+        return result_name
+
+    fallback = f"class{cls_id}"
+    if Path(_resolved_model_path or settings.yolo_model_name).suffix.lower() == ".engine" or class_names is not None:
+        _warn_class_name_fallback(cls_id, fallback)
+    return fallback
+
+
+def _name_from_result(cls_id: int, result_names: dict | None) -> str | None:
+    if not result_names:
+        return None
+
+    if cls_id in result_names:
+        return str(result_names[cls_id])
+
+    key = str(cls_id)
+    if key in result_names:
+        return str(result_names[key])
+
+    return None
+
+
+def _is_generic_class_name(cls_id: int, name: str) -> bool:
+    normalized = name.strip().lower()
+    return normalized in {str(cls_id), f"class{cls_id}".lower()}
+
+
+def _warn_class_name_fallback(cls_id: int, fallback: str) -> None:
+    model_key = _resolved_model_path or settings.yolo_model_name
+    warning_key = (model_key, cls_id)
+    if warning_key in _tensorrt_class_warning_keys:
+        return
+
+    logger.warning(
+        "TensorRT class id %s has no YOLO name mapping; falling back to %s.",
+        cls_id,
+        fallback,
+    )
+    _tensorrt_class_warning_keys.add(warning_key)
 
 
 def _get_yolo_model():
@@ -300,7 +402,7 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
                 xyxy = box.xyxy[0].cpu().numpy()
                 cls_id = int(box.cls[0].cpu().item())
                 conf = float(box.conf[0].cpu().item())
-                cls_name = result.names.get(cls_id, str(cls_id))
+                cls_name = _class_name_for_id(cls_id, result.names)
                 detections.append(YoloDetection(
                     x1=float(xyxy[0]),
                     y1=float(xyxy[1]),

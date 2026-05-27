@@ -4,6 +4,7 @@
 *.bin
 *.onnx
 *.engine
+*.names.json
 *.build.json
 *.backup.json
 *.safetensors

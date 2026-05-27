@@ -25,6 +25,7 @@ $pythonPath = Join-Path $scriptDir ".venv\Scripts\python.exe"
 $weightsPath = Join-Path $ModelDir $WeightsName
 $onnxPath = Join-Path $ModelDir $OnnxName
 $enginePath = Join-Path $ModelDir $EngineName
+$namesPath = Join-Path $ModelDir "$([IO.Path]::GetFileNameWithoutExtension($EngineName)).names.json"
 $tempEnginePath = Join-Path $ModelDir "$EngineName.new"
 $backupDir = Join-Path $ModelDir "engine_backups"
 $tempScriptDir = Join-Path $scriptDir ".engine_build_tmp"
@@ -212,6 +213,7 @@ Write-Host "  Modellordner: $ModelDir" -ForegroundColor White
 Write-Host "  Gewichte:     $weightsPath" -ForegroundColor White
 Write-Host "  ONNX:         $onnxPath" -ForegroundColor White
 Write-Host "  Engine:       $enginePath" -ForegroundColor White
+Write-Host "  Namen:        $namesPath" -ForegroundColor White
 Write-Host "  Builder:      $engineBuilder" -ForegroundColor White
 Write-Host "  trtexec:      $(if ($resolvedTrtExec) { $resolvedTrtExec } else { '<nicht gefunden, Python-Fallback>' })" -ForegroundColor White
 Write-Host ""
@@ -322,6 +324,44 @@ if (-not $DryRun) {
 
     Move-Item -LiteralPath $tempEnginePath -Destination $enginePath -Force
 
+    Write-Host "  Schreibe YOLO-Klassennamen ..." -ForegroundColor White
+    $namesScript = @"
+from datetime import datetime, timezone
+from pathlib import Path
+import hashlib
+import json
+from ultralytics import YOLO
+
+weights = Path(r"$weightsPath")
+engine = Path(r"$enginePath")
+names_path = Path(r"$namesPath")
+
+model = YOLO(str(weights))
+raw_names = model.names
+if isinstance(raw_names, dict):
+    names = {str(int(key)): str(value) for key, value in sorted(raw_names.items(), key=lambda item: int(item[0]))}
+else:
+    names = {str(index): str(value) for index, value in enumerate(raw_names)}
+
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+payload = {
+    "created_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    "source_weights": str(weights),
+    "source_weights_sha256": sha256(weights),
+    "engine": str(engine),
+    "engine_sha256": sha256(engine) if engine.exists() else "",
+    "names": names,
+}
+names_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+"@
+    Invoke-PythonBlock -Name "export_names.py" -ScriptText $namesScript
+
     $newMetaPath = Join-Path $ModelDir "$([IO.Path]::GetFileNameWithoutExtension($EngineName)).build.json"
     $newEngineInfo = Get-Item $enginePath
     $newMeta = [ordered]@{
@@ -333,6 +373,8 @@ if (-not $DryRun) {
         weights_sha256 = Get-Sha256 $weightsPath
         onnx = $onnxPath
         onnx_sha256 = Get-Sha256 $onnxPath
+        names = $namesPath
+        names_sha256 = Get-Sha256 $namesPath
         image_size = $ImageSize
         opset = $Opset
         fp16 = $true
