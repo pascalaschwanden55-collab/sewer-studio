@@ -179,6 +179,9 @@ public sealed class CodeCatalogSelectionCatalog : IVsaCodeSelectionCatalog
         if (string.Equals(def.Source, VsaKekCatalogSources.Icm, StringComparison.OrdinalIgnoreCase))
             return "VSA-KEK-2020-ICM-Regelcode.";
 
+        if (string.Equals(def.Source, VsaKekCatalogSources.Heading, StringComparison.OrdinalIgnoreCase))
+            return "VSA-KEK-2020-Basisgruppe.";
+
         return null;
     }
 

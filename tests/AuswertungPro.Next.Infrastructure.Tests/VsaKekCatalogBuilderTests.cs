@@ -22,6 +22,13 @@ public sealed class VsaKekCatalogBuilderTests
             && c.CategoryPath.Contains("Kanal", StringComparer.OrdinalIgnoreCase)));
         Assert.Equal(VsaKekCatalogSources.Icm, RequireCode(manifest, "BAG").Source);
 
+        foreach (var code in new[] { "BAA", "BAD", "BAK", "BAL", "BAM" })
+        {
+            var heading = RequireCode(manifest, code);
+            Assert.Equal(VsaKekCatalogSources.Heading, heading.Source);
+            Assert.True(heading.IsSelectable);
+        }
+
         var baga = RequireCode(manifest, "BAGA");
         Assert.Equal("BAG", baga.CanonicalCode);
         AssertRequiredNumberParameter(baga, "Q1");

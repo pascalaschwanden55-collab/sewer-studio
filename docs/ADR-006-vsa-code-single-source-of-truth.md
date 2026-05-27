@@ -201,17 +201,27 @@ Output:
 
 | Code | Bedeutung |
 |---|---|
+| `BAA` | Verformung |
 | `BAB` | Riss |
-| `BAC` | Bruch |
-| `BAF` | Deformation |
-| `BAH` | Versatz |
-| `BAI` | Einragung Stutzen/Anschluss |
+| `BAC` | Leitungsbruch / Einsturz |
+| `BAD` | Defektes Mauerwerk |
+| `BAE` | Fehlender Moertel |
+| `BAF` | Oberflaechenschaden |
+| `BAG` | Einragender Anschluss, Basiscode **nicht klickbar** |
+| `BAGA` | Anschluss einragend, intern `BAG` |
+| `BAH` | Schadhafter Anschluss |
+| `BAI` | Einragendes Dichtungsmaterial |
+| `BAJ` | Verschobene Rohrverbindung |
+| `BAK` | Feststellung der Innenauskleidung |
+| `BAL` | Schadhafte Reparatur |
+| `BAM` | Schadhafte Schweissnaht |
+| `BAN` | Poroese Leitung |
+| `BAO` | Boden sichtbar |
+| `BAP` | Hohlraum sichtbar |
 | `BBA*` | Wurzeln |
 | `BBB*` | Anhaftende Stoffe / Inkrustation / Fett |
 | `BBC*` | Ablagerungen |
 | `BBD*` | Eindringendes Bodenmaterial (kein Basiscode `BBD`) |
-| `BAG` | Regelcode, **nicht klickbar** |
-| `BAGA` | Anschluss einragend, intern `BAG` |
 | `BDB*` | TV-Untersuchungs-Anmerkungen, intern `BDB` |
 | `BCD` | Rohranfang |
 | `BCE` | Rohrende |

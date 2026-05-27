@@ -1,4 +1,4 @@
-﻿{
+{
   "version": 1,
   "codes": [
     {
@@ -687,6 +687,27 @@
         "VSA-KEK 2020",
         "Kanal",
         "AEF"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "BAA",
+      "title": "Verformung",
+      "canonicalCode": "BAA",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Kanal/BAA",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Kanal",
+        "BAA"
       ],
       "parameters": [],
       "examples": [],
@@ -1811,6 +1832,27 @@
           "required": false
         }
       ],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "BAD",
+      "title": "Defektes Mauerwerk",
+      "canonicalCode": "BAD",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Kanal/BAD",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Kanal",
+        "BAD"
+      ],
+      "parameters": [],
       "examples": [],
       "requiresRange": false,
       "rangeThresholdM": null,
@@ -5764,6 +5806,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "BAK",
+      "title": "Feststellung der Innenauskleidung",
+      "canonicalCode": "BAK",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Kanal/BAK",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Kanal",
+        "BAK"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "BAKA",
       "title": "Innenauskleidung abgel\u00F6st",
       "canonicalCode": "BAKA",
@@ -6142,6 +6205,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "BAL",
+      "title": "Schadhafte Reparatur",
+      "canonicalCode": "BAL",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Kanal/BAL",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Kanal",
+        "BAL"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "BALA",
       "title": "Reparatur mangelhaft, Wand fehlt teilweise",
       "canonicalCode": "BALA",
@@ -6365,6 +6449,27 @@
         "VSA-KEK 2020",
         "Kanal",
         "BAL"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
+      "code": "BAM",
+      "title": "Schadhafte Schweissnaht",
+      "canonicalCode": "BAM",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Kanal/BAM",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Kanal",
+        "BAM"
       ],
       "parameters": [],
       "examples": [],

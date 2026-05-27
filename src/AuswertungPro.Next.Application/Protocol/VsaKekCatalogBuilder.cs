@@ -9,6 +9,7 @@ public static class VsaKekCatalogSources
 {
     public const string Ili = "VSA-KEK-2020-ILI";
     public const string Icm = "VSA-KEK-2020-ICM";
+    public const string Heading = "VSA-KEK-2020-Heading";
     public const string XtfObserved = "VSA-XTF-Observed";
     public const string WinCanFallback = "WinCan-Fallback";
 }
@@ -26,6 +27,15 @@ public static partial class VsaKekCatalogBuilder
     private static readonly string[] OptionalChannelQ2 = ["BCA"];
     private static readonly string[] RequiredManholeQ1 = ["DCA", "DCG"];
     private static readonly string[] OptionalManholeQ2 = ["DCA", "DCG"];
+
+    private static readonly (string Code, string Title)[] OfficialChannelHeadings =
+    [
+        ("BAA", "Verformung"),
+        ("BAD", "Defektes Mauerwerk"),
+        ("BAK", "Feststellung der Innenauskleidung"),
+        ("BAL", "Schadhafte Reparatur"),
+        ("BAM", "Schadhafte Schweissnaht")
+    ];
 
     public static CodeCatalogDocument Build(
         string iliText,
@@ -48,6 +58,7 @@ public static partial class VsaKekCatalogBuilder
         foreach (var item in ParseIliEnum(iliText, "SchachtSchadencode", ManholeType))
             AddOrMerge(byCode, BuildIliDefinition(item, rules));
 
+        AddOfficialHeadingDefinitions(byCode);
         AddRuleOnlyDefinitions(byCode, rules);
         AddObservedXtfCodes(byCode, observedXtfTexts);
 
@@ -114,6 +125,27 @@ public static partial class VsaKekCatalogBuilder
             };
             ApplyParameters(def, rules);
             AddOrMerge(byCode, def);
+        }
+    }
+
+    private static void AddOfficialHeadingDefinitions(IDictionary<string, CodeDefinition> byCode)
+    {
+        foreach (var (code, title) in OfficialChannelHeadings)
+        {
+            if (byCode.ContainsKey(code))
+                continue;
+
+            AddOrMerge(byCode, new CodeDefinition
+            {
+                Code = code,
+                Title = title,
+                CanonicalCode = code,
+                Source = VsaKekCatalogSources.Heading,
+                IsSelectable = true,
+                Group = $"VSA-KEK 2020/{ChannelType}/{code}",
+                CategoryPath = ["VSA-KEK 2020", ChannelType, code],
+                Description = "Offizielle VSA-KEK-2020 Basisgruppe."
+            });
         }
     }
 
