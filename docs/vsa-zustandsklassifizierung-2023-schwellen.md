@@ -45,7 +45,52 @@ Hinweise:
 
 ## Noch offen
 
-- Restliche Kanaltabellen aus Anhang C: Tabellen 8-32.
+### BAB - Risse
+
+Quelle: PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 8: Risse.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BAB | A | A,B,C,D,E | S | keine Quantifizierung | - | - | - | - | alle | alle |
+| BAB | B,C | A,C,D,E | S | mm | >= 8 | >= 5 und < 8 | >= 3 und < 5 | >= 1 und < 3 | < 1 | alle |
+| BAB | B,C | B | S | mm | - | - | - | - | alle | alle |
+| BAB | B | A,B,C,D,E | D | mm | - | - | alle | - | - | alle |
+| BAB | C | A,B,C,D,E | D | mm | - | alle | - | - | - | alle |
+
+Hinweise:
+
+- `BAB` ist Riss, nicht Bruch/Einsturz.
+- Die aktuelle Legacy-Datei `classification_channels.json` ist fuer `BAB`
+  fachlich falsch: Sie modelliert `BAB` als Bruch/Einsturz mit Ausmass in %.
+- `BAB` braucht `Ch1/Ch2` als Diskriminator. Eine einzelne Code-Regel reicht
+  nicht.
+
+### BAC - Leitungsbruch/Einsturz
+
+Quelle: PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 9:
+Leitungsbruch/Einsturz.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BAC | A | - | D | mm | - | alle | - | - | - | alle |
+| BAC | A | - | S | mm | - | - | alle | - | - | alle |
+| BAC | A | - | B | mm | - | - | alle | - | - | alle |
+| BAC | B | - | D | mm | - | alle | - | - | - | alle |
+| BAC | B | - | S | mm | - | - | alle | - | - | alle |
+| BAC | C | - | D | mm | alle | - | - | - | - | alle |
+| BAC | C | - | S | mm | alle | - | - | - | - | alle |
+| BAC | C | - | B | mm | alle | - | - | - | - | alle |
+
+Hinweise:
+
+- `BAC` ist Leitungsbruch/Einsturz.
+- Die aktuelle Legacy-Datei `classification_channels.json` ist fuer `BAC`
+  mindestens zu grob: Sie modelliert Q1-Prozentbereiche, waehrend Tabelle 9
+  fixe Einzelzustaende nach `Ch1` und Anforderung vorgibt.
+
+## Noch offen
+
+- Restliche Kanaltabellen aus Anhang C: Tabellen 10-32.
 - Schachttabellen aus Anhang D: Tabellen 33-63.
 - Klaeren, aus welchen Stammdaten `biegesteif`/`biegeweich` im Programm sicher
   bestimmt wird.
