@@ -2247,20 +2247,25 @@ public sealed class ProtocolPdfExporter
 
     /// <summary>Klassifiziert einen Schaden nach Symbol-Kategorie anhand des VSA-Codes.</summary>
     private static string ClassifyDamageSymbol(ProtocolEntry entry)
+        => ResolveDamageSymbolCategory(entry.Code);
+
+    internal static string ResolveDamageSymbolCategory(string? rawCode)
     {
-        var code = (entry.Code ?? "").Trim().ToUpperInvariant();
+        var code = (rawCode ?? "").Trim().ToUpperInvariant();
         if (code.StartsWith("BAA", StringComparison.Ordinal)) return "crack";        // Rissbildung
-        if (code.StartsWith("BAB", StringComparison.Ordinal)) return "break";        // Bruch / Einsturz
-        if (code.StartsWith("BAC", StringComparison.Ordinal)) return "deformation";  // Deformation
+        if (code.StartsWith("BAB", StringComparison.Ordinal)) return "crack";        // Riss
+        if (code.StartsWith("BAC", StringComparison.Ordinal)) return "break";        // Bruch / Einsturz
         if (code.StartsWith("BAD", StringComparison.Ordinal)) return "leak";         // Undichtheit
         if (code.StartsWith("BAE", StringComparison.Ordinal)) return "offset";       // Versatz
-        if (code.StartsWith("BAF", StringComparison.Ordinal)) return "surface";      // Oberflaechenschaden
+        if (code.StartsWith("BAF", StringComparison.Ordinal)) return "deformation";  // Deformation
+        if (code.StartsWith("BAH", StringComparison.Ordinal)) return "offset";       // Versatz
         if (code.StartsWith("BAI", StringComparison.Ordinal)) return "obstacle";     // Hindernis
         if (code.StartsWith("BAJ", StringComparison.Ordinal)) return "roots";        // Wurzeleinwuchs
         if (code.StartsWith("BAK", StringComparison.Ordinal)) return "infiltration"; // Infiltration
         if (code.StartsWith("BAL", StringComparison.Ordinal)) return "exfiltration"; // Exfiltration
-        if (code.StartsWith("BBA", StringComparison.Ordinal)) return "deposit";      // Ablagerung
+        if (code.StartsWith("BBA", StringComparison.Ordinal)) return "incrustation"; // Inkrustation
         if (code.StartsWith("BBB", StringComparison.Ordinal)) return "obstacle";     // Verstopfung
+        if (code.StartsWith("BBC", StringComparison.Ordinal)) return "deposit";      // Ablagerung
         return "default";
     }
 
@@ -2273,7 +2278,7 @@ public sealed class ProtocolPdfExporter
             "deformation" or "offset" or "surface"      => "#E67E22", // Orange - Verformung / Oberflaeche
             "leak" or "infiltration" or "exfiltration"   => "#2196F3", // Blau - Wasser
             "roots"                                      => "#27AE60", // Gruen - biologisch
-            "deposit"                                    => "#8B6914", // Braun - Ablagerung
+            "incrustation" or "deposit"                  => "#8B6914", // Braun - Anhaftung / Ablagerung
             "obstacle"                                   => "#6B7280", // Grau - Hindernis
             _ => fallback
         };
@@ -2354,7 +2359,8 @@ public sealed class ProtocolPdfExporter
                           $"stroke='{color}' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/>");
                 break;
 
-            case "deposit": // Geschichtete Linien (Ablagerung)
+            case "incrustation":
+            case "deposit": // Geschichtete Linien (Anhaftung / Ablagerung)
                 sb.Append($"<line x1='{Svg(cx - s * 0.8)}' y1='{Svg(cy)}' x2='{Svg(cx + s * 0.8)}' y2='{Svg(cy)}' " +
                           $"stroke='{color}' stroke-width='1.8' stroke-linecap='round'/>");
                 sb.Append($"<line x1='{Svg(cx - s * 0.5)}' y1='{Svg(cy + s * 0.5)}' x2='{Svg(cx + s * 0.5)}' y2='{Svg(cy + s * 0.5)}' " +
