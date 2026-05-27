@@ -140,6 +140,18 @@ def _cuda_available() -> bool:
         return False
 
 
+def _response_telemetry(queue_wait_ms: float = 0.0) -> dict:
+    status = gpu_manager.get_status()
+    model_name = Path(_resolved_model_path).name if _resolved_model_path else settings.yolo_model_name
+    return {
+        "model_name": model_name,
+        "device": _resolve_device(),
+        "queue_wait_ms": round(queue_wait_ms, 1),
+        "vram_allocated_gb": status.get("vram_allocated_gb"),
+        "vram_total_gb": status.get("vram_total_gb"),
+    }
+
+
 def decode_image(image_base64: str) -> Image.Image:
     """Decode a base64-encoded image to PIL Image."""
     raw = base64.b64decode(image_base64)
@@ -210,6 +222,7 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
             detections=[],
             frame_class=quality_reason,
             inference_time_ms=0.0,
+            **_response_telemetry(),
         )
 
     t0 = time.perf_counter()
@@ -256,6 +269,7 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
         detections=detections,
         frame_class=frame_class,
         inference_time_ms=round(elapsed_ms, 1),
+        **_response_telemetry(),
     )
 
 

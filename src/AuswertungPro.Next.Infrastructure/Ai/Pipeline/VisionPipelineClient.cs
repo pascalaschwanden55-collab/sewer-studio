@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Text;
@@ -110,17 +111,42 @@ public sealed class VisionPipelineClient
         };
         AddSidecarTokenHeader(req);
 
+        var roundtrip = Stopwatch.StartNew();
         using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
 
         var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        roundtrip.Stop();
 
         if (!resp.IsSuccessStatusCode)
             throw new HttpRequestException(
                 $"Sidecar {endpoint} returned {(int)resp.StatusCode}: {body}");
 
-        return JsonSerializer.Deserialize<TResponse>(body, JsonOpts)
+        var result = JsonSerializer.Deserialize<TResponse>(body, JsonOpts)
             ?? throw new InvalidOperationException($"Failed to deserialize response from {endpoint}");
+
+        if (result is YoloResponse yolo)
+            await SidecarTelemetryWriter.WriteAsync(CreateTelemetryEvent(endpoint, yolo, roundtrip.ElapsedMilliseconds)).ConfigureAwait(false);
+
+        return result;
     }
+
+    private static SidecarTelemetryEvent CreateTelemetryEvent(
+        string endpoint,
+        YoloResponse yolo,
+        long roundtripMs)
+        => new(
+            TimestampUtc: DateTimeOffset.UtcNow,
+            Endpoint: endpoint,
+            ModelName: yolo.ModelName,
+            RoundtripMs: roundtripMs,
+            InferenceTimeMs: yolo.InferenceTimeMs,
+            QueueWaitMs: yolo.QueueWaitMs,
+            Device: yolo.Device,
+            VramAllocatedGb: yolo.VramAllocatedGb,
+            VramTotalGb: yolo.VramTotalGb,
+            DetectionCount: yolo.Detections.Count,
+            IsRelevant: yolo.IsRelevant,
+            FrameClass: yolo.FrameClass);
 
     private Uri BuildUri(string endpoint)
     {

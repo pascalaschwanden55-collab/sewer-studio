@@ -47,3 +47,8 @@ def test_yolo_empty_frame(client):
     assert "is_relevant" in data
     assert "detections" in data
     assert "inference_time_ms" in data
+    assert "model_name" in data
+    assert "device" in data
+    assert "queue_wait_ms" in data
+    assert "vram_allocated_gb" in data
+    assert "vram_total_gb" in data

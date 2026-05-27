@@ -37,7 +37,12 @@ public sealed record YoloResponse(
     [property: JsonPropertyName("is_relevant")] bool IsRelevant,
     [property: JsonPropertyName("detections")] IReadOnlyList<YoloDetectionDto> Detections,
     [property: JsonPropertyName("frame_class")] string FrameClass,
-    [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs
+    [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs,
+    [property: JsonPropertyName("model_name")] string? ModelName = null,
+    [property: JsonPropertyName("device")] string? Device = null,
+    [property: JsonPropertyName("queue_wait_ms")] double QueueWaitMs = 0,
+    [property: JsonPropertyName("vram_allocated_gb")] double? VramAllocatedGb = null,
+    [property: JsonPropertyName("vram_total_gb")] double? VramTotalGb = null
 );
 
 // ── YOLO Classify ─────────────────────────────────────────────────────────
