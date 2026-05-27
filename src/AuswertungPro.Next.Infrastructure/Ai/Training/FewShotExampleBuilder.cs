@@ -64,26 +64,26 @@ public sealed class FewShotExampleBuilder
         "AEDXP", // Materialwechsel
     };
 
-    // Codes die interessante Trainingsbeispiele sind
-    // (hoehere Qualitaet weil sie spezifische Schaeden zeigen)
+    // Codes die interessante Trainingsbeispiele sind.
+    // Bedeutungen nicht hier pflegen: Titel kommen aus dem VSA-KEK-Katalog.
     private static readonly HashSet<string> HighValuePrefixes = new(StringComparer.OrdinalIgnoreCase)
     {
-        "BAA",  // Deformation
-        "BAB",  // Riss
-        "BAC",  // Bruch/Einsturz
-        "BAD",  // Defekte Wandung
-        "BAE",  // Fehlender Moertel
-        "BAF",  // Scherbe
-        "BAG",  // Einragender Anschluss
-        "BAH",  // Versatz
-        "BAI",  // Abzweig/Anschluss
-        "BAJ",  // Verformung
-        "BBA",  // Wurzeleinwuchs
-        "BBB",  // Anhaftungen
-        "BBC",  // Infiltration
-        "BBD",  // Exfiltration
-        "BBE",  // Hindernisse
-        "BBF",  // Ablagerung
+        "BAA",
+        "BAB",
+        "BAC",
+        "BAD",
+        "BAE",
+        "BAF",
+        "BAG",
+        "BAH",
+        "BAI",
+        "BAJ",
+        "BBA",
+        "BBB",
+        "BBC",
+        "BBD",
+        "BBE",
+        "BBF",
     };
 
     // Uhrzeitlage aus Beschreibungstext extrahieren
