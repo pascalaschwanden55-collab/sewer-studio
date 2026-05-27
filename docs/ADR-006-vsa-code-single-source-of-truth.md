@@ -1,7 +1,8 @@
 # ADR-006: VSA-KEK-Manifest als alleinige Code-Wahrheit
 
-**Status:** Proposed
+**Status:** Accepted / in Umsetzung
 **Datum:** 2026-05-26
+**Aktualisiert:** 2026-05-27
 **Ersetzt:** Implizite Mehrfach-Definitionen in C#-Klassen (siehe Befundtabelle)
 
 ---
@@ -21,9 +22,9 @@ Stichprobe `BBA`:
 | Quelle | Bedeutung |
 |---|---|
 | **VSA-KEK-Manifest (Katalog-Wahrheit)** | **Wurzeln** |
-| `CLAUDE.md` | Inkrustation/Kalk (falsch) |
+| `CLAUDE.md` vor Korrektur | Inkrustation/Kalk (falsch) |
 | `project_vsa_2019_catalog.md` Memory | implizit Inkrustation (falsch) |
-| `VsaCodeResolver.cs:153` (Text→Code) | inkrustation/anhaftung/sinter → `BBA` (falsch) |
+| `VsaCodeResolver.cs` vor Paket 6 | inkrustation/anhaftung/sinter → `BBA` (falsch) |
 | `GuidedVerificationService.cs:232` | Wurzeleinwuchs (korrekt) |
 | `FewShotExampleBuilder.cs:79` | Wurzeleinwuchs (korrekt) |
 | `ObservationCatalogViewModel.cs:561` | Wurzeln (korrekt) |
@@ -51,22 +52,24 @@ ObservationCatalogViewModel) und Sonderfaelle `BAG`/`BAGA`/`BDB*`.
   (`TrainingSampleEligibility`).
 - `VsaCodeTreeCatalogAdapter` baut den UI-Codierbaum aus dem Manifest.
 
-**Was fehlt:** mehrere Konsumenten (Resolver, Prompt-Builder, PDF-Export,
-UI-Catalog-VM) haben das Manifest noch nicht als Quelle. Sie tragen
-eigene Definitionen mit.
+**Stand 2026-05-27:** Die kritischen Konsumenten sind bereinigt oder
+gegen Tests verriegelt: Training-Filter, UI-Katalog, Guided Verification,
+Few-Shot-Kommentare, zentrale Text-zu-Code-Heuristik, Prompt-Rendering,
+PDF-Symbolmapping und Eingabemarker. Uebrig bleiben nur bewusste
+Grobklassen/Modellkompatibilitaets-Stellen wie YOLO-Klassen-IDs.
 
 ---
 
 ## Bewiesene Konfliktstellen (Inventur)
 
-| Datei | Stellen-Typ | Konflikt |
+| Datei | Stellen-Typ | Befund / Status |
 |---|---|---|
-| [GuidedVerificationService.cs:222](../src/AuswertungPro.Next.Infrastructure/Ai/Training/GuidedVerificationService.cs#L222) | Code→Label-Switch | mehrere BA*-Codes falsch beschriftet (z. B. `BAH=Korrosion` statt Versatz) |
-| [FewShotExampleBuilder.cs:77](../src/AuswertungPro.Next.Infrastructure/Ai/Training/FewShotExampleBuilder.cs#L77) | Trainings-Priority-Liste mit Kommentaren | teilweise falsche Kommentare (BBB als Anhaftungen, BBC als Infiltration) |
-| [ObservationCatalogViewModel.cs:557](../src/AuswertungPro.Next.UI/ViewModels/Protocol/ObservationCatalogViewModel.cs#L557) | UI-Codebaum mit eigenem subLabels-Dict | BAB/BAC vertauscht, BAH=Korrosion (Manifest sagt Versatz) |
-| [ProtocolPdfExporter.cs:2252](../src/AuswertungPro.Next.Application/Reports/ProtocolPdfExporter.cs#L2252) | Symbol-Klassifizierung | teils verdreht, gleiche Codes liefern andere Symbole als der Katalog vorsieht |
-| [EnhancedVisionAnalysisService.cs:73](../src/AuswertungPro.Next.Infrastructure/Ai/EnhancedVisionAnalysisService.cs#L73) | Hartkodierter Qwen-Prompt | enthaelt eigene VSA-Code-Liste mit Bedeutungen — wenn der Katalog sich aendert, faellt der Prompt auseinander |
-| [VsaCodeResolver.cs](../src/AuswertungPro.Next.Infrastructure/Ai/VsaCodeResolver.cs), [LiveDetectionMapper.cs](../src/AuswertungPro.Next.Infrastructure/Ai/LiveDetectionMapper.cs), [VideoFullAnalysisService.cs](../src/AuswertungPro.Next.Infrastructure/Ai/VideoFullAnalysisService.cs), [MultiModelAnalysisService.cs](../src/AuswertungPro.Next.Infrastructure/Ai/Pipeline/MultiModelAnalysisService.cs) | viermal aehnliche Text→Code-Heuristik | jede Datei hat ihre eigene Regel-Liste — Mehrfach-Code-Pflege, jede falsch korrigierbar einzeln |
+| [GuidedVerificationService.cs](../src/AuswertungPro.Next.Infrastructure/Ai/Training/GuidedVerificationService.cs) | Code→Label | erledigt: Label kommen ueber `ICodeCatalogProvider`; kein eigener Switch mehr. |
+| [FewShotExampleBuilder.cs](../src/AuswertungPro.Next.Infrastructure/Ai/Training/FewShotExampleBuilder.cs) | Trainings-Priority-Liste | erledigt: Liste enthaelt nur Prefixe; Bedeutungen werden nicht dort gepflegt. |
+| [ObservationCatalogViewModel.cs](../src/AuswertungPro.Next.UI/ViewModels/Protocol/ObservationCatalogViewModel.cs) | UI-Codebaum | erledigt: Unterkategorie-Labels kommen aus dem Katalog. |
+| [ProtocolPdfExporter.cs](../src/AuswertungPro.Next.Application/Reports/ProtocolPdfExporter.cs) | Symbol-Klassifizierung | Paket 9 korrigiert: `BBA -> roots`, `BBB -> incrustation`, `BAJ -> default`. Symbolmapping bleibt bewusst Darstellungslogik. |
+| [EnhancedVisionAnalysisService.cs](../src/AuswertungPro.Next.Infrastructure/Ai/EnhancedVisionAnalysisService.cs) | Vision-Prompt | erledigt: Prompt wird aus dem Katalog gerendert, Fallback ist manifestkonform. |
+| [VsaCodeResolver.cs](../src/AuswertungPro.Next.Infrastructure/Ai/VsaCodeResolver.cs), [LiveDetectionMapper.cs](../src/AuswertungPro.Next.Infrastructure/Ai/LiveDetectionMapper.cs), [VideoFullAnalysisService.cs](../src/AuswertungPro.Next.Infrastructure/Ai/VideoFullAnalysisService.cs), [MultiModelAnalysisService.cs](../src/AuswertungPro.Next.Infrastructure/Ai/Pipeline/MultiModelAnalysisService.cs) | Text→Code-Heuristik | erledigt: zentrale Heuristik ueber `VsaCodeResolver`; Konsumenten duplizieren die Regeln nicht mehr. |
 
 ---
 
@@ -85,28 +88,16 @@ eigene Definitionen mit.
    Regel (siehe Punkt 4) sperren sie effektiv vom Training aus.
 
 3. **Codierbaum (UI), KI-Prompts, PDF-Symbole und Resolver greifen ueber
-   zentrale Services zu.** Konkrete Ablöse-Liste:
-   - `ObservationCatalogViewModel.subLabels` → entfaellt, ersetzt durch
-     `ICodeCatalogProvider.TryGet(...)`.
-   - `EnhancedVisionAnalysisService.DamageClassesPrompt` → wird zur
-     Laufzeit aus dem Katalog gerendert (Top-N Codes nach Haeufigkeit
-     oder Konfig-Liste). Statischer Prompt-Block bleibt nur fuer
-     Grundstruktur (BCD/BCE/BCA/BAHC/BCC).
-   - `VsaCodeResolver.cs` Text→Code-Heuristik → bleibt fuer Free-Text-
-     Parsing, aber die Ergebnis-Codes werden gegen den Katalog validiert.
-     Bei nicht-katalog-Treffer: Warnung statt direkte Code-Ausgabe.
-   - `LiveDetectionMapper`, `VideoFullAnalysisService`,
-     `MultiModelAnalysisService`: vier ahnliche Heuristiken werden auf
-     einen gemeinsamen Resolver konsolidiert (in `Application/Ai/`,
-     nicht UI).
-   - `GuidedVerificationService.cs` switch → ersetzt durch
-     `_codeCatalog.TryGet(code, out var def) ? def.Title : code`.
-   - `FewShotExampleBuilder.cs` Priority-Liste: bleibt als Liste der
-     Codes, aber Kommentare/Beschreibungen kommen aus dem Katalog.
-   - `ProtocolPdfExporter.cs` Symbol-Klassifizierung: Mapping
-     `code → symbol` muss am Katalog haengen — entweder per neuer
-     `CategoryGroup`-Property im `CodeDefinition` oder per
-     `code[0..2]`-Praefix-Regel (`BA*`, `BB*`, `BC*`, `BD*`, `AE*`).
+   zentrale Services zu.** Stand 2026-05-27:
+   - `ObservationCatalogViewModel.subLabels` ist entfernt.
+   - `EnhancedVisionAnalysisService` rendert den Prompt aus dem Katalog.
+   - `VsaCodeResolver` ist die zentrale Free-Text-Heuristik.
+   - `LiveDetectionMapper`, `VideoFullAnalysisService` und
+     `MultiModelAnalysisService` nutzen die zentrale Heuristik.
+   - `GuidedVerificationService` liest Labels aus dem Katalog.
+   - `FewShotExampleBuilder` pflegt keine Bedeutungs-Kommentare mehr.
+   - `ProtocolPdfExporter` nutzt manifestkonforme Symbol-Prefixe; das
+     Symbolmapping bleibt bewusst Darstellungslogik, nicht Code-Wahrheit.
 
 4. **Training-Haerter:**
    `StageAExporter` und `YoloDatasetExportService` validieren jeden
@@ -172,8 +163,8 @@ Streng inkrementell, jedes Paket einzeln committed und testbar.
 | 6 | **`VsaCodeResolver` Text→Code + Katalog-Validierung** | mittel | 2h | Aenderung kann Free-Text-Klassifikation veraendern — Pipeline-Smoke-Test noetig. |
 | 7 | **Vier Heuristik-Konsumenten** (`LiveDetectionMapper`, `VideoFullAnalysisService`, `MultiModelAnalysisService`) konsolidieren | mittel | 2-3h | Vorher Tests fuer Verhalten dokumentieren. |
 | 8 | **`EnhancedVisionAnalysisService` Prompt dynamisch aus Katalog** | hoch | 2h | KI-Prompt-Aenderung beeinflusst Qwen-Output direkt. Mit Live-Testlauf vergleichen. |
-| 9 | **CLAUDE.md korrigieren** | keiner | 15min | Hinterher, mit den korrekten Werten aus dem Manifest. |
-| 10 | **Memory `project_vsa_2019_catalog.md` korrigieren** | keiner | 15min | Hinterher. |
+| 9 | **CLAUDE.md korrigieren** | keiner | 15min | Erledigt am 2026-05-27 mit `BBA=Wurzeln/Bewuchs`, `BBB=Anhaftende Stoffe/Inkrustation`. |
+| 10 | **Memory `project_vsa_2019_catalog.md` korrigieren** | keiner | 15min | Ausserhalb des Repos separat nachziehen/halten. |
 
 **Gesamt-Aufwand:** ~13-15h, verteilt auf 4-6 Sitzungen.
 
@@ -228,9 +219,9 @@ Output:
 | `BCC` | Bogen |
 | `BCCYY` | Observed-Extension, nicht klickbar |
 
-**`CLAUDE.md` und Memory-Notiz `project_vsa_2019_catalog.md` widersprechen
-diesem Glossar in BBA/BBB/BBC und muessen aktualisiert werden (Schritte
-9-10 der Migration).**
+`CLAUDE.md` ist mit diesem Glossar abgeglichen. Externe Agenten-Memorys
+muessen weiterhin gegen das Manifest geprueft werden, weil sie ausserhalb
+des Repos liegen.
 
 ---
 
