@@ -4,6 +4,8 @@
 *.bin
 *.onnx
 *.engine
+*.build.json
+*.backup.json
 *.safetensors
 !.gitignore
 !.gitkeep

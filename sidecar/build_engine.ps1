@@ -27,6 +27,7 @@ $onnxPath = Join-Path $ModelDir $OnnxName
 $enginePath = Join-Path $ModelDir $EngineName
 $tempEnginePath = Join-Path $ModelDir "$EngineName.new"
 $backupDir = Join-Path $ModelDir "engine_backups"
+$tempScriptDir = Join-Path $scriptDir ".engine_build_tmp"
 
 function Invoke-Native {
     param(
@@ -63,6 +64,38 @@ function Get-CommandOutput {
     } catch {
         return $_.Exception.Message
     }
+}
+
+function Write-TempPythonScript {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+        [Parameter(Mandatory = $true)]
+        [string]$ScriptText
+    )
+
+    New-Item -ItemType Directory -Force -Path $tempScriptDir | Out-Null
+    $scriptPath = Join-Path $tempScriptDir $Name
+    Set-Content -LiteralPath $scriptPath -Value $ScriptText -Encoding UTF8
+    return $scriptPath
+}
+
+function Invoke-PythonBlock {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+        [Parameter(Mandatory = $true)]
+        [string]$ScriptText
+    )
+
+    if ($DryRun) {
+        Write-Host "DRY-RUN: $pythonPath .engine_build_tmp\$Name" -ForegroundColor DarkGray
+        Write-Host $ScriptText -ForegroundColor DarkGray
+        return
+    }
+
+    $scriptPath = Write-TempPythonScript -Name $Name -ScriptText $ScriptText
+    Invoke-Native $pythonPath $scriptPath
 }
 
 function Resolve-TrtExec {
@@ -135,7 +168,8 @@ except Exception as exc:
 print(json.dumps(info))
 "@
 
-    $json = & $pythonPath "-c" $probe
+    $probePath = Write-TempPythonScript -Name "probe_versions.py" -ScriptText $probe
+    $json = & $pythonPath $probePath
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($json)) {
         return @{
             python = ""
@@ -165,11 +199,9 @@ if (-not (Test-Path $weightsPath) -and -not $DryRun) {
 }
 
 $resolvedTrtExec = Resolve-TrtExec
+$engineBuilder = if ([string]::IsNullOrWhiteSpace($resolvedTrtExec)) { "python-tensorrt" } else { "trtexec" }
 if ([string]::IsNullOrWhiteSpace($resolvedTrtExec) -and $DryRun) {
-    $resolvedTrtExec = "trtexec"
-}
-if ([string]::IsNullOrWhiteSpace($resolvedTrtExec) -and -not $DryRun) {
-    throw "trtexec nicht gefunden. Bitte TensorRT installieren oder -TrtExecPath angeben."
+    $resolvedTrtExec = ""
 }
 
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
@@ -180,7 +212,8 @@ Write-Host "  Modellordner: $ModelDir" -ForegroundColor White
 Write-Host "  Gewichte:     $weightsPath" -ForegroundColor White
 Write-Host "  ONNX:         $onnxPath" -ForegroundColor White
 Write-Host "  Engine:       $enginePath" -ForegroundColor White
-Write-Host "  trtexec:      $(if ($resolvedTrtExec) { $resolvedTrtExec } else { '<nicht gefunden>' })" -ForegroundColor White
+Write-Host "  Builder:      $engineBuilder" -ForegroundColor White
+Write-Host "  trtexec:      $(if ($resolvedTrtExec) { $resolvedTrtExec } else { '<nicht gefunden, Python-Fallback>' })" -ForegroundColor White
 Write-Host ""
 
 if (-not $DryRun) {
@@ -214,6 +247,7 @@ if (Test-Path $enginePath) {
         tensorrt_python = $pythonInfo.tensorrt
         cuda_available = $pythonInfo.cuda_available
         gpu = $pythonInfo.gpu
+        engine_builder = $engineBuilder
         trtexec = $resolvedTrtExec
         trtexec_version = $trtExecVersion
     }
@@ -240,12 +274,46 @@ from ultralytics import YOLO
 
 weights = Path(r"$weightsPath")
 model = YOLO(str(weights))
-model.export(format="onnx", imgsz=$ImageSize, opset=$Opset, simplify=True, dynamic=False, half=False, device="cpu")
+model.export(format="onnx", imgsz=$ImageSize, opset=$Opset, simplify=False, dynamic=False, half=False, device="cpu")
 "@
-Invoke-Native $pythonPath "-c" $exportScript
+Invoke-PythonBlock -Name "export_onnx.py" -ScriptText $exportScript
 
 Write-Host "  Baue TensorRT Engine mit fp16 ..." -ForegroundColor White
-Invoke-Native $resolvedTrtExec "--onnx=$onnxPath" "--saveEngine=$tempEnginePath" "--fp16"
+if ($engineBuilder -eq "trtexec") {
+    Invoke-Native $resolvedTrtExec "--onnx=$onnxPath" "--saveEngine=$tempEnginePath" "--fp16"
+} else {
+    $buildScript = @"
+from pathlib import Path
+import sys
+import tensorrt as trt
+
+onnx_path = Path(r"$onnxPath")
+engine_path = Path(r"$tempEnginePath")
+logger = trt.Logger(trt.Logger.INFO)
+builder = trt.Builder(logger)
+network = builder.create_network(1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
+parser = trt.OnnxParser(network, logger)
+
+data = onnx_path.read_bytes()
+if not parser.parse(data):
+    for index in range(parser.num_errors):
+        print(parser.get_error(index), file=sys.stderr)
+    raise SystemExit(1)
+
+config = builder.create_builder_config()
+if hasattr(trt, "MemoryPoolType"):
+    config.set_memory_pool_limit(trt.MemoryPoolType.WORKSPACE, 4 << 30)
+if builder.platform_has_fast_fp16:
+    config.set_flag(trt.BuilderFlag.FP16)
+
+serialized = builder.build_serialized_network(network, config)
+if serialized is None:
+    raise SystemExit("TensorRT did not return a serialized engine.")
+
+engine_path.write_bytes(serialized)
+"@
+    Invoke-PythonBlock -Name "build_engine.py" -ScriptText $buildScript
+}
 
 if (-not $DryRun) {
     if (-not (Test-Path $tempEnginePath)) {
@@ -274,10 +342,15 @@ if (-not $DryRun) {
         tensorrt_python = $pythonInfo.tensorrt
         cuda_available = $pythonInfo.cuda_available
         gpu = $pythonInfo.gpu
+        engine_builder = $engineBuilder
         trtexec = $resolvedTrtExec
         trtexec_version = $trtExecVersion
     }
     $newMeta | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $newMetaPath -Encoding UTF8
+}
+
+if (-not $DryRun -and (Test-Path $tempScriptDir)) {
+    Remove-Item -LiteralPath $tempScriptDir -Recurse -Force
 }
 
 Write-Host ""

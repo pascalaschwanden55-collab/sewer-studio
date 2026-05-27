@@ -32,7 +32,7 @@ To rebuild the local YOLO TensorRT engine on the target GPU machine:
 .\build_engine.ps1
 ```
 
-The script backs up the old `.engine` file first and writes JSON metadata with hashes and version information. It then exports `models\yolo26m\yolo26m.pt` to ONNX and builds `models\yolo26m\yolo26m.engine` with `trtexec --fp16`.
+The script backs up the old `.engine` file first and writes JSON metadata with hashes and version information. It then exports `models\yolo26m\yolo26m.pt` to ONNX and builds `models\yolo26m\yolo26m.engine` with `trtexec --fp16`. If `trtexec` is not installed, it falls back to the TensorRT Python builder.
 
 ## Telemetry
 

@@ -11,6 +11,7 @@ ultralytics>=8.2
 tensorrt-cu12>=10.0
 Pillow>=10.0
 numpy>=1.24
+onnx>=1.16
 scipy>=1.10
 
 # Grounding DINO (open-vocabulary detection)
