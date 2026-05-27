@@ -8,7 +8,7 @@ public sealed class SanierungValidationService
     /// <summary>
     /// Returns true if any finding indicates collapse/structural failure.
     /// BAC = Bruch/Einsturz (VSA-KEK), BABC = Bruch laengs/quer.
-    /// BBB war falsch — das ist "Eindringender Boden", nicht Einsturz.
+    /// BBB ist Anhaftende Stoffe/Inkrustation, nicht Einsturz.
     /// </summary>
     public bool IsCollapseDetected(IReadOnlyList<DamageFindingDto> findings)
         => findings.Any(f =>

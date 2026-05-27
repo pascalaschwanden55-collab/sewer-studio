@@ -6212,6 +6212,32 @@ public partial class PlayerWindow : Window
         }
     }
 
+    private static string? ResolveEingabemarkerCodeHint(string? keyword)
+    {
+        var normalized = keyword?.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+            return null;
+
+        return normalized.ToUpperInvariant() switch
+        {
+            "ROHRANFANG" => "BCD",
+            "ROHRENDE" => "BCE",
+            "ANSCHLUSS" => "BCA",
+            "BOGEN" => "BCC",
+            "RISS" => "BAB",
+            "BRUCH" => "BAC",
+            "VERFORMUNG" => "BAF",
+            "OBERFLAECHENSCHADEN" => "BAJ",
+            "VERSATZ" or "VERSCHIEBUNG" => "BAH",
+            "WURZELN" or "BEWUCHS" => "BBA",
+            "ABLAGERUNG" => "BBC",
+            "INKRUSTATION" => "BBB",
+            "WASSERSTAND" => "BDDC",
+            "ABBRUCH" => "BDC",
+            _ => VsaCodeResolver.InferCodeFromLabel(normalized)
+        };
+    }
+
     /// <summary>Freitext oder Stichwort absenden → Code ableiten oder KI-Analyse starten.</summary>
     private async void SubmitEingabemarker()
     {
@@ -6223,25 +6249,7 @@ public partial class PlayerWindow : Window
 
         // VSA-Hauptcode ableiten: Exakte Stichwörter ODER Freitext-Heuristik
         // Freitext wie "beule unten", "riss bei 3 uhr" wird durch InferCodeFromLabel erkannt
-        string? codeHint = keyword.ToUpperInvariant() switch
-        {
-            "ROHRANFANG" => "BCD",
-            "ROHRENDE" => "BCE",
-            "ANSCHLUSS" => "BCA",
-            "BOGEN" => "BCC",
-            "RISS" => "BAB",
-            "BRUCH" => "BAC",
-            "VERFORMUNG" => "BAA",
-            "OBERFLAECHENSCHADEN" => "BAF",
-            "VERSATZ" or "VERSCHIEBUNG" => "BAH",
-            "WURZELN" or "BEWUCHS" => "BBB",
-            "ABLAGERUNG" => "BBC",
-            "INKRUSTATION" => "BBA",
-            "WASSERSTAND" => "BDDC",
-            "ABBRUCH" => "BDC",
-            // Kein exaktes Stichwort → Freitext-Heuristik (z.B. "beule unten", "riss bei 3 uhr")
-            _ => VsaCodeResolver.InferCodeFromLabel(keyword)
-        };
+        string? codeHint = ResolveEingabemarkerCodeHint(keyword);
 
         try
         {
@@ -7038,10 +7046,10 @@ public partial class PlayerWindow : Window
            || code.StartsWith("BAF", StringComparison.OrdinalIgnoreCase) // Deformation
            || code.StartsWith("BAH", StringComparison.OrdinalIgnoreCase) // Versatz
            || code.StartsWith("BAI", StringComparison.OrdinalIgnoreCase) // Einragender Stutzen
-           || code.StartsWith("BAJ", StringComparison.OrdinalIgnoreCase) // Undichtheit
+           || code.StartsWith("BAJ", StringComparison.OrdinalIgnoreCase) // Oberflaechenschaden
            // Betriebliche Stoerungen (BB-Gruppe)
-           || code.StartsWith("BBA", StringComparison.OrdinalIgnoreCase) // Inkrustation
-           || code.StartsWith("BBB", StringComparison.OrdinalIgnoreCase) // Wurzeleinwuchs
+           || code.StartsWith("BBA", StringComparison.OrdinalIgnoreCase) // Wurzeln / Bewuchs
+           || code.StartsWith("BBB", StringComparison.OrdinalIgnoreCase) // Anhaftende Stoffe / Inkrustation
            || code.StartsWith("BBD", StringComparison.OrdinalIgnoreCase); // Eindringender Boden
 
     /// <summary>

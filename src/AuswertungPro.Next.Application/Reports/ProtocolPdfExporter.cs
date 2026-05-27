@@ -2260,11 +2260,11 @@ public sealed class ProtocolPdfExporter
         if (code.StartsWith("BAF", StringComparison.Ordinal)) return "deformation";  // Deformation
         if (code.StartsWith("BAH", StringComparison.Ordinal)) return "offset";       // Versatz
         if (code.StartsWith("BAI", StringComparison.Ordinal)) return "obstacle";     // Hindernis
-        if (code.StartsWith("BAJ", StringComparison.Ordinal)) return "roots";        // Wurzeleinwuchs
+        if (code.StartsWith("BAJ", StringComparison.Ordinal)) return "default";      // Oberflaechenschaden
         if (code.StartsWith("BAK", StringComparison.Ordinal)) return "infiltration"; // Infiltration
         if (code.StartsWith("BAL", StringComparison.Ordinal)) return "exfiltration"; // Exfiltration
-        if (code.StartsWith("BBA", StringComparison.Ordinal)) return "incrustation"; // Inkrustation
-        if (code.StartsWith("BBB", StringComparison.Ordinal)) return "obstacle";     // Verstopfung
+        if (code.StartsWith("BBA", StringComparison.Ordinal)) return "roots";        // Wurzeln / Bewuchs
+        if (code.StartsWith("BBB", StringComparison.Ordinal)) return "incrustation"; // Anhaftende Stoffe / Inkrustation
         if (code.StartsWith("BBC", StringComparison.Ordinal)) return "deposit";      // Ablagerung
         return "default";
     }

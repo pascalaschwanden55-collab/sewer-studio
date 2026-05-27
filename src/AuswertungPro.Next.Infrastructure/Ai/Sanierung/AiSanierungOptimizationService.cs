@@ -195,7 +195,7 @@ public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationSer
             Wichtige Regeln:
             - Wähle IMMER aus den zulässigen Massnahmen, ausser du hast einen sehr guten Grund für eine Alternative
             - Bei Zustandsklasse 4-5 darf Erneuerung empfohlen werden, bei 1-3 nur Reparatur/Renovation
-            - Liner-Verfahren sind bei Einsturz (BBB-Codes) nicht zulässig
+            - Liner-Verfahren sind bei Einsturz (BAC-Codes) nicht zulässig
             - confidence: 0.0 = unsicher, 1.0 = sehr sicher
             - cost_adjustment_factor: 1.0 = Standardkosten, >1.0 = teurer als üblich, <1.0 = günstiger
 

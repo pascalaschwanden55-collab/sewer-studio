@@ -12,7 +12,9 @@ public sealed class ProtocolPdfExporterCatalogMetaTests
     [InlineData("BAC", "break")]
     [InlineData("BAF", "deformation")]
     [InlineData("BAH", "offset")]
-    [InlineData("BBA", "incrustation")]
+    [InlineData("BAJ", "default")]
+    [InlineData("BBA", "roots")]
+    [InlineData("BBB", "incrustation")]
     [InlineData("BBC", "deposit")]
     [InlineData("ZZZ", "default")]
     public void Damage_symbol_category_uses_correct_vsa_kek_mapping(string code, string expected)

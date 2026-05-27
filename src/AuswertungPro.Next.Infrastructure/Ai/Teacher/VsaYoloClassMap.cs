@@ -42,9 +42,9 @@ public static class VsaYoloClassMap
         ["BAI"] = 8,   // Einragung Stutzen
 
         // Oberflaechenschaeden
-        ["BAJ"] = 9,   // Korrosion / Ausbrueche
-        ["BBB"] = 10,  // Wurzeleinwuchs / Bewuchs
-        ["BBA"] = 11,  // Inkrustation / Kalkablagerung
+        ["BAJ"] = 9,   // Oberflaechenschaden / Ausbrueche
+        ["BBB"] = 10,  // Anhaftende Stoffe / Inkrustation / Fett
+        ["BBA"] = 11,  // Wurzeln / Bewuchs
 
         // Betriebliche Stoerungen
         ["BBC"] = 12,  // Ablagerung Sohle
