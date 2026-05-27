@@ -43,8 +43,6 @@ Hinweise:
 - `BAA` darf deshalb nicht als einfache Code-Regel modelliert werden. Der Scope
   biegesteif/biegeweich ist fuer `S` entscheidend.
 
-## Noch offen
-
 ### BAB - Risse
 
 Quelle: PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 8: Risse.
