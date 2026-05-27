@@ -59,11 +59,15 @@ sidecar/models/**/*.pt
 sidecar/models/**/*.pth
 sidecar/models/**/*.bin
 sidecar/models/**/*.onnx
+sidecar/models/**/*.engine
 sidecar/models/**/*.safetensors
+sidecar/models/candidates/
+sidecar/models/yolo26l-seg/
 sidecar/test_export_tmp/
 sidecar/training_export/
 sidecar/yolo11m.engine
 sidecar/yolo11m.onnx
+sidecar/.ruff_cache/
 
 # Lokale UI-Config-Backups
 src/AuswertungPro.Next.UI/Config/*.bak_*.json
@@ -74,6 +78,7 @@ tests/**/TestResults/
 # Lokale SDK/Runtime-Kopien (gross)
 .dotnet/
 .dotnet_cli/
+.dotnet_cli_home/
 .dotnet_home/
 
 # IDE
@@ -83,6 +88,10 @@ tests/**/TestResults/
 Rohdaten/
 _legacy/
 runs/
+Knowledge/
+skills.pdf
+CODEX_SKILLS.md
+docs/benchmarks/
 
 # YOLO-Modelle im Projektroot
 *.pt

@@ -3,6 +3,7 @@
 *.pth
 *.bin
 *.onnx
+*.engine
 *.safetensors
 !.gitignore
 !.gitkeep

@@ -83,7 +83,7 @@ public static class KnowledgeBasePaths
         if (!string.IsNullOrWhiteSpace(envRoot))
             return envRoot;
 
-        return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Knowledge");
+        return Path.Combine(GetAppDataDir(), "Knowledge");
     }
 
     private static void TryMigrateFromAppData(string knowledgeRoot)
