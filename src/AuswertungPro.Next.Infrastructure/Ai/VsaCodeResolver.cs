@@ -122,42 +122,42 @@ public static class VsaCodeResolver
         // Grundstruktur
         if (Has(text, "anschluss") || Has(text, "abzweig") || Has(text, "stutzen")
             || Has(text, "zulauf") || Has(text, "lateral connection") || HasWord(text, "lateral"))
-            return "BCA";
+            return CatalogValidated("BCA");
         if (Has(text, "bogen") || Has(text, "kruemm") || Has(text, "kurve") || HasWord(text, "bend"))
-            return "BCC";
+            return CatalogValidated("BCC");
         if (Has(text, "rohranfang") || Has(text, "pipe start") || Has(text, "anfangsknoten")
             || Has(text, "einstieg") || HasWord(text, "manhole"))
-            return "BCD";
+            return CatalogValidated("BCD");
         if (Has(text, "rohrende") || Has(text, "pipe end") || Has(text, "endknoten")
             || Has(text, "ausstieg"))
-            return "BCE";
+            return CatalogValidated("BCE");
 
         // Strukturelle Schaeden
         if (Has(text, "riss") || HasWord(text, "crack") || Has(text, "fracture") || Has(text, "fissure"))
-            return "BAB";
+            return CatalogValidated("BAB");
         if (Has(text, "bruch") || Has(text, "einsturz") || Has(text, "collapse"))
-            return "BAC";
+            return CatalogValidated("BAC");
         if (Has(text, "deformation") || Has(text, "verformung") || HasWord(text, "oval"))
-            return "BAF";
+            return CatalogValidated("BAF");
         if (Has(text, "versatz") || HasWord(text, "offset") || Has(text, "displaced"))
-            return "BAH";
+            return CatalogValidated("BAH");
+        if (Has(text, "wurzel") || Has(text, "root intrusion") || Has(text, "bewuchs"))
+            return CatalogValidated("BBA");
         if (Has(text, "einragung") || Has(text, "intrusion") || Has(text, "protruding"))
-            return "BAI";
+            return CatalogValidated("BAI");
 
         // Oberflaechenschaeden
         if (Has(text, "korrosion") || Has(text, "corrosion") || HasWord(text, "rost")
             || Has(text, "erosion"))
-            return "BAJ";
-        if (Has(text, "wurzel") || Has(text, "root intrusion") || Has(text, "bewuchs"))
-            return "BBB";
+            return CatalogValidated("BAJ");
         if (Has(text, "inkrustation") || Has(text, "encrustation") || Has(text, "kalk")
             || Has(text, "anhaftung") || Has(text, "sinter") || Has(text, "attached deposit"))
-            return "BBA";
+            return CatalogValidated("BBB");
 
         // Betrieblich
         if (Has(text, "ablagerung") || HasWord(text, "sediment") || Has(text, "schlamm")
             || HasWord(text, "silt") || HasWord(text, "debris"))
-            return "BBC";
+            return CatalogValidated("BBC");
         if (Has(text, "wasserspiegel")
             || Has(text, "wasserstand")
             || Has(text, "wasserlinie")
@@ -169,7 +169,7 @@ public static class VsaCodeResolver
             || (HasWord(text, "water") &&
                 (HasWord(text, "level") || HasWord(text, "standing")
                  || Has(text, "sohle") || Has(text, "invert"))))
-            return "BDDC";
+            return CatalogValidated("BDDC");
 
         return null;
     }
@@ -290,6 +290,14 @@ public static class VsaCodeResolver
     }
 
     private static bool Has(string text, string term) => text.Contains(term);
+
+    private static string? CatalogValidated(string code)
+    {
+        if (_catalogProvider is null)
+            return code;
+
+        return NormalizeFindingCode(code) is null ? null : code;
+    }
 
     private static string? LookupCatalogLabel(string code)
     {

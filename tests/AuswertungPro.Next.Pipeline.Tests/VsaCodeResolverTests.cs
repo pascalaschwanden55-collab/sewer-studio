@@ -18,7 +18,11 @@ public sealed class VsaCodeResolverTests
             Code("BAC", "Leitungsbruch/Einsturz"),
             Code("BAF", "Oberflaechenschaden"),
             Code("BAG", "Einragender Anschluss", requiresRange: true),
+            Code("BAH", "Schadhafte Verbindung"),
+            Code("BAI", "Einragung"),
+            Code("BAJ", "Oberflaechenschaden"),
             Code("BCA", "Seitlicher Anschluss"),
+            Code("BCC", "Bogen"),
             Code("BCD", "Rohranfang"),
             Code("BCE", "Rohrende"),
             Code("BBA", "Wurzeln", requiresRange: true),
@@ -90,9 +94,9 @@ public sealed class VsaCodeResolverTests
     [InlineData("Surface crack", "BAB")]
     [InlineData("Bruch/Einsturz", "BAC")]
     [InlineData("Deformation oval", "BAF")]
-    [InlineData("Wurzeleinwuchs", "BBB")]
-    [InlineData("Inkrustation verkalkt", "BBA")]
-    [InlineData("Attached deposit on pipe wall", "BBA")]
+    [InlineData("Wurzeleinwuchs", "BBA")]
+    [InlineData("Inkrustation verkalkt", "BBB")]
+    [InlineData("Attached deposit on pipe wall", "BBB")]
     [InlineData("Ablagerung in der Sohle", "BBC")]
     [InlineData("Wasserstand in der Sohle", "BDDC")]
     [InlineData("Standing water at invert", "BDDC")]
@@ -101,6 +105,20 @@ public sealed class VsaCodeResolverTests
     {
         var result = VsaCodeResolver.InferCodeFromLabel(label);
         Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void InferCodeFromLabel_WhenInferredCodeIsMissingFromCatalog_ReturnsNull()
+    {
+        VsaCodeResolver.ConfigureCatalog(new InMemoryCodeCatalogProvider(new[]
+        {
+            Code("BAB", "Risse"),
+            Code("BAC", "Leitungsbruch/Einsturz")
+        }));
+
+        var result = VsaCodeResolver.InferCodeFromLabel("Muffenversatz");
+
+        Assert.Null(result);
     }
 
     [Theory]
@@ -125,16 +143,13 @@ public sealed class VsaCodeResolverTests
         // "crack" als Wort → BAB, aber "cracking joke" koennte matchen — akzeptabel
         Assert.Equal("BAB", VsaCodeResolver.InferCodeFromLabel("a crack in the pipe"));
 
-        // "root intrusion" matcht "intrusion" (BAI) VOR "root intrusion" (BBB)
-        // weil BAI-Check frueher in der Kette steht. Das ist korrekt —
-        // "intrusion" ist der spezifischere Fachbegriff (Einragung).
-        // Fuer Wurzeleinwuchs braucht es "wurzel" oder "bewuchs".
-        Assert.Equal("BAI", VsaCodeResolver.InferCodeFromLabel("root intrusion"));
-        Assert.Equal("BBB", VsaCodeResolver.InferCodeFromLabel("Wurzeleinwuchs"));
+        // "root intrusion" ist fachlich Wurzeleinwuchs, nicht generische Einragung (BAI).
+        Assert.Equal("BBA", VsaCodeResolver.InferCodeFromLabel("root intrusion"));
+        Assert.Equal("BBA", VsaCodeResolver.InferCodeFromLabel("Wurzeleinwuchs"));
         Assert.Null(VsaCodeResolver.InferCodeFromLabel("root cause analysis"));
 
         // "deposit" allein war frueher zu breit — jetzt nur "attached deposit"
-        Assert.Equal("BBA", VsaCodeResolver.InferCodeFromLabel("attached deposit"));
+        Assert.Equal("BBB", VsaCodeResolver.InferCodeFromLabel("attached deposit"));
         Assert.Null(VsaCodeResolver.InferCodeFromLabel("bank deposit"));
     }
 
