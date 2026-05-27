@@ -34,6 +34,16 @@ To rebuild the local YOLO TensorRT engine on the target GPU machine:
 
 The script backs up the old `.engine` file first and writes JSON metadata with hashes and version information. It then exports `models\yolo26m\yolo26m.pt` to ONNX and builds `models\yolo26m\yolo26m.engine` with `trtexec --fp16`.
 
+## Telemetry
+
+YOLO detection requests append one JSON line to:
+
+```text
+%LocalAppData%\SewerStudio\Telemetry\sidecar.jsonl
+```
+
+The path can be changed with `SEWER_SIDECAR_TELEMETRY_DIR`. Set `SEWER_SIDECAR_TELEMETRY_ENABLED=false` to disable it.
+
 ## Development
 
 - Top-level dependencies are listed in `requirements.txt`.
