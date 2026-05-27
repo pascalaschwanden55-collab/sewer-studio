@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Protocol;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
@@ -34,11 +35,16 @@ public sealed class GuidedVerificationService
     private static readonly TimeSpan FrameTimeout = TimeSpan.FromSeconds(60);
     private readonly OllamaClient _client;
     private readonly string _model;
+    private readonly ICodeCatalogProvider? _codeCatalog;
 
-    public GuidedVerificationService(OllamaClient client, string visionModel)
+    public GuidedVerificationService(
+        OllamaClient client,
+        string visionModel,
+        ICodeCatalogProvider? codeCatalog = null)
     {
         _client = client;
         _model = visionModel;
+        _codeCatalog = codeCatalog;
     }
 
     /// <summary>
@@ -81,9 +87,9 @@ public sealed class GuidedVerificationService
         }
     }
 
-    private static string BuildPrompt(GroundTruthEntry entry)
+    private string BuildPrompt(GroundTruthEntry entry)
     {
-        string codeDesc = GetCodeDescription(entry.VsaCode);
+        string codeDesc = ResolveCodeDescription(entry.VsaCode, _codeCatalog);
         string clockHint = !string.IsNullOrEmpty(entry.ClockPosition)
             ? $" bei {entry.ClockPosition} Uhr"
             : "";
@@ -206,56 +212,38 @@ public sealed class GuidedVerificationService
         return null;
     }
 
-    /// <summary>VSA-Code Kurzbeschreibungen fuer den Prompt.</summary>
-    private static string GetCodeDescription(string vsaCode)
+    /// <summary>VSA-Code Kurzbeschreibung fuer den Prompt.</summary>
+    internal static string ResolveCodeDescription(string vsaCode, ICodeCatalogProvider? codeCatalog)
     {
-        string baseCode = vsaCode.Split('.')[0].ToUpperInvariant();
-        return baseCode switch
-        {
-            // Bauliche Schaeden (BA*)
-            "BAA" => "Verformung",
-            "BAB" => "Riss/Bruch",
-            "BAC" => "Rohrbruch/Einsturz",
-            "BAD" => "Oberflaechenschaden",
-            "BAE" => "Verschobene Verbindung",
-            "BAF" => "Scherbenbildung",
-            "BAG" => "Fehlende Wandteile",
-            "BAH" => "Korrosion",
-            "BAI" => "Poroese Rohrwand",
-            "BAJ" => "Schadhafter Anschluss",
-            "BAK" => "Einragender Anschluss",
-            "BAL" => "Verschobene Rohrverbindung",
-            "BAM" => "Klaffende Rohrverbindung",
-            "BAN" => "Mechanischer Verschleiss",
-            "BAO" => "Fehlstelle",
-            // Betriebliche Schaeden (BB*)
-            "BBA" => "Wurzeleinwuchs",
-            "BBB" => "Inkrustation/Ablagerung hart",
-            "BBC" => "Ablagerung fein",
-            "BBD" => "Anhaftungen",
-            "BBE" => "Verstopfung/Pfropfen",
-            "BBF" => "Eingewachsener Dichtring",
-            "BBG" => "Sichtbare Undichtheit",
-            // Inventar (BC*)
-            "BCA" => "Anschluss",
-            "BCB" => "Seitlicher Anschluss",
-            "BCC" => "Scheitelanschluss",
-            // Sonderfaelle (BD*)
-            "BDA" => "Hindernis",
-            "BDB" => "Eindringen von Erdreich",
-            "BDC" => "Eindringen anderes Material",
-            "BDD" => "Nagertiere/Ungeziefer",
-            "BDE" => "Sonstiger Schaden",
-            "BDBD" => "Eindringen von Boden/Erdreich",
-            // Allgemein
-            _ => baseCode.Length >= 2 ? baseCode[1] switch
-            {
-                'A' => $"Baulicher Schaden ({baseCode})",
-                'B' => $"Betrieblicher Schaden ({baseCode})",
-                'C' => $"Inventar ({baseCode})",
-                'D' => $"Sonderbefund ({baseCode})",
-                _ => $"Schadenscode {baseCode}"
-            } : $"Code {baseCode}"
-        };
+        var code = NormalizeCode(vsaCode);
+        if (string.IsNullOrWhiteSpace(code))
+            return string.Empty;
+
+        if (TryResolveCatalogTitle(code, codeCatalog, out var title))
+            return title;
+
+        if (code.Length > 3 && TryResolveCatalogTitle(code[..3], codeCatalog, out title))
+            return title;
+
+        return code;
     }
+
+    private static bool TryResolveCatalogTitle(
+        string code,
+        ICodeCatalogProvider? codeCatalog,
+        out string title)
+    {
+        title = string.Empty;
+        if (codeCatalog is null)
+            return false;
+
+        if (!codeCatalog.TryGet(code, out var def))
+            return false;
+
+        title = string.IsNullOrWhiteSpace(def.Title) ? def.Code : def.Title.Trim();
+        return !string.IsNullOrWhiteSpace(title);
+    }
+
+    private static string NormalizeCode(string vsaCode)
+        => (vsaCode ?? string.Empty).Split('.')[0].Trim().ToUpperInvariant();
 }
