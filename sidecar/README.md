@@ -24,6 +24,16 @@ Start the sidecar with:
 ```
 The sidecar will start on `http://127.0.0.1:8100`. Sewer-Studio automatically detects and connects to it if it is running.
 
+## TensorRT Engine
+
+To rebuild the local YOLO TensorRT engine on the target GPU machine:
+
+```powershell
+.\build_engine.ps1
+```
+
+The script backs up the old `.engine` file first and writes JSON metadata with hashes and version information. It then exports `models\yolo26m\yolo26m.pt` to ONNX and builds `models\yolo26m\yolo26m.engine` with `trtexec --fp16`.
+
 ## Development
 
 - Top-level dependencies are listed in `requirements.txt`.
