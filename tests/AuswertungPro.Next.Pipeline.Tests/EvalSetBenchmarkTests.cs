@@ -439,6 +439,112 @@ public sealed class EvalSetBenchmarkTests : IDisposable
     }
 
     [Fact]
+    public void YoloDetectBaselineScorer_marks_presence_metrics_as_health_not_quality()
+    {
+        var cases = new[]
+        {
+            new EvalSetBenchmarkCase("a", "a.png", "a.png", "BBAA", "BBAA", "top5", 1, HasYoloLabel: true),
+            new EvalSetBenchmarkCase("b", "b.png", "b.png", "LEER", "LEER", "negativ", null, HasYoloLabel: false),
+            new EvalSetBenchmarkCase("c", "c.png", "c.png", "BDCZC", "BDCZC", "top5", 2, HasYoloLabel: false),
+        };
+        var predictions = new[]
+        {
+            Prediction("a.png", [new YoloDetectBaselineDetection("roots", 0.91)]),
+            Prediction("b.png", []),
+            Prediction("c.png", [new YoloDetectBaselineDetection("deposit", 0.74)]),
+        };
+
+        var rows = YoloDetectBaselineScorer.Evaluate(cases, predictions, confidenceThreshold: 0.5);
+        var summary = YoloDetectBaselineScorer.Summarize(rows);
+
+        Assert.Equal("presence_health", summary.MetricKind);
+        Assert.False(summary.IsQualityProof);
+        Assert.Equal(1, summary.TruePositiveFrames);
+        Assert.Equal(1, summary.FalsePositiveFrames);
+        Assert.Equal(0.5, summary.Precision);
+        Assert.Equal(1d / 3d, summary.FalsePositivesPerFrame);
+        Assert.Equal(1, summary.NoDamageNegativeFrames);
+        Assert.Equal(1, summary.UnlabeledVisibleOrOtherCodeFrames);
+        Assert.Equal(YoloDetectNegativeKind.PositiveLabel, rows[0].NegativeKind);
+        Assert.Equal(YoloDetectNegativeKind.NoDamage, rows[1].NegativeKind);
+        Assert.Equal(YoloDetectNegativeKind.UnlabeledVisibleOrOtherCode, rows[2].NegativeKind);
+    }
+
+    [Fact]
+    public void YoloDetectBaselineScorer_sweeps_fixed_confidence_thresholds()
+    {
+        var cases = new[]
+        {
+            new EvalSetBenchmarkCase("a", "a.png", "a.png", "BBAA", "BBAA", "top5", 1, HasYoloLabel: true),
+            new EvalSetBenchmarkCase("b", "b.png", "b.png", "LEER", "LEER", "negativ", null, HasYoloLabel: false),
+        };
+        var predictions = new[]
+        {
+            Prediction("a.png", [new YoloDetectBaselineDetection("roots", 0.60)]),
+            Prediction("b.png", [new YoloDetectBaselineDetection("roots", 0.80)]),
+        };
+
+        var sweep = YoloDetectBaselineScorer.SweepThresholds(cases, predictions, [0.25, 0.7, 0.9]);
+
+        Assert.Equal(new[] { 0.25, 0.7, 0.9 }, sweep.Select(s => s.ConfidenceThreshold).ToArray());
+        Assert.Equal(1, sweep[0].Summary.TruePositiveFrames);
+        Assert.Equal(1, sweep[0].Summary.FalsePositiveFrames);
+        Assert.Equal(0.5, sweep[0].Summary.Precision);
+        Assert.Equal(0, sweep[1].Summary.TruePositiveFrames);
+        Assert.Equal(1, sweep[1].Summary.FalsePositiveFrames);
+        Assert.Equal(0, sweep[2].Summary.FalsePositiveFrames);
+        Assert.Equal(1, sweep[2].Summary.TrueNegativeFrames);
+    }
+
+    [Fact]
+    public void YoloDetectBaselineScorer_groups_false_positive_detections_by_class_and_confidence()
+    {
+        var cases = new[]
+        {
+            new EvalSetBenchmarkCase("a", "a.png", "a.png", "LEER", "LEER", "negativ", null, HasYoloLabel: false),
+            new EvalSetBenchmarkCase("b", "b.png", "b.png", "BDCZC", "BDCZC", "top5", 2, HasYoloLabel: false),
+        };
+        var predictions = new[]
+        {
+            Prediction("a.png", [new YoloDetectBaselineDetection("roots", 0.92), new YoloDetectBaselineDetection("roots", 0.88)]),
+            Prediction("b.png", [new YoloDetectBaselineDetection("crack", 0.52)]),
+        };
+
+        var rows = YoloDetectBaselineScorer.Evaluate(cases, predictions, confidenceThreshold: 0.25);
+        var summary = YoloDetectBaselineScorer.Summarize(rows);
+
+        Assert.Contains(summary.FalsePositiveBuckets, b =>
+            b.ClassName == "roots" &&
+            b.ConfidenceBucket == ">=0.90" &&
+            b.Count == 1 &&
+            b.MaxConfidence == 0.92);
+        Assert.Contains(summary.FalsePositiveBuckets, b =>
+            b.ClassName == "roots" &&
+            b.ConfidenceBucket == "0.85-0.89" &&
+            b.Count == 1);
+        Assert.Contains(summary.FalsePositiveBuckets, b =>
+            b.ClassName == "crack" &&
+            b.ConfidenceBucket == "0.50-0.69" &&
+            b.Count == 1);
+    }
+
+    private static YoloDetectBaselinePrediction Prediction(
+        string frameFileName,
+        IReadOnlyList<YoloDetectBaselineDetection> detections)
+        => new(
+            frameFileName,
+            IsRelevant: true,
+            Detections: detections,
+            RoundtripMs: 100,
+            InferenceTimeMs: 80,
+            QueueWaitMs: 2,
+            ModelName: "yolo26m.pt",
+            Device: "cpu",
+            VramAllocatedGb: 0,
+            VramTotalGb: 31.5,
+            FrameClass: "relevant");
+
+    [Fact]
     public void RouterDatasetBuilder_copies_router_classes_and_skips_eval_set_images()
     {
         var sourceRoot = Path.Combine(_root, "router_source");

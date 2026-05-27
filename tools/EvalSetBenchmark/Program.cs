@@ -380,11 +380,16 @@ static async Task<int> RunYoloDetectOnlyAsync(
     if (health is null)
         throw new InvalidOperationException($"Sidecar nicht erreichbar: {sidecarUrl}");
 
-    Console.WriteLine("YOLO-Detect-Baseline:");
+    var thresholds = YoloDetectBaselineScorer.DefaultThresholds;
+    var requestConfidence = thresholds.Min();
+
+    Console.WriteLine("YOLO-Detect-Healthlauf:");
     Console.WriteLine($"  Eval-Set: {options.EvalSetRoot}");
     Console.WriteLine($"  Frames:   {cases.Count}/{allCases.Count}");
     Console.WriteLine($"  Sidecar:  {sidecarUrl}");
-    Console.WriteLine($"  Conf:     {options.YoloMinConfidence.ToString("P0", CultureInfo.InvariantCulture)}");
+    Console.WriteLine($"  Request:  {requestConfidence.ToString("P0", CultureInfo.InvariantCulture)} Mindest-Confidence");
+    Console.WriteLine($"  Sweep:    {string.Join(" / ", thresholds.Select(t => t.ToString("0.##", CultureInfo.InvariantCulture)))}");
+    Console.WriteLine("  Hinweis:  Presence-only ist Health-Metrik, kein fachlicher Qualitätsbeweis.");
     Console.WriteLine();
 
     var predictions = new List<YoloDetectBaselinePrediction>(cases.Count);
@@ -398,7 +403,7 @@ static async Task<int> RunYoloDetectOnlyAsync(
         {
             var b64 = Convert.ToBase64String(File.ReadAllBytes(c.ImagePath));
             var response = await client.DetectYoloAsync(
-                new YoloRequest(b64, options.YoloMinConfidence),
+                new YoloRequest(b64, requestConfidence),
                 cts.Token).ConfigureAwait(false);
             sw.Stop();
 
@@ -451,15 +456,18 @@ static async Task<int> RunYoloDetectOnlyAsync(
         }
     }
 
-    var rows = YoloDetectBaselineScorer.Evaluate(cases, predictions);
+    var rows = YoloDetectBaselineScorer.Evaluate(cases, predictions, requestConfidence);
     var summary = YoloDetectBaselineScorer.Summarize(rows);
+    var thresholdSweep = YoloDetectBaselineScorer.SweepThresholds(cases, predictions, thresholds);
     var stamp = DateTimeOffset.Now.ToString("yyyyMMdd_HHmmss");
     var modelName = rows.Select(r => r.ModelName).FirstOrDefault(m => !string.IsNullOrWhiteSpace(m)) ?? "yolo";
-    var runSlug = $"yolo_detect_{Slug(modelName)}";
+    var runSlug = $"yolo_detect_sweep_{Slug(modelName)}";
     var csvPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{runSlug}.csv");
+    var sweepCsvPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{runSlug}_thresholds.csv");
     var jsonPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{runSlug}.json");
 
     YoloDetectBaselineScorer.WriteCsv(csvPath, rows);
+    YoloDetectBaselineScorer.WriteSweepCsv(sweepCsvPath, thresholdSweep);
     YoloDetectBaselineScorer.WriteSummaryJson(jsonPath, summary, new
     {
         created_at = DateTimeOffset.Now.ToString("O"),
@@ -467,21 +475,47 @@ static async Task<int> RunYoloDetectOnlyAsync(
         frames_total = allCases.Count,
         frames_run = cases.Count,
         sidecar_url = sidecarUrl.ToString(),
-        yolo_min_confidence = options.YoloMinConfidence,
+        sidecar_request_min_confidence = requestConfidence,
+        threshold_sweep = thresholds,
+        metric_kind = "presence_health",
+        is_quality_proof = false,
+        note = "YOLO detect-only misst nur Erkennung vorhanden/nicht vorhanden. Das ist ein Health-Signal, kein fachlicher Qualitätsnachweis.",
         model_name = modelName,
         manifest = TryReadManifestInfo(options.EvalSetRoot)
-    });
+    }, thresholdSweep);
 
     Console.WriteLine();
-    Console.WriteLine("YOLO-Detect-Ergebnis:");
-    Console.WriteLine($"  Positive Recall:   {summary.TruePositiveFrames}/{summary.ExpectedPositiveFrames} = {summary.PositiveRecall:P1}");
-    Console.WriteLine($"  False Positive:    {summary.FalsePositiveFrames}/{summary.ExpectedNegativeFrames} = {summary.FalsePositiveRate:P1}");
-    Console.WriteLine($"  Detected Frames:   {summary.DetectedFrames}/{summary.Total}");
-    Console.WriteLine($"  Total Detections:  {summary.TotalDetections}");
-    Console.WriteLine($"  Roundtrip Mittel:  {summary.AverageRoundtripMs:F1} ms");
-    Console.WriteLine($"  Inferenz Mittel:   {summary.AverageInferenceMs:F1} ms");
-    Console.WriteLine($"  CSV:               {csvPath}");
-    Console.WriteLine($"  JSON:              {jsonPath}");
+    Console.WriteLine("YOLO-Detect-Ergebnis (Health, nicht Qualitätsbeweis):");
+    foreach (var entry in thresholdSweep)
+    {
+        var s = entry.Summary;
+        Console.WriteLine(
+            $"  t={entry.ConfidenceThreshold:0.##}  " +
+            $"Recall {s.TruePositiveFrames}/{s.ExpectedPositiveFrames}={s.PositiveRecall:P1}  " +
+            $"Precision {s.Precision:P1}  " +
+            $"FP/frame {s.FalsePositivesPerFrame:F3}  " +
+            $"Detections {s.TotalDetections}");
+    }
+
+    Console.WriteLine();
+    Console.WriteLine("Negativbilder:");
+    Console.WriteLine($"  Kein Schaden:       {summary.NoDamageNegativeFrames}");
+    Console.WriteLine($"  Ohne YOLO-Label:    {summary.UnlabeledVisibleOrOtherCodeFrames}");
+    Console.WriteLine();
+    Console.WriteLine("False-Positive Top-Gruppen:");
+    foreach (var bucket in summary.FalsePositiveBuckets.Take(8))
+    {
+        Console.WriteLine(
+            $"  {bucket.ClassName,-16} {bucket.ConfidenceBucket,-9} " +
+            $"{bucket.Count,3}  max {bucket.MaxConfidence:P0}  avg {bucket.AverageConfidence:P0}");
+    }
+
+    Console.WriteLine();
+    Console.WriteLine($"  Roundtrip Mittel:   {summary.AverageRoundtripMs:F1} ms");
+    Console.WriteLine($"  Inferenz Mittel:    {summary.AverageInferenceMs:F1} ms");
+    Console.WriteLine($"  Detail-CSV:         {csvPath}");
+    Console.WriteLine($"  Threshold-CSV:      {sweepCsvPath}");
+    Console.WriteLine($"  JSON:               {jsonPath}");
 
     return 0;
 }
@@ -498,7 +532,7 @@ Misst ein eingefrorenes Eval-Set gegen das aktuelle Ollama-Vision-Modell.
 Beispiele:
   dotnet run --project tools/EvalSetBenchmark -- --max 5
   dotnet run --project tools/EvalSetBenchmark -- --eval-set C:\KI_BRAIN\eval_set --model qwen3-vl:8b-q8
-  dotnet run --project tools/EvalSetBenchmark -- --yolo-detect-only --yolo-min-conf 0.25
+  dotnet run --project tools/EvalSetBenchmark -- --yolo-detect-only
 
 Optionen:
   --eval-set <pfad>     Standard: C:\KI_BRAIN\eval_set
@@ -511,10 +545,10 @@ Optionen:
   --yolo-context        Testmodus: YOLO-cls liefert 1-3 Kandidaten fuer Qwen
   --yolo-presence-context
                         Testmodus: YOLO-cls liefert nur unsichere Bildhinweise
-  --yolo-detect-only    Nur aktuellen Sidecar-YOLO-Detektor messen, kein Qwen/Ollama
+  --yolo-detect-only    Sidecar-YOLO als Health-Metrik messen, inkl. Sweep 0.25/0.5/0.7/0.85/0.9
   --sidecar-url <url>   Standard: App-Konfiguration
   --yolo-top-k <zahl>   Standard: 3
-  --yolo-min-conf <x>   Standard: 0.05
+  --yolo-min-conf <x>   Standard: 0.05 (nicht fuer --yolo-detect-only; dort fixer Sweep)
   --classifier-dataset <pfad>
                         YOLO-ImageFolder-Dataset (train/<klasse>) gegen Eval-Set pruefen
   --coverage-only       Nur Classifier/Eval-Set-Abdeckung pruefen, kein Qwen-Lauf

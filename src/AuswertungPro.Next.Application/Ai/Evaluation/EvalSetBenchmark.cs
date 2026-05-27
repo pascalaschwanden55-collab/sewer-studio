@@ -106,14 +106,23 @@ public sealed record YoloDetectBaselinePrediction(
     string? FrameClass,
     string? Error = null);
 
+public enum YoloDetectNegativeKind
+{
+    PositiveLabel,
+    NoDamage,
+    UnlabeledVisibleOrOtherCode
+}
+
 public sealed record YoloDetectBaselineRow(
     string FrameFileName,
     string ExpectedFullCode,
     bool ExpectedHasLabel,
+    YoloDetectNegativeKind NegativeKind,
     bool Detected,
     int DetectionCount,
     string TopClass,
     double TopConfidence,
+    IReadOnlyList<YoloDetectBaselineDetection> Detections,
     long RoundtripMs,
     double InferenceTimeMs,
     double QueueWaitMs,
@@ -124,10 +133,21 @@ public sealed record YoloDetectBaselineRow(
     string? FrameClass,
     string? Error);
 
+public sealed record YoloDetectFalsePositiveBucket(
+    string ClassName,
+    string ConfidenceBucket,
+    int Count,
+    double MaxConfidence,
+    double AverageConfidence);
+
 public sealed record YoloDetectBaselineSummary(
     int Total,
+    string MetricKind,
+    bool IsQualityProof,
     int ExpectedPositiveFrames,
     int ExpectedNegativeFrames,
+    int NoDamageNegativeFrames,
+    int UnlabeledVisibleOrOtherCodeFrames,
     int DetectedFrames,
     int TruePositiveFrames,
     int FalseNegativeFrames,
@@ -135,16 +155,26 @@ public sealed record YoloDetectBaselineSummary(
     int TrueNegativeFrames,
     int TotalDetections,
     double PositiveRecall,
+    double Precision,
     double FalsePositiveRate,
+    double FalsePositivesPerFrame,
     double AverageRoundtripMs,
     double AverageInferenceMs,
-    double AverageQueueWaitMs);
+    double AverageQueueWaitMs,
+    IReadOnlyList<YoloDetectFalsePositiveBucket> FalsePositiveBuckets);
+
+public sealed record YoloDetectThresholdSummary(
+    double ConfidenceThreshold,
+    YoloDetectBaselineSummary Summary);
 
 public static class YoloDetectBaselineScorer
 {
+    public static readonly IReadOnlyList<double> DefaultThresholds = [0.25, 0.5, 0.7, 0.85, 0.9];
+
     public static IReadOnlyList<YoloDetectBaselineRow> Evaluate(
         IReadOnlyList<EvalSetBenchmarkCase> cases,
-        IReadOnlyList<YoloDetectBaselinePrediction> predictions)
+        IReadOnlyList<YoloDetectBaselinePrediction> predictions,
+        double confidenceThreshold = 0)
     {
         ArgumentNullException.ThrowIfNull(cases);
         ArgumentNullException.ThrowIfNull(predictions);
@@ -154,9 +184,11 @@ public static class YoloDetectBaselineScorer
         return cases.Select(c =>
         {
             byFrame.TryGetValue(c.FrameFileName, out var prediction);
-            var detections = prediction?.Detections ?? Array.Empty<YoloDetectBaselineDetection>();
-            var top = detections
+            var detections = (prediction?.Detections ?? Array.Empty<YoloDetectBaselineDetection>())
+                .Where(d => d.Confidence >= confidenceThreshold)
                 .OrderByDescending(d => d.Confidence)
+                .ToList();
+            var top = detections
                 .FirstOrDefault();
             var detected = detections.Count > 0;
 
@@ -164,10 +196,12 @@ public static class YoloDetectBaselineScorer
                 FrameFileName: c.FrameFileName,
                 ExpectedFullCode: c.ExpectedFullCode,
                 ExpectedHasLabel: c.HasYoloLabel,
+                NegativeKind: ClassifyNegativeKind(c),
                 Detected: detected,
                 DetectionCount: detections.Count,
                 TopClass: top?.ClassName ?? "",
                 TopConfidence: top?.Confidence ?? 0,
+                Detections: detections,
                 RoundtripMs: prediction?.RoundtripMs ?? 0,
                 InferenceTimeMs: prediction?.InferenceTimeMs ?? 0,
                 QueueWaitMs: prediction?.QueueWaitMs ?? 0,
@@ -180,6 +214,20 @@ public static class YoloDetectBaselineScorer
         }).ToList();
     }
 
+    public static IReadOnlyList<YoloDetectThresholdSummary> SweepThresholds(
+        IReadOnlyList<EvalSetBenchmarkCase> cases,
+        IReadOnlyList<YoloDetectBaselinePrediction> predictions,
+        IReadOnlyList<double> confidenceThresholds)
+    {
+        ArgumentNullException.ThrowIfNull(confidenceThresholds);
+
+        return confidenceThresholds
+            .Select(threshold => new YoloDetectThresholdSummary(
+                threshold,
+                Summarize(Evaluate(cases, predictions, threshold))))
+            .ToList();
+    }
+
     public static YoloDetectBaselineSummary Summarize(IReadOnlyList<YoloDetectBaselineRow> rows)
     {
         ArgumentNullException.ThrowIfNull(rows);
@@ -187,6 +235,8 @@ public static class YoloDetectBaselineScorer
         var total = rows.Count;
         var expectedPositive = rows.Count(r => r.ExpectedHasLabel);
         var expectedNegative = total - expectedPositive;
+        var noDamageNegative = rows.Count(r => !r.ExpectedHasLabel && r.NegativeKind == YoloDetectNegativeKind.NoDamage);
+        var unlabeledVisibleOrOtherCode = rows.Count(r => !r.ExpectedHasLabel && r.NegativeKind == YoloDetectNegativeKind.UnlabeledVisibleOrOtherCode);
         var detected = rows.Count(r => r.Detected);
         var truePositive = rows.Count(r => r.ExpectedHasLabel && r.Detected);
         var falseNegative = rows.Count(r => r.ExpectedHasLabel && !r.Detected);
@@ -195,8 +245,12 @@ public static class YoloDetectBaselineScorer
 
         return new YoloDetectBaselineSummary(
             Total: total,
+            MetricKind: "presence_health",
+            IsQualityProof: false,
             ExpectedPositiveFrames: expectedPositive,
             ExpectedNegativeFrames: expectedNegative,
+            NoDamageNegativeFrames: noDamageNegative,
+            UnlabeledVisibleOrOtherCodeFrames: unlabeledVisibleOrOtherCode,
             DetectedFrames: detected,
             TruePositiveFrames: truePositive,
             FalseNegativeFrames: falseNegative,
@@ -204,23 +258,27 @@ public static class YoloDetectBaselineScorer
             TrueNegativeFrames: trueNegative,
             TotalDetections: rows.Sum(r => r.DetectionCount),
             PositiveRecall: Ratio(truePositive, expectedPositive),
+            Precision: Ratio(truePositive, detected),
             FalsePositiveRate: Ratio(falsePositive, expectedNegative),
+            FalsePositivesPerFrame: Ratio(falsePositive, total),
             AverageRoundtripMs: Average(rows, r => r.RoundtripMs),
             AverageInferenceMs: Average(rows, r => r.InferenceTimeMs),
-            AverageQueueWaitMs: Average(rows, r => r.QueueWaitMs));
+            AverageQueueWaitMs: Average(rows, r => r.QueueWaitMs),
+            FalsePositiveBuckets: BuildFalsePositiveBuckets(rows));
     }
 
     public static void WriteCsv(string path, IReadOnlyList<YoloDetectBaselineRow> rows)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         using var writer = new StreamWriter(path, false, new UTF8Encoding(false));
-        writer.WriteLine("frame,expected_code,expected_has_label,detected,detection_count,top_class,top_confidence,roundtrip_ms,inference_ms,queue_wait_ms,model_name,device,vram_allocated_gb,vram_total_gb,frame_class,error");
+        writer.WriteLine("frame,expected_code,expected_has_label,negative_kind,detected,detection_count,top_class,top_confidence,roundtrip_ms,inference_ms,queue_wait_ms,model_name,device,vram_allocated_gb,vram_total_gb,frame_class,error");
         foreach (var r in rows)
         {
             writer.WriteLine(string.Join(",",
                 Csv(r.FrameFileName),
                 Csv(r.ExpectedFullCode),
                 Bool(r.ExpectedHasLabel),
+                Csv(r.NegativeKind.ToString()),
                 Bool(r.Detected),
                 r.DetectionCount.ToString(CultureInfo.InvariantCulture),
                 Csv(r.TopClass),
@@ -237,12 +295,93 @@ public static class YoloDetectBaselineScorer
         }
     }
 
-    public static void WriteSummaryJson(string path, YoloDetectBaselineSummary summary, object metadata)
+    public static void WriteSweepCsv(string path, IReadOnlyList<YoloDetectThresholdSummary> sweep)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        var json = JsonSerializer.Serialize(new { metadata, summary }, new JsonSerializerOptions { WriteIndented = true });
+        using var writer = new StreamWriter(path, false, new UTF8Encoding(false));
+        writer.WriteLine("threshold,total,expected_positive,expected_negative,no_damage_negative,unlabeled_visible_or_other_code,detected_frames,true_positive,false_negative,false_positive,true_negative,total_detections,recall,precision,fp_per_frame,fp_rate,avg_roundtrip_ms,avg_inference_ms,avg_queue_wait_ms");
+        foreach (var s in sweep)
+        {
+            var r = s.Summary;
+            writer.WriteLine(string.Join(",",
+                s.ConfidenceThreshold.ToString(CultureInfo.InvariantCulture),
+                r.Total.ToString(CultureInfo.InvariantCulture),
+                r.ExpectedPositiveFrames.ToString(CultureInfo.InvariantCulture),
+                r.ExpectedNegativeFrames.ToString(CultureInfo.InvariantCulture),
+                r.NoDamageNegativeFrames.ToString(CultureInfo.InvariantCulture),
+                r.UnlabeledVisibleOrOtherCodeFrames.ToString(CultureInfo.InvariantCulture),
+                r.DetectedFrames.ToString(CultureInfo.InvariantCulture),
+                r.TruePositiveFrames.ToString(CultureInfo.InvariantCulture),
+                r.FalseNegativeFrames.ToString(CultureInfo.InvariantCulture),
+                r.FalsePositiveFrames.ToString(CultureInfo.InvariantCulture),
+                r.TrueNegativeFrames.ToString(CultureInfo.InvariantCulture),
+                r.TotalDetections.ToString(CultureInfo.InvariantCulture),
+                r.PositiveRecall.ToString(CultureInfo.InvariantCulture),
+                r.Precision.ToString(CultureInfo.InvariantCulture),
+                r.FalsePositivesPerFrame.ToString(CultureInfo.InvariantCulture),
+                r.FalsePositiveRate.ToString(CultureInfo.InvariantCulture),
+                r.AverageRoundtripMs.ToString(CultureInfo.InvariantCulture),
+                r.AverageInferenceMs.ToString(CultureInfo.InvariantCulture),
+                r.AverageQueueWaitMs.ToString(CultureInfo.InvariantCulture)));
+        }
+    }
+
+    public static void WriteSummaryJson(
+        string path,
+        YoloDetectBaselineSummary summary,
+        object metadata,
+        IReadOnlyList<YoloDetectThresholdSummary>? thresholdSweep = null)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        var json = JsonSerializer.Serialize(new
+        {
+            metadata,
+            summary,
+            threshold_sweep = thresholdSweep ?? Array.Empty<YoloDetectThresholdSummary>()
+        }, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(path, json, new UTF8Encoding(false));
     }
+
+    private static YoloDetectNegativeKind ClassifyNegativeKind(EvalSetBenchmarkCase c)
+    {
+        if (c.HasYoloLabel)
+            return YoloDetectNegativeKind.PositiveLabel;
+
+        return IsNoDamageCode(c.ExpectedFullCode) || IsNoDamageCode(c.ExpectedMainCode)
+            ? YoloDetectNegativeKind.NoDamage
+            : YoloDetectNegativeKind.UnlabeledVisibleOrOtherCode;
+    }
+
+    private static bool IsNoDamageCode(string code)
+        => string.Equals(code, "LEER", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(code, "KEIN_SCHADEN", StringComparison.OrdinalIgnoreCase);
+
+    private static IReadOnlyList<YoloDetectFalsePositiveBucket> BuildFalsePositiveBuckets(
+        IReadOnlyList<YoloDetectBaselineRow> rows)
+        => rows
+            .Where(r => !r.ExpectedHasLabel && r.Detected)
+            .SelectMany(r => r.Detections)
+            .GroupBy(d => new { ClassName = d.ClassName, Bucket = ConfidenceBucket(d.Confidence) })
+            .OrderBy(g => g.Key.ClassName, StringComparer.OrdinalIgnoreCase)
+            .ThenByDescending(g => g.Max(d => d.Confidence))
+            .Select(g => new YoloDetectFalsePositiveBucket(
+                g.Key.ClassName,
+                g.Key.Bucket,
+                g.Count(),
+                g.Max(d => d.Confidence),
+                g.Average(d => d.Confidence)))
+            .ToList();
+
+    private static string ConfidenceBucket(double confidence)
+        => confidence switch
+        {
+            >= 0.9 => ">=0.90",
+            >= 0.85 => "0.85-0.89",
+            >= 0.7 => "0.70-0.84",
+            >= 0.5 => "0.50-0.69",
+            >= 0.25 => "0.25-0.49",
+            _ => "<0.25"
+        };
 
     private static double Ratio(int part, int total)
         => total == 0 ? 0 : (double)part / total;
