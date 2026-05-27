@@ -86,9 +86,143 @@ Hinweise:
   mindestens zu grob: Sie modelliert Q1-Prozentbereiche, waehrend Tabelle 9
   fixe Einzelzustaende nach `Ch1` und Anforderung vorgibt.
 
+### BAD - Defektes Mauerwerk
+
+Quelle: PDF-Dateiseite 23 / gedruckte Seite 21, Anhang C, Tabelle 10:
+Defektes Mauerwerk.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BAD | A | - | D | - | - | - | alle | - | - | alle |
+| BAD | A | - | S | - | - | - | alle | - | - | alle |
+| BAD | A | - | B | - | - | - | - | alle | - | alle |
+| BAD | B | - | D | - | - | - | alle | - | - | alle |
+| BAD | B | - | S | - | - | - | alle | - | - | alle |
+| BAD | C | - | D | mm | alle | - | - | - | - | alle |
+| BAD | C | - | S | mm | alle | - | - | - | - | alle |
+| BAD | C | - | B | mm | alle | - | - | - | - | alle |
+| BAD | D | - | D | - | alle | - | - | - | - | alle |
+| BAD | D | - | S | - | alle | - | - | - | - | alle |
+| BAD | D | - | B | - | alle | - | - | - | - | alle |
+
+### BAE - Fehlender Moertel
+
+Quelle: PDF-Dateiseite 23 / gedruckte Seite 21, Anhang C, Tabelle 11:
+Fehlender Moertel.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BAE | - | - | D | mm | - | - | >= 100 | - | < 100 | alle |
+| BAE | - | - | S | mm | - | - | >= 100 | >= 10 und < 100 | < 10 | alle |
+
+### BAF - Oberflaechenschaden
+
+Quelle: PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:
+Oberflaechenschaden.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BAF | A | A,B,C,D,E,Z | S | - | - | - | - | - | alle | alle |
+| BAF | A | A,B,C,D,E,Z | B | - | - | - | - | - | alle | alle |
+| BAF | B | A,E,Z | S | - | - | - | - | alle | - | alle |
+| BAF | B | A,E,Z | B | - | - | - | - | - | alle | alle |
+| BAF | C | A,B,C,D,E,Z | S | - | - | - | - | alle | - | alle |
+| BAF | C | A,B,C,D,E,Z | B | - | - | - | - | - | alle | alle |
+| BAF | D | A,B,C,D,E,Z | S | - | - | - | alle | - | - | alle |
+| BAF | D | A,B,C,D,E,Z | B | - | - | - | - | - | alle | alle |
+| BAF | E | A,B,C,D,E,Z | S | - | - | alle | - | - | - | alle |
+| BAF | E | A,B,C,D,E,Z | B | - | - | - | - | - | alle | alle |
+| BAF | F | A,B,C,D,E,Z | S | - | - | - | - | alle | - | alle |
+| BAF | F | A,B,C,D,E,Z | B | - | - | - | - | - | alle | alle |
+| BAF | G | A,B,C,D,E,Z | S | - | - | - | alle | - | - | alle |
+| BAF | G | A,B,C,D,E,Z | B | - | - | - | - | - | alle | alle |
+| BAF | H | B,C,D,E | S | - | - | alle | - | - | - | alle |
+| BAF | H | B,C,D,E | B | - | - | - | - | - | alle | alle |
+| BAF | I | A,B,C,D,E,Z | D | - | - | alle | - | - | - | alle |
+| BAF | I | A,B,C,D,E,Z | S | - | - | alle | - | - | - | alle |
+| BAF | I | A,B,C,D,E,Z | B | - | - | - | - | - | alle | alle |
+| BAF | J | B,C,D,E,Z | S | - | - | - | - | - | alle | alle |
+| BAF | J | B,C,D,E,Z | B | - | - | - | - | - | alle | alle |
+| BAF | K | A,E,Z | B | - | - | - | - | alle | - | alle |
+| BAF | Z | A,B,C,D,E,Z | D | - | - | - | - | - | alle | alle |
+| BAF | Z | A,B,C,D,E,Z | S | - | - | - | - | - | alle | alle |
+| BAF | Z | A,B,C,D,E,Z | B | - | - | - | - | - | alle | alle |
+
+Hinweise:
+
+- `BAF` ist Oberflaechenschaden, nicht Verformung.
+- Die aktuelle Legacy-Datei `classification_channels.json` ist fuer `BAF`
+  zu grob: Sie modelliert Prozent-Schwellen, waehrend Tabelle 12 nach `Ch1`,
+  `Ch2` und Anforderung feste Einzelzustaende vorgibt.
+
+### BAG - Einragender Anschluss
+
+Quelle: PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 13:
+Einragender Anschluss.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BAG | - | - | B | % | >= 50 | >= 30 und < 50 | >= 20 und < 30 | >= 10 und < 20 | < 10 | <= DN 250 |
+| BAG | - | - | B | % | >= 80 | >= 60 und < 80 | >= 40 und < 60 | >= 10 und < 40 | < 10 | > DN 250 |
+
+### BAH - Schadhafter Anschluss
+
+Quelle: PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 14:
+Schadhafter Anschluss.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BAH | B,C,D | - | D | - | - | - | alle | - | - | alle |
+| BAH | A,E | - | B | - | - | - | - | - | alle* | alle |
+| BAH | Z | - | D | - | - | - | - | alle | - | alle |
+| BAH | Z | - | S | - | - | - | - | alle | - | alle |
+
+Hinweis: `alle*` verweist auf die Fussnote der Richtlinie: Beim schadhaften
+Anschluss handelt es sich um ein eigenes Inspektionsobjekt. Die Funktion der
+Anschlussleitung sollte ggf. ueberprueft oder die Anschlussleitung inspiziert
+werden.
+
+### BAI - Einragendes Dichtungsmaterial
+
+Quelle: PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 15:
+Einragendes Dichtungsmaterial.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BAI | A | A | D | - | - | - | alle | - | - | alle |
+| BAI | A | A | B | - | - | - | - | - | alle | alle |
+| BAI | A | B,C,D | D | - | - | - | alle | - | - | alle |
+| BAI | A | B,C,D | B | - | - | - | - | alle | - | alle |
+| BAI | Z | - | B | % | >= 50 | >= 35 und < 50 | >= 20 und < 35 | >= 5 und < 20 | < 5 | alle |
+
+### BAJ - Verschobene Rohrverbindung
+
+Quelle: PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16:
+Verschobene Rohrverbindung.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BAJ | A | - | D | mm | >= 70 | >= 50 und < 70 | >= 30 und < 50 | >= 20 und < 30 | < 20 | <= DN 400 |
+| BAJ | A | - | D | mm | >= 80 | >= 60 und < 80 | >= 40 und < 60 | >= 20 und < 40 | < 20 | > DN 400 |
+| BAJ | A | - | S | mm | - | - | - | - | alle | alle |
+| BAJ | B | - | D | mm | >= 30 | >= 20 und < 30 | >= 15 und < 20 | >= 10 und < 15 | < 10 | alle |
+| BAJ | B | - | S | mm | missing-vsa-source | missing-vsa-source | missing-vsa-source | missing-vsa-source | missing-vsa-source | PDF-Zeile ohne sichtbaren Einzelzustand |
+| BAJ | B | - | B | mm | - | - | - | >= 10 | < 10 | alle |
+| BAJ | C | - | D | deg | >= 12 | >= 9 und < 12 | >= 7 und < 9 | >= 5 und < 7 | < 5 | <= DN 200 |
+| BAJ | C | - | D | deg | >= 6 | >= 4 und < 6 | >= 3 und < 4 | >= 2 und < 3 | < 2 | > DN 200 |
+| BAJ | C | - | S | deg | - | - | - | - | alle | PDF-Zeile zeigt `alle` vor dem S-x; fachlich pruefen |
+
+Hinweise:
+
+- Die Fussnote der Richtlinie sagt, dass die Geometrie von Rohrverbindungen je
+  nach Verbindungsart, Werkstoff und Baujahr stark variiert. Konkrete
+  Erkenntnisse sollen in die Klassifizierung einfliessen.
+- Zwei BAJ-Zeilen sind bewusst als pruefbeduerftig markiert. Sie werden nicht
+  geraten.
+
 ## Noch offen
 
-- Restliche Kanaltabellen aus Anhang C: Tabellen 10-32.
+- Restliche Kanaltabellen aus Anhang C: Tabellen 17-32.
 - Schachttabellen aus Anhang D: Tabellen 33-63.
 - Klaeren, aus welchen Stammdaten `biegesteif`/`biegeweich` im Programm sicher
   bestimmt wird.
