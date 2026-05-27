@@ -99,8 +99,13 @@ public sealed class EnhancedVisionAnalysisServiceTests
 
         Assert.Contains("BBA = Wurzeln", StaticOllamaHandler.LastRequestJson);
         Assert.Contains("BBB = Anhaftende Stoffe", StaticOllamaHandler.LastRequestJson);
+        Assert.Contains("BAA = Verformung", StaticOllamaHandler.LastRequestJson);
+        Assert.Contains("BAF = Oberflaechenschaden", StaticOllamaHandler.LastRequestJson);
+        Assert.Contains("BAJ = Verschobene Rohrverbindung", StaticOllamaHandler.LastRequestJson);
         Assert.DoesNotContain("BBB = Bewuchs/Wurzeln", StaticOllamaHandler.LastRequestJson);
         Assert.DoesNotContain("BBA = Inkrustation", StaticOllamaHandler.LastRequestJson);
+        Assert.DoesNotContain("BAF = Deformation", StaticOllamaHandler.LastRequestJson);
+        Assert.DoesNotContain("BAJ = Ausbrueche/Abplatzungen", StaticOllamaHandler.LastRequestJson);
     }
 
     [Fact]

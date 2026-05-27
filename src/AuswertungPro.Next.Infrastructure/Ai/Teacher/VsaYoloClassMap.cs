@@ -37,12 +37,12 @@ public static class VsaYoloClassMap
         // Strukturelle Schaeden
         ["BAB"] = 4,   // Riss (laengs, quer, etc.)
         ["BAC"] = 5,   // Bruch
-        ["BAF"] = 6,   // Deformation
-        ["BAH"] = 7,   // Versatz
-        ["BAI"] = 8,   // Einragung Stutzen
+        ["BAF"] = 6,   // Oberflaechenschaden
+        ["BAH"] = 7,   // Schadhafter Anschluss
+        ["BAI"] = 8,   // Einragendes Dichtungsmaterial
 
         // Oberflaechenschaeden
-        ["BAJ"] = 9,   // Oberflaechenschaden / Ausbrueche
+        ["BAJ"] = 9,   // Verschobene Rohrverbindung
         ["BBB"] = 10,  // Anhaftende Stoffe / Inkrustation / Fett
         ["BBA"] = 11,  // Wurzeln / Bewuchs
 
@@ -50,6 +50,7 @@ public static class VsaYoloClassMap
         ["BBC"] = 12,  // Ablagerung Sohle
         ["BBD"] = 13,  // Eindringender Boden
         ["BDA"] = 14,  // Allgemeinzustand (Fotobeispiel)
+        ["BAA"] = 15,  // Verformung (angehaengt, damit bestehende YOLO-IDs stabil bleiben)
     };
 
     private static string GetMapPath()

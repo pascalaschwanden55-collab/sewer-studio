@@ -5,6 +5,7 @@ using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
+[Collection(VsaCodeResolverTestCollection.Name)]
 public sealed class VideoFullAnalysisServiceTests
 {
     public VideoFullAnalysisServiceTests()

@@ -138,9 +138,10 @@ public static class VsaCodeResolver
         if (Has(text, "bruch") || Has(text, "einsturz") || Has(text, "collapse"))
             return CatalogValidated("BAC");
         if (Has(text, "deformation") || Has(text, "verformung") || HasWord(text, "oval"))
-            return CatalogValidated("BAF");
-        if (Has(text, "versatz") || HasWord(text, "offset") || Has(text, "displaced"))
-            return CatalogValidated("BAH");
+            return CatalogValidated("BAA");
+        if (Has(text, "rohrverbindung") || Has(text, "muffe") || Has(text, "versatz")
+            || HasWord(text, "offset") || Has(text, "displaced"))
+            return CatalogValidated("BAJ");
         if (Has(text, "wurzel") || Has(text, "root intrusion") || Has(text, "bewuchs"))
             return CatalogValidated("BBA");
         if (Has(text, "einragung") || Has(text, "intrusion") || Has(text, "protruding"))
@@ -149,7 +150,7 @@ public static class VsaCodeResolver
         // Oberflaechenschaeden
         if (Has(text, "korrosion") || Has(text, "corrosion") || HasWord(text, "rost")
             || Has(text, "erosion"))
-            return CatalogValidated("BAJ");
+            return CatalogValidated("BAF");
         if (Has(text, "inkrustation") || Has(text, "encrustation") || Has(text, "kalk")
             || Has(text, "anhaftung") || Has(text, "sinter") || Has(text, "attached deposit"))
             return CatalogValidated("BBB");

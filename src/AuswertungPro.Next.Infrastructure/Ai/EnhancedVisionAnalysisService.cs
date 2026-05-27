@@ -211,15 +211,16 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         sb.AppendLine();
 
         sb.AppendLine("STRUKTURELLE SCHAEDEN:");
+        AppendCodeLine(sb, codeCatalog, "BAA", "Verformung", "vertikal oder horizontal");
         AppendCodeLine(sb, codeCatalog, "BAB", "Riss", "laengs/quer/diagonal/ringfoermig/verzweigt");
         AppendCodeLine(sb, codeCatalog, "BAC", "Bruch", "partiell oder total");
-        AppendCodeLine(sb, codeCatalog, "BAF", "Deformation", "vertikal oder horizontal");
-        AppendCodeLine(sb, codeCatalog, "BAH", "Versatz", "vertikal oder horizontal");
-        AppendCodeLine(sb, codeCatalog, "BAI", "Einragung Stutzen/Anschluss", null);
+        AppendCodeLine(sb, codeCatalog, "BAH", "Schadhafter Anschluss", null);
+        AppendCodeLine(sb, codeCatalog, "BAI", "Einragendes Dichtungsmaterial", null);
+        AppendCodeLine(sb, codeCatalog, "BAJ", "Verschobene Rohrverbindung", "Rohrverbindung versetzt oder Knick");
         sb.AppendLine();
 
         sb.AppendLine("OBERFLAECHEN / EINWUCHS / ABLAGERUNGEN:");
-        AppendCodeLine(sb, codeCatalog, "BAJ", "Ausbrueche/Abplatzungen", null);
+        AppendCodeLine(sb, codeCatalog, "BAF", "Oberflaechenschaden", "rauhe Rohrwandung, chemischer Angriff, Korrosion");
         AppendCodeLine(sb, codeCatalog, "BBA", "Wurzeln", "Wurzeleinwuchs/Bewuchs");
         AppendCodeLine(sb, codeCatalog, "BBB", "Anhaftende Stoffe", "Inkrustation/Fett/anhaftende Stoffe");
         AppendCodeLine(sb, codeCatalog, "BBC", "Ablagerungen", "Sand/Kies/verfestigte Ablagerung");

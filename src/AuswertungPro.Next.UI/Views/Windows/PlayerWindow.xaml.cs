@@ -6226,9 +6226,9 @@ public partial class PlayerWindow : Window
             "BOGEN" => "BCC",
             "RISS" => "BAB",
             "BRUCH" => "BAC",
-            "VERFORMUNG" => "BAF",
-            "OBERFLAECHENSCHADEN" => "BAJ",
-            "VERSATZ" or "VERSCHIEBUNG" => "BAH",
+            "VERFORMUNG" => "BAA",
+            "OBERFLAECHENSCHADEN" => "BAF",
+            "VERSATZ" or "VERSCHIEBUNG" => "BAJ",
             "WURZELN" or "BEWUCHS" => "BBA",
             "ABLAGERUNG" => "BBC",
             "INKRUSTATION" => "BBB",
@@ -7041,12 +7041,13 @@ public partial class PlayerWindow : Window
            || code.StartsWith("BBC", StringComparison.OrdinalIgnoreCase) // Ablagerung
            || code.StartsWith("BDDC", StringComparison.OrdinalIgnoreCase) // Wasserspiegel
            // Strukturschaeden (BA-Gruppe)
+           || code.StartsWith("BAA", StringComparison.OrdinalIgnoreCase) // Verformung
            || code.StartsWith("BAB", StringComparison.OrdinalIgnoreCase) // Riss
            || code.StartsWith("BAC", StringComparison.OrdinalIgnoreCase) // Bruch
-           || code.StartsWith("BAF", StringComparison.OrdinalIgnoreCase) // Deformation
-           || code.StartsWith("BAH", StringComparison.OrdinalIgnoreCase) // Versatz
-           || code.StartsWith("BAI", StringComparison.OrdinalIgnoreCase) // Einragender Stutzen
-           || code.StartsWith("BAJ", StringComparison.OrdinalIgnoreCase) // Oberflaechenschaden
+           || code.StartsWith("BAF", StringComparison.OrdinalIgnoreCase) // Oberflaechenschaden
+           || code.StartsWith("BAH", StringComparison.OrdinalIgnoreCase) // Schadhafter Anschluss
+           || code.StartsWith("BAI", StringComparison.OrdinalIgnoreCase) // Einragendes Dichtungsmaterial
+           || code.StartsWith("BAJ", StringComparison.OrdinalIgnoreCase) // Verschobene Rohrverbindung
            // Betriebliche Stoerungen (BB-Gruppe)
            || code.StartsWith("BBA", StringComparison.OrdinalIgnoreCase) // Wurzeln / Bewuchs
            || code.StartsWith("BBB", StringComparison.OrdinalIgnoreCase) // Anhaftende Stoffe / Inkrustation

@@ -461,8 +461,8 @@ internal static class EvalSetClassifierClassMapper
     private static readonly IReadOnlyDictionary<string, string> ClassToVsaCode =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["oberflaeche"] = "BAJ",
-            ["versatz"] = "BAH",
+            ["oberflaeche"] = "BAF",
+            ["versatz"] = "BAJ",
             ["riss_bruch"] = "BAB",
             ["rissbruch"] = "BAB",
             ["bruch"] = "BAC",
@@ -598,11 +598,11 @@ public static class EvalSetRouterPlanner
         if (code.StartsWith("BAA", StringComparison.OrdinalIgnoreCase))
             return "deformation";
 
-        if (code.StartsWith("BAF", StringComparison.OrdinalIgnoreCase) ||
-            code.StartsWith("BAJ", StringComparison.OrdinalIgnoreCase))
-        {
+        if (code.StartsWith("BAF", StringComparison.OrdinalIgnoreCase))
             return "oberflaeche";
-        }
+
+        if (code.StartsWith("BAJ", StringComparison.OrdinalIgnoreCase))
+            return "versatz";
 
         if (code.StartsWith("BBA", StringComparison.OrdinalIgnoreCase))
             return "wurzeln";

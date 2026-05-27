@@ -8,19 +8,21 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Tests fuer VsaCodeResolver — zentrale VSA-Code-Aufloesung.
 /// Deckt ab: NormalizeFindingCode, InferCodeFromLabel, LookupLabel, NormalizeClock.
 /// </summary>
+[Collection(VsaCodeResolverTestCollection.Name)]
 public sealed class VsaCodeResolverTests
 {
     public VsaCodeResolverTests()
     {
         VsaCodeResolver.ConfigureCatalog(new InMemoryCodeCatalogProvider(new[]
         {
+            Code("BAA", "Verformung"),
             Code("BAB", "Risse"),
             Code("BAC", "Leitungsbruch/Einsturz"),
             Code("BAF", "Oberflaechenschaden"),
             Code("BAG", "Einragender Anschluss", requiresRange: true),
-            Code("BAH", "Schadhafte Verbindung"),
-            Code("BAI", "Einragung"),
-            Code("BAJ", "Oberflaechenschaden"),
+            Code("BAH", "Schadhafter Anschluss"),
+            Code("BAI", "Einragendes Dichtungsmaterial"),
+            Code("BAJ", "Verschobene Rohrverbindung"),
             Code("BCA", "Seitlicher Anschluss"),
             Code("BCC", "Bogen"),
             Code("BCD", "Rohranfang"),
@@ -93,7 +95,9 @@ public sealed class VsaCodeResolverTests
     [InlineData("Riss längs", "BAB")]
     [InlineData("Surface crack", "BAB")]
     [InlineData("Bruch/Einsturz", "BAC")]
-    [InlineData("Deformation oval", "BAF")]
+    [InlineData("Deformation oval", "BAA")]
+    [InlineData("Korrosion an Rohrwandung", "BAF")]
+    [InlineData("Rohrverbindung versetzt", "BAJ")]
     [InlineData("Wurzeleinwuchs", "BBA")]
     [InlineData("Inkrustation verkalkt", "BBB")]
     [InlineData("Attached deposit on pipe wall", "BBB")]
@@ -160,9 +164,9 @@ public sealed class VsaCodeResolverTests
         // "Anschlüss" → "anschluess" — matcht nicht "anschluss" (doppel-s)
         // Korrekt: voller Begriff "Anschluss" mit ss
         Assert.Equal("BCA", VsaCodeResolver.InferCodeFromLabel("Anschluss"));
-        Assert.Equal("BAF", VsaCodeResolver.InferCodeFromLabel("Verformung"));
+        Assert.Equal("BAA", VsaCodeResolver.InferCodeFromLabel("Verformung"));
         // Umlaut-Konvertierung: ü→ue, ä→ae, ö→oe
-        Assert.Equal("BAH", VsaCodeResolver.InferCodeFromLabel("Muffenversatz"));
+        Assert.Equal("BAJ", VsaCodeResolver.InferCodeFromLabel("Muffenversatz"));
     }
 
     // ═══════════════════════════════════════════════════════════════

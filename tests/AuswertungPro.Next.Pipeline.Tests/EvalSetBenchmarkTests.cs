@@ -341,7 +341,10 @@ public sealed class EvalSetBenchmarkTests : IDisposable
             new EvalSetBenchmarkCase("f", "f.png", "f.png", "BABBA", "BABBA", "top5", 3),
             new EvalSetBenchmarkCase("g", "g.png", "g.png", "BCAEA", "BCAEA", "top5", 4),
             new EvalSetBenchmarkCase("h", "h.png", "h.png", "BBAA", "BBAA", "top5", 5),
-            new EvalSetBenchmarkCase("i", "i.png", "i.png", "XYZ", "XYZ", "unknown", 6),
+            new EvalSetBenchmarkCase("i", "i.png", "i.png", "BAAA", "BAAA", "top5", 6),
+            new EvalSetBenchmarkCase("j", "j.png", "j.png", "BAFAA", "BAFAA", "top5", 7),
+            new EvalSetBenchmarkCase("k", "k.png", "k.png", "BAJB", "BAJB", "top5", 8),
+            new EvalSetBenchmarkCase("l", "l.png", "l.png", "XYZ", "XYZ", "unknown", 9),
         };
 
         var plan = EvalSetRouterPlanner.BuildPlan(cases);
@@ -353,7 +356,19 @@ public sealed class EvalSetBenchmarkTests : IDisposable
         Assert.Contains(plan, p => p.RouterClass == "riss_bruch" && p.Count == 1 && p.ExpectedCodes.Contains("BABBA"));
         Assert.Contains(plan, p => p.RouterClass == "anschluss" && p.Count == 1 && p.ExpectedCodes.Contains("BCAEA"));
         Assert.Contains(plan, p => p.RouterClass == "wurzeln" && p.Count == 1 && p.ExpectedCodes.Contains("BBAA"));
+        Assert.Contains(plan, p => p.RouterClass == "deformation" && p.Count == 1 && p.ExpectedCodes.Contains("BAAA"));
+        Assert.Contains(plan, p => p.RouterClass == "oberflaeche" && p.Count == 1 && p.ExpectedCodes.Contains("BAFAA"));
+        Assert.Contains(plan, p => p.RouterClass == "versatz" && p.Count == 1 && p.ExpectedCodes.Contains("BAJB"));
         Assert.Contains(plan, p => p.RouterClass == "sonstiges" && p.Count == 1 && p.ExpectedCodes.Contains("XYZ"));
+    }
+
+    [Theory]
+    [InlineData("deformation", "BAA")]
+    [InlineData("oberflaeche", "BAF")]
+    [InlineData("versatz", "BAJ")]
+    public void ClassifierClassMapper_uses_vsa_kek_ba_base_codes(string className, string expectedCode)
+    {
+        Assert.Equal(expectedCode, EvalSetClassifierClassMapper.TryMapToVsaCode(className));
     }
 
     [Fact]

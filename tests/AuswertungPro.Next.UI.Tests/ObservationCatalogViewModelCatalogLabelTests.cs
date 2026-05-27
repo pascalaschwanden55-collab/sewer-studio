@@ -14,7 +14,7 @@ public sealed class ObservationCatalogViewModelCatalogLabelTests
         Assert.Contains(vm.Columns[1].Items, item =>
             item.Node?.Key == "BAB" && item.Label == "BAB  Riss aus Katalog");
         Assert.Contains(vm.Columns[1].Items, item =>
-            item.Node?.Key == "BAH" && item.Label == "BAH  Versatz");
+            item.Node?.Key == "BAH" && item.Label == "BAH  Schadhafter Anschluss");
 
         SelectRoot(vm, "BB");
 
@@ -45,7 +45,7 @@ public sealed class ObservationCatalogViewModelCatalogLabelTests
             lookupOnlyCodes: new[]
             {
                 new CodeDefinition { Code = "BAB", Title = "Riss aus Katalog" },
-                new CodeDefinition { Code = "BAH", Title = "Versatz" },
+                new CodeDefinition { Code = "BAH", Title = "Schadhafter Anschluss" },
                 new CodeDefinition { Code = "BBA", Title = "Wurzeln" }
             }), new ProtocolEntry());
 

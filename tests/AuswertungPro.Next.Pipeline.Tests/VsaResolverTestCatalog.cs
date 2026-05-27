@@ -13,12 +13,13 @@ internal static class VsaResolverTestCatalog
     public static ICodeCatalogProvider CreateDefault()
         => new InMemoryCodeCatalogProvider(new[]
         {
+            Code("BAA", "Verformung"),
             Code("BAB", "Risse"),
             Code("BAC", "Leitungsbruch/Einsturz"),
-            Code("BAF", "Deformation"),
-            Code("BAH", "Versatz"),
-            Code("BAI", "Einragung"),
-            Code("BAJ", "Oberflaechenschaden"),
+            Code("BAF", "Oberflaechenschaden"),
+            Code("BAH", "Schadhafter Anschluss"),
+            Code("BAI", "Einragendes Dichtungsmaterial"),
+            Code("BAJ", "Verschobene Rohrverbindung"),
             Code("BBA", "Wurzeln", requiresRange: true),
             Code("BBB", "Anhaftende Stoffe"),
             Code("BBC", "Ablagerungen"),

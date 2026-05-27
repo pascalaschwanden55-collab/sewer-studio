@@ -2252,15 +2252,15 @@ public sealed class ProtocolPdfExporter
     internal static string ResolveDamageSymbolCategory(string? rawCode)
     {
         var code = (rawCode ?? "").Trim().ToUpperInvariant();
-        if (code.StartsWith("BAA", StringComparison.Ordinal)) return "crack";        // Rissbildung
+        if (code.StartsWith("BAA", StringComparison.Ordinal)) return "deformation";  // Verformung
         if (code.StartsWith("BAB", StringComparison.Ordinal)) return "crack";        // Riss
         if (code.StartsWith("BAC", StringComparison.Ordinal)) return "break";        // Bruch / Einsturz
         if (code.StartsWith("BAD", StringComparison.Ordinal)) return "leak";         // Undichtheit
         if (code.StartsWith("BAE", StringComparison.Ordinal)) return "offset";       // Versatz
-        if (code.StartsWith("BAF", StringComparison.Ordinal)) return "deformation";  // Deformation
-        if (code.StartsWith("BAH", StringComparison.Ordinal)) return "offset";       // Versatz
+        if (code.StartsWith("BAF", StringComparison.Ordinal)) return "surface";      // Oberflaechenschaden
+        if (code.StartsWith("BAH", StringComparison.Ordinal)) return "offset";       // Schadhafter Anschluss
         if (code.StartsWith("BAI", StringComparison.Ordinal)) return "obstacle";     // Hindernis
-        if (code.StartsWith("BAJ", StringComparison.Ordinal)) return "default";      // Oberflaechenschaden
+        if (code.StartsWith("BAJ", StringComparison.Ordinal)) return "offset";       // Verschobene Rohrverbindung
         if (code.StartsWith("BAK", StringComparison.Ordinal)) return "infiltration"; // Infiltration
         if (code.StartsWith("BAL", StringComparison.Ordinal)) return "exfiltration"; // Exfiltration
         if (code.StartsWith("BBA", StringComparison.Ordinal)) return "roots";        // Wurzeln / Bewuchs

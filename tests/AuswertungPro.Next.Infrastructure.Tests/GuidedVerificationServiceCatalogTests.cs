@@ -10,11 +10,11 @@ public sealed class GuidedVerificationServiceCatalogTests
     {
         var catalog = new InMemoryCodeCatalogProvider(new[]
         {
-            new CodeDefinition { Code = "BAH", Title = "Versatz" },
+            new CodeDefinition { Code = "BAH", Title = "Schadhafter Anschluss" },
             new CodeDefinition { Code = "BBA", Title = "Wurzeln" }
         });
 
-        Assert.Equal("Versatz", GuidedVerificationService.ResolveCodeDescription("BAH", catalog));
+        Assert.Equal("Schadhafter Anschluss", GuidedVerificationService.ResolveCodeDescription("BAH", catalog));
         Assert.Equal("Wurzeln", GuidedVerificationService.ResolveCodeDescription("BBA", catalog));
     }
 
