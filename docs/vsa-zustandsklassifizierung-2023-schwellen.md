@@ -220,9 +220,222 @@ Hinweise:
 - Zwei BAJ-Zeilen sind bewusst als pruefbeduerftig markiert. Sie werden nicht
   geraten.
 
+### BAK - Feststellung der Innenauskleidung
+
+Quelle: PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:
+Feststellung der Innenauskleidung.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BAK | A | - | B | % | >= 50 | >= 35 und < 50 | >= 20 und < 35 | >= 5 und < 20 | < 5 | alle |
+| BAK | B | - | D | - | - | - | - | - | alle | alle |
+| BAK | C | - | D | - | - | - | alle | - | - | alle |
+| BAK | C | - | B | - | - | - | alle | - | - | alle |
+| BAK | D | A,B,D | B | % | - | - | - | alle | - | alle |
+| BAK | D | C | S | % | - | - | alle | - | - | alle |
+| BAK | D | C | B | % | - | - | alle | - | - | alle |
+| BAK | E | - | S | % | - | - | - | alle | - | alle |
+| BAK | E | - | B | % | >= 50 | >= 35 und < 50 | >= 20 und < 35 | >= 5 und < 20 | < 5 | alle |
+| BAK | F | - | S | mm | - | - | - | alle | - | alle |
+| BAK | G | - | B | - | - | - | - | - | alle | alle |
+| BAK | H | - | B | - | - | - | - | - | alle | alle |
+| BAK | I | - | D | mm | - | - | alle | - | - | alle |
+| BAK | J | - | D | mm | - | alle | - | - | - | alle |
+| BAK | K | - | D | - | - | - | alle | - | - | alle |
+| BAK | K | - | B | - | - | - | alle | - | - | alle |
+| BAK | L | - | D | - | - | - | - | alle | - | alle |
+| BAK | L | - | S | - | - | - | - | alle | - | alle |
+| BAK | M | - | D | - | - | - | alle | - | - | alle |
+| BAK | N | - | D | - | - | - | alle | - | - | alle |
+| BAK | Z | - | D | % | - | - | - | alle | - | alle |
+| BAK | Z | - | S | % | - | - | - | alle | - | alle |
+| BAK | Z | - | B | % | - | - | - | alle | - | alle |
+
+### BAL - Schadhafte Reparatur
+
+Quelle: PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 18:
+Schadhafte Reparatur.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BAL | A | - | D | mm | - | alle | - | - | - | alle |
+| BAL | B | - | D | mm | - | alle | - | - | - | alle |
+| BAL | C | - | D | % | - | - | alle | - | - | alle |
+| BAL | D | - | D | mm | - | - | alle | - | - | alle |
+| BAL | E | - | B | % | >= 50 | >= 35 und < 50 | >= 20 und < 35 | >= 5 und < 20 | < 5 | alle |
+| BAL | F | - | D | mm | - | alle | - | - | - | alle |
+| BAL | G | A,B,C,D | D | mm | - | - | - | alle | - | alle |
+| BAL | Z | - | D | - | - | - | alle | - | - | alle |
+| BAL | Z | - | B | - | - | - | alle | - | - | alle |
+
+### BAM - Schadhafte Schweissnaht
+
+Quelle: PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 19:
+Schadhafte Schweissnaht.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BAM | A,C | - | D | - | - | - | alle | - | - | alle |
+| BAM | A,C | - | S | - | - | - | - | alle | - | alle |
+| BAM | B | - | D | - | - | - | alle | - | - | alle |
+| BAM | B | - | S | - | - | - | - | - | alle | alle |
+
+### BAN - Poroese Leitung
+
+Quelle: PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 20:
+Poroese Leitung.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BAN | - | - | D | - | - | - | alle | - | - | alle |
+| BAN | - | - | S | - | - | - | alle | - | - | alle |
+
+### BAO - Boden sichtbar
+
+Quelle: PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 21:
+Boden sichtbar.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BAO | - | - | D | - | - | alle | - | - | - | alle |
+| BAO | - | - | S | - | - | alle | - | - | - | alle |
+
+### BAP - Hohlraum sichtbar
+
+Quelle: PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 22:
+Hohlraum sichtbar.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BAP | - | - | D | - | - | alle | - | - | - | alle |
+| BAP | - | - | S | - | alle | - | - | - | - | alle |
+
+### BBA - Wurzeln
+
+Quelle: PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 23:
+Wurzeln.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BBA | A,B,C | - | D | % | - | - | alle | - | - | alle |
+| BBA | A,B,C | - | B | % | >= 30 | >= 20 und < 30 | >= 10 und < 20 | < 10 | - | alle |
+
+Hinweis: Die aktuelle Legacy-Datei `classification_channels.json` ist fuer
+`BBA` fachlich falsch: Sie modelliert `BBA` als Deformation.
+
+### BBB - Anhaftende Stoffe
+
+Quelle: PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 24:
+Anhaftende Stoffe.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BBB | A | - | D | % | - | - | - | alle | - | alle |
+| BBB | A,B,C,Z | - | B | % | >= 30 | >= 20 und < 30 | >= 10 und < 20 | >= 5 und < 10 | < 5 | alle |
+
+### BBC - Ablagerungen an der Rohrsohle
+
+Quelle: PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 25:
+Ablagerungen an der Rohrsohle.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BBC | A,B | - | B | % | - | - | - | - | alle | alle |
+| BBC | C,Z | - | B | % | >= 50 | >= 40 und < 50 | >= 25 und < 40 | >= 10 und < 25 | < 10 | alle |
+
+### BBD - Eindringen von Bodenmaterial
+
+Quelle: PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 26:
+Eindringen von Bodenmaterial.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BBD | A,B,C,D,Z | - | D | % | - | alle | - | - | - | alle |
+| BBD | A,B,C,D,Z | - | S | % | alle | - | - | - | - | alle |
+| BBD | A,B,C,D,Z | - | B | % | >= 30 | >= 20 und < 30 | >= 10 und < 20 | < 10 | - | alle |
+
+### BBE - Andere Hindernisse
+
+Quelle: PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 27:
+Andere Hindernisse.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BBE | D,G | - | D | % | - | - | alle | - | - | alle |
+| BBE | A,B,C,D,E,F,G,H,Z | - | B | % | >= 50 | >= 35 und < 50 | >= 20 und < 35 | >= 5 und < 20 | < 5 | alle |
+
+### BBF - Infiltration
+
+Quelle: PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 28:
+Infiltration.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BBF | A,B | - | D | - | - | - | alle | - | - | alle |
+| BBF | A,B | - | S | - | - | - | - | alle | - | alle |
+| BBF | A,B | - | B | - | - | - | - | - | alle | alle |
+| BBF | C | - | S | - | - | - | alle | - | - | alle |
+| BBF | C,D | - | D | - | - | alle | - | - | - | alle |
+| BBF | C,D | - | B | - | - | - | - | - | alle | alle |
+| BBF | D | - | S | - | - | alle | - | - | - | alle |
+
+### BBG - Exfiltration
+
+Quelle: PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 29:
+Exfiltration.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BBG | - | - | D | - | - | alle | - | - | - | alle |
+| BBG | - | - | S | - | - | - | - | alle | - | alle |
+
+### BBH - Ungeziefer
+
+Quelle: PDF-Dateiseite 30 / gedruckte Seite 28, Anhang C, Tabelle 30:
+Ungeziefer.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BBH | A,B,Z | A,B,C,Z | B | Anzahl | - | - | - | - | alle* | alle |
+
+Hinweis: `alle*` verweist auf die Fussnote der Richtlinie: nicht relevant fuer
+die Leistungsfaehigkeit, aber ggf. betrieblich zu beheben.
+
+### BDD - Wasserspiegel
+
+Quelle: PDF-Dateiseite 30 / gedruckte Seite 28, Anhang C, Tabelle 31:
+Wasserspiegel.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BDD | A,C,D,E | - | B | % | - | - | >= 50 | >= 10 und < 50 | < 10* | alle |
+
+Hinweise:
+
+- `BDD` ist Wasserspiegel, nicht Deformation.
+- `*` verweist auf die Fussnote der Richtlinie: Es gilt die groesste
+  Quantifizierung an der Station mit Streckencode C.
+
+### BDE - Abwasserzufluss aus einem seitlichen Anschluss, Fehlanschluss
+
+Quelle: PDF-Dateiseite 30 / gedruckte Seite 28, Anhang C, Tabelle 32:
+Abwasserzufluss aus einem seitlichen Anschluss, Fehlanschluss.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| BDE | A,C,D,E,Y | A | B | % | - | alle | - | - | - | alle |
+| BDE | A,C,D,E,Y | B | B | % | - | - | alle | - | - | alle |
+| BDE | A,C,D,E,Y | C | B | % | - | - | alle* | - | alle* | fachlich pruefen: Tabelle zeigt `alle*` in EZ 2 und EZ 4 |
+| BDE | Y | Y | B | % | - | - | - | - | alle | alle |
+
+Hinweis: `alle*` verweist auf die Fussnote der Richtlinie: vorsorgliche
+Klassifizierung in Einzelzustand 2, da vermeintlicher Fehlanschluss fuer
+Inspekteur evtl. nicht erkennbar, nicht relevant oder es sich tatsaechlich
+nicht um einen Fehlanschluss handelt.
+
 ## Noch offen
 
-- Restliche Kanaltabellen aus Anhang C: Tabellen 17-32.
+- Anhang C ist als Draft vollstaendig dokumentiert (Tabellen 7-32).
 - Schachttabellen aus Anhang D: Tabellen 33-63.
 - Klaeren, aus welchen Stammdaten `biegesteif`/`biegeweich` im Programm sicher
   bestimmt wird.
