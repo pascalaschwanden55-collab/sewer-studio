@@ -7,6 +7,7 @@ import io
 import time
 import logging
 import threading
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -57,6 +58,7 @@ def get_runtime_status() -> dict:
 
     status = {
         "configured_model_name": settings.yolo_model_name,
+        "configured_model_backend": _configured_backend(),
         "require_custom_yolo": settings.require_custom_yolo,
         "custom_weights_present": custom_exists,
         "using_custom_weights": _using_custom_weights,
@@ -78,10 +80,24 @@ def get_runtime_status() -> dict:
 def _resolve_device() -> str:
     """Determine the effective device for YOLO inference."""
     device = settings.effective_yolo_device
+    if _configured_backend() == "tensorrt":
+        return device
+
     if device.startswith("cuda") and not _cuda_available():
         logger.warning("YOLO configured for %s but CUDA unavailable, falling back to cpu", device)
         return "cpu"
     return device
+
+
+def _configured_backend() -> str:
+    suffix = Path(settings.yolo_model_name).suffix.lower()
+    if suffix == ".engine":
+        return "tensorrt"
+    if suffix in {".pt", ".pth"}:
+        return "pytorch"
+    if suffix == ".onnx":
+        return "onnx"
+    return suffix.lstrip(".") or "unknown"
 
 
 def _load_yolo_on(device: str):
@@ -103,7 +119,8 @@ def _load_yolo_on(device: str):
         )
 
     model = YOLO(str(model_path))
-    model.to(device)
+    if _configured_backend() != "tensorrt":
+        model.to(device)
     return model, None
 
 
@@ -145,11 +162,49 @@ def _response_telemetry(queue_wait_ms: float = 0.0) -> dict:
     model_name = Path(_resolved_model_path).name if _resolved_model_path else settings.yolo_model_name
     return {
         "model_name": model_name,
+        "model_backend": _model_backend(model_name),
         "device": _resolve_device(),
         "queue_wait_ms": round(queue_wait_ms, 1),
         "vram_allocated_gb": status.get("vram_allocated_gb"),
         "vram_total_gb": status.get("vram_total_gb"),
+        "gpu_utilization_percent": _gpu_utilization_percent(),
     }
+
+
+def _model_backend(model_name: str) -> str:
+    suffix = Path(model_name).suffix.lower()
+    if suffix == ".engine":
+        return "tensorrt"
+    if suffix in {".pt", ".pth"}:
+        return "pytorch"
+    if suffix == ".onnx":
+        return "onnx"
+    return suffix.lstrip(".") or "unknown"
+
+
+def _gpu_utilization_percent() -> float | None:
+    if not _resolve_device().startswith("cuda"):
+        return None
+
+    try:
+        result = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=utilization.gpu",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=0.5,
+            check=False,
+        )
+        if result.returncode != 0:
+            return None
+
+        first_line = result.stdout.strip().splitlines()[0]
+        return float(first_line.strip())
+    except Exception:
+        return None
 
 
 def decode_image(image_base64: str) -> Image.Image:

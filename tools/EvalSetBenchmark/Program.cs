@@ -383,13 +383,26 @@ static async Task<int> RunYoloDetectOnlyAsync(
     var thresholds = YoloDetectBaselineScorer.DefaultThresholds;
     var requestConfidence = thresholds.Min();
 
-    Console.WriteLine("YOLO-Detect-Healthlauf:");
+    Console.WriteLine(options.YoloDetectEngine
+        ? "YOLO-TensorRT-Engine-Healthlauf:"
+        : "YOLO-Detect-Healthlauf:");
     Console.WriteLine($"  Eval-Set: {options.EvalSetRoot}");
     Console.WriteLine($"  Frames:   {cases.Count}/{allCases.Count}");
     Console.WriteLine($"  Sidecar:  {sidecarUrl}");
     Console.WriteLine($"  Request:  {requestConfidence.ToString("P0", CultureInfo.InvariantCulture)} Mindest-Confidence");
     Console.WriteLine($"  Sweep:    {string.Join(" / ", thresholds.Select(t => t.ToString("0.##", CultureInfo.InvariantCulture)))}");
     Console.WriteLine("  Hinweis:  Presence-only ist Health-Metrik, kein fachlicher Qualitätsbeweis.");
+    Console.WriteLine();
+
+    var warmup = await RunYoloWarmupAsync(client, cases[0], requestConfidence, cts.Token).ConfigureAwait(false);
+    if (options.YoloDetectEngine)
+        EnsureTensorRtEngine(warmup.Response, cases[0].FrameFileName, "Warmup");
+    Console.WriteLine(
+        $"Warmup: {cases[0].FrameFileName}  " +
+        $"MODEL={warmup.Response.ModelName ?? "-"}  " +
+        $"BACKEND={warmup.Response.ModelBackend ?? "-"}  " +
+        $"ROUNDTRIP={warmup.RoundtripMs} ms  " +
+        $"INFER={warmup.Response.InferenceTimeMs:F1} ms");
     Console.WriteLine();
 
     var predictions = new List<YoloDetectBaselinePrediction>(cases.Count);
@@ -407,6 +420,9 @@ static async Task<int> RunYoloDetectOnlyAsync(
                 cts.Token).ConfigureAwait(false);
             sw.Stop();
 
+            if (options.YoloDetectEngine && predictions.Count == 0)
+                EnsureTensorRtEngine(response, c.FrameFileName, "Erster Sweep-Frame");
+
             var detections = response.Detections
                 .Select(d => new YoloDetectBaselineDetection(d.ClassName, d.Confidence))
                 .ToList();
@@ -419,9 +435,11 @@ static async Task<int> RunYoloDetectOnlyAsync(
                 InferenceTimeMs: response.InferenceTimeMs,
                 QueueWaitMs: response.QueueWaitMs,
                 ModelName: response.ModelName,
+                ModelBackend: response.ModelBackend,
                 Device: response.Device,
                 VramAllocatedGb: response.VramAllocatedGb,
                 VramTotalGb: response.VramTotalGb,
+                GpuUtilizationPercent: response.GpuUtilizationPercent,
                 FrameClass: response.FrameClass));
 
             var top = detections
@@ -447,9 +465,11 @@ static async Task<int> RunYoloDetectOnlyAsync(
                 InferenceTimeMs: 0,
                 QueueWaitMs: 0,
                 ModelName: null,
+                ModelBackend: null,
                 Device: null,
                 VramAllocatedGb: null,
                 VramTotalGb: null,
+                GpuUtilizationPercent: null,
                 FrameClass: null,
                 Error: ex.Message));
             Console.WriteLine($"[{i + 1,3}/{cases.Count}] {c.FrameFileName}  FEHLER={ex.Message}");
@@ -461,7 +481,9 @@ static async Task<int> RunYoloDetectOnlyAsync(
     var thresholdSweep = YoloDetectBaselineScorer.SweepThresholds(cases, predictions, thresholds);
     var stamp = DateTimeOffset.Now.ToString("yyyyMMdd_HHmmss");
     var modelName = rows.Select(r => r.ModelName).FirstOrDefault(m => !string.IsNullOrWhiteSpace(m)) ?? "yolo";
-    var runSlug = $"yolo_detect_sweep_{Slug(modelName)}";
+    var backendName = rows.Select(r => r.ModelBackend).FirstOrDefault(m => !string.IsNullOrWhiteSpace(m)) ?? "unknown";
+    var runPrefix = options.YoloDetectEngine ? "yolo_detect_tensorrt_sweep" : "yolo_detect_sweep";
+    var runSlug = $"{runPrefix}_{Slug(modelName)}";
     var csvPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{runSlug}.csv");
     var sweepCsvPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{runSlug}_thresholds.csv");
     var jsonPath = Path.Combine(options.OutputDir, $"eval_{stamp}_{runSlug}.json");
@@ -481,6 +503,19 @@ static async Task<int> RunYoloDetectOnlyAsync(
         is_quality_proof = false,
         note = "YOLO detect-only misst nur Erkennung vorhanden/nicht vorhanden. Das ist ein Health-Signal, kein fachlicher Qualitätsnachweis.",
         model_name = modelName,
+        model_backend = backendName,
+        warmup = new
+        {
+            frame = cases[0].FrameFileName,
+            model_name = warmup.Response.ModelName,
+            model_backend = warmup.Response.ModelBackend,
+            device = warmup.Response.Device,
+            roundtrip_ms = warmup.RoundtripMs,
+            inference_time_ms = warmup.Response.InferenceTimeMs,
+            vram_allocated_gb = warmup.Response.VramAllocatedGb,
+            vram_total_gb = warmup.Response.VramTotalGb,
+            gpu_utilization_percent = warmup.Response.GpuUtilizationPercent
+        },
         manifest = TryReadManifestInfo(options.EvalSetRoot)
     }, thresholdSweep);
 
@@ -494,7 +529,8 @@ static async Task<int> RunYoloDetectOnlyAsync(
             $"Recall {s.TruePositiveFrames}/{s.ExpectedPositiveFrames}={s.PositiveRecall:P1}  " +
             $"Precision {s.Precision:P1}  " +
             $"FP/frame {s.FalsePositivesPerFrame:F3}  " +
-            $"Detections {s.TotalDetections}");
+            $"Detections {s.TotalDetections}  " +
+            $"p50/p95 {s.RoundtripP50Ms:F1}/{s.RoundtripP95Ms:F1} ms");
     }
 
     Console.WriteLine();
@@ -512,13 +548,50 @@ static async Task<int> RunYoloDetectOnlyAsync(
 
     Console.WriteLine();
     Console.WriteLine($"  Roundtrip Mittel:   {summary.AverageRoundtripMs:F1} ms");
+    Console.WriteLine($"  Roundtrip p50/p95:  {summary.RoundtripP50Ms:F1} / {summary.RoundtripP95Ms:F1} ms");
     Console.WriteLine($"  Inferenz Mittel:    {summary.AverageInferenceMs:F1} ms");
+    Console.WriteLine($"  Inferenz p50/p95:   {summary.InferenceP50Ms:F1} / {summary.InferenceP95Ms:F1} ms");
+    Console.WriteLine($"  Modell/Backend:     {modelName} / {backendName}");
+    Console.WriteLine($"  VRAM max:           {NullableText(summary.MaxVramAllocatedGb)} / {NullableText(summary.MaxVramTotalGb)} GB");
+    Console.WriteLine($"  GPU Util max:       {NullableText(summary.MaxGpuUtilizationPercent)} %");
     Console.WriteLine($"  Detail-CSV:         {csvPath}");
     Console.WriteLine($"  Threshold-CSV:      {sweepCsvPath}");
     Console.WriteLine($"  JSON:               {jsonPath}");
 
     return 0;
 }
+
+static async Task<(YoloResponse Response, long RoundtripMs)> RunYoloWarmupAsync(
+    VisionPipelineClient client,
+    EvalSetBenchmarkCase sample,
+    double confidenceThreshold,
+    CancellationToken ct)
+{
+    var b64 = Convert.ToBase64String(File.ReadAllBytes(sample.ImagePath));
+    var sw = Stopwatch.StartNew();
+    var response = await client.DetectYoloAsync(new YoloRequest(b64, confidenceThreshold), ct).ConfigureAwait(false);
+    sw.Stop();
+    return (response, sw.ElapsedMilliseconds);
+}
+
+static void EnsureTensorRtEngine(YoloResponse response, string frameFileName, string phase)
+{
+    var modelName = response.ModelName ?? "";
+    var backend = response.ModelBackend ?? "";
+    var isEngine = modelName.EndsWith(".engine", StringComparison.OrdinalIgnoreCase);
+    var isTensorRt = string.Equals(backend, "tensorrt", StringComparison.OrdinalIgnoreCase);
+
+    if (isEngine && isTensorRt)
+        return;
+
+    throw new InvalidOperationException(
+        $"{phase}: TensorRT-Engine ist nicht aktiv fuer {frameFileName}. " +
+        $"Sidecar meldet model_name='{modelName}', model_backend='{backend}'. " +
+        "Bitte Sidecar mit SEWER_SIDECAR_YOLO_MODEL_NAME=yolo26m.engine starten.");
+}
+
+static string NullableText(double? value)
+    => value.HasValue ? value.Value.ToString("F1", CultureInfo.InvariantCulture) : "-";
 
 static string BoolText(bool value) => value ? "ja" : "nein";
 
@@ -546,6 +619,7 @@ Optionen:
   --yolo-presence-context
                         Testmodus: YOLO-cls liefert nur unsichere Bildhinweise
   --yolo-detect-only    Sidecar-YOLO als Health-Metrik messen, inkl. Sweep 0.25/0.5/0.7/0.85/0.9
+  --yolo-detect-engine  TensorRT-Engine messen; bricht ab, wenn Sidecar nicht .engine/tensorrt meldet
   --sidecar-url <url>   Standard: App-Konfiguration
   --yolo-top-k <zahl>   Standard: 3
   --yolo-min-conf <x>   Standard: 0.05 (nicht fuer --yolo-detect-only; dort fixer Sweep)
@@ -648,6 +722,7 @@ internal sealed record BenchmarkOptions(
     bool UseYoloContext,
     bool UseYoloPresenceContext,
     bool YoloDetectOnly,
+    bool YoloDetectEngine,
     int YoloTopK,
     double YoloMinConfidence,
     string? ClassifierDataset,
@@ -676,6 +751,7 @@ internal sealed record BenchmarkOptions(
         var yoloContext = false;
         var yoloPresenceContext = false;
         var yoloDetectOnly = false;
+        var yoloDetectEngine = false;
         var yoloTopK = 3;
         var yoloMinConf = 0.05;
         string? classifierDataset = null;
@@ -731,6 +807,10 @@ internal sealed record BenchmarkOptions(
                     break;
                 case "--yolo-detect-only":
                     yoloDetectOnly = true;
+                    break;
+                case "--yolo-detect-engine":
+                    yoloDetectOnly = true;
+                    yoloDetectEngine = true;
                     break;
                 case "--yolo-top-k":
                     yoloTopK = int.Parse(RequireValue(args, ref i, arg));
@@ -803,6 +883,7 @@ internal sealed record BenchmarkOptions(
             yoloContext,
             yoloPresenceContext,
             yoloDetectOnly,
+            yoloDetectEngine,
             yoloTopK,
             yoloMinConf,
             classifierDataset,

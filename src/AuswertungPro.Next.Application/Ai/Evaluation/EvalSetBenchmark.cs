@@ -104,7 +104,9 @@ public sealed record YoloDetectBaselinePrediction(
     double? VramAllocatedGb,
     double? VramTotalGb,
     string? FrameClass,
-    string? Error = null);
+    string? Error = null,
+    string? ModelBackend = null,
+    double? GpuUtilizationPercent = null);
 
 public enum YoloDetectNegativeKind
 {
@@ -127,9 +129,11 @@ public sealed record YoloDetectBaselineRow(
     double InferenceTimeMs,
     double QueueWaitMs,
     string? ModelName,
+    string? ModelBackend,
     string? Device,
     double? VramAllocatedGb,
     double? VramTotalGb,
+    double? GpuUtilizationPercent,
     string? FrameClass,
     string? Error);
 
@@ -159,8 +163,15 @@ public sealed record YoloDetectBaselineSummary(
     double FalsePositiveRate,
     double FalsePositivesPerFrame,
     double AverageRoundtripMs,
+    double RoundtripP50Ms,
+    double RoundtripP95Ms,
     double AverageInferenceMs,
+    double InferenceP50Ms,
+    double InferenceP95Ms,
     double AverageQueueWaitMs,
+    double? MaxVramAllocatedGb,
+    double? MaxVramTotalGb,
+    double? MaxGpuUtilizationPercent,
     IReadOnlyList<YoloDetectFalsePositiveBucket> FalsePositiveBuckets);
 
 public sealed record YoloDetectThresholdSummary(
@@ -206,9 +217,11 @@ public static class YoloDetectBaselineScorer
                 InferenceTimeMs: prediction?.InferenceTimeMs ?? 0,
                 QueueWaitMs: prediction?.QueueWaitMs ?? 0,
                 ModelName: prediction?.ModelName,
+                ModelBackend: prediction?.ModelBackend,
                 Device: prediction?.Device,
                 VramAllocatedGb: prediction?.VramAllocatedGb,
                 VramTotalGb: prediction?.VramTotalGb,
+                GpuUtilizationPercent: prediction?.GpuUtilizationPercent,
                 FrameClass: prediction?.FrameClass,
                 Error: prediction?.Error);
         }).ToList();
@@ -262,8 +275,15 @@ public static class YoloDetectBaselineScorer
             FalsePositiveRate: Ratio(falsePositive, expectedNegative),
             FalsePositivesPerFrame: Ratio(falsePositive, total),
             AverageRoundtripMs: Average(rows, r => r.RoundtripMs),
+            RoundtripP50Ms: Percentile(rows.Select(r => (double)r.RoundtripMs), 0.50),
+            RoundtripP95Ms: Percentile(rows.Select(r => (double)r.RoundtripMs), 0.95),
             AverageInferenceMs: Average(rows, r => r.InferenceTimeMs),
+            InferenceP50Ms: Percentile(rows.Select(r => r.InferenceTimeMs), 0.50),
+            InferenceP95Ms: Percentile(rows.Select(r => r.InferenceTimeMs), 0.95),
             AverageQueueWaitMs: Average(rows, r => r.QueueWaitMs),
+            MaxVramAllocatedGb: MaxNullable(rows.Select(r => r.VramAllocatedGb)),
+            MaxVramTotalGb: MaxNullable(rows.Select(r => r.VramTotalGb)),
+            MaxGpuUtilizationPercent: MaxNullable(rows.Select(r => r.GpuUtilizationPercent)),
             FalsePositiveBuckets: BuildFalsePositiveBuckets(rows));
     }
 
@@ -271,7 +291,7 @@ public static class YoloDetectBaselineScorer
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         using var writer = new StreamWriter(path, false, new UTF8Encoding(false));
-        writer.WriteLine("frame,expected_code,expected_has_label,negative_kind,detected,detection_count,top_class,top_confidence,roundtrip_ms,inference_ms,queue_wait_ms,model_name,device,vram_allocated_gb,vram_total_gb,frame_class,error");
+        writer.WriteLine("frame,expected_code,expected_has_label,negative_kind,detected,detection_count,top_class,top_confidence,roundtrip_ms,inference_ms,queue_wait_ms,model_name,model_backend,device,vram_allocated_gb,vram_total_gb,gpu_utilization_percent,frame_class,error");
         foreach (var r in rows)
         {
             writer.WriteLine(string.Join(",",
@@ -287,9 +307,11 @@ public static class YoloDetectBaselineScorer
                 r.InferenceTimeMs.ToString(CultureInfo.InvariantCulture),
                 r.QueueWaitMs.ToString(CultureInfo.InvariantCulture),
                 Csv(r.ModelName ?? ""),
+                Csv(r.ModelBackend ?? ""),
                 Csv(r.Device ?? ""),
                 NullableDouble(r.VramAllocatedGb),
                 NullableDouble(r.VramTotalGb),
+                NullableDouble(r.GpuUtilizationPercent),
                 Csv(r.FrameClass ?? ""),
                 Csv(r.Error ?? "")));
         }
@@ -299,7 +321,7 @@ public static class YoloDetectBaselineScorer
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         using var writer = new StreamWriter(path, false, new UTF8Encoding(false));
-        writer.WriteLine("threshold,total,expected_positive,expected_negative,no_damage_negative,unlabeled_visible_or_other_code,detected_frames,true_positive,false_negative,false_positive,true_negative,total_detections,recall,precision,fp_per_frame,fp_rate,avg_roundtrip_ms,avg_inference_ms,avg_queue_wait_ms");
+        writer.WriteLine("threshold,total,expected_positive,expected_negative,no_damage_negative,unlabeled_visible_or_other_code,detected_frames,true_positive,false_negative,false_positive,true_negative,total_detections,recall,precision,fp_per_frame,fp_rate,avg_roundtrip_ms,p50_roundtrip_ms,p95_roundtrip_ms,avg_inference_ms,p50_inference_ms,p95_inference_ms,avg_queue_wait_ms,max_vram_allocated_gb,max_vram_total_gb,max_gpu_utilization_percent");
         foreach (var s in sweep)
         {
             var r = s.Summary;
@@ -321,8 +343,15 @@ public static class YoloDetectBaselineScorer
                 r.FalsePositivesPerFrame.ToString(CultureInfo.InvariantCulture),
                 r.FalsePositiveRate.ToString(CultureInfo.InvariantCulture),
                 r.AverageRoundtripMs.ToString(CultureInfo.InvariantCulture),
+                r.RoundtripP50Ms.ToString(CultureInfo.InvariantCulture),
+                r.RoundtripP95Ms.ToString(CultureInfo.InvariantCulture),
                 r.AverageInferenceMs.ToString(CultureInfo.InvariantCulture),
-                r.AverageQueueWaitMs.ToString(CultureInfo.InvariantCulture)));
+                r.InferenceP50Ms.ToString(CultureInfo.InvariantCulture),
+                r.InferenceP95Ms.ToString(CultureInfo.InvariantCulture),
+                r.AverageQueueWaitMs.ToString(CultureInfo.InvariantCulture),
+                NullableDouble(r.MaxVramAllocatedGb),
+                NullableDouble(r.MaxVramTotalGb),
+                NullableDouble(r.MaxGpuUtilizationPercent)));
         }
     }
 
@@ -391,6 +420,27 @@ public static class YoloDetectBaselineScorer
 
     private static double Average<T>(IReadOnlyList<T> rows, Func<T, long> selector)
         => rows.Count == 0 ? 0 : rows.Average(selector);
+
+    private static double Percentile(IEnumerable<double> values, double percentile)
+    {
+        var sorted = values.OrderBy(v => v).ToArray();
+        if (sorted.Length == 0)
+            return 0;
+        if (sorted.Length == 1)
+            return Math.Round(sorted[0], 1);
+
+        var index = percentile * (sorted.Length - 1);
+        var lower = (int)Math.Floor(index);
+        var upper = Math.Min(lower + 1, sorted.Length - 1);
+        var fraction = index - lower;
+        return Math.Round(sorted[lower] + fraction * (sorted[upper] - sorted[lower]), 1);
+    }
+
+    private static double? MaxNullable(IEnumerable<double?> values)
+    {
+        var present = values.Where(v => v.HasValue).Select(v => v!.Value).ToList();
+        return present.Count == 0 ? null : present.Max();
+    }
 
     private static string Bool(bool value) => value ? "True" : "False";
 

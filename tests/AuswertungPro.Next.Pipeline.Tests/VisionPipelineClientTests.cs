@@ -139,10 +139,12 @@ public class VisionPipelineClientTests
             "frame_class": "relevant",
             "inference_time_ms": 42.5,
             "model_name": "yolo26m.pt",
+            "model_backend": "pytorch",
             "device": "cuda:0",
             "queue_wait_ms": 3.5,
             "vram_allocated_gb": 2.25,
-            "vram_total_gb": 31.5
+            "vram_total_gb": 31.5,
+            "gpu_utilization_percent": 77.5
         }
         """;
 
@@ -158,10 +160,12 @@ public class VisionPipelineClientTests
         Assert.Equal(0.95, result.Detections[0].Confidence);
         Assert.Equal(42.5, result.InferenceTimeMs);
         Assert.Equal("yolo26m.pt", result.ModelName);
+        Assert.Equal("pytorch", result.ModelBackend);
         Assert.Equal("cuda:0", result.Device);
         Assert.Equal(3.5, result.QueueWaitMs);
         Assert.Equal(2.25, result.VramAllocatedGb);
         Assert.Equal(31.5, result.VramTotalGb);
+        Assert.Equal(77.5, result.GpuUtilizationPercent);
     }
 
     [Fact]

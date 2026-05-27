@@ -528,21 +528,59 @@ public sealed class EvalSetBenchmarkTests : IDisposable
             b.Count == 1);
     }
 
+    [Fact]
+    public void YoloDetectBaselineScorer_reports_latency_percentiles_and_runtime_fields()
+    {
+        var cases = new[]
+        {
+            new EvalSetBenchmarkCase("a", "a.png", "a.png", "BBAA", "BBAA", "top5", 1, HasYoloLabel: true),
+            new EvalSetBenchmarkCase("b", "b.png", "b.png", "BBBA", "BBBA", "top5", 2, HasYoloLabel: true),
+            new EvalSetBenchmarkCase("c", "c.png", "c.png", "BCAEA", "BCAEA", "top5", 3, HasYoloLabel: true),
+            new EvalSetBenchmarkCase("d", "d.png", "d.png", "BABBA", "BABBA", "top5", 4, HasYoloLabel: true),
+        };
+        var predictions = new[]
+        {
+            Prediction("a.png", [new YoloDetectBaselineDetection("roots", 0.91)], roundtripMs: 10, inferenceTimeMs: 5, modelBackend: "tensorrt", vramAllocatedGb: 1, gpuUtilizationPercent: 40),
+            Prediction("b.png", [new YoloDetectBaselineDetection("roots", 0.91)], roundtripMs: 20, inferenceTimeMs: 15, modelBackend: "tensorrt", vramAllocatedGb: 3, gpuUtilizationPercent: 80),
+            Prediction("c.png", [new YoloDetectBaselineDetection("connection", 0.91)], roundtripMs: 30, inferenceTimeMs: 20, modelBackend: "tensorrt", vramAllocatedGb: 2),
+            Prediction("d.png", [new YoloDetectBaselineDetection("crack", 0.91)], roundtripMs: 100, inferenceTimeMs: 80, modelBackend: "tensorrt", vramAllocatedGb: 2.5, gpuUtilizationPercent: 65),
+        };
+
+        var rows = YoloDetectBaselineScorer.Evaluate(cases, predictions, confidenceThreshold: 0.25);
+        var summary = YoloDetectBaselineScorer.Summarize(rows);
+
+        Assert.All(rows, r => Assert.Equal("tensorrt", r.ModelBackend));
+        Assert.Equal(25, summary.RoundtripP50Ms);
+        Assert.Equal(89.5, summary.RoundtripP95Ms);
+        Assert.Equal(17.5, summary.InferenceP50Ms);
+        Assert.Equal(71, summary.InferenceP95Ms);
+        Assert.Equal(3, summary.MaxVramAllocatedGb);
+        Assert.Equal(31.5, summary.MaxVramTotalGb);
+        Assert.Equal(80, summary.MaxGpuUtilizationPercent);
+    }
+
     private static YoloDetectBaselinePrediction Prediction(
         string frameFileName,
-        IReadOnlyList<YoloDetectBaselineDetection> detections)
+        IReadOnlyList<YoloDetectBaselineDetection> detections,
+        long roundtripMs = 100,
+        double inferenceTimeMs = 80,
+        string? modelBackend = null,
+        double? vramAllocatedGb = 0,
+        double? gpuUtilizationPercent = null)
         => new(
             frameFileName,
             IsRelevant: true,
             Detections: detections,
-            RoundtripMs: 100,
-            InferenceTimeMs: 80,
+            RoundtripMs: roundtripMs,
+            InferenceTimeMs: inferenceTimeMs,
             QueueWaitMs: 2,
             ModelName: "yolo26m.pt",
             Device: "cpu",
-            VramAllocatedGb: 0,
+            VramAllocatedGb: vramAllocatedGb,
             VramTotalGb: 31.5,
-            FrameClass: "relevant");
+            FrameClass: "relevant",
+            ModelBackend: modelBackend,
+            GpuUtilizationPercent: gpuUtilizationPercent);
 
     [Fact]
     public void RouterDatasetBuilder_copies_router_classes_and_skips_eval_set_images()
