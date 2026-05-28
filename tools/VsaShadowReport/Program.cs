@@ -19,7 +19,7 @@ Console.WriteLine($"  expected_drift=true:  {report.ExpectedDifferences}");
 Console.WriteLine($"  expected_drift=false: {report.UnexpectedDifferences}");
 Console.WriteLine($"    davon v2_ez=null:   {report.UnexpectedMissingV2Ez}");
 Console.WriteLine($"    davon EZ ungleich:  {report.UnexpectedDifferentEz}");
-Console.WriteLine($"    davon bekannte Nicht-Bewertung: {report.NonAssessableRuleNotFoundCount}");
+Console.WriteLine($"    davon bekannte Nicht-Bewertung: {report.ExpectedNonAssessmentCount}");
 Console.WriteLine($"    offene Cutover-Blocker: {report.OpenCutoverBlockerCount}");
 Console.WriteLine($"    v2 milder:          {report.V2MilderCount}");
 Console.WriteLine($"    v2 strenger:        {report.V2StricterCount}");

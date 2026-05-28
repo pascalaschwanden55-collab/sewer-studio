@@ -8,6 +8,7 @@ public sealed class VsaClassificationRuleSet
     public string Source { get; set; } = "";
     public string AssetKind { get; set; } = "";
     public List<VsaNonAssessableCode> NonAssessableCodes { get; set; } = new();
+    public List<VsaNonAssessableRequirement> NonAssessableRequirements { get; set; } = new();
     public List<VsaClassificationRule> Rules { get; set; } = new();
 
     public static VsaClassificationRuleSet LoadFromFile(string path)
@@ -24,6 +25,16 @@ public sealed class VsaNonAssessableCode
 {
     public string Code { get; set; } = "";
     public string CodeMatch { get; set; } = "exact";
+    public string Reason { get; set; } = "";
+    public string SourceRef { get; set; } = "";
+}
+
+public sealed class VsaNonAssessableRequirement
+{
+    public string Code { get; set; } = "";
+    public string CodeMatch { get; set; } = "exact";
+    public string Requirement { get; set; } = "";
+    public List<string> Ch1 { get; set; } = new();
     public string Reason { get; set; } = "";
     public string SourceRef { get; set; } = "";
 }

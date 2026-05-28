@@ -58,6 +58,42 @@
       "sourceRef": "Fachliche Freigabe 2026-05-28"
     }
   ],
+  "nonAssessableRequirements": [
+    {
+      "code": "BAG",
+      "codeMatch": "prefix",
+      "requirement": "S",
+      "ch1": [],
+      "reason": "Tabelle 13 klassifiziert BAG nur fuer Betriebssicherheit (B), nicht fuer Standsicherheit (S).",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 13"
+    },
+    {
+      "code": "BAI",
+      "codeMatch": "prefix",
+      "requirement": "S",
+      "ch1": [],
+      "reason": "Tabelle 15 klassifiziert BAI nicht fuer Standsicherheit (S).",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 15"
+    },
+    {
+      "code": "BAI",
+      "codeMatch": "prefix",
+      "requirement": "D",
+      "ch1": [
+        "Z"
+      ],
+      "reason": "Tabelle 15 klassifiziert BAI/Z nur fuer Betriebssicherheit (B), nicht fuer Dichtheit (D).",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 15"
+    },
+    {
+      "code": "BAP",
+      "codeMatch": "prefix",
+      "requirement": "B",
+      "ch1": [],
+      "reason": "Tabelle 22 klassifiziert BAP fuer Dichtheit (D) und Standsicherheit (S), nicht fuer Betriebssicherheit (B).",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 22"
+    }
+  ],
   "rules": [
     {
       "id": "c-001-BAA-S",

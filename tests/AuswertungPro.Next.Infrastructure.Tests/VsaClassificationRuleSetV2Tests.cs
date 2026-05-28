@@ -24,6 +24,12 @@ public sealed class VsaClassificationRuleSetV2Tests
         Assert.Contains(rules.NonAssessableCodes, code => code.Code == "BCA" && code.CodeMatch == "prefix");
         Assert.Contains(rules.NonAssessableCodes, code => code.Code == "BDA" && code.CodeMatch == "prefix");
         Assert.DoesNotContain(rules.NonAssessableCodes, code => code.Code is "BDD" or "BDE");
+        Assert.Contains(rules.NonAssessableRequirements, rule =>
+            rule.Code == "BAP" && rule.Requirement == "B" && rule.CodeMatch == "prefix");
+        Assert.Contains(rules.NonAssessableRequirements, rule =>
+            rule.Code == "BAI" && rule.Requirement == "S" && rule.CodeMatch == "prefix");
+        Assert.Contains(rules.NonAssessableRequirements, rule =>
+            rule.Code == "BAI" && rule.Requirement == "D" && rule.Ch1.SequenceEqual(new[] { "Z" }));
         Assert.All(rules.Rules, rule => Assert.InRange(rule.Classification.Ez ?? 0, 0, 4));
 
         var baaRigid = rules.Rules.Single(rule =>

@@ -239,7 +239,7 @@ public sealed class VsaShadowReportTests
         {
             var report = ShadowReportAnalyzer.Analyze(path);
 
-            Assert.Equal(2, report.NonAssessableRuleNotFoundCount);
+            Assert.Equal(2, report.ExpectedNonAssessmentCount);
             Assert.Equal(3, report.OpenCutoverBlockerCount);
             Assert.Equal(1, report.V2MilderCount);
             Assert.Equal(1, report.V2StricterCount);
@@ -264,7 +264,31 @@ public sealed class VsaShadowReportTests
             var report = ShadowReportAnalyzer.Analyze(path);
 
             Assert.Equal(2, report.UnexpectedDifferences);
-            Assert.Equal(2, report.NonAssessableRuleNotFoundCount);
+            Assert.Equal(2, report.ExpectedNonAssessmentCount);
+            Assert.Equal(0, report.OpenCutoverBlockerCount);
+            Assert.True(report.IsCutoverSafe);
+            Assert.All(report.Groups, group => Assert.True(group.ExpectedNonAssessment));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Analyze_TreatsKnownNonAssessableRequirementsAsSafeCutoverNonBlockers()
+    {
+        var path = WriteFixture("""
+        {"timestamp_utc":"2026-05-28T08:29:01Z","code":"BAP","base_code":"BAP","requirement":"B","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"rule-not-found"}
+        {"timestamp_utc":"2026-05-28T08:29:02Z","code":"BAIZ","base_code":"BAI","requirement":"S","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"rule-not-found","ch1":"Z"}
+        {"timestamp_utc":"2026-05-28T08:29:03Z","code":"BAIZ","base_code":"BAI","requirement":"D","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"ch1-unmatched","ch1":"Z"}
+        """);
+
+        try
+        {
+            var report = ShadowReportAnalyzer.Analyze(path, KnownNonAssessableRules());
+
+            Assert.Equal(3, report.ExpectedNonAssessmentCount);
             Assert.Equal(0, report.OpenCutoverBlockerCount);
             Assert.True(report.IsCutoverSafe);
             Assert.All(report.Groups, group => Assert.True(group.ExpectedNonAssessment));
@@ -313,6 +337,9 @@ public sealed class VsaShadowReportTests
         [
             new("BCA", "prefix"),
             new("BCC", "prefix"),
-            new("BDA", "prefix")
+            new("BDA", "prefix"),
+            new("BAP", "prefix", "B"),
+            new("BAI", "prefix", "S"),
+            new("BAI", "prefix", "D", ["Z"])
         ];
 }

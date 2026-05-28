@@ -81,7 +81,7 @@ public static class ShadowReportAnalyzer
         var unexpected = entries.Count - expected;
         var unexpectedMissing = entries.Count(e => !e.ExpectedDrift && e.V2Ez is null);
         var unexpectedDifferent = entries.Count(e => !e.ExpectedDrift && e.V2Ez is not null);
-        var nonAssessableRuleNotFound = entries.Count(e =>
+        var expectedNonAssessment = entries.Count(e =>
             IsExpectedNonAssessment(e, nonAssessableCodes));
         var openCutoverBlockers = entries.Count(e =>
             !e.ExpectedDrift
@@ -117,7 +117,7 @@ public static class ShadowReportAnalyzer
             UnexpectedDifferences: unexpected,
             UnexpectedMissingV2Ez: unexpectedMissing,
             UnexpectedDifferentEz: unexpectedDifferent,
-            NonAssessableRuleNotFoundCount: nonAssessableRuleNotFound,
+            ExpectedNonAssessmentCount: expectedNonAssessment,
             OpenCutoverBlockerCount: openCutoverBlockers,
             V2MilderCount: v2Milder,
             V2StricterCount: v2Stricter,
@@ -137,7 +137,6 @@ public static class ShadowReportAnalyzer
         IReadOnlyCollection<NonAssessableCodeRule> nonAssessableCodes)
         => !entry.ExpectedDrift
            && entry.V2Ez is null
-           && string.Equals(entry.V2Reason, "rule-not-found", StringComparison.OrdinalIgnoreCase)
            && IsKnownNonAssessable(entry, nonAssessableCodes);
 
     private static bool IsKnownNonAssessable(
@@ -145,7 +144,7 @@ public static class ShadowReportAnalyzer
         IReadOnlyCollection<NonAssessableCodeRule> nonAssessableCodes)
     {
         var code = entry.BaseCode ?? entry.Code ?? "";
-        return nonAssessableCodes.Any(rule => rule.Matches(code));
+        return nonAssessableCodes.Any(rule => rule.Matches(code, entry.Requirement, entry.Ch1));
     }
 
     public static IReadOnlyList<NonAssessableCodeRule> LoadDefaultNonAssessableCodes()
@@ -157,28 +156,59 @@ public static class ShadowReportAnalyzer
                 continue;
 
             using var document = JsonDocument.Parse(File.ReadAllText(path));
-            if (!document.RootElement.TryGetProperty("nonAssessableCodes", out var codes)
-                || codes.ValueKind != JsonValueKind.Array)
-            {
-                continue;
-            }
-
-            foreach (var item in codes.EnumerateArray())
-            {
-                var code = item.TryGetProperty("code", out var codeElement)
-                    ? codeElement.GetString()
-                    : null;
-                if (string.IsNullOrWhiteSpace(code))
-                    continue;
-
-                var codeMatch = item.TryGetProperty("codeMatch", out var matchElement)
-                    ? matchElement.GetString()
-                    : null;
-                result.Add(new NonAssessableCodeRule(code.Trim().ToUpperInvariant(), codeMatch ?? "exact"));
-            }
+            AddRules(document.RootElement, "nonAssessableCodes", result, requirementRequired: false);
+            AddRules(document.RootElement, "nonAssessableRequirements", result, requirementRequired: true);
         }
 
         return result;
+    }
+
+    private static void AddRules(
+        JsonElement root,
+        string propertyName,
+        List<NonAssessableCodeRule> result,
+        bool requirementRequired)
+    {
+        if (!root.TryGetProperty(propertyName, out var codes)
+            || codes.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        foreach (var item in codes.EnumerateArray())
+        {
+            var code = item.TryGetProperty("code", out var codeElement)
+                ? codeElement.GetString()
+                : null;
+            if (string.IsNullOrWhiteSpace(code))
+                continue;
+
+            var requirement = item.TryGetProperty("requirement", out var requirementElement)
+                ? requirementElement.GetString()
+                : null;
+            if (requirementRequired && string.IsNullOrWhiteSpace(requirement))
+                continue;
+
+            var ch1 = new List<string>();
+            if (item.TryGetProperty("ch1", out var ch1Element)
+                && ch1Element.ValueKind == JsonValueKind.Array)
+            {
+                ch1.AddRange(ch1Element
+                    .EnumerateArray()
+                    .Select(value => value.GetString())
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .Select(value => value!.Trim().ToUpperInvariant()));
+            }
+
+            var codeMatch = item.TryGetProperty("codeMatch", out var matchElement)
+                ? matchElement.GetString()
+                : null;
+            result.Add(new NonAssessableCodeRule(
+                code.Trim().ToUpperInvariant(),
+                codeMatch ?? "exact",
+                string.IsNullOrWhiteSpace(requirement) ? null : requirement.Trim().ToUpperInvariant(),
+                ch1));
+        }
     }
 
     private static IEnumerable<string> ResolveDefaultRuleSetPaths()
@@ -268,16 +298,36 @@ public static class ShadowReportAnalyzer
     private sealed record ShadowWindow(string Window, int Count);
 }
 
-public sealed record NonAssessableCodeRule(string Code, string CodeMatch)
+public sealed record NonAssessableCodeRule(
+    string Code,
+    string CodeMatch,
+    string? Requirement = null,
+    IReadOnlyCollection<string>? Ch1 = null)
 {
-    public bool Matches(string value)
+    public bool Matches(string value, string? requirement, string? ch1)
     {
         if (string.IsNullOrWhiteSpace(value))
             return false;
 
-        return CodeMatch.Equals("prefix", StringComparison.OrdinalIgnoreCase)
+        var codeMatches = CodeMatch.Equals("prefix", StringComparison.OrdinalIgnoreCase)
             ? value.StartsWith(Code, StringComparison.OrdinalIgnoreCase)
             : value.Equals(Code, StringComparison.OrdinalIgnoreCase);
+        if (!codeMatches)
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(Requirement)
+            && !string.Equals(Requirement, requirement, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (Ch1 is { Count: > 0 }
+            && !Ch1.Contains(ch1 ?? "", StringComparer.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return true;
     }
 }
 
@@ -288,7 +338,7 @@ public sealed record ShadowReport(
     int UnexpectedDifferences,
     int UnexpectedMissingV2Ez,
     int UnexpectedDifferentEz,
-    int NonAssessableRuleNotFoundCount,
+    int ExpectedNonAssessmentCount,
     int OpenCutoverBlockerCount,
     int V2MilderCount,
     int V2StricterCount,
