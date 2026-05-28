@@ -20,6 +20,7 @@ Console.WriteLine($"  expected_drift=false: {report.UnexpectedDifferences}");
 Console.WriteLine($"    davon v2_ez=null:   {report.UnexpectedMissingV2Ez}");
 Console.WriteLine($"    davon EZ ungleich:  {report.UnexpectedDifferentEz}");
 Console.WriteLine($"    davon bekannte Nicht-Bewertung: {report.ExpectedNonAssessmentCount}");
+Console.WriteLine($"    davon freigegebene Norm-Korrektur: {report.AcceptedNormCorrectionCount}");
 Console.WriteLine($"    offene Cutover-Blocker: {report.OpenCutoverBlockerCount}");
 Console.WriteLine($"    v2 milder:          {report.V2MilderCount}");
 Console.WriteLine($"    v2 strenger:        {report.V2StricterCount}");
@@ -43,8 +44,11 @@ if (report.Groups.Count > 0)
         var nonAssessment = group.ExpectedNonAssessment
             ? "  expected_non_assessment=true"
             : "";
+        var normCorrection = group.AcceptedNormCorrection
+            ? "  accepted_norm_correction=true"
+            : "";
         Console.WriteLine(
-            $"  {group.Code,-8} {group.Requirement,-1}  count={group.Count,5}  expected_drift={group.ExpectedDrift.ToString().ToLowerInvariant()}  v2_missing={group.V2Missing.ToString().ToLowerInvariant()}{reason}{nonAssessment}");
+            $"  {group.Code,-8} {group.Requirement,-1}  count={group.Count,5}  expected_drift={group.ExpectedDrift.ToString().ToLowerInvariant()}  v2_missing={group.V2Missing.ToString().ToLowerInvariant()}{reason}{nonAssessment}{normCorrection}");
     }
 
     Console.WriteLine();
@@ -82,7 +86,7 @@ if (report.IsCutoverSafe)
 }
 
 var unexpectedCodes = report.Groups
-    .Where(group => !group.ExpectedDrift && !group.ExpectedNonAssessment)
+    .Where(group => !group.ExpectedDrift && !group.ExpectedNonAssessment && !group.AcceptedNormCorrection)
     .Select(group => group.V2Missing
         ? $"{group.Code}/{group.Requirement}(v2=null{FormatReason(group.V2Reason)})"
         : $"{group.Code}/{group.Requirement}")

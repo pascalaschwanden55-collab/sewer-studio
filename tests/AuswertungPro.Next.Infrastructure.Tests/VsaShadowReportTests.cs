@@ -368,6 +368,38 @@ public sealed class VsaShadowReportTests
     }
 
     [Fact]
+    public void Analyze_TreatsAcceptedNormCorrectionsAsSafeCutoverNonBlockers()
+    {
+        var path = WriteFixture("""
+        {"timestamp_utc":"2026-05-28T08:29:01Z","code":"BAJA","base_code":"BAJ","requirement":"D","legacy_ez":2,"v2_ez":4,"expected_drift":false,"v2_rule_id":"c-066-BAJ-D"}
+        {"timestamp_utc":"2026-05-28T08:29:02Z","code":"BAJA","base_code":"BAJ","requirement":"S","legacy_ez":2,"v2_ez":4,"expected_drift":false,"v2_rule_id":"c-unapproved"}
+        """);
+
+        try
+        {
+            var report = ShadowReportAnalyzer.Analyze(path, [], [new("c-066-BAJ-D")]);
+
+            Assert.Equal(1, report.AcceptedNormCorrectionCount);
+            Assert.Equal(1, report.OpenCutoverBlockerCount);
+            Assert.Contains(report.Groups, group => group.Code == "BAJA" && group.Requirement == "D" && group.AcceptedNormCorrection);
+            Assert.Contains(report.Groups, group => group.Code == "BAJA" && group.Requirement == "S" && !group.AcceptedNormCorrection);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void LoadDefaultAcceptedNormCorrections_ReadsApprovedRuleIds()
+    {
+        var rules = ShadowReportAnalyzer.LoadDefaultAcceptedNormCorrections();
+
+        Assert.Contains(rules, rule => rule.RuleId == "c-066-BAJ-D");
+        Assert.Contains(rules, rule => rule.RuleId == "c-074-BAJ-S");
+    }
+
+    [Fact]
     public void ExportDifferentEzCsv_WritesExamplesForManualReview()
     {
         var shadowPath = WriteFixture("""

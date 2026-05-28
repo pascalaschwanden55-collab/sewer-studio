@@ -205,6 +205,126 @@
       "sourceRef": "Fachliche Freigabe 2026-05-28"
     }
   ],
+  "acceptedNormCorrections": [
+    {
+      "ruleId": "c-055-BAG-B",
+      "code": "BAG",
+      "requirement": "B",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 13"
+    },
+    {
+      "ruleId": "c-059-BAH-D",
+      "code": "BAHZ",
+      "requirement": "D",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 14"
+    },
+    {
+      "ruleId": "c-060-BAH-S",
+      "code": "BAHZ",
+      "requirement": "S",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 14"
+    },
+    {
+      "ruleId": "c-062-BAI-B",
+      "code": "BAIAA",
+      "requirement": "B",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 15"
+    },
+    {
+      "ruleId": "c-065-BAI-B",
+      "code": "BAIZ",
+      "requirement": "B",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 15"
+    },
+    {
+      "ruleId": "c-066-BAJ-D",
+      "code": "BAJA",
+      "requirement": "D",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16"
+    },
+    {
+      "ruleId": "c-068-BAJ-S",
+      "code": "BAJA",
+      "requirement": "S",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16"
+    },
+    {
+      "ruleId": "c-069-BAJ-D",
+      "code": "BAJB",
+      "requirement": "D",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16"
+    },
+    {
+      "ruleId": "c-071-BAJ-B",
+      "code": "BAJB",
+      "requirement": "B",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16"
+    },
+    {
+      "ruleId": "c-072-BAJ-D",
+      "code": "BAJC",
+      "requirement": "D",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16"
+    },
+    {
+      "ruleId": "c-074-BAJ-S",
+      "code": "BAJC",
+      "requirement": "S",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16"
+    },
+    {
+      "ruleId": "c-115-BAP-D",
+      "code": "BAP",
+      "requirement": "D",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 22"
+    },
+    {
+      "ruleId": "c-116-BAP-S",
+      "code": "BAP",
+      "requirement": "S",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 22"
+    },
+    {
+      "ruleId": "c-119-BBB-D",
+      "code": "BBBA",
+      "requirement": "D",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 24"
+    },
+    {
+      "ruleId": "c-120-BBB-B",
+      "code": "BBBA",
+      "requirement": "B",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 24"
+    },
+    {
+      "ruleId": "c-121-BBC-B",
+      "code": "BBCA",
+      "requirement": "B",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 25"
+    },
+    {
+      "ruleId": "c-122-BBC-B",
+      "requirement": "B",
+      "reason": "Fachlich freigegeben 2026-05-28: v2-PDF-Regel ersetzt Legacy-Pauschalnote.",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 25"
+    }
+  ],
   "rules": [
     {
       "id": "c-001-BAA-S",

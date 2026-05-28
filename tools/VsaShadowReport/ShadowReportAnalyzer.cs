@@ -11,14 +11,21 @@ public static class ShadowReportAnalyzer
     };
 
     public static ShadowReport Analyze(string path)
-        => Analyze(path, LoadDefaultNonAssessableCodes());
+        => Analyze(path, LoadDefaultNonAssessableCodes(), LoadDefaultAcceptedNormCorrections());
 
     public static ShadowReport Analyze(string path, IReadOnlyCollection<NonAssessableCodeRule>? nonAssessableCodes)
+        => Analyze(path, nonAssessableCodes, []);
+
+    public static ShadowReport Analyze(
+        string path,
+        IReadOnlyCollection<NonAssessableCodeRule>? nonAssessableCodes,
+        IReadOnlyCollection<AcceptedNormCorrectionRule>? acceptedNormCorrections)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             return ShadowReport.NoDataReport(path);
 
         nonAssessableCodes ??= [];
+        acceptedNormCorrections ??= [];
         var entries = new List<ShadowEntry>();
         foreach (var line in File.ReadLines(path))
         {
@@ -62,6 +69,7 @@ public static class ShadowReportAnalyzer
                 Requirement: e.Requirement ?? "",
                 e.ExpectedDrift,
                 ExpectedNonAssessment: IsExpectedNonAssessment(e, nonAssessableCodes),
+                AcceptedNormCorrection: IsAcceptedNormCorrection(e, acceptedNormCorrections),
                 V2Missing: e.V2Ez is null,
                 V2Reason: e.V2Reason ?? ""))
             .Select(g => new ShadowDiffGroup(
@@ -69,6 +77,7 @@ public static class ShadowReportAnalyzer
                 g.Key.Requirement,
                 g.Key.ExpectedDrift,
                 g.Key.ExpectedNonAssessment,
+                g.Key.AcceptedNormCorrection,
                 g.Key.V2Missing,
                 g.Count(),
                 string.IsNullOrWhiteSpace(g.Key.V2Reason) ? null : g.Key.V2Reason))
@@ -83,9 +92,12 @@ public static class ShadowReportAnalyzer
         var unexpectedDifferent = entries.Count(e => !e.ExpectedDrift && e.V2Ez is not null);
         var expectedNonAssessment = entries.Count(e =>
             IsExpectedNonAssessment(e, nonAssessableCodes));
+        var acceptedNormCorrection = entries.Count(e =>
+            IsAcceptedNormCorrection(e, acceptedNormCorrections));
         var openCutoverBlockers = entries.Count(e =>
             !e.ExpectedDrift
-            && !IsExpectedNonAssessment(e, nonAssessableCodes));
+            && !IsExpectedNonAssessment(e, nonAssessableCodes)
+            && !IsAcceptedNormCorrection(e, acceptedNormCorrections));
         var v2Milder = entries.Count(e => !e.ExpectedDrift && IsV2Milder(e));
         var v2Stricter = entries.Count(e => !e.ExpectedDrift && IsV2Stricter(e));
         var v2New = entries.Count(e => !e.ExpectedDrift && e.LegacyEz is null && e.V2Ez is not null);
@@ -117,6 +129,7 @@ public static class ShadowReportAnalyzer
             UnexpectedMissingV2Ez: unexpectedMissing,
             UnexpectedDifferentEz: unexpectedDifferent,
             ExpectedNonAssessmentCount: expectedNonAssessment,
+            AcceptedNormCorrectionCount: acceptedNormCorrection,
             OpenCutoverBlockerCount: openCutoverBlockers,
             V2MilderCount: v2Milder,
             V2StricterCount: v2Stricter,
@@ -146,6 +159,13 @@ public static class ShadowReportAnalyzer
         return nonAssessableCodes.Any(rule => rule.Matches(code, entry.Requirement, entry.Ch1, entry.V2Reason));
     }
 
+    private static bool IsAcceptedNormCorrection(
+        ShadowEntry entry,
+        IReadOnlyCollection<AcceptedNormCorrectionRule> acceptedNormCorrections)
+        => !entry.ExpectedDrift
+           && entry.V2Ez is not null
+           && acceptedNormCorrections.Any(rule => rule.Matches(entry.V2RuleId, entry.Code, entry.Requirement));
+
     public static IReadOnlyList<NonAssessableCodeRule> LoadDefaultNonAssessableCodes()
     {
         var result = new List<NonAssessableCodeRule>();
@@ -157,6 +177,45 @@ public static class ShadowReportAnalyzer
             using var document = JsonDocument.Parse(File.ReadAllText(path));
             AddRules(document.RootElement, "nonAssessableCodes", result, requirementRequired: false);
             AddRules(document.RootElement, "nonAssessableRequirements", result, requirementRequired: true);
+        }
+
+        return result;
+    }
+
+    public static IReadOnlyList<AcceptedNormCorrectionRule> LoadDefaultAcceptedNormCorrections()
+    {
+        var result = new List<AcceptedNormCorrectionRule>();
+        foreach (var path in ResolveDefaultRuleSetPaths().Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!File.Exists(path))
+                continue;
+
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            if (!document.RootElement.TryGetProperty("acceptedNormCorrections", out var rules)
+                || rules.ValueKind != JsonValueKind.Array)
+            {
+                continue;
+            }
+
+            foreach (var item in rules.EnumerateArray())
+            {
+                var ruleId = item.TryGetProperty("ruleId", out var ruleIdElement)
+                    ? ruleIdElement.GetString()
+                    : null;
+                if (string.IsNullOrWhiteSpace(ruleId))
+                    continue;
+
+                var code = item.TryGetProperty("code", out var codeElement)
+                    ? codeElement.GetString()
+                    : null;
+                var requirement = item.TryGetProperty("requirement", out var requirementElement)
+                    ? requirementElement.GetString()
+                    : null;
+                result.Add(new AcceptedNormCorrectionRule(
+                    ruleId.Trim(),
+                    string.IsNullOrWhiteSpace(code) ? null : code.Trim().ToUpperInvariant(),
+                    string.IsNullOrWhiteSpace(requirement) ? null : requirement.Trim().ToUpperInvariant()));
+            }
         }
 
         return result;
@@ -355,6 +414,35 @@ public sealed record NonAssessableCodeRule(
     }
 }
 
+public sealed record AcceptedNormCorrectionRule(
+    string RuleId,
+    string? Code = null,
+    string? Requirement = null)
+{
+    public bool Matches(string? ruleId, string? code, string? requirement)
+    {
+        if (string.IsNullOrWhiteSpace(ruleId)
+            || !string.Equals(RuleId, ruleId, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(Code)
+            && !string.Equals(Code, code, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(Requirement)
+            && !string.Equals(Requirement, requirement, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return true;
+    }
+}
+
 public sealed record ShadowReport(
     string Path,
     int TotalDifferences,
@@ -363,6 +451,7 @@ public sealed record ShadowReport(
     int UnexpectedMissingV2Ez,
     int UnexpectedDifferentEz,
     int ExpectedNonAssessmentCount,
+    int AcceptedNormCorrectionCount,
     int OpenCutoverBlockerCount,
     int V2MilderCount,
     int V2StricterCount,
@@ -384,7 +473,7 @@ public sealed record ShadowReport(
            && AnalyzedWindowEntries < LargestWindowEntries;
 
     public static ShadowReport NoDataReport(string path)
-        => new(path, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, [], [], NoData: true, TotalLogEntries: 0, AnalyzedWindow: null, AnalyzedWindowEntries: 0, LargestWindow: null, LargestWindowEntries: 0);
+        => new(path, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, [], [], NoData: true, TotalLogEntries: 0, AnalyzedWindow: null, AnalyzedWindowEntries: 0, LargestWindow: null, LargestWindowEntries: 0);
 }
 
 public sealed record ShadowDiffGroup(
@@ -392,6 +481,7 @@ public sealed record ShadowDiffGroup(
     string Requirement,
     bool ExpectedDrift,
     bool ExpectedNonAssessment,
+    bool AcceptedNormCorrection,
     bool V2Missing,
     int Count,
     string? V2Reason);
