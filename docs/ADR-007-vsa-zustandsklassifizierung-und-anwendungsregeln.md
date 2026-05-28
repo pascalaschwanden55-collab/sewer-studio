@@ -30,6 +30,10 @@ Stand 2026-05-28: ADR-007 ist umgesetzt. `VsaEvaluationService` nutzt produktiv
 die v2-Regeldateien aus der VSA-Richtlinie 2023. Legacy bleibt nur als
 Rollback-Pfad ueber `VsaUseV2Engine=false` erhalten.
 
+Smoke-Test 2026-05-28: echte Schaeden zeigen plausible, gestreute Noten;
+Bestandsaufnahme-/Nicht-Bewertungscodes werden sauber als `n/a` angezeigt. D.2
+ist damit fachlich und technisch abgeschlossen.
+
 Die Richtlinie enthaelt eigene Klassifizierungstabellen. Diese bestimmen pro
 Code, Charakterisierung, Anforderung und Quantifizierung den Einzelzustand fuer:
 
