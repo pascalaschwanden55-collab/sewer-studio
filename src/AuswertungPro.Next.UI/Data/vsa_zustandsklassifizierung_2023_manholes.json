@@ -1,0 +1,5999 @@
+{
+  "schemaVersion": 2,
+  "source": "VSA_Rili_ Zustandsbeurteilung von Entwaesserungsanlagen.pdf / docs/vsa-zustandsklassifizierung-2023-schwellen.md",
+  "assetKind": "manhole",
+  "rules": [
+    {
+      "id": "m-143-DAA-S",
+      "code": "DAA",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "rigid",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 7,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 4,
+            "maxExclusive": 7
+          },
+          {
+            "ez": 2,
+            "minInclusive": 3,
+            "maxExclusive": 4
+          },
+          {
+            "ez": 3,
+            "minInclusive": 1,
+            "maxExclusive": 3
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 1
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 31 / gedruckte Seite 29, Anhang D, Tabelle 33:",
+      "notes": [
+        "Geltung: Bereiche B,D,F; biegesteif"
+      ]
+    },
+    {
+      "id": "m-144-DAA-S",
+      "code": "DAA",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "flexible",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 31 / gedruckte Seite 29, Anhang D, Tabelle 33:",
+      "notes": [
+        "Geltung: Bereiche B,D,F; biegeweich"
+      ]
+    },
+    {
+      "id": "m-145-DAA-B",
+      "code": "DAA",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 40,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 30,
+            "maxExclusive": 40
+          },
+          {
+            "ez": 2,
+            "minInclusive": 20,
+            "maxExclusive": 30
+          },
+          {
+            "ez": 3,
+            "minInclusive": 10,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 10
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 31 / gedruckte Seite 29, Anhang D, Tabelle 33:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-146-DAB-S",
+      "code": "DAB",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "A",
+        "B"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 34:",
+      "notes": [
+        "Geltung: Bereiche B,D,F,I,J"
+      ]
+    },
+    {
+      "id": "m-147-DAB-S",
+      "code": "DAB",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "C",
+        "D",
+        "E"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 34:",
+      "notes": [
+        "Geltung: Bereiche B,D,F,I,J"
+      ]
+    },
+    {
+      "id": "m-148-DAB-S",
+      "code": "DAB",
+      "codeMatch": "exact",
+      "ch1": [
+        "B",
+        "C"
+      ],
+      "ch2": [
+        "A"
+      ],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 8,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 5,
+            "maxExclusive": 8
+          },
+          {
+            "ez": 2,
+            "minInclusive": 3,
+            "maxExclusive": 5
+          },
+          {
+            "ez": 3,
+            "minInclusive": 1,
+            "maxExclusive": 3
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 1
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 34:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-149-DAB-S",
+      "code": "DAB",
+      "codeMatch": "exact",
+      "ch1": [
+        "B",
+        "C"
+      ],
+      "ch2": [
+        "B"
+      ],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 34:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-150-DAB-S",
+      "code": "DAB",
+      "codeMatch": "exact",
+      "ch1": [
+        "B",
+        "C"
+      ],
+      "ch2": [
+        "C",
+        "D",
+        "E"
+      ],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 34:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-151-DAB-D",
+      "code": "DAB",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 34:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-152-DAB-D",
+      "code": "DAB",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 34:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-153-DAB-D",
+      "code": "DAB",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 34:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-154-DAB-D",
+      "code": "DAB",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 34:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-155-DAC-D",
+      "code": "DAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 35:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-156-DAC-D",
+      "code": "DAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 35:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-157-DAC-S",
+      "code": "DAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 35:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-158-DAC-B",
+      "code": "DAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 35:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-159-DAC-D",
+      "code": "DAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 35:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-160-DAC-D",
+      "code": "DAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 35:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-161-DAC-S",
+      "code": "DAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 35:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-162-DAC-D",
+      "code": "DAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 35:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-163-DAC-D",
+      "code": "DAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 35:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-164-DAC-S",
+      "code": "DAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 35:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-165-DAC-B",
+      "code": "DAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 35:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-166-DAD-D",
+      "code": "DAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 36:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-167-DAD-D",
+      "code": "DAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 36:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-168-DAD-S",
+      "code": "DAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 36:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-169-DAD-B",
+      "code": "DAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 36:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-170-DAD-B",
+      "code": "DAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "H",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 36:",
+      "notes": [
+        "Geltung: Bereiche H,I,J"
+      ]
+    },
+    {
+      "id": "m-171-DAD-D",
+      "code": "DAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 36:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-172-DAD-D",
+      "code": "DAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 36:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-173-DAD-S",
+      "code": "DAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 36:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-174-DAD-B",
+      "code": "DAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "H",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 36:",
+      "notes": [
+        "Geltung: Bereiche H,I,J"
+      ]
+    },
+    {
+      "id": "m-175-DAD-D",
+      "code": "DAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 36:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-176-DAD-D",
+      "code": "DAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 36:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-177-DAD-S",
+      "code": "DAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 36:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-178-DAD-B",
+      "code": "DAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "H",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 36:",
+      "notes": [
+        "Geltung: Bereiche D,F,H,I,J"
+      ]
+    },
+    {
+      "id": "m-179-DAE-D",
+      "code": "DAE",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 3,
+            "minInclusive": 100,
+            "maxExclusive": null
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 100
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 37:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-180-DAE-D",
+      "code": "DAE",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 2,
+            "minInclusive": 100,
+            "maxExclusive": null
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 100
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 37:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-181-DAE-S",
+      "code": "DAE",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 2,
+            "minInclusive": 100,
+            "maxExclusive": null
+          },
+          {
+            "ez": 3,
+            "minInclusive": 10,
+            "maxExclusive": 100
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 10
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 37:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-182-DAF-S",
+      "code": "DAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 38:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-183-DAF-S",
+      "code": "DAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [
+        "A",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 38:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-184-DAF-S",
+      "code": "DAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 38:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-185-DAF-S",
+      "code": "DAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 38:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-186-DAF-S",
+      "code": "DAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "E"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 38:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-187-DAF-S",
+      "code": "DAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "F"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 38:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-188-DAF-S",
+      "code": "DAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "G"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 38:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-189-DAF-S",
+      "code": "DAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "H"
+      ],
+      "ch2": [
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 38:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-190-DAF-D",
+      "code": "DAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "I"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 38:",
+      "notes": [
+        "Geltung: Bereiche D,F,I,J"
+      ]
+    },
+    {
+      "id": "m-191-DAF-S",
+      "code": "DAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "I"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 38:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-192-DAF-S",
+      "code": "DAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "J"
+      ],
+      "ch2": [
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 38:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-193-DAF-B",
+      "code": "DAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "J"
+      ],
+      "ch2": [
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 38:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-194-DAF-B",
+      "code": "DAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "K"
+      ],
+      "ch2": [
+        "A",
+        "E",
+        "Z"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 38:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-195-DAF-D",
+      "code": "DAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 38:",
+      "notes": [
+        "Geltung: Bereiche D,F,I,J"
+      ]
+    },
+    {
+      "id": "m-196-DAF-S",
+      "code": "DAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 38:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-197-DAG-B",
+      "code": "DAG",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 400,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 300,
+            "maxExclusive": 400
+          },
+          {
+            "ez": 2,
+            "minInclusive": 200,
+            "maxExclusive": 300
+          },
+          {
+            "ez": 3,
+            "minInclusive": 100,
+            "maxExclusive": 200
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 100
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 39:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-198-DAG-B",
+      "code": "DAG",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 39:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-199-DAH-D",
+      "code": "DAH",
+      "codeMatch": "exact",
+      "ch1": [
+        "B",
+        "C",
+        "D"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 40:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-200-DAH-D",
+      "code": "DAH",
+      "codeMatch": "exact",
+      "ch1": [
+        "B",
+        "C",
+        "D"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 40:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-201-DAH-B",
+      "code": "DAH",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "E"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "I"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 40:",
+      "notes": [
+        "Geltung: Bereiche D,F,I"
+      ]
+    },
+    {
+      "id": "m-202-DAH-D",
+      "code": "DAH",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 40:",
+      "notes": [
+        "Geltung: Bereiche D,F,I,J"
+      ]
+    },
+    {
+      "id": "m-203-DAI-D",
+      "code": "DAI",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C"
+      ],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 35 / gedruckte Seite 33, Anhang D, Tabelle 41:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-204-DAI-D",
+      "code": "DAI",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C"
+      ],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 35 / gedruckte Seite 33, Anhang D, Tabelle 41:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-205-DAI-B",
+      "code": "DAI",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 35 / gedruckte Seite 33, Anhang D, Tabelle 41:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-206-DAI-B",
+      "code": "DAI",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 35 / gedruckte Seite 33, Anhang D, Tabelle 41:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-207-DAJ-D",
+      "code": "DAJ",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 35 / gedruckte Seite 33, Anhang D, Tabelle 42:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-208-DAJ-S",
+      "code": "DAJ",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 35 / gedruckte Seite 33, Anhang D, Tabelle 42:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-209-DAK-B",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "H"
+        ]
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 40,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 30,
+            "maxExclusive": 40
+          },
+          {
+            "ez": 2,
+            "minInclusive": 20,
+            "maxExclusive": 30
+          },
+          {
+            "ez": 3,
+            "minInclusive": 10,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 10
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F,H"
+      ]
+    },
+    {
+      "id": "m-210-DAK-B",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 50,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 35,
+            "maxExclusive": 50
+          },
+          {
+            "ez": 2,
+            "minInclusive": 20,
+            "maxExclusive": 35
+          },
+          {
+            "ez": 3,
+            "minInclusive": 5,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 5
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-211-DAK-D",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F,I,J"
+      ]
+    },
+    {
+      "id": "m-212-DAK-D",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "H"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F,H"
+      ]
+    },
+    {
+      "id": "m-213-DAK-D",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-214-DAK-B",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-215-DAK-B",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-216-DAK-S",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [
+        "C"
+      ],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "H",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F,H,I,J"
+      ]
+    },
+    {
+      "id": "m-217-DAK-S",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "E"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "H",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F,H,I,J"
+      ]
+    },
+    {
+      "id": "m-218-DAK-B",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "E"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "H"
+        ]
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 40,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 30,
+            "maxExclusive": 40
+          },
+          {
+            "ez": 2,
+            "minInclusive": 20,
+            "maxExclusive": 30
+          },
+          {
+            "ez": 3,
+            "minInclusive": 10,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 10
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F,H"
+      ]
+    },
+    {
+      "id": "m-219-DAK-B",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "E"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 50,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 35,
+            "maxExclusive": 50
+          },
+          {
+            "ez": 2,
+            "minInclusive": 20,
+            "maxExclusive": 35
+          },
+          {
+            "ez": 3,
+            "minInclusive": 5,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 5
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-220-DAK-D",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "F"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "H",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F,H,I,J"
+      ]
+    },
+    {
+      "id": "m-221-DAK-B",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "G"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "H",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F,H,I,J"
+      ]
+    },
+    {
+      "id": "m-222-DAK-B",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "H"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-223-DAK-D",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "I"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-224-DAK-D",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "I"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-225-DAK-D",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "J"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-226-DAK-D",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "J"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-227-DAK-D",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "K"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-228-DAK-D",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "K"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-229-DAK-D",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "L"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-230-DAK-D",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "L"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-231-DAK-S",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "L"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "H",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F,H,I,J"
+      ]
+    },
+    {
+      "id": "m-232-DAK-D",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "M"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-233-DAK-D",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "M"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-234-DAK-D",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "N"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F,I,J"
+      ]
+    },
+    {
+      "id": "m-235-DAK-D",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F,I,J"
+      ]
+    },
+    {
+      "id": "m-236-DAK-S",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F,I,J"
+      ]
+    },
+    {
+      "id": "m-237-DAK-B",
+      "code": "DAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:",
+      "notes": [
+        "Geltung: Bereiche D,F,I,J"
+      ]
+    },
+    {
+      "id": "m-238-DAL-D",
+      "code": "DAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 44:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-239-DAL-D",
+      "code": "DAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 44:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-240-DAL-D",
+      "code": "DAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 44:",
+      "notes": [
+        "Geltung: Bereiche D,F,I,J"
+      ]
+    },
+    {
+      "id": "m-241-DAL-D",
+      "code": "DAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 44:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-242-DAL-D",
+      "code": "DAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 44:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-243-DAL-D",
+      "code": "DAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 44:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-244-DAL-D",
+      "code": "DAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 44:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-245-DAL-B",
+      "code": "DAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "E"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "A",
+          "B",
+          "D",
+          "E",
+          "H"
+        ]
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 40,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 30,
+            "maxExclusive": 40
+          },
+          {
+            "ez": 2,
+            "minInclusive": 20,
+            "maxExclusive": 30
+          },
+          {
+            "ez": 3,
+            "minInclusive": 10,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 10
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 44:",
+      "notes": [
+        "Geltung: Bereiche A,B,D,E,H"
+      ]
+    },
+    {
+      "id": "m-246-DAL-B",
+      "code": "DAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "E"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 50,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 35,
+            "maxExclusive": 50
+          },
+          {
+            "ez": 2,
+            "minInclusive": 20,
+            "maxExclusive": 35
+          },
+          {
+            "ez": 3,
+            "minInclusive": 5,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 5
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 44:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-247-DAL-D",
+      "code": "DAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "F"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 44:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-248-DAL-D",
+      "code": "DAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "F"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 44:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-249-DAL-D",
+      "code": "DAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "G"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 44:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-250-DAL-D",
+      "code": "DAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "G"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 44:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-251-DAL-D",
+      "code": "DAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 44:",
+      "notes": [
+        "Geltung: Bereiche alle"
+      ]
+    },
+    {
+      "id": "m-252-DAL-B",
+      "code": "DAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 44:",
+      "notes": [
+        "Geltung: Bereiche alle"
+      ]
+    },
+    {
+      "id": "m-253-DAM-D",
+      "code": "DAM",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 45:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-254-DAM-D",
+      "code": "DAM",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 45:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-255-DAM-S",
+      "code": "DAM",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 45:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-256-DAM-D",
+      "code": "DAM",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 45:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-257-DAM-D",
+      "code": "DAM",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 45:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-258-DAM-S",
+      "code": "DAM",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 45:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-259-DAM-D",
+      "code": "DAM",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 45:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-260-DAM-D",
+      "code": "DAM",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 45:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-261-DAM-S",
+      "code": "DAM",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 45:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-262-DAN-D",
+      "code": "DAN",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 46:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-263-DAN-D",
+      "code": "DAN",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 46:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-264-DAN-S",
+      "code": "DAN",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 46:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-265-DAO-D",
+      "code": "DAO",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 47:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-266-DAO-D",
+      "code": "DAO",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 47:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-267-DAO-S",
+      "code": "DAO",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 47:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-268-DAP-D",
+      "code": "DAP",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 48:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-269-DAP-D",
+      "code": "DAP",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 48:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-270-DAP-S",
+      "code": "DAP",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 48:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-271-DAQ-B",
+      "code": "DAQ",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "C",
+        "D",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 49:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-272-DAQ-B",
+      "code": "DAQ",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 49:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-273-DAQ-B",
+      "code": "DAQ",
+      "codeMatch": "exact",
+      "ch1": [
+        "E"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 49:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-274-DAQ-B",
+      "code": "DAQ",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 49:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-275-DAR-B",
+      "code": "DAR",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "C",
+        "F"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "A"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 50:",
+      "notes": [
+        "Geltung: Bereiche A"
+      ]
+    },
+    {
+      "id": "m-276-DAR-B",
+      "code": "DAR",
+      "codeMatch": "exact",
+      "ch1": [
+        "B",
+        "E"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "A"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 50:",
+      "notes": [
+        "Geltung: Bereiche A"
+      ]
+    },
+    {
+      "id": "m-277-DAR-B",
+      "code": "DAR",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "A"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 50:",
+      "notes": [
+        "Geltung: Bereiche A"
+      ]
+    },
+    {
+      "id": "m-278-DAR-B",
+      "code": "DAR",
+      "codeMatch": "exact",
+      "ch1": [
+        "G",
+        "H"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "A"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 50:",
+      "notes": [
+        "Geltung: Bereiche A"
+      ]
+    },
+    {
+      "id": "m-279-DAR-B",
+      "code": "DAR",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "A"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 50:",
+      "notes": [
+        "Geltung: Bereiche A"
+      ]
+    },
+    {
+      "id": "m-280-DBA-D",
+      "code": "DBA",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 51:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-281-DBA-D",
+      "code": "DBA",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 51:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-282-DBA-B",
+      "code": "DBA",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 51:",
+      "notes": [
+        "Geltung: Bereiche alle"
+      ]
+    },
+    {
+      "id": "m-283-DBB-D",
+      "code": "DBB",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 52:",
+      "notes": [
+        "Geltung: Bereiche alle"
+      ]
+    },
+    {
+      "id": "m-284-DBB-B",
+      "code": "DBB",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "C",
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 52:",
+      "notes": [
+        "Geltung: Bereiche alle"
+      ]
+    },
+    {
+      "id": "m-285-DBC-B",
+      "code": "DBC",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "J",
+          "H"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 53:",
+      "notes": [
+        "Geltung: Bereiche J,H"
+      ]
+    },
+    {
+      "id": "m-286-DBC-B",
+      "code": "DBC",
+      "codeMatch": "exact",
+      "ch1": [
+        "C",
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 1,
+            "minInclusive": 300,
+            "maxExclusive": null
+          },
+          {
+            "ez": 2,
+            "minInclusive": 100,
+            "maxExclusive": 300
+          },
+          {
+            "ez": 3,
+            "minInclusive": 50,
+            "maxExclusive": 100
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 50
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 53:",
+      "notes": [
+        "Geltung: Bereiche J"
+      ]
+    },
+    {
+      "id": "m-287-DBC-B",
+      "code": "DBC",
+      "codeMatch": "exact",
+      "ch1": [
+        "C",
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "H"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 53:",
+      "notes": [
+        "Geltung: Bereiche H"
+      ]
+    },
+    {
+      "id": "m-288-DBD-D",
+      "code": "DBD",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 54:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-289-DBD-D",
+      "code": "DBD",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 54:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-290-DBD-S",
+      "code": "DBD",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 54:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-291-DBD-B",
+      "code": "DBD",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 54:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-292-DBE-B",
+      "code": "DBE",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 55:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-293-DBE-D",
+      "code": "DBE",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 55:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-294-DBE-D",
+      "code": "DBE",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 55:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-295-DBE-B",
+      "code": "DBE",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 55:",
+      "notes": [
+        "Geltung: Bereiche alle"
+      ]
+    },
+    {
+      "id": "m-296-DBE-B",
+      "code": "DBE",
+      "codeMatch": "exact",
+      "ch1": [
+        "E",
+        "F",
+        "H",
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 55:",
+      "notes": [
+        "Geltung: Bereiche alle"
+      ]
+    },
+    {
+      "id": "m-297-DBE-D",
+      "code": "DBE",
+      "codeMatch": "exact",
+      "ch1": [
+        "G"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 55:",
+      "notes": [
+        "Geltung: Bereiche D,F"
+      ]
+    },
+    {
+      "id": "m-298-DBE-D",
+      "code": "DBE",
+      "codeMatch": "exact",
+      "ch1": [
+        "G"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 55:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-299-DBE-B",
+      "code": "DBE",
+      "codeMatch": "exact",
+      "ch1": [
+        "G"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 55:",
+      "notes": [
+        "Geltung: Bereiche alle"
+      ]
+    },
+    {
+      "id": "m-300-DBF-D",
+      "code": "DBF",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C"
+      ],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 56:",
+      "notes": [
+        "Geltung: Bereiche D,F,I,J"
+      ]
+    },
+    {
+      "id": "m-301-DBF-S",
+      "code": "DBF",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 56:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-302-DBF-B",
+      "code": "DBF",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 56:",
+      "notes": [
+        "Geltung: Bereiche alle"
+      ]
+    },
+    {
+      "id": "m-303-DBF-D",
+      "code": "DBF",
+      "codeMatch": "exact",
+      "ch1": [
+        "B",
+        "C"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C"
+      ],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 56:",
+      "notes": [
+        "Geltung: Bereiche D,F,I,J"
+      ]
+    },
+    {
+      "id": "m-304-DBF-S",
+      "code": "DBF",
+      "codeMatch": "exact",
+      "ch1": [
+        "B",
+        "C"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 56:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-305-DBF-D",
+      "code": "DBF",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C"
+      ],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "D",
+          "F",
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 56:",
+      "notes": [
+        "Geltung: Bereiche D,F,I,J"
+      ]
+    },
+    {
+      "id": "m-306-DBF-S",
+      "code": "DBF",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 56:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-307-DBG-D",
+      "code": "DBG",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I",
+          "J"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 57:",
+      "notes": [
+        "Geltung: Bereiche I,J"
+      ]
+    },
+    {
+      "id": "m-308-DBG-S",
+      "code": "DBG",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "B",
+          "D",
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 57:",
+      "notes": [
+        "Geltung: Bereiche B,D,F"
+      ]
+    },
+    {
+      "id": "m-309-DBH-X",
+      "code": "DBH",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "Z"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "Z"
+      ],
+      "requirement": null,
+      "parameter": "q1",
+      "unit": "Anzahl",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "missing",
+        "ez": null,
+        "ranges": [],
+        "reason": "needs-review"
+      },
+      "status": "needs-review",
+      "sourceRef": "PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 58:",
+      "notes": [
+        "Geltung: Bereiche alle",
+        "EZ-Fussnote: alle*"
+      ]
+    },
+    {
+      "id": "m-310-DCH-B",
+      "code": "DCH",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "H"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 59:",
+      "notes": [
+        "Geltung: Bereiche H"
+      ]
+    },
+    {
+      "id": "m-311-DCH-B",
+      "code": "DCH",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "H"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 59:",
+      "notes": [
+        "Geltung: Bereiche H"
+      ]
+    },
+    {
+      "id": "m-312-DCI-B",
+      "code": "DCI",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 60:",
+      "notes": [
+        "Geltung: Bereiche I"
+      ]
+    },
+    {
+      "id": "m-313-DCI-B",
+      "code": "DCI",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [
+        "Y"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 60:",
+      "notes": [
+        "Geltung: Bereiche I"
+      ]
+    },
+    {
+      "id": "m-314-DCI-B",
+      "code": "DCI",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [
+        "Y"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "I"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 60:",
+      "notes": [
+        "Geltung: Bereiche I"
+      ]
+    },
+    {
+      "id": "m-315-DCL-B",
+      "code": "DCL",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "C"
+      ],
+      "ch2": [
+        "A"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 41 / gedruckte Seite 39, Anhang D, Tabelle 61:",
+      "notes": [
+        "Geltung: Bereiche F"
+      ]
+    },
+    {
+      "id": "m-316-DCL-B",
+      "code": "DCL",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "C"
+      ],
+      "ch2": [
+        "B"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "F"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 41 / gedruckte Seite 39, Anhang D, Tabelle 61:",
+      "notes": [
+        "Geltung: Bereiche F"
+      ]
+    },
+    {
+      "id": "m-317-DCM-B",
+      "code": "DCM",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "A"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 41 / gedruckte Seite 39, Anhang D, Tabelle 62:",
+      "notes": [
+        "Geltung: Bereiche A"
+      ]
+    },
+    {
+      "id": "m-318-DCM-B",
+      "code": "DCM",
+      "codeMatch": "exact",
+      "ch1": [
+        "B",
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": [
+          "A"
+        ]
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 41 / gedruckte Seite 39, Anhang D, Tabelle 62:",
+      "notes": [
+        "Geltung: Bereiche A"
+      ]
+    },
+    {
+      "id": "m-319-DDE-B",
+      "code": "DDE",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "C",
+        "D",
+        "E",
+        "Y"
+      ],
+      "ch2": [
+        "A"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 41 / gedruckte Seite 39, Anhang D, Tabelle 63:",
+      "notes": [
+        "Geltung: Bereiche alle"
+      ]
+    },
+    {
+      "id": "m-320-DDE-B",
+      "code": "DDE",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "C",
+        "D",
+        "E",
+        "Y"
+      ],
+      "ch2": [
+        "B"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 41 / gedruckte Seite 39, Anhang D, Tabelle 63:",
+      "notes": [
+        "Geltung: Bereiche alle"
+      ]
+    },
+    {
+      "id": "m-321-DDE-B",
+      "code": "DDE",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "C",
+        "D",
+        "E",
+        "Y"
+      ],
+      "ch2": [
+        "C"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "missing",
+        "ez": null,
+        "ranges": [],
+        "reason": "needs-review"
+      },
+      "status": "needs-review",
+      "sourceRef": "PDF-Dateiseite 41 / gedruckte Seite 39, Anhang D, Tabelle 63:",
+      "notes": [
+        "Geltung: Bereiche alle",
+        "EZ-Fussnote: alle*",
+        "Mehrere feste EZ-Spalten in einer Regel."
+      ]
+    },
+    {
+      "id": "m-322-DDE-B",
+      "code": "DDE",
+      "codeMatch": "exact",
+      "ch1": [
+        "Y"
+      ],
+      "ch2": [
+        "Y"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 41 / gedruckte Seite 39, Anhang D, Tabelle 63:",
+      "notes": [
+        "Geltung: Bereiche alle"
+      ]
+    }
+  ]
+}

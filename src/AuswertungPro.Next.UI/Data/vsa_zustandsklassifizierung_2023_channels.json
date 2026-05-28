@@ -1,0 +1,4413 @@
+{
+  "schemaVersion": 2,
+  "source": "VSA_Rili_ Zustandsbeurteilung von Entwaesserungsanlagen.pdf / docs/vsa-zustandsklassifizierung-2023-schwellen.md",
+  "assetKind": "channel",
+  "rules": [
+    {
+      "id": "c-001-BAA-S",
+      "code": "BAA",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "rigid",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 7,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 4,
+            "maxExclusive": 7
+          },
+          {
+            "ez": 2,
+            "minInclusive": 3,
+            "maxExclusive": 4
+          },
+          {
+            "ez": 3,
+            "minInclusive": 1,
+            "maxExclusive": 3
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 1
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 7:",
+      "notes": [
+        "Geltung: biegesteif"
+      ]
+    },
+    {
+      "id": "c-002-BAA-S",
+      "code": "BAA",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "flexible",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 15,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 10,
+            "maxExclusive": 15
+          },
+          {
+            "ez": 2,
+            "minInclusive": 6,
+            "maxExclusive": 10
+          },
+          {
+            "ez": 3,
+            "minInclusive": 2,
+            "maxExclusive": 6
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 2
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 7:",
+      "notes": [
+        "Geltung: biegeweich"
+      ]
+    },
+    {
+      "id": "c-003-BAA-B",
+      "code": "BAA",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 50,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 40,
+            "maxExclusive": 50
+          },
+          {
+            "ez": 2,
+            "minInclusive": 25,
+            "maxExclusive": 40
+          },
+          {
+            "ez": 3,
+            "minInclusive": 10,
+            "maxExclusive": 25
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 10
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 7:",
+      "notes": []
+    },
+    {
+      "id": "c-004-BAB-S",
+      "code": "BAB",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 8: Risse.",
+      "notes": []
+    },
+    {
+      "id": "c-005-BAB-S",
+      "code": "BAB",
+      "codeMatch": "exact",
+      "ch1": [
+        "B",
+        "C"
+      ],
+      "ch2": [
+        "A",
+        "C",
+        "D",
+        "E"
+      ],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 8,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 5,
+            "maxExclusive": 8
+          },
+          {
+            "ez": 2,
+            "minInclusive": 3,
+            "maxExclusive": 5
+          },
+          {
+            "ez": 3,
+            "minInclusive": 1,
+            "maxExclusive": 3
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 1
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 8: Risse.",
+      "notes": []
+    },
+    {
+      "id": "c-006-BAB-S",
+      "code": "BAB",
+      "codeMatch": "exact",
+      "ch1": [
+        "B",
+        "C"
+      ],
+      "ch2": [
+        "B"
+      ],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 8: Risse.",
+      "notes": []
+    },
+    {
+      "id": "c-007-BAB-D",
+      "code": "BAB",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 8: Risse.",
+      "notes": []
+    },
+    {
+      "id": "c-008-BAB-D",
+      "code": "BAB",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 8: Risse.",
+      "notes": []
+    },
+    {
+      "id": "c-009-BAC-D",
+      "code": "BAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 9:",
+      "notes": []
+    },
+    {
+      "id": "c-010-BAC-S",
+      "code": "BAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 9:",
+      "notes": []
+    },
+    {
+      "id": "c-011-BAC-B",
+      "code": "BAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 9:",
+      "notes": []
+    },
+    {
+      "id": "c-012-BAC-D",
+      "code": "BAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 9:",
+      "notes": []
+    },
+    {
+      "id": "c-013-BAC-S",
+      "code": "BAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 9:",
+      "notes": []
+    },
+    {
+      "id": "c-014-BAC-D",
+      "code": "BAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 9:",
+      "notes": []
+    },
+    {
+      "id": "c-015-BAC-S",
+      "code": "BAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 9:",
+      "notes": []
+    },
+    {
+      "id": "c-016-BAC-B",
+      "code": "BAC",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 22 / gedruckte Seite 20, Anhang C, Tabelle 9:",
+      "notes": []
+    },
+    {
+      "id": "c-017-BAD-D",
+      "code": "BAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 23 / gedruckte Seite 21, Anhang C, Tabelle 10:",
+      "notes": []
+    },
+    {
+      "id": "c-018-BAD-S",
+      "code": "BAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 23 / gedruckte Seite 21, Anhang C, Tabelle 10:",
+      "notes": []
+    },
+    {
+      "id": "c-019-BAD-B",
+      "code": "BAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 23 / gedruckte Seite 21, Anhang C, Tabelle 10:",
+      "notes": []
+    },
+    {
+      "id": "c-020-BAD-D",
+      "code": "BAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 23 / gedruckte Seite 21, Anhang C, Tabelle 10:",
+      "notes": []
+    },
+    {
+      "id": "c-021-BAD-S",
+      "code": "BAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 23 / gedruckte Seite 21, Anhang C, Tabelle 10:",
+      "notes": []
+    },
+    {
+      "id": "c-022-BAD-D",
+      "code": "BAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 23 / gedruckte Seite 21, Anhang C, Tabelle 10:",
+      "notes": []
+    },
+    {
+      "id": "c-023-BAD-S",
+      "code": "BAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 23 / gedruckte Seite 21, Anhang C, Tabelle 10:",
+      "notes": []
+    },
+    {
+      "id": "c-024-BAD-B",
+      "code": "BAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 23 / gedruckte Seite 21, Anhang C, Tabelle 10:",
+      "notes": []
+    },
+    {
+      "id": "c-025-BAD-D",
+      "code": "BAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 23 / gedruckte Seite 21, Anhang C, Tabelle 10:",
+      "notes": []
+    },
+    {
+      "id": "c-026-BAD-S",
+      "code": "BAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 23 / gedruckte Seite 21, Anhang C, Tabelle 10:",
+      "notes": []
+    },
+    {
+      "id": "c-027-BAD-B",
+      "code": "BAD",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 23 / gedruckte Seite 21, Anhang C, Tabelle 10:",
+      "notes": []
+    },
+    {
+      "id": "c-028-BAE-D",
+      "code": "BAE",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 2,
+            "minInclusive": 100,
+            "maxExclusive": null
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 100
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 23 / gedruckte Seite 21, Anhang C, Tabelle 11:",
+      "notes": []
+    },
+    {
+      "id": "c-029-BAE-S",
+      "code": "BAE",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 2,
+            "minInclusive": 100,
+            "maxExclusive": null
+          },
+          {
+            "ez": 3,
+            "minInclusive": 10,
+            "maxExclusive": 100
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 10
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 23 / gedruckte Seite 21, Anhang C, Tabelle 11:",
+      "notes": []
+    },
+    {
+      "id": "c-030-BAF-S",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-031-BAF-B",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-032-BAF-S",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [
+        "A",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-033-BAF-B",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [
+        "A",
+        "E",
+        "Z"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-034-BAF-S",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-035-BAF-B",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-036-BAF-S",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-037-BAF-B",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-038-BAF-S",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "E"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-039-BAF-B",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "E"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-040-BAF-S",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "F"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-041-BAF-B",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "F"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-042-BAF-S",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "G"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-043-BAF-B",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "G"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-044-BAF-S",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "H"
+      ],
+      "ch2": [
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-045-BAF-B",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "H"
+      ],
+      "ch2": [
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-046-BAF-D",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "I"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-047-BAF-S",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "I"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-048-BAF-B",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "I"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-049-BAF-S",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "J"
+      ],
+      "ch2": [
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-050-BAF-B",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "J"
+      ],
+      "ch2": [
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-051-BAF-B",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "K"
+      ],
+      "ch2": [
+        "A",
+        "E",
+        "Z"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-052-BAF-D",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-053-BAF-S",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-054-BAF-B",
+      "code": "BAF",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "Z"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 24 / gedruckte Seite 22, Anhang C, Tabelle 12:",
+      "notes": []
+    },
+    {
+      "id": "c-055-BAG-B",
+      "code": "BAG",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 50,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 30,
+            "maxExclusive": 50
+          },
+          {
+            "ez": 2,
+            "minInclusive": 20,
+            "maxExclusive": 30
+          },
+          {
+            "ez": 3,
+            "minInclusive": 10,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 10
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 13:",
+      "notes": [
+        "Geltung: \u003C= DN 250"
+      ]
+    },
+    {
+      "id": "c-056-BAG-B",
+      "code": "BAG",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 80,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 60,
+            "maxExclusive": 80
+          },
+          {
+            "ez": 2,
+            "minInclusive": 40,
+            "maxExclusive": 60
+          },
+          {
+            "ez": 3,
+            "minInclusive": 10,
+            "maxExclusive": 40
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 10
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 13:",
+      "notes": [
+        "Geltung: \u003E DN 250"
+      ]
+    },
+    {
+      "id": "c-057-BAH-D",
+      "code": "BAH",
+      "codeMatch": "exact",
+      "ch1": [
+        "B",
+        "C",
+        "D"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 14:",
+      "notes": []
+    },
+    {
+      "id": "c-058-BAH-B",
+      "code": "BAH",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "E"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 14:",
+      "notes": [
+        "EZ-Fussnote: alle*",
+        "EZ-Fussnote: alle*"
+      ]
+    },
+    {
+      "id": "c-059-BAH-D",
+      "code": "BAH",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 14:",
+      "notes": []
+    },
+    {
+      "id": "c-060-BAH-S",
+      "code": "BAH",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 14:",
+      "notes": []
+    },
+    {
+      "id": "c-061-BAI-D",
+      "code": "BAI",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "A"
+      ],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 15:",
+      "notes": []
+    },
+    {
+      "id": "c-062-BAI-B",
+      "code": "BAI",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "A"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 15:",
+      "notes": []
+    },
+    {
+      "id": "c-063-BAI-D",
+      "code": "BAI",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "B",
+        "C",
+        "D"
+      ],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 15:",
+      "notes": []
+    },
+    {
+      "id": "c-064-BAI-B",
+      "code": "BAI",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [
+        "B",
+        "C",
+        "D"
+      ],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 15:",
+      "notes": []
+    },
+    {
+      "id": "c-065-BAI-B",
+      "code": "BAI",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 50,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 35,
+            "maxExclusive": 50
+          },
+          {
+            "ez": 2,
+            "minInclusive": 20,
+            "maxExclusive": 35
+          },
+          {
+            "ez": 3,
+            "minInclusive": 5,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 5
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 25 / gedruckte Seite 23, Anhang C, Tabelle 15:",
+      "notes": []
+    },
+    {
+      "id": "c-066-BAJ-D",
+      "code": "BAJ",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 70,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 50,
+            "maxExclusive": 70
+          },
+          {
+            "ez": 2,
+            "minInclusive": 30,
+            "maxExclusive": 50
+          },
+          {
+            "ez": 3,
+            "minInclusive": 20,
+            "maxExclusive": 30
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 20
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16:",
+      "notes": [
+        "Geltung: \u003C= DN 400"
+      ]
+    },
+    {
+      "id": "c-067-BAJ-D",
+      "code": "BAJ",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 80,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 60,
+            "maxExclusive": 80
+          },
+          {
+            "ez": 2,
+            "minInclusive": 40,
+            "maxExclusive": 60
+          },
+          {
+            "ez": 3,
+            "minInclusive": 20,
+            "maxExclusive": 40
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 20
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16:",
+      "notes": [
+        "Geltung: \u003E DN 400"
+      ]
+    },
+    {
+      "id": "c-068-BAJ-S",
+      "code": "BAJ",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16:",
+      "notes": []
+    },
+    {
+      "id": "c-069-BAJ-D",
+      "code": "BAJ",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 30,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 20,
+            "maxExclusive": 30
+          },
+          {
+            "ez": 2,
+            "minInclusive": 15,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 3,
+            "minInclusive": 10,
+            "maxExclusive": 15
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 10
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16:",
+      "notes": []
+    },
+    {
+      "id": "c-070-BAJ-S",
+      "code": "BAJ",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "missing",
+        "ez": null,
+        "ranges": [],
+        "reason": "missing-vsa-source"
+      },
+      "status": "missing-vsa-source",
+      "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16:",
+      "notes": [
+        "Geltung: PDF-Zeile ohne sichtbaren Einzelzustand"
+      ]
+    },
+    {
+      "id": "c-071-BAJ-B",
+      "code": "BAJ",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 3,
+            "minInclusive": 10,
+            "maxExclusive": null
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 10
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16:",
+      "notes": []
+    },
+    {
+      "id": "c-072-BAJ-D",
+      "code": "BAJ",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "deg",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 12,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 9,
+            "maxExclusive": 12
+          },
+          {
+            "ez": 2,
+            "minInclusive": 7,
+            "maxExclusive": 9
+          },
+          {
+            "ez": 3,
+            "minInclusive": 5,
+            "maxExclusive": 7
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 5
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16:",
+      "notes": [
+        "Geltung: \u003C= DN 200"
+      ]
+    },
+    {
+      "id": "c-073-BAJ-D",
+      "code": "BAJ",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "deg",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 6,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 4,
+            "maxExclusive": 6
+          },
+          {
+            "ez": 2,
+            "minInclusive": 3,
+            "maxExclusive": 4
+          },
+          {
+            "ez": 3,
+            "minInclusive": 2,
+            "maxExclusive": 3
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 2
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16:",
+      "notes": [
+        "Geltung: \u003E DN 200"
+      ]
+    },
+    {
+      "id": "c-074-BAJ-S",
+      "code": "BAJ",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "deg",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "missing",
+        "ez": null,
+        "ranges": [],
+        "reason": "needs-review"
+      },
+      "status": "needs-review",
+      "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16:",
+      "notes": [
+        "Geltung: PDF-Zeile zeigt \u0060alle\u0060 vor dem S-x; fachlich pruefen"
+      ]
+    },
+    {
+      "id": "c-075-BAK-B",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 50,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 35,
+            "maxExclusive": 50
+          },
+          {
+            "ez": 2,
+            "minInclusive": 20,
+            "maxExclusive": 35
+          },
+          {
+            "ez": 3,
+            "minInclusive": 5,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 5
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-076-BAK-D",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-077-BAK-D",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-078-BAK-B",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-079-BAK-B",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "D"
+      ],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-080-BAK-S",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [
+        "C"
+      ],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-081-BAK-B",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [
+        "C"
+      ],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-082-BAK-S",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "E"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-083-BAK-B",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "E"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 50,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 35,
+            "maxExclusive": 50
+          },
+          {
+            "ez": 2,
+            "minInclusive": 20,
+            "maxExclusive": 35
+          },
+          {
+            "ez": 3,
+            "minInclusive": 5,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 5
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-084-BAK-S",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "F"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-085-BAK-B",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "G"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-086-BAK-B",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "H"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-087-BAK-D",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "I"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-088-BAK-D",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "J"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-089-BAK-D",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "K"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-090-BAK-B",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "K"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-091-BAK-D",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "L"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-092-BAK-S",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "L"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-093-BAK-D",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "M"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-094-BAK-D",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "N"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-095-BAK-D",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-096-BAK-S",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-097-BAK-B",
+      "code": "BAK",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 17:",
+      "notes": []
+    },
+    {
+      "id": "c-098-BAL-D",
+      "code": "BAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 18:",
+      "notes": []
+    },
+    {
+      "id": "c-099-BAL-D",
+      "code": "BAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 18:",
+      "notes": []
+    },
+    {
+      "id": "c-100-BAL-D",
+      "code": "BAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 18:",
+      "notes": []
+    },
+    {
+      "id": "c-101-BAL-D",
+      "code": "BAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 18:",
+      "notes": []
+    },
+    {
+      "id": "c-102-BAL-B",
+      "code": "BAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "E"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 50,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 35,
+            "maxExclusive": 50
+          },
+          {
+            "ez": 2,
+            "minInclusive": 20,
+            "maxExclusive": 35
+          },
+          {
+            "ez": 3,
+            "minInclusive": 5,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 5
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 18:",
+      "notes": []
+    },
+    {
+      "id": "c-103-BAL-D",
+      "code": "BAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "F"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 18:",
+      "notes": []
+    },
+    {
+      "id": "c-104-BAL-D",
+      "code": "BAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "G"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "mm",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 18:",
+      "notes": []
+    },
+    {
+      "id": "c-105-BAL-D",
+      "code": "BAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 18:",
+      "notes": []
+    },
+    {
+      "id": "c-106-BAL-B",
+      "code": "BAL",
+      "codeMatch": "exact",
+      "ch1": [
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 27 / gedruckte Seite 25, Anhang C, Tabelle 18:",
+      "notes": []
+    },
+    {
+      "id": "c-107-BAM-D",
+      "code": "BAM",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 19:",
+      "notes": []
+    },
+    {
+      "id": "c-108-BAM-S",
+      "code": "BAM",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 19:",
+      "notes": []
+    },
+    {
+      "id": "c-109-BAM-D",
+      "code": "BAM",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 19:",
+      "notes": []
+    },
+    {
+      "id": "c-110-BAM-S",
+      "code": "BAM",
+      "codeMatch": "exact",
+      "ch1": [
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 19:",
+      "notes": []
+    },
+    {
+      "id": "c-111-BAN-D",
+      "code": "BAN",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 20:",
+      "notes": []
+    },
+    {
+      "id": "c-112-BAN-S",
+      "code": "BAN",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 20:",
+      "notes": []
+    },
+    {
+      "id": "c-113-BAO-D",
+      "code": "BAO",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 21:",
+      "notes": []
+    },
+    {
+      "id": "c-114-BAO-S",
+      "code": "BAO",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 21:",
+      "notes": []
+    },
+    {
+      "id": "c-115-BAP-D",
+      "code": "BAP",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 22:",
+      "notes": []
+    },
+    {
+      "id": "c-116-BAP-S",
+      "code": "BAP",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 22:",
+      "notes": []
+    },
+    {
+      "id": "c-117-BBA-D",
+      "code": "BBA",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 23:",
+      "notes": []
+    },
+    {
+      "id": "c-118-BBA-B",
+      "code": "BBA",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 30,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 20,
+            "maxExclusive": 30
+          },
+          {
+            "ez": 2,
+            "minInclusive": 10,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 3,
+            "minInclusive": null,
+            "maxExclusive": 10
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 23:",
+      "notes": []
+    },
+    {
+      "id": "c-119-BBB-D",
+      "code": "BBB",
+      "codeMatch": "exact",
+      "ch1": [
+        "A"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 24:",
+      "notes": []
+    },
+    {
+      "id": "c-120-BBB-B",
+      "code": "BBB",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "C",
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 30,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 20,
+            "maxExclusive": 30
+          },
+          {
+            "ez": 2,
+            "minInclusive": 10,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 3,
+            "minInclusive": 5,
+            "maxExclusive": 10
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 5
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 24:",
+      "notes": []
+    },
+    {
+      "id": "c-121-BBC-B",
+      "code": "BBC",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 25:",
+      "notes": []
+    },
+    {
+      "id": "c-122-BBC-B",
+      "code": "BBC",
+      "codeMatch": "exact",
+      "ch1": [
+        "C",
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 50,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 40,
+            "maxExclusive": 50
+          },
+          {
+            "ez": 2,
+            "minInclusive": 25,
+            "maxExclusive": 40
+          },
+          {
+            "ez": 3,
+            "minInclusive": 10,
+            "maxExclusive": 25
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 10
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 25:",
+      "notes": []
+    },
+    {
+      "id": "c-123-BBD-D",
+      "code": "BBD",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 26:",
+      "notes": []
+    },
+    {
+      "id": "c-124-BBD-S",
+      "code": "BBD",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 0,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 26:",
+      "notes": []
+    },
+    {
+      "id": "c-125-BBD-B",
+      "code": "BBD",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 30,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 20,
+            "maxExclusive": 30
+          },
+          {
+            "ez": 2,
+            "minInclusive": 10,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 3,
+            "minInclusive": null,
+            "maxExclusive": 10
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 26:",
+      "notes": []
+    },
+    {
+      "id": "c-126-BBE-D",
+      "code": "BBE",
+      "codeMatch": "exact",
+      "ch1": [
+        "D",
+        "G"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 27:",
+      "notes": []
+    },
+    {
+      "id": "c-127-BBE-B",
+      "code": "BBE",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "Z"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 0,
+            "minInclusive": 50,
+            "maxExclusive": null
+          },
+          {
+            "ez": 1,
+            "minInclusive": 35,
+            "maxExclusive": 50
+          },
+          {
+            "ez": 2,
+            "minInclusive": 20,
+            "maxExclusive": 35
+          },
+          {
+            "ez": 3,
+            "minInclusive": 5,
+            "maxExclusive": 20
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 5
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 27:",
+      "notes": []
+    },
+    {
+      "id": "c-128-BBF-D",
+      "code": "BBF",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 28:",
+      "notes": []
+    },
+    {
+      "id": "c-129-BBF-S",
+      "code": "BBF",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 28:",
+      "notes": []
+    },
+    {
+      "id": "c-130-BBF-B",
+      "code": "BBF",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 28:",
+      "notes": []
+    },
+    {
+      "id": "c-131-BBF-S",
+      "code": "BBF",
+      "codeMatch": "exact",
+      "ch1": [
+        "C"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 28:",
+      "notes": []
+    },
+    {
+      "id": "c-132-BBF-D",
+      "code": "BBF",
+      "codeMatch": "exact",
+      "ch1": [
+        "C",
+        "D"
+      ],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 28:",
+      "notes": []
+    },
+    {
+      "id": "c-133-BBF-B",
+      "code": "BBF",
+      "codeMatch": "exact",
+      "ch1": [
+        "C",
+        "D"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 28:",
+      "notes": []
+    },
+    {
+      "id": "c-134-BBF-S",
+      "code": "BBF",
+      "codeMatch": "exact",
+      "ch1": [
+        "D"
+      ],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 28:",
+      "notes": []
+    },
+    {
+      "id": "c-135-BBG-D",
+      "code": "BBG",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "D",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 29:",
+      "notes": []
+    },
+    {
+      "id": "c-136-BBG-S",
+      "code": "BBG",
+      "codeMatch": "exact",
+      "ch1": [],
+      "ch2": [],
+      "requirement": "S",
+      "parameter": "none",
+      "unit": "none",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 3,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 29 / gedruckte Seite 27, Anhang C, Tabelle 29:",
+      "notes": []
+    },
+    {
+      "id": "c-137-BBH-B",
+      "code": "BBH",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "B",
+        "Z"
+      ],
+      "ch2": [
+        "A",
+        "B",
+        "C",
+        "Z"
+      ],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "Anzahl",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 30 / gedruckte Seite 28, Anhang C, Tabelle 30:",
+      "notes": [
+        "EZ-Fussnote: alle*",
+        "EZ-Fussnote: alle*"
+      ]
+    },
+    {
+      "id": "c-138-BDD-B",
+      "code": "BDD",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "C",
+        "D",
+        "E"
+      ],
+      "ch2": [],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "range",
+        "ez": null,
+        "ranges": [
+          {
+            "ez": 2,
+            "minInclusive": 50,
+            "maxExclusive": null
+          },
+          {
+            "ez": 3,
+            "minInclusive": 10,
+            "maxExclusive": 50
+          },
+          {
+            "ez": 4,
+            "minInclusive": null,
+            "maxExclusive": 10
+          }
+        ],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 30 / gedruckte Seite 28, Anhang C, Tabelle 31:",
+      "notes": [
+        "EZ-Fussnote: \u003C 10*"
+      ]
+    },
+    {
+      "id": "c-139-BDE-B",
+      "code": "BDE",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "C",
+        "D",
+        "E",
+        "Y"
+      ],
+      "ch2": [
+        "A"
+      ],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 1,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 30 / gedruckte Seite 28, Anhang C, Tabelle 32:",
+      "notes": []
+    },
+    {
+      "id": "c-140-BDE-B",
+      "code": "BDE",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "C",
+        "D",
+        "E",
+        "Y"
+      ],
+      "ch2": [
+        "B"
+      ],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 2,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 30 / gedruckte Seite 28, Anhang C, Tabelle 32:",
+      "notes": []
+    },
+    {
+      "id": "c-141-BDE-B",
+      "code": "BDE",
+      "codeMatch": "exact",
+      "ch1": [
+        "A",
+        "C",
+        "D",
+        "E",
+        "Y"
+      ],
+      "ch2": [
+        "C"
+      ],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "missing",
+        "ez": null,
+        "ranges": [],
+        "reason": "needs-review"
+      },
+      "status": "needs-review",
+      "sourceRef": "PDF-Dateiseite 30 / gedruckte Seite 28, Anhang C, Tabelle 32:",
+      "notes": [
+        "Geltung: fachlich pruefen: Tabelle zeigt \u0060alle*\u0060 in EZ 2 und EZ 4",
+        "EZ-Fussnote: alle*"
+      ]
+    },
+    {
+      "id": "c-142-BDE-B",
+      "code": "BDE",
+      "codeMatch": "exact",
+      "ch1": [
+        "Y"
+      ],
+      "ch2": [
+        "Y"
+      ],
+      "requirement": "B",
+      "parameter": "q1",
+      "unit": "%",
+      "scope": {
+        "pipeFlexibility": "any",
+        "areas": []
+      },
+      "classification": {
+        "mode": "fixed",
+        "ez": 4,
+        "ranges": [],
+        "reason": null
+      },
+      "status": "ok",
+      "sourceRef": "PDF-Dateiseite 30 / gedruckte Seite 28, Anhang C, Tabelle 32:",
+      "notes": []
+    }
+  ]
+}
