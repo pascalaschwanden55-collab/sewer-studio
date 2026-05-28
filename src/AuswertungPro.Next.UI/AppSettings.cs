@@ -73,6 +73,10 @@ public sealed class AppSettings
     // WinCan catalog directory for browsing and auto-discovery
     public string? WinCanCatalogDirectory { get; set; }
 
+    // VSA Zustandklassifizierung v2: Shadow-Vergleich gegen Legacy-Engine.
+    // Null bedeutet Default an.
+    public bool? VsaClassificationShadowEnabled { get; set; }
+
     // Multi-Model Pipeline Thresholds (overrides env vars if set)
     public bool? PipelineMultiModelEnabled { get; set; }
     public string? PipelineSidecarUrl { get; set; }

@@ -175,7 +175,14 @@ namespace AuswertungPro.Next.UI
 
             var channelsTable = Path.Combine(AppContext.BaseDirectory, "Data", "classification_channels.json");
             var manholesTable = Path.Combine(AppContext.BaseDirectory, "Data", "classification_manholes.json");
-            Vsa = new VsaEvaluationService(channelsTable, manholesTable);
+            var v2ChannelsTable = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_zustandsklassifizierung_2023_channels.json");
+            var v2ManholesTable = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_zustandsklassifizierung_2023_manholes.json");
+            Vsa = new VsaEvaluationService(
+                channelsTable,
+                manholesTable,
+                shadowModeEnabled: settings.VsaClassificationShadowEnabled ?? true,
+                v2ChannelsTablePath: v2ChannelsTable,
+                v2ManholesTablePath: v2ManholesTable);
 
             MeasureRecommendation = new Infrastructure.Ai.MeasureRecommendationService(
                 KnowledgeBasePaths.GetMeasuresLearningPath(),

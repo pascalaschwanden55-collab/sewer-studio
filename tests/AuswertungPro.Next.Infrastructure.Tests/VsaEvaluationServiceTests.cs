@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Vsa;
 
@@ -220,5 +222,95 @@ public sealed class VsaEvaluationServiceTests
         // BCA hat EZD=2, EZB=2 → darf nicht n/a sein
         Assert.NotEqual("n/a", rec.GetFieldValue("VSA_Zustandsnote_D"));
         Assert.NotEqual("n/a", rec.GetFieldValue("VSA_Zustandsnote_B"));
+    }
+
+    [Fact]
+    public void Evaluate_ShadowMode_LogsExpectedDriftWithoutChangingProductiveResult()
+    {
+        var root = TestPaths.FindSolutionRoot();
+        var channelsTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_channels.json");
+        var manholesTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_manholes.json");
+        var tempDir = Path.Combine(Path.GetTempPath(), "sewer-vsa-shadow-tests", Guid.NewGuid().ToString("N"));
+        var shadowLogPath = Path.Combine(tempDir, "vsa_shadow.jsonl");
+
+        try
+        {
+            var project = new Project();
+            var rec = new HaltungRecord();
+            rec.SetFieldValue("Haltungsname", "H_shadow", FieldSource.Xtf, userEdited: false);
+            rec.SetFieldValue("Haltungslaenge_m", "10", FieldSource.Xtf, userEdited: false);
+            rec.SetFieldValue("Rohrmaterial", "Beton", FieldSource.Xtf, userEdited: false);
+            rec.VsaFindings = new List<VsaFinding>
+            {
+                new() { KanalSchadencode = "BAAA", Quantifizierung1 = "0.5" }
+            };
+            project.Data.Add(rec);
+
+            var svc = new VsaEvaluationService(
+                channelsTable,
+                manholesTable,
+                shadowModeEnabled: true,
+                shadowLogPath: shadowLogPath);
+
+            var res = svc.Evaluate(project);
+
+            Assert.True(res.Ok, res.ErrorMessage);
+            Assert.Equal("3.28", rec.GetFieldValue("VSA_Zustandsnote_S"));
+            Assert.True(File.Exists(shadowLogPath), $"Shadow log missing: {shadowLogPath}");
+
+            using var doc = JsonDocument.Parse(File.ReadLines(shadowLogPath)
+                .Single(line => line.Contains("\"requirement\":\"S\"", StringComparison.OrdinalIgnoreCase)));
+            var entry = doc.RootElement;
+            Assert.Equal("BAAA", entry.GetProperty("code").GetString());
+            Assert.Equal("BAA", entry.GetProperty("base_code").GetString());
+            Assert.Equal("S", entry.GetProperty("requirement").GetString());
+            Assert.Equal(3, entry.GetProperty("legacy_ez").GetInt32());
+            Assert.Equal(4, entry.GetProperty("v2_ez").GetInt32());
+            Assert.True(entry.GetProperty("expected_drift").GetBoolean());
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Evaluate_ShadowMode_DoesNotLogWhenV2MatchesLegacy()
+    {
+        var root = TestPaths.FindSolutionRoot();
+        var channelsTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_channels.json");
+        var manholesTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_manholes.json");
+        var tempDir = Path.Combine(Path.GetTempPath(), "sewer-vsa-shadow-tests", Guid.NewGuid().ToString("N"));
+        var shadowLogPath = Path.Combine(tempDir, "vsa_shadow.jsonl");
+
+        try
+        {
+            var project = new Project();
+            var rec = new HaltungRecord();
+            rec.SetFieldValue("Haltungsname", "H_shadow_match", FieldSource.Xtf, userEdited: false);
+            rec.SetFieldValue("Haltungslaenge_m", "10", FieldSource.Xtf, userEdited: false);
+            rec.VsaFindings = new List<VsaFinding>
+            {
+                new() { KanalSchadencode = "BAN" }
+            };
+            project.Data.Add(rec);
+
+            var svc = new VsaEvaluationService(
+                channelsTable,
+                manholesTable,
+                shadowModeEnabled: true,
+                shadowLogPath: shadowLogPath);
+
+            var res = svc.Evaluate(project);
+
+            Assert.True(res.Ok, res.ErrorMessage);
+            Assert.False(File.Exists(shadowLogPath));
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
     }
 }

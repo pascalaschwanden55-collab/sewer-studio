@@ -20,14 +20,39 @@ namespace AuswertungPro.Next.Infrastructure.Vsa;
 public sealed class VsaEvaluationService : IVsaEvaluationService
 {
     private static readonly Regex LeadingTokenRegex = new(@"^[A-Za-z0-9]+", RegexOptions.Compiled);
+    private static readonly HashSet<string> ExpectedShadowDriftCodes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "BAA",
+        "BAB",
+        "BAC",
+        "BAF",
+        "BBA",
+        "BDD"
+    };
 
     private readonly string _channelsTablePath;
     private readonly string _manholesTablePath;
+    private readonly bool _shadowModeEnabled;
+    private readonly string? _shadowLogPath;
+    private readonly string _v2ChannelsTablePath;
+    private readonly string _v2ManholesTablePath;
 
-    public VsaEvaluationService(string channelsTablePath, string manholesTablePath)
+    public VsaEvaluationService(
+        string channelsTablePath,
+        string manholesTablePath,
+        bool shadowModeEnabled = true,
+        string? shadowLogPath = null,
+        string? v2ChannelsTablePath = null,
+        string? v2ManholesTablePath = null)
     {
         _channelsTablePath = channelsTablePath;
         _manholesTablePath = manholesTablePath;
+        _shadowModeEnabled = shadowModeEnabled;
+        _shadowLogPath = shadowLogPath;
+        _v2ChannelsTablePath = v2ChannelsTablePath
+            ?? Path.Combine(Path.GetDirectoryName(channelsTablePath) ?? "", "vsa_zustandsklassifizierung_2023_channels.json");
+        _v2ManholesTablePath = v2ManholesTablePath
+            ?? Path.Combine(Path.GetDirectoryName(manholesTablePath) ?? "", "vsa_zustandsklassifizierung_2023_manholes.json");
     }
 
     public Result<IReadOnlyList<VsaConditionResult>> Evaluate(Project project)
@@ -48,12 +73,14 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
         var results = new List<VsaConditionResult>(project.Data.Count * 3);
         var unknownCodeCount = 0;
+        var shadowSelector = TryLoadShadowSelector();
 
         foreach (var record in project.Data)
         {
             var findings = ResolveFindings(record, knownCodes);
             var classified = ClassifyFindings(findings, table, out var unknownForRecord);
             unknownCodeCount += unknownForRecord;
+            WriteShadowDiffs(record, classified, shadowSelector);
 
             var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
             const double minLength = 3.0; // Kanäle; Schächte: 0.5
@@ -94,6 +121,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
         var findings = ResolveFindings(record, knownCodes);
         var classified = ClassifyFindings(findings, table, out _);
+        WriteShadowDiffs(record, classified, TryLoadShadowSelector());
 
         var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
         const double minLength = 3.0;
@@ -106,6 +134,70 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         ApplyRecordFields(record, d, s, b);
 
         return Result<bool>.Success(true);
+    }
+
+    private VsaClassificationRuleSelector? TryLoadShadowSelector()
+    {
+        if (!_shadowModeEnabled)
+            return null;
+
+        if (!File.Exists(_v2ChannelsTablePath) || !File.Exists(_v2ManholesTablePath))
+            return null;
+
+        try
+        {
+            return VsaClassificationRuleSelector.Load(_v2ChannelsTablePath, _v2ManholesTablePath);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private void WriteShadowDiffs(
+        HaltungRecord record,
+        IReadOnlyList<ClassifiedFinding> classified,
+        VsaClassificationRuleSelector? selector)
+    {
+        if (selector is null || classified.Count == 0)
+            return;
+
+        foreach (var item in classified)
+        {
+            var rawCode = NormalizeCode(item.Finding.KanalSchadencode);
+            if (rawCode.Length < 3)
+                continue;
+
+            var baseCode = rawCode[..3];
+            var outcome = selector.Classify(new VsaClassificationRequest(
+                Code: baseCode,
+                Ch1: rawCode.Length >= 4 ? rawCode.Substring(3, 1) : null,
+                Ch2: rawCode.Length >= 5 ? rawCode.Substring(4, 1) : null,
+                Q1: item.Finding.Quantifizierung1,
+                Q2: item.Finding.Quantifizierung2,
+                Material: record.GetFieldValue("Rohrmaterial"),
+                AssetKind: baseCode.StartsWith('D') ? "manhole" : "channel"));
+
+            WriteRequirementDiff(rawCode, baseCode, "D", item.Classification.EZD, outcome.D?.Ez);
+            WriteRequirementDiff(rawCode, baseCode, "S", item.Classification.EZS, outcome.S?.Ez);
+            WriteRequirementDiff(rawCode, baseCode, "B", item.Classification.EZB, outcome.B?.Ez);
+        }
+    }
+
+    private void WriteRequirementDiff(string code, string baseCode, string requirement, int? legacyEz, int? v2Ez)
+    {
+        if (legacyEz == v2Ez)
+            return;
+
+        VsaShadowTelemetryWriter.Write(new VsaShadowTelemetryEvent(
+            TimestampUtc: DateTimeOffset.UtcNow,
+            Code: code,
+            BaseCode: baseCode,
+            Requirement: requirement,
+            LegacyEz: legacyEz,
+            V2Ez: v2Ez,
+            ExpectedDrift: ExpectedShadowDriftCodes.Contains(baseCode)),
+            _shadowLogPath);
     }
 
     public Result<string> Explain(Project project, HaltungRecord record)
