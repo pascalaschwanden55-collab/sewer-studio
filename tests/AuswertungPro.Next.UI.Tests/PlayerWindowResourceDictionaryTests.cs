@@ -10,11 +10,14 @@ public sealed class PlayerWindowResourceDictionaryTests
     {
         var root = FindRepoRoot();
         var xamlPath = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml");
+        var csprojPath = Path.Combine(root, "src", "AuswertungPro.Next.UI", "AuswertungPro.Next.UI.csproj");
 
         var xaml = File.ReadAllText(xamlPath);
+        var csproj = File.ReadAllText(csprojPath);
 
+        Assert.Contains("<AssemblyName>SewerStudio</AssemblyName>", csproj);
         Assert.Contains(
-            "Source=\"/AuswertungPro.Next.UI;component/Views/Windows/PlayerWindow.Resources.xaml\"",
+            "Source=\"/SewerStudio;component/Views/Windows/PlayerWindow.Resources.xaml\"",
             xaml);
     }
 

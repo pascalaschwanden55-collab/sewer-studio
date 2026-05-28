@@ -14,7 +14,7 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/AuswertungPro.Next.UI;component/Views/Windows/PlayerWindow.Resources.xaml"/>
+                <ResourceDictionary Source="/SewerStudio;component/Views/Windows/PlayerWindow.Resources.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
