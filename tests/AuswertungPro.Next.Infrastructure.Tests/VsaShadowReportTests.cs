@@ -131,10 +131,36 @@ public sealed class VsaShadowReportTests
 
             Assert.Equal(3, report.TotalLogEntries);
             Assert.Equal("2026-05-28 08:29", report.AnalyzedWindow);
+            Assert.Equal(2, report.AnalyzedWindowEntries);
             Assert.Equal(2, report.TotalDifferences);
             Assert.Equal(1, report.ExpectedDifferences);
             Assert.Equal(1, report.UnexpectedDifferences);
             Assert.DoesNotContain(report.Groups, group => group.Code == "BAN");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Analyze_Warns_WhenLatestWindowIsNotLargestWindow()
+    {
+        var path = WriteFixture("""
+        {"timestamp_utc":"2026-05-28T08:25:01Z","code":"BDA","base_code":"BDA","requirement":"B","legacy_ez":2,"v2_ez":null,"expected_drift":false}
+        {"timestamp_utc":"2026-05-28T08:25:02Z","code":"BDA","base_code":"BDA","requirement":"S","legacy_ez":2,"v2_ez":null,"expected_drift":false}
+        {"timestamp_utc":"2026-05-28T08:31:01Z","code":"BCA","base_code":"BCA","requirement":"D","legacy_ez":2,"v2_ez":null,"expected_drift":false}
+        """);
+
+        try
+        {
+            var report = ShadowReportAnalyzer.Analyze(path);
+
+            Assert.Equal("2026-05-28 08:31", report.AnalyzedWindow);
+            Assert.Equal(1, report.AnalyzedWindowEntries);
+            Assert.Equal("2026-05-28 08:25", report.LargestWindow);
+            Assert.Equal(2, report.LargestWindowEntries);
+            Assert.True(report.LatestWindowIsSmallerThanLargest);
         }
         finally
         {

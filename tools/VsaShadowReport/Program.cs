@@ -8,7 +8,11 @@ Console.WriteLine("VSA Shadow Report");
 Console.WriteLine($"Datei: {report.Path}");
 if (!string.IsNullOrWhiteSpace(report.AnalyzedWindow))
 {
-    Console.WriteLine($"Analysierter Lauf: {report.AnalyzedWindow} UTC ({report.TotalLogEntries} Logzeilen gesamt)");
+    Console.WriteLine($"Analysierter Lauf: {report.AnalyzedWindow} UTC ({report.AnalyzedWindowEntries} Logzeilen im Lauf, {report.TotalLogEntries} gesamt)");
+}
+if (report.LatestWindowIsSmallerThanLargest)
+{
+    Console.WriteLine($"WARNUNG: Neuester Lauf ist kleiner als ein aelterer Lauf ({report.LargestWindow}: {report.LargestWindowEntries} Logzeilen). Shadow-Log vor dem naechsten App-Lauf loeschen.");
 }
 Console.WriteLine($"Abweichungen gesamt: {report.TotalDifferences}");
 Console.WriteLine($"  expected_drift=true:  {report.ExpectedDifferences}");

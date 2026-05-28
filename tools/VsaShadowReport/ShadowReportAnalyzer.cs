@@ -43,11 +43,19 @@ public static class ShadowReportAnalyzer
             return ShadowReport.NoDataReport(path);
 
         var originalCount = entries.Count;
-        var latestMinute = entries
+        var windows = entries
             .Where(e => e.TimestampUtc is not null)
-            .Select(e => e.TimestampUtc!.Value.ToString("yyyy-MM-dd HH:mm"))
+            .GroupBy(e => e.TimestampUtc!.Value.ToString("yyyy-MM-dd HH:mm"))
+            .Select(g => new ShadowWindow(g.Key, g.Count()))
+            .ToList();
+        var latestMinute = windows
+            .Select(w => w.Window)
             .Order(StringComparer.Ordinal)
             .LastOrDefault();
+        var largestWindow = windows
+            .OrderByDescending(w => w.Count)
+            .ThenByDescending(w => w.Window, StringComparer.Ordinal)
+            .FirstOrDefault();
 
         if (latestMinute is not null)
         {
@@ -55,6 +63,7 @@ public static class ShadowReportAnalyzer
                 .Where(e => e.TimestampUtc?.ToString("yyyy-MM-dd HH:mm") == latestMinute)
                 .ToList();
         }
+        var analyzedWindowEntries = entries.Count;
 
         var groups = entries
             .GroupBy(e => (
@@ -123,7 +132,10 @@ public static class ShadowReportAnalyzer
             DifferentEzExamples: differentEzExamples,
             NoData: false,
             TotalLogEntries: originalCount,
-            AnalyzedWindow: latestMinute);
+            AnalyzedWindow: latestMinute,
+            AnalyzedWindowEntries: analyzedWindowEntries,
+            LargestWindow: largestWindow?.Window,
+            LargestWindowEntries: largestWindow?.Count ?? 0);
     }
 
     private static bool IsKnownNonAssessable(ShadowEntry entry)
@@ -189,6 +201,8 @@ public static class ShadowReportAnalyzer
         [JsonPropertyName("v2_source_ref")]
         public string? V2SourceRef { get; set; }
     }
+
+    private sealed record ShadowWindow(string Window, int Count);
 }
 
 public sealed record ShadowReport(
@@ -206,12 +220,20 @@ public sealed record ShadowReport(
     IReadOnlyList<ShadowEzDifferenceExample> DifferentEzExamples,
     bool NoData,
     int TotalLogEntries,
-    string? AnalyzedWindow)
+    string? AnalyzedWindow,
+    int AnalyzedWindowEntries,
+    string? LargestWindow,
+    int LargestWindowEntries)
 {
     public bool IsCutoverSafe => !NoData && UnexpectedDifferences == 0;
+    public bool LatestWindowIsSmallerThanLargest
+        => AnalyzedWindow is not null
+           && LargestWindow is not null
+           && !string.Equals(AnalyzedWindow, LargestWindow, StringComparison.Ordinal)
+           && AnalyzedWindowEntries < LargestWindowEntries;
 
     public static ShadowReport NoDataReport(string path)
-        => new(path, 0, 0, 0, 0, 0, 0, 0, 0, 0, [], [], NoData: true, TotalLogEntries: 0, AnalyzedWindow: null);
+        => new(path, 0, 0, 0, 0, 0, 0, 0, 0, 0, [], [], NoData: true, TotalLogEntries: 0, AnalyzedWindow: null, AnalyzedWindowEntries: 0, LargestWindow: null, LargestWindowEntries: 0);
 }
 
 public sealed record ShadowDiffGroup(
