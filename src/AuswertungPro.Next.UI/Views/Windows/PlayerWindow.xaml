@@ -12,11 +12,7 @@
         Background="{DynamicResource BgBrush}"
         WindowStartupLocation="CenterOwner">
     <Window.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/SewerStudio;component/Views/Windows/PlayerWindow.Resources.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
+        <ResourceDictionary Source="/SewerStudio;component/Views/Windows/PlayerWindow.Resources.xaml"/>
     </Window.Resources>
 
     <Grid Margin="16">

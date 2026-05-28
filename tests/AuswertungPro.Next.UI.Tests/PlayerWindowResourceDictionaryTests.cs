@@ -6,7 +6,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PlayerWindowResourceDictionaryTests
 {
     [Fact]
-    public void Player_window_uses_absolute_pack_uri_for_resource_dictionary()
+    public void Player_window_uses_direct_resource_dictionary_with_assembly_pack_uri()
     {
         var root = FindRepoRoot();
         var xamlPath = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml");
@@ -19,6 +19,7 @@ public sealed class PlayerWindowResourceDictionaryTests
         Assert.Contains(
             "Source=\"/SewerStudio;component/Views/Windows/PlayerWindow.Resources.xaml\"",
             xaml);
+        Assert.DoesNotContain("ResourceDictionary.MergedDictionaries", xaml);
     }
 
     private static string FindRepoRoot()
