@@ -92,9 +92,6 @@ public sealed record PlayerDamageOverlayData(
 
 public partial class PlayerWindow : Window
 {
-    private const float MinRate = 0.25f;
-    private const float MaxRate = 8.0f;
-
     private readonly LibVLC _libVlc;
     private readonly MediaPlayer _player;
     private readonly DispatcherTimer _timer;
@@ -592,8 +589,7 @@ public partial class PlayerWindow : Window
 
     private void ChangeSpeed(float delta)
     {
-        var current = _player.Rate <= 0f ? 1.0f : _player.Rate;
-        SetSpeed(current + delta);
+        SetSpeed(AuswertungPro.Next.UI.Player.PlayerPlaybackState.ApplyRateDelta(_player.Rate, delta));
     }
 
     private void JumpSeconds(int seconds)
@@ -601,12 +597,7 @@ public partial class PlayerWindow : Window
         if (_player.Length <= 0)
             return;
 
-        long newTime = _player.Time + seconds * 1000L;
-        if (newTime < 0)
-            newTime = 0;
-        if (newTime > _player.Length)
-            newTime = _player.Length;
-        _player.Time = newTime;
+        _player.Time = AuswertungPro.Next.UI.Player.PlayerPlaybackState.AddSeconds(_player.Time, _player.Length, seconds);
         ClearDetectionOverlays(); // Alte Overlays bei Navigation entfernen
         UpdateUi();
     }
@@ -782,7 +773,7 @@ public partial class PlayerWindow : Window
 
     private void SetSpeed(float rate)
     {
-        var clamped = Math.Clamp(rate, MinRate, MaxRate);
+        var clamped = AuswertungPro.Next.UI.Player.PlayerPlaybackState.ClampRate(rate);
         var result = _player.SetRate(clamped);
         if (result != 0)
         {
