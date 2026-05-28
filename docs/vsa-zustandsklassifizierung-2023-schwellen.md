@@ -731,10 +731,59 @@ Wurzeln.
 | DBA | A,B,C | - | D | - | - | - | alle | - | - | Bereiche I,J |
 | DBA | A,B,C | - | B | - | - | - | - | alle | - | Bereiche alle |
 
+### DBB - Anhaftende Stoffe
+
+Quelle: PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 52:
+Anhaftende Stoffe.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DBB | A | - | D | mm | - | - | - | alle | - | Bereiche alle |
+| DBB | A,B,C,Z | - | B | mm | - | - | - | alle | - | Bereiche alle |
+
+### DBC - Ablagerungen an der Schachtsohle oder auf dem Bankett
+
+Quelle: PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 53:
+Ablagerungen an der Schachtsohle oder auf dem Bankett.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DBC | A,B | - | B | - | - | - | - | - | alle | Bereiche J,H |
+| DBC | C,Z | - | B | mm | - | >= 300 | >= 100 und < 300 | >= 50 und < 100 | < 50 | Bereiche J |
+| DBC | C,Z | - | B | mm | - | - | - | alle | - | Bereiche H |
+
+### DBD - Eindringen von Bodenmaterial
+
+Quelle: PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 54:
+Eindringen von Bodenmaterial.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DBD | - | - | D | - | - | - | alle | - | - | Bereiche D,F |
+| DBD | - | - | D | - | - | alle | - | - | - | Bereiche I,J |
+| DBD | - | - | S | - | alle | - | - | - | - | Bereiche B,D,F |
+| DBD | - | - | B | - | - | - | - | alle | - | Bereiche B,D,F |
+
+### DBE - Andere Hindernisse
+
+Quelle: PDF-Dateiseite 39 / gedruckte Seite 37, Anhang D, Tabelle 55:
+Andere Hindernisse.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DBE | A,B,C | - | B | mm | - | - | - | alle | - | Bereiche I,J |
+| DBE | D | - | D | mm | - | - | - | alle | - | Bereiche D,F |
+| DBE | D | - | D | mm | - | - | alle | - | - | Bereiche I,J |
+| DBE | D | - | B | mm | - | - | alle | - | - | Bereiche alle |
+| DBE | E,F,H,Z | - | B | mm | - | - | alle | - | - | Bereiche alle |
+| DBE | G | - | D | mm | - | - | - | alle | - | Bereiche D,F |
+| DBE | G | - | D | mm | - | - | alle | - | - | Bereiche I,J |
+| DBE | G | - | B | mm | - | - | alle | - | - | Bereiche alle |
+
 ## Noch offen
 
 - Anhang C ist als Draft vollstaendig dokumentiert (Tabellen 7-32).
-- Anhang D ist begonnen: Tabellen 33-51 sind visuell geprueft dokumentiert.
-- Schachttabellen aus Anhang D offen: Tabellen 52-63.
+- Anhang D ist begonnen: Tabellen 33-55 sind visuell geprueft dokumentiert.
+- Schachttabellen aus Anhang D offen: Tabellen 56-63.
 - Klaeren, aus welchen Stammdaten `biegesteif`/`biegeweich` im Programm sicher
   bestimmt wird.
