@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -105,12 +105,12 @@ public partial class PlayerWindow : Window
     private readonly PlayerDamageOverlayData? _damageOverlay;
     private readonly List<(DamageMarkerInfo Info, FrameworkElement Container, FrameworkElement TickOrRange, TextBlock Label)> _damageMarkers = new();
 
-    // Ã¢"â‚¬Ã¢"â‚¬ Quick-Scan state Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
+    // ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ Quick-Scan state ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬
     private CancellationTokenSource? _quickScanCts;
     private bool _isQuickScanning;
     private readonly List<(QuickScanSegment Seg, Rectangle Rect)> _heatmapRects = new();
 
-    // Ã¢"â‚¬Ã¢"â‚¬ Live Detection state Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
+    // ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ Live Detection state ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬
     private OllamaClient? _liveDetectionClient;
     private LiveDetectionService? _liveDetectionService;
     private DispatcherTimer? _detectionTimer;
@@ -125,7 +125,7 @@ public partial class PlayerWindow : Window
     private double? _detectionPendingTimestampSec;
     private string _liveDetectionModelName = string.Empty;
 
-    // Ã¢"â‚¬Ã¢"â‚¬ Protocol integration (optional, passed by caller) Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
+    // ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ Protocol integration (optional, passed by caller) ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬
     private readonly ServiceProvider? _serviceProvider;
     private readonly string? _haltungId;
     private readonly Action<ProtocolEntry>? _onEntryCreated;
@@ -158,7 +158,7 @@ public partial class PlayerWindow : Window
         Loaded += (_, _) => EnsureVisibleOnScreen();
 
         // Overlay suspendieren wenn ein FREMDES Fenster den Fokus bekommt (z.B. Snipping Tool).
-        // Nicht bei eigenen Child-Dialogen (MessageBox, VsaCodeExplorer) — die verwenden
+        // Nicht bei eigenen Child-Dialogen (MessageBox, VsaCodeExplorer) â€” die verwenden
         // SuspendCodingOverlayInput/ResumeCodingOverlayInput direkt.
         Deactivated += (_, _) =>
         {
@@ -303,716 +303,6 @@ public partial class PlayerWindow : Window
 
         AddHandler(Keyboard.PreviewKeyDownEvent, new KeyEventHandler(PlayerWindow_PreviewKeyDown), true);
     }
-
-    public static bool TryShowOverlayOnLast(string text, TimeSpan duration)
-    {
-        if (_lastOpened is null)
-            return false;
-        _lastOpened.ShowOverlay(text, duration);
-        return true;
-    }
-
-    public static bool TryGetCurrentTime(out TimeSpan time)
-    {
-        time = default;
-        if (_lastOpened is null)
-            return false;
-
-        return _lastOpened.TryGetCurrentTimeInternal(out time);
-    }
-
-    public static bool TrySeekTo(TimeSpan time)
-    {
-        if (_lastOpened is null)
-            return false;
-
-        return _lastOpened.TrySeekToInternal(time);
-    }
-
-    /// <summary>
-    /// Erstellt einen Snapshot vom aktuellen Video-Frame als PNG.
-    /// Funktioniert mit jeder Aufloesung (auch FullHD 1920x1080).
-    /// </summary>
-    public static bool TryTakeSnapshot(out string snapshotPath)
-    {
-        snapshotPath = string.Empty;
-        if (_lastOpened?._player is null || !_lastOpened._player.IsPlaying && _lastOpened._player.Time <= 0)
-            return false;
-
-        try
-        {
-            var tempDir = Path.Combine(Path.GetTempPath(), "SewerStudio_Snapshots");
-            Directory.CreateDirectory(tempDir);
-            snapshotPath = Path.Combine(tempDir, $"snap_{DateTime.Now:yyyyMMdd_HHmmss}.png");
-
-            // VLC Snapshot: 0 = original Aufloesung (FullHD etc.)
-            return _lastOpened.TakeSnapshotSafe(snapshotPath);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// TakeSnapshot mit kurzem Pause-Trick, um D3D11-Deadlock zu vermeiden.
-    /// D3D11 haelt die Video-Surface exklusiv gesperrt; kurzes Pausieren gibt sie frei.
-    /// </summary>
-    private bool TakeSnapshotSafe(string filePath, uint width = 0, uint height = 0)
-    {
-        var wasPlaying = _player.IsPlaying;
-        if (wasPlaying)
-        {
-            _player.SetPause(true);
-            System.Threading.Thread.Sleep(60);
-        }
-        // VLC-OSD-Anzeige (Dateipfad) vorher deaktivieren, damit der Pfad
-        // nicht als Text auf dem Videobild erscheint
-        try { _player.SetMarqueeInt(VideoMarqueeOption.Enable, 0); } catch { }
-        var success = _player.TakeSnapshot(0, filePath, width, height);
-        if (wasPlaying)
-            _player.SetPause(false);
-        return success;
-    }
-
-    private void ShowOverlay(string text, TimeSpan duration)
-    {
-        if (_player is null)
-            return;
-
-        try
-        {
-            _player.SetMarqueeInt(VideoMarqueeOption.Enable, 1);
-            _player.SetMarqueeInt(VideoMarqueeOption.X, 16);
-            _player.SetMarqueeInt(VideoMarqueeOption.Y, 16);
-            _player.SetMarqueeInt(VideoMarqueeOption.Size, 24);
-            _player.SetMarqueeInt(VideoMarqueeOption.Color, 0xFFFFFF);
-            _player.SetMarqueeInt(VideoMarqueeOption.Opacity, 200);
-            _player.SetMarqueeString(VideoMarqueeOption.Text, text);
-
-            var t = new DispatcherTimer { Interval = duration };
-            t.Tick += (_, __) =>
-            {
-                t.Stop();
-                try { _player.SetMarqueeInt(VideoMarqueeOption.Enable, 0); } catch { }
-            };
-            t.Start();
-        }
-        catch
-        {
-            // ignore overlay errors
-        }
-    }
-
-    private bool TryGetCurrentTimeInternal(out TimeSpan time)
-    {
-        time = default;
-        try
-        {
-            var ms = Math.Max(0, _player.Time);
-            time = TimeSpan.FromMilliseconds(ms);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private bool TrySeekToInternal(TimeSpan time)
-    {
-        try
-        {
-            EnsurePlaying();
-            var ms = (long)Math.Max(0, time.TotalMilliseconds);
-            if (_player.Length > 0 && ms > _player.Length)
-                ms = _player.Length;
-            _player.Time = ms;
-            UpdateUi();
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static LibVLC CreateLibVlc(PlayerWindowOptions options)
-    {
-        var args = new List<string>();
-
-        if (!string.Equals(options.VideoOutput, "any", StringComparison.OrdinalIgnoreCase))
-            args.Add($"--vout={options.VideoOutput}");
-
-        args.Add(options.EnableHardwareDecoding ? "--avcodec-hw=dxva2" : "--avcodec-hw=none");
-        args.Add($"--avcodec-threads={options.CodecThreads}");
-        args.Add($"--file-caching={options.FileCachingMs}");
-        args.Add($"--network-caching={options.NetworkCachingMs}");
-
-        if (options.DropLateFrames)
-            args.Add("--drop-late-frames");
-        if (options.SkipFrames)
-            args.Add("--skip-frames");
-
-        args.Add("--clock-jitter=0");
-        args.Add("--clock-synchro=0");
-
-        // Snapshot-Pfad nicht als OSD anzeigen (stoert bei KI-Frame-Captures)
-        args.Add("--no-snapshot-preview");
-
-        try
-        {
-            return new LibVLC(args.ToArray());
-        }
-        catch
-        {
-            return new LibVLC();
-        }
-    }
-
-    private void PlayerWindow_PreviewKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Escape && _codingOverlayService != null)
-        {
-            _codingOverlayService.CancelDraw();
-            _codingSchemaManager.Cancel();
-            if (CodingOverlayCanvas.IsMouseCaptured)
-                CodingOverlayCanvas.ReleaseMouseCapture();
-            if (_codingVm != null)
-            {
-                _codingVm.CurrentOverlay = null;
-                BtnCodingCreateEvent.IsEnabled = false;
-                UpdateCodingOverlayInfo(null);
-            }
-            if (CodingOverlayPopup.IsOpen)
-                RedrawCodingCanvas(includeManualOverlay: false);
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.Space)
-        {
-            TogglePlayPause();
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.S)
-        {
-            _player.Stop();
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.P)
-        {
-            _player.SetPause(true);
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.R)
-        {
-            EnsurePlaying();
-            _player.SetPause(false);
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.Add || e.Key == Key.OemPlus)
-        {
-            ChangeSpeed(+0.25f);
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.Subtract || e.Key == Key.OemMinus)
-        {
-            ChangeSpeed(-0.25f);
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.Right)
-        {
-            JumpSeconds(5);
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.Left)
-        {
-            JumpSeconds(-5);
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.D)
-        {
-            if (_isCodingMode)
-            {
-                BtnCodingLiveAi.IsChecked = !(BtnCodingLiveAi.IsChecked == true);
-                CodingLiveAi_Click(BtnCodingLiveAi, new RoutedEventArgs());
-            }
-            else
-            {
-                LiveDetectionButton.IsChecked = !(LiveDetectionButton.IsChecked == true);
-                LiveDetection_Click(LiveDetectionButton, new RoutedEventArgs());
-            }
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.M)
-        {
-            // Toggle: Wenn Mark-Tool aktiv → deaktivieren, sonst Popup oeffnen
-            if (_markToolType != OverlayToolType.None)
-                DeactivateMarkTool();
-            else
-                MarkToolPopup.IsOpen = !MarkToolPopup.IsOpen;
-            e.Handled = true;
-        }
-    }
-
-    private void TogglePlayPause()
-    {
-        EnsurePlaying();
-        _player.SetPause(_player.IsPlaying);
-    }
-
-    private void EnsurePlaying()
-    {
-        var state = _player.State;
-        if (state == VLCState.Stopped || state == VLCState.Ended)
-            Play(_videoPath);
-    }
-
-    private void ChangeSpeed(float delta)
-    {
-        SetSpeed(AuswertungPro.Next.UI.Player.PlayerPlaybackState.ApplyRateDelta(_player.Rate, delta));
-    }
-
-    private void JumpSeconds(int seconds)
-    {
-        if (_player.Length <= 0)
-            return;
-
-        _player.Time = AuswertungPro.Next.UI.Player.PlayerPlaybackState.AddSeconds(_player.Time, _player.Length, seconds);
-        ClearDetectionOverlays(); // Alte Overlays bei Navigation entfernen
-        UpdateUi();
-    }
-
-    private void Play(string path)
-    {
-        using var media = new Media(_libVlc, path, FromType.FromPath);
-        _player.Play(media);
-        _timer.Start();
-        UpdateRateLabel();
-    }
-
-    private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
-    {
-        try
-        {
-            Cleanup();
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[PlayerWindow] OnClosing error: {ex.Message}");
-        }
-    }
-
-    private void Cleanup()
-    {
-        _timer.Stop();
-        _scrubTimer.Stop();
-        VideoView.MediaPlayer = null;
-        _player.Dispose();
-        _libVlc.Dispose();
-    }
-
-    private void UpdateUi()
-    {
-        if (_isDragging)
-            return;
-
-        var length = _player.Length;
-        var time = Math.Max(0, _player.Time);
-
-        if (length > 0)
-        {
-            var pos = (double)time / length;
-            PositionSlider.Value = pos * PositionSlider.Maximum;
-            CurrentTimeText.Text = FormatMs(time);
-            DurationText.Text = FormatMs(length);
-        }
-        else
-        {
-            CurrentTimeText.Text = FormatMs(time);
-            DurationText.Text = "--:--";
-        }
-
-        UpdateRateLabel();
-
-        // Im Codier-Modus: Echtzeit-Code am Zeitstempel aktualisieren
-        if (_isCodingMode)
-            UpdateCodingCurrentCode();
-    }
-
-    private static string FormatMs(long ms)
-    {
-        var t = TimeSpan.FromMilliseconds(ms);
-        return t.TotalHours >= 1 ? t.ToString(@"hh\:mm\:ss") : t.ToString(@"mm\:ss");
-    }
-
-    private void Play_Click(object sender, RoutedEventArgs e)
-    {
-        EnsurePlaying();
-        _player.SetPause(false);
-        UpdateRateLabel();
-        // Overlays aufraumen — beim Abspielen sind alte Markierungen irrelevant
-        ClearDetectionOverlays();
-    }
-
-    private void Pause_Click(object sender, RoutedEventArgs e)
-    {
-        _player.SetPause(true);
-        UpdateRateLabel();
-    }
-
-    private void Stop_Click(object sender, RoutedEventArgs e)
-    {
-        _player.Stop();
-        UpdateRateLabel();
-    }
-
-    private void Speed05_Click(object sender, RoutedEventArgs e) => SetSpeed(0.5f);
-
-    private void Speed1_Click(object sender, RoutedEventArgs e) => SetSpeed(1.0f);
-
-    private void Speed15_Click(object sender, RoutedEventArgs e) => SetSpeed(1.5f);
-
-    private void Speed2_Click(object sender, RoutedEventArgs e) => SetSpeed(2.0f);
-
-    private void Speed4_Click(object sender, RoutedEventArgs e) => SetSpeed(4.0f);
-
-    private void Speed8_Click(object sender, RoutedEventArgs e) => SetSpeed(8.0f);
-
-    private void PositionSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (_isDragging)
-            UpdateSeekPreview();
-    }
-
-    private void SeekToSlider()
-    {
-        var max = PositionSlider.Maximum;
-        if (max <= 0)
-            return;
-
-        var targetPos = PositionSlider.Value / max;
-        if (targetPos < 0)
-            targetPos = 0;
-        if (targetPos > 1)
-            targetPos = 1;
-
-        var length = _player.Length;
-        if (length > 0)
-            _player.Time = (long)(targetPos * length);
-        else
-            _player.Position = (float)targetPos;
-
-        UpdateUi();
-    }
-
-    private void UpdateSeekPreview()
-    {
-        var max = PositionSlider.Maximum;
-        if (max <= 0)
-            return;
-
-        var targetPos = PositionSlider.Value / max;
-        if (targetPos < 0)
-            targetPos = 0;
-        if (targetPos > 1)
-            targetPos = 1;
-
-        var length = _player.Length;
-        if (length > 0)
-        {
-            var targetMs = (long)(targetPos * length);
-            CurrentTimeText.Text = FormatMs(targetMs);
-            DurationText.Text = FormatMs(length);
-        }
-        else
-        {
-            CurrentTimeText.Text = $"{targetPos:P0}";
-            DurationText.Text = "--:--";
-        }
-
-        // Throttled live seek: schedule scrub if not already pending
-        if (_isDragging && !_scrubTimer.IsEnabled)
-            _scrubTimer.Start();
-    }
-
-    private void ScrubSeekToSlider()
-    {
-        var max = PositionSlider.Maximum;
-        if (max <= 0)
-            return;
-
-        var targetPos = Math.Clamp(PositionSlider.Value / max, 0.0, 1.0);
-        var length = _player.Length;
-        if (length > 0)
-            _player.Time = (long)(targetPos * length);
-        else
-            _player.Position = (float)targetPos;
-
-        CurrentTimeText.Text = length > 0 ? FormatMs((long)(targetPos * length)) : $"{targetPos:P0}";
-    }
-
-    private void SetSpeed(float rate)
-    {
-        var clamped = AuswertungPro.Next.UI.Player.PlayerPlaybackState.ClampRate(rate);
-        var result = _player.SetRate(clamped);
-        if (result != 0)
-        {
-            MessageBox.Show($"SetRate({clamped:0.##}) nicht unterstuetzt fuer dieses Video.",
-                "Video", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        UpdateRateLabel();
-    }
-
-    private void UpdateRateLabel()
-    {
-        var rate = _player.Rate <= 0f ? 1.0f : _player.Rate;
-        RateText.Text = $"{rate:0.##}x";
-        UpdateSpeedButtons(rate);
-    }
-
-    private void UpdateSpeedButtons(float rate)
-    {
-        SetSpeedButtonState(Speed05Button, rate, 0.5f);
-        SetSpeedButtonState(Speed1Button, rate, 1.0f);
-        SetSpeedButtonState(Speed15Button, rate, 1.5f);
-        SetSpeedButtonState(Speed2Button, rate, 2.0f);
-        SetSpeedButtonState(Speed4Button, rate, 4.0f);
-        SetSpeedButtonState(Speed8Button, rate, 8.0f);
-    }
-
-    private static void SetSpeedButtonState(ToggleButton button, float currentRate, float targetRate)
-    {
-        button.IsChecked = Math.Abs(currentRate - targetRate) < 0.01f;
-    }
-
-    // Ã¢"â‚¬Ã¢"â‚¬ Damage marker overlay Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
-
-    private void BuildDamageMarkers()
-    {
-        if (_damageOverlay is null || _damageOverlay.PipeLengthMeters <= 0)
-            return;
-
-        DamageMarkerCanvas.Children.Clear();
-        _damageMarkers.Clear();
-
-        var accentBrush = (System.Windows.Media.Brush)FindResource("NeonCyanBrush");
-        var accentColor = (System.Windows.Media.Color)FindResource("ColorNeonCyan");
-
-        foreach (var info in _damageOverlay.Markers)
-        {
-            if (info.MeterStart < 0 || info.MeterStart > _damageOverlay.PipeLengthMeters)
-                continue;
-
-            if (info.IsStreckenschaden && info.MeterEnd.HasValue && info.MeterEnd.Value > info.MeterStart)
-                CreateRangeMarker(info, accentBrush, accentColor);
-            else
-                CreatePointMarker(info, accentBrush, accentColor);
-        }
-
-        RepositionDamageMarkers();
-    }
-
-    private void CreatePointMarker(DamageMarkerInfo info, System.Windows.Media.Brush accentBrush, System.Windows.Media.Color accentColor)
-    {
-        var container = new Canvas { Cursor = Cursors.Hand };
-
-        var tick = new Rectangle
-        {
-            Width = 2,
-            Height = 14,
-            Fill = accentBrush,
-            Opacity = 0.85,
-            IsHitTestVisible = false,
-            Effect = new System.Windows.Media.Effects.DropShadowEffect { Color = accentColor, BlurRadius = 6, ShadowDepth = 0, Opacity = 0.5 }
-        };
-        Canvas.SetTop(tick, -5);
-        container.Children.Add(tick);
-
-        var label = new TextBlock
-        {
-            Text = string.IsNullOrWhiteSpace(info.Code) ? "?" : info.Code.Trim(),
-            FontSize = 9,
-            FontWeight = FontWeights.SemiBold,
-            FontFamily = new System.Windows.Media.FontFamily("Consolas"),
-            Foreground = accentBrush,
-            IsHitTestVisible = false
-        };
-        Canvas.SetTop(label, -19);
-        container.Children.Add(label);
-
-        container.ToolTip = $"{info.Code} @ {info.MeterStart:0.0}m"
-            + (string.IsNullOrWhiteSpace(info.Description) ? "" : $"\n{info.Description}");
-
-        container.MouseLeftButtonDown += (_, _) => SeekToMeter(info.MeterStart);
-
-        DamageMarkerCanvas.Children.Add(container);
-        _damageMarkers.Add((info, container, tick, label));
-    }
-
-    private void CreateRangeMarker(DamageMarkerInfo info, System.Windows.Media.Brush accentBrush, System.Windows.Media.Color accentColor)
-    {
-        var container = new Canvas { Cursor = Cursors.Hand };
-
-        var bar = new Rectangle
-        {
-            Height = 5,
-            Fill = accentBrush,
-            Opacity = 0.35,
-            RadiusX = 2,
-            RadiusY = 2,
-            IsHitTestVisible = false
-        };
-        Canvas.SetTop(bar, -2);
-        container.Children.Add(bar);
-
-        var startTick = new Rectangle
-        {
-            Width = 1.5,
-            Height = 10,
-            Fill = accentBrush,
-            Opacity = 0.7,
-            IsHitTestVisible = false
-        };
-        Canvas.SetTop(startTick, -4);
-        container.Children.Add(startTick);
-
-        var label = new TextBlock
-        {
-            Text = string.IsNullOrWhiteSpace(info.Code) ? "?" : info.Code.Trim(),
-            FontSize = 9,
-            FontWeight = FontWeights.SemiBold,
-            FontFamily = new System.Windows.Media.FontFamily("Consolas"),
-            Foreground = accentBrush,
-            IsHitTestVisible = false
-        };
-        Canvas.SetTop(label, -19);
-        container.Children.Add(label);
-
-        var endM = Math.Min(info.MeterEnd ?? info.MeterStart, _damageOverlay!.PipeLengthMeters);
-        container.ToolTip = $"{info.Code} Strecke {info.MeterStart:0.0}m - {endM:0.0}m"
-            + (string.IsNullOrWhiteSpace(info.Description) ? "" : $"\n{info.Description}");
-
-        container.MouseLeftButtonDown += (_, _) => SeekToMeter(info.MeterStart);
-
-        DamageMarkerCanvas.Children.Add(container);
-        _damageMarkers.Add((info, container, bar, label));
-    }
-
-    private (double offsetX, double trackWidth) GetSliderTrackBounds()
-    {
-        if (PositionSlider.Template?.FindName("PART_Track", PositionSlider) is Track track
-            && track.IsVisible
-            && track.ActualWidth > 0)
-        {
-            var thumbHalf = (track.Thumb?.ActualWidth ?? 18) / 2.0;
-            var ptStart = track.TranslatePoint(new Point(thumbHalf, 0), DamageMarkerCanvas);
-            var ptEnd = track.TranslatePoint(new Point(track.ActualWidth - thumbHalf, 0), DamageMarkerCanvas);
-            return (ptStart.X, ptEnd.X - ptStart.X);
-        }
-
-        // Fallback: assume 9px thumb offset on each side
-        return (9, Math.Max(DamageMarkerCanvas.ActualWidth - 18, 1));
-    }
-
-    private void RepositionDamageMarkers()
-    {
-        if (_damageOverlay is null || _damageMarkers.Count == 0)
-            return;
-
-        var (offsetX, trackWidth) = GetSliderTrackBounds();
-        if (trackWidth <= 0)
-            return;
-
-        var pipeLength = _damageOverlay.PipeLengthMeters;
-
-        foreach (var (info, container, tickOrRange, label) in _damageMarkers)
-        {
-            var x = AuswertungPro.Next.UI.Player.PlayerTimelineLayoutCalculator.CalculatePointX(
-                info.MeterStart,
-                pipeLength,
-                offsetX,
-                trackWidth);
-
-            if (info.IsStreckenschaden && info.MeterEnd.HasValue && info.MeterEnd.Value > info.MeterStart)
-            {
-                var range = AuswertungPro.Next.UI.Player.PlayerTimelineLayoutCalculator.CalculateRangeX(
-                    info.MeterStart,
-                    info.MeterEnd.Value,
-                    pipeLength,
-                    offsetX,
-                    trackWidth);
-                Canvas.SetLeft(container, range.StartX);
-                var barWidth = Math.Max(range.Width, 3);
-                ((Rectangle)tickOrRange).Width = barWidth;
-
-                label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                var labelWidth = label.DesiredSize.Width;
-                Canvas.SetLeft(label, (barWidth - labelWidth) / 2);
-            }
-            else
-            {
-                Canvas.SetLeft(container, x - 1);
-                label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                var labelWidth = label.DesiredSize.Width;
-                Canvas.SetLeft(label, -(labelWidth / 2) + 1);
-            }
-        }
-    }
-
-    private void SeekToMeter(double meter)
-    {
-        if (_damageOverlay is null || _damageOverlay.PipeLengthMeters <= 0)
-            return;
-
-        EnsurePlaying();
-        // Pause so the jumped-to frame is clearly visible
-        _player.SetPause(true);
-
-        var ratio = Math.Clamp(meter / _damageOverlay.PipeLengthMeters, 0.0, 1.0);
-        PositionSlider.Value = ratio * PositionSlider.Maximum;
-
-        var length = _player.Length;
-        if (length > 0)
-            _player.Time = (long)(ratio * length);
-        else
-            _player.Position = (float)ratio;
-
-        UpdateUi();
-    }
-
-    private void EnsureVisibleOnScreen()
-    {
-        var area = SystemParameters.WorkArea;
-        if (Width > area.Width) Width = area.Width - 20;
-        if (Height > area.Height) Height = area.Height - 20;
-        if (Left < area.Left) Left = area.Left;
-        if (Top < area.Top) Top = area.Top;
-        if (Left + Width > area.Right) Left = area.Right - Width;
-        if (Top + Height > area.Bottom) Top = area.Bottom - Height;
-    }
-
-    // Ã¢"â‚¬Ã¢"â‚¬ Quick-Scan Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
 
     private async void QuickScan_Click(object sender, RoutedEventArgs e)
     {
@@ -1231,7 +521,7 @@ public partial class PlayerWindow : Window
         TimeSpan? presetZeit)
         => new(entry, presetMeter, presetZeit, CodeSelectionCatalog);
 
-    // Ã¢"â‚¬Ã¢"â‚¬ Live Detection Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
+    // ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ Live Detection ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬
 
     private static string CompactModelName(string? model)
     {
@@ -1457,7 +747,7 @@ public partial class PlayerWindow : Window
 
         // Fertig-Meldung mit Zusammenfassung
         int totalEvents = _codingVm?.Events?.Count ?? 0;
-        LiveDetectionStatusText.Text = $"KI-Analyse beendet — {totalEvents} Beobachtungen";
+        LiveDetectionStatusText.Text = $"KI-Analyse beendet â€” {totalEvents} Beobachtungen";
         LiveDetectionStatusText.Visibility = Visibility.Visible;
 
         // Video pausieren damit der User die Meldung sieht
@@ -1620,7 +910,7 @@ public partial class PlayerWindow : Window
         }
     }
 
-    // Ã¢"â‚¬Ã¢"â‚¬ Detection Overlay Rendering (ring-sector pattern from LiveFrameWindow) Ã¢"â‚¬Ã¢"â‚¬
+    // ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ Detection Overlay Rendering (ring-sector pattern from LiveFrameWindow) ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬
 
     private void RenderDetectionOverlay(IReadOnlyList<LiveFrameFinding> findings, double timestampSec)
     {
@@ -1645,7 +935,7 @@ public partial class PlayerWindow : Window
             return;
         }
 
-        // ── Bbox-basiertes Rendering: Rechtecke + Labels direkt auf dem Bild ──
+        // â”€â”€ Bbox-basiertes Rendering: Rechtecke + Labels direkt auf dem Bild â”€â”€
         for (var i = 0; i < findings.Count && i < 8; i++)
         {
             var finding = findings[i];
@@ -1718,7 +1008,7 @@ public partial class PlayerWindow : Window
             }
             else
             {
-                // Einzelnes Finding ohne Bbox → Ring-Sektor-Fallback
+                // Einzelnes Finding ohne Bbox â†’ Ring-Sektor-Fallback
                 RenderRingSectorFinding(finding, i, findings.Count, width, height, timestampSec);
             }
         }
@@ -1917,9 +1207,9 @@ public partial class PlayerWindow : Window
 
     private static double DegToRad(double deg) => deg * Math.PI / 180.0;
 
-    // Ã¢"â‚¬Ã¢"â‚¬ Manual Marking Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
+    // ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ Manual Marking ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬
 
-    // ── Markieren Popup-Menü ──────────────────────────────────────────────
+    // â”€â”€ Markieren Popup-MenÃ¼ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private OverlayToolType _markToolType = OverlayToolType.None;
 
@@ -2074,12 +1364,12 @@ public partial class PlayerWindow : Window
 
             if (saved)
             {
-                // Erfolgreich gespeichert → Tool deaktivieren
+                // Erfolgreich gespeichert â†’ Tool deaktivieren
                 DeactivateMarkTool();
             }
             else
             {
-                // Abgebrochen → Tool bleibt aktiv, naechste Markierung kann sofort gezeichnet werden
+                // Abgebrochen â†’ Tool bleibt aktiv, naechste Markierung kann sofort gezeichnet werden
                 if (_codingOverlayService != null)
                     _codingOverlayService.ActiveTool = _markToolType;
                 CodingOverlayCanvas.Cursor = Cursors.Cross;
@@ -2100,7 +1390,7 @@ public partial class PlayerWindow : Window
     {
         try
         {
-            // 1. VSA-Code waehlen — VsaCodeExplorer oeffnet sich sofort
+            // 1. VSA-Code waehlen â€” VsaCodeExplorer oeffnet sich sofort
             // Meter automatisch aus OSD oder Videoposition berechnen
             var autoMeter = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
             var entry = new ProtocolEntry();
@@ -2138,7 +1428,7 @@ public partial class PlayerWindow : Window
             var exportService = Ai.Teacher.TrainingAnnotationExportServiceFactory.Create();
             var exportResult = await exportService.ExportAsync(tempFrame, bbox, selectedEntry.Code, classId, baseName);
 
-            // Temp aufräumen
+            // Temp aufrÃ¤umen
             try { System.IO.File.Delete(tempFrame); } catch { }
 
             // 5. TeacherAnnotation erstellen + persistieren
@@ -2191,7 +1481,7 @@ public partial class PlayerWindow : Window
 
             // Dezente Statusmeldung im OSD-Badge (kein MessageBox-Popup)
             OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"✓ {selectedEntry.Code} gespeichert";
+            TxtOsdMeter.Text = $"âœ“ {selectedEntry.Code} gespeichert";
 
             // Badge nach 3 Sekunden zuruecksetzen
             var resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
@@ -2214,7 +1504,7 @@ public partial class PlayerWindow : Window
         }
     }
 
-    // ── LiveDetection Bestaetigungs-Logik ──────────────────────────
+    // â”€â”€ LiveDetection Bestaetigungs-Logik â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private void ShowDetectionConfirmation(IReadOnlyList<LiveFrameFinding> findings)
     {
         if (findings.Count == 0) return;
@@ -2243,14 +1533,14 @@ public partial class PlayerWindow : Window
 
         TxtDetectionFinding.Text = findings.Count == 1
             ? $"KI-Erkennung: {primary.Label} ({severityText})"
-            : $"KI-Erkennung: {findings.Count} Befunde — {primary.Label} ({severityText})";
+            : $"KI-Erkennung: {findings.Count} Befunde â€” {primary.Label} ({severityText})";
 
         var details = new System.Text.StringBuilder();
         foreach (var f in findings)
         {
             if (details.Length > 0) details.Append("  |  ");
-            details.Append($"{f.PositionClock ?? "?"} Uhr · {f.Label}");
-            if (f.ExtentPercent.HasValue) details.Append($" · {f.ExtentPercent}%");
+            details.Append($"{f.PositionClock ?? "?"} Uhr Â· {f.Label}");
+            if (f.ExtentPercent.HasValue) details.Append($" Â· {f.ExtentPercent}%");
         }
         TxtDetectionDetail.Text = details.ToString();
 
@@ -2296,7 +1586,7 @@ public partial class PlayerWindow : Window
                 var annotationId = Guid.NewGuid().ToString("N")[..12];
                 var baseName = $"det_{annotationId}";
 
-                // Bounding-Box aus Uhrposition ableiten (Ring-Sektor → normalisierte Koordinaten)
+                // Bounding-Box aus Uhrposition ableiten (Ring-Sektor â†’ normalisierte Koordinaten)
                 var bbox = BBoxFromClockPosition(finding);
 
                 // Frame temp speichern
@@ -2330,7 +1620,7 @@ public partial class PlayerWindow : Window
 
             // Dezente Bestaetigung im OSD-Badge
             OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"✓ {_detectionPendingFindings.Count} Befund(e) gespeichert";
+            TxtOsdMeter.Text = $"âœ“ {_detectionPendingFindings.Count} Befund(e) gespeichert";
 
             var resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
             resetTimer.Tick += (_, _) =>
@@ -2346,7 +1636,7 @@ public partial class PlayerWindow : Window
         catch (Exception ex)
         {
             OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"✗ Fehler: {ex.Message}";
+            TxtOsdMeter.Text = $"âœ— Fehler: {ex.Message}";
         }
 
         ResumeDetection();
@@ -2364,7 +1654,7 @@ public partial class PlayerWindow : Window
         {
             var timestampSec = _player.Time / 1000.0;
 
-            // VsaCodeExplorer oeffnen fuer Korrektur — Meter aus OSD/Video
+            // VsaCodeExplorer oeffnen fuer Korrektur â€” Meter aus OSD/Video
             var autoMeter2 = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
             var entry = new ProtocolEntry();
             var explorerVm = CreateVsaCodeExplorerViewModel(entry, autoMeter2, TimeSpan.FromSeconds(timestampSec));
@@ -2424,7 +1714,7 @@ public partial class PlayerWindow : Window
             await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 
             OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"✓ Training: {selectedEntry.Code} (korrigiert)";
+            TxtOsdMeter.Text = $"âœ“ Training: {selectedEntry.Code} (korrigiert)";
 
             var resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
             resetTimer.Tick += (_, _) =>
@@ -2440,7 +1730,7 @@ public partial class PlayerWindow : Window
         catch (Exception ex)
         {
             OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"✗ Fehler: {ex.Message}";
+            TxtOsdMeter.Text = $"âœ— Fehler: {ex.Message}";
         }
 
         ResumeDetection();
@@ -2453,11 +1743,11 @@ public partial class PlayerWindow : Window
 
     /// <summary>
     /// Erzeugt eine grobe BoundingBox aus Uhrposition + Ausdehnung eines LiveFrameFinding.
-    /// Mapping: Uhrposition → Kreissektor → normalisierte Box im Bild.
+    /// Mapping: Uhrposition â†’ Kreissektor â†’ normalisierte Box im Bild.
     /// </summary>
     private static Application.Ai.NormalizedBoundingBox BBoxFromClockPosition(LiveFrameFinding finding)
     {
-        // Uhrzeiger → Winkel (12 Uhr = oben = -90°, dann im Uhrzeigersinn)
+        // Uhrzeiger â†’ Winkel (12 Uhr = oben = -90Â°, dann im Uhrzeigersinn)
         double clockHour = 6; // Default: unten
         if (double.TryParse(finding.PositionClock, System.Globalization.NumberStyles.Any,
             System.Globalization.CultureInfo.InvariantCulture, out var parsed))
@@ -2466,7 +1756,7 @@ public partial class PlayerWindow : Window
         double angleDeg = (clockHour / 12.0) * 360.0 - 90.0;
         double angleRad = angleDeg * Math.PI / 180.0;
 
-        // Extent-basierte Groesse (% Umfang → Box-Groesse)
+        // Extent-basierte Groesse (% Umfang â†’ Box-Groesse)
         double extent = (finding.ExtentPercent ?? 15) / 100.0;
         double boxSize = Math.Clamp(extent * 0.6, 0.08, 0.40);
 
@@ -2584,9 +1874,9 @@ public partial class PlayerWindow : Window
         }
     }
 
-    // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
     // CODIER-MODUS (integriert im PlayerWindow)
-    // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
 
     private bool _isCodingMode;
     private CodingSessionViewModel? _codingVm;
@@ -2629,7 +1919,7 @@ public partial class PlayerWindow : Window
     private Rect _eingabemarkerRectNorm;   // Normiertes Rechteck (0-1)
     private System.Windows.Shapes.Rectangle? _eingabemarkerPreviewRect;
 
-    // Multi-Model Pipeline (YOLO → DINO → SAM) fuer Einzelframe-Analyse
+    // Multi-Model Pipeline (YOLO â†’ DINO â†’ SAM) fuer Einzelframe-Analyse
     private SingleFrameMultiModelService? _codingMultiModel;
     private VisionPipelineClient? _codingVisionClient;
     private bool _codingUseMultiModel;
@@ -2734,7 +2024,7 @@ public partial class PlayerWindow : Window
         TxtCodingMeter.Text = "0.00m";
 
         // ALLE bestehenden Beobachtungen in Import-Referenz verschieben.
-        // KI-Befunde-Liste startet LEER — KI erkennt frisch, User korrigiert.
+        // KI-Befunde-Liste startet LEER â€” KI erkennt frisch, User korrigiert.
         _codingImportEvents.Clear();
         var allExisting = _codingVm.Events.OrderBy(e => e.MeterAtCapture).ToList();
         _codingVm.Events.Clear();
@@ -2799,7 +2089,7 @@ public partial class PlayerWindow : Window
         TxtOsdMeter.Text = "OSD: --";
 
         // Bestehende Protokoll-Eintraege direkt in Import-Referenz laden
-        // (NICHT in KI-Befunde — die startet leer)
+        // (NICHT in KI-Befunde â€” die startet leer)
         LoadExistingProtocolEventsAsImport();
 
         // Video an Anfang setzen (direkt, nicht ueber PropertyChanged)
@@ -2848,7 +2138,7 @@ public partial class PlayerWindow : Window
             var endMeter = _codingLastOsdMeter ?? _codingVm.EndMeter;
             if (!CloseOpenStreckenschaeden(endMeter))
             {
-                // User hat "Abbrechen" geklickt → Exit abbrechen, weiter codieren
+                // User hat "Abbrechen" geklickt â†’ Exit abbrechen, weiter codieren
                 _isCodingMode = true;
                 return;
             }
@@ -2975,7 +2265,7 @@ public partial class PlayerWindow : Window
         // Primaere Schaeden ins DataGrid uebertragen
         SyncCodingToPrimaryDamages(doc);
 
-        // Feedback-Loop: CodingEvents → TrainingSamples persistieren
+        // Feedback-Loop: CodingEvents â†’ TrainingSamples persistieren
         // (Im PlayerWindow wird CompleteSession() nicht aufgerufen,
         //  daher muss die Training-Persistierung hier erfolgen.)
         PersistCodingEventsAsTrainingSamples();
@@ -3008,7 +2298,7 @@ public partial class PlayerWindow : Window
     /// </summary>
     /// <summary>
     /// Speichert ein einzelnes CodingEvent sofort als TrainingSample.
-    /// Wird nach jeder Codierung aufgerufen — nicht erst beim Beenden.
+    /// Wird nach jeder Codierung aufgerufen â€” nicht erst beim Beenden.
     /// </summary>
     private void PersistSingleEventAsTrainingSample(CodingEvent ev)
     {
@@ -3072,7 +2362,7 @@ public partial class PlayerWindow : Window
 
     /// <summary>
     /// Stellt sicher, dass Haltungslaenge_m gesetzt ist.
-    /// Fallback-Kette: Haltungslaenge_m → Laenge_m → DamageOverlay → Protokoll BCE → manuelle Eingabe.
+    /// Fallback-Kette: Haltungslaenge_m â†’ Laenge_m â†’ DamageOverlay â†’ Protokoll BCE â†’ manuelle Eingabe.
     /// </summary>
     private void EnsureHaltungslaenge(HaltungRecord record)
     {
@@ -3098,7 +2388,7 @@ public partial class PlayerWindow : Window
             return;
         }
 
-        // Fallback 3: Protokoll BCE-Eintrag (Rohrende) → hoechster Meter
+        // Fallback 3: Protokoll BCE-Eintrag (Rohrende) â†’ hoechster Meter
         if (record.Protocol?.Current?.Entries is { Count: > 0 } entries)
         {
             var maxMeter = entries
@@ -3148,7 +2438,7 @@ public partial class PlayerWindow : Window
 
     // --- Coding UI-Update ---
 
-    // Flag: wird true wenn Meter-Navigation (Next/Previous) auslÃƒÂ¶st
+    // Flag: wird true wenn Meter-Navigation (Next/Previous) auslÃƒÆ’Ã‚Â¶st
     private bool _codingNavPending;
 
     // Benannter Handler fuer sauberes Cleanup via -=
@@ -3210,7 +2500,7 @@ public partial class PlayerWindow : Window
             currentMeter = _codingVm.CurrentMeter;
         }
 
-        // Naechsten Code innerhalb Ã‚Â±0.5m finden
+        // Naechsten Code innerhalb Ãƒâ€šÃ‚Â±0.5m finden
         var nearestEvent = _codingVm.Events
             .Where(ev => Math.Abs(ev.MeterAtCapture - currentMeter) < 0.5)
             .OrderBy(ev => Math.Abs(ev.MeterAtCapture - currentMeter))
@@ -3218,7 +2508,7 @@ public partial class PlayerWindow : Window
 
         if (nearestEvent != null)
         {
-            TxtCodingCurrentCode.Text = $"Ã¢-Â¶ {nearestEvent.MeterAtCapture:F2}m {nearestEvent.Entry.Code} {nearestEvent.Entry.Beschreibung}";
+            TxtCodingCurrentCode.Text = $"ÃƒÂ¢-Ã‚Â¶ {nearestEvent.MeterAtCapture:F2}m {nearestEvent.Entry.Code} {nearestEvent.Entry.Beschreibung}";
             CodingCurrentCodeBadge.Visibility = Visibility.Visible;
         }
         else
@@ -3232,7 +2522,7 @@ public partial class PlayerWindow : Window
             if (nextEvent != null)
             {
                 var distM = nextEvent.MeterAtCapture - currentMeter;
-                TxtCodingCurrentCode.Text = $"→ in {distM:F1}m: {nextEvent.Entry.Code}";
+                TxtCodingCurrentCode.Text = $"â†’ in {distM:F1}m: {nextEvent.Entry.Code}";
                 CodingCurrentCodeBadge.Visibility = Visibility.Visible;
             }
             else
@@ -3252,8 +2542,8 @@ public partial class PlayerWindow : Window
     }
 
     /// <summary>
-    /// Hält die Overlay-Zeichenfläche exakt auf VideoView-Größe.
-    /// Wichtig für Popup-Overlay über VLC (HwndHost/Airspace).
+    /// HÃ¤lt die Overlay-ZeichenflÃ¤che exakt auf VideoView-GrÃ¶ÃŸe.
+    /// Wichtig fÃ¼r Popup-Overlay Ã¼ber VLC (HwndHost/Airspace).
     /// </summary>
     private void UpdateCodingOverlayViewport()
     {
@@ -3310,7 +2600,7 @@ public partial class PlayerWindow : Window
     // --- Coding Werkzeuge ---
 
     // Vereinfachte Werkzeuge: nur Kalibrieren + Rechteck (Rest im PhotoAssistant)
-    // Rechteck nutzt ActivateMarkTool → nach Zeichnen oeffnet sich automatisch der Code-Katalog
+    // Rechteck nutzt ActivateMarkTool â†’ nach Zeichnen oeffnet sich automatisch der Code-Katalog
     private void CodingToolRect_Click(object sender, RoutedEventArgs e)
         => ActivateMarkTool(OverlayToolType.Rectangle, "Markieren");
 
@@ -3329,7 +2619,7 @@ public partial class PlayerWindow : Window
         // Popup schliessen
         ToolsDropdownPopup.IsOpen = false;
 
-        // Toggle: gleiches Tool nochmal → deaktivieren
+        // Toggle: gleiches Tool nochmal â†’ deaktivieren
         string btnName = (activeBtn as FrameworkElement)?.Name ?? "";
         bool activate = !string.Equals(_activeCodingToolName, btnName);
         _activeCodingToolName = activate ? btnName : null;
@@ -3774,7 +3064,7 @@ public partial class PlayerWindow : Window
 
     private void CodingCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
     {
-        // Mausrad: Winkel der PipeBend-Schablone aendern (5° pro Schritt)
+        // Mausrad: Winkel der PipeBend-Schablone aendern (5Â° pro Schritt)
         if (_codingSchemaManager.Active is PipeBendSchema bend && _codingSchemaManager.IsActive)
         {
             double delta = e.Delta > 0 ? 5 : -5;
@@ -4020,7 +3310,7 @@ public partial class PlayerWindow : Window
             case OverlayToolType.Freehand:
                 if (overlay.Points.Count >= 3)
                 {
-                    // Geschlossenes Polygon (nicht offene Polyline) — umschliesst den Schadensbereich
+                    // Geschlossenes Polygon (nicht offene Polyline) â€” umschliesst den Schadensbereich
                     var poly = new System.Windows.Shapes.Polygon
                     {
                         Stroke = isPreview ? Brushes.HotPink : new SolidColorBrush(Color.FromRgb(255, 105, 180)),
@@ -4438,7 +3728,7 @@ public partial class PlayerWindow : Window
 
         if (overlay.Points.Count == 2)
         {
-            // Teilvorschau: nur Linie P1 → P2
+            // Teilvorschau: nur Linie P1 â†’ P2
             var a = CodingNormToPixel(overlay.Points[0]);
             var b = CodingNormToPixel(overlay.Points[1]);
             var line = new System.Windows.Shapes.Line
@@ -4462,7 +3752,7 @@ public partial class PlayerWindow : Window
         var vertex = CodingNormToPixel(overlay.Points[1]);
         var p3 = CodingNormToPixel(overlay.Points[2]);
 
-        // Linie 1: P1 → Vertex
+        // Linie 1: P1 â†’ Vertex
         var line1 = new System.Windows.Shapes.Line
         {
             X1 = p1.X, Y1 = p1.Y, X2 = vertex.X, Y2 = vertex.Y,
@@ -4471,7 +3761,7 @@ public partial class PlayerWindow : Window
         if (isPreview) line1.StrokeDashArray = new DoubleCollection { 4, 2 };
         CodingOverlayCanvas.Children.Add(line1);
 
-        // Linie 2: Vertex → P3
+        // Linie 2: Vertex â†’ P3
         var line2 = new System.Windows.Shapes.Line
         {
             X1 = vertex.X, Y1 = vertex.Y, X2 = p3.X, Y2 = p3.Y,
@@ -4986,19 +4276,19 @@ public partial class PlayerWindow : Window
                 entry.IsStreckenschaden = result.IsStreckenschaden;
                 entry.FotoPaths = result.FotoPaths;
 
-                // Kein automatischer Snapshot hier — Foto wird manuell per "Foto"-Button
+                // Kein automatischer Snapshot hier â€” Foto wird manuell per "Foto"-Button
                 // oder automatisch durch die KI-Analyse eingefuegt, wenn ein sinnvoller
                 // Frame vorliegt (nicht die Dateneinblendung am Videoanfang).
 
                 var createdEvent = _codingSessionService!.AddEvent(entry, _codingVm.CurrentOverlay);
 
-                // Manuell codiert: Noch nicht bestaetigt — User muss "Akzeptieren" klicken.
+                // Manuell codiert: Noch nicht bestaetigt â€” User muss "Akzeptieren" klicken.
                 // Erst wenn alles gruen ist, stimmen die Daten fuer das KI-Training.
                 createdEvent.AiContext = new CodingEventAiContext
                 {
                     SuggestedCode = entry.Code,
                     Confidence = 1.0,
-                    Reason = "Manuell codiert — bitte bestaetigen",
+                    Reason = "Manuell codiert â€” bitte bestaetigen",
                     Decision = CodingUserDecision.Ignored
                 };
 
@@ -5066,13 +4356,13 @@ public partial class PlayerWindow : Window
 
         var manualEvent = _codingSessionService!.AddEvent(entry, _codingVm.CurrentOverlay);
 
-        // Manuell codiert: Noch nicht bestaetigt — User muss "Akzeptieren" klicken.
+        // Manuell codiert: Noch nicht bestaetigt â€” User muss "Akzeptieren" klicken.
         // Erst wenn alles gruen ist, stimmen die Daten fuer das KI-Training.
         manualEvent.AiContext = new CodingEventAiContext
         {
             SuggestedCode = entry.Code,
             Confidence = 1.0,
-            Reason = "Manuell codiert — bitte bestaetigen",
+            Reason = "Manuell codiert â€” bitte bestaetigen",
             Decision = CodingUserDecision.Ignored
         };
 
@@ -5139,7 +4429,7 @@ public partial class PlayerWindow : Window
 
         var result = MessageBox.Show(
             $"Codier-Session abgeschlossen ({doc.Current.Entries.Count} Ereignisse).\n\n" +
-            "MÃƒÂ¶chten Sie jetzt ein PDF-Protokoll mit Grafik und Fotos erstellen?",
+            "MÃƒÆ’Ã‚Â¶chten Sie jetzt ein PDF-Protokoll mit Grafik und Fotos erstellen?",
             "PDF-Protokoll erstellen",
             MessageBoxButton.YesNo, MessageBoxImage.Question);
 
@@ -5390,12 +4680,12 @@ public partial class PlayerWindow : Window
             ? TimeSpan.FromMilliseconds(_player.Time) : TimeSpan.Zero;
 
         // Event-Hook (OnSessionEventAdded) fuegt automatisch in _codingVm.Events ein.
-        // KEIN explizites Events.Add() — sonst doppelt!
+        // KEIN explizites Events.Add() â€” sonst doppelt!
         RefreshCodingEventsList();
 
         // Status
         SetCodingAiState(
-            $"Streckenschaden geschlossen: {startEvent.Entry.Code} {startEvent.MeterAtCapture:F2}m – {currentMeter:F2}m",
+            $"Streckenschaden geschlossen: {startEvent.Entry.Code} {startEvent.MeterAtCapture:F2}m â€“ {currentMeter:F2}m",
             Color.FromRgb(0x22, 0xC5, 0x5E), "");
     }
 
@@ -5449,9 +4739,9 @@ public partial class PlayerWindow : Window
         UpdateCodingStatistics();
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
     // Defekt-Detail-Panel, Aktionsbuttons, Statistik
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
 
     private void CodingEvents_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -5514,7 +4804,7 @@ public partial class PlayerWindow : Window
         var dep = e.OriginalSource as DependencyObject;
         while (dep != null && dep is not ListBoxItem)
         {
-            // Run/Inline-Elemente sind kein Visual — LogicalTreeHelper als Fallback
+            // Run/Inline-Elemente sind kein Visual â€” LogicalTreeHelper als Fallback
             dep = dep is System.Windows.Media.Visual or System.Windows.Media.Media3D.Visual3D
                 ? VisualTreeHelper.GetParent(dep)
                 : LogicalTreeHelper.GetParent(dep);
@@ -5534,7 +4824,7 @@ public partial class PlayerWindow : Window
         SeekToImportEvent(importEvent);
     }
 
-    /// <summary>Context-Menü: Zum Zeitpunkt springen.</summary>
+    /// <summary>Context-MenÃ¼: Zum Zeitpunkt springen.</summary>
     private void ImportSeek_Click(object sender, RoutedEventArgs e)
     {
         if (LstImportEvents.SelectedItem is not CodingEvent importEvent) return;
@@ -5554,7 +4844,7 @@ public partial class PlayerWindow : Window
     }
 
     /// <summary>
-    /// Context-Menü: Import-Eintrag als Training-Sample bestätigen.
+    /// Context-MenÃ¼: Import-Eintrag als Training-Sample bestÃ¤tigen.
     /// Springt zum Zeitpunkt, macht einen Snapshot und erstellt eine Lehrer-Annotation.
     /// </summary>
     private async void ImportConfirm_Click(object sender, RoutedEventArgs e)
@@ -5568,8 +4858,8 @@ public partial class PlayerWindow : Window
         // 2. Frame capturen
         if (!TryTakeSnapshot(out var snapshotPath) || !System.IO.File.Exists(snapshotPath))
         {
-            MessageBox.Show("Frame konnte nicht aufgenommen werden.\nBitte prüfen Sie ob das Video läuft.",
-                "Import bestätigen", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("Frame konnte nicht aufgenommen werden.\nBitte prÃ¼fen Sie ob das Video lÃ¤uft.",
+                "Import bestÃ¤tigen", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -5596,7 +4886,7 @@ public partial class PlayerWindow : Window
         // 5. Visuelles Feedback
         try { System.IO.File.Delete(snapshotPath); } catch { }
         OsdMeterBadge.Visibility = Visibility.Visible;
-        TxtOsdMeter.Text = $"✓ {importEvent.Entry.Code} @ {importEvent.MeterAtCapture:F1}m bestätigt";
+        TxtOsdMeter.Text = $"âœ“ {importEvent.Entry.Code} @ {importEvent.MeterAtCapture:F1}m bestÃ¤tigt";
         var resetTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         resetTimer.Tick += (_, _) => { OsdMeterBadge.Visibility = Visibility.Collapsed; resetTimer.Stop(); };
         resetTimer.Start();
@@ -5681,7 +4971,7 @@ public partial class PlayerWindow : Window
     }
 
     /// <summary>Defekt-Detail-Panel mit Werten des ausgewaehlten Events befuellen.</summary>
-    /// Details werden jetzt oben im KI-BEFUNDE Panel angezeigt — unteres Panel bleibt collapsed.
+    /// Details werden jetzt oben im KI-BEFUNDE Panel angezeigt â€” unteres Panel bleibt collapsed.
     private void UpdateCodingDefectDetailPanel(CodingEvent ev)
     {
         // CodingDefectDetailPanel.Visibility = Visibility.Visible; // Deaktiviert: Details sind im oberen Panel
@@ -5721,7 +5011,7 @@ public partial class PlayerWindow : Window
         var status = CodingSessionViewModel.GetDefectStatus(ev);
         TxtCodingDetailStatus.Text = $"Status: {CodingStatusToDisplayText(status)}";
 
-        // Alle Aktionen immer verfuegbar — auch manuell codierte Events
+        // Alle Aktionen immer verfuegbar â€” auch manuell codierte Events
         // muessen bestaetigt werden bevor sie als Training-Signal gelten.
         CodingDefectActionGrid.Visibility = Visibility.Visible;
         BtnCodingAcceptDefect.Visibility = Visibility.Visible;
@@ -6024,7 +5314,7 @@ public partial class PlayerWindow : Window
             _codingEnhancedVision = new EnhancedVisionAnalysisService(client, config.VisionModel, CodeCatalog);
             _codingQualityGate = new QualityGateService();
 
-            // Multi-Model Pipeline (YOLO → DINO → SAM) initialisieren
+            // Multi-Model Pipeline (YOLO â†’ DINO â†’ SAM) initialisieren
             try
             {
                 var sidecarUrl = Environment.GetEnvironmentVariable("SEWERSTUDIO_SIDECAR_URL")
@@ -6042,14 +5332,14 @@ public partial class PlayerWindow : Window
                 {
                     _codingUseMultiModel = false;
                     SetCodingAiState("Kuenstliche Intelligenz bereit (Qwen)", Color.FromRgb(0x22, 0xC5, 0x5E),
-                        $"Sidecar offline → {CompactModelName(_codingAiModelName)}");
+                        $"Sidecar offline â†’ {CompactModelName(_codingAiModelName)}");
                 }
             }
             catch
             {
                 _codingUseMultiModel = false;
                 SetCodingAiState("Kuenstliche Intelligenz bereit (Qwen)", Color.FromRgb(0x22, 0xC5, 0x5E),
-                    $"Sidecar offline → {CompactModelName(_codingAiModelName)}");
+                    $"Sidecar offline â†’ {CompactModelName(_codingAiModelName)}");
             }
             SetYoloStatus("Bereit", Color.FromRgb(0x22, 0xC5, 0x5E), CompactModelName(_codingAiModelName));
         }
@@ -6065,9 +5355,9 @@ public partial class PlayerWindow : Window
     private void CodingClearOverlays_Click(object sender, RoutedEventArgs e)
         => ClearDetectionOverlays();
 
-    // ═══════════════════════════════════════════════
-    // Eingabemarker: Klick → Stichwort → KI
-    // ═══════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // Eingabemarker: Klick â†’ Stichwort â†’ KI
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     /// <summary>Eingabemarker Button: Video pausieren, Rechteck-Zeichenmodus aktivieren.</summary>
     private void Eingabemarker_Click(object sender, RoutedEventArgs e)
@@ -6145,7 +5435,7 @@ public partial class PlayerWindow : Window
         _eingabemarkerPreviewRect.Height = h;
     }
 
-    /// <summary>MouseUp: Rechteck finalisieren → Phase wechseln → Popup anzeigen.</summary>
+    /// <summary>MouseUp: Rechteck finalisieren â†’ Phase wechseln â†’ Popup anzeigen.</summary>
     private void EingabemarkerCanvas_MouseUp(Point canvasPos)
     {
         if (_eingabemarkerPhase != EingabemarkerPhase.Drawing) return;
@@ -6166,7 +5456,7 @@ public partial class PlayerWindow : Window
 
         _eingabemarkerRectNorm = new Rect(x1, y1, x2 - x1, y2 - y1);
 
-        // Phase wechseln: KEINE Canvas-Klicks mehr → Popup sicher bedienbar
+        // Phase wechseln: KEINE Canvas-Klicks mehr â†’ Popup sicher bedienbar
         _eingabemarkerPhase = EingabemarkerPhase.Input;
         CodingOverlayCanvas.IsHitTestVisible = false; // Canvas ignoriert jetzt Klicks
         CodingOverlayCanvas.Cursor = System.Windows.Input.Cursors.Arrow;
@@ -6184,7 +5474,7 @@ public partial class PlayerWindow : Window
             Color.FromRgb(0x3B, 0x82, 0xF6), "z.B. \"Beule unten\", \"Riss bei 3 Uhr\", \"Anschluss offen\"");
     }
 
-    /// <summary>Enter in der Stichwort-ComboBox → KI-Analyse starten.</summary>
+    /// <summary>Enter in der Stichwort-ComboBox â†’ KI-Analyse starten.</summary>
     private void CmbEingabemarker_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (e.Key == System.Windows.Input.Key.Escape)
@@ -6198,7 +5488,7 @@ public partial class PlayerWindow : Window
         SubmitEingabemarker();
     }
 
-    /// <summary>Auswahl in der Schnellauswahl-ComboBox → Text uebernehmen und absenden.</summary>
+    /// <summary>Auswahl in der Schnellauswahl-ComboBox â†’ Text uebernehmen und absenden.</summary>
     private void CmbEingabemarker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         // Nur wenn Popup sichtbar und etwas ausgewaehlt wurde
@@ -6213,7 +5503,7 @@ public partial class PlayerWindow : Window
     private static string? ResolveEingabemarkerCodeHint(string? keyword)
         => AuswertungPro.Next.UI.Player.PlayerVsaCodeHintResolver.ResolveKeyword(keyword);
 
-    /// <summary>Freitext oder Stichwort absenden → Code ableiten oder KI-Analyse starten.</summary>
+    /// <summary>Freitext oder Stichwort absenden â†’ Code ableiten oder KI-Analyse starten.</summary>
     private async void SubmitEingabemarker()
     {
         string keyword = TxtEingabemarker.Text?.Trim() ?? "";
@@ -6222,7 +5512,7 @@ public partial class PlayerWindow : Window
         EingabemarkerPopup.Visibility = Visibility.Collapsed;
         _eingabemarkerPhase = EingabemarkerPhase.Analyzing;
 
-        // VSA-Hauptcode ableiten: Exakte Stichwörter ODER Freitext-Heuristik
+        // VSA-Hauptcode ableiten: Exakte StichwÃ¶rter ODER Freitext-Heuristik
         // Freitext wie "beule unten", "riss bei 3 uhr" wird durch InferCodeFromLabel erkannt
         string? codeHint = ResolveEingabemarkerCodeHint(keyword);
 
@@ -6232,7 +5522,7 @@ public partial class PlayerWindow : Window
             if (_codingVm != null && codeHint != null)
             {
                 double checkMeter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
-                // BCD/BCE/BDC: Einmal-Codes — Meter egal
+                // BCD/BCE/BDC: Einmal-Codes â€” Meter egal
                 bool isEinmalCode = codeHint is "BCD" or "BCE" or "BDC";
                 var existingDup = _codingVm.Events.FirstOrDefault(e =>
                     CodesMatchForDedup(e.Entry.Code, codeHint) &&
@@ -6240,13 +5530,13 @@ public partial class PlayerWindow : Window
                 if (existingDup != null)
                 {
                     SetCodingAiState(
-                        $"{codeHint} bereits vorhanden bei {existingDup.MeterAtCapture:F2}m — Duplikat",
+                        $"{codeHint} bereits vorhanden bei {existingDup.MeterAtCapture:F2}m â€” Duplikat",
                         Color.FromRgb(0xF5, 0x9E, 0x0B), "");
                     return;
                 }
             }
 
-            // Bekannter Hauptcode → Event SOFORT erzeugen (kein Warten auf Qwen)
+            // Bekannter Hauptcode â†’ Event SOFORT erzeugen (kein Warten auf Qwen)
             if (codeHint != null && _codingVm != null && _codingSessionService != null)
             {
                 double meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
@@ -6275,7 +5565,7 @@ public partial class PlayerWindow : Window
                     Decision = CodingUserDecision.Accepted
                 };
                 // Event-Hook (OnSessionEventAdded) fuegt automatisch in _codingVm.Events ein.
-                // KEIN explizites _codingVm.Events.Add() — sonst doppelt!
+                // KEIN explizites _codingVm.Events.Add() â€” sonst doppelt!
                 RefreshCodingEventsList();
                 UpdateToolBadge();
                 PersistSingleEventAsTrainingSample(ev);
@@ -6284,7 +5574,7 @@ public partial class PlayerWindow : Window
             }
             else
             {
-                // Kein Hauptcode erkannt → Qwen analysieren lassen
+                // Kein Hauptcode erkannt â†’ Qwen analysieren lassen
                 SetCodingAiState($"KI analysiert: \"{keyword}\" ...",
                     Color.FromRgb(0xF5, 0x9E, 0x0B), "Qwen analysiert");
                 await RunCodingAnalysisAsync(
@@ -6342,7 +5632,7 @@ public partial class PlayerWindow : Window
             // Zeitstempel VOR dem Capture festhalten (CaptureSnapshotAsync wartet bis zu 1s)
             var captureTimestampSec = _player.Time / 1000.0;
 
-            // ── Multi-Model Pfad: YOLO → DINO → SAM ──
+            // â”€â”€ Multi-Model Pfad: YOLO â†’ DINO â†’ SAM â”€â”€
             if (_codingUseMultiModel && _codingMultiModel != null)
             {
                 SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
@@ -6395,7 +5685,7 @@ public partial class PlayerWindow : Window
                 return;
             }
 
-            // ── Qwen-only Fallback-Pfad ──
+            // â”€â”€ Qwen-only Fallback-Pfad â”€â”€
             SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
                 "Schritt 1 von 3: Snapshot", pulse: true);
 
@@ -6448,7 +5738,7 @@ public partial class PlayerWindow : Window
     /// Sammelt alle Import-Eintraege als Erwartungshorizont fuer die KI-Analyse.
     /// Die KI erhaelt die bekannten VSA-Codes und kann sie zuweisen statt "???".
     /// </summary>
-    // ── Multi-Model Rendering (YOLO → DINO → SAM) ────────────────────
+    // â”€â”€ Multi-Model Rendering (YOLO â†’ DINO â†’ SAM) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     /// <summary>
     /// Rendert Multi-Model Ergebnisse: SAM-Masken (gruene Konturen) + Label-Badges mit Messungen.
@@ -6478,7 +5768,7 @@ public partial class PlayerWindow : Window
     /// Erstellt CodingEvents aus Multi-Model Befunden (DINO-Detections + SAM-Quantifizierung).
     /// </summary>
     /// <summary>
-    /// Multi-Model Findings als CodingEvents — nutzt denselben Resolver-
+    /// Multi-Model Findings als CodingEvents â€” nutzt denselben Resolver-
     /// und Label-Pfad wie der Qwen/Enhanced-Pfad (ResolveFindingCodeForCoding, LookupVsaLabel).
     /// </summary>
     private void AddMultiModelFindingsAsEvents(
@@ -6492,7 +5782,7 @@ public partial class PlayerWindow : Window
         var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
         bool anyAdded = false;
 
-        // BCD wird NICHT mehr automatisch erzeugt — nur durch Eingabemarker oder Qwen-Erkennung.
+        // BCD wird NICHT mehr automatisch erzeugt â€” nur durch Eingabemarker oder Qwen-Erkennung.
         // EnsureRohranfangExists(meter, videoTime, ref anyAdded);
 
         for (int i = 0; i < mmResult.QuantifiedMasks.Count; i++)
@@ -6500,7 +5790,7 @@ public partial class PlayerWindow : Window
             var quant = mmResult.QuantifiedMasks[i];
             var dino = i < mmResult.DinoDetections.Count ? mmResult.DinoDetections[i] : null;
 
-            // Gemeinsamer Resolver: DINO-Label → LiveFrameFinding → ResolveFindingCodeForCoding
+            // Gemeinsamer Resolver: DINO-Label â†’ LiveFrameFinding â†’ ResolveFindingCodeForCoding
             // So laeuft der Multi-Model-Pfad durch exakt denselben Code wie Qwen.
             var pseudoFinding = new LiveFrameFinding(
                 Label: quant.Label,
@@ -6523,13 +5813,13 @@ public partial class PlayerWindow : Window
             if (code == null)
             {
                 System.Diagnostics.Debug.WriteLine(
-                    $"[Multi-Model] Kein VSA-Code fuer Label='{quant.Label}' — uebersprungen");
+                    $"[Multi-Model] Kein VSA-Code fuer Label='{quant.Label}' â€” uebersprungen");
                 continue;
             }
 
             var officialLabel = LookupVsaLabel(code);
 
-            // BCD/BCE existieren pro Haltung nur EINMAL — Meterstand-unabhaengige Dedup
+            // BCD/BCE existieren pro Haltung nur EINMAL â€” Meterstand-unabhaengige Dedup
             // Primaer gegen session.Events pruefen (wird nie gecleared).
             if ((string.Equals(code, "BCD", StringComparison.OrdinalIgnoreCase)
                  || string.Equals(code, "BCE", StringComparison.OrdinalIgnoreCase))
@@ -6616,7 +5906,7 @@ public partial class PlayerWindow : Window
             return;
         }
 
-        // ── Zustandsautomat: Einblendung vs. echtes Videobild ──
+        // â”€â”€ Zustandsautomat: Einblendung vs. echtes Videobild â”€â”€
         // Zuerst State aktualisieren, dann pruefen ob Frame analysiert werden darf.
         // Gating BEVOR irgendetwas ins UI geschrieben wird.
         UpdateFrameReadiness(result);
@@ -6645,7 +5935,7 @@ public partial class PlayerWindow : Window
                 result = buffered;
         }
 
-        // ── Ab hier: Frame ist bereit fuer Analyse ──
+        // â”€â”€ Ab hier: Frame ist bereit fuer Analyse â”€â”€
 
         // OSD-Meterstand uebernehmen (Defense-in-Depth: nochmals Plausibilitaet pruefen)
         if (result.MeterReading.HasValue && result.MeterReading.Value <= 500 && _codingVm != null)
@@ -6656,7 +5946,7 @@ public partial class PlayerWindow : Window
             TxtOsdMeter.Text = $"{result.MeterReading.Value:F2}m (OSD)";
         }
 
-        // ── Findings filtern: VSA-Validierung + Deduplizierung ──
+        // â”€â”€ Findings filtern: VSA-Validierung + Deduplizierung â”€â”€
         // Eine einzige gefilterte Liste fuer UI, Overlays und Event-Erstellung.
         var currentMeter = result.MeterReading ?? (_codingVm?.CurrentMeter ?? 0);
         var validFindings = FilterValidFindings(result.Findings, currentMeter);
@@ -6693,12 +5983,12 @@ public partial class PlayerWindow : Window
     /// <summary>
     /// Prueft ob ein neuer Fund bereits durch ein bestehendes Event abgedeckt ist.
     /// Beruecksichtigt: Streckenschaeden (ganzer Bereich), akzeptierte Events,
-    /// und Punktschaeden (±0.3m + Position).
+    /// und Punktschaeden (Â±0.3m + Position).
     /// </summary>
     private static bool IsAlreadyCovered(CodingEvent existing, double newMeter, LiveFrameFinding newFinding)
     {
         // Einmal-Codes: BCD (Rohranfang), BCE (Rohrende), BDC (Abbruch) duerfen
-        // nur 1× pro Session vorkommen — Meter-Distanz ist irrelevant
+        // nur 1Ã— pro Session vorkommen â€” Meter-Distanz ist irrelevant
         var existBaseCode = existing.Entry.Code?.Length >= 3
             ? existing.Entry.Code[..3].ToUpperInvariant() : "";
         if (existBaseCode is "BCD" or "BCE" or "BDC")
@@ -6712,7 +6002,7 @@ public partial class PlayerWindow : Window
             return newMeter >= (start - 0.1) && newMeter <= (end + 0.1);
         }
 
-        // Bereits akzeptiertes/bearbeitetes Event: gleicher Code innerhalb ±1.0m
+        // Bereits akzeptiertes/bearbeitetes Event: gleicher Code innerhalb Â±1.0m
         // nicht nochmal melden (User hat den Schaden schon gesehen und bestaetigt)
         if (existing.AiContext?.Decision is CodingUserDecision.Accepted
             or CodingUserDecision.AcceptedWithEdit)
@@ -6720,12 +6010,12 @@ public partial class PlayerWindow : Window
             return Math.Abs(existing.MeterAtCapture - newMeter) < 1.0;
         }
 
-        // Punktschaden: gleicher Code innerhalb ±1.0m
+        // Punktschaden: gleicher Code innerhalb Â±1.0m
         if (Math.Abs(existing.MeterAtCapture - newMeter) >= 1.0)
             return false;
 
         // BCA (Anschluss) kann mehrfach am gleichen Meter vorkommen (z.B. 3h und 9h)
-        // → Position-Check noetig um verschiedene Anschluesse zu unterscheiden
+        // â†’ Position-Check noetig um verschiedene Anschluesse zu unterscheiden
         var baseCode = newFinding.VsaCodeHint?.Length >= 3
             ? newFinding.VsaCodeHint[..3].ToUpperInvariant() : "";
         if (baseCode == "BCA")
@@ -6738,9 +6028,9 @@ public partial class PlayerWindow : Window
     /// <summary>
     /// Positionsvergleich fuer Duplikat-Erkennung.
     /// Zwei Befunde mit gleichem Code gelten als gleiche Position wenn:
-    /// - Beide BBox haben → Mittelpunktabstand kleiner 15% (normalisiert)
-    /// - Keiner BBox hat → gleiche Uhrlage
-    /// - Gemischt (BBox vs. ohne) → Uhrlage vergleichen als Fallback.
+    /// - Beide BBox haben â†’ Mittelpunktabstand kleiner 15% (normalisiert)
+    /// - Keiner BBox hat â†’ gleiche Uhrlage
+    /// - Gemischt (BBox vs. ohne) â†’ Uhrlage vergleichen als Fallback.
     ///   Verhindert Duplikate wenn Vision die BBox mal liefert, mal nicht.
     /// </summary>
     private static bool IsSamePosition(CodingEvent existing, LiveFrameFinding newFinding)
@@ -6767,11 +6057,11 @@ public partial class PlayerWindow : Window
             ?.GetValueOrDefault("vsa.uhr.von");
         var newClock = newFinding.PositionClock;
 
-        // Beide haben Uhrlage → vergleichen
+        // Beide haben Uhrlage â†’ vergleichen
         if (!string.IsNullOrEmpty(existClock) && !string.IsNullOrEmpty(newClock))
             return string.Equals(existClock, newClock, StringComparison.OrdinalIgnoreCase);
 
-        // Keine Positionsinfo verfuegbar → konservativ: als gleich werten (Duplikat annehmen)
+        // Keine Positionsinfo verfuegbar â†’ konservativ: als gleich werten (Duplikat annehmen)
         return true;
     }
 
@@ -6814,7 +6104,7 @@ public partial class PlayerWindow : Window
 
         foreach (var f in raw)
         {
-            // Einzige Code-Aufloesung — ResolveFindingCodeForCoding gibt validen Code oder null
+            // Einzige Code-Aufloesung â€” ResolveFindingCodeForCoding gibt validen Code oder null
             var code = ResolveFindingCodeForCoding(f, currentMeter);
 
             // BCD/BCE: Live-Check bei JEDEM Finding (nicht gecacht!).
@@ -6837,11 +6127,11 @@ public partial class PlayerWindow : Window
             }
 
             System.Diagnostics.Debug.WriteLine(
-                $"[KI-Filter] Label='{f.Label}' VsaCodeHint='{f.VsaCodeHint}' → Code='{code ?? "(null)"}'");
+                $"[KI-Filter] Label='{f.Label}' VsaCodeHint='{f.VsaCodeHint}' â†’ Code='{code ?? "(null)"}'");
 
             if (code == null)
             {
-                // Kein VSA-Code ableitbar — Finding verwerfen
+                // Kein VSA-Code ableitbar â€” Finding verwerfen
                 System.Diagnostics.Debug.WriteLine(
                     $"[KI-Filter] Verworfen: Label='{f.Label}' (kein VSA-Code ableitbar)");
                 continue;
@@ -6877,7 +6167,7 @@ public partial class PlayerWindow : Window
 
     /// <summary>
     /// Klartext-Lookup fuer einen VSA-Code mit Fallback-Kette:
-    /// Voller Code → 3-Zeichen-Hauptcode → 2-Zeichen-Gruppe → null.
+    /// Voller Code â†’ 3-Zeichen-Hauptcode â†’ 2-Zeichen-Gruppe â†’ null.
     /// </summary>
     /// <summary>Delegiert an VsaCodeResolver.LookupLabel.</summary>
     private static string? LookupVsaLabel(string code) => VsaCodeResolver.LookupLabel(code);
@@ -6937,7 +6227,7 @@ public partial class PlayerWindow : Window
     /// <summary>
     /// Einzige Quelle fuer VSA-Code-Aufloesung eines KI-Findings.
     /// Delegiert an VsaCodeResolver (zentrale Utility) + Import-Verfeinerung.
-    /// Gibt validen VSA-Code oder null zurueck — nie "???".
+    /// Gibt validen VSA-Code oder null zurueck â€” nie "???".
     /// </summary>
     private string? ResolveFindingCodeForCoding(LiveFrameFinding finding, double currentMeter)
     {
@@ -7012,7 +6302,7 @@ public partial class PlayerWindow : Window
         => AuswertungPro.Next.UI.Player.PlayerImportFallbackCodePolicy.IsAllowed(code);
 
     /// <summary>
-    /// KI-Befunde als CodingEvents eintragen — mit QualityGate-Ampelsystem.
+    /// KI-Befunde als CodingEvents eintragen â€” mit QualityGate-Ampelsystem.
     /// Erwartet bereits gefilterte Findings (aus FilterValidFindings).
     /// </summary>
     private void AddAiFindingsAsEvents(LiveDetection result, IReadOnlyList<LiveFrameFinding> validFindings)
@@ -7027,7 +6317,7 @@ public partial class PlayerWindow : Window
         CodingEvent? firstUnsure = null;
         QualityGateResult? firstUnsureGate = null;
 
-        // BCD wird NICHT mehr automatisch erzeugt — nur durch Eingabemarker oder Qwen-Erkennung.
+        // BCD wird NICHT mehr automatisch erzeugt â€” nur durch Eingabemarker oder Qwen-Erkennung.
         // EnsureRohranfangExists(meter, videoTime, ref anyAdded);
 
         if (validFindings.Count == 0)
@@ -7039,10 +6329,10 @@ public partial class PlayerWindow : Window
         foreach (var finding in validFindings)
         {
             // FilterValidFindings garantiert: VsaCodeHint ist ein gueltiger VSA-Code.
-            // Kein zweiter Inferenzpfad hier — nur uebernehmen.
+            // Kein zweiter Inferenzpfad hier â€” nur uebernehmen.
             string code = finding.VsaCodeHint!;
 
-            // BCD/BCE existieren pro Haltung nur EINMAL — Meterstand-unabhaengige Dedup.
+            // BCD/BCE existieren pro Haltung nur EINMAL â€” Meterstand-unabhaengige Dedup.
             // Primaer gegen session.Events pruefen (wird nie gecleared, im Gegensatz zu _codingVm.Events).
             if ((string.Equals(code, "BCD", StringComparison.OrdinalIgnoreCase)
                  || string.Equals(code, "BCE", StringComparison.OrdinalIgnoreCase))
@@ -7054,12 +6344,12 @@ public partial class PlayerWindow : Window
                 continue;
             }
 
-            // Klartext aufloesen (voller Code → Hauptcode → Gruppe)
+            // Klartext aufloesen (voller Code â†’ Hauptcode â†’ Gruppe)
             var officialLabel = LookupVsaLabel(code);
 
             // Duplikat-Check: gleicher Code (oder gleicher Hauptcode) bereits vorhanden?
-            // Hauptcode-Match: BCAEB vs BCA = gleiche Schadensgruppe → Duplikat.
-            // 1. Punktschaden: code + meter ±0.3m + gleiche Position
+            // Hauptcode-Match: BCAEB vs BCA = gleiche Schadensgruppe â†’ Duplikat.
+            // 1. Punktschaden: code + meter Â±0.3m + gleiche Position
             // 2. Streckenschaden: code faellt in den MeterStart..MeterEnd Bereich
             // 3. Bereits akzeptierter/bearbeiteter Code: nicht nochmal melden
             var coveringEvent = codingVm.Events.FirstOrDefault(e =>
@@ -7068,7 +6358,7 @@ public partial class PlayerWindow : Window
             if (coveringEvent != null)
             {
                 // Offener Streckenschaden: letzte Sichtung merken (fuer automatisches Schliessen)
-                // MeterEnd bleibt null (= offen) — wird beim Exit via CloseOpenStreckenschaeden gesetzt
+                // MeterEnd bleibt null (= offen) â€” wird beim Exit via CloseOpenStreckenschaeden gesetzt
                 if (coveringEvent.Entry.IsStreckenschaden)
                     coveringEvent.MeterAtCapture = Math.Max(coveringEvent.MeterAtCapture, meter);
                 continue;
@@ -7098,7 +6388,7 @@ public partial class PlayerWindow : Window
                 Beschreibung = officialLabel ?? finding.Label,
                 MeterStart = meter,
                 IsStreckenschaden = isStrecke,
-                // MeterEnd bleibt null (offen) — wird beim naechsten Tick
+                // MeterEnd bleibt null (offen) â€” wird beim naechsten Tick
                 // oder beim Exit automatisch geschlossen
                 Zeit = videoTime
             };
@@ -7135,7 +6425,7 @@ public partial class PlayerWindow : Window
                     : CodingUserDecision.Ignored
             };
 
-            // Bbox → OverlayGeometry (Rectangle) fuer Kontur-Rendering auf CodingOverlayCanvas
+            // Bbox â†’ OverlayGeometry (Rectangle) fuer Kontur-Rendering auf CodingOverlayCanvas
             if (finding.BboxX1.HasValue && finding.BboxY1.HasValue
                 && finding.BboxX2.HasValue && finding.BboxY2.HasValue)
             {
@@ -7615,7 +6905,7 @@ public partial class PlayerWindow : Window
 
     /// <summary>
     /// Reine Bewertung: Ist der aktuelle Frame bereit fuer die Analyse?
-    /// Aendert KEINEN Zustand — dafuer ist UpdateFrameReadiness zustaendig.
+    /// Aendert KEINEN Zustand â€” dafuer ist UpdateFrameReadiness zustaendig.
     /// </summary>
     private bool IsFrameReady() => _codingFrameState == FrameReadiness.Ready;
 
@@ -7624,10 +6914,10 @@ public partial class PlayerWindow : Window
     /// Muss VOR IsFrameReady aufgerufen werden.
     ///
     /// Uebergaenge:
-    ///   WaitingForVideo → Warmup:  erster Frame mit Meterstand (aus aktuellem result)
-    ///   WaitingForVideo → Ready:   3 Frames ohne Meter (kein OSD vorhanden)
-    ///   Warmup          → Ready:   2. Frame mit Meterstand (Bestaetigung)
-    ///   Warmup          → Ready:   2 Frames in Warmup ohne zweiten Meter (Fallback gegen Deadlock)
+    ///   WaitingForVideo â†’ Warmup:  erster Frame mit Meterstand (aus aktuellem result)
+    ///   WaitingForVideo â†’ Ready:   3 Frames ohne Meter (kein OSD vorhanden)
+    ///   Warmup          â†’ Ready:   2. Frame mit Meterstand (Bestaetigung)
+    ///   Warmup          â†’ Ready:   2 Frames in Warmup ohne zweiten Meter (Fallback gegen Deadlock)
     /// </summary>
     private void UpdateFrameReadiness(LiveDetection result)
     {
@@ -7643,14 +6933,14 @@ public partial class PlayerWindow : Window
             case FrameReadiness.WaitingForVideo:
                 if (hasMeterThisFrame)
                 {
-                    // Erster Meter gesehen → Warmup (noch nicht sofort freischalten)
+                    // Erster Meter gesehen â†’ Warmup (noch nicht sofort freischalten)
                     _codingFrameState = FrameReadiness.Warmup;
                     _codingMeterConfirmCount = 1;
                     _codingOsdSkippedFrames = 0; // Zaehler fuer Warmup-Fallback neu starten
                 }
                 else
                 {
-                    // Kein Meter → zaehlen. Nach 3 Frames: kein OSD vorhanden.
+                    // Kein Meter â†’ zaehlen. Nach 3 Frames: kein OSD vorhanden.
                     _codingOsdSkippedFrames++;
                     if (_codingOsdSkippedFrames >= 3)
                         _codingFrameState = FrameReadiness.Ready;
@@ -7661,7 +6951,7 @@ public partial class PlayerWindow : Window
                 if (hasMeterThisFrame)
                     _codingMeterConfirmCount++;
 
-                // 2 Frames mit Meter → sofort Ready (stabiler Uebergang)
+                // 2 Frames mit Meter â†’ sofort Ready (stabiler Uebergang)
                 if (_codingMeterConfirmCount >= 2)
                 {
                     _codingMeterConfirmCount = 0;
@@ -7669,7 +6959,7 @@ public partial class PlayerWindow : Window
                 }
                 else
                 {
-                    // Fallback: nach 2 Frames in Warmup (auch ohne zweiten Meter) → Ready.
+                    // Fallback: nach 2 Frames in Warmup (auch ohne zweiten Meter) â†’ Ready.
                     // Verhindert Deadlock bei OCR-Aussetzern nach erstem Meter.
                     _codingOsdSkippedFrames++;
                     if (_codingOsdSkippedFrames >= 2)
@@ -7736,7 +7026,7 @@ public partial class PlayerWindow : Window
             Decision = CodingUserDecision.Accepted
         };
         // Event-Hook (OnSessionEventAdded) fuegt automatisch in _codingVm.Events ein.
-        // KEIN explizites _codingVm.Events.Add() — sonst doppelt!
+        // KEIN explizites _codingVm.Events.Add() â€” sonst doppelt!
         anyAdded = true;
 
         // Auto-Kalibrierung bei Rohranfang versuchen (wenn noch nicht kalibriert)
@@ -7901,9 +7191,9 @@ public partial class PlayerWindow : Window
         }
 
         if (result == MessageBoxResult.Cancel)
-            return false; // User will weiter codieren — Exit abbrechen
+            return false; // User will weiter codieren â€” Exit abbrechen
 
-        return true; // "Nein" → weiter ohne Schliessen
+        return true; // "Nein" â†’ weiter ohne Schliessen
     }
 
     /// <summary>
