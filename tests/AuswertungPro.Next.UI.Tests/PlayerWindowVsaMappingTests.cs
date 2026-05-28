@@ -37,13 +37,30 @@ public sealed class PlayerWindowVsaMappingTests
     [InlineData("BAAA")]
     [InlineData("BAFAA")]
     [InlineData("BAJB")]
-    public void Import_fallback_allows_current_vsa_kek_ba_families(string code)
+    [InlineData("BCD")]
+    [InlineData("BCE")]
+    [InlineData("BCA")]
+    [InlineData("BCC")]
+    [InlineData("BBC")]
+    [InlineData("BDDC")]
+    [InlineData("BBA")]
+    [InlineData("BBB")]
+    [InlineData("BBD")]
+    public void Import_fallback_allows_current_player_fallback_families(string code)
     {
-        var method = typeof(PlayerWindow).GetMethod(
-            "IsAllowedImportFallbackCode",
-            BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.True(PlayerImportFallbackCodePolicy.IsAllowed(code));
+    }
 
-        Assert.NotNull(method);
-        Assert.True(Assert.IsType<bool>(method!.Invoke(null, [code])));
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("BDB")]
+    [InlineData("BDC")]
+    [InlineData("BAG")]
+    [InlineData("BAK")]
+    [InlineData("BBH")]
+    public void Import_fallback_rejects_codes_outside_current_player_fallback_families(string code)
+    {
+        Assert.False(PlayerImportFallbackCodePolicy.IsAllowed(code));
     }
 }

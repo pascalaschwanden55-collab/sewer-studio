@@ -7011,24 +7011,7 @@ public partial class PlayerWindow : Window
     /// Umfasst Bestandsaufnahme (BC), Strukturschaeden (BA) und Betriebliche Stoerungen (BB).
     /// </summary>
     private static bool IsAllowedImportFallbackCode(string code)
-        => code.StartsWith("BCD", StringComparison.OrdinalIgnoreCase)   // Rohranfang
-           || code.StartsWith("BCE", StringComparison.OrdinalIgnoreCase) // Rohrende
-           || code.StartsWith("BCA", StringComparison.OrdinalIgnoreCase) // Seitl. Anschluss
-           || code.StartsWith("BCC", StringComparison.OrdinalIgnoreCase) // Bogen
-           || code.StartsWith("BBC", StringComparison.OrdinalIgnoreCase) // Ablagerung
-           || code.StartsWith("BDDC", StringComparison.OrdinalIgnoreCase) // Wasserspiegel
-           // Strukturschaeden (BA-Gruppe)
-           || code.StartsWith("BAA", StringComparison.OrdinalIgnoreCase) // Verformung
-           || code.StartsWith("BAB", StringComparison.OrdinalIgnoreCase) // Riss
-           || code.StartsWith("BAC", StringComparison.OrdinalIgnoreCase) // Bruch
-           || code.StartsWith("BAF", StringComparison.OrdinalIgnoreCase) // Oberflaechenschaden
-           || code.StartsWith("BAH", StringComparison.OrdinalIgnoreCase) // Schadhafter Anschluss
-           || code.StartsWith("BAI", StringComparison.OrdinalIgnoreCase) // Einragendes Dichtungsmaterial
-           || code.StartsWith("BAJ", StringComparison.OrdinalIgnoreCase) // Verschobene Rohrverbindung
-           // Betriebliche Stoerungen (BB-Gruppe)
-           || code.StartsWith("BBA", StringComparison.OrdinalIgnoreCase) // Wurzeln / Bewuchs
-           || code.StartsWith("BBB", StringComparison.OrdinalIgnoreCase) // Anhaftende Stoffe / Inkrustation
-           || code.StartsWith("BBD", StringComparison.OrdinalIgnoreCase); // Eindringender Boden
+        => AuswertungPro.Next.UI.Player.PlayerImportFallbackCodePolicy.IsAllowed(code);
 
     /// <summary>
     /// KI-Befunde als CodingEvents eintragen — mit QualityGate-Ampelsystem.
