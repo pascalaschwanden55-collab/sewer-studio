@@ -518,10 +518,77 @@ Fehlender Moertel.
 | DAE | - | - | D | mm | - | - | >= 100 | - | < 100 | Bereiche I,J |
 | DAE | - | - | S | mm | - | - | >= 100 | >= 10 und < 100 | < 10 | Bereiche D,F |
 
+### DAF - Oberflaechenschaden
+
+Quelle: PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 38:
+Oberflaechenschaden.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAF | A | A,B,C,D,E,Z | S | - | - | - | - | - | alle | Bereiche B,D,F |
+| DAF | B | A,E,Z | S | - | - | - | - | alle | - | Bereiche B,D,F |
+| DAF | C | A,B,C,D,E,Z | S | - | - | - | - | alle | - | Bereiche B,D,F |
+| DAF | D | A,B,C,D,E,Z | S | - | - | - | alle | - | - | Bereiche B,D,F |
+| DAF | E | A,B,C,D,E,Z | S | - | - | alle | - | - | - | Bereiche B,D,F |
+| DAF | F | A,B,C,D,E,Z | S | - | - | - | - | alle | - | Bereiche B,D,F |
+| DAF | G | A,B,C,D,E,Z | S | - | - | - | alle | - | - | Bereiche B,D,F |
+| DAF | H | B,C,D,E | S | - | - | alle | - | - | - | Bereiche B,D,F |
+| DAF | I | A,B,C,D,E,Z | D | - | - | alle | - | - | - | Bereiche D,F,I,J |
+| DAF | I | A,B,C,D,E,Z | S | - | - | - | alle | - | - | Bereiche B,D,F |
+| DAF | J | B,C,D,E,Z | S | - | - | - | alle | - | - | Bereiche B,D,F |
+| DAF | J | B,C,D,E,Z | B | - | - | - | - | - | alle | Bereiche B,D,F |
+| DAF | K | A,E,Z | B | - | - | - | - | alle | - | Bereiche I,J |
+| DAF | Z | A,B,C,D,E,Z | D | - | - | - | - | alle | - | Bereiche D,F,I,J |
+| DAF | Z | A,B,C,D,E,Z | S | - | - | - | - | alle | - | Bereiche B,D,F |
+
+### DAG - Einragender Anschluss
+
+Quelle: PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 39:
+Einragender Anschluss.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAG | - | - | B | mm | >= 400 | >= 300 und < 400 | >= 200 und < 300 | >= 100 und < 200 | < 100 | Bereiche D,F |
+| DAG | - | - | B | mm | - | - | - | alle | - | Bereiche I,J |
+
+### DAH - Schadhafter Anschluss
+
+Quelle: PDF-Dateiseite 34 / gedruckte Seite 32, Anhang D, Tabelle 40:
+Schadhafter Anschluss.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAH | B,C,D | - | D | - | - | - | - | alle | - | Bereiche D,F |
+| DAH | B,C,D | - | D | - | - | - | alle | - | - | Bereiche I,J |
+| DAH | A,E | - | B | - | - | - | - | - | alle | Bereiche D,F,I |
+| DAH | Z | - | D | - | - | - | - | alle | - | Bereiche D,F,I,J |
+
+### DAI - Einragendes Dichtungsmaterial
+
+Quelle: PDF-Dateiseite 35 / gedruckte Seite 33, Anhang D, Tabelle 41:
+Einragendes Dichtungsmaterial.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAI | A | A,B,C | D | - | - | - | - | alle | - | Bereiche D,F |
+| DAI | A | A,B,C | D | - | - | - | alle | - | - | Bereiche I,J |
+| DAI | A | A,B,C | B | - | - | - | - | - | alle | Bereiche B,D,F |
+| DAI | Z | - | B | - | - | - | - | - | alle | Bereiche B,D,F |
+
+### DAJ - Verschobene Verbindung
+
+Quelle: PDF-Dateiseite 35 / gedruckte Seite 33, Anhang D, Tabelle 42:
+Verschobene Verbindung.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAJ | A,B,C | - | D | mm | - | - | - | alle | - | Bereiche D,F |
+| DAJ | A,B,C | - | S | mm | - | - | - | - | alle | Bereiche B,D,F |
+
 ## Noch offen
 
 - Anhang C ist als Draft vollstaendig dokumentiert (Tabellen 7-32).
-- Anhang D ist begonnen: Tabellen 33-37 sind visuell geprueft dokumentiert.
-- Schachttabellen aus Anhang D offen: Tabellen 38-63.
+- Anhang D ist begonnen: Tabellen 33-42 sind visuell geprueft dokumentiert.
+- Schachttabellen aus Anhang D offen: Tabellen 43-63.
 - Klaeren, aus welchen Stammdaten `biegesteif`/`biegeweich` im Programm sicher
   bestimmt wird.
