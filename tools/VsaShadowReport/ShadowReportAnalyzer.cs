@@ -93,7 +93,6 @@ public static class ShadowReportAnalyzer
             .Where(e => !e.ExpectedDrift && e.V2Ez is not null)
             .OrderBy(e => e.Code, StringComparer.OrdinalIgnoreCase)
             .ThenBy(e => e.Requirement, StringComparer.OrdinalIgnoreCase)
-            .Take(50)
             .Select(e => new ShadowEzDifferenceExample(
                 e.Code ?? "",
                 e.Requirement ?? "",
@@ -203,11 +202,14 @@ public static class ShadowReportAnalyzer
             var codeMatch = item.TryGetProperty("codeMatch", out var matchElement)
                 ? matchElement.GetString()
                 : null;
+            var ch1MissingOnly = item.TryGetProperty("ch1MissingOnly", out var ch1MissingOnlyElement)
+                && ch1MissingOnlyElement.ValueKind is JsonValueKind.True;
             result.Add(new NonAssessableCodeRule(
                 code.Trim().ToUpperInvariant(),
                 codeMatch ?? "exact",
                 string.IsNullOrWhiteSpace(requirement) ? null : requirement.Trim().ToUpperInvariant(),
-                ch1));
+                ch1,
+                ch1MissingOnly));
         }
     }
 
@@ -302,7 +304,8 @@ public sealed record NonAssessableCodeRule(
     string Code,
     string CodeMatch,
     string? Requirement = null,
-    IReadOnlyCollection<string>? Ch1 = null)
+    IReadOnlyCollection<string>? Ch1 = null,
+    bool Ch1MissingOnly = false)
 {
     public bool Matches(string value, string? requirement, string? ch1)
     {
@@ -320,6 +323,9 @@ public sealed record NonAssessableCodeRule(
         {
             return false;
         }
+
+        if (Ch1MissingOnly && !string.IsNullOrWhiteSpace(ch1))
+            return false;
 
         if (Ch1 is { Count: > 0 }
             && !Ch1.Contains(ch1 ?? "", StringComparer.OrdinalIgnoreCase))

@@ -102,6 +102,96 @@
       ],
       "reason": "Tabelle 16 enthaelt fuer BAJ/B/S keine Einzelzustandswerte.",
       "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16"
+    },
+    {
+      "code": "BAJ",
+      "codeMatch": "exact",
+      "requirement": "D",
+      "ch1": [],
+      "ch1MissingOnly": true,
+      "reason": "Basiscode BAJ ohne Charakterisierung A/B/C ist nicht ausreichend bewertbar; charakterisierte BAJ-Subcodes bleiben bewertbar.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BAJ",
+      "codeMatch": "exact",
+      "requirement": "S",
+      "ch1": [],
+      "ch1MissingOnly": true,
+      "reason": "Basiscode BAJ ohne Charakterisierung A/B/C ist nicht ausreichend bewertbar; charakterisierte BAJ-Subcodes bleiben bewertbar.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BAI",
+      "codeMatch": "exact",
+      "requirement": "B",
+      "ch1": [],
+      "ch1MissingOnly": true,
+      "reason": "Basiscode BAI ohne Charakterisierung ist nicht ausreichend bewertbar; charakterisierte BAI-Subcodes bleiben bewertbar.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BAI",
+      "codeMatch": "exact",
+      "requirement": "D",
+      "ch1": [],
+      "ch1MissingOnly": true,
+      "reason": "Basiscode BAI ohne Charakterisierung ist nicht ausreichend bewertbar; charakterisierte BAI-Subcodes bleiben bewertbar.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BAK",
+      "codeMatch": "exact",
+      "requirement": "B",
+      "ch1": [],
+      "ch1MissingOnly": true,
+      "reason": "Basiscode BAK ohne Charakterisierung ist nicht ausreichend bewertbar; charakterisierte BAK-Subcodes bleiben bewertbar.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BAK",
+      "codeMatch": "exact",
+      "requirement": "S",
+      "ch1": [],
+      "ch1MissingOnly": true,
+      "reason": "Basiscode BAK ohne Charakterisierung ist nicht ausreichend bewertbar; charakterisierte BAK-Subcodes bleiben bewertbar.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BBC",
+      "codeMatch": "exact",
+      "requirement": "B",
+      "ch1": [],
+      "ch1MissingOnly": true,
+      "reason": "Basiscode BBC ohne Charakterisierung ist nicht ausreichend bewertbar; charakterisierte BBC-Subcodes bleiben bewertbar.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BBF",
+      "codeMatch": "exact",
+      "requirement": "B",
+      "ch1": [],
+      "ch1MissingOnly": true,
+      "reason": "Basiscode BBF ohne Charakterisierung ist nicht ausreichend bewertbar; charakterisierte BBF-Subcodes bleiben bewertbar.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BBF",
+      "codeMatch": "exact",
+      "requirement": "D",
+      "ch1": [],
+      "ch1MissingOnly": true,
+      "reason": "Basiscode BBF ohne Charakterisierung ist nicht ausreichend bewertbar; charakterisierte BBF-Subcodes bleiben bewertbar.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BBF",
+      "codeMatch": "exact",
+      "requirement": "S",
+      "ch1": [],
+      "ch1MissingOnly": true,
+      "reason": "Basiscode BBF ohne Charakterisierung ist nicht ausreichend bewertbar; charakterisierte BBF-Subcodes bleiben bewertbar.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
     }
   ],
   "rules": [

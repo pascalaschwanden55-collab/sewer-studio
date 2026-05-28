@@ -301,6 +301,44 @@ public sealed class VsaShadowReportTests
     }
 
     [Fact]
+    public void Analyze_TreatsOnlyMissingCh1BaseCodesAsKnownNonAssessable()
+    {
+        var path = WriteFixture("""
+        {"timestamp_utc":"2026-05-28T08:29:01Z","code":"BAJ","base_code":"BAJ","requirement":"S","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"ch1-missing"}
+        {"timestamp_utc":"2026-05-28T08:29:02Z","code":"BAJA","base_code":"BAJ","requirement":"S","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"rule-not-found","ch1":"A"}
+        """);
+
+        try
+        {
+            var report = ShadowReportAnalyzer.Analyze(path,
+            [
+                new("BAJ", "exact", "S", Ch1MissingOnly: true)
+            ]);
+
+            Assert.Equal(1, report.ExpectedNonAssessmentCount);
+            Assert.Equal(1, report.OpenCutoverBlockerCount);
+            Assert.Contains(report.Groups, group => group.Code == "BAJ" && group.ExpectedNonAssessment);
+            Assert.Contains(report.Groups, group => group.Code == "BAJA" && !group.ExpectedNonAssessment);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void LoadDefaultNonAssessableCodes_ReadsMissingCh1OnlyRules()
+    {
+        var rules = ShadowReportAnalyzer.LoadDefaultNonAssessableCodes();
+
+        Assert.Contains(rules, rule =>
+            rule.Code == "BAJ"
+            && rule.CodeMatch == "exact"
+            && rule.Requirement == "S"
+            && rule.Ch1MissingOnly);
+    }
+
+    [Fact]
     public void ExportDifferentEzCsv_WritesExamplesForManualReview()
     {
         var shadowPath = WriteFixture("""
@@ -317,6 +355,31 @@ public sealed class VsaShadowReportTests
             var csv = File.ReadAllText(csvPath);
             Assert.Contains("code;requirement;legacy_ez;v2_ez;ch1;ch2;q1;q2;material;dn;v2_rule_id;v2_source_ref", csv);
             Assert.Contains("BAJA;D;2;4;A;;10;;Beton;300;c-066-BAJ-D;PDF S.24", csv);
+        }
+        finally
+        {
+            File.Delete(shadowPath);
+            if (File.Exists(csvPath))
+                File.Delete(csvPath);
+        }
+    }
+
+    [Fact]
+    public void ExportDifferentEzCsv_WritesAllEzDifferences_NotOnlyConsolePreview()
+    {
+        var lines = Enumerable.Range(1, 60)
+            .Select(i => $$"""{"timestamp_utc":"2026-05-28T08:29:{{i % 60:00}}Z","code":"BAJA","base_code":"BAJ","requirement":"D","legacy_ez":2,"v2_ez":4,"expected_drift":false,"ch1":"A","q1":"{{i}}","v2_rule_id":"c-066-BAJ-D"}""");
+        var shadowPath = WriteFixture(string.Join(Environment.NewLine, lines));
+        var csvPath = Path.Combine(Path.GetTempPath(), "vsa-shadow-diff-" + Guid.NewGuid().ToString("N") + ".csv");
+
+        try
+        {
+            var report = ShadowReportAnalyzer.Analyze(shadowPath);
+
+            ShadowReportExporter.WriteDifferentEzCsv(report, csvPath);
+
+            var csvLines = File.ReadAllLines(csvPath);
+            Assert.Equal(61, csvLines.Length);
         }
         finally
         {
