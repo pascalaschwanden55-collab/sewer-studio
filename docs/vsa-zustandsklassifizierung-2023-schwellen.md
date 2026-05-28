@@ -433,9 +433,95 @@ Klassifizierung in Einzelzustand 2, da vermeintlicher Fehlanschluss fuer
 Inspekteur evtl. nicht erkennbar, nicht relevant oder es sich tatsaechlich
 nicht um einen Fehlanschluss handelt.
 
+## Anhang D - Schaechte
+
+Hinweis: Anhang D wird bewusst nur abschnittsweise uebernommen. Die
+Tabellenextraktion aus dem PDF verliert einzelne Zeilen; deshalb werden die
+Eintraege gegen gerenderte PDF-Seiten visuell gegengeprueft.
+
+### DAA - Verformung
+
+Quelle: PDF-Dateiseite 31 / gedruckte Seite 29, Anhang D, Tabelle 33:
+Verformung.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAA | A,B | - | S | % | >= 7 | >= 4 und < 7 | >= 3 und < 4 | >= 1 und < 3 | < 1 | Bereiche B,D,F; biegesteif |
+| DAA | A,B | - | S | % | - | - | - | alle | - | Bereiche B,D,F; biegeweich |
+| DAA | A,B | - | B | % | >= 40 | >= 30 und < 40 | >= 20 und < 30 | >= 10 und < 20 | < 10 | Bereiche B,D,F |
+
+### DAB - Risse
+
+Quelle: PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 34:
+Risse.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAB | A | A,B | S | keine Quantifizierung | - | - | - | - | alle | Bereiche B,D,F,I,J |
+| DAB | A | C,D,E | S | keine Quantifizierung | - | - | - | alle | - | Bereiche B,D,F,I,J |
+| DAB | B,C | A | S | mm | >= 8 | >= 5 und < 8 | >= 3 und < 5 | >= 1 und < 3 | < 1 | Bereiche B,D,F |
+| DAB | B,C | B | S | mm | - | - | - | - | alle | Bereiche B,D,F |
+| DAB | B,C | C,D,E | S | mm | - | - | - | alle | - | Bereiche B,D,F |
+| DAB | B | A,B,C,D,E | D | mm | - | - | - | alle | - | Bereiche D,F |
+| DAB | B | A,B,C,D,E | D | mm | - | - | alle | - | - | Bereiche I,J |
+| DAB | C | A,B,C,D,E | D | mm | - | - | alle | - | - | Bereiche D,F |
+| DAB | C | A,B,C,D,E | D | mm | - | alle | - | - | - | Bereiche I,J |
+
+### DAC - Bruch/Einsturz
+
+Quelle: PDF-Dateiseite 32 / gedruckte Seite 30, Anhang D, Tabelle 35:
+Bruch/Einsturz.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAC | A | - | D | mm | - | - | alle | - | - | Bereiche D,F |
+| DAC | A | - | D | mm | - | alle | - | - | - | Bereiche I,J |
+| DAC | A | - | S | mm | - | - | - | alle | - | Bereiche B,D,F |
+| DAC | A | - | B | mm | - | - | - | alle | - | Bereiche B,D,F |
+| DAC | B | - | D | mm | - | - | alle | - | - | Bereiche D,F |
+| DAC | B | - | D | mm | - | alle | - | - | - | Bereiche I,J |
+| DAC | B | - | S | mm | - | - | - | alle | - | Bereiche B,D,F |
+| DAC | C | - | D | mm | - | alle | - | - | - | Bereiche D,F |
+| DAC | C | - | D | mm | alle | - | - | - | - | Bereiche I,J |
+| DAC | C | - | S | mm | alle | - | - | - | - | Bereiche B,D,F |
+| DAC | C | - | B | mm | alle | - | - | - | - | Bereiche B,D,F |
+
+### DAD - Defektes Mauerwerk
+
+Quelle: PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 36:
+Defektes Mauerwerk.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAD | A | - | D | - | - | - | - | alle | - | Bereiche D,F |
+| DAD | A | - | D | - | - | - | alle | - | - | Bereiche I,J |
+| DAD | A | - | S | - | - | - | alle | - | - | Bereiche D,F |
+| DAD | A | - | B | - | - | - | - | alle | - | Bereiche D,F |
+| DAD | A | - | B | - | - | - | alle | - | - | Bereiche H,I,J |
+| DAD | B | - | D | - | - | - | - | alle | - | Bereiche D,F |
+| DAD | B | - | D | - | - | - | alle | - | - | Bereiche I,J |
+| DAD | B | - | S | - | - | - | alle | - | - | Bereiche D,F |
+| DAD | B | - | B | - | - | - | alle | - | - | Bereiche H,I,J |
+| DAD | C | - | D | - | - | alle | - | - | - | Bereiche D,F |
+| DAD | C | - | D | - | alle | - | - | - | - | Bereiche I,J |
+| DAD | C | - | S | - | alle | - | - | - | - | Bereiche D,F |
+| DAD | C | - | B | - | alle | - | - | - | - | Bereiche D,F,H,I,J |
+
+### DAE - Fehlender Moertel
+
+Quelle: PDF-Dateiseite 33 / gedruckte Seite 31, Anhang D, Tabelle 37:
+Fehlender Moertel.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAE | - | - | D | mm | - | - | - | >= 100 | < 100 | Bereiche D,F |
+| DAE | - | - | D | mm | - | - | >= 100 | - | < 100 | Bereiche I,J |
+| DAE | - | - | S | mm | - | - | >= 100 | >= 10 und < 100 | < 10 | Bereiche D,F |
+
 ## Noch offen
 
 - Anhang C ist als Draft vollstaendig dokumentiert (Tabellen 7-32).
-- Schachttabellen aus Anhang D: Tabellen 33-63.
+- Anhang D ist begonnen: Tabellen 33-37 sind visuell geprueft dokumentiert.
+- Schachttabellen aus Anhang D offen: Tabellen 38-63.
 - Klaeren, aus welchen Stammdaten `biegesteif`/`biegeweich` im Programm sicher
   bestimmt wird.
