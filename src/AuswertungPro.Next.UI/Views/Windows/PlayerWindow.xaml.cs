@@ -6213,30 +6213,7 @@ public partial class PlayerWindow : Window
     }
 
     private static string? ResolveEingabemarkerCodeHint(string? keyword)
-    {
-        var normalized = keyword?.Trim();
-        if (string.IsNullOrWhiteSpace(normalized))
-            return null;
-
-        return normalized.ToUpperInvariant() switch
-        {
-            "ROHRANFANG" => "BCD",
-            "ROHRENDE" => "BCE",
-            "ANSCHLUSS" => "BCA",
-            "BOGEN" => "BCC",
-            "RISS" => "BAB",
-            "BRUCH" => "BAC",
-            "VERFORMUNG" => "BAA",
-            "OBERFLAECHENSCHADEN" => "BAF",
-            "VERSATZ" or "VERSCHIEBUNG" => "BAJ",
-            "WURZELN" or "BEWUCHS" => "BBA",
-            "ABLAGERUNG" => "BBC",
-            "INKRUSTATION" => "BBB",
-            "WASSERSTAND" => "BDDC",
-            "ABBRUCH" => "BDC",
-            _ => VsaCodeResolver.InferCodeFromLabel(normalized)
-        };
-    }
+        => AuswertungPro.Next.UI.Player.PlayerVsaCodeHintResolver.ResolveKeyword(keyword);
 
     /// <summary>Freitext oder Stichwort absenden → Code ableiten oder KI-Analyse starten.</summary>
     private async void SubmitEingabemarker()

@@ -1,4 +1,5 @@
 using System.Reflection;
+using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Views.Windows;
 using Xunit;
 
@@ -14,15 +15,22 @@ public sealed class PlayerWindowVsaMappingTests
     [InlineData("WURZELN", "BBA")]
     [InlineData("BEWUCHS", "BBA")]
     [InlineData("INKRUSTATION", "BBB")]
+    [InlineData("ROHRANFANG", "BCD")]
+    [InlineData("ROHRENDE", "BCE")]
+    [InlineData("ANSCHLUSS", "BCA")]
+    [InlineData("BOGEN", "BCC")]
+    [InlineData("WASSERSTAND", "BDDC")]
     public void Eingabemarker_keyword_mapping_matches_vsa_kek_manifest(string keyword, string expectedCode)
     {
-        var method = typeof(PlayerWindow).GetMethod(
-            "ResolveEingabemarkerCodeHint",
-            BindingFlags.NonPublic | BindingFlags.Static);
+        var code = PlayerVsaCodeHintResolver.ResolveKeyword(keyword);
 
-        Assert.NotNull(method);
-        var code = Assert.IsType<string>(method!.Invoke(null, [keyword]));
         Assert.Equal(expectedCode, code);
+    }
+
+    [Fact]
+    public void Eingabemarker_keyword_mapping_returns_null_for_empty_keyword()
+    {
+        Assert.Null(PlayerVsaCodeHintResolver.ResolveKeyword(" "));
     }
 
     [Theory]
