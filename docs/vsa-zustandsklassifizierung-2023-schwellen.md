@@ -780,10 +780,107 @@ Andere Hindernisse.
 | DBE | G | - | D | mm | - | - | alle | - | - | Bereiche I,J |
 | DBE | G | - | B | mm | - | - | alle | - | - | Bereiche alle |
 
+### DBF - Infiltration
+
+Quelle: PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 56:
+Infiltration.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DBF | A | A,B,C | D | - | - | - | alle | - | - | Bereiche D,F,I,J |
+| DBF | A | A,B,C | S | - | - | - | - | alle | - | Bereiche B,D,F |
+| DBF | A | A,B,C | B | - | - | - | - | - | alle | Bereiche alle |
+| DBF | B,C | A,B,C | D | - | - | alle | - | - | - | Bereiche D,F,I,J |
+| DBF | B,C | A,B,C | S | - | - | - | alle | - | - | Bereiche B,D,F |
+| DBF | B,C | A,B,C | B | - | - | - | alle | - | Bereiche alle |
+| DBF | D | A,B,C | D | - | - | alle | - | - | - | Bereiche D,F,I,J |
+| DBF | D | A,B,C | S | - | - | alle | - | - | - | Bereiche B,D,F |
+| DBF | D | A,B,C | B | - | - | - | alle | - | Bereiche alle |
+
+### DBG - Exfiltration
+
+Quelle: PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 57:
+Exfiltration.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DBG | - | - | D | - | - | alle | - | - | - | Bereiche I,J |
+| DBG | - | - | S | - | - | - | - | alle | - | Bereiche B,D,F |
+
+### DBH - Ungeziefer
+
+Quelle: PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 58:
+Ungeziefer.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DBH | A,B,Z | A,B,C,Z | - | Anzahl | - | - | - | - | alle* | Bereiche alle |
+
+Hinweis: Die Anforderungsspalte ist in der PDF-Zeile leer. `alle*` verweist
+auf die Fussnote der Richtlinie: nicht relevant fuer die Leistungsfaehigkeit des
+Schachts, aber ggf. aus anderen betrieblichen Gruenden zu beheben.
+
+### DCH - Bankett
+
+Quelle: PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 59:
+Bankett.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DCH | A,C | - | B | - | - | - | - | alle | - | Bereiche H |
+| DCH | B | - | B | - | - | - | - | - | alle | Bereiche H |
+
+### DCI - Durchlaufrinne
+
+Quelle: PDF-Dateiseite 40 / gedruckte Seite 38, Anhang D, Tabelle 60:
+Durchlaufrinne.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DCI | A | A,B,C,D | B | - | - | - | - | alle | - | Bereiche I |
+| DCI | B | Y | B | - | - | - | - | - | alle | Bereiche I |
+| DCI | C | Y | B | - | - | - | - | alle | - | Bereiche I |
+
+### DCL - Rohrdurchfuehrung durch Schacht
+
+Quelle: PDF-Dateiseite 41 / gedruckte Seite 39, Anhang D, Tabelle 61:
+Rohrdurchfuehrung durch Schacht.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DCL | A,B,C | A | B | - | - | - | - | alle | - | Bereiche F |
+| DCL | A,B,C | B | B | - | - | - | - | - | alle | Bereiche F |
+
+### DCM - Schlammeimer
+
+Quelle: PDF-Dateiseite 41 / gedruckte Seite 39, Anhang D, Tabelle 62:
+Schlammeimer.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DCM | A | - | B | - | - | - | - | - | alle | Bereiche A |
+| DCM | B,C | - | B | - | - | - | - | alle | - | Bereiche A |
+
+### DDE - Abwasserzufluss aus einem seitlichen Anschluss / Fehlanschluss
+
+Quelle: PDF-Dateiseite 41 / gedruckte Seite 39, Anhang D, Tabelle 63:
+Abwasserzufluss aus einem seitlichen Anschluss / Fehlanschluss.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DDE | A,C,D,E,Y | A | B | - | - | alle | - | - | - | Bereiche alle |
+| DDE | A,C,D,E,Y | B | B | - | - | - | alle | - | - | Bereiche alle |
+| DDE | A,C,D,E,Y | C | B | - | - | - | alle* | - | alle* | Bereiche alle |
+| DDE | Y | Y | B | - | - | - | - | - | alle | Bereiche alle |
+
+Hinweis: `alle*` verweist auf die Fussnote der Richtlinie: vorsorgliche
+Klassifizierung in Einzelzustand 2, da vermeintlicher Fehlanschluss fuer
+Inspekteur evtl. nicht erkennbar, nicht relevant oder es sich tatsaechlich
+nicht um einen Fehlanschluss handelt.
+
 ## Noch offen
 
 - Anhang C ist als Draft vollstaendig dokumentiert (Tabellen 7-32).
-- Anhang D ist begonnen: Tabellen 33-55 sind visuell geprueft dokumentiert.
-- Schachttabellen aus Anhang D offen: Tabellen 56-63.
+- Anhang D ist als Draft vollstaendig dokumentiert (Tabellen 33-63).
 - Klaeren, aus welchen Stammdaten `biegesteif`/`biegeweich` im Programm sicher
   bestimmt wird.
