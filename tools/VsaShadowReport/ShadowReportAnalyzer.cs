@@ -33,11 +33,13 @@ public static class ShadowReportAnalyzer
             .GroupBy(e => (
                 Code: e.Code ?? "",
                 Requirement: e.Requirement ?? "",
-                e.ExpectedDrift))
+                e.ExpectedDrift,
+                V2Missing: e.V2Ez is null))
             .Select(g => new ShadowDiffGroup(
                 g.Key.Code,
                 g.Key.Requirement,
                 g.Key.ExpectedDrift,
+                g.Key.V2Missing,
                 g.Count()))
             .OrderByDescending(g => g.Count)
             .ThenBy(g => g.Code, StringComparer.OrdinalIgnoreCase)
@@ -46,12 +48,16 @@ public static class ShadowReportAnalyzer
 
         var expected = entries.Count(e => e.ExpectedDrift);
         var unexpected = entries.Count - expected;
+        var unexpectedMissing = entries.Count(e => !e.ExpectedDrift && e.V2Ez is null);
+        var unexpectedDifferent = entries.Count(e => !e.ExpectedDrift && e.V2Ez is not null);
 
         return new ShadowReport(
             Path: path,
             TotalDifferences: entries.Count,
             ExpectedDifferences: expected,
             UnexpectedDifferences: unexpected,
+            UnexpectedMissingV2Ez: unexpectedMissing,
+            UnexpectedDifferentEz: unexpectedDifferent,
             Groups: groups,
             NoData: false);
     }
@@ -66,6 +72,9 @@ public static class ShadowReportAnalyzer
 
         [JsonPropertyName("expected_drift")]
         public bool ExpectedDrift { get; set; }
+
+        [JsonPropertyName("v2_ez")]
+        public int? V2Ez { get; set; }
     }
 }
 
@@ -74,17 +83,20 @@ public sealed record ShadowReport(
     int TotalDifferences,
     int ExpectedDifferences,
     int UnexpectedDifferences,
+    int UnexpectedMissingV2Ez,
+    int UnexpectedDifferentEz,
     IReadOnlyList<ShadowDiffGroup> Groups,
     bool NoData)
 {
     public bool IsCutoverSafe => !NoData && UnexpectedDifferences == 0;
 
     public static ShadowReport NoDataReport(string path)
-        => new(path, 0, 0, 0, [], NoData: true);
+        => new(path, 0, 0, 0, 0, 0, [], NoData: true);
 }
 
 public sealed record ShadowDiffGroup(
     string Code,
     string Requirement,
     bool ExpectedDrift,
+    bool V2Missing,
     int Count);
