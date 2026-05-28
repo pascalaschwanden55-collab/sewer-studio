@@ -2,6 +2,62 @@
   "schemaVersion": 2,
   "source": "VSA_Rili_ Zustandsbeurteilung von Entwaesserungsanlagen.pdf / docs/vsa-zustandsklassifizierung-2023-schwellen.md",
   "assetKind": "channel",
+  "nonAssessableCodes": [
+    {
+      "code": "BCA",
+      "codeMatch": "prefix",
+      "reason": "Keine Klassifizierungstabelle in VSA-Richtlinie Anhang C/D; fachlich als Bestandsaufnahme/Beobachtung freigegeben.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BCB",
+      "codeMatch": "prefix",
+      "reason": "Keine Klassifizierungstabelle in VSA-Richtlinie Anhang C/D; fachlich als Bestandsaufnahme/Beobachtung freigegeben.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BCC",
+      "codeMatch": "prefix",
+      "reason": "Keine Klassifizierungstabelle in VSA-Richtlinie Anhang C/D; fachlich als Bestandsaufnahme/Beobachtung freigegeben.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BCD",
+      "codeMatch": "prefix",
+      "reason": "Keine Klassifizierungstabelle in VSA-Richtlinie Anhang C/D; fachlich als Bestandsaufnahme/Beobachtung freigegeben.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BCE",
+      "codeMatch": "prefix",
+      "reason": "Keine Klassifizierungstabelle in VSA-Richtlinie Anhang C/D; fachlich als Bestandsaufnahme/Beobachtung freigegeben.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BDA",
+      "codeMatch": "prefix",
+      "reason": "Keine Klassifizierungstabelle in VSA-Richtlinie Anhang C/D; fachlich als Bestandsaufnahme/Beobachtung freigegeben.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BDB",
+      "codeMatch": "prefix",
+      "reason": "Keine Klassifizierungstabelle in VSA-Richtlinie Anhang C/D; fachlich als Inspektions-Metadaten freigegeben.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BDC",
+      "codeMatch": "prefix",
+      "reason": "Keine Klassifizierungstabelle in VSA-Richtlinie Anhang C/D; fachlich als Altdaten/Beobachtung ohne Zustandsnote freigegeben.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
+      "code": "BDG",
+      "codeMatch": "prefix",
+      "reason": "Keine Klassifizierungstabelle in VSA-Richtlinie Anhang C/D; fachlich als Altdaten/Beobachtung ohne Zustandsnote freigegeben.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    }
+  ],
   "rules": [
     {
       "id": "c-001-BAA-S",

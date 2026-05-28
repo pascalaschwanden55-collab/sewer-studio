@@ -21,6 +21,9 @@ public sealed class VsaClassificationRuleSetV2Tests
 
         Assert.Equal(2, rules.SchemaVersion);
         Assert.Equal("channel", rules.AssetKind);
+        Assert.Contains(rules.NonAssessableCodes, code => code.Code == "BCA" && code.CodeMatch == "prefix");
+        Assert.Contains(rules.NonAssessableCodes, code => code.Code == "BDA" && code.CodeMatch == "prefix");
+        Assert.DoesNotContain(rules.NonAssessableCodes, code => code.Code is "BDD" or "BDE");
         Assert.All(rules.Rules, rule => Assert.InRange(rule.Classification.Ez ?? 0, 0, 4));
 
         var baaRigid = rules.Rules.Single(rule =>

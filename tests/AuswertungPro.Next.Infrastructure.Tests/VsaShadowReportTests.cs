@@ -83,7 +83,7 @@ public sealed class VsaShadowReportTests
 
         try
         {
-            var report = ShadowReportAnalyzer.Analyze(path);
+            var report = ShadowReportAnalyzer.Analyze(path, KnownNonAssessableRules());
 
             Assert.Equal(2, report.UnexpectedDifferences);
             Assert.Equal(1, report.UnexpectedMissingV2Ez);
@@ -104,7 +104,7 @@ public sealed class VsaShadowReportTests
 
         try
         {
-            var report = ShadowReportAnalyzer.Analyze(path);
+            var report = ShadowReportAnalyzer.Analyze(path, KnownNonAssessableRules());
 
             Assert.Equal(0, report.TotalDifferences);
             Assert.True(report.NoData);
@@ -149,18 +149,20 @@ public sealed class VsaShadowReportTests
         var path = WriteFixture("""
         {"timestamp_utc":"2026-05-28T08:25:01Z","code":"BDA","base_code":"BDA","requirement":"B","legacy_ez":2,"v2_ez":null,"expected_drift":false}
         {"timestamp_utc":"2026-05-28T08:25:02Z","code":"BDA","base_code":"BDA","requirement":"S","legacy_ez":2,"v2_ez":null,"expected_drift":false}
-        {"timestamp_utc":"2026-05-28T08:31:01Z","code":"BCA","base_code":"BCA","requirement":"D","legacy_ez":2,"v2_ez":null,"expected_drift":false}
+        {"timestamp_utc":"2026-05-28T08:31:01Z","code":"BCA","base_code":"BCA","requirement":"D","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"rule-not-found"}
         """);
 
         try
         {
-            var report = ShadowReportAnalyzer.Analyze(path);
+            var report = ShadowReportAnalyzer.Analyze(path, KnownNonAssessableRules());
 
             Assert.Equal("2026-05-28 08:31", report.AnalyzedWindow);
             Assert.Equal(1, report.AnalyzedWindowEntries);
             Assert.Equal("2026-05-28 08:25", report.LargestWindow);
             Assert.Equal(2, report.LargestWindowEntries);
             Assert.True(report.LatestWindowIsSmallerThanLargest);
+            Assert.Equal(0, report.OpenCutoverBlockerCount);
+            Assert.False(report.IsCutoverSafe);
         }
         finally
         {
@@ -238,9 +240,34 @@ public sealed class VsaShadowReportTests
             var report = ShadowReportAnalyzer.Analyze(path);
 
             Assert.Equal(2, report.NonAssessableRuleNotFoundCount);
+            Assert.Equal(3, report.OpenCutoverBlockerCount);
             Assert.Equal(1, report.V2MilderCount);
             Assert.Equal(1, report.V2StricterCount);
             Assert.Equal(1, report.V2NewCount);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Analyze_TreatsKnownNonAssessableCodesAsSafeCutoverNonBlockers()
+    {
+        var path = WriteFixture("""
+        {"timestamp_utc":"2026-05-28T08:29:01Z","code":"BDA","base_code":"BDA","requirement":"B","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"rule-not-found"}
+        {"timestamp_utc":"2026-05-28T08:29:02Z","code":"BCAAA","base_code":"BCA","requirement":"D","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"rule-not-found"}
+        """);
+
+        try
+        {
+            var report = ShadowReportAnalyzer.Analyze(path);
+
+            Assert.Equal(2, report.UnexpectedDifferences);
+            Assert.Equal(2, report.NonAssessableRuleNotFoundCount);
+            Assert.Equal(0, report.OpenCutoverBlockerCount);
+            Assert.True(report.IsCutoverSafe);
+            Assert.All(report.Groups, group => Assert.True(group.ExpectedNonAssessment));
         }
         finally
         {
@@ -280,4 +307,12 @@ public sealed class VsaShadowReportTests
         File.WriteAllText(path, jsonl.Replace("\r\n", "\n"));
         return path;
     }
+
+    private static IReadOnlyCollection<NonAssessableCodeRule> KnownNonAssessableRules()
+        =>
+        [
+            new("BCA", "prefix"),
+            new("BCC", "prefix"),
+            new("BDA", "prefix")
+        ];
 }

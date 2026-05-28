@@ -5,29 +5,20 @@ namespace VsaShadowReport;
 
 public static class ShadowReportAnalyzer
 {
-    private static readonly string[] NonAssessableRuleNotFoundPrefixes =
-    [
-        "BCA",
-        "BCB",
-        "BCC",
-        "BCD",
-        "BCE",
-        "BDA",
-        "BDB",
-        "BDC",
-        "BDG"
-    ];
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
     public static ShadowReport Analyze(string path)
+        => Analyze(path, LoadDefaultNonAssessableCodes());
+
+    public static ShadowReport Analyze(string path, IReadOnlyCollection<NonAssessableCodeRule>? nonAssessableCodes)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             return ShadowReport.NoDataReport(path);
 
+        nonAssessableCodes ??= [];
         var entries = new List<ShadowEntry>();
         foreach (var line in File.ReadLines(path))
         {
@@ -70,12 +61,14 @@ public static class ShadowReportAnalyzer
                 Code: e.Code ?? "",
                 Requirement: e.Requirement ?? "",
                 e.ExpectedDrift,
+                ExpectedNonAssessment: IsExpectedNonAssessment(e, nonAssessableCodes),
                 V2Missing: e.V2Ez is null,
                 V2Reason: e.V2Reason ?? ""))
             .Select(g => new ShadowDiffGroup(
                 g.Key.Code,
                 g.Key.Requirement,
                 g.Key.ExpectedDrift,
+                g.Key.ExpectedNonAssessment,
                 g.Key.V2Missing,
                 g.Count(),
                 string.IsNullOrWhiteSpace(g.Key.V2Reason) ? null : g.Key.V2Reason))
@@ -89,10 +82,10 @@ public static class ShadowReportAnalyzer
         var unexpectedMissing = entries.Count(e => !e.ExpectedDrift && e.V2Ez is null);
         var unexpectedDifferent = entries.Count(e => !e.ExpectedDrift && e.V2Ez is not null);
         var nonAssessableRuleNotFound = entries.Count(e =>
+            IsExpectedNonAssessment(e, nonAssessableCodes));
+        var openCutoverBlockers = entries.Count(e =>
             !e.ExpectedDrift
-            && e.V2Ez is null
-            && string.Equals(e.V2Reason, "rule-not-found", StringComparison.OrdinalIgnoreCase)
-            && IsKnownNonAssessable(e));
+            && !IsExpectedNonAssessment(e, nonAssessableCodes));
         var v2Milder = entries.Count(e => !e.ExpectedDrift && IsV2Milder(e));
         var v2Stricter = entries.Count(e => !e.ExpectedDrift && IsV2Stricter(e));
         var v2New = entries.Count(e => !e.ExpectedDrift && e.LegacyEz is null && e.V2Ez is not null);
@@ -125,6 +118,7 @@ public static class ShadowReportAnalyzer
             UnexpectedMissingV2Ez: unexpectedMissing,
             UnexpectedDifferentEz: unexpectedDifferent,
             NonAssessableRuleNotFoundCount: nonAssessableRuleNotFound,
+            OpenCutoverBlockerCount: openCutoverBlockers,
             V2MilderCount: v2Milder,
             V2StricterCount: v2Stricter,
             V2NewCount: v2New,
@@ -138,11 +132,80 @@ public static class ShadowReportAnalyzer
             LargestWindowEntries: largestWindow?.Count ?? 0);
     }
 
-    private static bool IsKnownNonAssessable(ShadowEntry entry)
+    private static bool IsExpectedNonAssessment(
+        ShadowEntry entry,
+        IReadOnlyCollection<NonAssessableCodeRule> nonAssessableCodes)
+        => !entry.ExpectedDrift
+           && entry.V2Ez is null
+           && string.Equals(entry.V2Reason, "rule-not-found", StringComparison.OrdinalIgnoreCase)
+           && IsKnownNonAssessable(entry, nonAssessableCodes);
+
+    private static bool IsKnownNonAssessable(
+        ShadowEntry entry,
+        IReadOnlyCollection<NonAssessableCodeRule> nonAssessableCodes)
     {
         var code = entry.BaseCode ?? entry.Code ?? "";
-        return NonAssessableRuleNotFoundPrefixes.Any(prefix =>
-            code.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+        return nonAssessableCodes.Any(rule => rule.Matches(code));
+    }
+
+    public static IReadOnlyList<NonAssessableCodeRule> LoadDefaultNonAssessableCodes()
+    {
+        var result = new List<NonAssessableCodeRule>();
+        foreach (var path in ResolveDefaultRuleSetPaths().Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!File.Exists(path))
+                continue;
+
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            if (!document.RootElement.TryGetProperty("nonAssessableCodes", out var codes)
+                || codes.ValueKind != JsonValueKind.Array)
+            {
+                continue;
+            }
+
+            foreach (var item in codes.EnumerateArray())
+            {
+                var code = item.TryGetProperty("code", out var codeElement)
+                    ? codeElement.GetString()
+                    : null;
+                if (string.IsNullOrWhiteSpace(code))
+                    continue;
+
+                var codeMatch = item.TryGetProperty("codeMatch", out var matchElement)
+                    ? matchElement.GetString()
+                    : null;
+                result.Add(new NonAssessableCodeRule(code.Trim().ToUpperInvariant(), codeMatch ?? "exact"));
+            }
+        }
+
+        return result;
+    }
+
+    private static IEnumerable<string> ResolveDefaultRuleSetPaths()
+    {
+        const string channelsFile = "vsa_zustandsklassifizierung_2023_channels.json";
+        const string manholesFile = "vsa_zustandsklassifizierung_2023_manholes.json";
+
+        foreach (var root in EnumerateCandidateRoots())
+        {
+            yield return Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", channelsFile);
+            yield return Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", manholesFile);
+            yield return Path.Combine(root, "Data", channelsFile);
+            yield return Path.Combine(root, "Data", manholesFile);
+        }
+    }
+
+    private static IEnumerable<string> EnumerateCandidateRoots()
+    {
+        foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
+        {
+            var directory = new DirectoryInfo(start);
+            while (directory is not null)
+            {
+                yield return directory.FullName;
+                directory = directory.Parent;
+            }
+        }
     }
 
     private static bool IsV2Milder(ShadowEntry entry)
@@ -205,6 +268,19 @@ public static class ShadowReportAnalyzer
     private sealed record ShadowWindow(string Window, int Count);
 }
 
+public sealed record NonAssessableCodeRule(string Code, string CodeMatch)
+{
+    public bool Matches(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        return CodeMatch.Equals("prefix", StringComparison.OrdinalIgnoreCase)
+            ? value.StartsWith(Code, StringComparison.OrdinalIgnoreCase)
+            : value.Equals(Code, StringComparison.OrdinalIgnoreCase);
+    }
+}
+
 public sealed record ShadowReport(
     string Path,
     int TotalDifferences,
@@ -213,6 +289,7 @@ public sealed record ShadowReport(
     int UnexpectedMissingV2Ez,
     int UnexpectedDifferentEz,
     int NonAssessableRuleNotFoundCount,
+    int OpenCutoverBlockerCount,
     int V2MilderCount,
     int V2StricterCount,
     int V2NewCount,
@@ -225,7 +302,7 @@ public sealed record ShadowReport(
     string? LargestWindow,
     int LargestWindowEntries)
 {
-    public bool IsCutoverSafe => !NoData && UnexpectedDifferences == 0;
+    public bool IsCutoverSafe => !NoData && !LatestWindowIsSmallerThanLargest && OpenCutoverBlockerCount == 0;
     public bool LatestWindowIsSmallerThanLargest
         => AnalyzedWindow is not null
            && LargestWindow is not null
@@ -233,13 +310,14 @@ public sealed record ShadowReport(
            && AnalyzedWindowEntries < LargestWindowEntries;
 
     public static ShadowReport NoDataReport(string path)
-        => new(path, 0, 0, 0, 0, 0, 0, 0, 0, 0, [], [], NoData: true, TotalLogEntries: 0, AnalyzedWindow: null, AnalyzedWindowEntries: 0, LargestWindow: null, LargestWindowEntries: 0);
+        => new(path, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, [], [], NoData: true, TotalLogEntries: 0, AnalyzedWindow: null, AnalyzedWindowEntries: 0, LargestWindow: null, LargestWindowEntries: 0);
 }
 
 public sealed record ShadowDiffGroup(
     string Code,
     string Requirement,
     bool ExpectedDrift,
+    bool ExpectedNonAssessment,
     bool V2Missing,
     int Count,
     string? V2Reason);

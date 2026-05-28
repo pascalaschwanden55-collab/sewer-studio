@@ -7,6 +7,7 @@ public sealed class VsaClassificationRuleSet
     public int SchemaVersion { get; set; }
     public string Source { get; set; } = "";
     public string AssetKind { get; set; } = "";
+    public List<VsaNonAssessableCode> NonAssessableCodes { get; set; } = new();
     public List<VsaClassificationRule> Rules { get; set; } = new();
 
     public static VsaClassificationRuleSet LoadFromFile(string path)
@@ -17,6 +18,14 @@ public sealed class VsaClassificationRuleSet
             Application.Common.JsonDefaults.CaseInsensitive)
             ?? throw new InvalidDataException($"VSA-Regelmodell konnte nicht geladen werden: {path}");
     }
+}
+
+public sealed class VsaNonAssessableCode
+{
+    public string Code { get; set; } = "";
+    public string CodeMatch { get; set; } = "exact";
+    public string Reason { get; set; } = "";
+    public string SourceRef { get; set; } = "";
 }
 
 public sealed class VsaClassificationRule

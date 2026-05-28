@@ -20,6 +20,7 @@ Console.WriteLine($"  expected_drift=false: {report.UnexpectedDifferences}");
 Console.WriteLine($"    davon v2_ez=null:   {report.UnexpectedMissingV2Ez}");
 Console.WriteLine($"    davon EZ ungleich:  {report.UnexpectedDifferentEz}");
 Console.WriteLine($"    davon bekannte Nicht-Bewertung: {report.NonAssessableRuleNotFoundCount}");
+Console.WriteLine($"    offene Cutover-Blocker: {report.OpenCutoverBlockerCount}");
 Console.WriteLine($"    v2 milder:          {report.V2MilderCount}");
 Console.WriteLine($"    v2 strenger:        {report.V2StricterCount}");
 Console.WriteLine($"    v2 neu bewertet:    {report.V2NewCount}");
@@ -39,8 +40,11 @@ if (report.Groups.Count > 0)
         var reason = string.IsNullOrWhiteSpace(group.V2Reason)
             ? ""
             : $"  reason={group.V2Reason}";
+        var nonAssessment = group.ExpectedNonAssessment
+            ? "  expected_non_assessment=true"
+            : "";
         Console.WriteLine(
-            $"  {group.Code,-8} {group.Requirement,-1}  count={group.Count,5}  expected_drift={group.ExpectedDrift.ToString().ToLowerInvariant()}  v2_missing={group.V2Missing.ToString().ToLowerInvariant()}{reason}");
+            $"  {group.Code,-8} {group.Requirement,-1}  count={group.Count,5}  expected_drift={group.ExpectedDrift.ToString().ToLowerInvariant()}  v2_missing={group.V2Missing.ToString().ToLowerInvariant()}{reason}{nonAssessment}");
     }
 
     Console.WriteLine();
@@ -65,6 +69,12 @@ if (!string.IsNullOrWhiteSpace(csvPath))
     Console.WriteLine();
 }
 
+if (report.LatestWindowIsSmallerThanLargest)
+{
+    Console.WriteLine("NICHT SICHER: neuester Shadow-Lauf wirkt unvollstaendig. Log loeschen, App-Lauf wiederholen und Report erneut ausfuehren.");
+    return 3;
+}
+
 if (report.IsCutoverSafe)
 {
     Console.WriteLine("CUTOVER SICHER: keine unerwarteten VSA-v2-Abweichungen.");
@@ -72,12 +82,12 @@ if (report.IsCutoverSafe)
 }
 
 var unexpectedCodes = report.Groups
-    .Where(group => !group.ExpectedDrift)
+    .Where(group => !group.ExpectedDrift && !group.ExpectedNonAssessment)
     .Select(group => group.V2Missing
         ? $"{group.Code}/{group.Requirement}(v2=null{FormatReason(group.V2Reason)})"
         : $"{group.Code}/{group.Requirement}")
     .Distinct(StringComparer.OrdinalIgnoreCase);
-Console.WriteLine($"NICHT SICHER: {report.UnexpectedDifferences} unerwartete Abweichungen, siehe Codes: {string.Join(", ", unexpectedCodes)}");
+Console.WriteLine($"NICHT SICHER: {report.OpenCutoverBlockerCount} offene Cutover-Blocker, siehe Codes: {string.Join(", ", unexpectedCodes)}");
 return 1;
 
 static string ResolvePath(string[] args)
