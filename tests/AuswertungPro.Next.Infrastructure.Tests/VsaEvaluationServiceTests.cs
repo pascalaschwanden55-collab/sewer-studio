@@ -19,6 +19,61 @@ public sealed class VsaEvaluationServiceTests
     }
 
     [Fact]
+    public void ResolveFindings_EnrichesBaseCodeWithFullCodeFromPrimaryDamages()
+    {
+        var rec = new HaltungRecord
+        {
+            VsaFindings = new List<VsaFinding>
+            {
+                new()
+                {
+                    KanalSchadencode = "BAJ",
+                    SchadenlageAnfang = 0.10,
+                    Raw = "Rohrverbindung Knick"
+                }
+            }
+        };
+        rec.SetFieldValue(
+            "Primaere_Schaeden",
+            "BAJ.C @0.10m (Rohrverbindung Knick)",
+            FieldSource.Xtf,
+            userEdited: false);
+
+        var findings = VsaEvaluationService.ResolveFindings(rec, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "BAJ" });
+
+        Assert.Single(findings);
+        Assert.Equal("BAJC", findings[0].KanalSchadencode);
+        Assert.Equal("Rohrverbindung Knick", findings[0].Raw);
+    }
+
+    [Fact]
+    public void ResolveFindings_DoesNotUseStationReferenceAsFindingCode()
+    {
+        var rec = new HaltungRecord
+        {
+            VsaFindings = new List<VsaFinding>
+            {
+                new()
+                {
+                    KanalSchadencode = "BDA",
+                    SchadenlageAnfang = 0.90,
+                    Raw = "Allgemeinzustand, Fotobeispiel, Foto 2 zu Station BAF.B.E"
+                }
+            }
+        };
+        rec.SetFieldValue(
+            "Primaere_Schaeden",
+            "BDA @0.90m (Allgemeinzustand, Fotobeispiel, Foto 2 zu Station BAF.B.E)",
+            FieldSource.Xtf,
+            userEdited: false);
+
+        var findings = VsaEvaluationService.ResolveFindings(rec, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "BDA" });
+
+        Assert.Single(findings);
+        Assert.Equal("BDA", findings[0].KanalSchadencode);
+    }
+
+    [Fact]
     public void Evaluate_UsesSchadencodeRules_WhenRuleExists()
     {
         var project = new Project();

@@ -19,7 +19,10 @@ namespace AuswertungPro.Next.Infrastructure.Vsa;
 /// </summary>
 public sealed class VsaEvaluationService : IVsaEvaluationService
 {
-    private static readonly Regex LeadingTokenRegex = new(@"^[A-Za-z0-9]+", RegexOptions.Compiled);
+    private static readonly Regex LeadingTokenRegex = new(@"^[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)*", RegexOptions.Compiled);
+    private static readonly Regex PrimaryDamageLineRegex = new(
+        @"^(?<code>[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)*)\s*(?:@(?<meter>-?\d+(?:[.,]\d+)?)m?)?",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly HashSet<string> ExpectedShadowDriftCodes = new(StringComparer.OrdinalIgnoreCase)
     {
         "BAA",
@@ -302,11 +305,12 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
     // ── Feststellungen auflösen / klassifizieren ─────────────────────────
 
-    private static List<VsaFinding> ResolveFindings(HaltungRecord record, IReadOnlySet<string> knownCodes)
+    internal static List<VsaFinding> ResolveFindings(HaltungRecord record, IReadOnlySet<string> knownCodes)
     {
         if (record.VsaFindings is { Count: > 0 })
         {
-            return record.VsaFindings
+            var primaryDamageText = record.GetFieldValue("Primaere_Schaeden");
+            return EnrichFindingsFromPrimaryDamage(record.VsaFindings, primaryDamageText)
                 .Where(f => !string.IsNullOrWhiteSpace(f.KanalSchadencode))
                 .Select(f => f)
                 .ToList();
@@ -646,7 +650,8 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             if (code.Length < 3)
                 continue;
 
-            if (knownCodes.Count > 0 && !knownCodes.Contains(code) && code.Length > 4)
+            var baseCode = code.Length >= 3 ? code[..3] : code;
+            if (knownCodes.Count > 0 && !knownCodes.Contains(code) && !knownCodes.Contains(baseCode))
                 continue;
 
             findings.Add(new VsaFinding
@@ -658,6 +663,101 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
         return findings;
     }
+
+    private static IEnumerable<VsaFinding> EnrichFindingsFromPrimaryDamage(
+        IEnumerable<VsaFinding> findings,
+        string? primaryDamageText)
+    {
+        var candidates = ParsePrimaryDamageCodeCandidates(primaryDamageText);
+        if (candidates.Count == 0)
+            return findings;
+
+        return findings.Select(finding =>
+        {
+            var code = NormalizeCode(finding.KanalSchadencode);
+            if (code.Length != 3)
+                return finding;
+
+            var meter = finding.MeterStart ?? finding.SchadenlageAnfang;
+            var candidate = FindMatchingFullCodeCandidate(candidates, code, meter);
+            return candidate is null ? finding : CopyFindingWithCode(finding, candidate.Code);
+        });
+    }
+
+    private static PrimaryDamageCodeCandidate? FindMatchingFullCodeCandidate(
+        IReadOnlyList<PrimaryDamageCodeCandidate> candidates,
+        string baseCode,
+        double? meter)
+    {
+        var matchingBase = candidates
+            .Where(c => c.Code.Length > baseCode.Length
+                        && c.Code.StartsWith(baseCode, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (matchingBase.Count == 0)
+            return null;
+
+        if (meter.HasValue)
+        {
+            return matchingBase
+                .Where(c => c.Meter.HasValue)
+                .OrderBy(c => Math.Abs(c.Meter!.Value - meter.Value))
+                .FirstOrDefault(c => Math.Abs(c.Meter!.Value - meter.Value) <= 0.05);
+        }
+
+        return matchingBase.Count == 1 ? matchingBase[0] : null;
+    }
+
+    private static List<PrimaryDamageCodeCandidate> ParsePrimaryDamageCodeCandidates(string? raw)
+    {
+        var candidates = new List<PrimaryDamageCodeCandidate>();
+        if (string.IsNullOrWhiteSpace(raw))
+            return candidates;
+
+        var lines = raw.Replace("\r\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var rawLine in lines)
+        {
+            var match = PrimaryDamageLineRegex.Match(rawLine.Trim());
+            if (!match.Success)
+                continue;
+
+            var code = NormalizeCode(match.Groups["code"].Value);
+            if (code.Length <= 3)
+                continue;
+
+            double? meter = null;
+            var meterText = match.Groups["meter"].Value;
+            if (!string.IsNullOrWhiteSpace(meterText)
+                && double.TryParse(meterText.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var meterValue))
+            {
+                meter = meterValue;
+            }
+
+            candidates.Add(new PrimaryDamageCodeCandidate(code, meter));
+        }
+
+        return candidates;
+    }
+
+    private static VsaFinding CopyFindingWithCode(VsaFinding source, string code)
+        => new()
+        {
+            KanalSchadencode = code,
+            Quantifizierung1 = source.Quantifizierung1,
+            Quantifizierung2 = source.Quantifizierung2,
+            SchadenlageAnfang = source.SchadenlageAnfang,
+            SchadenlageEnde = source.SchadenlageEnde,
+            LL = source.LL,
+            Raw = source.Raw,
+            MeterStart = source.MeterStart,
+            MeterEnd = source.MeterEnd,
+            MPEG = source.MPEG,
+            Timestamp = source.Timestamp,
+            FotoPath = source.FotoPath,
+            EZD = source.EZD,
+            EZS = source.EZS,
+            EZB = source.EZB
+        };
 
     private static double ParseDouble(string? s)
     {
@@ -696,6 +796,10 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         VsaFinding Finding,
         VsaClassificationResult Classification,
         bool IsUnknown);
+
+    private sealed record PrimaryDamageCodeCandidate(
+        string Code,
+        double? Meter);
 
     private sealed record LoadedTable(
         VsaClassificationTable Table,
