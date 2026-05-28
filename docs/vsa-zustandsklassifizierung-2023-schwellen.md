@@ -585,10 +585,98 @@ Verschobene Verbindung.
 | DAJ | A,B,C | - | D | mm | - | - | - | alle | - | Bereiche D,F |
 | DAJ | A,B,C | - | S | mm | - | - | - | - | alle | Bereiche B,D,F |
 
+### DAK - Feststellung der Innenauskleidung
+
+Quelle: PDF-Dateiseite 36 / gedruckte Seite 34, Anhang D, Tabelle 43:
+Feststellung der Innenauskleidung.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAK | A | - | B | % | >= 40 | >= 30 und < 40 | >= 20 und < 30 | >= 10 und < 20 | < 10 | Bereiche D,F,H |
+| DAK | A | - | B | % | >= 50 | >= 35 und < 50 | >= 20 und < 35 | >= 5 und < 20 | < 5 | Bereiche I,J |
+| DAK | B | - | D | - | - | - | - | - | alle | Bereiche D,F,I,J |
+| DAK | C | - | D | - | - | - | - | alle | - | Bereiche D,F,H |
+| DAK | C | - | D | - | - | - | alle | - | - | Bereiche I,J |
+| DAK | C | - | B | - | - | - | alle | - | - | Bereiche I,J |
+| DAK | D | A,B,C,D | B | % | - | - | - | alle | - | Bereiche I,J |
+| DAK | D | C | S | % | - | - | - | alle | - | Bereiche D,F,H,I,J |
+| DAK | E | - | S | % | - | - | - | alle | - | Bereiche D,F,H,I,J |
+| DAK | E | - | B | % | >= 40 | >= 30 und < 40 | >= 20 und < 30 | >= 10 und < 20 | < 10 | Bereiche D,F,H |
+| DAK | E | - | B | % | >= 50 | >= 35 und < 50 | >= 20 und < 35 | >= 5 und < 20 | < 5 | Bereiche I,J |
+| DAK | F | - | D | mm | - | - | - | - | alle | Bereiche D,F,H,I,J |
+| DAK | G | - | B | - | - | - | - | - | alle | Bereiche D,F,H,I,J |
+| DAK | H | - | B | - | - | - | - | - | alle | Bereiche I,J |
+| DAK | I | - | D | mm | - | - | - | alle | - | Bereiche D,F |
+| DAK | I | - | D | mm | - | - | alle | - | - | Bereiche I,J |
+| DAK | J | - | D | mm | - | - | alle | - | - | Bereiche D,F |
+| DAK | J | - | D | mm | - | alle | - | - | - | Bereiche I,J |
+| DAK | K | - | D | - | - | - | - | alle | - | Bereiche D,F |
+| DAK | K | - | D | - | - | - | alle | - | - | Bereiche I,J |
+| DAK | L | - | D | - | - | - | - | - | alle | Bereiche D,F |
+| DAK | L | - | D | - | - | - | - | alle | - | Bereiche I,J |
+| DAK | L | - | S | - | - | - | - | alle | - | Bereiche D,F,H,I,J |
+| DAK | M | - | D | - | - | - | - | - | alle | Bereiche D,F |
+| DAK | M | - | D | - | - | - | alle | - | - | Bereiche I,J |
+| DAK | N | - | D | - | - | - | - | alle | - | Bereiche D,F,I,J |
+| DAK | Z | - | D | - | - | - | - | alle | - | Bereiche D,F,I,J |
+| DAK | Z | - | S | - | - | - | - | alle | - | Bereiche D,F,I,J |
+| DAK | Z | - | B | - | - | - | - | alle | - | Bereiche D,F,I,J |
+
+### DAL - Schadhafte Reparatur
+
+Quelle: PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 44:
+Schadhafte Reparatur.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAL | A | - | D | mm | - | - | alle | - | - | Bereiche D,F |
+| DAL | A | - | D | mm | - | alle | - | - | - | Bereiche I,J |
+| DAL | B | - | D | mm | - | - | - | alle | - | Bereiche D,F,I,J |
+| DAL | C | - | D | % | - | - | - | alle | - | Bereiche D,F |
+| DAL | C | - | D | % | - | - | alle | - | - | Bereiche I,J |
+| DAL | D | - | D | - | - | - | - | - | alle | Bereiche D,F |
+| DAL | D | - | D | - | - | - | alle | - | - | Bereiche I,J |
+| DAL | E | - | B | % | >= 40 | >= 30 und < 40 | >= 20 und < 30 | >= 10 und < 20 | < 10 | Bereiche A,B,D,E,H |
+| DAL | E | - | B | % | >= 50 | >= 35 und < 50 | >= 20 und < 35 | >= 5 und < 20 | < 5 | Bereiche I,J |
+| DAL | F | - | D | mm | - | - | alle | - | - | Bereiche D,F |
+| DAL | F | - | D | mm | - | alle | - | - | - | Bereiche I,J |
+| DAL | G | - | D | mm | - | - | - | - | alle | Bereiche D,F |
+| DAL | G | - | D | mm | - | - | - | alle | - | Bereiche I,J |
+| DAL | Z | - | D | - | - | - | - | alle | - | Bereiche alle |
+| DAL | Z | - | B | - | - | - | - | alle | - | Bereiche alle |
+
+### DAM - Schadhafte Schweissnaht
+
+Quelle: PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 45:
+Schadhafte Schweissnaht.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAM | A | - | D | - | - | - | - | alle | - | Bereiche D,F |
+| DAM | A | - | D | - | - | - | alle | - | - | Bereiche I,J |
+| DAM | A | - | S | - | - | - | - | alle | - | Bereiche B,D,F |
+| DAM | B | - | D | - | - | - | - | alle | - | Bereiche D,F |
+| DAM | B | - | D | - | - | - | alle | - | - | Bereiche I,J |
+| DAM | B | - | S | - | - | - | - | - | alle | Bereiche B,D,F |
+| DAM | C | - | D | - | - | - | - | alle | - | Bereiche D,F |
+| DAM | C | - | D | - | - | - | alle | - | - | Bereiche I,J |
+| DAM | C | - | S | - | - | - | - | alle | - | Bereiche B,D,F |
+
+### DAN - Poroese Schachtwand
+
+Quelle: PDF-Dateiseite 37 / gedruckte Seite 35, Anhang D, Tabelle 46:
+Poroese Schachtwand.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAN | - | - | D | - | - | - | - | alle | - | Bereiche D,F |
+| DAN | - | - | D | - | - | - | alle | - | - | Bereiche I,J |
+| DAN | - | - | S | - | - | - | alle | - | - | Bereiche B,D,F |
+
 ## Noch offen
 
 - Anhang C ist als Draft vollstaendig dokumentiert (Tabellen 7-32).
-- Anhang D ist begonnen: Tabellen 33-42 sind visuell geprueft dokumentiert.
-- Schachttabellen aus Anhang D offen: Tabellen 43-63.
+- Anhang D ist begonnen: Tabellen 33-46 sind visuell geprueft dokumentiert.
+- Schachttabellen aus Anhang D offen: Tabellen 47-63.
 - Klaeren, aus welchen Stammdaten `biegesteif`/`biegeweich` im Programm sicher
   bestimmt wird.
