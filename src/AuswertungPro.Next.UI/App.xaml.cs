@@ -117,7 +117,7 @@ namespace AuswertungPro.Next.UI
                 MainWindow = mainWindow;
                 mainWindow.Show();
 
-                var minSplashDuration = TimeSpan.FromMilliseconds(5000);
+                var minSplashDuration = TimeSpan.FromMilliseconds(1800);
                 var elapsed = DateTime.UtcNow - splashStart;
                 if (elapsed < minSplashDuration)
                     await splash.WaitAsync(minSplashDuration - elapsed);

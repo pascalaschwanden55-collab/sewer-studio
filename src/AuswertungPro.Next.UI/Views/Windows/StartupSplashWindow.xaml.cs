@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -15,10 +14,9 @@ public partial class StartupSplashWindow : Window
 
     private static readonly string[] StatusMessages =
     [
-        "Initialisiere Anwendung...",
-        "Lade Konfiguration...",
-        "Module werden vorbereitet...",
-        "Oberflaeche wird aufgebaut...",
+        "Lade Einstellungen...",
+        "Pruefe Kataloge...",
+        "Bereite Arbeitsflaeche vor...",
         "Bereit"
     ];
 
@@ -26,7 +24,6 @@ public partial class StartupSplashWindow : Window
     {
         InitializeComponent();
 
-        // Cover entire primary screen including taskbar
         Left = 0;
         Top = 0;
         Width = SystemParameters.PrimaryScreenWidth;
@@ -34,7 +31,7 @@ public partial class StartupSplashWindow : Window
 
         _statusTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(1100)
+            Interval = TimeSpan.FromMilliseconds(450)
         };
         _statusTimer.Tick += OnStatusTick;
 
@@ -44,31 +41,29 @@ public partial class StartupSplashWindow : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        var windowFade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(350))
-        {
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-        };
-        BeginAnimation(OpacityProperty, windowFade);
+        BeginAnimation(OpacityProperty, Ease(0, 1, 180));
 
-        StartRingIntro();
-        RevealTitle(1800);
-        FadeIn(SubText, 2200, 700);
-        FadeIn(StatusText, 500, 350);
-        StartDataBlocks();
+        Shell.BeginAnimation(OpacityProperty, Ease(0, 1, 260, 80));
+        LogoMark.BeginAnimation(OpacityProperty, Ease(0, 1, 260, 170));
+        LogoScale.BeginAnimation(ScaleTransform.ScaleXProperty, Ease(0.92, 1.0, 420, 170));
+        LogoScale.BeginAnimation(ScaleTransform.ScaleYProperty, Ease(0.92, 1.0, 420, 170));
 
-        var ringPulse = new DoubleAnimation(0.65, 1.0, TimeSpan.FromMilliseconds(900))
+        TitleText.BeginAnimation(OpacityProperty, Ease(0, 1, 260, 260));
+        SubText.BeginAnimation(OpacityProperty, Ease(0, 1, 260, 360));
+        StatusText.BeginAnimation(OpacityProperty, Ease(0, 1, 220, 420));
+
+        var progress = new DoubleAnimation(-170, 780, TimeSpan.FromMilliseconds(1450))
         {
-            AutoReverse = true,
-            RepeatBehavior = RepeatBehavior.Forever
+            RepeatBehavior = RepeatBehavior.Forever,
+            EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
         };
-        GlowRing.BeginAnimation(OpacityProperty, ringPulse);
+        ProgressTranslate.BeginAnimation(TranslateTransform.XProperty, progress);
 
         _statusTimer.Start();
     }
 
     private void OnStatusTick(object? sender, EventArgs e)
     {
-        _statusIndex++;
         if (_statusIndex >= StatusMessages.Length)
         {
             _statusTimer.Stop();
@@ -76,109 +71,13 @@ public partial class StartupSplashWindow : Window
         }
 
         StatusText.Text = StatusMessages[_statusIndex];
-        if (_statusIndex == StatusMessages.Length - 1)
+        _statusIndex++;
+
+        if (_statusIndex == StatusMessages.Length)
         {
-            StatusText.Foreground = new SolidColorBrush(Color.FromRgb(102, 255, 178));
-            var brighten = new DoubleAnimation(1, TimeSpan.FromMilliseconds(250));
-            StatusText.BeginAnimation(OpacityProperty, brighten);
+            StatusText.Foreground = new SolidColorBrush(Color.FromRgb(22, 163, 74));
             _statusTimer.Stop();
         }
-    }
-
-    private void StartRingIntro()
-    {
-        var ringIn = new DoubleAnimation(0.2, 1.0, TimeSpan.FromMilliseconds(900))
-        {
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-        };
-        RingScale.BeginAnimation(ScaleTransform.ScaleXProperty, ringIn);
-        RingScale.BeginAnimation(ScaleTransform.ScaleYProperty, ringIn);
-    }
-
-    private void RevealTitle(int startMs)
-    {
-        FadeIn(TitleText, startMs, 500);
-
-        var settle = new DoubleAnimation(1.12, 1.0, TimeSpan.FromMilliseconds(600))
-        {
-            BeginTime = TimeSpan.FromMilliseconds(startMs),
-            EasingFunction = new BackEase
-            {
-                EasingMode = EasingMode.EaseOut,
-                Amplitude = 0.4
-            }
-        };
-        TitleScale.BeginAnimation(ScaleTransform.ScaleXProperty, settle);
-        TitleScale.BeginAnimation(ScaleTransform.ScaleYProperty, settle);
-
-        var glitch = new ThicknessAnimation
-        {
-            From = new Thickness(0),
-            To = new Thickness(6, 0, 0, 0),
-            Duration = TimeSpan.FromMilliseconds(40),
-            AutoReverse = true,
-            RepeatBehavior = new RepeatBehavior(6),
-            BeginTime = TimeSpan.FromMilliseconds(startMs)
-        };
-        TitleText.BeginAnimation(MarginProperty, glitch);
-    }
-
-    private void FadeIn(UIElement element, int startMs, int durMs)
-    {
-        var animation = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(durMs))
-        {
-            BeginTime = TimeSpan.FromMilliseconds(startMs),
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-        };
-        element.BeginAnimation(OpacityProperty, animation);
-    }
-
-    private void StartDataBlocks()
-    {
-        Canvas.SetLeft(B1, 220); Canvas.SetTop(B1, 180);
-        Canvas.SetLeft(B2, 260); Canvas.SetTop(B2, 250);
-        Canvas.SetLeft(B3, 180); Canvas.SetTop(B3, 320);
-        Canvas.SetLeft(B4, 300); Canvas.SetTop(B4, 120);
-
-        AnimateBlock(B1, 4000, 0);
-        AnimateBlock(B2, 3800, 200);
-        AnimateBlock(B3, 4200, 350);
-        AnimateBlock(B4, 3600, 500);
-    }
-
-    private void AnimateBlock(FrameworkElement rect, int travelMs, int delayMs)
-    {
-        var beginMs = 600 + delayMs;
-        var endMs = beginMs + travelMs;
-
-        var opacityFrames = new DoubleAnimationUsingKeyFrames
-        {
-            FillBehavior = FillBehavior.Stop
-        };
-        opacityFrames.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(0))));
-        opacityFrames.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(beginMs))));
-        opacityFrames.KeyFrames.Add(new LinearDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(beginMs + 250))));
-        opacityFrames.KeyFrames.Add(new LinearDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(endMs - 350))));
-        opacityFrames.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(endMs))));
-        rect.BeginAnimation(OpacityProperty, opacityFrames);
-
-        var x0 = Canvas.GetLeft(rect);
-        var y0 = Canvas.GetTop(rect);
-
-        var xAnimation = new DoubleAnimation(x0, x0 + 520, TimeSpan.FromMilliseconds(travelMs))
-        {
-            BeginTime = TimeSpan.FromMilliseconds(beginMs),
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut }
-        };
-
-        var yAnimation = new DoubleAnimation(y0, y0 - 40, TimeSpan.FromMilliseconds(travelMs))
-        {
-            BeginTime = TimeSpan.FromMilliseconds(beginMs),
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut }
-        };
-
-        rect.BeginAnimation(Canvas.LeftProperty, xAnimation);
-        rect.BeginAnimation(Canvas.TopProperty, yAnimation);
     }
 
     public Task WaitAsync(TimeSpan duration)
@@ -192,6 +91,7 @@ public partial class StartupSplashWindow : Window
     public Task FadeOutAndCloseAsync(TimeSpan duration)
     {
         _statusTimer.Stop();
+        ProgressTranslate.BeginAnimation(TranslateTransform.XProperty, null);
 
         var tcs = new TaskCompletionSource<object?>();
 
@@ -202,13 +102,7 @@ public partial class StartupSplashWindow : Window
             return tcs.Task;
         }
 
-        var opacityAnim = new DoubleAnimation
-        {
-            To = 0,
-            Duration = duration,
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
-        };
-
+        var opacityAnim = Ease(Opacity, 0, (int)duration.TotalMilliseconds);
         opacityAnim.Completed += (_, _) =>
         {
             Close();
@@ -218,4 +112,11 @@ public partial class StartupSplashWindow : Window
         BeginAnimation(OpacityProperty, opacityAnim);
         return tcs.Task;
     }
+
+    private static DoubleAnimation Ease(double from, double to, int durationMs, int delayMs = 0)
+        => new(from, to, TimeSpan.FromMilliseconds(durationMs))
+        {
+            BeginTime = TimeSpan.FromMilliseconds(delayMs),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
 }
