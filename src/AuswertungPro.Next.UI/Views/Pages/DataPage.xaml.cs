@@ -1169,39 +1169,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     }
 
     private List<RecordDetailGroup> BuildHaltungRecordDetails(HaltungRecord record)
-    {
-        var groups = new List<RecordDetailGroup>();
-        var added = new HashSet<string>(StringComparer.Ordinal);
-        var buckets = new Dictionary<string, List<RecordDetailItem>>(StringComparer.Ordinal)
-        {
-            ["Stammdaten"] = new(),
-            ["Zustand & Inspektion"] = new(),
-            ["Sanierung & Kosten"] = new(),
-            ["Dokumente & Medien"] = new(),
-            ["Weitere Angaben"] = new()
-        };
-
-        foreach (var column in FieldCatalog.ColumnOrder.Where(x => added.Add(x)))
-        {
-            var groupName = ResolveHaltungDetailGroup(column);
-            buckets[groupName].Add(CreateHaltungDetailItem(column, record));
-        }
-
-        foreach (var extraField in record.Fields.Keys
-                     .Where(x => !added.Contains(x))
-                     .OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
-        {
-            buckets["Weitere Angaben"].Add(CreateHaltungDetailItem(extraField, record));
-        }
-
-        AddHaltungGroup(groups, buckets, "Stammdaten", "Identifikation und Lage der Haltung.");
-        AddHaltungGroup(groups, buckets, "Zustand & Inspektion", "Bewertung, Schaeden und Pruefresultate.");
-        AddHaltungGroup(groups, buckets, "Sanierung & Kosten", "Massnahmen, Kosten und Mengenangaben.");
-        AddHaltungGroup(groups, buckets, "Dokumente & Medien", "Verknuepfte Dateien, PDFs und Links.");
-        AddHaltungGroup(groups, buckets, "Weitere Angaben", "Felder ohne klare Zuordnung.");
-
-        return groups;
-    }
+        => DataPageRecordDetailsBuilder.Build(record, fieldName => CreateHaltungDetailItem(fieldName, record));
 
     private RecordDetailItem CreateHaltungDetailItem(string fieldName, HaltungRecord record)
     {
@@ -1286,47 +1254,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
             vm.EnsureOptionForField(fieldName, next);
             vm.ScheduleAutoSave();
         }
-    }
-
-    private static void AddHaltungGroup(
-        ICollection<RecordDetailGroup> groups,
-        IReadOnlyDictionary<string, List<RecordDetailItem>> buckets,
-        string title,
-        string description)
-    {
-        if (!buckets.TryGetValue(title, out var items) || items.Count == 0)
-            return;
-
-        groups.Add(new RecordDetailGroup(title, description, items));
-    }
-
-    private static string ResolveHaltungDetailGroup(string fieldName)
-    {
-        return fieldName switch
-        {
-            "NR" or "Haltungsname" or "Strasse" or "DN_mm" or "Rohrmaterial"
-                or "Nutzungsart" or "Haltungslaenge_m" or "Inspektionsrichtung"
-                or "Eigentuemer" or "FunktionHierarchisch"
-                => "Stammdaten",
-
-            "Zustandsklasse" or "VSA_Zustandsnote_D" or "VSA_Zustandsnote_S"
-                or "VSA_Zustandsnote_B" or "Primaere_Schaeden" or "Pruefungsresultat"
-                or "Referenzpruefung" or "Datum_Jahr" or "Ausgefuehrt_durch"
-                or "Gewaesserschutz" or "Grundwasserspiegel"
-                => "Zustand & Inspektion",
-
-            "Sanieren_JaNein" or "Empfohlene_Sanierungsmassnahmen" or "Kosten"
-                or "Renovierung_Inliner_Stk" or "Renovierung_Inliner_m"
-                or "Anschluesse_verpressen" or "Reparatur_Manschette"
-                or "Linerendmanschette_LEM"
-                or "Reparatur_Kurzliner" or "Erneuerung_Neubau_m"
-                or "Offen_abgeschlossen"
-                => "Sanierung & Kosten",
-
-            "Link" => "Dokumente & Medien",
-
-            _ => "Weitere Angaben"
-        };
     }
 
     private static readonly SolidColorBrush TrainedRowBrush = new(Color.FromArgb(60, 220, 40, 40));
