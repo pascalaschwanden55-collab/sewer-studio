@@ -1,8 +1,9 @@
 # ADR-007 C.0: VSA-Regelmodell v2 fuer Zustandsklassifizierung
 
-**Status:** Proposed  
-**Datum:** 2026-05-28  
-**Bezug:** `docs/ADR-007-vsa-zustandsklassifizierung-und-anwendungsregeln.md`  
+**Status:** Accepted
+**Datum:** 2026-05-28
+**Bezug:** `docs/ADR-007-vsa-zustandsklassifizierung-und-anwendungsregeln.md`
+**Accepted:** 2026-05-28
 **Quelle:** `docs/vsa-zustandsklassifizierung-2023-schwellen.md`
 
 ---
@@ -366,20 +367,21 @@ Loader, Materialresolver und Selektor implementieren. Tests rein gegen V2.
 ### Phase D.1
 
 V2 im Shadow-Modus neben Legacy ausfuehren. Drift sichtbar protokollieren,
-aber noch nicht produktiv blockieren.
+bis zur fachlichen Freigabe nicht produktiv blockieren. Erledigt vor D.2.
 
 ### Phase D.2
 
-`VsaEvaluationService` auf V2 umstellen. Legacy-JSON wird nicht mehr geladen.
+Erledigt 2026-05-28: `VsaEvaluationService` nutzt V2 produktiv. Legacy-JSON
+wird nur noch geladen, wenn `VsaUseV2Engine=false` als Rollback gesetzt ist.
 
 ### Phase E
 
-ADR-007 auf `Accepted` setzen. Legacy-Dateien entweder entfernen oder klar als
-`legacy-do-not-use` markieren.
+ADR-007 ist `Accepted`. Legacy-Dateien bleiben fuer Rollback/Shadow vorhanden,
+sind aber nicht mehr produktive Quelle.
 
 ---
 
-## Offene Entscheidungen vor produktiver Umstellung
+## Offene Restpunkte nach produktiver Umstellung
 
 1. **DBH:** In der PDF-Tabelle ist die Anforderung nicht sauber lesbar. Nicht
    raten. `needs-review`, bis fachlich bestaetigt.

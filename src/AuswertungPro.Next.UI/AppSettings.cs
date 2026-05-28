@@ -77,6 +77,9 @@ public sealed class AppSettings
     // Null bedeutet Default an.
     public bool? VsaClassificationShadowEnabled { get; set; }
 
+    // VSA Zustandklassifizierung v2 produktiv nutzen. Null bedeutet Default an.
+    public bool? VsaUseV2Engine { get; set; }
+
     // Multi-Model Pipeline Thresholds (overrides env vars if set)
     public bool? PipelineMultiModelEnabled { get; set; }
     public string? PipelineSidecarUrl { get; set; }

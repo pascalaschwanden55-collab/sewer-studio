@@ -181,6 +181,7 @@ namespace AuswertungPro.Next.UI
                 channelsTable,
                 manholesTable,
                 shadowModeEnabled: settings.VsaClassificationShadowEnabled ?? true,
+                useV2Engine: settings.VsaUseV2Engine ?? true,
                 v2ChannelsTablePath: v2ChannelsTable,
                 v2ManholesTablePath: v2ManholesTable);
 

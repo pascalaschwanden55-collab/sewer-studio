@@ -1,7 +1,8 @@
 # ADR-007: VSA-Zustandsklassifizierung und Anwendungsregeln
 
-**Status:** Proposed  
-**Datum:** 2026-05-27  
+**Status:** Accepted
+**Datum:** 2026-05-27
+**Accepted:** 2026-05-28
 **Baut auf:** ADR-006 VSA-KEK-Code-Single-Source-of-Truth
 
 ## Quelle
@@ -24,6 +25,10 @@ Ordner ist fuer spaetere Gegenpruefungen bekannt, aber nicht Quelle dieser ADR.
 
 ADR-006 hat die VSA-KEK-Code-Wahrheit stabilisiert: Code-Bedeutungen kommen aus
 dem Manifest. Das reicht fuer die Zustandsbeurteilung nicht aus.
+
+Stand 2026-05-28: ADR-007 ist umgesetzt. `VsaEvaluationService` nutzt produktiv
+die v2-Regeldateien aus der VSA-Richtlinie 2023. Legacy bleibt nur als
+Rollback-Pfad ueber `VsaUseV2Engine=false` erhalten.
 
 Die Richtlinie enthaelt eigene Klassifizierungstabellen. Diese bestimmen pro
 Code, Charakterisierung, Anforderung und Quantifizierung den Einzelzustand fuer:
@@ -188,19 +193,23 @@ Ziel: Neue Regeldateien parallel zu Legacy-JSON.
 
 Ziel: `VsaEvaluationService` nutzt die neue strukturierte Regelengine.
 
-- Tests fuer Kerncodes aus der PDF.
-- Alte falsche `BAA`-als-Riss-Tests entfernen.
-- Fallbacks nur explizit.
-- Diagnostics fuer fehlende oder nicht belegte Regeln.
+- Erledigt 2026-05-28.
+- Tests fuer Kerncodes aus der PDF sind aktiv.
+- Alte falsche `BAA`-als-Riss-Tests wurden ersetzt.
+- Fallbacks sind explizit: v2 produktiv, Legacy per `VsaUseV2Engine=false`.
+- Diagnostics fuer fehlende oder nicht belegte Regeln bleiben im Shadow- und
+  Report-Tool nachvollziehbar.
 
 ### Phase E: Alles gruen und Legacy klar markieren
 
 Ziel: Reviewfaehiger Abschluss.
 
-- Alle Tests gruen.
-- Legacy-Dateien entfernen oder klar als nicht-produktive Approximation
-  markieren.
-- ADR-007 Status von `Proposed` auf `Accepted` stellen.
+- Erledigt 2026-05-28.
+- Shadow-Cutover fachlich freigegeben: bekannte Nicht-Bewertungen und
+  freigegebene Norm-Korrekturen blockieren nicht mehr.
+- Legacy-Dateien bleiben fuer Rollback/Shadow erhalten, sind aber nicht mehr
+  produktive Quelle.
+- ADR-007 Status ist `Accepted`.
 
 ## Aufwand
 
@@ -221,7 +230,8 @@ Grobe Schaetzung: 9-10 Stunden.
   bleiben getrennte Wahrheiten.
 - Kein Manifest-Change fuer Code-Bedeutungen.
 - Kein Trainingsdaten-Relabeling.
-- Keine PR-Freigabe der Zustandsbeurteilung, solange dieser Drift offen ist.
+- Keine automatische Umschreibung historischer Bewertungen; neue Bewertungen
+  laufen ueber die v2-Regelengine.
 
 ## Offene Fragen
 

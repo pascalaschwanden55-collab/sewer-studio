@@ -37,6 +37,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
     private readonly string _manholesTablePath;
     private readonly bool _shadowModeEnabled;
     private readonly string? _shadowLogPath;
+    private readonly bool _useV2Engine;
     private readonly string _v2ChannelsTablePath;
     private readonly string _v2ManholesTablePath;
 
@@ -45,6 +46,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         string manholesTablePath,
         bool shadowModeEnabled = true,
         string? shadowLogPath = null,
+        bool useV2Engine = true,
         string? v2ChannelsTablePath = null,
         string? v2ManholesTablePath = null)
     {
@@ -52,6 +54,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         _manholesTablePath = manholesTablePath;
         _shadowModeEnabled = shadowModeEnabled;
         _shadowLogPath = shadowLogPath;
+        _useV2Engine = useV2Engine;
         _v2ChannelsTablePath = v2ChannelsTablePath
             ?? Path.Combine(Path.GetDirectoryName(channelsTablePath) ?? "", "vsa_zustandsklassifizierung_2023_channels.json");
         _v2ManholesTablePath = v2ManholesTablePath
@@ -62,6 +65,9 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
     {
         if (project is null)
             return Result<IReadOnlyList<VsaConditionResult>>.Fail("VSA_PROJECT_NULL", "Project is null.");
+
+        if (_useV2Engine)
+            return EvaluateWithV2(project);
 
         var tableResult = LoadClassificationTable();
         if (!tableResult.Ok || tableResult.Value is null)
@@ -102,6 +108,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
         project.Metadata["VSA_Diag"] =
             $"Records={project.Data.Count}; UnknownCodes={unknownCodeCount}; Table={tableResult.Value.SourceName}";
+        project.Metadata["VSA_Table"] = tableResult.Value.SourceName;
 
         return Result<IReadOnlyList<VsaConditionResult>>.Success(results);
     }
@@ -110,6 +117,9 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
     {
         if (record is null)
             return Result<bool>.Fail("VSA_RECORD_NULL", "Record is null.");
+
+        if (_useV2Engine)
+            return EvaluateRecordWithV2(record);
 
         var tableResult = LoadClassificationTable();
         if (!tableResult.Ok || tableResult.Value is null)
@@ -125,6 +135,71 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         var findings = ResolveFindings(record, knownCodes);
         var classified = ClassifyFindings(findings, table, out _);
         WriteShadowDiffs(record, classified, TryLoadShadowSelector());
+
+        var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+        const double minLength = 3.0;
+        var rb = ComputeRandbedingungen(record);
+
+        var d = ComputeForRequirement(VsaRequirement.Dichtheit, classified, assessmentLength, minLength, rb);
+        var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
+        var b = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
+
+        ApplyRecordFields(record, d, s, b);
+
+        return Result<bool>.Success(true);
+    }
+
+    private Result<IReadOnlyList<VsaConditionResult>> EvaluateWithV2(Project project)
+    {
+        var modelResult = LoadV2ClassificationModel();
+        if (!modelResult.Ok || modelResult.Value is null)
+            return Result<IReadOnlyList<VsaConditionResult>>.Fail(
+                modelResult.ErrorCode ?? "VSA_V2_TABLE_LOAD_FAILED",
+                modelResult.ErrorMessage ?? "VSA-v2 classification model could not be loaded.");
+
+        var model = modelResult.Value;
+        var results = new List<VsaConditionResult>(project.Data.Count * 3);
+        var unknownCodeCount = 0;
+
+        foreach (var record in project.Data)
+        {
+            var findings = ResolveFindings(record, model.KnownCodes);
+            var classified = ClassifyFindingsV2(findings, model.Selector, record, model.KnownCodes, out var unknownForRecord);
+            unknownCodeCount += unknownForRecord;
+
+            var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+            const double minLength = 3.0;
+            var rb = ComputeRandbedingungen(record);
+
+            var d = ComputeForRequirement(VsaRequirement.Dichtheit, classified, assessmentLength, minLength, rb);
+            var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
+            var b = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
+
+            ApplyRecordFields(record, d, s, b);
+
+            results.Add(d);
+            results.Add(s);
+            results.Add(b);
+        }
+
+        project.Metadata["VSA_Diag"] =
+            $"Records={project.Data.Count}; UnknownCodes={unknownCodeCount}; Table={model.SourceName}";
+        project.Metadata["VSA_Table"] = model.SourceName;
+
+        return Result<IReadOnlyList<VsaConditionResult>>.Success(results);
+    }
+
+    private Result<bool> EvaluateRecordWithV2(HaltungRecord record)
+    {
+        var modelResult = LoadV2ClassificationModel();
+        if (!modelResult.Ok || modelResult.Value is null)
+            return Result<bool>.Fail(
+                modelResult.ErrorCode ?? "VSA_V2_TABLE_LOAD_FAILED",
+                modelResult.ErrorMessage ?? "VSA-v2 classification model could not be loaded.");
+
+        var model = modelResult.Value;
+        var findings = ResolveFindings(record, model.KnownCodes);
+        var classified = ClassifyFindingsV2(findings, model.Selector, record, model.KnownCodes, out _);
 
         var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
         const double minLength = 3.0;
@@ -243,6 +318,9 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         if (record is null)
             return Result<string>.Fail("VSA_RECORD_NULL", "Record is null.");
 
+        if (_useV2Engine)
+            return ExplainWithV2(project, record);
+
         var tableResult = LoadClassificationTable();
         if (!tableResult.Ok || tableResult.Value is null)
             return Result<string>.Fail(
@@ -310,7 +388,73 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         return Result<string>.Success(sb.ToString());
     }
 
-    // ── Tabelle laden ────────────────────────────────────────────────────
+    // -- Erklaerung v2 --
+
+    private Result<string> ExplainWithV2(Project project, HaltungRecord record)
+    {
+        var modelResult = LoadV2ClassificationModel();
+        if (!modelResult.Ok || modelResult.Value is null)
+            return Result<string>.Fail(
+                modelResult.ErrorCode ?? "VSA_V2_TABLE_LOAD_FAILED",
+                modelResult.ErrorMessage ?? "VSA-v2 classification model could not be loaded.");
+
+        var model = modelResult.Value;
+        var findings = ResolveFindings(record, model.KnownCodes);
+        var classified = ClassifyFindingsV2(findings, model.Selector, record, model.KnownCodes, out var unknownForRecord);
+
+        var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+        const double minLength = 3.0;
+        var rb = ComputeRandbedingungen(record);
+
+        var d = ComputeForRequirement(VsaRequirement.Dichtheit, classified, assessmentLength, minLength, rb);
+        var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
+        var bResult = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("VSA Zustandsbeurteilung - Rechnungsweg (VSA Richtlinie 2023)");
+        sb.AppendLine($"Haltung: {SafeField(record.GetFieldValue("Haltungsname"))}");
+        sb.AppendLine($"Klassifikationstabelle: {model.SourceName}");
+        sb.AppendLine($"Haltungslaenge: {assessmentLength:F1} m");
+        sb.AppendLine($"Anzahl Feststellungen: {findings.Count}");
+        sb.AppendLine($"Unbekannte Codes: {unknownForRecord}");
+        sb.AppendLine($"Randbedingungen: B1xB2xB3xB4 = {rb:F4}");
+        sb.AppendLine();
+
+        AppendRequirementSection(sb, d);
+        AppendRequirementSection(sb, s);
+        AppendRequirementSection(sb, bResult);
+
+        var allZn = new[] { d.Zustandsnote, s.Zustandsnote, bResult.Zustandsnote }
+            .Where(v => v is not null).Select(v => v!.Value).ToList();
+        if (allZn.Count > 0)
+        {
+            var worstZn = allZn.Min();
+            var allDz = new[] { d.Dringlichkeitszahl, s.Dringlichkeitszahl, bResult.Dringlichkeitszahl }
+                .Where(v => v is not null).Select(v => v!.Value).ToList();
+            var worstDz = allDz.Count > 0 ? (double?)allDz.Min() : null;
+            sb.AppendLine();
+            sb.AppendLine($"Gesamt-Zustandsnote (min D/S/B): {FmtNote(worstZn)}");
+            sb.AppendLine($"Gesamt-Dringlichkeitszahl: {FmtNote(worstDz)}");
+            sb.AppendLine($"Dringlichkeit: {MapDringlichkeit(worstDz)}");
+        }
+
+        if (classified.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("Codes:");
+            foreach (var item in classified)
+            {
+                var code = NormalizeCode(item.Finding.KanalSchadencode);
+                var marker = item.IsUnknown ? " (unbekannt)" : string.Empty;
+                sb.AppendLine(
+                    $"- {code}: D={FmtEz(item.Classification.EZD)}, S={FmtEz(item.Classification.EZS)}, B={FmtEz(item.Classification.EZB)}{marker}");
+            }
+        }
+
+        return Result<string>.Success(sb.ToString());
+    }
+
+    // -- Tabelle laden --
 
     private Result<LoadedTable> LoadClassificationTable()
     {
@@ -336,7 +480,58 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             $"Classification table not found. Expected '{_channelsTablePath}' or '{_manholesTablePath}'.");
     }
 
-    // ── Feststellungen auflösen / klassifizieren ─────────────────────────
+    private Result<LoadedV2Model> LoadV2ClassificationModel()
+    {
+        if (!File.Exists(_v2ChannelsTablePath) || !File.Exists(_v2ManholesTablePath))
+        {
+            return Result<LoadedV2Model>.Fail(
+                "VSA_V2_TABLE_MISSING",
+                $"VSA-v2 classification tables not found. Expected '{_v2ChannelsTablePath}' and '{_v2ManholesTablePath}'.");
+        }
+
+        try
+        {
+            var channels = VsaClassificationRuleSet.LoadFromFile(_v2ChannelsTablePath);
+            var manholes = VsaClassificationRuleSet.LoadFromFile(_v2ManholesTablePath);
+            var selector = new VsaClassificationRuleSelector(channels, manholes);
+            var knownCodes = BuildKnownV2Codes(channels, manholes);
+            return Result<LoadedV2Model>.Success(new LoadedV2Model(
+                selector,
+                knownCodes,
+                Path.GetFileName(_v2ChannelsTablePath)));
+        }
+        catch (Exception ex)
+        {
+            return Result<LoadedV2Model>.Fail(
+                "VSA_V2_TABLE_PARSE_FAILED",
+                $"Cannot read VSA-v2 classification tables: {ex.Message}");
+        }
+    }
+
+    private static HashSet<string> BuildKnownV2Codes(params VsaClassificationRuleSet[] ruleSets)
+    {
+        var knownCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var ruleSet in ruleSets)
+        {
+            foreach (var rule in ruleSet.Rules)
+                AddKnownCode(knownCodes, rule.Code);
+            foreach (var item in ruleSet.NonAssessableCodes)
+                AddKnownCode(knownCodes, item.Code);
+            foreach (var item in ruleSet.NonAssessableRequirements)
+                AddKnownCode(knownCodes, item.Code);
+        }
+
+        return knownCodes;
+    }
+
+    private static void AddKnownCode(HashSet<string> knownCodes, string? code)
+    {
+        var normalized = NormalizeCode(code);
+        if (normalized.Length > 0)
+            knownCodes.Add(normalized);
+    }
+
+    // -- Feststellungen aufloesen / klassifizieren --
 
     internal static List<VsaFinding> ResolveFindings(HaltungRecord record, IReadOnlySet<string> knownCodes)
     {
@@ -384,10 +579,57 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
     // ── Kernberechnung: Zustandsnote + Dringlichkeitszahl ────────────────
 
+    private static List<ClassifiedFinding> ClassifyFindingsV2(
+        IEnumerable<VsaFinding> findings,
+        VsaClassificationRuleSelector selector,
+        HaltungRecord record,
+        IReadOnlySet<string> knownCodes,
+        out int unknownCodeCount)
+    {
+        var list = new List<ClassifiedFinding>();
+        unknownCodeCount = 0;
+
+        foreach (var finding in findings)
+        {
+            var code = NormalizeCode(finding.KanalSchadencode);
+            if (code.Length == 0)
+                continue;
+
+            var baseCode = code.Length >= 3 ? code[..3] : code;
+            var ch1 = code.Length >= 4 ? code.Substring(3, 1) : null;
+            var ch2 = code.Length >= 5 ? code.Substring(4, 1) : null;
+            var outcome = selector.Classify(new VsaClassificationRequest(
+                Code: baseCode,
+                Ch1: ch1,
+                Ch2: ch2,
+                Q1: finding.Quantifizierung1,
+                Q2: finding.Quantifizierung2,
+                Material: record.GetFieldValue("Rohrmaterial"),
+                AssetKind: baseCode.StartsWith('D') ? "manhole" : "channel"));
+
+            var classification = new VsaClassificationResult(
+                outcome.D?.Ez,
+                outcome.S?.Ez,
+                outcome.B?.Ez);
+
+            var isKnown = knownCodes.Contains(code) || knownCodes.Contains(baseCode);
+            var isUnknown = !isKnown
+                            && classification.EZD is null
+                            && classification.EZS is null
+                            && classification.EZB is null;
+            if (isUnknown)
+                unknownCodeCount++;
+
+            list.Add(new ClassifiedFinding(finding, classification, isUnknown));
+        }
+
+        return list;
+    }
+
     /// <summary>
-    /// Berechnet ZN und DZ für eine Anforderung gemäss VSA Richtlinie 2023.
+    /// Berechnet ZN und DZ fuer eine Anforderung gemaess VSA Richtlinie 2023.
     /// ZN = EZ_min + 0.4 - A  (Kap. 5.2, Formel 1)
-    /// DZ = ZN × 100 × B1 × B2 × B3 × B4  (Kap. 5.3, Formel 2)
+    /// DZ = ZN x 100 x B1 x B2 x B3 x B4  (Kap. 5.3, Formel 2)
     /// </summary>
     private static VsaConditionResult ComputeForRequirement(
         VsaRequirement requirement,
@@ -434,6 +676,20 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
                 return na;
             }
 
+            if (skippedCodes.Count > 0)
+            {
+                var na = new VsaConditionResult
+                {
+                    Requirement = requirement,
+                    Zustandsnote = null,
+                    WorstEinzelzustand = null,
+                    Abminderung = null,
+                    Dringlichkeitszahl = null
+                };
+                na.Notes.Add($"Keine bewertbaren EZ fuer diese Anforderung (Codes ohne EZ: {string.Join(", ", skippedCodes)}).");
+                return na;
+            }
+
             var dzOk = Math.Round(4.0 * 100.0 * randbedingungen, 2, MidpointRounding.AwayFromZero);
             var ok = new VsaConditionResult
             {
@@ -444,8 +700,6 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
                 Dringlichkeitszahl = dzOk
             };
             var hint = "Keine Schadenscodes vorhanden – Leitung i.O.";
-            if (skippedCodes.Count > 0)
-                hint += $" (Codes ohne EZ: {string.Join(", ", skippedCodes)})";
             ok.Notes.Add(hint);
             return ok;
         }
@@ -870,5 +1124,10 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
     private sealed record LoadedTable(
         VsaClassificationTable Table,
+        string SourceName);
+
+    private sealed record LoadedV2Model(
+        VsaClassificationRuleSelector Selector,
+        IReadOnlySet<string> KnownCodes,
         string SourceName);
 }

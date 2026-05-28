@@ -18,6 +18,14 @@ public sealed class VsaEvaluationServiceTests
         return new VsaEvaluationService(channelsTable, manholesTable);
     }
 
+    private static VsaEvaluationService CreateLegacyService()
+    {
+        var root = TestPaths.FindSolutionRoot();
+        var channelsTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_channels.json");
+        var manholesTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_manholes.json");
+        return new VsaEvaluationService(channelsTable, manholesTable, useV2Engine: false);
+    }
+
     [Fact]
     public void ResolveFindings_EnrichesBaseCodeWithFullCodeFromPrimaryDamages()
     {
@@ -94,7 +102,7 @@ public sealed class VsaEvaluationServiceTests
 
         rec.VsaFindings = new List<VsaFinding>
         {
-            new() { KanalSchadencode = "BAF", LL = 3.0 }
+            new() { KanalSchadencode = "BAFAA", LL = 3.0 }
         };
 
         project.Data.Add(rec);
@@ -103,10 +111,9 @@ public sealed class VsaEvaluationServiceTests
         var res = svc.Evaluate(project);
         Assert.True(res.Ok, res.ErrorMessage);
 
-        // With at least one classified finding, notes must be numeric (not n/a)
-        Assert.NotEqual("n/a", rec.GetFieldValue("VSA_Zustandsnote_D"));
-        Assert.NotEqual("n/a", rec.GetFieldValue("VSA_Zustandsnote_S"));
-        Assert.NotEqual("n/a", rec.GetFieldValue("VSA_Zustandsnote_B"));
+        Assert.Equal("4.00", rec.GetFieldValue("VSA_Zustandsnote_S"));
+        Assert.Equal("4.00", rec.GetFieldValue("VSA_Zustandsnote_B"));
+        Assert.Equal("vsa_zustandsklassifizierung_2023_channels.json", project.Metadata["VSA_Table"]);
 
         // Zustandsklasse should be set (0..4 or n/a)
         Assert.False(string.IsNullOrWhiteSpace(rec.GetFieldValue("Zustandsklasse")));
@@ -155,7 +162,7 @@ public sealed class VsaEvaluationServiceTests
         rec.SetFieldValue("Haltungslaenge_m", "10", FieldSource.Xtf, userEdited: false);
 
         // No structured findings, but textual primary damage codes exist.
-        rec.SetFieldValue("Primaere_Schaeden", "BAF @12.3m (foo)", FieldSource.Xtf, userEdited: false);
+        rec.SetFieldValue("Primaere_Schaeden", "BAF.A.A @12.3m (foo)", FieldSource.Xtf, userEdited: false);
 
         project.Data.Add(rec);
 
@@ -163,7 +170,6 @@ public sealed class VsaEvaluationServiceTests
         var res = svc.Evaluate(project);
         Assert.True(res.Ok, res.ErrorMessage);
 
-        Assert.NotEqual("n/a", rec.GetFieldValue("VSA_Zustandsnote_D"));
         Assert.NotEqual("n/a", rec.GetFieldValue("VSA_Zustandsnote_S"));
         Assert.NotEqual("n/a", rec.GetFieldValue("VSA_Zustandsnote_B"));
         Assert.False(string.IsNullOrWhiteSpace(rec.GetFieldValue("Zustandsklasse")));
@@ -172,13 +178,37 @@ public sealed class VsaEvaluationServiceTests
     // ── Quantifizierungs-Tests ──────────────────────────────────────────
 
     [Fact]
-    public void Evaluate_UsesQuantRules_WhenQ1Provided()
+    public void Evaluate_UsesV2RulesByDefault_WhenQ1Provided()
     {
-        // BAA mit Q1=0.5mm (Rissbreite < 1mm) → EZS=3, EZB=3 (gemäss quantRules)
-        // Ohne Q1 wäre der statische Default: EZS=2, EZB=2
+        // BAA ist Verformung; BAAA mit Q1=0.5% am biegesteifen Rohr ergibt S=EZ 4.
         var project = new Project();
         var rec = new HaltungRecord();
         rec.SetFieldValue("Haltungsname", "H4_quant", FieldSource.Xtf, userEdited: false);
+        rec.SetFieldValue("Haltungslaenge_m", "10", FieldSource.Xtf, userEdited: false);
+        rec.SetFieldValue("Rohrmaterial", "Beton", FieldSource.Xtf, userEdited: false);
+
+        rec.VsaFindings = new List<VsaFinding>
+        {
+            new() { KanalSchadencode = "BAAA", Quantifizierung1 = "0.5", LL = 3.0 }
+        };
+
+        project.Data.Add(rec);
+
+        var svc = CreateService();
+        var res = svc.Evaluate(project);
+        Assert.True(res.Ok, res.ErrorMessage);
+
+        Assert.Equal("4.00", rec.GetFieldValue("VSA_Zustandsnote_S"));
+        Assert.Equal("vsa_zustandsklassifizierung_2023_channels.json", project.Metadata["VSA_Table"]);
+
+    }
+
+    [Fact]
+    public void Evaluate_CanUseLegacyEngine_WhenV2FlagDisabled()
+    {
+        var project = new Project();
+        var rec = new HaltungRecord();
+        rec.SetFieldValue("Haltungsname", "H4_legacy", FieldSource.Xtf, userEdited: false);
         rec.SetFieldValue("Haltungslaenge_m", "10", FieldSource.Xtf, userEdited: false);
 
         rec.VsaFindings = new List<VsaFinding>
@@ -188,27 +218,17 @@ public sealed class VsaEvaluationServiceTests
 
         project.Data.Add(rec);
 
-        var svc = CreateService();
+        var svc = CreateLegacyService();
         var res = svc.Evaluate(project);
         Assert.True(res.Ok, res.ErrorMessage);
 
-        // Quantifizierte BAA-Bewertung muss erfolgen (nicht n/a)
-        Assert.NotEqual("n/a", rec.GetFieldValue("VSA_Zustandsnote_S"));
-        Assert.NotEqual("n/a", rec.GetFieldValue("VSA_Zustandsnote_B"));
-
-        // Die ZN sollte höher sein bei kleinem Riss (EZ=3 statt Default EZ=2)
-        var znS = rec.GetFieldValue("VSA_Zustandsnote_S");
-        Assert.True(double.TryParse(znS?.Replace(',', '.'),
-            System.Globalization.NumberStyles.Float,
-            System.Globalization.CultureInfo.InvariantCulture, out var znSVal));
-        // EZ=3 + 0.4 = 3.4 (Startwert vor Abminderung) → ZN muss > 2.4 sein
-        Assert.True(znSVal > 2.4, $"ZN_S mit Q1=0.5mm (EZ=3) sollte > 2.4 sein, ist aber {znSVal}");
+        Assert.Equal("3.28", rec.GetFieldValue("VSA_Zustandsnote_S"));
+        Assert.Equal("classification_channels.json", project.Metadata["VSA_Table"]);
     }
 
     [Fact]
-    public void Evaluate_FallsBackToStatic_WhenQ1Null()
+    public void Evaluate_V2ReturnsNa_WhenRequiredCharacterizationMissing()
     {
-        // BAA ohne Q1 → statische Defaults: EZS=2, EZB=2
         var project = new Project();
         var recWithQ1 = new HaltungRecord();
         recWithQ1.SetFieldValue("Haltungsname", "H5_noQ1", FieldSource.Xtf, userEdited: false);
@@ -225,30 +245,25 @@ public sealed class VsaEvaluationServiceTests
         var res = svc.Evaluate(project);
         Assert.True(res.Ok, res.ErrorMessage);
 
-        // Muss trotzdem klassifiziert werden (nicht n/a)
-        Assert.NotEqual("n/a", recWithQ1.GetFieldValue("VSA_Zustandsnote_S"));
-        Assert.NotEqual("n/a", recWithQ1.GetFieldValue("VSA_Zustandsnote_B"));
+        Assert.Equal("n/a", recWithQ1.GetFieldValue("VSA_Zustandsnote_S"));
+        Assert.Equal("n/a", recWithQ1.GetFieldValue("VSA_Zustandsnote_B"));
+        Assert.Equal("n/a", recWithQ1.GetFieldValue("Zustandsklasse"));
 
         // EZ=2 (Default) + 0.4 = 2.4 → ZN muss <= 2.4 sein
-        var znS = recWithQ1.GetFieldValue("VSA_Zustandsnote_S");
-        Assert.True(double.TryParse(znS?.Replace(',', '.'),
-            System.Globalization.NumberStyles.Float,
-            System.Globalization.CultureInfo.InvariantCulture, out var znSVal));
-        Assert.True(znSVal <= 2.5, $"ZN_S ohne Q1 (Default EZ=2) sollte <= 2.5 sein, ist aber {znSVal}");
     }
 
     [Fact]
     public void Evaluate_UsesQuantRules_LargeQ1GivesWorseEZ()
     {
-        // BAA mit Q1=10mm (Rissbreite > 5mm) → EZS=1, EZB=1 (schlechter Zustand)
         var project = new Project();
         var rec = new HaltungRecord();
         rec.SetFieldValue("Haltungsname", "H6_largeQ1", FieldSource.Xtf, userEdited: false);
         rec.SetFieldValue("Haltungslaenge_m", "10", FieldSource.Xtf, userEdited: false);
+        rec.SetFieldValue("Rohrmaterial", "Beton", FieldSource.Xtf, userEdited: false);
 
         rec.VsaFindings = new List<VsaFinding>
         {
-            new() { KanalSchadencode = "BAA", Quantifizierung1 = "10", LL = 3.0 }
+            new() { KanalSchadencode = "BAAA", Quantifizierung1 = "10", LL = 3.0 }
         };
 
         project.Data.Add(rec);
@@ -257,16 +272,15 @@ public sealed class VsaEvaluationServiceTests
         var res = svc.Evaluate(project);
         Assert.True(res.Ok, res.ErrorMessage);
 
-        // Grosser Riss → schlechtere ZN (EZ=1 + 0.4 = 1.4 Startwert)
         var znS = rec.GetFieldValue("VSA_Zustandsnote_S");
         Assert.True(double.TryParse(znS?.Replace(',', '.'),
             System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var znSVal));
-        Assert.True(znSVal < 2.0, $"ZN_S mit Q1=10mm (EZ=1) sollte < 2.0 sein, ist aber {znSVal}");
+        Assert.True(znSVal < 1.0, $"ZN_S mit Q1=10% (EZ=0) sollte < 1.0 sein, ist aber {znSVal}");
     }
 
     [Fact]
-    public void Evaluate_ClassifiesNewBCACodes()
+    public void Evaluate_V2LeavesBcaObservationWithoutStateGrade()
     {
         // BCA (Anschluss) – neu hinzugefügter Code muss klassifiziert werden
         var project = new Project();
@@ -285,9 +299,31 @@ public sealed class VsaEvaluationServiceTests
         var res = svc.Evaluate(project);
         Assert.True(res.Ok, res.ErrorMessage);
 
-        // BCA hat EZD=2, EZB=2 → darf nicht n/a sein
-        Assert.NotEqual("n/a", rec.GetFieldValue("VSA_Zustandsnote_D"));
-        Assert.NotEqual("n/a", rec.GetFieldValue("VSA_Zustandsnote_B"));
+        Assert.Equal("n/a", rec.GetFieldValue("VSA_Zustandsnote_D"));
+        Assert.Equal("n/a", rec.GetFieldValue("VSA_Zustandsnote_B"));
+        Assert.Equal("n/a", rec.GetFieldValue("Zustandsklasse"));
+    }
+
+    [Fact]
+    public void Explain_UsesV2TableByDefault()
+    {
+        var project = new Project();
+        var rec = new HaltungRecord();
+        rec.SetFieldValue("Haltungsname", "H_explain", FieldSource.Xtf, userEdited: false);
+        rec.SetFieldValue("Haltungslaenge_m", "10", FieldSource.Xtf, userEdited: false);
+        rec.SetFieldValue("Rohrmaterial", "Beton", FieldSource.Xtf, userEdited: false);
+        rec.VsaFindings = new List<VsaFinding>
+        {
+            new() { KanalSchadencode = "BAAA", Quantifizierung1 = "0.5" }
+        };
+        project.Data.Add(rec);
+
+        var svc = CreateService();
+        var result = svc.Explain(project, rec);
+
+        Assert.True(result.Ok, result.ErrorMessage);
+        Assert.Contains("vsa_zustandsklassifizierung_2023_channels.json", result.Value);
+        Assert.Contains("BAAA", result.Value);
     }
 
     [Fact]
@@ -317,7 +353,8 @@ public sealed class VsaEvaluationServiceTests
                 channelsTable,
                 manholesTable,
                 shadowModeEnabled: true,
-                shadowLogPath: shadowLogPath);
+                shadowLogPath: shadowLogPath,
+                useV2Engine: false);
 
             var res = svc.Evaluate(project);
 
@@ -375,7 +412,8 @@ public sealed class VsaEvaluationServiceTests
                 channelsTable,
                 manholesTable,
                 shadowModeEnabled: true,
-                shadowLogPath: shadowLogPath);
+                shadowLogPath: shadowLogPath,
+                useV2Engine: false);
 
             var res = svc.Evaluate(project);
 
@@ -414,7 +452,8 @@ public sealed class VsaEvaluationServiceTests
                 channelsTable,
                 manholesTable,
                 shadowModeEnabled: true,
-                shadowLogPath: shadowLogPath);
+                shadowLogPath: shadowLogPath,
+                useV2Engine: false);
 
             var res = svc.Evaluate(project);
 
