@@ -143,7 +143,7 @@ public static class ShadowReportAnalyzer
         IReadOnlyCollection<NonAssessableCodeRule> nonAssessableCodes)
     {
         var code = entry.BaseCode ?? entry.Code ?? "";
-        return nonAssessableCodes.Any(rule => rule.Matches(code, entry.Requirement, entry.Ch1));
+        return nonAssessableCodes.Any(rule => rule.Matches(code, entry.Requirement, entry.Ch1, entry.V2Reason));
     }
 
     public static IReadOnlyList<NonAssessableCodeRule> LoadDefaultNonAssessableCodes()
@@ -204,12 +204,23 @@ public static class ShadowReportAnalyzer
                 : null;
             var ch1MissingOnly = item.TryGetProperty("ch1MissingOnly", out var ch1MissingOnlyElement)
                 && ch1MissingOnlyElement.ValueKind is JsonValueKind.True;
+            var v2Reasons = new List<string>();
+            if (item.TryGetProperty("v2Reasons", out var v2ReasonsElement)
+                && v2ReasonsElement.ValueKind == JsonValueKind.Array)
+            {
+                v2Reasons.AddRange(v2ReasonsElement
+                    .EnumerateArray()
+                    .Select(value => value.GetString())
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .Select(value => value!.Trim()));
+            }
             result.Add(new NonAssessableCodeRule(
                 code.Trim().ToUpperInvariant(),
                 codeMatch ?? "exact",
                 string.IsNullOrWhiteSpace(requirement) ? null : requirement.Trim().ToUpperInvariant(),
                 ch1,
-                ch1MissingOnly));
+                ch1MissingOnly,
+                v2Reasons));
         }
     }
 
@@ -305,9 +316,10 @@ public sealed record NonAssessableCodeRule(
     string CodeMatch,
     string? Requirement = null,
     IReadOnlyCollection<string>? Ch1 = null,
-    bool Ch1MissingOnly = false)
+    bool Ch1MissingOnly = false,
+    IReadOnlyCollection<string>? V2Reasons = null)
 {
-    public bool Matches(string value, string? requirement, string? ch1)
+    public bool Matches(string value, string? requirement, string? ch1, string? v2Reason = null)
     {
         if (string.IsNullOrWhiteSpace(value))
             return false;
@@ -329,6 +341,12 @@ public sealed record NonAssessableCodeRule(
 
         if (Ch1 is { Count: > 0 }
             && !Ch1.Contains(ch1 ?? "", StringComparer.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (V2Reasons is { Count: > 0 }
+            && !V2Reasons.Contains(v2Reason ?? "", StringComparer.OrdinalIgnoreCase))
         {
             return false;
         }

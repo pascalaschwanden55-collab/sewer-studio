@@ -94,6 +94,17 @@
       "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 22"
     },
     {
+      "code": "BAE",
+      "codeMatch": "exact",
+      "requirement": "D",
+      "ch1": [],
+      "v2Reasons": [
+        "quantification-missing"
+      ],
+      "reason": "BAE/D ist ohne Quantifizierung nicht ausreichend bewertbar.",
+      "sourceRef": "Fachliche Freigabe 2026-05-28"
+    },
+    {
       "code": "BAJ",
       "codeMatch": "exact",
       "requirement": "S",

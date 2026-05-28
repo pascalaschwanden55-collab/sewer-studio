@@ -336,6 +336,35 @@ public sealed class VsaShadowReportTests
             && rule.CodeMatch == "exact"
             && rule.Requirement == "S"
             && rule.Ch1MissingOnly);
+        Assert.Contains(rules, rule =>
+            rule.Code == "BAE"
+            && rule.Requirement == "D"
+            && rule.V2Reasons is not null
+            && rule.V2Reasons.Contains("quantification-missing"));
+    }
+
+    [Fact]
+    public void Analyze_TreatsOnlyConfiguredDiagnosticReasonsAsKnownNonAssessable()
+    {
+        var path = WriteFixture("""
+        {"timestamp_utc":"2026-05-28T08:29:01Z","code":"BAE","base_code":"BAE","requirement":"D","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"quantification-missing"}
+        {"timestamp_utc":"2026-05-28T08:29:02Z","code":"BAE","base_code":"BAE","requirement":"D","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"scope-unresolved"}
+        """);
+
+        try
+        {
+            var report = ShadowReportAnalyzer.Analyze(path,
+            [
+                new("BAE", "exact", "D", V2Reasons: ["quantification-missing"])
+            ]);
+
+            Assert.Equal(1, report.ExpectedNonAssessmentCount);
+            Assert.Equal(1, report.OpenCutoverBlockerCount);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     [Fact]
