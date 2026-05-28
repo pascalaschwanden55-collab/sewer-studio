@@ -5,6 +5,19 @@ namespace VsaShadowReport;
 
 public static class ShadowReportAnalyzer
 {
+    private static readonly string[] NonAssessableRuleNotFoundPrefixes =
+    [
+        "BCA",
+        "BCB",
+        "BCC",
+        "BCD",
+        "BCE",
+        "BDA",
+        "BDB",
+        "BDC",
+        "BDG"
+    ];
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -66,6 +79,14 @@ public static class ShadowReportAnalyzer
         var unexpected = entries.Count - expected;
         var unexpectedMissing = entries.Count(e => !e.ExpectedDrift && e.V2Ez is null);
         var unexpectedDifferent = entries.Count(e => !e.ExpectedDrift && e.V2Ez is not null);
+        var nonAssessableRuleNotFound = entries.Count(e =>
+            !e.ExpectedDrift
+            && e.V2Ez is null
+            && string.Equals(e.V2Reason, "rule-not-found", StringComparison.OrdinalIgnoreCase)
+            && IsKnownNonAssessable(e));
+        var v2Milder = entries.Count(e => !e.ExpectedDrift && IsV2Milder(e));
+        var v2Stricter = entries.Count(e => !e.ExpectedDrift && IsV2Stricter(e));
+        var v2New = entries.Count(e => !e.ExpectedDrift && e.LegacyEz is null && e.V2Ez is not null);
         var differentEzExamples = entries
             .Where(e => !e.ExpectedDrift && e.V2Ez is not null)
             .OrderBy(e => e.Code, StringComparer.OrdinalIgnoreCase)
@@ -94,6 +115,10 @@ public static class ShadowReportAnalyzer
             UnexpectedDifferences: unexpected,
             UnexpectedMissingV2Ez: unexpectedMissing,
             UnexpectedDifferentEz: unexpectedDifferent,
+            NonAssessableRuleNotFoundCount: nonAssessableRuleNotFound,
+            V2MilderCount: v2Milder,
+            V2StricterCount: v2Stricter,
+            V2NewCount: v2New,
             Groups: groups,
             DifferentEzExamples: differentEzExamples,
             NoData: false,
@@ -101,10 +126,26 @@ public static class ShadowReportAnalyzer
             AnalyzedWindow: latestMinute);
     }
 
+    private static bool IsKnownNonAssessable(ShadowEntry entry)
+    {
+        var code = entry.BaseCode ?? entry.Code ?? "";
+        return NonAssessableRuleNotFoundPrefixes.Any(prefix =>
+            code.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsV2Milder(ShadowEntry entry)
+        => entry.LegacyEz is int legacy && entry.V2Ez is int v2 && v2 > legacy;
+
+    private static bool IsV2Stricter(ShadowEntry entry)
+        => entry.LegacyEz is int legacy && entry.V2Ez is int v2 && v2 < legacy;
+
     private sealed class ShadowEntry
     {
         [JsonPropertyName("code")]
         public string? Code { get; set; }
+
+        [JsonPropertyName("base_code")]
+        public string? BaseCode { get; set; }
 
         [JsonPropertyName("requirement")]
         public string? Requirement { get; set; }
@@ -157,6 +198,10 @@ public sealed record ShadowReport(
     int UnexpectedDifferences,
     int UnexpectedMissingV2Ez,
     int UnexpectedDifferentEz,
+    int NonAssessableRuleNotFoundCount,
+    int V2MilderCount,
+    int V2StricterCount,
+    int V2NewCount,
     IReadOnlyList<ShadowDiffGroup> Groups,
     IReadOnlyList<ShadowEzDifferenceExample> DifferentEzExamples,
     bool NoData,
@@ -166,7 +211,7 @@ public sealed record ShadowReport(
     public bool IsCutoverSafe => !NoData && UnexpectedDifferences == 0;
 
     public static ShadowReport NoDataReport(string path)
-        => new(path, 0, 0, 0, 0, 0, [], [], NoData: true, TotalLogEntries: 0, AnalyzedWindow: null);
+        => new(path, 0, 0, 0, 0, 0, 0, 0, 0, 0, [], [], NoData: true, TotalLogEntries: 0, AnalyzedWindow: null);
 }
 
 public sealed record ShadowDiffGroup(

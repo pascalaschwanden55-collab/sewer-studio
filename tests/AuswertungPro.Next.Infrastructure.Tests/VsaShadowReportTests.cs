@@ -196,6 +196,58 @@ public sealed class VsaShadowReportTests
         }
     }
 
+    [Fact]
+    public void Analyze_SummarizesNonAssessableAndDifferentEzDirections()
+    {
+        var path = WriteFixture("""
+        {"timestamp_utc":"2026-05-28T08:29:01Z","code":"BDA","base_code":"BDA","requirement":"B","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"rule-not-found"}
+        {"timestamp_utc":"2026-05-28T08:29:02Z","code":"BCCYA","base_code":"BCC","requirement":"D","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"rule-not-found"}
+        {"timestamp_utc":"2026-05-28T08:29:03Z","code":"BAJA","base_code":"BAJ","requirement":"D","legacy_ez":2,"v2_ez":4,"expected_drift":false}
+        {"timestamp_utc":"2026-05-28T08:29:04Z","code":"BAP","base_code":"BAP","requirement":"D","legacy_ez":2,"v2_ez":1,"expected_drift":false}
+        {"timestamp_utc":"2026-05-28T08:29:05Z","code":"BAJB","base_code":"BAJ","requirement":"B","legacy_ez":null,"v2_ez":2,"expected_drift":false}
+        """);
+
+        try
+        {
+            var report = ShadowReportAnalyzer.Analyze(path);
+
+            Assert.Equal(2, report.NonAssessableRuleNotFoundCount);
+            Assert.Equal(1, report.V2MilderCount);
+            Assert.Equal(1, report.V2StricterCount);
+            Assert.Equal(1, report.V2NewCount);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void ExportDifferentEzCsv_WritesExamplesForManualReview()
+    {
+        var shadowPath = WriteFixture("""
+        {"timestamp_utc":"2026-05-28T08:29:01Z","code":"BAJA","base_code":"BAJ","requirement":"D","legacy_ez":2,"v2_ez":4,"expected_drift":false,"ch1":"A","q1":"10","material":"Beton","dn":"300","v2_rule_id":"c-066-BAJ-D","v2_source_ref":"PDF S.24"}
+        """);
+        var csvPath = Path.Combine(Path.GetTempPath(), "vsa-shadow-diff-" + Guid.NewGuid().ToString("N") + ".csv");
+
+        try
+        {
+            var report = ShadowReportAnalyzer.Analyze(shadowPath);
+
+            ShadowReportExporter.WriteDifferentEzCsv(report, csvPath);
+
+            var csv = File.ReadAllText(csvPath);
+            Assert.Contains("code;requirement;legacy_ez;v2_ez;ch1;ch2;q1;q2;material;dn;v2_rule_id;v2_source_ref", csv);
+            Assert.Contains("BAJA;D;2;4;A;;10;;Beton;300;c-066-BAJ-D;PDF S.24", csv);
+        }
+        finally
+        {
+            File.Delete(shadowPath);
+            if (File.Exists(csvPath))
+                File.Delete(csvPath);
+        }
+    }
+
     private static string WriteFixture(string jsonl)
     {
         var path = Path.Combine(Path.GetTempPath(), "vsa-shadow-report-" + Guid.NewGuid().ToString("N") + ".jsonl");

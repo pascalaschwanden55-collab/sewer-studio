@@ -2,6 +2,7 @@ using VsaShadowReport;
 
 var path = ResolvePath(args);
 var report = ShadowReportAnalyzer.Analyze(path);
+var csvPath = ResolveOptionValue(args, "--csv");
 
 Console.WriteLine("VSA Shadow Report");
 Console.WriteLine($"Datei: {report.Path}");
@@ -14,6 +15,10 @@ Console.WriteLine($"  expected_drift=true:  {report.ExpectedDifferences}");
 Console.WriteLine($"  expected_drift=false: {report.UnexpectedDifferences}");
 Console.WriteLine($"    davon v2_ez=null:   {report.UnexpectedMissingV2Ez}");
 Console.WriteLine($"    davon EZ ungleich:  {report.UnexpectedDifferentEz}");
+Console.WriteLine($"    davon bekannte Nicht-Bewertung: {report.NonAssessableRuleNotFoundCount}");
+Console.WriteLine($"    v2 milder:          {report.V2MilderCount}");
+Console.WriteLine($"    v2 strenger:        {report.V2StricterCount}");
+Console.WriteLine($"    v2 neu bewertet:    {report.V2NewCount}");
 Console.WriteLine();
 
 if (report.NoData)
@@ -49,6 +54,13 @@ if (report.DifferentEzExamples.Count > 0)
     Console.WriteLine();
 }
 
+if (!string.IsNullOrWhiteSpace(csvPath))
+{
+    ShadowReportExporter.WriteDifferentEzCsv(report, csvPath);
+    Console.WriteLine($"CSV exportiert: {Path.GetFullPath(csvPath)}");
+    Console.WriteLine();
+}
+
 if (report.IsCutoverSafe)
 {
     Console.WriteLine("CUTOVER SICHER: keine unerwarteten VSA-v2-Abweichungen.");
@@ -78,6 +90,17 @@ static string ResolvePath(string[] args)
         : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
     return Path.Combine(root, "SewerStudio", "Telemetry", "vsa_shadow.jsonl");
+}
+
+static string? ResolveOptionValue(string[] args, string optionName)
+{
+    for (var i = 0; i < args.Length; i++)
+    {
+        if (args[i].Equals(optionName, StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+            return args[i + 1];
+    }
+
+    return null;
 }
 
 static string FormatReason(string? reason)
