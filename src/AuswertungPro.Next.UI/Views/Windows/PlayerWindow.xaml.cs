@@ -144,6 +144,7 @@ public partial class PlayerWindow : Window
         HaltungRecord? haltungRecord = null)
     {
         InitializeComponent();
+        WireCodingSidePanelEvents();
         WindowStateManager.Track(this);
 
         _videoPath = videoPath;
