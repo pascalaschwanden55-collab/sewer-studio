@@ -172,18 +172,24 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
                 continue;
 
             var baseCode = rawCode[..3];
+            var ch1 = rawCode.Length >= 4 ? rawCode.Substring(3, 1) : null;
+            var ch2 = rawCode.Length >= 5 ? rawCode.Substring(4, 1) : null;
+            var q1 = item.Finding.Quantifizierung1;
+            var q2 = item.Finding.Quantifizierung2;
+            var material = record.GetFieldValue("Rohrmaterial");
+            var dn = record.GetFieldValue("DN_mm");
             var outcome = selector.Classify(new VsaClassificationRequest(
                 Code: baseCode,
-                Ch1: rawCode.Length >= 4 ? rawCode.Substring(3, 1) : null,
-                Ch2: rawCode.Length >= 5 ? rawCode.Substring(4, 1) : null,
-                Q1: item.Finding.Quantifizierung1,
-                Q2: item.Finding.Quantifizierung2,
-                Material: record.GetFieldValue("Rohrmaterial"),
+                Ch1: ch1,
+                Ch2: ch2,
+                Q1: q1,
+                Q2: q2,
+                Material: material,
                 AssetKind: baseCode.StartsWith('D') ? "manhole" : "channel"));
 
-            WriteRequirementDiff(rawCode, baseCode, "D", item.Classification.EZD, outcome.D?.Ez, ResolveV2Reason(outcome, "D"));
-            WriteRequirementDiff(rawCode, baseCode, "S", item.Classification.EZS, outcome.S?.Ez, ResolveV2Reason(outcome, "S"));
-            WriteRequirementDiff(rawCode, baseCode, "B", item.Classification.EZB, outcome.B?.Ez, ResolveV2Reason(outcome, "B"));
+            WriteRequirementDiff(rawCode, baseCode, "D", item.Classification.EZD, outcome.D, ResolveV2Reason(outcome, "D"), ch1, ch2, q1, q2, material, dn);
+            WriteRequirementDiff(rawCode, baseCode, "S", item.Classification.EZS, outcome.S, ResolveV2Reason(outcome, "S"), ch1, ch2, q1, q2, material, dn);
+            WriteRequirementDiff(rawCode, baseCode, "B", item.Classification.EZB, outcome.B, ResolveV2Reason(outcome, "B"), ch1, ch2, q1, q2, material, dn);
         }
     }
 
@@ -192,9 +198,16 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         string baseCode,
         string requirement,
         int? legacyEz,
-        int? v2Ez,
-        string? v2Reason)
+        VsaRequirementOutcome? v2Outcome,
+        string? v2Reason,
+        string? ch1,
+        string? ch2,
+        string? q1,
+        string? q2,
+        string? material,
+        string? dn)
     {
+        var v2Ez = v2Outcome?.Ez;
         if (legacyEz == v2Ez)
             return;
 
@@ -206,7 +219,15 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             LegacyEz: legacyEz,
             V2Ez: v2Ez,
             ExpectedDrift: ExpectedShadowDriftCodes.Contains(baseCode),
-            V2Reason: v2Reason),
+            V2Reason: v2Reason,
+            Ch1: ch1,
+            Ch2: ch2,
+            Q1: q1,
+            Q2: q2,
+            Material: material,
+            Dn: dn,
+            V2RuleId: v2Outcome?.RuleId,
+            V2SourceRef: v2Outcome?.SourceRef),
             _shadowLogPath);
     }
 

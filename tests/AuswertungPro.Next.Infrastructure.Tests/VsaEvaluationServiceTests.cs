@@ -306,6 +306,7 @@ public sealed class VsaEvaluationServiceTests
             rec.SetFieldValue("Haltungsname", "H_shadow", FieldSource.Xtf, userEdited: false);
             rec.SetFieldValue("Haltungslaenge_m", "10", FieldSource.Xtf, userEdited: false);
             rec.SetFieldValue("Rohrmaterial", "Beton", FieldSource.Xtf, userEdited: false);
+            rec.SetFieldValue("DN_mm", "300", FieldSource.Xtf, userEdited: false);
             rec.VsaFindings = new List<VsaFinding>
             {
                 new() { KanalSchadencode = "BAAA", Quantifizierung1 = "0.5" }
@@ -333,6 +334,14 @@ public sealed class VsaEvaluationServiceTests
             Assert.Equal(3, entry.GetProperty("legacy_ez").GetInt32());
             Assert.Equal(4, entry.GetProperty("v2_ez").GetInt32());
             Assert.True(entry.GetProperty("expected_drift").GetBoolean());
+            Assert.Equal("A", entry.GetProperty("ch1").GetString());
+            Assert.Equal(JsonValueKind.Null, entry.GetProperty("ch2").ValueKind);
+            Assert.Equal("0.5", entry.GetProperty("q1").GetString());
+            Assert.Equal(JsonValueKind.Null, entry.GetProperty("q2").ValueKind);
+            Assert.Equal("Beton", entry.GetProperty("material").GetString());
+            Assert.Equal("300", entry.GetProperty("dn").GetString());
+            Assert.False(string.IsNullOrWhiteSpace(entry.GetProperty("v2_rule_id").GetString()));
+            Assert.False(string.IsNullOrWhiteSpace(entry.GetProperty("v2_source_ref").GetString()));
         }
         finally
         {

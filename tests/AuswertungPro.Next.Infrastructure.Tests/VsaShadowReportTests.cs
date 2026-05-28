@@ -167,6 +167,35 @@ public sealed class VsaShadowReportTests
         }
     }
 
+    [Fact]
+    public void Analyze_ExposesExamplesForRealEzDifferences()
+    {
+        var path = WriteFixture("""
+        {"timestamp_utc":"2026-05-28T08:29:01Z","code":"BAJA","base_code":"BAJ","requirement":"S","legacy_ez":2,"v2_ez":3,"expected_drift":false,"ch1":"A","ch2":null,"q1":"25","q2":null,"material":"Beton","dn":"300","v2_rule_id":"c-068-BAJ-S","v2_source_ref":"PDF S.24 / Tabelle 16"}
+        """);
+
+        try
+        {
+            var report = ShadowReportAnalyzer.Analyze(path);
+
+            var example = Assert.Single(report.DifferentEzExamples);
+            Assert.Equal("BAJA", example.Code);
+            Assert.Equal("S", example.Requirement);
+            Assert.Equal(2, example.LegacyEz);
+            Assert.Equal(3, example.V2Ez);
+            Assert.Equal("A", example.Ch1);
+            Assert.Equal("25", example.Q1);
+            Assert.Equal("Beton", example.Material);
+            Assert.Equal("300", example.Dn);
+            Assert.Equal("c-068-BAJ-S", example.V2RuleId);
+            Assert.Equal("PDF S.24 / Tabelle 16", example.V2SourceRef);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     private static string WriteFixture(string jsonl)
     {
         var path = Path.Combine(Path.GetTempPath(), "vsa-shadow-report-" + Guid.NewGuid().ToString("N") + ".jsonl");

@@ -66,6 +66,26 @@ public static class ShadowReportAnalyzer
         var unexpected = entries.Count - expected;
         var unexpectedMissing = entries.Count(e => !e.ExpectedDrift && e.V2Ez is null);
         var unexpectedDifferent = entries.Count(e => !e.ExpectedDrift && e.V2Ez is not null);
+        var differentEzExamples = entries
+            .Where(e => !e.ExpectedDrift && e.V2Ez is not null)
+            .OrderBy(e => e.Code, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(e => e.Requirement, StringComparer.OrdinalIgnoreCase)
+            .Take(50)
+            .Select(e => new ShadowEzDifferenceExample(
+                e.Code ?? "",
+                e.Requirement ?? "",
+                e.LegacyEz,
+                e.V2Ez,
+                e.Ch1,
+                e.Ch2,
+                e.Q1,
+                e.Q2,
+                e.Material,
+                e.Dn,
+                e.V2RuleId,
+                e.V2SourceRef,
+                e.V2Reason))
+            .ToList();
 
         return new ShadowReport(
             Path: path,
@@ -75,6 +95,7 @@ public static class ShadowReportAnalyzer
             UnexpectedMissingV2Ez: unexpectedMissing,
             UnexpectedDifferentEz: unexpectedDifferent,
             Groups: groups,
+            DifferentEzExamples: differentEzExamples,
             NoData: false,
             TotalLogEntries: originalCount,
             AnalyzedWindow: latestMinute);
@@ -94,11 +115,38 @@ public static class ShadowReportAnalyzer
         [JsonPropertyName("v2_ez")]
         public int? V2Ez { get; set; }
 
+        [JsonPropertyName("legacy_ez")]
+        public int? LegacyEz { get; set; }
+
         [JsonPropertyName("timestamp_utc")]
         public DateTimeOffset? TimestampUtc { get; set; }
 
         [JsonPropertyName("v2_reason")]
         public string? V2Reason { get; set; }
+
+        [JsonPropertyName("ch1")]
+        public string? Ch1 { get; set; }
+
+        [JsonPropertyName("ch2")]
+        public string? Ch2 { get; set; }
+
+        [JsonPropertyName("q1")]
+        public string? Q1 { get; set; }
+
+        [JsonPropertyName("q2")]
+        public string? Q2 { get; set; }
+
+        [JsonPropertyName("material")]
+        public string? Material { get; set; }
+
+        [JsonPropertyName("dn")]
+        public string? Dn { get; set; }
+
+        [JsonPropertyName("v2_rule_id")]
+        public string? V2RuleId { get; set; }
+
+        [JsonPropertyName("v2_source_ref")]
+        public string? V2SourceRef { get; set; }
     }
 }
 
@@ -110,6 +158,7 @@ public sealed record ShadowReport(
     int UnexpectedMissingV2Ez,
     int UnexpectedDifferentEz,
     IReadOnlyList<ShadowDiffGroup> Groups,
+    IReadOnlyList<ShadowEzDifferenceExample> DifferentEzExamples,
     bool NoData,
     int TotalLogEntries,
     string? AnalyzedWindow)
@@ -117,7 +166,7 @@ public sealed record ShadowReport(
     public bool IsCutoverSafe => !NoData && UnexpectedDifferences == 0;
 
     public static ShadowReport NoDataReport(string path)
-        => new(path, 0, 0, 0, 0, 0, [], NoData: true, TotalLogEntries: 0, AnalyzedWindow: null);
+        => new(path, 0, 0, 0, 0, 0, [], [], NoData: true, TotalLogEntries: 0, AnalyzedWindow: null);
 }
 
 public sealed record ShadowDiffGroup(
@@ -126,4 +175,19 @@ public sealed record ShadowDiffGroup(
     bool ExpectedDrift,
     bool V2Missing,
     int Count,
+    string? V2Reason);
+
+public sealed record ShadowEzDifferenceExample(
+    string Code,
+    string Requirement,
+    int? LegacyEz,
+    int? V2Ez,
+    string? Ch1,
+    string? Ch2,
+    string? Q1,
+    string? Q2,
+    string? Material,
+    string? Dn,
+    string? V2RuleId,
+    string? V2SourceRef,
     string? V2Reason);

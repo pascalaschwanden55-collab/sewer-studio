@@ -37,6 +37,18 @@ if (report.Groups.Count > 0)
     Console.WriteLine();
 }
 
+if (report.DifferentEzExamples.Count > 0)
+{
+    Console.WriteLine("Beispiele echte EZ-Differenzen:");
+    foreach (var example in report.DifferentEzExamples.Take(20))
+    {
+        Console.WriteLine(
+            $"  {example.Code,-8} {example.Requirement,-1} legacy={FormatEz(example.LegacyEz),-4} v2={FormatEz(example.V2Ez),-4} ch1={Dash(example.Ch1),-2} ch2={Dash(example.Ch2),-2} q1={Dash(example.Q1),-6} q2={Dash(example.Q2),-6} mat={Dash(example.Material),-10} dn={Dash(example.Dn),-5} rule={Dash(example.V2RuleId)} source={Dash(example.V2SourceRef)}");
+    }
+
+    Console.WriteLine();
+}
+
 if (report.IsCutoverSafe)
 {
     Console.WriteLine("CUTOVER SICHER: keine unerwarteten VSA-v2-Abweichungen.");
@@ -70,3 +82,9 @@ static string ResolvePath(string[] args)
 
 static string FormatReason(string? reason)
     => string.IsNullOrWhiteSpace(reason) ? "" : $", {reason}";
+
+static string FormatEz(int? ez)
+    => ez?.ToString() ?? "null";
+
+static string Dash(string? value)
+    => string.IsNullOrWhiteSpace(value) ? "-" : value;
