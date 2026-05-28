@@ -13,32 +13,40 @@ public sealed class TrainingAnnotationExportServiceTests
         var imagesDir = Path.Combine(root, "teacher_images");
         var labelsDir = Path.Combine(root, "teacher_labels");
         var sourcePath = Path.Combine(root, "source.png");
-        Directory.CreateDirectory(root);
-        await File.WriteAllBytesAsync(sourcePath, TransparentPng1x1);
+        try
+        {
+            Directory.CreateDirectory(root);
+            await File.WriteAllBytesAsync(sourcePath, TransparentPng1x1);
 
-        var service = new TrainingAnnotationExportService(
-            imagesDir,
-            labelsDir,
-            new CopyCropper());
+            var service = new TrainingAnnotationExportService(
+                imagesDir,
+                labelsDir,
+                new CopyCropper());
 
-        var result = await service.ExportAsync(
-            sourcePath,
-            new NormalizedBoundingBox
-            {
-                XCenter = 0.5,
-                YCenter = 0.5,
-                Width = 1.0,
-                Height = 1.0
-            },
-            "BAA",
-            classId: 7,
-            baseName: "sample");
+            var result = await service.ExportAsync(
+                sourcePath,
+                new NormalizedBoundingBox
+                {
+                    XCenter = 0.5,
+                    YCenter = 0.5,
+                    Width = 1.0,
+                    Height = 1.0
+                },
+                "BAA",
+                classId: 7,
+                baseName: "sample");
 
-        Assert.True(result.Success, result.Error ?? "Export failed without error message.");
-        Assert.True(File.Exists(result.FullFramePath));
-        Assert.True(File.Exists(result.CroppedRegionPath));
-        Assert.True(File.Exists(result.YoloAnnotationPath));
-        Assert.Equal("7 0.500000 0.500000 1.000000 1.000000", await File.ReadAllTextAsync(result.YoloAnnotationPath));
+            Assert.True(result.Success, result.Error ?? "Export failed without error message.");
+            Assert.True(File.Exists(result.FullFramePath));
+            Assert.True(File.Exists(result.CroppedRegionPath));
+            Assert.True(File.Exists(result.YoloAnnotationPath));
+            Assert.Equal("7 0.500000 0.500000 1.000000 1.000000", await File.ReadAllTextAsync(result.YoloAnnotationPath));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
     }
 
     private sealed class CopyCropper : ITrainingImageCropper

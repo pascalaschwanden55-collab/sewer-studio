@@ -16,7 +16,7 @@ public static class KnowledgeBasePaths
         var root = ResolveRoot(settingsOverride);
         Directory.CreateDirectory(root);
 
-        if (!_migrationDone)
+        if (ShouldRunLegacyMigration(settingsOverride) && !_migrationDone)
         {
             _migrationDone = true;
             TryMigrateFromAppData(root);
@@ -84,6 +84,15 @@ public static class KnowledgeBasePaths
             return envRoot;
 
         return Path.Combine(GetAppDataDir(), "Knowledge");
+    }
+
+    private static bool ShouldRunLegacyMigration(string? settingsOverride)
+    {
+        if (!string.IsNullOrWhiteSpace(settingsOverride))
+            return false;
+
+        var envRoot = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT")?.Trim();
+        return string.IsNullOrWhiteSpace(envRoot);
     }
 
     private static void TryMigrateFromAppData(string knowledgeRoot)

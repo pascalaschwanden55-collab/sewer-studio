@@ -53,6 +53,9 @@ public sealed class KnowledgeBasePathsTests
         try
         {
             Assert.Equal(explicitRoot, KnowledgeBasePaths.GetRoot());
+            Assert.False(
+                Directory.Exists(Path.Combine(explicitRoot, "frames")),
+                "Explicit knowledge roots must not copy legacy frame archives into temp/test roots.");
         }
         finally
         {

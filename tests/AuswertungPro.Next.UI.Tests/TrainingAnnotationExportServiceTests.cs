@@ -50,6 +50,8 @@ public sealed class TrainingAnnotationExportServiceTests
         {
             Environment.SetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT", previousRoot);
             KnowledgeBasePaths.InvalidateCache();
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
         }
     }
 
