@@ -5,6 +5,10 @@ var report = ShadowReportAnalyzer.Analyze(path);
 
 Console.WriteLine("VSA Shadow Report");
 Console.WriteLine($"Datei: {report.Path}");
+if (!string.IsNullOrWhiteSpace(report.AnalyzedWindow))
+{
+    Console.WriteLine($"Analysierter Lauf: {report.AnalyzedWindow} UTC ({report.TotalLogEntries} Logzeilen gesamt)");
+}
 Console.WriteLine($"Abweichungen gesamt: {report.TotalDifferences}");
 Console.WriteLine($"  expected_drift=true:  {report.ExpectedDifferences}");
 Console.WriteLine($"  expected_drift=false: {report.UnexpectedDifferences}");

@@ -116,6 +116,32 @@ public sealed class VsaShadowReportTests
         }
     }
 
+    [Fact]
+    public void Analyze_UsesLatestTimestampWindow_WhenMultipleRunsAreLogged()
+    {
+        var path = WriteFixture("""
+        {"timestamp_utc":"2026-05-28T08:25:01Z","code":"BAN","base_code":"BAN","requirement":"D","legacy_ez":2,"v2_ez":null,"expected_drift":false}
+        {"timestamp_utc":"2026-05-28T08:29:01Z","code":"BAAA","base_code":"BAA","requirement":"S","legacy_ez":3,"v2_ez":4,"expected_drift":true}
+        {"timestamp_utc":"2026-05-28T08:29:02Z","code":"BAP","base_code":"BAP","requirement":"D","legacy_ez":2,"v2_ez":1,"expected_drift":false}
+        """);
+
+        try
+        {
+            var report = ShadowReportAnalyzer.Analyze(path);
+
+            Assert.Equal(3, report.TotalLogEntries);
+            Assert.Equal("2026-05-28 08:29", report.AnalyzedWindow);
+            Assert.Equal(2, report.TotalDifferences);
+            Assert.Equal(1, report.ExpectedDifferences);
+            Assert.Equal(1, report.UnexpectedDifferences);
+            Assert.DoesNotContain(report.Groups, group => group.Code == "BAN");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     private static string WriteFixture(string jsonl)
     {
         var path = Path.Combine(Path.GetTempPath(), "vsa-shadow-report-" + Guid.NewGuid().ToString("N") + ".jsonl");

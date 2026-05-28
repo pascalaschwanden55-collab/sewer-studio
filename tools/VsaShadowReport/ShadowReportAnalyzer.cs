@@ -29,6 +29,20 @@ public static class ShadowReportAnalyzer
         if (entries.Count == 0)
             return ShadowReport.NoDataReport(path);
 
+        var originalCount = entries.Count;
+        var latestMinute = entries
+            .Where(e => e.TimestampUtc is not null)
+            .Select(e => e.TimestampUtc!.Value.ToString("yyyy-MM-dd HH:mm"))
+            .Order(StringComparer.Ordinal)
+            .LastOrDefault();
+
+        if (latestMinute is not null)
+        {
+            entries = entries
+                .Where(e => e.TimestampUtc?.ToString("yyyy-MM-dd HH:mm") == latestMinute)
+                .ToList();
+        }
+
         var groups = entries
             .GroupBy(e => (
                 Code: e.Code ?? "",
@@ -59,7 +73,9 @@ public static class ShadowReportAnalyzer
             UnexpectedMissingV2Ez: unexpectedMissing,
             UnexpectedDifferentEz: unexpectedDifferent,
             Groups: groups,
-            NoData: false);
+            NoData: false,
+            TotalLogEntries: originalCount,
+            AnalyzedWindow: latestMinute);
     }
 
     private sealed class ShadowEntry
@@ -75,6 +91,9 @@ public static class ShadowReportAnalyzer
 
         [JsonPropertyName("v2_ez")]
         public int? V2Ez { get; set; }
+
+        [JsonPropertyName("timestamp_utc")]
+        public DateTimeOffset? TimestampUtc { get; set; }
     }
 }
 
@@ -86,12 +105,14 @@ public sealed record ShadowReport(
     int UnexpectedMissingV2Ez,
     int UnexpectedDifferentEz,
     IReadOnlyList<ShadowDiffGroup> Groups,
-    bool NoData)
+    bool NoData,
+    int TotalLogEntries,
+    string? AnalyzedWindow)
 {
     public bool IsCutoverSafe => !NoData && UnexpectedDifferences == 0;
 
     public static ShadowReport NoDataReport(string path)
-        => new(path, 0, 0, 0, 0, 0, [], NoData: true);
+        => new(path, 0, 0, 0, 0, 0, [], NoData: true, TotalLogEntries: 0, AnalyzedWindow: null);
 }
 
 public sealed record ShadowDiffGroup(
