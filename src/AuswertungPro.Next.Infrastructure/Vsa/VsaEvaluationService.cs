@@ -19,21 +19,55 @@ namespace AuswertungPro.Next.Infrastructure.Vsa;
 /// </summary>
 public sealed class VsaEvaluationService : IVsaEvaluationService
 {
-    private static readonly Regex LeadingTokenRegex = new(@"^[A-Za-z0-9]+", RegexOptions.Compiled);
+    private static readonly Regex LeadingTokenRegex = new(@"^[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)*", RegexOptions.Compiled);
+    private static readonly Regex PrimaryDamageLineRegex = new(
+        @"^(?<code>[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)*)\s*(?:@(?<meter>-?\d+(?:[.,]\d+)?)m?)?",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly HashSet<string> ExpectedShadowDriftCodes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "BAA",
+        "BAB",
+        "BAC",
+        "BAF",
+        "BBA",
+        "BDD"
+    };
 
     private readonly string _channelsTablePath;
     private readonly string _manholesTablePath;
+    private readonly bool _shadowModeEnabled;
+    private readonly string? _shadowLogPath;
+    private readonly bool _useV2Engine;
+    private readonly string _v2ChannelsTablePath;
+    private readonly string _v2ManholesTablePath;
 
-    public VsaEvaluationService(string channelsTablePath, string manholesTablePath)
+    public VsaEvaluationService(
+        string channelsTablePath,
+        string manholesTablePath,
+        bool shadowModeEnabled = true,
+        string? shadowLogPath = null,
+        bool useV2Engine = true,
+        string? v2ChannelsTablePath = null,
+        string? v2ManholesTablePath = null)
     {
         _channelsTablePath = channelsTablePath;
         _manholesTablePath = manholesTablePath;
+        _shadowModeEnabled = shadowModeEnabled;
+        _shadowLogPath = shadowLogPath;
+        _useV2Engine = useV2Engine;
+        _v2ChannelsTablePath = v2ChannelsTablePath
+            ?? Path.Combine(Path.GetDirectoryName(channelsTablePath) ?? "", "vsa_zustandsklassifizierung_2023_channels.json");
+        _v2ManholesTablePath = v2ManholesTablePath
+            ?? Path.Combine(Path.GetDirectoryName(manholesTablePath) ?? "", "vsa_zustandsklassifizierung_2023_manholes.json");
     }
 
     public Result<IReadOnlyList<VsaConditionResult>> Evaluate(Project project)
     {
         if (project is null)
             return Result<IReadOnlyList<VsaConditionResult>>.Fail("VSA_PROJECT_NULL", "Project is null.");
+
+        if (_useV2Engine)
+            return EvaluateWithV2(project);
 
         var tableResult = LoadClassificationTable();
         if (!tableResult.Ok || tableResult.Value is null)
@@ -48,12 +82,14 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
         var results = new List<VsaConditionResult>(project.Data.Count * 3);
         var unknownCodeCount = 0;
+        var shadowSelector = TryLoadShadowSelector();
 
         foreach (var record in project.Data)
         {
             var findings = ResolveFindings(record, knownCodes);
             var classified = ClassifyFindings(findings, table, out var unknownForRecord);
             unknownCodeCount += unknownForRecord;
+            WriteShadowDiffs(record, classified, shadowSelector);
 
             var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
             const double minLength = 3.0; // Kanäle; Schächte: 0.5
@@ -72,6 +108,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
         project.Metadata["VSA_Diag"] =
             $"Records={project.Data.Count}; UnknownCodes={unknownCodeCount}; Table={tableResult.Value.SourceName}";
+        project.Metadata["VSA_Table"] = tableResult.Value.SourceName;
 
         return Result<IReadOnlyList<VsaConditionResult>>.Success(results);
     }
@@ -80,6 +117,9 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
     {
         if (record is null)
             return Result<bool>.Fail("VSA_RECORD_NULL", "Record is null.");
+
+        if (_useV2Engine)
+            return EvaluateRecordWithV2(record);
 
         var tableResult = LoadClassificationTable();
         if (!tableResult.Ok || tableResult.Value is null)
@@ -94,6 +134,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
         var findings = ResolveFindings(record, knownCodes);
         var classified = ClassifyFindings(findings, table, out _);
+        WriteShadowDiffs(record, classified, TryLoadShadowSelector());
 
         var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
         const double minLength = 3.0;
@@ -108,12 +149,177 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         return Result<bool>.Success(true);
     }
 
+    private Result<IReadOnlyList<VsaConditionResult>> EvaluateWithV2(Project project)
+    {
+        var modelResult = LoadV2ClassificationModel();
+        if (!modelResult.Ok || modelResult.Value is null)
+            return Result<IReadOnlyList<VsaConditionResult>>.Fail(
+                modelResult.ErrorCode ?? "VSA_V2_TABLE_LOAD_FAILED",
+                modelResult.ErrorMessage ?? "VSA-v2 classification model could not be loaded.");
+
+        var model = modelResult.Value;
+        var results = new List<VsaConditionResult>(project.Data.Count * 3);
+        var unknownCodeCount = 0;
+
+        foreach (var record in project.Data)
+        {
+            var findings = ResolveFindings(record, model.KnownCodes);
+            var classified = ClassifyFindingsV2(findings, model.Selector, record, model.KnownCodes, out var unknownForRecord);
+            unknownCodeCount += unknownForRecord;
+
+            var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+            const double minLength = 3.0;
+            var rb = ComputeRandbedingungen(record);
+
+            var d = ComputeForRequirement(VsaRequirement.Dichtheit, classified, assessmentLength, minLength, rb);
+            var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
+            var b = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
+
+            ApplyRecordFields(record, d, s, b);
+
+            results.Add(d);
+            results.Add(s);
+            results.Add(b);
+        }
+
+        project.Metadata["VSA_Diag"] =
+            $"Records={project.Data.Count}; UnknownCodes={unknownCodeCount}; Table={model.SourceName}";
+        project.Metadata["VSA_Table"] = model.SourceName;
+
+        return Result<IReadOnlyList<VsaConditionResult>>.Success(results);
+    }
+
+    private Result<bool> EvaluateRecordWithV2(HaltungRecord record)
+    {
+        var modelResult = LoadV2ClassificationModel();
+        if (!modelResult.Ok || modelResult.Value is null)
+            return Result<bool>.Fail(
+                modelResult.ErrorCode ?? "VSA_V2_TABLE_LOAD_FAILED",
+                modelResult.ErrorMessage ?? "VSA-v2 classification model could not be loaded.");
+
+        var model = modelResult.Value;
+        var findings = ResolveFindings(record, model.KnownCodes);
+        var classified = ClassifyFindingsV2(findings, model.Selector, record, model.KnownCodes, out _);
+
+        var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+        const double minLength = 3.0;
+        var rb = ComputeRandbedingungen(record);
+
+        var d = ComputeForRequirement(VsaRequirement.Dichtheit, classified, assessmentLength, minLength, rb);
+        var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
+        var b = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
+
+        ApplyRecordFields(record, d, s, b);
+
+        return Result<bool>.Success(true);
+    }
+
+    private VsaClassificationRuleSelector? TryLoadShadowSelector()
+    {
+        if (!_shadowModeEnabled)
+            return null;
+
+        if (!File.Exists(_v2ChannelsTablePath) || !File.Exists(_v2ManholesTablePath))
+            return null;
+
+        try
+        {
+            return VsaClassificationRuleSelector.Load(_v2ChannelsTablePath, _v2ManholesTablePath);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private void WriteShadowDiffs(
+        HaltungRecord record,
+        IReadOnlyList<ClassifiedFinding> classified,
+        VsaClassificationRuleSelector? selector)
+    {
+        if (selector is null || classified.Count == 0)
+            return;
+
+        foreach (var item in classified)
+        {
+            var rawCode = NormalizeCode(item.Finding.KanalSchadencode);
+            if (rawCode.Length < 3)
+                continue;
+
+            var baseCode = rawCode[..3];
+            var ch1 = rawCode.Length >= 4 ? rawCode.Substring(3, 1) : null;
+            var ch2 = rawCode.Length >= 5 ? rawCode.Substring(4, 1) : null;
+            var q1 = item.Finding.Quantifizierung1;
+            var q2 = item.Finding.Quantifizierung2;
+            var material = record.GetFieldValue("Rohrmaterial");
+            var dn = record.GetFieldValue("DN_mm");
+            var outcome = selector.Classify(new VsaClassificationRequest(
+                Code: baseCode,
+                Ch1: ch1,
+                Ch2: ch2,
+                Q1: q1,
+                Q2: q2,
+                Material: material,
+                AssetKind: baseCode.StartsWith('D') ? "manhole" : "channel"));
+
+            WriteRequirementDiff(rawCode, baseCode, "D", item.Classification.EZD, outcome.D, ResolveV2Reason(outcome, "D"), ch1, ch2, q1, q2, material, dn);
+            WriteRequirementDiff(rawCode, baseCode, "S", item.Classification.EZS, outcome.S, ResolveV2Reason(outcome, "S"), ch1, ch2, q1, q2, material, dn);
+            WriteRequirementDiff(rawCode, baseCode, "B", item.Classification.EZB, outcome.B, ResolveV2Reason(outcome, "B"), ch1, ch2, q1, q2, material, dn);
+        }
+    }
+
+    private void WriteRequirementDiff(
+        string code,
+        string baseCode,
+        string requirement,
+        int? legacyEz,
+        VsaRequirementOutcome? v2Outcome,
+        string? v2Reason,
+        string? ch1,
+        string? ch2,
+        string? q1,
+        string? q2,
+        string? material,
+        string? dn)
+    {
+        var v2Ez = v2Outcome?.Ez;
+        if (legacyEz == v2Ez)
+            return;
+
+        VsaShadowTelemetryWriter.Write(new VsaShadowTelemetryEvent(
+            TimestampUtc: DateTimeOffset.UtcNow,
+            Code: code,
+            BaseCode: baseCode,
+            Requirement: requirement,
+            LegacyEz: legacyEz,
+            V2Ez: v2Ez,
+            ExpectedDrift: ExpectedShadowDriftCodes.Contains(baseCode),
+            V2Reason: v2Reason,
+            Ch1: ch1,
+            Ch2: ch2,
+            Q1: q1,
+            Q2: q2,
+            Material: material,
+            Dn: dn,
+            V2RuleId: v2Outcome?.RuleId,
+            V2SourceRef: v2Outcome?.SourceRef),
+            _shadowLogPath);
+    }
+
+    private static string? ResolveV2Reason(VsaClassificationOutcome outcome, string requirement)
+        => outcome.Diagnostics
+            .FirstOrDefault(d => d.Requirement.Equals(requirement, StringComparison.OrdinalIgnoreCase))
+            ?.Reason;
+
     public Result<string> Explain(Project project, HaltungRecord record)
     {
         if (project is null)
             return Result<string>.Fail("VSA_PROJECT_NULL", "Project is null.");
         if (record is null)
             return Result<string>.Fail("VSA_RECORD_NULL", "Record is null.");
+
+        if (_useV2Engine)
+            return ExplainWithV2(project, record);
 
         var tableResult = LoadClassificationTable();
         if (!tableResult.Ok || tableResult.Value is null)
@@ -182,7 +388,73 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         return Result<string>.Success(sb.ToString());
     }
 
-    // ── Tabelle laden ────────────────────────────────────────────────────
+    // -- Erklaerung v2 --
+
+    private Result<string> ExplainWithV2(Project project, HaltungRecord record)
+    {
+        var modelResult = LoadV2ClassificationModel();
+        if (!modelResult.Ok || modelResult.Value is null)
+            return Result<string>.Fail(
+                modelResult.ErrorCode ?? "VSA_V2_TABLE_LOAD_FAILED",
+                modelResult.ErrorMessage ?? "VSA-v2 classification model could not be loaded.");
+
+        var model = modelResult.Value;
+        var findings = ResolveFindings(record, model.KnownCodes);
+        var classified = ClassifyFindingsV2(findings, model.Selector, record, model.KnownCodes, out var unknownForRecord);
+
+        var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+        const double minLength = 3.0;
+        var rb = ComputeRandbedingungen(record);
+
+        var d = ComputeForRequirement(VsaRequirement.Dichtheit, classified, assessmentLength, minLength, rb);
+        var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
+        var bResult = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("VSA Zustandsbeurteilung - Rechnungsweg (VSA Richtlinie 2023)");
+        sb.AppendLine($"Haltung: {SafeField(record.GetFieldValue("Haltungsname"))}");
+        sb.AppendLine($"Klassifikationstabelle: {model.SourceName}");
+        sb.AppendLine($"Haltungslaenge: {assessmentLength:F1} m");
+        sb.AppendLine($"Anzahl Feststellungen: {findings.Count}");
+        sb.AppendLine($"Unbekannte Codes: {unknownForRecord}");
+        sb.AppendLine($"Randbedingungen: B1xB2xB3xB4 = {rb:F4}");
+        sb.AppendLine();
+
+        AppendRequirementSection(sb, d);
+        AppendRequirementSection(sb, s);
+        AppendRequirementSection(sb, bResult);
+
+        var allZn = new[] { d.Zustandsnote, s.Zustandsnote, bResult.Zustandsnote }
+            .Where(v => v is not null).Select(v => v!.Value).ToList();
+        if (allZn.Count > 0)
+        {
+            var worstZn = allZn.Min();
+            var allDz = new[] { d.Dringlichkeitszahl, s.Dringlichkeitszahl, bResult.Dringlichkeitszahl }
+                .Where(v => v is not null).Select(v => v!.Value).ToList();
+            var worstDz = allDz.Count > 0 ? (double?)allDz.Min() : null;
+            sb.AppendLine();
+            sb.AppendLine($"Gesamt-Zustandsnote (min D/S/B): {FmtNote(worstZn)}");
+            sb.AppendLine($"Gesamt-Dringlichkeitszahl: {FmtNote(worstDz)}");
+            sb.AppendLine($"Dringlichkeit: {MapDringlichkeit(worstDz)}");
+        }
+
+        if (classified.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("Codes:");
+            foreach (var item in classified)
+            {
+                var code = NormalizeCode(item.Finding.KanalSchadencode);
+                var marker = item.IsUnknown ? " (unbekannt)" : string.Empty;
+                sb.AppendLine(
+                    $"- {code}: D={FmtEz(item.Classification.EZD)}, S={FmtEz(item.Classification.EZS)}, B={FmtEz(item.Classification.EZB)}{marker}");
+            }
+        }
+
+        return Result<string>.Success(sb.ToString());
+    }
+
+    // -- Tabelle laden --
 
     private Result<LoadedTable> LoadClassificationTable()
     {
@@ -208,13 +480,65 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             $"Classification table not found. Expected '{_channelsTablePath}' or '{_manholesTablePath}'.");
     }
 
-    // ── Feststellungen auflösen / klassifizieren ─────────────────────────
+    private Result<LoadedV2Model> LoadV2ClassificationModel()
+    {
+        if (!File.Exists(_v2ChannelsTablePath) || !File.Exists(_v2ManholesTablePath))
+        {
+            return Result<LoadedV2Model>.Fail(
+                "VSA_V2_TABLE_MISSING",
+                $"VSA-v2 classification tables not found. Expected '{_v2ChannelsTablePath}' and '{_v2ManholesTablePath}'.");
+        }
 
-    private static List<VsaFinding> ResolveFindings(HaltungRecord record, IReadOnlySet<string> knownCodes)
+        try
+        {
+            var channels = VsaClassificationRuleSet.LoadFromFile(_v2ChannelsTablePath);
+            var manholes = VsaClassificationRuleSet.LoadFromFile(_v2ManholesTablePath);
+            var selector = new VsaClassificationRuleSelector(channels, manholes);
+            var knownCodes = BuildKnownV2Codes(channels, manholes);
+            return Result<LoadedV2Model>.Success(new LoadedV2Model(
+                selector,
+                knownCodes,
+                Path.GetFileName(_v2ChannelsTablePath)));
+        }
+        catch (Exception ex)
+        {
+            return Result<LoadedV2Model>.Fail(
+                "VSA_V2_TABLE_PARSE_FAILED",
+                $"Cannot read VSA-v2 classification tables: {ex.Message}");
+        }
+    }
+
+    private static HashSet<string> BuildKnownV2Codes(params VsaClassificationRuleSet[] ruleSets)
+    {
+        var knownCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var ruleSet in ruleSets)
+        {
+            foreach (var rule in ruleSet.Rules)
+                AddKnownCode(knownCodes, rule.Code);
+            foreach (var item in ruleSet.NonAssessableCodes)
+                AddKnownCode(knownCodes, item.Code);
+            foreach (var item in ruleSet.NonAssessableRequirements)
+                AddKnownCode(knownCodes, item.Code);
+        }
+
+        return knownCodes;
+    }
+
+    private static void AddKnownCode(HashSet<string> knownCodes, string? code)
+    {
+        var normalized = NormalizeCode(code);
+        if (normalized.Length > 0)
+            knownCodes.Add(normalized);
+    }
+
+    // -- Feststellungen aufloesen / klassifizieren --
+
+    internal static List<VsaFinding> ResolveFindings(HaltungRecord record, IReadOnlySet<string> knownCodes)
     {
         if (record.VsaFindings is { Count: > 0 })
         {
-            return record.VsaFindings
+            var primaryDamageText = record.GetFieldValue("Primaere_Schaeden");
+            return EnrichFindingsFromPrimaryDamage(record.VsaFindings, primaryDamageText)
                 .Where(f => !string.IsNullOrWhiteSpace(f.KanalSchadencode))
                 .Select(f => f)
                 .ToList();
@@ -255,10 +579,57 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
     // ── Kernberechnung: Zustandsnote + Dringlichkeitszahl ────────────────
 
+    private static List<ClassifiedFinding> ClassifyFindingsV2(
+        IEnumerable<VsaFinding> findings,
+        VsaClassificationRuleSelector selector,
+        HaltungRecord record,
+        IReadOnlySet<string> knownCodes,
+        out int unknownCodeCount)
+    {
+        var list = new List<ClassifiedFinding>();
+        unknownCodeCount = 0;
+
+        foreach (var finding in findings)
+        {
+            var code = NormalizeCode(finding.KanalSchadencode);
+            if (code.Length == 0)
+                continue;
+
+            var baseCode = code.Length >= 3 ? code[..3] : code;
+            var ch1 = code.Length >= 4 ? code.Substring(3, 1) : null;
+            var ch2 = code.Length >= 5 ? code.Substring(4, 1) : null;
+            var outcome = selector.Classify(new VsaClassificationRequest(
+                Code: baseCode,
+                Ch1: ch1,
+                Ch2: ch2,
+                Q1: finding.Quantifizierung1,
+                Q2: finding.Quantifizierung2,
+                Material: record.GetFieldValue("Rohrmaterial"),
+                AssetKind: baseCode.StartsWith('D') ? "manhole" : "channel"));
+
+            var classification = new VsaClassificationResult(
+                outcome.D?.Ez,
+                outcome.S?.Ez,
+                outcome.B?.Ez);
+
+            var isKnown = knownCodes.Contains(code) || knownCodes.Contains(baseCode);
+            var isUnknown = !isKnown
+                            && classification.EZD is null
+                            && classification.EZS is null
+                            && classification.EZB is null;
+            if (isUnknown)
+                unknownCodeCount++;
+
+            list.Add(new ClassifiedFinding(finding, classification, isUnknown));
+        }
+
+        return list;
+    }
+
     /// <summary>
-    /// Berechnet ZN und DZ für eine Anforderung gemäss VSA Richtlinie 2023.
+    /// Berechnet ZN und DZ fuer eine Anforderung gemaess VSA Richtlinie 2023.
     /// ZN = EZ_min + 0.4 - A  (Kap. 5.2, Formel 1)
-    /// DZ = ZN × 100 × B1 × B2 × B3 × B4  (Kap. 5.3, Formel 2)
+    /// DZ = ZN x 100 x B1 x B2 x B3 x B4  (Kap. 5.3, Formel 2)
     /// </summary>
     private static VsaConditionResult ComputeForRequirement(
         VsaRequirement requirement,
@@ -305,6 +676,20 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
                 return na;
             }
 
+            if (skippedCodes.Count > 0)
+            {
+                var na = new VsaConditionResult
+                {
+                    Requirement = requirement,
+                    Zustandsnote = null,
+                    WorstEinzelzustand = null,
+                    Abminderung = null,
+                    Dringlichkeitszahl = null
+                };
+                na.Notes.Add($"Keine bewertbaren EZ fuer diese Anforderung (Codes ohne EZ: {string.Join(", ", skippedCodes)}).");
+                return na;
+            }
+
             var dzOk = Math.Round(4.0 * 100.0 * randbedingungen, 2, MidpointRounding.AwayFromZero);
             var ok = new VsaConditionResult
             {
@@ -315,8 +700,6 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
                 Dringlichkeitszahl = dzOk
             };
             var hint = "Keine Schadenscodes vorhanden – Leitung i.O.";
-            if (skippedCodes.Count > 0)
-                hint += $" (Codes ohne EZ: {string.Join(", ", skippedCodes)})";
             ok.Notes.Add(hint);
             return ok;
         }
@@ -554,7 +937,8 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             if (code.Length < 3)
                 continue;
 
-            if (knownCodes.Count > 0 && !knownCodes.Contains(code) && code.Length > 4)
+            var baseCode = code.Length >= 3 ? code[..3] : code;
+            if (knownCodes.Count > 0 && !knownCodes.Contains(code) && !knownCodes.Contains(baseCode))
                 continue;
 
             findings.Add(new VsaFinding
@@ -566,6 +950,135 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
         return findings;
     }
+
+    private static IEnumerable<VsaFinding> EnrichFindingsFromPrimaryDamage(
+        IEnumerable<VsaFinding> findings,
+        string? primaryDamageText)
+    {
+        var candidates = ParsePrimaryDamageCodeCandidates(primaryDamageText);
+        if (candidates.Count == 0)
+            return findings;
+
+        return findings.Select(finding =>
+        {
+            var code = NormalizeCode(finding.KanalSchadencode);
+            var effectiveCode = code;
+            if (code.Length == 3)
+            {
+                var meter = finding.MeterStart ?? finding.SchadenlageAnfang;
+                var candidate = FindMatchingFullCodeCandidate(candidates, code, meter);
+                if (candidate is not null)
+                    effectiveCode = candidate.Code;
+            }
+
+            var q1 = string.IsNullOrWhiteSpace(finding.Quantifizierung1)
+                ? ExtractQuantValue(finding.Raw)
+                : finding.Quantifizierung1;
+
+            return string.Equals(effectiveCode, code, StringComparison.OrdinalIgnoreCase)
+                   && string.Equals(q1, finding.Quantifizierung1, StringComparison.Ordinal)
+                ? finding
+                : CopyFinding(finding, effectiveCode, q1);
+        });
+    }
+
+    private static PrimaryDamageCodeCandidate? FindMatchingFullCodeCandidate(
+        IReadOnlyList<PrimaryDamageCodeCandidate> candidates,
+        string baseCode,
+        double? meter)
+    {
+        var matchingBase = candidates
+            .Where(c => c.Code.Length > baseCode.Length
+                        && c.Code.StartsWith(baseCode, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (matchingBase.Count == 0)
+            return null;
+
+        if (meter.HasValue)
+        {
+            return matchingBase
+                .Where(c => c.Meter.HasValue)
+                .OrderBy(c => Math.Abs(c.Meter!.Value - meter.Value))
+                .FirstOrDefault(c => Math.Abs(c.Meter!.Value - meter.Value) <= 0.05);
+        }
+
+        return matchingBase.Count == 1 ? matchingBase[0] : null;
+    }
+
+    private static List<PrimaryDamageCodeCandidate> ParsePrimaryDamageCodeCandidates(string? raw)
+    {
+        var candidates = new List<PrimaryDamageCodeCandidate>();
+        if (string.IsNullOrWhiteSpace(raw))
+            return candidates;
+
+        var lines = raw.Replace("\r\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var rawLine in lines)
+        {
+            var match = PrimaryDamageLineRegex.Match(rawLine.Trim());
+            if (!match.Success)
+                continue;
+
+            var code = NormalizeCode(match.Groups["code"].Value);
+            if (code.Length <= 3)
+                continue;
+
+            double? meter = null;
+            var meterText = match.Groups["meter"].Value;
+            if (!string.IsNullOrWhiteSpace(meterText)
+                && double.TryParse(meterText.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var meterValue))
+            {
+                meter = meterValue;
+            }
+
+            candidates.Add(new PrimaryDamageCodeCandidate(code, meter));
+        }
+
+        return candidates;
+    }
+
+    internal static string? ExtractQuantValue(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+
+        var percent = Regex.Match(text, @"(\d+(?:[.,]\d+)?)\s*%");
+        if (percent.Success)
+            return NormalizeQuant(percent.Groups[1].Value);
+
+        var degrees = Regex.Match(text, @"(\d+(?:[.,]\d+)?)\s*(?:\u00B0|deg\b|Grad\b|degrees\b)", RegexOptions.IgnoreCase);
+        if (degrees.Success)
+            return NormalizeQuant(degrees.Groups[1].Value);
+
+        var millimeters = Regex.Match(text, @"(\d+(?:[.,]\d+)?)\s*mm\b", RegexOptions.IgnoreCase);
+        if (millimeters.Success)
+            return NormalizeQuant(millimeters.Groups[1].Value);
+
+        return null;
+    }
+
+    private static string NormalizeQuant(string value)
+        => value.Replace(',', '.');
+
+    private static VsaFinding CopyFinding(VsaFinding source, string code, string? quantification1)
+        => new()
+        {
+            KanalSchadencode = code,
+            Quantifizierung1 = quantification1,
+            Quantifizierung2 = source.Quantifizierung2,
+            SchadenlageAnfang = source.SchadenlageAnfang,
+            SchadenlageEnde = source.SchadenlageEnde,
+            LL = source.LL,
+            Raw = source.Raw,
+            MeterStart = source.MeterStart,
+            MeterEnd = source.MeterEnd,
+            MPEG = source.MPEG,
+            Timestamp = source.Timestamp,
+            FotoPath = source.FotoPath,
+            EZD = source.EZD,
+            EZS = source.EZS,
+            EZB = source.EZB
+        };
 
     private static double ParseDouble(string? s)
     {
@@ -605,7 +1118,16 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         VsaClassificationResult Classification,
         bool IsUnknown);
 
+    private sealed record PrimaryDamageCodeCandidate(
+        string Code,
+        double? Meter);
+
     private sealed record LoadedTable(
         VsaClassificationTable Table,
+        string SourceName);
+
+    private sealed record LoadedV2Model(
+        VsaClassificationRuleSelector Selector,
+        IReadOnlySet<string> KnownCodes,
         string SourceName);
 }

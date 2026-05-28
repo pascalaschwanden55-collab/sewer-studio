@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
-using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.Configuration;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
@@ -16,10 +17,11 @@ public class PipelineConfigTests
         {
             ClearEnvVars();
 
-            var config = PipelineConfig.Load();
+            var config = LoadPipelineConfig();
 
             Assert.False(config.MultiModelEnabled);
             Assert.Equal(new Uri("http://localhost:8100"), config.SidecarUrl);
+            Assert.Null(config.SidecarToken);
             Assert.Equal(PipelineMode.OllamaOnly, config.Mode);
             Assert.Equal(0.25, config.YoloConfidence);
             Assert.Equal(0.30, config.DinoBoxThreshold);
@@ -42,7 +44,7 @@ public class PipelineConfigTests
             ClearEnvVars();
             Environment.SetEnvironmentVariable("SEWERSTUDIO_MULTIMODEL_ENABLED", "1");
 
-            var config = PipelineConfig.Load();
+            var config = LoadPipelineConfig();
 
             Assert.True(config.MultiModelEnabled);
         }
@@ -59,7 +61,7 @@ public class PipelineConfigTests
     [InlineData("ollamaonly", PipelineMode.OllamaOnly)]
     [InlineData("auto", PipelineMode.Auto)]
     [InlineData("", PipelineMode.OllamaOnly)]
-    [InlineData("unknown", PipelineMode.Auto)]
+    [InlineData("unknown", PipelineMode.OllamaOnly)]
     public void Load_PipelineMode_ParsesCorrectly(string modeStr, PipelineMode expected)
     {
         var backup = BackupEnvVars();
@@ -68,7 +70,7 @@ public class PipelineConfigTests
             ClearEnvVars();
             Environment.SetEnvironmentVariable("SEWERSTUDIO_PIPELINE_MODE", modeStr);
 
-            var config = PipelineConfig.Load();
+            var config = LoadPipelineConfig();
 
             Assert.Equal(expected, config.Mode);
         }
@@ -90,7 +92,7 @@ public class PipelineConfigTests
             Environment.SetEnvironmentVariable("SEWERSTUDIO_DINO_TEXT_THRESHOLD", "0.35");
             Environment.SetEnvironmentVariable("SEWERSTUDIO_PIPE_DIAMETER_MM", "400");
 
-            var config = PipelineConfig.Load();
+            var config = LoadPipelineConfig();
 
             Assert.Equal(0.5, config.YoloConfidence);
             Assert.Equal(0.4, config.DinoBoxThreshold);
@@ -103,7 +105,29 @@ public class PipelineConfigTests
         }
     }
 
+    [Fact]
+    public void Load_SidecarAuthTokenEnvVar_MapsToPipelineConfig()
+    {
+        var backup = BackupEnvVars();
+        try
+        {
+            ClearEnvVars();
+            Environment.SetEnvironmentVariable("SEWER_SIDECAR_AUTH_TOKEN", "env-token");
+
+            var config = LoadPipelineConfig();
+
+            Assert.Equal("env-token", config.SidecarToken);
+        }
+        finally
+        {
+            RestoreEnvVars(backup);
+        }
+    }
+
     // ── Helpers ──
+
+    private static PipelineConfig LoadPipelineConfig() =>
+        AiSettingsFactory.Load().ToPipelineConfig();
 
     private static readonly string[] EnvKeys =
     [
@@ -115,6 +139,9 @@ public class PipelineConfigTests
         "SEWERSTUDIO_DINO_TEXT_THRESHOLD",
         "SEWERSTUDIO_SIDECAR_TIMEOUT_SEC",
         "SEWERSTUDIO_PIPE_DIAMETER_MM",
+        "SEWERSTUDIO_SIDECAR_TOKEN",
+        "SEWER_SIDECAR_AUTH_TOKEN",
+        "SEWER_SIDECAR_TOKEN",
     ];
 
     private static readonly string[] LegacyKeys = EnvKeys

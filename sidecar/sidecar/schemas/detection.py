@@ -26,6 +26,13 @@ class YoloResponse(BaseModel):
     detections: list[YoloDetection] = []
     frame_class: str = "unknown"
     inference_time_ms: float = 0.0
+    model_name: str | None = None
+    model_backend: str | None = None
+    device: str | None = None
+    queue_wait_ms: float = 0.0
+    vram_allocated_gb: float | None = None
+    vram_total_gb: float | None = None
+    gpu_utilization_percent: float | None = None
 
 
 # ── Grounding DINO ──────────────────────────────────────────────────────────

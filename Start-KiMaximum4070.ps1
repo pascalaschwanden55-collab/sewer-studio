@@ -41,6 +41,17 @@ $env:SEWER_SIDECAR_YOLO_CONFIDENCE = $env:AUSWERTUNGPRO_YOLO_CONFIDENCE
 $env:SEWER_SIDECAR_DINO_BOX_THRESHOLD = $env:AUSWERTUNGPRO_DINO_BOX_THRESHOLD
 $env:SEWER_SIDECAR_DINO_TEXT_THRESHOLD = $env:AUSWERTUNGPRO_DINO_TEXT_THRESHOLD
 
+if (-not $env:SEWER_SIDECAR_YOLO_CLS_MODEL_PATH) {
+    $candidateCls = Get-ChildItem -Path (Join-Path $modelsDir "candidates\classification") -Recurse -Filter "best.pt" -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+    if ($candidateCls) {
+        Write-Host "  YOLO-cls Kandidat vorhanden, aber noch nicht automatisch aktiviert." -ForegroundColor Yellow
+        Write-Host "  Fuer Benchmark aktivieren:" -ForegroundColor DarkGray
+        Write-Host "    `$env:SEWER_SIDECAR_YOLO_CLS_MODEL_PATH = `"$($candidateCls.FullName)`"" -ForegroundColor DarkGray
+    }
+}
+
 # Solange noch keine Custom-Gewichte vorhanden sind, nicht fail-fast erzwingen.
 $customYolo = Get-ChildItem -Path (Join-Path $modelsDir "yolo26m") -Filter *.pt -ErrorAction SilentlyContinue
 $env:SEWER_SIDECAR_REQUIRE_CUSTOM_YOLO = if ($customYolo) { "1" } else { "0" }
@@ -61,6 +72,7 @@ Write-Host "    YOLO Device:       $env:SEWER_SIDECAR_YOLO_DEVICE"
 Write-Host "    DINO Device:       $env:SEWER_SIDECAR_DINO_DEVICE"
 Write-Host "    SAM Device:        $env:SEWER_SIDECAR_SAM_DEVICE"
 Write-Host "    YOLO Model:        $env:SEWER_SIDECAR_YOLO_MODEL_NAME"
+Write-Host "    YOLO-cls Model:    $(if ($env:SEWER_SIDECAR_YOLO_CLS_MODEL_PATH) { $env:SEWER_SIDECAR_YOLO_CLS_MODEL_PATH } else { 'auto/fallback' })"
 Write-Host "    YOLO Conf:         $env:SEWER_SIDECAR_YOLO_CONFIDENCE"
 Write-Host "    DINO Box/Text:     $env:SEWER_SIDECAR_DINO_BOX_THRESHOLD / $env:SEWER_SIDECAR_DINO_TEXT_THRESHOLD"
 Write-Host "    Require Custom:    $env:SEWER_SIDECAR_REQUIRE_CUSTOM_YOLO"

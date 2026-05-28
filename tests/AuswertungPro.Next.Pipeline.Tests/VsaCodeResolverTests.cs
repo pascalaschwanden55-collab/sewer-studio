@@ -1,4 +1,5 @@
-using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai;
 using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
@@ -7,8 +8,32 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Tests fuer VsaCodeResolver — zentrale VSA-Code-Aufloesung.
 /// Deckt ab: NormalizeFindingCode, InferCodeFromLabel, LookupLabel, NormalizeClock.
 /// </summary>
+[Collection(VsaCodeResolverTestCollection.Name)]
 public sealed class VsaCodeResolverTests
 {
+    public VsaCodeResolverTests()
+    {
+        VsaCodeResolver.ConfigureCatalog(new InMemoryCodeCatalogProvider(new[]
+        {
+            Code("BAA", "Verformung"),
+            Code("BAB", "Risse"),
+            Code("BAC", "Leitungsbruch/Einsturz"),
+            Code("BAF", "Oberflaechenschaden"),
+            Code("BAG", "Einragender Anschluss", requiresRange: true),
+            Code("BAH", "Schadhafter Anschluss"),
+            Code("BAI", "Einragendes Dichtungsmaterial"),
+            Code("BAJ", "Verschobene Rohrverbindung"),
+            Code("BCA", "Seitlicher Anschluss"),
+            Code("BCC", "Bogen"),
+            Code("BCD", "Rohranfang"),
+            Code("BCE", "Rohrende"),
+            Code("BBA", "Wurzeln", requiresRange: true),
+            Code("BBB", "Anhaftende Stoffe"),
+            Code("BBC", "Ablagerungen Sohle"),
+            Code("BDDC", "Wasserstand")
+        }));
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // NormalizeFindingCode
     // ═══════════════════════════════════════════════════════════════
@@ -49,17 +74,9 @@ public sealed class VsaCodeResolverTests
     [Fact]
     public void NormalizeFindingCode_TwoCharGroupAlone_ReturnsNull()
     {
-        // 2-Zeichen-Gruppe allein (z.B. "BA") wird NICHT akzeptiert —
-        // der geschaerfte Validator erfordert entweder exakten Katalog-Match
-        // oder einen 3-Zeichen-Hauptcode. "BA" hat keinen exakten Match
-        // im Katalog (nur die Gruppe).
-        // Allerdings: "BA" IST im Katalog als Gruppenlabel.
-        // Deshalb: 2-Zeichen-Codes die eine Gruppe sind sollten akzeptiert werden.
+        // 2-Zeichen-Gruppen sind keine codierbaren Befunde.
         var result = VsaCodeResolver.NormalizeFindingCode("BA");
-        // BA ist als Gruppe im Katalog → sollte akzeptiert werden
-        // ABER unser Validator erfordert 3Z-Hauptcode als Minimum bei nicht-exaktem Match
-        // und BA hat einen exakten Match via LookupLabel("BA") → "Strukturschäden"
-        Assert.NotNull(result); // BA ist exakt im Katalog
+        Assert.Null(result);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -78,10 +95,12 @@ public sealed class VsaCodeResolverTests
     [InlineData("Riss längs", "BAB")]
     [InlineData("Surface crack", "BAB")]
     [InlineData("Bruch/Einsturz", "BAC")]
-    [InlineData("Deformation oval", "BAF")]
-    [InlineData("Wurzeleinwuchs", "BBB")]
-    [InlineData("Inkrustation verkalkt", "BBA")]
-    [InlineData("Attached deposit on pipe wall", "BBA")]
+    [InlineData("Deformation oval", "BAA")]
+    [InlineData("Korrosion an Rohrwandung", "BAF")]
+    [InlineData("Rohrverbindung versetzt", "BAJ")]
+    [InlineData("Wurzeleinwuchs", "BBA")]
+    [InlineData("Inkrustation verkalkt", "BBB")]
+    [InlineData("Attached deposit on pipe wall", "BBB")]
     [InlineData("Ablagerung in der Sohle", "BBC")]
     [InlineData("Wasserstand in der Sohle", "BDDC")]
     [InlineData("Standing water at invert", "BDDC")]
@@ -90,6 +109,20 @@ public sealed class VsaCodeResolverTests
     {
         var result = VsaCodeResolver.InferCodeFromLabel(label);
         Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void InferCodeFromLabel_WhenInferredCodeIsMissingFromCatalog_ReturnsNull()
+    {
+        VsaCodeResolver.ConfigureCatalog(new InMemoryCodeCatalogProvider(new[]
+        {
+            Code("BAB", "Risse"),
+            Code("BAC", "Leitungsbruch/Einsturz")
+        }));
+
+        var result = VsaCodeResolver.InferCodeFromLabel("Muffenversatz");
+
+        Assert.Null(result);
     }
 
     [Theory]
@@ -114,16 +147,13 @@ public sealed class VsaCodeResolverTests
         // "crack" als Wort → BAB, aber "cracking joke" koennte matchen — akzeptabel
         Assert.Equal("BAB", VsaCodeResolver.InferCodeFromLabel("a crack in the pipe"));
 
-        // "root intrusion" matcht "intrusion" (BAI) VOR "root intrusion" (BBB)
-        // weil BAI-Check frueher in der Kette steht. Das ist korrekt —
-        // "intrusion" ist der spezifischere Fachbegriff (Einragung).
-        // Fuer Wurzeleinwuchs braucht es "wurzel" oder "bewuchs".
-        Assert.Equal("BAI", VsaCodeResolver.InferCodeFromLabel("root intrusion"));
-        Assert.Equal("BBB", VsaCodeResolver.InferCodeFromLabel("Wurzeleinwuchs"));
+        // "root intrusion" ist fachlich Wurzeleinwuchs, nicht generische Einragung (BAI).
+        Assert.Equal("BBA", VsaCodeResolver.InferCodeFromLabel("root intrusion"));
+        Assert.Equal("BBA", VsaCodeResolver.InferCodeFromLabel("Wurzeleinwuchs"));
         Assert.Null(VsaCodeResolver.InferCodeFromLabel("root cause analysis"));
 
         // "deposit" allein war frueher zu breit — jetzt nur "attached deposit"
-        Assert.Equal("BBA", VsaCodeResolver.InferCodeFromLabel("attached deposit"));
+        Assert.Equal("BBB", VsaCodeResolver.InferCodeFromLabel("attached deposit"));
         Assert.Null(VsaCodeResolver.InferCodeFromLabel("bank deposit"));
     }
 
@@ -134,9 +164,9 @@ public sealed class VsaCodeResolverTests
         // "Anschlüss" → "anschluess" — matcht nicht "anschluss" (doppel-s)
         // Korrekt: voller Begriff "Anschluss" mit ss
         Assert.Equal("BCA", VsaCodeResolver.InferCodeFromLabel("Anschluss"));
-        Assert.Equal("BAF", VsaCodeResolver.InferCodeFromLabel("Verformung"));
+        Assert.Equal("BAA", VsaCodeResolver.InferCodeFromLabel("Verformung"));
         // Umlaut-Konvertierung: ü→ue, ä→ae, ö→oe
-        Assert.Equal("BAH", VsaCodeResolver.InferCodeFromLabel("Muffenversatz"));
+        Assert.Equal("BAJ", VsaCodeResolver.InferCodeFromLabel("Muffenversatz"));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -148,7 +178,7 @@ public sealed class VsaCodeResolverTests
     {
         var label = VsaCodeResolver.LookupLabel("BCD");
         Assert.NotNull(label);
-        Assert.Contains("Anfangsknoten", label);
+        Assert.Contains("Rohranfang", label);
     }
 
     [Fact]
@@ -166,6 +196,15 @@ public sealed class VsaCodeResolverTests
         Assert.Null(VsaCodeResolver.LookupLabel("ZZZ"));
         Assert.Null(VsaCodeResolver.LookupLabel(""));
         Assert.Null(VsaCodeResolver.LookupLabel(null!));
+    }
+
+    [Fact]
+    public void IsStreckenschadenCode_UsesCatalogRangeFlagAndKnownFallbacks()
+    {
+        Assert.True(VsaCodeResolver.IsStreckenschadenCode("BAG"));
+        Assert.True(VsaCodeResolver.IsStreckenschadenCode("BAGA"));
+        Assert.True(VsaCodeResolver.IsStreckenschadenCode("BBAA"));
+        Assert.False(VsaCodeResolver.IsStreckenschadenCode("BCD"));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -230,5 +269,43 @@ public sealed class VsaCodeResolverTests
         var result = VsaCodeResolver.InferCodeFromLabel("totally unknown thing");
         Assert.True(result == null || !result.Contains("?"),
             "InferCodeFromLabel darf nie '???' zurueckgeben");
+    }
+
+    private static CodeDefinition Code(string code, string title, bool requiresRange = false)
+        => new()
+        {
+            Code = code,
+            Title = title,
+            CanonicalCode = code,
+            Source = VsaKekCatalogSources.Ili,
+            RequiresRange = requiresRange
+        };
+
+    private sealed class InMemoryCodeCatalogProvider : ICodeCatalogProvider
+    {
+        private readonly IReadOnlyList<CodeDefinition> _codes;
+
+        public InMemoryCodeCatalogProvider(IReadOnlyList<CodeDefinition> codes)
+        {
+            _codes = codes;
+        }
+
+        public IReadOnlyList<CodeDefinition> GetAll() => _codes;
+
+        public bool TryGet(string code, out CodeDefinition def)
+        {
+            def = _codes.FirstOrDefault(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase))
+                ?? new CodeDefinition();
+            return !string.IsNullOrWhiteSpace(def.Code);
+        }
+
+        public void Save(IReadOnlyList<CodeDefinition> codes)
+            => throw new NotSupportedException();
+
+        public IReadOnlyList<string> AllowedCodes()
+            => _codes.Select(c => c.Code).ToList();
+
+        public IReadOnlyList<string> Validate(IReadOnlyList<CodeDefinition>? codes = null)
+            => Array.Empty<string>();
     }
 }

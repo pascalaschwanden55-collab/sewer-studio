@@ -73,9 +73,17 @@ public sealed class AppSettings
     // WinCan catalog directory for browsing and auto-discovery
     public string? WinCanCatalogDirectory { get; set; }
 
+    // VSA Zustandklassifizierung v2: Shadow-Vergleich gegen Legacy-Engine.
+    // Null bedeutet Default an.
+    public bool? VsaClassificationShadowEnabled { get; set; }
+
+    // VSA Zustandklassifizierung v2 produktiv nutzen. Null bedeutet Default an.
+    public bool? VsaUseV2Engine { get; set; }
+
     // Multi-Model Pipeline Thresholds (overrides env vars if set)
     public bool? PipelineMultiModelEnabled { get; set; }
     public string? PipelineSidecarUrl { get; set; }
+    public string? PipelineSidecarToken { get; set; }
     public string? PipelineMode { get; set; }
     public double? PipelineYoloConfidence { get; set; }
     public double? PipelineDinoBoxThreshold { get; set; }
@@ -96,8 +104,16 @@ public sealed class AppSettings
     // Hydraulik-Panel letzte Eingaben
     public HydraulikPanelSettings HydraulikPanel { get; set; } = new();
 
-    public static string AppDataDir =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.ProductName);
+    public static string AppDataDir
+    {
+        get
+        {
+            var overridePath = Environment.GetEnvironmentVariable("SEWERSTUDIO_APPDATA_DIR");
+            return string.IsNullOrWhiteSpace(overridePath)
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.ProductName)
+                : overridePath;
+        }
+    }
 
     private static string LegacyAppDataDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.LegacyLocalDataFolder);

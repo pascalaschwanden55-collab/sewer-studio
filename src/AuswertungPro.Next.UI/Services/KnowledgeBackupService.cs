@@ -5,6 +5,10 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Application.Ai.Training;
+using InfraKnowledgeBase = AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
+using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Services;
 
@@ -63,7 +67,7 @@ public static class KnowledgeBackupService
                     Product = "SewerStudio",
                     ExportedUtc = DateTime.UtcNow.ToString("o"),
                     FileCount = fileCount,
-                    KnowledgeRoot = Ai.KnowledgeRoot.GetRoot()
+                    KnowledgeRoot = InfraKnowledgeBase.KnowledgeBasePaths.GetRoot()
                 };
                 var manifestEntry = zip.CreateEntry("_manifest.json", CompressionLevel.Fastest);
                 using var mStream = manifestEntry.Open();
@@ -222,11 +226,11 @@ public static class KnowledgeBackupService
     {
         try
         {
-            var dbPath = Ai.KnowledgeRoot.GetKnowledgeDbPath();
+            var dbPath = InfraKnowledgeBase.KnowledgeBasePaths.GetKnowledgeDbPath();
             if (!File.Exists(dbPath)) return;
 
             progress?.Report("SQLite WAL-Checkpoint...");
-            using var ctx = new Ai.KnowledgeBase.KnowledgeBaseContext();
+            using var ctx = new AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBaseContext();
             using var cmd = ctx.Connection.CreateCommand();
             cmd.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
             cmd.ExecuteNonQuery();
@@ -288,14 +292,14 @@ public static class KnowledgeBackupService
     {
         try
         {
-            var samplesPath = Ai.KnowledgeRoot.GetTrainingSamplesPath();
+            var samplesPath = InfraKnowledgeBase.KnowledgeBasePaths.GetTrainingSamplesPath();
             if (!File.Exists(samplesPath)) return;
 
             var json = await File.ReadAllTextAsync(samplesPath, ct).ConfigureAwait(false);
-            var samples = JsonSerializer.Deserialize<List<Ai.Training.TrainingSample>>(json);
+            var samples = JsonSerializer.Deserialize<List<TrainingSample>>(json);
             if (samples is null || samples.Count == 0) return;
 
-            var localFramesDir = Ai.KnowledgeRoot.GetFramesDir();
+            var localFramesDir = InfraKnowledgeBase.KnowledgeBasePaths.GetFramesDir();
             var changed = false;
 
             foreach (var s in samples)
@@ -351,7 +355,7 @@ public static class KnowledgeBackupService
     {
         try
         {
-            var importedPath = Path.Combine(Ai.KnowledgeRoot.GetRoot(), "training_center.json");
+            var importedPath = Path.Combine(InfraKnowledgeBase.KnowledgeBasePaths.GetRoot(), "training_center.json");
             if (!File.Exists(importedPath)) return;
 
             var tcStore = new Ai.Training.TrainingCenterStore();
@@ -381,16 +385,16 @@ public static class KnowledgeBackupService
     {
         try
         {
-            var annotationsPath = Path.Combine(Ai.KnowledgeRoot.GetRoot(), "teacher_annotations.json");
+            var annotationsPath = Path.Combine(InfraKnowledgeBase.KnowledgeBasePaths.GetRoot(), "teacher_annotations.json");
             if (!File.Exists(annotationsPath)) return;
 
             var json = File.ReadAllText(annotationsPath);
             var opts = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
-            var annotations = JsonSerializer.Deserialize<List<Ai.Teacher.TeacherAnnotation>>(json, opts);
+            var annotations = JsonSerializer.Deserialize<List<TeacherAnnotation>>(json, opts);
             if (annotations is null || annotations.Count == 0) return;
 
-            var localImagesDir = Ai.Teacher.TeacherAnnotationStore.GetImagesDir();
-            var localLabelsDir = Ai.Teacher.TeacherAnnotationStore.GetLabelsDir();
+            var localImagesDir = InfraTeacher.TeacherAnnotationStore.GetImagesDir();
+            var localLabelsDir = InfraTeacher.TeacherAnnotationStore.GetLabelsDir();
             var changed = false;
 
             foreach (var a in annotations)
@@ -459,24 +463,24 @@ public static class KnowledgeBackupService
 
     private static IEnumerable<(string Source, string Entry)> EnumerateBackupFiles()
     {
-        var knowledgeRoot = Ai.KnowledgeRoot.GetRoot();
+        var knowledgeRoot = InfraKnowledgeBase.KnowledgeBasePaths.GetRoot();
 
         // ══════════════════════════════════════════════════════════════════
         // KNOWLEDGE-ROOT: Alle KI-Artefakte (vollstaendiger Hirntransfer)
         // ══════════════════════════════════════════════════════════════════
 
         // KB-Datenbank (nach WAL-Checkpoint nur noch .db noetig, WAL/SHM als Sicherheit)
-        var kbDbPath = Ai.KnowledgeRoot.GetKnowledgeDbPath();
+        var kbDbPath = InfraKnowledgeBase.KnowledgeBasePaths.GetKnowledgeDbPath();
         yield return (kbDbPath, "knowledge/KnowledgeBase.db");
         yield return (kbDbPath + "-wal", "knowledge/KnowledgeBase.db-wal");
         yield return (kbDbPath + "-shm", "knowledge/KnowledgeBase.db-shm");
 
         // Training Samples + Settings
-        yield return (Ai.KnowledgeRoot.GetTrainingSamplesPath(), "knowledge/training_samples.json");
-        yield return (Ai.KnowledgeRoot.GetTrainingSettingsPath(), "knowledge/training_settings.json");
+        yield return (InfraKnowledgeBase.KnowledgeBasePaths.GetTrainingSamplesPath(), "knowledge/training_samples.json");
+        yield return (InfraKnowledgeBase.KnowledgeBasePaths.GetTrainingSettingsPath(), "knowledge/training_settings.json");
 
         // Frames (extrahierte Video-Bilder)
-        var knowledgeFramesDir = Ai.KnowledgeRoot.GetFramesDir();
+        var knowledgeFramesDir = InfraKnowledgeBase.KnowledgeBasePaths.GetFramesDir();
         if (Directory.Exists(knowledgeFramesDir))
         {
             foreach (var png in Directory.EnumerateFiles(knowledgeFramesDir, "*.png"))
@@ -522,8 +526,8 @@ public static class KnowledgeBackupService
         yield return (Path.Combine(knowledgeRoot, "selftraining_history.json"), "knowledge/selftraining_history.json");
 
         // Massnahmen-Modell
-        yield return (Ai.KnowledgeRoot.GetMeasuresLearningPath(), "knowledge/measures_learning.json");
-        yield return (Ai.KnowledgeRoot.GetMeasuresModelPath(), "knowledge/measures-model.zip");
+        yield return (InfraKnowledgeBase.KnowledgeBasePaths.GetMeasuresLearningPath(), "knowledge/measures_learning.json");
+        yield return (InfraKnowledgeBase.KnowledgeBasePaths.GetMeasuresModelPath(), "knowledge/measures-model.zip");
 
         // Training-Center State (Case-Fortschritt) — liegt aktuell in AppData,
         // wird hier zusaetzlich unter knowledge/ exportiert fuer portablen Transfer.
@@ -579,7 +583,7 @@ public static class KnowledgeBackupService
 
         if (entryName.StartsWith(prefixKnowledge))
         {
-            basePath = Ai.KnowledgeRoot.GetRoot();
+            basePath = InfraKnowledgeBase.KnowledgeBasePaths.GetRoot();
             relativePart = entryName[prefixKnowledge.Length..];
         }
         else if (entryName.StartsWith(prefixAp))

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using AuswertungPro.Next.Application.Ai.Training;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
@@ -17,6 +18,7 @@ public partial class TrainingCase : ObservableObject
     [ObservableProperty] private string _folderPath = "";
     [ObservableProperty] private string _videoPath = "";
     [ObservableProperty] private string _protocolPath = "";
+    [ObservableProperty] private DateTime? _inspectionDate;
     [ObservableProperty] private TrainingCaseStatus _status = TrainingCaseStatus.New;
     [ObservableProperty] private DateTime _createdUtc = DateTime.UtcNow;
 

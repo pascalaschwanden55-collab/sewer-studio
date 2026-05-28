@@ -16,6 +16,7 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
 
     public ObservableCollection<AppProtocol.CodeDefinition> Codes { get; }
     public ObservableCollection<CodeTreeNode> CodeTree { get; } = new();
+    public ObservableCollection<CodeTreeNode> LockedCodeTree { get; } = new();
     public ObservableCollection<string> GroupOptions { get; } = new();
     public ObservableCollection<ParameterValueViewModel> ParameterValues { get; } = new();
 
@@ -35,6 +36,9 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
     public IRelayCommand CancelCommand { get; }
 
     public IReadOnlyList<string> SeverityOptions { get; } = new[] { "low", "mid", "high" };
+    public string SelectedSource => SelectedCode?.Source ?? string.Empty;
+    public string SelectedCanonicalCode => SelectedCode?.CanonicalCode ?? string.Empty;
+    public string SelectedStandardAnnotation => SelectedCode?.StandardAnnotation ?? string.Empty;
 
     public ProtocolCodePickerViewModel(AppProtocol.ICodeCatalogProvider catalog, ProtocolEntryVM entryVm)
     {
@@ -46,6 +50,7 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
 
         GroupOptions.Add(AllGroups);
         foreach (var group in Codes
+                     .Where(c => c.IsSelectable && !c.IsObservedExtension)
                      .Select(c => string.IsNullOrWhiteSpace(c.Group) ? "Unbekannt" : c.Group.Trim())
                      .Distinct(StringComparer.OrdinalIgnoreCase)
                      .OrderBy(g => g, StringComparer.OrdinalIgnoreCase))
@@ -74,6 +79,9 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
     {
         BuildParameterEditors();
         BuildRangeHint();
+        OnPropertyChanged(nameof(SelectedSource));
+        OnPropertyChanged(nameof(SelectedCanonicalCode));
+        OnPropertyChanged(nameof(SelectedStandardAnnotation));
     }
 
     partial void OnSelectedNodeChanged(CodeTreeNode? value)
@@ -81,7 +89,15 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
         if (value is null)
             return;
         if (value.Code is not null)
+        {
+            if (!value.IsSelectable)
+            {
+                ValidationMessage = "Dieser Code ist im Katalog sichtbar, aber nicht normal auswaehlbar.";
+                return;
+            }
+
             SelectedCode = value.Code;
+        }
     }
 
     private void InitializeFromEntry()
@@ -138,8 +154,24 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
     private void RebuildTree()
     {
         CodeTree.Clear();
+        LockedCodeTree.Clear();
 
         var filtered = Codes.Where(FilterCode).ToList();
+        BuildTree(filtered, CodeTree);
+
+        var locked = Codes.Where(FilterLockedCode).ToList();
+        BuildTree(locked, LockedCodeTree);
+
+        if (SelectedCode is not null)
+        {
+            var node = FindNodeByCode(CodeTree, SelectedCode.Code);
+            if (node is not null)
+                SelectedNode = node;
+        }
+    }
+
+    private static void BuildTree(IReadOnlyList<AppProtocol.CodeDefinition> filtered, ObservableCollection<CodeTreeNode> target)
+    {
         var majorGroups = filtered
             .Select(c => ParseGroup(c.Group).Major)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -174,14 +206,7 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
                 majorNode.Children.Add(baseNode);
             }
 
-            CodeTree.Add(majorNode);
-        }
-
-        if (SelectedCode is not null)
-        {
-            var node = FindNodeByCode(CodeTree, SelectedCode.Code);
-            if (node is not null)
-                SelectedNode = node;
+            target.Add(majorNode);
         }
     }
 
@@ -200,7 +225,24 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
 
     private bool FilterCode(AppProtocol.CodeDefinition code)
     {
+        if (code.IsObservedExtension || !code.IsSelectable)
+            return false;
+
+        return MatchesActiveFilters(code);
+    }
+
+    private bool FilterLockedCode(AppProtocol.CodeDefinition code)
+    {
+        if (!code.IsObservedExtension && code.IsSelectable)
+            return false;
+
+        return MatchesActiveFilters(code);
+    }
+
+    private bool MatchesActiveFilters(AppProtocol.CodeDefinition code)
+    {
         var group = string.IsNullOrWhiteSpace(code.Group) ? "Unbekannt" : code.Group.Trim();
+
         if (!string.IsNullOrWhiteSpace(SelectedGroup)
             && !string.Equals(SelectedGroup, AllGroups, StringComparison.OrdinalIgnoreCase)
             && !string.Equals(group, SelectedGroup, StringComparison.OrdinalIgnoreCase))
@@ -215,6 +257,9 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
         return code.Code.Contains(q, StringComparison.OrdinalIgnoreCase)
                || code.Title.Contains(q, StringComparison.OrdinalIgnoreCase)
                || group.Contains(q, StringComparison.OrdinalIgnoreCase)
+               || (code.Source?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
+               || (code.CanonicalCode?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
+               || (code.StandardAnnotation?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
                || (code.Description?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false);
     }
 
@@ -236,6 +281,12 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
         if (SelectedCode is null)
         {
             ValidationMessage = "Bitte einen Code auswaehlen.";
+            return false;
+        }
+
+        if (SelectedCode.IsObservedExtension || !SelectedCode.IsSelectable)
+        {
+            ValidationMessage = "Dieser Code ist nicht auswaehlbar.";
             return false;
         }
 
@@ -280,6 +331,8 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
             if (!string.IsNullOrWhiteSpace(parameter.Value))
                 parameters[parameter.Name] = parameter.Value.Trim();
         }
+
+        AddCatalogMetadata(parameters, SelectedCode);
 
         _entryVm.ApplyCodeSelection(
             SelectedCode.Code,
@@ -359,6 +412,21 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
         var suffix = string.Join(", ", parts);
         return $"{title} ({suffix})";
     }
+
+    private static void AddCatalogMetadata(
+        Dictionary<string, string> parameters,
+        AppProtocol.CodeDefinition code)
+    {
+        AddIfPresent(parameters, "catalog.source", code.Source);
+        AddIfPresent(parameters, "catalog.canonicalCode", code.CanonicalCode);
+        AddIfPresent(parameters, "catalog.standardAnnotation", code.StandardAnnotation);
+    }
+
+    private static void AddIfPresent(Dictionary<string, string> parameters, string key, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+            parameters[key] = value.Trim();
+    }
 }
 
 public sealed class CodeTreeNode
@@ -366,11 +434,33 @@ public sealed class CodeTreeNode
     public string Label { get; }
     public AppProtocol.CodeDefinition? Code { get; }
     public ObservableCollection<CodeTreeNode> Children { get; } = new();
+    public bool IsSelectable => Code is null || (Code.IsSelectable && !Code.IsObservedExtension);
+    public bool IsObserved => Code?.IsObservedExtension == true;
+    public string Source => Code?.Source ?? string.Empty;
+    public string SourceBadgeText => BuildSourceBadge(Code?.Source);
+    public bool HasSourceBadge => !string.IsNullOrWhiteSpace(SourceBadgeText);
+    public string CanonicalCode => Code?.CanonicalCode ?? string.Empty;
+    public string StandardAnnotation => Code?.StandardAnnotation ?? string.Empty;
 
     public CodeTreeNode(string label, AppProtocol.CodeDefinition? code = null)
     {
         Label = label;
         Code = code;
+    }
+
+    private static string BuildSourceBadge(string? source)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+            return string.Empty;
+
+        return source.Trim() switch
+        {
+            AppProtocol.VsaKekCatalogSources.Ili => string.Empty,
+            AppProtocol.VsaKekCatalogSources.Icm => "ICM",
+            AppProtocol.VsaKekCatalogSources.XtfObserved => "XTF",
+            AppProtocol.VsaKekCatalogSources.WinCanFallback => "WinCan",
+            var other => other
+        };
     }
 }
 

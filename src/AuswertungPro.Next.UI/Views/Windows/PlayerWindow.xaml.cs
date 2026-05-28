@@ -18,16 +18,26 @@ using Rectangle = System.Windows.Shapes.Rectangle;
 using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 using LibVLCSharp.Shared;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.QualityGate;
-using AuswertungPro.Next.UI.Ai.Shared;
+using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Ai.QualityGate;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
+using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.UI.ViewModels.Protocol;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
+using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
+using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
+using InfraTraining = AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -1015,10 +1025,12 @@ public partial class PlayerWindow : Window
             return;
         }
 
-        AiRuntimeConfig cfg;
+        AiRuntimeSettings cfg;
         try
         {
-            cfg = AiRuntimeConfig.Load();
+            cfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
         }
         catch
         {
@@ -1197,6 +1209,30 @@ public partial class PlayerWindow : Window
         };
     }
 
+    private AppProtocol.IVsaCodeSelectionCatalog? CodeSelectionCatalog
+        => _serviceProvider?.CodeSelectionCatalog ?? TryGetAppServiceProvider()?.CodeSelectionCatalog;
+
+    private AppProtocol.ICodeCatalogProvider? CodeCatalog
+        => _serviceProvider?.CodeCatalog ?? TryGetAppServiceProvider()?.CodeCatalog;
+
+    private static ServiceProvider? TryGetAppServiceProvider()
+    {
+        try
+        {
+            return App.Services as ServiceProvider;
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    private ViewModels.Windows.VsaCodeExplorerViewModel CreateVsaCodeExplorerViewModel(
+        ProtocolEntry entry,
+        double? presetMeter,
+        TimeSpan? presetZeit)
+        => new(entry, presetMeter, presetZeit, CodeSelectionCatalog);
+
     // Ã¢"â‚¬Ã¢"â‚¬ Live Detection Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬Ã¢"â‚¬
 
     private static string CompactModelName(string? model)
@@ -1319,8 +1355,13 @@ public partial class PlayerWindow : Window
 
     private async Task StartLiveDetectionAsync()
     {
-        AiRuntimeConfig cfg;
-        try { cfg = AiRuntimeConfig.Load(); }
+        AiRuntimeSettings cfg;
+        try
+        {
+            cfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
+        }
         catch
         {
             MessageBox.Show("KI-Konfiguration konnte nicht geladen werden.", "Live-KI",
@@ -1951,16 +1992,25 @@ public partial class PlayerWindow : Window
     /// <summary>
     /// Stellt sicher dass OverlayService + ViewModel bereitstehen (auch ausserhalb Codier-Modus).
     /// </summary>
+    private static ICodingSessionService CreateCodingSessionService()
+    {
+        return new CodingSessionService(
+            () => new AppSettingsAiSettingsProvider().Load().ToOllamaConfig());
+    }
+
     private void EnsureMarkOverlayReady()
     {
         if (_codingOverlayService != null && _codingVm != null) return;
 
         // Lazy-Init: minimales Setup fuer Overlay-Zeichnung
-        _codingOverlayService ??= new Ai.OverlayToolService();
+        _codingOverlayService ??= new OverlayToolService();
         if (_codingVm == null)
         {
-            _codingSessionService ??= new Ai.CodingSessionService();
-            _codingVm = new ViewModels.Windows.CodingSessionViewModel(_codingSessionService, _codingOverlayService);
+            _codingSessionService ??= CreateCodingSessionService();
+            _codingVm = new ViewModels.Windows.CodingSessionViewModel(
+                _codingSessionService,
+                _codingOverlayService,
+                new InfraSelfImproving.CodingFeedbackRecorder());
         }
     }
 
@@ -2056,7 +2106,7 @@ public partial class PlayerWindow : Window
             // Meter automatisch aus OSD oder Videoposition berechnen
             var autoMeter = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
             var entry = new ProtocolEntry();
-            var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(entry, autoMeter, TimeSpan.FromSeconds(timestampSec));
+            var explorerVm = CreateVsaCodeExplorerViewModel(entry, autoMeter, TimeSpan.FromSeconds(timestampSec));
             var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
             {
                 Owner = this
@@ -2078,7 +2128,7 @@ public partial class PlayerWindow : Window
             if (bbox.Width < 0.01 || bbox.Height < 0.01) return false;
 
             // 4. YOLO-Export
-            int classId = Ai.Teacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
+            int classId = InfraTeacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
             var annotationId = Guid.NewGuid().ToString("N")[..12];
             var baseName = $"mark_{annotationId}";
 
@@ -2087,7 +2137,7 @@ public partial class PlayerWindow : Window
                 System.IO.Path.GetTempPath(), $"sewer_studio_mark_{annotationId}.png");
             await System.IO.File.WriteAllBytesAsync(tempFrame, frameBytes);
 
-            var exportService = new Ai.Teacher.TrainingAnnotationExportService();
+            var exportService = Ai.Teacher.TrainingAnnotationExportServiceFactory.Create();
             var exportResult = await exportService.ExportAsync(tempFrame, bbox, selectedEntry.Code, classId, baseName);
 
             // Temp aufräumen
@@ -2099,7 +2149,7 @@ public partial class PlayerWindow : Window
                 System.Globalization.CultureInfo.InvariantCulture, out var parsedMeter))
                 captureMeter = parsedMeter;
 
-            var annotation = new Ai.Teacher.TeacherAnnotation
+            var annotation = new TeacherAnnotation
             {
                 AnnotationId = annotationId,
                 VsaCode = selectedEntry.Code,
@@ -2118,7 +2168,7 @@ public partial class PlayerWindow : Window
                 HeightMm = overlay.Q1Mm
             };
 
-            await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+            await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 
             // Markierung AUCH als CodingEvent in die KI-Befunde-Liste eintragen
             if (_codingSessionService != null && _codingVm != null)
@@ -2239,12 +2289,12 @@ public partial class PlayerWindow : Window
             }
 
             var timestampSec = _detectionPendingTimestampSec ?? (_player.Time / 1000.0);
-            var exportService = new Ai.Teacher.TrainingAnnotationExportService();
+            var exportService = Ai.Teacher.TrainingAnnotationExportServiceFactory.Create();
 
             foreach (var finding in _detectionPendingFindings)
             {
                 var code = finding.VsaCodeHint ?? finding.Label;
-                int classId = Ai.Teacher.VsaYoloClassMap.GetClassId(code);
+                int classId = InfraTeacher.VsaYoloClassMap.GetClassId(code);
                 var annotationId = Guid.NewGuid().ToString("N")[..12];
                 var baseName = $"det_{annotationId}";
 
@@ -2260,7 +2310,7 @@ public partial class PlayerWindow : Window
                 try { System.IO.File.Delete(tempFrame); } catch { }
 
                 // TeacherAnnotation erstellen
-                var annotation = new Ai.Teacher.TeacherAnnotation
+                var annotation = new TeacherAnnotation
                 {
                     AnnotationId = annotationId,
                     VsaCode = code,
@@ -2277,7 +2327,7 @@ public partial class PlayerWindow : Window
                     WidthMm = finding.WidthMm,
                     HeightMm = finding.HeightMm
                 };
-                await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+                await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
             }
 
             // Dezente Bestaetigung im OSD-Badge
@@ -2319,7 +2369,7 @@ public partial class PlayerWindow : Window
             // VsaCodeExplorer oeffnen fuer Korrektur — Meter aus OSD/Video
             var autoMeter2 = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
             var entry = new ProtocolEntry();
-            var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(entry, autoMeter2, TimeSpan.FromSeconds(timestampSec));
+            var explorerVm = CreateVsaCodeExplorerViewModel(entry, autoMeter2, TimeSpan.FromSeconds(timestampSec));
             var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
             {
                 Owner = this
@@ -2344,7 +2394,7 @@ public partial class PlayerWindow : Window
             var timestampSecForFrame = _detectionPendingTimestampSec ?? timestampSec;
             var bbox = BBoxFromClockPosition(primary);
 
-            int classId = Ai.Teacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
+            int classId = InfraTeacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
             var annotationId = Guid.NewGuid().ToString("N")[..12];
             var baseName = $"det_corr_{annotationId}";
 
@@ -2352,11 +2402,11 @@ public partial class PlayerWindow : Window
                 System.IO.Path.GetTempPath(), $"sewer_studio_det_{annotationId}.png");
             await System.IO.File.WriteAllBytesAsync(tempFrame, frameBytes);
 
-            var exportService = new Ai.Teacher.TrainingAnnotationExportService();
+            var exportService = Ai.Teacher.TrainingAnnotationExportServiceFactory.Create();
             var exportResult = await exportService.ExportAsync(tempFrame, bbox, selectedEntry.Code, classId, baseName);
             try { System.IO.File.Delete(tempFrame); } catch { }
 
-            var annotation = new Ai.Teacher.TeacherAnnotation
+            var annotation = new TeacherAnnotation
             {
                 AnnotationId = annotationId,
                 VsaCode = selectedEntry.Code,
@@ -2373,7 +2423,7 @@ public partial class PlayerWindow : Window
                 WidthMm = primary.WidthMm,
                 HeightMm = primary.HeightMm
             };
-            await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+            await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 
             OsdMeterBadge.Visibility = Visibility.Visible;
             TxtOsdMeter.Text = $"✓ Training: {selectedEntry.Code} (korrigiert)";
@@ -2509,7 +2559,7 @@ public partial class PlayerWindow : Window
         if (!string.IsNullOrWhiteSpace(clockPosition))
             entry.CodeMeta.Parameters["vsa.uhr.von"] = clockPosition;
 
-        var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+        var explorerVm = CreateVsaCodeExplorerViewModel(
             entry,
             _codingLastOsdMeter ?? GetMeterFromVideoPosition(),
             TimeSpan.FromSeconds(timestampSec));
@@ -2582,8 +2632,8 @@ public partial class PlayerWindow : Window
     private System.Windows.Shapes.Rectangle? _eingabemarkerPreviewRect;
 
     // Multi-Model Pipeline (YOLO → DINO → SAM) fuer Einzelframe-Analyse
-    private Ai.Pipeline.SingleFrameMultiModelService? _codingMultiModel;
-    private Ai.Pipeline.VisionPipelineClient? _codingVisionClient;
+    private SingleFrameMultiModelService? _codingMultiModel;
+    private VisionPipelineClient? _codingVisionClient;
     private bool _codingUseMultiModel;
 
     // Import-Beobachtungen (Referenz-Spalte, nur-lesen)
@@ -2632,11 +2682,14 @@ public partial class PlayerWindow : Window
         LiveDetectionStatusText.Visibility = Visibility.Collapsed;
 
         // Session-Services erstellen
-        _codingSessionService = new CodingSessionService();
+        _codingSessionService = CreateCodingSessionService();
         _codingOverlayService = new OverlayToolService();
         _codingSchemaManager.Cancel();
         _codingSchemaType = null;
-        _codingVm = new CodingSessionViewModel(_codingSessionService, _codingOverlayService);
+        _codingVm = new CodingSessionViewModel(
+            _codingSessionService,
+            _codingOverlayService,
+            new InfraSelfImproving.CodingFeedbackRecorder());
         _codingVm.VideoPath = _videoPath;
         _codingVm.PropertyChanged += CodingVm_PropertyChanged;
 
@@ -2966,14 +3019,14 @@ public partial class PlayerWindow : Window
         {
             var caseId = _codingVm?.HaltungName ?? "unknown";
             var framePath = ev.Entry.FotoPaths.Count > 0 ? ev.Entry.FotoPaths[0] : null;
-            var sample = Ai.Training.CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath);
+            var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath, ResolveTrainingInspectionDate());
             if (ev.Entry.FotoPaths.Count > 1)
             {
                 sample.AdditionalFramePaths ??= new System.Collections.Generic.List<string>();
                 for (int i = 1; i < ev.Entry.FotoPaths.Count; i++)
                     sample.AdditionalFramePaths.Add(ev.Entry.FotoPaths[i]);
             }
-            Ai.Training.TrainingSamplesStore.MergeAndSaveAsync(new List<Ai.Training.TrainingSample> { sample })
+            InfraTraining.TrainingSamplesStore.MergeAndSaveAsync(new List<TrainingSample> { sample })
                 .SafeFireAndForget("TrainingSaveSingle");
         }
         catch (Exception ex)
@@ -2988,11 +3041,11 @@ public partial class PlayerWindow : Window
         try
         {
             var caseId = _codingVm.HaltungName ?? "unknown";
-            var samples = new System.Collections.Generic.List<Ai.Training.TrainingSample>();
+            var samples = new List<TrainingSample>();
             foreach (var ev in _codingVm.Events)
             {
                 var framePath = ev.Entry.FotoPaths.Count > 0 ? ev.Entry.FotoPaths[0] : null;
-                var sample = Ai.Training.CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath);
+                var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath, ResolveTrainingInspectionDate());
 
                 // Alle Fotos als zusaetzliche Lernbilder referenzieren
                 // (Foto 1 = FramePath, Foto 2+ = AdditionalFrames)
@@ -3006,7 +3059,7 @@ public partial class PlayerWindow : Window
                 samples.Add(sample);
             }
             if (samples.Count > 0)
-                Ai.Training.TrainingSamplesStore.MergeAndSaveAsync(samples)
+                InfraTraining.TrainingSamplesStore.MergeAndSaveAsync(samples)
                     .SafeFireAndForget("TrainingSave");
         }
         catch (Exception ex)
@@ -3015,6 +3068,9 @@ public partial class PlayerWindow : Window
             System.Diagnostics.Debug.WriteLine($"[Training] Fehler: {ex.Message}");
         }
     }
+
+    private DateTime? ResolveTrainingInspectionDate()
+        => TrainingSampleEligibility.TryParseInspectionDate(_haltungRecord?.GetFieldValue("Datum_Jahr"));
 
     /// <summary>
     /// Stellt sicher, dass Haltungslaenge_m gesetzt ist.
@@ -4905,7 +4961,7 @@ public partial class PlayerWindow : Window
                 }
             }
 
-            var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+            var explorerVm = CreateVsaCodeExplorerViewModel(
                 entry, meterValue, videoZeit);
 
             var dlg = new VsaCodeExplorerWindow(explorerVm, _videoPath, videoZeit)
@@ -5146,7 +5202,7 @@ public partial class PlayerWindow : Window
         SuspendCodingOverlayInput();
 
         var entry = codingEvent.Entry;
-        var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+        var explorerVm = CreateVsaCodeExplorerViewModel(
             entry, entry.MeterStart, entry.Zeit);
 
         var dlg = new VsaCodeExplorerWindow(explorerVm, _videoPath,
@@ -5520,13 +5576,13 @@ public partial class PlayerWindow : Window
         }
 
         // 3. Bild in teacher_images kopieren
-        var imagesDir = Ai.Teacher.TeacherAnnotationStore.GetImagesDir();
+        var imagesDir = InfraTeacher.TeacherAnnotationStore.GetImagesDir();
         var annotationId = Guid.NewGuid().ToString("N")[..12];
         var destFrame = System.IO.Path.Combine(imagesDir, $"mark_{annotationId}.png");
         System.IO.File.Copy(snapshotPath, destFrame, overwrite: true);
 
         // 4. Lehrer-Annotation erstellen
-        var annotation = new Ai.Teacher.TeacherAnnotation
+        var annotation = new TeacherAnnotation
         {
             AnnotationId = annotationId,
             VsaCode = importEvent.Entry.Code,
@@ -5537,7 +5593,7 @@ public partial class PlayerWindow : Window
             FullFramePath = destFrame,
         };
 
-        await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+        await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 
         // 5. Visuelles Feedback
         try { System.IO.File.Delete(snapshotPath); } catch { }
@@ -5572,7 +5628,7 @@ public partial class PlayerWindow : Window
         try
         {
             var entry = ev.Entry;
-            var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+            var explorerVm = CreateVsaCodeExplorerViewModel(
                 entry, entry.MeterStart, entry.Zeit);
 
             var dlg = new VsaCodeExplorerWindow(explorerVm, _codingVm.VideoPath, _codingVm.CurrentVideoTime)
@@ -5950,7 +6006,9 @@ public partial class PlayerWindow : Window
     {
         try
         {
-            var config = AiRuntimeConfig.Load();
+            var config = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
             _codingAiModelName = config.VisionModel;
             if (!config.Enabled)
             {
@@ -5959,9 +6017,13 @@ public partial class PlayerWindow : Window
                 return;
             }
 
-            var client = config.CreateOllamaClient();
+            var client = new OllamaClient(
+                config.OllamaBaseUri,
+                ownedTimeout: config.OllamaRequestTimeout,
+                keepAlive: config.OllamaKeepAlive,
+                numCtx: config.OllamaNumCtx);
             _codingLiveDetection = new LiveDetectionService(client, config.VisionModel);
-            _codingEnhancedVision = new EnhancedVisionAnalysisService(client, config.VisionModel);
+            _codingEnhancedVision = new EnhancedVisionAnalysisService(client, config.VisionModel, CodeCatalog);
             _codingQualityGate = new QualityGateService();
 
             // Multi-Model Pipeline (YOLO → DINO → SAM) initialisieren
@@ -5969,11 +6031,11 @@ public partial class PlayerWindow : Window
             {
                 var sidecarUrl = Environment.GetEnvironmentVariable("SEWERSTUDIO_SIDECAR_URL")
                     ?? "http://localhost:8100";
-                _codingVisionClient = new Ai.Pipeline.VisionPipelineClient(new Uri(sidecarUrl));
+                _codingVisionClient = new VisionPipelineClient(new Uri(sidecarUrl));
                 var health = await _codingVisionClient.HealthCheckAsync();
                 if (health != null)
                 {
-                    _codingMultiModel = new Ai.Pipeline.SingleFrameMultiModelService(_codingVisionClient);
+                    _codingMultiModel = new SingleFrameMultiModelService(_codingVisionClient);
                     _codingUseMultiModel = true;
                     SetCodingAiState("Kuenstliche Intelligenz bereit (Multi-Model)", Color.FromRgb(0x22, 0xC5, 0x5E),
                         $"YOLO+DINO+SAM + {CompactModelName(_codingAiModelName)}");
@@ -6150,6 +6212,32 @@ public partial class PlayerWindow : Window
         }
     }
 
+    private static string? ResolveEingabemarkerCodeHint(string? keyword)
+    {
+        var normalized = keyword?.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+            return null;
+
+        return normalized.ToUpperInvariant() switch
+        {
+            "ROHRANFANG" => "BCD",
+            "ROHRENDE" => "BCE",
+            "ANSCHLUSS" => "BCA",
+            "BOGEN" => "BCC",
+            "RISS" => "BAB",
+            "BRUCH" => "BAC",
+            "VERFORMUNG" => "BAA",
+            "OBERFLAECHENSCHADEN" => "BAF",
+            "VERSATZ" or "VERSCHIEBUNG" => "BAJ",
+            "WURZELN" or "BEWUCHS" => "BBA",
+            "ABLAGERUNG" => "BBC",
+            "INKRUSTATION" => "BBB",
+            "WASSERSTAND" => "BDDC",
+            "ABBRUCH" => "BDC",
+            _ => VsaCodeResolver.InferCodeFromLabel(normalized)
+        };
+    }
+
     /// <summary>Freitext oder Stichwort absenden → Code ableiten oder KI-Analyse starten.</summary>
     private async void SubmitEingabemarker()
     {
@@ -6161,25 +6249,7 @@ public partial class PlayerWindow : Window
 
         // VSA-Hauptcode ableiten: Exakte Stichwörter ODER Freitext-Heuristik
         // Freitext wie "beule unten", "riss bei 3 uhr" wird durch InferCodeFromLabel erkannt
-        string? codeHint = keyword.ToUpperInvariant() switch
-        {
-            "ROHRANFANG" => "BCD",
-            "ROHRENDE" => "BCE",
-            "ANSCHLUSS" => "BCA",
-            "BOGEN" => "BCC",
-            "RISS" => "BAB",
-            "BRUCH" => "BAC",
-            "VERFORMUNG" => "BAA",
-            "OBERFLAECHENSCHADEN" => "BAF",
-            "VERSATZ" or "VERSCHIEBUNG" => "BAH",
-            "WURZELN" or "BEWUCHS" => "BBB",
-            "ABLAGERUNG" => "BBC",
-            "INKRUSTATION" => "BBA",
-            "WASSERSTAND" => "BDDC",
-            "ABBRUCH" => "BDC",
-            // Kein exaktes Stichwort → Freitext-Heuristik (z.B. "beule unten", "riss bei 3 uhr")
-            _ => Ai.VsaCodeResolver.InferCodeFromLabel(keyword)
-        };
+        string? codeHint = ResolveEingabemarkerCodeHint(keyword);
 
         try
         {
@@ -6373,7 +6443,7 @@ public partial class PlayerWindow : Window
                     var importContext = GatherImportContext();
                     var enhanced = await _codingEnhancedVision.AnalyzeAsync(
                         b64, importContext, _codingAnalysisCts.Token);
-                    result = Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, captureTimestampSec);
+                    result = LiveDetectionMapper.FromEnhancedAnalysis(enhanced, captureTimestampSec);
                 }
                 else
                 {
@@ -6408,7 +6478,7 @@ public partial class PlayerWindow : Window
     /// <summary>
     /// Rendert Multi-Model Ergebnisse: SAM-Masken (gruene Konturen) + Label-Badges mit Messungen.
     /// </summary>
-    private void ShowMultiModelResults(Ai.Pipeline.SingleFrameResult mmResult)
+    private void ShowMultiModelResults(SingleFrameResult mmResult)
     {
         // Alte Masken entfernen
         Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
@@ -6437,12 +6507,14 @@ public partial class PlayerWindow : Window
     /// und Label-Pfad wie der Qwen/Enhanced-Pfad (ResolveFindingCodeForCoding, LookupVsaLabel).
     /// </summary>
     private void AddMultiModelFindingsAsEvents(
-        Ai.Pipeline.SingleFrameResult mmResult, double captureTimestampSec)
+        SingleFrameResult mmResult, double captureTimestampSec)
     {
-        if (_codingVm == null || _codingSessionService == null) return;
+        var codingVm = _codingVm;
+        var codingSessionService = _codingSessionService;
+        if (codingVm == null || codingSessionService == null) return;
 
-        double meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
-        var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
+        double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter;
+        var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
         bool anyAdded = false;
 
         // BCD wird NICHT mehr automatisch erzeugt — nur durch Eingabemarker oder Qwen-Erkennung.
@@ -6486,13 +6558,13 @@ public partial class PlayerWindow : Window
             // Primaer gegen session.Events pruefen (wird nie gecleared).
             if ((string.Equals(code, "BCD", StringComparison.OrdinalIgnoreCase)
                  || string.Equals(code, "BCE", StringComparison.OrdinalIgnoreCase))
-                && (_codingSessionService?.ActiveSession?.Events.Any(e =>
+                && (codingSessionService.ActiveSession?.Events.Any(e =>
                         CodesMatchForDedup(e.Entry.Code, code)) == true
-                    || _codingVm.Events.Any(e => CodesMatchForDedup(e.Entry.Code, code))))
+                    || codingVm.Events.Any(e => CodesMatchForDedup(e.Entry.Code, code))))
                 continue;
 
             // Dedup gegen bestehende Events (identisch mit Qwen-Pfad)
-            var coveringEvent = _codingVm.Events.FirstOrDefault(e =>
+            var coveringEvent = codingVm.Events.FirstOrDefault(e =>
                 CodesMatchForDedup(e.Entry.Code, code) &&
                 IsAlreadyCovered(e, meter, pseudoFinding));
             if (coveringEvent != null) continue;
@@ -6521,7 +6593,7 @@ public partial class PlayerWindow : Window
             // Messungen in CodeMeta (gleiche Logik wie Qwen-Pfad)
             ApplyQuantificationToEntry(entry, code, quant);
 
-            var codingEvent = _codingSessionService.AddEvent(entry);
+            var codingEvent = codingSessionService.AddEvent(entry);
             codingEvent.AiContext = new CodingEventAiContext
             {
                 SuggestedCode = code,
@@ -6833,14 +6905,14 @@ public partial class PlayerWindow : Window
     /// Voller Code → 3-Zeichen-Hauptcode → 2-Zeichen-Gruppe → null.
     /// </summary>
     /// <summary>Delegiert an VsaCodeResolver.LookupLabel.</summary>
-    private static string? LookupVsaLabel(string code) => Ai.VsaCodeResolver.LookupLabel(code);
+    private static string? LookupVsaLabel(string code) => VsaCodeResolver.LookupLabel(code);
 
     /// <summary>
     /// Traegt SAM-Quantifizierungsdaten in ProtocolEntry.CodeMeta ein.
     /// Gemeinsam genutzt von Qwen- und Multi-Model-Pfad.
     /// </summary>
     private static void ApplyQuantificationToEntry(
-        ProtocolEntry entry, string code, Ai.Pipeline.MaskQuantificationService.QuantifiedMask quant)
+        ProtocolEntry entry, string code, MaskQuantificationService.QuantifiedMask quant)
     {
         if (!string.IsNullOrEmpty(quant.ClockPosition))
         {
@@ -6869,7 +6941,7 @@ public partial class PlayerWindow : Window
     /// Schaetzt Severity (1-5) aus SAM-Quantifizierung.
     /// Groesse der Maske relativ zum Rohrquerschnitt.
     /// </summary>
-    private static int EstimateSeverityFromQuantification(Ai.Pipeline.MaskQuantificationService.QuantifiedMask q)
+    private static int EstimateSeverityFromQuantification(MaskQuantificationService.QuantifiedMask q)
     {
         // Querschnittsreduktion als primaerer Indikator
         if (q.CrossSectionReductionPercent is > 30) return 5;
@@ -6885,7 +6957,7 @@ public partial class PlayerWindow : Window
     }
 
     /// <summary>Delegiert an VsaCodeResolver.NormalizeClock.</summary>
-    private static string? NormalizeClockPosition(string? raw) => Ai.VsaCodeResolver.NormalizeClock(raw);
+    private static string? NormalizeClockPosition(string? raw) => VsaCodeResolver.NormalizeClock(raw);
 
     /// <summary>
     /// Einzige Quelle fuer VSA-Code-Aufloesung eines KI-Findings.
@@ -6895,12 +6967,12 @@ public partial class PlayerWindow : Window
     private string? ResolveFindingCodeForCoding(LiveFrameFinding finding, double currentMeter)
     {
         // 1. VsaCodeHint normalisieren
-        var hinted = Ai.VsaCodeResolver.NormalizeFindingCode(finding.VsaCodeHint);
+        var hinted = VsaCodeResolver.NormalizeFindingCode(finding.VsaCodeHint);
         if (hinted != null)
             return RefineGenericCodeFromImport(hinted, currentMeter) ?? hinted;
 
         // 2. Label-Heuristik
-        var coarse = Ai.VsaCodeResolver.InferCodeFromLabel(finding.Label);
+        var coarse = VsaCodeResolver.InferCodeFromLabel(finding.Label);
         if (coarse != null)
             return RefineGenericCodeFromImport(coarse, currentMeter) ?? coarse;
 
@@ -6969,15 +7041,16 @@ public partial class PlayerWindow : Window
            || code.StartsWith("BBC", StringComparison.OrdinalIgnoreCase) // Ablagerung
            || code.StartsWith("BDDC", StringComparison.OrdinalIgnoreCase) // Wasserspiegel
            // Strukturschaeden (BA-Gruppe)
+           || code.StartsWith("BAA", StringComparison.OrdinalIgnoreCase) // Verformung
            || code.StartsWith("BAB", StringComparison.OrdinalIgnoreCase) // Riss
            || code.StartsWith("BAC", StringComparison.OrdinalIgnoreCase) // Bruch
-           || code.StartsWith("BAF", StringComparison.OrdinalIgnoreCase) // Deformation
-           || code.StartsWith("BAH", StringComparison.OrdinalIgnoreCase) // Versatz
-           || code.StartsWith("BAI", StringComparison.OrdinalIgnoreCase) // Einragender Stutzen
-           || code.StartsWith("BAJ", StringComparison.OrdinalIgnoreCase) // Undichtheit
+           || code.StartsWith("BAF", StringComparison.OrdinalIgnoreCase) // Oberflaechenschaden
+           || code.StartsWith("BAH", StringComparison.OrdinalIgnoreCase) // Schadhafter Anschluss
+           || code.StartsWith("BAI", StringComparison.OrdinalIgnoreCase) // Einragendes Dichtungsmaterial
+           || code.StartsWith("BAJ", StringComparison.OrdinalIgnoreCase) // Verschobene Rohrverbindung
            // Betriebliche Stoerungen (BB-Gruppe)
-           || code.StartsWith("BBA", StringComparison.OrdinalIgnoreCase) // Inkrustation
-           || code.StartsWith("BBB", StringComparison.OrdinalIgnoreCase) // Wurzeleinwuchs
+           || code.StartsWith("BBA", StringComparison.OrdinalIgnoreCase) // Wurzeln / Bewuchs
+           || code.StartsWith("BBB", StringComparison.OrdinalIgnoreCase) // Anhaftende Stoffe / Inkrustation
            || code.StartsWith("BBD", StringComparison.OrdinalIgnoreCase); // Eindringender Boden
 
     /// <summary>
@@ -6986,10 +7059,12 @@ public partial class PlayerWindow : Window
     /// </summary>
     private void AddAiFindingsAsEvents(LiveDetection result, IReadOnlyList<LiveFrameFinding> validFindings)
     {
-        if (_codingVm == null || _codingSessionService == null) return;
+        var codingVm = _codingVm;
+        var codingSessionService = _codingSessionService;
+        if (codingVm == null || codingSessionService == null) return;
 
-        double meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
-        var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
+        double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter;
+        var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
         bool anyAdded = false;
         CodingEvent? firstUnsure = null;
         QualityGateResult? firstUnsureGate = null;
@@ -7013,9 +7088,9 @@ public partial class PlayerWindow : Window
             // Primaer gegen session.Events pruefen (wird nie gecleared, im Gegensatz zu _codingVm.Events).
             if ((string.Equals(code, "BCD", StringComparison.OrdinalIgnoreCase)
                  || string.Equals(code, "BCE", StringComparison.OrdinalIgnoreCase))
-                && (_codingSessionService?.ActiveSession?.Events.Any(e =>
+                && (codingSessionService.ActiveSession?.Events.Any(e =>
                         CodesMatchForDedup(e.Entry.Code, code)) == true
-                    || _codingVm.Events.Any(e => CodesMatchForDedup(e.Entry.Code, code))))
+                    || codingVm.Events.Any(e => CodesMatchForDedup(e.Entry.Code, code))))
             {
                 System.Diagnostics.Debug.WriteLine($"[BCD-Dedup] AddFindings: {code} uebersprungen (bereits vorhanden)");
                 continue;
@@ -7029,7 +7104,7 @@ public partial class PlayerWindow : Window
             // 1. Punktschaden: code + meter ±0.3m + gleiche Position
             // 2. Streckenschaden: code faellt in den MeterStart..MeterEnd Bereich
             // 3. Bereits akzeptierter/bearbeiteter Code: nicht nochmal melden
-            var coveringEvent = _codingVm.Events.FirstOrDefault(e =>
+            var coveringEvent = codingVm.Events.FirstOrDefault(e =>
                 CodesMatchForDedup(e.Entry.Code, code) &&
                 IsAlreadyCovered(e, meter, finding));
             if (coveringEvent != null)
@@ -7056,7 +7131,7 @@ public partial class PlayerWindow : Window
 
             // Streckenschaden-Erkennung: Codes die typischerweise ueber eine Strecke auftreten
             // (z.B. Wasserrueckstau, Wurzeleinwuchs, Ablagerung, Korrosion)
-            bool isStrecke = Services.CodeCatalog.VsaCodeTree.IsStreckenschadenCode(code);
+            bool isStrecke = VsaCodeResolver.IsStreckenschadenCode(code);
 
             var entry = new ProtocolEntry
             {
@@ -7091,7 +7166,7 @@ public partial class PlayerWindow : Window
             if (fotoPath != null)
                 entry.FotoPaths.Add(fotoPath);
 
-            var codingEvent = _codingSessionService.AddEvent(entry);
+            var codingEvent = codingSessionService.AddEvent(entry);
             codingEvent.AiContext = new CodingEventAiContext
             {
                 SuggestedCode = code,
@@ -7136,8 +7211,8 @@ public partial class PlayerWindow : Window
         {
             RefreshCodingEventsList();
             RenderAiOverlays();
-            if (_codingVm.CurrentOverlay != null)
-                RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: false);
+            if (codingVm.CurrentOverlay != null)
+                RenderOverlayGeometry(codingVm.CurrentOverlay, isPreview: false);
             UpdateToolBadge();
         }
 
@@ -7683,7 +7758,7 @@ public partial class PlayerWindow : Window
             rohranfangTime = importBcd.VideoTimestamp;
         }
 
-        var label = Services.CodeCatalog.VsaCodeTree.LookupLabel("BCD") ?? "Rohranfang";
+        var label = VsaCodeResolver.LookupLabel("BCD") ?? "Rohranfang";
         var entry = new ProtocolEntry
         {
             Source = ProtocolEntrySource.Ai,
@@ -7787,7 +7862,7 @@ public partial class PlayerWindow : Window
             rohrEndTime = importBce.VideoTimestamp;
         }
 
-        var label = Services.CodeCatalog.VsaCodeTree.LookupLabel("BCE") ?? "Rohrende";
+        var label = VsaCodeResolver.LookupLabel("BCE") ?? "Rohrende";
         var entry = new ProtocolEntry
         {
             Source = ProtocolEntrySource.Ai,
@@ -7961,8 +8036,14 @@ public partial class PlayerWindow : Window
             if (pngBytes == null || pngBytes.Length == 0) return null;
 
             // Leichtgewichtiger OSD-Request: nur Meterstand, keine volle Analyse
-            var config = AiRuntimeConfig.Load();
-            var client = config.CreateOllamaClient();
+            var config = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
+            var client = new OllamaClient(
+                config.OllamaBaseUri,
+                ownedTimeout: config.OllamaRequestTimeout,
+                keepAlive: config.OllamaKeepAlive,
+                numCtx: config.OllamaNumCtx);
             var b64 = Convert.ToBase64String(pngBytes);
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));

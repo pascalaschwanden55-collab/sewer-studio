@@ -20,10 +20,10 @@ using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
+using AuswertungPro.Next.Infrastructure.Ai;
 using System.Net.Http;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Training;
-using AuswertungPro.Next.UI.Ai.Sanierung;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.UI.Hydraulik;
@@ -1133,7 +1133,9 @@ public sealed partial class DataPageViewModel : ObservableObject
             return;
         }
 
-        var cfg = AiRuntimeConfig.Load();
+        var cfg = new AppSettingsAiSettingsProvider()
+            .Load()
+            .ToRuntimeSettings();
         if (!cfg.Enabled)
         {
             MessageBox.Show("KI ist deaktiviert (SEWERSTUDIO_AI_ENABLED=0).", "Videoanalyse KI",
@@ -1734,7 +1736,9 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         // Build SanierungOptimizationViewModel (nullable when AI disabled)
         SanierungOptimizationViewModel? optimizationVm = null;
-        var cfg = AiRuntimeConfig.Load();
+        var cfg = new AppSettingsAiSettingsProvider()
+            .Load()
+            .ToRuntimeSettings();
         if (cfg.Enabled)
         {
             var ruleResult = _measureRecommendationService.Recommend(record, maxSuggestions: 5);

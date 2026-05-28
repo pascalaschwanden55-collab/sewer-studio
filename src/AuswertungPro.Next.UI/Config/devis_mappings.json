@@ -127,8 +127,8 @@
       "prioritaet": 80
     },
     {
-      "id": "RISS_LAENGS_BAA",
-      "schadensCode": "BAA",
+      "id": "RISS_LAENGS_BAB",
+      "schadensCode": "BAB",
       "minZustandsklasse": 2,
       "maxZustandsklasse": 4,
       "massnahme": "Kurzliner",
@@ -178,8 +178,8 @@
       "prioritaet": 90
     },
     {
-      "id": "WURZEL_BAJ",
-      "schadensCode": "BAJ",
+      "id": "WURZEL_BBA",
+      "schadensCode": "BBA",
       "minZustandsklasse": 2,
       "maxZustandsklasse": 4,
       "massnahme": "Robotersanierung",
@@ -199,8 +199,8 @@
       "prioritaet": 85
     },
     {
-      "id": "DEFORMATION_BAF",
-      "schadensCode": "BAF",
+      "id": "DEFORMATION_BAA",
+      "schadensCode": "BAA",
       "minZustandsklasse": 3,
       "maxZustandsklasse": 4,
       "massnahme": "Leitungsersatz",
@@ -230,8 +230,8 @@
       "prioritaet": 95
     },
     {
-      "id": "KORROSION_BAC",
-      "schadensCode": "BAC",
+      "id": "KORROSION_BAF",
+      "schadensCode": "BAF",
       "minZustandsklasse": 3,
       "maxZustandsklasse": 4,
       "massnahme": "Relining",
@@ -251,8 +251,8 @@
       "prioritaet": 85
     },
     {
-      "id": "VERSATZ_BAD",
-      "schadensCode": "BAD",
+      "id": "VERSATZ_BAJ",
+      "schadensCode": "BAJ",
       "minZustandsklasse": 3,
       "maxZustandsklasse": 4,
       "massnahme": "Teilersatz",
@@ -282,8 +282,8 @@
       "prioritaet": 90
     },
     {
-      "id": "ANSCHLUSS_BAG",
-      "schadensCode": "BAG",
+      "id": "ANSCHLUSS_BAH",
+      "schadensCode": "BAH",
       "minZustandsklasse": 3,
       "maxZustandsklasse": 4,
       "massnahme": "AnschlussErsatz",

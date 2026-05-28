@@ -1,0 +1,460 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
+
+namespace AuswertungPro.Next.Infrastructure.Ai.Training;
+
+/// <summary>
+/// Erstellt TrainingSamples aus einem Trainingsfall (Video + ProtocolDocument).
+///
+/// Features (Phase 2 + 2.5):
+/// - Range Sampling: Streckenschaden → N Samples entlang MeterStart-End
+/// - OSD Mismatch: Δm > threshold → HasOsdMismatch = true
+/// - Dedup: Signature Code + gerundete MeterRange → skip duplicates
+/// </summary>
+public enum TrainingSampleGenerationOutcome
+{
+    Success,
+    ProtocolFileMissing,
+    ProtocolUnreadable,
+    NoProtocolEntries,
+    OnlyDuplicates
+}
+
+public sealed record TrainingSampleGenerationResult(
+    List<TrainingSample> Samples,
+    int ParsedEntries,
+    int DuplicateSkipped,
+    TrainingSampleGenerationOutcome Outcome);
+
+public sealed class TrainingSampleGenerator
+{
+    private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
+
+    private readonly AiRuntimeSettings _cfg;
+    private readonly MeterTimelineService _meterTimeline;
+    private readonly TrainingCenterSettings _settings;
+    private readonly ICodeCatalogProvider? _codeCatalog;
+    private string? _pdfFramesDir;
+
+    public TrainingSampleGenerator(
+        AiRuntimeSettings cfg,
+        MeterTimelineService meterTimeline,
+        TrainingCenterSettings? settings = null,
+        ICodeCatalogProvider? codeCatalog = null)
+    {
+        _cfg = cfg;
+        _meterTimeline = meterTimeline;
+        _settings = settings ?? new TrainingCenterSettings();
+        _codeCatalog = codeCatalog;
+    }
+
+    public async Task<List<TrainingSample>> GenerateAsync(
+        TrainingCaseInput tc,
+        IReadOnlyCollection<string>? existingSignatures = null,
+        string? framesDir = null,
+        CancellationToken ct = default)
+    {
+        var report = await GenerateWithDiagnosticsAsync(tc, existingSignatures, framesDir, ct)
+            .ConfigureAwait(false);
+        return report.Samples;
+    }
+
+    public async Task<TrainingSampleGenerationResult> GenerateWithDiagnosticsAsync(
+        TrainingCaseInput tc,
+        IReadOnlyCollection<string>? existingSignatures = null,
+        string? framesDir = null,
+        CancellationToken ct = default)
+    {
+        var result = new List<TrainingSample>();
+        var duplicateSkipped = 0;
+
+        // Protokoll ist Pflicht
+        if (!File.Exists(tc.ProtocolPath))
+            return new TrainingSampleGenerationResult(
+                result, 0, 0, TrainingSampleGenerationOutcome.ProtocolFileMissing);
+
+        // Frames-Ordner für PDF-Bildbericht-Fotos
+        _pdfFramesDir = framesDir ?? FrameStore.GetFramesDir(null);
+
+        var doc = await LoadProtocolAsync(tc.ProtocolPath);
+        if (doc is null)
+        {
+            return new TrainingSampleGenerationResult(
+                result, 0, 0, TrainingSampleGenerationOutcome.ProtocolUnreadable);
+        }
+
+        var entries = doc.Current.Entries
+            .Where(e => !e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code))
+            .ToList();
+
+        if (entries.Count == 0)
+        {
+            return new TrainingSampleGenerationResult(
+                result, 0, 0, TrainingSampleGenerationOutcome.NoProtocolEntries);
+        }
+
+        // Video + ffmpeg optional: wenn verfügbar → Frames + OSD, sonst protocol-only
+        var hasVideo = File.Exists(tc.VideoPath);
+        var duration = 0.0;
+        if (hasVideo)
+        {
+            var (dur, _) = await GetDurationAsync(_cfg.FfmpegPath ?? "ffmpeg", tc.VideoPath, ct)
+                .ConfigureAwait(false);
+            duration = dur;
+            hasVideo = duration > 0; // ffmpeg nicht verfügbar → protocol-only
+        }
+
+        // OSD-Zeitreihe nur mit Video + AI
+        IReadOnlyList<(double TimeSeconds, double Meter)> timeline = [];
+        if (hasVideo)
+        {
+            timeline = await _meterTimeline.BuildTimelineAsync(
+                tc.VideoPath, duration, stepSeconds: 5.0, ct).ConfigureAwait(false);
+        }
+
+        // Maximaler Meterstand als Referenz für Zeitschätzung
+        var maxMeter = entries
+            .Select(e => e.MeterEnd ?? e.MeterStart ?? 0)
+            .DefaultIfEmpty(0)
+            .Max();
+        if (maxMeter <= 0) maxMeter = Math.Max(duration, 1);
+
+        var seen = new HashSet<string>(
+            existingSignatures ?? Array.Empty<string>(),
+            StringComparer.Ordinal);
+        var eligibility = TrainingSampleEligibility.Evaluate(tc.InspectionDate);
+
+        foreach (var entry in entries)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var meterStart = entry.MeterStart ?? 0;
+            var meterEnd = entry.MeterEnd ?? meterStart;
+
+            // Protocol-only: ein Sample pro Eintrag am MeterStart
+            var samplePoints = hasVideo
+                ? GetSamplePoints(entry, meterStart, meterEnd, duration, maxMeter)
+                : [(meterStart, 0.0, 0)];
+
+            foreach (var (meter, t, frameIndex) in samplePoints)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                var sampleCode = ResolveCatalogCode(entry.Code);
+                var sig = BuildSignature(tc.CaseId, sampleCode, meter, meterEnd);
+                if (seen.Contains(sig))
+                {
+                    duplicateSkipped++;
+                    continue;
+                }
+                seen.Add(sig);
+
+                var safeCase = Regex.Replace(tc.CaseId, @"[^\w\-]", "_");
+                var sampleId = $"{safeCase}_{sampleCode}_{meter:F2}_{Guid.NewGuid():N}";
+
+                // Frame-Extraktion: Video > PDF-Bildbericht-Foto > kein Frame
+                string? framePath = null;
+                if (hasVideo)
+                {
+                    framePath = await FrameStore.ExtractAndStoreAsync(
+                        _cfg.FfmpegPath ?? "ffmpeg",
+                        tc.VideoPath, t, sampleId, framesDir, ct).ConfigureAwait(false);
+                }
+                // Fallback: Foto aus PDF-Bildbericht
+                if (string.IsNullOrEmpty(framePath) && entry.FotoPaths.Count > 0
+                    && File.Exists(entry.FotoPaths[0]))
+                {
+                    framePath = entry.FotoPaths[0];
+                }
+
+                // OSD Mismatch prüfen (nur mit Video-Timeline)
+                double? detectedMeter = null;
+                var meterSource = hasVideo ? "linear" : "protocol";
+                var hasOsdMismatch = false;
+                double? odsDelta = null;
+
+                if (timeline.Count > 0)
+                {
+                    detectedMeter = MeterTimelineService.InterpolateMeter(timeline, t);
+                    if (detectedMeter.HasValue)
+                    {
+                        meterSource = "osd";
+                        odsDelta = Math.Abs(detectedMeter.Value - meter);
+                        hasOsdMismatch = odsDelta.Value > _settings.OsdMismatchThresholdMeters;
+                    }
+                }
+
+                result.Add(new TrainingSample
+                {
+                    SampleId = sampleId,
+                    CaseId = tc.CaseId,
+                    Code = sampleCode,
+                    Beschreibung = entry.Beschreibung,
+                    MeterStart = Math.Round(meterStart, 1),
+                    MeterEnd = Math.Round(meterEnd, 1),
+                    IsStreckenschaden = entry.IsStreckenschaden,
+                    TimeSeconds = t,
+                    DetectedMeter = detectedMeter,
+                    MeterSource = meterSource,
+                    FramePath = framePath ?? "",
+                    Status = TrainingSampleStatus.New,
+                    TruthMeterCenter = meter,
+                    OdsDeltaMeters = odsDelta,
+                    HasOsdMismatch = hasOsdMismatch,
+                    Signature = sig,
+                    FrameIndex = frameIndex,
+                    SourceType = SourceTypeNames.BatchImport,
+                    InspectionDate = tc.InspectionDate,
+                    TrainingEligible = eligibility.IsEligible,
+                    TrainingEligibilityReason = eligibility.Reason,
+                    CodeMeta = BuildSampleCodeMeta(entry, sampleCode)
+                });
+            }
+        }
+
+        var outcome = result.Count > 0
+            ? TrainingSampleGenerationOutcome.Success
+            : duplicateSkipped > 0
+                ? TrainingSampleGenerationOutcome.OnlyDuplicates
+                : TrainingSampleGenerationOutcome.NoProtocolEntries;
+
+        return new TrainingSampleGenerationResult(
+            result,
+            entries.Count,
+            duplicateSkipped,
+            outcome);
+    }
+
+    // ── Hilfsmethoden ──────────────────────────────────────────────────────
+
+    private List<(double Meter, double Time, int FrameIndex)> GetSamplePoints(
+        ProtocolEntry entry,
+        double meterStart, double meterEnd,
+        double duration, double maxMeter)
+    {
+        var points = new List<(double Meter, double Time, int FrameIndex)>();
+
+        // Falls Zeit direkt im Eintrag gesetzt → nutzen
+        if (entry.Zeit.HasValue)
+        {
+            var t = entry.Zeit.Value.TotalSeconds;
+            points.Add((meterStart, Math.Clamp(t, 0, duration - 0.1), 0));
+            return points;
+        }
+
+        var rangeLength = meterEnd - meterStart;
+        if (entry.IsStreckenschaden
+            && rangeLength >= _settings.MinRangeLengthForSampling
+            && _settings.RangeSampleCount > 1)
+        {
+            // Range Sampling: N gleichmäßige Punkte entlang MeterStart–MeterEnd
+            for (var i = 0; i < _settings.RangeSampleCount; i++)
+            {
+                var frac = (double)i / (_settings.RangeSampleCount - 1);
+                var m = meterStart + frac * rangeLength;
+                var t = EstimateTime(m, maxMeter, duration);
+                points.Add((m, t, i));
+            }
+        }
+        else
+        {
+            points.Add((meterStart, EstimateTime(meterStart, maxMeter, duration), 0));
+        }
+
+        return points;
+    }
+
+    private static double EstimateTime(double meter, double maxMeter, double duration)
+    {
+        if (maxMeter <= 0) return 0;
+        return Math.Clamp(meter / maxMeter * duration, 0, duration - 0.1);
+    }
+
+    /// <summary>Delegiert an die zentrale Signatur-Methode auf TrainingSample.</summary>
+    private static string BuildSignature(string caseId, string code, double meterCenter, double meterEnd)
+        => TrainingSample.BuildCanonicalSignature(caseId, code, meterCenter, meterEnd);
+
+    private string ResolveCatalogCode(string rawCode)
+    {
+        var code = (rawCode ?? string.Empty).Trim().ToUpperInvariant();
+        if (_codeCatalog is null || code.Length == 0)
+            return code;
+
+        if (_codeCatalog.TryGet(code, out var exact))
+            return exact.Code;
+
+        var normalized = VsaCodeResolver.NormalizeFindingCode(code);
+        return string.IsNullOrWhiteSpace(normalized) ? code : normalized;
+    }
+
+    private ProtocolEntryCodeMeta? BuildSampleCodeMeta(ProtocolEntry entry, string sampleCode)
+    {
+        var meta = GroundTruthProtocolEntryMapper.CloneCodeMeta(entry.CodeMeta);
+        if (_codeCatalog is null || !_codeCatalog.TryGet(sampleCode, out var def))
+            return meta;
+
+        meta ??= new ProtocolEntryCodeMeta
+        {
+            Code = sampleCode,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+        meta.Code = sampleCode;
+        meta.Parameters ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        AddMeta(meta.Parameters, "catalog.source", def.Source);
+        AddMeta(meta.Parameters, "catalog.canonicalCode", def.CanonicalCode);
+        AddMeta(meta.Parameters, "catalog.standardAnnotation", def.StandardAnnotation);
+
+        return meta;
+    }
+
+    private static void AddMeta(Dictionary<string, string> parameters, string key, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+            parameters[key] = value.Trim();
+    }
+
+    private async Task<ProtocolDocument?> LoadProtocolAsync(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            return null;
+
+        var ext = Path.GetExtension(path).ToLowerInvariant();
+
+        // JSON: direkt als ProtocolDocument deserialisieren
+        if (ext == ".json")
+        {
+            try
+            {
+                var json = File.ReadAllText(path);
+                var doc  = JsonSerializer.Deserialize<ProtocolDocument>(json, JsonOpts);
+                if (doc?.Current?.Entries?.Count > 0)
+                    return doc;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TrainingSampleGenerator] JSON-Parse fehlgeschlagen für {path}: {ex.Message}");
+            }
+        }
+
+        // PDF (und JSON-Fallback falls ProtocolDocument-Deserialisierung fehlschlägt):
+        // PdfProtocolExtractor → GroundTruthEntry → ProtocolEntry
+        if (ext is ".pdf" or ".json")
+        {
+            try
+            {
+                var extractor = new PdfProtocolExtractor();
+                var entries   = await extractor.ExtractAsync(path, _pdfFramesDir).ConfigureAwait(false);
+                if (entries.Count == 0) return null;
+
+                var protocolEntries = entries
+                    .Select(GroundTruthProtocolEntryMapper.ToProtocolEntry)
+                    .ToList();
+
+                return new ProtocolDocument
+                {
+                    Current = new ProtocolRevision { Entries = protocolEntries }
+                };
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TrainingSampleGenerator] PDF-Extraktion fehlgeschlagen für {path}: {ex.Message}");
+            }
+        }
+
+        return null;
+    }
+
+    private static async Task<(double duration, string? error)> GetDurationAsync(
+        string ffmpegPath, string videoPath, CancellationToken ct)
+    {
+        // ffprobe zuerst
+        var dir = Path.GetDirectoryName(ffmpegPath) ?? "";
+        var ffprobe = string.IsNullOrWhiteSpace(dir)
+            ? "ffprobe"
+            : Path.Combine(dir, "ffprobe.exe");
+        if (!File.Exists(ffprobe)) ffprobe = "ffprobe";
+
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = ffprobe,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+            psi.ArgumentList.Add("-v");
+            psi.ArgumentList.Add("error");
+            psi.ArgumentList.Add("-show_entries");
+            psi.ArgumentList.Add("format=duration");
+            psi.ArgumentList.Add("-of");
+            psi.ArgumentList.Add("default=noprint_wrappers=1:nokey=1");
+            psi.ArgumentList.Add(videoPath);
+            using var p = Process.Start(psi);
+            if (p is not null)
+            {
+                var output = await p.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
+                await p.WaitForExitAsync(ct).ConfigureAwait(false);
+                if (double.TryParse(output.Trim(), NumberStyles.Float,
+                    CultureInfo.InvariantCulture, out var d) && d > 0)
+                    return (d, null);
+            }
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TrainingSampleGenerator] ffprobe fehlgeschlagen: {ex.Message}");
+        }
+
+        // ffmpeg fallback: Duration aus stderr parsen
+        try
+        {
+            var psi2 = new ProcessStartInfo
+            {
+                FileName = ffmpegPath,
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+            psi2.ArgumentList.Add("-i");
+            psi2.ArgumentList.Add(videoPath);
+            using var p2 = Process.Start(psi2);
+            if (p2 is not null)
+            {
+                var stderr = await p2.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
+                await p2.WaitForExitAsync(ct).ConfigureAwait(false);
+                var m = Regex.Match(stderr, @"Duration:\s*(\d+):(\d{2}):(\d{2}\.?\d*)");
+                if (m.Success
+                    && int.TryParse(m.Groups[1].Value, out var hh)
+                    && int.TryParse(m.Groups[2].Value, out var mm)
+                    && double.TryParse(m.Groups[3].Value, NumberStyles.Float,
+                        CultureInfo.InvariantCulture, out var ss))
+                {
+                    return (hh * 3600 + mm * 60 + ss, null);
+                }
+            }
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TrainingSampleGenerator] ffmpeg Duration-Parse fehlgeschlagen: {ex.Message}");
+        }
+
+        return (0, "Videodauer konnte nicht ermittelt werden.");
+    }
+}

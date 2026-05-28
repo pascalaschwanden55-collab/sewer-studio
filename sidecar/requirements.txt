@@ -1,3 +1,6 @@
+--extra-index-url https://download.pytorch.org/whl/cu121
+--extra-index-url https://pypi.nvidia.com
+
 fastapi>=0.110
 uvicorn[standard]>=0.29
 pydantic>=2.0
@@ -5,13 +8,16 @@ pydantic-settings>=2.0
 torch>=2.1
 torchvision>=0.16
 ultralytics>=8.2
+tensorrt-cu12>=10.0
 Pillow>=10.0
 numpy>=1.24
+onnx>=1.16
 scipy>=1.10
 
 # Grounding DINO (open-vocabulary detection)
 groundingdino-py>=0.4
 transformers>=4.38,<5
 
-# SAM (pixel-precise segmentation)
+# SAM (pixel-precise segmentation - SAM v1)
+# Note: Code uses segment-anything, not segment-anything-2
 segment-anything>=1.0

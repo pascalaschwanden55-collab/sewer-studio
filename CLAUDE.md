@@ -2,8 +2,8 @@
 
 ## Projekt-Kontext
 - **App:** WPF / .NET 8+, MVVM, Windows 11
-- **Zweck:** Automatisierte Kanalinspektion, ~3000 WinCan/Ikas IBSK Videos
-- **Standards:** EN 13508-2, VSA-KEK Schweiz 2023
+- **Zweck:** Automatisierte Kanalinspektion, ~3000 Videos aus Kanal-TV-Exporten
+- **Standards:** EN 13508-2, VSA-KEK; aktive Quelle: `vsa_kek_2020_catalog_manifest.json`
 - **Entwickler:** Solo, kein kommerzielles Ziel
 - **Hardware:** Intel Core Ultra 9 285K · ASUS RTX 5090 32GB · 64GB DDR5
 
@@ -59,17 +59,19 @@ Codes sind hierarchisch aufgebaut: **Hauptcode** (2-3 Buchstaben) + **Char1** (U
 - BCC = Bogen (Richtungsaenderung, ueber mehrere Frames sichtbar)
 
 **Strukturelle Schaeden (BA-Gruppe):**
+- BAA = Verformung (A=vertikal, B=horizontal)
 - BAB = Riss (A=laengs, B=quer, C=diagonal, D=ringfoermig, E=verzweigt)
 - BAC = Bruch (A=partiell, B=total)
-- BAF = Deformation (A=vertikal, B=horizontal)
-- BAH = Versatz (A=vertikal, B=horizontal)
-- BAI = Einragender Stutzen
+- BAF = Oberflaechenschaden (rauhe Rohrwandung, chemischer Angriff, Korrosion)
+- BAH = Schadhafter Anschluss
+- BAI = Einragendes Dichtungsmaterial
+- BAJ = Verschobene Rohrverbindung (breit, versetzt, Knick)
 
 **Betriebliche Stoerungen (BB-Gruppe):**
-- BBA = Inkrustation/Kalkablagerung
-- BBB = Wurzeleinwuchs
+- BBA = Wurzeln/Bewuchs
+- BBB = Anhaftende Stoffe/Inkrustation/Fett
 - BBC = Ablagerung (A=Sand, B=Kies, C=verfestigt)
-- BBD = Eindringender Boden
+- BBD* = Eindringender Boden (kein Basiscode BBD, nur Untercodes)
 
 ### Quantifizierung
 - **Uhrlage:** 12:00=Scheitel (oben), 6:00=Sohle (unten), 3:00=rechts, 9:00=links

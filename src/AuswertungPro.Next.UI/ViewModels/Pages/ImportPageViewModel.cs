@@ -617,12 +617,13 @@ public sealed partial class ImportPageViewModel : ObservableObject
         var configured = _sp.Settings.VsaCatalogSecXmlPath;
         var configuredNod = _sp.Settings.VsaCatalogNodXmlPath;
         var resolved = _sp.VsaCatalogResolvedPath;
-        var isNod = !string.IsNullOrWhiteSpace(resolved)
-                    && resolved.Contains("_NOD", StringComparison.OrdinalIgnoreCase);
 
         if (!string.IsNullOrWhiteSpace(resolved))
         {
-            CatalogStatus = $"VSA-Katalog ({(isNod ? "NOD" : "SEC")}): {resolved}";
+            var label = resolved.Contains(" | ", StringComparison.Ordinal)
+                ? "SEC+NOD"
+                : (resolved.Contains("_NOD", StringComparison.OrdinalIgnoreCase) ? "NOD" : "SEC");
+            CatalogStatus = $"VSA-2019-Katalog ({label}): {resolved}";
             IsCatalogOk = true;
             return;
         }
@@ -656,6 +657,9 @@ public sealed partial class ImportPageViewModel : ObservableObject
                     break;
                 case AuswertungPro.Next.Application.Protocol.JsonCodeCatalogProvider json:
                     json.Reload();
+                    break;
+                case AuswertungPro.Next.Application.Protocol.CompositeCodeCatalogProvider composite:
+                    composite.Reload();
                     break;
             }
         }

@@ -31,14 +31,69 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="150" />
             </Grid.RowDefinitions>
             <TextBlock Text="Katalogstruktur" Margin="0,0,0,6" FontWeight="SemiBold" />
             <TreeView Grid.Row="1"
                       ItemsSource="{Binding CodeTree}"
                       SelectedItemChanged="TreeView_SelectedItemChanged">
+                <TreeView.ItemContainerStyle>
+                    <Style TargetType="TreeViewItem">
+                        <Setter Property="IsExpanded" Value="True" />
+                        <Setter Property="IsEnabled" Value="{Binding IsSelectable}" />
+                    </Style>
+                </TreeView.ItemContainerStyle>
                 <TreeView.ItemTemplate>
                     <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                        <TextBlock Text="{Binding Label}" />
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Label}" />
+                            <Border Margin="6,0,0,0"
+                                    Padding="4,1"
+                                    CornerRadius="2"
+                                    Background="#FFF0F2F5"
+                                    BorderBrush="#FFD0D7E2"
+                                    BorderThickness="1"
+                                    Visibility="{Binding HasSourceBadge, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{Binding SourceBadgeText}"
+                                           FontSize="10"
+                                           Foreground="#FF4B5563" />
+                            </Border>
+                        </StackPanel>
+                    </HierarchicalDataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
+
+            <TextBlock Grid.Row="2"
+                       Text="Nicht normal auswaehlbar"
+                       Margin="0,8,0,6"
+                       FontWeight="SemiBold"
+                       Foreground="#FF6B7280" />
+            <TreeView Grid.Row="3"
+                      ItemsSource="{Binding LockedCodeTree}"
+                      SelectedItemChanged="TreeView_SelectedItemChanged">
+                <TreeView.ItemContainerStyle>
+                    <Style TargetType="TreeViewItem">
+                        <Setter Property="IsExpanded" Value="True" />
+                        <Setter Property="IsEnabled" Value="{Binding IsSelectable}" />
+                    </Style>
+                </TreeView.ItemContainerStyle>
+                <TreeView.ItemTemplate>
+                    <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                        <StackPanel Orientation="Horizontal" Opacity="0.85">
+                            <TextBlock Text="{Binding Label}" />
+                            <Border Margin="6,0,0,0"
+                                    Padding="4,1"
+                                    CornerRadius="2"
+                                    Background="#FFFFF3E0"
+                                    BorderBrush="#FFFFCC80"
+                                    BorderThickness="1"
+                                    Visibility="{Binding HasSourceBadge, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{Binding SourceBadgeText}"
+                                           FontSize="10"
+                                           Foreground="#FF9A3412" />
+                            </Border>
+                        </StackPanel>
                     </HierarchicalDataTemplate>
                 </TreeView.ItemTemplate>
             </TreeView>
@@ -64,6 +119,33 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Title" Grid.Column="0" VerticalAlignment="Center" />
                     <TextBox Grid.Column="1" IsReadOnly="True" Text="{Binding SelectedCode.Title}" />
+                </Grid>
+
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Quelle" Grid.Column="0" VerticalAlignment="Center" />
+                    <TextBox Grid.Column="1" IsReadOnly="True" Text="{Binding SelectedSource}" />
+                </Grid>
+
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Canonical" Grid.Column="0" VerticalAlignment="Center" />
+                    <TextBox Grid.Column="1" IsReadOnly="True" Text="{Binding SelectedCanonicalCode}" />
+                </Grid>
+
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Standard" Grid.Column="0" VerticalAlignment="Center" />
+                    <TextBox Grid.Column="1" IsReadOnly="True" Text="{Binding SelectedStandardAnnotation}" />
                 </Grid>
 
                 <TextBlock Text="Description" />

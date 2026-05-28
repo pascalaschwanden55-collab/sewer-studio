@@ -8,6 +8,15 @@ using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels;
 
+public static class ShellNavigationPolicy
+{
+    public static bool RequiresProject(string? title)
+        => !CanOpenWithoutProject(title);
+
+    public static bool CanOpenWithoutProject(string? title)
+        => title is "Uebersicht" or "Projekt" or "Export" or "Einstellungen";
+}
+
 public sealed partial class ShellViewModel : ObservableObject
 {
     private readonly ServiceProvider _sp = (ServiceProvider)App.Services;
@@ -62,20 +71,21 @@ public sealed partial class ShellViewModel : ObservableObject
 
         NavItems = new List<NavItem>
         {
-            new("\uE80F", "Uebersicht", () => new Pages.OverviewPageViewModel(this, _sp)),
-            new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this)),
+            new("\uE80F", "Uebersicht", () => new Pages.OverviewPageViewModel(this, _sp), canOpenWithoutProject: true),
+            new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this), canOpenWithoutProject: true),
             new("\uE8FD", "Haltungen", () => new Pages.DataPageViewModel(this)),
             new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(this)),
             // Segoe MDL2: Import = Download, Export = Upload
             new("\uE896", "Import", () => new Pages.ImportPageViewModel(this, _sp)),
-            new("\uE898", "Export", () => new Pages.ExportPageViewModel(this, _sp)),
+            new("\uE898", "Export", () => new Pages.ExportPageViewModel(this, _sp), canOpenWithoutProject: true),
             new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(this, _sp)),
             new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(this)),
             new("\uE128", "VSA", () => new Pages.VsaPageViewModel(this, _sp)),
             new("\uE8A1", "Eigendevis", () => new Pages.EigendevisPageViewModel(this, _sp)),
             new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(_sp)),
-            new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(_sp))
+            new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(_sp), canOpenWithoutProject: true)
         };
+        RefreshNavigationAvailability();
 
         SaveCommand = new RelayCommand(SaveProject);
         NewProjectCommand = new RelayCommand(NewProject);
@@ -103,7 +113,9 @@ public sealed partial class ShellViewModel : ObservableObject
             {
                 try
                 {
-                    var cfg = Ai.AiRuntimeConfig.Load();
+                    var cfg = new AppSettingsAiSettingsProvider()
+                        .Load()
+                        .ToRuntimeSettings();
                     AiLoadedModels = cfg.VisionModel ?? "Qwen2.5-VL";
                 }
                 catch { AiLoadedModels = ""; }
@@ -128,7 +140,14 @@ public sealed partial class ShellViewModel : ObservableObject
 
     partial void OnIsProjectReadyChanged(bool value)
     {
+        RefreshNavigationAvailability();
         ApplyGuideStep();
+    }
+
+    private void RefreshNavigationAvailability()
+    {
+        foreach (var item in NavItems)
+            item.UpdateAvailability(IsProjectReady);
     }
 
     private void RestartGuide()
@@ -413,6 +432,43 @@ public sealed partial class ShellViewModel : ObservableObject
         window.ShowDialog();
     }
 
-    public sealed record NavItem(string Icon, string Title, Func<object> CreatePage);
+    public sealed partial class NavItem : ObservableObject
+    {
+        private bool _isAvailable = true;
+
+        public NavItem(string icon, string title, Func<object> createPage, bool? canOpenWithoutProject = null)
+        {
+            Icon = icon;
+            Title = title;
+            CreatePage = createPage;
+            CanOpenWithoutProject = canOpenWithoutProject ?? ShellNavigationPolicy.CanOpenWithoutProject(title);
+        }
+
+        public string Icon { get; }
+
+        public string Title { get; }
+
+        public Func<object> CreatePage { get; }
+
+        public bool CanOpenWithoutProject { get; }
+
+        public bool RequiresProject => !CanOpenWithoutProject;
+
+        public bool IsAvailable
+        {
+            get => _isAvailable;
+            private set
+            {
+                if (SetProperty(ref _isAvailable, value))
+                    OnPropertyChanged(nameof(AvailabilityOpacity));
+            }
+        }
+
+        public double AvailabilityOpacity => IsAvailable ? 1.0 : 0.5;
+
+        public void UpdateAvailability(bool isProjectReady)
+            => IsAvailable = isProjectReady || CanOpenWithoutProject;
+    }
+
     private sealed record GuideStep(string Title, string Message, string? NavTitle = null, bool RequiresProject = false);
 }

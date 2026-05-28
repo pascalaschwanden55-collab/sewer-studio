@@ -12,14 +12,20 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using CommunityToolkit.Mvvm.Input;
 using LibVLCSharp.Shared;
 using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
+using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
+using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -55,7 +61,7 @@ public partial class CodingModeWindow : Window
     // KI Live-Analyse
     private LiveDetectionService? _liveDetection;
     private EnhancedVisionAnalysisService? _enhancedVision;
-    private AiRuntimeConfig? _aiConfig;
+    private AiRuntimeSettings? _aiConfig;
     private OllamaClient? _ollamaClient;
     private CancellationTokenSource? _analysisCts;
     private bool _isAnalyzing;
@@ -70,9 +76,13 @@ public partial class CodingModeWindow : Window
         InitializeComponent();
 
         _haltung = haltung;
-        _sessionService = new CodingSessionService();
+        _sessionService = new CodingSessionService(
+            () => new AppSettingsAiSettingsProvider().Load().ToOllamaConfig());
         _overlayService = new OverlayToolService();
-        _vm = new CodingSessionViewModel(_sessionService, _overlayService);
+        _vm = new CodingSessionViewModel(
+            _sessionService,
+            _overlayService,
+            new InfraSelfImproving.CodingFeedbackRecorder());
         _vm.VideoPath = videoPath;
 
         DataContext = _vm;
@@ -90,6 +100,27 @@ public partial class CodingModeWindow : Window
         Loaded += OnLoaded;
         Closing += OnClosing;
     }
+
+    private static IVsaCodeSelectionCatalog? CodeSelectionCatalog
+        => TryGetAppServiceProvider()?.CodeSelectionCatalog;
+
+    private static AuswertungPro.Next.UI.ServiceProvider? TryGetAppServiceProvider()
+    {
+        try
+        {
+            return AuswertungPro.Next.UI.App.Services as AuswertungPro.Next.UI.ServiceProvider;
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    private static VsaCodeExplorerViewModel CreateVsaCodeExplorerViewModel(
+        ProtocolEntry entry,
+        double? presetMeter,
+        TimeSpan? presetZeit)
+        => new(entry, presetMeter, presetZeit, CodeSelectionCatalog);
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
@@ -1535,7 +1566,7 @@ public partial class CodingModeWindow : Window
                 entry.CodeMeta.Parameters["vsa.q2"] = _vm.CurrentOverlay.Q2Mm.Value.ToString("F1");
         }
 
-        var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+        var explorerVm = CreateVsaCodeExplorerViewModel(
             entry,
             captureMeter,
             _vm.CurrentVideoTime);
@@ -1673,7 +1704,7 @@ public partial class CodingModeWindow : Window
             Zeit = _vm.CurrentVideoTime
         };
 
-        var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+        var explorerVm = CreateVsaCodeExplorerViewModel(
             entry, captureMeter, _vm.CurrentVideoTime);
 
         var dlg = new VsaCodeExplorerWindow(explorerVm, _vm.VideoPath, _vm.CurrentVideoTime)
@@ -1705,7 +1736,7 @@ public partial class CodingModeWindow : Window
 
             // Frame temporaer speichern (annotationId = kollisionsfrei)
             var tempFrame = System.IO.Path.Combine(
-                Ai.Teacher.TeacherAnnotationStore.GetImagesDir(),
+                InfraTeacher.TeacherAnnotationStore.GetImagesDir(),
                 $"frame_temp_{annotationId}.png");
             await System.IO.File.WriteAllBytesAsync(tempFrame, pngBytes);
 
@@ -1726,10 +1757,10 @@ public partial class CodingModeWindow : Window
             var baseName = $"{selectedEntry.Code}_{captureMeter:F1}m_{annotationId}";
 
             // Fix 1: VSA-Code → YOLO classId ueber persistiertes Mapping
-            int classId = Ai.Teacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
+            int classId = InfraTeacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
 
             // 4. YOLO-Export (Crop + Annotation)
-            var exportService = new Ai.Teacher.TrainingAnnotationExportService();
+            var exportService = Ai.Teacher.TrainingAnnotationExportServiceFactory.Create();
             var exportResult = await exportService.ExportAsync(
                 tempFrame, bbox, selectedEntry.Code, classId, baseName);
 
@@ -1744,7 +1775,7 @@ public partial class CodingModeWindow : Window
             }
 
             // 5. TeacherAnnotation erstellen und speichern (nur bei Erfolg)
-            var annotation = new Ai.Teacher.TeacherAnnotation
+            var annotation = new TeacherAnnotation
             {
                 AnnotationId = annotationId,
                 VsaCode = selectedEntry.Code,
@@ -1765,7 +1796,7 @@ public partial class CodingModeWindow : Window
                 HeightMm = _vm.CurrentOverlay.Q1Mm
             };
 
-            await Ai.Teacher.TeacherAnnotationStore.AppendAsync(annotation);
+            await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 
             // Temporaeres Frame aufraeumen (wurde nach teacher_images kopiert)
             try { System.IO.File.Delete(tempFrame); } catch { }
@@ -1778,7 +1809,7 @@ public partial class CodingModeWindow : Window
                 BtnSaveAsTraining.IsEnabled = false;
             UpdateOverlayInfo(null);
 
-            var count = await Ai.Teacher.TeacherAnnotationStore.CountAsync();
+            var count = await InfraTeacher.TeacherAnnotationStore.CountAsync();
             MessageBox.Show(
                 $"Lehrer-Annotation gespeichert:\n" +
                 $"Code: {selectedEntry.Code}\n" +
@@ -1917,7 +1948,7 @@ public partial class CodingModeWindow : Window
         // ProtocolEntry zum Bearbeiten oeffnen (bestehende Werte vorbelegen)
         var entry = ev.Entry;
 
-        var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+        var explorerVm = CreateVsaCodeExplorerViewModel(
             entry,
             entry.MeterStart,
             entry.Zeit);
@@ -2006,7 +2037,7 @@ public partial class CodingModeWindow : Window
         var ev = selected;
 
         var entry = ev.Entry;
-        var explorerVm = new ViewModels.Windows.VsaCodeExplorerViewModel(
+        var explorerVm = CreateVsaCodeExplorerViewModel(
             entry, entry.MeterStart, entry.Zeit);
 
         var dlg = new VsaCodeExplorerWindow(explorerVm, _vm.VideoPath, _vm.CurrentVideoTime)
@@ -2269,7 +2300,9 @@ public partial class CodingModeWindow : Window
     {
         try
         {
-            _aiConfig = AiRuntimeConfig.Load();
+            _aiConfig = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
             _aiModelName = _aiConfig.VisionModel;
             if (!_aiConfig.Enabled)
             {
@@ -2278,9 +2311,16 @@ public partial class CodingModeWindow : Window
                 return;
             }
 
-            _ollamaClient = _aiConfig.CreateOllamaClient();
+            _ollamaClient = new OllamaClient(
+                _aiConfig.OllamaBaseUri,
+                ownedTimeout: _aiConfig.OllamaRequestTimeout,
+                keepAlive: _aiConfig.OllamaKeepAlive,
+                numCtx: _aiConfig.OllamaNumCtx);
             _liveDetection = new LiveDetectionService(_ollamaClient, _aiConfig.VisionModel);
-            _enhancedVision = new EnhancedVisionAnalysisService(_ollamaClient, _aiConfig.VisionModel);
+            _enhancedVision = new EnhancedVisionAnalysisService(
+                _ollamaClient,
+                _aiConfig.VisionModel,
+                ResolveCodeCatalog());
             SetAiStatus("Bereit", "#22C55E",
                 $"Qwen aktiv ({CompactModelName(_aiModelName)})");
         }
@@ -2302,6 +2342,18 @@ public partial class CodingModeWindow : Window
         if (slashIndex >= 0 && slashIndex < trimmed.Length - 1)
             trimmed = trimmed[(slashIndex + 1)..];
         return trimmed;
+    }
+
+    private static ICodeCatalogProvider? ResolveCodeCatalog()
+    {
+        try
+        {
+            return (App.Services as AuswertungPro.Next.UI.ServiceProvider)?.CodeCatalog;
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
     }
 
     private void SetPipelineDots(string? stage, bool busy, bool error)
@@ -2425,7 +2477,7 @@ public partial class CodingModeWindow : Window
             {
                 var b64 = Convert.ToBase64String(pngBytes);
                 var enhanced = await _enhancedVision.AnalyzeAsync(b64, null, _analysisCts.Token);
-                result = Ai.LiveDetectionMapper.FromEnhancedAnalysis(enhanced, timestampSec);
+                result = LiveDetectionMapper.FromEnhancedAnalysis(enhanced, timestampSec);
             }
             else
             {
@@ -2735,7 +2787,7 @@ public partial class CodingModeWindow : Window
         for (var i = 0; i < findings.Count && i < 8; i++)
         {
             var f = findings[i];
-            var normalizedClock = Ai.VsaCodeResolver.NormalizeClock(f.PositionClock);
+            var normalizedClock = VsaCodeResolver.NormalizeClock(f.PositionClock);
             var clockMatch = System.Text.RegularExpressions.Regex.Match(normalizedClock ?? "", @"(\d{1,2})");
             int parsedClock = clockMatch.Success && int.TryParse(clockMatch.Groups[1].Value, out var ch) ? ch : 0;
             if (parsedClock == 0) parsedClock = 12;
@@ -2820,18 +2872,18 @@ public sealed class AiFindingDisplayItem
     {
         Label = f.Label;
         // Gemeinsamer Resolver: VsaCodeHint normalisieren, bei Fehlschlag Label-Heuristik
-        VsaCode = Ai.VsaCodeResolver.NormalizeFindingCode(f.VsaCodeHint)
-                   ?? Ai.VsaCodeResolver.InferCodeFromLabel(f.Label)
+        VsaCode = VsaCodeResolver.NormalizeFindingCode(f.VsaCodeHint)
+                   ?? VsaCodeResolver.InferCodeFromLabel(f.Label)
                    ?? "";
         Severity = f.Severity;
         SeverityText = f.Severity.ToString();
 
         // VSA-Klartext aus Katalog (z.B. "BCAEB" → "Seitl. Anschluss, einmuendend, Bogen")
-        Description = Ai.VsaCodeResolver.LookupLabel(VsaCode) ?? f.Label;
+        Description = VsaCodeResolver.LookupLabel(VsaCode) ?? f.Label;
 
         // Position: Meter + Uhrzeit zusammengefasst
         var posParts = new List<string>();
-        var normalizedClock = Ai.VsaCodeResolver.NormalizeClock(f.PositionClock);
+        var normalizedClock = VsaCodeResolver.NormalizeClock(f.PositionClock);
         if (!string.IsNullOrWhiteSpace(normalizedClock))
             posParts.Add(normalizedClock);
         if (f.ExtentPercent.HasValue)

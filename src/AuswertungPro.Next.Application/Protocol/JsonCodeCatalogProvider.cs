@@ -20,6 +20,21 @@ public sealed class CodeDefinition
     [JsonPropertyName("title")]
     public string Title { get; set; } = string.Empty;
 
+    [JsonPropertyName("canonicalCode")]
+    public string? CanonicalCode { get; set; }
+
+    [JsonPropertyName("source")]
+    public string? Source { get; set; }
+
+    [JsonPropertyName("isObservedExtension")]
+    public bool IsObservedExtension { get; set; }
+
+    [JsonPropertyName("isSelectable")]
+    public bool IsSelectable { get; set; } = true;
+
+    [JsonPropertyName("standardAnnotation")]
+    public string? StandardAnnotation { get; set; }
+
     [JsonPropertyName("group")]
     public string Group { get; set; } = "Unbekannt";
 
@@ -139,6 +154,7 @@ public sealed class JsonCodeCatalogProvider : ICodeCatalogProvider
     public IReadOnlyList<string> AllowedCodes()
     {
         return _codes
+            .Where(x => x.IsSelectable && !x.IsObservedExtension)
             .Select(x => x.Code)
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -231,6 +247,11 @@ public sealed class JsonCodeCatalogProvider : ICodeCatalogProvider
     {
         code.Code = NormalizeCode(code.Code);
         code.Title = (code.Title ?? string.Empty).Trim();
+        code.CanonicalCode = string.IsNullOrWhiteSpace(code.CanonicalCode)
+            ? code.Code
+            : NormalizeCode(code.CanonicalCode);
+        code.Source = string.IsNullOrWhiteSpace(code.Source) ? null : code.Source.Trim();
+        code.StandardAnnotation = string.IsNullOrWhiteSpace(code.StandardAnnotation) ? null : code.StandardAnnotation.Trim();
         code.Group = string.IsNullOrWhiteSpace(code.Group) ? "Unbekannt" : code.Group.Trim();
         code.Description = string.IsNullOrWhiteSpace(code.Description) ? null : code.Description.Trim();
         code.CategoryPath = (code.CategoryPath ?? new List<string>())
@@ -254,6 +275,11 @@ public sealed class JsonCodeCatalogProvider : ICodeCatalogProvider
         {
             Code = source.Code ?? string.Empty,
             Title = source.Title ?? string.Empty,
+            CanonicalCode = source.CanonicalCode,
+            Source = source.Source,
+            IsObservedExtension = source.IsObservedExtension,
+            IsSelectable = source.IsSelectable,
+            StandardAnnotation = source.StandardAnnotation,
             Group = source.Group ?? "Unbekannt",
             Description = source.Description,
             CategoryPath = (source.CategoryPath ?? new List<string>()).ToList(),

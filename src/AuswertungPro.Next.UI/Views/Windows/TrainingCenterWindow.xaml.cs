@@ -9,10 +9,15 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using AuswertungPro.Next.UI.Ai.Teacher;
+using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.UI.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Teacher;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
+using InfraKnowledgeBase = AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
+using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -25,16 +30,22 @@ public partial class TrainingCenterWindow : Window
     private Border[] _serviceDots = Array.Empty<Border>();
 
     // Review-Services (lazy, erst bei erster Review-Aktion)
-    private Ai.SelfImproving.ReviewQueueService? _reviewQueueService;
+    private InfraSelfImproving.ReviewQueueService? _reviewQueueService;
 
     public TrainingCenterWindow()
     {
         InitializeComponent();
         WindowStateManager.Track(this);
 
+        var codeCatalog = App.Services is ServiceProvider sp ? sp.CodeCatalog : null;
+        var kbDiagnostics = App.Services is ServiceProvider services
+            ? services.KnowledgeBaseDiagnostics
+            : new InfraKnowledgeBase.KnowledgeBaseDiagnosticsRunner();
         Vm = new TrainingCenterViewModel(
             new TrainingCenterStore(),
-            new TrainingCenterImportService());
+            new TrainingCenterImportService(),
+            codeCatalog,
+            kbDiagnostics);
 
         DataContext = Vm;
 
@@ -45,7 +56,7 @@ public partial class TrainingCenterWindow : Window
             SetupAutoScroll();
 
             // Review-Queue laden (falls KB vorhanden)
-            _reviewQueueService = new Ai.SelfImproving.ReviewQueueService();
+            _reviewQueueService = new InfraSelfImproving.ReviewQueueService();
             Vm.ReviewQueueServiceRef = _reviewQueueService;
             Vm.LoadReviewQueue(_reviewQueueService);
 
@@ -196,33 +207,35 @@ public partial class TrainingCenterWindow : Window
     // ── Review Queue Event Handlers ──
 
     /// <summary>Erzeugt FeedbackIngestionService mit optionalem KbManager fuer KB-Re-Indexierung.</summary>
-    private static Ai.SelfImproving.FeedbackIngestionService CreateFeedbackService(
-        Ai.KnowledgeBase.KnowledgeBaseContext db)
+    private static InfraSelfImproving.FeedbackIngestionService CreateFeedbackService(
+        InfraKnowledgeBase.KnowledgeBaseContext db)
     {
-        var logger = new Ai.QualityGate.ValidationLogger(db.Connection);
-        var weights = new Ai.QualityGate.WeightLearningService(db.Connection);
+        var logger = new AuswertungPro.Next.Infrastructure.Ai.QualityGate.ValidationLogger(db.Connection);
+        var weights = new AuswertungPro.Next.Infrastructure.Ai.QualityGate.WeightLearningService(db.Connection);
 
         // KbManager optional — wenn Ollama offline, wird nur geloggt
-        Ai.KnowledgeBase.KnowledgeBaseManager? kbManager = null;
+        InfraKnowledgeBase.KnowledgeBaseManager? kbManager = null;
         try
         {
-            var cfg = Ai.Ollama.OllamaConfig.Load();
+            var cfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToOllamaConfig();
             var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
-            var embedder = new Ai.KnowledgeBase.EmbeddingService(http, cfg);
-            kbManager = new Ai.KnowledgeBase.KnowledgeBaseManager(db, embedder);
+            var embedder = new InfraKnowledgeBase.EmbeddingService(http, cfg);
+            kbManager = new InfraKnowledgeBase.KnowledgeBaseManager(db, embedder);
         }
         catch { /* Ollama nicht verfuegbar — Feedback wird geloggt, KB-Update uebersprungen */ }
 
-        return new Ai.SelfImproving.FeedbackIngestionService(logger, weights, kbManager);
+        return new InfraSelfImproving.FeedbackIngestionService(logger, weights, kbManager);
     }
 
     private async void ReviewApprove_Click(object sender, RoutedEventArgs e)
     {
         if (Vm.SelectedReviewItem is null) return;
-        _reviewQueueService ??= new Ai.SelfImproving.ReviewQueueService();
+        _reviewQueueService ??= new InfraSelfImproving.ReviewQueueService();
         try
         {
-            using var db = new Ai.KnowledgeBase.KnowledgeBaseContext();
+            using var db = new InfraKnowledgeBase.KnowledgeBaseContext();
             var feedback = CreateFeedbackService(db);
             await Vm.ApproveReviewItemAsync(Vm.SelectedReviewItem, feedback, _reviewQueueService);
         }
@@ -240,10 +253,10 @@ public partial class TrainingCenterWindow : Window
             "Korrekter VSA-Code:", "Korrektur",
             Vm.SelectedReviewItem.SuggestedCode ?? "");
         if (string.IsNullOrWhiteSpace(code)) return;
-        _reviewQueueService ??= new Ai.SelfImproving.ReviewQueueService();
+        _reviewQueueService ??= new InfraSelfImproving.ReviewQueueService();
         try
         {
-            using var db = new Ai.KnowledgeBase.KnowledgeBaseContext();
+            using var db = new InfraKnowledgeBase.KnowledgeBaseContext();
             var feedback = CreateFeedbackService(db);
             await Vm.RejectReviewItemAsync(Vm.SelectedReviewItem, code, feedback, _reviewQueueService);
         }
@@ -310,7 +323,7 @@ public partial class TrainingCenterWindow : Window
     {
         try
         {
-            var store = new AuswertungPro.Next.UI.Ai.Training.FewShotExampleStore();
+            var store = new FewShotExampleStore();
             await store.LoadAsync();
             var ids = new HashSet<string>(StringComparer.Ordinal);
             foreach (var ex in store.Examples)
@@ -462,7 +475,7 @@ public partial class TrainingCenterWindow : Window
             var remaining = all.Where(a => a.AnnotationId != _selectedTeacherAnnotation.AnnotationId).ToList();
 
             // Direkt in JSON schreiben (Store hat keine Delete-Methode — Append-only umgehen)
-            var storePath = System.IO.Path.Combine(Ai.KnowledgeRoot.GetRoot(), "teacher_annotations.json");
+            var storePath = System.IO.Path.Combine(InfraKnowledgeBase.KnowledgeBasePaths.GetRoot(), "teacher_annotations.json");
             var json = System.Text.Json.JsonSerializer.Serialize(remaining,
                 new System.Text.Json.JsonSerializerOptions
                 {

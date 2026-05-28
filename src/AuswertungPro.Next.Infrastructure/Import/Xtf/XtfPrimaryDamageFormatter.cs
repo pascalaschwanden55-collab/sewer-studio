@@ -265,18 +265,26 @@ public static class XtfPrimaryDamageFormatter
 
         try
         {
-            var catalogPath = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_codes.json");
-            if (File.Exists(catalogPath))
+            foreach (var root in Vsa2019CatalogResolver.GetDefaultCatalogRoots())
             {
-                var provider = new JsonCodeCatalogProvider(catalogPath);
-                foreach (var codeDef in provider.GetAll())
+                var paths = new[]
                 {
-                    var code = NormalizeCode(codeDef.Code);
-                    var title = (codeDef.Title ?? string.Empty).Trim();
-                    if (code.Length == 0 || title.Length == 0)
-                        continue;
+                    Vsa2019CatalogResolver.FindSectionCatalog(root),
+                    Vsa2019CatalogResolver.FindNodeCatalog(root)
+                };
 
-                    map[code] = title;
+                foreach (var path in paths.Where(p => !string.IsNullOrWhiteSpace(p)).Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    var provider = new XmlCodeCatalogProvider(path!);
+                    foreach (var codeDef in provider.GetAll())
+                    {
+                        var code = NormalizeCode(codeDef.Code);
+                        var title = (codeDef.Title ?? string.Empty).Trim();
+                        if (code.Length == 0 || title.Length == 0)
+                            continue;
+
+                        map.TryAdd(code, title);
+                    }
                 }
             }
         }

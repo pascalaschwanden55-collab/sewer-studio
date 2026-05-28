@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import base64
 import io
+import json
 import time
 import logging
 import threading
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -21,6 +23,9 @@ logger = logging.getLogger(__name__)
 # Flag: True when custom sewer-specific weights are loaded, False for COCO fallback.
 _using_custom_weights = False
 _resolved_model_path: str | None = None
+_tensorrt_class_names: dict[int, str] = {}
+_tensorrt_names_warning_paths: set[str] = set()
+_tensorrt_class_warning_keys: set[tuple[str, int]] = set()
 
 # CPU-mode singleton (bypasses GpuModelManager when YOLO runs on CPU)
 _cpu_model = None
@@ -57,6 +62,7 @@ def get_runtime_status() -> dict:
 
     status = {
         "configured_model_name": settings.yolo_model_name,
+        "configured_model_backend": _configured_backend(),
         "require_custom_yolo": settings.require_custom_yolo,
         "custom_weights_present": custom_exists,
         "using_custom_weights": _using_custom_weights,
@@ -78,20 +84,35 @@ def get_runtime_status() -> dict:
 def _resolve_device() -> str:
     """Determine the effective device for YOLO inference."""
     device = settings.effective_yolo_device
+    if _configured_backend() == "tensorrt":
+        return device
+
     if device.startswith("cuda") and not _cuda_available():
         logger.warning("YOLO configured for %s but CUDA unavailable, falling back to cpu", device)
         return "cpu"
     return device
 
 
+def _configured_backend() -> str:
+    suffix = Path(settings.yolo_model_name).suffix.lower()
+    if suffix == ".engine":
+        return "tensorrt"
+    if suffix in {".pt", ".pth"}:
+        return "pytorch"
+    if suffix == ".onnx":
+        return "onnx"
+    return suffix.lstrip(".") or "unknown"
+
+
 def _load_yolo_on(device: str):
     """Load YOLO model onto *device*. Returns (model, None)."""
-    global _using_custom_weights, _resolved_model_path
+    global _using_custom_weights, _resolved_model_path, _tensorrt_class_names
     from ultralytics import YOLO
 
     model_path, using_custom = _resolve_yolo_model_path()
     _using_custom_weights = using_custom
     _resolved_model_path = model_path
+    _tensorrt_class_names = _load_tensorrt_class_names(Path(model_path))
 
     if using_custom:
         logger.info("Loading custom YOLO weights from %s onto %s", model_path, device)
@@ -103,8 +124,106 @@ def _load_yolo_on(device: str):
         )
 
     model = YOLO(str(model_path))
-    model.to(device)
+    if _configured_backend() != "tensorrt":
+        model.to(device)
     return model, None
+
+
+def _load_tensorrt_class_names(model_path: str | Path) -> dict[int, str]:
+    """Load YOLO class names for a TensorRT engine sidecar file."""
+    path = Path(model_path)
+    if path.suffix.lower() != ".engine":
+        return {}
+
+    names_path = path.with_suffix(".names.json")
+    warning_key = str(names_path)
+    if not names_path.exists():
+        if warning_key not in _tensorrt_names_warning_paths:
+            logger.warning(
+                "TensorRT class-name file missing: %s. Detection labels will fall back to classN.",
+                names_path,
+            )
+            _tensorrt_names_warning_paths.add(warning_key)
+        return {}
+
+    try:
+        payload = json.loads(names_path.read_text(encoding="utf-8-sig"))
+        raw_names = payload.get("names", {})
+        if isinstance(raw_names, list):
+            return {
+                index: str(name)
+                for index, name in enumerate(raw_names)
+                if str(name).strip()
+            }
+
+        if isinstance(raw_names, dict):
+            class_names: dict[int, str] = {}
+            for key, value in raw_names.items():
+                name = str(value).strip()
+                if not name:
+                    continue
+                class_names[int(key)] = name
+            return class_names
+    except Exception as exc:
+        logger.warning(
+            "TensorRT class-name file could not be read: %s (%s). Detection labels will fall back to classN.",
+            names_path,
+            exc,
+        )
+
+    return {}
+
+
+def _class_name_for_id(
+    cls_id: int,
+    result_names: dict | None,
+    class_names: dict[int, str] | None = None,
+) -> str:
+    mapped_names = _tensorrt_class_names if class_names is None else class_names
+    if cls_id in mapped_names:
+        return mapped_names[cls_id]
+
+    result_name = _name_from_result(cls_id, result_names)
+    if result_name and not _is_generic_class_name(cls_id, result_name):
+        return result_name
+
+    fallback = f"class{cls_id}"
+    if Path(_resolved_model_path or settings.yolo_model_name).suffix.lower() == ".engine" or class_names is not None:
+        _warn_class_name_fallback(cls_id, fallback)
+    return fallback
+
+
+def _name_from_result(cls_id: int, result_names: dict | None) -> str | None:
+    if not result_names:
+        return None
+
+    if cls_id in result_names:
+        return str(result_names[cls_id])
+
+    key = str(cls_id)
+    if key in result_names:
+        return str(result_names[key])
+
+    return None
+
+
+def _is_generic_class_name(cls_id: int, name: str) -> bool:
+    normalized = name.strip().lower()
+    return normalized in {str(cls_id), f"class{cls_id}".lower()}
+
+
+def _warn_class_name_fallback(cls_id: int, fallback: str) -> None:
+    model_key = _resolved_model_path or settings.yolo_model_name
+    warning_key = (model_key, cls_id)
+    if warning_key in _tensorrt_class_warning_keys:
+        return
+
+    logger.warning(
+        "TensorRT class id %s has no YOLO name mapping; falling back to %s.",
+        cls_id,
+        fallback,
+    )
+    _tensorrt_class_warning_keys.add(warning_key)
 
 
 def _get_yolo_model():
@@ -138,6 +257,56 @@ def _cuda_available() -> bool:
         return torch.cuda.is_available()
     except Exception:
         return False
+
+
+def _response_telemetry(queue_wait_ms: float = 0.0) -> dict:
+    status = gpu_manager.get_status()
+    model_name = Path(_resolved_model_path).name if _resolved_model_path else settings.yolo_model_name
+    return {
+        "model_name": model_name,
+        "model_backend": _model_backend(model_name),
+        "device": _resolve_device(),
+        "queue_wait_ms": round(queue_wait_ms, 1),
+        "vram_allocated_gb": status.get("vram_allocated_gb"),
+        "vram_total_gb": status.get("vram_total_gb"),
+        "gpu_utilization_percent": _gpu_utilization_percent(),
+    }
+
+
+def _model_backend(model_name: str) -> str:
+    suffix = Path(model_name).suffix.lower()
+    if suffix == ".engine":
+        return "tensorrt"
+    if suffix in {".pt", ".pth"}:
+        return "pytorch"
+    if suffix == ".onnx":
+        return "onnx"
+    return suffix.lstrip(".") or "unknown"
+
+
+def _gpu_utilization_percent() -> float | None:
+    if not _resolve_device().startswith("cuda"):
+        return None
+
+    try:
+        result = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=utilization.gpu",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=0.5,
+            check=False,
+        )
+        if result.returncode != 0:
+            return None
+
+        first_line = result.stdout.strip().splitlines()[0]
+        return float(first_line.strip())
+    except Exception:
+        return None
 
 
 def decode_image(image_base64: str) -> Image.Image:
@@ -210,6 +379,7 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
             detections=[],
             frame_class=quality_reason,
             inference_time_ms=0.0,
+            **_response_telemetry(),
         )
 
     t0 = time.perf_counter()
@@ -232,7 +402,7 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
                 xyxy = box.xyxy[0].cpu().numpy()
                 cls_id = int(box.cls[0].cpu().item())
                 conf = float(box.conf[0].cpu().item())
-                cls_name = result.names.get(cls_id, str(cls_id))
+                cls_name = _class_name_for_id(cls_id, result.names)
                 detections.append(YoloDetection(
                     x1=float(xyxy[0]),
                     y1=float(xyxy[1]),
@@ -256,6 +426,7 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
         detections=detections,
         frame_class=frame_class,
         inference_time_ms=round(elapsed_ms, 1),
+        **_response_telemetry(),
     )
 
 
@@ -269,6 +440,10 @@ def _resolve_cls_model_path() -> str | None:
     """Suche best.pt aus dem YOLO-cls Trainingslauf."""
     # Relativer Pfad vom Sidecar-Root (portabel, kein absoluter Pfad)
     project_root = Path(__file__).resolve().parent.parent.parent.parent
+    configured_path = Path(settings.yolo_cls_model_path) if settings.yolo_cls_model_path else None
+    if configured_path is not None:
+        return str(configured_path) if configured_path.exists() else None
+
     candidates = [
         Path(settings.models_dir) / "yolo_cls_best.pt",
         project_root / "yolo_cls_runs" / "grundgeruest_v2" / "weights" / "best.pt",

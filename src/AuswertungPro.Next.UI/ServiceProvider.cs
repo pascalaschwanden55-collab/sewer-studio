@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Reflection;
 using Microsoft.Extensions.Logging;
 
 using AuswertungPro.Next.Application.Devis;
@@ -25,14 +24,14 @@ using AuswertungPro.Next.Infrastructure.Import.Ibak;
 using AuswertungPro.Next.Infrastructure.Import.Kins;
 using AuswertungPro.Next.Infrastructure.Projects;
 using AuswertungPro.Next.Infrastructure.Vsa;
+using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Infrastructure.Ai.Configuration;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 
-// AI/CodeCatalog services are currently defined in this UI namespace:
-using AuswertungPro.Next.UI.ViewModels.Protocol;
-using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
-using AuswertungPro.Next.UI.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai.Pipeline;
-using AuswertungPro.Next.UI.Ai.Sanierung;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Sanierung;
@@ -50,6 +49,7 @@ namespace AuswertungPro.Next.UI
         public ILogger Logger { get; }
         public ILoggerFactory LoggerFactory { get; }
         public ErrorCodeGenerator ErrorCodes { get; } = new();
+        private const string VsaKekManifestFileName = "vsa_kek_2020_catalog_manifest.json";
 
 
         public IProjectRepository Projects { get; }
@@ -70,6 +70,7 @@ namespace AuswertungPro.Next.UI
         // AI/CodeCatalog Services
         public IProtocolAiService ProtocolAi { get; }
         public AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog { get; }
+        public AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog CodeSelectionCatalog { get; }
         public string? VsaCatalogResolvedPath { get; }
 
         public IDialogService Dialogs { get; } = new DialogService();
@@ -78,6 +79,7 @@ namespace AuswertungPro.Next.UI
 
         public IMeasureRecommendationService MeasureRecommendation { get; }
         public IRetrievalService? Retrieval { get; }
+        public IKnowledgeBaseDiagnosticsRunner KnowledgeBaseDiagnostics { get; }
 
         // Eigendevis
         public IDevisGenerator DevisGenerator { get; }
@@ -109,20 +111,30 @@ namespace AuswertungPro.Next.UI
 
 
             // Einheitliche KI-Konfiguration (1x laden, 3x projizieren)
-            var aiPlatform = AiPlatformConfig.Load(settings);
+            var aiPlatform = AiSettingsFactory.Load(AppSettingsAiSettingsProvider.ToSource(settings));
             PipelineCfg = aiPlatform.ToPipelineConfig();
 
             // AI/CodeCatalog Init (AiLocalPack)
-            var cfg = aiPlatform.ToRuntimeConfig();
-            var codeCatalogPath = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_codes.json");
-            EnsureEmbeddedCatalogFile(codeCatalogPath);
+            var cfg = aiPlatform.ToRuntimeSettings();
+            var secCatalogPath = ResolveVsaCatalogPath(settings);
             var nodCatalogPath = ResolveVsaCatalogNodPath(settings);
-            var xmlCatalogPath = nodCatalogPath ?? ResolveVsaCatalogPath(settings);
-            VsaCatalogResolvedPath = xmlCatalogPath;
-            var fallbackTextXmlPath = ResolveVsaCatalogTextPath(settings, xmlCatalogPath);
-            CodeCatalog = !string.IsNullOrWhiteSpace(xmlCatalogPath)
-                ? new AuswertungPro.Next.Application.Protocol.XmlCodeCatalogProvider(xmlCatalogPath, codeCatalogPath, fallbackTextXmlPath)
-                : new AuswertungPro.Next.Application.Protocol.JsonCodeCatalogProvider(codeCatalogPath);
+            var vsaKekManifestPath = ResolveVsaKekCatalogManifestPath();
+            var xmlCatalogPaths = new[] { secCatalogPath, nodCatalogPath }
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Select(p => p!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var catalogSourcePaths = new[] { vsaKekManifestPath }
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Select(p => p!)
+                .Concat(xmlCatalogPaths)
+                .ToList();
+            VsaCatalogResolvedPath = catalogSourcePaths.Count > 0
+                ? string.Join(" | ", catalogSourcePaths)
+                : null;
+            CodeCatalog = CreateCodeCatalog(settings, vsaKekManifestPath, xmlCatalogPaths);
+            CodeSelectionCatalog = new CodeCatalogSelectionCatalog(CodeCatalog);
+            VsaCodeResolver.ConfigureCatalog(CodeCatalog);
             RetrievalService? retrieval = null;
             try
             {
@@ -143,23 +155,39 @@ namespace AuswertungPro.Next.UI
             }
 
             Retrieval = retrieval;
+            KnowledgeBaseDiagnostics = new KnowledgeBaseDiagnosticsRunner();
 
             var allowedCodeSet = new HashSet<string>(CodeCatalog.AllowedCodes(), StringComparer.OrdinalIgnoreCase);
             IAiSuggestionPlausibilityService plausibility = new RuleBasedAiSuggestionPlausibilityService(allowedCodeSet);
+            var protocolTrainingSamples = new ProtocolTrainingSampleProvider();
 
             ProtocolAi = cfg.Enabled
-                ? new OllamaProtocolAiService(cfg, retrieval, plausibility)
+                ? new OllamaProtocolAiService(
+                    cfg.Enabled,
+                    aiPlatform.ToOllamaConfig(),
+                    cfg.FfmpegPath,
+                    protocolTrainingSamples,
+                    retrieval,
+                    plausibility)
                 : new NoopProtocolAiService();
 
-            LogCodeCatalogWarnings(CodeCatalog, xmlCatalogPath ?? codeCatalogPath);
+            LogCodeCatalogWarnings(CodeCatalog, VsaCatalogResolvedPath);
 
             var channelsTable = Path.Combine(AppContext.BaseDirectory, "Data", "classification_channels.json");
             var manholesTable = Path.Combine(AppContext.BaseDirectory, "Data", "classification_manholes.json");
-            Vsa = new VsaEvaluationService(channelsTable, manholesTable);
+            var v2ChannelsTable = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_zustandsklassifizierung_2023_channels.json");
+            var v2ManholesTable = Path.Combine(AppContext.BaseDirectory, "Data", "vsa_zustandsklassifizierung_2023_manholes.json");
+            Vsa = new VsaEvaluationService(
+                channelsTable,
+                manholesTable,
+                shadowModeEnabled: settings.VsaClassificationShadowEnabled ?? true,
+                useV2Engine: settings.VsaUseV2Engine ?? true,
+                v2ChannelsTablePath: v2ChannelsTable,
+                v2ManholesTablePath: v2ManholesTable);
 
             MeasureRecommendation = new Infrastructure.Ai.MeasureRecommendationService(
-                Ai.KnowledgeRoot.GetMeasuresLearningPath(),
-                Ai.KnowledgeRoot.GetMeasuresModelPath());
+                KnowledgeBasePaths.GetMeasuresLearningPath(),
+                KnowledgeBasePaths.GetMeasuresModelPath());
 
             // Eigendevis
             var devisMappingPath = Path.Combine(AppContext.BaseDirectory, "Config", "devis_mappings.json");
@@ -169,15 +197,15 @@ namespace AuswertungPro.Next.UI
         }
 
         public IVideoAnalysisPipelineService CreateVideoAnalysisPipeline(
-            AiRuntimeConfig cfg,
+            AiRuntimeSettings cfg,
             IAiSuggestionPlausibilityService plausibility,
             HttpClient http)
         {
-            return new VideoAnalysisPipelineService(cfg, plausibility, http);
+            return new VideoAnalysisPipelineService(cfg, PipelineCfg, plausibility, http, CodeCatalog);
         }
 
         public IAiSanierungOptimizationService CreateSanierungOptimization(
-            AiRuntimeConfig cfg,
+            AiRuntimeSettings cfg,
             HttpClient? http = null)
         {
             return new AiSanierungOptimizationService(cfg, http);
@@ -187,74 +215,40 @@ namespace AuswertungPro.Next.UI
         {
             if (!string.IsNullOrWhiteSpace(settings.VsaCatalogSecXmlPath))
             {
-                if (File.Exists(settings.VsaCatalogSecXmlPath))
+                if (IsCanonicalVsa2019Catalog(settings.VsaCatalogSecXmlPath, Vsa2019CatalogResolver.SectionCatalogFileName))
                     return settings.VsaCatalogSecXmlPath;
 
                 if (Directory.Exists(settings.VsaCatalogSecXmlPath))
                 {
-                    var fromDir = FindCatalogInRoot(settings.VsaCatalogSecXmlPath);
+                    var fromDir = Vsa2019CatalogResolver.FindSectionCatalog(settings.VsaCatalogSecXmlPath);
                     if (!string.IsNullOrWhiteSpace(fromDir))
                         return fromDir;
                 }
             }
 
             var env = Environment.GetEnvironmentVariable("VSA_CATALOG_SEC_XML");
-            if (!string.IsNullOrWhiteSpace(env) && File.Exists(env))
+            if (IsCanonicalVsa2019Catalog(env, Vsa2019CatalogResolver.SectionCatalogFileName))
                 return env;
 
             var envRoot = Environment.GetEnvironmentVariable("VSA_CATALOG_ROOT");
             if (!string.IsNullOrWhiteSpace(envRoot) && Directory.Exists(envRoot))
             {
-                var fromRoot = FindCatalogInRoot(envRoot);
+                var fromRoot = Vsa2019CatalogResolver.FindSectionCatalog(envRoot);
                 if (!string.IsNullOrWhiteSpace(fromRoot))
                     return fromRoot;
-            }
-
-            if (!string.IsNullOrWhiteSpace(settings.LastProjectPath))
-            {
-                var candidate = Path.Combine(
-                    settings.LastProjectPath,
-                    "DISK1",
-                    "System",
-                    "ProgramData",
-                    "CDLAB",
-                    "Common",
-                    "Catalogs",
-                    "Version4",
-                    "EN13508_VSA_CH_DEU_SEC.xml");
-                if (File.Exists(candidate))
-                    return candidate;
-
-                var fromProject = FindCatalogInRoot(Path.Combine(
-                    settings.LastProjectPath,
-                    "DISK1",
-                    "System",
-                    "ProgramData",
-                    "CDLAB",
-                    "Common",
-                    "Catalogs"));
-                if (!string.IsNullOrWhiteSpace(fromProject))
-                    return fromProject;
             }
 
             // WinCan catalog directory (user-configured via Katalog-Auswahl)
             if (!string.IsNullOrWhiteSpace(settings.WinCanCatalogDirectory))
             {
-                var fromWinCan = FindCatalogInRoot(settings.WinCanCatalogDirectory);
+                var fromWinCan = Vsa2019CatalogResolver.FindSectionCatalog(settings.WinCanCatalogDirectory);
                 if (!string.IsNullOrWhiteSpace(fromWinCan))
                     return fromWinCan;
             }
 
-            // Auto-detect common WinCanVX installation paths
-            var commonPaths = new[]
+            foreach (var root in Vsa2019CatalogResolver.GetDefaultCatalogRoots(lastProjectPath: settings.LastProjectPath))
             {
-                @"C:\CDLAB\WinCanVX\WinCanMerger\App_Data\Catalogs",
-                @"C:\Program Files\CDLAB\WinCanVX\WinCanMerger\App_Data\Catalogs",
-                @"C:\Program Files (x86)\CDLAB\WinCanVX\WinCanMerger\App_Data\Catalogs"
-            };
-            foreach (var commonPath in commonPaths)
-            {
-                var fromCommon = FindCatalogInRoot(commonPath);
+                var fromCommon = Vsa2019CatalogResolver.FindSectionCatalog(root);
                 if (!string.IsNullOrWhiteSpace(fromCommon))
                     return fromCommon;
             }
@@ -266,68 +260,55 @@ namespace AuswertungPro.Next.UI
         {
             if (!string.IsNullOrWhiteSpace(settings.VsaCatalogNodXmlPath))
             {
-                if (File.Exists(settings.VsaCatalogNodXmlPath))
+                if (IsCanonicalVsa2019Catalog(settings.VsaCatalogNodXmlPath, Vsa2019CatalogResolver.NodeCatalogFileName))
                     return settings.VsaCatalogNodXmlPath;
 
                 if (Directory.Exists(settings.VsaCatalogNodXmlPath))
                 {
-                    var fromDir = FindCatalogInRootNod(settings.VsaCatalogNodXmlPath);
+                    var fromDir = Vsa2019CatalogResolver.FindNodeCatalog(settings.VsaCatalogNodXmlPath);
                     if (!string.IsNullOrWhiteSpace(fromDir))
                         return fromDir;
                 }
             }
 
             var env = Environment.GetEnvironmentVariable("VSA_CATALOG_NOD_XML");
-            if (!string.IsNullOrWhiteSpace(env) && File.Exists(env))
+            if (IsCanonicalVsa2019Catalog(env, Vsa2019CatalogResolver.NodeCatalogFileName))
                 return env;
 
             var envRoot = Environment.GetEnvironmentVariable("VSA_CATALOG_NOD_ROOT");
             if (!string.IsNullOrWhiteSpace(envRoot) && Directory.Exists(envRoot))
             {
-                var fromRoot = FindCatalogInRootNod(envRoot);
+                var fromRoot = Vsa2019CatalogResolver.FindNodeCatalog(envRoot);
                 if (!string.IsNullOrWhiteSpace(fromRoot))
                     return fromRoot;
             }
 
-            return null;
-        }
-
-        private static string? FindCatalogInRoot(string root)
-        {
-            var v4 = Path.Combine(root, "Version4");
-            var candidates = new[]
+            if (!string.IsNullOrWhiteSpace(settings.WinCanCatalogDirectory))
             {
-                Path.Combine(root, "EN13508_VSA-2019_CH_DEU_SEC.xml"),
-                Path.Combine(root, "EN13508_VSA_CH_DEU_SEC.xml"),
-                Path.Combine(v4, "EN13508_VSA-2019_CH_DEU_SEC.xml"),
-                Path.Combine(v4, "EN13508_VSA_CH_DEU_SEC.xml"),
-            };
+                var fromWinCan = Vsa2019CatalogResolver.FindNodeCatalog(settings.WinCanCatalogDirectory);
+                if (!string.IsNullOrWhiteSpace(fromWinCan))
+                    return fromWinCan;
+            }
 
-            foreach (var c in candidates)
+            foreach (var root in Vsa2019CatalogResolver.GetDefaultCatalogRoots(lastProjectPath: settings.LastProjectPath))
             {
-                if (File.Exists(c))
-                    return c;
+                var fromCommon = Vsa2019CatalogResolver.FindNodeCatalog(root);
+                if (!string.IsNullOrWhiteSpace(fromCommon))
+                    return fromCommon;
             }
 
             return null;
         }
 
-        private static string? FindCatalogInRootNod(string root)
+        private static string? ResolveVsaKekCatalogManifestPath()
         {
-            var v4 = Path.Combine(root, "Version4");
-            var candidates = new[]
-            {
-                Path.Combine(v4, "EN13508_VSA-2019_CH_DEU_NOD.xml"),
-                Path.Combine(v4, "EN13508_VSA_CH_DEU_NOD.xml"),
-                Path.Combine(root, "EN13508_VSA-2019_CH_DEU_NOD.xml"),
-                Path.Combine(root, "EN13508_VSA_CH_DEU_NOD.xml")
-            };
+            var env = Environment.GetEnvironmentVariable("VSA_KEK_2020_CATALOG_MANIFEST");
+            if (!string.IsNullOrWhiteSpace(env) && File.Exists(env))
+                return env;
 
-            foreach (var c in candidates)
-            {
-                if (File.Exists(c))
-                    return c;
-            }
+            var fromData = Path.Combine(AppContext.BaseDirectory, "Data", VsaKekManifestFileName);
+            if (File.Exists(fromData))
+                return fromData;
 
             return null;
         }
@@ -338,6 +319,7 @@ namespace AuswertungPro.Next.UI
             {
                 AuswertungPro.Next.Application.Protocol.XmlCodeCatalogProvider xml => xml.LastLoadWarnings,
                 AuswertungPro.Next.Application.Protocol.JsonCodeCatalogProvider json => json.LastLoadWarnings,
+                AuswertungPro.Next.Application.Protocol.CompositeCodeCatalogProvider composite => composite.GetWarnings(),
                 _ => null
             };
 
@@ -396,45 +378,36 @@ namespace AuswertungPro.Next.UI
             if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
                 return null;
 
-            var candidates = new[]
-            {
-                Path.Combine(root, "EN13508_VSA_CH_DEU_SEC.xml"),
-                Path.Combine(root, "EN13508_VSA-2019_CH_DEU_SEC.xml")
-            };
-
-            foreach (var c in candidates)
-            {
-                if (File.Exists(c))
-                    return c;
-            }
-
-            return null;
+            return Vsa2019CatalogResolver.FindSectionCatalog(root);
         }
 
-        private static void EnsureEmbeddedCatalogFile(string targetPath)
+        private static bool IsCanonicalVsa2019Catalog(string? path, string fileName)
+            => !string.IsNullOrWhiteSpace(path)
+               && File.Exists(path)
+               && string.Equals(Path.GetFileName(path), fileName, StringComparison.OrdinalIgnoreCase);
+
+        private static AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CreateCodeCatalog(
+            AppSettings settings,
+            string? vsaKekManifestPath,
+            IReadOnlyList<string> xmlCatalogPaths)
         {
-            if (File.Exists(targetPath))
-                return;
+            var providers = new List<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>();
 
-            try
+            if (!string.IsNullOrWhiteSpace(vsaKekManifestPath) && File.Exists(vsaKekManifestPath))
             {
-                var dir = Path.GetDirectoryName(targetPath);
-                if (!string.IsNullOrWhiteSpace(dir))
-                    Directory.CreateDirectory(dir);
-
-                var asm = Assembly.GetExecutingAssembly();
-                var resourceName = "AuswertungPro.Next.UI.Data.vsa_codes.json";
-                using var stream = asm.GetManifestResourceStream(resourceName);
-                if (stream is null)
-                    return;
-
-                using var fs = File.Create(targetPath);
-                stream.CopyTo(fs);
+                providers.Add(new AuswertungPro.Next.Application.Protocol.ManifestCodeCatalogProvider(vsaKekManifestPath));
             }
-            catch
-            {
-                // ignore, fallback handled by JsonCodeCatalogProvider
-            }
+
+            providers.AddRange(xmlCatalogPaths
+                .Select(path => new AuswertungPro.Next.Application.Protocol.SourceDecoratingCodeCatalogProvider(
+                    new AuswertungPro.Next.Application.Protocol.XmlCodeCatalogProvider(
+                    path,
+                    fallbackJsonPath: null,
+                    fallbackTextXmlPath: ResolveVsaCatalogTextPath(settings, path)),
+                    AuswertungPro.Next.Application.Protocol.VsaKekCatalogSources.WinCanFallback))
+                .Cast<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>());
+
+            return new AuswertungPro.Next.Application.Protocol.CompositeCodeCatalogProvider(providers);
         }
 
         public object? GetService(Type serviceType)
@@ -448,6 +421,9 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(IExcelExportService)) return ExcelExport;
             if (serviceType == typeof(IVsaEvaluationService)) return Vsa;
             if (serviceType == typeof(IProtocolService)) return Protocols;
+            if (serviceType == typeof(IKnowledgeBaseDiagnosticsRunner)) return KnowledgeBaseDiagnostics;
+            if (serviceType == typeof(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider)) return CodeCatalog;
+            if (serviceType == typeof(AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog)) return CodeSelectionCatalog;
             if (serviceType == typeof(ILogger)) return Logger;
             if (serviceType == typeof(ILoggerFactory)) return LoggerFactory;
             return null;

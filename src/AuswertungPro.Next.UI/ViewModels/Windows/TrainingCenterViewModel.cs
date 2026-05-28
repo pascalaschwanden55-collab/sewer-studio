@@ -13,24 +13,34 @@ using Microsoft.Win32;
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.KnowledgeBase;
-using AuswertungPro.Next.UI.Ai.Ollama;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.KnowledgeBase;
+using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai.Teacher;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Training;
-using AuswertungPro.Next.UI.Ai.Training.Services;
 using AuswertungPro.Next.UI.Services;
 using AiTrack = AuswertungPro.Next.UI.Services.AiActivityTracker;
+using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 public partial class TrainingCenterViewModel : ObservableObject
 {
     private readonly TrainingCenterStore _store;
     private readonly TrainingCenterImportService _import;
+    private readonly ICodeCatalogProvider? _codeCatalog;
+    private readonly IKnowledgeBaseDiagnosticsRunner _kbDiagnostics;
 
     /// <summary>Wiederverwendbarer HttpClient fuer KB-Operationen (Embedding-Requests).</summary>
     private System.Net.Http.HttpClient? _kbHttpClient;
 
     /// <summary>Optionale Referenz auf die Review Queue (gesetzt von Window).</summary>
-    public Ai.SelfImproving.ReviewQueueService? ReviewQueueServiceRef { get; set; }
+    public InfraSelfImproving.ReviewQueueService? ReviewQueueServiceRef { get; set; }
 
     public ObservableCollection<TrainingCase> Cases { get; } = new();
     public ObservableCollection<TrainingSample> Samples { get; } = new();
@@ -81,8 +91,8 @@ public partial class TrainingCenterViewModel : ObservableObject
     [ObservableProperty] private string _kbTrendDirection = "";
 
     // Review Queue (Self-Improving Loop)
-    public ObservableCollection<Ai.SelfImproving.ReviewQueueItem> ReviewQueue { get; } = new();
-    [ObservableProperty] private Ai.SelfImproving.ReviewQueueItem? _selectedReviewItem;
+    public ObservableCollection<InfraSelfImproving.ReviewQueueItem> ReviewQueue { get; } = new();
+    [ObservableProperty] private InfraSelfImproving.ReviewQueueItem? _selectedReviewItem;
     [ObservableProperty] private int _reviewQueueCount;
     [ObservableProperty] private string _reviewStatusText = "";
 
@@ -331,42 +341,21 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         try
         {
-            var (summary, totalDistinctCodes, errorCount, newCount) = await Task.Run(() =>
-            {
-                using var db = new KnowledgeBaseContext();
-                var diag = new KnowledgeBaseDiagnosticsService(db);
-                var s = diag.ReadSummary(20);
-                var allCodes = diag.ReadAllCodeCounts().Count;
-
-                // Sample-Statistik aus JSON fuer Diagnose-Anzeige
-                int errors = 0, news = 0;
-                try
-                {
-                    var samples = TrainingSamplesStore.LoadAsync().GetAwaiter().GetResult();
-                    foreach (var sample in samples)
-                    {
-                        if (sample.KbIndexState == KbIndexState.Error) errors++;
-                        else if (sample.Status == TrainingSampleStatus.New) news++;
-                    }
-                }
-                catch { /* optional */ }
-
-                return (s, allCodes, errors, news);
-            });
+            var status = await _kbDiagnostics.ReadStatusAsync(20).ConfigureAwait(false);
 
             void Apply()
             {
-                KbSampleCount = summary.SampleCount;
-                KbErrorCount = errorCount;
-                KbNewCount = newCount;
-                KbEmbeddingCount = summary.EmbeddingCount;
-                KbCodesCovered = totalDistinctCodes;
-                KbLastUpdate = summary.LatestVersionAtUtc?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "\u2014";
+                KbSampleCount = status.SampleCount;
+                KbErrorCount = status.ErrorCount;
+                KbNewCount = status.NewCount;
+                KbEmbeddingCount = status.EmbeddingCount;
+                KbCodesCovered = status.CodesCovered;
+                KbLastUpdate = status.LatestVersionAtUtc?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "\u2014";
 
                 static System.Windows.Media.SolidColorBrush Rgb(byte r, byte g, byte b)
                     => new(System.Windows.Media.Color.FromRgb(r, g, b));
 
-                (KbReadinessLabel, KbReadinessBrush) = summary.SampleCount switch
+                (KbReadinessLabel, KbReadinessBrush) = status.SampleCount switch
                 {
                     >= 100 => ("KI-Modell einsatzbereit", Rgb(0x4A, 0xDE, 0x80)),
                     >= 25  => ("Lernbasis grundlegend",   Rgb(0xFA, 0xCC, 0x15)),
@@ -374,7 +363,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                     _      => ("Keine Trainingsdaten",    Rgb(0x94, 0xA3, 0xB8))
                 };
 
-                KbTopCodesText = string.Join("\n", summary.TopCodes
+                KbTopCodesText = string.Join("\n", status.TopCodes
                     .Select(c => $"{c.VsaCode}: {c.Count} Samples"));
             }
 
@@ -394,61 +383,15 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     /// <summary>
     /// Laedt KB-Qualitaetsmetriken: Coverage-Luecken, Accuracy, Stale Samples, Trend.
-    /// Eigener KnowledgeBaseContext (unabhaengig von RefreshKbStatusAsync).
     /// </summary>
     private async Task RefreshKbQualityAsync()
     {
         try
         {
-            var (gaps, gapCount, accuracy, stale) = await Task.Run(() =>
-            {
-                // Leere KB abfangen: DB existiert evtl. noch nicht
-                var dbPath = KnowledgeBaseContext.DefaultDbPath;
-                if (!System.IO.File.Exists(dbPath))
-                    return ("KB noch nicht erstellt", 0, "Noch keine Validierungsdaten", 0);
-
-                using var db = new KnowledgeBaseContext();
-                var diag = new KnowledgeBaseDiagnosticsService(db);
-
-                // Coverage: ALLE Codes abfragen, nicht nur Top-N
-                var allCodes = diag.ReadAllCodeCounts();
-                var underRep = allCodes.Where(c => c.Count < 3).ToList();
-                var gapsText = allCodes.Count == 0
-                    ? "KB leer — noch keine Samples indexiert"
-                    : underRep.Count > 0
-                        ? string.Join("\n", underRep.Select(c => $"{c.VsaCode}: {c.Count} Samples"))
-                        : "Keine Luecken (alle Codes >= 3 Samples)";
-
-                // Accuracy (aus ValidationLog)
-                string accText;
-                try
-                {
-                    var accSvc = new Ai.Monitoring.AccuracyDashboardService(db.Connection);
-                    var metrics = accSvc.ComputeMetrics();
-                    accText = metrics.Count > 0
-                        ? string.Join("\n", metrics
-                            .OrderByDescending(m => m.TruePositives + m.FalsePositives + m.FalseNegatives)
-                            .Take(8)
-                            .Select(m =>
-                                $"{m.VsaCode}: F1={m.F1Score:F2}  P={m.Precision:F2}  R={m.Recall:F2}  (n={m.TruePositives + m.FalsePositives + m.FalseNegatives})"))
-                        : "Noch keine Validierungsdaten";
-                }
-                catch { accText = "Validierungsdaten nicht verfuegbar"; }
-
-                // Stale Samples
-                int staleCount = 0;
-                try
-                {
-                    var kbq = new Ai.SelfImproving.KbQualityService(db.Connection);
-                    staleCount = kbq.FindStaleCandidates().Count;
-                }
-                catch { }
-
-                return (gapsText, underRep.Count, accText, staleCount);
-            });
+            var quality = await _kbDiagnostics.ReadQualityAsync().ConfigureAwait(false);
 
             // Trend (aus JSON, kein DB-Zugriff)
-            var runs = await Ai.Training.SelfTrainingHistoryStore.LoadAsync();
+            var runs = await SelfTrainingHistoryStore.LoadAsync();
             var last5 = runs.TakeLast(5).ToList();
             var trendText = last5.Count > 0
                 ? string.Join("\n", last5.Select(r =>
@@ -466,16 +409,16 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             void Apply()
             {
-                KbCoverageGapsText = gaps;
-                KbCoverageGapsCount = gapCount;
-                KbAccuracyText = accuracy;
-                KbStaleSampleCount = stale;
+                KbCoverageGapsText = quality.CoverageGapsText;
+                KbCoverageGapsCount = quality.CoverageGapsCount;
+                KbAccuracyText = quality.AccuracyText;
+                KbStaleSampleCount = quality.StaleSampleCount;
                 KbTrendText = trendText;
                 KbTrendDirection = direction;
 
                 // Stale-Sample Warnung im Log (E1)
-                if (stale > 0)
-                    Log($"KB-Qualitaet: {stale} veraltete Samples erkannt (manuell pruefen im Tab 'Samples')");
+                if (quality.StaleSampleCount > 0)
+                    Log($"KB-Qualitaet: {quality.StaleSampleCount} veraltete Samples erkannt (manuell pruefen im Tab 'Samples')");
             }
             if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
                 d.Invoke(Apply);
@@ -485,10 +428,16 @@ public partial class TrainingCenterViewModel : ObservableObject
         catch { /* KB evtl. noch nicht vorhanden */ }
     }
 
-    public TrainingCenterViewModel(TrainingCenterStore store, TrainingCenterImportService import)
+    public TrainingCenterViewModel(
+        TrainingCenterStore store,
+        TrainingCenterImportService import,
+        ICodeCatalogProvider? codeCatalog,
+        IKnowledgeBaseDiagnosticsRunner kbDiagnostics)
     {
         _store = store;
         _import = import;
+        _codeCatalog = codeCatalog;
+        _kbDiagnostics = kbDiagnostics;
     }
 
     // ── Cases ────────────────────────────────────────────────────────────────
@@ -664,7 +613,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             {
                 if (!Directory.Exists(folder)) continue;
                 var found = await _import.ScanAsync(folder);
-                foreach (var c in found)
+                foreach (var c in found.Select(ToTrainingCase))
                     Cases.Add(c);
             }
 
@@ -789,16 +738,18 @@ public partial class TrainingCenterViewModel : ObservableObject
             IsBusy = true;
             StatusText = $"Generiere Samples für {SelectedCase.CaseId}...";
 
-            var cfg = AiRuntimeConfig.Load();
+            var cfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
             var settings = await TrainingCenterSettingsStore.LoadAsync();
             var meterSvc = CreateMeterTimelineService(cfg, settings.GpuConcurrency);
-            var generator = new TrainingSampleGenerator(cfg, meterSvc, settings);
+            var generator = new TrainingSampleGenerator(cfg, meterSvc, settings, _codeCatalog);
 
             var existing = await TrainingSamplesStore.LoadAsync();
             var existingSigs = existing.Select(s => s.Signature).ToHashSet(StringComparer.Ordinal);
 
             var generation = await generator.GenerateWithDiagnosticsAsync(
-                SelectedCase, existingSigs, framesDir: null, ct);
+                ToTrainingCaseInput(SelectedCase), existingSigs, framesDir: null, ct);
             var newSamples = generation.Samples;
 
             if (newSamples.Count == 0)
@@ -866,9 +817,15 @@ public partial class TrainingCenterViewModel : ObservableObject
         try
         {
             IsBusy = true;
-            var approved = Samples
+            var candidates = Samples
                 .Where(s => s.Status == TrainingSampleStatus.Approved && s.ExportedUtc is null)
                 .ToList();
+            var approved = candidates
+                .Where(IsTrainingExportEligible)
+                .ToList();
+
+            if (candidates.Count != approved.Count)
+                await PersistSamplesAsync();
 
             if (approved.Count == 0)
             {
@@ -914,11 +871,17 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         if (IsBusy) return;
 
-        var approved = Samples
+        var candidates = Samples
             .Where(s => s.Status == TrainingSampleStatus.Approved
                         && !string.IsNullOrWhiteSpace(s.FramePath)
                         && File.Exists(s.FramePath))
             .ToList();
+        var approved = candidates
+            .Where(IsTrainingExportEligible)
+            .ToList();
+
+        if (candidates.Count != approved.Count)
+            await PersistSamplesAsync();
 
         if (approved.Count == 0)
         {
@@ -946,8 +909,10 @@ public partial class TrainingCenterViewModel : ObservableObject
             StatusText = $"YOLO-Export: {approved.Count} Samples werden vorbereitet...";
 
             // Sidecar-Verbindung prüfen
-            var pipelineCfg = PipelineConfig.Load();
-            var client = new VisionPipelineClient(pipelineCfg.SidecarUrl);
+            var pipelineCfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToPipelineConfig();
+            var client = new VisionPipelineClient(pipelineCfg.SidecarUrl, sidecarToken: pipelineCfg.SidecarToken);
 
             var health = await client.HealthCheckAsync(ct).ConfigureAwait(false);
             if (health is null)
@@ -991,7 +956,17 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             StatusText = $"YOLO-Export: Sende {exportSamples.Count} Samples an Sidecar...";
             var request = new TrainingExportRequestDto(exportSamples, outputDir, 0.8);
-            var response = await client.ExportTrainingAsync(request, ct).ConfigureAwait(false);
+            TrainingExportResponseDto response;
+            try
+            {
+                response = await client.ExportTrainingAsync(request, ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                Log($"Sidecar-Export nicht moeglich ({ex.Message}). Lokaler Export wird verwendet...");
+                await ExportYoloLocalAsync(approved, outputDir, ct).ConfigureAwait(false);
+                return;
+            }
 
             // Samples als exportiert markieren
             foreach (var s in approved)
@@ -1030,7 +1005,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         List<TrainingSample> approved, string outputDir, CancellationToken ct)
     {
         // TeacherAnnotations laden (echte BBoxen)
-        var annotations = await Ai.Teacher.TeacherAnnotationStore.LoadAsync();
+        var annotations = await TeacherAnnotationStore.LoadAsync();
         var annotationsWithImages = annotations
             .Where(a => !string.IsNullOrWhiteSpace(a.FullFramePath) && File.Exists(a.FullFramePath))
             .ToList();
@@ -1069,7 +1044,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 File.Copy(a.FullFramePath!, imgDst, overwrite: true);
 
                 // Label mit echten BBoxen schreiben
-                var clsIdx = Ai.Teacher.VsaYoloClassMap.GetClassId(a.VsaCode);
+                var clsIdx = VsaYoloClassMap.GetClassId(a.VsaCode);
                 var bbox = a.BoundingBox;
                 var lblPath = Path.Combine(lblDir, $"teacher_{a.AnnotationId}.txt");
                 if (bbox is not null && bbox.Width > 0 && bbox.Height > 0)
@@ -1114,7 +1089,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 try { File.Copy(s.FramePath, imgDst, overwrite: true); }
                 catch (IOException) { continue; } // Datei gesperrt oder nicht mehr vorhanden
 
-                var clsIdx = Ai.Teacher.VsaYoloClassMap.GetClassId(s.Code);
+                var clsIdx = VsaYoloClassMap.GetClassId(s.Code);
                 var lblPath = Path.Combine(lblDir, $"sample_{i:D6}.txt");
 
                 // Echte BBox aus Eingabemarker nutzen, sonst Fallback
@@ -1138,7 +1113,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
 
         // ── data.yaml mit exaktem Klassenmapping ──
-        var fullMap = Ai.Teacher.VsaYoloClassMap.GetFullMap();
+        var fullMap = VsaYoloClassMap.GetFullMap();
         var sortedClasses = fullMap.OrderBy(kv => kv.Value).Select(kv => kv.Key).ToList();
 
         var yamlPath = Path.Combine(outputDir, "data.yaml");
@@ -1153,7 +1128,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         await File.WriteAllLinesAsync(yamlPath, yamlLines, ct);
 
         // classes.txt exportieren
-        await Ai.Teacher.VsaYoloClassMap.ExportClassesTxtAsync(
+        await VsaYoloClassMap.ExportClassesTxtAsync(
             Path.Combine(outputDir, "classes.txt"));
 
         var msg = $"YOLO-Export fertig: {totalExported} Samples " +
@@ -1163,6 +1138,16 @@ public partial class TrainingCenterViewModel : ObservableObject
         Log($"  data.yaml: {yamlPath}");
         Log($"  Klassen: {string.Join(", ", sortedClasses)}");
         StatusText = msg;
+    }
+
+    private bool IsTrainingExportEligible(TrainingSample sample)
+    {
+        var result = _codeCatalog is null
+            ? TrainingSampleEligibility.Evaluate(sample)
+            : TrainingSampleEligibility.Evaluate(sample, _codeCatalog);
+        sample.TrainingEligible = result.IsEligible;
+        sample.TrainingEligibilityReason = result.Reason;
+        return result.IsEligible;
     }
 
     /// <summary>
@@ -1207,7 +1192,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 }
                 Log($"  Scanne: {folder}");
                 var result = await _import.ScanAsync(folder);
-                found.AddRange(result);
+                found.AddRange(result.Select(ToTrainingCase));
             }
             var casesWithProtocol = found.Where(c => !string.IsNullOrEmpty(c.ProtocolPath)).ToList();
 
@@ -1233,12 +1218,14 @@ public partial class TrainingCenterViewModel : ObservableObject
             }
 
             // 2. Generate samples for all cases
-            var cfg = AiRuntimeConfig.Load();
+            var cfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
             Log($"AI Config: Enabled={cfg.Enabled}, ffmpeg={cfg.FfmpegPath}");
 
             var settings = await TrainingCenterSettingsStore.LoadAsync();
             var meterSvc = CreateMeterTimelineService(cfg, settings.GpuConcurrency);
-            var generator = new TrainingSampleGenerator(cfg, meterSvc, settings);
+            var generator = new TrainingSampleGenerator(cfg, meterSvc, settings, _codeCatalog);
 
             var allSamples = await TrainingSamplesStore.LoadAsync();
             var existingSigs = allSamples.Select(s => s.Signature)
@@ -1250,7 +1237,9 @@ public partial class TrainingCenterViewModel : ObservableObject
             var casesToProcess = casesWithProtocol;
 
             // Ollama-Verbindung einmalig pruefen + KB-Objekte vorbereiten
-            var ollamaConfig = OllamaConfig.Load();
+            var ollamaConfig = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToOllamaConfig();
             var ollamaReachable = await CheckOllamaReachableAsync(ollamaConfig, ct);
             KnowledgeBaseContext? kbCtx = null;
             KnowledgeBaseManager? kbManager = null;
@@ -1349,7 +1338,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                     else
                         UpdateLivePreview(tc.CaseId, "Verarbeite...", "—", null);
 
-                    var generation = await generator.GenerateWithDiagnosticsAsync(tc, existingSigs, framesDir: null, ct);
+                    var generation = await generator.GenerateWithDiagnosticsAsync(
+                        ToTrainingCaseInput(tc), existingSigs, framesDir: null, ct);
                     var newSamples = generation.Samples;
 
                     if (newSamples.Count == 0)
@@ -1610,12 +1600,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             IsBusy = true;
             StatusText = "Prüfe Knowledge Base...";
 
-            var summary = await Task.Run(() =>
-            {
-                using var db = new KnowledgeBaseContext();
-                var diag = new KnowledgeBaseDiagnosticsService(db);
-                return diag.ReadSummary(12);
-            });
+            var summary = await _kbDiagnostics.ReadSummaryAsync(12).ConfigureAwait(false);
 
             Log($"KB-Stand: Samples={summary.SampleCount}, Embeddings={summary.EmbeddingCount}, Versionen={summary.VersionCount}");
             if (summary.LatestVersionAtUtc is not null)
@@ -1663,7 +1648,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// Extrahiert einen einzelnen Preview-Frame aus dem Video (bei Sekunde 2).
     /// Wird für die Live-Vorschau genutzt, auch wenn keine neuen Samples generiert werden.
     /// </summary>
-    private static async Task<string?> ExtractPreviewFrameAsync(TrainingCase tc, AiRuntimeConfig cfg, CancellationToken ct)
+    private static async Task<string?> ExtractPreviewFrameAsync(TrainingCase tc, AiRuntimeSettings cfg, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(tc.VideoPath) || !File.Exists(tc.VideoPath))
             return null;
@@ -1680,15 +1665,44 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
     }
 
-    private static MeterTimelineService CreateMeterTimelineService(AiRuntimeConfig cfg, int concurrency = 1)
+    private static MeterTimelineService CreateMeterTimelineService(AiRuntimeSettings cfg, int concurrency = 1)
     {
         if (!cfg.Enabled)
             return new MeterTimelineService(cfg);
 
-        var ollamaClient = cfg.CreateOllamaClient();
+        var ollamaClient = new OllamaClient(
+            cfg.OllamaBaseUri,
+            ownedTimeout: cfg.OllamaRequestTimeout,
+            keepAlive: cfg.OllamaKeepAlive,
+            numCtx: cfg.OllamaNumCtx);
         var vision = new OllamaVisionFindingsService(ollamaClient, cfg.VisionModel);
         var osd = new OsdMeterDetectionService(vision);
         return new MeterTimelineService(cfg, osd, concurrency);
+    }
+
+    private static TrainingCaseInput ToTrainingCaseInput(TrainingCase tc)
+        => new(tc.CaseId, tc.FolderPath, tc.VideoPath, tc.ProtocolPath, tc.InspectionDate);
+
+    private static TrainingCase ToTrainingCase(TrainingCaseInput input)
+        => new()
+        {
+            CaseId = input.CaseId,
+            FolderPath = input.FolderPath,
+            VideoPath = input.VideoPath,
+            ProtocolPath = input.ProtocolPath,
+            InspectionDate = input.InspectionDate,
+            Status = TrainingCaseStatus.New,
+            CreatedUtc = DateTime.UtcNow
+        };
+
+    private static string ResolveFfmpegPath(string? ffmpegPath)
+    {
+        if (string.IsNullOrWhiteSpace(ffmpegPath))
+            return "ffmpeg";
+
+        return File.Exists(ffmpegPath) || string.Equals(ffmpegPath, "ffmpeg", StringComparison.OrdinalIgnoreCase)
+            ? ffmpegPath
+            : "ffmpeg";
     }
 
     /// <summary>
@@ -1738,7 +1752,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     // ── Review Queue (Self-Improving Loop) ──────────────────────────────
 
     /// <summary>Loads pending review items into the queue.</summary>
-    public void LoadReviewQueue(Ai.SelfImproving.ReviewQueueService queueService)
+    public void LoadReviewQueue(InfraSelfImproving.ReviewQueueService queueService)
     {
         ReviewQueue.Clear();
         foreach (var item in queueService.GetAll())
@@ -1749,9 +1763,9 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     /// <summary>Approve a review item (accept the suggested code).</summary>
     public async Task ApproveReviewItemAsync(
-        Ai.SelfImproving.ReviewQueueItem item,
-        Ai.SelfImproving.FeedbackIngestionService feedback,
-        Ai.SelfImproving.ReviewQueueService queueService,
+        InfraSelfImproving.ReviewQueueItem item,
+        InfraSelfImproving.FeedbackIngestionService feedback,
+        InfraSelfImproving.ReviewQueueService queueService,
         CancellationToken ct = default)
     {
         if (item.Entry is not null)
@@ -1775,10 +1789,10 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     /// <summary>Reject a review item with a corrected code.</summary>
     public async Task RejectReviewItemAsync(
-        Ai.SelfImproving.ReviewQueueItem item,
+        InfraSelfImproving.ReviewQueueItem item,
         string correctedCode,
-        Ai.SelfImproving.FeedbackIngestionService feedback,
-        Ai.SelfImproving.ReviewQueueService queueService,
+        InfraSelfImproving.FeedbackIngestionService feedback,
+        InfraSelfImproving.ReviewQueueService queueService,
         CancellationToken ct = default)
     {
         if (item.Entry is not null)
@@ -1868,6 +1882,9 @@ public partial class TrainingCenterViewModel : ObservableObject
                         SourceType = match.SourceType,
                         TechniqueGrade = match.TechniqueGrade,
                         KiCode = match.KiCode,
+                        InspectionDate = match.InspectionDate,
+                        TrainingEligible = match.TrainingEligible,
+                        TrainingEligibilityReason = match.TrainingEligibilityReason,
                         Notes = $"Korrektur aus Review: {vsaCode} → {correctedCode}"
                     };
                     // Korrigiertes Sample per Merge speichern (Race-Condition-sicher)
@@ -1920,7 +1937,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             {
                 if (!Directory.Exists(folder)) continue;
                 var found = await _import.ScanAsync(folder);
-                foreach (var c in found)
+                foreach (var c in found.Select(ToTrainingCase))
                     Cases.Add(c);
             }
         }
@@ -1969,26 +1986,32 @@ public partial class TrainingCenterViewModel : ObservableObject
             Log($"  Protokoll: {SelectedCase.ProtocolPath}");
 
             // Services instanziieren (gleicher Pattern wie BatchImport)
-            var cfg = AiRuntimeConfig.Load();
+            var cfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
             Log($"Ollama: {cfg.OllamaBaseUri}, Modell: {cfg.VisionModel}");
 
             var visionModel = cfg.VisionModel ?? "Qwen2.5-VL";
             _activeVisionModel = visionModel;
-            var ollamaClient = cfg.CreateOllamaClient();
-            var vision = new EnhancedVisionAnalysisService(ollamaClient, visionModel);
+            var ollamaClient = new OllamaClient(
+                cfg.OllamaBaseUri,
+                ownedTimeout: cfg.OllamaRequestTimeout,
+                keepAlive: cfg.OllamaKeepAlive,
+                numCtx: cfg.OllamaNumCtx);
+            var vision = new EnhancedVisionAnalysisService(ollamaClient, visionModel, _codeCatalog);
             var comparison = new SelfTrainingComparisonService();
             var technique = new TechniqueAssessmentService(ollamaClient, visionModel);
             var pdfExtractor = new PdfProtocolExtractor();
 
             var stSettings = await TrainingCenterSettingsStore.LoadAsync();
             _selfTrainingOrchestrator = new SelfTrainingOrchestrator(
-                vision, comparison, technique, pdfExtractor, stSettings);
+                vision, comparison, technique, pdfExtractor, stSettings, ResolveFfmpegPath(cfg.FfmpegPath));
 
             // Progress-Callback verbindet Orchestrator → ViewModel-Visualisierungen
             var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);
 
             Log("Pipeline gestartet: OSD-Scan → Frame → KI-Analyse → Vergleich → Technik");
-            var result = await _selfTrainingOrchestrator.RunAsync(SelectedCase, progress, ct);
+            var result = await _selfTrainingOrchestrator.RunAsync(ToTrainingCaseInput(SelectedCase), progress, ct);
 
             // Ergebnis loggen
             Log($"--- Selbsttraining abgeschlossen ---");
@@ -2108,7 +2131,9 @@ public partial class TrainingCenterViewModel : ObservableObject
         var indexedIds = new List<string>();
         try
         {
-            var ollamaConfig = OllamaConfig.Load();
+            var ollamaConfig = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToOllamaConfig();
             var ollamaReachable = await CheckOllamaReachableAsync(ollamaConfig, ct);
             if (!ollamaReachable)
             {

@@ -18,7 +18,9 @@ if (!File.Exists(pdfPath))
     return;
 }
 
-var codeRx = new Regex(@"^(?<code>[A-Z]{3,5})\\s+(.+)$", RegexOptions.Compiled);
+// Vorher: @"...\\s+..." — sucht im verbatim-String nach literalem "\s",
+// nicht nach Whitespace. Tool fand dadurch null Codes.
+var codeRx = new Regex(@"^(?<code>[A-Z]{3,5})\s+(.+)$", RegexOptions.Compiled);
 var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 var dumped = false;
 

@@ -236,35 +236,16 @@ public sealed partial class SettingsPageViewModel : ObservableObject
 
     private void ApplyTheme()
     {
-        _sp.Settings.UiTheme = ThemeManager.NormalizeTheme(UiTheme);
+        var normalized = ThemeManager.NormalizeTheme(UiTheme);
+        _sp.Settings.UiTheme = normalized;
         _sp.Settings.SaveImmediate();
 
-        var restart = MessageBox.Show(
-            "Design gespeichert.\n\nJetzt neu starten, damit das Theme vollstaendig angewendet wird?",
-            "SewerStudio",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-        if (restart != MessageBoxResult.Yes)
-            return;
-
-        try
-        {
-            var exePath = Environment.ProcessPath;
-            if (!string.IsNullOrWhiteSpace(exePath))
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = exePath,
-                    UseShellExecute = true
-                });
-            }
-        }
-        catch
-        {
-            // best effort restart; app is still configured even if restart launch fails
-        }
-
-        System.Windows.Application.Current.Shutdown();
+        // Live-Switch: tauscht das Theme-Dictionary in Application.Resources aus.
+        // DynamicResource-Bindings rendern sofort neu; StaticResource-Pages
+        // bekommen das neue Theme beim naechsten Page-Wechsel (DataTemplate-Reinstanz).
+        var app = System.Windows.Application.Current;
+        if (app != null)
+            ThemeManager.ApplyTheme(app.Resources, normalized);
     }
 
     private static string? NormalizeProjectPath(string? value)

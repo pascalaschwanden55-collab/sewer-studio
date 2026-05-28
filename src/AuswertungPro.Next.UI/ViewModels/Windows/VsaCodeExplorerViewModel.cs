@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.UI.Services.CodeCatalog;
+using AuswertungPro.Next.Domain.VsaCatalog;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -79,12 +80,15 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
 
     // Vorherige Auswahl (fuer Edit-Modus)
     private readonly ProtocolEntry? _existingEntry;
+    private readonly IVsaCodeSelectionCatalog _catalog;
 
     public VsaCodeExplorerViewModel(ProtocolEntry? existingEntry = null,
                                      double? presetMeter = null,
-                                     TimeSpan? presetZeit = null)
+                                     TimeSpan? presetZeit = null,
+                                     IVsaCodeSelectionCatalog? catalog = null)
     {
         _existingEntry = existingEntry;
+        _catalog = catalog ?? EmptyVsaCodeSelectionCatalog.Instance;
 
         if (presetMeter.HasValue)
             MeterStart = presetMeter.Value.ToString("F2", CultureInfo.InvariantCulture);
@@ -216,7 +220,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         Q2Error = null;
 
         if (!string.IsNullOrWhiteSpace(SelectedGroupKey)
-            && VsaCodeTree.Groups.ContainsKey(SelectedGroupKey))
+            && _catalog.Groups.ContainsKey(SelectedGroupKey))
         {
             CurrentLevel = 1;
         }
@@ -245,7 +249,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         SelectedCodeKey = codeKey;
         SelectedChar1Key = c1Key;
         SelectedChar2Key = c2Key;
-        CurrentGroupColor = VsaCodeTree.Groups[groupKey].Color;
+        CurrentGroupColor = _catalog.Groups[groupKey].Color;
         CurrentLevel = level;
         UpdateBreadcrumb();
 
@@ -286,7 +290,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
     private void LoadTilesForCurrentLevel()
     {
         // Inkonsistente Zwischenzustaende nach Reset/Bearbeitung abfangen.
-        if (CurrentLevel >= 1 && (string.IsNullOrWhiteSpace(SelectedGroupKey) || !VsaCodeTree.Groups.ContainsKey(SelectedGroupKey)))
+        if (CurrentLevel >= 1 && (string.IsNullOrWhiteSpace(SelectedGroupKey) || !_catalog.Groups.ContainsKey(SelectedGroupKey)))
         {
             NavigateToLevel(0);
             return;
@@ -309,7 +313,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         switch (CurrentLevel)
         {
             case 0: // Gruppen
-                foreach (var (key, grp) in VsaCodeTree.Groups)
+                foreach (var (key, grp) in _catalog.Groups)
                 {
                     CurrentTiles.Add(new TileItem
                     {
@@ -319,11 +323,11 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
                 break;
 
             case 1: // Hauptcodes
-                if (SelectedGroupKey is not null && VsaCodeTree.Groups.TryGetValue(SelectedGroupKey, out var group))
+                if (SelectedGroupKey is not null && _catalog.Groups.TryGetValue(SelectedGroupKey, out var group))
                 {
                     foreach (var (key, cd) in group.Codes)
                     {
-                        var (q1, _) = VsaCodeTree.GetQuantRule(key, null);
+                        var (q1, _) = _catalog.GetQuantRule(key, null);
                         var badge = q1 is not null ? q1.Einheit ?? "Q" : null;
                         var badgeColor = q1 is { Pflicht: "P" } ? "#DC2626" : q1 is not null ? "#F59E0B" : null;
 
@@ -347,10 +351,10 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
                     var grpColor = CurrentGroupColor;
                     foreach (var (key, charDef) in cd.Char1)
                     {
-                        var hasC2 = VsaCodeTree.GetChar2Options(cd, key) is not null;
+                        var hasC2 = _catalog.GetChar2Options(cd, key) is not null;
                         var prefix = cd.XPrefix ? "X" : "";
                         var fullCode = $"{SelectedCodeKey}{prefix}{key}";
-                        var (q1, _) = VsaCodeTree.GetQuantRule(SelectedCodeKey!, key);
+                        var (q1, _) = _catalog.GetQuantRule(SelectedCodeKey!, key);
 
                         CurrentTiles.Add(new TileItem
                         {
@@ -369,13 +373,13 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
                 var cd = GetCurrentVsaCodeDef();
                 if (cd is not null && SelectedChar1Key is not null)
                 {
-                    var c2Options = VsaCodeTree.GetChar2Options(cd, SelectedChar1Key);
+                    var c2Options = _catalog.GetChar2Options(cd, SelectedChar1Key);
                     if (c2Options is not null)
                     {
                         var prefix = cd.XPrefix ? "X" : "";
                         foreach (var (key, label) in c2Options)
                         {
-                            var invalid = VsaCodeTree.IsInvalidCombo(cd, SelectedChar1Key, key);
+                            var invalid = _catalog.IsInvalidCombo(cd, SelectedChar1Key, key);
                             var fullCode = $"{SelectedCodeKey}{prefix}{SelectedChar1Key}{key}";
                             CurrentTiles.Add(new TileItem
                             {
@@ -406,7 +410,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
             FinalSublabel = c1Def.Label;
             if (c2Key is not null)
             {
-                var c2Options = VsaCodeTree.GetChar2Options(cd, c1Key);
+                var c2Options = _catalog.GetChar2Options(cd, c1Key);
                 if (c2Options is not null && c2Options.TryGetValue(c2Key, out var c2Label))
                     FinalSublabel = $"{c1Def.Label} - {c2Label}";
             }
@@ -419,11 +423,11 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         WarnMessage = cd?.Warn;
 
         // Quant + Clock Regeln aktualisieren
-        var (q1, q2) = VsaCodeTree.GetQuantRule(SelectedCodeKey ?? code, c1Key);
+        var (q1, q2) = _catalog.GetQuantRule(SelectedCodeKey ?? code, c1Key);
         Q1Rule = q1;
         Q2Rule = q2;
 
-        var clockRule = VsaCodeTree.GetClockRule(SelectedCodeKey ?? code);
+        var clockRule = _catalog.GetClockRule(SelectedCodeKey ?? code);
         ClockMode = clockRule.Mode;
         ClockHint = clockRule.Hint;
 
@@ -569,7 +573,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
     // ProtocolEntry bauen
     // =================================================================
 
-    private static bool TryResolveCodePath(
+    private bool TryResolveCodePath(
         string? rawCode,
         out string groupKey,
         out string codeKey,
@@ -589,7 +593,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(normalized))
             return false;
 
-        foreach (var (grpKey, group) in VsaCodeTree.Groups)
+        foreach (var (grpKey, group) in _catalog.Groups)
         {
             foreach (var (candidateCodeKey, codeDef) in group.Codes)
             {
@@ -631,7 +635,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
                 if (!codeDef.Char1.ContainsKey(char1))
                     continue;
 
-                var c2Options = VsaCodeTree.GetChar2Options(codeDef, char1);
+                var c2Options = _catalog.GetChar2Options(codeDef, char1);
                 if (rest.Length == 1)
                 {
                     groupKey = grpKey;
@@ -710,6 +714,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         entry.CodeMeta.UpdatedAt = DateTimeOffset.UtcNow;
 
         var p = entry.CodeMeta.Parameters;
+        AddCatalogMetadata(p, GetCurrentVsaCodeDef());
         SetOrRemove(p, "vsa.q1", Q1Value);
         SetOrRemove(p, "vsa.q2", Q2Value);
 
@@ -765,6 +770,16 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
             dict[key] = value.Trim();
     }
 
+    private static void AddCatalogMetadata(Dictionary<string, string> parameters, VsaCodeDef? codeDef)
+    {
+        if (codeDef is null)
+            return;
+
+        SetOrRemove(parameters, "catalog.source", codeDef.Source);
+        SetOrRemove(parameters, "catalog.canonicalCode", codeDef.CanonicalCode);
+        SetOrRemove(parameters, "catalog.standardAnnotation", codeDef.StandardAnnotation);
+    }
+
     // =================================================================
     // Multi-Column Navigation (WinCan-Stil)
     // =================================================================
@@ -781,7 +796,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
     private void PopulateGroupColumn()
     {
         GroupTiles.Clear();
-        foreach (var (key, grp) in VsaCodeTree.Groups)
+        foreach (var (key, grp) in _catalog.Groups)
         {
             GroupTiles.Add(new TileItem
             {
@@ -795,12 +810,12 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
     private void PopulateCodeColumn()
     {
         CodeTiles.Clear();
-        if (SelectedGroupKey is null || !VsaCodeTree.Groups.TryGetValue(SelectedGroupKey, out var group))
+        if (SelectedGroupKey is null || !_catalog.Groups.TryGetValue(SelectedGroupKey, out var group))
             return;
 
         foreach (var (key, cd) in group.Codes)
         {
-            var (q1, _) = VsaCodeTree.GetQuantRule(key, null);
+            var (q1, _) = _catalog.GetQuantRule(key, null);
             var badge = q1 is not null ? q1.Einheit ?? "Q" : null;
             var badgeColor = q1 is { Pflicht: "P" } ? "#DC2626" : q1 is not null ? "#F59E0B" : null;
 
@@ -824,10 +839,10 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
 
         foreach (var (key, charDef) in cd.Char1)
         {
-            var hasC2 = VsaCodeTree.GetChar2Options(cd, key) is not null;
+            var hasC2 = _catalog.GetChar2Options(cd, key) is not null;
             var prefix = cd.XPrefix ? "X" : "";
             var fullCode = $"{SelectedCodeKey}{prefix}{key}";
-            var (q1, _) = VsaCodeTree.GetQuantRule(SelectedCodeKey!, key);
+            var (q1, _) = _catalog.GetQuantRule(SelectedCodeKey!, key);
 
             Char1Tiles.Add(new TileItem
             {
@@ -847,13 +862,13 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         var cd = GetCurrentVsaCodeDef();
         if (cd is null || SelectedChar1Key is null) return;
 
-        var c2Options = VsaCodeTree.GetChar2Options(cd, SelectedChar1Key);
+        var c2Options = _catalog.GetChar2Options(cd, SelectedChar1Key);
         if (c2Options is null) return;
 
         var prefix = cd.XPrefix ? "X" : "";
         foreach (var (key, label) in c2Options)
         {
-            var invalid = VsaCodeTree.IsInvalidCombo(cd, SelectedChar1Key, key);
+            var invalid = _catalog.IsInvalidCombo(cd, SelectedChar1Key, key);
             var fullCode = $"{SelectedCodeKey}{prefix}{SelectedChar1Key}{key}";
             Char2Tiles.Add(new TileItem
             {
@@ -872,7 +887,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
             return;
 
         SelectedGroupKey = key;
-        var grp = VsaCodeTree.Groups[key];
+        var grp = _catalog.Groups[key];
         CurrentGroupColor = grp.Color;
 
         SelectedCodeKey = null;
@@ -932,7 +947,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         PopulateChar1Column();
 
         var cd = GetCurrentVsaCodeDef();
-        var hasC2 = cd is not null && VsaCodeTree.GetChar2Options(cd, key) is not null;
+        var hasC2 = cd is not null && _catalog.GetChar2Options(cd, key) is not null;
 
         if (!hasC2)
         {
@@ -961,7 +976,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         var prefix = cd?.XPrefix == true ? "X" : "";
         var invalidCombo = cd is not null
             && SelectedChar1Key is not null
-            && VsaCodeTree.IsInvalidCombo(cd, SelectedChar1Key, key);
+            && _catalog.IsInvalidCombo(cd, SelectedChar1Key, key);
         ShowFinalResult($"{SelectedCodeKey}{prefix}{SelectedChar1Key}{key}", SelectedChar1Key, key);
         if (invalidCombo)
         {
@@ -980,7 +995,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
     private VsaCodeDef? GetCurrentVsaCodeDef()
     {
         if (SelectedGroupKey is null || SelectedCodeKey is null) return null;
-        if (!VsaCodeTree.Groups.TryGetValue(SelectedGroupKey, out var grp)) return null;
+        if (!_catalog.Groups.TryGetValue(SelectedGroupKey, out var grp)) return null;
         return grp.Codes.TryGetValue(SelectedCodeKey, out var cd) ? cd : null;
     }
 
