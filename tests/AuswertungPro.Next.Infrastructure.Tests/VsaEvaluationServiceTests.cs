@@ -29,7 +29,7 @@ public sealed class VsaEvaluationServiceTests
                 {
                     KanalSchadencode = "BAJ",
                     SchadenlageAnfang = 0.10,
-                    Raw = "Rohrverbindung Knick"
+                    Raw = "Rohrverbindung Knick, Winkel = 10°, an Verbindung"
                 }
             }
         };
@@ -43,7 +43,8 @@ public sealed class VsaEvaluationServiceTests
 
         Assert.Single(findings);
         Assert.Equal("BAJC", findings[0].KanalSchadencode);
-        Assert.Equal("Rohrverbindung Knick", findings[0].Raw);
+        Assert.Equal("10", findings[0].Quantifizierung1);
+        Assert.Equal("Rohrverbindung Knick, Winkel = 10°, an Verbindung", findings[0].Raw);
     }
 
     [Fact]
@@ -71,6 +72,16 @@ public sealed class VsaEvaluationServiceTests
 
         Assert.Single(findings);
         Assert.Equal("BDA", findings[0].KanalSchadencode);
+    }
+
+    [Theory]
+    [InlineData("Riss laengs, Breite = 4mm, geschaetzt", "4")]
+    [InlineData("Rohrverbindung Knick, Winkel = 10°, geschaetzt", "10")]
+    [InlineData("Einragendes Dichtungsmaterial, Querschnittsreduzierung = 3%", "3")]
+    [InlineData("Riss radial, Breite = 1,5 mm", "1.5")]
+    public void ExtractQuantValue_ReadsMeasurementFromRawText(string raw, string expected)
+    {
+        Assert.Equal(expected, VsaEvaluationService.ExtractQuantValue(raw));
     }
 
     [Fact]

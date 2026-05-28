@@ -675,12 +675,23 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         return findings.Select(finding =>
         {
             var code = NormalizeCode(finding.KanalSchadencode);
-            if (code.Length != 3)
-                return finding;
+            var effectiveCode = code;
+            if (code.Length == 3)
+            {
+                var meter = finding.MeterStart ?? finding.SchadenlageAnfang;
+                var candidate = FindMatchingFullCodeCandidate(candidates, code, meter);
+                if (candidate is not null)
+                    effectiveCode = candidate.Code;
+            }
 
-            var meter = finding.MeterStart ?? finding.SchadenlageAnfang;
-            var candidate = FindMatchingFullCodeCandidate(candidates, code, meter);
-            return candidate is null ? finding : CopyFindingWithCode(finding, candidate.Code);
+            var q1 = string.IsNullOrWhiteSpace(finding.Quantifizierung1)
+                ? ExtractQuantValue(finding.Raw)
+                : finding.Quantifizierung1;
+
+            return string.Equals(effectiveCode, code, StringComparison.OrdinalIgnoreCase)
+                   && string.Equals(q1, finding.Quantifizierung1, StringComparison.Ordinal)
+                ? finding
+                : CopyFinding(finding, effectiveCode, q1);
         });
     }
 
@@ -739,11 +750,34 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         return candidates;
     }
 
-    private static VsaFinding CopyFindingWithCode(VsaFinding source, string code)
+    internal static string? ExtractQuantValue(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+
+        var percent = Regex.Match(text, @"(\d+(?:[.,]\d+)?)\s*%");
+        if (percent.Success)
+            return NormalizeQuant(percent.Groups[1].Value);
+
+        var degrees = Regex.Match(text, @"(\d+(?:[.,]\d+)?)\s*(?:\u00B0|deg\b|Grad\b|degrees\b)", RegexOptions.IgnoreCase);
+        if (degrees.Success)
+            return NormalizeQuant(degrees.Groups[1].Value);
+
+        var millimeters = Regex.Match(text, @"(\d+(?:[.,]\d+)?)\s*mm\b", RegexOptions.IgnoreCase);
+        if (millimeters.Success)
+            return NormalizeQuant(millimeters.Groups[1].Value);
+
+        return null;
+    }
+
+    private static string NormalizeQuant(string value)
+        => value.Replace(',', '.');
+
+    private static VsaFinding CopyFinding(VsaFinding source, string code, string? quantification1)
         => new()
         {
             KanalSchadencode = code,
-            Quantifizierung1 = source.Quantifizierung1,
+            Quantifizierung1 = quantification1,
             Quantifizierung2 = source.Quantifizierung2,
             SchadenlageAnfang = source.SchadenlageAnfang,
             SchadenlageEnde = source.SchadenlageEnde,
