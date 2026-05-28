@@ -13,7 +13,7 @@ public static class ShadowReportAnalyzer
     public static ShadowReport Analyze(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
-            return ShadowReport.Empty(path);
+            return ShadowReport.NoDataReport(path);
 
         var entries = new List<ShadowEntry>();
         foreach (var line in File.ReadLines(path))
@@ -25,6 +25,9 @@ public static class ShadowReportAnalyzer
             if (entry is not null)
                 entries.Add(entry);
         }
+
+        if (entries.Count == 0)
+            return ShadowReport.NoDataReport(path);
 
         var groups = entries
             .GroupBy(e => (
@@ -49,7 +52,8 @@ public static class ShadowReportAnalyzer
             TotalDifferences: entries.Count,
             ExpectedDifferences: expected,
             UnexpectedDifferences: unexpected,
-            Groups: groups);
+            Groups: groups,
+            NoData: false);
     }
 
     private sealed class ShadowEntry
@@ -70,12 +74,13 @@ public sealed record ShadowReport(
     int TotalDifferences,
     int ExpectedDifferences,
     int UnexpectedDifferences,
-    IReadOnlyList<ShadowDiffGroup> Groups)
+    IReadOnlyList<ShadowDiffGroup> Groups,
+    bool NoData)
 {
-    public bool IsCutoverSafe => UnexpectedDifferences == 0;
+    public bool IsCutoverSafe => !NoData && UnexpectedDifferences == 0;
 
-    public static ShadowReport Empty(string path)
-        => new(path, 0, 0, 0, []);
+    public static ShadowReport NoDataReport(string path)
+        => new(path, 0, 0, 0, [], NoData: true);
 }
 
 public sealed record ShadowDiffGroup(

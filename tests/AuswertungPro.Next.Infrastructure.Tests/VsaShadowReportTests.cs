@@ -57,14 +57,34 @@ public sealed class VsaShadowReportTests
     }
 
     [Fact]
-    public void Analyze_ReturnsSafe_WhenFileMissingOrEmpty()
+    public void Analyze_ReturnsNoData_WhenFileMissing()
     {
         var path = Path.Combine(Path.GetTempPath(), "missing-vsa-shadow-" + Guid.NewGuid().ToString("N") + ".jsonl");
 
         var report = ShadowReportAnalyzer.Analyze(path);
 
         Assert.Equal(0, report.TotalDifferences);
-        Assert.True(report.IsCutoverSafe);
+        Assert.True(report.NoData);
+        Assert.False(report.IsCutoverSafe);
+    }
+
+    [Fact]
+    public void Analyze_ReturnsNoData_WhenFileEmpty()
+    {
+        var path = WriteFixture("");
+
+        try
+        {
+            var report = ShadowReportAnalyzer.Analyze(path);
+
+            Assert.Equal(0, report.TotalDifferences);
+            Assert.True(report.NoData);
+            Assert.False(report.IsCutoverSafe);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     private static string WriteFixture(string jsonl)

@@ -10,6 +10,12 @@ Console.WriteLine($"  expected_drift=true:  {report.ExpectedDifferences}");
 Console.WriteLine($"  expected_drift=false: {report.UnexpectedDifferences}");
 Console.WriteLine();
 
+if (report.NoData)
+{
+    Console.WriteLine("KEINE DATEN: Shadow-Log leer oder nicht vorhanden. App erst mit echten VSA-Projekten laufen lassen.");
+    return 2;
+}
+
 if (report.Groups.Count > 0)
 {
     Console.WriteLine("Gruppen nach Code + Anforderung:");
