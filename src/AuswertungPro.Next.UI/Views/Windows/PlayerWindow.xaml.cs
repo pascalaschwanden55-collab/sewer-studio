@@ -957,15 +957,22 @@ public partial class PlayerWindow : Window
 
         foreach (var (info, container, tickOrRange, label) in _damageMarkers)
         {
-            var ratio = Math.Clamp(info.MeterStart / pipeLength, 0.0, 1.0);
-            var x = offsetX + ratio * trackWidth;
+            var x = AuswertungPro.Next.UI.Player.PlayerTimelineLayoutCalculator.CalculatePointX(
+                info.MeterStart,
+                pipeLength,
+                offsetX,
+                trackWidth);
 
             if (info.IsStreckenschaden && info.MeterEnd.HasValue && info.MeterEnd.Value > info.MeterStart)
             {
-                Canvas.SetLeft(container, x);
-                var endRatio = Math.Clamp(Math.Min(info.MeterEnd.Value, pipeLength) / pipeLength, 0.0, 1.0);
-                var endX = offsetX + endRatio * trackWidth;
-                var barWidth = Math.Max(endX - x, 3);
+                var range = AuswertungPro.Next.UI.Player.PlayerTimelineLayoutCalculator.CalculateRangeX(
+                    info.MeterStart,
+                    info.MeterEnd.Value,
+                    pipeLength,
+                    offsetX,
+                    trackWidth);
+                Canvas.SetLeft(container, range.StartX);
+                var barWidth = Math.Max(range.Width, 3);
                 ((Rectangle)tickOrRange).Width = barWidth;
 
                 label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
