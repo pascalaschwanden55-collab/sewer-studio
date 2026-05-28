@@ -88,6 +88,38 @@ public sealed class VsaClassificationRuleSelectorV2Tests
     }
 
     [Fact]
+    public void Classify_Baj_C_S_IsFixedEz4_FromPdfTable16()
+    {
+        var selector = CreateSelector();
+
+        var outcome = selector.Classify(new VsaClassificationRequest(
+            Code: "BAJ",
+            Ch1: "C",
+            Requirement: "S",
+            Q1: "5"));
+
+        Assert.Equal(4, outcome.S?.Ez);
+        Assert.Equal("c-074-BAJ-S", outcome.S?.RuleId);
+    }
+
+    [Fact]
+    public void Classify_Baj_B_S_RemainsNonAssessable()
+    {
+        var selector = CreateSelector();
+
+        var outcome = selector.Classify(new VsaClassificationRequest(
+            Code: "BAJ",
+            Ch1: "B",
+            Requirement: "S",
+            Q1: "25"));
+
+        Assert.Null(outcome.S);
+        Assert.Contains(outcome.Diagnostics, d =>
+            d.Requirement == "S" &&
+            d.Reason == "not-assessable");
+    }
+
+    [Fact]
     public void Classify_UnknownRule_AddsDiagnosticReason()
     {
         var selector = CreateSelector();

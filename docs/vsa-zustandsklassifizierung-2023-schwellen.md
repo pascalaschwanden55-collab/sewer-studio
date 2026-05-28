@@ -206,19 +206,19 @@ Verschobene Rohrverbindung.
 | BAJ | A | - | D | mm | >= 80 | >= 60 und < 80 | >= 40 und < 60 | >= 20 und < 40 | < 20 | > DN 400 |
 | BAJ | A | - | S | mm | - | - | - | - | alle | alle |
 | BAJ | B | - | D | mm | >= 30 | >= 20 und < 30 | >= 15 und < 20 | >= 10 und < 15 | < 10 | alle |
-| BAJ | B | - | S | mm | missing-vsa-source | missing-vsa-source | missing-vsa-source | missing-vsa-source | missing-vsa-source | PDF-Zeile ohne sichtbaren Einzelzustand |
+| BAJ | B | - | S | mm | - | - | - | - | - | PDF-Zeile ohne Einzelzustandswerte; keine Zustandsnote |
 | BAJ | B | - | B | mm | - | - | - | >= 10 | < 10 | alle |
 | BAJ | C | - | D | deg | >= 12 | >= 9 und < 12 | >= 7 und < 9 | >= 5 und < 7 | < 5 | <= DN 200 |
 | BAJ | C | - | D | deg | >= 6 | >= 4 und < 6 | >= 3 und < 4 | >= 2 und < 3 | < 2 | > DN 200 |
-| BAJ | C | - | S | deg | - | - | - | - | alle | PDF-Zeile zeigt `alle` vor dem S-x; fachlich pruefen |
+| BAJ | C | - | S | deg | - | - | - | - | alle | alle |
 
 Hinweise:
 
 - Die Fussnote der Richtlinie sagt, dass die Geometrie von Rohrverbindungen je
   nach Verbindungsart, Werkstoff und Baujahr stark variiert. Konkrete
   Erkenntnisse sollen in die Klassifizierung einfliessen.
-- Zwei BAJ-Zeilen sind bewusst als pruefbeduerftig markiert. Sie werden nicht
-  geraten.
+- `BAJ/B/S` hat in der PDF-Zeile keine Einzelzustandswerte und wird nicht
+  bewertet. `BAJ/C/S` ist nach visueller PDF-Pruefung EZ 4 fuer alle Werte.
 
 ### BAK - Feststellung der Innenauskleidung
 

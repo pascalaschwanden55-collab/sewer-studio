@@ -282,13 +282,14 @@ public sealed class VsaShadowReportTests
         {"timestamp_utc":"2026-05-28T08:29:01Z","code":"BAP","base_code":"BAP","requirement":"B","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"rule-not-found"}
         {"timestamp_utc":"2026-05-28T08:29:02Z","code":"BAIZ","base_code":"BAI","requirement":"S","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"rule-not-found","ch1":"Z"}
         {"timestamp_utc":"2026-05-28T08:29:03Z","code":"BAIZ","base_code":"BAI","requirement":"D","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"ch1-unmatched","ch1":"Z"}
+        {"timestamp_utc":"2026-05-28T08:29:04Z","code":"BAJB","base_code":"BAJ","requirement":"S","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"not-assessable","ch1":"B"}
         """);
 
         try
         {
             var report = ShadowReportAnalyzer.Analyze(path, KnownNonAssessableRules());
 
-            Assert.Equal(3, report.ExpectedNonAssessmentCount);
+            Assert.Equal(4, report.ExpectedNonAssessmentCount);
             Assert.Equal(0, report.OpenCutoverBlockerCount);
             Assert.True(report.IsCutoverSafe);
             Assert.All(report.Groups, group => Assert.True(group.ExpectedNonAssessment));
@@ -340,6 +341,7 @@ public sealed class VsaShadowReportTests
             new("BDA", "prefix"),
             new("BAP", "prefix", "B"),
             new("BAI", "prefix", "S"),
-            new("BAI", "prefix", "D", ["Z"])
+            new("BAI", "prefix", "D", ["Z"]),
+            new("BAJ", "exact", "S", ["B"])
         ];
 }

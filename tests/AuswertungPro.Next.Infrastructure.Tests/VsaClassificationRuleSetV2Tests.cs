@@ -30,6 +30,8 @@ public sealed class VsaClassificationRuleSetV2Tests
             rule.Code == "BAI" && rule.Requirement == "S" && rule.CodeMatch == "prefix");
         Assert.Contains(rules.NonAssessableRequirements, rule =>
             rule.Code == "BAI" && rule.Requirement == "D" && rule.Ch1.SequenceEqual(new[] { "Z" }));
+        Assert.Contains(rules.NonAssessableRequirements, rule =>
+            rule.Code == "BAJ" && rule.Requirement == "S" && rule.Ch1.SequenceEqual(new[] { "B" }));
         Assert.All(rules.Rules, rule => Assert.InRange(rule.Classification.Ez ?? 0, 0, 4));
 
         var baaRigid = rules.Rules.Single(rule =>
@@ -59,7 +61,7 @@ public sealed class VsaClassificationRuleSetV2Tests
         Assert.NotEmpty(bbaRoots);
         Assert.All(bbaRoots, rule => Assert.DoesNotContain("deformation", string.Join(' ', rule.Notes), StringComparison.OrdinalIgnoreCase));
 
-        Assert.Contains(rules.Rules, rule => rule.Status == "missing-vsa-source"
+        Assert.Contains(rules.Rules, rule => rule.Status == "not-assessable"
                                              && rule.Classification.Mode == "missing");
     }
 

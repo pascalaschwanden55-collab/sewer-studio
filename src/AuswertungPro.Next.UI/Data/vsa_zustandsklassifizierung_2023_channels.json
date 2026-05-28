@@ -92,6 +92,16 @@
       "ch1": [],
       "reason": "Tabelle 22 klassifiziert BAP fuer Dichtheit (D) und Standsicherheit (S), nicht fuer Betriebssicherheit (B).",
       "sourceRef": "PDF-Dateiseite 28 / gedruckte Seite 26, Anhang C, Tabelle 22"
+    },
+    {
+      "code": "BAJ",
+      "codeMatch": "exact",
+      "requirement": "S",
+      "ch1": [
+        "B"
+      ],
+      "reason": "Tabelle 16 enthaelt fuer BAJ/B/S keine Einzelzustandswerte.",
+      "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16"
     }
   ],
   "rules": [
@@ -2338,12 +2348,12 @@
         "mode": "missing",
         "ez": null,
         "ranges": [],
-        "reason": "missing-vsa-source"
+        "reason": "not-assessable"
       },
-      "status": "missing-vsa-source",
+      "status": "not-assessable",
       "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16:",
       "notes": [
-        "Geltung: PDF-Zeile ohne sichtbaren Einzelzustand"
+        "Geltung: PDF-Zeile ohne Einzelzustandswerte"
       ]
     },
     {
@@ -2504,15 +2514,15 @@
         "areas": []
       },
       "classification": {
-        "mode": "missing",
-        "ez": null,
+        "mode": "fixed",
+        "ez": 4,
         "ranges": [],
-        "reason": "needs-review"
+        "reason": null
       },
-      "status": "needs-review",
+      "status": "ok",
       "sourceRef": "PDF-Dateiseite 26 / gedruckte Seite 24, Anhang C, Tabelle 16:",
       "notes": [
-        "Geltung: PDF-Zeile zeigt \u0060alle\u0060 vor dem S-x; fachlich pruefen"
+        "Geltung: PDF-Zeile zeigt fuer BAJ/C/S EZ 4 = alle"
       ]
     },
     {
