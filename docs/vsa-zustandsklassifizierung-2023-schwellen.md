@@ -673,10 +673,68 @@ Poroese Schachtwand.
 | DAN | - | - | D | - | - | - | alle | - | - | Bereiche I,J |
 | DAN | - | - | S | - | - | - | alle | - | - | Bereiche B,D,F |
 
+### DAO - Boden sichtbar
+
+Quelle: PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 47:
+Boden sichtbar.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAO | - | - | D | - | - | - | alle | - | - | Bereiche D,F |
+| DAO | - | - | D | - | - | alle | - | - | - | Bereiche I,J |
+| DAO | - | - | S | - | - | alle | - | - | - | Bereiche B,D,F |
+
+### DAP - Hohlraum sichtbar
+
+Quelle: PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 48:
+Hohlraum sichtbar.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAP | - | - | D | - | - | - | alle | - | - | Bereiche D,F |
+| DAP | - | - | D | - | - | alle | - | - | - | Bereiche I,J |
+| DAP | - | - | S | - | alle | - | - | - | - | Bereiche B,D,F |
+
+### DAQ - Schadhafte Steighilfen
+
+Quelle: PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 49:
+Schadhafte Steighilfen.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAQ | A,C,D,F,G,H,I,J,K | - | B | - | - | alle | - | - | - | Bereiche D,F |
+| DAQ | B | - | B | - | alle | - | - | - | - | Bereiche D,F |
+| DAQ | E | - | B | - | - | - | - | alle | - | Bereiche D,F |
+| DAQ | Z | - | B | - | - | - | - | alle | - | Bereiche D,F |
+
+### DAR - Deckel und/oder Rahmen schadhaft
+
+Quelle: PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 50:
+Deckel und/oder Rahmen schadhaft.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DAR | A,C,F | - | B | - | alle | - | - | - | - | Bereiche A |
+| DAR | B,E | - | B | - | - | - | - | alle | - | Bereiche A |
+| DAR | D | - | B | - | - | alle | - | - | - | Bereiche A |
+| DAR | G,H | - | B | mm | - | - | alle | - | - | Bereiche A |
+| DAR | Z | - | B | - | - | - | - | alle | - | Bereiche A |
+
+### DBA - Wurzeln
+
+Quelle: PDF-Dateiseite 38 / gedruckte Seite 36, Anhang D, Tabelle 51:
+Wurzeln.
+
+| Code | Ch1 | Ch2 | Anforderung | Einheit | EZ 0 | EZ 1 | EZ 2 | EZ 3 | EZ 4 | Geltung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DBA | A,B,C | - | D | - | - | - | - | alle | - | Bereiche D,F |
+| DBA | A,B,C | - | D | - | - | - | alle | - | - | Bereiche I,J |
+| DBA | A,B,C | - | B | - | - | - | - | alle | - | Bereiche alle |
+
 ## Noch offen
 
 - Anhang C ist als Draft vollstaendig dokumentiert (Tabellen 7-32).
-- Anhang D ist begonnen: Tabellen 33-46 sind visuell geprueft dokumentiert.
-- Schachttabellen aus Anhang D offen: Tabellen 47-63.
+- Anhang D ist begonnen: Tabellen 33-51 sind visuell geprueft dokumentiert.
+- Schachttabellen aus Anhang D offen: Tabellen 52-63.
 - Klaeren, aus welchen Stammdaten `biegesteif`/`biegeweich` im Programm sicher
   bestimmt wird.
