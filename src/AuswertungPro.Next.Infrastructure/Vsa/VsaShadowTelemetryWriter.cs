@@ -52,4 +52,5 @@ public sealed record VsaShadowTelemetryEvent(
     string Requirement,
     int? LegacyEz,
     int? V2Ez,
-    bool ExpectedDrift);
+    bool ExpectedDrift,
+    string? V2Reason = null);

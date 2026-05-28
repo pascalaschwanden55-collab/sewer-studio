@@ -57,15 +57,40 @@ public sealed class VsaClassificationRuleSelector
         string requirement,
         List<VsaRuleDiagnostic> diagnostics)
     {
-        var candidates = ruleSet.Rules
+        var requirementRules = ruleSet.Rules
             .Where(rule => RequirementMatches(rule, requirement))
+            .ToList();
+
+        var codeMatches = requirementRules
             .Where(rule => CodeMatches(rule, normalizedCode))
+            .ToList();
+
+        if (codeMatches.Count == 0)
+        {
+            diagnostics.Add(new VsaRuleDiagnostic(normalizedCode, requirement, "rule-not-found",
+                "Keine VSA-v2-Regel fuer Code und Anforderung gefunden."));
+            return null;
+        }
+
+        var ch1Matches = codeMatches
             .Where(rule => CharacterizationMatches(rule.Ch1, request.Ch1))
+            .ToList();
+
+        if (ch1Matches.Count == 0)
+        {
+            diagnostics.Add(BuildCharacterizationDiagnostic(normalizedCode, requirement, "ch1", request.Ch1));
+            return null;
+        }
+
+        var candidates = ch1Matches
             .Where(rule => CharacterizationMatches(rule.Ch2, request.Ch2))
             .ToList();
 
         if (candidates.Count == 0)
+        {
+            diagnostics.Add(BuildCharacterizationDiagnostic(normalizedCode, requirement, "ch2", request.Ch2));
             return null;
+        }
 
         var outcomes = new List<VsaRequirementOutcome>();
         foreach (var rule in candidates)
@@ -108,6 +133,22 @@ public sealed class VsaClassificationRuleSelector
             return false;
 
         return allowed.Contains(Normalize(value), StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static VsaRuleDiagnostic BuildCharacterizationDiagnostic(
+        string code,
+        string requirement,
+        string field,
+        string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return new VsaRuleDiagnostic(code, requirement, $"{field}-missing",
+                $"{field.ToUpperInvariant()} fehlt fuer die VSA-v2-Regel.");
+        }
+
+        return new VsaRuleDiagnostic(code, requirement, $"{field}-unmatched",
+            $"{field.ToUpperInvariant()}={Normalize(value)} passt zu keiner VSA-v2-Regel.");
     }
 
     private static ResolvedScope? ResolveScope(

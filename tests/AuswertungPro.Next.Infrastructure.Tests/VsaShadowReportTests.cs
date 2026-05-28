@@ -142,6 +142,31 @@ public sealed class VsaShadowReportTests
         }
     }
 
+    [Fact]
+    public void Analyze_GroupsMissingV2DifferencesByDiagnosticReason()
+    {
+        var path = WriteFixture("""
+        {"timestamp_utc":"2026-05-28T08:29:01Z","code":"BCA","base_code":"BCA","requirement":"D","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"rule-not-found"}
+        {"timestamp_utc":"2026-05-28T08:29:02Z","code":"BCA","base_code":"BCA","requirement":"D","legacy_ez":2,"v2_ez":null,"expected_drift":false,"v2_reason":"rule-not-found"}
+        """);
+
+        try
+        {
+            var report = ShadowReportAnalyzer.Analyze(path);
+
+            var group = Assert.Single(report.Groups);
+            Assert.Equal("BCA", group.Code);
+            Assert.Equal("D", group.Requirement);
+            Assert.True(group.V2Missing);
+            Assert.Equal("rule-not-found", group.V2Reason);
+            Assert.Equal(2, group.Count);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     private static string WriteFixture(string jsonl)
     {
         var path = Path.Combine(Path.GetTempPath(), "vsa-shadow-report-" + Guid.NewGuid().ToString("N") + ".jsonl");

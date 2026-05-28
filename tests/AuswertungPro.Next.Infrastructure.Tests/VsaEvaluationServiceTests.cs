@@ -379,4 +379,50 @@ public sealed class VsaEvaluationServiceTests
                 Directory.Delete(tempDir, recursive: true);
         }
     }
+
+    [Fact]
+    public void Evaluate_ShadowMode_LogsV2DiagnosticReason_WhenV2CannotClassify()
+    {
+        var root = TestPaths.FindSolutionRoot();
+        var channelsTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_channels.json");
+        var manholesTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_manholes.json");
+        var tempDir = Path.Combine(Path.GetTempPath(), "sewer-vsa-shadow-tests", Guid.NewGuid().ToString("N"));
+        var shadowLogPath = Path.Combine(tempDir, "vsa_shadow.jsonl");
+
+        try
+        {
+            var project = new Project();
+            var rec = new HaltungRecord();
+            rec.SetFieldValue("Haltungsname", "H_shadow_reason", FieldSource.Xtf, userEdited: false);
+            rec.SetFieldValue("Haltungslaenge_m", "10", FieldSource.Xtf, userEdited: false);
+            rec.VsaFindings = new List<VsaFinding>
+            {
+                new() { KanalSchadencode = "BCA" }
+            };
+            project.Data.Add(rec);
+
+            var svc = new VsaEvaluationService(
+                channelsTable,
+                manholesTable,
+                shadowModeEnabled: true,
+                shadowLogPath: shadowLogPath);
+
+            var res = svc.Evaluate(project);
+
+            Assert.True(res.Ok, res.ErrorMessage);
+            Assert.True(File.Exists(shadowLogPath), $"Shadow log missing: {shadowLogPath}");
+
+            using var doc = JsonDocument.Parse(File.ReadLines(shadowLogPath)
+                .Single(line => line.Contains("\"requirement\":\"D\"", StringComparison.OrdinalIgnoreCase)));
+            var entry = doc.RootElement;
+            Assert.Equal("BCA", entry.GetProperty("code").GetString());
+            Assert.Null(entry.GetProperty("v2_ez").GetString());
+            Assert.Equal("rule-not-found", entry.GetProperty("v2_reason").GetString());
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+    }
 }

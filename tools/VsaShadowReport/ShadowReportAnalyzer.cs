@@ -48,13 +48,15 @@ public static class ShadowReportAnalyzer
                 Code: e.Code ?? "",
                 Requirement: e.Requirement ?? "",
                 e.ExpectedDrift,
-                V2Missing: e.V2Ez is null))
+                V2Missing: e.V2Ez is null,
+                V2Reason: e.V2Reason ?? ""))
             .Select(g => new ShadowDiffGroup(
                 g.Key.Code,
                 g.Key.Requirement,
                 g.Key.ExpectedDrift,
                 g.Key.V2Missing,
-                g.Count()))
+                g.Count(),
+                string.IsNullOrWhiteSpace(g.Key.V2Reason) ? null : g.Key.V2Reason))
             .OrderByDescending(g => g.Count)
             .ThenBy(g => g.Code, StringComparer.OrdinalIgnoreCase)
             .ThenBy(g => g.Requirement, StringComparer.OrdinalIgnoreCase)
@@ -94,6 +96,9 @@ public static class ShadowReportAnalyzer
 
         [JsonPropertyName("timestamp_utc")]
         public DateTimeOffset? TimestampUtc { get; set; }
+
+        [JsonPropertyName("v2_reason")]
+        public string? V2Reason { get; set; }
     }
 }
 
@@ -120,4 +125,5 @@ public sealed record ShadowDiffGroup(
     string Requirement,
     bool ExpectedDrift,
     bool V2Missing,
-    int Count);
+    int Count,
+    string? V2Reason);

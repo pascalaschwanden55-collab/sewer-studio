@@ -181,13 +181,19 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
                 Material: record.GetFieldValue("Rohrmaterial"),
                 AssetKind: baseCode.StartsWith('D') ? "manhole" : "channel"));
 
-            WriteRequirementDiff(rawCode, baseCode, "D", item.Classification.EZD, outcome.D?.Ez);
-            WriteRequirementDiff(rawCode, baseCode, "S", item.Classification.EZS, outcome.S?.Ez);
-            WriteRequirementDiff(rawCode, baseCode, "B", item.Classification.EZB, outcome.B?.Ez);
+            WriteRequirementDiff(rawCode, baseCode, "D", item.Classification.EZD, outcome.D?.Ez, ResolveV2Reason(outcome, "D"));
+            WriteRequirementDiff(rawCode, baseCode, "S", item.Classification.EZS, outcome.S?.Ez, ResolveV2Reason(outcome, "S"));
+            WriteRequirementDiff(rawCode, baseCode, "B", item.Classification.EZB, outcome.B?.Ez, ResolveV2Reason(outcome, "B"));
         }
     }
 
-    private void WriteRequirementDiff(string code, string baseCode, string requirement, int? legacyEz, int? v2Ez)
+    private void WriteRequirementDiff(
+        string code,
+        string baseCode,
+        string requirement,
+        int? legacyEz,
+        int? v2Ez,
+        string? v2Reason)
     {
         if (legacyEz == v2Ez)
             return;
@@ -199,9 +205,15 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             Requirement: requirement,
             LegacyEz: legacyEz,
             V2Ez: v2Ez,
-            ExpectedDrift: ExpectedShadowDriftCodes.Contains(baseCode)),
+            ExpectedDrift: ExpectedShadowDriftCodes.Contains(baseCode),
+            V2Reason: v2Reason),
             _shadowLogPath);
     }
+
+    private static string? ResolveV2Reason(VsaClassificationOutcome outcome, string requirement)
+        => outcome.Diagnostics
+            .FirstOrDefault(d => d.Requirement.Equals(requirement, StringComparison.OrdinalIgnoreCase))
+            ?.Reason;
 
     public Result<string> Explain(Project project, HaltungRecord record)
     {

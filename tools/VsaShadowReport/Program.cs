@@ -27,8 +27,11 @@ if (report.Groups.Count > 0)
     Console.WriteLine("Gruppen nach Code + Anforderung:");
     foreach (var group in report.Groups)
     {
+        var reason = string.IsNullOrWhiteSpace(group.V2Reason)
+            ? ""
+            : $"  reason={group.V2Reason}";
         Console.WriteLine(
-            $"  {group.Code,-8} {group.Requirement,-1}  count={group.Count,5}  expected_drift={group.ExpectedDrift.ToString().ToLowerInvariant()}  v2_missing={group.V2Missing.ToString().ToLowerInvariant()}");
+            $"  {group.Code,-8} {group.Requirement,-1}  count={group.Count,5}  expected_drift={group.ExpectedDrift.ToString().ToLowerInvariant()}  v2_missing={group.V2Missing.ToString().ToLowerInvariant()}{reason}");
     }
 
     Console.WriteLine();
@@ -43,7 +46,7 @@ if (report.IsCutoverSafe)
 var unexpectedCodes = report.Groups
     .Where(group => !group.ExpectedDrift)
     .Select(group => group.V2Missing
-        ? $"{group.Code}/{group.Requirement}(v2=null)"
+        ? $"{group.Code}/{group.Requirement}(v2=null{FormatReason(group.V2Reason)})"
         : $"{group.Code}/{group.Requirement}")
     .Distinct(StringComparer.OrdinalIgnoreCase);
 Console.WriteLine($"NICHT SICHER: {report.UnexpectedDifferences} unerwartete Abweichungen, siehe Codes: {string.Join(", ", unexpectedCodes)}");
@@ -64,3 +67,6 @@ static string ResolvePath(string[] args)
 
     return Path.Combine(root, "SewerStudio", "Telemetry", "vsa_shadow.jsonl");
 }
+
+static string FormatReason(string? reason)
+    => string.IsNullOrWhiteSpace(reason) ? "" : $", {reason}";

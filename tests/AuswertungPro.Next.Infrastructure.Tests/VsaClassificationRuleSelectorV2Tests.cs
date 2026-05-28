@@ -86,4 +86,19 @@ public sealed class VsaClassificationRuleSelectorV2Tests
         Assert.Equal(0, outcome.S?.Ez);
         Assert.Equal(0, outcome.B?.Ez);
     }
+
+    [Fact]
+    public void Classify_UnknownRule_AddsDiagnosticReason()
+    {
+        var selector = CreateSelector();
+
+        var outcome = selector.Classify(new VsaClassificationRequest(
+            Code: "BDA",
+            Requirement: "S"));
+
+        Assert.Null(outcome.S);
+        Assert.Contains(outcome.Diagnostics, d =>
+            d.Requirement == "S" &&
+            d.Reason == "rule-not-found");
+    }
 }
