@@ -1192,7 +1192,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
     private void OpenHydraulikPanel(HaltungRecord? record)
     {
-        var vm = new HydraulikPanelViewModel();
+        var vm = new HydraulikPanelViewModel(_sp.Settings);
 
         if (record is not null)
         {
@@ -1288,7 +1288,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         // Build input from record
         var dn = TryParseDnMm(record.GetFieldValue("DN_mm")) ?? 300;
         var materialRaw = record.GetFieldValue("Rohrmaterial") ?? "";
-        var vm = new HydraulikPanelViewModel();
+        var vm = new HydraulikPanelViewModel(_sp.Settings);
         vm.LoadFromRecord(dn, materialRaw, null);
 
         var mat = vm.SelectedMaterial;
@@ -1454,7 +1454,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             if (dialog.SelectedOptions.IncludeHydraulik && hydraulikAvailable)
             {
                 var materialRaw = record.GetFieldValue("Rohrmaterial") ?? "";
-                var vm = new HydraulikPanelViewModel();
+                var vm = new HydraulikPanelViewModel(_sp.Settings);
                 vm.LoadFromRecord(dn!.Value, materialRaw, gefaelle);
 
                 var mat = vm.SelectedMaterial;
