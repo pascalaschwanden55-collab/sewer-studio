@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,6 +23,9 @@ public static class SamMaskRenderer
     /// <summary>Tag fuer Mess-Label-Elemente.</summary>
     public const string LabelTag = "mm_label";
 
+    /// <summary>Obergrenze fuer Masken-Pixel (Schutz gegen absurde Dimensionen vom Sidecar). ~50 MB bool.</summary>
+    private const long MaxMaskPixels = 50_000_000;
+
     // ── Farben ──────────────────────────────────────────────────────
 
     private static readonly Color MaskFill = Color.FromArgb(64, 0, 255, 0);       // Gruen, 25% opak
@@ -37,23 +41,38 @@ public static class SamMaskRenderer
     /// </summary>
     public static bool[,] DecodeRle(string rle, int width, int height)
     {
+        // Defensiv: Dimensionen kommen ungeprueft vom Sidecar. Ungueltige oder absurd
+        // grosse Werte abweisen, bevor allokiert wird (sonst OutOfMemoryException).
+        if (width <= 0 || height <= 0 || (long)width * height > MaxMaskPixels)
+            return new bool[0, 0];
+
         var mask = new bool[height, width];
         if (string.IsNullOrWhiteSpace(rle)) return mask;
 
         var parts = rle.Split(',');
         if (parts.Length < 2) return mask;
 
-        int startVal = int.Parse(parts[0]);
+        // Start-Token defensiv parsen; bei Fehler leere (aber dimensionierte) Maske
+        if (!int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int startVal))
+            return mask;
+
         bool currentVal = startVal != 0;
         int pos = 0;
         int totalPixels = width * height;
 
         for (int i = 1; i < parts.Length && pos < totalPixels; i++)
         {
-            int runLength = int.Parse(parts[i]);
+            // Defektes oder negatives Run-Token: Dekodierung abbrechen, bereits
+            // gesetzte Pixel behalten, statt zu werfen.
+            if (!int.TryParse(parts[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out int runLength)
+                || runLength < 0)
+                break;
+
+            // long-Arithmetik: ein korruptes Riesen-Run-Token (nahe int.MaxValue) wuerde
+            // sonst pos ueberlaufen lassen → negativer Index → IndexOutOfRangeException.
+            int end = (int)Math.Min((long)pos + runLength, totalPixels);
             if (currentVal)
             {
-                int end = Math.Min(pos + runLength, totalPixels);
                 for (int p = pos; p < end; p++)
                 {
                     int row = p / width;
@@ -61,7 +80,7 @@ public static class SamMaskRenderer
                     mask[row, col] = true;
                 }
             }
-            pos += runLength;
+            pos = end;
             currentVal = !currentVal;
         }
 
@@ -231,42 +250,63 @@ public static class SamMaskRenderer
 
         for (int i = 0; i < samResponse.Masks.Count; i++)
         {
-            var mask = samResponse.Masks[i];
-            var quant = i < quantified.Count ? quantified[i] : null;
-
-            // RLE dekodieren
-            var decoded = DecodeRle(mask.MaskRle, imgW, imgH);
-
-            // Fuellung rendern (semi-transparent gruen)
-            var fillGeom = ExtractFillGeometry(decoded, imgW, imgH, canvasWidth, canvasHeight);
-            var fillPath = new Path
+            try
             {
-                Data = fillGeom,
-                Fill = new SolidColorBrush(MaskFill),
-                Tag = MaskTag,
-                IsHitTestVisible = false
-            };
-            canvas.Children.Add(fillPath);
-
-            // Kontur rendern (gruene Linie)
-            var contourGeom = ExtractContourGeometry(decoded, imgW, imgH, canvasWidth, canvasHeight);
-            var contourPath = new Path
-            {
-                Data = contourGeom,
-                Stroke = new SolidColorBrush(MaskStroke),
-                StrokeThickness = 2,
-                Tag = MaskTag,
-                IsHitTestVisible = false
-            };
-            canvas.Children.Add(contourPath);
-
-            // Label-Badge positionieren (ueber der BBox)
-            if (quant != null && mask.Bbox.Count >= 4)
-            {
-                double bboxX = mask.Bbox[0] / imgW * canvasWidth;
-                double bboxY = mask.Bbox[1] / imgH * canvasHeight;
-                RenderMaskLabel(canvas, quant, bboxX, Math.Max(0, bboxY - 40));
+                var mask = samResponse.Masks[i];
+                var quant = i < quantified.Count ? quantified[i] : null;
+                RenderSingleMask(canvas, mask, quant, imgW, imgH, canvasWidth, canvasHeight);
             }
+            catch (Exception ex)
+            {
+                // Eine defekte Maske darf das Rendern der uebrigen nicht verhindern.
+                System.Diagnostics.Debug.WriteLine(
+                    $"SamMaskRenderer: Maske {i} uebersprungen: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Rendert eine einzelne SAM-Maske (Fuellung + Kontur + Label) auf den Canvas.
+    /// </summary>
+    private static void RenderSingleMask(
+        Canvas canvas,
+        SamMaskResult mask,
+        MaskQuantificationService.QuantifiedMask? quant,
+        int imgW, int imgH,
+        double canvasWidth, double canvasHeight)
+    {
+        // RLE dekodieren
+        var decoded = DecodeRle(mask.MaskRle, imgW, imgH);
+
+        // Fuellung rendern (semi-transparent gruen)
+        var fillGeom = ExtractFillGeometry(decoded, imgW, imgH, canvasWidth, canvasHeight);
+        var fillPath = new Path
+        {
+            Data = fillGeom,
+            Fill = new SolidColorBrush(MaskFill),
+            Tag = MaskTag,
+            IsHitTestVisible = false
+        };
+        canvas.Children.Add(fillPath);
+
+        // Kontur rendern (gruene Linie)
+        var contourGeom = ExtractContourGeometry(decoded, imgW, imgH, canvasWidth, canvasHeight);
+        var contourPath = new Path
+        {
+            Data = contourGeom,
+            Stroke = new SolidColorBrush(MaskStroke),
+            StrokeThickness = 2,
+            Tag = MaskTag,
+            IsHitTestVisible = false
+        };
+        canvas.Children.Add(contourPath);
+
+        // Label-Badge positionieren (ueber der BBox)
+        if (quant != null && mask.Bbox.Count >= 4)
+        {
+            double bboxX = mask.Bbox[0] / imgW * canvasWidth;
+            double bboxY = mask.Bbox[1] / imgH * canvasHeight;
+            RenderMaskLabel(canvas, quant, bboxX, Math.Max(0, bboxY - 40));
         }
     }
 
