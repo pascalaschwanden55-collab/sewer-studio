@@ -1,6 +1,7 @@
 """FastAPI application – Sewer-Studio Vision Sidecar."""
 
 import logging
+import traceback
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -14,6 +15,15 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
+
+logger = logging.getLogger("sidecar")
+
+
+def _looks_like_oom(exc: BaseException) -> bool:
+    """Erkennt CUDA-Out-of-Memory ohne harten torch-Import."""
+    if "OutOfMemory" in type(exc).__name__:
+        return True
+    return "out of memory" in str(exc).lower()
 
 
 @asynccontextmanager
@@ -39,6 +49,29 @@ app = FastAPI(
     description="Multi-Model Vision Pipeline (YOLO / Grounding DINO / SAM)",
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(Exception)
+async def handle_unexpected(request: Request, exc: Exception):
+    """Zentraler Fallback: nie roher 500-Stacktrace nach aussen.
+
+    - CUDA-OOM      -> VRAM freigeben, 503 (Aufrufer kann Frame ueberspringen/retryen)
+    - Modell fehlt  -> 503 (Dienst voruebergehend nicht verfuegbar)
+    - sonst         -> 500 mit generischer Meldung (Trace nur ins Log)
+    """
+    logger.error(
+        "Unbehandelter Fehler bei %s %s: %s\n%s",
+        request.method, request.url.path, exc, traceback.format_exc(),
+    )
+
+    if _looks_like_oom(exc):
+        gpu_manager.empty_cache()
+        return JSONResponse({"detail": "GPU out of memory"}, status_code=503)
+
+    if isinstance(exc, FileNotFoundError):
+        return JSONResponse({"detail": "model unavailable"}, status_code=503)
+
+    return JSONResponse({"detail": "internal error"}, status_code=500)
 
 
 def _normalize_host(host_header: str | None) -> str:
