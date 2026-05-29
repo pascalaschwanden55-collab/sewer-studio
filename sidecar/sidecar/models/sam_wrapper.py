@@ -2,19 +2,17 @@
 
 from __future__ import annotations
 
-import base64
-import io
 import time
 import logging
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
 
 from ..config import settings
 from ..gpu_manager import gpu_manager, ModelSlot
 from ..schemas.detection import BoundingBox
 from ..schemas.segmentation import MaskResult, SamResponse
+from .image_decode import decode_image_safe
 
 logger = logging.getLogger(__name__)
 
@@ -88,8 +86,11 @@ def segment(
     state = gpu_manager.ensure_loaded(ModelSlot.SAM, device, lambda: _load_sam_on(device))
     predictor = state.processor  # SamPredictor
 
-    raw = base64.b64decode(image_base64)
-    img = Image.open(io.BytesIO(raw)).convert("RGB")
+    img = decode_image_safe(
+        image_base64,
+        max_bytes=settings.inference_max_image_bytes,
+        max_pixels=settings.max_image_pixels,
+    )
     img_array = np.array(img)
     h, w = img_array.shape[:2]
 
