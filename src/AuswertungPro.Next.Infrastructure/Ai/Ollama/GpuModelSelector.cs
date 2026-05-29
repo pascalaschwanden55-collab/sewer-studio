@@ -28,7 +28,7 @@ public static class GpuModelSelector
     public const long SmallModelThresholdMb = 8_000;
 
     /// <summary>NumCtx fuer das grosse Modell.</summary>
-    public const int LargeModelNumCtx = 8192;
+    public const int LargeModelNumCtx = 12288;
 
     /// <summary>NumCtx fuer das kleine Modell (weniger RAM-Verbrauch).</summary>
     public const int SmallModelNumCtx = 4096;

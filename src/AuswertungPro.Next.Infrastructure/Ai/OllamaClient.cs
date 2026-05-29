@@ -240,7 +240,10 @@ public sealed class OllamaClient : IDisposable
     {
         if (_numCtx <= 0) return;
         if (payload.TryGetValue("options", out var existing) && existing is Dictionary<string, object> opts)
-            opts["num_ctx"] = _numCtx;
+        {
+            if (!opts.ContainsKey("num_ctx"))
+                opts["num_ctx"] = _numCtx;
+        }
         else
             payload["options"] = new Dictionary<string, object> { ["num_ctx"] = _numCtx };
     }
