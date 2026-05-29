@@ -1728,7 +1728,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             var hasDossierBaseSection =
                 options.IncludeDeckblatt
                 || options.IncludeHaltungsprotokoll
-                || (options.IncludeFotos && HasPrintableDossierPhotos(record, projectFolder))
+                || (options.IncludeFotos && DataPageDossierAvailability.HasPrintablePhotos(record, projectFolder))
                 || (options.IncludeSchachtVon && schachtVon != null)
                 || (options.IncludeSchachtBis && schachtBis != null)
                 || (options.IncludeHydraulik && calcResult != null)
@@ -1807,43 +1807,6 @@ public sealed partial class DataPageViewModel : ObservableObject
             MessageBox.Show($"PDF konnte nicht geoeffnet werden:\n{ex.Message}",
                 "Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
-    }
-
-    private static bool HasPrintableDossierPhotos(HaltungRecord record, string projectFolder)
-    {
-        var entries = record.Protocol?.Current?.Entries;
-        if (entries is null || entries.Count == 0)
-            return false;
-
-        foreach (var entry in entries)
-        {
-            if (entry.IsDeleted || entry.FotoPaths is null || entry.FotoPaths.Count == 0)
-                continue;
-
-            foreach (var raw in entry.FotoPaths)
-            {
-                var resolved = ResolveDossierPhotoPath(raw, projectFolder);
-                if (!string.IsNullOrWhiteSpace(resolved) && File.Exists(resolved))
-                    return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static string? ResolveDossierPhotoPath(string? raw, string projectFolder)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var normalized = raw.Replace('/', Path.DirectorySeparatorChar);
-        if (Path.IsPathRooted(normalized))
-            return normalized;
-
-        if (string.IsNullOrWhiteSpace(projectFolder))
-            return null;
-
-        return Path.GetFullPath(Path.Combine(projectFolder, normalized));
     }
 
     private static void ResolveSchachtPdfPaths(SchachtRecord schacht, string projectFolder, List<string> paths)
