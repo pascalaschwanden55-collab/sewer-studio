@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using System.Windows;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 
@@ -62,12 +61,14 @@ namespace AuswertungPro.Next.UI.Dialogs
         private readonly RelayCommand _moveDownCommand;
         private readonly RelayCommand _saveCommand;
         private readonly RelayCommand _cancelCommand;
+        private readonly IDialogService _dialogs;
         private string? _selectedItem;
         private string? _newItemText;
         private bool? _dialogResult;
 
-        public OptionsEditorViewModel(IEnumerable<string> items, bool isReadOnly = false)
+        public OptionsEditorViewModel(IEnumerable<string> items, bool isReadOnly = false, IDialogService? dialogs = null)
         {
+            _dialogs = dialogs ?? new DialogService();
             IsReadOnly = isReadOnly;
             Items = new ObservableCollection<string>(NormalizeItems(items));
             _addCommand = new RelayCommand(Add, () => IsEditingEnabled);
@@ -141,14 +142,12 @@ namespace AuswertungPro.Next.UI.Dialogs
                 var value = (item ?? string.Empty).Trim();
                 if (string.IsNullOrEmpty(value))
                 {
-                    MessageBox.Show("Leere Eintraege sind nicht erlaubt.", "Ungueltige Liste",
-                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _dialogs.Warn("Leere Eintraege sind nicht erlaubt.", "Ungueltige Liste");
                     return false;
                 }
                 if (!seen.Add(value))
                 {
-                    MessageBox.Show("Doppelte Eintraege sind nicht erlaubt.", "Ungueltige Liste",
-                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _dialogs.Warn("Doppelte Eintraege sind nicht erlaubt.", "Ungueltige Liste");
                     return false;
                 }
             }
