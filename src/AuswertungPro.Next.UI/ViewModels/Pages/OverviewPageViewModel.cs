@@ -7,7 +7,6 @@ using System.Text.Json;
 using System.Globalization;
 using System.Collections.Generic;
 using System.Linq;
-using System.Windows;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages
 {
@@ -223,12 +222,10 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             return;
 
         var fileName = Path.GetFileName(entry.Path);
-        var result = MessageBox.Show(
+        var confirmed = _sp.Dialogs.Confirm(
             $"Projekt wirklich löschen?\n\n{fileName}\n{entry.Path}",
-            "Projekt löschen",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-        if (result != MessageBoxResult.Yes)
+            "Projekt löschen");
+        if (!confirmed)
             return;
 
         try
@@ -246,7 +243,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Löschen fehlgeschlagen: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            _sp.Dialogs.Error($"Löschen fehlgeschlagen: {ex.Message}", "Fehler");
         }
     }
 

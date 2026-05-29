@@ -168,11 +168,9 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         var filteredRows = Rows.ToList();
         if (filteredRows.Count == 0)
         {
-            MessageBox.Show(
+            _sp.Dialogs.Info(
                 "Keine Daten fuer den aktuellen Filter gefunden.",
-                "Druckcenter",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+                "Druckcenter");
             return;
         }
 
@@ -243,21 +241,17 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             LastResult = $"PDF erstellt: {Path.GetFileName(output)}";
             _shell.SetStatus("Druckcenter PDF erstellt");
             PdfExportProgress = "PDF fertig.";
-            MessageBox.Show(
+            _sp.Dialogs.Info(
                 $"Druckcenter-PDF wurde erstellt:\n{output}",
-                "Druckcenter",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+                "Druckcenter");
         }
         catch (Exception ex)
         {
             LastResult = $"Fehler: {ex.Message}";
             PdfExportProgress = "PDF-Erstellung fehlgeschlagen.";
-            MessageBox.Show(
+            _sp.Dialogs.Error(
                 $"PDF konnte nicht erstellt werden:\n{ex.Message}",
-                "Druckcenter",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+                "Druckcenter");
         }
         finally
         {
@@ -278,16 +272,14 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             }
             else
             {
-                var decision = MessageBox.Show(
+                var decision = _sp.Dialogs.ConfirmCancel(
                     "Der Druckstand hat sich seit dem letzten Export geaendert.\n\nJa = letztes PDF drucken\nNein = anderes PDF auswaehlen\nAbbrechen = nichts tun",
-                    "Druckcenter",
-                    MessageBoxButton.YesNoCancel,
-                    MessageBoxImage.Question);
+                    "Druckcenter");
 
-                if (decision == MessageBoxResult.Cancel)
+                if (decision == DialogConfirm.Cancel)
                     return;
 
-                if (decision == MessageBoxResult.Yes)
+                if (decision == DialogConfirm.Yes)
                     pdfPath = LastExportedPdfPath;
             }
         }
@@ -312,11 +304,9 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             LastResult = $"Fehler beim Drucken: {ex.Message}";
-            MessageBox.Show(
+            _sp.Dialogs.Error(
                 $"PDF konnte nicht gedruckt werden:\n{ex.Message}",
-                "Druckcenter",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+                "Druckcenter");
         }
     }
 
@@ -326,11 +316,9 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         if (!HasLastExportedPdf())
         {
             ClearLastExport("Die zuletzt exportierte PDF-Datei wurde nicht gefunden.");
-            MessageBox.Show(
+            _sp.Dialogs.Info(
                 "Die zuletzt exportierte PDF-Datei wurde nicht gefunden.",
-                "Druckcenter",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+                "Druckcenter");
             return;
         }
 
@@ -346,11 +334,9 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             LastResult = $"Fehler beim Oeffnen: {ex.Message}";
-            MessageBox.Show(
+            _sp.Dialogs.Error(
                 $"PDF konnte nicht geoeffnet werden:\n{ex.Message}",
-                "Druckcenter",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+                "Druckcenter");
         }
     }
 

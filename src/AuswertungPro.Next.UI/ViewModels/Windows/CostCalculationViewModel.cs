@@ -118,8 +118,7 @@ public sealed partial class CostCalculationViewModel : ObservableObject
         sb.AppendLine($"TOTAL: {_lastOffer.Totals.TotalInclMwst:N2} {_lastOffer.Totals.Currency}");
 
         Clipboard.SetText(sb.ToString());
-        MessageBox.Show("Offerte wurde in die Zwischenablage kopiert.", "OK", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
+        _sp.Dialogs.Info("Offerte wurde in die Zwischenablage kopiert.", "OK");
     }
 
     [RelayCommand]
@@ -127,7 +126,7 @@ public sealed partial class CostCalculationViewModel : ObservableObject
     {
         if (_lastOffer is null)
         {
-            MessageBox.Show("Bitte zuerst berechnen.", "PDF", MessageBoxButton.OK, MessageBoxImage.Information);
+            _sp.Dialogs.Info("Bitte zuerst berechnen.", "PDF");
             return;
         }
 
@@ -163,11 +162,11 @@ public sealed partial class CostCalculationViewModel : ObservableObject
 
             await renderer.RenderAsync(model, templatePath, output, logoPath);
 
-            MessageBox.Show("PDF wurde erstellt.", "PDF", MessageBoxButton.OK, MessageBoxImage.Information);
+            _sp.Dialogs.Info("PDF wurde erstellt.", "PDF");
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"PDF konnte nicht erstellt werden:\n{ex.Message}", "PDF", MessageBoxButton.OK, MessageBoxImage.Error);
+            _sp.Dialogs.Error($"PDF konnte nicht erstellt werden:\n{ex.Message}", "PDF");
         }
         finally
         {
@@ -180,7 +179,7 @@ public sealed partial class CostCalculationViewModel : ObservableObject
     {
         if (_sp.PlaywrightInstaller.IsChromiumInstalled())
         {
-            MessageBox.Show("Chromium ist bereits installiert.", "PDF", MessageBoxButton.OK, MessageBoxImage.Information);
+            _sp.Dialogs.Info("Chromium ist bereits installiert.", "PDF");
             return;
         }
 
@@ -194,22 +193,20 @@ public sealed partial class CostCalculationViewModel : ObservableObject
             var result = await _sp.PlaywrightInstaller.InstallChromiumAsync();
             if (result.Success)
             {
-                MessageBox.Show("Chromium wurde installiert. PDF-Export sollte jetzt funktionieren.", "PDF", MessageBoxButton.OK, MessageBoxImage.Information);
+                _sp.Dialogs.Info("Chromium wurde installiert. PDF-Export sollte jetzt funktionieren.", "PDF");
             }
             else
             {
-                MessageBox.Show(
+                _sp.Dialogs.Error(
                     "Chromium-Installation fehlgeschlagen.\n\n" +
                     $"ExitCode: {result.ExitCode}\nTool: {result.Tool}\nScript: {result.ScriptPath}\n\n" +
                     result.CombinedOutput,
-                    "PDF",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "PDF");
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Chromium-Installation fehlgeschlagen:\n{ex.Message}", "PDF", MessageBoxButton.OK, MessageBoxImage.Error);
+            _sp.Dialogs.Error($"Chromium-Installation fehlgeschlagen:\n{ex.Message}", "PDF");
         }
         finally
         {

@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.UI;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
@@ -15,6 +16,7 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
 
     private readonly AppProtocol.ICodeCatalogProvider _catalogProvider;
     private readonly Window _window;
+    private readonly IDialogService _dialogs;
     private readonly ICollectionView _codesView;
     private bool _hasChanges;
 
@@ -33,10 +35,11 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
     public IRelayCommand ValidateCommand { get; }
     public IRelayCommand CancelCommand { get; }
 
-    public CodeCatalogEditorViewModel(AppProtocol.ICodeCatalogProvider catalogProvider, Window window)
+    public CodeCatalogEditorViewModel(AppProtocol.ICodeCatalogProvider catalogProvider, Window window, IDialogService? dialogs = null)
     {
         _catalogProvider = catalogProvider;
         _window = window;
+        _dialogs = dialogs ?? new DialogService();
 
         Codes = new ObservableCollection<CodeDefinitionItem>(
             catalogProvider.GetAll()
@@ -126,13 +129,11 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
             return;
 
         var label = string.IsNullOrWhiteSpace(SelectedCode.Code) ? SelectedCode.Title : SelectedCode.Code;
-        var result = MessageBox.Show(
+        var confirmed = _dialogs.Confirm(
             $"Code '{label}' wirklich loeschen?",
-            "Code loeschen",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            "Code loeschen");
 
-        if (result != MessageBoxResult.Yes)
+        if (!confirmed)
             return;
 
         var deleted = SelectedCode;
@@ -152,7 +153,7 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
 
         if (errors.Count > 0)
         {
-            MessageBox.Show(string.Join(Environment.NewLine, errors), "Code-Katalog", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogs.Warn(string.Join(Environment.NewLine, errors), "Code-Katalog");
             return;
         }
 
@@ -165,7 +166,7 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Speichern fehlgeschlagen: {ex.Message}", "Code-Katalog", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogs.Error($"Speichern fehlgeschlagen: {ex.Message}", "Code-Katalog");
         }
     }
 
@@ -177,24 +178,22 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
 
         if (errors.Count == 0)
         {
-            MessageBox.Show("Validierung erfolgreich. Keine Fehler gefunden.", "Code-Katalog", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogs.Info("Validierung erfolgreich. Keine Fehler gefunden.", "Code-Katalog");
             return;
         }
 
-        MessageBox.Show(string.Join(Environment.NewLine, errors), "Code-Katalog", MessageBoxButton.OK, MessageBoxImage.Warning);
+        _dialogs.Warn(string.Join(Environment.NewLine, errors), "Code-Katalog");
     }
 
     private void Cancel()
     {
         if (_hasChanges)
         {
-            var result = MessageBox.Show(
+            var confirmed = _dialogs.Confirm(
                 "Aenderungen verwerfen?",
-                "Code-Katalog",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
+                "Code-Katalog");
 
-            if (result != MessageBoxResult.Yes)
+            if (!confirmed)
                 return;
         }
 

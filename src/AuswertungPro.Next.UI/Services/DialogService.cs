@@ -1,10 +1,32 @@
 using Microsoft.Win32;
 using System.IO;
+using System.Windows;
 
 namespace AuswertungPro.Next.UI;
 
 public sealed class DialogService : IDialogService
 {
+    public void Info(string message, string title = "Hinweis")
+        => MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
+
+    public void Warn(string message, string title = "Warnung")
+        => MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Warning);
+
+    public void Error(string message, string title = "Fehler")
+        => MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+
+    public bool Confirm(string message, string title = "Bestaetigung")
+        => MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Question)
+            == MessageBoxResult.Yes;
+
+    public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
+        => MessageBox.Show(message, title, MessageBoxButton.YesNoCancel, MessageBoxImage.Question) switch
+        {
+            MessageBoxResult.Yes => DialogConfirm.Yes,
+            MessageBoxResult.No => DialogConfirm.No,
+            _ => DialogConfirm.Cancel
+        };
+
     public string? OpenFile(string title, string filter, string? initialDirectory = null)
     {
         var dlg = new OpenFileDialog { Title = title, Filter = filter };

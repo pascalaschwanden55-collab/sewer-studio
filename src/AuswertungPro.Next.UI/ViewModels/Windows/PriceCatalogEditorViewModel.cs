@@ -1,27 +1,29 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Windows;
 using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models.Costs;
 using AuswertungPro.Next.Infrastructure.Costs;
+using AuswertungPro.Next.UI;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 public sealed partial class PriceCatalogEditorViewModel : ObservableObject
 {
     private readonly CostCalculationService _costService;
+    private readonly IDialogService _dialogs;
     private PriceCatalog _catalog = new();
 
     [ObservableProperty] private string _searchText = string.Empty;
     
     public ObservableCollection<PriceItemRow> Items { get; } = new();
 
-    public PriceCatalogEditorViewModel(CostCalculationService costService)
+    public PriceCatalogEditorViewModel(CostCalculationService costService, IDialogService? dialogs = null)
     {
         _costService = costService;
+        _dialogs = dialogs ?? new DialogService();
         LoadCatalog();
     }
 
@@ -107,8 +109,7 @@ public sealed partial class PriceCatalogEditorViewModel : ObservableObject
         }).ToList();
 
         _costService.SaveCatalog(_catalog);
-        MessageBox.Show($"Preiskatalog gespeichert: {_costService.GetCatalogPath()}", "OK", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
+        _dialogs.Info($"Preiskatalog gespeichert: {_costService.GetCatalogPath()}", "OK");
     }
 }
 

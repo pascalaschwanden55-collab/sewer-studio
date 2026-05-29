@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
+using AuswertungPro.Next.UI;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -15,6 +16,7 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
     private readonly CostCatalog _catalog;
     private readonly string? _projectPath;
     private readonly Window _window;
+    private readonly IDialogService _dialogs;
 
     public ObservableCollection<CostCatalogItem> Items { get; }
 
@@ -25,10 +27,11 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
     public IRelayCommand SaveCommand { get; }
     public IRelayCommand CloseCommand { get; }
 
-    public CostCatalogEditorViewModel(string? projectPath, Window window)
+    public CostCatalogEditorViewModel(string? projectPath, Window window, IDialogService? dialogs = null)
     {
         _projectPath = projectPath;
         _window = window;
+        _dialogs = dialogs ?? new DialogService();
 
         _catalog = _store.LoadMerged(projectPath);
         Items = new ObservableCollection<CostCatalogItem>(_catalog.Items);
@@ -66,10 +69,9 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
             return;
 
         var label = string.IsNullOrWhiteSpace(SelectedItem.Name) ? SelectedItem.Key : SelectedItem.Name;
-        var result = MessageBox.Show($"Position '{label}' wirklich löschen?", "Position löschen",
-            MessageBoxButton.YesNo, MessageBoxImage.Question);
+        var confirmed = _dialogs.Confirm($"Position '{label}' wirklich löschen?", "Position löschen");
 
-        if (result != MessageBoxResult.Yes)
+        if (!confirmed)
             return;
 
         Items.Remove(SelectedItem);
@@ -85,8 +87,7 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
 
         if (!_store.SaveUserOverrides(_catalog, out var error))
         {
-            MessageBox.Show($"Speichern fehlgeschlagen: {error}", "Positionen",
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogs.Error($"Speichern fehlgeschlagen: {error}", "Positionen");
             return;
         }
 

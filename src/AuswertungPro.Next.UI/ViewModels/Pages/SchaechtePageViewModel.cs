@@ -369,7 +369,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private void PreviewSanierenOptions()
     {
         var items = string.Join("\n", SanierenOptions);
-        System.Windows.MessageBox.Show(items, "Sanieren-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        _sp.Dialogs.Info(items, "Sanieren-Liste");
     }
 
     private void ResetSanierenOptions()
@@ -400,7 +400,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private void PreviewEigentuemerOptions()
     {
         var items = string.Join("\n", EigentuemerOptions);
-        System.Windows.MessageBox.Show(items, "Eigentuemer-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        _sp.Dialogs.Info(items, "Eigentuemer-Liste");
     }
 
     private void ResetEigentuemerOptions()
@@ -439,7 +439,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private void PreviewPruefungsresultatOptions()
     {
         var items = string.Join("\n", PruefungsresultatOptions);
-        System.Windows.MessageBox.Show(items, "Pruefungsresultat-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        _sp.Dialogs.Info(items, "Pruefungsresultat-Liste");
     }
 
     private void ResetPruefungsresultatOptions()
@@ -475,7 +475,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private void PreviewReferenzpruefungOptions()
     {
         var items = string.Join("\n", ReferenzpruefungOptions);
-        System.Windows.MessageBox.Show(items, "Referenzpruefung-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        _sp.Dialogs.Info(items, "Referenzpruefung-Liste");
     }
 
     private void ResetReferenzpruefungOptions()

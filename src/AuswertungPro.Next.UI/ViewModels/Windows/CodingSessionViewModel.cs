@@ -1,13 +1,13 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Windows;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Helpers;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
@@ -43,16 +43,19 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     private readonly ICodingSessionService _sessionService;
     private readonly IOverlayToolService _overlayService;
     private readonly ICodingFeedbackRecorder? _feedbackRecorder;
+    private readonly IDialogService _dialogs;
     private bool _disposed;
 
     public CodingSessionViewModel(
         ICodingSessionService sessionService,
         IOverlayToolService overlayService,
-        ICodingFeedbackRecorder? feedbackRecorder = null)
+        ICodingFeedbackRecorder? feedbackRecorder = null,
+        IDialogService? dialogs = null)
     {
         _sessionService = sessionService;
         _overlayService = overlayService;
         _feedbackRecorder = feedbackRecorder;
+        _dialogs = dialogs ?? new DialogService();
 
         _sessionService.StateChanged += OnSessionStateChanged;
         _sessionService.MeterChanged += OnSessionMeterChanged;
@@ -187,7 +190,7 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogs.Warn(ex.Message, "Fehler");
         }
     }
 
@@ -200,8 +203,7 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     [RelayCommand]
     private void AbortSession()
     {
-        if (MessageBox.Show("Session wirklich abbrechen?", "Abbrechen",
-                MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+        if (_dialogs.Confirm("Session wirklich abbrechen?", "Abbrechen"))
         {
             _sessionService.AbortSession("Vom Benutzer abgebrochen");
         }
@@ -217,7 +219,7 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogs.Warn(ex.Message, "Fehler");
         }
     }
 

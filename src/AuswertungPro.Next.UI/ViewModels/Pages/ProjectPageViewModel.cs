@@ -12,6 +12,7 @@ public sealed partial class ProjectPageViewModel : ObservableObject
 {
     private static readonly string[] FixedEigentuemerOptions = { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" };
     private readonly ShellViewModel _shell;
+    private readonly IDialogService _dialogs;
 
     public Project Project => _shell.Project;
     public IRelayCommand SaveCommand => _shell.SaveCommand;
@@ -41,9 +42,10 @@ public sealed partial class ProjectPageViewModel : ObservableObject
     public IRelayCommand<object?> AddEigentuemerOptionCommand { get; }
     public IRelayCommand<object?> RemoveEigentuemerOptionCommand { get; }
 
-    public ProjectPageViewModel(ShellViewModel shell)
+    public ProjectPageViewModel(ShellViewModel shell, IDialogService? dialogs = null)
     {
         _shell = shell;
+        _dialogs = dialogs ?? new DialogService();
 
         // Dropdown-Optionen laden
         SanierenOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadSanierenOptions());
@@ -127,7 +129,7 @@ public sealed partial class ProjectPageViewModel : ObservableObject
     private void PreviewSanierenOptions()
     {
         var items = string.Join("\n", SanierenOptions);
-        System.Windows.MessageBox.Show(items, "Sanieren-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        _dialogs.Info(items, "Sanieren-Liste");
     }
 
     private void ResetSanierenOptions()
@@ -161,7 +163,7 @@ public sealed partial class ProjectPageViewModel : ObservableObject
     private void PreviewEigentuemerOptions()
     {
         var items = string.Join("\n", EigentuemerOptions);
-        System.Windows.MessageBox.Show(items, "Eigentuemer-Liste", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        _dialogs.Info(items, "Eigentuemer-Liste");
     }
 
     private void ResetEigentuemerOptions()

@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
+using AuswertungPro.Next.UI;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -16,6 +17,7 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
     private readonly CostCatalogStore _catalogStore = new();
     private readonly string? _projectPath;
     private readonly Window _window;
+    private readonly IDialogService _dialogs;
     private readonly PositionTemplateCatalog _originalCatalog;
 
     [ObservableProperty] private PositionGroup? _selectedGroup;
@@ -38,10 +40,11 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
     public IRelayCommand MoveToStorageCommand { get; }
     public IRelayCommand RestoreFromStorageCommand { get; }
 
-    public PositionTemplateEditorViewModel(string? projectPath, Window window)
+    public PositionTemplateEditorViewModel(string? projectPath, Window window, IDialogService? dialogs = null)
     {
         _projectPath = projectPath;
         _window = window;
+        _dialogs = dialogs ?? new DialogService();
 
         // Load data
         _originalCatalog = _store.LoadMerged(projectPath);
@@ -124,8 +127,7 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
 
         if (!_store.SaveUserOverride(catalog, out var error))
         {
-            MessageBox.Show($"Fehler beim Speichern: {error}", "Fehler", 
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogs.Error($"Fehler beim Speichern: {error}", "Fehler");
             return;
         }
 
@@ -141,13 +143,11 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
 
     private void ResetToDefault()
     {
-        var result = MessageBox.Show(
+        var confirmed = _dialogs.Confirm(
             "Möchten Sie wirklich alle Änderungen verwerfen und die Standard-Einstellungen wiederherstellen?",
-            "Standard wiederherstellen",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            "Standard wiederherstellen");
 
-        if (result == MessageBoxResult.Yes)
+        if (confirmed)
         {
             var defaultCatalog = _store.Load(_projectPath);
             Groups.Clear();
@@ -197,13 +197,11 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
     {
         if (SelectedGroup is null) return;
 
-        var result = MessageBox.Show(
+        var confirmed = _dialogs.Confirm(
             $"Möchten Sie die Gruppe '{SelectedGroup.Name}' wirklich löschen?",
-            "Gruppe löschen",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            "Gruppe löschen");
 
-        if (result == MessageBoxResult.Yes)
+        if (confirmed)
         {
             var index = Groups.IndexOf(SelectedGroup);
             Groups.Remove(SelectedGroup);
