@@ -12,6 +12,7 @@ public sealed partial class HydraulikPanelViewModel : ObservableObject
     private const double MinTemperaturC = 0;
     private const double MaxTemperaturC = 40;
     private bool _suppressSave;
+    private readonly AppSettings _settings;
 
     // ── Material → kb Zuordnung (VSA-typische Werte) ──────────
     public static IReadOnlyList<MaterialOption> Materialien { get; } = new[]
@@ -75,8 +76,11 @@ public sealed partial class HydraulikPanelViewModel : ObservableObject
     /// <summary>Gefaelle immer in Promille, unabhaengig von der Einheit-Auswahl.</summary>
     public double GefaellePromille => IsGefaellePercent ? Gefaelle * 10 : Gefaelle;
 
-    public HydraulikPanelViewModel()
+    public HydraulikPanelViewModel(AppSettings? settings = null)
     {
+        // Composition Root (DataPageViewModel) reicht die Live-Settings durch;
+        // Fallback nur, falls jemand den VM ohne Settings erzeugt.
+        _settings = settings ?? AppSettings.Load();
         _selectedMaterial = Materialien[0];
         LoadFromSettings();
         Recalculate();
@@ -274,8 +278,7 @@ public sealed partial class HydraulikPanelViewModel : ObservableObject
         }
     }
 
-    private static AppSettings GetWritableSettings()
-        => (App.Services as ServiceProvider)?.Settings ?? AppSettings.Load();
+    private AppSettings GetWritableSettings() => _settings;
 
     private static string Fmt(double v, int dec) =>
         v.ToString($"F{dec}", CultureInfo.InvariantCulture);
