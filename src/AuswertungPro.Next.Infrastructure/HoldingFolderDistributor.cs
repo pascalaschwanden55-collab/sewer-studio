@@ -18,7 +18,7 @@ using AuswertungPro.Next.Infrastructure.Import.Pdf;
 
 namespace AuswertungPro.Next.Infrastructure;
 
-public static class HoldingFolderDistributor
+public static partial class HoldingFolderDistributor
 {
     private static readonly object SchachtDateIndexSync = new();
     private static readonly Dictionary<string, IReadOnlyDictionary<string, DateTime>> SchachtDateIndexCache =
@@ -4592,25 +4592,4 @@ public static class HoldingFolderDistributor
         throw new IOException($"Unable to find free filename for {path}");
     }
 
-#if DEMO
-    public static class DemoProgram
-    {
-        public static void Main()
-        {
-            var results = Distribute(
-                pdfSourceFolder: @"D:\Input\PDFs",
-                videoSourceFolder: @"D:\Input\Videos",
-                destGemeindeFolder: @"D:\Bauwerke\Haltungen\Buerglen",
-                moveInsteadOfCopy: false,
-                overwrite: false,
-                recursiveVideoSearch: true,
-                unmatchedFolderName: "__UNMATCHED",
-                project: null,
-                progress: null);
-
-            foreach (var r in results)
-                Console.WriteLine($"{(r.Success ? "OK" : "FAIL")} - {r.Message} - {r.SourcePdfPath}");
-        }
-    }
-#endif
 }
