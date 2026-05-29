@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using AuswertungPro.Next.Domain.Models;
@@ -236,6 +237,41 @@ public sealed class DataPageProtocolPathResolverTests
             storedFilesRaw: storedFilesRaw);
 
         Assert.Equal(Path.GetFullPath(pdf), found, ignoreCase: true);
+    }
+
+    // --- ResolveSchachtPdfPaths ---
+
+    [Fact]
+    public void ResolveSchachtPdfPaths_fuegt_pdf_path_und_pdf_link_hinzu()
+    {
+        using var temp = new TempDir();
+        var pdf = temp.CreateFile("schacht.pdf");
+        var link = temp.CreateFile("verweis.pdf");
+
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("PDF_Path", "schacht.pdf");
+        schacht.SetFieldValue("Link", "verweis.pdf");
+
+        var paths = new List<string>();
+        DataPageProtocolPathResolver.ResolveSchachtPdfPaths(schacht, temp.Path, paths);
+
+        Assert.Contains(Path.GetFullPath(pdf), paths, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(Path.GetFullPath(link), paths, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveSchachtPdfPaths_ignoriert_nicht_pdf_link()
+    {
+        using var temp = new TempDir();
+        temp.CreateFile("doc.txt");
+
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Link", "doc.txt");
+
+        var paths = new List<string>();
+        DataPageProtocolPathResolver.ResolveSchachtPdfPaths(schacht, temp.Path, paths);
+
+        Assert.Empty(paths);
     }
 
     private sealed class TempDir : IDisposable
