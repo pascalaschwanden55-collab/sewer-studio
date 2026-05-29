@@ -605,46 +605,7 @@ public sealed partial class DataPageViewModel : ObservableObject
                 CodecThreads: _sp.Settings.VideoCodecThreads,
                 VideoOutput: _sp.Settings.VideoOutput);
 
-            // Build damage overlay markers from protocol entries
-            PlayerDamageOverlayData? damageOverlay = null;
-            var lengthStr = record.GetFieldValue("Haltungslaenge_m");
-            if (double.TryParse(lengthStr?.Replace(',', '.'),
-                    NumberStyles.Float, CultureInfo.InvariantCulture, out var pipeLength)
-                && pipeLength > 0)
-            {
-                var markers = new System.Collections.Generic.List<DamageMarkerInfo>();
-
-                if (record.Protocol?.Current?.Entries is { Count: > 0 } entries)
-                {
-                    foreach (var e in entries.Where(e => !e.IsDeleted && e.MeterStart.HasValue))
-                    {
-                        markers.Add(new DamageMarkerInfo(
-                            e.Code ?? "",
-                            e.Beschreibung,
-                            e.MeterStart!.Value,
-                            e.MeterEnd,
-                            e.IsStreckenschaden));
-                    }
-                }
-                else if (record.VsaFindings is { Count: > 0 } findings)
-                {
-                    foreach (var f in findings)
-                    {
-                        var mStart = f.MeterStart ?? f.SchadenlageAnfang;
-                        if (mStart is null) continue;
-                        var mEnd = f.MeterEnd ?? f.SchadenlageEnde;
-                        markers.Add(new DamageMarkerInfo(
-                            f.KanalSchadencode?.Trim() ?? "",
-                            f.Raw,
-                            mStart.Value,
-                            mEnd,
-                            mEnd.HasValue && mEnd.Value > mStart.Value));
-                    }
-                }
-
-                if (markers.Count > 0)
-                    damageOverlay = new PlayerDamageOverlayData(pipeLength, markers);
-            }
+            var damageOverlay = DataPageVideoOverlayBuilder.Build(record);
 
             var window = new PlayerWindow(path, options,
                 damageOverlay: damageOverlay,
