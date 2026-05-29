@@ -304,7 +304,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         _isSyncingSelectedProtocol = true;
         try
         {
-            var entries = BuildEntriesFromFindings(record.VsaFindings);
+            var entries = VsaFindingToProtocolEntryMapper.BuildEntries(record.VsaFindings, ResolveCodeTitle);
             record.Protocol = _sp.Protocols.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
             RefreshRecordInGrid(record);
             if (Selected?.Id == record.Id)
@@ -340,76 +340,10 @@ public sealed partial class DataPageViewModel : ObservableObject
         }
     }
 
-    private IReadOnlyList<ProtocolEntry> BuildEntriesFromFindings(IEnumerable<VsaFinding> findings)
-    {
-        var list = new List<ProtocolEntry>();
-        foreach (var f in findings)
-        {
-            var mStart = f.MeterStart ?? f.SchadenlageAnfang;
-            var mEnd = f.MeterEnd ?? f.SchadenlageEnde;
-            var time = ParseMpegTime(f.MPEG) ?? (f.Timestamp?.TimeOfDay);
-
-            var beschreibung = f.Raw?.Trim() ?? string.Empty;
-            // Beschreibung aus dem VSA-Katalog auflösen, wenn Raw leer oder nur Kuerzel
-            var code = f.KanalSchadencode?.Trim() ?? string.Empty;
-            if ((string.IsNullOrWhiteSpace(beschreibung) || beschreibung.Length <= 3) &&
-                !string.IsNullOrWhiteSpace(code) &&
-                _sp.CodeCatalog.TryGet(code, out var codeDef) &&
-                !string.IsNullOrWhiteSpace(codeDef.Title))
-            {
-                beschreibung = codeDef.Title;
-            }
-
-            var entry = new ProtocolEntry
-            {
-                Code = code,
-                Beschreibung = beschreibung,
-                MeterStart = mStart,
-                MeterEnd = mEnd,
-                IsStreckenschaden = mStart.HasValue && mEnd.HasValue && mEnd >= mStart,
-                Mpeg = f.MPEG,
-                Zeit = time,
-                Source = ProtocolEntrySource.Imported
-            };
-
-            if (!string.IsNullOrWhiteSpace(f.Quantifizierung1) || !string.IsNullOrWhiteSpace(f.Quantifizierung2))
-            {
-                entry.CodeMeta = new ProtocolEntryCodeMeta
-                {
-                    Code = entry.Code,
-                    Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                    {
-                        ["Quantifizierung1"] = f.Quantifizierung1 ?? string.Empty,
-                        ["Quantifizierung2"] = f.Quantifizierung2 ?? string.Empty
-                    },
-                    UpdatedAt = DateTimeOffset.UtcNow
-                };
-            }
-
-            if (!string.IsNullOrWhiteSpace(f.FotoPath))
-                entry.FotoPaths.Add(f.FotoPath);
-
-            list.Add(entry);
-        }
-
-        return list;
-    }
-
-    private static TimeSpan? ParseMpegTime(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim();
-        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss", @"hh\:mm\:ss\.fff", @"mm\:ss\.fff" };
-        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out var parsed))
-            return parsed;
-
-        if (TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out parsed))
-            return parsed;
-
-        return null;
-    }
+    private string? ResolveCodeTitle(string code)
+        => _sp.CodeCatalog.TryGet(code, out var codeDef) && !string.IsNullOrWhiteSpace(codeDef.Title)
+            ? codeDef.Title
+            : null;
 
     private static readonly Regex MeterRegex = new(@"@?\s*(\d+(?:[.,]\d+)?)\s*m(?!m)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex TimeRegex = new(@"\b(\d{1,2}:\d{2}(?::\d{2})?)\b", RegexOptions.Compiled);
@@ -1487,7 +1421,7 @@ public sealed partial class DataPageViewModel : ObservableObject
                 && (record.Protocol.Current.Entries.Count == 0)
                 && record.VsaFindings is { Count: > 0 })
             {
-                var imported = BuildEntriesFromFindings(record.VsaFindings);
+                var imported = VsaFindingToProtocolEntryMapper.BuildEntries(record.VsaFindings, ResolveCodeTitle);
                 record.Protocol = _sp.Protocols.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", imported, null);
             }
 
@@ -1495,7 +1429,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         }
 
         var entries = record.VsaFindings is { Count: > 0 }
-            ? BuildEntriesFromFindings(record.VsaFindings)
+            ? VsaFindingToProtocolEntryMapper.BuildEntries(record.VsaFindings, ResolveCodeTitle)
             : Array.Empty<ProtocolEntry>();
         return _sp.Protocols.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
     }
