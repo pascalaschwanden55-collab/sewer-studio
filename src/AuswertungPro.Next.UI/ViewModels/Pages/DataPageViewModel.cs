@@ -1643,9 +1643,9 @@ public sealed partial class DataPageViewModel : ObservableObject
         // Original-PDFs pruefen (Haltung + Schaechte)
         var originalPdfPaths = DataPageProtocolPathResolver.ResolveOriginalPdfPaths(record, projectFolder);
         if (schachtVon != null)
-            ResolveSchachtPdfPaths(schachtVon, projectFolder, originalPdfPaths);
+            DataPageProtocolPathResolver.ResolveSchachtPdfPaths(schachtVon, projectFolder, originalPdfPaths);
         if (schachtBis != null)
-            ResolveSchachtPdfPaths(schachtBis, projectFolder, originalPdfPaths);
+            DataPageProtocolPathResolver.ResolveSchachtPdfPaths(schachtBis, projectFolder, originalPdfPaths);
 
         // Dialog oeffnen
         var dialog = new DossierPrintDialog();
@@ -1807,16 +1807,6 @@ public sealed partial class DataPageViewModel : ObservableObject
             MessageBox.Show($"PDF konnte nicht geoeffnet werden:\n{ex.Message}",
                 "Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
-    }
-
-    private static void ResolveSchachtPdfPaths(SchachtRecord schacht, string projectFolder, List<string> paths)
-    {
-        var pdfPath = schacht.GetFieldValue("PDF_Path")?.Trim();
-        DataPageProtocolPathResolver.AddResolvedPdf(paths, pdfPath, projectFolder);
-
-        var link = schacht.GetFieldValue("Link")?.Trim();
-        if (!string.IsNullOrWhiteSpace(link) && link.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-            DataPageProtocolPathResolver.AddResolvedPdf(paths, link, projectFolder);
     }
 
     private SchachtRecord? FindSchachtByNummer(string? nummer)

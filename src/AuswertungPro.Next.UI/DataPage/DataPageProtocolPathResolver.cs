@@ -153,6 +153,20 @@ public static class DataPageProtocolPathResolver
     }
 
     /// <summary>
+    /// Sammelt die zu einem Schacht gehoerenden PDF-Pfade (PDF_Path und ein
+    /// PDF-Link) und haengt die aufgeloesten Pfade an die uebergebene Liste an.
+    /// </summary>
+    public static void ResolveSchachtPdfPaths(SchachtRecord schacht, string projectFolder, List<string> paths)
+    {
+        var pdfPath = schacht.GetFieldValue("PDF_Path")?.Trim();
+        AddResolvedPdf(paths, pdfPath, projectFolder);
+
+        var link = schacht.GetFieldValue("Link")?.Trim();
+        if (!string.IsNullOrWhiteSpace(link) && link.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            AddResolvedPdf(paths, link, projectFolder);
+    }
+
+    /// <summary>
     /// Baut die Suchtoken einer Haltung: sanitisierter Name plus Rohname (dedupliziert).
     /// </summary>
     public static IReadOnlyList<string> BuildHoldingTokens(HaltungRecord record)
