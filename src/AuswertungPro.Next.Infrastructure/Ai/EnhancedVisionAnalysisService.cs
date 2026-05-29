@@ -122,6 +122,29 @@ public sealed class EnhancedVisionAnalysisService
         return knownCodes.Contains(code) ? code : null;       // erfundener/unbekannter Code → verwerfen
     }
 
+    /// <summary>
+    /// Normalisiert die vom LLM gelieferte BBox [x1,y1,x2,y2] (0-1): Ecken in
+    /// Min/Max-Ordnung bringen, auf [0,1] clampen, degenerierte (Null-Flaeche)
+    /// Boxen verwerfen. Liefert null-Werte wenn keine gueltige Box vorliegt.
+    /// </summary>
+    internal static (double? X1, double? Y1, double? X2, double? Y2) NormalizeBbox(IReadOnlyList<double>? bbox)
+    {
+        if (bbox is not { Count: >= 4 })
+            return (null, null, null, null);
+
+        // Ecken in Min/Max-Ordnung (Qwen vertauscht sie haeufig) + Clamp auf [0,1]
+        var x1 = Math.Clamp(Math.Min(bbox[0], bbox[2]), 0, 1);
+        var y1 = Math.Clamp(Math.Min(bbox[1], bbox[3]), 0, 1);
+        var x2 = Math.Clamp(Math.Max(bbox[0], bbox[2]), 0, 1);
+        var y2 = Math.Clamp(Math.Max(bbox[1], bbox[3]), 0, 1);
+
+        // Degenerierte (Null-Flaeche) Box verwerfen
+        if (x2 <= x1 || y2 <= y1)
+            return (null, null, null, null);
+
+        return (x1, y1, x2, y2);
+    }
+
     private static readonly TimeSpan FrameTimeout = TimeSpan.FromSeconds(60);
 
     public async Task<EnhancedFrameAnalysis> AnalyzeAsync(
@@ -363,15 +386,8 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
             .Where(f => !string.IsNullOrWhiteSpace(f.Label))
             .Select(f =>
             {
-                // BBox parsen: [x1, y1, x2, y2] normalisiert
-                double? bx1 = null, by1 = null, bx2 = null, by2 = null;
-                if (f.Bbox is { Count: >= 4 })
-                {
-                    bx1 = Math.Clamp(f.Bbox[0], 0, 1);
-                    by1 = Math.Clamp(f.Bbox[1], 0, 1);
-                    bx2 = Math.Clamp(f.Bbox[2], 0, 1);
-                    by2 = Math.Clamp(f.Bbox[3], 0, 1);
-                }
+                // BBox parsen + normalisieren: [x1, y1, x2, y2] normalisiert (0-1)
+                var (bx1, by1, bx2, by2) = NormalizeBbox(f.Bbox);
 
                 return new EnhancedFinding(
                     Label: f.Label.Trim(),
