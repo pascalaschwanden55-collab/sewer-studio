@@ -73,6 +73,9 @@ public sealed class EnhancedVisionAnalysisService
     private readonly string _model;
     private readonly ICodeCatalogProvider? _codeCatalog;
 
+    /// <summary>Bekannte Katalog-Codes (einmalig aufgebaut) zur Validierung des vsa_code_hint. Null = keine Validierung moeglich.</summary>
+    private readonly IReadOnlySet<string>? _knownCodes;
+
     public EnhancedVisionAnalysisService(
         OllamaClient client,
         string model,
@@ -81,6 +84,42 @@ public sealed class EnhancedVisionAnalysisService
         _client = client;
         _model = model;
         _codeCatalog = codeCatalog;
+        _knownCodes = BuildKnownCodeSet(codeCatalog);
+    }
+
+    /// <summary>
+    /// Baut die Menge der im aktiven Katalog bekannten Codes (inkl. Hauptcodes).
+    /// Gibt null zurueck, wenn kein/leerer Katalog vorliegt — dann wird nicht validiert.
+    /// </summary>
+    internal static IReadOnlySet<string>? BuildKnownCodeSet(ICodeCatalogProvider? catalog)
+    {
+        if (catalog is null) return null;
+
+        var all = catalog.GetAll();
+        if (all is null || all.Count == 0) return null;
+
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var def in all)
+        {
+            if (def is not null && !string.IsNullOrWhiteSpace(def.Code))
+                set.Add(def.Code.Trim());
+        }
+
+        // Leerer Katalog → keine Validierung (sonst wuerden alle Hints faelschlich verworfen).
+        return set.Count > 0 ? set : null;
+    }
+
+    /// <summary>
+    /// Validiert einen LLM-Code-Hint gegen den Katalog: unbekannte/erfundene Codes
+    /// werden zu null verworfen, BEVOR sie in Dedup/Tracking/Anzeige landen.
+    /// Ohne Katalog (knownCodes == null) wird der Hint unveraendert durchgereicht.
+    /// </summary>
+    internal static string? ValidateCodeHint(string? hint, IReadOnlySet<string>? knownCodes)
+    {
+        var code = hint?.Trim();
+        if (string.IsNullOrWhiteSpace(code)) return null;
+        if (knownCodes is null) return code;                  // ohne Katalog keine Validierung moeglich
+        return knownCodes.Contains(code) ? code : null;       // erfundener/unbekannter Code → verwerfen
     }
 
     private static readonly TimeSpan FrameTimeout = TimeSpan.FromSeconds(60);
@@ -317,7 +356,7 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         return sb.ToString();
     }
 
-    private static EnhancedFrameAnalysis MapToAnalysis(EnhancedVisionDto dto)
+    private EnhancedFrameAnalysis MapToAnalysis(EnhancedVisionDto dto)
     {
         var findings = (dto.Findings ?? Array.Empty<EnhancedFindingDto>())
             .Where(f => !string.IsNullOrWhiteSpace(f.Label))
@@ -335,7 +374,7 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
 
                 return new EnhancedFinding(
                     Label: f.Label.Trim(),
-                    VsaCodeHint: f.VsaCodeHint?.Trim(),
+                    VsaCodeHint: ValidateCodeHint(f.VsaCodeHint, _knownCodes),
                     Severity: Math.Clamp(f.Severity, 1, 5),
                     PositionClock: f.PositionClock?.Trim(),
                     ExtentPercent: f.ExtentPercent,
