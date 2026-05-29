@@ -334,16 +334,17 @@ def _is_frame_usable(img: Image.Image) -> tuple[bool, str]:
     mean_brightness = gray.mean()
     std_brightness = gray.std()
 
-    # Too dark (lens cap, black frame, no signal)
-    if mean_brightness < 10:
+    # Too dark (lens cap, black frame, no signal) -- Schwelle bewusst niedrig,
+    # damit dunkle, aber inhaltlich gueltige Kanal-Frames erhalten bleiben.
+    if mean_brightness < settings.frame_min_brightness:
         return False, "too_dark"
 
     # Too bright (overexposed, white frame)
-    if mean_brightness > 245:
+    if mean_brightness > settings.frame_max_brightness:
         return False, "too_bright"
 
     # Too uniform (solid color, no texture = likely no pipe content)
-    if std_brightness < 5:
+    if std_brightness < settings.frame_min_std:
         return False, "too_uniform"
 
     # Check edge density using Laplacian-like filter for blur detection
@@ -352,7 +353,7 @@ def _is_frame_usable(img: Image.Image) -> tuple[bool, str]:
     edges = laplace(gray)
     edge_var = edges.var()
 
-    if edge_var < 3:
+    if edge_var < settings.frame_min_edge_var:
         return False, "too_blurry"
 
     return True, "ok"
@@ -388,6 +389,7 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
     results = model.predict(
         source=np.array(img),
         conf=confidence_threshold,
+        imgsz=settings.yolo_imgsz,
         verbose=False,
     )
     elapsed_ms = (time.perf_counter() - t0) * 1000

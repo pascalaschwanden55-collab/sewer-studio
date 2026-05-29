@@ -40,9 +40,17 @@ class SidecarSettings(BaseSettings):
 
     # YOLO
     yolo_confidence: float = 0.25
+    yolo_imgsz: int = 1280  # Inferenz-Aufloesung: 1280 statt Default 640 -> kleine Schaeden besser sichtbar
     yolo_model_name: str = "yolo26m.pt"
     yolo_cls_model_path: str = ""
     require_custom_yolo: bool = False
+
+    # Frame-Quality-Gate (_is_frame_usable) -- env-konfigurierbar, entschaerft fuer
+    # dunkle Kanaele: gueltige dunkle Frames mit Inhalt wurden frueher hart verworfen.
+    frame_min_brightness: float = 4.0    # frueher hart 10 -> nur echtes Schwarz/lens-cap raus
+    frame_max_brightness: float = 250.0  # frueher hart 245
+    frame_min_std: float = 2.0           # frueher hart 5 -> Glattrohr nicht als "leer" verwerfen
+    frame_min_edge_var: float = 1.0      # frueher hart 3 -> dunkle, aber scharfe Frames behalten
 
     # Grounding DINO
     dino_box_threshold: float = 0.25
@@ -50,14 +58,16 @@ class SidecarSettings(BaseSettings):
     dino_labels: str = (
         "crack . fracture . break . deformation . "
         "corrosion . surface damage . erosion . "
-        "root intrusion . roots . "
-        "deposit . sediment . buildup . "
+        "root intrusion . roots . root mass . root ball . "
+        "deposit . sediment . buildup . incrustation . scale . grease . "
         "obstacle . blockage . "
         "infiltration . water ingress . leak . "
         "displaced joint . open joint . offset joint . "
         "hole . collapse . missing wall . "
         "connection defect . pipe defect . "
-        "intruding connection . protruding seal"
+        "intruding connection . protruding seal . "
+        "lateral connection . junction . inlet . branch . side opening . "
+        "pipe bend . bend"
     )
 
     # SAM
