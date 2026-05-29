@@ -150,6 +150,11 @@ class GpuModelManager:
             "loaded_models": loaded,
         }
 
+    def empty_cache(self) -> None:
+        """Gibt den CUDA-Cache frei (z.B. zur Erholung nach einem OOM-Fehler)."""
+        self._try_empty_cache()
+        gc.collect()
+
     # ── Internal ────────────────────────────────────────────────────────
 
     def _get_or_create_lock(self, slot: ModelSlot) -> threading.Lock:
