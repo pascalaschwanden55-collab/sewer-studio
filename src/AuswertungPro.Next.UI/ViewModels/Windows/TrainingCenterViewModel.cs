@@ -121,12 +121,12 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     private void RefreshMatchRatePercents()
     {
-        var total = _totalExact + _totalPartial + _totalMismatch + _totalNoFindings;
-        if (total == 0) { ExactPercent = PartialPercent = MismatchPercent = NoFindingsPercent = 0; return; }
-        ExactPercent = (double)_totalExact / total;
-        PartialPercent = (double)_totalPartial / total;
-        MismatchPercent = (double)_totalMismatch / total;
-        NoFindingsPercent = (double)_totalNoFindings / total;
+        var p = SelfTrainingStatusCalculator.ComputeMatchRatePercents(
+            _totalExact, _totalPartial, _totalMismatch, _totalNoFindings);
+        ExactPercent = p.Exact;
+        PartialPercent = p.Partial;
+        MismatchPercent = p.Mismatch;
+        NoFindingsPercent = p.NoFindings;
     }
 
     private void AddSelfTrainingLog(string message)
@@ -154,14 +154,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 entry = new CodeDistributionEntry { Code = code };
                 CodeDistribution.Add(entry);
             }
-            entry.Total++;
-            switch (level)
-            {
-                case MatchLevel.ExactMatch: entry.Exact++; break;
-                case MatchLevel.PartialMatch: entry.Partial++; break;
-                case MatchLevel.Mismatch: entry.Mismatch++; break;
-                case MatchLevel.NoFindings: entry.NoFindings++; break;
-            }
+            SelfTrainingStatusCalculator.ApplyMatch(entry, level);
         }
         if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
             d.Invoke(Apply);
@@ -181,16 +174,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             ProgressMax = step.TotalEntries;
 
             // Aktives Modell je Stage anzeigen
-            (ActiveModelName, IsModelActive) = step.Stage switch
-            {
-                SelfTrainingStage.BuildingTimeline => ("PdfPig (CPU)", true),
-                SelfTrainingStage.ExtractingFrame  => ("ffmpeg (CPU)", true),
-                SelfTrainingStage.Analyzing        => ($"{_activeVisionModel} (GPU)", true),
-                SelfTrainingStage.Comparing        => ("Deterministisch (CPU)", true),
-                SelfTrainingStage.AssessingTechnique => ($"{_activeVisionModel} (GPU)", true),
-                SelfTrainingStage.Completed        => ("", false),
-                _ => ("", false)
-            };
+            (ActiveModelName, IsModelActive) = SelfTrainingStatusCalculator.ResolveActiveModel(step.Stage, _activeVisionModel);
 
             // Stage-spezifisches Logging
             switch (step.Stage)
@@ -221,13 +205,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                     if (step.Comparison is { } cmp)
                     {
                         CurrentComparisonText = $"{cmp.Level} ({cmp.ConfidenceScore:P0})";
-                        var levelStr = cmp.Level switch
-                        {
-                            MatchLevel.ExactMatch => "EXACT",
-                            MatchLevel.PartialMatch => "PARTIAL",
-                            MatchLevel.Mismatch => "MISMATCH",
-                            _ => "NO_FINDINGS"
-                        };
+                        var levelStr = SelfTrainingStatusCalculator.FormatLevel(cmp.Level);
                         AddSelfTrainingLog($"Ergebnis: {step.VsaCode} → {levelStr} ({cmp.ConfidenceScore:P0}) {cmp.Explanation}");
 
                         // Zaehler aktualisieren
