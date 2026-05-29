@@ -127,7 +127,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         InitializeOwnerLookup(projectRecords, haltungRecord);
 
         var existing = GetExistingCost();
-        var recommendedIds = ResolveMeasureIds(recommendedTokens, templates.Measures, _catalogItems);
+        var recommendedIds = CostCalculatorLogicService.ResolveMeasureIds(recommendedTokens, templates.Measures, _catalogItems);
         var initialIds = existing is null ? recommendedIds : existing.Measures.Select(m => m.MeasureId).ToList();
         InitialMeasureIds = initialIds;
 
@@ -438,19 +438,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     private HoldingCost BuildHoldingCost(string holding)
     {
         var measures = SelectedMeasures.Select(m => m.ToModel()).ToList();
-        var total = measures.Sum(m => m.Total);
-        var mwst = Math.Round(total * _vatRate, 2);
-
-        return new HoldingCost
-        {
-            Holding = holding,
-            Date = Date,
-            Measures = measures,
-            Total = total,
-            MwstRate = _vatRate,
-            MwstAmount = mwst,
-            TotalInclMwst = Math.Round(total + mwst, 2)
-        };
+        return CostCalculatorLogicService.BuildHoldingCost(holding, Date, measures, _vatRate);
     }
 
     private void LoadExisting(HoldingCost cost)
@@ -470,9 +458,10 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
     private void UpdateTotal()
     {
-        Total = SelectedMeasures.Sum(m => m.Total);
-        MwstAmount = Math.Round(Total * _vatRate, 2);
-        TotalInclMwst = Math.Round(Total + MwstAmount, 2);
+        var totals = CostCalculatorLogicService.CalculateTotals(SelectedMeasures.Sum(m => m.Total), _vatRate);
+        Total = totals.Total;
+        MwstAmount = totals.MwstAmount;
+        TotalInclMwst = totals.TotalInclMwst;
 
         // Debounce consistency check (300ms after last edit)
         _checkDebounceTimer?.Stop();
@@ -703,130 +692,8 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             .Where(m => !m.Disabled)
             .Select(m => m.Template)
             .ToList();
-        var ids = ResolveMeasureIds(tokens, templates, _catalogItems);
+        var ids = CostCalculatorLogicService.ResolveMeasureIds(tokens, templates, _catalogItems);
         return new HashSet<string>(ids, StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static List<string> ResolveMeasureIds(
-        IReadOnlyList<string> tokens,
-        IReadOnlyList<MeasureTemplate> templates,
-        IReadOnlyDictionary<string, CostCatalogItem> catalogItems)
-    {
-        if (tokens.Count == 0 || templates.Count == 0)
-            return new List<string>();
-
-        var normalizedTokens = tokens
-            .Select(NormalizeToken)
-            .Where(t => t.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        if (normalizedTokens.Count == 0)
-            return new List<string>();
-
-        var scores = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        foreach (var template in templates)
-        {
-            if (template.Disabled)
-                continue;
-
-            var templateId = template.Id?.Trim() ?? "";
-            if (templateId.Length == 0)
-                continue;
-
-            var templateIdNorm = NormalizeToken(templateId);
-            var templateNameNorm = NormalizeToken(template.Name);
-            var templateScore = 0;
-
-            foreach (var token in normalizedTokens)
-            {
-                if (templateIdNorm.Equals(token, StringComparison.OrdinalIgnoreCase) ||
-                    templateNameNorm.Equals(token, StringComparison.OrdinalIgnoreCase))
-                {
-                    templateScore += 100;
-                    continue;
-                }
-
-                if (ContainsToken(templateIdNorm, token) || ContainsToken(templateNameNorm, token))
-                    templateScore += 25;
-
-                foreach (var line in template.Lines)
-                {
-                    var keyNorm = NormalizeToken(line.ItemKey);
-                    if (keyNorm.Length > 0)
-                    {
-                        if (keyNorm.Equals(token, StringComparison.OrdinalIgnoreCase))
-                            templateScore += 40;
-                        else if (ContainsToken(keyNorm, token))
-                            templateScore += 12;
-                    }
-
-                    if (!catalogItems.TryGetValue(line.ItemKey, out var item))
-                        continue;
-
-                    var itemNameNorm = NormalizeToken(item.Name);
-                    if (itemNameNorm.Length > 0)
-                    {
-                        if (itemNameNorm.Equals(token, StringComparison.OrdinalIgnoreCase))
-                            templateScore += 60;
-                        else if (ContainsToken(itemNameNorm, token))
-                            templateScore += 18;
-                    }
-
-                    if (item.Aliases is null)
-                        continue;
-
-                    foreach (var alias in item.Aliases)
-                    {
-                        var aliasNorm = NormalizeToken(alias);
-                        if (aliasNorm.Length == 0)
-                            continue;
-
-                        if (aliasNorm.Equals(token, StringComparison.OrdinalIgnoreCase))
-                            templateScore += 45;
-                        else if (ContainsToken(aliasNorm, token))
-                            templateScore += 12;
-                    }
-                }
-            }
-
-            if (templateScore > 0)
-                scores[templateId] = templateScore;
-        }
-
-        var ranked = scores
-            .OrderByDescending(x => x.Value)
-            .ThenBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        if (ranked.Count == 0)
-            return new List<string>();
-
-        var maxScore = ranked[0].Value;
-        var minScore = Math.Max(25, (int)Math.Ceiling(maxScore * 0.4m));
-        return ranked
-            .Where(x => x.Value >= minScore)
-            .Select(x => x.Key)
-            .ToList();
-    }
-
-    private static bool ContainsToken(string text, string token)
-    {
-        if (text.Length == 0 || token.Length == 0)
-            return false;
-        if (text.Contains(token, StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        // Only allow reverse contains for longer values to avoid noisy matches.
-        return text.Length >= 5 && token.Length >= 5 &&
-               token.Contains(text, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string NormalizeToken(string? value)
-    {
-        var text = (value ?? string.Empty).Trim();
-        while (text.Length > 0 && (text[0] == '-' || text[0] == '*'))
-            text = text[1..].TrimStart();
-        return text;
     }
 
     private void InitializeFromHaltungRecord(HaltungRecord haltungRecord)
