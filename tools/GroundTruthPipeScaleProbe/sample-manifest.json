@@ -1,0 +1,25 @@
+{
+  "_hinweis": "Vorlage. Echte Datei nach tools/GroundTruthFrames/pipe-scale/manifest.json kopieren und mit gemessenen Werten fuellen. pipe_left_x/right_x = Rohrkanten-Pixel auf einer klaren Bildzeile. damage_* sind optional fuer den End-to-End-Check.",
+  "frames": [
+    {
+      "file": "haltung-a_16x9.png",
+      "image_width": 1920,
+      "image_height": 1080,
+      "dn_mm": 300,
+      "pipe_edge_row_y": 540,
+      "pipe_left_x": 480,
+      "pipe_right_x": 1440,
+      "damage_height_px": 60,
+      "damage_known_mm": 45
+    },
+    {
+      "file": "haltung-b_4x3.png",
+      "image_width": 768,
+      "image_height": 576,
+      "dn_mm": 250,
+      "pipe_edge_row_y": 288,
+      "pipe_left_x": 150,
+      "pipe_right_x": 600
+    }
+  ]
+}
