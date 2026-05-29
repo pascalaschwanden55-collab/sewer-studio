@@ -812,6 +812,16 @@ public sealed class MultiModelAnalysisService
         return raw.Trim();
     }
 
+    /// <summary>
+    /// Bestimmt den effektiven MeterEnd: Streckenschaeden behalten den beobachteten
+    /// Bereich (MeterStart..MeterEnd), Punktschaeden kollabieren auf eine Stelle
+    /// (MeterEnd = MeterStart) -- sonst entstuenden kuenstliche Mini-Strecken.
+    /// </summary>
+    internal static double ResolveMeterEnd(string? vsaCode, double meterStart, double observedMeterEnd)
+        => VsaCodeResolver.IsStreckenschadenCode(vsaCode ?? string.Empty)
+            ? observedMeterEnd   // Streckenschaden: beobachteten Bereich behalten
+            : meterStart;        // Punktschaden / unbekannt: auf eine Stelle kollabieren
+
     private sealed class ActiveFindingState
     {
         public string Name { get; }
@@ -867,7 +877,7 @@ public sealed class MultiModelAnalysisService
         }
 
         public RawVideoDetection ToDetection() =>
-            new(Name, MeterStart, MeterEnd, SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock,
+            new(Name, MeterStart, ResolveMeterEnd(VsaCodeHint, MeterStart, MeterEnd), SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock,
                 ExtentPercent, HeightMm, WidthMm, IntrusionPercent, CrossSectionReductionPercent, DiameterReductionMm,
                 Evidence: Evidence is not null ? Evidence with { FrameCount = FrameCount } : null);
 
