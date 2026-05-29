@@ -1,4 +1,8 @@
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Pipeline;
+using Microsoft.Extensions.Logging;
+using System.Threading;
+using System.Windows.Controls;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -74,5 +78,75 @@ public class SamMaskRendererTests
 
         Assert.Equal(0, mask.GetLength(0));
         Assert.Equal(0, mask.GetLength(1));
+    }
+
+    [Fact]
+    public void RenderMasks_LogsSkippedMaskViaLogger()
+    {
+        var logger = new CapturingLogger();
+        Exception? threadError = null;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var canvas = new Canvas();
+                var response = new SamResponse(
+                    [
+                        new SamMaskResult(
+                            Label: "crack",
+                            Confidence: 0.9,
+                            Bbox: null!,
+                            MaskRle: "1,1,3",
+                            MaskAreaPixels: 1,
+                            ImageAreaPixels: 4,
+                            HeightPixels: 1,
+                            WidthPixels: 1,
+                            CentroidX: 0.5,
+                            CentroidY: 0.5)
+                    ],
+                    ImageWidth: 2,
+                    ImageHeight: 2,
+                    InferenceTimeMs: 1);
+                var quantified = new[]
+                {
+                    new MaskQuantificationService.QuantifiedMask("crack", 0.9, null, null, null, null, null, null)
+                };
+
+                SamMaskRenderer.RenderMasks(canvas, response, quantified, 100, 100, logger);
+            }
+            catch (Exception ex)
+            {
+                threadError = ex;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(threadError);
+        var entry = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Warning, entry.Level);
+        Assert.Contains("Maske 0", entry.Message);
+        Assert.NotNull(entry.Exception);
+    }
+
+    private sealed class CapturingLogger : ILogger
+    {
+        public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = new();
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            Entries.Add((logLevel, formatter(state, exception), exception));
+        }
     }
 }

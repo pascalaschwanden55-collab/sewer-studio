@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.UI.Ai.Pipeline;
 
@@ -241,7 +242,8 @@ public static class SamMaskRenderer
         SamResponse samResponse,
         IReadOnlyList<MaskQuantificationService.QuantifiedMask> quantified,
         double canvasWidth,
-        double canvasHeight)
+        double canvasHeight,
+        ILogger? logger = null)
     {
         if (samResponse == null || samResponse.Masks.Count == 0) return;
 
@@ -259,8 +261,7 @@ public static class SamMaskRenderer
             catch (Exception ex)
             {
                 // Eine defekte Maske darf das Rendern der uebrigen nicht verhindern.
-                System.Diagnostics.Debug.WriteLine(
-                    $"SamMaskRenderer: Maske {i} uebersprungen: {ex.Message}");
+                logger?.LogWarning(ex, "SamMaskRenderer: Maske {MaskIndex} uebersprungen.", i);
             }
         }
     }
