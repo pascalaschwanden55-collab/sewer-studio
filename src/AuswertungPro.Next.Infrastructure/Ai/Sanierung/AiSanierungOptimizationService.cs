@@ -84,13 +84,14 @@ public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationSer
         string? firstError = null;
         try
         {
-            aiDto = await _client.ChatStructuredAsync<SanierungAiDto>(
+            aiDto = await _client.ChatStructuredWithOptionsAsync<SanierungAiDto>(
                 _cfg.TextModel,
                 [
                     new OllamaClient.ChatMessage("system", systemPrompt),
                     new OllamaClient.ChatMessage("user",   userPrompt)
                 ],
                 AiSchema,
+                OllamaDeterministicOptions.Create(),
                 ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
@@ -106,13 +107,14 @@ public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationSer
             try
             {
                 var repairPrompt = userPrompt + "\n\nANTWORTE AUSSCHLIESSLICH im angegebenen JSON-Format. Kein Text ausserhalb.";
-                aiDto = await _client.ChatStructuredAsync<SanierungAiDto>(
+                aiDto = await _client.ChatStructuredWithOptionsAsync<SanierungAiDto>(
                     _cfg.TextModel,
                     [
                         new OllamaClient.ChatMessage("system", systemPrompt),
                         new OllamaClient.ChatMessage("user",   repairPrompt)
                     ],
                     AiSchema,
+                    OllamaDeterministicOptions.Create(),
                     ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException) { throw; }
