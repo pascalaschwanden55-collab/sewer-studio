@@ -102,7 +102,7 @@ public static class MaskQuantificationService
         {
             // Kalibrierter Pfad: NormalizedDiameter statt hartkodiertem 0.70
             double pipeWidthRatio = calibration.NormalizedDiameter;
-            return QuantifyWithRatio(mask, imageWidth, imageHeight, pipeDiameterMm, pipeWidthRatio);
+            return QuantifyWithRatio(mask, imageWidth, imageHeight, pipeDiameterMm, pipeWidthRatio, calibration);
         }
         return Quantify(mask, imageWidth, imageHeight, pipeDiameterMm);
     }
@@ -110,14 +110,15 @@ public static class MaskQuantificationService
     private static QuantifiedMask QuantifyWithRatio(
         SamMaskResult mask,
         int imageWidth, int imageHeight,
-        int pipeDiameterMm, double pipeWidthRatio)
+        int pipeDiameterMm, double pipeWidthRatio,
+        PipeCalibration? calibration = null)
     {
         if (imageWidth <= 0 || imageHeight <= 0 || pipeDiameterMm <= 0 || pipeWidthRatio <= 0)
         {
             return new QuantifiedMask(
                 mask.Label, mask.Confidence,
                 null, null, null, null, null,
-                ComputeClockPosition(mask.CentroidX, mask.CentroidY, imageWidth, imageHeight));
+                ComputeClockPosition(mask.CentroidX, mask.CentroidY, imageWidth, imageHeight, calibration));
         }
 
         double pxToMm = pipeDiameterMm / (imageWidth * pipeWidthRatio);
@@ -149,7 +150,7 @@ public static class MaskQuantificationService
             ExtentPercent: extentPercent,
             CrossSectionReductionPercent: crossSectionReduction,
             IntrusionPercent: intrusionPercent,
-            ClockPosition: ComputeClockPosition(mask.CentroidX, mask.CentroidY, imageWidth, imageHeight));
+            ClockPosition: ComputeClockPosition(mask.CentroidX, mask.CentroidY, imageWidth, imageHeight, calibration));
     }
 
     /// <summary>
@@ -197,6 +198,30 @@ public static class MaskQuantificationService
         int hour = (int)Math.Round(degrees / 30.0) % 12;
         if (hour == 0) hour = 12;
 
+        return $"{hour}:00";
+    }
+
+    /// <summary>
+    /// Uhrlage gegen die kalibrierte Rohrmitte (PipeCalibration.PointToClockHour).
+    /// Ohne Kalibrierung Fallback auf die Bildmitte (4-arg-Ueberladung).
+    /// </summary>
+    public static string? ComputeClockPosition(
+        double centroidX, double centroidY,
+        int imageWidth, int imageHeight,
+        PipeCalibration? calibration)
+    {
+        if (imageWidth <= 0 || imageHeight <= 0)
+            return null;
+
+        // Ohne Kalibrierung: bisheriges Verhalten (Rohrmitte = Bildmitte)
+        if (calibration is null)
+            return ComputeClockPosition(centroidX, centroidY, imageWidth, imageHeight);
+
+        // Mit Kalibrierung: gegen die echte Rohrmitte rechnen
+        var clockHour = calibration.PointToClockHour(
+            new NormalizedPoint(centroidX / imageWidth, centroidY / imageHeight));
+        int hour = (int)Math.Round(clockHour) % 12;
+        if (hour == 0) hour = 12;
         return $"{hour}:00";
     }
 }
