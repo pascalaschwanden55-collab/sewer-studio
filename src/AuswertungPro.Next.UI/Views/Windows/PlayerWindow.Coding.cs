@@ -2886,7 +2886,8 @@ public partial class PlayerWindow
                 mmResult.SamResponse,
                 mmResult.QuantifiedMasks,
                 CodingOverlayCanvas.ActualWidth,
-                CodingOverlayCanvas.ActualHeight);
+                CodingOverlayCanvas.ActualHeight,
+                logger: _serviceProvider?.LoggerFactory.CreateLogger("SamMaskRenderer"));
         }
 
         // Kalibrierkreis anzeigen
