@@ -133,8 +133,9 @@ public sealed class TechniqueAssessmentService : ITechniqueAssessmentService
             new OllamaClient.ChatMessage("user", prompt, new[] { b64 })
         };
 
-        var result = await _ollama.ChatStructuredAsync<VisionTechniqueResult>(
-            _visionModel, messages, TechniqueSchema, ct);
+        var result = await _ollama.ChatStructuredWithOptionsAsync<VisionTechniqueResult>(
+            _visionModel, messages, TechniqueSchema,
+            AuswertungPro.Next.Infrastructure.Ai.OllamaDeterministicOptions.Create(), ct);
 
         return result.Zentrierung.ToLowerInvariant() switch
         {

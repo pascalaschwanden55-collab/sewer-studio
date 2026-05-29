@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace AuswertungPro.Next.Infrastructure.Ai;
 
-internal static class OllamaDeterministicOptions
+public static class OllamaDeterministicOptions
 {
     public const int Seed = 42;
     public const int NumCtx = 12288;
