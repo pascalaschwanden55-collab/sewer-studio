@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import base64
-import io
 import json
 import time
 import logging
@@ -17,6 +15,7 @@ from PIL import Image
 from ..config import settings
 from ..gpu_manager import gpu_manager, ModelSlot
 from ..schemas.detection import YoloDetection, YoloResponse
+from .image_decode import decode_image_safe
 
 logger = logging.getLogger(__name__)
 
@@ -311,8 +310,11 @@ def _gpu_utilization_percent() -> float | None:
 
 def decode_image(image_base64: str) -> Image.Image:
     """Decode a base64-encoded image to PIL Image."""
-    raw = base64.b64decode(image_base64)
-    return Image.open(io.BytesIO(raw)).convert("RGB")
+    return decode_image_safe(
+        image_base64,
+        max_bytes=settings.inference_max_image_bytes,
+        max_pixels=settings.max_image_pixels,
+    )
 
 
 def _is_frame_usable(img: Image.Image) -> tuple[bool, str]:

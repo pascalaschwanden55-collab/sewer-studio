@@ -18,6 +18,8 @@ class SidecarSettings(BaseSettings):
     # Training export sandbox. output_dir in /training/export-yolo must stay inside this root.
     training_export_root: str = "./training_export"
     training_max_image_bytes: int = 25 * 1024 * 1024
+    inference_max_image_bytes: int = 25 * 1024 * 1024
+    max_image_pixels: int = 50_000_000
 
     # Per-model device overrides (empty = fallback to gpu_device)
     yolo_device: str = ""
