@@ -88,61 +88,6 @@ public static partial class HoldingFolderDistributor
         @"(?:Haltungsname|Schacht\s*oben|Schacht\s*unten|Oberer\s*Punkt|Unterer\s*Punkt).{0,300}?(?<id>\d{10})(?!\d)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
-    public sealed record DistributionResult(
-        bool Success,
-        string Message,
-        string SourcePdfPath,
-        string? SourceVideoPath,
-        string? DestPdfPath,
-        string? DestVideoPath,
-        string? InfoPath,
-        string? HoldingFolder,
-        VideoMatchStatus VideoStatus,
-        bool PdfCorrected = false,
-        string? PdfCorrectionMessage = null);
-
-    public sealed record DistributionProgress(int Processed, int Total, string? CurrentFile);
-
-    public enum VideoMatchStatus
-    {
-        NotChecked,
-        Matched,
-        NotFound,
-        Ambiguous
-    }
-
-    public sealed record VideoFindResult(
-        VideoMatchStatus Status,
-        string? VideoPath,
-        IReadOnlyList<string> Candidates,
-        string? Message);
-
-    private sealed record KinsTxtSection(
-        string SourceTxtPath,
-        string HoldingRaw,
-        string VideoFileName,
-        DateTime Date,
-        string SectionText);
-
-    private sealed record PdfTextReplacement(string SearchText, string ReplacementText);
-    private sealed record PdfTextReplacementMatch(
-        PdfTextReplacement Replacement,
-        int StartLetterIndex,
-        int EndLetterIndex,
-        double Left,
-        double Bottom,
-        double Right,
-        double Top,
-        PdfPoint StartBaseLine,
-        double FontSize);
-    private sealed record PdfCorrectionResult(
-        bool Success,
-        bool Corrected,
-        string OutputPdfPath,
-        int MatchCount,
-        int PageCount,
-        string Message);
-
     public static IReadOnlyList<DistributionResult> Distribute(
         string pdfSourceFolder,
         string videoSourceFolder,
