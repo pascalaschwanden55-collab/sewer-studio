@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Threading;
 using AuswertungPro.Next.Infrastructure;
 using AuswertungPro.Next.Domain.Models;
@@ -121,15 +120,13 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task DistributeHoldingsAsync()
     {
-        var sourceMode = MessageBox.Show(
+        var sourceMode = _sp.Dialogs.ConfirmCancel(
             "Quelle:\nJa = PDF-Import verteilen\nNein = TXT-Import verteilen (z.B. kiDVDaten.txt)",
-            "Haltungen verteilen",
-            MessageBoxButton.YesNoCancel,
-            MessageBoxImage.Question);
-        if (sourceMode == MessageBoxResult.Cancel)
+            "Haltungen verteilen");
+        if (sourceMode == DialogConfirm.Cancel)
             return;
 
-        var useTxtImport = sourceMode == MessageBoxResult.No;
+        var useTxtImport = sourceMode == DialogConfirm.No;
 
         string? pdfFolder = null;
         string[] selectedPdfFiles = Array.Empty<string>();
@@ -138,15 +135,13 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
         if (!useTxtImport)
         {
-            var mode = MessageBox.Show(
+            var mode = _sp.Dialogs.ConfirmCancel(
                 "PDF-Auswahl:\nJa = einzelne PDF-Protokolle auswaehlen\nNein = ganzen PDF-Ordner verwenden",
-                "Haltungen verteilen (PDF)",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Question);
-            if (mode == MessageBoxResult.Cancel)
+                "Haltungen verteilen (PDF)");
+            if (mode == DialogConfirm.Cancel)
                 return;
 
-            if (mode == MessageBoxResult.Yes)
+            if (mode == DialogConfirm.Yes)
             {
                 selectedPdfFiles = _sp.Dialogs.OpenFiles("PDF-Protokolle auswaehlen", "PDF (*.pdf)|*.pdf");
                 if (selectedPdfFiles.Length == 0)
@@ -161,15 +156,13 @@ public sealed partial class ExportPageViewModel : ObservableObject
         }
         else
         {
-            var mode = MessageBox.Show(
+            var mode = _sp.Dialogs.ConfirmCancel(
                 "TXT-Auswahl:\nJa = einzelne TXT-Dateien auswaehlen\nNein = ganzen TXT-Ordner verwenden",
-                "Haltungen verteilen (TXT)",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Question);
-            if (mode == MessageBoxResult.Cancel)
+                "Haltungen verteilen (TXT)");
+            if (mode == DialogConfirm.Cancel)
                 return;
 
-            if (mode == MessageBoxResult.Yes)
+            if (mode == DialogConfirm.Yes)
             {
                 selectedTxtFiles = _sp.Dialogs.OpenFiles("TXT-Dateien auswaehlen", "TXT (*.txt)|*.txt");
                 if (selectedTxtFiles.Length == 0)
@@ -351,17 +344,15 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task DistributeShaftsAsync()
     {
-        var mode = MessageBox.Show(
+        var mode = _sp.Dialogs.ConfirmCancel(
             "PDF-Auswahl:\nJa = einzelne Schacht-PDFs auswaehlen\nNein = ganzen PDF-Ordner verwenden",
-            "Schaechte verteilen",
-            MessageBoxButton.YesNoCancel,
-            MessageBoxImage.Question);
-        if (mode == MessageBoxResult.Cancel)
+            "Schaechte verteilen");
+        if (mode == DialogConfirm.Cancel)
             return;
 
         string? pdfFolder = null;
         string[] selectedPdfFiles = Array.Empty<string>();
-        if (mode == MessageBoxResult.Yes)
+        if (mode == DialogConfirm.Yes)
         {
             selectedPdfFiles = _sp.Dialogs.OpenFiles("Schacht-PDFs auswaehlen", "PDF (*.pdf)|*.pdf");
             if (selectedPdfFiles.Length == 0)
@@ -449,17 +440,15 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private async Task DistributeDichtheitAsync()
     {
-        var mode = MessageBox.Show(
+        var mode = _sp.Dialogs.ConfirmCancel(
             "PDF-Auswahl:\nJa = einzelne DP-PDFs auswaehlen\nNein = ganzen PDF-Ordner verwenden",
-            "Dichtheitsprüfung verteilen",
-            MessageBoxButton.YesNoCancel,
-            MessageBoxImage.Question);
-        if (mode == MessageBoxResult.Cancel)
+            "Dichtheitsprüfung verteilen");
+        if (mode == DialogConfirm.Cancel)
             return;
 
         string? pdfFolder = null;
         string[] selectedPdfFiles = Array.Empty<string>();
-        if (mode == MessageBoxResult.Yes)
+        if (mode == DialogConfirm.Yes)
         {
             selectedPdfFiles = _sp.Dialogs.OpenFiles("Dichtheitsprüfungs-PDFs auswaehlen", "PDF (*.pdf)|*.pdf");
             if (selectedPdfFiles.Length == 0)

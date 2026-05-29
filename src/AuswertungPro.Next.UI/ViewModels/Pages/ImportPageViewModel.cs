@@ -121,8 +121,8 @@ public sealed partial class ImportPageViewModel : ObservableObject
         }
         else
         {
-            MessageBox.Show("Bericht-Ordner nicht vorhanden.\nBitte zuerst einen Import durchfuehren.",
-                "Import-Berichte", MessageBoxButton.OK, MessageBoxImage.Information);
+            _sp.Dialogs.Info("Bericht-Ordner nicht vorhanden.\nBitte zuerst einen Import durchfuehren.",
+                "Import-Berichte");
         }
     }
 
@@ -823,7 +823,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         var projectDir = string.IsNullOrWhiteSpace(projectPath) ? null : Path.GetDirectoryName(projectPath);
         if (string.IsNullOrWhiteSpace(projectDir))
         {
-            MessageBox.Show("Bitte zuerst das Projekt speichern.", "Import-Report", MessageBoxButton.OK, MessageBoxImage.Information);
+            _sp.Dialogs.Info("Bitte zuerst das Projekt speichern.", "Import-Report");
             return;
         }
 

@@ -1,17 +1,18 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models.Costs;
 using AuswertungPro.Next.Infrastructure.Costs;
+using AuswertungPro.Next.UI;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
 {
     private readonly CostCalculationService _costService;
+    private readonly IDialogService _dialogs;
     private MeasureTemplates _templates;
     private PriceCatalog _catalog;
 
@@ -32,9 +33,10 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
     public IRelayCommand RemoveCatalogItemCommand { get; }
     public IRelayCommand SaveCatalogCommand { get; }
 
-    public MeasureTemplateEditorViewModel(CostCalculationService costService)
+    public MeasureTemplateEditorViewModel(CostCalculationService costService, IDialogService? dialogs = null)
     {
         _costService = costService;
+        _dialogs = dialogs ?? new DialogService();
         _templates = costService.LoadTemplates();
         _catalog = costService.LoadCatalog();
 
@@ -125,8 +127,7 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(TemplateId) || string.IsNullOrWhiteSpace(TemplateName))
         {
-            MessageBox.Show("ID und Name müssen ausgefüllt sein.", "Hinweis",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogs.Warn("ID und Name müssen ausgefüllt sein.", "Hinweis");
             return;
         }
 
@@ -156,8 +157,7 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
         LoadTemplates();
         SelectedTemplate = Templates.FirstOrDefault(t => t.Id == TemplateId);
 
-        MessageBox.Show("Template gespeichert.", "OK",
-            MessageBoxButton.OK, MessageBoxImage.Information);
+        _dialogs.Info("Template gespeichert.", "OK");
     }
 
     [RelayCommand]
@@ -165,10 +165,10 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
     {
         if (SelectedTemplate == null) return;
 
-        var result = MessageBox.Show($"Template '{SelectedTemplate.Name}' wirklich löschen?",
-            "Bestätigen", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        var confirmed = _dialogs.Confirm($"Template '{SelectedTemplate.Name}' wirklich löschen?",
+            "Bestätigen");
 
-        if (result != MessageBoxResult.Yes) return;
+        if (!confirmed) return;
 
         var template = _templates.Templates.FirstOrDefault(t => t.Id == SelectedTemplate.Id);
         if (template != null)
@@ -252,13 +252,11 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
             ? SelectedAvailablePrice.Id
             : SelectedAvailablePrice.Label;
 
-        var result = MessageBox.Show(
+        var confirmed = _dialogs.Confirm(
             $"Position '{label}' wirklich löschen?",
-            "Position löschen",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            "Position löschen");
 
-        if (result != MessageBoxResult.Yes)
+        if (!confirmed)
             return;
 
         AvailablePrices.Remove(SelectedAvailablePrice);
@@ -273,7 +271,7 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
             .ToList();
 
         _costService.SaveCatalog(_catalog);
-        MessageBox.Show("Positionen gespeichert.", "OK", MessageBoxButton.OK, MessageBoxImage.Information);
+        _dialogs.Info("Positionen gespeichert.", "OK");
     }
 
     private string CreateNewCatalogId()

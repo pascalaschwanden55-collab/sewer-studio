@@ -4,7 +4,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-using System.Windows;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
@@ -162,7 +161,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     private void OpenLogsFolder() => OpenFolder(LogsFolderPath);
     private void OpenRestorePointsFolder() => OpenFolder(RestorePointsFolderPath);
 
-    private static void OpenFolder(string path)
+    private void OpenFolder(string path)
     {
         try
         {
@@ -180,7 +179,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Ordner konnte nicht geöffnet werden:\n{ex.Message}", "SewerStudio", MessageBoxButton.OK, MessageBoxImage.Error);
+            _sp.Dialogs.Error($"Ordner konnte nicht geöffnet werden:\n{ex.Message}", "SewerStudio");
         }
     }
 
@@ -296,18 +295,18 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             {
                 var sizeMb = result.SizeBytes / (1024.0 * 1024.0);
                 BackupStatusText = $"Export OK: {result.FileCount} Dateien, {sizeMb:F1} MB";
-                MessageBox.Show(
+                _sp.Dialogs.Info(
                     $"KI-Wissen erfolgreich exportiert.\n\n" +
                     $"Dateien: {result.FileCount}\n" +
                     $"Groesse: {sizeMb:F1} MB\n" +
                     $"Pfad: {path}",
-                    "SewerStudio", MessageBoxButton.OK, MessageBoxImage.Information);
+                    "SewerStudio");
             }
             else
             {
                 BackupStatusText = $"Fehler: {result.Error}";
-                MessageBox.Show($"Export fehlgeschlagen:\n{result.Error}",
-                    "SewerStudio", MessageBoxButton.OK, MessageBoxImage.Error);
+                _sp.Dialogs.Error($"Export fehlgeschlagen:\n{result.Error}",
+                    "SewerStudio");
             }
         }
         catch (Exception ex)
@@ -323,12 +322,12 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             "ZIP-Archiv (*.zip)|*.zip");
         if (path is null) return;
 
-        var confirm = MessageBox.Show(
+        var confirm = _sp.Dialogs.Confirm(
             "Vorhandene KI-Daten und Einstellungen werden ueberschrieben.\n\n" +
             "Nach dem Import muss die Anwendung neu gestartet werden.\n\n" +
             "Fortfahren?",
-            "SewerStudio", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-        if (confirm != MessageBoxResult.Yes) return;
+            "SewerStudio");
+        if (!confirm) return;
 
         BackupStatusText = "Importiere...";
         try
@@ -339,16 +338,16 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             if (result.Success)
             {
                 BackupStatusText = $"Import OK: {result.FileCount} Dateien";
-                MessageBox.Show(
+                _sp.Dialogs.Info(
                     $"KI-Wissen erfolgreich importiert ({result.FileCount} Dateien).\n\n" +
                     "Bitte starten Sie die Anwendung neu.",
-                    "SewerStudio", MessageBoxButton.OK, MessageBoxImage.Information);
+                    "SewerStudio");
             }
             else
             {
                 BackupStatusText = $"Fehler: {result.Error}";
-                MessageBox.Show($"Import fehlgeschlagen:\n{result.Error}",
-                    "SewerStudio", MessageBoxButton.OK, MessageBoxImage.Error);
+                _sp.Dialogs.Error($"Import fehlgeschlagen:\n{result.Error}",
+                    "SewerStudio");
             }
         }
         catch (Exception ex)
