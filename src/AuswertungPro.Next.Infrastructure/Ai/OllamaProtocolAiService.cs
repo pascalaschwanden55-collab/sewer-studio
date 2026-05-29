@@ -115,7 +115,7 @@ public sealed class OllamaProtocolAiService : IProtocolAiService
         string? llmError = null;
         try
         {
-            var dto = await _client.ChatStructuredAsync<ProtocolSuggestionDto>(
+            var dto = await _client.ChatStructuredWithOptionsAsync<ProtocolSuggestionDto>(
                 _textModel,
                 new[]
                 {
@@ -125,6 +125,7 @@ public sealed class OllamaProtocolAiService : IProtocolAiService
                     new OllamaClient.ChatMessage("user", prompt)
                 },
                 ProtocolSuggestionSchema,
+                OllamaDeterministicOptions.Create(),
                 ct).ConfigureAwait(false);
 
             if (!string.IsNullOrWhiteSpace(dto.suggestedCode) &&

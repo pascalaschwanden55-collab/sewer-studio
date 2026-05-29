@@ -128,7 +128,7 @@ public sealed class EnhancedVisionAnalysisService
             using var frameCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             frameCts.CancelAfter(FrameTimeout);
 
-            dto = await _client.ChatStructuredAsync<EnhancedVisionDto>(
+            dto = await _client.ChatStructuredWithOptionsAsync<EnhancedVisionDto>(
                 model: _model,
                 messages:
                 [
@@ -138,6 +138,7 @@ public sealed class EnhancedVisionAnalysisService
                         ImagesBase64: [framePngBase64])
                 ],
                 formatSchema: EnhancedVisionSchema,
+                options: OllamaDeterministicOptions.Create(),
                 ct: frameCts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
@@ -379,7 +380,7 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
             using var frameCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             frameCts.CancelAfter(FrameTimeout);
 
-            dto = await _client.ChatStructuredAsync<EnhancedVisionDto>(
+            dto = await _client.ChatStructuredWithOptionsAsync<EnhancedVisionDto>(
                 model: _model,
                 messages:
                 [
@@ -389,6 +390,7 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
                         ImagesBase64: [framePngBase64])
                 ],
                 formatSchema: EnhancedVisionSchema,
+                options: OllamaDeterministicOptions.Create(),
                 ct: frameCts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)

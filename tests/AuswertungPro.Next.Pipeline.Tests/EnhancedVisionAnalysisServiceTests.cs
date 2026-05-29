@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using AuswertungPro.Next.Infrastructure.Ai;
 using Xunit;
 
@@ -69,6 +70,36 @@ public sealed class EnhancedVisionAnalysisServiceTests
         Assert.Contains("riss_bruch", StaticOllamaHandler.LastRequestJson);
         Assert.Contains("nicht als VSA-Code", StaticOllamaHandler.LastRequestJson);
         Assert.Contains("is_empty_frame=true nur dann setzen", StaticOllamaHandler.LastRequestJson);
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_uses_deterministic_ollama_options()
+    {
+        var content = """
+            {
+              "meter": null,
+              "time_in_video": null,
+              "pipe_material": "unbekannt",
+              "pipe_diameter_mm": null,
+              "findings": [],
+              "image_quality": "mittel",
+              "is_empty_frame": true
+            }
+            """;
+        using var http = new HttpClient(new StaticOllamaHandler(content))
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+        using var client = new OllamaClient(new Uri("http://localhost:11434"), http);
+        var service = new EnhancedVisionAnalysisService(client, "qwen-test");
+
+        await service.AnalyzeAsync(Convert.ToBase64String([1, 2, 3]));
+
+        using var doc = JsonDocument.Parse(StaticOllamaHandler.LastRequestJson);
+        var options = doc.RootElement.GetProperty("options");
+        Assert.Equal(0, options.GetProperty("temperature").GetInt32());
+        Assert.Equal(42, options.GetProperty("seed").GetInt32());
+        Assert.Equal(12288, options.GetProperty("num_ctx").GetInt32());
     }
 
     [Fact]

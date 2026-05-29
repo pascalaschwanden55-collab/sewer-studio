@@ -161,7 +161,7 @@ public sealed class FullProtocolGenerationService : IDisposable
         AiSuggestionResultDto dto;
         try
         {
-            dto = await _client.ChatStructuredAsync<AiSuggestionResultDto>(
+            dto = await _client.ChatStructuredWithOptionsAsync<AiSuggestionResultDto>(
                 model: _cfg.TextModel,
                 messages: new[]
                 {
@@ -169,6 +169,7 @@ public sealed class FullProtocolGenerationService : IDisposable
                     new OllamaClient.ChatMessage("user", prompt)
                 },
                 formatSchema: AiSuggestionSchemas.AiSuggestionResultSchema,
+                options: OllamaDeterministicOptions.Create(),
                 ct: ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
