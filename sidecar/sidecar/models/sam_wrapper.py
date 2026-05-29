@@ -13,6 +13,7 @@ from ..gpu_manager import gpu_manager, ModelSlot
 from ..schemas.detection import BoundingBox
 from ..schemas.segmentation import MaskResult, SamResponse
 from .image_decode import decode_image_safe
+from .box_utils import clamp_box
 
 logger = logging.getLogger(__name__)
 
@@ -102,8 +103,12 @@ def segment(
     masks_out: list[MaskResult] = []
 
     for bbox in bounding_boxes:
+        clamped = clamp_box(bbox.x1, bbox.y1, bbox.x2, bbox.y2, w, h)
+        if clamped is None:
+            continue  # aus dem Bild ragende oder Null-Flaechen-Box -> ueberspringen
+        bx1, by1, bx2, by2 = clamped
         try:
-            box_np = np.array([bbox.x1, bbox.y1, bbox.x2, bbox.y2])
+            box_np = np.array([bx1, by1, bx2, by2])
 
             pred_masks, scores, _ = predictor.predict(
                 point_coords=None,
@@ -134,7 +139,7 @@ def segment(
         masks_out.append(MaskResult(
             label=bbox.label,
             confidence=round(score, 4),
-            bbox=[bbox.x1, bbox.y1, bbox.x2, bbox.y2],
+            bbox=[bx1, by1, bx2, by2],
             mask_rle=_rle_encode(mask.astype(np.uint8)),
             mask_area_pixels=mask_area,
             image_area_pixels=h * w,
