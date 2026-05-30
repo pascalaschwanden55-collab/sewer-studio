@@ -620,6 +620,22 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             if (isUnknown)
                 unknownCodeCount++;
 
+            // Bestandsaufnahme-/Beobachtungscodes (nonAssessable in der Klassifizierungstabelle):
+            // bekannt, kein EZ-Wert, und alle Diagnostics sagen "rule-not-found" (keine Regel im
+            // Regelwerk vorhanden). Solche Codes sind fachlich transparent – Bestandsaufnahme,
+            // kein Schaden. Sie werden herausgefiltert, damit eine Haltung mit ausschliesslich
+            // Bestandsaufnahme-Codes Zustandsklasse 4 ("Leitung i.O.") bekommt.
+            // Abgrenzung zu echten Schadenscodes mit fehlender Quantifizierung (z.B. BAA ohne Q1):
+            // Diese haben Diagnostics wie "quantification-missing" oder "ch1-missing" und werden
+            // NICHT gefiltert.
+            if (isKnown
+                && classification.EZD is null
+                && classification.EZS is null
+                && classification.EZB is null
+                && outcome.Diagnostics.Count > 0
+                && outcome.Diagnostics.All(d => d.Reason.Equals("rule-not-found", StringComparison.OrdinalIgnoreCase)))
+                continue;
+
             list.Add(new ClassifiedFinding(finding, classification, isUnknown));
         }
 

@@ -23,7 +23,7 @@ public sealed partial class KarteViewModel : ObservableObject
     private readonly string _xtfPath = @"D:\QGIS_V4\Export_Sewer_Studio\Abwasserkataster_Uri.xtf";
 
     // Skalierung: false = VSA-Skala (0=gut); true = EZ-Skala (0=schlecht/4=gut)
-    private bool _invertiert = false;
+    private bool _invertiert = true;
 
     private IReadOnlyList<ProjectedHaltungGeometry> _projectedGeometrien = Array.Empty<ProjectedHaltungGeometry>();
     private IReadOnlyDictionary<string, int?> _kondition = new Dictionary<string, int?>(StringComparer.OrdinalIgnoreCase);

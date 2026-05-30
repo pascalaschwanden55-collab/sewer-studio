@@ -282,7 +282,8 @@ public sealed class VsaEvaluationServiceTests
     [Fact]
     public void Evaluate_V2LeavesBcaObservationWithoutStateGrade()
     {
-        // BCA (Anschluss) – neu hinzugefügter Code muss klassifiziert werden
+        // BCA (Anschluss) ist ein Bestandsaufnahme-Code, kein Schadencode.
+        // Nach dem Fix wird BCA herausgefiltert → schadenfreie Haltung → Zustandsklasse 4.
         var project = new Project();
         var rec = new HaltungRecord();
         rec.SetFieldValue("Haltungsname", "H7_BCA", FieldSource.Xtf, userEdited: false);
@@ -299,9 +300,8 @@ public sealed class VsaEvaluationServiceTests
         var res = svc.Evaluate(project);
         Assert.True(res.Ok, res.ErrorMessage);
 
-        Assert.Equal("n/a", rec.GetFieldValue("VSA_Zustandsnote_D"));
-        Assert.Equal("n/a", rec.GetFieldValue("VSA_Zustandsnote_B"));
-        Assert.Equal("n/a", rec.GetFieldValue("Zustandsklasse"));
+        // BCA ist kein Schadencode → wird herausgefiltert → Leitung i.O. → Zustandsklasse 4
+        Assert.Equal("4", rec.GetFieldValue("Zustandsklasse"));
     }
 
     [Fact]
@@ -425,6 +425,27 @@ public sealed class VsaEvaluationServiceTests
             if (Directory.Exists(tempDir))
                 Directory.Delete(tempDir, recursive: true);
         }
+    }
+
+    [Fact]
+    public void EvaluateRecord_Grundgeruest_OnlyFindings_GivesZustandsklasse4()
+    {
+        // Schadenfreie Haltung: nur Bestandsaufnahme-Codes (BCD, BCC, BCE).
+        // Diese sind NICHT in knownCodes → werden herausgefiltert → Leitung i.O. → Zustandsklasse 4.
+        var rec = new HaltungRecord();
+        rec.SetFieldValue("Haltungslaenge_m", "10.20", FieldSource.Xtf, userEdited: false);
+        rec.VsaFindings = new List<VsaFinding>
+        {
+            new() { KanalSchadencode = "BCD", LL = 1.0 },
+            new() { KanalSchadencode = "BCC", LL = 5.0 },
+            new() { KanalSchadencode = "BCE", LL = 10.0 }
+        };
+
+        var svc = CreateService();
+        var res = svc.EvaluateRecord(rec);
+        Assert.True(res.Ok, res.ErrorMessage);
+
+        Assert.Equal("4", rec.GetFieldValue("Zustandsklasse"));
     }
 
     [Fact]
