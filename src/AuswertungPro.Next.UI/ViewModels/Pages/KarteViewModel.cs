@@ -19,8 +19,13 @@ public sealed partial class KarteViewModel : ObservableObject
 
     private readonly ShellViewModel _shell;
 
-    // Pfad zur Netz-XTF; kein Settings-Eintrag vorhanden → Konstante
-    private readonly string _xtfPath = @"D:\QGIS_V4\Export_Sewer_Studio\Abwasserkataster_Uri.xtf";
+    // Pfad zur Netz-XTF; kein Settings-Eintrag vorhanden → Konstante.
+    // Korrigierte Fassung: vollstaendigerer Netzplan (110'224 Haltungen statt 94'109).
+    private readonly string _xtfPath = @"D:\QGIS_V4\Export_Sewer_Studio\Abwasserkataster_Uri_korrigiert.xtf";
+
+    // Lokale QGIS-Kacheln (von qgis_process erzeugt). Vorhanden = werden als Hintergrund
+    // ueber dem WMS gezeigt; fehlt der Ordner, bleibt es beim WMS allein.
+    private readonly string _qgisTilesPath = @"D:\QGIS_V4\Export_Sewer_Studio\tiles_test";
 
     // Skalierung: false = VSA-Skala (0=gut); true = EZ-Skala (0=schlecht/4=gut)
     private bool _invertiert = true;
@@ -66,6 +71,21 @@ public sealed partial class KarteViewModel : ObservableObject
         {
             // WMS nicht verfügbar → trotzdem Netzlinien anzeigen
             StatusText = $"WMS nicht verfügbar: {ex.Message}";
+        }
+
+        // ── QGIS-Kachel-Hintergrund (lokal, falls vorhanden) ─────────────────
+        // QGIS-Optik als XYZ-Kacheln ueber dem WMS; ausserhalb des Exports leer.
+        try
+        {
+            if (Directory.Exists(_qgisTilesPath))
+            {
+                var tileSource = new AuswertungPro.Next.UI.Mapping.LocalXyzTileSource(_qgisTilesPath, "QGIS");
+                map.Layers.Add(new Mapsui.Tiling.Layers.TileLayer(tileSource) { Name = "QGIS" });
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"QGIS-Kacheln nicht ladbar: {ex.Message}";
         }
 
         // ── Netz-Geometrie laden ──────────────────────────────────────────────
