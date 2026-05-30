@@ -312,7 +312,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
 
         switch (CurrentLevel)
         {
-            case 0: // Gruppen
+            case 0: // Gruppen (Anordnung kommt aus dem Katalog = ISYBAU-Baum)
                 foreach (var (key, grp) in _catalog.Groups)
                 {
                     CurrentTiles.Add(new TileItem
