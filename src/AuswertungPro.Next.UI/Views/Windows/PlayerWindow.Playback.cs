@@ -324,6 +324,24 @@ public partial class PlayerWindow
 
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        // 1. Guard setzen: alle laufenden Tick-Handler prufen _closing und kehren sofort zurueck.
+        _closing = true;
+
+        // 2. Alle DispatcherTimer stoppen bevor der MediaPlayer freigegeben wird.
+        //    So koennen keine in-flight Ticks mehr _player.IsPlaying aufrufen.
+        _timer.Stop();
+        _scrubTimer.Stop();
+        _detectionTimer?.Stop();
+        _codingLiveAiTimer?.Stop();
+        _codingLiveAiBlinkTimer?.Stop();
+        _codingOsdTimer?.Stop();
+
+        // 3. Player vom VideoView trennen (verhindert D3D-Zugriff nach Dispose).
+        try { if (VideoView != null) VideoView.MediaPlayer = null; } catch { }
+
+        // 4. Player sauber stoppen bevor Dispose (Cleanup macht dann nur noch Dispose).
+        try { _player.Stop(); } catch { }
+
         try
         {
             Cleanup();

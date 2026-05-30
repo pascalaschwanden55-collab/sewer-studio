@@ -2397,6 +2397,7 @@ public partial class PlayerWindow
         _codingOsdTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _codingOsdTimer.Tick += async (_, _) =>
         {
+            if (_closing || _player is null) return;
             if (!_isCodingMode || _codingOsdReading || _codingLiveDetection == null) return;
             _codingOsdReading = true;
             try
@@ -3611,6 +3612,7 @@ public partial class PlayerWindow
             _codingLiveAiBlinkTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
             _codingLiveAiBlinkTimer.Tick += (_, _) =>
             {
+                if (_closing || _player is null) return;
                 _codingLiveAiBlinkState = !_codingLiveAiBlinkState;
                 BtnCodingLiveAi.Background = new SolidColorBrush(
                     _codingLiveAiBlinkState
@@ -3640,6 +3642,7 @@ public partial class PlayerWindow
 
     private async void CodingLiveAiTimer_Tick(object? sender, EventArgs e)
     {
+        if (_closing || _player is null) return;
         try
         {
             // Nicht analysieren wenn: bereits analysierend, Video pausiert, WaitingForUserInput

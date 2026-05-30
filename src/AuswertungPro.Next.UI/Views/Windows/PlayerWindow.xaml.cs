@@ -131,6 +131,10 @@ public partial class PlayerWindow : Window
     private readonly Action<ProtocolEntry>? _onEntryCreated;
     private readonly HaltungRecord? _haltungRecord;
 
+    // Guard-Flag: wird am Anfang von OnClosing gesetzt, bevor MediaPlayer freigegeben wird.
+    // Alle DispatcherTimer-Tick-Handler pruefen dieses Flag als erste Aktion (early-out).
+    private volatile bool _closing;
+
     private static PlayerWindow? _lastOpened;
 
     public PlayerWindow(
@@ -194,13 +198,14 @@ public partial class PlayerWindow : Window
         VideoView.MediaPlayer = _player;
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
-        _timer.Tick += (_, __) => UpdateUi();
+        _timer.Tick += (_, __) => { if (_closing || _player is null) return; UpdateUi(); };
 
         // Scrub timer: fires pending seek when dragging (throttled)
         _scrubTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(60) };
         _scrubTimer.Tick += (_, __) =>
         {
             _scrubTimer.Stop();
+            if (_closing || _player is null) return;
             if (_isDragging)
                 ScrubSeekToSlider();
         };

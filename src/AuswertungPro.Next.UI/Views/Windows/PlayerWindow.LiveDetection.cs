@@ -497,6 +497,7 @@ public partial class PlayerWindow
 
     private async void DetectionTimer_Tick(object? sender, EventArgs e)
     {
+        if (_closing || _player is null) return;
         try
         {
             await RunDetectionAsync();
@@ -509,6 +510,7 @@ public partial class PlayerWindow
 
     private async Task RunDetectionAsync()
     {
+        if (_closing || _player is null) return;
         if (_isDetectionInFlight || _liveDetectionService is null || _detectionCts is null)
             return;
         if (!_player.IsPlaying)
