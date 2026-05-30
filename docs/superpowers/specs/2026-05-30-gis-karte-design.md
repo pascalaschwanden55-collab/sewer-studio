@@ -20,11 +20,15 @@ auf einen Blick, wo die schlechten Haltungen liegen, und springt direkt zur Ausw
 ## Datenquellen
 1. **Geometrie:** `D:\QGIS_V4\Export_Sewer_Studio\Abwasserkataster_Uri.xtf`
    (fester Pfad, vom QGIS-Plugin „AWU XTF-Exporter" wöchentlich neu geschrieben;
-   SIA405_ABWASSER_2020_LV95, INTERLIS 2, ~600–700 MB, enthält LV95-Koordinaten).
-   Pfad in den App-Einstellungen hinterlegbar (Default = obiger Pfad).
+   SIA405_ABWASSER_2020_LV95, INTERLIS 2, **~604 MB, ca. 94'109 Haltungen**,
+   enthält LV95-Koordinaten als echte Linien). Pfad in den App-Einstellungen
+   hinterlegbar (Default = obiger Pfad).
 2. **Zustand je Haltung:** aus dem aktuellen SewerStudio-Projekt
    (`HaltungRecord`, Feld `Zustandsklasse` 0–4; Schlüssel = `Haltungsname`).
 3. **Hintergrund:** WMS des Kantons Uri `https://geo.ur.ch/wms` (EPSG:2056 / LV95).
+   Standard-Layer: **`basemaps:basemap_av_farbe`** (Farbe), Alternative
+   **`basemaps:basemap_av_sw`** (s/w) — in den Einstellungen wählbar.
+   Layer-Liste via `https://geo.ur.ch/wms?request=getCapabilities`.
 
 ## Koordinatensystem
 Alles in **EPSG:2056 (CH1903+/LV95)**. WMS liefert in 2056, die XTF-Koordinaten sind
@@ -43,11 +47,14 @@ Vier klar abgegrenzte Bausteine:
 ### 1. `XtfNetworkExtractor` (Infrastructure, rein/testbar)
 - **Zweck:** liest die Kataster-XTF und liefert je Haltung eine Linie.
 - **Eingang:** XTF-Pfad.
-- **Ausgang:** `IReadOnlyList<HaltungGeometry>` mit `Haltungsname`, `(X1,Y1)`,`(X2,Y2)` (LV95).
-- **Logik:** 1. Durchlauf sammelt Haltungspunkte (`TID → COORD C1/C2`). 2. Durchlauf
-  sammelt Haltungen (`Bezeichnung` + `vonHaltungspunktRef`/`nachHaltungspunktRef`),
-  Linie = Verbindung der beiden Punkt-Koordinaten. Streaming-XML-Reader
-  (`XmlReader`), damit die 700 MB nicht komplett in den RAM müssen.
+- **Ausgang:** `IReadOnlyList<HaltungGeometry>` mit `Haltungsname` + **Polylinie**
+  (Liste von `(X,Y)`-Punkten in LV95).
+- **Logik:** Pro Haltung wird die **echte Linie aus `Verlauf → POLYLINE → COORD`
+  gelesen** (mehrere Stützpunkte, auch gekrümmte Haltungen korrekt). Nur falls eine
+  Haltung kein `Verlauf` hat: **Fallback** = gerade Linie zwischen
+  `vonHaltungspunktRef`/`nachHaltungspunktRef` (deshalb im 1. Durchlauf trotzdem die
+  Haltungspunkte `TID → COORD C1/C2` sammeln). Streaming-XML-Reader (`XmlReader`),
+  damit die ~604 MB nicht komplett in den RAM müssen.
 - **Abhängigkeiten:** nur `System.Xml`. Keine UI, keine DB.
 
 ### 2. `NetworkGeometryCache` (Infrastructure)
@@ -61,17 +68,25 @@ Vier klar abgegrenzte Bausteine:
 - **Abhängigkeiten:** `XtfNetworkExtractor`, Dateisystem, `System.Text.Json`.
 
 ### 3. `HaltungConditionProvider` (Infrastructure/Application)
-- **Zweck:** liefert je Haltungsname die Einfärb-Info.
+- **Zweck:** liefert je Haltungsname den Zustand-Rohwert + Feldquelle.
 - **Eingang:** aktuelles Projekt (vorhandene `HaltungRecord`s).
-- **Ausgang:** `Dictionary<Haltungsname, int? Zustandsklasse>` (null = nicht inspiziert).
+- **Ausgang:** `Dictionary<Haltungsname, ZustandRoh?>` (null = nicht inspiziert);
+  `ZustandRoh` = Wert + welches Feld (damit `ZustandColorMapper` die richtige Skala kennt).
 - **Abhängigkeiten:** Projekt-Repository / Shell-Projekt. Reine Lese-Operation.
+
+### 5. `ZustandColorMapper` (Infrastructure, rein/testbar)
+- **Zweck:** Zustand-Rohwert → feste Farbstufe (grün/orange/rot/grau), **eindeutig**
+  und unabhängig von der invertierten Skala (siehe Einfärbung).
+- **Eingang:** `ZustandRoh?`. **Ausgang:** Farb-Enum (`Gut/Mittel/Schlecht/Unbekannt`).
+- **Abhängigkeiten:** keine. Kleiner Unit-Test (jede Skala-Richtung).
 
 ### 4. `KartePage` + `KarteViewModel` (UI)
 - **Zweck:** zeigt die Mapsui-Karte, verknüpft Geometrie+Zustand, behandelt Klick.
 - **Aufbau der Karte (Layer von unten):**
-  1. **WMS-Layer** `https://geo.ur.ch/wms` (Hintergrund).
-  2. **Netz-Layer:** alle Haltungen als Linien; Farbe nach Zustandsklasse
-     (siehe Einfärbung); Haltungen ohne Projekt-Zustand = grau.
+  1. **WMS-Layer** `https://geo.ur.ch/wms`, Layer `basemaps:basemap_av_farbe`
+     (Hintergrund).
+  2. **Netz-Layer:** alle Haltungen als Polylinien; Farbe über den
+     `ZustandColorMapper` (siehe Einfärbung); Haltungen ohne Projekt-Zustand = grau.
 - **Klick:** Treffer-Haltung markieren → ViewModel meldet `Haltungsname` →
   Knopf „Inspektion/Video öffnen" startet die bestehende Codier-/Player-Ansicht
   für diese Haltung (gleicher Weg wie Rechtsklick → öffnen in der Tabelle).
@@ -92,11 +107,22 @@ Projekt-Haltungen ─ HaltungConditionProvider ─┐
 ```
 
 ## Einfärbung
-- Zustandsklasse **0 = grün**, **1 = hellgrün/gelb**, **2 = orange**, **3 = rot-orange**,
-  **4 = rot** (5-stufige Skala, an die VSA-Farblogik angelehnt).
-- **Keine Inspektion / nicht im Projekt = grau** (das ganze Kanton-Netz ist sichtbar,
-  aber nur die bearbeiteten Haltungen sind farbig).
-- Genaue Farbwerte werden im Plan festgelegt (Theme-Brushes wiederverwenden, falls vorhanden).
+**⚠️ Wichtig — Skala ist im Code nicht einheitlich.** An manchen Stellen entsteht
+`4` als *guter* Zustand (invertierte EZ-Skala 0=schlecht/4=gut), an anderen ist
+`4` der *schlechteste* (VSA-Zustandsklasse). Wenn die Karte den Rohwert direkt
+einfärbt, malt sie eventuell **falsch herum**. Deshalb:
+
+- Eine kleine, **eindeutige Normalisierungsfunktion `ZustandColorMapper`**:
+  - Eingang: der Zustand-Rohwert je Haltung (+ Quelle/Feldname, damit klar ist,
+    welche Skala gilt).
+  - Ausgang: feste Farbstufe → **`0/1 = grün`, `2 = orange`, `3/4/5 = rot`,
+    `n/a = grau`**.
+- **Im Plan zu klären (Pflicht):** welches Feld die Karte als Zustand nimmt und in
+  welcher Richtung dessen Skala läuft — an einer bekannten Haltung gegenprüfen
+  (eine real schlechte Haltung MUSS rot werden), bevor die Farbe fix verdrahtet wird.
+- **Keine Inspektion / nicht im Projekt = grau** (ganzes Kanton-Netz sichtbar, nur
+  bearbeitete Haltungen farbig).
+- Konkrete Farbwerte aus den Theme-Brushes wiederverwenden, falls vorhanden.
 
 ## Fehlerbehandlung
 - **XTF fehlt/Pfad falsch:** Karte zeigt nur WMS-Hintergrund + Hinweis „Netz-Datei nicht
@@ -121,7 +147,8 @@ Projekt-Haltungen ─ HaltungConditionProvider ─┐
 ## Isolation / Dateien (neu)
 - `src/AuswertungPro.Next.Infrastructure/Map/XtfNetworkExtractor.cs`
 - `src/AuswertungPro.Next.Infrastructure/Map/NetworkGeometryCache.cs`
-- `src/AuswertungPro.Next.Infrastructure/Map/HaltungGeometry.cs` (Record)
+- `src/AuswertungPro.Next.Infrastructure/Map/HaltungGeometry.cs` (Record, Polylinie)
+- `src/AuswertungPro.Next.Infrastructure/Map/ZustandColorMapper.cs`
 - `src/AuswertungPro.Next.UI/ViewModels/Pages/KarteViewModel.cs`
 - `src/AuswertungPro.Next.UI/Views/Pages/KartePage.xaml` (+ `.xaml.cs`)
 - Menü-Eintrag in `ShellViewModel.cs` (1 Zeile), DataTemplate in `App.xaml` (analog
@@ -131,7 +158,6 @@ Projekt-Haltungen ─ HaltungConditionProvider ─┐
 
 ## Spätere Erweiterungen (nicht jetzt)
 - Schacht-Symbole (Normschacht/Abwasserknoten als Punkte).
-- Echte Verlaufs-Polylinien (gekrümmte Haltungen) statt gerader Linien.
 - Alternativ swisstopo-WMS als Hintergrund.
 - Netz direkt aus dem WFS statt aus der XTF.
 - Filter/Suche (nach Strasse, Zustand, „nur zu sanierende").
