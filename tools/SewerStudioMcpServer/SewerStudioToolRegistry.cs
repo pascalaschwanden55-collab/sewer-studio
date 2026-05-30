@@ -64,13 +64,56 @@ public sealed class SewerStudioToolRegistry
                     },
                     required = new[] { "case_id" },
                     additionalProperties = false
+                })),
+            new McpToolDefinition(
+                "live_control_health",
+                "Checks whether the running SewerStudio app exposes the local Live-Control endpoint.",
+                Schema(new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        live_control_url = new { type = "string", description = "Optional override. Default http://127.0.0.1:8765/ or SEWERSTUDIO_LIVE_CONTROL_URL." }
+                    },
+                    additionalProperties = false
+                })),
+            new McpToolDefinition(
+                "live_set_resource_brush",
+                "Changes a WPF ResourceDictionary SolidColorBrush in the running app, e.g. AccentBrush -> gelb.",
+                Schema(new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        key = new { type = "string", description = "Resource key, e.g. AccentBrush, CardBrush, WarningBrush." },
+                        color = new { type = "string", description = "Color name or hex, e.g. gelb, yellow, #F59E0B." },
+                        live_control_url = new { type = "string", description = "Optional Live-Control URL override." }
+                    },
+                    required = new[] { "key", "color" },
+                    additionalProperties = false
+                })),
+            new McpToolDefinition(
+                "live_set_button_background",
+                "Changes button backgrounds in the running app by button name/content/tooltip match. Empty target affects visible buttons up to max_matches.",
+                Schema(new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        target = new { type = "string", description = "Optional name/content/tooltip fragment, e.g. Speichern or StartButton." },
+                        color = new { type = "string", description = "Color name or hex, e.g. gelb, yellow, #F59E0B." },
+                        max_matches = new { type = "integer", minimum = 1, maximum = 500, description = "Safety cap. Default 50." },
+                        live_control_url = new { type = "string", description = "Optional Live-Control URL override." }
+                    },
+                    required = new[] { "color" },
+                    additionalProperties = false
                 }))
         ];
     }
 
     public IReadOnlyList<McpToolDefinition> ListTools() => _tools;
 
-    public Task<object> CallAsync(string name, JsonElement arguments)
+    public async Task<object> CallAsync(string name, JsonElement arguments)
     {
         object result = name switch
         {
@@ -93,10 +136,21 @@ public sealed class SewerStudioToolRegistry
                     GetString(arguments, "knowledge_root") ?? _options.KnowledgeRoot,
                     RequireString(arguments, "case_id"))
             },
+            "live_control_health" => await LiveControlClient.HealthAsync(
+                GetString(arguments, "live_control_url") ?? _options.LiveControlUrl).ConfigureAwait(false),
+            "live_set_resource_brush" => await LiveControlClient.SetResourceBrushAsync(
+                GetString(arguments, "live_control_url") ?? _options.LiveControlUrl,
+                RequireString(arguments, "key"),
+                RequireString(arguments, "color")).ConfigureAwait(false),
+            "live_set_button_background" => await LiveControlClient.SetButtonBackgroundAsync(
+                GetString(arguments, "live_control_url") ?? _options.LiveControlUrl,
+                GetString(arguments, "target"),
+                RequireString(arguments, "color"),
+                GetInt(arguments, "max_matches")).ConfigureAwait(false),
             _ => throw new InvalidOperationException($"Unbekanntes Tool: {name}")
         };
 
-        return Task.FromResult(result);
+        return result;
     }
 
     private static JsonElement Schema(object schema)

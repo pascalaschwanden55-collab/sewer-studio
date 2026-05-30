@@ -23,6 +23,7 @@ using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.Reports;
+using AuswertungPro.Next.UI.LiveControl;
 using AuswertungPro.Next.UI.Views.Windows;
 using AuswertungPro.Next.UI.Services;
 
@@ -33,6 +34,7 @@ namespace AuswertungPro.Next.UI
 
         private static ServiceProvider? _services;
         private static int _handlingException;
+        private LiveControlServer? _liveControlServer;
 
         public static IServiceProvider Services
             => _services ?? throw new InvalidOperationException("Services are not initialized.");
@@ -66,6 +68,9 @@ namespace AuswertungPro.Next.UI
                     b.AddProvider(new FileLoggerProvider(logPath));
                 });
                 var logger = loggerFactory.CreateLogger("App");
+                _liveControlServer = LiveControlServer.TryStartFromEnvironment(
+                    this,
+                    loggerFactory.CreateLogger<LiveControlServer>());
 
                 var diagnostics = new DiagnosticsOptions
                 {
@@ -178,6 +183,7 @@ namespace AuswertungPro.Next.UI
         {
             try
             {
+                _liveControlServer?.Dispose();
                 AppSettings.FlushPendingSave();
             }
             catch

@@ -3,7 +3,8 @@ namespace AuswertungPro.Tools.SewerStudioMcpServer;
 public sealed record SewerStudioMcpOptions(
     string HaltungenRoot,
     string DiagnosticsOutputDir,
-    string KnowledgeRoot)
+    string KnowledgeRoot,
+    string LiveControlUrl)
 {
     public static SewerStudioMcpOptions FromArgs(IReadOnlyList<string> args)
     {
@@ -13,6 +14,8 @@ public sealed record SewerStudioMcpOptions(
                                 ?? Path.Combine(FindRepoRoot(), "tools", "ProtocolPipelineDiagnostics", "output");
         var knowledgeRoot = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT")
                             ?? @"C:\KI_BRAIN";
+        var liveControlUrl = Environment.GetEnvironmentVariable("SEWERSTUDIO_LIVE_CONTROL_URL")
+                             ?? "http://127.0.0.1:8765/";
 
         for (var i = 0; i < args.Count; i++)
         {
@@ -27,10 +30,13 @@ public sealed record SewerStudioMcpOptions(
                 case "--knowledge-root" when i + 1 < args.Count:
                     knowledgeRoot = args[++i];
                     break;
+                case "--live-control-url" when i + 1 < args.Count:
+                    liveControlUrl = args[++i];
+                    break;
             }
         }
 
-        return new SewerStudioMcpOptions(haltungenRoot, diagnosticsOutput, knowledgeRoot);
+        return new SewerStudioMcpOptions(haltungenRoot, diagnosticsOutput, knowledgeRoot, liveControlUrl);
     }
 
     private static string FindRepoRoot()
