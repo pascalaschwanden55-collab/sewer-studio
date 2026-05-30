@@ -45,15 +45,28 @@ public sealed class XtfNetworkExtractor
                 else if (local == "Verlauf") inVerlauf = true;
                 else if (inVerlauf && local == "C1")
                 {
-                    c1 = double.Parse(reader.ReadElementContentAsString(), CultureInfo.InvariantCulture);
+                    var raw = reader.ReadElementContentAsString();
                     skipRead = true;
+                    if (double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var c1Val))
+                        c1 = c1Val;
+                    else
+                    {
+                        // Fehlerhafte Koordinate — gesamte Haltung verwerfen
+                        points = null;
+                        c1 = null;
+                    }
                 }
                 else if (inVerlauf && local == "C2" && c1.HasValue)
                 {
-                    var c2 = double.Parse(reader.ReadElementContentAsString(), CultureInfo.InvariantCulture);
-                    points!.Add((c1.Value, c2));
-                    c1 = null;
+                    var raw = reader.ReadElementContentAsString();
                     skipRead = true;
+                    if (points != null && double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var c2Val))
+                    {
+                        points.Add((c1.Value, c2Val));
+                        c1 = null;
+                    }
+                    else
+                        points = null; // Fehlerhafte Koordinate oder bereits verworfene Haltung
                 }
             }
             else if (reader.NodeType == XmlNodeType.EndElement)

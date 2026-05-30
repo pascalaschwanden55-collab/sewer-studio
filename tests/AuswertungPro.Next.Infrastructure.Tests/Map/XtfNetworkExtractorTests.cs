@@ -34,4 +34,39 @@ public class XtfNetworkExtractorTests
         }
         finally { File.Delete(path); }
     }
+
+    private const string MalformedC1Xtf = @"<?xml version='1.0' encoding='UTF-8'?>
+<TRANSFER><DATASECTION><SIA405_ABWASSER_2020_LV95 BID='b'>
+  <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID='bad'>
+    <Bezeichnung>schlechte-Haltung</Bezeichnung>
+    <Verlauf><POLYLINE>
+      <COORD><C1>abc</C1><C2>1194863.079</C2></COORD>
+      <COORD><C1>2690500.961</C1><C2>1194862.355</C2></COORD>
+    </POLYLINE></Verlauf>
+  </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+  <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID='good'>
+    <Bezeichnung>gute-Haltung</Bezeichnung>
+    <Verlauf><POLYLINE>
+      <COORD><C1>2690511.225</C1><C2>1194863.079</C2></COORD>
+      <COORD><C1>2690500.961</C1><C2>1194862.355</C2></COORD>
+    </POLYLINE></Verlauf>
+  </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+</SIA405_ABWASSER_2020_LV95></DATASECTION></TRANSFER>";
+
+    [Fact]
+    public void Extract_UebergehtHaltungMitUngueltigerKoordinate_LiefertNurGueltigeHaltung()
+    {
+        // Erste Haltung hat ein nicht-parsbares C1 ("abc") — sie muss stillschweigend
+        // uebersprungen werden. Die zweite Haltung ist valide und muss zurueckgegeben werden.
+        var path = Path.GetTempFileName();
+        File.WriteAllText(path, MalformedC1Xtf);
+        try
+        {
+            var result = new XtfNetworkExtractor().Extract(path).ToList();
+            Assert.Single(result);
+            Assert.Equal("gute-Haltung", result[0].Haltungsname);
+            Assert.Equal(2, result[0].Points.Count);
+        }
+        finally { File.Delete(path); }
+    }
 }
