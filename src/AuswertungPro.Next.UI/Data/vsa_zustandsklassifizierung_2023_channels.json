@@ -2,7 +2,33 @@
   "schemaVersion": 2,
   "source": "VSA_Rili_ Zustandsbeurteilung von Entwaesserungsanlagen.pdf / docs/vsa-zustandsklassifizierung-2023-schwellen.md",
   "assetKind": "channel",
+  "approximateEzWhenUnquantified": [
+    { "code": "BAA", "ez": 2, "reason": "Verformung ohne Messwert – mittlerer Naeherungswert (entspricht Basiswert der Regel)." },
+    { "code": "BAB", "ez": 2, "reason": "Riss ohne Messwert – mittlerer Naeherungswert." },
+    { "code": "BAC", "ez": 1, "reason": "Bruch ohne Messwert – strukturell ernst, konservativ." },
+    { "code": "BAF", "ez": 3, "reason": "Oberflaechenschaden ohne Messwert – Ausmass unbekannt, vorsichtig mild." },
+    { "code": "BAI", "ez": 2, "reason": "Einragendes Material ohne Messwert – kann Abfluss behindern." },
+    { "code": "BBC", "ez": 3, "reason": "Ablagerung ohne Messwert – meist betrieblich, mittelfristig." }
+  ],
   "nonAssessableCodes": [
+    {
+      "code": "AEC",
+      "codeMatch": "prefix",
+      "reason": "Rohrprofilwechsel (Anlagen-/Stammdaten-Aenderung); kein Schaden, keine Zustandsnote.",
+      "sourceRef": "Fachliche Freigabe 2026-05-30"
+    },
+    {
+      "code": "AED",
+      "codeMatch": "prefix",
+      "reason": "Rohrmaterialwechsel (Anlagen-/Stammdaten-Aenderung); kein Schaden, keine Zustandsnote.",
+      "sourceRef": "Fachliche Freigabe 2026-05-30"
+    },
+    {
+      "code": "AEF",
+      "codeMatch": "prefix",
+      "reason": "Neue Baulaenge / Verbindung (Anlagen-/Stammdaten-Aenderung); kein Schaden, keine Zustandsnote.",
+      "sourceRef": "Fachliche Freigabe 2026-05-30"
+    },
     {
       "code": "BCA",
       "codeMatch": "prefix",

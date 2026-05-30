@@ -99,7 +99,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
             var b = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
 
-            ApplyRecordFields(record, d, s, b);
+            ApplyRecordFields(record, d, s, b, classified.Any(c => c.Approximated));
 
             results.Add(d);
             results.Add(s);
@@ -144,7 +144,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
         var b = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
 
-        ApplyRecordFields(record, d, s, b);
+        ApplyRecordFields(record, d, s, b, classified.Any(c => c.Approximated));
 
         return Result<bool>.Success(true);
     }
@@ -164,7 +164,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         foreach (var record in project.Data)
         {
             var findings = ResolveFindings(record, model.KnownCodes);
-            var classified = ClassifyFindingsV2(findings, model.Selector, record, model.KnownCodes, out var unknownForRecord);
+            var classified = ClassifyFindingsV2(findings, model.Selector, record, model.KnownCodes, model.ApproxEz, out var unknownForRecord);
             unknownCodeCount += unknownForRecord;
 
             var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
@@ -175,7 +175,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
             var b = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
 
-            ApplyRecordFields(record, d, s, b);
+            ApplyRecordFields(record, d, s, b, classified.Any(c => c.Approximated));
 
             results.Add(d);
             results.Add(s);
@@ -199,7 +199,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
         var model = modelResult.Value;
         var findings = ResolveFindings(record, model.KnownCodes);
-        var classified = ClassifyFindingsV2(findings, model.Selector, record, model.KnownCodes, out _);
+        var classified = ClassifyFindingsV2(findings, model.Selector, record, model.KnownCodes, model.ApproxEz, out _);
 
         var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
         const double minLength = 3.0;
@@ -209,7 +209,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         var s = ComputeForRequirement(VsaRequirement.Standsicherheit, classified, assessmentLength, minLength, rb);
         var b = ComputeForRequirement(VsaRequirement.Betriebssicherheit, classified, assessmentLength, minLength, rb);
 
-        ApplyRecordFields(record, d, s, b);
+        ApplyRecordFields(record, d, s, b, classified.Any(c => c.Approximated));
 
         return Result<bool>.Success(true);
     }
@@ -400,7 +400,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
         var model = modelResult.Value;
         var findings = ResolveFindings(record, model.KnownCodes);
-        var classified = ClassifyFindingsV2(findings, model.Selector, record, model.KnownCodes, out var unknownForRecord);
+        var classified = ClassifyFindingsV2(findings, model.Selector, record, model.KnownCodes, model.ApproxEz, out var unknownForRecord);
 
         var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
         const double minLength = 3.0;
@@ -495,9 +495,11 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             var manholes = VsaClassificationRuleSet.LoadFromFile(_v2ManholesTablePath);
             var selector = new VsaClassificationRuleSelector(channels, manholes);
             var knownCodes = BuildKnownV2Codes(channels, manholes);
+            var approxEz = BuildApproxEz(channels, manholes);
             return Result<LoadedV2Model>.Success(new LoadedV2Model(
                 selector,
                 knownCodes,
+                approxEz,
                 Path.GetFileName(_v2ChannelsTablePath)));
         }
         catch (Exception ex)
@@ -529,6 +531,20 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         var normalized = NormalizeCode(code);
         if (normalized.Length > 0)
             knownCodes.Add(normalized);
+    }
+
+    // Naeherungstabelle: Basiscode -> EZ (wenn kein Messwert vorhanden).
+    private static IReadOnlyDictionary<string, int> BuildApproxEz(params VsaClassificationRuleSet[] ruleSets)
+    {
+        var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var ruleSet in ruleSets)
+            foreach (var item in ruleSet.ApproximateEzWhenUnquantified)
+            {
+                var code = NormalizeCode(item.Code);
+                if (code.Length > 0 && item.Ez is >= 0 and <= 4)
+                    map[code] = item.Ez;
+            }
+        return map;
     }
 
     // -- Feststellungen aufloesen / klassifizieren --
@@ -584,6 +600,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         VsaClassificationRuleSelector selector,
         HaltungRecord record,
         IReadOnlySet<string> knownCodes,
+        IReadOnlyDictionary<string, int> approxEz,
         out int unknownCodeCount)
     {
         var list = new List<ClassifiedFinding>();
@@ -636,7 +653,21 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
                 && outcome.Diagnostics.All(d => d.Reason.Equals("rule-not-found", StringComparison.OrdinalIgnoreCase)))
                 continue;
 
-            list.Add(new ClassifiedFinding(finding, classification, isUnknown));
+            // Naeherung: Schadencode ohne benotbaren Messwert -> Standard-Schaetzwert je Code.
+            // Greift nur, wenn die Regeln keinen EZ liefern konnten – echte Messwerte haben Vorrang.
+            var approximated = false;
+            if (classification.EZD is null
+                && classification.EZS is null
+                && classification.EZB is null
+                && approxEz.TryGetValue(baseCode, out var fallbackEz))
+            {
+                classification = baseCode.StartsWith("BB", StringComparison.Ordinal)
+                    ? classification with { EZB = fallbackEz }   // betriebliche Schaeden
+                    : classification with { EZS = fallbackEz };  // strukturelle Schaeden
+                approximated = true;
+            }
+
+            list.Add(new ClassifiedFinding(finding, classification, isUnknown, approximated));
         }
 
         return list;
@@ -787,7 +818,8 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         HaltungRecord record,
         VsaConditionResult dResult,
         VsaConditionResult sResult,
-        VsaConditionResult bResult)
+        VsaConditionResult bResult,
+        bool approximated = false)
     {
         record.SetFieldValue("VSA_Zustandsnote_D", FmtNote(dResult.Zustandsnote), FieldSource.Legacy, userEdited: false);
         record.SetFieldValue("VSA_Zustandsnote_S", FmtNote(sResult.Zustandsnote), FieldSource.Legacy, userEdited: false);
@@ -800,6 +832,9 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
 
         record.SetFieldValue("Zustandsklasse", MapZustandsklasse(worstZn), FieldSource.Legacy, userEdited: false);
         record.SetFieldValue("Pruefungsresultat", BuildPruefungsresultat(worstZn), FieldSource.Legacy, userEdited: false);
+
+        // Markierung, wenn die Note (teilweise) auf Naeherungswerten beruht (fehlende Messwerte).
+        record.SetFieldValue("VSA_Geschaetzt", approximated ? "ja" : "", FieldSource.Legacy, userEdited: false);
     }
 
     private static void AppendRequirementSection(StringBuilder sb, VsaConditionResult result)
@@ -1132,7 +1167,8 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
     private sealed record ClassifiedFinding(
         VsaFinding Finding,
         VsaClassificationResult Classification,
-        bool IsUnknown);
+        bool IsUnknown,
+        bool Approximated = false);
 
     private sealed record PrimaryDamageCodeCandidate(
         string Code,
@@ -1145,5 +1181,6 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
     private sealed record LoadedV2Model(
         VsaClassificationRuleSelector Selector,
         IReadOnlySet<string> KnownCodes,
+        IReadOnlyDictionary<string, int> ApproxEz,
         string SourceName);
 }
