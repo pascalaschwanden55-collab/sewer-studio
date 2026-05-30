@@ -107,6 +107,20 @@ public sealed class SewerStudioToolRegistry
                     },
                     required = new[] { "color" },
                     additionalProperties = false
+                })),
+            new McpToolDefinition(
+                "retry_holding",
+                "Re-runs the KI video analysis for one holding in the running SewerStudio app (live). Requires the app open with SEWERSTUDIO_LIVE_CONTROL=1 and the project containing the holding loaded. Returns immediately; analysis continues in the app window.",
+                Schema(new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        haltungsname = new { type = "string", description = "Holding name as shown in the project, e.g. 06.24341-35625." },
+                        live_control_url = new { type = "string", description = "Optional Live-Control URL override. Default http://127.0.0.1:8765/." }
+                    },
+                    required = new[] { "haltungsname" },
+                    additionalProperties = false
                 }))
         ];
     }
@@ -147,6 +161,9 @@ public sealed class SewerStudioToolRegistry
                 GetString(arguments, "target"),
                 RequireString(arguments, "color"),
                 GetInt(arguments, "max_matches")).ConfigureAwait(false),
+            "retry_holding" => await LiveControlClient.RetryHoldingAsync(
+                GetString(arguments, "live_control_url") ?? _options.LiveControlUrl,
+                RequireString(arguments, "haltungsname")).ConfigureAwait(false),
             _ => throw new InvalidOperationException($"Unbekanntes Tool: {name}")
         };
 

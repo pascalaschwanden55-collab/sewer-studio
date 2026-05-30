@@ -182,6 +182,16 @@ public sealed class LiveControlServer : IDisposable
             return Ok(result);
         }
 
+        if (request.Method == "POST" && request.Path == "/pipeline/retry")
+        {
+            var command = JsonSerializer.Deserialize<RetryHoldingRequest>(request.Body, JsonOptions)
+                          ?? throw new InvalidOperationException("Request-Body fehlt.");
+            var result = await _dispatcher
+                .InvokeAsync(() => LiveControlRetryBridge.Invoke(command.Haltungsname ?? ""))
+                .Task.ConfigureAwait(false);
+            return Ok(new { ok = result.Ok, message = result.Message, haltung = command.Haltungsname });
+        }
+
         return new LiveHttpResponse(404, new { ok = false, error = "Unbekannter Live-Control-Endpunkt." });
     }
 
@@ -332,4 +342,5 @@ public sealed class LiveControlServer : IDisposable
     private readonly record struct LiveHttpResponse(int StatusCode, object Payload);
     private sealed record SetResourceBrushRequest(string? Key, string? Color);
     private sealed record SetButtonBackgroundRequest(string? Target, string? Color, int? MaxMatches);
+    private sealed record RetryHoldingRequest(string? Haltungsname);
 }

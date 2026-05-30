@@ -17,14 +17,17 @@ Implemented tools:
 - `live_control_health`
 - `live_set_resource_brush`
 - `live_set_button_background`
+- `retry_holding`
 
-Write operations such as retrying failed holdings or marking samples reviewed are
-out of scope until the diagnostic run output is available.
+Marking samples reviewed remains out of scope.
 
 Live-control tools are a narrow exception: they only talk to the running WPF app
 over `127.0.0.1` and only work when the app was started with
-`SEWERSTUDIO_LIVE_CONTROL=1`. They are intended for temporary UI tuning, not
-persistent project data changes.
+`SEWERSTUDIO_LIVE_CONTROL=1`. The UI tools (`live_set_*`) are temporary tuning,
+not persistent data changes. `retry_holding` re-runs the existing KI video
+analysis for one holding via the running app (same code path as the UI button);
+it requires the project containing the holding to be loaded and returns
+immediately while the analysis window runs.
 
 ## Run
 
@@ -63,3 +66,4 @@ Examples:
 - `live_control_health`
 - `live_set_resource_brush` with `{ "key": "AccentBrush", "color": "gelb" }`
 - `live_set_button_background` with `{ "target": "Speichern", "color": "gelb" }`
+- `retry_holding` with `{ "haltungsname": "06.24341-35625" }`

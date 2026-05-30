@@ -32,6 +32,13 @@ public static class LiveControlClient
             "buttons/background",
             new { target, color, max_matches = maxMatches }).ConfigureAwait(false);
 
+    public static async Task<object> RetryHoldingAsync(string liveControlUrl, string haltungsname)
+        => await SendAsync(
+            liveControlUrl,
+            HttpMethod.Post,
+            "pipeline/retry",
+            new { haltungsname }).ConfigureAwait(false);
+
     private static async Task<object> SendAsync(string liveControlUrl, HttpMethod method, string path, object? body)
     {
         var url = BuildUrl(liveControlUrl, path);
