@@ -30,6 +30,7 @@
     <PackageReference Include="QuestPDF" Version="2026.2.0" />
     <PackageReference Include="UglyToad.PdfPig" Version="1.7.0-custom-5" />
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23" />
+    <PackageReference Include="Mapsui.Wpf" Version="5.1.0" />
   </ItemGroup>
 
   <ItemGroup>
