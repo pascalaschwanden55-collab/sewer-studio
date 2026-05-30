@@ -134,6 +134,7 @@ public partial class PlayerWindow : Window
     // Guard-Flag: wird am Anfang von OnClosing gesetzt, bevor MediaPlayer freigegeben wird.
     // Alle DispatcherTimer-Tick-Handler pruefen dieses Flag als erste Aktion (early-out).
     private volatile bool _closing;
+    private bool _playbackDisposed;
 
     private static PlayerWindow? _lastOpened;
 
@@ -283,8 +284,8 @@ public partial class PlayerWindow : Window
             if (ReferenceEquals(_lastOpened, this))
                 _lastOpened = null;
 
-            // Codier-Modus sauber beenden: Timer + Hintergrund-Tasks stoppen
-            // MUSS vor Cleanup() passieren, da sonst Timer auf disposed VLC zugreifen
+            // Codier-Modus sauber beenden: Timer + Hintergrund-Tasks stoppen.
+            // Cleanup() ist idempotent, weil OnClosing den VLC-Player bereits freigeben kann.
             _isCodingMode = false;
             StopCodingOsdTimer();
             _codingAnalysisCts?.Cancel();
