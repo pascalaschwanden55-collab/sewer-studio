@@ -95,11 +95,11 @@ public sealed partial class KarteViewModel : ObservableObject
             }
         }
 
-        // ── Karten-Mittelpunkt Uri/Altdorf (EPSG:3857) ───────────────────────
-        // WebMercator Zoom-Level 14 ≈ 9.55 m/px
-        map.Navigator.CenterOnAndZoomTo(new MPoint(960296, 5925558), 9.55);
-
         // ── Klick-Handler: Haltungsname setzen ───────────────────────────────
+        // Hinweis: CenterOnAndZoomTo wird NICHT hier aufgerufen, weil der
+        // MapControl zu diesem Zeitpunkt noch keinen gültigen Viewport hat.
+        // CenterOnUriAndRefresh() wird stattdessen aus dem Code-Behind aufgerufen,
+        // sobald der MapControl eine echte Größe besitzt (SizeChanged-Einmal-Handler).
         _map = map;
         map.Navigator.FetchRequested += (_, _) => RefreshVisibleNetworkLayer(force: false);
 
@@ -115,6 +115,17 @@ public sealed partial class KarteViewModel : ObservableObject
         }
 
         return map;
+    }
+
+    /// <summary>
+    /// Zentriert die Karte auf Uri/Altdorf und lädt die sichtbaren Netzlinien.
+    /// Wird aus dem Code-Behind aufgerufen, sobald der MapControl eine gültige Größe hat.
+    /// </summary>
+    public void CenterOnUriAndRefresh()
+    {
+        // WebMercator-Koordinaten Uri/Altdorf; Zoom-Level 14 ≈ 9.55 m/px
+        _map?.Navigator.CenterOnAndZoomTo(new MPoint(960296, 5925558), 9.55);
+        RefreshVisibleNetworkLayer(force: true);
     }
 
     public void RefreshVisibleNetworkLayer(bool force)
