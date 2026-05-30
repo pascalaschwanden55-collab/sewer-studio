@@ -5,14 +5,16 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Map;
 /// <summary>
 /// Tests fuer CoordinateTransform LV95 -> WebMercator (Naeherungsformel).
 ///
-/// Referenzwerte (REFRAME-API geodesy.geo.admin.ch, abgefragt 2026-05-30):
+/// WGS84-Referenzwerte (REFRAME-API geodesy.geo.admin.ch, abgefragt 2026-05-30):
 ///   E=2'600'000 / N=1'200'000  -> lon=7.438632420871814  lat=46.9510827728495
 ///   E=2'690'511.225 / N=1'194'863.079 -> lon=8.626486614290537  lat=46.89871734160188
 ///
-/// WebMercator daraus berechnet:  X = lon * 20037508.342789244 / 180
-///                                 Y = ln(tan((90+lat)*PI/360)) * 20037508.342789244 / 180
-///   Fundamentalpunkt: X=828064.773  Y=103569.464
-///   Uri-Punkt:        X=960296.097  Y=103420.494
+/// EPSG:3857-Referenzwerte berechnet mit:
+///   X = lon * 20037508.342789244 / 180          (= lon * R * PI/180, korrekt)
+///   Y = ln(tan((90+lat)*PI/360)) * 6378137.0    (Erdradius R, korrekt)
+/// Quelle WGS84-Werte: https://geodesy.geo.admin.ch/reframe/lv95towgs84 (swisstopo REFRAME)
+///   Fundamentalpunkt: X=828064.773  Y=5934093.188
+///   Uri-Punkt:        X=960296.097  Y=5925557.806
 ///
 /// Toleranz: +-10 m (Naeherungsformel hat ca. 1 m Genauigkeit).
 /// </summary>
@@ -26,9 +28,10 @@ public class CoordinateTransformTests
         // Arrange
         // LV95-Fundamentalpunkt (Nullpunkt des Netzes, nahe Bern)
         // Referenz REFRAME geodesy.geo.admin.ch: lon=7.438632420871814 lat=46.9510827728495
-        // -> WebMercator X=828064.773  Y=103569.464
+        // -> EPSG:3857 X = lon*20037508.342789244/180, Y = ln(tan((90+lat)*PI/360))*6378137.0
+        // -> WebMercator X=828064.773  Y=5934093.188
         const double expectedX = 828064.773;
-        const double expectedY = 103569.464;
+        const double expectedY = 5934093.188;
 
         // Act
         var (x, y) = CoordinateTransform.Lv95ToWebMercator(2_600_000.0, 1_200_000.0);
@@ -46,9 +49,10 @@ public class CoordinateTransformTests
         // Arrange
         // Uri/Altdorf-Punkt aus Haltungsdaten
         // Referenz REFRAME geodesy.geo.admin.ch: lon=8.626486614290537 lat=46.89871734160188
-        // -> WebMercator X=960296.097  Y=103420.494
+        // -> EPSG:3857 X = lon*20037508.342789244/180, Y = ln(tan((90+lat)*PI/360))*6378137.0
+        // -> WebMercator X=960296.097  Y=5925557.806
         const double expectedX = 960296.097;
-        const double expectedY = 103420.494;
+        const double expectedY = 5925557.806;
 
         // Act
         var (x, y) = CoordinateTransform.Lv95ToWebMercator(2_690_511.225, 1_194_863.079);

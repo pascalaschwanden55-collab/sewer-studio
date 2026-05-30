@@ -21,10 +21,11 @@ public static class CoordinateTransform
     //                - 0.0447*y^2*x - 0.0140*x^3) * 100/36
     //
     // Schritt 2: WGS84 -> WebMercator (EPSG:3857, exakt)
-    //   X = lon * 20037508.342789244 / 180
-    //   Y = ln(tan((90+lat)*PI/360)) * 20037508.342789244 / 180
+    //   X = lon * 20037508.342789244 / 180   (= lon * R_earth * PI/180)
+    //   Y = ln(tan((90+lat)*PI/360)) * R_earth   (R_earth = 6378137.0, NICHT Halbumfang/180)
 
-    private const double R = 20037508.342789244; // Halbumfang Erde in Metern (WebMercator)
+    private const double R        = 6378137.0;           // Erdradius in Metern (WebMercator EPSG:3857)
+    private const double HalfCirc = 20037508.342789244;  // R * PI — fuer X-Formel
 
     /// <summary>
     /// Konvertiert LV95/CH1903+ Koordinaten (EPSG:2056) in WebMercator (EPSG:3857).
@@ -57,8 +58,10 @@ public static class CoordinateTransform
         double latDeg = latArcsec * 100.0 / 36.0;
 
         // --- Schritt 2: WGS84 -> WebMercator (exakt) ---
-        double mercX = lonDeg * R / 180.0;
-        double mercY = Math.Log(Math.Tan((90.0 + latDeg) * Math.PI / 360.0)) * R / 180.0;
+        // X: lon [deg] * HalfCirc / 180  =  lon * R * PI / 180  (korrekt)
+        // Y: ln(tan(...)) * R            (Erdradius, NICHT HalfCirc/180 — das war der Fehler)
+        double mercX = lonDeg * HalfCirc / 180.0;
+        double mercY = Math.Log(Math.Tan((90.0 + latDeg) * Math.PI / 360.0)) * R;
 
         return (mercX, mercY);
     }
