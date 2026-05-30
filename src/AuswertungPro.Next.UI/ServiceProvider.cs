@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net.Http;
 using Microsoft.Extensions.Logging;
 
-using AuswertungPro.Next.Application.Devis;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Import;
@@ -14,7 +13,6 @@ using AuswertungPro.Next.Application.Protocol;
 // using AuswertungPro.Next.Application.Reports; // entfernt, da bereits oben vorhanden
 using AuswertungPro.Next.Application.Vsa;
 
-using AuswertungPro.Next.Infrastructure.Devis;
 using AuswertungPro.Next.Infrastructure.Export;
 using AuswertungPro.Next.Infrastructure.Export.Excel;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
@@ -80,10 +78,6 @@ namespace AuswertungPro.Next.UI
         public IMeasureRecommendationService MeasureRecommendation { get; }
         public IRetrievalService? Retrieval { get; }
         public IKnowledgeBaseDiagnosticsRunner KnowledgeBaseDiagnostics { get; }
-
-        // Eigendevis
-        public IDevisGenerator DevisGenerator { get; }
-        public DevisExcelExporter DevisExcelExporter { get; }
 
         public ServiceProvider(AppSettings settings, DiagnosticsOptions diagnostics, ILogger logger, ILoggerFactory loggerFactory)
                 // Removed misplaced property initialization
@@ -188,12 +182,6 @@ namespace AuswertungPro.Next.UI
             MeasureRecommendation = new Infrastructure.Ai.MeasureRecommendationService(
                 KnowledgeBasePaths.GetMeasuresLearningPath(),
                 KnowledgeBasePaths.GetMeasuresModelPath());
-
-            // Eigendevis
-            var devisMappingPath = Path.Combine(AppContext.BaseDirectory, "Config", "devis_mappings.json");
-            var devisMappingService = new DevisMappingService(devisMappingPath);
-            DevisGenerator = new Infrastructure.Devis.DevisGenerator(devisMappingService);
-            DevisExcelExporter = new DevisExcelExporter();
         }
 
         public IVideoAnalysisPipelineService CreateVideoAnalysisPipeline(

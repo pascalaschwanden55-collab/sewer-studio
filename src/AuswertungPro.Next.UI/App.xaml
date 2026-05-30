@@ -34,9 +34,6 @@
             <DataTemplate DataType="{x:Type vm:VsaPageViewModel}">
                 <views:VsaPage/>
             </DataTemplate>
-            <DataTemplate DataType="{x:Type vm:EigendevisPageViewModel}">
-                <views:EigendevisPage/>
-            </DataTemplate>
             <DataTemplate DataType="{x:Type vm:DiagnosticsPageViewModel}">
                 <views:DiagnosticsPage/>
             </DataTemplate>
