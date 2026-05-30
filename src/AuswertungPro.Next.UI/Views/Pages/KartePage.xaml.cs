@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using System.Windows.Threading;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
@@ -22,6 +23,13 @@ public partial class KartePage : UserControl
 
             var map = await _vm.BuildMapAsync();
             MapControl.Map = map;
+            await Dispatcher.InvokeAsync(
+                () =>
+                {
+                    _vm.RefreshVisibleNetworkLayer(force: true);
+                    MapControl.ForceUpdate();
+                },
+                DispatcherPriority.Loaded);
         };
     }
 }
