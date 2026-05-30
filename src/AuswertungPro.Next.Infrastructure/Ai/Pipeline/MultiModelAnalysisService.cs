@@ -95,6 +95,12 @@ public sealed class MultiModelAnalysisService
 
         var telemetry = new PipelineTelemetry();
 
+        // Stufen-Trace pro Lauf (reine Sichtbarkeit, aendert kein Verhalten).
+        var runId = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture)
+                    + "_" + Guid.NewGuid().ToString("N")[..6];
+        _logger.LogInformation("Multi-Model Pipeline runId={RunId}, Stufen-Trace: {TracePath}",
+            runId, PipelineTraceWriter.ResolvePath(runId));
+
         await using var stream = VideoFrameStream.Open(
             _ffmpegPath, videoPath, FrameStepSeconds, duration, ct);
 
@@ -105,6 +111,14 @@ public sealed class MultiModelAnalysisService
             frameIndex++;
             var t = frame.TimestampSeconds;
 
+            var trace = new PipelineFrameTrace
+            {
+                RunId = runId,
+                TimestampUtc = DateTimeOffset.UtcNow,
+                FrameIndex = frameIndex,
+                TimeSec = t,
+            };
+
             // Extraction timing is effectively 0 for streaming (already read)
             var extractionMs = frameSw.ElapsedMilliseconds;
             var frameBytes = frame.PngBytes;
@@ -112,6 +126,9 @@ public sealed class MultiModelAnalysisService
             if (frameBytes is null or { Length: 0 })
             {
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                trace.Path = "empty_frame";
+                trace.DropReason = "empty_frame";
+                await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
                 AdvanceAll(active, detections, DedupWindowFrames);
                 continue;
             }
@@ -129,6 +146,9 @@ public sealed class MultiModelAnalysisService
             // Jeden 3. Frame immer analysieren (Bestandsaufnahme-Sweep)
             bool isPeriodicSweep = isAfterOsd && (frameIndex % 3 == 0);
             bool telemetryBypass = isBcdZone || isBceZone || isPeriodicSweep;
+
+            trace.Meter = estimatedMeter;
+            trace.YoloBypass = telemetryBypass;
 
             // ── Step 1: YOLO Pre-Screening ──
             var phaseSw = Stopwatch.StartNew();
@@ -173,6 +193,10 @@ public sealed class MultiModelAnalysisService
                             $"Frame {frameIndex}/{totalFrames} – cls: {topPred.ClassName} ({topPred.Confidence:P0}) → skip"));
                         telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0,
                             frameSw.ElapsedMilliseconds, Skipped: true));
+                        trace.Path = "yolo_cls_skip";
+                        trace.YoloRelevant = false;
+                        trace.DropReason = "yolo_cls_normal";
+                        await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
                         AdvanceAll(active, detections, DedupWindowFrames);
                         continue;
                     }
@@ -224,11 +248,17 @@ public sealed class MultiModelAnalysisService
                     progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                         $"Frame {frameIndex} – YOLO Fehler: {ex.Message}"));
                     telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, phaseSw.ElapsedMilliseconds, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                    trace.Path = "yolo_error";
+                    trace.DropReason = "yolo_error";
+                    await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
                     AdvanceAll(active, detections, DedupWindowFrames);
                     continue;
                 }
                 yoloMs = phaseSw.ElapsedMilliseconds;
             }
+
+            trace.YoloRelevant = yoloResult.IsRelevant;
+            trace.YoloDetectionCount = yoloResult.Detections.Count;
 
             if (!yoloResult.IsRelevant)
             {
@@ -236,6 +266,9 @@ public sealed class MultiModelAnalysisService
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex}/{totalFrames} – übersprungen (YOLO: irrelevant, {skippedFrames} gesamt)"));
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                trace.Path = "yolo_irrelevant";
+                trace.DropReason = "yolo_irrelevant";
+                await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
                 AdvanceAll(active, detections, DedupWindowFrames);
                 continue;
             }
@@ -262,14 +295,21 @@ public sealed class MultiModelAnalysisService
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex} – DINO Fehler: {ex.Message}"));
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, phaseSw.ElapsedMilliseconds, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                trace.Path = "dino_error";
+                trace.DropReason = "dino_error";
+                await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
                 AdvanceAll(active, detections, DedupWindowFrames);
                 continue;
             }
             var dinoMs = phaseSw.ElapsedMilliseconds;
+            trace.DinoBoxCount = dinoResult.Detections.Count;
 
             if (dinoResult.Detections.Count == 0)
             {
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, 0, 0, frameSw.ElapsedMilliseconds, Skipped: false));
+                trace.Path = "dino_no_boxes";
+                trace.DropReason = "dino_no_boxes";
+                await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
                 AdvanceAll(active, detections, DedupWindowFrames);
                 continue;
             }
@@ -296,10 +336,14 @@ public sealed class MultiModelAnalysisService
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex} – SAM Fehler: {ex.Message}"));
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, phaseSw.ElapsedMilliseconds, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                trace.Path = "sam_error";
+                trace.DropReason = "sam_error";
+                await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
                 AdvanceAll(active, detections, DedupWindowFrames);
                 continue;
             }
             var samMs = phaseSw.ElapsedMilliseconds;
+            trace.SamMaskCount = samResult.Masks.Count;
 
             // ── Step 4: Quantification ──
             var quantified = MaskQuantificationService.QuantifyAll(samResult, pipeDiameterMm);
@@ -337,6 +381,9 @@ public sealed class MultiModelAnalysisService
                 ));
             }
 
+            trace.FindingsBuilt = findings.Count;
+            trace.CodesFromLabel = findings.Count(f => !string.IsNullOrWhiteSpace(f.VsaCodeHint));
+
             // Build per-frame EvidenceVector with pipeline signals
             var frameEvidence = new EvidenceVector(
                 YoloConf: yoloResult.IsRelevant ? 1.0 : 0.0,
@@ -350,6 +397,7 @@ public sealed class MultiModelAnalysisService
             long qwenMs = 0;
             if (_qwenVision is not null && findings.Count > 0)
             {
+                trace.QwenCalled = true;
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex}/{totalFrames} – Qwen VSA-Code-Mapping...",
                     FramePreviewPng: frameBytes));
@@ -378,6 +426,9 @@ public sealed class MultiModelAnalysisService
                         frameBase64, multiModelContext, pipeDiameterMm, qwenCts.Token,
                         previousFinding: prevCtx).ConfigureAwait(false);
 
+                    trace.QwenImageQuality = qwenResult.ImageQuality;
+                    trace.QwenRawFindingCount = qwenResult.Findings.Count;
+
                     // OSD-Meterstand IMMER uebernehmen (auch ohne Findings)
                     if (qwenResult.Meter.HasValue)
                     {
@@ -391,6 +442,7 @@ public sealed class MultiModelAnalysisService
                     {
                         _logger.LogDebug("Frame {Frame}: ImageQuality=schlecht, {Count} Findings verworfen",
                             frameIndex, findings.Count);
+                        trace.DropReason = "image_quality_bad";
                         findings.Clear();
                     }
 
@@ -432,11 +484,13 @@ public sealed class MultiModelAnalysisService
                 }
                 catch (OperationCanceledException) when (!ct.IsCancellationRequested)
                 {
+                    trace.DropReason = "qwen_timeout";
                     _logger.LogWarning("Frame {Frame}: Qwen VSA-Code-Mapping timeout ({Timeout}s)",
                         frameIndex, QwenFrameTimeout.TotalSeconds);
                 }
                 catch (Exception ex)
                 {
+                    trace.DropReason = "qwen_error";
                     _logger.LogWarning(ex, "Frame {Frame}: Qwen VSA-Code-Mapping fehlgeschlagen", frameIndex);
                 }
                 qwenMs = phaseSw.ElapsedMilliseconds;
@@ -459,6 +513,20 @@ public sealed class MultiModelAnalysisService
 
             // Update active findings (dedup)
             UpdateActive(active, findings, meter, detections, frameEvidence);
+
+            trace.Meter = meter;
+            trace.FindingsEndOfFrame = findings.Count;
+            trace.CodesAfterQwen = findings.Count(f => !string.IsNullOrWhiteSpace(f.VsaCodeHint));
+            trace.ActiveCount = active.Count;
+            trace.DetectionsTotal = detections.Count;
+            if (trace.DropReason is null)
+            {
+                if (findings.Count == 0)
+                    trace.DropReason = "no_findings";
+                else if (trace.CodesAfterQwen == 0)
+                    trace.DropReason = "all_findings_missing_code";
+            }
+            await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
 
             progress?.Report(new VideoAnalysisProgress(
                 frameIndex, totalFrames,
