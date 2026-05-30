@@ -1,0 +1,63 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.KartePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mapsui="clr-namespace:Mapsui.UI.Wpf;assembly=Mapsui.UI.Wpf">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ═══ KARTE ═══ -->
+        <mapsui:MapControl x:Name="MapControl" Grid.Row="0"/>
+
+        <!-- ═══ LEGENDE + STATUSLEISTE ═══ -->
+        <Border Grid.Row="1" Padding="10,6" Background="{DynamicResource CardBrush}"
+                BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderLightBrush}">
+            <DockPanel>
+
+                <!-- Legende links -->
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Zustand: " FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextBrush}"/>
+
+                    <Border Width="14" Height="14" Background="Green" CornerRadius="2" Margin="4,0,2,0"/>
+                    <TextBlock Text="Gut" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextBrush}" Margin="0,0,8,0"/>
+
+                    <Border Width="14" Height="14" Background="Orange" CornerRadius="2" Margin="0,0,2,0"/>
+                    <TextBlock Text="Mittel" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextBrush}" Margin="0,0,8,0"/>
+
+                    <Border Width="14" Height="14" Background="Red" CornerRadius="2" Margin="0,0,2,0"/>
+                    <TextBlock Text="Schlecht" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextBrush}" Margin="0,0,8,0"/>
+
+                    <Border Width="14" Height="14" Background="Gray" CornerRadius="2" Margin="0,0,2,0"/>
+                    <TextBlock Text="Unbekannt" FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextBrush}" Margin="0,0,16,0"/>
+                </StackPanel>
+
+                <!-- Gewählte Haltung + Schaltfläche Mitte -->
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Ausgewählt: " FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource MutedBrush}"/>
+                    <TextBlock Text="{Binding SelectedHaltungsname, TargetNullValue=—}"
+                               FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextBrush}" Margin="4,0,12,0"/>
+                    <Button Content="Inspektion öffnen"
+                            Command="{Binding OpenInspektionCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            Padding="12,4"/>
+                </StackPanel>
+
+                <!-- Statustext rechts -->
+                <TextBlock DockPanel.Dock="Right" Text="{Binding StatusText}"
+                           FontSize="11" VerticalAlignment="Center" HorizontalAlignment="Right"
+                           Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis"
+                           MaxWidth="400" Margin="16,0,0,0"/>
+
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>
