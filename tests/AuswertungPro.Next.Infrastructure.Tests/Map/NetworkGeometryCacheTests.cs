@@ -29,6 +29,15 @@ public class NetworkGeometryCacheTests
             Assert.True(File.Exists(cache));
             var second = sut.Load(xtf).ToList();
             Assert.Equal("A-B", second[0].Haltungsname);
+
+            // Koordinaten muessen den Cache-Roundtrip unveraendert ueberstehen.
+            // Ohne IncludeFields=true serialisiert System.Text.Json Wertetupel-Felder
+            // nicht, sodass alle Punkte als (0,0) zurueckkommen.
+            Assert.Equal(2, second[0].Points.Count);
+            Assert.Equal(2690000.0, second[0].Points[0].X);
+            Assert.Equal(1190000.0, second[0].Points[0].Y);
+            Assert.Equal(2690010.0, second[0].Points[1].X);
+            Assert.Equal(1190000.0, second[0].Points[1].Y);
         }
         finally { Directory.Delete(dir, true); }
     }

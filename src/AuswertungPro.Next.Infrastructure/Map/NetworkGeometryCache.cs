@@ -15,6 +15,14 @@ public sealed class NetworkGeometryCache
     private readonly string _cacheFilePath;
     private readonly XtfNetworkExtractor _extractor = new();
 
+    // Version 2: IncludeFields=true serialisiert Wertetupel-Felder (Item1/Item2) korrekt.
+    // Aeltere Caches (Version fehlt oder != 2) werden verworfen und neu gebaut.
+    private const int CurrentFormatVersion = 2;
+
+    // IncludeFields=true ist noetig, damit Wertetupel-Felder (Item1/Item2) serialisiert werden.
+    // Ohne diese Option liefert System.Text.Json nur leere Objekte {} fuer jeden Punkt.
+    private static readonly JsonSerializerOptions JsonOpts = new() { IncludeFields = true };
+
     public NetworkGeometryCache(string? cacheFilePath = null)
     {
         _cacheFilePath = cacheFilePath ?? Path.Combine(
@@ -22,7 +30,7 @@ public sealed class NetworkGeometryCache
             "SewerStudio", "map", "network_cache.json");
     }
 
-    private sealed record CacheFile(string XtfPath, long XtfTicks, List<HaltungGeometry> Items);
+    private sealed record CacheFile(int FormatVersion, string XtfPath, long XtfTicks, List<HaltungGeometry> Items);
 
     public IReadOnlyList<HaltungGeometry> Load(string xtfPath)
     {
@@ -31,8 +39,11 @@ public sealed class NetworkGeometryCache
         {
             try
             {
-                var cached = JsonSerializer.Deserialize<CacheFile>(File.ReadAllText(_cacheFilePath));
-                if (cached is not null && cached.XtfPath == xtfPath && cached.XtfTicks == xtfTicks)
+                var cached = JsonSerializer.Deserialize<CacheFile>(File.ReadAllText(_cacheFilePath), JsonOpts);
+                if (cached is not null
+                    && cached.FormatVersion == CurrentFormatVersion
+                    && cached.XtfPath == xtfPath
+                    && cached.XtfTicks == xtfTicks)
                     return cached.Items;
             }
             catch { /* Cache defekt -> neu bauen */ }
@@ -41,7 +52,7 @@ public sealed class NetworkGeometryCache
         var items = _extractor.Extract(xtfPath).ToList();
         Directory.CreateDirectory(Path.GetDirectoryName(_cacheFilePath)!);
         File.WriteAllText(_cacheFilePath,
-            JsonSerializer.Serialize(new CacheFile(xtfPath, xtfTicks, items)));
+            JsonSerializer.Serialize(new CacheFile(CurrentFormatVersion, xtfPath, xtfTicks, items), JsonOpts));
         return items;
     }
 }
