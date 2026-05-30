@@ -51,7 +51,6 @@ namespace AuswertungPro.Next.UI
                 splash.Show();
                 splash.Activate();
                 await Dispatcher.Yield(DispatcherPriority.Background);
-                var splashStart = DateTime.UtcNow;
 
                 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
@@ -122,10 +121,12 @@ namespace AuswertungPro.Next.UI
                 MainWindow = mainWindow;
                 mainWindow.Show();
 
-                var minSplashDuration = TimeSpan.FromMilliseconds(5000);
-                var elapsed = DateTime.UtcNow - splashStart;
-                if (elapsed < minSplashDuration)
-                    await splash.WaitAsync(minSplashDuration - elapsed);
+                // Splash erst ausblenden, wenn der Fortschrittsbalken durchgelaufen ist –
+                // sonst wird die Startanimation bei schnellem Start abgeschnitten.
+                // Sicherheitskappe: max. 15 s, falls die Animation nicht meldet.
+                await Task.WhenAny(
+                    splash.WaitForProgressAsync(),
+                    Task.Delay(TimeSpan.FromMilliseconds(15000)));
 
                 await Task.WhenAll(
                     AnimateOpacityAsync(mainWindow, to: 1, duration: TimeSpan.FromMilliseconds(500), EasingMode.EaseOut),
