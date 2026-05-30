@@ -82,7 +82,6 @@ public sealed partial class ShellViewModel : ObservableObject
             new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(this)),
             new("\uE128", "VSA", () => new Pages.VsaPageViewModel(this, _sp)),
             new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(_sp)),
-            new("\uE707", "Karte", () => new Pages.KarteViewModel(this)),
             new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(_sp), canOpenWithoutProject: true)
         };
         RefreshNavigationAvailability();
