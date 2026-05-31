@@ -44,6 +44,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         InitializeComponent();
 
+        // Haltungsansicht teilt sich Selected/Records mit der Tabelle; Detail-Aufbau wie im Detailfenster
+        HaltungsansichtView.DetailBuilder = BuildHaltungRecordDetails;
+
         _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(180) };
         _searchDebounceTimer.Tick += (_, __) =>
         {
@@ -1153,6 +1156,16 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     // ── Haltung Record Details ──────────────────────────────────────────
 
+    // Umschalter Tabelle <-> Haltungsansicht: beide Sichten teilen Selected/Records
+    private void HaltungsansichtToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        var showAnsicht = HaltungsansichtToggle.IsChecked == true;
+        HaltungsansichtView.Visibility = showAnsicht ? Visibility.Visible : Visibility.Collapsed;
+        Grid.Visibility = showAnsicht ? Visibility.Collapsed : Visibility.Visible;
+    }
+
     private void ShowHaltungRecordDetails(HaltungRecord record)
     {
         var holding = record.GetFieldValue("Haltungsname");
@@ -1532,6 +1545,12 @@ public partial class DataPage : System.Windows.Controls.UserControl
             // Guard-Flag setzen damit der Unloaded-Handler nicht interferiert
             _isUndocking = true;
 
+            // Haltungsansicht ist an die eingebettete Tabelle gebunden: beim Abdocken zuerst
+            // auf die Tabellensicht zurueck, dann den Umschalter sperren.
+            if (HaltungsansichtToggle.IsChecked == true)
+                HaltungsansichtToggle.IsChecked = false; // loest HaltungsansichtToggle_Changed -> Tabelle sichtbar
+            HaltungsansichtToggle.IsEnabled = false;
+
             // FloatingGridWindow erstellen (VOR dem Entfernen des DataGrids!)
             _floatingGridWindow = new FloatingGridWindow();
             _floatingGridWindow.DockBackRequested += DockGridBack;
@@ -1574,6 +1593,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             Grid.Visibility = Visibility.Visible;
             UndockedPlaceholder.Visibility = Visibility.Collapsed;
             UndockButton.IsEnabled = true;
+            HaltungsansichtToggle.IsEnabled = true; // bei fehlgeschlagenem Abdocken Umschalter wieder freigeben
 
             if (_floatingGridWindow is not null)
             {
@@ -1619,6 +1639,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         // Platzhalter ausblenden
         UndockedPlaceholder.Visibility = Visibility.Collapsed;
         UndockButton.IsEnabled = true;
+        HaltungsansichtToggle.IsEnabled = true;
     }
 
     private void FloatingGridWindow_Closed(object? sender, EventArgs e)
@@ -1646,6 +1667,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         UndockedPlaceholder.Visibility = Visibility.Collapsed;
         UndockButton.IsEnabled = true;
+        HaltungsansichtToggle.IsEnabled = true;
     }
 
     private void UpdateFloatingWindowInfo()
