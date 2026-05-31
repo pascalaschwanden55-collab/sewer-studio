@@ -344,6 +344,12 @@ public sealed class KnowledgeBaseManager(
             return false;
         if (VsaCodeResolver.LookupLabel(sample.Code) is null)
             return false;
+        // D7: nur fachlich plausible Befunde lernen (kein Muell in die KB).
+        if (!TrainingSamplePlausibility.IsFachlichPlausibel(sample, out var reason))
+        {
+            Debug.WriteLine($"[KnowledgeBaseManager] Sample {sample.SampleId} fachlich implausibel: {reason}");
+            return false;
+        }
         return true;
     }
 }
