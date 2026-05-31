@@ -90,7 +90,9 @@ public sealed class MultiModelAnalysisService
         {
             DedupWindowFrames = DedupWindowFrames,
             NormalizeFallbackLabels = true,
-            NormalizeOutputClock = false
+            NormalizeOutputClock = false,
+            MinStretchLengthMeters = 1.0,
+            MeterMergeGapMaxMeters = 1.0
         });
         int frameIndex = 0;
         int skippedFrames = 0;

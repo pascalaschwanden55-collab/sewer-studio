@@ -14,6 +14,8 @@ internal sealed class TemporalDedupOptions
     public int DedupWindowFrames { get; init; } = 3;
     public bool NormalizeFallbackLabels { get; init; } = true;
     public bool NormalizeOutputClock { get; init; }
+    public double MinStretchLengthMeters { get; init; } = 1.0;
+    public double? MeterMergeGapMaxMeters { get; init; }
 }
 
 internal sealed class TemporalFindingDeduplicator
@@ -47,7 +49,15 @@ internal sealed class TemporalFindingDeduplicator
         {
             if (currentMap.TryGetValue(key, out var finding))
             {
-                _active[key].Update(
+                var active = _active[key];
+                if (ShouldStartNewFinding(active, meter))
+                {
+                    completed.Add(active.ToDetection());
+                    _active.Remove(key);
+                    continue;
+                }
+
+                active.Update(
                     meter,
                     finding.Severity,
                     finding.VsaCodeHint,
@@ -90,6 +100,7 @@ internal sealed class TemporalFindingDeduplicator
                 finding.CrossSectionReductionPercent,
                 finding.DiameterReductionMm,
                 _options.NormalizeOutputClock,
+                _options.MinStretchLengthMeters,
                 evidence);
         }
 
@@ -120,10 +131,19 @@ internal sealed class TemporalFindingDeduplicator
         return completed;
     }
 
-    public static double ResolveMeterEnd(string? vsaCode, double meterStart, double observedMeterEnd)
+    public static double ResolveMeterEnd(
+        string? vsaCode,
+        double meterStart,
+        double observedMeterEnd,
+        double minStretchLengthMeters = 1.0)
         => VsaCodeResolver.IsStreckenschadenCode(vsaCode ?? string.Empty)
+            && observedMeterEnd - meterStart >= minStretchLengthMeters
             ? observedMeterEnd
             : meterStart;
+
+    private bool ShouldStartNewFinding(ActiveFindingState active, double meter)
+        => _options.MeterMergeGapMaxMeters is { } maxGap
+            && meter - active.MeterEnd > maxGap;
 
     private string BuildFindingKey(EnhancedFinding finding)
     {
@@ -194,6 +214,7 @@ internal sealed class TemporalFindingDeduplicator
     private sealed class ActiveFindingState
     {
         private readonly bool _normalizeOutputClock;
+        private readonly double _minStretchLengthMeters;
 
         public string Name { get; }
         public double MeterStart { get; }
@@ -224,9 +245,11 @@ internal sealed class TemporalFindingDeduplicator
             int? crossSection,
             int? diameterReduction,
             bool normalizeOutputClock,
+            double minStretchLengthMeters,
             EvidenceVector? evidence = null)
         {
             _normalizeOutputClock = normalizeOutputClock;
+            _minStretchLengthMeters = minStretchLengthMeters;
             Name = name;
             MeterStart = start;
             MeterEnd = start;
@@ -274,7 +297,7 @@ internal sealed class TemporalFindingDeduplicator
         }
 
         public RawVideoDetection ToDetection() =>
-            new(Name, MeterStart, ResolveMeterEnd(VsaCodeHint, MeterStart, MeterEnd), SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock,
+            new(Name, MeterStart, ResolveMeterEnd(VsaCodeHint, MeterStart, MeterEnd, _minStretchLengthMeters), SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock,
                 ExtentPercent, HeightMm, WidthMm, IntrusionPercent, CrossSectionReductionPercent, DiameterReductionMm,
                 Evidence: Evidence is not null ? Evidence with { FrameCount = FrameCount } : null);
 

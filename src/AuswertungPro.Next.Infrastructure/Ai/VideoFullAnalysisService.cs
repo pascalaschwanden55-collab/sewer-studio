@@ -83,7 +83,9 @@ public sealed class VideoFullAnalysisService
         {
             DedupWindowFrames = DedupWindowFrames,
             NormalizeFallbackLabels = false,
-            NormalizeOutputClock = true
+            NormalizeOutputClock = true,
+            MinStretchLengthMeters = 1.0,
+            MeterMergeGapMaxMeters = 1.0
         });
         var frameIndex = 0;
 

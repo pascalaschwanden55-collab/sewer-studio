@@ -26,6 +26,14 @@ public class MeterRangeResolutionTests
     }
 
     [Fact]
+    public void ResolveMeterEnd_StretchDamageShorterThanOneMeter_CollapsesToStart()
+    {
+        // Fachregel: Erst ab 1.0m wird aus einem Ereignis ein Streckenschaden.
+        var end = TemporalFindingDeduplicator.ResolveMeterEnd("BBA", 12.3, 12.9);
+        Assert.Equal(12.3, end);
+    }
+
+    [Fact]
     public void ResolveMeterEnd_UnknownOrNullCode_TreatedAsPoint()
     {
         Assert.Equal(12.3, TemporalFindingDeduplicator.ResolveMeterEnd(null, 12.3, 12.9));

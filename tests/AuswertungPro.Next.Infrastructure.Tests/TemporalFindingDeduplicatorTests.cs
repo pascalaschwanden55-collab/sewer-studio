@@ -15,11 +15,11 @@ public class TemporalFindingDeduplicatorTests
         });
 
         Assert.Empty(deduplicator.Update(new[] { Finding("Wurzeln", "BBA", 2, "3:00") }, 5.0));
-        Assert.Empty(deduplicator.Update(new[] { Finding("Wurzeln", "BBA", 4, "3") }, 5.7));
+        Assert.Empty(deduplicator.Update(new[] { Finding("Wurzeln", "BBA", 4, "3") }, 6.1));
 
         var detection = Assert.Single(deduplicator.Flush());
         Assert.Equal(5.0, detection.MeterStart);
-        Assert.Equal(5.7, detection.MeterEnd);
+        Assert.Equal(6.1, detection.MeterEnd);
         Assert.Equal("high", detection.Severity);
         Assert.Equal("BBA", detection.VsaCodeHint);
     }
@@ -80,6 +80,46 @@ public class TemporalFindingDeduplicatorTests
         Assert.Equal(0.7, detection.Evidence.DinoConf);
         Assert.Equal(0.8, detection.Evidence.SamMaskStability);
         Assert.Equal(2, detection.Evidence.FrameCount);
+    }
+
+    [Fact]
+    public void Update_GapGreaterThanOneMeter_StartsNewFinding()
+    {
+        var deduplicator = new TemporalFindingDeduplicator(new TemporalDedupOptions
+        {
+            DedupWindowFrames = 3,
+            MeterMergeGapMaxMeters = 1.0
+        });
+
+        Assert.Empty(deduplicator.Update(new[] { Finding("Wurzeln", "BBA", 2, "3") }, 5.0));
+        Assert.Empty(deduplicator.Update(new[] { Finding("Wurzeln", "BBA", 2, "3") }, 6.0));
+
+        var completed = deduplicator.Update(new[] { Finding("Wurzeln", "BBA", 2, "3") }, 7.1);
+
+        var first = Assert.Single(completed);
+        Assert.Equal(5.0, first.MeterStart);
+        Assert.Equal(6.0, first.MeterEnd);
+
+        var second = Assert.Single(deduplicator.Flush());
+        Assert.Equal(7.1, second.MeterStart);
+        Assert.Equal(7.1, second.MeterEnd);
+    }
+
+    [Fact]
+    public void Update_GapAtOneMeter_KeepsSameFinding()
+    {
+        var deduplicator = new TemporalFindingDeduplicator(new TemporalDedupOptions
+        {
+            DedupWindowFrames = 3,
+            MeterMergeGapMaxMeters = 1.0
+        });
+
+        deduplicator.Update(new[] { Finding("Wurzeln", "BBA", 2, "3") }, 5.0);
+        Assert.Empty(deduplicator.Update(new[] { Finding("Wurzeln", "BBA", 2, "3") }, 6.0));
+
+        var detection = Assert.Single(deduplicator.Flush());
+        Assert.Equal(5.0, detection.MeterStart);
+        Assert.Equal(6.0, detection.MeterEnd);
     }
 
     private static EnhancedFinding Finding(string label, string? code, int severity, string? clock) =>
