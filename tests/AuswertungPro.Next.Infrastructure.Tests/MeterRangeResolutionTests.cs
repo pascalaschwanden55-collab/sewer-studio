@@ -13,7 +13,7 @@ public class MeterRangeResolutionTests
     public void ResolveMeterEnd_PointDamage_CollapsesToStart()
     {
         // BCA = seitlicher Anschluss = Punktschaden -> eine Stelle
-        var end = MultiModelAnalysisService.ResolveMeterEnd("BCA", 12.3, 12.9);
+        var end = TemporalFindingDeduplicator.ResolveMeterEnd("BCA", 12.3, 12.9);
         Assert.Equal(12.3, end);
     }
 
@@ -21,14 +21,14 @@ public class MeterRangeResolutionTests
     public void ResolveMeterEnd_StretchDamage_KeepsObservedRange()
     {
         // BBA = Wurzeln = Streckenschaden -> Bereich behalten
-        var end = MultiModelAnalysisService.ResolveMeterEnd("BBA", 12.3, 18.0);
+        var end = TemporalFindingDeduplicator.ResolveMeterEnd("BBA", 12.3, 18.0);
         Assert.Equal(18.0, end);
     }
 
     [Fact]
     public void ResolveMeterEnd_UnknownOrNullCode_TreatedAsPoint()
     {
-        Assert.Equal(12.3, MultiModelAnalysisService.ResolveMeterEnd(null, 12.3, 12.9));
-        Assert.Equal(12.3, MultiModelAnalysisService.ResolveMeterEnd("", 12.3, 12.9));
+        Assert.Equal(12.3, TemporalFindingDeduplicator.ResolveMeterEnd(null, 12.3, 12.9));
+        Assert.Equal(12.3, TemporalFindingDeduplicator.ResolveMeterEnd("", 12.3, 12.9));
     }
 }

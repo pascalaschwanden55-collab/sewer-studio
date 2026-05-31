@@ -79,7 +79,12 @@ public sealed class VideoFullAnalysisService
 
         var totalFrames = (int)Math.Ceiling(duration / FrameStepSeconds);
         var detections = new List<RawVideoDetection>();
-        var active = new Dictionary<string, ActiveFinding>(StringComparer.OrdinalIgnoreCase);
+        var deduplicator = new TemporalFindingDeduplicator(new TemporalDedupOptions
+        {
+            DedupWindowFrames = DedupWindowFrames,
+            NormalizeFallbackLabels = false,
+            NormalizeOutputClock = true
+        });
         var frameIndex = 0;
 
         progress?.Report(new VideoAnalysisProgress(0, totalFrames, "Analyse gestartet..."));
@@ -102,7 +107,7 @@ public sealed class VideoFullAnalysisService
             if (frameBytes is null or { Length: 0 })
             {
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
-                AdvanceAll(active, detections, DedupWindowFrames);
+                detections.AddRange(deduplicator.AdvanceAll());
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex}/{totalFrames} â€“ kein Bild"));
                 continue;
@@ -134,7 +139,7 @@ public sealed class VideoFullAnalysisService
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex}/{totalFrames} â€“ Timeout bei KI-Analyse ({VisionFrameTimeout.TotalSeconds:0}s)"));
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, visionSw.ElapsedMilliseconds, frameSw.ElapsedMilliseconds, Skipped: true));
-                AdvanceAll(active, detections, DedupWindowFrames);
+                detections.AddRange(deduplicator.AdvanceAll());
                 continue;
             }
             catch (OperationCanceledException) { throw; }
@@ -143,7 +148,7 @@ public sealed class VideoFullAnalysisService
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex}/{totalFrames} â€“ Fehler: {ex.Message}"));
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, visionSw.ElapsedMilliseconds, frameSw.ElapsedMilliseconds, Skipped: true));
-                AdvanceAll(active, detections, DedupWindowFrames);
+                detections.AddRange(deduplicator.AdvanceAll());
                 continue;
             }
             var qwenMs = visionSw.ElapsedMilliseconds;
@@ -172,7 +177,7 @@ public sealed class VideoFullAnalysisService
                     DiameterReductionMm: f.DiameterReductionMm))
                 .ToList();
 
-            UpdateActive(active, current, meter, detections);
+            detections.AddRange(deduplicator.Update(current, meter));
 
             progress?.Report(new VideoAnalysisProgress(
                 frameIndex,
@@ -182,8 +187,7 @@ public sealed class VideoFullAnalysisService
                 LiveFindings: liveFindings));
         }
 
-        foreach (var a in active.Values)
-            detections.Add(a.ToDetection());
+        detections.AddRange(deduplicator.Flush());
 
         progress?.Report(new VideoAnalysisProgress(totalFrames, totalFrames,
             $"Fertig â€“ {detections.Count} SchÃ¤den erkannt."));
@@ -193,77 +197,6 @@ public sealed class VideoFullAnalysisService
     }
 
     // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-    private void UpdateActive(
-        Dictionary<string, ActiveFinding> active,
-        List<EnhancedFinding> current,
-        double meter,
-        List<RawVideoDetection> completed)
-    {
-        var currentMap = new Dictionary<string, EnhancedFinding>(StringComparer.OrdinalIgnoreCase);
-        foreach (var f in current)
-        {
-            var key = BuildFindingKey(f);
-            if (!currentMap.ContainsKey(key))
-                currentMap[key] = f;
-        }
-
-        foreach (var key in active.Keys.ToList())
-        {
-            if (currentMap.TryGetValue(key, out var finding))
-            {
-                active[key].Update(meter, finding.Severity, finding.VsaCodeHint, finding.PositionClock, finding.ExtentPercent,
-                    finding.HeightMm, finding.WidthMm, finding.IntrusionPercent, finding.CrossSectionReductionPercent, finding.DiameterReductionMm);
-            }
-            else
-            {
-                active[key].MissedFrames++;
-                // BUG 1.2 FIX: DedupWindowFrames
-                if (active[key].MissedFrames >= DedupWindowFrames)
-                {
-                    completed.Add(active[key].ToDetection());
-                    active.Remove(key);
-                }
-            }
-        }
-
-        foreach (var pair in currentMap)
-        {
-            if (!active.ContainsKey(pair.Key))
-            {
-                var f = pair.Value;
-                active[pair.Key] = new ActiveFinding(
-                    f.Label.Trim(),
-                    meter,
-                    f.Severity,
-                    f.VsaCodeHint,
-                    f.PositionClock,
-                    f.ExtentPercent,
-                    f.HeightMm,
-                    f.WidthMm,
-                    f.IntrusionPercent,
-                    f.CrossSectionReductionPercent,
-                    f.DiameterReductionMm);
-            }
-        }
-    }
-
-    // BUG 1.2 FIX: dedupWindow als Parameter statt hardcoded 3
-    private static void AdvanceAll(
-        Dictionary<string, ActiveFinding> active,
-        List<RawVideoDetection> completed,
-        int dedupWindow)
-    {
-        foreach (var key in active.Keys.ToList())
-        {
-            active[key].MissedFrames++;
-            if (active[key].MissedFrames >= dedupWindow)
-            {
-                completed.Add(active[key].ToDetection());
-                active.Remove(key);
-            }
-        }
-    }
 
     // Dauer + Fehler
     private async Task<(double duration, string error)> GetVideoDurationWithErrorAsync(string videoPath, CancellationToken ct)
@@ -419,55 +352,6 @@ public sealed class VideoFullAnalysisService
         return Math.Round(_lastKnownMeter + Math.Max(step, 0.01), 2);
     }
 
-    private static string BuildFindingKey(EnhancedFinding finding)
-    {
-        var keyBase = VsaCodeResolver.NormalizeFindingCode(finding.VsaCodeHint)
-            ?? VsaCodeResolver.InferCodeFromLabel(finding.Label)
-            ?? finding.Label.Trim();
-        var clock = NormalizeClock(finding.PositionClock);
-        return string.IsNullOrWhiteSpace(clock) ? keyBase : $"{keyBase}|{clock}";
-    }
-
-    private static int? TryParseClockHour(string? raw)
-    {
-        var normalized = NormalizeClock(raw);
-        if (string.IsNullOrWhiteSpace(normalized))
-            return null;
-
-        var m = Regex.Match(normalized, @"\b(?<h>1[0-2]|0?[1-9])\b");
-        if (!m.Success)
-            return null;
-
-        return int.TryParse(m.Groups["h"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var h)
-            ? h
-            : null;
-    }
-
-    private static string? NormalizeClock(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim().ToLowerInvariant();
-        if (text.Contains("oben") || text.Contains("scheitel") || text.Contains("krone"))
-            return "12:00";
-        if (text.Contains("unten") || text.Contains("sohle"))
-            return "6:00";
-        if (text.Contains("rechts")) return "3:00";
-        if (text.Contains("links")) return "9:00";
-
-        var match = Regex.Match(raw, @"\b(1[0-2]|0?[1-9])\b");
-        if (match.Success
-            && int.TryParse(match.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var hour)
-            && hour >= 1
-            && hour <= 12)
-        {
-            return $"{hour}:00";
-        }
-
-        return raw.Trim();
-    }
-
     private static string DeriveFFprobePath(string ffmpegPath)
     {
         if (string.IsNullOrWhiteSpace(ffmpegPath) ||
@@ -476,90 +360,6 @@ public sealed class VideoFullAnalysisService
         var dir = Path.GetDirectoryName(ffmpegPath);
         var ext = Path.GetExtension(ffmpegPath);
         return string.IsNullOrWhiteSpace(dir) ? "ffprobe" + ext : Path.Combine(dir, "ffprobe" + ext);
-    }
-
-    private sealed class ActiveFinding
-    {
-        public string Name { get; }
-        public double MeterStart { get; }
-        public double MeterEnd { get; private set; }
-        public int MaxSeverity { get; private set; }
-        public string? VsaCodeHint { get; private set; }
-        public string? PositionClock { get; private set; }
-        public int? ExtentPercent { get; private set; }
-        public int? HeightMm { get; private set; }
-        public int? WidthMm { get; private set; }
-        public int? IntrusionPercent { get; private set; }
-        public int? CrossSectionReductionPercent { get; private set; }
-        public int? DiameterReductionMm { get; private set; }
-        public int MissedFrames { get; set; }
-
-        public ActiveFinding(
-            string name,
-            double start,
-            int severity,
-            string? hint,
-            string? positionClock,
-            int? extentPercent,
-            int? heightMm = null,
-            int? widthMm = null,
-            int? intrusionPercent = null,
-            int? crossSectionReductionPercent = null,
-            int? diameterReductionMm = null)
-        {
-            Name = name; MeterStart = start; MeterEnd = start;
-            MaxSeverity = severity; VsaCodeHint = hint;
-            PositionClock = NormalizeClock(positionClock);
-            ExtentPercent = extentPercent is null ? null : Math.Clamp(extentPercent.Value, 1, 100);
-            HeightMm = heightMm;
-            WidthMm = widthMm;
-            IntrusionPercent = intrusionPercent;
-            CrossSectionReductionPercent = crossSectionReductionPercent;
-            DiameterReductionMm = diameterReductionMm;
-        }
-
-        public void Update(
-            double meter,
-            int severity,
-            string? hint,
-            string? positionClock,
-            int? extentPercent,
-            int? heightMm = null,
-            int? widthMm = null,
-            int? intrusionPercent = null,
-            int? crossSectionReductionPercent = null,
-            int? diameterReductionMm = null)
-        {
-            MeterEnd = meter;
-            MissedFrames = 0;
-            if (severity > MaxSeverity) MaxSeverity = severity;
-            if (!string.IsNullOrWhiteSpace(hint)) VsaCodeHint = hint;
-            if (!string.IsNullOrWhiteSpace(positionClock))
-                PositionClock = NormalizeClock(positionClock);
-            if (extentPercent is { } e)
-                ExtentPercent = Math.Max(ExtentPercent ?? 0, Math.Clamp(e, 1, 100));
-            if (heightMm is { } h)
-                HeightMm = Math.Max(HeightMm ?? 0, h);
-            if (widthMm is { } w)
-                WidthMm = Math.Max(WidthMm ?? 0, w);
-            if (intrusionPercent is { } ip)
-                IntrusionPercent = Math.Max(IntrusionPercent ?? 0, ip);
-            if (crossSectionReductionPercent is { } csr)
-                CrossSectionReductionPercent = Math.Max(CrossSectionReductionPercent ?? 0, csr);
-            if (diameterReductionMm is { } dr)
-                DiameterReductionMm = Math.Max(DiameterReductionMm ?? 0, dr);
-        }
-
-        public RawVideoDetection ToDetection() =>
-            // D4: Punkt/Strecken-Aufloesung wie im Multi-Model-Pfad wiederverwenden -
-            // Punktschaeden kollabieren auf MeterStart, sonst entstuenden kuenstliche Mini-Strecken
-            // (und das downstream aus der Spanne abgeleitete IsStreckenschaden-Flag kippt faelschlich).
-            new(Name, MeterStart,
-                Pipeline.MultiModelAnalysisService.ResolveMeterEnd(VsaCodeHint, MeterStart, MeterEnd),
-                SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock, ExtentPercent,
-                HeightMm, WidthMm, IntrusionPercent, CrossSectionReductionPercent, DiameterReductionMm);
-
-        private static string SeverityLabel(int s) => s >= 4 ? "high" : s == 3 ? "mid" : "low";
     }
 }
 

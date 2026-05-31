@@ -86,7 +86,12 @@ public sealed class MultiModelAnalysisService
 
         var totalFrames = (int)Math.Ceiling(duration / FrameStepSeconds);
         var detections = new List<RawVideoDetection>();
-        var active = new Dictionary<string, ActiveFindingState>(StringComparer.OrdinalIgnoreCase);
+        var deduplicator = new TemporalFindingDeduplicator(new TemporalDedupOptions
+        {
+            DedupWindowFrames = DedupWindowFrames,
+            NormalizeFallbackLabels = true,
+            NormalizeOutputClock = false
+        });
         int frameIndex = 0;
         int skippedFrames = 0;
         double lastMeter = 0;
@@ -133,7 +138,7 @@ public sealed class MultiModelAnalysisService
                 trace.Path = "empty_frame";
                 trace.DropReason = "empty_frame";
                 await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
-                AdvanceAll(active, detections, DedupWindowFrames);
+                detections.AddRange(deduplicator.AdvanceAll());
                 continue;
             }
 
@@ -201,7 +206,7 @@ public sealed class MultiModelAnalysisService
                         trace.YoloRelevant = false;
                         trace.DropReason = "yolo_cls_normal";
                         await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
-                        AdvanceAll(active, detections, DedupWindowFrames);
+                        detections.AddRange(deduplicator.AdvanceAll());
                         continue;
                     }
 
@@ -255,7 +260,7 @@ public sealed class MultiModelAnalysisService
                     trace.Path = "yolo_error";
                     trace.DropReason = "yolo_error";
                     await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
-                    AdvanceAll(active, detections, DedupWindowFrames);
+                    detections.AddRange(deduplicator.AdvanceAll());
                     continue;
                 }
                 yoloMs = phaseSw.ElapsedMilliseconds;
@@ -273,7 +278,7 @@ public sealed class MultiModelAnalysisService
                 trace.Path = "yolo_irrelevant";
                 trace.DropReason = "yolo_irrelevant";
                 await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
-                AdvanceAll(active, detections, DedupWindowFrames);
+                detections.AddRange(deduplicator.AdvanceAll());
                 continue;
             }
 
@@ -302,7 +307,7 @@ public sealed class MultiModelAnalysisService
                 trace.Path = "dino_error";
                 trace.DropReason = "dino_error";
                 await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
-                AdvanceAll(active, detections, DedupWindowFrames);
+                detections.AddRange(deduplicator.AdvanceAll());
                 continue;
             }
             var dinoMs = phaseSw.ElapsedMilliseconds;
@@ -314,7 +319,7 @@ public sealed class MultiModelAnalysisService
                 trace.Path = "dino_no_boxes";
                 trace.DropReason = "dino_no_boxes";
                 await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
-                AdvanceAll(active, detections, DedupWindowFrames);
+                detections.AddRange(deduplicator.AdvanceAll());
                 continue;
             }
 
@@ -343,7 +348,7 @@ public sealed class MultiModelAnalysisService
                 trace.Path = "sam_error";
                 trace.DropReason = "sam_error";
                 await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
-                AdvanceAll(active, detections, DedupWindowFrames);
+                detections.AddRange(deduplicator.AdvanceAll());
                 continue;
             }
             var samMs = phaseSw.ElapsedMilliseconds;
@@ -516,12 +521,12 @@ public sealed class MultiModelAnalysisService
             )).ToList();
 
             // Update active findings (dedup)
-            UpdateActive(active, findings, meter, detections, frameEvidence);
+            detections.AddRange(deduplicator.Update(findings, meter, frameEvidence));
 
             trace.Meter = meter;
             trace.FindingsEndOfFrame = findings.Count;
             trace.CodesAfterQwen = findings.Count(f => !string.IsNullOrWhiteSpace(f.VsaCodeHint));
-            trace.ActiveCount = active.Count;
+            trace.ActiveCount = deduplicator.ActiveCount;
             trace.DetectionsTotal = detections.Count;
             if (trace.DropReason is null)
             {
@@ -539,9 +544,7 @@ public sealed class MultiModelAnalysisService
                 LiveFindings: liveFindings));
         }
 
-        // Flush remaining active findings
-        foreach (var a in active.Values)
-            detections.Add(a.ToDetection());
+        detections.AddRange(deduplicator.Flush());
 
         _logger.LogInformation(
             "Multi-Model Pipeline complete: {Detections} detections, {Skipped}/{Total} frames skipped, {Duration:F1}s video",
@@ -668,71 +671,6 @@ public sealed class MultiModelAnalysisService
         return Path.GetFullPath(path);
     }
 
-    private void UpdateActive(
-        Dictionary<string, ActiveFindingState> active,
-        List<EnhancedFinding> current,
-        double meter,
-        List<RawVideoDetection> completed,
-        EvidenceVector? evidence = null)
-    {
-        var currentMap = new Dictionary<string, EnhancedFinding>(StringComparer.OrdinalIgnoreCase);
-        foreach (var f in current)
-        {
-            var key = BuildFindingKey(f);
-            if (!currentMap.ContainsKey(key))
-                currentMap[key] = f;
-        }
-
-        foreach (var key in active.Keys.ToList())
-        {
-            if (currentMap.TryGetValue(key, out var finding))
-            {
-                active[key].Update(meter, finding.Severity, finding.VsaCodeHint, finding.PositionClock,
-                    finding.ExtentPercent, finding.HeightMm, finding.WidthMm,
-                    finding.IntrusionPercent, finding.CrossSectionReductionPercent, finding.DiameterReductionMm,
-                    evidence);
-            }
-            else
-            {
-                active[key].MissedFrames++;
-                if (active[key].MissedFrames >= DedupWindowFrames)
-                {
-                    completed.Add(active[key].ToDetection());
-                    active.Remove(key);
-                }
-            }
-        }
-
-        foreach (var pair in currentMap)
-        {
-            if (!active.ContainsKey(pair.Key))
-            {
-                var f = pair.Value;
-                active[pair.Key] = new ActiveFindingState(
-                    f.Label.Trim(), meter, f.Severity, f.VsaCodeHint, f.PositionClock,
-                    f.ExtentPercent, f.HeightMm, f.WidthMm,
-                    f.IntrusionPercent, f.CrossSectionReductionPercent, f.DiameterReductionMm,
-                    evidence);
-            }
-        }
-    }
-
-    private static void AdvanceAll(
-        Dictionary<string, ActiveFindingState> active,
-        List<RawVideoDetection> completed,
-        int dedupWindow)
-    {
-        foreach (var key in active.Keys.ToList())
-        {
-            active[key].MissedFrames++;
-            if (active[key].MissedFrames >= dedupWindow)
-            {
-                completed.Add(active[key].ToDetection());
-                active.Remove(key);
-            }
-        }
-    }
-
     private async Task<double> GetVideoDurationAsync(string videoPath, CancellationToken ct)
     {
         var probePath = DeriveFfprobePath(_ffmpegPath);
@@ -779,73 +717,6 @@ public sealed class MultiModelAnalysisService
     }
 
     /// <summary>
-    /// Baut einen stabilen Dedup-Key fuer ein Finding.
-    /// Normalisiert Labels gegen DINO-Phrasen-Drift (crack/fracture/break → gleicher Key)
-    /// und Clock-Positionen (3:00/3/rechts → normalisierte Stunde).
-    /// </summary>
-    private static string BuildFindingKey(EnhancedFinding f)
-    {
-        var label = VsaCodeResolver.NormalizeFindingCode(f.VsaCodeHint)
-            ?? VsaCodeResolver.InferCodeFromLabel(f.Label)
-            ?? NormalizeFindingLabel(f.Label.Trim());
-        var clock = NormalizeClockPosition(f.PositionClock);
-        return string.IsNullOrEmpty(clock) ? label : $"{label}|{clock}";
-    }
-
-    /// <summary>
-    /// Normalisiert DINO-Labels auf kanonische Gruppen.
-    /// "crack", "fracture", "break" → "crack"
-    /// "root intrusion", "roots" → "roots"
-    /// Reduziert Label-Drift zwischen Frames.
-    /// </summary>
-    private static string NormalizeFindingLabel(string label)
-    {
-        var lower = label.ToLowerInvariant();
-
-        // Risse/Brueche
-        if (lower.Contains("crack") || lower.Contains("fracture") || lower.Contains("riss"))
-            return "crack";
-        if (lower.Contains("break") || lower.Contains("bruch") || lower.Contains("collapse") || lower.Contains("einsturz"))
-            return "break";
-
-        // Deformation
-        if (lower.Contains("deform") || lower.Contains("verform") || lower.Contains("dent") || lower.Contains("oval"))
-            return "deformation";
-
-        // Wurzeln
-        if (lower.Contains("root") || lower.Contains("wurzel"))
-            return "roots";
-
-        // Korrosion / Oberflaechenschaden
-        if (lower.Contains("corros") || lower.Contains("erosion") || lower.Contains("surface damage") || lower.Contains("abplatz"))
-            return "corrosion";
-
-        // Ablagerung
-        if (lower.Contains("deposit") || lower.Contains("sediment") || lower.Contains("buildup")
-            || lower.Contains("ablagerung") || lower.Contains("inkrust"))
-            return "deposit";
-
-        // Infiltration
-        if (lower.Contains("infiltrat") || lower.Contains("ingress") || lower.Contains("leak")
-            || lower.Contains("undicht") || lower.Contains("fremdwasser"))
-            return "infiltration";
-
-        // Versatz
-        if (lower.Contains("displace") || lower.Contains("offset") || lower.Contains("versatz") || lower.Contains("joint"))
-            return "displacement";
-
-        // Hindernis
-        if (lower.Contains("obstacle") || lower.Contains("blockage") || lower.Contains("obstruct") || lower.Contains("hindernis"))
-            return "obstacle";
-
-        // Anschluss
-        if (lower.Contains("connection") || lower.Contains("anschluss") || lower.Contains("intrud") || lower.Contains("protrud"))
-            return "connection";
-
-        return lower;
-    }
-
-    /// <summary>
     /// Normalisiert Clock-Positionen auf ganzzahlige Stunden.
     /// "3:00" → "3", "12" → "12", "Scheitel" → "12", "Sohle" → "6", "rechts" → "3", "links" → "9".
     /// </summary>
@@ -856,8 +727,6 @@ public sealed class MultiModelAnalysisService
             return null;
         return normalized;
     }
-
-    // ── ActiveFindingState (mirrors VideoFullAnalysisService.ActiveFinding) ──
 
     private static string? NormalizeClock(string? raw)
     {
@@ -884,93 +753,4 @@ public sealed class MultiModelAnalysisService
         return raw.Trim();
     }
 
-    /// <summary>
-    /// Bestimmt den effektiven MeterEnd: Streckenschaeden behalten den beobachteten
-    /// Bereich (MeterStart..MeterEnd), Punktschaeden kollabieren auf eine Stelle
-    /// (MeterEnd = MeterStart) -- sonst entstuenden kuenstliche Mini-Strecken.
-    /// </summary>
-    internal static double ResolveMeterEnd(string? vsaCode, double meterStart, double observedMeterEnd)
-        => VsaCodeResolver.IsStreckenschadenCode(vsaCode ?? string.Empty)
-            ? observedMeterEnd   // Streckenschaden: beobachteten Bereich behalten
-            : meterStart;        // Punktschaden / unbekannt: auf eine Stelle kollabieren
-
-    private sealed class ActiveFindingState
-    {
-        public string Name { get; }
-        public double MeterStart { get; }
-        public double MeterEnd { get; private set; }
-        public int MaxSeverity { get; private set; }
-        public string? VsaCodeHint { get; private set; }
-        public string? PositionClock { get; private set; }
-        public int? ExtentPercent { get; private set; }
-        public int? HeightMm { get; private set; }
-        public int? WidthMm { get; private set; }
-        public int? IntrusionPercent { get; private set; }
-        public int? CrossSectionReductionPercent { get; private set; }
-        public int? DiameterReductionMm { get; private set; }
-        public EvidenceVector? Evidence { get; private set; }
-        public int FrameCount { get; private set; } = 1;
-        public int MissedFrames { get; set; }
-
-        public ActiveFindingState(
-            string name, double start, int severity, string? hint, string? clock,
-            int? extent, int? height, int? width, int? intrusion, int? crossSection, int? diameterReduction,
-            EvidenceVector? evidence = null)
-        {
-            Name = name; MeterStart = start; MeterEnd = start;
-            MaxSeverity = severity; VsaCodeHint = hint; PositionClock = clock;
-            ExtentPercent = extent; HeightMm = height; WidthMm = width;
-            IntrusionPercent = intrusion; CrossSectionReductionPercent = crossSection;
-            DiameterReductionMm = diameterReduction;
-            Evidence = evidence;
-        }
-
-        public void Update(double meter, int severity, string? hint, string? clock,
-            int? extent, int? height, int? width, int? intrusion, int? crossSection, int? diameterReduction,
-            EvidenceVector? evidence = null)
-        {
-            MeterEnd = meter;
-            MissedFrames = 0;
-            FrameCount++;
-            if (severity > MaxSeverity) MaxSeverity = severity;
-            if (!string.IsNullOrWhiteSpace(hint)) VsaCodeHint = hint;
-            if (!string.IsNullOrWhiteSpace(clock)) PositionClock = clock;
-            if (extent is { } e) ExtentPercent = Math.Max(ExtentPercent ?? 0, Math.Clamp(e, 1, 100));
-            if (height is { } h) HeightMm = Math.Max(HeightMm ?? 0, h);
-            if (width is { } w) WidthMm = Math.Max(WidthMm ?? 0, w);
-            if (intrusion is { } ip) IntrusionPercent = Math.Max(IntrusionPercent ?? 0, ip);
-            if (crossSection is { } csr) CrossSectionReductionPercent = Math.Max(CrossSectionReductionPercent ?? 0, csr);
-            if (diameterReduction is { } dr) DiameterReductionMm = Math.Max(DiameterReductionMm ?? 0, dr);
-            // Merge evidence: keep max of each signal
-            if (evidence is not null)
-            {
-                Evidence = Evidence is null ? evidence : MergeEvidence(Evidence, evidence);
-            }
-        }
-
-        public RawVideoDetection ToDetection() =>
-            new(Name, MeterStart, ResolveMeterEnd(VsaCodeHint, MeterStart, MeterEnd), SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock,
-                ExtentPercent, HeightMm, WidthMm, IntrusionPercent, CrossSectionReductionPercent, DiameterReductionMm,
-                Evidence: Evidence is not null ? Evidence with { FrameCount = FrameCount } : null);
-
-        private static string SeverityLabel(int s) => s >= 4 ? "high" : s == 3 ? "mid" : "low";
-
-        private static EvidenceVector MergeEvidence(EvidenceVector a, EvidenceVector b) =>
-            new(
-                YoloConf: Max(a.YoloConf, b.YoloConf),
-                DinoConf: Max(a.DinoConf, b.DinoConf),
-                SamMaskStability: Max(a.SamMaskStability, b.SamMaskStability),
-                QwenVisionConf: Max(a.QwenVisionConf, b.QwenVisionConf),
-                LlmCodeConf: Max(a.LlmCodeConf, b.LlmCodeConf),
-                KbSimilarity: Max(a.KbSimilarity, b.KbSimilarity),
-                KbCodeAgreement: a.KbCodeAgreement ?? b.KbCodeAgreement,
-                PlausibilityScore: Max(a.PlausibilityScore, b.PlausibilityScore),
-                DamageCategory: a.DamageCategory ?? b.DamageCategory,
-                FrameCount: (a.FrameCount ?? 0) + (b.FrameCount ?? 0)
-            );
-
-        private static double? Max(double? a, double? b) =>
-            a.HasValue && b.HasValue ? Math.Max(a.Value, b.Value)
-            : a ?? b;
-    }
 }
