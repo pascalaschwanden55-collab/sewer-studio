@@ -43,9 +43,16 @@
                                 <TextBlock Text="{Binding Fields[Haltungsname]}" Foreground="{StaticResource TextBrush}"
                                            FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
-                            <TextBlock Text="{Binding Converter={StaticResource SummaryConv}}"
-                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"
-                                       TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                            <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"
+                                       TextTrimming="CharacterEllipsis" Margin="0,2,0,0">
+                                <TextBlock.Text>
+                                    <MultiBinding Converter="{StaticResource SummaryConv}">
+                                        <Binding Path="Fields[DN_mm]"/>
+                                        <Binding Path="Fields[Haltungslaenge_m]"/>
+                                        <Binding Path="Fields[Nutzungsart]"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
                         </StackPanel>
                         <Border Grid.Column="1" Width="26" Height="26" CornerRadius="13" VerticalAlignment="Center"
                                 Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}">

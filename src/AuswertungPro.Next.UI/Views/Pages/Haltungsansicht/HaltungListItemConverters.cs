@@ -7,14 +7,20 @@ using AuswertungPro.Next.UI.DataPage;
 
 namespace AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
 
-/// <summary>Bindet das ganze HaltungRecord-Item auf die einzeilige Kurzbeschreibung.</summary>
-public sealed class HaltungSummaryConverter : IValueConverter
+/// <summary>
+/// Baut die einzeilige Kurzbeschreibung aus den drei Feldwerten (DN, Laenge, Nutzungsart).
+/// MultiBinding auf die Feld-Pfade, damit die Zeile live aktualisiert, wenn ein Feld geaendert wird.
+/// </summary>
+public sealed class HaltungSummaryConverter : IMultiValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        => value is HaltungRecord r ? HaltungSummaryFormatter.FormatSummary(r) : string.Empty;
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        string? At(int i) => values is not null && i < values.Length ? values[i] as string : null;
+        return HaltungSummaryFormatter.FormatSummary(At(0), At(1), At(2));
+    }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        => Binding.DoNothing;
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        => Array.Empty<object>();
 }
 
 /// <summary>Bindet den Zustandsklasse-Text auf den Chip-Hintergrund (gleiche Quelle wie die Tabelle).</summary>
