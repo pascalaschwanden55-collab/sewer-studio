@@ -145,7 +145,11 @@ public sealed class EnhancedVisionAnalysisService
         return (x1, y1, x2, y2);
     }
 
-    private static readonly TimeSpan FrameTimeout = TimeSpan.FromSeconds(60);
+    // Standard Per-Frame-Qwen-Cap (#9): 120s. Dies ist der real wirksame Cap auch im
+    // Multi-Model-Pfad (innerer LinkedTokenSource gewinnt gegen den aeusseren QwenFrameTimeout).
+    // Ein separates groesseres Budget fuers 32B-Modell (z.B. 300s) erfordert, diesen Cap pro
+    // Instanz konfigurierbar zu machen — bewusst spaeterer Folgeschritt.
+    private static readonly TimeSpan FrameTimeout = TimeSpan.FromSeconds(120);
 
     public async Task<EnhancedFrameAnalysis> AnalyzeAsync(
         string framePngBase64,
@@ -205,7 +209,7 @@ public sealed class EnhancedVisionAnalysisService
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            return EnhancedFrameAnalysis.Empty("Timeout (60s)");
+            return EnhancedFrameAnalysis.Empty($"Timeout ({FrameTimeout.TotalSeconds:0}s)");
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
@@ -450,7 +454,7 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            return EnhancedFrameAnalysis.Empty("Timeout (60s)");
+            return EnhancedFrameAnalysis.Empty($"Timeout ({FrameTimeout.TotalSeconds:0}s)");
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)

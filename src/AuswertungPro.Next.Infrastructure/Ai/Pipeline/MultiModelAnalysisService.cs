@@ -32,7 +32,11 @@ public sealed class MultiModelAnalysisService
 
     public double FrameStepSeconds { get; set; } = 3.0;
     public int DedupWindowFrames { get; set; } = 3;
-    public TimeSpan QwenFrameTimeout { get; set; } = TimeSpan.FromSeconds(300);
+    // Aeusserer Per-Frame-Qwen-Cap = Standard 120s (#9). Hinweis: der effektiv wirksame Cap
+    // ist ohnehin der innere FrameTimeout in EnhancedVisionAnalysisService. Ein separates,
+    // groesseres 32B-Budget (z.B. 300s) erfordert, jenen inneren Cap konfigurierbar zu machen
+    // (bewusster Folgeschritt). Frueher 300s — faktisch tot, da innen auf 60s gedeckelt.
+    public TimeSpan QwenFrameTimeout { get; set; } = TimeSpan.FromSeconds(120);
 
     /// <summary>YOLO-cls Vorfilter aktivieren/deaktivieren (Fallback: aus wenn kein Modell).</summary>
     public bool UseClsPrefilter { get; set; } = true;
