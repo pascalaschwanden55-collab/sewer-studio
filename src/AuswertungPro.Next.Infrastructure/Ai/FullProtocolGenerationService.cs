@@ -50,6 +50,7 @@ public sealed class FullProtocolGenerationService : IDisposable
             keepAlive: cfg.OllamaKeepAlive,
             numCtx: cfg.OllamaNumCtx);
         _retrieval = retrieval;
+        // Fallback laeuft bewusst mit statischen Default-Gewichten (siehe ADR-008).
         _qualityGate = qualityGate ?? new QualityGateService();
 
         // Only create own KB when none provided and AI is active
@@ -389,7 +390,9 @@ public sealed class FullProtocolGenerationService : IDisposable
             MeterStart = det.MeterStart,
             MeterEnd = det.MeterEnd > det.MeterStart ? det.MeterEnd : det.MeterStart,
             IsStreckenschaden = det.MeterEnd - det.MeterStart > 0.05,
-            Source = ProtocolEntrySource.Manual,
+            // KI-generierter Eintrag: als Ai kennzeichnen, nicht als Manual tarnen
+            // (Herkunft/Filterung im Export bleibt nachvollziehbar).
+            Source = ProtocolEntrySource.Ai,
             Ai = new ProtocolEntryAiMeta
             {
                 SuggestedCode = mapped.SuggestedCode,

@@ -48,7 +48,10 @@ public partial class PlayerWindow
     public static bool TryTakeSnapshot(out string snapshotPath)
     {
         snapshotPath = string.Empty;
-        if (_lastOpened?._player is null || !_lastOpened._player.IsPlaying && _lastOpened._player.Time <= 0)
+        var playerWindow = _lastOpened;
+        if (playerWindow is null || playerWindow._closing || playerWindow._playbackDisposed)
+            return false;
+        if (playerWindow._player is null || !playerWindow._player.IsPlaying && playerWindow._player.Time <= 0)
             return false;
 
         try
@@ -58,7 +61,7 @@ public partial class PlayerWindow
             snapshotPath = Path.Combine(tempDir, $"snap_{DateTime.Now:yyyyMMdd_HHmmss}.png");
 
             // VLC Snapshot: 0 = original Aufloesung (FullHD etc.)
-            return _lastOpened.TakeSnapshotSafe(snapshotPath);
+            return playerWindow.TakeSnapshotSafe(snapshotPath);
         }
         catch
         {
@@ -72,19 +75,37 @@ public partial class PlayerWindow
     /// </summary>
     private bool TakeSnapshotSafe(string filePath, uint width = 0, uint height = 0)
     {
-        var wasPlaying = _player.IsPlaying;
-        if (wasPlaying)
+        if (_closing || _playbackDisposed)
+            return false;
+
+        var wasPlaying = false;
+        try
         {
-            _player.SetPause(true);
-            System.Threading.Thread.Sleep(60);
+            wasPlaying = _player.IsPlaying;
+            if (wasPlaying)
+            {
+                _player.SetPause(true);
+                System.Threading.Thread.Sleep(60);
+            }
+            if (_closing || _playbackDisposed)
+                return false;
+
+            // VLC-OSD-Anzeige (Dateipfad) vorher deaktivieren, damit der Pfad
+            // nicht als Text auf dem Videobild erscheint
+            try { _player.SetMarqueeInt(VideoMarqueeOption.Enable, 0); } catch { }
+            return _player.TakeSnapshot(0, filePath, width, height);
         }
-        // VLC-OSD-Anzeige (Dateipfad) vorher deaktivieren, damit der Pfad
-        // nicht als Text auf dem Videobild erscheint
-        try { _player.SetMarqueeInt(VideoMarqueeOption.Enable, 0); } catch { }
-        var success = _player.TakeSnapshot(0, filePath, width, height);
-        if (wasPlaying)
-            _player.SetPause(false);
-        return success;
+        catch
+        {
+            return false;
+        }
+        finally
+        {
+            if (wasPlaying && !_closing && !_playbackDisposed)
+            {
+                try { _player.SetPause(false); } catch { }
+            }
+        }
     }
 
     private void ShowOverlay(string text, TimeSpan duration)
@@ -324,6 +345,28 @@ public partial class PlayerWindow
 
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        if (_closing)
+            return;
+
+        // 1. Guard setzen: alle laufenden Tick-Handler prufen _closing und kehren sofort zurueck.
+        _closing = true;
+        if (ReferenceEquals(_lastOpened, this))
+            _lastOpened = null;
+
+        // 2. Alle DispatcherTimer stoppen bevor der MediaPlayer freigegeben wird.
+        //    So koennen keine in-flight Ticks mehr _player.IsPlaying aufrufen.
+        StopPlayerTimers();
+        _quickScanCts?.Cancel();
+        _detectionCts?.Cancel();
+        _codingAnalysisCts?.Cancel();
+        StopLiveDetection();
+
+        // 3. Player vom VideoView trennen (verhindert D3D-Zugriff nach Dispose).
+        try { if (VideoView != null) VideoView.MediaPlayer = null; } catch { }
+
+        // 4. Player sauber stoppen bevor Dispose (Cleanup macht dann nur noch Dispose).
+        try { _player.Stop(); } catch { }
+
         try
         {
             Cleanup();
@@ -336,11 +379,24 @@ public partial class PlayerWindow
 
     private void Cleanup()
     {
-        _timer.Stop();
-        _scrubTimer.Stop();
-        VideoView.MediaPlayer = null;
-        _player.Dispose();
-        _libVlc.Dispose();
+        if (_playbackDisposed)
+            return;
+
+        _playbackDisposed = true;
+        StopPlayerTimers();
+        try { if (VideoView != null) VideoView.MediaPlayer = null; } catch { }
+        try { _player.Dispose(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PlayerWindow] MediaPlayer Dispose error: {ex.Message}"); }
+        try { _libVlc.Dispose(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PlayerWindow] LibVLC Dispose error: {ex.Message}"); }
+    }
+
+    private void StopPlayerTimers()
+    {
+        try { _timer.Stop(); } catch { }
+        try { _scrubTimer.Stop(); } catch { }
+        try { _detectionTimer?.Stop(); } catch { }
+        try { _codingLiveAiTimer?.Stop(); } catch { }
+        try { _codingLiveAiBlinkTimer?.Stop(); } catch { }
+        try { _codingOsdTimer?.Stop(); } catch { }
     }
 
     private void UpdateUi()

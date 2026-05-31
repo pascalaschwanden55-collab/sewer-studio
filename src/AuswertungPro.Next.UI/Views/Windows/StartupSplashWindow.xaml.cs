@@ -31,6 +31,11 @@ public partial class StartupSplashWindow : Window
     private readonly List<ActivePulse> _activePulses = new();
     private readonly List<NodeFlare> _flares = new();
 
+    // Wird gesetzt, sobald der Fortschrittsbalken durchgelaufen ist (oder das Fenster schliesst).
+    // App.xaml.cs wartet darauf, damit die Startanimation nicht abgeschnitten wird.
+    private readonly TaskCompletionSource<bool> _progressDone =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     private double[] _screenX = Array.Empty<double>();
     private double[] _screenY = Array.Empty<double>();
     private double[] _screenDepth = Array.Empty<double>();
@@ -162,6 +167,7 @@ public partial class StartupSplashWindow : Window
         Loaded += OnLoaded;
         Closed += (_, _) =>
         {
+            _progressDone.TrySetResult(true);
             try { _statusTimer.Stop(); }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Splash.Closed] StatusTimer: {ex.Message}"); }
             try { _pulseTimer.Stop(); }
@@ -675,8 +681,17 @@ public partial class StartupSplashWindow : Window
             BeginTime = TimeSpan.FromMilliseconds(900),
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
         };
+        // Signalisieren, sobald der Balken voll durchgelaufen ist.
+        grow.Completed += (_, _) => _progressDone.TrySetResult(true);
         ProgressBar.BeginAnimation(WidthProperty, grow);
     }
+
+    /// <summary>
+    /// Task, der abgeschlossen ist, sobald der Fortschrittsbalken vollstaendig
+    /// durchgelaufen ist (oder das Splash-Fenster geschlossen wurde). App.xaml.cs
+    /// wartet darauf, bevor der Splash ausgeblendet wird.
+    /// </summary>
+    public Task WaitForProgressAsync() => _progressDone.Task;
 
     private void OnStatusTick(object? sender, EventArgs e)
     {

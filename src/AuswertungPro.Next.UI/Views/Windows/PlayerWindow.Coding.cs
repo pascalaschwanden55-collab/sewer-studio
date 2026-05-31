@@ -2397,6 +2397,7 @@ public partial class PlayerWindow
         _codingOsdTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _codingOsdTimer.Tick += async (_, _) =>
         {
+            if (_closing || _player is null) return;
             if (!_isCodingMode || _codingOsdReading || _codingLiveDetection == null) return;
             _codingOsdReading = true;
             try
@@ -2442,6 +2443,7 @@ public partial class PlayerWindow
                 numCtx: config.OllamaNumCtx);
             _codingLiveDetection = new LiveDetectionService(client, config.VisionModel);
             _codingEnhancedVision = new EnhancedVisionAnalysisService(client, config.VisionModel, CodeCatalog);
+            // Bewusst Default-Gewichte (statisch). Gelernte Gewichte werden NICHT geladen (siehe ADR-008).
             _codingQualityGate = new QualityGateService();
 
             // Multi-Model Pipeline (YOLO â†’ DINO â†’ SAM) initialisieren
@@ -2967,8 +2969,12 @@ public partial class PlayerWindow
 
             // QualityGate mit Multi-Model Evidenz
             double dinoConf = dino?.Confidence ?? quant.Confidence;
+            // D2-A: ECHTE YOLO-Confidence (hoechste Box des Frames) statt Festwert 0.8.
+            // Ist sie null (keine YOLO-Box), ueberspringt das QualityGate das Signal und
+            // renormalisiert ueber DINO/SAM/Plausibilitaet. Klar erkannte Befunde bekommen
+            // so wieder eine ehrliche, hohe Confidence statt durchgehend gelb.
             var evidence = new EvidenceVector(
-                YoloConf: 0.8,
+                YoloConf: mmResult.YoloMaxConfidence,
                 DinoConf: dinoConf,
                 SamMaskStability: quant.Confidence,
                 PlausibilityScore: officialLabel != null ? 0.8 : 0.4
@@ -2995,9 +3001,9 @@ public partial class PlayerWindow
                 SuggestedCode = code,
                 Confidence = gateResult.CompositeConfidence,
                 Reason = $"{quant.Label} (DINO {dinoConf:P0})",
-                Decision = gateResult.IsGreen
-                    ? CodingUserDecision.Accepted
-                    : CodingUserDecision.Ignored
+                // KI darf in KEINEM Pfad selbst akzeptieren: Vorschlag bleibt
+                // unbestaetigt (Ignored), bis der Mensch ihn bestaetigt (identisch zum Qwen-Pfad).
+                Decision = CodingUserDecision.Ignored
             };
 
             anyAdded = true;
@@ -3008,6 +3014,11 @@ public partial class PlayerWindow
             RefreshCodingEventsList();
             UpdateToolBadge();
         }
+        // KEIN PauseAndAskConfirmation im kontinuierlichen Live-Loop: der 5s-Timer
+        // (CodingLiveAiTimer_Tick) haelt bei WaitingForUserInput/Pause an — ein Pause-Dialog
+        // pro Befund wuergt damit die laufende Erkennung ab (Regression aus D1). Befunde
+        // bleiben als Ignored in der KI-BEFUNDE-Liste und werden dort bestaetigt; das Video
+        // laeuft durch und erkennt ueber die ganze Haltung.
     }
 
     private IReadOnlyList<(string Code, string Description, double Meter)>? GatherImportContext()
@@ -3551,9 +3562,9 @@ public partial class PlayerWindow
                 SuggestedCode = code,
                 Confidence = gateResult.CompositeConfidence,
                 Reason = finding.Label,
-                Decision = gateResult.IsGreen
-                    ? CodingUserDecision.Accepted
-                    : CodingUserDecision.Ignored
+                // KI darf nicht selbst akzeptieren: Vorschlag bleibt unbestaetigt
+                // (Ignored), bis der Mensch ihn ueber das Bestaetigungs-Panel annimmt.
+                Decision = CodingUserDecision.Ignored
             };
 
             // Bbox â†’ OverlayGeometry (Rectangle) fuer Kontur-Rendering auf CodingOverlayCanvas
@@ -3579,7 +3590,10 @@ public partial class PlayerWindow
 
             anyAdded = true;
 
-            if (!gateResult.IsGreen && firstUnsure == null)
+            // Zur Bestaetigung vorlegen, wenn die KI unsicher ist (gelb/rot) ODER
+            // der Befund kritisch ist (Severity >= 4) - kritische Schaeden duerfen
+            // niemals stillschweigend uebernommen werden.
+            if ((!gateResult.IsGreen || finding.Severity >= 4) && firstUnsure == null)
             {
                 firstUnsure = codingEvent;
                 firstUnsureGate = gateResult;
@@ -3611,6 +3625,7 @@ public partial class PlayerWindow
             _codingLiveAiBlinkTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
             _codingLiveAiBlinkTimer.Tick += (_, _) =>
             {
+                if (_closing || _player is null) return;
                 _codingLiveAiBlinkState = !_codingLiveAiBlinkState;
                 BtnCodingLiveAi.Background = new SolidColorBrush(
                     _codingLiveAiBlinkState
@@ -3640,6 +3655,7 @@ public partial class PlayerWindow
 
     private async void CodingLiveAiTimer_Tick(object? sender, EventArgs e)
     {
+        if (_closing || _player is null) return;
         try
         {
             // Nicht analysieren wenn: bereits analysierend, Video pausiert, WaitingForUserInput
@@ -3692,23 +3708,28 @@ public partial class PlayerWindow
         _codingPendingConfirmEvent = codingEvent;
         _codingPendingGateResult = gateResult;
 
-        // Ampel-Farbe setzen
-        var ampelColor = gateResult.IsYellow
-            ? Color.FromRgb(0xF5, 0x9E, 0x0B)   // Gelb
-            : Color.FromRgb(0xEF, 0x44, 0x44);   // Rot
+        // Ampel-Farbe setzen (Gruen = sicher, aber kritischer Befund zur Bestaetigung)
+        var ampelColor = gateResult.IsGreen
+            ? Color.FromRgb(0x22, 0xC5, 0x5E)   // Gruen
+            : gateResult.IsYellow
+                ? Color.FromRgb(0xF5, 0x9E, 0x0B)   // Gelb
+                : Color.FromRgb(0xEF, 0x44, 0x44);   // Rot
         ConfirmAmpel.Fill = new SolidColorBrush(ampelColor);
 
         // Globale Ampel aktualisieren
         SetCodingAiState(TxtCodingAiStatus.Text, ampelColor,
-            gateResult.IsYellow ? "QualityGate: Gelb" : "QualityGate: Rot");
+            gateResult.IsGreen ? "QualityGate: Gruen (kritisch)"
+            : gateResult.IsYellow ? "QualityGate: Gelb" : "QualityGate: Rot");
 
         // Panel befuellen
         TxtConfirmCode.Text = codingEvent.Entry.Code ?? "???";
         TxtConfirmConfidence.Text = $"({gateResult.CompositeConfidence:P0})";
         TxtConfirmDescription.Text = codingEvent.Entry.Beschreibung ?? codingEvent.AiContext?.Reason ?? "";
-        TxtConfirmDetail.Text = gateResult.IsYellow
-            ? "KI ist unsicher \u2014 bitte pruefen."
-            : "KI hat geringe Sicherheit \u2014 bitte Code korrigieren oder verwerfen.";
+        TxtConfirmDetail.Text = gateResult.IsGreen
+            ? "Kritischer Befund \u2014 bitte bestaetigen oder korrigieren."
+            : gateResult.IsYellow
+                ? "KI ist unsicher \u2014 bitte pruefen."
+                : "KI hat geringe Sicherheit \u2014 bitte Code korrigieren oder verwerfen.";
 
         CodingConfirmationPanel.Visibility = Visibility.Visible;
     }

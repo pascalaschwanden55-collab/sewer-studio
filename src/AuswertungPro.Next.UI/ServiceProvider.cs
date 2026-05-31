@@ -127,7 +127,10 @@ namespace AuswertungPro.Next.UI
                 ? string.Join(" | ", catalogSourcePaths)
                 : null;
             CodeCatalog = CreateCodeCatalog(settings, vsaKekManifestPath, xmlCatalogPaths);
-            CodeSelectionCatalog = new CodeCatalogSelectionCatalog(CodeCatalog);
+            // Picker-Anordnung wie ISYBAU/WinCan (kuratierter VsaCodeTree), aber Mengen-/Uhrlage-
+            // Regeln aus dem aktuellen VSA-Katalog – Codes sind EN-13508-/VSA-konform (geprueft).
+            CodeSelectionCatalog = new AuswertungPro.Next.Application.Protocol.VsaCodeTreeSelectionCatalog(
+                new CodeCatalogSelectionCatalog(CodeCatalog));
             VsaCodeResolver.ConfigureCatalog(CodeCatalog);
             RetrievalService? retrieval = null;
             try

@@ -37,8 +37,11 @@ public sealed class VsaClassificationCutoverTests
     }
 
     [Fact]
-    public void ProductiveEvaluation_LeavesKnownObservationCodesUnassessed()
+    public void ProductiveEvaluation_GivesZustandsklasse4_WhenOnlyObservationCodesPresent()
     {
+        // BCA ist ein Bestandsaufnahme-/Beobachtungscode (nonAssessable), kein Schadencode.
+        // Fachliche Regel: eine Haltung mit ausschliesslich Bestandsaufnahme-Codes gilt als
+        // schadensfrei → Zustandsklasse 4 ("keine Mängel").
         var project = new Project();
         var record = new HaltungRecord();
         record.SetFieldValue("Haltungsname", "cutover-bca", FieldSource.Xtf, userEdited: false);
@@ -52,8 +55,8 @@ public sealed class VsaClassificationCutoverTests
         var result = CreateService().Evaluate(project);
 
         Assert.True(result.Ok, result.ErrorMessage);
-        Assert.Equal("n/a", record.GetFieldValue("VSA_Zustandsnote_D"));
-        Assert.Equal("n/a", record.GetFieldValue("VSA_Zustandsnote_B"));
-        Assert.Equal("n/a", record.GetFieldValue("Zustandsklasse"));
+        Assert.Equal("4.00", record.GetFieldValue("VSA_Zustandsnote_D"));
+        Assert.Equal("4.00", record.GetFieldValue("VSA_Zustandsnote_B"));
+        Assert.Equal("4", record.GetFieldValue("Zustandsklasse"));
     }
 }

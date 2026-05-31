@@ -173,11 +173,17 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
         try
         {
+            // Bei der Vorschau (DryRun) auf einer unabhaengigen Kopie arbeiten, damit der
+            // Import das echte Live-Projekt NICHT veraendert. Die Kopie wird auf dem
+            // UI-Thread erstellt, weil Project.Data eine UI-gebundene ObservableCollection
+            // ist und die Serialisierung sie sonst aus dem Worker-Thread enumerieren wuerde.
+            var targetProject = dryRun ? _sp.Projects.DeepCopy(_shell.Project) : _shell.Project;
+
             var result = await Task.Run(() =>
             {
                 try
                 {
-                    return importFunc(source, _shell.Project, ctx);
+                    return importFunc(source, targetProject, ctx);
                 }
                 catch (OperationCanceledException)
                 {
@@ -235,6 +241,18 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
             DeduplicateAllPrimaryDamages();
             await RunVsaAfterImport(label);
+
+            // Fachliche Plausibilitaetspruefung: offensichtlich falsche Werte sichtbar machen,
+            // damit sie nicht unbemerkt bis in den Export durchlaufen.
+            var plausibilityWarnings = Application.Import.ImportPlausibilityValidator.Validate(_shell.Project);
+            if (plausibilityWarnings.Count > 0)
+            {
+                SummaryText += $"\n  Plausibilitaet: {plausibilityWarnings.Count} Warnung(en) - bitte pruefen.";
+                DetailsText += "\n\n--- Plausibilitaets-Warnungen ---\n"
+                    + string.Join("\n", plausibilityWarnings.Take(80));
+                foreach (var w in plausibilityWarnings.Take(200))
+                    runLog.AddEntry(label, "Plausibilitaet", ImportLogStatus.Info, detail: w);
+            }
 
             if (saveProjectAfterCommit)
                 _shell.TrySaveProject();

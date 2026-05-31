@@ -160,6 +160,10 @@ public sealed partial class DataPageViewModel : ObservableObject
             }
         };
 
+        // Live-Control: Retry-Handler registrieren, damit der MCP eine Haltung
+        // per Name erneut durch die KI-Videoanalyse schicken kann (nur wenn diese Seite lebt).
+        LiveControl.LiveControlRetryBridge.Register(TryStartVideoAiPipelineByName);
+
         var uiLayout = _sp.Settings.DataPageLayout ?? new DataPageLayoutSettings();
         GridMinRowHeight = uiLayout.GridMinRowHeight is >= 24d and <= 240d
             ? uiLayout.GridMinRowHeight
@@ -427,6 +431,12 @@ public sealed partial class DataPageViewModel : ObservableObject
     private void Remove()
     {
         if (Selected is null) return;
+
+        var name = Selected.GetFieldValue("Haltungsname");
+        var label = string.IsNullOrWhiteSpace(name) ? "diese Haltung" : $"die Haltung \"{name}\"";
+        if (!_sp.Dialogs.Confirm($"Soll {label} wirklich geloescht werden?\n\nDie Zeile inkl. aller Daten wird entfernt.",
+                "Haltung loeschen"))
+            return;
 
         var idx = Records.IndexOf(Selected);
         var removedId = Selected.Id;
@@ -759,6 +769,32 @@ public sealed partial class DataPageViewModel : ObservableObject
 
             ScheduleAutoSave();
         }
+    }
+
+    /// <summary>
+    /// Startet die KI-Videoanalyse fuer eine Haltung anhand ihres Namens erneut –
+    /// genutzt von der Live-Control-Bruecke (MCP retry_holding).
+    /// Die Suche laeuft sofort; das Analyse-Fenster wird per Dispatcher nachgeschoben,
+    /// damit die Live-Control-Antwort nicht bis zum Schliessen des Fensters blockiert.
+    /// </summary>
+    public LiveControl.LiveControlRetryResult TryStartVideoAiPipelineByName(string haltungsname)
+    {
+        if (string.IsNullOrWhiteSpace(haltungsname))
+            return new LiveControl.LiveControlRetryResult(false, "Haltungsname fehlt.");
+
+        var name = haltungsname.Trim();
+        var record = _shell.Project.Data.FirstOrDefault(r =>
+            string.Equals(r.GetFieldValue("Haltungsname"), name, StringComparison.OrdinalIgnoreCase));
+
+        if (record is null)
+            return new LiveControl.LiveControlRetryResult(
+                false, $"Haltung '{name}' nicht im geladenen Projekt gefunden.");
+
+        // Modales Analyse-Fenster nicht blockierend hier oeffnen – nachschieben.
+        System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => OpenVideoAiPipeline(record));
+
+        return new LiveControl.LiveControlRetryResult(
+            true, $"KI-Videoanalyse fuer '{name}' gestartet.");
     }
 
 

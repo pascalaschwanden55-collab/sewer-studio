@@ -31,6 +31,15 @@ public sealed class JsonProjectRepository : IProjectRepository
         }
     }
 
+    public Project DeepCopy(Project source)
+    {
+        // Serialisieren + zurueck deserialisieren = unabhaengige Tiefenkopie.
+        var json = JsonSerializer.Serialize(source, Opt);
+        var copy = JsonSerializer.Deserialize<Project>(json, Opt) ?? new Project();
+        copy.EnsureMetadataDefaults();
+        return copy;
+    }
+
     public Result Save(Project project, string path)
     {
         string? tempPath = null;

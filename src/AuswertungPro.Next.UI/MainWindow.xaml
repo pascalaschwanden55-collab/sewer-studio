@@ -37,6 +37,7 @@
                 <MenuItem Header="Code-Katalog..." Click="OpenCodeCatalog_Click"/>
                 <Separator/>
                 <MenuItem Header="KI Videoanalyse – Training Center..." Click="OpenTrainingCenter_Click"/>
+                <MenuItem Header="Karte..." Click="OpenKarte_Click"/>
             </MenuItem>
             <MenuItem Header="_Ansicht">
                 <MenuItem Header="Fokusmodus (F11)" IsCheckable="True" IsChecked="{Binding IsFocusMode, Mode=TwoWay}" />

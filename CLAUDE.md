@@ -7,12 +7,15 @@
 - **Entwickler:** Solo, kein kommerzielles Ziel
 - **Hardware:** Intel Core Ultra 9 285K · ASUS RTX 5090 32GB · 64GB DDR5
 
-## AI-Pipeline (lokal, Workstation-Mode)
-- YOLO26m-seg         → permanent GPU, ~1.5GB VRAM
-- Qwen2.5-VL-32B Q5  → permanent GPU, ~26GB VRAM (via Ollama)
-- Grounding DINO 1.5  → on-demand, nur bei QualityGate Yellow/Red
-- SAM 3               → on-demand, exklusiv mit DINO
-- ByteTrack/OC-SORT   → CPU, immer aktiv
+## AI-Pipeline (Ist-Zustand, HEAD)
+- C# steuert Geschaeftslogik, UI, Dedup, QualityGate und Persistenz.
+- Sidecar `sidecar/sidecar/` liefert YOLO, Grounding DINO und SAM ueber HTTP.
+- YOLO: Standard-Gewicht `yolo26m.pt` bzw. TensorRT-Engine, wenn vorhanden; COCO-Fallback `yolo11m.pt`, wenn eigene Gewichte fehlen und Fallback erlaubt ist.
+- Qwen2.5-VL laeuft ueber Ollama fuer Bild-/Code-Analyse. Keine Doku-Annahme zu automatischer 8B->32B-Laufzeit-Eskalation treffen.
+- Grounding DINO: on-demand im Sidecar.
+- SAM: Segment Anything `vit_h`; Gewichte liegen aktuell unter `models/sam3/`. Der Ordnername bedeutet nicht "SAM 3".
+- Dedup/Merge: C#-framebasiert in `MultiModelAnalysisService.UpdateActive` und `VideoFullAnalysisService.UpdateActive` ueber `DedupWindowFrames`.
+- Kein ByteTrack/OC-SORT und kein echtes Multi-Object-Tracking in HEAD.
 
 ## Architektur-Prinzipien (NICHT brechen)
 - Thin-AI: C# fuer alle Geschaeftslogik, LLM nur fuer Textgenerierung
@@ -21,24 +24,36 @@
 - VRAM-Budget: max 29GB stabil, niemals alle Modelle gleichzeitig
 - QualityGate Green/Yellow/Red muss immer durchlaufen
 
-## Inference-Orchestrator Zustaende
-1. DETECT  → GPU: YOLO | CPU: Tracker + Aggregator
-2. SEGMENT → GPU: YOLO + SAM | Qwen: entladen
-3. CLASSIFY→ GPU: YOLO + Qwen | SAM/DINO: entladen
+## Aktueller Pipeline-Ablauf
+1. UI/Service startet Analyse ueber `VideoAnalysisPipelineService`, `SingleFrameMultiModelService` oder `VideoFullAnalysisService`.
+2. C# ruft den Sidecar ueber `VisionPipelineClient` auf.
+3. Sidecar verwaltet Modell-Locks und GPU-Slots in `sidecar/sidecar/gpu_manager.py`.
+4. Multi-Model-Pfad: YOLO -> DINO -> SAM -> Quantifizierung -> optional Qwen.
+5. C# mappt VSA-Code, dedupliziert framebasiert und laesst `QualityGateService` laufen.
+
+## Geplant / nicht implementiert (nicht als Ist-Zustand behandeln)
+- `ByteTrack` / `OC-SORT`: kein Tracking im aktuellen HEAD.
+- `DetectionAggregator` / meterbasierter Merge-Radius / Temporal Voting: nicht im aktuellen HEAD.
+- `InferenceOrchestratorService`: keine C#-Klasse im aktuellen HEAD; GPU-Slots liegen im Sidecar.
+- `KbDeduplicationService` / Cosine-Dedup beim Schreiben: nicht implementiert; Cosine wird fuer Retrieval genutzt.
+- Automatische 8B->32B-Laufzeit-Eskalation: nicht als implementiert annehmen.
 
 ## Build & Test
 ```bash
 dotnet build AuswertungPro.sln
-dotnet test --filter Category=Recommendation
+dotnet test AuswertungPro.sln
 ```
 
 ## Wichtige Klassen
-- `InferenceOrchestratorService` → Zustandssteuerung GPU
-- `DetectionAggregator`          → Temporal Voting
-- `QualityGateService`           → Green/Yellow/Red
-- `MeasurementService`           → deterministisch, KEIN LLM
-- `ClassificationService`        → Qwen-Wrapper
-- `ReportGenerator`              → EN 13508-2 Output
+- `VideoAnalysisPipelineService`  → waehlt Multi-Model- oder Fallback-Pfad fuer Videoanalyse
+- `MultiModelAnalysisService`     → YOLO/DINO/SAM/Qwen-Pipeline mit framebasiertem Dedup
+- `VideoFullAnalysisService`      → Vollanalyse-/Fallback-Pfad mit eigener Dedup-Logik
+- `SingleFrameMultiModelService`  → Live-Einzelframe YOLO/DINO/SAM
+- `VisionPipelineClient`          → C#-HTTP-Client zum Sidecar
+- `QualityGateService`            → Green/Yellow/Red aus verfuegbaren Evidence-Signalen
+- `FullProtocolGenerationService` → KI-Befunde zu Protokolleintraegen mappen
+- `KnowledgeBaseManager`          → SQLite-KB: Samples + Embeddings indexieren/retrieven
+- `TrainingSamplesStore`          → JSON-Trainingssamples speichern/mergen
 
 ## Fachdomaene Kanalinspektion
 

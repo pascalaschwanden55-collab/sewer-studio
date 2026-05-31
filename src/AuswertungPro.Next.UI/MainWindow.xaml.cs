@@ -70,4 +70,16 @@ public partial class MainWindow : Window
         window.Show();
     }
 
+    private void OpenKarte_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not ViewModels.ShellViewModel shell)
+            return;
+        var window = new Views.Windows.KarteWindow
+        {
+            Owner = this,
+            DataContext = new ViewModels.Pages.KarteViewModel(shell)
+        };
+        window.Show();
+    }
+
 }

@@ -15,6 +15,10 @@ namespace AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 /// 8 dimensions × 7 candidate values, minimizing binary cross-entropy.
 /// Learned weights are persisted to SQLite CategoryWeights table.
 /// </summary>
+// EXPERIMENTELL / HALB-OFFENER LERNKREIS (siehe ADR-008): Diese Klasse lernt und speichert
+// Gewichte (via FeedbackIngestionService, ausgeloest beim Bestaetigen/Verwerfen im Codiermodus),
+// ABER kein QualityGate laedt sie aktuell (LoadWeights/SetWeights ohne Aufrufer). Das Gate laeuft
+// bewusst mit CategoryWeights.Default(). NICHT als aktives "adaptives Gate" annehmen.
 public sealed class WeightLearningService
 {
     public int MinSamples { get; set; } = 20;

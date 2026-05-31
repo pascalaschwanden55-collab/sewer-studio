@@ -52,7 +52,12 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             return PipelineResult.Failed("KI ist deaktiviert (SEWERSTUDIO_AI_ENABLED=0).");
 
         // â”€â”€ Decide: Multi-Model or Ollama-Only â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        var (useMultiModel, pipelineCfg) = await ShouldUseMultiModelAsync(ct).ConfigureAwait(false);
+        var (useMultiModel, pipelineCfg, fallbackReason) = await ShouldUseMultiModelAsync(ct).ConfigureAwait(false);
+
+        // Unerwarteten Fallback klar sichtbar machen (sonst sieht Ollama-Only wie Normalbetrieb aus).
+        if (fallbackReason is not null)
+            progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 0,
+                "WARNUNG: " + fallbackReason, FramesDone: 0, FramesTotal: 0));
 
         // â”€â”€ Phase 1: Video-Analyse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         progress?.Report(new PipelineProgress(
@@ -171,17 +176,18 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
     /// - Auto: check sidecar health, use if available, fall back to Ollama otherwise.
     /// - MultiModel: require sidecar (error if not reachable).
     /// </summary>
-    private async Task<(bool UseMultiModel, PipelineConfig Config)> ShouldUseMultiModelAsync(CancellationToken ct)
+    private async Task<(bool UseMultiModel, PipelineConfig Config, string? FallbackReason)> ShouldUseMultiModelAsync(CancellationToken ct)
     {
         var pipelineCfg = _pipelineCfg;
 
+        // OllamaOnly und Kill-Switch sind ABSICHTLICHE Modi -> kein Warn-Fallback.
         if (pipelineCfg.Mode == PipelineMode.OllamaOnly)
-            return (false, pipelineCfg);
+            return (false, pipelineCfg, null);
 
         // MultiModelEnabled ist ein Master-Kill-Switch.
         // Nur ein explizites Mode=MultiModel Ã¼bersteuert ihn.
         if (!pipelineCfg.MultiModelEnabled && pipelineCfg.Mode != PipelineMode.MultiModel)
-            return (false, pipelineCfg);
+            return (false, pipelineCfg, null);
 
         // Check sidecar health
         try
@@ -194,17 +200,20 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 if (pipelineCfg.Mode == PipelineMode.MultiModel)
                     throw new InvalidOperationException(
                         $"Sidecar nicht erreichbar ({pipelineCfg.SidecarUrl}), aber PipelineMode=MultiModel erzwungen.");
-                return (false, pipelineCfg);
+                // Unerwarteter Fallback: Nutzer wollte Multi-Model, Sidecar ist aber tot.
+                return (false, pipelineCfg,
+                    $"Sidecar nicht erreichbar ({pipelineCfg.SidecarUrl}) - Analyse laeuft im schwaecheren Ollama-Only-Modus.");
             }
 
-            return (true, pipelineCfg);
+            return (true, pipelineCfg, null);
         }
         catch (InvalidOperationException) { throw; }
-        catch
+        catch (Exception ex)
         {
             if (pipelineCfg.Mode == PipelineMode.MultiModel)
                 throw;
-            return (false, pipelineCfg);
+            return (false, pipelineCfg,
+                $"Sidecar-Fehler ({ex.Message}) - Analyse laeuft im schwaecheren Ollama-Only-Modus.");
         }
     }
 

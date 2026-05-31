@@ -113,6 +113,14 @@ public static class ProjectPathResolver
                 sb.Append(ch);
         }
         var cleaned = sb.ToString().Trim();
-        return string.IsNullOrWhiteSpace(cleaned) ? "UNKNOWN" : cleaned;
+
+        // Punkt-Segmente abfangen: "." / ".." (oder nur Punkte) wuerden sonst
+        // ueber Path.Combine aus dem Zielordner ausbrechen. Auch fuehrende/
+        // abschliessende Punkte sind unter Windows problematisch.
+        cleaned = cleaned.Trim().Trim('.', ' ');
+        if (string.IsNullOrWhiteSpace(cleaned))
+            return "UNKNOWN";
+
+        return cleaned;
     }
 }

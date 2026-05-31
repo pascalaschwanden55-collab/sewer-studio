@@ -455,6 +455,8 @@ public partial class PlayerWindow
 
     private void StopLiveDetection()
     {
+        var updateUi = !_closing && !_playbackDisposed;
+
         _detectionTimer?.Stop();
         _detectionTimer = null;
         _detectionCts?.Cancel();
@@ -466,6 +468,10 @@ public partial class PlayerWindow
         _liveDetectionClient?.Dispose();
         _liveDetectionClient = null;
         _liveDetectionModelName = string.Empty;
+        _currentFindings.Clear();
+
+        if (!updateUi)
+            return;
 
         // Hide overlay layer (unless manual mark mode is still active)
         if (!_isManualMarkMode)
@@ -474,7 +480,6 @@ public partial class PlayerWindow
         SetYoloStatus("Gestoppt", Color.FromRgb(0x94, 0xA3, 0xB8));
         DetectionCanvas.Children.Clear();
         FindingSummaryPanel.Visibility = Visibility.Collapsed;
-        _currentFindings.Clear();
 
         // Fertig-Meldung mit Zusammenfassung
         int totalEvents = _codingVm?.Events?.Count ?? 0;
@@ -482,7 +487,7 @@ public partial class PlayerWindow
         LiveDetectionStatusText.Visibility = Visibility.Visible;
 
         // Video pausieren damit der User die Meldung sieht
-        if (_player != null && _player.IsPlaying)
+        if (_player != null && !_playbackDisposed && _player.IsPlaying)
             _player.SetPause(true);
 
         var hideTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
@@ -497,6 +502,7 @@ public partial class PlayerWindow
 
     private async void DetectionTimer_Tick(object? sender, EventArgs e)
     {
+        if (_closing || _player is null) return;
         try
         {
             await RunDetectionAsync();
@@ -509,6 +515,7 @@ public partial class PlayerWindow
 
     private async Task RunDetectionAsync()
     {
+        if (_closing || _player is null) return;
         if (_isDetectionInFlight || _liveDetectionService is null || _detectionCts is null)
             return;
         if (!_player.IsPlaying)
@@ -527,10 +534,16 @@ public partial class PlayerWindow
             if (snapshot is null)
             {
                 _isDetectionInFlight = false;
-                SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
-                    $"{CompactModelName(_liveDetectionModelName)} | Bereit");
+                if (!_closing && !_playbackDisposed)
+                {
+                    SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
+                        $"{CompactModelName(_liveDetectionModelName)} | Bereit");
+                }
                 return;
             }
+
+            if (_closing || _playbackDisposed || _liveDetectionService is null || _detectionCts is null)
+                return;
 
             SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0xF5, 0x9E, 0x0B),
                 $"{CompactModelName(_liveDetectionModelName)} | Inferenz");
@@ -540,7 +553,7 @@ public partial class PlayerWindow
 
             Dispatcher.Invoke(() =>
             {
-                if (!_isDetecting) return;
+                if (_closing || _playbackDisposed || !_isDetecting) return;
 
                 _lastDetectionTimestamp = result.TimestampSeconds;
                 _currentFindings.Clear();
@@ -569,10 +582,16 @@ public partial class PlayerWindow
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
+            if (_closing || _playbackDisposed)
+                return;
+
             var msg = ex.Message;
             if (msg.Length > 200) msg = msg[..200] + "...";
             Dispatcher.Invoke(() =>
             {
+                if (_closing || _playbackDisposed)
+                    return;
+
                 LiveDetectionStatusText.Text = $"Fehler: {msg}";
                 SetLiveDetectionBadge("KI Fehler", Color.FromRgb(0xEF, 0x44, 0x44),
                     CompactModelName(_liveDetectionModelName));
@@ -586,13 +605,16 @@ public partial class PlayerWindow
 
     private async Task<byte[]?> CaptureCurrentFrameAsync()
     {
+        if (_closing || _playbackDisposed)
+            return null;
+
         var tempPath = System.IO.Path.Combine(
             System.IO.Path.GetTempPath(),
             $"sewer_live_{Guid.NewGuid():N}.png");
         try
         {
             var success = TakeSnapshotSafe(tempPath, 640);
-            if (!success)
+            if (!success || _closing || _playbackDisposed)
                 return null;
 
             // Wait briefly for file write

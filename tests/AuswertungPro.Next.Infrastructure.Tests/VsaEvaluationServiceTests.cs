@@ -227,7 +227,7 @@ public sealed class VsaEvaluationServiceTests
     }
 
     [Fact]
-    public void Evaluate_V2ReturnsNa_WhenRequiredCharacterizationMissing()
+    public void Evaluate_V2_SchadenOhneMesswert_GibtNaeherungStattNa()
     {
         var project = new Project();
         var recWithQ1 = new HaltungRecord();
@@ -245,11 +245,12 @@ public sealed class VsaEvaluationServiceTests
         var res = svc.Evaluate(project);
         Assert.True(res.Ok, res.ErrorMessage);
 
-        Assert.Equal("n/a", recWithQ1.GetFieldValue("VSA_Zustandsnote_S"));
-        Assert.Equal("n/a", recWithQ1.GetFieldValue("VSA_Zustandsnote_B"));
-        Assert.Equal("n/a", recWithQ1.GetFieldValue("Zustandsklasse"));
-
-        // EZ=2 (Default) + 0.4 = 2.4 → ZN muss <= 2.4 sein
+        // Naeherung: BAA ohne Messwert -> Standard-EZ 2 (strukturell) -> ZN ~2.2 -> Zustandsklasse "2",
+        // als geschaetzt markiert. Frueher: n/a (nicht bewertbar).
+        Assert.Equal("2", recWithQ1.GetFieldValue("Zustandsklasse"));
+        Assert.Equal("ja", recWithQ1.GetFieldValue("VSA_Geschaetzt"));
+        Assert.NotEqual("n/a", recWithQ1.GetFieldValue("VSA_Zustandsnote_S"));
+        Assert.Equal("n/a", recWithQ1.GetFieldValue("VSA_Zustandsnote_B")); // BAA setzt nur Standsicherheit (S)
     }
 
     [Fact]
@@ -282,7 +283,8 @@ public sealed class VsaEvaluationServiceTests
     [Fact]
     public void Evaluate_V2LeavesBcaObservationWithoutStateGrade()
     {
-        // BCA (Anschluss) – neu hinzugefügter Code muss klassifiziert werden
+        // BCA (Anschluss) ist ein Bestandsaufnahme-Code, kein Schadencode.
+        // Nach dem Fix wird BCA herausgefiltert → schadenfreie Haltung → Zustandsklasse 4.
         var project = new Project();
         var rec = new HaltungRecord();
         rec.SetFieldValue("Haltungsname", "H7_BCA", FieldSource.Xtf, userEdited: false);
@@ -299,9 +301,8 @@ public sealed class VsaEvaluationServiceTests
         var res = svc.Evaluate(project);
         Assert.True(res.Ok, res.ErrorMessage);
 
-        Assert.Equal("n/a", rec.GetFieldValue("VSA_Zustandsnote_D"));
-        Assert.Equal("n/a", rec.GetFieldValue("VSA_Zustandsnote_B"));
-        Assert.Equal("n/a", rec.GetFieldValue("Zustandsklasse"));
+        // BCA ist kein Schadencode → wird herausgefiltert → Leitung i.O. → Zustandsklasse 4
+        Assert.Equal("4", rec.GetFieldValue("Zustandsklasse"));
     }
 
     [Fact]
@@ -425,6 +426,76 @@ public sealed class VsaEvaluationServiceTests
             if (Directory.Exists(tempDir))
                 Directory.Delete(tempDir, recursive: true);
         }
+    }
+
+    [Fact]
+    public void EvaluateRecord_Grundgeruest_OnlyFindings_GivesZustandsklasse4()
+    {
+        // Schadenfreie Haltung: nur Bestandsaufnahme-/Stammdaten-Codes (BCD, BCC, BCE)
+        // sowie Anlagen-Aenderungen (AEC Rohrprofilwechsel, AED Materialwechsel, AEF neue Baulaenge).
+        // Alle sind nonAssessable → werden herausgefiltert → Leitung i.O. → Zustandsklasse 4.
+        var rec = new HaltungRecord();
+        rec.SetFieldValue("Haltungslaenge_m", "10.20", FieldSource.Xtf, userEdited: false);
+        rec.VsaFindings = new List<VsaFinding>
+        {
+            new() { KanalSchadencode = "AEC", LL = 0.0 },
+            new() { KanalSchadencode = "AED", LL = 0.0 },
+            new() { KanalSchadencode = "AEF", LL = 0.0 },
+            new() { KanalSchadencode = "BCD", LL = 1.0 },
+            new() { KanalSchadencode = "BCC", LL = 5.0 },
+            new() { KanalSchadencode = "BCE", LL = 10.0 }
+        };
+
+        var svc = CreateService();
+        var res = svc.EvaluateRecord(rec);
+        Assert.True(res.Ok, res.ErrorMessage);
+
+        Assert.Equal("4", rec.GetFieldValue("Zustandsklasse"));
+    }
+
+    [Fact]
+    public void EvaluateRecord_SchadenOhneMesswert_GibtNaeherungsklasseUndMarkiertGeschaetzt()
+    {
+        // Schaeden als nackte Codes (ohne Lage, ohne Quantifizierung) – wie bei unvollstaendigen
+        // Importen. Ohne Messwert kann die Regel nicht benoten -> Naeherungswert je Code:
+        // BAA->EZ 2, BAF->EZ 3 (strukturell). Schlechtester zaehlt -> ZN ~2.2 -> Zustandsklasse "2".
+        var rec = new HaltungRecord();
+        rec.SetFieldValue("Haltungslaenge_m", "10.20", FieldSource.Xtf, userEdited: false);
+        rec.VsaFindings = new List<VsaFinding>
+        {
+            new() { KanalSchadencode = "BCD", LL = 0.0 },
+            new() { KanalSchadencode = "BAF", LL = 1.7 },   // Oberflaechenschaden, kein Messwert
+            new() { KanalSchadencode = "BAA", LL = 2.6 },   // Verformung, kein Messwert
+            new() { KanalSchadencode = "BCE", LL = 10.2 }
+        };
+
+        var svc = CreateService();
+        var res = svc.EvaluateRecord(rec);
+        Assert.True(res.Ok, res.ErrorMessage);
+
+        // Echte Note statt n/a – und als geschaetzt markiert.
+        Assert.Equal("2", rec.GetFieldValue("Zustandsklasse"));
+        Assert.Equal("ja", rec.GetFieldValue("VSA_Geschaetzt"));
+    }
+
+    [Fact]
+    public void EvaluateRecord_SchadenfreieHaltung_IstNichtGeschaetzt()
+    {
+        // Gegenprobe: schadenfreie Haltung -> Klasse 4, NICHT als geschaetzt markiert.
+        var rec = new HaltungRecord();
+        rec.SetFieldValue("Haltungslaenge_m", "10.20", FieldSource.Xtf, userEdited: false);
+        rec.VsaFindings = new List<VsaFinding>
+        {
+            new() { KanalSchadencode = "BCD", LL = 1.0 },
+            new() { KanalSchadencode = "BCE", LL = 10.0 }
+        };
+
+        var svc = CreateService();
+        var res = svc.EvaluateRecord(rec);
+        Assert.True(res.Ok, res.ErrorMessage);
+
+        Assert.Equal("4", rec.GetFieldValue("Zustandsklasse"));
+        Assert.NotEqual("ja", rec.GetFieldValue("VSA_Geschaetzt"));
     }
 
     [Fact]

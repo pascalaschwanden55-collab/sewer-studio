@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "sewerstudio": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "tools/SewerStudioMcpServer/SewerStudioMcpServer.csproj",
+        "--"
+      ]
+    }
+  }
+}

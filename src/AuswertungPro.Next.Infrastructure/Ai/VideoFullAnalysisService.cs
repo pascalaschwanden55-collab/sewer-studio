@@ -32,7 +32,9 @@ public sealed class VideoFullAnalysisService
     public double FrameStepSeconds { get; set; } = 3.0;
     public int DedupWindowFrames { get; set; } = 3;
     public int MinSeverity { get; set; } = 1;
-    public TimeSpan VisionFrameTimeout { get; set; } = TimeSpan.FromSeconds(300);
+    // Aeusserer Per-Frame-Cap = Standard 120s (#9). Effektiv wirksam ist ohnehin der innere
+    // FrameTimeout in EnhancedVisionAnalysisService; frueher 300s und damit faktisch tot.
+    public TimeSpan VisionFrameTimeout { get; set; } = TimeSpan.FromSeconds(120);
 
     public VideoFullAnalysisService(
         EnhancedVisionAnalysisService vision,
@@ -549,7 +551,12 @@ public sealed class VideoFullAnalysisService
         }
 
         public RawVideoDetection ToDetection() =>
-            new(Name, MeterStart, MeterEnd, SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock, ExtentPercent,
+            // D4: Punkt/Strecken-Aufloesung wie im Multi-Model-Pfad wiederverwenden -
+            // Punktschaeden kollabieren auf MeterStart, sonst entstuenden kuenstliche Mini-Strecken
+            // (und das downstream aus der Spanne abgeleitete IsStreckenschaden-Flag kippt faelschlich).
+            new(Name, MeterStart,
+                Pipeline.MultiModelAnalysisService.ResolveMeterEnd(VsaCodeHint, MeterStart, MeterEnd),
+                SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock, ExtentPercent,
                 HeightMm, WidthMm, IntrusionPercent, CrossSectionReductionPercent, DiameterReductionMm);
 
         private static string SeverityLabel(int s) => s >= 4 ? "high" : s == 3 ? "mid" : "low";

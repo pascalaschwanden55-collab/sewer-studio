@@ -9,6 +9,11 @@ public sealed class VsaClassificationRuleSet
     public string AssetKind { get; set; } = "";
     public List<VsaNonAssessableCode> NonAssessableCodes { get; set; } = new();
     public List<VsaNonAssessableRequirement> NonAssessableRequirements { get; set; } = new();
+
+    // Naeherungswerte: EZ je Schadencode, wenn kein Messwert (Quantifizierung/Lage) vorhanden ist.
+    // Greift nur, wenn die Regel sonst keine Note liefern kann. Vom Anwender pflegbar.
+    public List<VsaApproximateEz> ApproximateEzWhenUnquantified { get; set; } = new();
+
     public List<VsaClassificationRule> Rules { get; set; } = new();
 
     public static VsaClassificationRuleSet LoadFromFile(string path)
@@ -27,6 +32,13 @@ public sealed class VsaNonAssessableCode
     public string CodeMatch { get; set; } = "exact";
     public string Reason { get; set; } = "";
     public string SourceRef { get; set; } = "";
+}
+
+public sealed class VsaApproximateEz
+{
+    public string Code { get; set; } = "";   // Basiscode, z.B. BAA, BAF
+    public int Ez { get; set; }                // 0..4 (0 = schlecht, 4 = gut)
+    public string Reason { get; set; } = "";
 }
 
 public sealed class VsaNonAssessableRequirement

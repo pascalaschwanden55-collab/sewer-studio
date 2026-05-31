@@ -44,6 +44,7 @@ public partial class CodingModeWindow : Window
     private long _videoDurationMs;  // Gesamtlaenge des Videos in ms
     private bool _videoReady;       // true sobald VLC die Dauer kennt
     private bool _videoPlaying;     // true wenn Video laeuft (nicht pausiert)
+    private bool _closing;          // true sobald das Fenster geschlossen wird (Guard gegen Zugriff auf disposed _player)
     private double _lastSyncedMeter = -1; // Verhindert Doppel-Sync
 
     // Overlay-Zeichnung (WPF Shapes auf Canvas)
@@ -239,19 +240,26 @@ public partial class CodingModeWindow : Window
 
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        if (_closing) return;   // idempotent
+        _closing = true;
+
         // Event-Handler abmelden (Memory Leak verhindern)
         _vm.PropertyChanged -= Vm_PropertyChanged;
         _vm.Events.CollectionChanged -= VmEvents_CollectionChanged;
         _vm.SessionCompleted -= OnSessionCompleted;
 
-        _analysisCts?.Cancel();
-        _analysisCts?.Dispose();
+        try { _analysisCts?.Cancel(); } catch { /* bereits disposed */ }
+        try { _analysisCts?.Dispose(); } catch { }
         StopAiStatusPulse();
-        _ollamaClient?.Dispose();
-        _player?.Stop();
-        _player?.Dispose();
-        _libVlc?.Dispose();
-        _vm.Dispose();
+        try { _ollamaClient?.Dispose(); } catch { }
+
+        // WICHTIG: VideoView zuerst vom Player trennen, sonst kann der native
+        // Render-Pfad nach dem Dispose noch auf den Player zugreifen (Absturz).
+        try { VideoView.MediaPlayer = null; } catch { }
+        try { _player?.Stop(); } catch { }
+        try { _player?.Dispose(); } catch { }
+        try { _libVlc?.Dispose(); } catch { }
+        try { _vm.Dispose(); } catch { }
     }
 
     // Benannte Event-Handler (fuer sauberes Cleanup via -=)
@@ -392,16 +400,25 @@ public partial class CodingModeWindow : Window
         if (_player == null) return;
         // Event abmelden, damit es nur einmal feuert
         _player.Playing -= OnPlayerFirstPlaying;
-        // Kurz warten, damit VLC die Dauer sicher kennt, dann pausieren
+        // Kurz warten, damit VLC die Dauer sicher kennt, dann pausieren.
+        var player = _player;
         Task.Delay(150).ContinueWith(_ =>
         {
-            if (_player.Length > 0)
-                _videoDurationMs = _player.Length;
-            _videoReady = _videoDurationMs > 0;
-            _videoPlaying = false;
-            _player.SetPause(true);
-            Dispatcher.Invoke(() =>
+            // Guard: Fenster koennte in den 150ms geschlossen + Player disposed worden sein.
+            if (_closing || player is null) return;
+            try
             {
+                if (player.Length > 0)
+                    _videoDurationMs = player.Length;
+                _videoReady = _videoDurationMs > 0;
+                _videoPlaying = false;
+                player.SetPause(true);
+            }
+            catch { return; /* Player wurde zwischenzeitlich disposed */ }
+
+            Dispatcher.InvokeAsync(() =>
+            {
+                if (_closing) return;
                 // Session auch pausieren, damit BtnPause_Click korrekt "Fortsetzen" erkennt
                 if (_vm.IsRunning)
                     _vm.PauseSessionCommand.Execute(null);
