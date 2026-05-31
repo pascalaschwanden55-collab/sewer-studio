@@ -2443,6 +2443,7 @@ public partial class PlayerWindow
                 numCtx: config.OllamaNumCtx);
             _codingLiveDetection = new LiveDetectionService(client, config.VisionModel);
             _codingEnhancedVision = new EnhancedVisionAnalysisService(client, config.VisionModel, CodeCatalog);
+            // Bewusst Default-Gewichte (statisch). Gelernte Gewichte werden NICHT geladen (siehe ADR-008).
             _codingQualityGate = new QualityGateService();
 
             // Multi-Model Pipeline (YOLO â†’ DINO â†’ SAM) initialisieren
