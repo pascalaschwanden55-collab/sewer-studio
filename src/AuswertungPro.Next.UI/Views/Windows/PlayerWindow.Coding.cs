@@ -2913,6 +2913,8 @@ public partial class PlayerWindow
         double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter;
         var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
         bool anyAdded = false;
+        CodingEvent? firstUnsure = null;
+        QualityGateResult? firstUnsureGate = null;
 
         // BCD wird NICHT mehr automatisch erzeugt â€” nur durch Eingabemarker oder Qwen-Erkennung.
         // EnsureRohranfangExists(meter, videoTime, ref anyAdded);
@@ -2996,12 +2998,20 @@ public partial class PlayerWindow
                 SuggestedCode = code,
                 Confidence = gateResult.CompositeConfidence,
                 Reason = $"{quant.Label} (DINO {dinoConf:P0})",
-                Decision = gateResult.IsGreen
-                    ? CodingUserDecision.Accepted
-                    : CodingUserDecision.Ignored
+                // KI darf in KEINEM Pfad selbst akzeptieren: Vorschlag bleibt
+                // unbestaetigt (Ignored), bis der Mensch ihn bestaetigt (identisch zum Qwen-Pfad).
+                Decision = CodingUserDecision.Ignored
             };
 
             anyAdded = true;
+
+            // Zur Bestaetigung vorlegen, wenn unsicher (gelb/rot) ODER kritisch (Severity >= 4) -
+            // kritische Schaeden duerfen niemals stillschweigend uebernommen werden.
+            if ((!gateResult.IsGreen || pseudoFinding.Severity >= 4) && firstUnsure == null)
+            {
+                firstUnsure = codingEvent;
+                firstUnsureGate = gateResult;
+            }
         }
 
         if (anyAdded)
@@ -3009,6 +3019,9 @@ public partial class PlayerWindow
             RefreshCodingEventsList();
             UpdateToolBadge();
         }
+
+        if (firstUnsure != null && firstUnsureGate != null)
+            PauseAndAskConfirmation(firstUnsure, firstUnsureGate);
     }
 
     private IReadOnlyList<(string Code, string Description, double Meter)>? GatherImportContext()
