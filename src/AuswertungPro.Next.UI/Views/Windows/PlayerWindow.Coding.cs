@@ -2969,11 +2969,12 @@ public partial class PlayerWindow
 
             // QualityGate mit Multi-Model Evidenz
             double dinoConf = dino?.Confidence ?? quant.Confidence;
-            // D2: KEIN kuenstlicher YoloConf-Festwert mehr. YOLO ist hier nur ein
-            // Frame-Relevanz-Vorscreen, kein Per-Befund-Signal -> weglassen. Der
-            // QualityGateService renormalisiert die Gewichte ueber die vorhandenen,
-            // echten Per-Befund-Signale (DINO, SAM, Plausibilitaet).
+            // D2-A: ECHTE YOLO-Confidence (hoechste Box des Frames) statt Festwert 0.8.
+            // Ist sie null (keine YOLO-Box), ueberspringt das QualityGate das Signal und
+            // renormalisiert ueber DINO/SAM/Plausibilitaet. Klar erkannte Befunde bekommen
+            // so wieder eine ehrliche, hohe Confidence statt durchgehend gelb.
             var evidence = new EvidenceVector(
+                YoloConf: mmResult.YoloMaxConfidence,
                 DinoConf: dinoConf,
                 SamMaskStability: quant.Confidence,
                 PlausibilityScore: officialLabel != null ? 0.8 : 0.4

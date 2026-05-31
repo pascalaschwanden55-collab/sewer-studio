@@ -56,6 +56,11 @@ public sealed class SingleFrameMultiModelService
             var yoloReq = new YoloRequest(b64, _yoloConfidence);
             var yoloResp = await _client.DetectYoloAsync(yoloReq, ct);
             yoloMs = yoloResp.InferenceTimeMs;
+            // D2-A: echte YOLO-Confidence (hoechste Box) ans QualityGate weiterreichen,
+            // statt sie zu verwerfen. So zeigen klar erkannte Befunde wieder hohe Confidence.
+            double? yoloMax = yoloResp.Detections.Count > 0
+                ? yoloResp.Detections.Max(d => d.Confidence)
+                : (double?)null;
 
             if (!yoloResp.IsRelevant)
             {
@@ -65,7 +70,7 @@ public sealed class SingleFrameMultiModelService
                     SamResponse: null,
                     QuantifiedMasks: Array.Empty<MaskQuantificationService.QuantifiedMask>(),
                     YoloTimeMs: yoloMs, DinoTimeMs: 0, SamTimeMs: 0,
-                    Error: null);
+                    Error: null, YoloMaxConfidence: yoloMax);
             }
 
             // 2. DINO Open-Vocabulary Detection
@@ -81,7 +86,7 @@ public sealed class SingleFrameMultiModelService
                     SamResponse: null,
                     QuantifiedMasks: Array.Empty<MaskQuantificationService.QuantifiedMask>(),
                     YoloTimeMs: yoloMs, DinoTimeMs: dinoMs, SamTimeMs: 0,
-                    Error: null);
+                    Error: null, YoloMaxConfidence: yoloMax);
             }
 
             // 3. SAM Segmentation (DINO-Boxes als Input)
@@ -108,7 +113,7 @@ public sealed class SingleFrameMultiModelService
                 SamResponse: samResp,
                 QuantifiedMasks: quantified,
                 YoloTimeMs: yoloMs, DinoTimeMs: dinoMs, SamTimeMs: samMs,
-                Error: null);
+                Error: null, YoloMaxConfidence: yoloMax);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
@@ -129,7 +134,8 @@ public sealed record SingleFrameResult(
     double YoloTimeMs,
     double DinoTimeMs,
     double SamTimeMs,
-    string? Error)
+    string? Error,
+    double? YoloMaxConfidence = null)
 {
     public bool HasDetections => DinoDetections.Count > 0;
     public bool HasMasks => SamResponse?.Masks.Count > 0;
