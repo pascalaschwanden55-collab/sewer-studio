@@ -51,4 +51,28 @@ public sealed class DataPageRecordDetailsBuilderTests
             "Weitere Angaben"
         }, groups.Select(g => g.Title));
     }
+
+    [Fact]
+    public void Build_covers_every_catalog_field_exactly_once()
+    {
+        var record = new HaltungRecord();
+
+        var groups = DataPageRecordDetailsBuilder.Build(
+            record,
+            fieldName => new RecordDetailItem(fieldName, fieldName, _ => { }));
+
+        // Label == Feldname (durch die Test-Factory oben).
+        var renderedFields = groups
+            .SelectMany(g => g.Items)
+            .Select(item => item.Label)
+            .ToList();
+
+        // Jedes Katalogfeld erscheint genau einmal (faengt fehlend=0 und doppelt>1 ab).
+        foreach (var field in FieldCatalog.ColumnOrder)
+        {
+            var count = renderedFields.Count(f => f == field);
+            Assert.True(count == 1,
+                $"Feld '{field}' sollte genau einmal editierbar erscheinen, war aber {count}x vorhanden.");
+        }
+    }
 }
