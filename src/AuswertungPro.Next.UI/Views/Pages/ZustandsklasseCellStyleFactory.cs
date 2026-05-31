@@ -14,16 +14,10 @@ internal static class ZustandsklasseCellStyleFactory
     private static readonly Brush ForegroundBrush = CreateBrush(0x00, 0x00, 0x00);
 
     // Colors taken from Excel template "Haltungen.xlsx"
-    private static readonly IReadOnlyDictionary<string, Brush> HaltungenPalette = new Dictionary<string, Brush>(StringComparer.Ordinal)
-    {
-        ["0"] = CreateBrush(0xFF, 0x00, 0x00),
-        ["1"] = CreateBrush(0xFF, 0x66, 0x00),
-        ["2"] = CreateBrush(0xFF, 0xFF, 0x00),
-        ["3"] = CreateBrush(0xAE, 0xB1, 0x35),
-        ["4"] = CreateBrush(0x92, 0xD0, 0x50)
-    };
+    private static readonly IReadOnlyDictionary<string, Brush> HaltungenPalette =
+        AuswertungPro.Next.UI.DataPage.ZustandsklasseColorPalette.HaltungenPalette;
 
-    // Colors taken from Excel template "Schaechte/Schächte.xlsx"
+    // Colors taken from Excel template "Schaechte/Schï¿½chte.xlsx"
     private static readonly IReadOnlyDictionary<string, Brush> SchaechtePalette = new Dictionary<string, Brush>(StringComparer.Ordinal)
     {
         ["0"] = CreateBrush(0xFF, 0x00, 0x00),
@@ -115,7 +109,7 @@ internal static class ZustandsklasseCellStyleFactory
         if (key.Length == 0)
             return null;
 
-        // Prüfung bestanden / knapp nicht bestanden / nicht bestanden (grob undicht) / Keine
+        // Prï¿½fung bestanden / knapp nicht bestanden / nicht bestanden (grob undicht) / Keine
         if (key.Contains("keine", StringComparison.Ordinal))
             return CreateBrush(0xE7, 0xE6, 0xE6); // light gray
         if (key.Contains("grob", StringComparison.Ordinal) || key.Contains("undicht", StringComparison.Ordinal))
@@ -150,10 +144,10 @@ internal static class ZustandsklasseCellStyleFactory
         var text = (value ?? string.Empty)
             .Trim()
             .ToLowerInvariant()
-            .Replace("Ã¤", "ä", StringComparison.Ordinal)
-            .Replace("Ã¶", "ö", StringComparison.Ordinal)
-            .Replace("Ã¼", "ü", StringComparison.Ordinal)
-            .Replace("ÃŸ", "ß", StringComparison.Ordinal);
+            .Replace("Ã¤", "ï¿½", StringComparison.Ordinal)
+            .Replace("Ã¶", "ï¿½", StringComparison.Ordinal)
+            .Replace("Ã¼", "ï¿½", StringComparison.Ordinal)
+            .Replace("ÃŸ", "ï¿½", StringComparison.Ordinal);
 
         if (text.Length == 0)
             return string.Empty;
@@ -168,7 +162,7 @@ internal static class ZustandsklasseCellStyleFactory
 
         text = sb.ToString()
             .Normalize(NormalizationForm.FormC)
-            .Replace("ß", "ss", StringComparison.Ordinal)
+            .Replace("ï¿½", "ss", StringComparison.Ordinal)
             .Replace("ue", "u", StringComparison.Ordinal)
             .Replace("ae", "a", StringComparison.Ordinal)
             .Replace("oe", "o", StringComparison.Ordinal)
@@ -182,24 +176,7 @@ internal static class ZustandsklasseCellStyleFactory
     }
 
     private static string NormalizeClass(object? value)
-    {
-        var text = (value?.ToString() ?? string.Empty).Trim();
-        if (text.Length == 0)
-            return string.Empty;
-
-        if (text.Length >= 1 && char.IsDigit(text[0]))
-        {
-            var digit = text[0];
-            return digit is >= '0' and <= '4' ? digit.ToString() : string.Empty;
-        }
-
-        var normalized = text.Replace(',', '.');
-        if (!double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
-            return string.Empty;
-
-        var rounded = (int)Math.Round(number, MidpointRounding.AwayFromZero);
-        return rounded is >= 0 and <= 4 ? rounded.ToString(CultureInfo.InvariantCulture) : string.Empty;
-    }
+        => AuswertungPro.Next.UI.DataPage.ZustandsklasseColorPalette.NormalizeClass(value);
 
     private sealed class PaletteToBackgroundConverter(IReadOnlyDictionary<string, Brush> palette) : IValueConverter
     {
