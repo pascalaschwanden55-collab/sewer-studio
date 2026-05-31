@@ -32,7 +32,8 @@ public sealed record GuidedVerificationResult(
 /// </summary>
 public sealed class GuidedVerificationService
 {
-    private static readonly TimeSpan FrameTimeout = TimeSpan.FromSeconds(60);
+    // Per-Frame-Qwen-Cap = Standard 120s (#9), konsistent mit EnhancedVisionAnalysisService.
+    private static readonly TimeSpan FrameTimeout = TimeSpan.FromSeconds(120);
     private readonly OllamaClient _client;
     private readonly string _model;
     private readonly ICodeCatalogProvider? _codeCatalog;

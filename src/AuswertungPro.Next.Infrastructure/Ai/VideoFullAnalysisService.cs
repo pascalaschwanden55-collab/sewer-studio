@@ -32,7 +32,9 @@ public sealed class VideoFullAnalysisService
     public double FrameStepSeconds { get; set; } = 3.0;
     public int DedupWindowFrames { get; set; } = 3;
     public int MinSeverity { get; set; } = 1;
-    public TimeSpan VisionFrameTimeout { get; set; } = TimeSpan.FromSeconds(300);
+    // Aeusserer Per-Frame-Cap = Standard 120s (#9). Effektiv wirksam ist ohnehin der innere
+    // FrameTimeout in EnhancedVisionAnalysisService; frueher 300s und damit faktisch tot.
+    public TimeSpan VisionFrameTimeout { get; set; } = TimeSpan.FromSeconds(120);
 
     public VideoFullAnalysisService(
         EnhancedVisionAnalysisService vision,
