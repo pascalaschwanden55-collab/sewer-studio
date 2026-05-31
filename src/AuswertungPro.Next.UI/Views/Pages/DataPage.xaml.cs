@@ -932,11 +932,24 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
+        var betroffen = vm.Records.Count(r =>
+            !string.IsNullOrEmpty(r.GetFieldValue(fieldName)));
+        if (betroffen == 0)
+        {
+            MessageBox.Show($"Spalte \"{displayName}\" ist bereits leer.",
+                "Spalte leeren", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
         var result = MessageBox.Show(
-            $"Alle Werte in Spalte \"{displayName}\" loeschen?",
+            $"ACHTUNG: Alle Werte in Spalte \"{displayName}\" werden geloescht.\n\n" +
+            $"Betroffen: {betroffen} von {vm.Records.Count} Haltungen.\n" +
+            "Auch manuell bearbeitete Werte gehen verloren und koennen nicht rueckgaengig gemacht werden.\n\n" +
+            "Wirklich loeschen?",
             "Spalte leeren",
             MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
         if (result != MessageBoxResult.Yes)
             return;
 

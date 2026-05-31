@@ -21,20 +21,25 @@ public sealed class LiveControlServer : IDisposable
         WriteIndented = false
     };
 
+    /// <summary>Maximale Body-Groesse eines Live-Control-Requests (Schutz vor Speicher-Missbrauch).</summary>
+    private const int MaxBodyBytes = 64 * 1024;
+
     private readonly System.Windows.Application _app;
     private readonly Dispatcher _dispatcher;
     private readonly ILogger _logger;
     private readonly int _port;
+    private readonly string? _token;
     private readonly CancellationTokenSource _cts = new();
     private TcpListener? _listener;
     private Task? _loopTask;
 
-    private LiveControlServer(System.Windows.Application app, Dispatcher dispatcher, ILogger logger, int port)
+    private LiveControlServer(System.Windows.Application app, Dispatcher dispatcher, ILogger logger, int port, string? token)
     {
         _app = app;
         _dispatcher = dispatcher;
         _logger = logger;
         _port = port;
+        _token = string.IsNullOrWhiteSpace(token) ? null : token;
     }
 
     public static LiveControlServer? TryStartFromEnvironment(System.Windows.Application app, ILogger logger)
@@ -52,7 +57,8 @@ public sealed class LiveControlServer : IDisposable
             ? parsed
             : 8765;
 
-        var server = new LiveControlServer(app, app.Dispatcher, logger, port);
+        var token = Environment.GetEnvironmentVariable("SEWERSTUDIO_LIVE_CONTROL_TOKEN");
+        var server = new LiveControlServer(app, app.Dispatcher, logger, port, token);
         server.Start();
         return server;
     }
@@ -120,6 +126,7 @@ public sealed class LiveControlServer : IDisposable
             return null;
 
         var contentLength = 0;
+        string? token = null;
         string? line;
         while (!string.IsNullOrEmpty(line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false)))
         {
@@ -131,6 +138,15 @@ public sealed class LiveControlServer : IDisposable
             var value = line[(separator + 1)..].Trim();
             if (string.Equals(name, "Content-Length", StringComparison.OrdinalIgnoreCase))
                 _ = int.TryParse(value, out contentLength);
+            else if (string.Equals(name, "X-Live-Control-Token", StringComparison.OrdinalIgnoreCase))
+                token = value;
+        }
+
+        // Body-Limit: schuetzt vor Speicher-Missbrauch durch riesige Content-Length.
+        if (contentLength > MaxBodyBytes)
+        {
+            _logger.LogWarning("Live-Control Request abgelehnt: Body zu gross ({Len} Bytes).", contentLength);
+            return null;
         }
 
         var body = "";
@@ -150,11 +166,15 @@ public sealed class LiveControlServer : IDisposable
             body = new string(buffer, 0, read);
         }
 
-        return new LiveHttpRequest(parts[0].ToUpperInvariant(), parts[1], body);
+        return new LiveHttpRequest(parts[0].ToUpperInvariant(), parts[1], body, token);
     }
 
     private async Task<LiveHttpResponse> DispatchAsync(LiveHttpRequest request)
     {
+        // Optionaler Token: wenn konfiguriert, muss jeder Request ihn mitschicken.
+        if (_token is not null && !string.Equals(request.Token, _token, StringComparison.Ordinal))
+            return new LiveHttpResponse(401, new { ok = false, error = "Live-Control-Token fehlt oder ist falsch." });
+
         if (request.Method == "GET" && request.Path == "/health")
         {
             return Ok(new
@@ -338,7 +358,7 @@ public sealed class LiveControlServer : IDisposable
         _cts.Dispose();
     }
 
-    private readonly record struct LiveHttpRequest(string Method, string Path, string Body);
+    private readonly record struct LiveHttpRequest(string Method, string Path, string Body, string? Token);
     private readonly record struct LiveHttpResponse(int StatusCode, object Payload);
     private sealed record SetResourceBrushRequest(string? Key, string? Color);
     private sealed record SetButtonBackgroundRequest(string? Target, string? Color, int? MaxMatches);

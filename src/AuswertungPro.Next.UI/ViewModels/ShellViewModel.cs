@@ -239,6 +239,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public void NewProject()
     {
+        if (!ConfirmDiscardUnsavedChanges())
+            return;
+
         var folder = _sp.Dialogs.SelectFolder("Projektordner waehlen");
         if (string.IsNullOrWhiteSpace(folder))
             return;
@@ -279,6 +282,9 @@ public sealed partial class ShellViewModel : ObservableObject
             return false;
         }
 
+        if (!ConfirmDiscardUnsavedChanges())
+            return false;
+
         var res = _sp.Projects.Load(path);
         if (!res.Ok || res.Value is null)
         {
@@ -301,6 +307,28 @@ public sealed partial class ShellViewModel : ObservableObject
         if (path is null)
             return false;
         return TryOpenProject(path);
+    }
+
+    /// <summary>
+    /// Fragt bei ungespeicherten Aenderungen nach (Speichern/Verwerfen/Abbrechen).
+    /// Gibt false zurueck, wenn der Vorgang abgebrochen werden soll.
+    /// </summary>
+    private bool ConfirmDiscardUnsavedChanges()
+    {
+        if (Project is null || !Project.Dirty)
+            return true;
+
+        var answer = _sp.Dialogs.ConfirmCancel(
+            "Das aktuelle Projekt hat ungespeicherte Aenderungen.\n\n" +
+            "Vor dem Fortfahren speichern?",
+            "Ungespeicherte Aenderungen");
+
+        return answer switch
+        {
+            DialogConfirm.Cancel => false,
+            DialogConfirm.Yes => TrySaveProject() && !Project.Dirty, // nur fort, wenn Speichern klappte
+            _ => true, // No = verwerfen
+        };
     }
 
     private void SaveProject()

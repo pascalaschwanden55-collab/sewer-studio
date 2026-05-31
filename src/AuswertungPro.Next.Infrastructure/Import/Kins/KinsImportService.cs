@@ -539,7 +539,9 @@ public sealed class KinsImportService : IKinsImportService
             var candidate = NormalizeHoldingKey(record.GetFieldValue("Haltungsname"));
             if (string.IsNullOrWhiteSpace(candidate))
                 continue;
-            if (candidate.Contains(key, StringComparison.OrdinalIgnoreCase) || key.Contains(candidate, StringComparison.OrdinalIgnoreCase))
+            // Kein unscharfes Contains mehr (100-200 wuerde sonst 100-2000 treffen).
+            // Nur Praefix-Match an einer Segmentgrenze zulassen.
+            if (Common.HoldingKeyMatch.IsBoundaryPrefixMatch(candidate, key))
                 return record;
         }
 

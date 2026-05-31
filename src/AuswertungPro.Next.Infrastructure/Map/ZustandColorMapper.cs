@@ -12,8 +12,22 @@ public static class ZustandColorMapper
     public static ZustandFarbe Map(int? wert, bool invertiert)
     {
         if (wert is null) return ZustandFarbe.Unbekannt;
-        var v = invertiert ? 5 - wert.Value : wert.Value;
-        return v switch
+
+        if (invertiert)
+        {
+            // EZ-Skala 0-4: 4 = bester, 0 = schlechtester Zustand.
+            // Eigene Schwellen, damit die Mittelklasse (2) nicht faelschlich
+            // als Schlecht (rot) erscheint (frueher: 5 - wert).
+            return wert.Value switch
+            {
+                >= 3 => ZustandFarbe.Gut,      // 4, 3
+                2 => ZustandFarbe.Mittel,      // Mittelklasse
+                _ => ZustandFarbe.Schlecht,    // 1, 0
+            };
+        }
+
+        // VSA-Skala: 0 = bester, hoeher = schlechter.
+        return wert.Value switch
         {
             <= 1 => ZustandFarbe.Gut,
             2 => ZustandFarbe.Mittel,

@@ -47,6 +47,12 @@ public static class LiveControlClient
         {
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
             using var request = new HttpRequestMessage(method, url);
+
+            // Optionaler Token (gleiche Env-Var wie der Server) - nur senden wenn gesetzt.
+            var token = Environment.GetEnvironmentVariable("SEWERSTUDIO_LIVE_CONTROL_TOKEN");
+            if (!string.IsNullOrWhiteSpace(token))
+                request.Headers.TryAddWithoutValidation("X-Live-Control-Token", token);
+
             if (body is not null)
                 request.Content = JsonContent.Create(body, options: JsonOptions);
 

@@ -389,7 +389,9 @@ public sealed class FullProtocolGenerationService : IDisposable
             MeterStart = det.MeterStart,
             MeterEnd = det.MeterEnd > det.MeterStart ? det.MeterEnd : det.MeterStart,
             IsStreckenschaden = det.MeterEnd - det.MeterStart > 0.05,
-            Source = ProtocolEntrySource.Manual,
+            // KI-generierter Eintrag: als Ai kennzeichnen, nicht als Manual tarnen
+            // (Herkunft/Filterung im Export bleibt nachvollziehbar).
+            Source = ProtocolEntrySource.Ai,
             Ai = new ProtocolEntryAiMeta
             {
                 SuggestedCode = mapped.SuggestedCode,

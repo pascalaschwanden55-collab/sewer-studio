@@ -122,13 +122,14 @@ public sealed class IbakExportImportService : IIbakImportService
         if (exact is not null)
             return exact;
 
-        // Fallback: contains-match (IBAK exports can omit prefixes or format differently)
+        // Fallback: Praefix-Match an Segmentgrenze (kein unscharfes Contains mehr,
+        // das 100-200 mit 100-2000 verwechselt hat).
         foreach (var r in project.Data)
         {
             var v = NormalizeHoldingKey(r.GetFieldValue("Haltungsname"));
             if (string.IsNullOrWhiteSpace(v))
                 continue;
-            if (v.Contains(key, StringComparison.OrdinalIgnoreCase) || key.Contains(v, StringComparison.OrdinalIgnoreCase))
+            if (Common.HoldingKeyMatch.IsBoundaryPrefixMatch(v, key))
                 return r;
         }
 

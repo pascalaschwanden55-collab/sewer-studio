@@ -236,6 +236,10 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             {
                 _sp.Settings.LastProjectPath = null;
                 _sp.Settings.Save();
+                // Das aktive Projekt wurde soeben geloescht: ungespeicherte Aenderungen
+                // sind hinfaellig. Dirty-Flag zuruecksetzen, damit der Dirty-Guard in
+                // NewProject nicht anbietet, die geloeschte Datei wiederherzustellen.
+                _shell.Project.Dirty = false;
                 _shell.NewProject();
             }
 

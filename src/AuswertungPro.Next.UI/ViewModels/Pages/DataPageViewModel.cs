@@ -432,6 +432,12 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         if (Selected is null) return;
 
+        var name = Selected.GetFieldValue("Haltungsname");
+        var label = string.IsNullOrWhiteSpace(name) ? "diese Haltung" : $"die Haltung \"{name}\"";
+        if (!_sp.Dialogs.Confirm($"Soll {label} wirklich geloescht werden?\n\nDie Zeile inkl. aller Daten wird entfernt.",
+                "Haltung loeschen"))
+            return;
+
         var idx = Records.IndexOf(Selected);
         var removedId = Selected.Id;
         var removed = _shell.Project.RemoveRecord(removedId);

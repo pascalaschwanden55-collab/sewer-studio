@@ -3552,9 +3552,9 @@ public partial class PlayerWindow
                 SuggestedCode = code,
                 Confidence = gateResult.CompositeConfidence,
                 Reason = finding.Label,
-                Decision = gateResult.IsGreen
-                    ? CodingUserDecision.Accepted
-                    : CodingUserDecision.Ignored
+                // KI darf nicht selbst akzeptieren: Vorschlag bleibt unbestaetigt
+                // (Ignored), bis der Mensch ihn ueber das Bestaetigungs-Panel annimmt.
+                Decision = CodingUserDecision.Ignored
             };
 
             // Bbox â†’ OverlayGeometry (Rectangle) fuer Kontur-Rendering auf CodingOverlayCanvas
@@ -3580,7 +3580,10 @@ public partial class PlayerWindow
 
             anyAdded = true;
 
-            if (!gateResult.IsGreen && firstUnsure == null)
+            // Zur Bestaetigung vorlegen, wenn die KI unsicher ist (gelb/rot) ODER
+            // der Befund kritisch ist (Severity >= 4) - kritische Schaeden duerfen
+            // niemals stillschweigend uebernommen werden.
+            if ((!gateResult.IsGreen || finding.Severity >= 4) && firstUnsure == null)
             {
                 firstUnsure = codingEvent;
                 firstUnsureGate = gateResult;
@@ -3695,23 +3698,28 @@ public partial class PlayerWindow
         _codingPendingConfirmEvent = codingEvent;
         _codingPendingGateResult = gateResult;
 
-        // Ampel-Farbe setzen
-        var ampelColor = gateResult.IsYellow
-            ? Color.FromRgb(0xF5, 0x9E, 0x0B)   // Gelb
-            : Color.FromRgb(0xEF, 0x44, 0x44);   // Rot
+        // Ampel-Farbe setzen (Gruen = sicher, aber kritischer Befund zur Bestaetigung)
+        var ampelColor = gateResult.IsGreen
+            ? Color.FromRgb(0x22, 0xC5, 0x5E)   // Gruen
+            : gateResult.IsYellow
+                ? Color.FromRgb(0xF5, 0x9E, 0x0B)   // Gelb
+                : Color.FromRgb(0xEF, 0x44, 0x44);   // Rot
         ConfirmAmpel.Fill = new SolidColorBrush(ampelColor);
 
         // Globale Ampel aktualisieren
         SetCodingAiState(TxtCodingAiStatus.Text, ampelColor,
-            gateResult.IsYellow ? "QualityGate: Gelb" : "QualityGate: Rot");
+            gateResult.IsGreen ? "QualityGate: Gruen (kritisch)"
+            : gateResult.IsYellow ? "QualityGate: Gelb" : "QualityGate: Rot");
 
         // Panel befuellen
         TxtConfirmCode.Text = codingEvent.Entry.Code ?? "???";
         TxtConfirmConfidence.Text = $"({gateResult.CompositeConfidence:P0})";
         TxtConfirmDescription.Text = codingEvent.Entry.Beschreibung ?? codingEvent.AiContext?.Reason ?? "";
-        TxtConfirmDetail.Text = gateResult.IsYellow
-            ? "KI ist unsicher \u2014 bitte pruefen."
-            : "KI hat geringe Sicherheit \u2014 bitte Code korrigieren oder verwerfen.";
+        TxtConfirmDetail.Text = gateResult.IsGreen
+            ? "Kritischer Befund \u2014 bitte bestaetigen oder korrigieren."
+            : gateResult.IsYellow
+                ? "KI ist unsicher \u2014 bitte pruefen."
+                : "KI hat geringe Sicherheit \u2014 bitte Code korrigieren oder verwerfen.";
 
         CodingConfirmationPanel.Visibility = Visibility.Visible;
     }
