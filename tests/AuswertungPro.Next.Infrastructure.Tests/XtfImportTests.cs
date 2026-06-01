@@ -8,29 +8,57 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 
 public sealed class XtfImportTests
 {
-    [Fact(Skip = "Requires local XTF file not checked into repository")]
-    public void Sia405Import_FillsExpectedFields()
+    [Fact]
+    public void Sia405Import_ParsesHoldingMaterialAndDn_FromSyntheticBasket()
     {
-        var root = TestPaths.FindSolutionRoot();
-        var xtfPath = Path.Combine(root, "Rohdaten", "GEP_Altdorf_2025_Zone_1.15_29261_925_INTERLIS SIA405 2020_SEC.xtf");
-        Assert.True(File.Exists(xtfPath), $"Test XTF not found: {xtfPath}");
+        // Minimales SYNTHETISCHES SIA405-XTF (kein echter Kundendatensatz):
+        // ein SIA405_Abwasser-Basket mit einer Haltung inkl. Material und lichter Hoehe (DN).
+        // Deckt den realen Parse-Pfad LegacyXtfImportService.ParseSia405 ab, ohne Uri/Altdorf-Daten ins Repo zu legen.
+        var tempPath = Path.Combine(Path.GetTempPath(), $"sia405-{Guid.NewGuid():N}.xtf");
+        File.WriteAllText(tempPath, """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="SewerStudioTest" VERSION="2.3">
+    <MODELS>
+      <MODEL NAME="SIA405_Abwasser_2015_LV95" />
+    </MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_Abwasser.SIA405_Abwasser BID="B1">
+      <Haltung TID="H1">
+        <Bezeichnung>80638-80631</Bezeichnung>
+        <LaengeEffektiv>22.5</LaengeEffektiv>
+        <Lichte_Hoehe>300</Lichte_Hoehe>
+        <Material>Steinzeug</Material>
+      </Haltung>
+    </SIA405_Abwasser.SIA405_Abwasser>
+  </DATASECTION>
+</TRANSFER>
+""");
 
-        var project = new Project();
-        var svc = new LegacyXtfImportService();
+        try
+        {
+            var project = new Project();
+            var svc = new LegacyXtfImportService();
 
-        var stats = svc.ImportXtfFiles(new[] { xtfPath }, project);
+            var stats = svc.ImportXtfFiles(new[] { tempPath }, project);
 
-        var debug = string.Join("\n", stats.Messages.Select(m => $"{m.Level}: {m.Message} ({m.Context})"));
-        Assert.True(stats.Errors == 0, debug);
-        Assert.True(project.Data.Count > 0, $"No records imported.\n{debug}");
-        Assert.Equal(stats.Found, project.Data.Count);
+            var debug = string.Join("\n", stats.Messages.Select(m => $"{m.Level}: {m.Message} ({m.Context})"));
+            Assert.True(stats.Errors == 0, debug);
+            Assert.True(project.Data.Count > 0, $"No records imported.\n{debug}");
+            Assert.Equal(stats.Found, project.Data.Count);
 
-        // Use a stable holding ID present at the top of the shipped sample XTF
-        var rec = project.Data.FirstOrDefault(r =>
-            string.Equals(r.GetFieldValue("Haltungsname"), "80638-80631", StringComparison.OrdinalIgnoreCase));
-        Assert.NotNull(rec);
-        Assert.False(string.IsNullOrWhiteSpace(rec!.GetFieldValue("Rohrmaterial")));
-        Assert.False(string.IsNullOrWhiteSpace(rec.GetFieldValue("DN_mm")));
+            var rec = project.Data.FirstOrDefault(r =>
+                string.Equals(r.GetFieldValue("Haltungsname"), "80638-80631", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(rec);
+            Assert.Equal("Steinzeug", rec!.GetFieldValue("Rohrmaterial"));
+            Assert.Equal("300", rec.GetFieldValue("DN_mm"));
+            Assert.Equal("22.5", rec.GetFieldValue("Haltungslaenge_m"));
+        }
+        finally
+        {
+            try { File.Delete(tempPath); } catch { }
+        }
     }
 
     [Fact]
