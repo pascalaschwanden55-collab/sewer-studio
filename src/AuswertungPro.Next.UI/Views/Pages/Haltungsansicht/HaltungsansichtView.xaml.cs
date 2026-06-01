@@ -60,6 +60,33 @@ public partial class HaltungsansichtView : UserControl
             ActionRequested?.Invoke("codieren", record);
     }
 
+    // Rechtsklick wählt zuerst die Zeile unter dem Cursor, damit das Menü auf der
+    // richtigen Haltung arbeitet (auch wenn sie nicht selektiert war).
+    private void HaltungList_PreviewMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        _ = sender;
+        var dep = e.OriginalSource as System.Windows.DependencyObject;
+        while (dep is not null and not System.Windows.Controls.ListBoxItem)
+            dep = System.Windows.Media.VisualTreeHelper.GetParent(dep);
+        if (dep is System.Windows.Controls.ListBoxItem { DataContext: HaltungRecord record })
+            HaltungList.SelectedItem = record;
+    }
+
+    private void RaiseAction(string actionKey)
+    {
+        if (HaltungList.SelectedItem is HaltungRecord record)
+            ActionRequested?.Invoke(actionKey, record);
+    }
+
+    private void CtxMoveUp_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("moveup"); }
+    private void CtxMoveDown_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("movedown"); }
+    private void CtxBeobachtungen_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("beobachtungen"); }
+    private void CtxPlay_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("play"); }
+    private void CtxPrintAwu_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("printawu"); }
+    private void CtxOpenPdf_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("openpdf"); }
+    private void CtxCosts_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("costs"); }
+    private void CtxDelete_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("delete"); }
+
     private void RefreshDetail()
     {
         if (!IsVisible)
