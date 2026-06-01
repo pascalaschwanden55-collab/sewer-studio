@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.DataPage;
 
 namespace AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
@@ -31,4 +32,28 @@ public sealed class ZustandsklasseBrushConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => Binding.DoNothing;
+}
+
+/// <summary>ProtocolEntry → Meter-Anzeige (z. B. "2.50–8.10 m"); nutzt den getesteten Formatter.</summary>
+public sealed class SchadenMeterConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is ProtocolEntry e ? SchadenZeileFormatter.FormatMeter(e) : string.Empty;
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+}
+
+/// <summary>ProtocolEntry → Klartext (Beschreibung, Fallback Code).</summary>
+public sealed class SchadenKlartextConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is ProtocolEntry e ? SchadenZeileFormatter.Format(e).Klartext : string.Empty;
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+}
+
+/// <summary>ProtocolEntry → Kategorie-Tag ("Bestand"/"Betrieb"/"Zustand"/"").</summary>
+public sealed class SchadenKategorieConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is ProtocolEntry e ? SchadenZeileFormatter.Kategorie(e.Code) : string.Empty;
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
 }

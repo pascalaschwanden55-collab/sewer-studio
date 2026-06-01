@@ -46,6 +46,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         // Haltungsansicht teilt sich Selected/Records mit der Tabelle; Detail-Aufbau wie im Detailfenster
         HaltungsansichtView.DetailBuilder = BuildHaltungRecordDetails;
+        HaltungsansichtView.ActionRequested = RouteHaltungsansichtAction;
 
         _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(180) };
         _searchDebounceTimer.Tick += (_, __) =>
@@ -1155,6 +1156,31 @@ public partial class DataPage : System.Windows.Controls.UserControl
     }
 
     // ── Haltung Record Details ──────────────────────────────────────────
+
+    private void RouteHaltungsansichtAction(string actionKey, HaltungRecord record)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+
+        // Sender ist hier die DataPage (kein HaltungRecord-DataContext, kein offenes
+        // ContextMenu) -> GetContextMenuRecord(this) liefert null -> ResolveActionRecord
+        // faellt auf das gerade gesetzte vm.Selected zurueck. Darum reicht 'this' als Sender.
+        vm.Selected = record;
+        var e = new RoutedEventArgs();
+        switch (actionKey)
+        {
+            case "codieren": vm.OpenProtocolCommand.Execute(record); break;
+            case "play": PlayMenu_Click(this, e); break;
+            case "beobachtungen": BeobachtungenMenu_Click(this, e); break;
+            case "printawu": PrintAwuHaltungsprotokollMenu_Click(this, e); break;
+            case "openpdf": OpenOriginalPdfMenu_Click(this, e); break;
+            case "costs": CostsMenu_Click(this, e); break;
+            case "moveup": MoveRecordUpMenu_Click(this, e); break;
+            case "movedown": MoveRecordDownMenu_Click(this, e); break;
+            case "delete": DeleteSelectedRows(); break;
+            default: System.Diagnostics.Debug.Fail($"Unbekannter actionKey: {actionKey}"); break;
+        }
+    }
 
     // Umschalter Tabelle <-> Haltungsansicht: beide Sichten teilen Selected/Records
     private void HaltungsansichtToggle_Changed(object sender, RoutedEventArgs e)

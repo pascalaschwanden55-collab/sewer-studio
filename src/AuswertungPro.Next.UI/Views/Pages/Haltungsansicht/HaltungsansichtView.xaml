@@ -7,6 +7,9 @@
     <UserControl.Resources>
         <local:HaltungSummaryConverter x:Key="SummaryConv"/>
         <local:ZustandsklasseBrushConverter x:Key="ZkBrushConv"/>
+        <local:SchadenMeterConverter x:Key="SchadenMeterConv"/>
+        <local:SchadenKlartextConverter x:Key="SchadenKlartextConv"/>
+        <local:SchadenKategorieConverter x:Key="SchadenKategorieConv"/>
     </UserControl.Resources>
 
     <Grid Margin="8">
@@ -68,7 +71,69 @@
         <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
                       Background="{StaticResource BorderBrush}"/>
 
-        <!-- Detail rechts (wiederverwendetes Control) -->
-        <controls:RecordDetailsView Grid.Column="2" x:Name="Detail" Margin="8,0,0,0"/>
+        <!-- Detail rechts: Feld-Karten oben, Primaere-Schaeden-Tabelle unten -->
+        <Grid Grid.Column="2" Margin="8,0,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <controls:RecordDetailsView Grid.Row="0" x:Name="Detail"/>
+
+            <Border Grid.Row="1" Margin="0,8,0,0" Padding="12"
+                    Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1" CornerRadius="10">
+                <StackPanel>
+                    <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                        <TextBlock DockPanel.Dock="Left" Text="Primäre Schäden" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
+                        <Button DockPanel.Dock="Right" x:Name="SchadenAddButton" Content="+"
+                                Width="28" Height="24" FontSize="16" Padding="0"
+                                Click="SchadenAdd_Click" ToolTip="Neue Beobachtung codieren"/>
+                    </DockPanel>
+
+                    <ListBox x:Name="SchadenList"
+                             ItemsSource="{Binding SelectedProtocolEntries}"
+                             MaxHeight="220"
+                             Background="Transparent" BorderThickness="0"
+                             HorizontalContentAlignment="Stretch"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             MouseDoubleClick="SchadenList_MouseDoubleClick">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="0,2" Padding="8,5"
+                                        Background="{StaticResource HeaderBrush}" BorderBrush="{StaticResource BorderBrush}"
+                                        BorderThickness="1" CornerRadius="6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="64"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="12"
+                                                   Foreground="{StaticResource NeonGreenBrush}"
+                                                   Text="{Binding Converter={StaticResource SchadenMeterConv}}"/>
+                                        <Border Grid.Column="1" VerticalAlignment="Center" Margin="6,0" Padding="6,2"
+                                                CornerRadius="4" Background="#1E3A8A">
+                                            <TextBlock Text="{Binding Code}" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
+                                        </Border>
+                                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="6,0" FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" Foreground="{StaticResource TextBrush}"
+                                                   Text="{Binding Converter={StaticResource SchadenKlartextConv}}"/>
+                                        <Border Grid.Column="3" VerticalAlignment="Center" Padding="6,2" CornerRadius="4"
+                                                Background="{StaticResource HeaderBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                            <TextBlock Text="{Binding Converter={StaticResource SchadenKategorieConv}}"
+                                                       FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

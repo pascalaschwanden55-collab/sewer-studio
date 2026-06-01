@@ -33,11 +33,31 @@ public partial class HaltungsansichtView : UserControl
         }
     }
 
+    /// <summary>
+    /// Von der DataPage gesetzt: führt eine Aktion (actionKey) auf einer Haltung aus,
+    /// indem sie die bestehenden DataPage-Handler/Commands aufruft.
+    /// </summary>
+    public Action<string, HaltungRecord>? ActionRequested { get; set; }
+
     private void HaltungList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         _ = sender;
         _ = e;
         RefreshDetail();
+    }
+
+    private void SchadenList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        _ = sender; _ = e;
+        if (HaltungList.SelectedItem is HaltungRecord record)
+            ActionRequested?.Invoke("codieren", record);
+    }
+
+    private void SchadenAdd_Click(object sender, RoutedEventArgs e)
+    {
+        _ = sender; _ = e;
+        if (HaltungList.SelectedItem is HaltungRecord record)
+            ActionRequested?.Invoke("codieren", record);
     }
 
     private void RefreshDetail()
