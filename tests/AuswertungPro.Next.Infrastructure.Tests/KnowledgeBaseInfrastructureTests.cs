@@ -26,6 +26,17 @@ public sealed class KnowledgeBaseInfrastructureTests
 
             var tableCount = Convert.ToInt32(cmd.ExecuteScalar());
             Assert.Equal(5, tableCount);
+
+            // busy_timeout gesetzt (Schutz gegen "database is locked" bei Rebuild vs. Retrieval)
+            using var pragma = db.Connection.CreateCommand();
+            pragma.CommandText = "PRAGMA busy_timeout;";
+            Assert.Equal(3000, Convert.ToInt32(pragma.ExecuteScalar()));
+
+            // Additiver Index auf Embeddings.Model existiert
+            using var idxCmd = db.Connection.CreateCommand();
+            idxCmd.CommandText =
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_embeddings_model'";
+            Assert.Equal(1, Convert.ToInt32(idxCmd.ExecuteScalar()));
         }
         finally
         {

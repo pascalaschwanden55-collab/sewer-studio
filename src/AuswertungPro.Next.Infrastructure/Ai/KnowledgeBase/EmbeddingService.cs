@@ -87,9 +87,21 @@ public sealed class EmbeddingService(HttpClient http, OllamaConfig config)
         return bytes;
     }
 
-    /// <summary>Deserialisiert einen byte[] BLOB zurück in float[].</summary>
+    /// <summary>
+    /// Deserialisiert einen byte[] BLOB zurück in float[].
+    /// Wirft bei ungültiger Länge einen klaren Fehler statt eine kryptische BlockCopy-Exception
+    /// (die Länge muss ein Vielfaches von sizeof(float) sein – jeder von ToBlob erzeugte BLOB ist das).
+    /// </summary>
+    /// <exception cref="ArgumentException">BLOB-Länge ist nicht durch sizeof(float) teilbar.</exception>
     public static float[] FromBlob(byte[] blob)
     {
+        if (blob is null || blob.Length == 0)
+            return Array.Empty<float>();
+        if (blob.Length % sizeof(float) != 0)
+            throw new ArgumentException(
+                $"Embedding-BLOB hat ungueltige Laenge {blob.Length} (nicht durch {sizeof(float)} teilbar).",
+                nameof(blob));
+
         var vector = new float[blob.Length / sizeof(float)];
         Buffer.BlockCopy(blob, 0, vector, 0, blob.Length);
         return vector;

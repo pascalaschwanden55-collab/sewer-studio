@@ -41,6 +41,9 @@ public sealed class KnowledgeBaseContext : IDisposable
     {
         // WAL-Mode explizit aktivieren: bessere Concurrency + Crash-Safety
         ExecuteNonQuery("PRAGMA journal_mode=WAL;");
+        // Konkurrierende Zugriffe (Rebuild im TrainingCenter vs. Retrieval bei der Protokollgenerierung)
+        // nicht sofort mit "database is locked" abbrechen, sondern bis zu 3s warten.
+        ExecuteNonQuery("PRAGMA busy_timeout=3000;");
 
         ExecuteNonQuery("""
             CREATE TABLE IF NOT EXISTS Samples (
@@ -82,6 +85,13 @@ public sealed class KnowledgeBaseContext : IDisposable
         ExecuteNonQuery("""
             CREATE INDEX IF NOT EXISTS idx_samples_code
                 ON Samples(VsaCode);
+            """);
+
+        // Index für CheckModelConsistency (SELECT DISTINCT Model) – vermeidet Full-Scan
+        // bei der Modell-Mismatch-Pruefung; additiv, aendert keine bestehende Query.
+        ExecuteNonQuery("""
+            CREATE INDEX IF NOT EXISTS idx_embeddings_model
+                ON Embeddings(Model);
             """);
 
         // QualityGate: Per-category adaptive weights
