@@ -45,4 +45,43 @@ public sealed class SelfTrainingAutoAcceptPolicyTests
             Assert.True(d.RouteToReview);
         }
     }
+
+    [Fact]
+    public void KbDisagreement_VetoesAutoAccept_EvenWhenAutoAllowed()
+    {
+        // Selbst bei ExactMatch + Flag aus: KB-Widerspruch -> immer Review.
+        var d = SelfTrainingAutoAcceptPolicy.Decide(
+            MatchLevel.ExactMatch, requireHumanReview: false, KbCheckResult.KbDisagreement);
+
+        Assert.Equal(TrainingSampleStatus.New, d.Status);
+        Assert.Equal(KbIndexState.None, d.KbIndexState);
+        Assert.True(d.RouteToReview);
+        Assert.Equal(SelfTrainingAutoAcceptPolicy.KbDisagreementReason, d.Reason);
+    }
+
+    [Fact]
+    public void KbAgreement_DoesNotOverride_RequireHumanReview()
+    {
+        // KbAgreement ist nur ein Kandidaten-Signal; RequireHumanReview bleibt staerker.
+        var d = SelfTrainingAutoAcceptPolicy.Decide(
+            MatchLevel.ExactMatch, requireHumanReview: true, KbCheckResult.KbAgreement);
+
+        Assert.Equal(TrainingSampleStatus.New, d.Status);
+        Assert.Equal(KbIndexState.None, d.KbIndexState);
+        Assert.Equal(SelfTrainingAutoAcceptPolicy.HumanReviewRequiredReason, d.Reason);
+    }
+
+    [Theory]
+    [InlineData(KbCheckResult.KbAgreement)]
+    [InlineData(KbCheckResult.KbNoSignal)]
+    public void NonDisagreement_WithFlagOff_CleanExact_StillApproves(KbCheckResult kb)
+    {
+        // Ohne Flag und ohne KB-Widerspruch bleibt das S2-Verhalten (Auto-Approve bei ExactMatch).
+        var d = SelfTrainingAutoAcceptPolicy.Decide(
+            MatchLevel.ExactMatch, requireHumanReview: false, kb);
+
+        Assert.Equal(TrainingSampleStatus.Approved, d.Status);
+        Assert.Equal(KbIndexState.Pending, d.KbIndexState);
+        Assert.False(d.RouteToReview);
+    }
 }

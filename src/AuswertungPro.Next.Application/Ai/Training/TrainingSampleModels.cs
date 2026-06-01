@@ -74,6 +74,9 @@ public sealed class TrainingSample
     /// <summary>Von der KI erkannter Code.</summary>
     public string? KiCode { get; set; }
 
+    /// <summary>KB-Abgleich-Signal (Weg 1): "KbAgreement" / "KbDisagreement" / "KbNoSignal".</summary>
+    public string? KbCheck { get; set; }
+
     /// <summary>Herkunft des Samples, siehe SourceTypeNames.</summary>
     public string? SourceType { get; set; }
 

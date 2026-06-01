@@ -12,6 +12,7 @@ namespace AuswertungPro.Next.Application.Ai.Training;
 public static class SelfTrainingAutoAcceptPolicy
 {
     public const string HumanReviewRequiredReason = "HumanReviewRequired";
+    public const string KbDisagreementReason = "KbDisagreement";
 
     public readonly record struct Decision(
         TrainingSampleStatus Status,
@@ -19,8 +20,19 @@ public static class SelfTrainingAutoAcceptPolicy
         bool RouteToReview,
         string? Reason);
 
-    public static Decision Decide(MatchLevel level, bool requireHumanReview)
+    public static Decision Decide(
+        MatchLevel level,
+        bool requireHumanReview,
+        KbCheckResult kbCheck = KbCheckResult.KbNoSignal)
     {
+        // Weg 1: KB-Mehrheit widerspricht dem KI-Code -> IMMER Review (Veto), unabhaengig von
+        // MatchLevel/Flag. KbAgreement/KbNoSignal aendern die Entscheidung NICHT — Agreement ist
+        // nur ein Kandidaten-Signal, kein Auto-Gold-Trigger; RequireHumanReview bleibt staerker.
+        if (kbCheck == KbCheckResult.KbDisagreement)
+            return new Decision(
+                TrainingSampleStatus.New, KbIndexState.None,
+                RouteToReview: true, KbDisagreementReason);
+
         bool cleanExact = level == MatchLevel.ExactMatch;
 
         // Sauberer Treffer, aber Mensch muss bestaetigen -> Kandidat, KEIN Auto-Gold/Index.

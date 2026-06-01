@@ -1984,8 +1984,16 @@ public partial class TrainingCenterViewModel : ObservableObject
             var pdfExtractor = new PdfProtocolExtractor();
 
             var stSettings = await TrainingCenterSettingsStore.LoadAsync();
+
+            // Weg 1: read-only KB-Abgleich-Signal fuer den Orchestrator (KB-Widerspruch -> Review).
+            var stOllamaConfig = new AppSettingsAiSettingsProvider().Load().ToOllamaConfig();
+            _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = stOllamaConfig.RequestTimeout };
+            using var stKbCtx = new KnowledgeBaseContext();
+            var stRetrieval = new RetrievalService(stKbCtx, new EmbeddingService(_kbHttpClient, stOllamaConfig));
+
             _selfTrainingOrchestrator = new SelfTrainingOrchestrator(
-                vision, comparison, technique, pdfExtractor, stSettings, ResolveFfmpegPath(cfg.FfmpegPath));
+                vision, comparison, technique, pdfExtractor, stSettings,
+                ResolveFfmpegPath(cfg.FfmpegPath), stRetrieval);
 
             // Progress-Callback verbindet Orchestrator → ViewModel-Visualisierungen
             var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);

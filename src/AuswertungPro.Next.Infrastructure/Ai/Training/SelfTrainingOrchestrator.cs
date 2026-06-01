@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
@@ -22,6 +23,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     private readonly PdfProtocolExtractor _pdfExtractor;
     private readonly TrainingCenterSettings _settings;
     private readonly string _ffmpegPath;
+    private readonly IRetrievalService? _retrieval;
 
     private readonly ManualResetEventSlim _pauseGate = new(true);
 
@@ -33,7 +35,8 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         ITechniqueAssessmentService technique,
         PdfProtocolExtractor pdfExtractor,
         TrainingCenterSettings? settings = null,
-        string? ffmpegPath = null)
+        string? ffmpegPath = null,
+        IRetrievalService? retrieval = null)
     {
         _vision = vision;
         _comparison = comparison;
@@ -41,10 +44,38 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         _pdfExtractor = pdfExtractor;
         _settings = settings ?? new TrainingCenterSettings();
         _ffmpegPath = string.IsNullOrWhiteSpace(ffmpegPath) ? "ffmpeg" : ffmpegPath;
+        _retrieval = retrieval;
     }
 
     public void Pause() => _pauseGate.Reset();
     public void Resume() => _pauseGate.Set();
+
+    /// <summary>
+    /// Weg 1: liest (read-only) die KB-Nachbarn zum Protokolltext und vergleicht deren Mehrheits-Code
+    /// mit dem KI-Code. Defensiv: kein Retrieval injiziert ODER Fehler -> KbNoSignal (kein Block).
+    /// </summary>
+    private async Task<KbCheckResult> EvaluateKbAgreementAsync(
+        ComparisonResult comparison, GroundTruthEntry entry, CancellationToken ct)
+    {
+        if (_retrieval is null)
+            return KbCheckResult.KbNoSignal;
+
+        var kiCode = comparison.BestMatchCode;
+        if (string.IsNullOrWhiteSpace(kiCode) || string.IsNullOrWhiteSpace(entry.Text))
+            return KbCheckResult.KbNoSignal;
+
+        try
+        {
+            var hits = await _retrieval.RetrieveAsync(entry.Text, topK: 5, ct).ConfigureAwait(false);
+            var kbCodes = hits.Select(h => h.Sample.VsaCode).ToList();
+            return KbCodeAgreement.Classify(kiCode, kbCodes);
+        }
+        catch
+        {
+            // Retrieval/Ollama-Fehler darf das Self-Training nicht stoppen -> neutral.
+            return KbCheckResult.KbNoSignal;
+        }
+    }
 
     public async Task<SelfTrainingResult> RunAsync(
         TrainingCaseInput tc,
@@ -264,8 +295,10 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             // ── TrainingSample erzeugen ──
             var meterCenter = (entry.MeterStart + entry.MeterEnd) / 2.0;
             var eligibility = TrainingSampleEligibility.Evaluate(tc.InspectionDate);
+            // Weg 1: KB-Abgleich (read-only) als zusaetzliches Signal; KB-Widerspruch -> Review.
+            var kbCheck = await EvaluateKbAgreementAsync(comparison, entry, ct).ConfigureAwait(false);
             // S2b: RequireHumanReview haelt auch saubere ExactMatches vom Auto-Gold/Index zurueck.
-            var decision = SelfTrainingAutoAcceptPolicy.Decide(comparison.Level, _settings.RequireHumanReview);
+            var decision = SelfTrainingAutoAcceptPolicy.Decide(comparison.Level, _settings.RequireHumanReview, kbCheck);
             var sample = new TrainingSample
             {
                 SampleId = $"{tc.CaseId}_st_{i:D3}_{DateTime.UtcNow:HHmmss}",
@@ -288,6 +321,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 Signature = TrainingSample.BuildCanonicalSignature(tc.CaseId, entry.VsaCode, meterCenter, entry.MeterEnd),
                 MatchLevel = comparison.Level.ToString(),
                 KiCode = comparison.BestMatchCode,
+                KbCheck = kbCheck.ToString(),
                 SourceType = usedVideoFallback
                     ? (entry.Zeit.HasValue ? SourceTypeNames.VideoTimestamp : SourceTypeNames.VideoLinear)
                     : SourceTypeNames.PdfPhoto,
