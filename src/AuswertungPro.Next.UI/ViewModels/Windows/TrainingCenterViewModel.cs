@@ -1225,7 +1225,9 @@ public partial class TrainingCenterViewModel : ObservableObject
             {
                 _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
                 kbCtx = new KnowledgeBaseContext();
-                kbManager = new KnowledgeBaseManager(kbCtx, new EmbeddingService(_kbHttpClient, ollamaConfig));
+                // Eval-Kontaminationsschutz: Eval-Frames hart aus dem KB-Index blockieren.
+                var kbEvalHashes = EvalContaminationGuard.LoadEvalImageHashes(AppSettings.Load().EvalSetRoot);
+                kbManager = new KnowledgeBaseManager(kbCtx, new EmbeddingService(_kbHttpClient, ollamaConfig), kbEvalHashes);
                 Log($"Ollama bereit: {ollamaConfig.BaseUri}, Embed-Modell: {ollamaConfig.EmbedModel}");
             }
             else
@@ -2122,7 +2124,9 @@ public partial class TrainingCenterViewModel : ObservableObject
             _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
             using var kbCtx = new KnowledgeBaseContext();
             var embedder = new EmbeddingService(_kbHttpClient, ollamaConfig);
-            var kbManager = new KnowledgeBaseManager(kbCtx, embedder);
+            // Eval-Kontaminationsschutz: Eval-Frames hart aus dem KB-Index blockieren.
+            var kbEvalHashes = EvalContaminationGuard.LoadEvalImageHashes(AppSettings.Load().EvalSetRoot);
+            var kbManager = new KnowledgeBaseManager(kbCtx, embedder, kbEvalHashes);
 
             foreach (var sample in samples)
             {

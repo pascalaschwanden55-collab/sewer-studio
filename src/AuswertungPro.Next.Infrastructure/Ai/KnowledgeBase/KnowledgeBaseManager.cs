@@ -18,8 +18,18 @@ namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 /// </summary>
 public sealed class KnowledgeBaseManager(
     KnowledgeBaseContext db,
-    EmbeddingService embedder) : ITrainingSampleIndexer
+    EmbeddingService embedder,
+    IReadOnlySet<string>? evalImageHashes = null) : ITrainingSampleIndexer
 {
+    /// <summary>
+    /// True wenn der Frame des Samples inhaltsgleich zu einem Eval-Set-Bild ist (Hash-Vergleich).
+    /// Schuetzt die Benchmark-Wahrheit: Eval-Frames duerfen NICHT in die KB indexiert werden,
+    /// sonst tauchen sie spaeter als Retrieval-Kontext auf und blaehen die Metriken auf.
+    /// Ist kein Eval-Hash-Satz konfiguriert, ist der Schutz inaktiv (Rueckgabe false).
+    /// </summary>
+    public bool IsEvalContaminated(TrainingSample sample)
+        => evalImageHashes is { Count: > 0 }
+           && EvalContaminationGuard.IsEvalContaminated(evalImageHashes, sample.FramePath);
     // ── Öffentliche API ───────────────────────────────────────────────────
 
     /// <summary>
@@ -31,6 +41,14 @@ public sealed class KnowledgeBaseManager(
         TrainingSample sample,
         CancellationToken ct = default)
     {
+        // Eval-Kontaminationsschutz ZUERST (vor Embedding/Katalog): ein Eval-Frame darf nie
+        // in die KB. Hart blockieren + klarer Log-Eintrag (kein stilles Ueberspringen).
+        if (IsEvalContaminated(sample))
+        {
+            Debug.WriteLine($"[KnowledgeBaseManager] Sample {sample.SampleId} BLOCKIERT (Eval-Kontamination): Frame inhaltsgleich zu Eval-Set – nicht indexiert.");
+            return false;
+        }
+
         if (!IsIndexWorthy(sample))
         {
             Debug.WriteLine($"[KnowledgeBaseManager] Sample {sample.SampleId} uebersprungen: Qualitaet ungenuegend ({sample.Code}, Beschreibung={sample.Beschreibung?.Length ?? 0} Zeichen)");
@@ -74,6 +92,11 @@ public sealed class KnowledgeBaseManager(
         foreach (var sample in samples)
         {
             ct.ThrowIfCancellationRequested();
+            if (IsEvalContaminated(sample))
+            {
+                Debug.WriteLine($"[KnowledgeBaseManager] Sample {sample.SampleId} BLOCKIERT (Eval-Kontamination) – nicht indexiert.");
+                continue;
+            }
             if (!IsIndexWorthy(sample)) continue;
             var vec = await embedder.EmbedAsync(sample.Beschreibung, ct).ConfigureAwait(false);
             if (vec is not null)
@@ -141,8 +164,11 @@ public sealed class KnowledgeBaseManager(
             new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, concurrency), CancellationToken = ct },
             async (i, token) =>
             {
-                if (!IsIndexWorthy(samples[i]))
+                var evalBlocked = IsEvalContaminated(samples[i]);
+                if (!IsIndexWorthy(samples[i]) || evalBlocked)
                 {
+                    if (evalBlocked)
+                        Debug.WriteLine($"[KnowledgeBaseManager] Rebuild: Sample {samples[i].SampleId} BLOCKIERT (Eval-Kontamination).");
                     Interlocked.Increment(ref errors);
                     var n2 = Interlocked.Increment(ref done);
                     progress?.Report(n2);

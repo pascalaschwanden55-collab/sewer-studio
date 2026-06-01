@@ -76,6 +76,11 @@ public sealed class AppSettings
     // WinCan catalog directory for browsing and auto-discovery
     public string? WinCanCatalogDirectory { get; set; }
 
+    // Eval-Set-Wurzel (eingefrorene Benchmark-Daten). Quelle fuer den Eval-Kontaminationsschutz:
+    // Frames aus diesem Set werden hart aus dem KB-Index-Schreibpfad blockiert. Default = kanonischer
+    // Projektpfad, ueberschreibbar; fehlt der Pfad/das Manifest, ist der Schutz leer (kein Blocken).
+    public string EvalSetRoot { get; set; } = @"C:\KI_BRAIN\eval_set";
+
     // VSA Zustandklassifizierung v2: Shadow-Vergleich gegen Legacy-Engine.
     // Null bedeutet Default an.
     public bool? VsaClassificationShadowEnabled { get; set; }
