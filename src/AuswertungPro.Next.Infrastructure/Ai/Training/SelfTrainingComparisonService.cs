@@ -23,9 +23,12 @@ public interface ISelfTrainingComparisonService
 public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonService
 {
     // Toleranzen
-    private const double MeterTolerance = 1.0;      // ± 1.0m
     private const int ClockTolerance = 1;            // ± 1 Stunde
     // SeverityTolerance nicht als Konstante — Plausibilitaet ist kategorieabhaengig (siehe SeverityPlausible)
+    // Meter-Toleranz ist schadenstyp-abhaengig (siehe MeterToleranceFor):
+    private const double AnschlussMeterTolerance = 0.30;  // BCA/BAH: muss genau sitzen
+    private const double DefaultMeterTolerance = 0.50;    // Einzelschaden / unbekannt
+    private const double StreckenEdgeTolerance = 0.50;    // Rand-Toleranz bei Overlap-Pruefung
 
     public ComparisonResult Compare(GroundTruthEntry truth, EnhancedFrameAnalysis analysis)
     {
@@ -54,9 +57,11 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
         foreach (var finding in analysis.Findings)
         {
             bool codeMatch = CodesMatch(truth.VsaCode, finding.VsaCodeHint);
-            bool meterMatch = MeterMatches(truth.MeterStart, analysis.Meter);
+            bool meterMatch = MeterMatches(truth, analysis.Meter);
             bool severityOk = SeverityPlausible(truth.VsaCode, finding.Severity);
-            bool clockMatch = ClockMatches(truth.ClockPosition, finding.PositionClock);
+            // Nur eine positiv bestaetigte Uhrlage (Protokoll hat + KI gleich) zaehlt. Fehlende
+            // Protokoll-Uhrlage erzeugt KEINEN Volltreffer (Neutral/OverClaim/Conflict != Match).
+            bool clockMatch = EvaluateClock(truth.ClockPosition, finding.PositionClock) == ClockEval.Match;
 
             // Gewichtete Punktzahl
             double score = 0;
@@ -76,9 +81,11 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
             }
         }
 
-        // Match-Level bestimmen
+        // Match-Level bestimmen. ExactMatch (= Grundlage fuer Auto-Accept im Orchestrator) verlangt
+        // jetzt ALLE Achsen sauber: Code exakt, Meter in (typabhaengiger) Toleranz, Severity plausibel
+        // UND positiv bestaetigte Uhrlage. Alles andere -> Partial/Mismatch -> ReviewQueue statt Gold.
         MatchLevel level;
-        if (bestCodeMatch && bestMeterMatch && bestClockMatch)
+        if (bestCodeMatch && bestMeterMatch && bestSeverityOk && bestClockMatch)
             level = MatchLevel.ExactMatch;
         else if (bestCodeMatch)
             level = MatchLevel.PartialMatch;
@@ -127,10 +134,31 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
 
     // ── Meter-Vergleich ──
 
-    private static bool MeterMatches(double truthMeter, double? kiMeter)
+    /// <summary>
+    /// Meter-Abgleich mit schadenstyp-abhaengiger Toleranz:
+    /// - Streckenschaden (MeterEnd&gt;MeterStart): Overlap-Pruefung (KI-Punkt im Bereich +/- Rand) statt Punktdistanz.
+    /// - Anschluss/Zulauf/Abzweiger (BCA*/BAH*): +/- 0.30 m (muss genau sitzen).
+    /// - sonst (Einzelschaden/unbekannt): +/- 0.50 m.
+    /// </summary>
+    private static bool MeterMatches(GroundTruthEntry truth, double? kiMeter)
     {
         if (!kiMeter.HasValue) return false;
-        return Math.Abs(truthMeter - kiMeter.Value) <= MeterTolerance;
+        var ki = kiMeter.Value;
+
+        if (truth.IsStreckenschaden && truth.MeterEnd > truth.MeterStart)
+            return ki >= truth.MeterStart - StreckenEdgeTolerance
+                && ki <= truth.MeterEnd + StreckenEdgeTolerance;
+
+        return Math.Abs(truth.MeterStart - ki) <= MeterToleranceFor(truth.VsaCode);
+    }
+
+    private static double MeterToleranceFor(string? vsaCode)
+    {
+        var c = (vsaCode ?? string.Empty).ToUpperInvariant().Trim();
+        // BCA = seitlicher Anschluss, BAH = schadhafter Anschluss -> Position muss genau sitzen.
+        if (c.StartsWith("BCA", StringComparison.Ordinal) || c.StartsWith("BAH", StringComparison.Ordinal))
+            return AnschlussMeterTolerance;
+        return DefaultMeterTolerance;
     }
 
     // ── Schweregrad-Plausibilitaet ──
@@ -162,12 +190,35 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
 
     // ── Uhrzeigerposition-Vergleich ──
 
-    private static bool ClockMatches(string? truthClock, string? kiClock)
+    /// <summary>Drei(+1)-Wert-Bewertung der Uhrlage Protokoll vs. KI.</summary>
+    private enum ClockEval
     {
-        // Beide leer = kein Uhrzeitvergleich noetig = Match
-        if (string.IsNullOrEmpty(truthClock) && string.IsNullOrEmpty(kiClock)) return true;
-        if (string.IsNullOrEmpty(truthClock) || string.IsNullOrEmpty(kiClock)) return false;
+        Match,      // Protokoll hat Uhrlage UND KI gleiche -> einziger Fall der ExactMatch erlaubt
+        Conflict,   // Protokoll hat Uhrlage, KI weicht ab ODER fehlt -> Review, kein ExactMatch
+        Neutral,    // beide leer -> unbewertet, kein Pluspunkt, kein Volltreffer
+        OverClaim   // Protokoll leer, KI gibt Uhrlage an -> kein harter Fehler, aber kein ExactMatch
+    }
 
+    /// <summary>
+    /// Bewertet die Uhrlage. WICHTIG: Eine fehlende Protokoll-Uhrlage darf keinen Volltreffer
+    /// erzeugen — nur <see cref="ClockEval.Match"/> zaehlt fuer ExactMatch/Score.
+    /// </summary>
+    private static ClockEval EvaluateClock(string? truthClock, string? kiClock)
+    {
+        bool truthHas = !string.IsNullOrWhiteSpace(truthClock);
+        bool kiHas = !string.IsNullOrWhiteSpace(kiClock);
+
+        if (truthHas && kiHas)
+            return ClocksEqual(truthClock!, kiClock!) ? ClockEval.Match : ClockEval.Conflict;
+        if (truthHas)            // Protokoll hat Uhrlage, KI leer -> Review
+            return ClockEval.Conflict;
+        if (!kiHas)              // beide leer -> unbewertet
+            return ClockEval.Neutral;
+        return ClockEval.OverClaim; // Protokoll leer, KI gibt Uhrlage an
+    }
+
+    private static bool ClocksEqual(string truthClock, string kiClock)
+    {
         if (!TryParseClock(truthClock, out int tHour)) return false;
         if (!TryParseClock(kiClock, out int kHour)) return false;
 
