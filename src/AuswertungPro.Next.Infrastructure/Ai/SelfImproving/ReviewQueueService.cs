@@ -41,7 +41,8 @@ public sealed class ReviewQueueService
         string suggestedCode,
         double meter,
         string framePath,
-        string matchLevel)
+        string matchLevel,
+        string? reason = null)
     {
         var priority = matchLevel switch
         {
@@ -61,7 +62,8 @@ public sealed class ReviewQueueService
             SelfTrainingSuggestedCode = suggestedCode,
             SelfTrainingMeter = meter,
             SelfTrainingFramePath = framePath,
-            SelfTrainingMatchLevel = matchLevel
+            SelfTrainingMatchLevel = matchLevel,
+            SelfTrainingReason = reason
         };
 
         lock (_lock)
@@ -113,6 +115,8 @@ public sealed record ReviewQueueItem(
     public double? SelfTrainingMeter { get; init; }
     public string? SelfTrainingFramePath { get; init; }
     public string? SelfTrainingMatchLevel { get; init; }
+    /// <summary>Warum der Fall geprueft werden muss (z.B. "HumanReviewRequired"). Null = aus MatchLevel ableitbar.</summary>
+    public string? SelfTrainingReason { get; init; }
 
     public string Label => IsFromSelfTraining
         ? $"{SelfTrainingVsaCode} @ {SelfTrainingMeter:F1}m ({SelfTrainingMatchLevel})"

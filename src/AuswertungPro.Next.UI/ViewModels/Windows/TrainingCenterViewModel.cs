@@ -2053,26 +2053,31 @@ public partial class TrainingCenterViewModel : ObservableObject
                 Log($"{result.ExactMatches} ExactMatch-Samples erzeugt. Fuer Few-Shot-Export: Tab 'Samples' → 'Export Approved'");
             }
 
-            // Review Queue befuellen mit PartialMatch/Mismatch (C1)
-            if (ReviewQueueServiceRef is not null && (result.PartialMatches > 0 || result.Mismatches > 0))
+            // Review Queue befuellen: PartialMatch/Mismatch (C1) UND vom RequireHumanReview-Schalter
+            // zurueckgehaltene saubere ExactMatches (S2b: ExactMatch, aber Status New statt Approved).
+            if (ReviewQueueServiceRef is not null
+                && (result.PartialMatches > 0 || result.Mismatches > 0 || result.ExactMatches > 0))
             {
                 var allSamplesForReview = await TrainingSamplesStore.LoadAsync();
                 var reviewCandidates = allSamplesForReview
                     .Where(s => s.CaseId == result.CaseId
-                        && s.MatchLevel is MatchLevelNames.PartialMatch or MatchLevelNames.Mismatch)
+                        && (s.MatchLevel is MatchLevelNames.PartialMatch or MatchLevelNames.Mismatch
+                            || (s.MatchLevel == MatchLevelNames.ExactMatch
+                                && s.Status == TrainingSampleStatus.New)))
                     .ToList();
 
                 foreach (var s in reviewCandidates)
                 {
                     ReviewQueueServiceRef.EnqueueFromSelfTraining(
                         s.CaseId, s.Code, s.KiCode ?? s.Code,
-                        s.MeterStart, s.FramePath, s.MatchLevel!);
+                        s.MeterStart, s.FramePath, s.MatchLevel!,
+                        reason: string.IsNullOrWhiteSpace(s.Notes) ? null : s.Notes);
                 }
 
                 if (reviewCandidates.Count > 0)
                 {
                     LoadReviewQueue(ReviewQueueServiceRef);
-                    Log($"{reviewCandidates.Count} Samples in Review Queue eingereiht (PartialMatch/Mismatch)");
+                    Log($"{reviewCandidates.Count} Samples in Review Queue eingereiht (Partial/Mismatch + zurueckgehaltene ExactMatches)");
                 }
             }
 

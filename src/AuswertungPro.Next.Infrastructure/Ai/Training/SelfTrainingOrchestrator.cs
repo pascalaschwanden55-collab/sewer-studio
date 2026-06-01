@@ -264,6 +264,8 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             // ── TrainingSample erzeugen ──
             var meterCenter = (entry.MeterStart + entry.MeterEnd) / 2.0;
             var eligibility = TrainingSampleEligibility.Evaluate(tc.InspectionDate);
+            // S2b: RequireHumanReview haelt auch saubere ExactMatches vom Auto-Gold/Index zurueck.
+            var decision = SelfTrainingAutoAcceptPolicy.Decide(comparison.Level, _settings.RequireHumanReview);
             var sample = new TrainingSample
             {
                 SampleId = $"{tc.CaseId}_st_{i:D3}_{DateTime.UtcNow:HHmmss}",
@@ -277,12 +279,9 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 DetectedMeter = analysis.Meter,
                 MeterSource = "Protokoll",
                 FramePath = framePath,
-                Status = comparison.Level == MatchLevel.ExactMatch
-                    ? TrainingSampleStatus.Approved
-                    : TrainingSampleStatus.New,
-                KbIndexState = comparison.Level == MatchLevel.ExactMatch
-                    ? KbIndexState.Pending
-                    : KbIndexState.None,
+                Status = decision.Status,
+                KbIndexState = decision.KbIndexState,
+                Notes = decision.Reason ?? string.Empty,
                 TruthMeterCenter = meterCenter,
                 OdsDeltaMeters = technique?.OsdDeltaMeters,
                 HasOsdMismatch = technique?.OsdDeltaMeters > _settings.OsdMismatchThresholdMeters,

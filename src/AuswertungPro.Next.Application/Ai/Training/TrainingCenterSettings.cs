@@ -13,4 +13,11 @@ public sealed class TrainingCenterSettings
     public int TimelineSampleCount { get; set; } = 30;
     public string? FramesOutputFolder { get; set; } = null; // null = default AppData folder
     public int GpuConcurrency { get; set; } = 1;
+
+    /// <summary>
+    /// S2b-Sicherheitsschalter: Wenn true, wird im Self-Training NICHTS automatisch als Gold/KB
+    /// uebernommen — auch ein sauberer 4-Achsen-ExactMatch (S2) bleibt nur Kandidat und geht in die
+    /// ReviewQueue (Grund: HumanReviewRequired). Default true = sicher fuer unbeaufsichtigte Nachtlaeufe.
+    /// </summary>
+    public bool RequireHumanReview { get; set; } = true;
 }
