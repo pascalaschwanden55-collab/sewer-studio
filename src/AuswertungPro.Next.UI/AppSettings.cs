@@ -61,6 +61,9 @@ public sealed class AppSettings
     public DataPageLayoutSettings DataPageLayout { get; set; } = new();
     public DataPageLayoutSettings SchaechtePageLayout { get; set; } = new();
 
+    // Haltungsansicht: per GridSplitter einstellbare Hoehe des "Primaere Schaeden"-Panels (in px).
+    public double HaltungsansichtSchadenHeight { get; set; } = 240d;
+
     // Window position/size persistence
     public Dictionary<string, WindowBounds> WindowStates { get; set; } = new();
 

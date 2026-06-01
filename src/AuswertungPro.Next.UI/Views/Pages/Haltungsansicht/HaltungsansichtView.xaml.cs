@@ -9,10 +9,58 @@ namespace AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
 
 public partial class HaltungsansichtView : UserControl
 {
+    // Grenzen fuer die einstellbare Hoehe des "Primaere Schaeden"-Panels (px).
+    private const double SchadenHeightMin = 80d;
+    private const double SchadenHeightMax = 2000d;
+
     public HaltungsansichtView()
     {
         InitializeComponent();
+        RestoreSchadenHeight();
         IsVisibleChanged += (_, _) => RefreshDetail();
+    }
+
+    /// <summary>
+    /// Liefert die App-Settings, oder null wenn (z.B. im Designer) keine Services initialisiert sind.
+    /// </summary>
+    private static AppSettings? TryGetSettings()
+    {
+        try
+        {
+            return (App.Services as ServiceProvider)?.Settings;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Gespeicherte Panel-Hoehe beim Start anwenden (geclampt).</summary>
+    private void RestoreSchadenHeight()
+    {
+        var height = TryGetSettings()?.HaltungsansichtSchadenHeight ?? double.NaN;
+        if (double.IsNaN(height) || height <= 0)
+            return;
+
+        SchadenRowDef.Height = new GridLength(
+            Math.Clamp(height, SchadenHeightMin, SchadenHeightMax),
+            GridUnitType.Pixel);
+    }
+
+    /// <summary>Nach dem Ziehen des Splitters die neue Hoehe speichern.</summary>
+    private void SchadenSplitter_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+    {
+        _ = sender; _ = e;
+        var settings = TryGetSettings();
+        if (settings is null)
+            return;
+
+        var height = Math.Clamp(SchadenRowDef.ActualHeight, SchadenHeightMin, SchadenHeightMax);
+        if (Math.Abs(settings.HaltungsansichtSchadenHeight - height) < 0.5d)
+            return;
+
+        settings.HaltungsansichtSchadenHeight = height;
+        settings.Save();
     }
 
     private Func<HaltungRecord, IReadOnlyList<RecordDetailGroup>>? _detailBuilder;
