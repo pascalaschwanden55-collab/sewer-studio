@@ -33,7 +33,9 @@ internal sealed class TemporalFindingDeduplicator
     public IReadOnlyList<RawVideoDetection> Update(
         IReadOnlyList<EnhancedFinding> current,
         double meter,
-        EvidenceVector? evidence = null)
+        EvidenceVector? evidence = null,
+        string? meterSource = null,
+        bool isMeterEstimated = false)
     {
         var completed = new List<RawVideoDetection>();
         var currentMap = new Dictionary<string, EnhancedFinding>(StringComparer.OrdinalIgnoreCase);
@@ -68,6 +70,8 @@ internal sealed class TemporalFindingDeduplicator
                     finding.IntrusionPercent,
                     finding.CrossSectionReductionPercent,
                     finding.DiameterReductionMm,
+                    meterSource,
+                    isMeterEstimated,
                     evidence);
             }
             else
@@ -99,6 +103,8 @@ internal sealed class TemporalFindingDeduplicator
                 finding.IntrusionPercent,
                 finding.CrossSectionReductionPercent,
                 finding.DiameterReductionMm,
+                meterSource,
+                isMeterEstimated,
                 _options.NormalizeOutputClock,
                 _options.MinStretchLengthMeters,
                 evidence);
@@ -228,6 +234,8 @@ internal sealed class TemporalFindingDeduplicator
         public int? IntrusionPercent { get; private set; }
         public int? CrossSectionReductionPercent { get; private set; }
         public int? DiameterReductionMm { get; private set; }
+        public string? MeterSource { get; private set; }
+        public bool IsMeterEstimated { get; private set; }
         public EvidenceVector? Evidence { get; private set; }
         public int FrameCount { get; private set; } = 1;
         public int MissedFrames { get; set; }
@@ -244,6 +252,8 @@ internal sealed class TemporalFindingDeduplicator
             int? intrusion,
             int? crossSection,
             int? diameterReduction,
+            string? meterSource,
+            bool isMeterEstimated,
             bool normalizeOutputClock,
             double minStretchLengthMeters,
             EvidenceVector? evidence = null)
@@ -262,6 +272,8 @@ internal sealed class TemporalFindingDeduplicator
             IntrusionPercent = intrusion;
             CrossSectionReductionPercent = crossSection;
             DiameterReductionMm = diameterReduction;
+            MeterSource = meterSource;
+            IsMeterEstimated = isMeterEstimated;
             Evidence = evidence;
         }
 
@@ -276,6 +288,8 @@ internal sealed class TemporalFindingDeduplicator
             int? intrusion,
             int? crossSection,
             int? diameterReduction,
+            string? meterSource,
+            bool isMeterEstimated,
             EvidenceVector? evidence = null)
         {
             MeterEnd = meter;
@@ -290,6 +304,8 @@ internal sealed class TemporalFindingDeduplicator
             if (intrusion is { } ip) IntrusionPercent = Math.Max(IntrusionPercent ?? 0, ip);
             if (crossSection is { } csr) CrossSectionReductionPercent = Math.Max(CrossSectionReductionPercent ?? 0, csr);
             if (diameterReduction is { } dr) DiameterReductionMm = Math.Max(DiameterReductionMm ?? 0, dr);
+            if (!string.IsNullOrWhiteSpace(meterSource)) MeterSource = meterSource;
+            IsMeterEstimated |= isMeterEstimated;
             if (evidence is not null)
             {
                 Evidence = Evidence is null ? evidence : MergeEvidence(Evidence, evidence);
@@ -299,7 +315,9 @@ internal sealed class TemporalFindingDeduplicator
         public RawVideoDetection ToDetection() =>
             new(Name, MeterStart, ResolveMeterEnd(VsaCodeHint, MeterStart, MeterEnd, _minStretchLengthMeters), SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock,
                 ExtentPercent, HeightMm, WidthMm, IntrusionPercent, CrossSectionReductionPercent, DiameterReductionMm,
-                Evidence: Evidence is not null ? Evidence with { FrameCount = FrameCount } : null);
+                Evidence: Evidence is not null ? Evidence with { FrameCount = FrameCount } : null,
+                MeterSource: MeterSource,
+                IsMeterEstimated: IsMeterEstimated);
 
         private string? NormalizeStoredClock(string? clock) =>
             _normalizeOutputClock ? NormalizeClock(clock) : clock;

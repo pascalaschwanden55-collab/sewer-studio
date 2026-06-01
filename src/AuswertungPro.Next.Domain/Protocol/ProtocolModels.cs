@@ -45,6 +45,8 @@ public sealed class ProtocolEntryAiMeta
     public List<string> Flags { get; set; } = new();
     public bool Accepted { get; set; }
     public string? FinalCode { get; set; }
+    public string? MeterSource { get; set; }
+    public bool IsMeterEstimated { get; set; }
     public DateTimeOffset SuggestedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 

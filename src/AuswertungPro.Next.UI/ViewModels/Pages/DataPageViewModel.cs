@@ -25,6 +25,7 @@ using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Sanierung;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Hydraulik;
 
@@ -758,10 +759,13 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         if (ok && win.Result?.IsSuccess == true && win.Result.Document is not null)
         {
-            record.Protocol = win.Result.Document;
+            record.Protocol = ProtocolReplacementService.PrepareReplacement(
+                record.Protocol,
+                win.Result.Document,
+                user: "KI-Reanalyse",
+                archiveComment: "Auto-Archiv vor KI-Reanalyse");
 
-            _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-            _shell.Project.Dirty = true;
+            _shell.MarkProjectDirty(record);
 
             RefreshRecordInGrid(record);
             if (Selected?.Id == record.Id)

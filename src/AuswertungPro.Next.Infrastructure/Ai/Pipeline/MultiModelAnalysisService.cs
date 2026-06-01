@@ -523,7 +523,12 @@ public sealed class MultiModelAnalysisService
             )).ToList();
 
             // Update active findings (dedup)
-            detections.AddRange(deduplicator.Update(findings, meter, frameEvidence));
+            detections.AddRange(deduplicator.Update(
+                findings,
+                meter,
+                frameEvidence,
+                meterSource: "LinearEstimate",
+                isMeterEstimated: true));
 
             trace.Meter = meter;
             trace.FindingsEndOfFrame = findings.Count;

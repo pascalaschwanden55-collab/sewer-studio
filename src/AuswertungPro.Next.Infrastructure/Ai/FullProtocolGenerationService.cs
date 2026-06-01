@@ -9,6 +9,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
@@ -393,15 +394,72 @@ public sealed class FullProtocolGenerationService : IDisposable
             // KI-generierter Eintrag: als Ai kennzeichnen, nicht als Manual tarnen
             // (Herkunft/Filterung im Export bleibt nachvollziehbar).
             Source = ProtocolEntrySource.Ai,
+            CodeMeta = BuildCodeMeta(mapped),
             Ai = new ProtocolEntryAiMeta
             {
                 SuggestedCode = mapped.SuggestedCode,
                 Confidence = mapped.Confidence,
                 Reason = mapped.Reason,
                 Flags = mapped.Warnings.ToList(),
+                MeterSource = det.MeterSource,
+                IsMeterEstimated = det.IsMeterEstimated,
                 SuggestedAt = DateTimeOffset.UtcNow
             }
         };
+    }
+
+    private static ProtocolEntryCodeMeta? BuildCodeMeta(MappedProtocolEntry mapped)
+    {
+        var det = mapped.Detection;
+        var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        AddClockParameters(parameters, det.PositionClock);
+        AddMm(parameters, "vsa.q1", det.HeightMm);
+        AddMm(parameters, "vsa.q2", det.WidthMm);
+        AddPercent(parameters, "vsa.umfang.prozent", det.ExtentPercent);
+        AddPercent(parameters, "vsa.einragung.prozent", det.IntrusionPercent);
+        AddPercent(parameters, "vsa.querschnitt.prozent", det.CrossSectionReductionPercent);
+        AddMm(parameters, "vsa.dn.reduktion", det.DiameterReductionMm);
+
+        if (parameters.Count == 0 && string.IsNullOrWhiteSpace(det.Severity))
+            return null;
+
+        return new ProtocolEntryCodeMeta
+        {
+            Code = mapped.SuggestedCode ?? det.VsaCodeHint ?? string.Empty,
+            Parameters = parameters,
+            Severity = string.IsNullOrWhiteSpace(det.Severity) ? null : det.Severity.Trim(),
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+    }
+
+    private static void AddClockParameters(Dictionary<string, string> parameters, string? positionClock)
+    {
+        if (string.IsNullOrWhiteSpace(positionClock))
+            return;
+
+        var raw = positionClock.Trim();
+        var parts = raw.Split(new[] { '-', '–' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length >= 2)
+        {
+            parameters["vsa.uhr.von"] = parts[0];
+            parameters["vsa.uhr.bis"] = parts[1];
+            return;
+        }
+
+        parameters["vsa.uhr.von"] = raw;
+    }
+
+    private static void AddMm(Dictionary<string, string> parameters, string key, int? value)
+    {
+        if (value is > 0)
+            parameters[key] = $"{value.Value} mm";
+    }
+
+    private static void AddPercent(Dictionary<string, string> parameters, string key, int? value)
+    {
+        if (value is > 0)
+            parameters[key] = value.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private sealed record KbExample(
@@ -426,8 +484,8 @@ public sealed class FullProtocolGenerationService : IDisposable
         return new ProtocolDocument
         {
             HaltungId = request.HaltungId,
-            Original = revision,
-            Current = revision
+            Original = ProtocolRevisionCloner.CloneRevision(revision, "KI (FullProtocolGeneration)", "Original aus Video-Analyse"),
+            Current = ProtocolRevisionCloner.CloneRevision(revision, "KI (FullProtocolGeneration)", "Automatisch generiert aus Video-Analyse")
         };
     }
 
@@ -444,8 +502,8 @@ public sealed class FullProtocolGenerationService : IDisposable
         return new ProtocolDocument
         {
             HaltungId = request.HaltungId,
-            Original = revision,
-            Current = revision
+            Original = ProtocolRevisionCloner.CloneRevision(revision, "KI (FullProtocolGeneration)", "Original aus Video-Analyse"),
+            Current = ProtocolRevisionCloner.CloneRevision(revision, "KI (FullProtocolGeneration)", "Keine Schaeden erkannt")
         };
     }
 }

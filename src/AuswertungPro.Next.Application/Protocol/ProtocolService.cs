@@ -1,4 +1,3 @@
-using System.Text.Json;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Application.Protocol;
@@ -14,17 +13,17 @@ public sealed class ProtocolService : IProtocolService
             {
                 CreatedBy = user,
                 Comment = "Import (Original)",
-                Entries = importedEntries.Select(CloneEntry).ToList()
+                Entries = importedEntries.Select(ProtocolRevisionCloner.CloneEntry).ToList()
             }
         };
-        doc.Current = CloneRevision(doc.Original, user, "Arbeitskopie");
+        doc.Current = ProtocolRevisionCloner.CloneRevision(doc.Original, user, "Arbeitskopie");
         return doc;
     }
 
     public ProtocolRevision StartNachprotokoll(ProtocolDocument doc, string? user, string? comment)
     {
-        doc.History.Add(CloneRevision(doc.Current, user, "Auto-Archiv vor Nachprotokoll"));
-        var next = CloneRevision(doc.Current, user, comment ?? "Nachprotokoll");
+        doc.History.Add(ProtocolRevisionCloner.CloneRevision(doc.Current, user, "Auto-Archiv vor Nachprotokoll"));
+        var next = ProtocolRevisionCloner.CloneRevision(doc.Current, user, comment ?? "Nachprotokoll");
         next.BasedOnRevisionId = doc.Current.RevisionId;
         next.Changes.Add(new ProtocolChange
         {
@@ -40,7 +39,7 @@ public sealed class ProtocolService : IProtocolService
 
     public ProtocolRevision StartNeuProtokoll(ProtocolDocument doc, string? user, string? comment)
     {
-        doc.History.Add(CloneRevision(doc.Current, user, "Auto-Archiv vor Neu-Protokoll"));
+        doc.History.Add(ProtocolRevisionCloner.CloneRevision(doc.Current, user, "Auto-Archiv vor Neu-Protokoll"));
         var next = new ProtocolRevision
         {
             CreatedBy = user,
@@ -65,8 +64,8 @@ public sealed class ProtocolService : IProtocolService
 
     public void RestoreOriginal(ProtocolDocument doc, string? user)
     {
-        doc.History.Add(CloneRevision(doc.Current, user, "Auto-Archiv vor Wiederherstellen"));
-        doc.Current = CloneRevision(doc.Original, user, "Wiederhergestellt aus Original");
+        doc.History.Add(ProtocolRevisionCloner.CloneRevision(doc.Current, user, "Auto-Archiv vor Wiederherstellen"));
+        doc.Current = ProtocolRevisionCloner.CloneRevision(doc.Original, user, "Wiederhergestellt aus Original");
         doc.Current.Changes.Add(new ProtocolChange
         {
             User = user,
@@ -79,8 +78,8 @@ public sealed class ProtocolService : IProtocolService
 
     public void RestoreRevision(ProtocolDocument doc, ProtocolRevision revision, string? user, string? comment)
     {
-        doc.History.Add(CloneRevision(doc.Current, user, "Auto-Archiv vor Wiederherstellen (Historie)"));
-        doc.Current = CloneRevision(revision, user, comment ?? "Wiederhergestellt aus Historie");
+        doc.History.Add(ProtocolRevisionCloner.CloneRevision(doc.Current, user, "Auto-Archiv vor Wiederherstellen (Historie)"));
+        doc.Current = ProtocolRevisionCloner.CloneRevision(revision, user, comment ?? "Wiederhergestellt aus Historie");
         doc.Current.Changes.Add(new ProtocolChange
         {
             User = user,
@@ -91,53 +90,4 @@ public sealed class ProtocolService : IProtocolService
         });
     }
 
-    private static ProtocolRevision CloneRevision(ProtocolRevision rev, string? user, string? comment)
-    {
-        var json = JsonSerializer.Serialize(rev);
-        var clone = JsonSerializer.Deserialize<ProtocolRevision>(json)
-            ?? throw new InvalidOperationException("ProtocolRevision-Deserialisierung ergab null.");
-        clone.RevisionId = Guid.NewGuid();
-        clone.CreatedAt = DateTimeOffset.UtcNow;
-        clone.CreatedBy = user;
-        clone.Comment = comment;
-        return clone;
-    }
-
-    private static ProtocolEntry CloneEntry(ProtocolEntry e) => new()
-    {
-        EntryId = e.EntryId,
-        Code = e.Code,
-        Beschreibung = e.Beschreibung,
-        MeterStart = e.MeterStart,
-        MeterEnd = e.MeterEnd,
-        IsStreckenschaden = e.IsStreckenschaden,
-        Mpeg = e.Mpeg,
-        Zeit = e.Zeit,
-        FotoPaths = new List<string>(e.FotoPaths),
-        Source = e.Source,
-        IsDeleted = e.IsDeleted,
-        CodeMeta = e.CodeMeta is null
-            ? null
-            : new ProtocolEntryCodeMeta
-            {
-                Code = e.CodeMeta.Code,
-                Parameters = new Dictionary<string, string>(e.CodeMeta.Parameters, StringComparer.OrdinalIgnoreCase),
-                Severity = e.CodeMeta.Severity,
-                Count = e.CodeMeta.Count,
-                Notes = e.CodeMeta.Notes,
-                UpdatedAt = e.CodeMeta.UpdatedAt
-            },
-        Ai = e.Ai is null
-            ? null
-            : new ProtocolEntryAiMeta
-            {
-                SuggestedCode = e.Ai.SuggestedCode,
-                Confidence = e.Ai.Confidence,
-                Reason = e.Ai.Reason,
-                Flags = new List<string>(e.Ai.Flags),
-                Accepted = e.Ai.Accepted,
-                FinalCode = e.Ai.FinalCode,
-                SuggestedAt = e.Ai.SuggestedAt
-            }
-    };
 }

@@ -102,7 +102,9 @@ public sealed record RawVideoDetection(
     int? IntrusionPercent = null,
     int? CrossSectionReductionPercent = null,
     int? DiameterReductionMm = null,
-    EvidenceVector? Evidence = null)
+    EvidenceVector? Evidence = null,
+    string? MeterSource = null,
+    bool IsMeterEstimated = false)
 {
     public string Code => VsaCodeHint ?? string.Empty;
     public string Label => FindingLabel;

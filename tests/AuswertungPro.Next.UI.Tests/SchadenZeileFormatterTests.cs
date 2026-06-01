@@ -20,6 +20,21 @@ public sealed class SchadenZeileFormatterTests
     }
 
     [Fact]
+    public void Format_Punktschaden_MarksEstimatedAiMeter()
+    {
+        var entry = Entry("BAB", "Riss", 1.2);
+        entry.Ai = new ProtocolEntryAiMeta
+        {
+            MeterSource = "LinearEstimate",
+            IsMeterEstimated = true
+        };
+
+        var z = SchadenZeileFormatter.Format(entry);
+
+        Assert.Equal("ca. 1.20 m", z.Meter);
+    }
+
+    [Fact]
     public void Format_Streckenschaden_ShowsMeterRange()
     {
         var z = SchadenZeileFormatter.Format(Entry("BBA", "Wurzeln", 2.50, 8.10, strecke: true));

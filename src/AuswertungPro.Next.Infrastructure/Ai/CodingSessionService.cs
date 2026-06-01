@@ -143,8 +143,9 @@ public sealed class CodingSessionService : ICodingSessionService
         // Rohranfang (BCD) bei 0.00m und Rohrende (BCE) sicherstellen
         ProtocolBoundaryService.EnsureBoundaries(revision.Entries, _session.EndMeter);
 
-        doc.Original = revision;
-        doc.Current = revision;
+        doc.Original = ProtocolRevisionCloner.CloneRevision(revision, "Codier-Modus", "Original aus Codier-Session");
+        doc.Current = ProtocolRevisionCloner.CloneRevision(revision, "Codier-Modus", revision.Comment);
+        doc.Current.BasedOnRevisionId = doc.Original.RevisionId;
 
         // Feedback-Loop: CodingEvents → TrainingSamples persistieren
         // SYNCHRON WARTEN — Daten muessen gesichert sein bevor Session abgeschlossen wird

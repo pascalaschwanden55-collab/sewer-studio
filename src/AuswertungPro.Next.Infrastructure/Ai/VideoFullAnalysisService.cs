@@ -157,6 +157,7 @@ public sealed class VideoFullAnalysisService
 
             telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, qwenMs, frameSw.ElapsedMilliseconds, Skipped: false));
 
+            var meterWasEstimated = !analysis.Meter.HasValue;
             var meter = analysis.Meter ?? EstimateMeter(t, duration);
             // Always update _lastKnownMeter so EstimateMeter doesn't stagnate at 0.01
             _lastKnownMeter = meter;
@@ -179,7 +180,11 @@ public sealed class VideoFullAnalysisService
                     DiameterReductionMm: f.DiameterReductionMm))
                 .ToList();
 
-            detections.AddRange(deduplicator.Update(current, meter));
+            detections.AddRange(deduplicator.Update(
+                current,
+                meter,
+                meterSource: meterWasEstimated ? "LinearEstimate" : "Analysis",
+                isMeterEstimated: meterWasEstimated));
 
             progress?.Report(new VideoAnalysisProgress(
                 frameIndex,

@@ -398,6 +398,15 @@ public sealed partial class ShellViewModel : ObservableObject
     public void ResetProjectReady()
         => IsProjectReady = false;
 
+    public void MarkProjectDirty(HaltungRecord? record = null)
+    {
+        if (record is not null)
+            record.ModifiedAtUtc = System.DateTime.UtcNow;
+
+        Project.ModifiedAtUtc = System.DateTime.UtcNow;
+        Project.Dirty = true;
+    }
+
     private static string MakeSafeFileName(string? name)
     {
         var baseName = string.IsNullOrWhiteSpace(name) ? "Projekt" : name.Trim();

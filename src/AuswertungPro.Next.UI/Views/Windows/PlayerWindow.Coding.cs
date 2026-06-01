@@ -99,6 +99,7 @@ public partial class PlayerWindow
     private bool _codingOsdReading;
     private int _codingOverlaySuspendDepth;
     private bool _codingOverlayWasOpenBeforeSuspend;
+    private string _codingBaselineSignature = string.Empty;
 
     private void CodingMode_Click(object sender, RoutedEventArgs e)
     {
@@ -204,6 +205,7 @@ public partial class PlayerWindow
         // KI-Events-Liste binden (startet leer)
         LstCodingEvents.ItemsSource = _codingVm.Events;
         RunCodingDefectCount.Text = "0";
+        _codingBaselineSignature = BuildCodingEventsSignature(_codingVm.Events);
 
         // UI einblenden
         CodingOverlayPopup.IsOpen = true;
@@ -384,11 +386,16 @@ public partial class PlayerWindow
     }
 
     private void CodingApply_Click(object sender, RoutedEventArgs e)
+        => ApplyCodingChanges(showOverlay: true);
+
+    private bool ApplyCodingChanges(bool showOverlay)
     {
-        if (_codingVm == null || _haltungRecord == null) return;
+        if (_codingVm == null || _haltungRecord == null) return false;
 
         // ProtocolDocument aus allen Events aufbauen
-        var doc = _haltungRecord.Protocol ?? new ProtocolDocument();
+        var doc = _haltungRecord.Protocol is null
+            ? new ProtocolDocument { HaltungId = _haltungRecord.GetFieldValue("Haltungsname") }
+            : AppProtocol.ProtocolRevisionCloner.CloneDocument(_haltungRecord.Protocol);
         doc.Current ??= new ProtocolRevision();
         doc.Current.Entries ??= new List<ProtocolEntry>();
 
@@ -423,20 +430,28 @@ public partial class PlayerWindow
         }
 
         _haltungRecord.Protocol = doc;
-        _haltungRecord.ModifiedAtUtc = DateTime.UtcNow;
+        MarkProjectDirtyForCoding();
 
         // Primaere Schaeden ins DataGrid uebertragen
         SyncCodingToPrimaryDamages(doc);
+        MarkProjectDirtyForCoding();
 
         // Feedback-Loop: CodingEvents â†’ TrainingSamples persistieren
         // (Im PlayerWindow wird CompleteSession() nicht aufgerufen,
         //  daher muss die Training-Persistierung hier erfolgen.)
         PersistCodingEventsAsTrainingSamples();
 
-        var message = _codingVm.Events.Count == 0
-            ? "Primaere Schaeden geleert"
-            : $"{_codingVm.Events.Count} Ereignisse in Primaere Schaeden uebernommen";
-        ShowOverlay(message, TimeSpan.FromSeconds(4));
+        _codingBaselineSignature = BuildCodingEventsSignature(_codingVm.Events);
+
+        if (showOverlay)
+        {
+            var message = _codingVm.Events.Count == 0
+                ? "Primaere Schaeden geleert"
+                : $"{_codingVm.Events.Count} Ereignisse in Primaere Schaeden uebernommen";
+            ShowOverlay(message, TimeSpan.FromSeconds(4));
+        }
+
+        return true;
     }
 
     private static void CopyProtocolEntryValues(ProtocolEntry source, ProtocolEntry target)
@@ -452,6 +467,96 @@ public partial class PlayerWindow
         target.CodeMeta = source.CodeMeta;
         target.Ai = source.Ai;
         target.FotoPaths = source.FotoPaths?.ToList() ?? new List<string>();
+    }
+
+    private bool ConfirmUnappliedCodingChangesOnClose()
+    {
+        if (!HasUnappliedCodingChanges())
+            return true;
+
+        SuspendCodingOverlayInput();
+        MessageBoxResult result;
+        try
+        {
+            result = MessageBox.Show(
+                "Es gibt noch nicht uebernommene Codierungen.\n\n" +
+                "Ja = uebernehmen\nNein = verwerfen\nAbbrechen = Fenster offen lassen",
+                "Codier-Modus",
+                MessageBoxButton.YesNoCancel,
+                MessageBoxImage.Warning,
+                MessageBoxResult.Cancel);
+        }
+        finally
+        {
+            ResumeCodingOverlayInput();
+        }
+
+        if (result == MessageBoxResult.Cancel)
+            return false;
+
+        if (result == MessageBoxResult.Yes)
+            return ApplyCodingChanges(showOverlay: false);
+
+        return true;
+    }
+
+    private bool HasUnappliedCodingChanges()
+    {
+        if (!_isCodingMode || _codingVm is null)
+            return false;
+
+        var current = BuildCodingEventsSignature(_codingVm.Events);
+        return !string.Equals(current, _codingBaselineSignature, StringComparison.Ordinal);
+    }
+
+    private static string BuildCodingEventsSignature(IEnumerable<CodingEvent> events)
+        => string.Join("\n", events
+            .OrderBy(e => e.Entry.EntryId)
+            .ThenBy(e => e.MeterAtCapture)
+            .Select(e => BuildCodingEventSignature(e)));
+
+    private static string BuildCodingEventSignature(CodingEvent codingEvent)
+    {
+        var entry = codingEvent.Entry;
+        var parameters = entry.CodeMeta?.Parameters is null
+            ? string.Empty
+            : string.Join(";", entry.CodeMeta.Parameters
+                .OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase)
+                .Select(p => $"{p.Key}={p.Value}"));
+
+        return string.Join("|", new[]
+        {
+            entry.EntryId.ToString("N"),
+            entry.Code ?? string.Empty,
+            entry.Beschreibung ?? string.Empty,
+            FormatNullable(entry.MeterStart),
+            FormatNullable(entry.MeterEnd),
+            entry.IsStreckenschaden ? "1" : "0",
+            entry.Mpeg ?? string.Empty,
+            entry.Zeit?.ToString() ?? string.Empty,
+            entry.Source.ToString(),
+            entry.IsDeleted ? "1" : "0",
+            parameters,
+            FormatNullable(codingEvent.MeterAtCapture),
+            codingEvent.VideoTimestamp.ToString()
+        });
+    }
+
+    private static string FormatNullable(double? value)
+        => value.HasValue
+            ? value.Value.ToString("0.###", CultureInfo.InvariantCulture)
+            : string.Empty;
+
+    private void MarkProjectDirtyForCoding()
+    {
+        if (App.Current?.MainWindow?.DataContext is ViewModels.ShellViewModel shell)
+        {
+            shell.MarkProjectDirty(_haltungRecord);
+            return;
+        }
+
+        if (_haltungRecord is not null)
+            _haltungRecord.ModifiedAtUtc = DateTime.UtcNow;
     }
 
     /// <summary>
@@ -2377,7 +2482,7 @@ public partial class PlayerWindow
             _haltungRecord, project, _serviceProvider, _videoPath, projectFolder,
             markDirty: () =>
             {
-                _haltungRecord.ModifiedAtUtc = DateTime.UtcNow;
+                MarkProjectDirtyForCoding();
             });
         dlg.Owner = this;
         dlg.ShowDialog();

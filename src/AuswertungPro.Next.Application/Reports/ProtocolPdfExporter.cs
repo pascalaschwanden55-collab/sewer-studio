@@ -931,7 +931,8 @@ public sealed class ProtocolPdfExporter
 
         var m1 = FmtMeterValue(entry.MeterStart);
         var m2 = FmtMeterValue(entry.MeterEnd);
-        return $"{rangeLabel} {m1}-{m2} m";
+        var prefix = IsEstimatedMeter(entry) ? "ca. " : "";
+        return $"{rangeLabel} {prefix}{m1}-{m2} m";
     }
 
     private static string BuildDetailLine(ProtocolEntry entry)
@@ -948,15 +949,16 @@ public sealed class ProtocolPdfExporter
     {
         var start = entry.MeterStart;
         var end = entry.MeterEnd;
+        var prefix = IsEstimatedMeter(entry) ? "ca. " : "";
 
         if (entry.IsStreckenschaden && start.HasValue && end.HasValue)
-            return $"{FmtMeterValue(start)}–{FmtMeterValue(end)}";
+            return $"{prefix}{FmtMeterValue(start)}–{FmtMeterValue(end)}";
 
         if (start.HasValue)
-            return FmtMeterValue(start);
+            return $"{prefix}{FmtMeterValue(start)}";
 
         if (end.HasValue)
-            return FmtMeterValue(end);
+            return $"{prefix}{FmtMeterValue(end)}";
 
         return "-";
     }
@@ -974,8 +976,16 @@ public sealed class ProtocolPdfExporter
     private static string BuildObservationMeterStartText(ProtocolEntry entry)
     {
         var value = entry.MeterStart ?? entry.MeterEnd;
-        return value.HasValue ? FmtMeterValue(value) : "-";
+        if (!value.HasValue)
+            return "-";
+
+        var prefix = IsEstimatedMeter(entry) ? "ca. " : "";
+        return $"{prefix}{FmtMeterValue(value)}";
     }
+
+    private static bool IsEstimatedMeter(ProtocolEntry entry)
+        => entry.Ai?.IsMeterEstimated == true
+           || string.Equals(entry.Ai?.MeterSource, "LinearEstimate", StringComparison.OrdinalIgnoreCase);
 
     private static string BuildObservationMpegText(ProtocolEntry entry)
     {

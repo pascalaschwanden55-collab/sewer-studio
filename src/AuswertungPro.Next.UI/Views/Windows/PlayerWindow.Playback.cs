@@ -348,6 +348,12 @@ public partial class PlayerWindow
         if (_closing)
             return;
 
+        if (!ConfirmUnappliedCodingChangesOnClose())
+        {
+            e.Cancel = true;
+            return;
+        }
+
         // 1. Guard setzen: alle laufenden Tick-Handler prufen _closing und kehren sofort zurueck.
         _closing = true;
         if (ReferenceEquals(_lastOpened, this))

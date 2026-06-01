@@ -32,10 +32,15 @@ public static class SchadenZeileFormatter
     {
         var start = entry.MeterStart ?? 0.0;
         var s = start.ToString("0.00", CultureInfo.InvariantCulture);
+        var prefix = IsEstimatedMeter(entry) ? "ca. " : "";
         if (entry.IsStreckenschaden && entry.MeterEnd is { } end && end > start)
-            return $"{s}–{end.ToString("0.00", CultureInfo.InvariantCulture)} m";
-        return $"{s} m";
+            return $"{prefix}{s}–{end.ToString("0.00", CultureInfo.InvariantCulture)} m";
+        return $"{prefix}{s} m";
     }
+
+    private static bool IsEstimatedMeter(ProtocolEntry entry)
+        => entry.Ai?.IsMeterEstimated == true
+           || string.Equals(entry.Ai?.MeterSource, "LinearEstimate", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>VSA-Hauptgruppe → grobe Kategorie. BA=Zustand, BB/BD=Betrieb, BC=Bestand, sonst "".</summary>
     public static string Kategorie(string? code)
