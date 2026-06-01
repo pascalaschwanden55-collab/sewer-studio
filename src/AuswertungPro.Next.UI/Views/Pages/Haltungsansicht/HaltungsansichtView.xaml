@@ -19,6 +19,7 @@
         <!-- Liste links (virtualisiert) -->
         <ListBox Grid.Column="0"
                  x:Name="HaltungList"
+                 HorizontalContentAlignment="Stretch"
                  ItemsSource="{Binding Records}"
                  SelectedItem="{Binding Selected, Mode=TwoWay}"
                  SelectionChanged="HaltungList_SelectionChanged"
@@ -54,7 +55,7 @@
                                 </TextBlock.Text>
                             </TextBlock>
                         </StackPanel>
-                        <Border Grid.Column="1" Width="26" Height="26" CornerRadius="13" VerticalAlignment="Center"
+                        <Border Grid.Column="1" Width="32" Height="22" CornerRadius="4" VerticalAlignment="Center" Margin="8,0,4,0"
                                 Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}">
                             <TextBlock Text="{Binding Fields[Zustandsklasse]}" HorizontalAlignment="Center"
                                        VerticalAlignment="Center" Foreground="#000000" FontSize="12" FontWeight="Bold"/>

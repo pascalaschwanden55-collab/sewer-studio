@@ -145,6 +145,21 @@
             <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                     Padding="4,3" CornerRadius="8">
                 <StackPanel Orientation="Horizontal">
+                    <ToggleButton x:Name="HaltungsansichtToggle"
+                                  Style="{StaticResource CompactToggleButton}"
+                                  Margin="0,0,6,0"
+                                  Checked="HaltungsansichtToggle_Changed"
+                                  Unchecked="HaltungsansichtToggle_Changed"
+                                  ToolTip="Zwischen Tabelle und Haltungsansicht umschalten">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8FD;" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Haltungsansicht" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ToggleButton>
+
+                    <Border Width="1" Background="{StaticResource BorderBrush}" Margin="6,4"/>
+
                     <Button Command="{Binding SaveCommand}"
                             Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
@@ -281,19 +296,6 @@
                             <TextBlock Text="Abdocken" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-
-                    <ToggleButton x:Name="HaltungsansichtToggle"
-                                  Style="{StaticResource CompactToggleButton}"
-                                  Margin="6,0,0,0"
-                                  Checked="HaltungsansichtToggle_Changed"
-                                  Unchecked="HaltungsansichtToggle_Changed"
-                                  ToolTip="Zwischen Tabelle und Haltungsansicht umschalten">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8FD;" FontFamily="Segoe MDL2 Assets" FontSize="13"
-                                       VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Haltungsansicht" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ToggleButton>
 
                     <Button x:Name="AnsichtDropdown" Click="DropdownButton_Click"
                             Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
