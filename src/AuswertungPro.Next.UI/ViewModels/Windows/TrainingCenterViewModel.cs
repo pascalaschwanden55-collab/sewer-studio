@@ -784,6 +784,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         if (SelectedSample is null) return;
         SelectedSample.Status = TrainingSampleStatus.Rejected;
+        SelectedSample.KbIndexState = KbIndexState.None;
         TryDeindexSample(SelectedSample.SampleId);
         StatusText = $"Rejected: {SelectedSample.SampleId}";
         await PersistSamplesAsync();
@@ -794,6 +795,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         if (SelectedSample is null) return;
         SelectedSample.Status = TrainingSampleStatus.Removed;
+        SelectedSample.KbIndexState = KbIndexState.None;
         TryDeindexSample(SelectedSample.SampleId);
         StatusText = $"Entfernt: {SelectedSample.SampleId}";
         await PersistSamplesAsync();
