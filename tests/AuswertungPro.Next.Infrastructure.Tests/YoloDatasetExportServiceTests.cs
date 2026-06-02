@@ -67,7 +67,12 @@ public sealed class YoloDatasetExportServiceTests : IDisposable
             FramePath = framePath,
             Status = TrainingSampleStatus.Approved,
             InspectionDate = new DateTime(2022, 1, 1),
-            TrainingEligible = true
+            TrainingEligible = true,
+            // Echte BBox noetig: YOLO-Export blockt seit Task 7 Samples ohne gezeichnete Box.
+            BboxXCenter = 0.5,
+            BboxYCenter = 0.5,
+            BboxWidth = 0.3,
+            BboxHeight = 0.3
         };
 
     private static ICodeCatalogProvider CreateTestCatalog()
