@@ -222,6 +222,19 @@ public static class TrainingSampleEligibility
                 return parsed;
         }
 
+        // Eingebettetes yyyyMMdd-Datum, z.B. im Dateinamen-Praefix "20251110_9866-9327.pdf".
+        // 8 zusammenhaengende Ziffern, die NICHT Teil einer laengeren Ziffernfolge sind (Lookarounds),
+        // links-nach-rechts der erste gueltige Kalendertag mit plausiblem Jahr [1990,2099].
+        // Laeuft erst nach Exact/Trennzeichen-Formaten und VOR dem reinen Jahres-Fallback.
+        foreach (Match compact in Regex.Matches(text, @"(?<!\d)(?<y>\d{4})(?<m>\d{2})(?<d>\d{2})(?!\d)"))
+        {
+            var cy = int.Parse(compact.Groups["y"].Value, CultureInfo.InvariantCulture);
+            var cm = int.Parse(compact.Groups["m"].Value, CultureInfo.InvariantCulture);
+            var cd = int.Parse(compact.Groups["d"].Value, CultureInfo.InvariantCulture);
+            if (cy is >= 1990 and <= 2099 && TryCreateDate(cy, cm, cd, out var compactDate))
+                return compactDate;
+        }
+
         var yearMatch = Regex.Match(text, @"\b(?<y>19\d{2}|20\d{2})\b");
         if (yearMatch.Success)
         {

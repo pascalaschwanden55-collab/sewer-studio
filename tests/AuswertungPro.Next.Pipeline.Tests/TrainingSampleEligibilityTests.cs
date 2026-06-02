@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Protocol;
 using Xunit;
@@ -55,6 +56,47 @@ public sealed class TrainingSampleEligibilityTests
         var observedResult = TrainingSampleEligibility.Evaluate(observed, catalog);
         Assert.False(observedResult.IsEligible);
         Assert.Equal(TrainingSampleEligibility.InvalidCatalogCodeReason, observedResult.Reason);
+    }
+
+    [Theory]
+    // Fix: yyyyMMdd-Praefix im Datei-/Ordnernamen wird als Inspektionsdatum erkannt.
+    [InlineData("20251110_9866-9327.pdf", "2025-11-10")]   // kanonischer Protokollname
+    [InlineData("20251110_9866-9327.mpg", "2025-11-10")]   // kanonischer Videoname
+    [InlineData("9866-9327_20251110", "2025-11-10")]       // Datum nach der Projekt-ID
+    [InlineData("20251110.pdf", "2025-11-10")]             // Datum direkt vor der Extension
+    [InlineData("20230915_2835-2828_BAFZA_17.9m_1.png", "2023-09-15")] // realer self_training_frames-Name
+    [InlineData(@"D:\Haltungen\20251110_9866-9327", "2025-11-10")]      // ganzer Pfad
+    public void TryParseInspectionDate_erkennt_eingebettetes_yyyyMMdd_Praefix(string raw, string expectedIso)
+    {
+        var parsed = TrainingSampleEligibility.TryParseInspectionDate(raw);
+
+        Assert.Equal(DateTime.ParseExact(expectedIso, "yyyy-MM-dd", CultureInfo.InvariantCulture), parsed);
+    }
+
+    [Theory]
+    // Guards: keine falschen Treffer aus IDs, zu langen Ziffernfolgen oder ungueltigen Kalenderdaten.
+    [InlineData("9866-9327")]            // reine Projekt-ID, kein Datum
+    [InlineData("report_30250101.pdf")]  // eingebettetes Jahr ausserhalb [1990,2099]
+    [InlineData("12345678")]             // 8-Lauf, aber Monat 56 ungueltig
+    [InlineData("99999999")]             // Fueller-ID
+    [InlineData("123420251110")]         // 8-Lauf nur innerhalb laengerer Ziffernfolge -> nicht isoliert
+    [InlineData("202511109999")]         // Datum direkt von weiteren Ziffern gefolgt
+    [InlineData("report_20230229.pdf")]  // 29. Feb in Nicht-Schaltjahr
+    public void TryParseInspectionDate_ignoriert_Nicht_Datums_Ziffern(string raw)
+    {
+        Assert.Null(TrainingSampleEligibility.TryParseInspectionDate(raw));
+    }
+
+    [Theory]
+    // Praezedenz/Regression: ungueltiger erster Lauf wird uebersprungen; bestehende Formate unveraendert.
+    [InlineData("20251301_20231110.pdf", "2023-11-10")] // Monat 13 -> skip, dann gueltiger zweiter Lauf
+    [InlineData("20251110", "2025-11-10")]              // reines yyyyMMdd (bestehender Exact-Pfad)
+    [InlineData("2022/03/04", "2022-03-04")]            // bestehendes Trennzeichen-Format unveraendert
+    public void TryParseInspectionDate_behaelt_Praezedenz_und_bestehende_Formate(string raw, string expectedIso)
+    {
+        var parsed = TrainingSampleEligibility.TryParseInspectionDate(raw);
+
+        Assert.Equal(DateTime.ParseExact(expectedIso, "yyyy-MM-dd", CultureInfo.InvariantCulture), parsed);
     }
 
     private static TrainingSample MakeSample(string code)
