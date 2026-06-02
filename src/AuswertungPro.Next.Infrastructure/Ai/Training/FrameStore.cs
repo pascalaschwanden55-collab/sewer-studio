@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
@@ -34,7 +35,7 @@ public static class FrameStore
         CancellationToken ct = default)
     {
         var dir = GetFramesDir(framesDir);
-        var outPath = Path.Combine(dir, $"{sampleId}.png");
+        var outPath = Path.Combine(dir, $"{SanitizeFileStem(sampleId)}.png");
 
         if (File.Exists(outPath))
             return outPath;
@@ -48,5 +49,18 @@ public static class FrameStore
 
         await File.WriteAllBytesAsync(outPath, bytes, ct).ConfigureAwait(false);
         return outPath;
+    }
+
+    /// <summary>
+    /// Macht aus einem (evtl. pfad-unsicheren) Sample-Bezeichner einen sicheren Datei-Stamm:
+    /// alles ausser Wort-Zeichen und '-' wird zu '_'. Verhindert, dass z.B. eine verschachtelte
+    /// CaseId mit '/' beim Frame-Schreiben einen nicht existierenden Unterordner adressiert.
+    /// </summary>
+    public static string SanitizeFileStem(string sampleId)
+    {
+        if (string.IsNullOrEmpty(sampleId))
+            return "frame";
+
+        return Regex.Replace(sampleId, @"[^\w\-]", "_");
     }
 }
