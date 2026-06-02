@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using System.Collections.ObjectModel;
 using System.Linq;
 
@@ -32,6 +33,12 @@ public sealed class Project
     /// </summary>
     public List<JsonObject> Conflicts { get; set; } = new();
 
+    /// <summary>
+    /// Laufzeit-Flag fuer ungespeicherte Aenderungen. NICHT serialisieren:
+    /// sonst stuende im AutoSave-Betrieb "Dirty": true in der projekt.json und
+    /// ein frisch geladenes Projekt gaelte sofort als geaendert (Fehlalarm beim Schliessen).
+    /// </summary>
+    [JsonIgnore]
     public bool Dirty { get; set; }
 
     public Project()

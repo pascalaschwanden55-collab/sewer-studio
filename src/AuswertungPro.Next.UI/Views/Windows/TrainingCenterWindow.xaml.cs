@@ -55,8 +55,8 @@ public partial class TrainingCenterWindow : Window
             SetupPipelineElements();
             SetupAutoScroll();
 
-            // Review-Queue laden (falls KB vorhanden)
-            _reviewQueueService = new InfraSelfImproving.ReviewQueueService();
+            // Review-Queue laden (falls KB vorhanden) - persistent, ueberlebt Neustart
+            _reviewQueueService = InfraSelfImproving.ReviewQueueService.CreatePersistent();
             Vm.ReviewQueueServiceRef = _reviewQueueService;
             Vm.LoadReviewQueue(_reviewQueueService);
 
@@ -232,7 +232,7 @@ public partial class TrainingCenterWindow : Window
     private async void ReviewApprove_Click(object sender, RoutedEventArgs e)
     {
         if (Vm.SelectedReviewItem is null) return;
-        _reviewQueueService ??= new InfraSelfImproving.ReviewQueueService();
+        _reviewQueueService ??= InfraSelfImproving.ReviewQueueService.CreatePersistent();
         try
         {
             using var db = new InfraKnowledgeBase.KnowledgeBaseContext();
@@ -253,7 +253,7 @@ public partial class TrainingCenterWindow : Window
             "Korrekter VSA-Code:", "Korrektur",
             Vm.SelectedReviewItem.SuggestedCode ?? "");
         if (string.IsNullOrWhiteSpace(code)) return;
-        _reviewQueueService ??= new InfraSelfImproving.ReviewQueueService();
+        _reviewQueueService ??= InfraSelfImproving.ReviewQueueService.CreatePersistent();
         try
         {
             using var db = new InfraKnowledgeBase.KnowledgeBaseContext();

@@ -407,6 +407,27 @@ public partial class PlayerWindow
             .Select(g => g.Last())
             .ToDictionary(e => e.EntryId, e => e);
 
+        // S6: Schutz vor versehentlichem Leeren. Liegen keine Coding-Events vor,
+        // wuerde der folgende Abgleich alle bestehenden aktiven Befunde als geloescht
+        // markieren und die primaeren Schaeden leeren. Daher immer (auch im Schliess-Pfad
+        // mit showOverlay=false) rueckfragen, bevor still geloescht wird.
+        if (eventEntries.Count == 0)
+        {
+            var aktiveBefunde = doc.Current.Entries.Count(
+                e => !e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code));
+            if (aktiveBefunde > 0)
+            {
+                var antwort = MessageBox.Show(
+                    this,
+                    $"Die Befundliste ist leer.\n\n\"Uebernehmen\" wuerde {aktiveBefunde} bestehende(n) Befund(e) dieser Haltung loeschen und die primaeren Schaeden leeren.\n\nWirklich eine leere Codierung uebernehmen?",
+                    "Leere Codierung uebernehmen?",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+                if (antwort != MessageBoxResult.Yes)
+                    return false;
+            }
+        }
+
         // 2) Vorhandene Protokoll-Eintraege updaten oder als geloescht markieren
         var existingById = doc.Current.Entries.ToDictionary(e => e.EntryId, e => e);
         foreach (var existing in doc.Current.Entries)
@@ -442,6 +463,11 @@ public partial class PlayerWindow
         PersistCodingEventsAsTrainingSamples();
 
         _codingBaselineSignature = BuildCodingEventsSignature(_codingVm.Events);
+
+        // S7: Uebernommene Codierung sofort persistieren. MarkProjectDirty setzt nur das
+        // Flag; der AutoSave-Timer haengt an der DataPage und wird hier nicht ausgeloest.
+        // Ohne diesen Save lebt die Codierung nur im RAM, bis das Hauptfenster sauber schliesst.
+        SaveProjectAfterCoding();
 
         if (showOverlay)
         {
@@ -557,6 +583,16 @@ public partial class PlayerWindow
 
         if (_haltungRecord is not null)
             _haltungRecord.ModifiedAtUtc = DateTime.UtcNow;
+    }
+
+    private void SaveProjectAfterCoding()
+    {
+        // Nur speichern, wenn das Projekt bereits einen Pfad hat (IsProjectReady). Sonst wuerde
+        // TrySaveProject einen Speichern-unter-Dialog oeffnen - unerwuenscht mitten im Codieren
+        // oder beim Fensterschliessen. MarkProjectDirtyForCoding hat das Dirty-Flag bereits gesetzt,
+        // sodass der Schliess-Guard des Hauptfensters ungespeicherte Codierungen auffaengt.
+        if (App.Current?.MainWindow?.DataContext is ViewModels.ShellViewModel shell && shell.IsProjectReady)
+            shell.TrySaveProject();
     }
 
     /// <summary>

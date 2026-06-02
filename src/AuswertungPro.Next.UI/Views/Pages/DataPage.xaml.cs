@@ -1217,7 +1217,11 @@ public partial class DataPage : System.Windows.Controls.UserControl
         {
             Owner = Window.GetWindow(this)
         };
-        window.Show();
+        // S5: Modal oeffnen. Das Detailfenster baut beim Oeffnen einen Snapshot der Feldwerte
+        // und hoert nicht auf spaetere Aenderungen des Records. Nicht-modal konnte daher eine
+        // spaetere Detail-Eingabe parallele Tabellen-/KI-Aenderungen still ueberschreiben.
+        // Modal verhindert Parallelbearbeitung waehrend das Detail offen ist.
+        window.ShowDialog();
     }
 
     private List<RecordDetailGroup> BuildHaltungRecordDetails(HaltungRecord record)
@@ -1481,9 +1485,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
+        // Merkt sich, ob ein Sonderfeld-Block die Spalte bereits behandelt hat, damit der
+        // generische S3-Zweig sie nicht erneut setzt (keine zweite, synchron zu haltende Namensliste).
+        bool handled = false;
+
         if (fieldName == "Sanieren_JaNein" || fieldName == "Eigentuemer" ||
             fieldName == "Pruefungsresultat" || fieldName == "Referenzpruefung")
         {
+            handled = true;
             var value = GetEditedTextValue(e.EditingElement);
             if (!string.IsNullOrWhiteSpace(value) && e.Row?.Item is HaltungRecord editedRecord)
                 editedRecord.SetFieldValue(fieldName, value ?? string.Empty, FieldSource.Manual, userEdited: true);
@@ -1492,12 +1501,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         if (fieldName == "Zustandsklasse" && e.Row?.Item is HaltungRecord record)
         {
+            handled = true;
             var value = GetEditedTextValue(e.EditingElement) ?? record.GetFieldValue(fieldName);
             record.SetFieldValue(fieldName, value, FieldSource.Manual, userEdited: true);
         }
 
         if (fieldName == "Haltungsname" && e.Row?.Item is HaltungRecord hRecord)
         {
+            handled = true;
             var oldValue = hRecord.GetFieldValue("Haltungsname");
             var newValue = GetEditedTextValue(e.EditingElement) ?? oldValue;
             if (!string.Equals(oldValue, newValue, StringComparison.OrdinalIgnoreCase))
@@ -1521,6 +1532,18 @@ public partial class DataPage : System.Windows.Controls.UserControl
                 hRecord.SetFieldValue("Haltungsname", newValue, FieldSource.Manual, userEdited: true);
                 PdfCorrectionMetadata.RegisterHoldingRename(vm.Project, oldValue, newValue);
             }
+        }
+
+        // S3: Alle uebrigen (normalen) Textspalten ebenfalls als manuell editiert markieren.
+        // Die Sonderfelder oben setzen userEdited bereits selbst. Ohne diesen Zweig bliebe
+        // FieldMeta.UserEdited fuer normale Spalten (z.B. Bemerkungen) auf false, und ein
+        // spaeterer Re-Import koennte handeditierte Werte still ueberschreiben
+        // (HaltungRecord.SetFieldValue/MergeEngine schuetzen nur Felder mit UserEdited==true).
+        if (!handled && e.Row?.Item is HaltungRecord genericRecord)
+        {
+            var value = GetEditedTextValue(e.EditingElement);
+            if (value is not null)
+                genericRecord.SetFieldValue(fieldName, value, FieldSource.Manual, userEdited: true);
         }
 
         vm.ScheduleAutoSave();

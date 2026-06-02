@@ -759,6 +759,19 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         if (ok && win.Result?.IsSuccess == true && win.Result.Document is not null)
         {
+            // S4: Hat die Haltung manuell codierte Eintraege, vor dem Ersetzen rueckfragen.
+            // Das bisherige Protokoll wird zwar in die Historie gesichert (wiederherstellbar),
+            // die Anzeige (Current) aber durch die KI-Ergebnisse ersetzt.
+            if (ProtocolReplacementService.HasManualCurrentEntries(record.Protocol)
+                && !_sp.Dialogs.Confirm(
+                    "Diese Haltung enthaelt manuell codierte Eintraege.\n\n" +
+                    "Die KI-Reanalyse ersetzt das angezeigte Protokoll. Das bisherige Protokoll " +
+                    "wird in die Historie verschoben (wiederherstellbar).\n\nFortfahren?",
+                    "KI-Reanalyse"))
+            {
+                return;
+            }
+
             record.Protocol = ProtocolReplacementService.PrepareReplacement(
                 record.Protocol,
                 win.Result.Document,

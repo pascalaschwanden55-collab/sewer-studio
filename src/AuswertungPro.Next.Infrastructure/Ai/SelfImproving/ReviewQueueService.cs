@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
@@ -10,6 +13,22 @@ public sealed class ReviewQueueService
 {
     private readonly List<ReviewQueueItem> _queue = new();
     private readonly object _lock = new();
+    private static readonly object _fileLock = new();
+    private readonly string? _persistPath;
+
+    /// <summary>Produktions-Factory: persistiert die Self-Training-Kandidaten (Nachtlauf) im
+    /// Knowledge-Ordner, damit sie Fenster-Schliessen/Neustart ueberleben.</summary>
+    public static ReviewQueueService CreatePersistent()
+        => new(Path.Combine(KnowledgeBasePaths.GetRoot(), "review_queue.json"));
+
+    /// <param name="persistencePath">null = reine In-Memory-Queue ohne Datei-IO (z.B. fuer Tests).</param>
+    public ReviewQueueService(string? persistencePath = null)
+    {
+        _persistPath = persistencePath;
+        // S9: Beim Start die persistierten Self-Training-Kandidaten wieder laden.
+        if (_persistPath is not null)
+            LoadSelfTrainingItems();
+    }
 
     public void Enqueue(MappedProtocolEntry entry)
     {
@@ -25,7 +44,7 @@ public sealed class ReviewQueueService
         lock (_lock)
         {
             _queue.Add(item);
-            _queue.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+            ResortByPriorityDesc();
         }
     }
 
@@ -69,8 +88,10 @@ public sealed class ReviewQueueService
         lock (_lock)
         {
             _queue.Add(item);
-            _queue.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+            ResortByPriorityDesc();
         }
+
+        PersistSelfTrainingItems();
     }
 
     public IReadOnlyList<ReviewQueueItem> GetAll()
@@ -85,7 +106,10 @@ public sealed class ReviewQueueService
 
     public bool Remove(string itemId)
     {
-        lock (_lock) return _queue.RemoveAll(q => q.Id == itemId) > 0;
+        bool removed;
+        lock (_lock) removed = _queue.RemoveAll(q => q.Id == itemId) > 0;
+        if (removed) PersistSelfTrainingItems();
+        return removed;
     }
 
     public int Count
@@ -98,6 +122,89 @@ public sealed class ReviewQueueService
         var epistemic = entry.Uncertainty?.EpistemicUncertainty ?? 0.5;
         var closenessTo05 = 1.0 - Math.Abs(2.0 * entry.Confidence - 1.0);
         return 0.6 * epistemic + 0.4 * closenessTo05;
+    }
+
+    /// <summary>Sortiert die Queue absteigend nach Prioritaet. Aufrufer muss _lock halten.</summary>
+    private void ResortByPriorityDesc()
+        => _queue.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+
+    // ─── S9: Persistenz der Self-Training-Kandidaten (Nachtlauf) ──────────────────────
+    // Nur Self-Training-Items (Entry == null) werden persistiert. Die QualityGate-Items
+    // (Entry != null) sind In-Session-Daten eines laufenden Analyselaufs und tragen einen
+    // komplexen MappedProtocolEntry-Graphen, der nicht verlustfrei rekonstruierbar ist.
+    private sealed record PersistedItem(
+        string Id,
+        double Priority,
+        DateTime EnqueuedUtc,
+        string? SelfTrainingCaseId,
+        string? SelfTrainingVsaCode,
+        string? SelfTrainingSuggestedCode,
+        double? SelfTrainingMeter,
+        string? SelfTrainingFramePath,
+        string? SelfTrainingMatchLevel,
+        string? SelfTrainingReason);
+
+    private void LoadSelfTrainingItems()
+    {
+        try
+        {
+            if (_persistPath is null || !File.Exists(_persistPath)) return;
+
+            var items = JsonSerializer.Deserialize<List<PersistedItem>>(File.ReadAllText(_persistPath));
+            if (items is null) return;
+
+            lock (_lock)
+            {
+                foreach (var p in items)
+                {
+                    if (p.SelfTrainingCaseId is null) continue; // nur Self-Training-Kandidaten
+                    _queue.Add(new ReviewQueueItem(p.Id, null, p.Priority, p.EnqueuedUtc)
+                    {
+                        SelfTrainingCaseId = p.SelfTrainingCaseId,
+                        SelfTrainingVsaCode = p.SelfTrainingVsaCode,
+                        SelfTrainingSuggestedCode = p.SelfTrainingSuggestedCode,
+                        SelfTrainingMeter = p.SelfTrainingMeter,
+                        SelfTrainingFramePath = p.SelfTrainingFramePath,
+                        SelfTrainingMatchLevel = p.SelfTrainingMatchLevel,
+                        SelfTrainingReason = p.SelfTrainingReason
+                    });
+                }
+                ResortByPriorityDesc();
+            }
+        }
+        catch { /* best-effort: korrupte/fehlende Datei darf den Start nicht verhindern */ }
+    }
+
+    private void PersistSelfTrainingItems()
+    {
+        if (_persistPath is null) return;
+        try
+        {
+            List<PersistedItem> items;
+            lock (_lock)
+            {
+                items = _queue
+                    .Where(q => q.IsFromSelfTraining)
+                    .Select(q => new PersistedItem(
+                        q.Id, q.Priority, q.EnqueuedUtc,
+                        q.SelfTrainingCaseId, q.SelfTrainingVsaCode, q.SelfTrainingSuggestedCode,
+                        q.SelfTrainingMeter, q.SelfTrainingFramePath, q.SelfTrainingMatchLevel,
+                        q.SelfTrainingReason))
+                    .ToList();
+            }
+
+            // Datei-Schreibzugriff prozessweit serialisieren; eindeutiger tmp-Name verhindert
+            // Kollisionen, falls mehrere Instanzen/Threads zugleich persistieren.
+            lock (_fileLock)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(_persistPath)!);
+                var tmp = _persistPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                File.WriteAllText(tmp, JsonSerializer.Serialize(
+                    items, AuswertungPro.Next.Application.Common.JsonDefaults.Indented));
+                File.Move(tmp, _persistPath, overwrite: true);
+            }
+        }
+        catch { /* best-effort: Persistenz-Fehler darf den Lauf nicht abbrechen */ }
     }
 }
 

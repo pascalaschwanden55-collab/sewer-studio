@@ -1142,6 +1142,24 @@ public partial class TrainingCenterViewModel : ObservableObject
             return;
         }
 
+        // S8: Dieser Pfad setzt erkannte Samples automatisch auf Approved und indexiert sie
+        // OHNE manuelle Pruefung direkt in die Knowledge Base (umgeht die Review-Politik des
+        // Selbsttrainings). Falsche Labels verschlechtern damit dauerhaft alle kuenftigen
+        // KI-Vorschlaege. Darum einmalige, bewusste Bestaetigung pro Lauf verlangen.
+        var bestaetigung = System.Windows.MessageBox.Show(
+            "Achtung: Der Batch-Import indexiert erkannte Samples OHNE manuelle Pruefung direkt in die Knowledge Base (Auto-Approve).\n\n" +
+            "Falsche Code-/Meter-Zuordnungen verschlechtern dauerhaft alle kuenftigen KI-Vorschlaege. " +
+            "Fuer geprueftes Lernen stattdessen 'Selbsttraining' mit der Review-Queue nutzen.\n\n" +
+            "Trotzdem ungeprueft in die Knowledge Base lernen?",
+            "Batch-Import + KB (ungeprueft)",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning);
+        if (bestaetigung != System.Windows.MessageBoxResult.Yes)
+        {
+            StatusText = "Batch-Import abgebrochen.";
+            return;
+        }
+
         _genCts?.Cancel();
         _genCts?.Dispose();
         _genCts = new CancellationTokenSource();

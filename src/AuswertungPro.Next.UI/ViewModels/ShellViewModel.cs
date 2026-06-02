@@ -31,6 +31,10 @@ public sealed partial class ShellViewModel : ObservableObject
     public Project Project => _project;
     private Project _project = new();
 
+    /// <summary>S1: True bei ungespeicherten Aenderungen. Global sichtbar via Fenstertitel-Marker
+    /// und Uebersichts-Badge. Wird ueber RefreshTitleAndDirty() benachrichtigt.</summary>
+    public bool IsDirty => _project.Dirty;
+
     public IReadOnlyList<NavItem> NavItems { get; }
     [ObservableProperty] private NavItem? _selectedNavItem;
     [ObservableProperty] private object? _currentPage;
@@ -63,6 +67,11 @@ public sealed partial class ShellViewModel : ObservableObject
 
     // Lock-Objekt fuer thread-sichere ObservableCollection-Zugriffe
     private readonly object _collectionLock = new();
+
+    /// <summary>S10: Sync-Objekt fuer Project.Data/SchaechteData (EnableCollectionSynchronization).
+    /// Hintergrund-Threads, die diese Collections mutieren (z.B. VSA-Lauf, Importe), MUESSEN
+    /// diesen Lock halten, damit der UI-Thread nicht waehrend einer Mutation enumeriert.</summary>
+    public object CollectionLock => _collectionLock;
 
     public ShellViewModel()
     {
@@ -141,6 +150,18 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         RefreshNavigationAvailability();
         ApplyGuideStep();
+        RefreshTitleAndDirty();
+    }
+
+    /// <summary>S1: Fenstertitel mit Projektname und Ungespeichert-Marker aktualisieren
+    /// und IsDirty fuer gebundene Anzeigen (Uebersichts-Badge) benachrichtigen.</summary>
+    public void RefreshTitleAndDirty()
+    {
+        var name = IsProjectReady && !string.IsNullOrWhiteSpace(Project.Name)
+            ? $"{Project.Name} – SewerStudio"
+            : "SewerStudio";
+        Title = Project.Dirty ? $"● {name}" : name;
+        OnPropertyChanged(nameof(IsDirty));
     }
 
     private void RefreshNavigationAvailability()
@@ -218,6 +239,7 @@ public sealed partial class ShellViewModel : ObservableObject
         EnableCollectionSync(p);
         OnPropertyChanged(nameof(Project));
         SetStatus($"Projekt: {p.Name}");
+        RefreshTitleAndDirty();
     }
 
     /// <summary>
@@ -358,7 +380,10 @@ public sealed partial class ShellViewModel : ObservableObject
         var res = _sp.Projects.Save(Project, path);
         SetStatus(res.Ok ? "Gespeichert" : $"Fehler: {res.ErrorMessage}");
         if (res.Ok)
+        {
             IsProjectReady = true;
+            RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
+        }
         return res.Ok;
     }
 
@@ -383,6 +408,8 @@ public sealed partial class ShellViewModel : ObservableObject
 
         var res = _sp.Projects.Save(Project, path);
         SetStatus(res.Ok ? $"Gespeichert: {Path.GetFileName(path)}" : $"Fehler: {res.ErrorMessage}");
+        if (res.Ok)
+            RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
         return res.Ok;
     }
 
@@ -405,6 +432,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
         Project.ModifiedAtUtc = System.DateTime.UtcNow;
         Project.Dirty = true;
+        RefreshTitleAndDirty();
     }
 
     private static string MakeSafeFileName(string? name)

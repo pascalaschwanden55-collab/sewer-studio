@@ -55,7 +55,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             _shell.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName == nameof(ShellViewModel.Project) ||
-                    e.PropertyName == nameof(ShellViewModel.IsProjectReady))
+                    e.PropertyName == nameof(ShellViewModel.IsProjectReady) ||
+                    e.PropertyName == nameof(ShellViewModel.IsDirty))
                 {
                     OnPropertyChanged(nameof(Project));
                     OnPropertyChanged(nameof(IsProjectReady));
@@ -177,7 +178,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
     }
 
     private string BuildProjectStatus()
-        => IsProjectReady ? "Projekt gespeichert" : "Projekt noch nicht gespeichert";
+        => !IsProjectReady ? "Projekt noch nicht gespeichert"
+           : _shell.Project.Dirty ? "Ungespeicherte Aenderungen"
+           : "Projekt gespeichert";
 
     private void NewProject()
     {

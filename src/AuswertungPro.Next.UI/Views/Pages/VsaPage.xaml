@@ -37,6 +37,21 @@
                             <TextBlock Text="VSA-Bewertung starten" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+
+                    <!-- S10: Sichtbares Lade-Feedback waehrend die Bewertung im Hintergrund laeuft.
+                         Der Button wird durch das AsyncRelayCommand automatisch gesperrt. -->
+                    <ProgressBar IsIndeterminate="True" Height="4" Margin="0,10,0,0">
+                        <ProgressBar.Style>
+                            <Style TargetType="ProgressBar">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ProgressBar.Style>
+                    </ProgressBar>
                 </StackPanel>
             </Grid>
         </Border>

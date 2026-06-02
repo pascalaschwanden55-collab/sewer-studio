@@ -196,6 +196,9 @@
                                                 <DataTrigger Binding="{Binding ProjectStatus}" Value="Projekt noch nicht gespeichert">
                                                     <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
                                                 </DataTrigger>
+                                                <DataTrigger Binding="{Binding ProjectStatus}" Value="Ungespeicherte Aenderungen">
+                                                    <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
+                                                </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>

@@ -18,13 +18,51 @@ public sealed partial class VsaPageViewModel : ObservableObject
 
     [ObservableProperty] private string _summary = "Noch keine Berechnung.";
 
-    public IRelayCommand RunCommand { get; }
+    /// <summary>S10: True waehrend die (synchrone) Bewertung im Hintergrund laeuft.</summary>
+    [ObservableProperty] private bool _isBusy;
+
+    public IAsyncRelayCommand RunCommand { get; }
 
     public VsaPageViewModel(ShellViewModel shell, ServiceProvider sp)
     {
         _shell = shell;
         _sp = sp;
-        RunCommand = new RelayCommand(Run);
+        // S10: AsyncRelayCommand sperrt Mehrfachstarts automatisch und verlagert die
+        // Bewertung in den Hintergrund, damit die App nicht einfriert.
+        RunCommand = new AsyncRelayCommand(RunAsync);
+    }
+
+    private async System.Threading.Tasks.Task RunAsync()
+    {
+        // AsyncRelayCommand sperrt Mehrfachstarts bereits selbst (CanExecute waehrend des Laufs).
+        IsBusy = true;
+        Summary = "VSA-Bewertung laeuft, bitte warten...";
+        _shell.SetStatus("VSA-Bewertung laeuft...");
+        try
+        {
+            // Import/Bewertung sind synchron und potenziell langlaufend -> in den Hintergrund.
+            // Run() mutiert Project.Data (ObservableCollection). Der Schreiber MUSS denselben Lock
+            // halten, den EnableCollectionSynchronization fuer die UI-Lesezugriffe nutzt, sonst
+            // entstehen Cross-Thread-Collection-Fehler. Skalare Property-/Item-PropertyChanged
+            // marshallt WPFs Binding-Engine selbst auf den UI-Thread.
+            await System.Threading.Tasks.Task.Run(() =>
+            {
+                lock (_shell.CollectionLock)
+                {
+                    Run();
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            Summary = $"Fehler: {ex.Message}";
+            _shell.SetStatus("VSA fehlgeschlagen");
+        }
+        finally
+        {
+            IsBusy = false;
+            _shell.RefreshTitleAndDirty(); // SuggestMeasuresForAll kann Project.Dirty gesetzt haben
+        }
     }
 
     private void Run()
