@@ -1038,7 +1038,9 @@ public partial class PlayerWindow
         return new CodingSessionService(
             () => new AppSettingsAiSettingsProvider().Load().ToOllamaConfig(),
             () => AuswertungPro.Next.Application.Ai.Training.EvalContaminationGuard
-                      .LoadEvalImageHashes(AppSettings.Load().EvalSetRoot));
+                      .LoadEvalImageHashes(AppSettings.Load().EvalSetRoot),
+            () => AuswertungPro.Next.Application.Ai.Training.EvalContaminationGuard
+                      .LoadEvalHaltungKeys(AppSettings.Load().EvalSetRoot));
     }
 
     private void EnsureMarkOverlayReady()

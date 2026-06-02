@@ -1822,8 +1822,10 @@ public partial class TrainingCenterViewModel : ObservableObject
                 .ToOllamaConfig();
             var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
             var embedder = new EmbeddingService(http, cfg);
-            var evalHashes = EvalContaminationGuard.LoadEvalImageHashes(AppSettings.Load().EvalSetRoot);
-            kbManager = new KnowledgeBaseManager(db, embedder, evalHashes);
+            var evalRoot = AppSettings.Load().EvalSetRoot;
+            var evalHashes = EvalContaminationGuard.LoadEvalImageHashes(evalRoot);
+            var evalHaltungen = EvalContaminationGuard.LoadEvalHaltungKeys(evalRoot);
+            kbManager = new KnowledgeBaseManager(db, embedder, evalHashes, evalHaltungen);
         }
         catch { /* Ollama nicht verfuegbar — Feedback wird geloggt, KB-Update uebersprungen */ }
 
@@ -2131,23 +2133,38 @@ public partial class TrainingCenterViewModel : ObservableObject
             _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
             using var kbCtx = new KnowledgeBaseContext();
             var embedder = new EmbeddingService(_kbHttpClient, ollamaConfig);
-            // Eval-Kontaminationsschutz: Eval-Frames hart aus dem KB-Index blockieren.
-            var kbEvalHashes = EvalContaminationGuard.LoadEvalImageHashes(AppSettings.Load().EvalSetRoot);
-            var kbManager = new KnowledgeBaseManager(kbCtx, embedder, kbEvalHashes);
+            // Eval-Kontaminationsschutz: Eval-Frames (per Hash) UND reservierte Eval-Haltungen
+            // (per CaseId) hart aus dem KB-Index blockieren.
+            var kbEvalRoot = AppSettings.Load().EvalSetRoot;
+            var kbEvalHashes = EvalContaminationGuard.LoadEvalImageHashes(kbEvalRoot);
+            var kbEvalHaltungen = EvalContaminationGuard.LoadEvalHaltungKeys(kbEvalRoot);
+            var kbManager = new KnowledgeBaseManager(kbCtx, embedder, kbEvalHashes, kbEvalHaltungen);
 
+            var newlyIndexed = 0;
             foreach (var sample in samples)
             {
                 ct.ThrowIfCancellationRequested();
                 if (kbManager.IsIndexed(sample.SampleId))
-                    continue;
-                if (await kbManager.IndexSampleAsync(sample, ct))
+                {
+                    // Bereits in der KB = Erfolg, KEIN Fehler. Muss in indexedIds,
+                    // sonst meldet der Aufrufer faelschlich "KB: Error" fuer ein
+                    // korrekt indexiertes Sample (z. B. bei einer erneuten Freigabe).
                     indexedIds.Add(sample.SampleId);
+                    continue;
+                }
+                if (await kbManager.IndexSampleAsync(sample, ct))
+                {
+                    indexedIds.Add(sample.SampleId);
+                    newlyIndexed++;
+                }
             }
 
-            if (indexedIds.Count > 0)
+            // Version + "indexiert"-Log nur bei tatsaechlich NEU indexierten Samples,
+            // damit nicht bei reinen "schon vorhanden"-Faellen ein leerer Snapshot entsteht.
+            if (newlyIndexed > 0)
             {
                 kbManager.CreateVersion($"Self-Training inkrementell {DateTime.Now:yyyy-MM-dd HH:mm}");
-                Log($"KB-Update: {indexedIds.Count} Samples inkrementell indexiert");
+                Log($"KB-Update: {newlyIndexed} Samples inkrementell indexiert");
             }
             else
             {

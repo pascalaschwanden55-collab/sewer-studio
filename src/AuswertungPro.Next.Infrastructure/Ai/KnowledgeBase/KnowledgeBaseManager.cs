@@ -19,17 +19,22 @@ namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 public sealed class KnowledgeBaseManager(
     KnowledgeBaseContext db,
     EmbeddingService embedder,
-    IReadOnlySet<string>? evalImageHashes = null) : ITrainingSampleIndexer
+    IReadOnlySet<string>? evalImageHashes = null,
+    IReadOnlySet<string>? evalHaltungKeys = null) : ITrainingSampleIndexer
 {
     /// <summary>
-    /// True wenn der Frame des Samples inhaltsgleich zu einem Eval-Set-Bild ist (Hash-Vergleich).
-    /// Schuetzt die Benchmark-Wahrheit: Eval-Frames duerfen NICHT in die KB indexiert werden,
-    /// sonst tauchen sie spaeter als Retrieval-Kontext auf und blaehen die Metriken auf.
-    /// Ist kein Eval-Hash-Satz konfiguriert, ist der Schutz inaktiv (Rueckgabe false).
+    /// True wenn das Sample dem eingefrorenen Eval-Set zuzurechnen ist und daher NICHT in die KB
+    /// gehoert (sonst taucht es als Retrieval-Kontext auf und blaeht die Benchmark-Metriken auf).
+    /// Zwei Sperren: (1) Frame inhaltsgleich zu einem Eval-Bild (Hash) und (2) Haltung (CaseId)
+    /// gehoert zu einer reservierten Eval-Haltung – Letzteres faengt auch nicht-pixelidentische
+    /// Frames derselben Eval-Haltung, die der Hash-Schutz verfehlt. Ist weder ein Hash-Satz noch
+    /// eine Haltungs-Sperrliste konfiguriert, ist der Schutz inaktiv (Rueckgabe false).
     /// </summary>
     public bool IsEvalContaminated(TrainingSample sample)
-        => evalImageHashes is { Count: > 0 }
-           && EvalContaminationGuard.IsEvalContaminated(evalImageHashes, sample.FramePath);
+        => (evalImageHashes is { Count: > 0 }
+            && EvalContaminationGuard.IsEvalContaminated(evalImageHashes, sample.FramePath))
+        || (evalHaltungKeys is { Count: > 0 }
+            && EvalContaminationGuard.IsEvalHaltung(evalHaltungKeys, sample.CaseId));
     // ── Öffentliche API ───────────────────────────────────────────────────
 
     /// <summary>

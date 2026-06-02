@@ -30,10 +30,10 @@ public sealed class KnowledgeBaseManagerEvalGuardTests
         => new(new HttpClient(new FixedEmbeddingHandler()),
             new OllamaConfig(new Uri("http://localhost:11434"), "v", "t", "nomic-embed-text", TimeSpan.FromSeconds(5)));
 
-    private static TrainingSample MakeSample(string id, string framePath) => new()
+    private static TrainingSample MakeSample(string id, string framePath, string caseId = "H-01") => new()
     {
         SampleId = id,
-        CaseId = "H-01",
+        CaseId = caseId,
         Code = "BAB",
         Beschreibung = "Riss in Laengsrichtung sichtbar",
         MeterStart = 1.0,
@@ -73,6 +73,40 @@ public sealed class KnowledgeBaseManagerEvalGuardTests
             // (1) Eval-Hash vorhanden -> Sample wird nicht indexiert (Block vor Embed/Katalog).
             Assert.False(await mgr.IndexSampleAsync(evalSample, CancellationToken.None));
             Assert.False(mgr.IsIndexed("s-eval"));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task EvalHaltung_IsBlockedByCaseId_EvenWhenFrameHashClean()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "kb-eval-mgr", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            // Sauberer Frame (KEIN Hash-Treffer), Schutz laeuft rein ueber die Haltungs-Sperrliste.
+            var cleanFrame = Path.Combine(root, "clean.png");
+            File.WriteAllBytes(cleanFrame, new byte[] { 5, 5, 5, 5 });
+            var evalHaltungen = new HashSet<string>(new[] { "287425-81162" }, StringComparer.OrdinalIgnoreCase);
+
+            using var db = new KnowledgeBaseContext(Path.Combine(root, "kb.db"));
+            // Kein Hash-Satz, nur Haltungs-Sperrliste.
+            var mgr = new KnowledgeBaseManager(db, FakeEmbedder(), evalImageHashes: null, evalHaltungKeys: evalHaltungen);
+
+            // Sample einer fremden Haltung -> nicht blockiert.
+            var cleanSample = MakeSample("s-other-haltung", cleanFrame, caseId: "999999-888888");
+            Assert.False(mgr.IsEvalContaminated(cleanSample));
+
+            // Sample einer Eval-Haltung (gleiche CaseId) -> blockiert, obwohl der Frame sauber ist.
+            var evalSample = MakeSample("s-eval-haltung", cleanFrame, caseId: "287425-81162");
+            Assert.True(mgr.IsEvalContaminated(evalSample));
+            Assert.False(await mgr.IndexSampleAsync(evalSample, CancellationToken.None));
+            Assert.False(mgr.IsIndexed("s-eval-haltung"));
         }
         finally
         {

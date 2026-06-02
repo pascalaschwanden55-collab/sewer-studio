@@ -80,7 +80,9 @@ public partial class CodingModeWindow : Window
         _sessionService = new CodingSessionService(
             () => new AppSettingsAiSettingsProvider().Load().ToOllamaConfig(),
             () => AuswertungPro.Next.Application.Ai.Training.EvalContaminationGuard
-                      .LoadEvalImageHashes(AppSettings.Load().EvalSetRoot));
+                      .LoadEvalImageHashes(AppSettings.Load().EvalSetRoot),
+            () => AuswertungPro.Next.Application.Ai.Training.EvalContaminationGuard
+                      .LoadEvalHaltungKeys(AppSettings.Load().EvalSetRoot));
         _overlayService = new OverlayToolService();
         _vm = new CodingSessionViewModel(
             _sessionService,

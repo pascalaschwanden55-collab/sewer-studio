@@ -19,14 +19,18 @@ public sealed class CodingSessionService : ICodingSessionService
 {
     private readonly Func<OllamaConfig?> _ollamaConfigProvider;
     private readonly Func<IReadOnlySet<string>> _evalHashesProvider;
+    private readonly Func<IReadOnlySet<string>> _evalHaltungKeysProvider;
     private CodingSession? _session;
 
     public CodingSessionService(
         Func<OllamaConfig?>? ollamaConfigProvider = null,
-        Func<IReadOnlySet<string>>? evalHashesProvider = null)
+        Func<IReadOnlySet<string>>? evalHashesProvider = null,
+        Func<IReadOnlySet<string>>? evalHaltungKeysProvider = null)
     {
         _ollamaConfigProvider = ollamaConfigProvider ?? (() => null);
         _evalHashesProvider = evalHashesProvider
+            ?? (() => new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+        _evalHaltungKeysProvider = evalHaltungKeysProvider
             ?? (() => new HashSet<string>(StringComparer.OrdinalIgnoreCase));
     }
 
@@ -220,7 +224,8 @@ public sealed class CodingSessionService : ICodingSessionService
             var embedder = new InfraKnowledgeBase.EmbeddingService(http, cfg);
 
             using var db = new InfraKnowledgeBase.KnowledgeBaseContext();
-            var kbManager = new InfraKnowledgeBase.KnowledgeBaseManager(db, embedder, _evalHashesProvider());
+            var kbManager = new InfraKnowledgeBase.KnowledgeBaseManager(
+                db, embedder, _evalHashesProvider(), _evalHaltungKeysProvider());
 
             foreach (var sample in approved)
             {
