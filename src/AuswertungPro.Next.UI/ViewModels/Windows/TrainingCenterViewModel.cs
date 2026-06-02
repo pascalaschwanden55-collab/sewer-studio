@@ -2168,4 +2168,66 @@ public partial class TrainingCenterViewModel : ObservableObject
             Log("Pipeline pausiert.");
         }
     }
+
+    // ── Protokoll-Startdaten (B6) ────────────────────────────────────────
+
+    /// <summary>
+    /// Reiht gepruefte Protokoll-Samples (Status=New, katalog-gueltig) als Startdaten-Kandidaten
+    /// in die Review Queue ein. Keine KI-Analyse — Freigabe nur ueber ApproveReviewItemAsync.
+    /// Bereits eingereihte Samples werden per SampleId dedupliziert.
+    /// </summary>
+    [RelayCommand]
+    private async Task SuggestProtocolStartdataAsync()
+    {
+        if (ReviewQueueServiceRef is null) return;
+
+        // Katalog: bevorzugt injizierter Catalog, Fallback auf globalen VsaCodeResolver
+        var catalog = _codeCatalog ?? AuswertungPro.Next.Infrastructure.Ai.VsaCodeResolver.CurrentCatalog;
+        if (catalog is null) { ReviewStatusText = "Kein Code-Katalog verfuegbar."; return; }
+
+        var all = await TrainingSamplesStore.LoadAsync().ConfigureAwait(false);
+        var candidates = ProtocolReviewCandidateFilter.SelectCandidates(all, catalog).ToList();
+
+        // Schon in der Queue stehende Samples nicht erneut einreihen (Dedup per SampleId).
+        var queued = ReviewQueueServiceRef.GetAll()
+            .Select(q => q.SelfTrainingSampleId).Where(s => !string.IsNullOrEmpty(s)).ToHashSet();
+        int added = 0;
+        foreach (var s in candidates)
+        {
+            if (queued.Contains(s.SampleId)) continue;
+            ReviewQueueServiceRef.EnqueueFromSelfTraining(
+                s.CaseId, s.Code, s.Code, s.MeterStart, s.FramePath,
+                matchLevel: "ProtocolStartdata", reason: "Protokoll-Startdaten", sampleId: s.SampleId);
+            added++;
+        }
+        LoadReviewQueue(ReviewQueueServiceRef);
+        ReviewStatusText = $"{added} Protokoll-Startdaten als Kandidaten eingereiht (Freigabe ueber Review).";
+        Log($"Protokoll-Startdaten: {added} Kandidaten eingereiht (von {candidates.Count} gefiltert).");
+    }
+
+    /// <summary>Anzahl der aktuell als Protokoll-Startdaten eingereihten Kandidaten.</summary>
+    public int StartdataCandidateCount =>
+        ReviewQueue.Count(i => string.Equals(i.SelfTrainingMatchLevel, "ProtocolStartdata", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>Gibt ALLE Protokoll-Startdaten-Kandidaten frei (nach expliziter Bestaetigung im View).</summary>
+    public async Task ApproveAllStartdataAsync(CancellationToken ct = default)
+    {
+        if (ReviewQueueServiceRef is null) return;
+        var items = ReviewQueue
+            .Where(i => string.Equals(i.SelfTrainingMatchLevel, "ProtocolStartdata", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        int ok = 0;
+        foreach (var item in items)
+        {
+            try
+            {
+                using var db = new KnowledgeBaseContext();
+                var feedback = CreateFeedbackService(db);
+                await ApproveReviewItemAsync(item, feedback, ReviewQueueServiceRef, ct).ConfigureAwait(false);
+                ok++;
+            }
+            catch (Exception ex) { Log($"Startdaten-Freigabe Fehler ({item.SelfTrainingVsaCode}): {ex.Message}"); }
+        }
+        ReviewStatusText = $"{ok}/{items.Count} Protokoll-Startdaten freigegeben.";
+    }
 }

@@ -334,6 +334,33 @@ public partial class TrainingCenterWindow : Window
         }
     }
 
+    // ── Protokoll-Startdaten Sammel-Freigabe (B6) ───────────────────────
+
+    /// <summary>
+    /// Sammel-Freigabe aller Protokoll-Startdaten-Kandidaten nach expliziter Bestaetigung.
+    /// Alle Freigaben laufen ueber ApproveReviewItemAsync (kein direkter KB-Write).
+    /// </summary>
+    private async void ReleaseStartdata_Click(object sender, RoutedEventArgs e)
+    {
+        var n = Vm.StartdataCandidateCount;
+        if (n == 0)
+        {
+            MessageBox.Show("Keine Protokoll-Startdaten in der Queue.", "Sammel-Freigabe",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        var res = MessageBox.Show(
+            $"{n} Protokoll-Startdaten freigeben?\n\nDas schreibt {n} gepruefte Eintraege in die Knowledge Base (ueber Review, kein Auto-Index).",
+            "Sammel-Freigabe", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (res != MessageBoxResult.Yes) return;
+        try { await Vm.ApproveAllStartdataAsync(); }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Fehler bei der Sammel-Freigabe: {ex.Message}", "Sammel-Freigabe",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
     // ── Review-Korrektur ─────────────────────────────────────────────────
 
     private async void ReviewCorrect_Click(object sender, RoutedEventArgs e)

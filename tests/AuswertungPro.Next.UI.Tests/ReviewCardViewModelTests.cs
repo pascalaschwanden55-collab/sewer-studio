@@ -49,4 +49,15 @@ public sealed class ReviewCardViewModelTests
         Assert.False(vm.IsKiError);
         Assert.False(vm.IsNoFindings);
     }
+
+    [Fact]
+    public void ProtocolStartdata_zeigt_Strich_und_Startdaten_Label()
+    {
+        // Protokoll-Startdaten: kein KI-Durchlauf, Code identisch (SelfTrainingSuggestedCode = ProtocolCode)
+        var vm = new ReviewCardViewModel(Item("ProtocolStartdata", "BAB", "BAB"));
+        Assert.Equal("—", vm.KiAussage);
+        Assert.Equal("Protokoll-Startdaten", vm.StatusLabel);
+        Assert.False(vm.IsKiError);
+        Assert.True(vm.IsProtocolStartdata);
+    }
 }

@@ -23,11 +23,17 @@ public sealed class ReviewCardViewModel
         PriorityLabel = item.PriorityLabel;
 
         // MatchLevel-String robust in den Enum uebersetzen.
+        // "ProtocolStartdata" ist kein echter Enum-Wert — TryParse liefert false → _level bleibt null.
         if (Enum.TryParse<TrainingMatchLevel>(MatchLevel, ignoreCase: true, out var parsed))
             _level = parsed;
 
-        // KI-Erkennung am Frame — bei NoFindings nichts erkannt, sonst der KI-Code.
-        KiAussage = IsNoFindings ? "nichts erkannt" : (item.SelfTrainingSuggestedCode ?? "?");
+        // KI-Erkennung am Frame: Protokoll-Startdaten haben keine KI-Analyse (Strich),
+        // NoFindings zeigt "nichts erkannt", sonst der KI-Code.
+        KiAussage = IsProtocolStartdata
+            ? "—"
+            : IsNoFindings
+                ? "nichts erkannt"
+                : (item.SelfTrainingSuggestedCode ?? "?");
     }
 
     /// <summary>Pfad zum Frame-Bild (kann null sein).</summary>
@@ -59,6 +65,16 @@ public sealed class ReviewCardViewModel
     /// <summary>True wenn die KI einen Fehler gemacht hat (NoFindings oder Mismatch).</summary>
     public bool IsKiError => _level is TrainingMatchLevel.NoFindings or TrainingMatchLevel.Mismatch;
 
-    /// <summary>Alle Kandidaten in der Queue sind zu pruefende Kandidaten.</summary>
-    public string StatusLabel => "Kandidat";
+    /// <summary>
+    /// True wenn es sich um einen Protokoll-Startdaten-Kandidaten handelt (Quell-Label, kein echter Enum-Wert).
+    /// TryParse auf "ProtocolStartdata" schlaegt fehl → IsKiError bleibt false.
+    /// </summary>
+    public bool IsProtocolStartdata =>
+        string.Equals(MatchLevel, "ProtocolStartdata", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Lesbare Statusbeschriftung fuer die Karte:
+    /// Protokoll-Startdaten zeigen "Protokoll-Startdaten", sonst "Kandidat".
+    /// </summary>
+    public string StatusLabel => IsProtocolStartdata ? "Protokoll-Startdaten" : "Kandidat";
 }

@@ -622,11 +622,19 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Kopfzeile: Anzahl + Status -->
+                    <!-- Kopfzeile: Anzahl + Status + Protokoll-Startdaten-Buttons (B6) -->
                     <StackPanel Grid.Row="0" Orientation="Horizontal">
                         <TextBlock Text="Zur Prüfung:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Text="{Binding ReviewQueueCount}" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                        <TextBlock Text="{Binding ReviewStatusText}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ReviewStatusText}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                        <Button Content="Protokoll-Startdaten vorschlagen"
+                                Command="{Binding SuggestProtocolStartdataCommand}"
+                                ToolTip="Gepruefte Protokoll-Samples (Status=New) als Kandidaten einreihen — keine KI-Analyse"
+                                Margin="0,0,6,0" Padding="8,3"/>
+                        <Button Content="Alle Startdaten freigeben"
+                                Click="ReleaseStartdata_Click"
+                                ToolTip="Alle Protokoll-Startdaten-Kandidaten nach expliziter Bestaetigung freigeben"
+                                Padding="8,3"/>
                     </StackPanel>
 
                     <!-- Hauptbereich: Liste links + Karte rechts -->
