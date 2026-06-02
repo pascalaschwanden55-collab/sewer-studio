@@ -64,12 +64,8 @@ public sealed class ReviewQueueService
         string? reason = null,
         string? sampleId = null)
     {
-        var priority = matchLevel switch
-        {
-            MatchLevelNames.Mismatch => 0.9,
-            MatchLevelNames.PartialMatch => 0.6,
-            _ => 0.3
-        };
+        var level = Enum.TryParse<MatchLevel>(matchLevel, ignoreCase: true, out var ml) ? ml : MatchLevel.PartialMatch;
+        var priority = SelfTrainingReviewRouting.Priority(level);
 
         var item = new ReviewQueueItem(
             Id: Guid.NewGuid().ToString(),

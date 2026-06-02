@@ -59,4 +59,37 @@ public sealed class ReviewQueueTests
         Assert.True(svc.Remove(id));
         Assert.Equal(0, svc.Count);
     }
+
+    [Fact]
+    public void SelfTraining_NoFindings_HasHighPriorityAndSortsBefore_PartialMatch()
+    {
+        // NoFindings = uebersehener Schaden → hoehere Prioritaet als PartialMatch
+        var svc = new ReviewQueueService();
+
+        svc.EnqueueFromSelfTraining(
+            caseId: "case-1",
+            vsaCode: "BAB",
+            suggestedCode: "BAB",
+            meter: 10.0,
+            framePath: "frame_a.jpg",
+            matchLevel: "PartialMatch");
+
+        svc.EnqueueFromSelfTraining(
+            caseId: "case-1",
+            vsaCode: "BAB",
+            suggestedCode: "BAB",
+            meter: 5.0,
+            framePath: "frame_b.jpg",
+            matchLevel: "NoFindings");
+
+        var items = svc.GetAll();
+        Assert.Equal(2, items.Count);
+
+        // NoFindings-Item muss als erstes stehen (hoehere Prioritaet)
+        Assert.Equal("NoFindings", items[0].SelfTrainingMatchLevel);
+        Assert.True(items[0].Priority >= 0.9);
+
+        // NoFindings muss vor PartialMatch stehen
+        Assert.True(items[0].Priority > items[1].Priority);
+    }
 }
