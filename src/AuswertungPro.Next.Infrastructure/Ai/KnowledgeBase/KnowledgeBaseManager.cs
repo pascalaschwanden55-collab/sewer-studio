@@ -370,6 +370,13 @@ public sealed class KnowledgeBaseManager(
             return false;
         if (VsaCodeResolver.LookupLabel(sample.Code) is null)
             return false;
+        // Trainings-Eligibility (Datum/Herkunft) muss auch fuer die KB gelten — konsistent zum Export.
+        var eligibility = TrainingSampleEligibility.Evaluate(sample);
+        if (!eligibility.IsEligible)
+        {
+            Debug.WriteLine($"[KnowledgeBaseManager] Sample {sample.SampleId} nicht trainingsfaehig: {eligibility.Reason}");
+            return false;
+        }
         // D7: nur fachlich plausible Befunde lernen (kein Muell in die KB).
         if (!TrainingSamplePlausibility.IsFachlichPlausibel(sample, out var reason))
         {
