@@ -4,12 +4,7 @@ using System.Threading.Tasks;
 
 namespace AuswertungPro.Next.Application.Ai.Training;
 
-/// <summary>
-/// Abstraktion fuer KB-Indexierung und -Deindexierung von Trainingssamples.
-/// Wird als Delegate-Bridge genutzt, damit der ReviewApprovalService
-/// VM-Methoden (IncrementalKbUpdateAsync / TryDeindexSample) aufrufen kann,
-/// ohne eine direkte Abhaengigkeit auf das ViewModel zu haben.
-/// </summary>
+/// <summary>Abstraktion fuer KB-Indexierung und -Deindexierung von Trainingssamples.</summary>
 public interface IKnowledgeBaseIndexer
 {
     /// <summary>Indexiert die uebergebenen Samples in die Knowledge Base. Gibt die SampleIds der erfolgreich indizierten Samples zurueck.</summary>

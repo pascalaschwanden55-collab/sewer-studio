@@ -1652,6 +1652,30 @@ public partial class TrainingCenterViewModel : ObservableObject
         ReviewStatusText = $"{ReviewQueueCount} Einträge zur Prüfung";
     }
 
+    /// <summary>
+    /// Loest die SampleId eines Self-Training-Review-Items auf: bevorzugt die direkte SampleId,
+    /// sonst (Altbestand ohne SampleId) ueber Fuzzy-Match CaseId/Code/Meter±0.2. Null = nicht gefunden.
+    /// </summary>
+    private async Task<string?> ResolveSelfTrainingSampleIdAsync(InfraSelfImproving.ReviewQueueItem item)
+    {
+        if (!string.IsNullOrEmpty(item.SelfTrainingSampleId))
+            return item.SelfTrainingSampleId;
+        var allSamples = await TrainingSamplesStore.LoadAsync().ConfigureAwait(false);
+        return allSamples.FirstOrDefault(s =>
+            s.CaseId == item.SelfTrainingCaseId
+            && s.Code == item.SelfTrainingVsaCode
+            && Math.Abs(s.MeterStart - (item.SelfTrainingMeter ?? 0)) < 0.2)?.SampleId;
+    }
+
+    /// <summary>Baut den Review-Approval-Service mit Delegate auf die bestehende VM-KB-Indexierung.</summary>
+    private IReviewApprovalService BuildReviewApprovalService()
+    {
+        var indexer = new DelegatingKnowledgeBaseIndexer(
+            async (s, c) => (IReadOnlyList<string>)await IncrementalKbUpdateAsync(s.ToList(), c).ConfigureAwait(false),
+            TryDeindexSample);
+        return new ReviewApprovalService(new TrainingSamplesStoreAdapter(), indexer);
+    }
+
     /// <summary>Approve a review item (accept the suggested code).</summary>
     public async Task ApproveReviewItemAsync(
         InfraSelfImproving.ReviewQueueItem item,
@@ -1666,28 +1690,14 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
         else if (item.IsFromSelfTraining)
         {
-            // SampleId-Lookup: direkt per item.SelfTrainingSampleId; Altbestand ohne SampleId per Fuzzy-Match.
-            var sampleId = item.SelfTrainingSampleId;
-            if (string.IsNullOrEmpty(sampleId))
-            {
-                var allSamples = await TrainingSamplesStore.LoadAsync().ConfigureAwait(false);
-                sampleId = allSamples.FirstOrDefault(s =>
-                    s.CaseId == item.SelfTrainingCaseId
-                    && s.Code == item.SelfTrainingVsaCode
-                    && Math.Abs(s.MeterStart - (item.SelfTrainingMeter ?? 0)) < 0.2)?.SampleId;
-            }
+            var sampleId = await ResolveSelfTrainingSampleIdAsync(item).ConfigureAwait(false);
             if (string.IsNullOrEmpty(sampleId))
             {
                 Log($"Self-Training Review: Sample nicht gefunden ({item.SelfTrainingCaseId}/{item.SelfTrainingVsaCode}@{item.SelfTrainingMeter:F1}m)");
             }
             else
             {
-                // Self-Training Review: Sample-Status auf Approved setzen + in KB indexieren
-                var indexer = new DelegatingKnowledgeBaseIndexer(
-                    async (s, c) => (IReadOnlyList<string>)await IncrementalKbUpdateAsync(s.ToList(), c).ConfigureAwait(false),
-                    TryDeindexSample);
-                var store = new TrainingSamplesStoreAdapter();
-                var svc = new ReviewApprovalService(store, indexer);
+                var svc = BuildReviewApprovalService();
                 var result = await svc.ApproveSelfTrainingAsync(sampleId, box: null, ct).ConfigureAwait(false);
                 if (result.Found)
                     Log($"Self-Training Review: {item.SelfTrainingVsaCode}@{item.SelfTrainingMeter:F1}m → Approved, KB: {(result.Indexed ? "Indexed" : "Error")}");
@@ -1716,28 +1726,14 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
         else if (item.IsFromSelfTraining)
         {
-            // SampleId-Lookup: direkt per item.SelfTrainingSampleId; Altbestand ohne SampleId per Fuzzy-Match.
-            var sampleId = item.SelfTrainingSampleId;
-            if (string.IsNullOrEmpty(sampleId))
-            {
-                var allSamples = await TrainingSamplesStore.LoadAsync().ConfigureAwait(false);
-                sampleId = allSamples.FirstOrDefault(s =>
-                    s.CaseId == item.SelfTrainingCaseId
-                    && s.Code == item.SelfTrainingVsaCode
-                    && Math.Abs(s.MeterStart - (item.SelfTrainingMeter ?? 0)) < 0.2)?.SampleId;
-            }
+            var sampleId = await ResolveSelfTrainingSampleIdAsync(item).ConfigureAwait(false);
             if (string.IsNullOrEmpty(sampleId))
             {
                 Log($"Self-Training Review: Sample nicht gefunden ({item.SelfTrainingCaseId}/{item.SelfTrainingVsaCode}@{item.SelfTrainingMeter:F1}m)");
             }
             else
             {
-                // Self-Training Review: Sample-Status auf Rejected setzen, Code korrigieren
-                var indexer = new DelegatingKnowledgeBaseIndexer(
-                    async (s, c) => (IReadOnlyList<string>)await IncrementalKbUpdateAsync(s.ToList(), c).ConfigureAwait(false),
-                    TryDeindexSample);
-                var store = new TrainingSamplesStoreAdapter();
-                var svc = new ReviewApprovalService(store, indexer);
+                var svc = BuildReviewApprovalService();
                 var result = await svc.RejectSelfTrainingAsync(sampleId, correctedCode, ct).ConfigureAwait(false);
                 if (result.Found)
                 {
