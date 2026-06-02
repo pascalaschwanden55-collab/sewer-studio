@@ -114,7 +114,7 @@ public sealed class TrainingSample
     public double? BboxHeight { get; set; }
 
     /// <summary>Hat eine echte BoundingBox.</summary>
-    public bool HasBbox => BboxXCenter.HasValue && BboxWidth.HasValue;
+    public bool HasBbox => BboxXCenter.HasValue && BboxYCenter.HasValue && BboxWidth.HasValue && BboxHeight.HasValue;
 
     /// <summary>
     /// Zentrale Signatur-Berechnung fuer Dedup.
