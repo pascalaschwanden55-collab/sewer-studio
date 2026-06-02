@@ -1744,6 +1744,8 @@ public partial class TrainingCenterViewModel : ObservableObject
             else
             {
                 match.Status = TrainingSampleStatus.Rejected;
+                match.KbIndexState = KbIndexState.None;
+                TryDeindexSample(match.SampleId);  // T3-Invariante: Ablehnen raeumt KB-Eintrag weg — auch im Review-Queue-Pfad
                 if (!string.IsNullOrEmpty(correctedCode))
                 {
                     Log($"Self-Training Review: {vsaCode}@{meter:F1}m → Rejected, Code korrigiert zu {correctedCode}");
