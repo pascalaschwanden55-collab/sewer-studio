@@ -18,11 +18,16 @@ namespace AuswertungPro.Next.Infrastructure.Ai;
 public sealed class CodingSessionService : ICodingSessionService
 {
     private readonly Func<OllamaConfig?> _ollamaConfigProvider;
+    private readonly Func<IReadOnlySet<string>> _evalHashesProvider;
     private CodingSession? _session;
 
-    public CodingSessionService(Func<OllamaConfig?>? ollamaConfigProvider = null)
+    public CodingSessionService(
+        Func<OllamaConfig?>? ollamaConfigProvider = null,
+        Func<IReadOnlySet<string>>? evalHashesProvider = null)
     {
         _ollamaConfigProvider = ollamaConfigProvider ?? (() => null);
+        _evalHashesProvider = evalHashesProvider
+            ?? (() => new HashSet<string>(StringComparer.OrdinalIgnoreCase));
     }
 
     // --- Session-Lifecycle ---
@@ -215,7 +220,7 @@ public sealed class CodingSessionService : ICodingSessionService
             var embedder = new InfraKnowledgeBase.EmbeddingService(http, cfg);
 
             using var db = new InfraKnowledgeBase.KnowledgeBaseContext();
-            var kbManager = new InfraKnowledgeBase.KnowledgeBaseManager(db, embedder);
+            var kbManager = new InfraKnowledgeBase.KnowledgeBaseManager(db, embedder, _evalHashesProvider());
 
             foreach (var sample in approved)
             {
