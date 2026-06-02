@@ -1827,6 +1827,23 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
     }
 
+    /// <summary>Wendet eine Review-Korrektur an: Original ablehnen+deindexieren, korrigiertes Sample anlegen+indexieren.</summary>
+    public async Task ApplyReviewCorrectionAsync(InfraSelfImproving.ReviewQueueItem item, string correctedCode, CancellationToken ct = default)
+    {
+        if (item is null || ReviewQueueServiceRef is null || string.IsNullOrWhiteSpace(correctedCode)) return;
+        try
+        {
+            using var db = new KnowledgeBaseContext();
+            var feedback = CreateFeedbackService(db);
+            await RejectReviewItemAsync(item, correctedCode, feedback, ReviewQueueServiceRef, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log($"Review-Korrektur Fehler: {ex.Message}");
+            ReviewStatusText = $"Fehler: {ex.Message}";
+        }
+    }
+
     // ── Selbsttraining (Orchestrator) ──────────────────────────────────
 
     [ObservableProperty] private bool _isSelfTrainingRunning;

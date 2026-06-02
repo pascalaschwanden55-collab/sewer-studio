@@ -750,8 +750,8 @@
                                 Command="{Binding ApproveSelectedReviewCommand}"
                                 Padding="12,4" Margin="0,0,8,0"/>
                         <Button Content="✎ Korrigieren"
-                                IsEnabled="False"
-                                ToolTip="Korrektur folgt in B4"
+                                Click="ReviewCorrect_Click"
+                                IsEnabled="{Binding SelectedReviewItem, Converter={StaticResource NotNullToBool}, FallbackValue=False}"
                                 Padding="12,4" Margin="0,0,8,0"/>
                         <Button Content="✕ Ablehnen"
                                 Command="{Binding RejectSelectedReviewCommand}"

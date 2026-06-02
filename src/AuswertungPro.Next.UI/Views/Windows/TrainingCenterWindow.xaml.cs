@@ -204,6 +204,23 @@ public partial class TrainingCenterWindow : Window
             total >= 0.99 ? 0 : 1 - total, GridUnitType.Star);
     }
 
+    // ── Review-Korrektur ─────────────────────────────────────────────────
+
+    private async void ReviewCorrect_Click(object sender, RoutedEventArgs e)
+    {
+        if (Vm.SelectedReviewItem is null) return;
+        var dlg = new CorrectionDialog { Owner = this };
+        if (dlg.ShowDialog() == true && !string.IsNullOrWhiteSpace(dlg.SelectedCode))
+        {
+            try { await Vm.ApplyReviewCorrectionAsync(Vm.SelectedReviewItem, dlg.SelectedCode!); }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler bei der Korrektur: {ex.Message}", "Korrektur",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+    }
+
     // ── Lehrer-Annotationen Tab Event Handlers ──
 
     private List<TeacherAnnotation> _allTeacherAnnotations = new();
