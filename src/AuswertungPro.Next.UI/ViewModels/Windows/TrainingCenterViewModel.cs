@@ -92,9 +92,19 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     // Review Queue (Self-Improving Loop)
     public ObservableCollection<InfraSelfImproving.ReviewQueueItem> ReviewQueue { get; } = new();
-    [ObservableProperty] private InfraSelfImproving.ReviewQueueItem? _selectedReviewItem;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedReviewCard))]
+    [NotifyCanExecuteChangedFor(nameof(ApproveSelectedReviewCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RejectSelectedReviewCommand))]
+    private InfraSelfImproving.ReviewQueueItem? _selectedReviewItem;
+
     [ObservableProperty] private int _reviewQueueCount;
     [ObservableProperty] private string _reviewStatusText = "";
+
+    /// <summary>Projektion des aktuell gewaehlten Kandidaten auf die Karte (null = nichts gewaehlt).</summary>
+    public ReviewCardViewModel? SelectedReviewCard
+        => SelectedReviewItem is null ? null : new ReviewCardViewModel(SelectedReviewItem);
 
     // ── Selbsttraining-Visualisierungen ──
     public ObservableCollection<SelfTrainingEntryResult> SelfTrainingResults { get; } = new();
@@ -1750,6 +1760,71 @@ public partial class TrainingCenterViewModel : ObservableObject
         ReviewQueueCount = ReviewQueue.Count;
         ReviewStatusText = $"Rejected: {item.SuggestedCode} → {correctedCode} | {ReviewQueueCount} verbleibend";
         Log($"Review Rejected: {item.Label} → {item.SuggestedCode} korrigiert zu {correctedCode}");
+    }
+
+    // ── Review Queue Commands ────────────────────────────────────────────
+
+    private bool HasSelectedReviewItem => SelectedReviewItem is not null;
+
+    /// <summary>Erzeugt FeedbackIngestionService mit optionalem KbManager fuer KB-Re-Indexierung.</summary>
+    private static InfraSelfImproving.FeedbackIngestionService CreateFeedbackService(
+        KnowledgeBaseContext db)
+    {
+        var logger  = new AuswertungPro.Next.Infrastructure.Ai.QualityGate.ValidationLogger(db.Connection);
+        var weights = new AuswertungPro.Next.Infrastructure.Ai.QualityGate.WeightLearningService(db.Connection);
+
+        // KbManager optional — wenn Ollama offline, wird nur geloggt
+        KnowledgeBaseManager? kbManager = null;
+        try
+        {
+            var cfg = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToOllamaConfig();
+            var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
+            var embedder = new EmbeddingService(http, cfg);
+            var evalHashes = EvalContaminationGuard.LoadEvalImageHashes(AppSettings.Load().EvalSetRoot);
+            kbManager = new KnowledgeBaseManager(db, embedder, evalHashes);
+        }
+        catch { /* Ollama nicht verfuegbar — Feedback wird geloggt, KB-Update uebersprungen */ }
+
+        return new InfraSelfImproving.FeedbackIngestionService(logger, weights, kbManager);
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelectedReviewItem))]
+    private async Task ApproveSelectedReviewAsync(CancellationToken ct)
+    {
+        var item = SelectedReviewItem;
+        if (item is null || ReviewQueueServiceRef is null) return;
+        try
+        {
+            using var db = new KnowledgeBaseContext();
+            var feedback = CreateFeedbackService(db);
+            await ApproveReviewItemAsync(item, feedback, ReviewQueueServiceRef, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log($"Review-Freigabe Fehler: {ex.Message}");
+            ReviewStatusText = $"Fehler: {ex.Message}";
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelectedReviewItem))]
+    private async Task RejectSelectedReviewAsync(CancellationToken ct)
+    {
+        var item = SelectedReviewItem;
+        if (item is null || ReviewQueueServiceRef is null) return;
+        try
+        {
+            using var db = new KnowledgeBaseContext();
+            var feedback = CreateFeedbackService(db);
+            // Reine Ablehnung ohne Korrektur (correctedCode leer) -> Status Rejected + KB-Eintrag entfernt, kein _corr-Sample.
+            await RejectReviewItemAsync(item, string.Empty, feedback, ReviewQueueServiceRef, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log($"Review-Ablehnung Fehler: {ex.Message}");
+            ReviewStatusText = $"Fehler: {ex.Message}";
+        }
     }
 
     // ── Selbsttraining (Orchestrator) ──────────────────────────────────

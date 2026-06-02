@@ -609,6 +609,10 @@
             <!-- Tab 4: Review Queue (Self-Improving Loop) -->
             <TabItem Header="Review Queue">
                 <Grid Margin="8">
+                    <Grid.InputBindings>
+                        <KeyBinding Key="Enter" Command="{Binding ApproveSelectedReviewCommand}"/>
+                        <KeyBinding Key="Delete" Command="{Binding RejectSelectedReviewCommand}"/>
+                    </Grid.InputBindings>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="8"/>
@@ -617,37 +621,138 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
+                    <!-- Kopfzeile: Anzahl + Status -->
                     <StackPanel Grid.Row="0" Orientation="Horizontal">
                         <TextBlock Text="Zur Prüfung:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Text="{Binding ReviewQueueCount}" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0"/>
                         <TextBlock Text="{Binding ReviewStatusText}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
 
-                    <DataGrid Grid.Row="2"
-                              ItemsSource="{Binding ReviewQueue}"
-                              SelectedItem="{Binding SelectedReviewItem}"
-                              AutoGenerateColumns="False"
-                              IsReadOnly="True"
-                              SelectionMode="Single"
-                              CanUserSortColumns="True"
-                              HeadersVisibility="Column">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Priorität" Binding="{Binding PriorityLabel}" Width="80"/>
-                            <DataGridTextColumn Header="Befund" Binding="{Binding Label}" Width="*"/>
-                            <DataGridTextColumn Header="Vorgeschlagen" Binding="{Binding SuggestedCode}" Width="100"/>
-                            <DataGridTextColumn Header="Konfidenz" Binding="{Binding Confidence, StringFormat=P0}" Width="80"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                    <!-- Hauptbereich: Liste links + Karte rechts -->
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="320"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
+                        <!-- Linke Spalte: Kandidaten-Liste -->
+                        <ListBox Grid.Column="0"
+                                 ItemsSource="{Binding ReviewQueue}"
+                                 SelectedItem="{Binding SelectedReviewItem}"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 Background="#0F172A" BorderThickness="0">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="6,4"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="4,2" CornerRadius="3">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Style.Triggers>
+                                                    <!-- KI-Fehler: Mismatch hervorheben -->
+                                                    <DataTrigger Binding="{Binding SelfTrainingMatchLevel}" Value="Mismatch">
+                                                        <Setter Property="Background" Value="#3B1C1C"/>
+                                                    </DataTrigger>
+                                                    <!-- KI-Fehler: NoFindings hervorheben -->
+                                                    <DataTrigger Binding="{Binding SelfTrainingMatchLevel}" Value="NoFindings">
+                                                        <Setter Property="Background" Value="#1C2A3B"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding SelfTrainingVsaCode}"
+                                                           FontWeight="SemiBold" Foreground="#E2E8F0"
+                                                           FontSize="13"/>
+                                                <TextBlock Text="{Binding SelfTrainingMeter, StringFormat={}{0:F1}m}"
+                                                           Foreground="#94A3B8" FontSize="11"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding PriorityLabel}"
+                                                       Foreground="#FBBF24" FontSize="10"
+                                                       VerticalAlignment="Center" Margin="4,0,0,0"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <!-- Rechte Spalte: Karte mit Detailansicht (leer wenn kein Eintrag gewaehlt) -->
+                        <Border Grid.Column="2"
+                                Background="#0F172A" CornerRadius="6" Padding="12">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel>
+                                    <!-- Frame-Bild -->
+                                    <Image Source="{Binding SelectedReviewCard.FramePath, Converter={StaticResource FileToImage}}"
+                                           MaxHeight="320" Stretch="Uniform" Margin="0,0,0,10"/>
+
+                                    <!-- Protokoll-Code (Ground-Truth) -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <TextBlock Text="Protokoll-Code: " Foreground="#94A3B8" FontSize="12"/>
+                                        <TextBlock Text="{Binding SelectedReviewCard.ProtocolCode}"
+                                                   Foreground="#E2E8F0" FontWeight="Bold" FontSize="14"/>
+                                    </StackPanel>
+
+                                    <!-- KI-Aussage -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <TextBlock Text="KI-Erkennung: " Foreground="#94A3B8" FontSize="12"/>
+                                        <TextBlock Text="{Binding SelectedReviewCard.KiAussage}"
+                                                   Foreground="#FBBF24" FontSize="12"/>
+                                    </StackPanel>
+
+                                    <!-- Meterstand -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <TextBlock Text="Meter: " Foreground="#94A3B8" FontSize="12"/>
+                                        <TextBlock Text="{Binding SelectedReviewCard.Meter, StringFormat={}{0:F1} m}"
+                                                   Foreground="#E2E8F0" FontSize="12"/>
+                                    </StackPanel>
+
+                                    <!-- Status -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <TextBlock Text="Status: " Foreground="#94A3B8" FontSize="12"/>
+                                        <TextBlock Text="{Binding SelectedReviewCard.StatusLabel}"
+                                                   Foreground="#64748B" FontSize="12"/>
+                                    </StackPanel>
+
+                                    <!-- Priorität -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="Priorität: " Foreground="#94A3B8" FontSize="12"/>
+                                        <TextBlock Text="{Binding SelectedReviewCard.PriorityLabel}"
+                                                   Foreground="#FBBF24" FontSize="12"/>
+                                    </StackPanel>
+
+                                    <!-- Platzhalter B5 -->
+                                    <TextBlock Text="Optional: Box ziehen (nur für YOLO)"
+                                               Foreground="#334155" FontSize="10" FontStyle="Italic"
+                                               Margin="0,8,0,0"/>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+                    </Grid>
+
+                    <!-- Action Bar -->
                     <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="Akzeptieren" x:Name="ReviewApproveBtn"
-                                Click="ReviewApprove_Click"
-                                Padding="12,4" Margin="0,0,8,0"
-                                IsEnabled="{Binding SelectedReviewItem, Converter={StaticResource NotNullToBool}, FallbackValue=False}"/>
-                        <Button Content="Ablehnen + Korrektur" x:Name="ReviewRejectBtn"
-                                Click="ReviewReject_Click"
-                                Padding="12,4"
-                                IsEnabled="{Binding SelectedReviewItem, Converter={StaticResource NotNullToBool}, FallbackValue=False}"/>
+                        <Button Content="✓ Akzeptieren"
+                                Command="{Binding ApproveSelectedReviewCommand}"
+                                Padding="12,4" Margin="0,0,8,0"/>
+                        <Button Content="✎ Korrigieren"
+                                IsEnabled="False"
+                                ToolTip="Korrektur folgt in B4"
+                                Padding="12,4" Margin="0,0,8,0"/>
+                        <Button Content="✕ Ablehnen"
+                                Command="{Binding RejectSelectedReviewCommand}"
+                                Padding="12,4"/>
                     </StackPanel>
                 </Grid>
             </TabItem>
