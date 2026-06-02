@@ -44,8 +44,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         InitializeComponent();
 
-        // Haltungsansicht teilt sich Selected/Records mit der Tabelle; Detail-Aufbau wie im Detailfenster
-        HaltungsansichtView.DetailBuilder = BuildHaltungRecordDetails;
+        // Haltungsansicht teilt sich Selected/Records mit der Tabelle; Detail-Aufbau wie im Detailfenster,
+        // aber ohne Primaere_Schaeden (steht dort schon als Schadensliste unten).
+        HaltungsansichtView.DetailBuilder = BuildHaltungRecordDetailsForAnsicht;
         HaltungsansichtView.ActionRequested = RouteHaltungsansichtAction;
 
         _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(180) };
@@ -1226,6 +1227,18 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private List<RecordDetailGroup> BuildHaltungRecordDetails(HaltungRecord record)
         => DataPageRecordDetailsBuilder.Build(record, fieldName => CreateHaltungDetailItem(fieldName, record));
+
+    /// <summary>In der eingebetteten Haltungsansicht ausgeblendete Formularfelder, weil sie dort
+    /// bereits anders dargestellt sind. Primaere_Schaeden = die Schadensliste unten (SchadenList).
+    /// Das Datenfeld selbst bleibt erhalten (Export/VSA/Massnahmen), nur die doppelte Anzeige entfaellt.</summary>
+    private static readonly IReadOnlySet<string> HaltungsansichtHiddenFields =
+        new HashSet<string>(StringComparer.Ordinal) { "Primaere_Schaeden" };
+
+    private List<RecordDetailGroup> BuildHaltungRecordDetailsForAnsicht(HaltungRecord record)
+        => DataPageRecordDetailsBuilder.Build(
+            record,
+            fieldName => CreateHaltungDetailItem(fieldName, record),
+            HaltungsansichtHiddenFields);
 
     private RecordDetailItem CreateHaltungDetailItem(string fieldName, HaltungRecord record)
     {

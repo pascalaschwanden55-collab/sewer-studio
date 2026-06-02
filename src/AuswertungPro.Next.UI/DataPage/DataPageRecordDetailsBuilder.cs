@@ -7,10 +7,12 @@ public static class DataPageRecordDetailsBuilder
 {
     public static List<RecordDetailGroup> Build(
         HaltungRecord record,
-        Func<string, RecordDetailItem> createItem)
+        Func<string, RecordDetailItem> createItem,
+        IReadOnlySet<string>? excludeFields = null)
     {
         var groups = new List<RecordDetailGroup>();
         var added = new HashSet<string>(StringComparer.Ordinal);
+        bool IsExcluded(string field) => excludeFields is not null && excludeFields.Contains(field);
         var buckets = new Dictionary<string, List<RecordDetailItem>>(StringComparer.Ordinal)
         {
             ["Stammdaten"] = new(),
@@ -22,6 +24,7 @@ public static class DataPageRecordDetailsBuilder
 
         foreach (var column in FieldCatalog.ColumnOrder.Where(x => added.Add(x)))
         {
+            if (IsExcluded(column)) continue;
             var groupName = ResolveGroup(column);
             buckets[groupName].Add(createItem(column));
         }
@@ -30,6 +33,7 @@ public static class DataPageRecordDetailsBuilder
                      .Where(x => !added.Contains(x))
                      .OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
         {
+            if (IsExcluded(extraField)) continue;
             buckets["Weitere Angaben"].Add(createItem(extraField));
         }
 
