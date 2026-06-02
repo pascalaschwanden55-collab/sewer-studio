@@ -1263,82 +1263,8 @@ public partial class TrainingCenterViewModel : ObservableObject
             // Dedup passiert per Signature auf Entry-Level.
             var casesToProcess = casesWithProtocol;
 
-            // Ollama-Verbindung einmalig pruefen + KB-Objekte vorbereiten
-            var ollamaConfig = new AppSettingsAiSettingsProvider()
-                .Load()
-                .ToOllamaConfig();
-            var ollamaReachable = await CheckOllamaReachableAsync(ollamaConfig, ct);
-            KnowledgeBaseContext? kbCtx = null;
-            KnowledgeBaseManager? kbManager = null;
-            if (ollamaReachable)
-            {
-                _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
-                kbCtx = new KnowledgeBaseContext();
-                // Eval-Kontaminationsschutz: Eval-Frames hart aus dem KB-Index blockieren.
-                var kbEvalHashes = EvalContaminationGuard.LoadEvalImageHashes(AppSettings.Load().EvalSetRoot);
-                kbManager = new KnowledgeBaseManager(kbCtx, new EmbeddingService(_kbHttpClient, ollamaConfig), kbEvalHashes);
-                Log($"Ollama bereit: {ollamaConfig.BaseUri}, Embed-Modell: {ollamaConfig.EmbedModel}");
-            }
-            else
-            {
-                Log($"Ollama NICHT erreichbar auf {ollamaConfig.BaseUri} — Samples werden gespeichert, KB-Indexierung uebersprungen.");
-            }
-
-            // ── KB-Nachholpfad: Approved Samples die noch nicht in der KB sind nachindizieren ──
-            // Deckt den Fall ab: Crash nach MergeAndSave aber vor IndexSampleAsync,
-            // oder vorheriger Lauf ohne Ollama.
-            if (kbManager is not null && allSamples.Count > 0)
-            {
-                // Pending + Error Samples immer nachindizieren
-                var unindexed = allSamples
-                    .Where(s => s.Status == TrainingSampleStatus.Approved)
-                    .Where(s => s.KbIndexState is KbIndexState.Pending or KbIndexState.Error)
-                    .ToList();
-
-                // Migration-Fallback: Alte Samples mit KbIndexState.None (noch nie durch die neue Pipeline)
-                var noneState = allSamples
-                    .Where(s => s.Status == TrainingSampleStatus.Approved && s.KbIndexState == KbIndexState.None)
-                    .ToList();
-                if (noneState.Count > 0)
-                {
-                    var notInKb = noneState.Where(s => !kbManager.IsIndexed(s.SampleId)).ToList();
-                    foreach (var s in notInKb)
-                        s.KbIndexState = KbIndexState.Pending;
-                    // Bereits indexierte als Indexed markieren
-                    foreach (var s in noneState.Except(notInKb))
-                        s.KbIndexState = KbIndexState.Indexed;
-                    if (noneState.Count > 0)
-                        await TrainingSamplesStore.MergeOrUpdateAsync(noneState);
-                    unindexed.AddRange(notInKb);
-                }
-
-                if (unindexed.Count > 0)
-                {
-                    Log($"KB-Nachholpfad: {unindexed.Count} Samples noch nicht in KB — indexiere nach...");
-                    StatusText = $"KB-Nachholpfad: {unindexed.Count} Samples nachindizieren...";
-                    ProgressMax = unindexed.Count;
-                    try
-                    {
-                        var indexedIds = await kbManager.IndexSamplesAsync(unindexed, ct);
-                        var indexedSet = indexedIds.ToHashSet();
-                        foreach (var s in unindexed)
-                            s.KbIndexState = indexedSet.Contains(s.SampleId)
-                                ? KbIndexState.Indexed
-                                : KbIndexState.Error;
-                        await TrainingSamplesStore.MergeOrUpdateAsync(unindexed);
-                        Log($"KB-Nachholpfad fertig: {indexedIds.Count}/{unindexed.Count} nachindiziert");
-                    }
-                    catch (Exception ex) when (ex is not OperationCanceledException)
-                    {
-                        Log($"  KB-Nachhol Fehler: {ex.Message}");
-                        // KbIndexState bleibt Pending/Error → naechster Lauf versucht es erneut
-                    }
-                }
-            }
-
             ProgressMax = casesToProcess.Count;
             var totalNew = 0;
-            var totalIndexed = 0;
             var errors = 0;
             var lastError = "";
             var emptyProtocols = 0;
@@ -1346,8 +1272,6 @@ public partial class TrainingCenterViewModel : ObservableObject
             var missingProtocols = 0;
             var unreadableProtocols = 0;
 
-            try // try-finally fuer kbCtx/kbHttp Dispose
-            {
             for (var i = 0; i < casesToProcess.Count; i++)
             {
                 ct.ThrowIfCancellationRequested();
@@ -1422,12 +1346,11 @@ public partial class TrainingCenterViewModel : ObservableObject
                         continue; // Naechster Case
                     }
 
-                    // Smart-Approve + Signaturen registrieren + Live-Visualisierung
+                    // Signaturen registrieren + Live-Visualisierung
+                    // nie Auto-Approve; Freigabe nur ueber Review (Modul I)
                     foreach (var s in newSamples)
                     {
-                        s.Status = !string.IsNullOrEmpty(s.FramePath)
-                            ? TrainingSampleStatus.Approved
-                            : TrainingSampleStatus.New;
+                        s.Status = TrainingSampleStatus.New;   // nie Auto-Approve; Freigabe nur ueber Review (Modul I)
                         existingSigs.Add(s.Signature);
 
                         // Live-Frame pro Sample (nicht nur pro Case)
@@ -1437,8 +1360,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                         // Ergebnis-Verlauf: Sample als Eintrag hinzufuegen
                         // Batch-Import hat keinen echten KI-vs-Protokoll Vergleich,
                         // daher Match-Rate NICHT aktualisieren (nur im Selbsttraining sinnvoll).
-                        var level = s.Status == TrainingSampleStatus.Approved
-                            ? MatchLevel.ExactMatch : MatchLevel.NoFindings;
+                        var level = MatchLevel.NoFindings; // Status ist immer New, nie Approved
                         void AddResult()
                         {
                             SelfTrainingResults.Add(new SelfTrainingEntryResult
@@ -1458,51 +1380,19 @@ public partial class TrainingCenterViewModel : ObservableObject
                             AddResult();
                     }
 
-                    var autoApproved = newSamples.Count(s => s.Status == TrainingSampleStatus.Approved);
-                    var needsReview = newSamples.Count - autoApproved;
                     totalNew += newSamples.Count;
 
-                    Log($"  -> {newSamples.Count} Samples ({autoApproved} approved, {needsReview} zur Pruefung):");
+                    Log($"  -> {newSamples.Count} Samples (Status: Neu, Freigabe ueber Review):");
                     foreach (var s in newSamples)
                         Log($"     {s.Code} @ {s.MeterStart:F2}m [{s.Status}] - {s.Beschreibung}");
-
-                    // Approved Samples als Pending markieren (vor dem Speichern)
-                    foreach (var s in newSamples.Where(s => s.Status == TrainingSampleStatus.Approved))
-                        s.KbIndexState = KbIndexState.Pending;
 
                     // ══════════════════════════════════════════════════════════════════
                     // SOFORT SPEICHERN — Crash-sicher pro Haltung
                     // ══════════════════════════════════════════════════════════════════
                     await TrainingSamplesStore.MergeAndSaveAsync(newSamples);
 
-                    // SOFORT in KB indexieren (inkrementell, kein Rebuild/Delete)
-                    if (kbManager is not null)
-                    {
-                        var approvedForKb = newSamples
-                            .Where(s => s.Status == TrainingSampleStatus.Approved)
-                            .ToList();
-
-                        if (approvedForKb.Count > 0)
-                        {
-                            try
-                            {
-                                var indexedIds = await kbManager.IndexSamplesAsync(approvedForKb, ct);
-                                totalIndexed += indexedIds.Count;
-                                // Pro Sample: Indexed oder Error je nach Ergebnis
-                                var indexedSet = indexedIds.ToHashSet();
-                                foreach (var s in approvedForKb)
-                                    s.KbIndexState = indexedSet.Contains(s.SampleId)
-                                        ? KbIndexState.Indexed
-                                        : KbIndexState.Error;
-                                await TrainingSamplesStore.MergeOrUpdateAsync(approvedForKb);
-                            }
-                            catch (Exception kbEx) when (kbEx is not OperationCanceledException)
-                            {
-                                Log($"     KB-Index Fehler: {kbEx.Message}");
-                                // KbIndexState bleibt Pending → Nachholpfad beim naechsten Lauf
-                            }
-                        }
-                    }
+                    // Kein KB-Index — Samples bleiben Kandidaten (Status: Neu)
+                    Log($"{newSamples.Count} Samples als Kandidaten gespeichert (Status: Neu). Freigabe ueber Review (Modul I) - KEIN Auto-Index.");
 
                     // UI-Zaehler aktualisieren (Samples + Codes)
                     allSamples.AddRange(newSamples);
@@ -1517,7 +1407,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                     else
                         UpdateCounters();
 
-                    Log($"  Gespeichert + KB: {autoApproved} indexiert | Gesamt: {allSamples.Count} Samples, {distinctCodes} Codes");
+                    Log($"  Gespeichert | Gesamt: {allSamples.Count} Samples, {distinctCodes} Codes");
 
                     // Case-State periodisch sichern (alle 10 Haltungen),
                     // damit die UI nach einem Crash den Fortschritt korrekt anzeigt.
@@ -1541,25 +1431,6 @@ public partial class TrainingCenterViewModel : ObservableObject
                     Log($"  FEHLER: {ex.Message}");
                 }
             }
-            } // end try
-            finally
-            {
-                kbCtx?.Dispose();
-                // _kbHttpClient wird wiederverwendet, nicht disposen
-            }
-
-            // KB-Version erstellen (nach allen Cases)
-            if (totalIndexed > 0)
-            {
-                try
-                {
-                    _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
-                    using var finalKbCtx = new KnowledgeBaseContext();
-                    var finalManager = new KnowledgeBaseManager(finalKbCtx, new EmbeddingService(_kbHttpClient, ollamaConfig));
-                    finalManager.CreateVersion($"Batch-Import {DateTime.Now:yyyy-MM-dd HH:mm}");
-                }
-                catch { /* Version-Erstellung ist optional */ }
-            }
 
             // Abschlussmeldung
             Samples.Clear();
@@ -1580,9 +1451,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                 return;
             }
 
-            var finalStatus = $"Fertig! {totalNew} Samples gespeichert, {totalIndexed} in KB indexiert";
-            if (errors > 0) finalStatus += $", {errors} Fehler";
-            if (!ollamaReachable) finalStatus += " (KB-Indexierung uebersprungen: Ollama offline)";
+            var finalStatus = $"Fertig! {totalNew} Kandidaten gespeichert (Status: Neu). Freigabe ueber Review (Modul I) — kein Auto-Index.";
+            if (errors > 0) finalStatus += $" {errors} Fehler.";
             Log(finalStatus);
             StatusText = finalStatus;
 
