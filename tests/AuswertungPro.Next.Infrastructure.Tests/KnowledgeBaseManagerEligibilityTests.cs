@@ -9,13 +9,19 @@ using Xunit;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
-public class KnowledgeBaseManagerEligibilityTests
+public class KnowledgeBaseManagerEligibilityTests : IDisposable
 {
+    private readonly ICodeCatalogProvider? _previousCatalog;
+
     public KnowledgeBaseManagerEligibilityTests()
     {
+        // Vorherigen Katalog sichern bevor wir den statischen Zustand aendern.
+        _previousCatalog = VsaCodeResolver.CurrentCatalog;
         // VsaCodeResolver ist statisch — Minimal-Katalog konfigurieren damit LookupLabel("BAB") != null.
         VsaCodeResolver.ConfigureCatalog(new MinimalCatalog());
     }
+
+    public void Dispose() => VsaCodeResolver.ConfigureCatalog(_previousCatalog);
 
     private static TrainingSample BaseSample() => new()
     {
@@ -33,8 +39,17 @@ public class KnowledgeBaseManagerEligibilityTests
     [Fact]
     public void IndexWorthy_False_WhenInspectionDateMissing()
     {
+        // Nur InspectionDate entfernen — TrainingEligible bleibt true.
         var s = BaseSample();
         s.InspectionDate = null;
+        Assert.False(KnowledgeBaseManager.IsIndexWorthy(s));
+    }
+
+    [Fact]
+    public void IndexWorthy_False_WhenTrainingNotEligible()
+    {
+        // Gueltiges Datum, aber TrainingEligible explizit auf false setzen.
+        var s = BaseSample();
         s.TrainingEligible = false;
         Assert.False(KnowledgeBaseManager.IsIndexWorthy(s));
     }

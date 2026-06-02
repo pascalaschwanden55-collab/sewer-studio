@@ -17,6 +17,11 @@ public static class VsaCodeResolver
 {
     private static ICodeCatalogProvider? _catalogProvider;
 
+    /// <summary>
+    /// Liest den aktuell konfigurierten Katalog-Provider (zum Sichern/Wiederherstellen in Tests).
+    /// </summary>
+    public static ICodeCatalogProvider? CurrentCatalog => _catalogProvider;
+
     public static void ConfigureCatalog(ICodeCatalogProvider? catalogProvider)
     {
         _catalogProvider = catalogProvider;
