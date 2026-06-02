@@ -466,7 +466,8 @@ Verifikation (keine Dummy-Box bleibt übrig):
 ```bash
 git grep -n "0.5, 0.5, 0.8\|0.500000 0.500000 0.800000" -- src/
 ```
-Expected: **kein Treffer** mehr.
+Expected: **kein Treffer** in den beiden App-Pfaden (`YoloDatasetExportService`, `ExportYoloLocalAsync`).
+Ausnahme (bewusst belassen, Entscheid 2026-06-02): `StageAExporter.cs:497` ist ein **dritter** YOLO-Label-Schreiber im Offline-Bulk-Export, aber per `requireBoundingBox`-Schalter gesteuert (true = boxlose Samples verworfen, Z.244; false = Dummy-Box). Kein unbedingter Dummy wie die App-Pfade; Code + pinnender Test (`StageAExporterTests.cs:94`) bleiben unverändert.
 
 - [ ] **Step 4: Commit**
 
