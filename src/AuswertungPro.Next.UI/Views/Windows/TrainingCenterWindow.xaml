@@ -10,6 +10,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <local:NotNullToBoolConverter x:Key="NotNullToBool"/>
         <local:FileToImageConverter x:Key="FileToImage"/>
+        <local:VsaCodeToTextConverter x:Key="VsaCodeToText"/>
     </Window.Resources>
     <Grid Margin="12" Background="Transparent">
         <Grid.RowDefinitions>
@@ -700,15 +701,17 @@
                                     <!-- Protokoll-Code (Ground-Truth) -->
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                         <TextBlock Text="Protokoll-Code: " Foreground="#94A3B8" FontSize="12"/>
-                                        <TextBlock Text="{Binding SelectedReviewCard.ProtocolCode}"
-                                                   Foreground="#E2E8F0" FontWeight="Bold" FontSize="14"/>
+                                        <TextBlock Text="{Binding SelectedReviewCard.ProtocolCode, Converter={StaticResource VsaCodeToText}}"
+                                                   Foreground="#E2E8F0" FontWeight="Bold" FontSize="14"
+                                                   TextWrapping="Wrap"/>
                                     </StackPanel>
 
                                     <!-- KI-Aussage -->
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                         <TextBlock Text="KI-Erkennung: " Foreground="#94A3B8" FontSize="12"/>
-                                        <TextBlock Text="{Binding SelectedReviewCard.KiAussage}"
-                                                   Foreground="#FBBF24" FontSize="12"/>
+                                        <TextBlock Text="{Binding SelectedReviewCard.KiAussage, Converter={StaticResource VsaCodeToText}}"
+                                                   Foreground="#FBBF24" FontSize="12"
+                                                   TextWrapping="Wrap"/>
                                     </StackPanel>
 
                                     <!-- Meterstand -->

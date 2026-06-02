@@ -452,6 +452,24 @@ public sealed class NotNullToBoolConverter : IValueConverter
 }
 
 /// <summary>
+/// Wandelt einen VSA-Code in "CODE — Klartext" um (Klartext aus dem Katalog via VsaCodeResolver).
+/// Ist der Wert kein bekannter Code (z.B. "nichts erkannt"), bleibt er unveraendert.
+/// </summary>
+public sealed class VsaCodeToTextConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not string code || string.IsNullOrWhiteSpace(code))
+            return value;
+        var label = AuswertungPro.Next.Infrastructure.Ai.VsaCodeResolver.LookupLabel(code);
+        return string.IsNullOrWhiteSpace(label) ? code : $"{code} — {label}";
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => System.Windows.Data.Binding.DoNothing;
+}
+
+/// <summary>
 /// Laedt ein Bild aus dem Dateipfad in den Speicher, ohne die Datei zu sperren.
 /// Verhindert File-Locking und ermoeglicht Echtzeit-Updates waehrend Self-Training.
 /// </summary>
