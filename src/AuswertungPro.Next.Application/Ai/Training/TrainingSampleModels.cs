@@ -7,7 +7,7 @@ using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Application.Ai.Training;
 
-public enum TrainingSampleStatus { New, Approved, Rejected }
+public enum TrainingSampleStatus { New, Approved, Rejected, Removed }
 
 /// <summary>KB-Indexierungszustand eines TrainingSamples.</summary>
 public enum KbIndexState
