@@ -222,7 +222,9 @@ public partial class TrainingCenterWindow : Window
                 .ToOllamaConfig();
             var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
             var embedder = new InfraKnowledgeBase.EmbeddingService(http, cfg);
-            kbManager = new InfraKnowledgeBase.KnowledgeBaseManager(db, embedder);
+            var evalHashes = AuswertungPro.Next.Application.Ai.Training.EvalContaminationGuard
+                .LoadEvalImageHashes(AppSettings.Load().EvalSetRoot);
+            kbManager = new InfraKnowledgeBase.KnowledgeBaseManager(db, embedder, evalHashes);
         }
         catch { /* Ollama nicht verfuegbar — Feedback wird geloggt, KB-Update uebersprungen */ }
 
