@@ -67,6 +67,9 @@ sidecar/models/yolo26l-seg/
 sidecar/test_export_tmp/
 sidecar/training_export/
 sidecar/yolo11m.engine
+
+# Superpowers Brainstorm-/Arbeitsordner (Mockups, Sessions)
+.superpowers/
 sidecar/yolo11m.onnx
 sidecar/.ruff_cache/
 
