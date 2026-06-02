@@ -784,8 +784,37 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         if (SelectedSample is null) return;
         SelectedSample.Status = TrainingSampleStatus.Rejected;
+        TryDeindexSample(SelectedSample.SampleId);
         StatusText = $"Rejected: {SelectedSample.SampleId}";
         await PersistSamplesAsync();
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSampleSelection))]
+    private async Task RemoveSampleAsync()
+    {
+        if (SelectedSample is null) return;
+        SelectedSample.Status = TrainingSampleStatus.Removed;
+        TryDeindexSample(SelectedSample.SampleId);
+        StatusText = $"Entfernt: {SelectedSample.SampleId}";
+        await PersistSamplesAsync();
+    }
+
+    /// <summary>
+    /// Entfernt ein Sample aus der Wissensdatenbank (Deindex), ohne Ollama zu benoetigen.
+    /// Fehler werden still geschluckt — die Status-Aenderung bleibt persistiert.
+    /// </summary>
+    private void TryDeindexSample(string sampleId)
+    {
+        try
+        {
+            var ollamaConfig = new AppSettingsAiSettingsProvider().Load().ToOllamaConfig();
+            _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
+            using var kbCtx = new KnowledgeBaseContext();
+            var embedder = new EmbeddingService(_kbHttpClient, ollamaConfig);
+            var kbManager = new KnowledgeBaseManager(kbCtx, embedder);
+            kbManager.DeindexSample(sampleId);
+        }
+        catch { /* KB evtl. nicht erreichbar — Status-Aenderung bleibt persistiert */ }
     }
 
     [RelayCommand]
