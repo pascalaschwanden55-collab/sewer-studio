@@ -1077,7 +1077,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         if (approved.Count > 0)
         {
             int withBbox = approved.Count(s => s.HasBbox);
-            Log($"  Exportiere {approved.Count} TrainingSamples ({withBbox} mit echten BBoxen)");
+            Log($"  Exportiere {withBbox} TrainingSamples mit echter Box (von {approved.Count}; {approved.Count - withBbox} ohne Box uebersprungen)");
             var sampleSplitIdx = (int)(approved.Count * 0.8);
 
             for (var i = 0; i < approved.Count; i++)
@@ -1092,6 +1092,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 
                 // Sicherheitscheck: Frame-Datei koennte zwischen Filter und Export geloescht worden sein
                 if (!File.Exists(s.FramePath)) continue;
+                if (!s.HasBbox) continue;   // YOLO nur mit echter Box — keine Dummy-Labels, kein Bild ohne Label
 
                 var ext = Path.GetExtension(s.FramePath);
                 var imgDst = Path.Combine(imgDir, $"sample_{i:D6}{ext}");
@@ -1101,19 +1102,10 @@ public partial class TrainingCenterViewModel : ObservableObject
                 var clsIdx = VsaYoloClassMap.GetClassId(s.Code);
                 var lblPath = Path.Combine(lblDir, $"sample_{i:D6}.txt");
 
-                // Echte BBox aus Eingabemarker nutzen, sonst Fallback
-                if (s.HasBbox)
-                {
-                    await File.WriteAllTextAsync(lblPath,
-                        $"{clsIdx} {s.BboxXCenter!.Value:F6} {s.BboxYCenter!.Value:F6} " +
-                        $"{s.BboxWidth!.Value:F6} {s.BboxHeight!.Value:F6}", ct);
-                }
-                else
-                {
-                    // Kein BBox → zentrierte Fallback-Box
-                    await File.WriteAllTextAsync(lblPath,
-                        $"{clsIdx} 0.500000 0.500000 0.800000 0.800000", ct);
-                }
+                // Echte BBox aus Eingabemarker
+                await File.WriteAllTextAsync(lblPath,
+                    $"{clsIdx} {s.BboxXCenter!.Value:F6} {s.BboxYCenter!.Value:F6} " +
+                    $"{s.BboxWidth!.Value:F6} {s.BboxHeight!.Value:F6}", ct);
 
                 s.ExportedUtc = DateTime.UtcNow;
                 totalExported++;

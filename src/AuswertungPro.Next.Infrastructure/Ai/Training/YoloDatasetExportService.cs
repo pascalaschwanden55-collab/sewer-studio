@@ -31,7 +31,8 @@ public sealed class YoloDatasetExportService
             .Where(s => s.Status == TrainingSampleStatus.Approved
                         && IsTrainingExportEligible(s)
                         && !string.IsNullOrEmpty(s.FramePath)
-                        && File.Exists(s.FramePath))
+                        && File.Exists(s.FramePath)
+                        && s.HasBbox) // YOLO nur mit echter Box
             .ToList();
 
         if (approved.Count == 0)
@@ -152,7 +153,8 @@ public sealed class YoloDatasetExportService
                 sample.BboxHeight!.Value);
         }
 
-        return (0.5, 0.5, 0.8, 0.8);
+        throw new InvalidOperationException(
+            $"YOLO-Export ohne BBox fuer Sample {sample.SampleId} — darf nach dem HasBbox-Filter nie passieren.");
     }
 
     private bool IsTrainingExportEligible(TrainingSample sample)
