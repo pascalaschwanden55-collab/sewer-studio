@@ -609,7 +609,7 @@
 
             <!-- Tab 4: Review Queue (Self-Improving Loop) -->
             <TabItem Header="Review Queue">
-                <Grid Margin="8">
+                <Grid Margin="8" KeyDown="ReviewGrid_KeyDown" Focusable="True">
                     <Grid.InputBindings>
                         <KeyBinding Key="Enter" Command="{Binding ApproveSelectedReviewCommand}"/>
                         <KeyBinding Key="Delete" Command="{Binding RejectSelectedReviewCommand}"/>
@@ -694,9 +694,24 @@
                                 Background="#0F172A" CornerRadius="6" Padding="12">
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
                                 <StackPanel>
-                                    <!-- Frame-Bild -->
-                                    <Image Source="{Binding SelectedReviewCard.FramePath, Converter={StaticResource FileToImage}}"
-                                           MaxHeight="320" Stretch="Uniform" Margin="0,0,0,10"/>
+                                    <!-- Frame-Bild mit optionalem Box-Zeichnen (B5) -->
+                                    <Grid Margin="0,0,0,10" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                        <!-- Bild: Links/Oben ausrichten damit ActualWidth/Height == gerendertes Bild (kein Letterbox-Rest) -->
+                                        <Image x:Name="CardImage"
+                                               Source="{Binding SelectedReviewCard.FramePath, Converter={StaticResource FileToImage}}"
+                                               MaxHeight="320" Stretch="Uniform"
+                                               HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                                        <!-- Zeichen-Canvas ueberlagert exakt das Bild; Groesse gebunden an ActualWidth/Height des Image -->
+                                        <Canvas x:Name="BoxCanvas"
+                                                Width="{Binding ActualWidth, ElementName=CardImage}"
+                                                Height="{Binding ActualHeight, ElementName=CardImage}"
+                                                HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                Background="Transparent"
+                                                ClipToBounds="True"
+                                                MouseLeftButtonDown="BoxCanvas_MouseDown"
+                                                MouseMove="BoxCanvas_MouseMove"
+                                                MouseLeftButtonUp="BoxCanvas_MouseUp"/>
+                                    </Grid>
 
                                     <!-- Protokoll-Code (Ground-Truth) -->
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
@@ -735,8 +750,8 @@
                                                    Foreground="#FBBF24" FontSize="12"/>
                                     </StackPanel>
 
-                                    <!-- Platzhalter B5 -->
-                                    <TextBlock Text="Optional: Box ziehen (nur für YOLO)"
+                                    <!-- Hinweis Box-Zeichnen (B5) -->
+                                    <TextBlock Text="Optional: Box ziehen (nur für YOLO) · Esc löscht"
                                                Foreground="#334155" FontSize="10" FontStyle="Italic"
                                                Margin="0,8,0,0"/>
                                 </StackPanel>

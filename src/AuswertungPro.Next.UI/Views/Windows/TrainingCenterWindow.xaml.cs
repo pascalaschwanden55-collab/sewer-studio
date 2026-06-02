@@ -7,9 +7,12 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
@@ -31,6 +34,11 @@ public partial class TrainingCenterWindow : Window
 
     // Review-Services (lazy, erst bei erster Review-Aktion)
     private InfraSelfImproving.ReviewQueueService? _reviewQueueService;
+
+    // ── Box-Zeichnen auf Review-Karte (B5) ──────────────────────────────
+    private Rectangle? _boxPreview;
+    private Point _boxStart;
+    private bool _drawing;
 
     public TrainingCenterWindow()
     {
@@ -131,6 +139,10 @@ public partial class TrainingCenterWindow : Window
             or nameof(TrainingCenterViewModel.MismatchPercent)
             or nameof(TrainingCenterViewModel.NoFindingsPercent))
             UpdateMatchRateBar();
+
+        // Box loeschen wenn Kandidat wechselt (B5)
+        if (e.PropertyName == nameof(TrainingCenterViewModel.SelectedReviewItem))
+            ClearBox();
     }
 
     private void UpdatePipelineVisuals(int activeStep)
@@ -202,6 +214,124 @@ public partial class TrainingCenterWindow : Window
         // Restliche Spalte auf 0 wenn Daten da sind
         MatchRateBar.ColumnDefinitions[4].Width = new GridLength(
             total >= 0.99 ? 0 : 1 - total, GridUnitType.Star);
+    }
+
+    // ── Box-Zeichnen auf der Review-Karte (B5) ──────────────────────────
+
+    /// <summary>
+    /// Entfernt die gezeichnete Vorschau-Box und setzt PendingBox im ViewModel zurueck.
+    /// </summary>
+    private void ClearBox()
+    {
+        if (_boxPreview is not null)
+        {
+            BoxCanvas?.Children.Remove(_boxPreview);
+            _boxPreview = null;
+        }
+        _drawing = false;
+        Vm.PendingBox = null;
+    }
+
+    private void BoxCanvas_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (BoxCanvas is null) return;
+
+        // Bestehende Box loeschen bevor neue gezeichnet wird
+        ClearBox();
+
+        _drawing = true;
+        _boxStart = e.GetPosition(BoxCanvas);
+
+        // Vorschau-Rechteck anlegen
+        _boxPreview = new Rectangle
+        {
+            Stroke = new SolidColorBrush(Color.FromRgb(0xFB, 0xBF, 0x24)), // Amber #FBBF24
+            StrokeThickness = 2,
+            Fill = new SolidColorBrush(Color.FromArgb(0x33, 0xFB, 0xBF, 0x24)),
+            IsHitTestVisible = false
+        };
+        Canvas.SetLeft(_boxPreview, _boxStart.X);
+        Canvas.SetTop(_boxPreview, _boxStart.Y);
+        BoxCanvas.Children.Add(_boxPreview);
+
+        BoxCanvas.CaptureMouse();
+    }
+
+    private void BoxCanvas_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_drawing || _boxPreview is null || BoxCanvas is null) return;
+
+        var current = e.GetPosition(BoxCanvas);
+
+        // Rechteck aus beliebiger Richtung zeichnen
+        var left = Math.Min(_boxStart.X, current.X);
+        var top = Math.Min(_boxStart.Y, current.Y);
+        var width = Math.Abs(current.X - _boxStart.X);
+        var height = Math.Abs(current.Y - _boxStart.Y);
+
+        Canvas.SetLeft(_boxPreview, left);
+        Canvas.SetTop(_boxPreview, top);
+        _boxPreview.Width = width;
+        _boxPreview.Height = height;
+    }
+
+    private void BoxCanvas_MouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_drawing || _boxPreview is null || BoxCanvas is null)
+        {
+            _drawing = false;
+            BoxCanvas?.ReleaseMouseCapture();
+            return;
+        }
+
+        _drawing = false;
+        BoxCanvas.ReleaseMouseCapture();
+
+        // Normierte Koordinaten berechnen (0-1, YOLO-Format)
+        var canvasW = BoxCanvas.ActualWidth;
+        var canvasH = BoxCanvas.ActualHeight;
+        if (canvasW <= 0 || canvasH <= 0)
+        {
+            ClearBox();
+            return;
+        }
+
+        var left = Canvas.GetLeft(_boxPreview);
+        var top = Canvas.GetTop(_boxPreview);
+        var w = _boxPreview.Width;
+        var h = _boxPreview.Height;
+
+        // Mindestgroesse 2% in beiden Achsen — kleiner = Versehen, nicht speichern
+        if (w / canvasW < 0.02 || h / canvasH < 0.02)
+        {
+            ClearBox();
+            return;
+        }
+
+        var normW = Math.Clamp(w / canvasW, 0.0, 1.0);
+        var normH = Math.Clamp(h / canvasH, 0.0, 1.0);
+        var normXc = Math.Clamp((left + w / 2.0) / canvasW, 0.0, 1.0);
+        var normYc = Math.Clamp((top + h / 2.0) / canvasH, 0.0, 1.0);
+
+        if (BoundingBox.TryCreate(normXc, normYc, normW, normH, out var box))
+        {
+            Vm.PendingBox = box;
+        }
+        else
+        {
+            // Ungueltige Box (z.B. ausserhalb Bild) → verwerfen
+            ClearBox();
+        }
+    }
+
+    /// <summary>Esc loescht die gezeichnete Box (KeyDown auf Review-Grid).</summary>
+    private void ReviewGrid_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            ClearBox();
+            e.Handled = true;
+        }
     }
 
     // ── Review-Korrektur ─────────────────────────────────────────────────

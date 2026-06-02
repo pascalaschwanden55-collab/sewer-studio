@@ -99,6 +99,12 @@ public partial class TrainingCenterViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(RejectSelectedReviewCommand))]
     private InfraSelfImproving.ReviewQueueItem? _selectedReviewItem;
 
+    /// <summary>
+    /// Optionale YOLO-Box die der Reviewer auf dem Review-Karten-Bild gezeichnet hat.
+    /// Wird beim Approve an ApproveSelfTrainingAsync weitergereicht (B5).
+    /// </summary>
+    public BoundingBox? PendingBox { get; set; }
+
     [ObservableProperty] private int _reviewQueueCount;
     [ObservableProperty] private string _reviewStatusText = "";
 
@@ -1546,6 +1552,15 @@ public partial class TrainingCenterViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Beim Wechsel des Review-Kandidaten PendingBox zuruecksetzen (B5).
+    /// Die visuelle Box wird zusaetzlich vom Code-behind via OnVmPropertyChanged geloescht.
+    /// </summary>
+    partial void OnSelectedReviewItemChanged(InfraSelfImproving.ReviewQueueItem? value)
+    {
+        PendingBox = null;
+    }
+
+    /// <summary>
     /// Extrahiert einen einzelnen Preview-Frame aus dem Video (bei Sekunde 2).
     /// Wird für die Live-Vorschau genutzt, auch wenn keine neuen Samples generiert werden.
     /// </summary>
@@ -1686,12 +1701,16 @@ public partial class TrainingCenterViewModel : ObservableObject
         return new ReviewApprovalService(new TrainingSamplesStoreAdapter(), indexer);
     }
 
-    /// <summary>Approve a review item (accept the suggested code).</summary>
+    /// <summary>
+    /// Approve a review item (accept the suggested code).
+    /// Optionaler <paramref name="box"/>-Parameter: vom Reviewer gezeichnete YOLO-Box (B5).
+    /// </summary>
     public async Task ApproveReviewItemAsync(
         InfraSelfImproving.ReviewQueueItem item,
         InfraSelfImproving.FeedbackIngestionService feedback,
         InfraSelfImproving.ReviewQueueService queueService,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        BoundingBox? box = null)
     {
         if (item.Entry is not null)
         {
@@ -1708,9 +1727,13 @@ public partial class TrainingCenterViewModel : ObservableObject
             else
             {
                 var svc = BuildReviewApprovalService();
-                var result = await svc.ApproveSelfTrainingAsync(sampleId, box: null, ct).ConfigureAwait(false);
+                // box uebergeben: wenn Reviewer eine Box gezeichnet hat, wird HasBbox=true gesetzt (B5)
+                var result = await svc.ApproveSelfTrainingAsync(sampleId, box, ct).ConfigureAwait(false);
                 if (result.Found)
-                    Log($"Self-Training Review: {item.SelfTrainingVsaCode}@{item.SelfTrainingMeter:F1}m → Approved, KB: {(result.Indexed ? "Indexed" : "Error")}");
+                {
+                    var bboxInfo = box.HasValue ? " (Box gesetzt)" : "";
+                    Log($"Self-Training Review: {item.SelfTrainingVsaCode}@{item.SelfTrainingMeter:F1}m → Approved{bboxInfo}, KB: {(result.Indexed ? "Indexed" : "Error")}");
+                }
                 await LoadSamplesInternalAsync().ConfigureAwait(false);
             }
         }
@@ -1795,11 +1818,18 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         var item = SelectedReviewItem;
         if (item is null || ReviewQueueServiceRef is null) return;
+
+        // Box vor dem await captureren (UI-State kann sich aendern) (B5)
+        var box = PendingBox;
+
         try
         {
             using var db = new KnowledgeBaseContext();
             var feedback = CreateFeedbackService(db);
-            await ApproveReviewItemAsync(item, feedback, ReviewQueueServiceRef, ct).ConfigureAwait(false);
+            await ApproveReviewItemAsync(item, feedback, ReviewQueueServiceRef, ct, box).ConfigureAwait(false);
+
+            // Box-Model zuruecksetzen (visuelle Box wird via PropertyChanged/Selection-Change geloescht)
+            PendingBox = null;
         }
         catch (Exception ex)
         {
