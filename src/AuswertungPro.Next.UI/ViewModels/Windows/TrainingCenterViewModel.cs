@@ -1667,14 +1667,25 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     // ── Review Queue (Self-Improving Loop) ──────────────────────────────
 
+    /// <summary>Fuehrt UI-gebundene Aenderungen (ObservableCollection/Status) auf dem Dispatcher-Thread aus.</summary>
+    private static void OnUi(Action action)
+    {
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess()) action();
+        else dispatcher.Invoke(action);
+    }
+
     /// <summary>Loads pending review items into the queue.</summary>
     public void LoadReviewQueue(InfraSelfImproving.ReviewQueueService queueService)
     {
-        ReviewQueue.Clear();
-        foreach (var item in queueService.GetAll())
-            ReviewQueue.Add(item);
-        ReviewQueueCount = ReviewQueue.Count;
-        ReviewStatusText = $"{ReviewQueueCount} Einträge zur Prüfung";
+        OnUi(() =>
+        {
+            ReviewQueue.Clear();
+            foreach (var item in queueService.GetAll())
+                ReviewQueue.Add(item);
+            ReviewQueueCount = ReviewQueue.Count;
+            ReviewStatusText = $"{ReviewQueueCount} Einträge zur Prüfung";
+        });
     }
 
     /// <summary>
@@ -1737,11 +1748,14 @@ public partial class TrainingCenterViewModel : ObservableObject
                 await LoadSamplesInternalAsync().ConfigureAwait(false);
             }
         }
-        queueService.Remove(item.Id);
-        ReviewQueue.Remove(item);
-        ReviewQueueCount = ReviewQueue.Count;
-        ReviewStatusText = $"Approved: {item.SuggestedCode} | {ReviewQueueCount} verbleibend";
-        Log($"Review Approved: {item.Label} → {item.SuggestedCode}");
+        OnUi(() =>
+        {
+            queueService.Remove(item.Id);
+            ReviewQueue.Remove(item);
+            ReviewQueueCount = ReviewQueue.Count;
+            ReviewStatusText = $"Approved: {item.SuggestedCode} | {ReviewQueueCount} verbleibend";
+            Log($"Review Approved: {item.Label} → {item.SuggestedCode}");
+        });
     }
 
     /// <summary>Reject a review item with a corrected code.</summary>
@@ -1778,11 +1792,14 @@ public partial class TrainingCenterViewModel : ObservableObject
                 await LoadSamplesInternalAsync().ConfigureAwait(false);
             }
         }
-        queueService.Remove(item.Id);
-        ReviewQueue.Remove(item);
-        ReviewQueueCount = ReviewQueue.Count;
-        ReviewStatusText = $"Rejected: {item.SuggestedCode} → {correctedCode} | {ReviewQueueCount} verbleibend";
-        Log($"Review Rejected: {item.Label} → {item.SuggestedCode} korrigiert zu {correctedCode}");
+        OnUi(() =>
+        {
+            queueService.Remove(item.Id);
+            ReviewQueue.Remove(item);
+            ReviewQueueCount = ReviewQueue.Count;
+            ReviewStatusText = $"Rejected: {item.SuggestedCode} → {correctedCode} | {ReviewQueueCount} verbleibend";
+            Log($"Review Rejected: {item.Label} → {item.SuggestedCode} korrigiert zu {correctedCode}");
+        });
     }
 
     // ── Review Queue Commands ────────────────────────────────────────────
@@ -1834,7 +1851,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         catch (Exception ex)
         {
             Log($"Review-Freigabe Fehler: {ex.Message}");
-            ReviewStatusText = $"Fehler: {ex.Message}";
+            OnUi(() => ReviewStatusText = $"Fehler: {ex.Message}");
         }
     }
 
@@ -1853,7 +1870,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         catch (Exception ex)
         {
             Log($"Review-Ablehnung Fehler: {ex.Message}");
-            ReviewStatusText = $"Fehler: {ex.Message}";
+            OnUi(() => ReviewStatusText = $"Fehler: {ex.Message}");
         }
     }
 
@@ -1870,7 +1887,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         catch (Exception ex)
         {
             Log($"Review-Korrektur Fehler: {ex.Message}");
-            ReviewStatusText = $"Fehler: {ex.Message}";
+            OnUi(() => ReviewStatusText = $"Fehler: {ex.Message}");
         }
     }
 
@@ -2183,7 +2200,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 
         // Katalog: bevorzugt injizierter Catalog, Fallback auf globalen VsaCodeResolver
         var catalog = _codeCatalog ?? AuswertungPro.Next.Infrastructure.Ai.VsaCodeResolver.CurrentCatalog;
-        if (catalog is null) { ReviewStatusText = "Kein Code-Katalog verfuegbar."; return; }
+        if (catalog is null) { OnUi(() => ReviewStatusText = "Kein Code-Katalog verfuegbar."); return; }
 
         var all = await TrainingSamplesStore.LoadAsync().ConfigureAwait(false);
         var candidates = ProtocolReviewCandidateFilter.SelectCandidates(all, catalog).ToList();
@@ -2201,7 +2218,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             added++;
         }
         LoadReviewQueue(ReviewQueueServiceRef);
-        ReviewStatusText = $"{added} Protokoll-Startdaten als Kandidaten eingereiht (Freigabe ueber Review).";
+        OnUi(() => ReviewStatusText = $"{added} Protokoll-Startdaten als Kandidaten eingereiht (Freigabe ueber Review).");
         Log($"Protokoll-Startdaten: {added} Kandidaten eingereiht (von {candidates.Count} gefiltert).");
     }
 
@@ -2228,6 +2245,6 @@ public partial class TrainingCenterViewModel : ObservableObject
             }
             catch (Exception ex) { Log($"Startdaten-Freigabe Fehler ({item.SelfTrainingVsaCode}): {ex.Message}"); }
         }
-        ReviewStatusText = $"{ok}/{items.Count} Protokoll-Startdaten freigegeben.";
+        OnUi(() => ReviewStatusText = $"{ok}/{items.Count} Protokoll-Startdaten freigegeben.");
     }
 }
