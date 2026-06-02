@@ -61,7 +61,8 @@ public sealed class ReviewQueueService
         double meter,
         string framePath,
         string matchLevel,
-        string? reason = null)
+        string? reason = null,
+        string? sampleId = null)
     {
         var priority = matchLevel switch
         {
@@ -82,7 +83,8 @@ public sealed class ReviewQueueService
             SelfTrainingMeter = meter,
             SelfTrainingFramePath = framePath,
             SelfTrainingMatchLevel = matchLevel,
-            SelfTrainingReason = reason
+            SelfTrainingReason = reason,
+            SelfTrainingSampleId = sampleId
         };
 
         lock (_lock)
@@ -142,7 +144,8 @@ public sealed class ReviewQueueService
         double? SelfTrainingMeter,
         string? SelfTrainingFramePath,
         string? SelfTrainingMatchLevel,
-        string? SelfTrainingReason);
+        string? SelfTrainingReason,
+        string? SelfTrainingSampleId);
 
     private void LoadSelfTrainingItems()
     {
@@ -166,7 +169,8 @@ public sealed class ReviewQueueService
                         SelfTrainingMeter = p.SelfTrainingMeter,
                         SelfTrainingFramePath = p.SelfTrainingFramePath,
                         SelfTrainingMatchLevel = p.SelfTrainingMatchLevel,
-                        SelfTrainingReason = p.SelfTrainingReason
+                        SelfTrainingReason = p.SelfTrainingReason,
+                        SelfTrainingSampleId = p.SelfTrainingSampleId
                     });
                 }
                 ResortByPriorityDesc();
@@ -189,7 +193,7 @@ public sealed class ReviewQueueService
                         q.Id, q.Priority, q.EnqueuedUtc,
                         q.SelfTrainingCaseId, q.SelfTrainingVsaCode, q.SelfTrainingSuggestedCode,
                         q.SelfTrainingMeter, q.SelfTrainingFramePath, q.SelfTrainingMatchLevel,
-                        q.SelfTrainingReason))
+                        q.SelfTrainingReason, q.SelfTrainingSampleId))
                     .ToList();
             }
 
@@ -224,6 +228,9 @@ public sealed record ReviewQueueItem(
     public string? SelfTrainingMatchLevel { get; init; }
     /// <summary>Warum der Fall geprueft werden muss (z.B. "HumanReviewRequired"). Null = aus MatchLevel ableitbar.</summary>
     public string? SelfTrainingReason { get; init; }
+
+    /// <summary>SampleId des zugehoerigen TrainingSample (stabile Adresse fuer Review-Freigabe). Null bei Altbestand.</summary>
+    public string? SelfTrainingSampleId { get; init; }
 
     public string Label => IsFromSelfTraining
         ? $"{SelfTrainingVsaCode} @ {SelfTrainingMeter:F1}m ({SelfTrainingMatchLevel})"
