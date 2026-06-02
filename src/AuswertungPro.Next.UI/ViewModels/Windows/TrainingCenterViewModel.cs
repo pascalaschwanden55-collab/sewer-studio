@@ -1666,10 +1666,33 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
         else if (item.IsFromSelfTraining)
         {
-            // Self-Training Review: Sample-Status auf Approved setzen + in KB indexieren
-            await ApplySelfTrainingReviewAsync(
-                item.SelfTrainingCaseId!, item.SelfTrainingVsaCode!,
-                item.SelfTrainingMeter ?? 0, approved: true, correctedCode: null, ct);
+            // SampleId-Lookup: direkt per item.SelfTrainingSampleId; Altbestand ohne SampleId per Fuzzy-Match.
+            var sampleId = item.SelfTrainingSampleId;
+            if (string.IsNullOrEmpty(sampleId))
+            {
+                var allSamples = await TrainingSamplesStore.LoadAsync().ConfigureAwait(false);
+                sampleId = allSamples.FirstOrDefault(s =>
+                    s.CaseId == item.SelfTrainingCaseId
+                    && s.Code == item.SelfTrainingVsaCode
+                    && Math.Abs(s.MeterStart - (item.SelfTrainingMeter ?? 0)) < 0.2)?.SampleId;
+            }
+            if (string.IsNullOrEmpty(sampleId))
+            {
+                Log($"Self-Training Review: Sample nicht gefunden ({item.SelfTrainingCaseId}/{item.SelfTrainingVsaCode}@{item.SelfTrainingMeter:F1}m)");
+            }
+            else
+            {
+                // Self-Training Review: Sample-Status auf Approved setzen + in KB indexieren
+                var indexer = new DelegatingKnowledgeBaseIndexer(
+                    async (s, c) => (IReadOnlyList<string>)await IncrementalKbUpdateAsync(s.ToList(), c).ConfigureAwait(false),
+                    TryDeindexSample);
+                var store = new TrainingSamplesStoreAdapter();
+                var svc = new ReviewApprovalService(store, indexer);
+                var result = await svc.ApproveSelfTrainingAsync(sampleId, box: null, ct).ConfigureAwait(false);
+                if (result.Found)
+                    Log($"Self-Training Review: {item.SelfTrainingVsaCode}@{item.SelfTrainingMeter:F1}m → Approved, KB: {(result.Indexed ? "Indexed" : "Error")}");
+                await LoadSamplesInternalAsync().ConfigureAwait(false);
+            }
         }
         queueService.Remove(item.Id);
         ReviewQueue.Remove(item);
@@ -1693,121 +1716,44 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
         else if (item.IsFromSelfTraining)
         {
-            // Self-Training Review: Sample-Status auf Rejected setzen, Code korrigieren
-            await ApplySelfTrainingReviewAsync(
-                item.SelfTrainingCaseId!, item.SelfTrainingVsaCode!,
-                item.SelfTrainingMeter ?? 0, approved: false, correctedCode: correctedCode, ct);
+            // SampleId-Lookup: direkt per item.SelfTrainingSampleId; Altbestand ohne SampleId per Fuzzy-Match.
+            var sampleId = item.SelfTrainingSampleId;
+            if (string.IsNullOrEmpty(sampleId))
+            {
+                var allSamples = await TrainingSamplesStore.LoadAsync().ConfigureAwait(false);
+                sampleId = allSamples.FirstOrDefault(s =>
+                    s.CaseId == item.SelfTrainingCaseId
+                    && s.Code == item.SelfTrainingVsaCode
+                    && Math.Abs(s.MeterStart - (item.SelfTrainingMeter ?? 0)) < 0.2)?.SampleId;
+            }
+            if (string.IsNullOrEmpty(sampleId))
+            {
+                Log($"Self-Training Review: Sample nicht gefunden ({item.SelfTrainingCaseId}/{item.SelfTrainingVsaCode}@{item.SelfTrainingMeter:F1}m)");
+            }
+            else
+            {
+                // Self-Training Review: Sample-Status auf Rejected setzen, Code korrigieren
+                var indexer = new DelegatingKnowledgeBaseIndexer(
+                    async (s, c) => (IReadOnlyList<string>)await IncrementalKbUpdateAsync(s.ToList(), c).ConfigureAwait(false),
+                    TryDeindexSample);
+                var store = new TrainingSamplesStoreAdapter();
+                var svc = new ReviewApprovalService(store, indexer);
+                var result = await svc.RejectSelfTrainingAsync(sampleId, correctedCode, ct).ConfigureAwait(false);
+                if (result.Found)
+                {
+                    if (!string.IsNullOrEmpty(result.CorrectedSampleId))
+                        Log($"Korrigiertes Sample {result.CorrectedSampleId} erzeugt");
+                    else
+                        Log($"Self-Training Review: {item.SelfTrainingVsaCode}@{item.SelfTrainingMeter:F1}m → Rejected");
+                }
+                await LoadSamplesInternalAsync().ConfigureAwait(false);
+            }
         }
         queueService.Remove(item.Id);
         ReviewQueue.Remove(item);
         ReviewQueueCount = ReviewQueue.Count;
         ReviewStatusText = $"Rejected: {item.SuggestedCode} → {correctedCode} | {ReviewQueueCount} verbleibend";
         Log($"Review Rejected: {item.Label} → {item.SuggestedCode} korrigiert zu {correctedCode}");
-    }
-
-    /// <summary>
-    /// Wendet eine Self-Training-Review-Entscheidung auf das TrainingSample an.
-    /// Bei Approve: Status → Approved, inkrementelles KB-Update.
-    /// Bei Reject: Status → Rejected (mit korrigiertem Code falls angegeben).
-    /// </summary>
-    private async Task ApplySelfTrainingReviewAsync(
-        string caseId, string vsaCode, double meter,
-        bool approved, string? correctedCode, CancellationToken ct)
-    {
-        try
-        {
-            var allSamples = await TrainingSamplesStore.LoadAsync();
-            var match = allSamples.FirstOrDefault(s =>
-                s.CaseId == caseId
-                && s.Code == vsaCode
-                && Math.Abs(s.MeterStart - meter) < 0.2);
-
-            if (match is null)
-            {
-                Log($"Self-Training Review: Sample nicht gefunden ({caseId}/{vsaCode}@{meter:F1}m)");
-                return;
-            }
-
-            if (approved)
-            {
-                match.Status = TrainingSampleStatus.Approved;
-                match.KbIndexState = KbIndexState.Pending;
-                match.MatchLevel = MatchLevelNames.ReviewApproved;
-                Log($"Self-Training Review: {vsaCode}@{meter:F1}m → Approved");
-
-                // Inkrementell in KB indexieren
-                var indexedIds = await IncrementalKbUpdateAsync(new List<TrainingSample> { match }, ct);
-                match.KbIndexState = indexedIds.Contains(match.SampleId)
-                    ? KbIndexState.Indexed
-                    : KbIndexState.Error;
-            }
-            else
-            {
-                match.Status = TrainingSampleStatus.Rejected;
-                match.KbIndexState = KbIndexState.None;
-                TryDeindexSample(match.SampleId);  // T3-Invariante: Ablehnen raeumt KB-Eintrag weg — auch im Review-Queue-Pfad
-                if (!string.IsNullOrEmpty(correctedCode))
-                {
-                    Log($"Self-Training Review: {vsaCode}@{meter:F1}m → Rejected, Code korrigiert zu {correctedCode}");
-                    match.Notes = $"Korrigiert: {vsaCode} → {correctedCode}";
-
-                    // Korrigiertes Sample als neues Trainingsbeispiel erzeugen
-                    var corrected = new TrainingSample
-                    {
-                        SampleId = $"{match.SampleId}_corr",
-                        CaseId = match.CaseId,
-                        Code = correctedCode,
-                        Beschreibung = match.Beschreibung,
-                        MeterStart = match.MeterStart,
-                        MeterEnd = match.MeterEnd,
-                        IsStreckenschaden = match.IsStreckenschaden,
-                        TimeSeconds = match.TimeSeconds,
-                        DetectedMeter = match.DetectedMeter,
-                        MeterSource = match.MeterSource,
-                        FramePath = match.FramePath,
-                        Status = TrainingSampleStatus.Approved,
-                        KbIndexState = KbIndexState.Pending,
-                        TruthMeterCenter = match.TruthMeterCenter,
-                        OdsDeltaMeters = match.OdsDeltaMeters,
-                        HasOsdMismatch = match.HasOsdMismatch,
-                        Signature = TrainingSample.BuildCanonicalSignature(match.CaseId, correctedCode, match.MeterStart, match.MeterEnd),
-                        MatchLevel = MatchLevelNames.ReviewCorrected,
-                        SourceType = match.SourceType,
-                        TechniqueGrade = match.TechniqueGrade,
-                        KiCode = match.KiCode,
-                        InspectionDate = match.InspectionDate,
-                        TrainingEligible = match.TrainingEligible,
-                        TrainingEligibilityReason = match.TrainingEligibilityReason,
-                        Notes = $"Korrektur aus Review: {vsaCode} → {correctedCode}"
-                    };
-                    // Korrigiertes Sample per Merge speichern (Race-Condition-sicher)
-                    await TrainingSamplesStore.MergeAndSaveAsync(new List<TrainingSample> { corrected });
-
-                    // Inkrementell in KB indexieren
-                    var corrIndexedIds = await IncrementalKbUpdateAsync(new List<TrainingSample> { corrected }, ct);
-                    corrected.KbIndexState = corrIndexedIds.Contains(corrected.SampleId)
-                        ? KbIndexState.Indexed
-                        : KbIndexState.Error;
-                    await TrainingSamplesStore.MergeOrUpdateAsync(new List<TrainingSample> { corrected });
-
-                    Log($"Korrigiertes Sample {corrected.SampleId} erzeugt, KB-Status: {corrected.KbIndexState}");
-                }
-                else
-                {
-                    Log($"Self-Training Review: {vsaCode}@{meter:F1}m → Rejected");
-                }
-            }
-
-            // Status-Aenderung von match (Approved/Rejected) atomar speichern.
-            // MergeOrUpdateAsync statt SaveAsync: verhindert Ueberschreiben von parallel
-            // geschriebenen Samples (z.B. corrected Sample aus L1569).
-            await TrainingSamplesStore.MergeOrUpdateAsync(new List<TrainingSample> { match });
-            await LoadSamplesInternalAsync();
-        }
-        catch (Exception ex)
-        {
-            Log($"Self-Training Review Fehler: {ex.Message}");
-        }
     }
 
     // ── Selbsttraining (Orchestrator) ──────────────────────────────────
