@@ -99,26 +99,9 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
                 {
                     if (!string.IsNullOrEmpty(s.Signature) && sigIndex.TryGetValue(s.Signature, out var idx))
                     {
-                        // In-place Update: Statusfelder + Anreicherungsfelder uebernehmen
+                        // In-place Update: Statusfelder + Anreicherungsfelder + BBox uebernehmen
                         var target = existing[idx];
-                        target.Status = s.Status;
-                        target.Notes = s.Notes;
-                        target.MatchLevel = s.MatchLevel;
-                        target.KiCode = s.KiCode;
-                        target.KbIndexState = s.KbIndexState;
-                        if (s.CodeMeta is not null)
-                            target.CodeMeta = GroundTruthProtocolEntryMapper.CloneCodeMeta(s.CodeMeta);
-                        // Anreicherung: nur ueberschreiben wenn der neue Wert gesetzt ist
-                        if (s.SourceType is not null) target.SourceType = s.SourceType;
-                        if (s.TechniqueGrade is not null) target.TechniqueGrade = s.TechniqueGrade;
-                        if (s.InspectionDate is not null) target.InspectionDate = s.InspectionDate;
-                        if (s.InspectionDate is not null ||
-                            s.TrainingEligible ||
-                            !string.IsNullOrWhiteSpace(s.TrainingEligibilityReason))
-                        {
-                            target.TrainingEligible = s.TrainingEligible;
-                            target.TrainingEligibilityReason = s.TrainingEligibilityReason;
-                        }
+                        TrainingSampleMerge.ApplyUpdatableFields(target, s);
                     }
                     else
                     {
