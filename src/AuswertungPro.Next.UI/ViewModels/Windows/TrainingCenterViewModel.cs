@@ -1987,9 +1987,11 @@ public partial class TrainingCenterViewModel : ObservableObject
             using var stKbCtx = new KnowledgeBaseContext();
             var stRetrieval = new RetrievalService(stKbCtx, new EmbeddingService(_kbHttpClient, stOllamaConfig));
 
+            // Eval-Schutz: reservierte Eval-Haltungen gar nicht erst sammeln (Early-Skip im Orchestrator).
+            var stEvalHaltungen = EvalContaminationGuard.LoadEvalHaltungKeys(AppSettings.Load().EvalSetRoot);
             _selfTrainingOrchestrator = new SelfTrainingOrchestrator(
                 vision, comparison, technique, pdfExtractor, stSettings,
-                ResolveFfmpegPath(cfg.FfmpegPath), stRetrieval);
+                ResolveFfmpegPath(cfg.FfmpegPath), stRetrieval, stEvalHaltungen);
 
             // Progress-Callback verbindet Orchestrator → ViewModel-Visualisierungen
             var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);

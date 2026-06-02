@@ -58,6 +58,27 @@ public sealed class StageAExporterTests : IDisposable
     }
 
     [Fact]
+    public async Task DryRun_blockt_Eval_Haltung_per_CaseId_auch_ohne_Hash_Treffer()
+    {
+        var source = PrepareSourceWithEvalHaltung();
+        var output = Path.Combine(_root, "haltung-out");
+
+        var result = await new StageAExporter(CreateTestCatalog()).ExportAsync(new StageAExportOptions(
+            SourceSamplesPath: source.SamplesPath,
+            EvalSetRoot: source.EvalRoot,
+            OutputRoot: output,
+            DryRun: true,
+            ValidationRatio: 0,
+            DegreeOfParallelism: 2));
+
+        Assert.Equal(2, result.InputSamples);
+        Assert.Equal(1, result.SkippedEvalSet);   // Eval-Haltung per CaseId blockiert (kein Hash-Treffer)
+        Assert.Equal(1, result.FinalSamples);      // Sample fremder Haltung bleibt
+        Assert.Equal("BABAC", Assert.Single(result.Classes).ClassName);
+        Assert.False(Directory.Exists(output));
+    }
+
+    [Fact]
     public async Task Export_schreibt_clean_samples_manifest_data_yaml_und_labels()
     {
         var source = PrepareSourceWithEvalOverlap();
@@ -250,6 +271,47 @@ public sealed class StageAExporterTests : IDisposable
         };
 
         var samplesPath = Path.Combine(_root, "training_samples.json");
+        File.WriteAllText(samplesPath, JsonSerializer.Serialize(samples, StageAExporter.JsonOptions));
+        return (samplesPath, evalRoot);
+    }
+
+    private (string SamplesPath, string EvalRoot) PrepareSourceWithEvalHaltung()
+    {
+        Directory.CreateDirectory(_root);
+        var frameRoot = Path.Combine(_root, "haltung-frames");
+        Directory.CreateDirectory(frameRoot);
+
+        var evalHaltungFrame = Path.Combine(frameRoot, "eval-haltung.png");
+        var cleanFrame = Path.Combine(frameRoot, "clean.png");
+        File.WriteAllBytes(evalHaltungFrame, [11, 22, 33]); // NICHT im Eval-Hash-Satz
+        File.WriteAllBytes(cleanFrame, [44, 55, 66]);
+
+        var evalRoot = Path.Combine(_root, "haltung-eval");
+        Directory.CreateDirectory(Path.Combine(evalRoot, "images"));
+        // Leeres Hash-Manifest -> kein Hash-Treffer; der Schutz laeuft rein ueber die Haltung.
+        File.WriteAllText(
+            Path.Combine(evalRoot, "_manifest.json"),
+            new JsonObject
+            {
+                ["frozen"] = true,
+                ["hash_algorithm"] = "sha256",
+                ["hashes"] = new JsonObject()
+            }.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+        // Eval-Kandidaten: eine reservierte Haltung (haltung_key).
+        File.WriteAllText(
+            Path.Combine(evalRoot, "_candidates.json"),
+            new JsonArray
+            {
+                new JsonObject { ["id"] = "x", ["haltung_key"] = "287425-81162", ["code_main"] = "BCD" }
+            }.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+
+        var samples = new[]
+        {
+            MarkEligible(new TrainingSample { SampleId = "eval-haltung", CaseId = "287425-81162", Code = "BCAAA", FramePath = evalHaltungFrame, Status = TrainingSampleStatus.Approved }),
+            MarkEligible(new TrainingSample { SampleId = "clean", CaseId = "999999-888888", Code = "BABAC", FramePath = cleanFrame, Status = TrainingSampleStatus.Approved }),
+        };
+
+        var samplesPath = Path.Combine(_root, "haltung_training_samples.json");
         File.WriteAllText(samplesPath, JsonSerializer.Serialize(samples, StageAExporter.JsonOptions));
         return (samplesPath, evalRoot);
     }

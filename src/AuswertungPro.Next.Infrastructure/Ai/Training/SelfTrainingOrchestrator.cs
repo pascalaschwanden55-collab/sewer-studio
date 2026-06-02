@@ -24,6 +24,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     private readonly TrainingCenterSettings _settings;
     private readonly string _ffmpegPath;
     private readonly IRetrievalService? _retrieval;
+    private readonly IReadOnlySet<string>? _evalHaltungKeys;
 
     private readonly ManualResetEventSlim _pauseGate = new(true);
 
@@ -36,7 +37,8 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         PdfProtocolExtractor pdfExtractor,
         TrainingCenterSettings? settings = null,
         string? ffmpegPath = null,
-        IRetrievalService? retrieval = null)
+        IRetrievalService? retrieval = null,
+        IReadOnlySet<string>? evalHaltungKeys = null)
     {
         _vision = vision;
         _comparison = comparison;
@@ -45,6 +47,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         _settings = settings ?? new TrainingCenterSettings();
         _ffmpegPath = string.IsNullOrWhiteSpace(ffmpegPath) ? "ffmpeg" : ffmpegPath;
         _retrieval = retrieval;
+        _evalHaltungKeys = evalHaltungKeys;
     }
 
     public void Pause() => _pauseGate.Reset();
@@ -83,6 +86,19 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         CancellationToken ct)
     {
         var sw = Stopwatch.StartNew();
+
+        // Eval-Schutz (Early-Skip): reservierte Eval-Haltungen werden gar nicht erst
+        // gesammelt — keine Frame-Extraktion, kein Sample in training_samples.json.
+        // Der KB-Index-Guard greift sonst erst beim spaeteren Indexieren; die Samples
+        // laegen aber bereits im JSON-Store und im Stage-A-Export.
+        if (_evalHaltungKeys is { Count: > 0 }
+            && EvalContaminationGuard.IsEvalHaltung(_evalHaltungKeys, tc.CaseId))
+        {
+            progress.Report(new SelfTrainingStep(
+                0, 0, "", 0, SelfTrainingStage.Completed, null, null, null,
+                $"Haltung {tc.CaseId} ist als Eval-Set reserviert — uebersprungen (kein Training)."));
+            return new SelfTrainingResult(tc.CaseId, 0, 0, 0, 0, 0, null, sw.Elapsed, 0);
+        }
 
         // 1. Protokoll-Eintraege extrahieren
         string framesDir = Path.Combine(tc.FolderPath, "self_training_frames");

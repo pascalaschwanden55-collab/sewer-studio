@@ -80,12 +80,15 @@ public sealed class StageAExporter
             .ConfigureAwait(false);
         var evalHashes = LoadEvalImageHashes(options.EvalSetRoot);
         var evalHashListSha256 = ComputeHashListSha256(evalHashes);
+        // Haltungs-Sperrliste (CaseId) zusaetzlich zum Hash: faengt Eval-Frames derselben
+        // reservierten Haltung, die kein pixelidentisches Bild im Eval-Set haben.
+        var evalHaltungKeys = EvalContaminationGuard.LoadEvalHaltungKeys(options.EvalSetRoot);
 
         var analyses = samples
             .Select((sample, index) => new IndexedSample(index, sample))
             .AsParallel()
             .WithDegreeOfParallelism(GetDegreeOfParallelism(options.DegreeOfParallelism))
-            .Select(s => AnalyzeSample(s, evalHashes, options.RequireBoundingBox, _codeCatalog))
+            .Select(s => AnalyzeSample(s, evalHashes, evalHaltungKeys, options.RequireBoundingBox, _codeCatalog))
             .OrderBy(a => a.Index)
             .ToList();
 
@@ -213,6 +216,7 @@ public sealed class StageAExporter
     private static StageASampleAnalysis AnalyzeSample(
         IndexedSample indexed,
         IReadOnlySet<string> evalHashes,
+        IReadOnlySet<string> evalHaltungKeys,
         bool requireBoundingBox,
         ICodeCatalogProvider codeCatalog)
     {
@@ -220,6 +224,12 @@ public sealed class StageAExporter
 
         if (sample.Status != TrainingSampleStatus.Approved)
             return StageASampleAnalysis.NotApproved(indexed);
+
+        // Eval-Haltung (CaseId) hat Vorrang vor dem Hash-Check: Eval-Frames derselben
+        // reservierten Haltung duerfen nie ins Training, auch ohne pixelidentischen Hash
+        // (z. B. fehlende Frame-Datei). Schliesst das Leck, das der reine Hash-Filter laesst.
+        if (EvalContaminationGuard.IsEvalHaltung(evalHaltungKeys, sample.CaseId))
+            return StageASampleAnalysis.EvalSet(indexed, NormalizeClassName(sample.Code), sha256: string.Empty);
 
         var dateEligibility = TrainingSampleEligibility.Evaluate(sample);
         if (!dateEligibility.IsEligible)
