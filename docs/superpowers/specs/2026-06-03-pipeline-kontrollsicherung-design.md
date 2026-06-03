@@ -1,7 +1,7 @@
 # Design: Pipeline-Kontrollsicherung im Codiermodus
 
 **Datum:** 2026-06-03
-**Status:** Entwurf zur Freigabe
+**Status:** Freigegeben (2026-06-03)
 **Branch-Kontext:** aktueller Arbeitsbaum
 **Grundlage:** User-Freigabe fuer Ansatz 2 ("Dedizierter PipelineHealthMonitor-Service mit Interface")
 
@@ -174,7 +174,7 @@ Verhalten:
   - Analyse-Button deaktivieren, sofern kein Qwen verfuegbar ist
   - Status rot/grau je nach Ursache
 
-Die vorhandene Statuszeile (`CodingAiDot`, `TxtCodingAiStatus`, `TxtCodingAiStage`) wird weiterverwendet. Optional kommt ein kleiner Detail-Popup/Tooltip dazu:
+Die vorhandene Statuszeile (`CodingAiDot`, `TxtCodingAiStatus`, `TxtCodingAiStage`) wird weiterverwendet. Zusaetzlich kommt eine ausklappbare Detailanzeige (vom User gewaehlt: Ampel + ausklappbare Details, kein reiner Tooltip):
 
 - Sidecar: ok/offline
 - Token: ok/ungueltig/nicht benoetigt
@@ -344,8 +344,8 @@ Abdeckung:
 - Token-Fehler wird explizit von offline getrennt.
 - Keine Sidecar-Code-Aenderung ist erforderlich.
 
-Bewusste offene Punkte fuer die Freigabe:
+Getroffene Entscheidungen (Freigabe 2026-06-03):
 
-1. Soll der Monitor schon in der ersten Iteration eine echte Ollama/Qwen-Health-Abfrage nutzen, oder reicht `config.Enabled` als Qwen-Annahme?
-2. Soll die Detailanzeige nur Tooltip sein oder als kleines ausklappbares Panel umgesetzt werden?
-3. Soll der Monitor nur laufen, wenn der Codiermodus sichtbar ist, oder solange das PlayerWindow offen ist?
+1. Qwen-Verfuegbarkeit: In Iteration 1 konservative Annahme `QwenAvailable = config.Enabled`. Echte Ollama-Health-Abfrage erst spaeter (YAGNI).
+2. Detailanzeige: Ampel + ausklappbare Details (kein reiner Tooltip).
+3. Monitor-Laufzeit: Pollt nur, solange die KI im Codiermodus aktiv ist (nicht durchgehend, solange das PlayerWindow offen ist).
