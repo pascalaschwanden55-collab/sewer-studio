@@ -18,10 +18,15 @@ public static class MetrierungProximityEvaluator
         double cy = (i.Y1 + i.Y2) / 2.0;
         double fillRatio = Math.Max(0.0, i.Y2 - i.Y1);
 
+        // Isotrope Distanz in Einheiten "Anteil der Bildbreite" — konsistent mit pipeR.
+        // NormalizedDiameter (und damit pipeR) wird aus der horizontalen Kalibrierlinie als
+        // Breitenanteil bestimmt. Deshalb die Hoehe durch das Seitenverhaeltnis TEILEN,
+        // nicht die Breite multiplizieren (sonst ist distToVanish um den Faktor Aspect verfaelscht).
+        double aspect = i.ImageAspect > 0 ? i.ImageAspect : 1.0;
         double Dist(double ax, double ay, double bx, double by)
         {
-            double dx = (ax - bx) * i.ImageAspect;
-            double dy = ay - by;
+            double dx = ax - bx;
+            double dy = (ay - by) / aspect;
             return Math.Sqrt(dx * dx + dy * dy);
         }
 

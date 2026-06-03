@@ -584,7 +584,9 @@ public sealed class MultiModelAnalysisService
             trace.DetectionsTotal = detections.Count;
             if (trace.DropReason is null)
             {
-                if (findings.Count == 0)
+                if (findings.Count == 0 && proximitySuppressedCount > 0)
+                    trace.DropReason = "ahead_of_camera";   // erkannt, aber als "voraus" nicht metriert
+                else if (findings.Count == 0)
                     trace.DropReason = "no_findings";
                 else if (trace.CodesAfterQwen == 0)
                     trace.DropReason = "all_findings_missing_code";

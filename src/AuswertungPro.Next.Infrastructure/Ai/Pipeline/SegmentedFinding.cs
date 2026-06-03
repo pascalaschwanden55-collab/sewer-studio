@@ -58,33 +58,36 @@ public static class SegmentedFindingBuilder
         return result;
     }
 
-    /// <summary>DINO-Detection mit gleichem Label und hoechster bbox-IoU; null wenn keine plausibel.</summary>
+    /// <summary>
+    /// DINO-Detection mit gleichem Label und hoechstem Containment der Masken-bbox; null wenn keine plausibel.
+    /// Containment (Schnitt / Masken-Flaeche) statt klassischer IoU, weil die SAM-Masken-bbox die
+    /// GECLAMPTE Input-Box ist und damit Teilmenge der (ungeclampten) DINO-Box. Klassische IoU fiele
+    /// fuer Boxen, die weit aus dem Bild ragen, faelschlich unter die Schwelle und liefe ins Dino=null.
+    /// </summary>
     private static DinoDetectionDto? MatchDino(SamMaskResult mask, IReadOnlyList<DinoDetectionDto> dinos)
     {
         if (mask.Bbox.Count < 4 || dinos.Count == 0) return null;
         double mx1 = mask.Bbox[0], my1 = mask.Bbox[1], mx2 = mask.Bbox[2], my2 = mask.Bbox[3];
+        double maskArea = Math.Max(0, mx2 - mx1) * Math.Max(0, my2 - my1);
+        if (maskArea <= 0) return null;
 
         DinoDetectionDto? best = null;
-        double bestIou = 0.0;
+        double bestScore = 0.0;
         foreach (var d in dinos)
         {
             if (!string.Equals(d.Label, mask.Label, StringComparison.OrdinalIgnoreCase)) continue;
-            double iou = Iou(mx1, my1, mx2, my2, d.X1, d.Y1, d.X2, d.Y2);
-            if (iou > bestIou) { bestIou = iou; best = d; }
+            double containment = Intersection(mx1, my1, mx2, my2, d.X1, d.Y1, d.X2, d.Y2) / maskArea;
+            if (containment > bestScore) { bestScore = containment; best = d; }
         }
-        return bestIou >= 0.5 ? best : null; // konservativer Mindest-Overlap
+        return bestScore >= 0.5 ? best : null; // konservativer Mindest-Overlap
     }
 
-    private static double Iou(double ax1, double ay1, double ax2, double ay2,
-                              double bx1, double by1, double bx2, double by2)
+    private static double Intersection(double ax1, double ay1, double ax2, double ay2,
+                                       double bx1, double by1, double bx2, double by2)
     {
         double ix1 = Math.Max(ax1, bx1), iy1 = Math.Max(ay1, by1);
         double ix2 = Math.Min(ax2, bx2), iy2 = Math.Min(ay2, by2);
         double iw = Math.Max(0, ix2 - ix1), ih = Math.Max(0, iy2 - iy1);
-        double inter = iw * ih;
-        double areaA = Math.Max(0, ax2 - ax1) * Math.Max(0, ay2 - ay1);
-        double areaB = Math.Max(0, bx2 - bx1) * Math.Max(0, by2 - by1);
-        double union = areaA + areaB - inter;
-        return union <= 0 ? 0 : inter / union;
+        return iw * ih;
     }
 }

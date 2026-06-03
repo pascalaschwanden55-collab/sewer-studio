@@ -3029,6 +3029,18 @@ public partial class PlayerWindow
                 // Masken/Overlay rendern (alle; "Voraus" optisch abgesetzt).
                 ShowMultiModelResults(mmResult, segmented);
 
+                // DINO hatte Detektionen (sonst waeren wir oben raus), aber SAM lieferte keine Maske
+                // -> Befund verloren (degraded). Nicht als sauberen Negativbefund (gruen) tarnen.
+                if (segmented.Count == 0)
+                {
+                    SetCodingAiState("SAM ohne Maske - Befund nicht segmentiert",
+                        Color.FromRgb(0xF5, 0x9E, 0x0B),
+                        mmResult.SamResponse?.Degraded == true
+                            ? $"SAM degraded ({mmResult.SamResponse.SkippedBoxes} Box(en) verloren)"
+                            : "keine Maske erzeugt");
+                    return;
+                }
+
                 if (codierbarCount == 0 && vorausCount > 0)
                 {
                     SetCodingAiState("Ereignis voraus erkannt - naeher heranfahren",
@@ -3113,16 +3125,23 @@ public partial class PlayerWindow
         // Alte Masken entfernen
         Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
 
-        // SAM-Masken rendern (gruene Konturen + semi-transparente Fuellung)
+        // Gruene SAM-Masken (inkl. Mess-Label) NUR fuer codierbare Befunde.
+        // Voraus-Befunde bekommen weiter unten nur einen gestrichelten Hinweis (kein Mess-Label,
+        // da sie bewusst nicht metriert werden).
         if (mmResult.SamResponse != null)
         {
-            Ai.Pipeline.SamMaskRenderer.RenderMasks(
-                CodingOverlayCanvas,
-                mmResult.SamResponse,
-                mmResult.QuantifiedMasks,
-                CodingOverlayCanvas.ActualWidth,
-                CodingOverlayCanvas.ActualHeight,
-                logger: _serviceProvider?.LoggerFactory.CreateLogger("SamMaskRenderer"));
+            var codierbar = segmented.Where(s => s.Proximity.IsCodierbar).ToList();
+            if (codierbar.Count > 0)
+            {
+                var filtered = mmResult.SamResponse with { Masks = codierbar.Select(s => s.Mask).ToList() };
+                Ai.Pipeline.SamMaskRenderer.RenderMasks(
+                    CodingOverlayCanvas,
+                    filtered,
+                    codierbar.Select(s => s.Quant).ToList(),
+                    CodingOverlayCanvas.ActualWidth,
+                    CodingOverlayCanvas.ActualHeight,
+                    logger: _serviceProvider?.LoggerFactory.CreateLogger("SamMaskRenderer"));
+            }
         }
 
         // "Voraus"-Befunde gestrichelt markieren (noch nicht codierbar -> kein Meter/Event).
@@ -3134,20 +3153,36 @@ public partial class PlayerWindow
             foreach (var s in segmented)
             {
                 if (s.Proximity.IsCodierbar || s.Mask.Bbox.Count < 4) continue;
+                double left = s.Mask.Bbox[0] / iw * cw;
+                double top = s.Mask.Bbox[1] / ih * ch;
                 var rect = new System.Windows.Shapes.Rectangle
                 {
                     Width = Math.Max(1, (s.Mask.Bbox[2] - s.Mask.Bbox[0]) / iw * cw),
                     Height = Math.Max(1, (s.Mask.Bbox[3] - s.Mask.Bbox[1]) / ih * ch),
-                    Stroke = new SolidColorBrush(Color.FromArgb(200, 0xF5, 0x9E, 0x0B)),
+                    Stroke = new SolidColorBrush(Color.FromArgb(220, 0xF5, 0x9E, 0x0B)),
                     StrokeThickness = 1.5,
                     StrokeDashArray = new DoubleCollection { 4, 3 },
                     Fill = Brushes.Transparent,
                     Tag = Ai.Pipeline.SamMaskRenderer.MaskTag,
                     IsHitTestVisible = false
                 };
-                Canvas.SetLeft(rect, s.Mask.Bbox[0] / iw * cw);
-                Canvas.SetTop(rect, s.Mask.Bbox[1] / ih * ch);
+                Canvas.SetLeft(rect, left);
+                Canvas.SetTop(rect, top);
                 CodingOverlayCanvas.Children.Add(rect);
+
+                // Textlabel "voraus", damit der Befund klar als nicht-codierbar erkennbar ist.
+                var vorausLabel = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(220, 0xF5, 0x9E, 0x0B)),
+                    CornerRadius = new CornerRadius(3),
+                    Padding = new Thickness(4, 1, 4, 1),
+                    Tag = Ai.Pipeline.SamMaskRenderer.MaskTag,
+                    IsHitTestVisible = false,
+                    Child = new TextBlock { Text = "voraus", FontSize = 10, Foreground = Brushes.White }
+                };
+                Canvas.SetLeft(vorausLabel, left);
+                Canvas.SetTop(vorausLabel, Math.Max(0, top - 16));
+                CodingOverlayCanvas.Children.Add(vorausLabel);
             }
         }
 

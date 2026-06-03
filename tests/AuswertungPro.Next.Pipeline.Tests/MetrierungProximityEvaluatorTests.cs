@@ -54,4 +54,15 @@ public class MetrierungProximityEvaluatorTests
         var r = MetrierungProximityEvaluator.Evaluate(wide, T);
         Assert.Equal(MetrierungProximity.Codierbar, r.Decision);
     }
+
+    [Fact]
+    public void DistToVanish_ist_in_Rohrradien_geeicht_unabhaengig_vom_Aspect()
+    {
+        // Rohr fuellt die Breite (pipeR=0.5). Box-Zentrum ~ an der rechten Rohrwand.
+        // Einheiten-Konsistenz: DistToVanish muss ~1.0 sein (an der Wand), NICHT ~1.78 (aspect-verfaelscht).
+        var atWall = new MetrierungProximityInput(0.96, 0.48, 1.00, 0.52, 0.5, 0.5, 1.78, 0.5);
+        var r = MetrierungProximityEvaluator.Evaluate(atWall, T);
+        Assert.True(r.DistToVanish > 0.85 && r.DistToVanish < 1.10,
+            $"DistToVanish={r.DistToVanish:F2} sollte ~1.0 sein (Rohrradius-Eichung, aspect-unabhaengig)");
+    }
 }
