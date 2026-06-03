@@ -396,15 +396,27 @@ public sealed class MultiModelAnalysisService
             var maxDinoConf = dinoResult.Detections.Count > 0
                 ? dinoResult.Detections.Max(d => d.Confidence) : 0.0;
 
-            // Build findings from quantified masks
-            var findings = new List<EnhancedFinding>(quantified.Count);
-            for (var i = 0; i < quantified.Count; i++)
+            // Build findings via SegmentedFinding + Naehe-Gate.
+            // Ohne Kalibrierung im Batch: Fluchtpunkt = Bildmitte, Rohrradius-Fallback 0.5.
+            var segmented = SegmentedFindingBuilder.Build(
+                samResult, dinoResult.Detections, quantified,
+                vanishX: 0.5, vanishY: 0.5, pipeRadiusNorm: 0.5,
+                AuswertungPro.Next.Application.Ai.MetrierungProximityThresholds.Default);
+
+            int proximitySuppressedCount = 0;
+            var findings = new List<EnhancedFinding>(segmented.Count);
+            foreach (var seg in segmented)
             {
-                var q = quantified[i];
+                var q = seg.Quant;
                 if (string.IsNullOrWhiteSpace(q.Label))
                     continue;
+                if (!seg.Proximity.IsCodierbar)
+                {
+                    proximitySuppressedCount++;   // ahead_of_camera: erkannt, aber nicht metriert
+                    continue;
+                }
 
-                var bbox = i < samResult.Masks.Count ? GetNormalizedBbox(samResult.Masks[i], samResult.ImageWidth, samResult.ImageHeight) : default;
+                var bbox = GetNormalizedBbox(seg.Mask, samResult.ImageWidth, samResult.ImageHeight);
                 findings.Add(new EnhancedFinding(
                     Label: q.Label,
                     VsaCodeHint: VsaCodeResolver.InferCodeFromLabel(q.Label),
@@ -420,9 +432,12 @@ public sealed class MultiModelAnalysisService
                     BboxY1: bbox.Y1,
                     BboxX2: bbox.X2,
                     BboxY2: bbox.Y2,
-                    Notes: $"DINO conf={q.Confidence:F2}"
+                    Notes: $"DINO conf={(seg.Dino?.Confidence ?? q.Confidence):F2}"
                 ));
             }
+            if (proximitySuppressedCount > 0)
+                _logger.LogDebug("Frame {Frame}: {Count} Befund(e) als 'ahead_of_camera' nicht metriert.",
+                    frameIndex, proximitySuppressedCount);
 
             trace.FindingsBuilt = findings.Count;
             trace.CodesFromLabel = findings.Count(f => !string.IsNullOrWhiteSpace(f.VsaCodeHint));
