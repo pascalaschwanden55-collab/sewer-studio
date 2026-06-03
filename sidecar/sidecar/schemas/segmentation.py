@@ -30,6 +30,14 @@ class SamResponse(BaseModel):
     image_width: int = 0
     image_height: int = 0
     inference_time_ms: float = 0.0
+    # Ehrlichkeits-Felder: requested_boxes = angefragte Boxen, skipped_boxes = still
+    # uebersprungene (Fehler/ausserhalb Bild/leere Maske). degraded=True, sobald Boxen
+    # verloren gingen ODER ein Inferenzfehler auftrat -> Aufrufer muss das als Warnung
+    # behandeln, NICHT als vollstaendige Segmentierung.
+    degraded: bool = False
+    requested_boxes: int = 0
+    skipped_boxes: int = 0
+    error: str | None = None
 
 
 # ── Training Export ─────────────────────────────────────────────────────────

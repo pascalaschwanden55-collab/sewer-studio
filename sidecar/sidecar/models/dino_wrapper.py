@@ -106,10 +106,15 @@ def detect(
             text_threshold=text_threshold,
         )
     except Exception as exc:
-        logger.error("DINO inference failed: %s", exc)
+        # KEIN stilles "200 + leer": ein Inferenzfehler darf nicht wie "kein Befund"
+        # aussehen. degraded=True + Fehlertext, voller Trace ins Log.
+        logger.exception("DINO inference failed")
         return DinoResponse(
             detections=[],
             inference_time_ms=round((time.perf_counter() - t0) * 1000, 1),
+            degraded=True,
+            error=str(exc),
+            error_code="dino_inference_failed",
         )
 
     elapsed_ms = (time.perf_counter() - t0) * 1000

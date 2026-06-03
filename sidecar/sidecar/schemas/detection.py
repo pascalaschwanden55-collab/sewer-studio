@@ -57,6 +57,12 @@ class DinoDetection(BaseModel):
 class DinoResponse(BaseModel):
     detections: list[DinoDetection] = []
     inference_time_ms: float = 0.0
+    # Ehrlichkeits-Felder: leere detections bei degraded=False bedeutet "kein Befund";
+    # degraded=True bedeutet "Modell-/Inferenzfehler" -> Aufrufer muss das als Warnung
+    # behandeln, NICHT als sauberen Negativbefund.
+    degraded: bool = False
+    error: str | None = None
+    error_code: str | None = None
 
 
 # ── Bounding Box (shared input for SAM) ────────────────────────────────────

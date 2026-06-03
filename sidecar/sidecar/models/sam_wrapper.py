@@ -101,11 +101,16 @@ def segment(
     predictor.set_image(img_array)
 
     masks_out: list[MaskResult] = []
+    requested_boxes = len(bounding_boxes)
+    skipped_boxes = 0
 
     for bbox in bounding_boxes:
         clamped = clamp_box(bbox.x1, bbox.y1, bbox.x2, bbox.y2, w, h)
         if clamped is None:
-            continue  # aus dem Bild ragende oder Null-Flaechen-Box -> ueberspringen
+            # aus dem Bild ragende oder Null-Flaechen-Box -> sichtbar als uebersprungen
+            skipped_boxes += 1
+            logger.warning("SAM-Box uebersprungen (ausserhalb Bild / Null-Flaeche): %s", bbox)
+            continue
         bx1, by1, bx2, by2 = clamped
         try:
             box_np = np.array([bx1, by1, bx2, by2])
@@ -118,6 +123,7 @@ def segment(
             )
         except Exception as exc:
             logger.warning("SAM prediction failed for box %s: %s", bbox, exc)
+            skipped_boxes += 1
             continue
 
         # Take best mask
@@ -129,6 +135,7 @@ def segment(
         ys, xs = np.where(mask)
 
         if len(xs) == 0:
+            skipped_boxes += 1
             continue
 
         mask_h = int(ys.max() - ys.min() + 1)
@@ -156,4 +163,7 @@ def segment(
         image_width=w,
         image_height=h,
         inference_time_ms=round(elapsed_ms, 1),
+        requested_boxes=requested_boxes,
+        skipped_boxes=skipped_boxes,
+        degraded=skipped_boxes > 0,
     )
