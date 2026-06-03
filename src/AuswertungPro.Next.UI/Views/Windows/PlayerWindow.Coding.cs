@@ -86,6 +86,8 @@ public partial class PlayerWindow
     private SingleFrameMultiModelService? _codingMultiModel;
     private VisionPipelineClient? _codingVisionClient;
     private bool _codingUseMultiModel;
+    private AuswertungPro.Next.Application.Ai.IPipelineHealthMonitor? _codingHealthMonitor;
+    private bool _codingAiEnabled;
 
     // Import-Beobachtungen (Referenz-Spalte, nur-lesen)
     private readonly ObservableCollection<CodingEvent> _codingImportEvents = new();
@@ -324,6 +326,9 @@ public partial class PlayerWindow
         _codingLiveAiTimer?.Stop();
         _codingLiveAiTimer = null;
         StopCodingAiPulse();
+
+        // Pipeline-Health-Monitor beenden (Kontrollsicherung)
+        StopPipelineHealthMonitor();
 
         _codingAnalysisCts?.Cancel();
         _codingAnalysisCts?.Dispose();
@@ -2593,26 +2598,27 @@ public partial class PlayerWindow
                 var sidecarUrl = Environment.GetEnvironmentVariable("SEWERSTUDIO_SIDECAR_URL")
                     ?? "http://localhost:8100";
                 _codingVisionClient = new VisionPipelineClient(new Uri(sidecarUrl));
-                var health = await _codingVisionClient.HealthCheckAsync();
-                if (health != null)
-                {
-                    _codingMultiModel = new SingleFrameMultiModelService(_codingVisionClient);
-                    _codingUseMultiModel = true;
-                    SetCodingAiState("Kuenstliche Intelligenz bereit (Multi-Model)", Color.FromRgb(0x22, 0xC5, 0x5E),
-                        $"YOLO+DINO+SAM + {CompactModelName(_codingAiModelName)}");
-                }
-                else
-                {
-                    _codingUseMultiModel = false;
-                    SetCodingAiState("Kuenstliche Intelligenz bereit (Qwen)", Color.FromRgb(0x22, 0xC5, 0x5E),
-                        $"Sidecar offline â†’ {CompactModelName(_codingAiModelName)}");
-                }
+                _codingMultiModel = new SingleFrameMultiModelService(_codingVisionClient);
+                _codingAiEnabled = true;
+
+                // Kontrollsicherung: Monitor pollt laufend und haelt den Modus aktuell
+                // (behebt die fruehere Timing-Falle des einmaligen Health-Checks).
+                _codingHealthMonitor = new PipelineHealthMonitor(
+                    _codingVisionClient,
+                    aiEnabled: () => _codingAiEnabled,
+                    qwenAvailable: () => _codingLiveDetection != null || _codingEnhancedVision != null);
+                _codingHealthMonitor.StatusChanged += OnPipelineHealthChanged;
+                _codingHealthMonitor.Start();
+
+                // Sofort einmal auswerten, damit die Anzeige nicht leer startet.
+                var initial = await _codingHealthMonitor.RefreshOnceAsync();
+                ApplyPipelineHealth(initial);
             }
-            catch
+            catch (Exception ex)
             {
                 _codingUseMultiModel = false;
                 SetCodingAiState("Kuenstliche Intelligenz bereit (Qwen)", Color.FromRgb(0x22, 0xC5, 0x5E),
-                    $"Sidecar offline â†’ {CompactModelName(_codingAiModelName)}");
+                    $"Monitor-Fehler: {ex.Message}");
             }
             SetYoloStatus("Bereit", Color.FromRgb(0x22, 0xC5, 0x5E), CompactModelName(_codingAiModelName));
         }
@@ -2621,6 +2627,64 @@ public partial class PlayerWindow
             SetCodingAiState($"Fehler: {ex.Message}", Color.FromRgb(0xEF, 0x44, 0x44),
                 $"Modell: {CompactModelName(_codingAiModelName)}");
             BtnCodingAnalyze.IsEnabled = false;
+        }
+    }
+
+    // ── Pipeline-Kontrollsicherung: Live-Status + Auto-Recovery ──────────────
+
+    private void OnPipelineHealthChanged(object? sender, AuswertungPro.Next.Application.Ai.PipelineHealthStatus status)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.Invoke(() => ApplyPipelineHealth(status));
+            return;
+        }
+        ApplyPipelineHealth(status);
+    }
+
+    /// <summary>
+    /// Wendet den Pipeline-Status an: fuehrt den Multi-Model-Modus automatisch nach
+    /// (Auto-Recovery) und aktualisiert Ampel + Detailanzeige.
+    /// </summary>
+    private void ApplyPipelineHealth(AuswertungPro.Next.Application.Ai.PipelineHealthStatus status)
+    {
+        _codingUseMultiModel = status.MultiModelActive;
+        if (status.MultiModelActive && _codingMultiModel == null && _codingVisionClient != null)
+            _codingMultiModel = new SingleFrameMultiModelService(_codingVisionClient);
+
+        var color = status.Level switch
+        {
+            AuswertungPro.Next.Application.Ai.PipelineHealthLevel.Full => Color.FromRgb(0x22, 0xC5, 0x5E),     // gruen
+            AuswertungPro.Next.Application.Ai.PipelineHealthLevel.Degraded => Color.FromRgb(0xF5, 0x9E, 0x0B), // gelb
+            _ => Color.FromRgb(0x94, 0xA3, 0xB8)                                                              // grau
+        };
+        SetCodingAiState(status.Summary, color, status.Detail);
+        BtnCodingAnalyze.IsEnabled = status.AnalysisPossible;
+        UpdatePipelineHealthDetails(status);
+    }
+
+    /// <summary>Aktualisiert die ausklappbare Detailanzeige (Sidecar/Token/Modelle/Modus).</summary>
+    private void UpdatePipelineHealthDetails(AuswertungPro.Next.Application.Ai.PipelineHealthStatus s)
+    {
+        static string OkBad(bool ok) => ok ? "OK" : "fehlt";
+        static string Loaded(bool ok) => ok ? "geladen" : "laedt bei Bedarf";
+        Hd_Sidecar.Text = $"Sidecar: {(s.SidecarReachable ? (s.SidecarHealthy ? "OK" : "antwortet, ungesund") : "offline")}";
+        Hd_Token.Text = $"Token: {(s.SidecarReachable ? OkBad(s.TokenValid) : "-")}";
+        Hd_Yolo.Text = $"YOLO: {Loaded(s.YoloLoaded)}";
+        Hd_Dino.Text = $"DINO: {Loaded(s.DinoLoaded)}";
+        Hd_Sam.Text = $"SAM: {Loaded(s.SamLoaded)}";
+        Hd_Mode.Text = $"Modus: {(s.MultiModelActive ? "Multi-Model" : (s.QwenAvailable ? "Qwen-only" : "KI aus"))}";
+    }
+
+    /// <summary>Stoppt den Pipeline-Health-Monitor und meldet sich vom Event ab.</summary>
+    private void StopPipelineHealthMonitor()
+    {
+        _codingAiEnabled = false;
+        if (_codingHealthMonitor != null)
+        {
+            _codingHealthMonitor.StatusChanged -= OnPipelineHealthChanged;
+            _ = _codingHealthMonitor.StopAsync();
+            _codingHealthMonitor = null;
         }
     }
 

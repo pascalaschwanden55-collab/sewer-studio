@@ -459,6 +459,30 @@
                     <TextBlock x:Name="TxtCodingAiStage" FontSize="9"
                                Foreground="#94A3B8"
                                Text="" VerticalAlignment="Center" Margin="0,0,8,0"/>
+
+                    <!-- Pipeline-Kontrollsicherung: ausklappbare Detailanzeige -->
+                    <ToggleButton x:Name="CodingHealthToggle" Content="Details" FontSize="9"
+                                  Margin="0,0,8,0" Padding="6,2" VerticalAlignment="Center"
+                                  ToolTip="Zeigt, welche Teile der KI-Pipeline aktiv sind"/>
+                    <Popup PlacementTarget="{Binding ElementName=CodingHealthToggle}" Placement="Bottom"
+                           IsOpen="{Binding IsChecked, ElementName=CodingHealthToggle}"
+                           StaysOpen="False" AllowsTransparency="True">
+                        <Border Background="#FF0B1018" BorderBrush="#FF243A46" BorderThickness="1"
+                                CornerRadius="6" Padding="10" Margin="0,4,0,0">
+                            <StackPanel MinWidth="220">
+                                <TextBlock Text="KI-Pipeline" Foreground="#FFFAFCFF" FontSize="12"
+                                           FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="Hd_Sidecar" Foreground="#FFD7E3F0" FontSize="11" Text="Sidecar: -"/>
+                                <TextBlock x:Name="Hd_Token"   Foreground="#FFD7E3F0" FontSize="11" Text="Token: -"/>
+                                <TextBlock x:Name="Hd_Yolo"    Foreground="#FFD7E3F0" FontSize="11" Text="YOLO: -"/>
+                                <TextBlock x:Name="Hd_Dino"    Foreground="#FFD7E3F0" FontSize="11" Text="DINO: -"/>
+                                <TextBlock x:Name="Hd_Sam"     Foreground="#FFD7E3F0" FontSize="11" Text="SAM: -"/>
+                                <TextBlock x:Name="Hd_Mode"    Foreground="#FF91A8BD" FontSize="10"
+                                           Margin="0,4,0,0" Text="Modus: -"/>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+
                     <ToggleButton x:Name="BtnCodingLiveAi" Style="{StaticResource SpeedToggleButton}"
                                   IsChecked="False" Margin="0,0,6,0"
                                   ToolTip="Automatische KI-Analyse im Codiermodus an/aus (alle 5s)" Click="CodingLiveAi_Click">
