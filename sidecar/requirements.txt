@@ -1,4 +1,5 @@
---extra-index-url https://download.pytorch.org/whl/cu121
+# cu128-Nightly: RTX 5090 (sm_120) braucht cu128. NICHT auf cu121 zuruecksetzen.
+--extra-index-url https://download.pytorch.org/whl/nightly/cu128
 --extra-index-url https://pypi.nvidia.com
 
 fastapi>=0.110
