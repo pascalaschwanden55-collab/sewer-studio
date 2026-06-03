@@ -12,6 +12,9 @@ class SidecarSettings(BaseSettings):
     gpu_device: str = "cuda:0"
     trusted_hosts: str = "127.0.0.1,localhost"
     auth_token: str = ""
+    # Geteilte Token-Datei mit dem C#-Client (Default: %LOCALAPPDATA%/SewerStudio/.sidecar_token).
+    # Leer -> Standardpfad wird zur Laufzeit ermittelt. Token wird beim Start erzeugt, falls keiner da.
+    auth_token_file: str = ""
     telemetry_enabled: bool = True
     telemetry_dir: str = ""
 

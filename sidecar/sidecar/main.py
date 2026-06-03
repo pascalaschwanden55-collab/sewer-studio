@@ -1,8 +1,12 @@
 """FastAPI application – Sewer-Studio Vision Sidecar."""
 
+import hmac
 import logging
+import os
+import secrets
 import traceback
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -37,6 +41,12 @@ async def lifespan(app: FastAPI):
         settings.effective_yolo_device,
         settings.effective_dino_device,
         settings.effective_sam_device,
+    )
+    # Auth-Token aufloesen (env -> Datei -> neu erzeugen) und scharf schalten. Ab jetzt ist
+    # X-Sidecar-Token Pflicht. Die Token-Datei wird mit dem C#-Client geteilt.
+    settings.auth_token = _resolve_or_create_token()
+    logging.getLogger("sidecar").info(
+        "Auth aktiv: X-Sidecar-Token erforderlich (Token-Datei: %s).", _token_file_path()
     )
     yield
     logging.getLogger("sidecar").info("Sidecar shutting down — unloading all models ...")
@@ -98,6 +108,42 @@ def _trusted_hosts() -> set[str]:
     }
 
 
+def _token_file_path() -> Path:
+    """Geteilte Token-Datei. Default = %LOCALAPPDATA%/SewerStudio/.sidecar_token
+    (exakt der Pfad, den der C#-Client liest)."""
+    configured = (settings.auth_token_file or "").strip()
+    if configured:
+        return Path(configured)
+    base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+    return Path(base) / "SewerStudio" / ".sidecar_token"
+
+
+def _resolve_or_create_token() -> str:
+    """Effektives Auth-Token: env (SEWER_SIDECAR_AUTH_TOKEN) -> Token-Datei -> neu erzeugen
+    und schreiben. Eine vorhandene Datei wird wiederverwendet (kein Aussperren des Clients)."""
+    env_token = (settings.auth_token or "").strip()
+    if env_token:
+        return env_token
+
+    path = _token_file_path()
+    try:
+        if path.exists():
+            existing = path.read_text(encoding="utf-8").strip()
+            if existing:
+                return existing
+    except OSError as exc:
+        logger.warning("Sidecar-Token-Datei nicht lesbar (%s): %s", path, exc)
+
+    token = secrets.token_urlsafe(32)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(token, encoding="utf-8")
+        logger.info("Neues Sidecar-Token erzeugt: %s", path)
+    except OSError as exc:
+        logger.error("Sidecar-Token konnte nicht geschrieben werden (%s): %s", path, exc)
+    return token
+
+
 def _auth_token() -> str:
     return (settings.auth_token or "").strip()
 
@@ -113,11 +159,14 @@ async def enforce_loopback_security(request: Request, call_next):
         )
 
     token = _auth_token()
-    if token and request.headers.get("X-Sidecar-Token") != token:
-        return JSONResponse(
-            {"detail": "Invalid sidecar token."},
-            status_code=401,
-        )
+    if token:
+        provided = request.headers.get("X-Sidecar-Token") or ""
+        # Konstante-Zeit-Vergleich gegen Timing-Angriffe; fehlender/falscher Token -> 401.
+        if not hmac.compare_digest(provided, token):
+            return JSONResponse(
+                {"detail": "Invalid or missing sidecar token."},
+                status_code=401,
+            )
 
     return await call_next(request)
 
