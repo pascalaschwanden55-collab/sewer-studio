@@ -3021,16 +3021,32 @@ public partial class PlayerWindow
                 SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
                     $"Schritt 3 von 4: SAM-Masken ({mmResult.DinoDetections.Count} Befunde)", pulse: true);
 
-                // Masken und Labels auf Canvas rendern
-                ShowMultiModelResults(mmResult);
+                // Naehe-Gate: nur codierbare Befunde metrieren; "Voraus" nur anzeigen.
+                var segmented = BuildCodingSegmentedFindings(mmResult);
+                int vorausCount = segmented.Count(s => !s.Proximity.IsCodierbar);
+                int codierbarCount = segmented.Count - vorausCount;
+
+                // Masken/Overlay rendern (alle; "Voraus" optisch abgesetzt).
+                ShowMultiModelResults(mmResult, segmented);
+
+                if (codierbarCount == 0 && vorausCount > 0)
+                {
+                    SetCodingAiState("Ereignis voraus erkannt - naeher heranfahren",
+                        Color.FromRgb(0xF5, 0x9E, 0x0B),
+                        $"{vorausCount} voraus");
+                    return;
+                }
 
                 SetCodingAiState(
-                    $"{mmResult.DinoDetections.Count} Befunde erkannt",
+                    $"{codierbarCount} Befunde erkannt" + (vorausCount > 0 ? $" ({vorausCount} voraus ignoriert)" : ""),
                     Color.FromRgb(0x22, 0xC5, 0x5E),
                     $"YOLO {mmResult.YoloTimeMs:F0}ms | DINO {mmResult.DinoTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms");
 
-                // Events erstellen
-                AddMultiModelFindingsAsEvents(mmResult, captureTimestampSec);
+                // Nur codierbare Befunde als Events.
+                AddMultiModelFindingsAsEvents(
+                    segmented.Where(s => s.Proximity.IsCodierbar).ToList(),
+                    mmResult.SamResponse?.ImageWidth ?? 1, mmResult.SamResponse?.ImageHeight ?? 1,
+                    mmResult.YoloMaxConfidence, captureTimestampSec);
                 return;
             }
 
@@ -3092,7 +3108,7 @@ public partial class PlayerWindow
     /// <summary>
     /// Rendert Multi-Model Ergebnisse: SAM-Masken (gruene Konturen) + Label-Badges mit Messungen.
     /// </summary>
-    private void ShowMultiModelResults(SingleFrameResult mmResult)
+    private void ShowMultiModelResults(SingleFrameResult mmResult, IReadOnlyList<SegmentedFinding> segmented)
     {
         // Alte Masken entfernen
         Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
@@ -3109,9 +3125,54 @@ public partial class PlayerWindow
                 logger: _serviceProvider?.LoggerFactory.CreateLogger("SamMaskRenderer"));
         }
 
+        // "Voraus"-Befunde gestrichelt markieren (noch nicht codierbar -> kein Meter/Event).
+        double cw = CodingOverlayCanvas.ActualWidth, ch = CodingOverlayCanvas.ActualHeight;
+        double iw = mmResult.SamResponse?.ImageWidth ?? 0;
+        double ih = mmResult.SamResponse?.ImageHeight ?? 0;
+        if (iw > 0 && ih > 0)
+        {
+            foreach (var s in segmented)
+            {
+                if (s.Proximity.IsCodierbar || s.Mask.Bbox.Count < 4) continue;
+                var rect = new System.Windows.Shapes.Rectangle
+                {
+                    Width = Math.Max(1, (s.Mask.Bbox[2] - s.Mask.Bbox[0]) / iw * cw),
+                    Height = Math.Max(1, (s.Mask.Bbox[3] - s.Mask.Bbox[1]) / ih * ch),
+                    Stroke = new SolidColorBrush(Color.FromArgb(200, 0xF5, 0x9E, 0x0B)),
+                    StrokeThickness = 1.5,
+                    StrokeDashArray = new DoubleCollection { 4, 3 },
+                    Fill = Brushes.Transparent,
+                    Tag = Ai.Pipeline.SamMaskRenderer.MaskTag,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(rect, s.Mask.Bbox[0] / iw * cw);
+                Canvas.SetTop(rect, s.Mask.Bbox[1] / ih * ch);
+                CodingOverlayCanvas.Children.Add(rect);
+            }
+        }
+
         // Kalibrierkreis anzeigen
         _showReferenceDn = true;
         RenderReferenceDn();
+    }
+
+    /// <summary>Baut SegmentedFindings aus dem Multi-Model-Ergebnis inkl. Naehe-Pruefung.</summary>
+    private IReadOnlyList<SegmentedFinding> BuildCodingSegmentedFindings(SingleFrameResult mmResult)
+    {
+        if (mmResult.SamResponse == null)
+            return System.Array.Empty<SegmentedFinding>();
+
+        var cal = _codingOverlayService?.Calibration;
+        double vanishX = cal?.PipeCenter.X ?? 0.5;
+        double vanishY = cal?.PipeCenter.Y ?? 0.5;
+        double pipeRadius = (cal != null && cal.NormalizedDiameter > 0) ? cal.NormalizedDiameter / 2.0 : 0.5;
+
+        return SegmentedFindingBuilder.Build(
+            mmResult.SamResponse,
+            mmResult.DinoDetections,
+            mmResult.QuantifiedMasks,
+            vanishX, vanishY, pipeRadius,
+            AuswertungPro.Next.Application.Ai.MetrierungProximityThresholds.Default);
     }
 
     /// <summary>
@@ -3122,7 +3183,8 @@ public partial class PlayerWindow
     /// und Label-Pfad wie der Qwen/Enhanced-Pfad (ResolveFindingCodeForCoding, LookupVsaLabel).
     /// </summary>
     private void AddMultiModelFindingsAsEvents(
-        SingleFrameResult mmResult, double captureTimestampSec)
+        IReadOnlyList<SegmentedFinding> segmented, double imageWidth, double imageHeight,
+        double? yoloMaxConfidence, double captureTimestampSec)
     {
         var codingVm = _codingVm;
         var codingSessionService = _codingSessionService;
@@ -3135,10 +3197,10 @@ public partial class PlayerWindow
         // BCD wird NICHT mehr automatisch erzeugt â€” nur durch Eingabemarker oder Qwen-Erkennung.
         // EnsureRohranfangExists(meter, videoTime, ref anyAdded);
 
-        for (int i = 0; i < mmResult.QuantifiedMasks.Count; i++)
+        foreach (var seg in segmented)
         {
-            var quant = mmResult.QuantifiedMasks[i];
-            var dino = i < mmResult.DinoDetections.Count ? mmResult.DinoDetections[i] : null;
+            var quant = seg.Quant;
+            var dino = seg.Dino;
 
             // Gemeinsamer Resolver: DINO-Label â†’ LiveFrameFinding â†’ ResolveFindingCodeForCoding
             // So laeuft der Multi-Model-Pfad durch exakt denselben Code wie Qwen.
@@ -3153,10 +3215,10 @@ public partial class PlayerWindow
                 IntrusionPercent: quant.IntrusionPercent,
                 CrossSectionReductionPercent: quant.CrossSectionReductionPercent,
                 DiameterReductionMm: null,
-                BboxX1: dino != null ? dino.X1 / (mmResult.SamResponse?.ImageWidth ?? 1) : null,
-                BboxY1: dino != null ? dino.Y1 / (mmResult.SamResponse?.ImageHeight ?? 1) : null,
-                BboxX2: dino != null ? dino.X2 / (mmResult.SamResponse?.ImageWidth ?? 1) : null,
-                BboxY2: dino != null ? dino.Y2 / (mmResult.SamResponse?.ImageHeight ?? 1) : null);
+                BboxX1: dino != null ? dino.X1 / imageWidth : null,
+                BboxY1: dino != null ? dino.Y1 / imageHeight : null,
+                BboxX2: dino != null ? dino.X2 / imageWidth : null,
+                BboxY2: dino != null ? dino.Y2 / imageHeight : null);
 
             // Gemeinsamer Resolver (identisch mit Qwen-Pfad)
             var code = ResolveFindingCodeForCoding(pseudoFinding, meter);
@@ -3191,7 +3253,7 @@ public partial class PlayerWindow
             // renormalisiert ueber DINO/SAM/Plausibilitaet. Klar erkannte Befunde bekommen
             // so wieder eine ehrliche, hohe Confidence statt durchgehend gelb.
             var evidence = new EvidenceVector(
-                YoloConf: mmResult.YoloMaxConfidence,
+                YoloConf: yoloMaxConfidence,
                 DinoConf: dinoConf,
                 SamMaskStability: quant.Confidence,
                 PlausibilityScore: officialLabel != null ? 0.8 : 0.4
