@@ -109,33 +109,67 @@ Ort: gleiche Datei.
 
 Ort: `src/AuswertungPro.Next.Application/Ai/MetrierungProximityEvaluator.cs`
 
-### 5.5 Adapter zu den Detektions-Typen
+### 5.5 `SegmentedFinding` — feste Kopplungseinheit (ersetzt Index-Kopplung)
 
-Kleine Mapper, die aus den vorhandenen Typen einen `MetrierungProximityInput` bauen:
+Heute werden DINO-Detection, SAM-Maske und QuantifiedMask **per Listen-Index** gekoppelt
+(`Coding.cs:3138-3141`: `QuantifiedMasks[i]` <-> `DinoDetections[i]`; `MultiModelAnalysisService.cs:401-407`:
+`quantified[i]` <-> `Masks[i]`). Das ist fragil: Der Sidecar ueberspringt Boxen
+(`sam_wrapper.py`: `skipped_boxes++` ohne Maske), wodurch die Masken-Liste kuerzer ist als die
+DINO-Liste und ab der ersten uebersprungenen Box ALLE Indizes verrutschen. Ein Proximity-Filter,
+der zusaetzlich Eintraege als "Voraus" aussortiert, verschaerft das. Diese lose Kopplung wird
+durch eine feste Einheit ersetzt, die EINMAL korrekt zusammengebaut wird:
 
-- Live: aus `DinoDetectionDto` + `SamResponse.ImageWidth/Height` + `PipeCalibration`.
-- Vollanalyse: aus `QuantifiedMask` (CentroidX/Y, Box) + Bildmasse + `pipeDiameterMm`.
+`SegmentedFinding { DinoDetectionDto? Dino; SamMaskResult Mask; QuantifiedMask Quant; MetrierungProximityResult Proximity }`
 
-Ort: bei den jeweiligen Aufrufstellen (Infrastructure/UI), nicht in Application.
+Aufbauregeln:
+
+- Basis ist die **Masken-Liste** (`samResult.Masks`), NICHT die DINO-Liste. Iteriert wird ueber
+  Masken — uebersprungene Boxen existieren dort gar nicht erst.
+- `Mask` und `Quant` sind per Index **innerhalb derselben Masken-Liste** sicher gepaart
+  (`QuantifyAll` erzeugt `QuantifiedMask` 1:1 aus `samResult.Masks` in gleicher Reihenfolge).
+- `Dino` wird der Maske **ueber bbox+Label** zugeordnet, nicht per Listen-Index: Jede
+  `SamMaskResult` traegt `label` und die (geclampte) `bbox` ihrer Input-Box
+  (`sam_wrapper.py:146-149`). Zuordnung = DINO-Detection mit gleichem Label und hoechster
+  bbox-Ueberlappung (IoU). Kein eindeutiger Match -> `Dino = null` (die Maske traegt Label,
+  bbox und SAM-Score selbst als Fallback; nur die echte DINO-Confidence fehlt dann).
+- `Proximity` wird per `MetrierungProximityEvaluator` gesetzt.
+
+Ort: Der Record liegt in Infrastructure (referenziert die Infrastructure-DTOs
+`SamMaskResult`/`DinoDetectionDto`/`QuantifiedMask`). Der Aufbau erfolgt an den Aufrufstellen.
+
+**Alle nachgelagerten Schritte** (Overlay, Event-/`EnhancedFinding`-Erstellung, Suppressed-Zaehler)
+arbeiten NUR noch auf `IReadOnlyList<SegmentedFinding>` — kein paralleles Index-Hantieren mehr.
 
 ## 6. Einhaeng-Punkte (gleiche Logik, zwei Stellen)
 
 ### 6.1 Live (Codiermodus)
 
-In `PlayerWindow.Coding.cs`, `RunCodingAnalysisAsync`, nach `AnalyzeFrameAsync` (`:3002`), vor `ShowMultiModelResults`/`AddMultiModelFindingsAsEvents`:
+In `PlayerWindow.Coding.cs`, `RunCodingAnalysisAsync`, nach `AnalyzeFrameAsync` (`:3002`):
 
-- Pro Befund `Evaluate(...)`.
-- `Codierbar` -> wie bisher: Overlay + Event mit Meter aus `_codingLastOsdMeter`.
-- `Voraus` -> Overlay im "Voraus"-Stil (gestrichelt + Label "voraus"), **kein** Event, **kein** Meter.
+1. Aus `SingleFrameResult` die `SegmentedFinding`-Liste bauen (Abschnitt 5.5).
+2. Pro `SegmentedFinding` `Proximity` setzen.
+3. `Codierbar` -> Overlay + Event mit Meter aus `_codingLastOsdMeter` (wie bisher, aber ueber die Einheit statt Index).
+4. `Voraus` -> Overlay im "Voraus"-Stil (gestrichelt + Label "voraus"), **kein** Event, **kein** Meter.
+
+Statusmeldung (`SetCodingAiState`):
+
+- Wenn **alle** gefundenen Masken `Voraus` sind: `Ereignis voraus erkannt - naeher heranfahren`.
+- Wenn **gemischt**: normale codierbare Befunde anzeigen, optional klein `N voraus ignoriert`.
+- Wenn gar nichts gefunden: unveraendert "Kein Schaden erkannt".
 
 ### 6.2 Vollanalyse (Video-Batch)
 
 In `MultiModelAnalysisService` nach `QuantifyAll` (`:392`), vor `new EnhancedFinding(...)`:
 
-- Pro quantifizierter Maske `Evaluate(...)`.
-- `Codierbar` -> `EnhancedFinding` wird erzeugt (wie bisher).
-- `Voraus` -> kein `EnhancedFinding` (der Befund fliesst nicht in Protokoll/Dedup/Meter).
-  - Optional (nicht in Iteration 1): Voraus-Faelle zaehlen/loggen fuer Diagnose.
+1. `SegmentedFinding`-Liste bauen, `Proximity` setzen.
+2. Nur `Codierbar` -> `EnhancedFinding` erzeugen (wie bisher).
+3. `Voraus` -> kein `EnhancedFinding` (fliesst nicht in Protokoll/Dedup/Meter).
+
+Leichtgewichtiges Logging (kein UI, kein Log pro Maske):
+
+- Pro Frame/Lauf einen Zaehler `ProximitySuppressedCount` mit Grund `ahead_of_camera` fuehren
+  (im vorhandenen `trace`/Progress-Objekt, analog zu `Degraded`/`SkippedBoxes`).
+- Hoechstens ein zusammenfassender Log-Eintrag pro Frame, nur falls `ProximitySuppressedCount > 0`.
 
 ## 7. Verhalten / UX
 
@@ -157,6 +191,14 @@ Unit-Tests fuer `MetrierungProximityEvaluator` (reine Logik, kein Sidecar):
 
 Ort: `tests/AuswertungPro.Next.Pipeline.Tests/MetrierungProximityEvaluatorTests.cs`
 
+Zusaetzlich Unit-Tests fuer die `SegmentedFinding`-Zuordnung
+(`tests/AuswertungPro.Next.Pipeline.Tests/SegmentedFindingBuilderTests.cs`):
+
+- 3 DINO-Boxen, SAM skippt die mittlere -> die 2 Masken werden den RICHTIGEN 2 DINO-Boxen
+  zugeordnet (kein Index-Verrutschen).
+- Maske ohne passende DINO-Box -> `Dino = null`, Einheit bleibt nutzbar (Label/bbox aus Maske).
+- Zwei gleiche Labels mit unterschiedlichen Boxen -> Zuordnung ueber hoechste IoU, nicht ueber Reihenfolge.
+
 Hinweis: passt zur Testregel (Recommendation-/Gate-Logik), analog `PipelineHealthEvaluatorTests`.
 
 ## 9. Geltungsbereich
@@ -177,14 +219,16 @@ Hinweis: passt zur Testregel (Recommendation-/Gate-Logik), analog `PipelineHealt
 - **Nahe Muffe vs. Tunnel** bleibt die schwierigste Unterscheidung. Mitigiert durch `wandnaehe` (Rand erreicht Wand/Bildrand) + konservativen Default. Feinschliff ueber die vier Parameter.
 - **Kalibrierung noetig**: Ist `PipeCalibration` nicht gesetzt, faellt der Fluchtpunkt auf Bildmitte und der Rohrradius auf einen Default-Anteil zurueck; die Heuristik wird dann unschaerfer, bleibt aber konservativ.
 - **Falsch-"Voraus"** (ein naher Befund wird als voraus eingestuft): bewusst akzeptiert, weil weniger schaedlich als ein falscher Metereintrag. Der Inspekteur kann den Frame erneut/naeher analysieren.
+- **bbox+Label-Zuordnung statt Index**: Die geclampte Masken-bbox weicht leicht von der DINO-bbox ab; Zuordnung daher ueber hoechste IoU + Label. Bei zwei sehr aehnlichen Boxen mit gleichem Label theoretisch mehrdeutig — in der Praxis selten, und der Fallback `Dino = null` ist unkritisch (die Maske traegt Label/bbox/SAM-Score selbst; nur die echte DINO-Confidence fehlt dann fuer das QualityGate, das darueber renormalisiert).
 
 ## 12. Umsetzungsreihenfolge (fuer den Plan)
 
 1. `MetrierungProximity`, `MetrierungProximityInput`, `MetrierungProximityResult`, `MetrierungProximityThresholds` (Application).
 2. `MetrierungProximityEvaluator` + Unit-Tests (TDD).
-3. Live-Einhaengung in `RunCodingAnalysisAsync` + "Voraus"-Overlay-Stil.
-4. Vollanalyse-Einhaengung in `MultiModelAnalysisService`.
-5. Build + Tests + manuelle Akzeptanzpruefung.
+3. `SegmentedFinding`-Record (Infrastructure) + Zusammenbau-Helfer (Masken-basiert, bbox+Label-Zuordnung) + Unit-Test fuer die Zuordnung inkl. skipped-box-Fall.
+4. Live-Einhaengung in `RunCodingAnalysisAsync`: SegmentedFinding bauen, Proximity, "Voraus"-Overlay + Statusmeldung-Regel.
+5. Vollanalyse-Einhaengung in `MultiModelAnalysisService`: SegmentedFinding bauen, nur Codierbar -> EnhancedFinding, `ProximitySuppressedCount`.
+6. Build + Tests + manuelle Akzeptanzpruefung.
 
 ## 13. Akzeptanzkriterien
 
@@ -203,7 +247,8 @@ Hinweis: passt zur Testregel (Recommendation-/Gate-Logik), analog `PipelineHealt
 - Einhaeng-Punkte am Code verifiziert (Methodennamen existieren).
 - Tunnel-vs-Muffe als Hauptrisiko benannt und mitigiert.
 
-Offen fuer die Freigabe:
+Getroffene Entscheidungen (Review 2026-06-03):
 
-1. Sollen "Voraus"-Faelle in der Vollanalyse fuer Diagnose mitgezaehlt/geloggt werden (oder erst spaeter)?
-2. Soll der Live-Modus bei einem reinen "Voraus"-Ergebnis eine kurze Statusmeldung zeigen ("Ereignis voraus — naeher heranfahren"), oder genuegt das Overlay?
+1. Vollanalyse: leichtgewichtiger Zaehler `ProximitySuppressedCount` (Grund `ahead_of_camera`), kein UI, kein Log pro Maske.
+2. Live: Statusmeldung nur wenn ALLE Masken "Voraus" sind (`Ereignis voraus erkannt - naeher heranfahren`); bei gemischt normal + optional `N voraus ignoriert`.
+3. Kopplung DINO/SAM/Quant nicht mehr per Index, sondern feste `SegmentedFinding`-Einheit (bbox+Label-Zuordnung, robust gegen skipped boxes).
