@@ -109,13 +109,21 @@ public sealed class BatchMediaSearchService
             var tokens = BuildTokens(record, haltungsname);
             var datumStr = (record.GetFieldValue("Datum_Jahr") ?? "").Trim();
 
-            // Video matching
-            var (videoStatus, videoPath, videoCandidates) = MatchFiles(videoFiles, tokens, datumStr);
+            // Video matching: zuerst das robuste Export-Namensmuster ({Haltung}_{Sektion},
+            // trennzeichen-tolerant, deckt Punkt->Unterstrich + einstellige Namen ab),
+            // danach der generische Token-Fallback.
+            var (videoStatus, videoPath, videoCandidates) = ExportNameMatcher.Match(videoFiles, haltungsname);
+            if (videoStatus == MediaMatchStatus.NotFound)
+                (videoStatus, videoPath, videoCandidates) = MatchFiles(videoFiles, tokens, datumStr);
 
-            // PDF matching
-            var (pdfStatus, pdfPath, pdfCandidates) = options.SearchPdfs
-                ? MatchFiles(pdfFiles, tokens, datumStr)
-                : (MediaMatchStatus.NotFound, (string?)null, (List<string>?)null);
+            // PDF matching (gleiche Strategie)
+            var (pdfStatus, pdfPath, pdfCandidates) = (MediaMatchStatus.NotFound, (string?)null, (List<string>?)null);
+            if (options.SearchPdfs)
+            {
+                (pdfStatus, pdfPath, pdfCandidates) = ExportNameMatcher.Match(pdfFiles, haltungsname);
+                if (pdfStatus == MediaMatchStatus.NotFound)
+                    (pdfStatus, pdfPath, pdfCandidates) = MatchFiles(pdfFiles, tokens, datumStr);
+            }
 
             // Photo matching
             var foundPhotos = options.SearchPhotos
