@@ -1,13 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\AuswertungPro.Next.UI\AuswertungPro.Next.UI.csproj" />
+    <!-- Reines CLI-Tool: nur Application + Infrastructure, KEINE UI/WPF (entkoppelt vom
+         windows10.0.19041-Target der UI und von der laufenden App, die deren DLLs sperrt). -->
+    <ProjectReference Include="..\..\src\AuswertungPro.Next.Application\AuswertungPro.Next.Application.csproj" />
+    <ProjectReference Include="..\..\src\AuswertungPro.Next.Infrastructure\AuswertungPro.Next.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
