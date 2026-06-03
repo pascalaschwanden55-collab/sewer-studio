@@ -1,6 +1,7 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.SettingsPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:AuswertungPro.Next.UI">
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled"
                   CanContentScroll="True"
@@ -703,9 +704,14 @@
         <Border Margin="0,0,0,20" Padding="14,10"
                 BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
                 Background="{StaticResource CardBrush}" CornerRadius="6">
-            <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="11" TextAlignment="Center">
-                SewerStudio - Professionelle Kanalinspektion und KI-Analyse
-            </TextBlock>
+            <StackPanel>
+                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" FontWeight="SemiBold"
+                           TextAlignment="Center"
+                           Text="{x:Static ui:AppIdentity.DisplayVersion}"/>
+                <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="11" TextAlignment="Center" Margin="0,2,0,0">
+                    SewerStudio - Professionelle Kanalinspektion und KI-Analyse
+                </TextBlock>
+            </StackPanel>
         </Border>
 
         </StackPanel>

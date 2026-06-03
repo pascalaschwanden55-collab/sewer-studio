@@ -53,7 +53,7 @@
                            Opacity="0"/>
 
                 <TextBlock x:Name="VersionText"
-                           Text="v4.3  |  Neural Network Core  |  VSA-KEK 2023  |  Local AI"
+                           Text="v4.4  |  Neural Network Core  |  VSA-KEK 2023  |  Local AI"
                            Foreground="#86C3D0DE"
                            FontSize="11"
                            FontFamily="Consolas"

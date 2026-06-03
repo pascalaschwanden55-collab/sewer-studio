@@ -140,7 +140,7 @@ public partial class StartupSplashWindow : Window
         "Lokale KI-Modelle vorbereiten...",
         "3D-Neuralnetz synchronisieren...",
         "VSA-Kataloge und Wissensbasis verbinden...",
-        "SewerStudio v4.3 bereit"
+        "SewerStudio " + AppIdentity.DisplayVersion + " bereit"
     ];
 
     public StartupSplashWindow()
@@ -184,6 +184,9 @@ public partial class StartupSplashWindow : Window
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
         BeginAnimation(OpacityProperty, windowFade);
+
+        // Versionszeile aus der zentralen Versionsnummer aufbauen.
+        VersionText.Text = AppIdentity.DisplayVersion + "  |  Neural Network Core  |  VSA-KEK 2023  |  Local AI";
 
         BuildNeuralNetwork();
         RenderFrame();
