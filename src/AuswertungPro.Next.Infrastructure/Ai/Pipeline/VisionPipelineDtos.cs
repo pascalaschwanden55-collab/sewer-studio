@@ -14,7 +14,13 @@ public sealed record SidecarHealthResponse(
 public sealed record GpuStatus(
     [property: JsonPropertyName("current_model")] string CurrentModel,
     [property: JsonPropertyName("vram_allocated_gb")] double VramAllocatedGb,
-    [property: JsonPropertyName("vram_total_gb")] double VramTotalGb
+    [property: JsonPropertyName("vram_total_gb")] double VramTotalGb,
+    [property: JsonPropertyName("loaded_models")] Dictionary<string, GpuLoadedModel>? LoadedModels = null
+);
+
+public sealed record GpuLoadedModel(
+    [property: JsonPropertyName("device")] string? Device = null,
+    [property: JsonPropertyName("load_time_sec")] double LoadTimeSec = 0
 );
 
 // ── YOLO ───────────────────────────────────────────────────────────────────

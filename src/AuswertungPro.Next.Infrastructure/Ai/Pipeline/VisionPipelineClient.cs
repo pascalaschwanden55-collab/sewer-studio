@@ -60,6 +60,36 @@ public sealed class VisionPipelineClient
     }
 
     /// <summary>
+    /// Health-Check mit Fehlerart-Unterscheidung (offline vs. 401 vs. ok),
+    /// damit die UI Token-Fehler nicht als allgemeines "offline" anzeigt.
+    /// </summary>
+    public async Task<PipelineHealthCheckResult> CheckHealthDetailedAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, BuildUri("/health"));
+            AddSidecarTokenHeader(req);
+            using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
+
+            int code = (int)resp.StatusCode;
+            if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                return new PipelineHealthCheckResult(true, false, code, null, "Token ungueltig/fehlt");
+
+            if (!resp.IsSuccessStatusCode)
+                return new PipelineHealthCheckResult(true, true, code, null, $"HTTP {code}");
+
+            var json = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            var health = JsonSerializer.Deserialize<SidecarHealthResponse>(json, JsonOpts);
+            return new PipelineHealthCheckResult(true, true, code, health, null);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            return new PipelineHealthCheckResult(false, false, null, null, ex.Message);
+        }
+    }
+
+    /// <summary>
     /// YOLO pre-screening detection.
     /// </summary>
     public async Task<YoloResponse> DetectYoloAsync(YoloRequest request, CancellationToken ct = default)
@@ -201,3 +231,14 @@ public sealed class VisionPipelineClient
     private static string? NormalizeToken(string? token)
         => string.IsNullOrWhiteSpace(token) ? null : token.Trim();
 }
+
+/// <summary>
+/// Detailliertes Ergebnis eines Health-Checks. Unterscheidet offline / 401 / ok,
+/// damit die UI Token-Fehler nicht als "offline" anzeigt.
+/// </summary>
+public sealed record PipelineHealthCheckResult(
+    bool IsReachable,
+    bool IsAuthorized,
+    int? StatusCode,
+    SidecarHealthResponse? Health,
+    string? Error);
