@@ -85,7 +85,12 @@ public sealed record DinoDetectionDto(
 
 public sealed record DinoResponse(
     [property: JsonPropertyName("detections")] IReadOnlyList<DinoDetectionDto> Detections,
-    [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs
+    [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs,
+    // Ehrlichkeits-Felder des Sidecars: degraded=true bedeutet Modell-/Inferenzfehler ->
+    // leere detections sind dann KEIN sauberer Negativbefund, sondern Review-Signal.
+    [property: JsonPropertyName("degraded")] bool Degraded = false,
+    [property: JsonPropertyName("error")] string? Error = null,
+    [property: JsonPropertyName("error_code")] string? ErrorCode = null
 );
 
 // ── SAM ────────────────────────────────────────────────────────────────────
@@ -122,7 +127,13 @@ public sealed record SamResponse(
     [property: JsonPropertyName("masks")] IReadOnlyList<SamMaskResult> Masks,
     [property: JsonPropertyName("image_width")] int ImageWidth,
     [property: JsonPropertyName("image_height")] int ImageHeight,
-    [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs
+    [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs,
+    // Ehrlichkeits-Felder: degraded=true, sobald Boxen verloren gingen (skipped_boxes)
+    // oder ein Fehler auftrat -> Teil-Segmentierung, Review-Signal.
+    [property: JsonPropertyName("degraded")] bool Degraded = false,
+    [property: JsonPropertyName("requested_boxes")] int RequestedBoxes = 0,
+    [property: JsonPropertyName("skipped_boxes")] int SkippedBoxes = 0,
+    [property: JsonPropertyName("error")] string? Error = null
 );
 
 // ── Training Export ─────────────────────────────────────────────────────────

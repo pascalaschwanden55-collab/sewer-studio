@@ -315,6 +315,25 @@ public sealed class MultiModelAnalysisService
             var dinoMs = phaseSw.ElapsedMilliseconds;
             trace.DinoBoxCount = dinoResult.Detections.Count;
 
+            // degraded != sauber: ein Modell-/Inferenzfehler im Sidecar (degraded=true)
+            // darf NICHT als "dino_no_boxes" (kein Befund) verbucht werden, sonst sieht
+            // ein verstummtes Modell wie ein sauberes Rohr aus. Frame als Review markieren.
+            if (dinoResult.Degraded)
+            {
+                _logger.LogWarning("Frame {Frame}: DINO degraded ({Code}: {Error}) – als Review markiert, NICHT als sauberer Negativbefund.",
+                    frameIndex, dinoResult.ErrorCode, dinoResult.Error);
+                progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                    $"Frame {frameIndex} – DINO degraded (Modellfehler) – Review nötig"));
+                telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+                trace.Path = "dino_degraded";
+                trace.DropReason = "dino_degraded";
+                trace.Degraded = true;
+                trace.DegradedReason = dinoResult.ErrorCode ?? "dino_degraded";
+                await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
+                detections.AddRange(deduplicator.AdvanceAll());
+                continue;
+            }
+
             if (dinoResult.Detections.Count == 0)
             {
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, 0, 0, frameSw.ElapsedMilliseconds, Skipped: false));
@@ -355,6 +374,19 @@ public sealed class MultiModelAnalysisService
             }
             var samMs = phaseSw.ElapsedMilliseconds;
             trace.SamMaskCount = samResult.Masks.Count;
+
+            // SAM-Teilverlust sichtbar machen: degraded=true heisst, Boxen gingen verloren
+            // (Predict-Fehler / ausserhalb Bild). Frame wird weiterverarbeitet (Masken existieren),
+            // aber als Review markiert, statt den Teilverlust still zu schlucken.
+            if (samResult.Degraded)
+            {
+                _logger.LogWarning("Frame {Frame}: SAM degraded – {Skipped}/{Requested} Boxen verloren (Review).",
+                    frameIndex, samResult.SkippedBoxes, samResult.RequestedBoxes);
+                progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                    $"Frame {frameIndex} – SAM degraded ({samResult.SkippedBoxes} Box(en) verloren) – Review nötig"));
+                trace.Degraded = true;
+                trace.DegradedReason = $"sam_skipped_{samResult.SkippedBoxes}_of_{samResult.RequestedBoxes}";
+            }
 
             // ── Step 4: Quantification ──
             var quantified = MaskQuantificationService.QuantifyAll(samResult, pipeDiameterMm);

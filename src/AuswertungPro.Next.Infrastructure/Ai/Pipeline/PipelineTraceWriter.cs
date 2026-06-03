@@ -110,6 +110,12 @@ public sealed class PipelineFrameTrace
     /// <summary>Bisher abgeschlossene Detections (laufende Summe).</summary>
     public int DetectionsTotal { get; set; }
 
-    /// <summary>Grund, falls (Teil-)Befunde verloren gehen: empty_frame, yolo_cls_normal, yolo_error, yolo_irrelevant, dino_error, dino_no_boxes, sam_error, image_quality_bad, all_findings_missing_code, no_findings.</summary>
+    /// <summary>Grund, falls (Teil-)Befunde verloren gehen: empty_frame, yolo_cls_normal, yolo_error, yolo_irrelevant, dino_error, dino_no_boxes, dino_degraded, sam_error, sam_degraded, image_quality_bad, all_findings_missing_code, no_findings.</summary>
     public string? DropReason { get; set; }
+
+    /// <summary>True, wenn der Sidecar einen degraded-Befund meldete (Modell-/Inferenzfehler bzw.
+    /// verlorene Boxen) -> der Frame ist KEIN sauberer Negativbefund, sondern Review-bedürftig.</summary>
+    public bool Degraded { get; set; }
+    /// <summary>Grund des degraded-Zustands (z. B. dino_inference_failed, sam_skipped_2_of_3).</summary>
+    public string? DegradedReason { get; set; }
 }
