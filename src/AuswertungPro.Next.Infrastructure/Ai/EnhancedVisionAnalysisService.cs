@@ -241,7 +241,7 @@ AUFGABEN:
 7. Gib fuer jeden Schaden den passenden VSA-Code als vsa_code_hint an.
 8. Wenn der exakte Untertyp eines ERKANNTEN Schadens unklar ist, verwende den passenden HAUPTCODE statt "???".
    Beispiele: Anschluss -> BCA, Bogen -> BCC, Ablagerung -> BBC.
-   ABER rate NIE ein Strukturmerkmal (BCD/BCE/BCA/BCC) nur aus Unsicherheit. Ohne klares Merkmal: KEIN Befund.
+   Strukturmerkmale (BCD/BCE/BCA/BCC) bei sichtbarem Merkmal vergeben, aber nicht aus blosser Unsicherheit raten.
 {contextSection}
 {observationHintsSection}
 {BuildDamageClassesPrompt()}
@@ -269,17 +269,17 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         sb.AppendLine("VSA-KEK-KATALOGAUSZUG (Code-Wahrheit aus aktivem Katalog):");
         sb.AppendLine();
 
-        sb.AppendLine("GRUNDSTRUKTUR DER HALTUNG (NUR bei klarem visuellem Beleg vergeben - NICHT raten!):");
-        AppendCodeLine(sb, codeCatalog, "BCD", "Rohranfang", "NUR wenn Einstiegsschacht sichtbar UND Kamera faehrt zu Beginn ins Rohr ein (Meter nahe 0)");
-        AppendCodeLine(sb, codeCatalog, "BCE", "Rohrende", "NUR wenn Zielschacht am Ende sichtbar ist");
+        sb.AppendLine("GRUNDSTRUKTUR DER HALTUNG (bei klarem Merkmal vergeben - aber nicht aus Unsicherheit raten):");
+        AppendCodeLine(sb, codeCatalog, "BCD", "Rohranfang", "wenn der Einstiegsschacht / die Schachtwand deutlich sichtbar ist und die Kamera ins Rohr einfaehrt");
+        AppendCodeLine(sb, codeCatalog, "BCE", "Rohrende", "wenn der Zielschacht / die Schachtwand am Ende deutlich sichtbar ist");
         AppendCodeLine(sb, codeCatalog, "BCA", "Seitlicher Anschluss", "klar sichtbare seitliche Rohroeffnung in der Kanalwand");
         AppendCodeLine(sb, codeCatalog, "BCAEB", "Anschluss eingespitzt, verschlossen", null);
         AppendCodeLine(sb, codeCatalog, "BAHC", "Anschluss unvollstaendig eingebunden", "Stutzen ragt in den Kanal hinein");
         AppendCodeLine(sb, codeCatalog, "BCC", "Bogen", "sichtbare Richtungsaenderung des Kanals");
         sb.AppendLine();
-        sb.AppendLine("WICHTIG gegen Falsch-Codierung: Ein dunkles Rohrinneres / der Fluchtpunkt in der Tiefe ist KEIN BCD.");
-        sb.AppendLine("Vergib BCD/BCE/BCA/BCC NUR bei eindeutigem Merkmal. Bist du unsicher, ob ueberhaupt ein");
-        sb.AppendLine("Strukturmerkmal vorliegt, gib dafuer KEINEN Code - lieber kein Befund als ein falscher Rohranfang.");
+        sb.AppendLine("ABGRENZUNG: Ein KLAR sichtbarer Einstiegs-/Zielschacht IST BCD bzw. BCE - den ruhig vergeben.");
+        sb.AppendLine("ABER ein bloss dunkles Rohrinneres / der Fluchtpunkt in der Tiefe OHNE sichtbaren Schacht");
+        sb.AppendLine("ist KEIN BCD. Nur im echten Zweifel ohne erkennbares Merkmal keinen Strukturcode raten.");
         sb.AppendLine();
 
         sb.AppendLine("STRUKTURELLE SCHAEDEN:");
