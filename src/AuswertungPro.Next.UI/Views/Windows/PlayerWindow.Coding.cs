@@ -2634,12 +2634,24 @@ public partial class PlayerWindow
 
     private void OnPipelineHealthChanged(object? sender, AuswertungPro.Next.Application.Ai.PipelineHealthStatus status)
     {
+        // Der Aufruf kommt aus dem Monitor-Loop (ThreadPool-Thread). Nach Window-Close
+        // oder Verlassen des Codiermodus duerfen keine UI-Controls mehr angefasst werden.
+        if (_closing || Dispatcher.HasShutdownStarted)
+            return;
+
         if (!Dispatcher.CheckAccess())
         {
-            Dispatcher.Invoke(() => ApplyPipelineHealth(status));
+            // Nicht-blockierend marshallen; im UI-Thread Zustand erneut pruefen.
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!_closing && _isCodingMode && _codingHealthMonitor != null)
+                    ApplyPipelineHealth(status);
+            }));
             return;
         }
-        ApplyPipelineHealth(status);
+
+        if (_isCodingMode && _codingHealthMonitor != null)
+            ApplyPipelineHealth(status);
     }
 
     /// <summary>

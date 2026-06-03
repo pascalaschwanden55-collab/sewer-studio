@@ -366,6 +366,7 @@ public partial class PlayerWindow
         _detectionCts?.Cancel();
         _codingAnalysisCts?.Cancel();
         StopLiveDetection();
+        StopPipelineHealthMonitor();
 
         // 3. Player vom VideoView trennen (verhindert D3D-Zugriff nach Dispose).
         try { if (VideoView != null) VideoView.MediaPlayer = null; } catch { }

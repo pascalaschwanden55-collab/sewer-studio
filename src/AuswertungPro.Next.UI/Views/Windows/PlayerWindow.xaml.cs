@@ -296,6 +296,7 @@ public partial class PlayerWindow : Window
 
             _quickScanCts?.Cancel();
             StopLiveDetection();
+            StopPipelineHealthMonitor();
             Cleanup();
 
             // Hauptfenster sichtbar machen und aktivieren
