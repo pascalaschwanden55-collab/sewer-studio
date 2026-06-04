@@ -20,4 +20,22 @@ public sealed class TrainingCenterSettings
     /// ReviewQueue (Grund: HumanReviewRequired). Default true = sicher fuer unbeaufsichtigte Nachtlaeufe.
     /// </summary>
     public bool RequireHumanReview { get; set; } = true;
+
+    /// <summary>
+    /// Wenn true, darf Auto-Gold nur entstehen, wenn die KB den KI-Code aktiv bestaetigt.
+    /// KbNoSignal bleibt Review. Default true = streng fuer unbeaufsichtigte Batch-Laeufe.
+    /// </summary>
+    public bool RequireKbAgreementForAutoGold { get; set; } = true;
+
+    /// <summary>
+    /// Mindestscore fuer Auto-Gold. Heute erreicht nur ExactMatch 1.0; der Wert bleibt als
+    /// Reserve fuer spaetere Lockerungen explizit konfigurierbar.
+    /// </summary>
+    public double AutoAcceptConfidenceThreshold { get; set; } = 1.0;
+
+    /// <summary>
+    /// Wenn true, werden per linearer Meter-zu-Zeit-Schaetzung erzeugte VideoFrames nie Auto-Gold.
+    /// Sie bleiben Review-Kandidaten, weil ihre Position nicht belastbar genug ist.
+    /// </summary>
+    public bool RequireReliableFramePositionForAutoGold { get; set; } = true;
 }

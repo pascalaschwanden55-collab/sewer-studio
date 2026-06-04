@@ -84,4 +84,86 @@ public sealed class SelfTrainingAutoAcceptPolicyTests
         Assert.Equal(KbIndexState.Pending, d.KbIndexState);
         Assert.False(d.RouteToReview);
     }
+
+    [Fact]
+    public void RequireKbAgreement_CleanExactWithAgreement_Approves()
+    {
+        var d = SelfTrainingAutoAcceptPolicy.Decide(
+            MatchLevel.ExactMatch,
+            requireHumanReview: false,
+            KbCheckResult.KbAgreement,
+            requireKbAgreement: true,
+            confidenceScore: 1.0,
+            confidenceThreshold: 1.0,
+            framePositionReliable: true);
+
+        Assert.Equal(TrainingSampleStatus.Approved, d.Status);
+        Assert.Equal(KbIndexState.Pending, d.KbIndexState);
+        Assert.False(d.RouteToReview);
+        Assert.Null(d.Reason);
+    }
+
+    [Fact]
+    public void RequireKbAgreement_CleanExactWithoutKbSignal_RoutesToReview()
+    {
+        var d = SelfTrainingAutoAcceptPolicy.Decide(
+            MatchLevel.ExactMatch,
+            requireHumanReview: false,
+            KbCheckResult.KbNoSignal,
+            requireKbAgreement: true,
+            confidenceScore: 1.0,
+            confidenceThreshold: 1.0,
+            framePositionReliable: true);
+
+        Assert.Equal(TrainingSampleStatus.New, d.Status);
+        Assert.Equal(KbIndexState.None, d.KbIndexState);
+        Assert.True(d.RouteToReview);
+        Assert.Equal(SelfTrainingAutoAcceptPolicy.KbAgreementRequiredReason, d.Reason);
+    }
+
+    [Fact]
+    public void ConfidenceBelowThreshold_RoutesToReview()
+    {
+        var d = SelfTrainingAutoAcceptPolicy.Decide(
+            MatchLevel.ExactMatch,
+            requireHumanReview: false,
+            KbCheckResult.KbAgreement,
+            requireKbAgreement: true,
+            confidenceScore: 0.99,
+            confidenceThreshold: 1.0,
+            framePositionReliable: true);
+
+        Assert.Equal(TrainingSampleStatus.New, d.Status);
+        Assert.Equal(KbIndexState.None, d.KbIndexState);
+        Assert.True(d.RouteToReview);
+        Assert.Equal(SelfTrainingAutoAcceptPolicy.ConfidenceInsufficientReason, d.Reason);
+    }
+
+    [Fact]
+    public void UnreliableFramePosition_RoutesToReview()
+    {
+        var d = SelfTrainingAutoAcceptPolicy.Decide(
+            MatchLevel.ExactMatch,
+            requireHumanReview: false,
+            KbCheckResult.KbAgreement,
+            requireKbAgreement: true,
+            confidenceScore: 1.0,
+            confidenceThreshold: 1.0,
+            framePositionReliable: false);
+
+        Assert.Equal(TrainingSampleStatus.New, d.Status);
+        Assert.Equal(KbIndexState.None, d.KbIndexState);
+        Assert.True(d.RouteToReview);
+        Assert.Equal(SelfTrainingAutoAcceptPolicy.FramePositionUnverifiedReason, d.Reason);
+    }
+
+    [Fact]
+    public void BackwardsCompatibleDefaults_StillApproveCleanExactWhenCalledOldWay()
+    {
+        var d = SelfTrainingAutoAcceptPolicy.Decide(MatchLevel.ExactMatch, requireHumanReview: false);
+
+        Assert.Equal(TrainingSampleStatus.Approved, d.Status);
+        Assert.Equal(KbIndexState.Pending, d.KbIndexState);
+        Assert.False(d.RouteToReview);
+    }
 }

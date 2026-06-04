@@ -313,8 +313,17 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             var eligibility = TrainingSampleEligibility.Evaluate(tc.InspectionDate);
             // Weg 1: KB-Abgleich (read-only) als zusaetzliches Signal; KB-Widerspruch -> Review.
             var kbCheck = await EvaluateKbAgreementAsync(comparison, entry, ct).ConfigureAwait(false);
+            var framePositionReliable = !_settings.RequireReliableFramePositionForAutoGold
+                || SelfTrainingFramePositionPolicy.IsReliable(usedVideoFallback, entry.Zeit.HasValue);
             // S2b: RequireHumanReview haelt auch saubere ExactMatches vom Auto-Gold/Index zurueck.
-            var decision = SelfTrainingAutoAcceptPolicy.Decide(comparison.Level, _settings.RequireHumanReview, kbCheck);
+            var decision = SelfTrainingAutoAcceptPolicy.Decide(
+                comparison.Level,
+                _settings.RequireHumanReview,
+                kbCheck,
+                _settings.RequireKbAgreementForAutoGold,
+                comparison.ConfidenceScore,
+                _settings.AutoAcceptConfidenceThreshold,
+                framePositionReliable);
             var sample = new TrainingSample
             {
                 SampleId = $"{tc.CaseId}_st_{i:D3}_{DateTime.UtcNow:HHmmss}",
