@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training;
@@ -397,8 +398,10 @@ public sealed class TrainingCenterImportService
 
     /// <summary>
     /// Extrahiert Beobachtungen aus dem Chunk-Text (Fretz-Format + Standard).
+    /// Unbekannte Codes werden am Parse-Eintritt verworfen, damit PDF-Freitext
+    /// nicht als Trainingslabel in den Batch gelangt.
     /// </summary>
-    private static List<ProtocolEntry> ExtractEntriesFromChunkText(string text)
+    internal static List<ProtocolEntry> ExtractEntriesFromChunkText(string text)
     {
         var entries = new List<ProtocolEntry>();
         if (string.IsNullOrWhiteSpace(text))
@@ -412,19 +415,22 @@ public sealed class TrainingCenterImportService
         foreach (Match m in fretzRx.Matches(text))
         {
             var code = m.Groups["code"].Value.Trim();
+            if (!VsaCodeValidator.IsKnownCode(code))
+                continue;
+
             var desc = m.Groups["text"].Value.Trim();
             if (double.TryParse(m.Groups["meter"].Value.Replace(',', '.'),
                     System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var meter))
             {
-                entries.Add(new ProtocolEntry(code, desc, meter));
+                entries.Add(new ProtocolEntry(code.Replace(".", "").ToUpperInvariant(), desc, meter));
             }
         }
 
         return entries;
     }
 
-    private sealed record ProtocolEntry(string Code, string Beschreibung, double MeterStart);
+    internal sealed record ProtocolEntry(string Code, string Beschreibung, double MeterStart);
 
     private static void WriteProtocolJson(string path, List<ProtocolEntry> entries, string haltungId, string pageRange)
     {
