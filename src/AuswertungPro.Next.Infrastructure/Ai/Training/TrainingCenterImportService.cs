@@ -41,8 +41,7 @@ public sealed class TrainingCenterImportService
                     continue;
 
                 var caseId = SafeRelativeId(rootFolder, folder);
-                var bestVideo = videos.Count > 0 ? PickBestVideo(videos, caseId) : "";
-                var bestProto = protos.Count > 0 ? PickBestProtocol(protos) ?? "" : "";
+                var (bestVideo, bestProto) = ResolvePair(videos, protos, caseId);
                 var inspectionDate = ResolveInspectionDate(folder, bestProto, bestVideo);
 
                 cases.Add(new TrainingCaseInput(
@@ -87,11 +86,9 @@ public sealed class TrainingCenterImportService
 
                 var videos = files.Where(f => VideoExts.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
                 var caseId = SafeRelativeId(rootFolder, folder);
-                var bestVideo = videos.Count > 0 ? PickBestVideo(videos, caseId) : "";
-
-                var proto = PickBestProtocol(protos);
-                var inspectionDate = ResolveInspectionDate(folder, proto ?? string.Empty, bestVideo);
-                if (proto is null) continue; // Nur Non-Protocol-Dateien → ueberspringen
+                var (bestVideo, proto) = ResolveProtocolOnlyPair(videos, protos, caseId);
+                var inspectionDate = ResolveInspectionDate(folder, proto, bestVideo);
+                if (string.IsNullOrWhiteSpace(proto)) continue; // Nur Non-Protocol-Dateien -> ueberspringen
 
                 cases.Add(new TrainingCaseInput(
                     CaseId: caseId,
@@ -238,6 +235,116 @@ public sealed class TrainingCenterImportService
 
         // XML als letzter Fallback
         return protos.FirstOrDefault(p => Path.GetExtension(p).Equals(".xml", StringComparison.OrdinalIgnoreCase));
+    }
+
+    internal static (string VideoPath, string ProtocolPath) ResolvePair(
+        IReadOnlyList<string> videos,
+        IReadOnlyList<string> protos,
+        string caseId)
+    {
+        return ResolvePairCore(videos, protos, caseId, preserveProtocolOnConflict: false);
+    }
+
+    internal static (string VideoPath, string ProtocolPath) ResolveProtocolOnlyPair(
+        IReadOnlyList<string> videos,
+        IReadOnlyList<string> protos,
+        string caseId)
+    {
+        return ResolvePairCore(videos, protos, caseId, preserveProtocolOnConflict: true);
+    }
+
+    private static (string VideoPath, string ProtocolPath) ResolvePairCore(
+        IReadOnlyList<string> videos,
+        IReadOnlyList<string> protos,
+        string caseId,
+        bool preserveProtocolOnConflict)
+    {
+        var videoList = videos.ToList();
+        var protoList = protos.ToList();
+
+        var bestVideo = videoList.Count > 0 ? PickBestVideo(videoList, caseId) : "";
+        var bestProto = protoList.Count > 0 ? PickBestProtocol(protoList) ?? "" : "";
+
+        if (videoList.Count <= 1 && protoList.Count <= 1)
+        {
+            return preserveProtocolOnConflict
+                ? DropContradiction(bestVideo, bestProto, caseId, preserveProtocolOnConflict: true)
+                : (bestVideo, bestProto);
+        }
+
+        var caseKey = EvalContaminationGuard.NormalizeHaltungKey(caseId);
+        var matchingVideo = PickVideoByHaltungKey(videoList, caseKey, caseId);
+        if (!string.IsNullOrWhiteSpace(matchingVideo))
+            bestVideo = matchingVideo;
+
+        var matchingProto = PickProtocolByHaltungKey(protoList, caseKey);
+        if (!string.IsNullOrWhiteSpace(matchingProto))
+            bestProto = matchingProto;
+
+        return DropContradiction(bestVideo, bestProto, caseId, preserveProtocolOnConflict);
+    }
+
+    private static string PickVideoByHaltungKey(List<string> videos, string? caseKey, string caseId)
+    {
+        if (string.IsNullOrWhiteSpace(caseKey))
+            return "";
+
+        var matches = videos
+            .Where(v => string.Equals(NormalizeFileHaltungKey(v), caseKey, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return matches.Count == 0 ? "" : PickBestVideo(matches, caseId);
+    }
+
+    private static string PickProtocolByHaltungKey(List<string> protos, string? caseKey)
+    {
+        if (string.IsNullOrWhiteSpace(caseKey))
+            return "";
+
+        var matches = protos
+            .Where(p => string.Equals(NormalizeFileHaltungKey(p), caseKey, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return matches.Count == 0 ? "" : PickBestProtocol(matches) ?? "";
+    }
+
+    private static (string VideoPath, string ProtocolPath) DropContradiction(
+        string videoPath,
+        string protocolPath,
+        string caseId,
+        bool preserveProtocolOnConflict)
+    {
+        if (string.IsNullOrWhiteSpace(videoPath) || string.IsNullOrWhiteSpace(protocolPath))
+            return (videoPath, protocolPath);
+
+        var videoKey = NormalizeFileHaltungKey(videoPath);
+        var protocolKey = NormalizeFileHaltungKey(protocolPath);
+        if (videoKey is null || protocolKey is null)
+            return (videoPath, protocolPath);
+
+        if (string.Equals(videoKey, protocolKey, StringComparison.OrdinalIgnoreCase))
+            return (videoPath, protocolPath);
+
+        if (preserveProtocolOnConflict)
+            return ("", protocolPath);
+
+        var caseKey = EvalContaminationGuard.NormalizeHaltungKey(caseId);
+        var videoMatchesCase = caseKey is not null
+            && string.Equals(videoKey, caseKey, StringComparison.OrdinalIgnoreCase);
+        var protocolMatchesCase = caseKey is not null
+            && string.Equals(protocolKey, caseKey, StringComparison.OrdinalIgnoreCase);
+
+        if (videoMatchesCase && !protocolMatchesCase)
+            return (videoPath, "");
+        if (protocolMatchesCase && !videoMatchesCase)
+            return ("", protocolPath);
+
+        return (videoPath, "");
+    }
+
+    private static string? NormalizeFileHaltungKey(string path)
+    {
+        return EvalContaminationGuard.NormalizeHaltungKey(Path.GetFileNameWithoutExtension(path));
     }
 
     // ── Haltungs-Verteilung ─────────────────────────────────────────────────
