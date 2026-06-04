@@ -494,8 +494,8 @@ public static class VsaCodeTree
 
     /// <summary>
     /// Prueft ob ein VSA-Code typischerweise ein Streckenschaden ist (requiresRange laut Katalog).
-    /// Typisch fuer: Risse laengs (BABA/BABAB), Korrosion (BAFA), Ablagerung (BBA), Infiltration (BBB),
-    /// Wasserrueckstau (BBBA), Wurzeleinwuchs (BBC), Inkrustation (BBD) etc.
+    /// Typisch fuer: Risse laengs (BABA/BABAB), Korrosion (BAFA), Wurzeln (BBA),
+    /// Anhaftende Stoffe (BBB), Ablagerungen Sohle (BBC), eindringender Boden (BBD) etc.
     /// </summary>
     private static readonly HashSet<string> StreckenschadenCodes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -517,18 +517,18 @@ public static class VsaCodeTree
         "BAG",    // Verformung allgemein
         "BAGA",   // Verformung - Deformation
         // BB: Betriebliche Schaeden
-        "BBA",    // Ablagerung (hart/weich)
-        "BBAA",   // Ablagerung - fein
-        "BBAB",   // Ablagerung - grob
-        "BBB",    // Eindringendes Wasser / Infiltration
-        "BBBA",   // Infiltration - Wasserrueckstau
-        "BBC",    // Wurzeleinwuchs
-        "BBCA",   // Wurzeleinwuchs - fein
-        "BBCB",   // Wurzeleinwuchs - einzeln
-        "BBCC",   // Wurzeleinwuchs - verwachsen
-        "BBD",    // Anhaftung / Inkrustation
-        "BBDA",   // Inkrustation - Sintertropfen
-        "BBDB",   // Inkrustation - Sinterschicht
+        "BBA",    // Wurzeln
+        "BBAA",   // Wurzeln - Pfahlwurzel
+        "BBAB",   // Wurzeln - feiner Einwuchs
+        "BBB",    // Anhaftende Stoffe
+        "BBBA",   // Anhaftende Stoffe - Inkrustation
+        "BBC",    // Ablagerungen Sohle
+        "BBCA",   // Ablagerungen Sohle - Sand
+        "BBCB",   // Ablagerungen Sohle - Kies
+        "BBCC",   // Ablagerungen Sohle - Hart
+        "BBD",    // Eindringen Boden
+        "BBDA",   // Eindringen Boden - Sand
+        "BBDB",   // Eindringen Boden - Humus
     };
 
     public static bool IsStreckenschadenCode(string code)

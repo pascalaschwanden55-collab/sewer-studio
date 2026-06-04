@@ -333,6 +333,8 @@ public static class VsaCodeResolver
         return false;
     }
 
+    // Bedeutungen der BB-Codes kommen aus VsaCodeTree.Groups["BB"]; dieses Set ist nur
+    // eine Streckenschaden-Heuristik und darf keine umetikettierten Fachbedeutungen tragen.
     private static readonly HashSet<string> StreckenschadenCodes = new(StringComparer.OrdinalIgnoreCase)
     {
         "BABA", "BABAB", "BABAC", "BABB", "BABBA", "BABBB", "BABBC",
