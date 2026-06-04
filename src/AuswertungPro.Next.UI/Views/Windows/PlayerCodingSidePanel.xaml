@@ -12,14 +12,21 @@
                               HorizontalScrollBarVisibility="Disabled">
                     <StackPanel>
 
-                        <!-- == 1. QualityGate kompakt (eine Zeile) == -->
+                        <!-- == 1. Legende: Punkt = Pruef-Status, % = Konfidenz == -->
                         <WrapPanel Orientation="Horizontal" Margin="0,0,0,4">
-                            <Border Width="8" Height="8" CornerRadius="2" Background="#22C55E" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#x2265;85%" FontSize="9" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                            <Border Width="8" Height="8" CornerRadius="2" Background="#F59E0B" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="60-85%" FontSize="9" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                            <Border Width="8" Height="8" CornerRadius="2" Background="#EF4444" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="&lt;60%" FontSize="9" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Punkt:" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                            <Border Width="8" Height="8" CornerRadius="4" Background="#94A3B8" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="offen" FontSize="9" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <Border Width="8" Height="8" CornerRadius="4" Background="#22C55E" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="akzeptiert" FontSize="9" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <Border Width="8" Height="8" CornerRadius="4" Background="#3B82F6" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="bearbeitet" FontSize="9" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <Border Width="8" Height="8" CornerRadius="4" Background="#EF4444" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="abgelehnt" FontSize="9" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="%=Konfidenz:" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#x2265;85" FontSize="9" FontWeight="SemiBold" Foreground="#22C55E" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="60-85" FontSize="9" FontWeight="SemiBold" Foreground="#F59E0B" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="&lt;60" FontSize="9" FontWeight="SemiBold" Foreground="#EF4444" Margin="0,0,10,0" VerticalAlignment="Center"/>
                             <TextBlock x:Name="TxtQualityGateStatus" FontSize="9" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                         </WrapPanel>

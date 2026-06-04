@@ -2314,8 +2314,10 @@ public partial class PlayerWindow
             if (LstCodingEvents.ItemContainerGenerator.ContainerFromIndex(i) is not ListBoxItem container) continue;
             if (LstCodingEvents.Items[i] is not CodingEvent ev) continue;
 
-            // Zone-Dot einfaerben: Status hat Vorrang vor Konfidenz
-            // Akzeptiert = gruen, Abgelehnt = rot, sonst Konfidenz-Farbe
+            // Zone-Dot einfaerben: Der Punkt zeigt NUR den Pruef-Status, die Konfidenz steht
+            // als farbige Prozentzahl daneben (TxtConfidence). "Offen/noch nicht entschieden"
+            // = grau, damit der Punkt nicht mehr mit der Konfidenz-Ampel verwechselt wird
+            // (frueher faerbte er offene Befunde nach Konfidenz -> alle gleich orange).
             var zoneDot = FindCodingChild<System.Windows.Shapes.Ellipse>(container, "ZoneDot");
             if (zoneDot != null)
             {
@@ -2323,14 +2325,12 @@ public partial class PlayerWindow
                 zoneDot.Fill = status switch
                 {
                     DefectStatus.Accepted or DefectStatus.AutoAccepted
-                        => new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)), // Gruen
+                        => new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)), // Gruen = akzeptiert
                     DefectStatus.AcceptedWithEdit
-                        => new SolidColorBrush(Color.FromRgb(0x3B, 0x82, 0xF6)), // Blau
+                        => new SolidColorBrush(Color.FromRgb(0x3B, 0x82, 0xF6)), // Blau = bearbeitet
                     DefectStatus.Rejected
-                        => new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44)), // Rot
-                    _ => ev.AiContext != null
-                        ? CodingSessionViewModel.GetConfidenceBrush(ev.AiContext.Confidence)
-                        : new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8))   // Grau (unbestaetigt)
+                        => new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44)), // Rot = abgelehnt
+                    _ => new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8))    // Grau = offen
                 };
             }
 
