@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Domain.VsaCatalog;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
@@ -63,6 +64,13 @@ public sealed class PdfProtocolExtractor
     private static readonly Regex BildberichtVideoPattern = new(
         @"^\s*Video\s+(?<time>\d{2}:\d{2}:\d{2})\s*$",
         RegexOptions.Compiled | RegexOptions.Multiline);
+
+    // Bildbericht 2025 (IBAK), 2-spaltig INLINE: "Foto 082 Zustand BCD Entf. in Flie?r. 0.00 m"
+    // Code UND Meter stehen in EINER Zeile; pro Zeile zwei Spalten -> globale Suche (mehrere Treffer).
+    // "Flie.{1,2}r" faengt "Fließr"/"Flie¦r" (Font-Encoding) ab; "in" ODER "gegen" Flie?r.
+    private static readonly Regex BildberichtInlinePattern = new(
+        $@"Foto\s+\d+\s+Zustand\s+(?<code>{CodePattern})\s+Entf\.?\s+(?:in|gegen)\s+Flie.{{1,2}}r\.?\s+(?<meter>\d{{1,4}}[.,]\d{{1,3}})\s*m",
+        RegexOptions.Compiled);
 
     // Fallback: "12.45 BAB B Querriss..." oder "@12.45m BAB Querriss"
     private static readonly Regex EntryPattern = new(
@@ -146,6 +154,7 @@ public sealed class PdfProtocolExtractor
             return null;
 
         var code = e.TryGetProperty("Code", out var c) ? c.GetString() : null;
+        code = NormalizeKnownVsaCode(code);
         if (string.IsNullOrWhiteSpace(code)) return null;
 
         var text  = e.TryGetProperty("Beschreibung", out var t) ? t.GetString() ?? "" : "";
@@ -508,6 +517,11 @@ public sealed class PdfProtocolExtractor
         if (results.Count > 0)
             return results;
 
+        // Strategie 4a: IBAK-2025-"Haltungsbildbericht" (2-spaltig inline) — Code+Meter in einer Zeile.
+        results = ParseInlineBildbericht(text);
+        if (results.Count > 0)
+            return results;
+
         // Strategie 4: Bildbericht (Label-Value Blöcke)
         results = ParseBildberichtBlocks(text, seen);
         if (results.Count > 0)
@@ -547,6 +561,32 @@ public sealed class PdfProtocolExtractor
                 if (entry is not null && seen.Add(Sig(entry)))
                     results.Add(entry);
             }
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Strategie 4a: IBAK-2025-"Haltungsbildbericht" (2-spaltig inline).
+    /// Eine Zeile enthaelt zwei "Foto NNN Zustand CODE Entf. in Flie?r. METER m"-Bloecke.
+    /// Liefert Code + Meter je Treffer; im 2-Spalten-Layout ist die Beschreibung nicht eindeutig
+    /// zuordenbar -> BuildEntryDirect setzt den Code als Text-Fallback. BuildEntryDirect validiert
+    /// den Code (NormalizeKnownVsaCode) und entfernt die Punkte (BAF.B.E -> BAFBE).
+    /// </summary>
+    internal static List<GroundTruthEntry> ParseInlineBildbericht(string text)
+    {
+        var results = new List<GroundTruthEntry>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (Match m in BildberichtInlinePattern.Matches(text))
+        {
+            var meter = double.TryParse(
+                m.Groups["meter"].Value.Replace(',', '.'),
+                NumberStyles.Float, CultureInfo.InvariantCulture, out var mv) ? mv : 0.0;
+
+            var entry = BuildEntryDirect(meter, meter, m.Groups["code"].Value, "", null);
+            if (entry is not null && seen.Add(Sig(entry)))
+                results.Add(entry);
         }
 
         return results;
@@ -644,8 +684,9 @@ public sealed class PdfProtocolExtractor
         if (!TryParseMeter(meterEndRaw, out var mEnd)) mEnd = mStart;
         if (mEnd < mStart) mEnd = mStart;
 
-        code = code.Trim().ToUpperInvariant();
-        if (code.Length < 2 || code.Length > 8) return null;
+        var normalizedCode = NormalizeKnownVsaCode(code);
+        if (normalizedCode is null) return null;
+        code = normalizedCode;
 
         text = text.Trim();
         if (text.Length < 2) return null;
@@ -680,8 +721,9 @@ public sealed class PdfProtocolExtractor
         double meterStart, double meterEnd,
         string code, string text, TimeSpan? zeit)
     {
-        code = code.Trim().ToUpperInvariant();
-        if (code.Length < 2 || code.Length > 8) return null;
+        var normalizedCode = NormalizeKnownVsaCode(code);
+        if (normalizedCode is null) return null;
+        code = normalizedCode;
 
         text = text.Trim();
         if (text.Length < 2) text = code; // Fallback: Code als Beschreibung
@@ -772,6 +814,14 @@ public sealed class PdfProtocolExtractor
         if (string.IsNullOrWhiteSpace(raw)) { value = 0; return false; }
         return double.TryParse(raw.Replace(',', '.'), NumberStyles.Float,
             CultureInfo.InvariantCulture, out value);
+    }
+
+    private static string? NormalizeKnownVsaCode(string? code)
+    {
+        if (!VsaCodeValidator.IsKnownCode(code))
+            return null;
+
+        return code!.Trim().Replace(".", "").ToUpperInvariant();
     }
 
     private static string Sig(GroundTruthEntry e)
