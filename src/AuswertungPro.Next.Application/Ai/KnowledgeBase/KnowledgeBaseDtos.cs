@@ -6,13 +6,15 @@ namespace AuswertungPro.Next.Application.Ai.KnowledgeBase;
 /// <param name="Beschreibung">Protokolltext.</param>
 /// <param name="MeterStart">Meterposition Beginn.</param>
 /// <param name="MeterEnd">Meterposition Ende.</param>
+/// <param name="QualityGateLevel">QualityGate-Stufe ("Green"/"Yellow"/"Red", leer = unbekannt) — steuert die Retrieval-Gewichtung.</param>
 public sealed record SampleRecord(
     string SampleId,
     string CaseId,
     string VsaCode,
     string Beschreibung,
     double MeterStart,
-    double MeterEnd);
+    double MeterEnd,
+    string QualityGateLevel = "");
 
 /// <summary>Ein Retrieval-Ergebnis mit Ähnlichkeitswert.</summary>
 public sealed record RetrievalResult(SampleRecord Sample, double Score);

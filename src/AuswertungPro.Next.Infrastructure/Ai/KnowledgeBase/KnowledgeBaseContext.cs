@@ -81,6 +81,11 @@ public sealed class KnowledgeBaseContext : IDisposable
         // Migration: SourceType-Spalte hinzufuegen (bestehende DBs upgraden)
         MigrateAddColumn("Samples", "SourceType", "TEXT NOT NULL DEFAULT ''");
 
+        // Migration: QualityGateLevel ("Green"/"Yellow"/"Red") fuer qualitaetsbewusstes Retrieval.
+        // Bestands-DBs wurden von aelteren Versionen bereits befuellt; hier nur sicherstellen, dass
+        // die Spalte existiert, damit das SELECT in RetrievalService auf frischen DBs nicht bricht.
+        MigrateAddColumn("Samples", "QualityGateLevel", "TEXT NOT NULL DEFAULT ''");
+
         // Index für schnelle Code-Suche
         ExecuteNonQuery("""
             CREATE INDEX IF NOT EXISTS idx_samples_code
