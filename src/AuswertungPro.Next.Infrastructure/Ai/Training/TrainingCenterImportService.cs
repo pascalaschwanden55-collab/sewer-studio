@@ -275,7 +275,15 @@ public sealed class TrainingCenterImportService
         var caseKey = EvalContaminationGuard.NormalizeHaltungKey(caseId);
         var matchingVideo = PickVideoByHaltungKey(videoList, caseKey, caseId);
         if (!string.IsNullOrWhiteSpace(matchingVideo))
+        {
             bestVideo = matchingVideo;
+        }
+        else if (videoList.Count > 1)
+        {
+            // Mehrere Videos ohne eindeutigen Haltungs-Treffer sind unsicher.
+            // Lieber kein Video verwenden als das groesste falsche Video koppeln.
+            bestVideo = "";
+        }
 
         var matchingProto = PickProtocolByHaltungKey(protoList, caseKey);
         if (!string.IsNullOrWhiteSpace(matchingProto))

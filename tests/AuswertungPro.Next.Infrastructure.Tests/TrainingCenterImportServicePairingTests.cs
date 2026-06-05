@@ -33,6 +33,20 @@ public sealed class TrainingCenterImportServicePairingTests : IDisposable
     }
 
     [Fact]
+    public void ResolvePair_clears_video_when_multiple_videos_have_no_haltung_match()
+    {
+        var firstVideo = WriteFile("kamera_aufnahme_a.mp4", 10);
+        var largeWrongVideo = WriteFile("kamera_aufnahme_b.mp4", 200);
+        var proto = WriteFile("bericht.pdf", 10);
+
+        var pair = TrainingCenterImportService.ResolvePair(
+            [firstVideo, largeWrongVideo], [proto], "24379-41412");
+
+        Assert.Equal("", pair.VideoPath);
+        Assert.Equal(proto, pair.ProtocolPath);
+    }
+
+    [Fact]
     public void ResolvePair_prefers_id_matching_protocol_over_best_protocol_keyword()
     {
         var video = WriteFile("H_24379-41412.mp4", 10);
