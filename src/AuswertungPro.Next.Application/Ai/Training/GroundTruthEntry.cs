@@ -50,4 +50,10 @@ public sealed record GroundTruthEntry
     /// Wird als Frame verwendet wenn kein Video vorhanden ist.
     /// </summary>
     public string? ExtractedFramePath { get; init; }
+
+    /// <summary>
+    /// Tatsachlicher Video-Zeitpunkt des extrahierten Frames.
+    /// Kann aus Protokoll-Zeit oder linearer Schaetzung stammen.
+    /// </summary>
+    public double? ExtractedFrameTimeSeconds { get; init; }
 }

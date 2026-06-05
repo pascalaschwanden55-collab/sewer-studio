@@ -53,6 +53,29 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     public void Pause() => _pauseGate.Reset();
     public void Resume() => _pauseGate.Set();
 
+    internal static GroundTruthEntry AttachExtractedVideoFrame(
+        GroundTruthEntry entry,
+        string framePath,
+        double timeSeconds)
+        => entry with
+        {
+            ExtractedFramePath = framePath,
+            ExtractedFrameTimeSeconds = Math.Max(0, timeSeconds)
+        };
+
+    /// <summary>
+    /// Groesster Meterwert aus den Protokoll-Eintraegen fuer die lineare Meter->Zeit-Interpolation.
+    /// Leer-/0-sicher: leere Liste oder ausschliesslich 0-Meter -> 100.0. Verhindert die
+    /// "Sequence contains no elements"-Exception (Max auf leerer Liste) und Division durch 0.
+    /// </summary>
+    internal static double ComputeMaxMeter(IReadOnlyList<GroundTruthEntry> entries)
+    {
+        if (entries is null || entries.Count == 0)
+            return 100.0;
+        var max = entries.Max(e => Math.Max(e.MeterStart, e.MeterEnd));
+        return max <= 0 ? 100.0 : max;
+    }
+
     /// <summary>
     /// Weg 1: liest (read-only) die KB-Nachbarn zum Protokolltext und vergleicht deren Mehrheits-Code
     /// mit dem KI-Code. Defensiv: kein Retrieval injiziert ODER Fehler -> KbNoSignal (kein Block).
@@ -114,6 +137,17 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             0, allEntries.Count, "", 0, SelfTrainingStage.BuildingTimeline, null, null, null,
             $"{allEntries.Count} Protokoll-Eintraege gefunden"));
 
+        // Kein einziger (gueltiger) Protokoll-Eintrag -> nichts zu trainieren. Frueh + sauber
+        // zurueck, BEVOR der Video-Fallback (ComputeMaxMeter/Max) ueberhaupt erreicht wird.
+        // Tritt z.B. bei Sanierungs-PDFs auf, deren Codes der VsaCodeValidator alle verwirft.
+        if (allEntries.Count == 0)
+        {
+            progress.Report(new SelfTrainingStep(
+                0, 0, "", 0, SelfTrainingStage.Completed, null, null, null,
+                "Keine Protokoll-Eintraege erkannt — uebersprungen (kein Training)."));
+            return new SelfTrainingResult(tc.CaseId, 0, 0, 0, 0, 0, null, sw.Elapsed, 0);
+        }
+
         // Eintraege mit Foto behalten
         var entries = allEntries
             .Where(e => !string.IsNullOrEmpty(e.ExtractedFramePath)
@@ -135,9 +169,8 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             var probeResult = await probe.ProbeAsync(tc.VideoPath, ct);
             double videoDuration = probeResult.Success ? probeResult.DurationSeconds : 300.0;
 
-            // Max-Meter aus Protokoll fuer lineare Interpolation
-            double maxMeter = allEntries.Max(e => Math.Max(e.MeterStart, e.MeterEnd));
-            if (maxMeter <= 0) maxMeter = 100.0;
+            // Max-Meter aus Protokoll fuer lineare Interpolation (leer-/0-sicher)
+            double maxMeter = ComputeMaxMeter(allEntries);
 
             progress.Report(new SelfTrainingStep(
                 0, allEntries.Count, "", 0, SelfTrainingStage.ExtractingFrame, null, null, null,
@@ -171,7 +204,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
 
                 if (framePath is not null)
                 {
-                    videoEntries.Add(entry with { ExtractedFramePath = framePath });
+                    videoEntries.Add(AttachExtractedVideoFrame(entry, framePath, timeSec));
 
                     progress.Report(new SelfTrainingStep(
                         i, allEntries.Count, entry.VsaCode, entry.MeterStart,
@@ -333,7 +366,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                 MeterStart = Math.Round(entry.MeterStart, 1),
                 MeterEnd = Math.Round(entry.MeterEnd, 1),
                 IsStreckenschaden = entry.IsStreckenschaden,
-                TimeSeconds = 0,
+                TimeSeconds = entry.ExtractedFrameTimeSeconds ?? entry.Zeit?.TotalSeconds ?? 0,
                 DetectedMeter = analysis.Meter,
                 MeterSource = "Protokoll",
                 FramePath = framePath,
