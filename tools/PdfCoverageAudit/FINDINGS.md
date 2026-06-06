@@ -3,7 +3,15 @@
 Lauf des **echten** `PdfProtocolExtractor` (Training-Parser) ueber `D:\Haltungen`
 + `H:\02_Sanierung_Abnahmedoku_Kunde_25100490`.
 
-## Gesamt
+## Ergebnis nach den Fixes (Stand 2026-06-06)
+- Ausgangslage: 1.534 erkannt (81,5 %), 348 leer.
+- Nach **Pallon** (+68) und **Alt-Fretz 2017** (+75): **1.677 erkannt (89,1 %)**,
+  205 leer, 0 Abstuerze, keine Regression.
+- Verbleibende 205 "leer" sind groesstenteils KORREKT leer (DP/Plan/Stammdaten/0,00m)
+  oder brauchen OCR (gescannt). Alle werden nun in `_pdf_ohne_befunde.log` mit Grund
+  protokolliert (keine stillen Fehler mehr).
+
+## Ausgangslage (erster Lauf)
 - **1.882 PDFs**, **1.534 erkannt (81,5 %)**, **348 mit 0 Befunden**, **0 Abstuerze**.
 - Wichtig: `ExtractFromPdf` schluckt Fehler und gibt leer zurueck
   (`PdfProtocolExtractor.cs` catch → `Array.Empty`). „0 Befunde" heisst also
