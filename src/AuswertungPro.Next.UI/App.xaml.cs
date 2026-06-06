@@ -36,6 +36,9 @@ namespace AuswertungPro.Next.UI
         private static int _handlingException;
         private LiveControlServer? _liveControlServer;
 
+        // Tageslogs aelter als dieser Wert werden beim Start geloescht (Aufbewahrung).
+        private const int LogRetentionDays = 60;
+
         public static IServiceProvider Services
             => _services ?? throw new InvalidOperationException("Services are not initialized.");
 
@@ -61,6 +64,8 @@ namespace AuswertungPro.Next.UI
                 // Logging
                 var logDir = Path.Combine(AppSettings.AppDataDir, "logs");
                 Directory.CreateDirectory(logDir);
+                // Aufbewahrung: alte Tageslogs entsorgen, damit der Log-Ordner nicht unbegrenzt waechst.
+                FileLoggerProvider.CleanupOldLogs(logDir, LogRetentionDays);
                 logPath = Path.Combine(logDir, $"app-{DateTime.Now:yyyyMMdd}.log");
                 var loggerFactory = LoggerFactory.Create(b =>
                 {

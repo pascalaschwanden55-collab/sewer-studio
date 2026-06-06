@@ -14,6 +14,39 @@ public sealed class FileLoggerProvider : ILoggerProvider
 
     public void Dispose() { }
 
+    /// <summary>
+    /// Loescht alte Tageslogs (app-*.log), die aelter als <paramref name="retentionDays"/> Tage sind.
+    /// Verhindert unbegrenztes Anwachsen des Log-Ordners. Best-effort: Fehler werden geschluckt,
+    /// der App-Start darf daran niemals scheitern. Das aktuelle Tageslog bleibt immer erhalten,
+    /// weil dessen letzte Schreibzeit innerhalb des Aufbewahrungsfensters liegt.
+    /// </summary>
+    public static void CleanupOldLogs(string logDir, int retentionDays)
+    {
+        try
+        {
+            if (retentionDays <= 0 || !Directory.Exists(logDir))
+                return;
+
+            var cutoff = DateTime.Now.AddDays(-retentionDays);
+            foreach (var file in Directory.EnumerateFiles(logDir, "app-*.log"))
+            {
+                try
+                {
+                    if (File.GetLastWriteTime(file) < cutoff)
+                        File.Delete(file);
+                }
+                catch
+                {
+                    // Einzelne Datei gesperrt/verschwunden - ueberspringen, nicht abbrechen.
+                }
+            }
+        }
+        catch
+        {
+            // Verzeichnis-Enumeration fehlgeschlagen - Retention ist nur best-effort.
+        }
+    }
+
     private sealed class FileLogger : ILogger
     {
         private readonly string _path;
