@@ -3,5 +3,9 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Reproduzierbare Restores: schreibt/aktualisiert pro Projekt eine packages.lock.json.
+         Lokal reibungslos (Restore aktualisiert die Lock-Datei automatisch); ein erzwungener
+         Locked-Mode wuerde nur in einer CI genutzt (Restore mit Locked-Mode-Flag). -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 </Project>
