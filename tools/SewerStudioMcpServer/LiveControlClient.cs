@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -48,8 +49,8 @@ public static class LiveControlClient
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
             using var request = new HttpRequestMessage(method, url);
 
-            // Optionaler Token (gleiche Env-Var wie der Server) - nur senden wenn gesetzt.
-            var token = Environment.GetEnvironmentVariable("SEWERSTUDIO_LIVE_CONTROL_TOKEN");
+            // Token: bevorzugt aus der Env-Var, sonst aus der vom App-Server erzeugten Token-Datei.
+            var token = ResolveToken();
             if (!string.IsNullOrWhiteSpace(token))
                 request.Headers.TryAddWithoutValidation("X-Live-Control-Token", token);
 
@@ -77,6 +78,34 @@ public static class LiveControlClient
                 error = ex.Message
             };
         }
+    }
+
+    /// <summary>
+    /// Live-Control-Token ermitteln: zuerst Env-Var, sonst die vom App-Server angelegte Token-Datei
+    /// (gleicher Pfad wie AppSettings.AppDataDir + ".live_control_token").
+    /// </summary>
+    private static string? ResolveToken()
+    {
+        var envToken = Environment.GetEnvironmentVariable("SEWERSTUDIO_LIVE_CONTROL_TOKEN");
+        if (!string.IsNullOrWhiteSpace(envToken))
+            return envToken;
+
+        try
+        {
+            var overridePath = Environment.GetEnvironmentVariable("SEWERSTUDIO_APPDATA_DIR");
+            var dir = string.IsNullOrWhiteSpace(overridePath)
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SewerStudio")
+                : overridePath;
+            var path = Path.Combine(dir, ".live_control_token");
+            if (File.Exists(path))
+                return File.ReadAllText(path).Trim();
+        }
+        catch
+        {
+            // Token-Datei nicht lesbar - ohne Token senden (Server antwortet dann 401).
+        }
+
+        return null;
     }
 
     private static Uri BuildUrl(string liveControlUrl, string path)

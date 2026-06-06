@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
@@ -57,10 +58,55 @@ public sealed class LiveControlServer : IDisposable
             ? parsed
             : 8765;
 
-        var token = Environment.GetEnvironmentVariable("SEWERSTUDIO_LIVE_CONTROL_TOKEN");
+        // Pflicht-Token: ist keiner per Env gesetzt, erzeugen wir einen sicheren Zufallstoken und
+        // legen ihn in einer Datei ab, die der lokale Aufrufer (MCP-Server) liest. So laeuft
+        // Live-Control nie ohne Auth - frueher war der Token null, womit die Pruefung uebersprungen wurde.
+        var token = ResolveOrCreateToken(logger);
         var server = new LiveControlServer(app, app.Dispatcher, logger, port, token);
         server.Start();
         return server;
+    }
+
+    /// <summary>
+    /// Pfad der Token-Datei im AppData-Verzeichnis (gleiche Ableitung wie AppSettings.AppDataDir),
+    /// damit der MCP-Client exakt denselben Pfad berechnen kann.
+    /// </summary>
+    internal static string TokenFilePath
+    {
+        get
+        {
+            var overridePath = Environment.GetEnvironmentVariable("SEWERSTUDIO_APPDATA_DIR");
+            var dir = string.IsNullOrWhiteSpace(overridePath)
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.ProductName)
+                : overridePath;
+            return Path.Combine(dir, ".live_control_token");
+        }
+    }
+
+    /// <summary>
+    /// Ermittelt den Live-Control-Token: bevorzugt aus der Env-Var, sonst wird ein neuer erzeugt
+    /// und in <see cref="TokenFilePath"/> abgelegt. Gibt nie null/leer zurueck -> Auth ist immer aktiv.
+    /// </summary>
+    private static string ResolveOrCreateToken(ILogger logger)
+    {
+        var envToken = Environment.GetEnvironmentVariable("SEWERSTUDIO_LIVE_CONTROL_TOKEN");
+        if (!string.IsNullOrWhiteSpace(envToken))
+            return envToken;
+
+        var generated = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+        try
+        {
+            var path = TokenFilePath;
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, generated);
+            logger.LogInformation("Live-Control-Token automatisch erzeugt und abgelegt: {Path}", path);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Live-Control-Token konnte nicht gespeichert werden - Auth bleibt aktiv, lokaler Client muss den Env-Token nutzen.");
+        }
+
+        return generated;
     }
 
     public void Start()
@@ -171,8 +217,11 @@ public sealed class LiveControlServer : IDisposable
 
     private async Task<LiveHttpResponse> DispatchAsync(LiveHttpRequest request)
     {
-        // Optionaler Token: wenn konfiguriert, muss jeder Request ihn mitschicken.
-        if (_token is not null && !string.Equals(request.Token, _token, StringComparison.Ordinal))
+        // Pflicht-Token mit zeitkonstantem Vergleich (gegen Timing-Angriffe). _token ist beim Start
+        // immer gesetzt (Env oder automatisch erzeugt), daher gibt es keinen Auth-freien Pfad mehr.
+        var expectedToken = Encoding.UTF8.GetBytes(_token ?? "");
+        var providedToken = Encoding.UTF8.GetBytes(request.Token ?? "");
+        if (!CryptographicOperations.FixedTimeEquals(expectedToken, providedToken))
             return new LiveHttpResponse(401, new { ok = false, error = "Live-Control-Token fehlt oder ist falsch." });
 
         if (request.Method == "GET" && request.Path == "/health")
