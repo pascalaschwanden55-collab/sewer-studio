@@ -72,6 +72,13 @@ public sealed class PdfProtocolExtractor
         $@"Foto\s+\d+\s+Zustand\s+(?<code>{CodePattern})\s+Entf\.?\s+(?:in|gegen)\s+Flie.{{1,2}}r\.?\s+(?<meter>\d{{1,4}}[.,]\d{{1,3}})\s*m",
         RegexOptions.Compiled);
 
+    // Pallon-Format (app.pallon.com): "[Meter]  HH:MM:SS  CODE  Text  [Uhr]  [Foto]"
+    // Reihenfolge: Meter ZUERST, dann ZEIT, dann CODE (anders als alle anderen Formate).
+    // Meter ist optional - Folgezeilen ohne Meter erben den vorherigen Meter.
+    private static readonly Regex PallonTablePattern = new(
+        $@"^[ \t]*(?:(?<meter>\d{{1,4}}[.,]\d{{1,3}})[ \t]+)?(?<time>\d{{2}}:\d{{2}}:\d{{2}})[ \t]+(?<code>{CodePattern})[ \t]+(?<text>[^\r\n]+)",
+        RegexOptions.Compiled | RegexOptions.Multiline);
+
     // Fallback: "12.45 BAB B Querriss..." oder "@12.45m BAB Querriss"
     private static readonly Regex EntryPattern = new(
         $@"@?(?<m1>\d{{1,4}}[.,]\d{{1,3}})\s*m?\s*[-–]?\s*(?<m2>\d{{1,4}}[.,]\d{{1,3}})?\s*m?\s+(?<code>{CodePattern})(?:\s+(?<char>[ABCD]))?\s+(?<text>[^\r\n]{{3,}})",
@@ -514,6 +521,36 @@ public sealed class PdfProtocolExtractor
                 results.Add(entry);
         }
 
+        if (results.Count > 0)
+            return results;
+
+        // Strategie 3b: Pallon-Format ("[Meter]  ZEIT  CODE  Text") - Zeit VOR Code, Meter optional.
+        // Laeuft nur, wenn Strategie 1-3 nichts fanden -> keine Auswirkung auf bereits erkannte PDFs.
+        {
+            double lastPallonMeter = 0.0;
+            foreach (Match m in PallonTablePattern.Matches(text))
+            {
+                double meter;
+                if (m.Groups["meter"].Success && TryParseMeter(m.Groups["meter"].Value, out var pm))
+                {
+                    meter = pm;
+                    lastPallonMeter = pm;
+                }
+                else
+                {
+                    meter = lastPallonMeter; // Folgezeile ohne Meter -> vorherigen Meter erben
+                }
+
+                var entry = BuildEntryDirect(
+                    meter, meter,
+                    m.Groups["code"].Value,
+                    m.Groups["text"].Value,
+                    ParseTimestamp(m.Groups["time"].Value));
+
+                if (entry is not null && seen.Add(Sig(entry)))
+                    results.Add(entry);
+            }
+        }
         if (results.Count > 0)
             return results;
 
