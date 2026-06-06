@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 async def export_yolo(req: TrainingExportRequest) -> TrainingExportResponse:
     """Export training samples to YOLO format (images + labels + data.yaml)."""
     out = _resolve_output_dir(req.output_dir)
-    decoded_images = [_decode_training_image(sample.image_base64) for sample in req.samples]
 
     img_train = out / "images" / "train"
     img_val = out / "images" / "val"
@@ -53,8 +52,9 @@ async def export_yolo(req: TrainingExportRequest) -> TrainingExportResponse:
         img_dir = img_train if is_train else img_val
         lbl_dir = lbl_train if is_train else lbl_val
 
-        # Save image
-        img = decoded_images[i]
+        # Save image - jedes Bild erst hier dekodieren (lazy), damit nie alle Bilder
+        # gleichzeitig im RAM liegen (vermeidet RAM-Spike bei grossen Self-Training-Laeufen).
+        img = _decode_training_image(sample.image_base64)
         img_path = img_dir / f"sample_{i:06d}.jpg"
         img.save(str(img_path), "JPEG", quality=95)
 
