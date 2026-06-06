@@ -8,7 +8,9 @@ from .detection import BoundingBox
 
 class SamRequest(BaseModel):
     image_base64: str
-    bounding_boxes: list[BoundingBox] = []
+    # Mengen-Limit als Fail-Fast: 422 statt langsamer GPU-Last / SAM-OOM bei absurd vielen
+    # Boxen. Reale Frames haben <20 Boxen; 256 ist eine grosszuegige Obergrenze.
+    bounding_boxes: list[BoundingBox] = Field(default_factory=list, max_length=256)
     pipe_diameter_mm: int | None = None
 
 
