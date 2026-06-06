@@ -20,6 +20,16 @@ public sealed class RetrievalService(
     private static int _dimensionMismatchWarned;
     private readonly RetrievalQualityPolicy _policy = RetrievalQualityPolicy.Default;
 
+    // ── In-Memory-Cache der Embeddings+Samples (#6: Retrieval entkalten) ──────────────
+    // Wird einmal geladen und nur neu geladen, wenn sich die Embeddings-Tabelle aendert.
+    // Erkennung ueber eine billige Kennzahl (Zeilenzahl + groesste rowid) statt bei JEDER
+    // Query ~21.860 Embeddings (~67 MB) neu zu lesen und zu parsen -> die Retrieval-Latenz
+    // wird unabhaengig vom KB-Wachstum (genau das Self-Training-Ziel).
+    private readonly object _cacheLock = new();
+    private List<(string SampleId, float[] Vector, SampleRecord? Sample)>? _cache;
+    private long _cacheRowCount = -1;
+    private long _cacheMaxRowId = -1;
+
     /// <summary>Aktuelles Embedding-Modell in der DB (null = leer / unbekannt).</summary>
     public string? StoredEmbedModel { get; private set; }
 
@@ -38,8 +48,9 @@ public sealed class RetrievalService(
         if (queryVec is null)
             return [];
 
-        // Eine einzige JOIN-Query statt N+1 (vorher: LoadAllEmbeddings + N× LoadSample)
-        var candidates = LoadAllEmbeddingsWithSamples();
+        // Embeddings aus dem In-Memory-Cache (laedt nur beim ersten Mal bzw. nach KB-Aenderung
+        // alle Blobs - statt bei JEDER Query ~21.860 Embeddings neu zu lesen/parsen).
+        var candidates = GetCandidatesCached();
 
         // Qualitaetsbewusstes Ranking (Green bevorzugt, Yellow niedriger, Red nur als Fallback).
         var results = RankAndFilter(queryVec, candidates, topK, _policy, out var mismatchCount);
@@ -190,6 +201,49 @@ public sealed class RetrievalService(
     }
 
     // ── Intern ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Liefert die Embeddings+Samples aus dem Cache. Laedt sie nur beim ersten Aufruf neu bzw.
+    /// wenn sich die Embeddings-Tabelle geaendert hat (neue/geloeschte Zeilen oder KB-Rebuild).
+    /// Hinweis: eine reine In-Place-Aenderung der QualityGate-Stufe eines bestehenden Samples
+    /// (ohne neue Embedding-Zeile) wird erst beim naechsten Reload sichtbar - fuers Few-Shot-
+    /// Retrieval unkritisch (Default-Policy gewichtet Green=Yellow, nur Red-Ausschluss zaehlt).
+    /// </summary>
+    private List<(string SampleId, float[] Vector, SampleRecord? Sample)> GetCandidatesCached()
+    {
+        lock (_cacheLock)
+        {
+            var (rowCount, maxRowId) = ReadEmbeddingsStamp();
+            if (_cache is not null && rowCount >= 0 && rowCount == _cacheRowCount && maxRowId == _cacheMaxRowId)
+                return _cache;
+
+            _cache = LoadAllEmbeddingsWithSamples();
+            _cacheRowCount = rowCount;
+            _cacheMaxRowId = maxRowId;
+            return _cache;
+        }
+    }
+
+    /// <summary>
+    /// Billige Kennzahl der Embeddings-Tabelle zur Cache-Invalidierung (Zeilenzahl + groesste rowid).
+    /// Bei Fehler (-1,-1) -> Cache gilt als ungueltig und wird neu geladen (nie veraltete Daten).
+    /// </summary>
+    private (long RowCount, long MaxRowId) ReadEmbeddingsStamp()
+    {
+        try
+        {
+            using var cmd = db.Connection.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*), COALESCE(MAX(rowid), 0) FROM Embeddings";
+            using var reader = cmd.ExecuteReader();
+            if (reader.Read())
+                return (reader.GetInt64(0), reader.GetInt64(1));
+        }
+        catch
+        {
+            // Cache verwerfen -> erzwingt Neuladen.
+        }
+        return (-1, -1);
+    }
 
     /// <summary>
     /// Laedt alle Embeddings MIT Sample-Daten in einer einzelnen JOIN-Query.
