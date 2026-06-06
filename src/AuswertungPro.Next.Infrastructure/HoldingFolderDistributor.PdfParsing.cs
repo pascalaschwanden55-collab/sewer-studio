@@ -68,15 +68,15 @@ public static partial class HoldingFolderDistributor
         RegexOptions.Compiled);
 
     private static readonly Regex FormEntryDateRx = new(
-        @"\b(?<d>\d{2}[./-]\d{2}[./-]\d{2,4}|\d{4}[./-]\d{2}[./-]\d{2})\b",
+        @"\b(?<d>" + SewerTextPatterns.GermanDateCore + @"|\d{4}[./-]\d{2}[./-]\d{2})\b",
         RegexOptions.Compiled);
 
     private static readonly Regex LabeledDateRx = new(
-        @"Datum\s*[:\-]?\s*(?<date>\d{2}[./-]\d{2}[./-]\d{2,4})",
+        @"Datum\s*[:\-]?\s*(?<date>" + SewerTextPatterns.GermanDateCore + ")",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private static readonly Regex GenericDateRx = new(
-        @"\b(?<date>\d{2}[./-]\d{2}[./-]\d{2,4})\b",
+        @"\b(?<date>" + SewerTextPatterns.GermanDateCore + @")\b",
         RegexOptions.Compiled);
 
     // Hotpath-Regex: TryFindHaltungId

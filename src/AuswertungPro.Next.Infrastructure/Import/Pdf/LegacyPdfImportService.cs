@@ -636,7 +636,7 @@ public sealed class LegacyPdfImportService
         var schachtNummer = GetFirst(@"\bNr\.?\s*[:\-]?\s*(?<v>\d{3,})\b")
                             ?? GetFirst(@"\bSchachtnummer\s*[:\-]?\s*(?<v>\d{3,})\b");
 
-        var dateRaw = GetFirst(@"\bDatum\s*[:\-]?\s*(?<v>\d{2}[./-]\d{2}[./-]\d{2,4})\b");
+        var dateRaw = GetFirst(@"\bDatum\s*[:\-]?\s*(?<v>" + SewerTextPatterns.GermanDateCore + @")\b");
         var datum = NormalizeDate(dateRaw);
 
         var funktion = GetFirst(@"\bSchachttyp\s+(?<v>[^\n\r]+)")?.Trim();

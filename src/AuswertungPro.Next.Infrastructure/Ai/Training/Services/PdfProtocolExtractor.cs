@@ -605,7 +605,7 @@ public sealed class PdfProtocolExtractor
         // KB-schonend). Laeuft nur, wenn alle code-basierten Strategien nichts fanden.
         foreach (Match m in FretzObservationRowPattern.Matches(text))
         {
-            var code = MapFretzObservationToCode(m.Groups["text"].Value);
+            var code = VsaObservationMap.MapGermanObservationToCode(m.Groups["text"].Value);
             if (code is null) continue;
             if (!TryParseMeter(m.Groups["meter"].Value, out var meter)) continue;
 
@@ -817,23 +817,6 @@ public sealed class PdfProtocolExtractor
             IsStreckenschaden = mEnd > mStart + 0.05,
             Zeit              = zeit
         };
-    }
-
-    /// <summary>
-    /// Mappt einen deutschen Alt-Fretz-"Beobachtung"-Begriff auf einen VSA-Code - aber NUR fuer
-    /// eindeutige Grundgeruest-/Verbindungs-Begriffe. Alles Mehrdeutige (Untersuchungs-Marker wie
-    /// "Anfang/Ende der Untersuchung", "Abbruch", "Rohrmaterialwechsel") bleibt bewusst null, damit
-    /// keine falschen Codes als Trainingsdaten in die KB gelangen.
-    /// </summary>
-    private static string? MapFretzObservationToCode(string text)
-    {
-        var t = text.Trim().ToLowerInvariant();
-        if (t.Contains("rohranfang")) return "BCD";              // Rohranfang
-        if (t.Contains("rohrende")) return "BCE";                // Rohrende
-        if (t.Contains("bogen")) return "BCC";                   // Bogen (Richtungsaenderung)
-        if (t.Contains("verschobene rohrverbindung")) return "BAJ"; // Verschobene Rohrverbindung (Knick)
-        if (t.Contains("breite rohrverbindung")) return "BAJ";   // Breite Rohrverbindung
-        return null; // bewusst nicht zugeordnet
     }
 
     /// <summary>BuildEntry ohne Rohtext-Parsing (für Bildbericht/Continuation).</summary>
