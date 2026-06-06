@@ -79,6 +79,14 @@ public sealed class PdfProtocolExtractor
         $@"^[ \t]*(?:(?<meter>\d{{1,4}}[.,]\d{{1,3}})[ \t]+)?(?<time>\d{{2}}:\d{{2}}:\d{{2}})[ \t]+(?<code>{CodePattern})[ \t]+(?<text>[^\r\n]+)",
         RegexOptions.Compiled | RegexOptions.Multiline);
 
+    // Alt-Fretz 2017: Befunde stehen als deutscher Text in der Spalte "Beobachtung" OHNE VSA-Code.
+    // Zeile: "  0.55   Rohranfang   00:00:26". Wir mappen NUR eindeutige Grundgeruest-/Verbindungs-
+    // Begriffe (siehe MapFretzObservationToCode) - mehrdeutiges bleibt bewusst unzugeordnet, damit
+    // keine falschen Codes in die KB gelangen.
+    private static readonly Regex FretzObservationRowPattern = new(
+        @"^[ \t]*(?<meter>\d{1,4}[.,]\d{1,2})[ \t]+(?<text>[A-Za-zÄÖÜäöüß][^\r\n\d]{2,60}?)[ \t]+(?<time>\d{2}:\d{2}:\d{2})",
+        RegexOptions.Compiled | RegexOptions.Multiline);
+
     // Fallback: "12.45 BAB B Querriss..." oder "@12.45m BAB Querriss"
     private static readonly Regex EntryPattern = new(
         $@"@?(?<m1>\d{{1,4}}[.,]\d{{1,3}})\s*m?\s*[-–]?\s*(?<m2>\d{{1,4}}[.,]\d{{1,3}})?\s*m?\s+(?<code>{CodePattern})(?:\s+(?<char>[ABCD]))?\s+(?<text>[^\r\n]{{3,}})",
@@ -554,6 +562,26 @@ public sealed class PdfProtocolExtractor
         if (results.Count > 0)
             return results;
 
+        // Strategie 3c: Alt-Fretz 2017 - Befunde als deutscher Text (Spalte "Beobachtung") ohne Code.
+        // Nur eindeutige Begriffe werden zu Grundgeruest-/Verbindungs-Codes gemappt (konservativ,
+        // KB-schonend). Laeuft nur, wenn alle code-basierten Strategien nichts fanden.
+        foreach (Match m in FretzObservationRowPattern.Matches(text))
+        {
+            var code = MapFretzObservationToCode(m.Groups["text"].Value);
+            if (code is null) continue;
+            if (!TryParseMeter(m.Groups["meter"].Value, out var meter)) continue;
+
+            var entry = BuildEntryDirect(
+                meter, meter, code,
+                m.Groups["text"].Value.Trim(),
+                ParseTimestamp(m.Groups["time"].Value));
+
+            if (entry is not null && seen.Add(Sig(entry)))
+                results.Add(entry);
+        }
+        if (results.Count > 0)
+            return results;
+
         // Strategie 4a: IBAK-2025-"Haltungsbildbericht" (2-spaltig inline) — Code+Meter in einer Zeile.
         results = ParseInlineBildbericht(text);
         if (results.Count > 0)
@@ -751,6 +779,23 @@ public sealed class PdfProtocolExtractor
             IsStreckenschaden = mEnd > mStart + 0.05,
             Zeit              = zeit
         };
+    }
+
+    /// <summary>
+    /// Mappt einen deutschen Alt-Fretz-"Beobachtung"-Begriff auf einen VSA-Code - aber NUR fuer
+    /// eindeutige Grundgeruest-/Verbindungs-Begriffe. Alles Mehrdeutige (Untersuchungs-Marker wie
+    /// "Anfang/Ende der Untersuchung", "Abbruch", "Rohrmaterialwechsel") bleibt bewusst null, damit
+    /// keine falschen Codes als Trainingsdaten in die KB gelangen.
+    /// </summary>
+    private static string? MapFretzObservationToCode(string text)
+    {
+        var t = text.Trim().ToLowerInvariant();
+        if (t.Contains("rohranfang")) return "BCD";              // Rohranfang
+        if (t.Contains("rohrende")) return "BCE";                // Rohrende
+        if (t.Contains("bogen")) return "BCC";                   // Bogen (Richtungsaenderung)
+        if (t.Contains("verschobene rohrverbindung")) return "BAJ"; // Verschobene Rohrverbindung (Knick)
+        if (t.Contains("breite rohrverbindung")) return "BAJ";   // Breite Rohrverbindung
+        return null; // bewusst nicht zugeordnet
     }
 
     /// <summary>BuildEntry ohne Rohtext-Parsing (für Bildbericht/Continuation).</summary>
