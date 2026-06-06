@@ -8,6 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.VsaCatalog;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
@@ -24,6 +26,10 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 /// </summary>
 public sealed class PdfProtocolExtractor
 {
+    private readonly ILogger _logger;
+
+    public PdfProtocolExtractor(ILogger? logger = null) => _logger = logger ?? NullLogger.Instance;
+
     // ── Regex-Muster ────────────────────────────────────────────────────────
 
     // VSA-Code: 2-6 Buchstaben, optional mit Punkt-Suffixen (.A, .C, .AB, .Y.B)
@@ -191,7 +197,7 @@ public sealed class PdfProtocolExtractor
 
     // ── PDF ─────────────────────────────────────────────────────────────────
 
-    private static IReadOnlyList<GroundTruthEntry> ExtractFromPdf(string path, string? framesDir)
+    private IReadOnlyList<GroundTruthEntry> ExtractFromPdf(string path, string? framesDir)
     {
         try
         {
@@ -199,7 +205,10 @@ public sealed class PdfProtocolExtractor
 
             var text = ExtractTextFromPdfDoc(doc);
             if (string.IsNullOrWhiteSpace(text))
+            {
+                NoteProblemPdf(path, "kein extrahierbarer Text (evtl. gescannt -> OCR noetig)");
                 return Array.Empty<GroundTruthEntry>();
+            }
 
             // Diagnose: extrahierten Text speichern
             try
@@ -217,6 +226,11 @@ public sealed class PdfProtocolExtractor
 
             var entries = ParseEntriesFromText(text);
 
+            // Stille 0-Befund-Faelle sichtbar machen: Text war da, aber keine Strategie griff
+            // -> moeglicherweise ein neues/unbekanntes Format (nicht zwingend schadenfrei).
+            if (entries.Count == 0)
+                NoteProblemPdf(path, "Text vorhanden, aber 0 Befunde erkannt (evtl. unbekanntes Format)");
+
             // Fotos aus PDF-Bildbericht extrahieren und Einträgen zuordnen
             if (entries.Count > 0 && !string.IsNullOrWhiteSpace(framesDir))
             {
@@ -225,10 +239,34 @@ public sealed class PdfProtocolExtractor
 
             return entries;
         }
-        catch
+        catch (Exception ex)
         {
+            // Frueher still verschluckt -> jetzt sichtbar (gescannte/beschaedigte/verschluesselte PDFs).
+            NoteProblemPdf(path, "Lesefehler: " + ex.GetType().Name + " - " + ex.Message);
             return Array.Empty<GroundTruthEntry>();
         }
+    }
+
+    /// <summary>
+    /// Macht ein PDF ohne Befunde sichtbar - ueber den Logger (falls verdrahtet) UND immer in einer
+    /// Sammeldatei %LOCALAPPDATA%\AuswertungPro\diag\_pdf_ohne_befunde.log. So verschwinden "stille"
+    /// 0-Befund-/Lesefehler-Faelle nicht mehr unbemerkt (der Parser gibt sonst nur leer zurueck).
+    /// Best-effort: darf den Import niemals stoppen.
+    /// </summary>
+    private void NoteProblemPdf(string path, string reason)
+    {
+        _logger.LogWarning("PDF ohne Befunde: {Reason} -> {Path}", reason, path);
+        try
+        {
+            var diagDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "AuswertungPro", "diag");
+            Directory.CreateDirectory(diagDir);
+            File.AppendAllText(
+                Path.Combine(diagDir, "_pdf_ohne_befunde.log"),
+                $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}\t{reason}\t{path}{Environment.NewLine}");
+        }
+        catch { /* Sichtbarkeit ist best-effort */ }
     }
 
     private static string ExtractTextFromPdfDoc(UglyToad.PdfPig.PdfDocument doc)
