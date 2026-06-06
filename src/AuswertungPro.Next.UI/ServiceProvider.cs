@@ -192,7 +192,7 @@ namespace AuswertungPro.Next.UI
             IAiSuggestionPlausibilityService plausibility,
             HttpClient http)
         {
-            return new VideoAnalysisPipelineService(cfg, PipelineCfg, plausibility, http, CodeCatalog);
+            return new VideoAnalysisPipelineService(cfg, PipelineCfg, plausibility, http, CodeCatalog, LoggerFactory);
         }
 
         public IAiSanierungOptimizationService CreateSanierungOptimization(

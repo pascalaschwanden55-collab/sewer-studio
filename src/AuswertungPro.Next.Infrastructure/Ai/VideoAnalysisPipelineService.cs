@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
@@ -9,6 +10,8 @@ using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AuswertungPro.Next.Infrastructure.Ai;
 
@@ -28,19 +31,24 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
     private readonly IAiSuggestionPlausibilityService _plausibility;
     private readonly HttpClient _httpClient;
     private readonly ICodeCatalogProvider? _codeCatalog;
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger _logger;
 
     public VideoAnalysisPipelineService(
         AiRuntimeSettings cfg,
         PipelineConfig pipelineCfg,
         IAiSuggestionPlausibilityService plausibility,
         HttpClient httpClient,
-        ICodeCatalogProvider? codeCatalog = null)
+        ICodeCatalogProvider? codeCatalog = null,
+        ILoggerFactory? loggerFactory = null)
     {
         _cfg = cfg;
         _pipelineCfg = pipelineCfg;
         _plausibility = plausibility;
         _httpClient = httpClient;
         _codeCatalog = codeCatalog;
+        _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+        _logger = _loggerFactory.CreateLogger<VideoAnalysisPipelineService>();
     }
 
     public async Task<PipelineResult> RunAsync(
@@ -56,8 +64,15 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 
         // Unerwarteten Fallback klar sichtbar machen (sonst sieht Ollama-Only wie Normalbetrieb aus).
         if (fallbackReason is not null)
+        {
+            _logger.LogWarning("Videoanalyse-Pipeline Fallback: {Reason}", fallbackReason);
             progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 0,
                 "WARNUNG: " + fallbackReason, FramesDone: 0, FramesTotal: 0));
+        }
+
+        _logger.LogInformation(
+            "Videoanalyse-Pipeline gestartet: Modus={Mode}, Haltung={Haltung}, Video={Video}",
+            useMultiModel ? "Multi-Model" : "Ollama-Only", request.HaltungId, Path.GetFileName(request.VideoPath));
 
         // â”€â”€ Phase 1: Video-Analyse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         progress?.Report(new PipelineProgress(
@@ -88,7 +103,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             var multiModel = new MultiModelAnalysisService(
                 pipelineClient, pipelineCfg,
                 _cfg.FfmpegPath ?? "ffmpeg",
-                qwenVision: qwenVision);
+                qwenVision: qwenVision,
+                logger: _loggerFactory.CreateLogger<MultiModelAnalysisService>());
             multiModel.FrameStepSeconds = request.FrameStepSeconds;
             multiModel.DedupWindowFrames = request.DedupWindowFrames;
 
@@ -103,7 +119,8 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 client: client,
                 visionModel: _cfg.VisionModel,
                 ffmpegPath: _cfg.FfmpegPath ?? "ffmpeg",
-                codeCatalog: _codeCatalog);
+                codeCatalog: _codeCatalog,
+                logger: _loggerFactory.CreateLogger<VideoFullAnalysisService>());
 
             videoService.FrameStepSeconds = request.FrameStepSeconds;
             videoService.DedupWindowFrames = request.DedupWindowFrames;

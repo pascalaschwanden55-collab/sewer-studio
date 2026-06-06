@@ -11,6 +11,8 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AuswertungPro.Next.Infrastructure.Ai;
 
@@ -28,6 +30,7 @@ public sealed class VideoFullAnalysisService
     private readonly EnhancedVisionAnalysisService _vision;
     private readonly string _ffmpegPath;
     private readonly string _ffprobePath;
+    private readonly ILogger _logger;
 
     public double FrameStepSeconds { get; set; } = 3.0;
     public int DedupWindowFrames { get; set; } = 3;
@@ -39,11 +42,13 @@ public sealed class VideoFullAnalysisService
     public VideoFullAnalysisService(
         EnhancedVisionAnalysisService vision,
         string ffmpegPath = "ffmpeg",
-        string? ffprobePath = null)
+        string? ffprobePath = null,
+        ILogger? logger = null)
     {
         _vision = vision;
         _ffmpegPath = ffmpegPath;
         _ffprobePath = ffprobePath ?? DeriveFFprobePath(ffmpegPath);
+        _logger = logger ?? NullLogger.Instance;
     }
 
     /// <summary>
@@ -53,8 +58,9 @@ public sealed class VideoFullAnalysisService
         OllamaClient client,
         string visionModel,
         string ffmpegPath = "ffmpeg",
-        ICodeCatalogProvider? codeCatalog = null)
-        => new(new EnhancedVisionAnalysisService(client, visionModel, codeCatalog), ffmpegPath);
+        ICodeCatalogProvider? codeCatalog = null,
+        ILogger? logger = null)
+        => new(new EnhancedVisionAnalysisService(client, visionModel, codeCatalog), ffmpegPath, logger: logger);
 
     public async Task<VideoAnalysisResult> AnalyzeAsync(
         string videoPath,
@@ -78,6 +84,12 @@ public sealed class VideoFullAnalysisService
             return VideoAnalysisResult.Failed($"Videodauer konnte nicht ermittelt werden (ffprobe): {probeError}");
 
         var totalFrames = (int)Math.Ceiling(duration / FrameStepSeconds);
+        // runId zur Korrelation aller Log-Zeilen eines Laufs (wie im Multi-Model-Pfad).
+        var runId = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture)
+                    + "_" + Guid.NewGuid().ToString("N")[..6];
+        _logger.LogInformation(
+            "Video-Vollanalyse (Ollama-Only) runId={RunId} gestartet: {Video}, Dauer={Duration:F1}s, ~{Frames} Frames, Step={Step}s",
+            runId, Path.GetFileName(videoPath), duration, totalFrames, FrameStepSeconds);
         var detections = new List<RawVideoDetection>();
         var deduplicator = new TemporalFindingDeduplicator(new TemporalDedupOptions
         {
@@ -110,6 +122,7 @@ public sealed class VideoFullAnalysisService
             {
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
                 detections.AddRange(deduplicator.AdvanceAll());
+                _logger.LogDebug("runId={RunId} Frame {Frame}/{Total}: leeres Bild, uebersprungen", runId, frameIndex, totalFrames);
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex}/{totalFrames} â€“ kein Bild"));
                 continue;
@@ -138,6 +151,8 @@ public sealed class VideoFullAnalysisService
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
+                _logger.LogWarning("runId={RunId} Frame {Frame}/{Total}: Timeout bei KI-Analyse nach {Timeout:0}s",
+                    runId, frameIndex, totalFrames, VisionFrameTimeout.TotalSeconds);
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex}/{totalFrames} â€“ Timeout bei KI-Analyse ({VisionFrameTimeout.TotalSeconds:0}s)"));
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, visionSw.ElapsedMilliseconds, frameSw.ElapsedMilliseconds, Skipped: true));
@@ -147,6 +162,7 @@ public sealed class VideoFullAnalysisService
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "runId={RunId} Frame {Frame}/{Total}: Fehler bei KI-Analyse", runId, frameIndex, totalFrames);
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex}/{totalFrames} â€“ Fehler: {ex.Message}"));
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, visionSw.ElapsedMilliseconds, frameSw.ElapsedMilliseconds, Skipped: true));
@@ -196,6 +212,9 @@ public sealed class VideoFullAnalysisService
 
         detections.AddRange(deduplicator.Flush());
 
+        _logger.LogInformation(
+            "Video-Vollanalyse runId={RunId} fertig: {Count} Befunde aus {Frames} analysierten Frames",
+            runId, detections.Count, frameIndex);
         progress?.Report(new VideoAnalysisProgress(totalFrames, totalFrames,
             $"Fertig â€“ {detections.Count} SchÃ¤den erkannt."));
 
