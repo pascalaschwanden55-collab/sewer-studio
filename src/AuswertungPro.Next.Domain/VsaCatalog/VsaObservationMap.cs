@@ -11,6 +11,10 @@ namespace AuswertungPro.Next.Domain.VsaCatalog;
 /// </summary>
 public static class VsaObservationMap
 {
+    // "bogen"/"rohrbogen" als ganzes Wort — schliesst Verformungs-Partizipien wie "verbogen" aus. (Audit)
+    private static readonly System.Text.RegularExpressions.Regex BogenWord =
+        new(@"\b(bogen|rohrbogen)\b", System.Text.RegularExpressions.RegexOptions.Compiled);
+
     /// <summary>
     /// Liefert den VSA-Code zu einer deutschen Beobachtung oder null, wenn nicht eindeutig zuordenbar.
     /// </summary>
@@ -22,7 +26,9 @@ public static class VsaObservationMap
         var t = observation.Trim().ToLowerInvariant();
         if (t.Contains("rohranfang")) return "BCD";                  // Rohranfang
         if (t.Contains("rohrende")) return "BCE";                    // Rohrende
-        if (t.Contains("bogen")) return "BCC";                       // Bogen (Richtungsaenderung)
+        // "bogen" nur als Bauteil (Bogen/Rohrbogen), NICHT als Verformungs-Partizip wie
+        // "verbogen"/"abgebogen" -> sonst falsche BCC-Labels. (Audit)
+        if (BogenWord.IsMatch(t)) return "BCC";                      // Bogen (Richtungsaenderung)
         if (t.Contains("verschobene rohrverbindung")) return "BAJ";  // Verschobene Rohrverbindung (Knick)
         if (t.Contains("breite rohrverbindung")) return "BAJ";       // Breite Rohrverbindung
         return null;                                                 // bewusst nicht zugeordnet

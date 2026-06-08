@@ -32,7 +32,15 @@ public static class ShadowReportAnalyzer
             if (string.IsNullOrWhiteSpace(line))
                 continue;
 
-            var entry = JsonSerializer.Deserialize<ShadowEntry>(line, JsonOptions);
+            ShadowEntry? entry;
+            try
+            {
+                entry = JsonSerializer.Deserialize<ShadowEntry>(line, JsonOptions);
+            }
+            catch (JsonException)
+            {
+                continue;   // eine kaputte Zeile darf das Cutover-Gate nicht kippen (Audit)
+            }
             if (entry is not null)
                 entries.Add(entry);
         }

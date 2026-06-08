@@ -28,6 +28,7 @@ public static class SidecarTelemetryWriter
             await WriteLock.WaitAsync().ConfigureAwait(false);
             try
             {
+                RotateIfTooLarge(path);   // begrenzt das sonst unbegrenzte jsonl-Wachstum (Audit)
                 await File.AppendAllTextAsync(path, line).ConfigureAwait(false);
             }
             finally
@@ -38,6 +39,26 @@ public static class SidecarTelemetryWriter
         catch
         {
             // Telemetry must never break the actual analysis request.
+        }
+    }
+
+    private const long MaxBytes = 10L * 1024 * 1024;   // 10 MB, dann eine Generation rotieren
+
+    private static void RotateIfTooLarge(string path)
+    {
+        try
+        {
+            var fi = new FileInfo(path);
+            if (fi.Exists && fi.Length >= MaxBytes)
+            {
+                var rolled = path + ".1";
+                if (File.Exists(rolled)) File.Delete(rolled);   // nur 1 alte Generation behalten
+                File.Move(path, rolled);
+            }
+        }
+        catch
+        {
+            // Rotation darf das Schreiben (und die Analyse) nie kippen.
         }
     }
 

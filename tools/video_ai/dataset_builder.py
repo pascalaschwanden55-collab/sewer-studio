@@ -82,7 +82,10 @@ def build_dataset(
         with open(events_file, "r", encoding="utf-8") as f:
             for line in f:
                 if line.strip():
-                    event = json.loads(line)
+                    try:
+                        event = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue   # kaputte Zeile ueberspringen statt den ganzen Build zu kippen (Audit)
                     all_events.append(event)
                     holdings.add(event.get("holding_id", "unknown"))
     

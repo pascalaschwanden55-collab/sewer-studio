@@ -106,6 +106,10 @@ public partial class PipeGraphTimeline : UserControl
     {
         InitializeComponent();
         SizeChanged += (_, _) => Refresh();
+        // CollectionChanged-Abo an den Lebenszyklus binden: beim Entladen loesen (sonst haelt die
+        // externe Markers-Collection das Control am Leben -> Leak), beim Laden neu setzen. (Audit)
+        Loaded += (_, _) => SubscribeMarkers();
+        Unloaded += (_, _) => UnsubscribeMarkers();
     }
 
     // ═══════ Property-Change Callbacks ═══════
@@ -123,21 +127,27 @@ public partial class PipeGraphTimeline : UserControl
     private static void OnMarkersChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is not PipeGraphTimeline tl) return;
-
-        // Collection-Change Subscription verwalten
-        if (tl._subscribedCollection != null)
-        {
-            tl._subscribedCollection.CollectionChanged -= tl.OnMarkersCollectionChanged;
-            tl._subscribedCollection = null;
-        }
-
-        if (tl.Markers is INotifyCollectionChanged ncc)
-        {
-            ncc.CollectionChanged += tl.OnMarkersCollectionChanged;
-            tl._subscribedCollection = ncc;
-        }
-
+        tl.SubscribeMarkers();
         tl.Refresh();
+    }
+
+    private void SubscribeMarkers()
+    {
+        UnsubscribeMarkers();
+        if (Markers is INotifyCollectionChanged ncc)
+        {
+            ncc.CollectionChanged += OnMarkersCollectionChanged;
+            _subscribedCollection = ncc;
+        }
+    }
+
+    private void UnsubscribeMarkers()
+    {
+        if (_subscribedCollection != null)
+        {
+            _subscribedCollection.CollectionChanged -= OnMarkersCollectionChanged;
+            _subscribedCollection = null;
+        }
     }
 
     private void OnMarkersCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
