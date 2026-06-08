@@ -676,8 +676,12 @@ public sealed class MediaConflictCenterService
                 if (string.Equals(Path.GetFileName(existing), srcName, StringComparison.OrdinalIgnoreCase))
                     return existing;
 
+                // Gleiche Groesse ist KEIN Identitaetsbeweis — zwei verschiedene Videos koennen
+                // zufaellig gleich gross sein. Nur verlinken, wenn auch der Inhalt (Kopf+Schwanz)
+                // passt; sonst kein Auto-Link (lieber als neu importieren statt falsch zuordnen). (Audit R5)
                 var existInfo = new FileInfo(existing);
-                if (existInfo.Length > 0 && existInfo.Length == srcInfo.Length)
+                if (existInfo.Length > 0 && existInfo.Length == srcInfo.Length
+                    && SameHeadAndTail(sourceVideoPath, existing, srcInfo.Length))
                     return existing;
             }
         }
@@ -687,6 +691,46 @@ public sealed class MediaConflictCenterService
         }
 
         return null;
+    }
+
+    private const long HeadTailSampleBytes = 1_048_576;   // je 1 MB Kopf + Schwanz
+
+    /// <summary>
+    /// Vergleicht zwei gleich grosse Dateien anhand der ersten und letzten <see cref="HeadTailSampleBytes"/>
+    /// Bytes. Genuegt, um zwei zufaellig gleich grosse, aber verschiedene Videos zu unterscheiden,
+    /// ohne die ganze Datei zu hashen. IO-Fehler -> false (lieber kein Auto-Link). (Audit R5)
+    /// </summary>
+    internal static bool SameHeadAndTail(string pathA, string pathB, long length)
+    {
+        try
+        {
+            var sample = (int)Math.Min(HeadTailSampleBytes, length);
+            using var a = File.OpenRead(pathA);
+            using var b = File.OpenRead(pathB);
+
+            if (!RegionsEqual(a, b, 0, sample))
+                return false;
+
+            if (length > sample && !RegionsEqual(a, b, length - sample, sample))
+                return false;
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool RegionsEqual(FileStream a, FileStream b, long offset, int count)
+    {
+        a.Seek(offset, SeekOrigin.Begin);
+        b.Seek(offset, SeekOrigin.Begin);
+        var ba = new byte[count];
+        var bb = new byte[count];
+        a.ReadExactly(ba, 0, count);
+        b.ReadExactly(bb, 0, count);
+        return ba.AsSpan().SequenceEqual(bb);
     }
 
     private static string EnsureUniquePath(string path, bool overwrite)
