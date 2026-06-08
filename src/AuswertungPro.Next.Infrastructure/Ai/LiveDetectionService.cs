@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
@@ -173,22 +172,7 @@ public sealed class LiveDetectionService
         }
     }
 
+    // Brace-Counter statt non-greedy Regex: schneidet verschachteltes JSON korrekt. (Audit R9)
     private static string? ExtractJson(string raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        // Try to find JSON block in ```json ... ``` or ``` ... ```
-        var m = Regex.Match(raw, @"```(?:json)?\s*(\{[\s\S]*?\})\s*```");
-        if (m.Success)
-            return m.Groups[1].Value;
-
-        // Try to find raw JSON object
-        var start = raw.IndexOf('{');
-        var end = raw.LastIndexOf('}');
-        if (start >= 0 && end > start)
-            return raw[start..(end + 1)];
-
-        return null;
-    }
+        => AuswertungPro.Next.Application.Ai.JsonObjectExtractor.TryExtractFirstObject(raw);
 }

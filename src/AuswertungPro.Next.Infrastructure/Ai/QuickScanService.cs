@@ -105,7 +105,8 @@ public sealed class QuickScanService
                 new OllamaClient.ChatMessage("user", Prompt, new[] { b64 })
             };
 
-            // Use plain /api/chat (qwen2.5vl does not support structured format)
+            // Plain /api/chat + robuste JSON-Extraktion (JsonObjectExtractor). Strict-Schema waere
+            // moeglich (EnhancedVision nutzt es erfolgreich) — hier bewusst plain (nur Hilfssignal). (Audit R9)
             var raw = await _client.ChatAsync(
                 _visionModel, messages, frameCts.Token).ConfigureAwait(false);
 
@@ -254,20 +255,7 @@ public sealed class QuickScanService
         }
     }
 
+    // Brace-Counter statt non-greedy Regex: schneidet verschachteltes JSON korrekt. (Audit R9)
     private static string? ExtractJson(string raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var m = Regex.Match(raw, @"```(?:json)?\s*(\{[\s\S]*?\})\s*```");
-        if (m.Success)
-            return m.Groups[1].Value;
-
-        var start = raw.IndexOf('{');
-        var end = raw.LastIndexOf('}');
-        if (start >= 0 && end > start)
-            return raw[start..(end + 1)];
-
-        return null;
-    }
+        => AuswertungPro.Next.Application.Ai.JsonObjectExtractor.TryExtractFirstObject(raw);
 }
