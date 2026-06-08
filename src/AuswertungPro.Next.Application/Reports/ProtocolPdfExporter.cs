@@ -94,8 +94,14 @@ public sealed class ProtocolPdfExporter
                                 {
                                     foreach (var rel in e.FotoPaths.Take(3))
                                     {
-                                        var abs = Path.Combine(projectRootAbs, rel.Replace('/', Path.DirectorySeparatorChar));
-                                        if (!File.Exists(abs))
+                                        // Pfad-Containment: ein Foto-Pfad darf nicht aus dem Projektordner
+                                        // ausbrechen (absolute Pfade / "..") -> sonst verwerfen. (Audit)
+                                        var abs = Path.GetFullPath(Path.Combine(projectRootAbs,
+                                            rel.Replace('/', Path.DirectorySeparatorChar)));
+                                        var rootGuard = Path.GetFullPath(projectRootAbs);
+                                        if (!rootGuard.EndsWith(Path.DirectorySeparatorChar))
+                                            rootGuard += Path.DirectorySeparatorChar;
+                                        if (!abs.StartsWith(rootGuard, StringComparison.OrdinalIgnoreCase) || !File.Exists(abs))
                                             continue;
 
                                         imgRow.ConstantItem(170).Height(110)
