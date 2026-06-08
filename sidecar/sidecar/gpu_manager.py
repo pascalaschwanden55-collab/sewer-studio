@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import gc
+import os
 import enum
 import time
 import threading
@@ -11,6 +12,11 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Tuple, Optional
 
 logger = logging.getLogger(__name__)
+
+# VRAM-Budget (GB): YOLO/DINO/SAM bleiben bewusst gleichzeitig resident (Tempo). Auf der 32-GB-Karte
+# traegt das; das Budget macht die Grenze im Code SICHTBAR (Warnung) und erlaubt LRU-Eviction bei
+# Bedarf, statt sich nur auf grosszuegige Hardware zu verlassen. (Audit R8)
+VRAM_BUDGET_GB = float(os.environ.get("SEWER_SIDECAR_VRAM_BUDGET_GB", "29"))
 
 
 class ModelSlot(str, enum.Enum):
@@ -27,14 +33,16 @@ class SlotState:
     processor: Any = None
     device: str = ""
     load_time_sec: float = 0.0
+    last_used: float = 0.0   # time.monotonic() der letzten Nutzung (fuer LRU-Eviction)
 
 
 class GpuModelManager:
     """Multi-slot persistent model manager.
 
-    Multiple models can be loaded simultaneously and remain resident.
-    No automatic eviction on slot switch — models stay until explicitly
-    unloaded or the process shuts down.
+    YOLO/DINO/SAM koennen gleichzeitig resident bleiben (bewusst, fuer Tempo). KEINE
+    automatische Eviction beim Slot-Wechsel. Ein konfigurierbares VRAM-Budget
+    (VRAM_BUDGET_GB) macht die Grenze sichtbar (Warnung beim Ueberschreiten); ueber
+    evict_lru() ist LRU-Eviction moeglich (z.B. nach OOM). (Audit R8)
     """
 
     def __init__(self) -> None:
@@ -62,6 +70,7 @@ class GpuModelManager:
         # Fast path: already loaded
         state = self._slots.get(slot)
         if state is not None and state.model is not None:
+            state.last_used = time.monotonic()
             return state
 
         # Slow path: acquire per-slot lock and load
@@ -70,6 +79,7 @@ class GpuModelManager:
             # Double-check after acquiring lock
             state = self._slots.get(slot)
             if state is not None and state.model is not None:
+                state.last_used = time.monotonic()
                 return state
 
             t0 = time.perf_counter()
@@ -81,11 +91,13 @@ class GpuModelManager:
                 processor=processor,
                 device=device,
                 load_time_sec=elapsed,
+                last_used=time.monotonic(),
             )
             self._slots[slot] = state
             logger.info(
                 "Loaded %s in %.1fs on %s (persistent)", slot.value, elapsed, device
             )
+            self._warn_if_over_budget()
             return state
 
     def unload(self, slot: ModelSlot) -> None:
@@ -142,6 +154,7 @@ class GpuModelManager:
             "current_model": current,
             "vram_allocated_gb": round(vram_allocated, 2),
             "vram_total_gb": round(vram_total, 2),
+            "vram_budget_gb": VRAM_BUDGET_GB,
             "load_times_sec": {
                 s.value: round(st.load_time_sec, 2)
                 for s, st in self._slots.items()
@@ -162,6 +175,35 @@ class GpuModelManager:
             if slot not in self._locks:
                 self._locks[slot] = threading.Lock()
             return self._locks[slot]
+
+    @staticmethod
+    def _allocated_gb() -> float:
+        try:
+            import torch
+            if torch.cuda.is_available():
+                return torch.cuda.memory_allocated(0) / (1024**3)
+        except Exception:
+            pass
+        return 0.0
+
+    def _warn_if_over_budget(self) -> None:
+        alloc = self._allocated_gb()
+        if alloc > VRAM_BUDGET_GB:
+            loaded = [s.value for s in self._slots if self._slots[s].model is not None]
+            logger.warning(
+                "VRAM ueber Budget: %.1f GB > %.1f GB (geladen: %s). evict_lru()/unload() erwaegen.",
+                alloc, VRAM_BUDGET_GB, ", ".join(loaded),
+            )
+
+    def evict_lru(self) -> Optional[ModelSlot]:
+        """Entlaedt den am laengsten ungenutzten Slot (LRU). Gibt den Slot zurueck oder None."""
+        candidates = [(st.last_used, s) for s, st in self._slots.items() if st.model is not None]
+        if not candidates:
+            return None
+        _, victim = min(candidates, key=lambda x: x[0])
+        logger.info("evict_lru: entlade %s (LRU)", victim.value)
+        self.unload(victim)
+        return victim
 
     @staticmethod
     def _try_empty_cache() -> None:
