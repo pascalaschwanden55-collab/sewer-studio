@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf
 {
@@ -21,7 +22,18 @@ namespace AuswertungPro.Next.Infrastructure.Import.Xtf
         {
             var result = new List<XtfHoldingInfo>();
             if (!File.Exists(xtfPath)) return result;
-            var doc = XDocument.Load(xtfPath);
+
+            XDocument doc;
+            try
+            {
+                // SafeXmlLoader: DTD prohibited + XmlResolver=null (XXE-Schutz fuer fremde XTF). (Audit)
+                doc = SafeXmlLoader.Load(xtfPath);
+            }
+            catch (Exception)
+            {
+                // Eine kaputte/ungueltige .xtf darf den Import einer gueltigen PDF nicht abbrechen. (Audit)
+                return result;
+            }
             XNamespace ns = doc.Root?.Name.Namespace ?? "";
 
             // SIA405: <SIA405_Abwasser.SIA405_Abwasser.Kanal ... Haltung="11111-2222" SchachtOben="..." SchachtUnten="..." />
