@@ -137,9 +137,28 @@ public static class TeacherAnnotationStore
             return JsonSerializer.Deserialize<List<TeacherAnnotation>>(json, _jsonOpts)
                    ?? new List<TeacherAnnotation>();
         }
+        catch (JsonException)
+        {
+            // Korrupte Datei NICHT still verschlucken: zur Forensik sichern, dann leer starten. (Audit R6)
+            TryBackupCorrupt(path);
+            return new List<TeacherAnnotation>();
+        }
         catch
         {
+            // Transienter IO-Fehler (z.B. kurz gesperrt) -> nicht als korrupt sichern.
             return new List<TeacherAnnotation>();
+        }
+    }
+
+    private static void TryBackupCorrupt(string path)
+    {
+        try
+        {
+            File.Copy(path, path + ".corrupt", overwrite: true);
+        }
+        catch
+        {
+            // best effort
         }
     }
 
@@ -150,6 +169,16 @@ public static class TeacherAnnotationStore
         if (dir != null) Directory.CreateDirectory(dir);
 
         var json = JsonSerializer.Serialize(annotations, _jsonOpts);
-        await File.WriteAllTextAsync(path, json);
+
+        // Atomar: erst vollstaendig in eine temp-Datei schreiben, dann per Verzeichnis-Swap
+        // ersetzen. Ein Crash/Stromausfall waehrend des Schreibens beschaedigt so NIE die
+        // Zieldatei (sie bleibt der alte, gueltige Stand). (Audit R6)
+        var tmp = path + ".tmp";
+        await File.WriteAllTextAsync(tmp, json);
+
+        if (File.Exists(path))
+            File.Replace(tmp, path, path + ".bak");   // atomarer Swap + Vorgaenger nach .bak
+        else
+            File.Move(tmp, path);
     }
 }

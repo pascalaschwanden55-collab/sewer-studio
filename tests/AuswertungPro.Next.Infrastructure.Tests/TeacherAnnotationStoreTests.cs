@@ -65,6 +65,39 @@ public sealed class TeacherAnnotationStoreTests
         });
     }
 
+    [Fact]
+    public async Task Save_IsAtomic_AndKeepsBackup()
+    {
+        // R6: Speichern laeuft ueber temp -> File.Replace; kein temp-Rest, Vorgaenger als .bak.
+        await WithTempKnowledgeRoot(async () =>
+        {
+            await TeacherAnnotationStore.AppendAsync(Make("v1"));
+            await TeacherAnnotationStore.AppendAsync(Make("v2"));   // zweiter Save -> .bak vom ersten
+
+            var store = Path.Combine(KnowledgeBasePaths.GetRoot(), "teacher_annotations.json");
+            Assert.True(File.Exists(store));
+            Assert.False(File.Exists(store + ".tmp"));   // kein halb geschriebener temp-Rest
+            Assert.True(File.Exists(store + ".bak"));     // Vorgaenger-Stand gesichert
+        });
+    }
+
+    [Fact]
+    public async Task Load_CorruptFile_BacksUpAndStartsEmpty()
+    {
+        // R6: eine kaputte JSON-Datei darf das Laden nicht werfen lassen und nicht still
+        // verschwinden — sie wird nach .corrupt gesichert, der Store startet leer.
+        await WithTempKnowledgeRoot(async () =>
+        {
+            var store = Path.Combine(KnowledgeBasePaths.GetRoot(), "teacher_annotations.json");
+            await File.WriteAllTextAsync(store, "{ das ist kein gueltiges json ");
+
+            var list = await TeacherAnnotationStore.LoadAsync();   // darf NICHT werfen
+
+            Assert.Empty(list);
+            Assert.True(File.Exists(store + ".corrupt"));   // korrupte Datei gesichert
+        });
+    }
+
     private static async Task WithTempKnowledgeRoot(Func<Task> body)
     {
         var previous = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT");
