@@ -384,6 +384,7 @@ public partial class TrainingCenterWindow : Window
     private List<TeacherAnnotation> _filteredTeacherAnnotations = new();
     private TeacherAnnotation? _selectedTeacherAnnotation;
     private bool _teacherLoaded;
+    private readonly TeacherAnnotationGalleryService _teacherGalleryService = new();
 
     private async void TeacherRefresh_Click(object sender, RoutedEventArgs e)
     {
@@ -394,25 +395,12 @@ public partial class TrainingCenterWindow : Window
     {
         try
         {
-            var all = await TeacherAnnotationStore.LoadAsync();
-
-            // Bereits als FewShot uebernommene Annotationen ausfiltern
-            var trainedIds = await GetTrainedAnnotationIdsAsync();
-            _allTeacherAnnotations = trainedIds.Count > 0
-                ? all.Where(a => !trainedIds.Contains(a.AnnotationId)).ToList()
-                : all;
-
-            // Filter-ComboBox mit vorhandenen VSA-Codes fuellen
-            var codes = _allTeacherAnnotations
-                .Select(a => a.VsaCode)
-                .Where(c => !string.IsNullOrEmpty(c))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(c => c)
-                .ToList();
+            var snapshot = await _teacherGalleryService.LoadPendingAsync();
+            _allTeacherAnnotations = snapshot.PendingAnnotations.ToList();
 
             TeacherFilterCombo.Items.Clear();
             TeacherFilterCombo.Items.Add(new ComboBoxItem { Content = "Alle", IsSelected = true });
-            foreach (var code in codes)
+            foreach (var code in snapshot.FilterCodes)
                 TeacherFilterCombo.Items.Add(new ComboBoxItem { Content = code });
 
             TeacherFilterCombo.SelectedIndex = 0;
@@ -423,30 +411,6 @@ public partial class TrainingCenterWindow : Window
         {
             MessageBox.Show($"Fehler beim Laden der Lehrer-Annotationen:\n{ex.Message}",
                 "Lehrer", MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
-    }
-
-    /// <summary>
-    /// Laedt die IDs aller Lehrer-Annotationen die bereits als FewShot-Beispiel uebernommen wurden.
-    /// Format im FewShot-Store: Source = "teacher:{annotationId}"
-    /// </summary>
-    private static async Task<HashSet<string>> GetTrainedAnnotationIdsAsync()
-    {
-        try
-        {
-            var store = new FewShotExampleStore();
-            await store.LoadAsync();
-            var ids = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var ex in store.Examples)
-            {
-                if (ex.Source is not null && ex.Source.StartsWith("teacher:", StringComparison.Ordinal))
-                    ids.Add(ex.Source.Substring("teacher:".Length));
-            }
-            return ids;
-        }
-        catch
-        {
-            return new HashSet<string>();
         }
     }
 
@@ -461,11 +425,9 @@ public partial class TrainingCenterWindow : Window
         var selectedItem = TeacherFilterCombo.SelectedItem as ComboBoxItem;
         var filterCode = selectedItem?.Content?.ToString();
 
-        _filteredTeacherAnnotations = (filterCode == "Alle" || string.IsNullOrEmpty(filterCode))
-            ? new List<TeacherAnnotation>(_allTeacherAnnotations)
-            : _allTeacherAnnotations
-                .Where(a => a.VsaCode.Equals(filterCode, StringComparison.OrdinalIgnoreCase))
-                .ToList();
+        _filteredTeacherAnnotations = TeacherAnnotationGalleryService
+            .FilterByCode(_allTeacherAnnotations, filterCode)
+            .ToList();
 
         TeacherGallery.ItemsSource = _filteredTeacherAnnotations;
         TeacherCountText.Text = $"{_filteredTeacherAnnotations.Count} Annotationen";
@@ -576,14 +538,7 @@ public partial class TrainingCenterWindow : Window
 
         try
         {
-            // Dateien loeschen (best effort)
-            TryDeleteFile(_selectedTeacherAnnotation.FullFramePath);
-            TryDeleteFile(_selectedTeacherAnnotation.CroppedRegionPath);
-            TryDeleteFile(_selectedTeacherAnnotation.YoloAnnotationPath);
-
-            // Aus Store entfernen — atomar unter dem Store-Lock (kein Lost-Update gegen
-            // gleichzeitiges AppendAsync aus dem Player-/Coding-Pfad). (Audit R2)
-            await TeacherAnnotationStore.DeleteAsync(_selectedTeacherAnnotation.AnnotationId);
+            await _teacherGalleryService.DeleteAsync(_selectedTeacherAnnotation);
 
             // Galerie neu laden
             await LoadTeacherAnnotationsAsync();
@@ -595,15 +550,6 @@ public partial class TrainingCenterWindow : Window
         }
     }
 
-    private static void TryDeleteFile(string? path)
-    {
-        try
-        {
-            if (!string.IsNullOrEmpty(path) && File.Exists(path))
-                File.Delete(path);
-        }
-        catch { /* best effort */ }
-    }
 }
 
 /// <summary>Converter: non-null → true, null → false.</summary>
