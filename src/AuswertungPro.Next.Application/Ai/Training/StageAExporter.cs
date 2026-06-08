@@ -14,7 +14,7 @@ public sealed record StageAExportOptions(
     bool DryRun,
     double ValidationRatio = 0.2,
     int DegreeOfParallelism = 0,
-    bool RequireBoundingBox = false);
+    bool RequireBoundingBox = true);
 
 public sealed record StageAExportResult(
     bool DryRun,

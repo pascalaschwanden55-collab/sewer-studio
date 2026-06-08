@@ -17,6 +17,10 @@ packages/
 # Claude session data
 .claude/
 
+# Codex session data / local attachments
+.codex/
+.codex-remote-attachments/
+
 # OS
 Thumbs.db
 desktop.ini
@@ -105,3 +109,14 @@ yolo_cls_runs/
 
 # Tools
 tools/PdfImageAnalyzer/
+tools/**/output/
+tools/ProtocolPipelineDiagnostics/output-smoke/
+tools/SewerStudioTrainingBatch/*.json
+tools/SewerStudioTrainingBatch/*.jpg
+tools/VideoprojekteInventory/videoprojekte_inventory_*.csv
+tools/VideoprojekteInventory/videoprojekte_inventory_*.json
+tools/OffertenKalibrierung/
+xtf_korrektur/
+
+# Lokale Sidecar-Requirement-Backups
+sidecar/requirements.before-*.txt

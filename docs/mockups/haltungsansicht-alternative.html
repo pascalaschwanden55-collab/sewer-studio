@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SewerStudio Mockup - Alternative Haltungsansicht</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --panel-soft: #f8fafc;
+      --line: #9fb2cc;
+      --line-soft: #d6e0ec;
+      --text: #101827;
+      --muted: #64748b;
+      --blue: #1f6feb;
+      --cyan: #0ea5e9;
+      --green: #16a34a;
+      --yellow: #facc15;
+      --orange: #f97316;
+      --red: #dc2626;
+      --shadow: 0 14px 34px rgba(15, 23, 42, .10);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .app {
+      height: 100vh;
+      padding: 14px 16px 18px;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 8px;
+    }
+
+    .status,
+    .toolbar,
+    .viewbar,
+    .surface {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .82);
+      border-radius: 7px;
+    }
+
+    .status {
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 10px;
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #f59e0b;
+      border: 1px solid #1f6feb;
+    }
+
+    .toolbar {
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px;
+      overflow: hidden;
+    }
+
+    button {
+      height: 30px;
+      border: 1px solid transparent;
+      background: transparent;
+      border-radius: 4px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--text);
+      font: inherit;
+      cursor: default;
+      white-space: nowrap;
+    }
+
+    .primary {
+      background: #0d6efd;
+      border-color: #075bd7;
+      color: white;
+      font-weight: 600;
+    }
+
+    .icon { color: #0d6efd; font-weight: 700; }
+    .sep { width: 1px; height: 24px; background: var(--line-soft); margin: 0 5px; }
+
+    .viewbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 10px;
+    }
+
+    .tabs {
+      display: inline-flex;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      overflow: hidden;
+      background: white;
+    }
+
+    .tab {
+      height: 30px;
+      padding: 0 16px;
+      border: 0;
+      border-right: 1px solid var(--line-soft);
+      border-radius: 0;
+      background: white;
+    }
+
+    .tab:last-child { border-right: 0; }
+    .tab.active {
+      background: #e8f1ff;
+      color: #0b57d0;
+      font-weight: 700;
+    }
+
+    .searchbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+    }
+
+    .searchbar input {
+      width: 250px;
+      height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 0 9px;
+      background: white;
+    }
+
+    .surface {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .holding-list {
+      border-right: 1px solid var(--line);
+      background: #f8fbff;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-width: 0;
+    }
+
+    .list-head {
+      padding: 12px;
+      border-bottom: 1px solid var(--line-soft);
+      display: grid;
+      gap: 8px;
+    }
+
+    .list-head strong { font-size: 15px; }
+
+    .chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      border: 1px solid var(--line-soft);
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: white;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .rows {
+      overflow: auto;
+      padding: 8px;
+      display: grid;
+      gap: 7px;
+      align-content: start;
+    }
+
+    .holding-card {
+      border: 1px solid var(--line-soft);
+      background: white;
+      border-radius: 6px;
+      padding: 9px;
+      display: grid;
+      grid-template-columns: 34px 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .holding-card.selected {
+      border-color: #38bdf8;
+      background: #eff8ff;
+      box-shadow: inset 3px 0 0 #38bdf8;
+    }
+
+    .nr { color: var(--muted); text-align: center; }
+    .holding-name { font-weight: 700; margin-bottom: 3px; }
+    .small { color: var(--muted); font-size: 12px; }
+
+    .state {
+      min-width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      border: 1px solid rgba(0,0,0,.16);
+    }
+
+    .state.s2 { background: #ffd84d; }
+    .state.s3 { background: #fb923c; color: white; }
+    .state.s4 { background: #dc2626; color: white; }
+
+    .detail {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      background: var(--panel);
+    }
+
+    .detail-head {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line-soft);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+    }
+
+    h1 {
+      margin: 0 0 5px;
+      font-size: 23px;
+      letter-spacing: 0;
+    }
+
+    .head-actions {
+      display: flex;
+      gap: 6px;
+      align-items: start;
+    }
+
+    .outline {
+      border-color: var(--line);
+      background: white;
+    }
+
+    .detail-body {
+      overflow: auto;
+      padding: 14px 18px 18px;
+      display: grid;
+      grid-template-columns: minmax(340px, 1.05fr) minmax(400px, 1.35fr);
+      gap: 14px;
+      align-content: start;
+    }
+
+    .section {
+      border: 1px solid var(--line-soft);
+      background: var(--panel-soft);
+      border-radius: 7px;
+      overflow: hidden;
+    }
+
+    .section h2 {
+      margin: 0;
+      padding: 10px 12px;
+      font-size: 14px;
+      border-bottom: 1px solid var(--line-soft);
+      background: white;
+    }
+
+    .section-content { padding: 12px; }
+
+    .facts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .fact {
+      min-height: 54px;
+      border: 1px solid var(--line-soft);
+      background: white;
+      border-radius: 6px;
+      padding: 8px 9px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 5px;
+    }
+
+    .value { font-size: 15px; font-weight: 650; }
+
+    .score {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .big-state {
+      height: 92px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: #ffd84d;
+      border: 1px solid rgba(0,0,0,.18);
+      font-size: 30px;
+      font-weight: 850;
+    }
+
+    .meterbar {
+      height: 10px;
+      background: linear-gradient(90deg, #16a34a 0 28%, #facc15 28% 55%, #f97316 55% 78%, #dc2626 78%);
+      border-radius: 999px;
+      margin-top: 8px;
+      position: relative;
+    }
+
+    .pin {
+      position: absolute;
+      top: -5px;
+      left: 42%;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: white;
+      border: 4px solid #2563eb;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 9px;
+    }
+
+    .event {
+      display: grid;
+      grid-template-columns: 58px 34px 1fr auto;
+      gap: 9px;
+      align-items: start;
+      padding: 9px;
+      border: 1px solid var(--line-soft);
+      background: white;
+      border-radius: 6px;
+    }
+
+    .meter {
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      color: #0f766e;
+    }
+
+    .code {
+      min-width: 34px;
+      height: 24px;
+      border-radius: 4px;
+      background: #e0f2fe;
+      color: #075985;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 11px;
+    }
+
+    .badge {
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      background: #eef2ff;
+      color: #3730a3;
+      white-space: nowrap;
+    }
+
+    .media-grid,
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .action-tile {
+      border: 1px solid var(--line-soft);
+      background: white;
+      border-radius: 6px;
+      padding: 10px;
+      min-height: 58px;
+      display: grid;
+      align-content: center;
+      gap: 3px;
+    }
+
+    .action-title { font-weight: 750; }
+
+    .table-preview {
+      grid-column: 1 / -1;
+      overflow: auto;
+      border: 1px solid var(--line-soft);
+      border-radius: 7px;
+      background: white;
+    }
+
+    table {
+      border-collapse: collapse;
+      min-width: 1120px;
+      width: 100%;
+      font-size: 12px;
+    }
+
+    th, td {
+      border: 1px solid var(--line-soft);
+      padding: 7px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #eaf0f8;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    td.status-cell {
+      background: #ffd84d;
+      text-align: center;
+      font-weight: 800;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 1100px) {
+      .surface { grid-template-columns: 1fr; }
+      .holding-list { border-right: 0; border-bottom: 1px solid var(--line); max-height: 300px; }
+      .detail-body { grid-template-columns: 1fr; }
+      .toolbar { overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="status">
+      <span class="dot"></span>
+      <strong>Gelb</strong>
+      <span>Lernbasis: 45 Faelle / KI-Modell ab 25 Faellen</span>
+    </div>
+
+    <div class="toolbar">
+      <button class="primary"><span>💾</span>Speichern</button>
+      <button><span class="icon">+</span>Neu</button>
+      <button><span>🗑</span>Loeschen</button>
+      <span class="sep"></span>
+      <button><span class="icon">⚙</span>KI-Tools</button>
+      <button><span class="icon">🛠</span>Sanierungsmassnahmen</button>
+      <button><span class="icon">📁</span>Medien suchen</button>
+      <button><span>💧</span>Hydraulik</button>
+      <button><span class="icon">📄</span>Dossier</button>
+      <span class="sep"></span>
+      <button><span class="icon">↗</span>Abdocken</button>
+    </div>
+
+    <div class="viewbar">
+      <div class="tabs" aria-label="Ansicht">
+        <button class="tab">Tabelle wie heute</button>
+        <button class="tab active">Haltungsansicht</button>
+      </div>
+      <div class="searchbar">
+        <label for="search">Suche Haltung</label>
+        <input id="search" value="1077586" aria-label="Suche Haltung">
+      </div>
+    </div>
+
+    <section class="surface">
+      <aside class="holding-list">
+        <div class="list-head">
+          <strong>Haltungen</strong>
+          <div class="small">Gleiche Daten wie Excel-Export, nur anders dargestellt.</div>
+          <div class="chips">
+            <span class="chip">3 sichtbar</span>
+            <span class="chip">2 beobachten</span>
+            <span class="chip">1 ausgewaehlt</span>
+          </div>
+        </div>
+
+        <div class="rows">
+          <article class="holding-card">
+            <div class="nr">1</div>
+            <div>
+              <div class="holding-name">1077460-1077458</div>
+              <div class="small">DN150 · 11.52 m · Polyethylen</div>
+            </div>
+            <div class="state s2">2</div>
+          </article>
+
+          <article class="holding-card">
+            <div class="nr">2</div>
+            <div>
+              <div class="holding-name">1077458-59604</div>
+              <div class="small">DN150 · 34.91 m · Polyethylen</div>
+            </div>
+            <div class="state s2">2</div>
+          </article>
+
+          <article class="holding-card selected">
+            <div class="nr">3</div>
+            <div>
+              <div class="holding-name">1077586-1077458</div>
+              <div class="small">DN150 · 6.39 m · Schmutzwasser</div>
+            </div>
+            <div class="state s2">2</div>
+          </article>
+        </div>
+      </aside>
+
+      <section class="detail">
+        <header class="detail-head">
+          <div>
+            <h1>Haltung 1077586-1077458</h1>
+            <div class="small">Hartolfinge · Polyethylen · DN150 · Inspektion in Fliessrichtung</div>
+          </div>
+          <div class="head-actions">
+            <button class="outline">Video</button>
+            <button class="outline">PDF</button>
+            <button class="outline">Dossier</button>
+            <button class="primary">Bearbeiten</button>
+          </div>
+        </header>
+
+        <div class="detail-body">
+          <section class="section">
+            <h2>Stammdaten</h2>
+            <div class="section-content facts">
+              <div class="fact"><div class="label">Strasse</div><div class="value">Hartolfinge</div></div>
+              <div class="fact"><div class="label">Nutzungsart</div><div class="value">Schmutzwasser</div></div>
+              <div class="fact"><div class="label">Rohrmaterial</div><div class="value">Polyethylen</div></div>
+              <div class="fact"><div class="label">Laenge</div><div class="value">6.39 m</div></div>
+              <div class="fact"><div class="label">DN</div><div class="value">150 mm</div></div>
+              <div class="fact"><div class="label">Richtung</div><div class="value">In Fliessrichtung</div></div>
+            </div>
+          </section>
+
+          <section class="section">
+            <h2>Zustand</h2>
+            <div class="section-content score">
+              <div class="big-state">2</div>
+              <div>
+                <div class="label">VSA-Zustandsnote</div>
+                <div class="value">2.02 · Pruefungsresultat: beobachten</div>
+                <div class="meterbar"><span class="pin"></span></div>
+                <div class="note">Farbe entspricht der Tabellen-Spalte Zustandsklasse. Export bleibt identisch.</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section">
+            <h2>Primaere Schaeden als Timeline</h2>
+            <div class="section-content timeline">
+              <div class="event">
+                <div class="meter">0.00 m</div>
+                <div class="code">BCD</div>
+                <div><strong>Rohranfang</strong><div class="small">Schacht sichtbar, Start der Haltung</div></div>
+                <span class="badge">Bestand</span>
+              </div>
+              <div class="event">
+                <div class="meter">0.71 m</div>
+                <div class="code">BCA</div>
+                <div><strong>Bogen links</strong><div class="small">Richtungswechsel / seitliche Lage links</div></div>
+                <span class="badge">Kontrolle</span>
+              </div>
+              <div class="event">
+                <div class="meter">5.36 m</div>
+                <div class="code">BBC</div>
+                <div><strong>Wasserspiegel Start</strong><div class="small">Betriebliche Stoerung, Beginn</div></div>
+                <span class="badge">Strecke</span>
+              </div>
+              <div class="event">
+                <div class="meter">6.08 m</div>
+                <div class="code">BCB</div>
+                <div><strong>Bogen rechts</strong><div class="small">Richtungswechsel / Lage rechts</div></div>
+                <span class="badge">Bestand</span>
+              </div>
+              <div class="event">
+                <div class="meter">6.30 m</div>
+                <div class="code">BBC</div>
+                <div><strong>Wasserspiegel Ende</strong><div class="small">Ende der beobachteten Strecke</div></div>
+                <span class="badge">Strecke</span>
+              </div>
+              <div class="event">
+                <div class="meter">6.38 m</div>
+                <div class="code">BCE</div>
+                <div><strong>Rohrende</strong><div class="small">Endknoten erreicht</div></div>
+                <span class="badge">Bestand</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="section">
+            <h2>Sanierung und Medien</h2>
+            <div class="section-content">
+              <div class="decision-grid">
+                <div class="action-tile">
+                  <div class="label">Sanieren</div>
+                  <div class="action-title">Nein / beobachten</div>
+                </div>
+                <div class="action-tile">
+                  <div class="label">Empfohlene Massnahme</div>
+                  <div class="action-title">Keine Sofortmassnahme</div>
+                </div>
+              </div>
+
+              <div class="media-grid" style="margin-top: 10px;">
+                <div class="action-tile"><div class="action-title">Video oeffnen</div><div class="small">Inspektion abspielen</div></div>
+                <div class="action-tile"><div class="action-title">Protokoll</div><div class="small">PDF / Beobachtungen</div></div>
+                <div class="action-tile"><div class="action-title">Karte</div><div class="small">Haltung im Netz zeigen</div></div>
+                <div class="action-tile"><div class="action-title">Dossier</div><div class="small">Export wie bisher</div></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="table-preview">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nr.</th>
+                  <th>Haltungsname (ID)</th>
+                  <th>Strasse</th>
+                  <th>Rohrmaterial</th>
+                  <th>DN mm</th>
+                  <th>Nutzungsart</th>
+                  <th>Laenge m</th>
+                  <th>Primaere Schaeden</th>
+                  <th>Zustandsklasse</th>
+                  <th>VSA-Note</th>
+                  <th>Pruefungsresultat</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>3</td>
+                  <td>1077586-1077458</td>
+                  <td>Hartolfinge</td>
+                  <td>Polyethylen</td>
+                  <td>150</td>
+                  <td>Schmutzwasser</td>
+                  <td>6.39</td>
+                  <td>BCD @0.00m; BCA @0.71m; BBC @5.36m; BCB @6.08m; BBC @6.30m; BCE @6.38m</td>
+                  <td class="status-cell">2</td>
+                  <td>2.02</td>
+                  <td>beobachten</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

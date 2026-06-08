@@ -93,6 +93,63 @@ public sealed class TrainingSampleGeneratorCodeMetaTests
     }
 
     [Fact]
+    public void PdfProtocolExtractor_BuildEntry_Verwirft_unbekannte_VsaCodes()
+    {
+        var method = typeof(PdfProtocolExtractor).GetMethod(
+            "BuildEntry",
+            BindingFlags.NonPublic | BindingFlags.Static);
+
+        Assert.NotNull(method);
+
+        var entry = (GroundTruthEntry?)method!.Invoke(
+            null,
+            [
+                "12.30",
+                "",
+                "ABC",
+                "",
+                "Freitext der kein VSA-Code ist",
+                TimeSpan.FromSeconds(12)
+            ]);
+
+        Assert.Null(entry);
+    }
+
+    [Fact]
+    public async Task PdfProtocolExtractor_ExtractAsync_Verwirft_unbekannte_JsonCodes()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "AuswertungProTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            var protocolPath = Path.Combine(tempDir, "protocol.json");
+            var doc = new ProtocolDocument
+            {
+                Current = new ProtocolRevision
+                {
+                    Entries =
+                    [
+                        CreateEntry("BAB", "Riss", 1.0),
+                        CreateEntry("ABC", "Freitext-Code", 2.0)
+                    ]
+                }
+            };
+            await File.WriteAllTextAsync(protocolPath, JsonSerializer.Serialize(doc));
+
+            var entries = await new PdfProtocolExtractor().ExtractAsync(protocolPath);
+
+            var entry = Assert.Single(entries);
+            Assert.Equal("BAB", entry.VsaCode);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task GenerateWithDiagnosticsAsync_CopiesProtocolCodeMetaToTrainingSample()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "AuswertungProTests", Guid.NewGuid().ToString("N"));

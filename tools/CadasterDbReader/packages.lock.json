@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net8.0": {
+      "FirebirdSql.Data.FirebirdClient": {
+        "type": "Direct",
+        "requested": "[10.0.0, )",
+        "resolved": "10.0.0",
+        "contentHash": "x+JkSd6TeL9zUXDbi5C0NPeZ1ejo5sw3G9nhoxvVGXhaU399agYgO5RXtYRmcS4GkeA57Q9sThe5pFL2knSdXQ=="
+      }
+    }
+  }
+}

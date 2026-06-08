@@ -71,4 +71,29 @@ public sealed class EvalSetManifestHasherTests : IDisposable
         Assert.NotNull(hashes["images/a.png"]);
         Assert.NotNull(hashes["labels/a.txt"]);
     }
+
+    [Fact]
+    public void ComputeAndStoreHashes_refreshes_manifest_counts_for_subset()
+    {
+        File.WriteAllText(Path.Combine(_root, "_manifest.json"), """{"frozen":true,"approved":120}""", Encoding.UTF8);
+        File.WriteAllText(Path.Combine(_root, "_candidates.json"), """
+[
+  {"id":"a","status":"approved"},
+  {"id":"b","status":"approved"}
+]
+""", Encoding.UTF8);
+        File.WriteAllBytes(Path.Combine(_root, "images", "b.jpg"), [7, 8, 9]);
+        File.WriteAllText(Path.Combine(_root, "labels", "b.txt"), "BBA", Encoding.UTF8);
+
+        var result = EvalSetManifestHasher.ComputeAndStoreHashes(_root);
+
+        Assert.Equal(5, result.HashesCount);
+
+        var manifest = JsonNode.Parse(File.ReadAllText(Path.Combine(_root, "_manifest.json"), Encoding.UTF8))!.AsObject();
+        Assert.Equal(2, manifest["approved"]!.GetValue<int>());
+        Assert.Equal(2, manifest["candidates_count"]!.GetValue<int>());
+        Assert.Equal(2, manifest["images_count"]!.GetValue<int>());
+        Assert.Equal(2, manifest["labels_count"]!.GetValue<int>());
+        Assert.Equal(5, manifest["hashes_count"]!.GetValue<int>());
+    }
 }

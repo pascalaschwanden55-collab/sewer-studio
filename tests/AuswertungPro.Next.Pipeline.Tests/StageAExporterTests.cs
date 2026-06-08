@@ -126,6 +126,27 @@ public sealed class StageAExporterTests : IDisposable
     }
 
     [Fact]
+    public async Task DryRun_blockt_samples_ohne_echte_box_standardmaessig()
+    {
+        var source = PrepareSourceWithBboxAndNoBbox();
+        var output = Path.Combine(_root, "bbox-default-out");
+
+        var result = await new StageAExporter(CreateTestCatalog()).ExportAsync(new StageAExportOptions(
+            SourceSamplesPath: source.SamplesPath,
+            EvalSetRoot: source.EvalRoot,
+            OutputRoot: output,
+            DryRun: true,
+            ValidationRatio: 0,
+            DegreeOfParallelism: 2));
+
+        Assert.Equal(2, result.InputSamples);
+        Assert.Equal(1, result.SkippedWithoutBoundingBox);
+        Assert.Equal(1, result.FinalSamples);
+        Assert.Equal("BABAC", Assert.Single(result.Classes).ClassName);
+        Assert.False(Directory.Exists(output));
+    }
+
+    [Fact]
     public async Task DryRun_require_bbox_filtert_samples_ohne_echte_box()
     {
         var source = PrepareSourceWithBboxAndNoBbox();
@@ -264,10 +285,40 @@ public sealed class StageAExporterTests : IDisposable
         var samples = new[]
         {
             new TrainingSample { SampleId = "rejected", Code = "BCE", FramePath = good, Status = TrainingSampleStatus.Rejected },
-            MarkEligible(new TrainingSample { SampleId = "eval", Code = "BCAAA", FramePath = eval, Status = TrainingSampleStatus.Approved }),
-            MarkEligible(new TrainingSample { SampleId = "missing", Code = "BAHC", FramePath = Path.Combine(frameRoot, "missing.png"), Status = TrainingSampleStatus.Approved }),
+            MarkEligible(new TrainingSample
+            {
+                SampleId = "eval",
+                Code = "BCAAA",
+                FramePath = eval,
+                Status = TrainingSampleStatus.Approved,
+                BboxXCenter = 0.5,
+                BboxYCenter = 0.5,
+                BboxWidth = 0.8,
+                BboxHeight = 0.8,
+            }),
+            MarkEligible(new TrainingSample
+            {
+                SampleId = "missing",
+                Code = "BAHC",
+                FramePath = Path.Combine(frameRoot, "missing.png"),
+                Status = TrainingSampleStatus.Approved,
+                BboxXCenter = 0.5,
+                BboxYCenter = 0.5,
+                BboxWidth = 0.8,
+                BboxHeight = 0.8,
+            }),
             MarkEligible(new TrainingSample { SampleId = "badcode", Code = "", FramePath = good, Status = TrainingSampleStatus.Approved }),
-            MarkEligible(new TrainingSample { SampleId = "ok", Code = "BABAC", FramePath = good, Status = TrainingSampleStatus.Approved }),
+            MarkEligible(new TrainingSample
+            {
+                SampleId = "ok",
+                Code = "BABAC",
+                FramePath = good,
+                Status = TrainingSampleStatus.Approved,
+                BboxXCenter = 0.5,
+                BboxYCenter = 0.5,
+                BboxWidth = 0.8,
+                BboxHeight = 0.8,
+            }),
         };
 
         var samplesPath = Path.Combine(_root, "training_samples.json");
@@ -308,7 +359,18 @@ public sealed class StageAExporterTests : IDisposable
         var samples = new[]
         {
             MarkEligible(new TrainingSample { SampleId = "eval-haltung", CaseId = "287425-81162", Code = "BCAAA", FramePath = evalHaltungFrame, Status = TrainingSampleStatus.Approved }),
-            MarkEligible(new TrainingSample { SampleId = "clean", CaseId = "999999-888888", Code = "BABAC", FramePath = cleanFrame, Status = TrainingSampleStatus.Approved }),
+            MarkEligible(new TrainingSample
+            {
+                SampleId = "clean",
+                CaseId = "999999-888888",
+                Code = "BABAC",
+                FramePath = cleanFrame,
+                Status = TrainingSampleStatus.Approved,
+                BboxXCenter = 0.5,
+                BboxYCenter = 0.5,
+                BboxWidth = 0.8,
+                BboxHeight = 0.8,
+            }),
         };
 
         var samplesPath = Path.Combine(_root, "haltung_training_samples.json");
@@ -454,6 +516,10 @@ public sealed class StageAExporterTests : IDisposable
                 Status = TrainingSampleStatus.Approved,
                 InspectionDate = new DateTime(2022, 1, 1),
                 TrainingEligible = true,
+                BboxXCenter = 0.5,
+                BboxYCenter = 0.5,
+                BboxWidth = 0.8,
+                BboxHeight = 0.8,
             },
         };
 

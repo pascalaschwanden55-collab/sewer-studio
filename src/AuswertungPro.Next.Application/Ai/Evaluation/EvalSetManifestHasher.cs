@@ -35,6 +35,11 @@ public static class EvalSetManifestHasher
         var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))?.AsObject()
             ?? throw new InvalidDataException("Eval-Set-Manifest ist kein JSON-Objekt.");
 
+        var counts = CountEvalSetArtifacts(evalSetRoot);
+        manifest["approved"] = counts.ApprovedCandidates;
+        manifest["candidates_count"] = counts.CandidateCount;
+        manifest["images_count"] = counts.ImagesCount;
+        manifest["labels_count"] = counts.LabelsCount;
         manifest["hash_algorithm"] = result.Algorithm;
         manifest["hashes_count"] = result.HashesCount;
         manifest["hashes_generated_utc"] = DateTimeOffset.UtcNow.ToString("O");
@@ -99,4 +104,64 @@ public static class EvalSetManifestHasher
 
     private static string ToRelativeSlashPath(string root, string path)
         => Path.GetRelativePath(root, path).Replace(Path.DirectorySeparatorChar, '/');
+
+    private static EvalSetArtifactCounts CountEvalSetArtifacts(string evalSetRoot)
+    {
+        var candidates = CountCandidates(Path.Combine(evalSetRoot, CandidatesFileName));
+        return new EvalSetArtifactCounts(
+            CandidateCount: candidates.Total,
+            ApprovedCandidates: candidates.Approved,
+            ImagesCount: CountFiles(Path.Combine(evalSetRoot, "images")),
+            LabelsCount: CountFiles(Path.Combine(evalSetRoot, "labels")));
+    }
+
+    private static (int Total, int Approved) CountCandidates(string candidatesPath)
+    {
+        if (!File.Exists(candidatesPath))
+            return (0, 0);
+
+        using var doc = JsonDocument.Parse(File.ReadAllText(candidatesPath));
+        var root = doc.RootElement;
+        var array = root.ValueKind == JsonValueKind.Array
+            ? root
+            : root.ValueKind == JsonValueKind.Object &&
+              root.TryGetProperty("candidates", out var nested) &&
+              nested.ValueKind == JsonValueKind.Array
+                ? nested
+                : default;
+
+        if (array.ValueKind != JsonValueKind.Array)
+            return (0, 0);
+
+        var total = 0;
+        var approved = 0;
+        foreach (var item in array.EnumerateArray())
+        {
+            total++;
+            var status = item.ValueKind == JsonValueKind.Object &&
+                         item.TryGetProperty("status", out var statusElement) &&
+                         statusElement.ValueKind == JsonValueKind.String
+                ? statusElement.GetString()
+                : null;
+
+            if (string.IsNullOrWhiteSpace(status) ||
+                string.Equals(status, "approved", StringComparison.OrdinalIgnoreCase))
+            {
+                approved++;
+            }
+        }
+
+        return (total, approved);
+    }
+
+    private static int CountFiles(string directory)
+        => Directory.Exists(directory)
+            ? Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories).Count()
+            : 0;
+
+    private sealed record EvalSetArtifactCounts(
+        int CandidateCount,
+        int ApprovedCandidates,
+        int ImagesCount,
+        int LabelsCount);
 }

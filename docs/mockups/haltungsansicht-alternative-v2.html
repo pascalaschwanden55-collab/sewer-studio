@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SewerStudio · Alternative Haltungsansicht (v2)</title>
+<style>
+  :root{
+    /* Eine Farbe pro Bedeutung – konsolidierte Tokens */
+    --bg:#eef2f7;
+    --panel:#ffffff;
+    --surface:#f7f9fc;
+    --line:#dce3ec;
+    --line-strong:#c3cedd;
+    --text:#0f172a;
+    --muted:#5b6b80;
+    --hint:#8a98ab;
+    --primary:#1f6feb;
+    --primary-strong:#1559c4;
+    --primary-soft:#e8f1ff;
+    --accent:#0ea5e9;
+    /* Zustandsklassen – identisch zur Tabellenspalte */
+    --k1:#16a34a;            /* gut */
+    --k2:#ffd400;            /* beobachten (Tabellengelb) */
+    --k3:#f97316;
+    --k4:#dc2626;
+    --rail:#0f766e;          /* Meterwerte */
+    --shadow:0 10px 30px rgba(15,23,42,.10);
+  }
+  *{box-sizing:border-box}
+  html{font-size:100%}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Segoe UI",system-ui,Arial,sans-serif;
+    font-size:.875rem;            /* 14px, skaliert mit OS-Textgröße */
+    line-height:1.45;
+  }
+  .app{
+    height:100vh;
+    padding:.7rem .9rem 1rem;
+    display:grid;
+    grid-template-rows:auto auto auto 1fr;
+    gap:.5rem;
+  }
+  .bar{
+    border:1px solid var(--line);
+    background:var(--panel);
+    border-radius:.55rem;
+  }
+
+  /* Statuszeile */
+  .status{display:flex;align-items:center;gap:.6rem;padding:.35rem .7rem;min-height:2rem}
+  .dot{width:.7rem;height:.7rem;border-radius:50%;flex:0 0 auto}
+  .dot.gelb{background:var(--k2);box-shadow:0 0 0 2px #fff,0 0 0 3px var(--k2)}
+  .status .muted{color:var(--muted)}
+
+  /* Toolbar */
+  .toolbar{display:flex;align-items:center;gap:.15rem;padding:.3rem;flex-wrap:wrap}
+  button{
+    font:inherit;color:var(--text);
+    height:2rem;border:1px solid transparent;background:transparent;border-radius:.35rem;
+    padding:0 .65rem;display:inline-flex;align-items:center;gap:.4rem;cursor:pointer;
+    white-space:nowrap;
+  }
+  button:hover{background:var(--surface);border-color:var(--line)}
+  button:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
+  button:active{transform:translateY(.5px)}
+  .primary{background:var(--primary);border-color:var(--primary-strong);color:#fff;font-weight:600}
+  .primary:hover{background:var(--primary-strong)}
+  .ic{color:var(--primary);font-weight:700}
+  .primary .ic{color:#fff}
+  .sep{width:1px;height:1.4rem;background:var(--line);margin:0 .35rem}
+  .caret{color:var(--hint);font-size:.7rem}
+
+  /* Ansichtsleiste */
+  .viewbar{display:flex;align-items:center;justify-content:space-between;gap:.8rem;padding:.45rem .7rem}
+  .tabs{display:inline-flex;border:1px solid var(--line-strong);border-radius:.45rem;overflow:hidden;background:#fff}
+  .tab{height:2rem;border:0;border-right:1px solid var(--line);border-radius:0;background:#fff;padding:0 1rem}
+  .tab:last-child{border-right:0}
+  .tab[aria-selected="true"]{background:var(--primary-soft);color:var(--primary-strong);font-weight:700}
+  .search{display:flex;align-items:center;gap:.5rem;color:var(--muted)}
+  .search input{height:2rem;border:1px solid var(--line-strong);border-radius:.35rem;padding:0 .55rem;background:#fff;font:inherit;width:14rem}
+  .search input:focus-visible{outline:2px solid var(--primary);outline-offset:1px;border-color:var(--primary)}
+
+  /* Fläche */
+  .viewport{min-height:0;display:grid;grid-template-rows:1fr}
+  .surface{height:100%;border:1px solid var(--line);border-radius:.55rem;background:var(--panel);box-shadow:var(--shadow);overflow:hidden;min-height:0;display:grid;grid-template-columns:21rem 1fr}
+
+  /* Liste */
+  .list{border-right:1px solid var(--line);background:#f8fbff;display:grid;grid-template-rows:auto 1fr;min-width:0}
+  .list-head{padding:.7rem .75rem;border-bottom:1px solid var(--line);display:grid;gap:.45rem}
+  .list-head strong{font-size:1rem}
+  .chips{display:flex;gap:.35rem;flex-wrap:wrap}
+  .chip{border:1px solid var(--line);border-radius:999px;padding:.12rem .55rem;background:#fff;color:var(--muted);font-size:.75rem}
+  .rows{overflow:auto;padding:.5rem;display:grid;gap:.45rem;align-content:start}
+  .hcard{
+    text-align:left;height:auto;border:1px solid var(--line);background:#fff;border-radius:.45rem;padding:.55rem;
+    display:grid;grid-template-columns:1.7rem 1fr auto;gap:.5rem;align-items:center;width:100%;
+  }
+  .hcard:hover{border-color:var(--line-strong);background:#fff}
+  .hcard[aria-current="true"]{border-color:var(--accent);background:#eff8ff;box-shadow:inset 3px 0 0 var(--accent)}
+  .hcard .nr{color:var(--muted);text-align:center}
+  .hname{font-weight:700;margin-bottom:.12rem}
+  .small{color:var(--muted);font-size:.78rem}
+  .kstate{min-width:2.3rem;height:2.3rem;border-radius:.4rem;display:grid;place-items:center;font-weight:800;border:1px solid rgba(0,0,0,.16)}
+
+  /* Detail */
+  .detail{min-width:0;display:grid;grid-template-rows:auto 1fr;background:var(--panel)}
+  .detail-head{padding:.9rem 1.05rem;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:1rem}
+  h1{margin:0 0 .25rem;font-size:1.4rem}
+  .detail-head .sub{color:var(--muted)}
+  .head-actions{display:flex;gap:.35rem;align-items:start;flex-wrap:wrap}
+  .outline{border-color:var(--line-strong);background:#fff}
+
+  .body{overflow:auto;padding:.9rem 1.05rem 1.1rem;display:grid;grid-template-columns:minmax(20rem,1fr) minmax(24rem,1.25fr);gap:.8rem;align-content:start}
+  .section{border:1px solid var(--line);background:var(--surface);border-radius:.5rem;overflow:hidden}
+  .section.wide{grid-column:1 / -1}
+  .section h2{margin:0;padding:.6rem .75rem;font-size:.92rem;border-bottom:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:space-between}
+  .section .content{padding:.75rem}
+
+  .facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+  .fact{border:1px solid var(--line);background:#fff;border-radius:.4rem;padding:.5rem .6rem;min-height:3.1rem}
+  .label{color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem}
+  .value{font-size:.95rem;font-weight:650}
+
+  /* Zustand */
+  .score{display:grid;grid-template-columns:5.6rem 1fr;gap:.8rem;align-items:center}
+  .big{height:5.6rem;border-radius:.5rem;display:grid;place-items:center;font-size:2.1rem;font-weight:850;border:1px solid rgba(0,0,0,.18)}
+  .scale{margin-top:.55rem}
+  .scale-track{display:grid;grid-template-columns:repeat(4,1fr);height:.7rem;border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+  .scale-track span{display:block}
+  .ticks{display:grid;grid-template-columns:repeat(4,1fr);margin-top:.25rem;font-size:.72rem;color:var(--muted)}
+  .ticks span{text-align:center;position:relative}
+  .ticks span.cur{color:var(--text);font-weight:800}
+  .ticks span.cur::before{content:"▲";display:block;color:var(--text);font-size:.6rem;line-height:1}
+
+  /* Meter-Leiste */
+  .rail-wrap{padding:.2rem .4rem 0}
+  .rail-line{position:relative;height:2.6rem;margin-top:1.4rem}
+  .rail-base{position:absolute;left:0;right:0;top:1.05rem;height:.32rem;background:#e2e8f0;border-radius:999px}
+  .span{position:absolute;top:.95rem;height:.52rem;background:var(--accent);opacity:.35;border-radius:999px}
+  .mk{position:absolute;top:.55rem;width:1.05rem;height:1.05rem;border-radius:50%;border:3px solid #fff;transform:translateX(-50%);box-shadow:0 0 0 1px var(--line-strong)}
+  .mk.bc{background:var(--primary)}     /* Grundgerüst (Rohranfang/-ende, Bogen, Anschluss) */
+  .mk.op{background:var(--accent)}       /* Betrieb (Wasserspiegel u.ä.) */
+  .mk.st{background:var(--k3)}           /* baulich/sonstige */
+  .mlab{position:absolute;top:-0.05rem;transform:translateX(-50%);font-size:.68rem;color:var(--rail);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ends{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-top:.1rem}
+  .legend{display:flex;gap:.9rem;flex-wrap:wrap;font-size:.72rem;color:var(--muted);margin:.55rem .2rem 0}
+  .legend i{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;vertical-align:-1px;margin-right:.3rem}
+
+  /* Timeline-Liste */
+  .events{display:grid;gap:.4rem;margin-top:.7rem}
+  .ev{display:grid;grid-template-columns:3.6rem 3rem 1fr auto;gap:.55rem;align-items:center;padding:.5rem .55rem;border:1px solid var(--line);background:#fff;border-radius:.4rem}
+  .ev .m{font-variant-numeric:tabular-nums;font-weight:700;color:var(--rail)}
+  .code{height:1.55rem;border-radius:.3rem;background:#e0f2fe;color:#075985;display:grid;place-items:center;font-weight:800;font-size:.72rem;padding:0 .25rem}
+  .ev .ttl{font-weight:650}
+  .ev .small{font-size:.76rem}
+  .badge{border-radius:999px;padding:.12rem .5rem;font-size:.7rem;background:var(--primary-soft);color:var(--primary-strong);white-space:nowrap}
+
+  /* Aktionen */
+  .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
+  .tile{border:1px solid var(--line);background:#fff;border-radius:.4rem;padding:.6rem;min-height:3.4rem;display:grid;align-content:center;gap:.15rem}
+  .tile .t{font-weight:700}
+
+  /* Datenquelle */
+  details.src{grid-column:1 / -1;border:1px dashed var(--line-strong);border-radius:.5rem;background:#fff;padding:.5rem .7rem;color:var(--muted)}
+  details.src summary{cursor:pointer;font-weight:600;color:var(--text)}
+  details.src code{font-family:Consolas,"SF Mono",monospace;font-size:.78rem;color:#334155;display:block;margin-top:.5rem;white-space:pre-wrap;word-break:break-word}
+
+  /* Tabellen-Ansicht */
+  .tablewrap{grid-column:1 / -1;overflow:auto;border:1px solid var(--line);border-radius:.5rem;background:#fff}
+  table{border-collapse:collapse;width:100%;min-width:64rem;font-size:.78rem}
+  th,td{border:1px solid var(--line);padding:.45rem .55rem;text-align:left;vertical-align:top}
+  th{background:#eaf0f8;font-weight:700;white-space:nowrap;position:sticky;top:0}
+  td.kcell{text-align:center;font-weight:800}
+  .note{color:var(--muted);font-size:.78rem;margin:.5rem .2rem 0}
+  .hidden{display:none}
+
+  @media (max-width:1080px){
+    .surface{grid-template-columns:1fr}
+    .list{border-right:0;border-bottom:1px solid var(--line);max-height:16rem}
+    .body{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<main class="app">
+
+  <div class="bar status">
+    <span class="dot gelb" aria-hidden="true"></span>
+    <strong>Gelb</strong>
+    <span class="muted">Lernbasis: 45 Fälle / KI-Modell ab 25 Fällen</span>
+  </div>
+
+  <div class="bar toolbar" role="toolbar" aria-label="Aktionen">
+    <button class="primary"><span class="ic" aria-hidden="true">💾</span>Speichern</button>
+    <button><span class="ic" aria-hidden="true">+</span>Neu</button>
+    <button><span aria-hidden="true">🗑</span>Löschen</button>
+    <span class="sep" aria-hidden="true"></span>
+    <button><span class="ic" aria-hidden="true">⚙</span>KI-Tools<span class="caret">▾</span></button>
+    <button><span class="ic" aria-hidden="true">🛠</span>Sanierungsmaßnahmen<span class="caret">▾</span></button>
+    <button><span class="ic" aria-hidden="true">📁</span>Medien suchen</button>
+    <button><span aria-hidden="true">💧</span>Hydraulik</button>
+    <button><span class="ic" aria-hidden="true">📄</span>Hydraulik PDF</button>
+    <button><span class="ic" aria-hidden="true">📑</span>Dossier</button>
+    <span class="sep" aria-hidden="true"></span>
+    <button><span class="ic" aria-hidden="true">↗</span>Abdocken</button>
+    <button><span class="ic" aria-hidden="true">⊟</span>Ansicht<span class="caret">▾</span></button>
+  </div>
+
+  <div class="bar viewbar">
+    <div class="tabs" role="tablist" aria-label="Ansicht wählen">
+      <button class="tab" role="tab" id="tab-tabelle" aria-selected="false" aria-controls="view-tabelle">Tabelle wie heute</button>
+      <button class="tab" role="tab" id="tab-ansicht" aria-selected="true" aria-controls="view-ansicht">Haltungsansicht</button>
+    </div>
+    <div class="search">
+      <label for="search">Suche Schacht</label>
+      <input id="search" placeholder="z. B. 1077586" aria-label="Suche Schacht">
+    </div>
+  </div>
+
+  <section class="viewport">
+    <!-- ============ HALTUNGSANSICHT ============ -->
+    <div id="view-ansicht" class="surface" role="tabpanel" aria-labelledby="tab-ansicht" style="width:100%">
+      <aside class="list">
+        <div class="list-head">
+          <strong>Haltungen</strong>
+          <div class="small">Gleiche Daten wie der Excel-Export – nur anders dargestellt. Export bleibt 1:1.</div>
+          <div class="chips" id="chips"></div>
+        </div>
+        <div class="rows" id="rows" role="listbox" aria-label="Haltungen" tabindex="0"></div>
+      </aside>
+
+      <section class="detail">
+        <header class="detail-head">
+          <div>
+            <h1 id="d-title">—</h1>
+            <div class="sub" id="d-sub">—</div>
+          </div>
+          <div class="head-actions">
+            <button class="outline"><span aria-hidden="true">▶</span> Video</button>
+            <button class="outline">PDF</button>
+            <button class="outline">Dossier</button>
+            <button class="primary">Bearbeiten</button>
+          </div>
+        </header>
+
+        <div class="body" id="d-body"><!-- gefüllt per JS --></div>
+      </section>
+    </div>
+
+    <!-- ============ TABELLE WIE HEUTE ============ -->
+    <div id="view-tabelle" class="surface hidden" role="tabpanel" aria-labelledby="tab-tabelle" style="width:100%;grid-template-columns:1fr">
+      <div style="padding:.8rem 1rem;overflow:auto;display:grid;align-content:start;gap:.4rem">
+        <div class="small">Dieselbe Datengrundlage wie die Haltungsansicht – nur als Tabelle. (Auszug der Spalten)</div>
+        <div class="tablewrap" style="grid-column:auto">
+          <table id="tbl"></table>
+        </div>
+        <div class="note">Beide Ansichten werden aus <em>einem</em> Datensatz erzeugt. Spalte „Zustandsklasse“ behält ihre Farbe; der Export ist identisch.</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* =========================================================================
+   EINE Datengrundlage – 1:1 aus der Datenseite übernommen (Screenshot).
+   Die Spalte "Primäre Schäden" hat das Format: CODE @METERm (Bezeichnung).
+   Diese Ansicht PARST diesen String – sie erfindet keine Bezeichnungen.
+   Bezeichnungen stammen aus der Zelle bzw. dem VSA-Katalog.
+   ========================================================================= */
+const HALTUNGEN = [
+  {
+    nr:1, id:"1077460-1077458", strasse:"Hartolfinge", material:"Polyethylen", dn:150,
+    nutzung:"Schmutzwasser", laenge:11.52, richtung:"In Fliessrichtung",
+    klasse:2, noteD:4.00, pruef:"beobachten", referenz:"—", sanieren:"—", massnahme:"—",
+    schaeden:[
+      {m:0.00,  code:"BCD", label:"Rohranfang"},
+      {m:1.47,  code:"BDA", label:""},
+      {m:11.52, code:"BCE", label:"Rohrende"}
+    ]
+  },
+  {
+    nr:2, id:"1077458-59604", strasse:"Hartolfinge", material:"Polyethylen", dn:150,
+    nutzung:"Schmutzwasser", laenge:34.91, richtung:"In Fliessrichtung",
+    klasse:2, noteD:2.37, pruef:"beobachten", referenz:"—", sanieren:"—", massnahme:"—",
+    schaeden:[
+      {m:0.00,  code:"BCD",   label:"Rohranfang"},
+      {m:12.65, code:"BDA",   label:""},
+      {m:33.84, code:"BCAAA", label:"Seitl. Anschluss"},
+      {m:34.91, code:"BCE",   label:"Rohrende"}
+    ]
+  },
+  {
+    nr:3, id:"1077586-1077458", strasse:"Hartolfinge", material:"Polyethylen", dn:150,
+    nutzung:"Schmutzwasser", laenge:6.39, richtung:"In Fliessrichtung",
+    klasse:2, noteD:2.02, pruef:"beobachten", referenz:"—", sanieren:"—", massnahme:"—",
+    schaeden:[
+      {m:0.00, code:"BCD",   label:"Rohranfang"},
+      {m:0.71, code:"BCCAY", label:"Bogen"},
+      {m:5.36, code:"BDDC",  label:"Wasserspiegel"},
+      {m:6.08, code:"BCCBY", label:"Bogen"},
+      {m:6.31, code:"BDDC",  label:"Wasserspiegel"},
+      {m:6.39, code:"BCE",   label:"Rohrende"}
+    ]
+  }
+];
+
+const KLASSE_FARBE = {1:"var(--k1)",2:"var(--k2)",3:"var(--k3)",4:"var(--k4)"};
+const KLASSE_TXT    = {1:"#053",2:"#3a2f00",3:"#fff",4:"#fff"};
+
+/* Code-Gruppe -> Markerfarbe/Badge */
+function gruppe(code){
+  if(code.startsWith("BC")) return "bc";   // Grundgerüst
+  if(code.startsWith("BD") || code.startsWith("BB")) return "op"; // Betrieb
+  return "st";
+}
+function tag(code){
+  const g = gruppe(code);
+  return g==="bc" ? "Bestand" : g==="op" ? "Betrieb" : "Schaden";
+}
+function fmtM(x){ return x.toFixed(2)+" m"; }
+function titel(s){ return s.label && s.label.length ? s.label : s.code; }
+
+let aktiv = 2; // Index der ausgewählten Haltung (Standard: Zeile 3)
+
+/* ---------- Liste links ---------- */
+function renderListe(){
+  const beob = HALTUNGEN.filter(h=>h.pruef==="beobachten").length;
+  document.getElementById("chips").innerHTML =
+    `<span class="chip">${HALTUNGEN.length} sichtbar</span>`+
+    `<span class="chip">${beob} beobachten</span>`+
+    `<span class="chip">1 ausgewählt</span>`;
+
+  const rows = document.getElementById("rows");
+  rows.innerHTML = "";
+  HALTUNGEN.forEach((h,i)=>{
+    const b = document.createElement("button");
+    b.className = "hcard";
+    b.setAttribute("role","option");
+    b.setAttribute("aria-current", i===aktiv ? "true":"false");
+    b.innerHTML =
+      `<div class="nr">${h.nr}</div>`+
+      `<div><div class="hname">${h.id}</div><div class="small">DN${h.dn} · ${fmtM(h.laenge)} · ${h.nutzung}</div></div>`+
+      `<div class="kstate" style="background:${KLASSE_FARBE[h.klasse]};color:${KLASSE_TXT[h.klasse]}">${h.klasse}</div>`;
+    b.onclick = ()=>{ aktiv=i; renderListe(); renderDetail(); };
+    rows.appendChild(b);
+  });
+}
+
+/* ---------- Meter-Leiste ---------- */
+function renderRail(h){
+  const L = h.laenge || 1;
+  const pos = m => Math.min(100, Math.max(0, (m/L)*100));
+
+  // Streckenschaden erkennen: identischer Code an zwei Positionen -> Spanne
+  const spans = [];
+  const byCode = {};
+  h.schaeden.forEach(s=>{ (byCode[s.code]=byCode[s.code]||[]).push(s.m); });
+  Object.entries(byCode).forEach(([code,ms])=>{
+    if(ms.length>=2){ spans.push({a:Math.min(...ms), b:Math.max(...ms), code}); }
+  });
+
+  let mk = "";
+  spans.forEach(sp=>{
+    const l=pos(sp.a), w=pos(sp.b)-pos(sp.a);
+    mk += `<span class="span" style="left:${l}%;width:${w}%" title="${sp.code} ${fmtM(sp.a)}–${fmtM(sp.b)}"></span>`;
+  });
+  h.schaeden.forEach((s,idx)=>{
+    const l = pos(s.m);
+    const align = l<6 ? "left:0;transform:none" : l>94 ? "right:0;left:auto;transform:none" : `left:${l}%`;
+    // Label nur für gut lesbare / wichtige Punkte, sonst überlappt es
+    const showLab = (idx===0 || idx===h.schaeden.length-1 || s.code==="BDDC" || s.label==="Bogen");
+    if(showLab) mk += `<span class="mlab" style="${align}">${fmtM(s.m)}</span>`;
+    mk += `<span class="mk ${gruppe(s.code)}" style="left:${l}%" title="${s.code} · ${titel(s)} @ ${fmtM(s.m)}"></span>`;
+  });
+
+  return `
+    <div class="rail-wrap">
+      <div class="rail-line">
+        <div class="rail-base"></div>
+        ${mk}
+      </div>
+      <div class="ends"><span>0.00 m</span><span>${fmtM(h.laenge)}</span></div>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--primary)"></i>Grundgerüst (BC)</span>
+      <span><i style="background:var(--accent)"></i>Betrieb (BD/BB)</span>
+      <span><i style="background:var(--accent);opacity:.35"></i>Strecke (gleicher Code, Anfang→Ende)</span>
+    </div>`;
+}
+
+/* ---------- Timeline-Liste ---------- */
+function renderEvents(h){
+  return h.schaeden.map(s=>`
+    <div class="ev">
+      <div class="m">${fmtM(s.m)}</div>
+      <div class="code" title="VSA-KEK Code">${s.code}</div>
+      <div><div class="ttl">${titel(s)}</div>${s.label? "" : '<div class="small">Bezeichnung folgt aus Katalog</div>'}</div>
+      <span class="badge">${tag(s.code)}</span>
+    </div>`).join("");
+}
+
+/* ---------- Rohzelle (Datenherkunft) ---------- */
+function rohzelle(h){
+  return h.schaeden.map(s=>`${s.code} @${s.m.toFixed(2)}m (${s.label||"…"})`).join("; ");
+}
+
+/* ---------- Klassenskala mit Achse ---------- */
+function renderSkala(klasse){
+  const segs=[1,2,3,4].map(k=>`<span style="background:${KLASSE_FARBE[k]}"></span>`).join("");
+  const ticks=[1,2,3,4].map(k=>`<span class="${k===klasse?"cur":""}">${k}</span>`).join("");
+  return `<div class="scale"><div class="scale-track">${segs}</div><div class="ticks">${ticks}</div></div>`;
+}
+
+/* ---------- Detail rechts ---------- */
+function renderDetail(){
+  const h = HALTUNGEN[aktiv];
+  document.getElementById("d-title").textContent = `Haltung ${h.id}`;
+  document.getElementById("d-sub").textContent =
+    `${h.strasse} · ${h.material} · DN${h.dn} · ${h.nutzung} · ${h.richtung}`;
+
+  document.getElementById("d-body").innerHTML = `
+    <section class="section">
+      <h2>Stammdaten</h2>
+      <div class="content facts">
+        <div class="fact"><div class="label">Straße</div><div class="value">${h.strasse}</div></div>
+        <div class="fact"><div class="label">Nutzungsart</div><div class="value">${h.nutzung}</div></div>
+        <div class="fact"><div class="label">Rohrmaterial</div><div class="value">${h.material}</div></div>
+        <div class="fact"><div class="label">Länge</div><div class="value">${fmtM(h.laenge)}</div></div>
+        <div class="fact"><div class="label">DN</div><div class="value">${h.dn} mm</div></div>
+        <div class="fact"><div class="label">Richtung</div><div class="value">${h.richtung}</div></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Zustand</h2>
+      <div class="content">
+        <div class="score">
+          <div class="big" style="background:${KLASSE_FARBE[h.klasse]};color:${KLASSE_TXT[h.klasse]}">${h.klasse}</div>
+          <div>
+            <div class="label">VSA-Zustandsnote D</div>
+            <div class="value">${h.noteD.toFixed(2)} · Prüfungsresultat: ${h.pruef}</div>
+            ${renderSkala(h.klasse)}
+            <div class="note">Farbe = Tabellenspalte „Zustandsklasse“. Klasse ${h.klasse} von 4.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section wide">
+      <h2>Primäre Schäden · maßstäblich über die Haltung <span class="small">${h.schaeden.length} Befunde</span></h2>
+      <div class="content">
+        ${renderRail(h)}
+        <div class="events">${renderEvents(h)}</div>
+      </div>
+    </section>
+
+    <section class="section wide">
+      <h2>Sanierung &amp; Medien</h2>
+      <div class="content">
+        <div class="grid2">
+          <div class="tile"><div class="label">Sanieren Ja/Nein</div><div class="t">${h.sanieren}</div></div>
+          <div class="tile"><div class="label">Empfohlene Maßnahme</div><div class="t">${h.massnahme}</div></div>
+        </div>
+        <div class="grid2" style="margin-top:.5rem">
+          <div class="tile"><div class="t">Video öffnen</div><div class="small">Inspektion abspielen</div></div>
+          <div class="tile"><div class="t">Protokoll</div><div class="small">PDF / Beobachtungen</div></div>
+          <div class="tile"><div class="t">Karte</div><div class="small">Haltung im Netz zeigen</div></div>
+          <div class="tile"><div class="t">Dossier</div><div class="small">Export wie bisher</div></div>
+        </div>
+      </div>
+    </section>
+
+    <details class="src">
+      <summary>Datenherkunft: Spalte „Primäre Schäden“ (Originalzelle)</summary>
+      <code>${rohzelle(h)}</code>
+    </details>
+  `;
+}
+
+/* ---------- Tabelle wie heute ---------- */
+function renderTabelle(){
+  const cols = ["NR.","Haltungsname (ID)","Straße","Rohrmaterial","DN mm","Nutzungsart",
+    "Haltungslänge m","Inspektionsrichtung","Primäre Schäden","Zustandsklasse",
+    "VSA-Zustandsnote D","Prüfungsresultat","Referenzprüfung","Sanieren Ja/Nein","Empfohlene Maßnahme"];
+  const head = "<thead><tr>"+cols.map(c=>`<th>${c}</th>`).join("")+"</tr></thead>";
+  const body = "<tbody>"+HALTUNGEN.map(h=>{
+    const sch = h.schaeden.map(s=>`${s.code} @${s.m.toFixed(2)}m`).join("; ");
+    return "<tr>"+[
+      h.nr, h.id, h.strasse, h.material, h.dn, h.nutzung, h.laenge.toFixed(2),
+      h.richtung, sch,
+      `<td class="kcell" style="background:${KLASSE_FARBE[h.klasse]};color:${KLASSE_TXT[h.klasse]}">${h.klasse}</td>`,
+      h.noteD.toFixed(2), h.pruef, h.referenz, h.sanieren, h.massnahme
+    ].map((v,i)=> i===9 ? v : `<td>${v}</td>`).join("")+"</tr>";
+  }).join("")+"</tbody>";
+  document.getElementById("tbl").innerHTML = head+body;
+}
+
+/* ---------- Umschalter Tabelle / Ansicht ---------- */
+function setView(which){
+  const tA=document.getElementById("tab-ansicht"), tT=document.getElementById("tab-tabelle");
+  const vA=document.getElementById("view-ansicht"), vT=document.getElementById("view-tabelle");
+  const ansicht = which==="ansicht";
+  tA.setAttribute("aria-selected", ansicht); tT.setAttribute("aria-selected", !ansicht);
+  vA.classList.toggle("hidden", !ansicht); vT.classList.toggle("hidden", ansicht);
+}
+document.getElementById("tab-ansicht").onclick = ()=>setView("ansicht");
+document.getElementById("tab-tabelle").onclick = ()=>setView("tabelle");
+
+/* ---------- Tastatur: Haltung vor/zurück in der Liste ---------- */
+document.getElementById("rows").addEventListener("keydown", e=>{
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){
+    e.preventDefault();
+    aktiv = (aktiv + (e.key==="ArrowDown"?1:-1) + HALTUNGEN.length) % HALTUNGEN.length;
+    renderListe(); renderDetail();
+  }
+});
+
+/* ---------- Suche ---------- */
+document.getElementById("search").addEventListener("input", e=>{
+  const q=e.target.value.trim();
+  if(!q) return;
+  const i=HALTUNGEN.findIndex(h=>h.id.includes(q));
+  if(i>=0){ aktiv=i; renderListe(); renderDetail(); }
+});
+
+/* Init */
+renderListe();
+renderDetail();
+renderTabelle();
+setView("ansicht");
+</script>
+</body>
+</html>

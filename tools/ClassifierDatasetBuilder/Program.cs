@@ -16,11 +16,13 @@ string outDir     = Arg("--out") ?? @"C:\KI_BRAIN\yolo_vsa_cls_dataset";
 double valFraction = double.TryParse(Arg("--val-fraction"), NumberStyles.Float, CultureInfo.InvariantCulture, out var vf) ? vf : 0.2;
 int seed = int.TryParse(Arg("--seed"), out var sd) ? sd : 42;
 bool dryRun = Flag("--dry-run");
+int leerOversample = int.TryParse(Arg("--leer-oversample"), out var lo) ? Math.Max(1, lo) : 1;
 
 Console.WriteLine($"Frames:   {framesRoot}");
 Console.WriteLine($"Eval-Set: {evalSet}");
 Console.WriteLine($"Ausgabe:  {outDir}{(dryRun ? "   (DRY-RUN, schreibt nichts)" : "")}");
 Console.WriteLine($"Split:    val={valFraction:P0}, seed={seed}");
+Console.WriteLine($"LEER-Oversample (nur train): {leerOversample}x");
 Console.WriteLine();
 
 // Schutz (User-Bedingung): bestehenden, nicht-leeren Zielordner NICHT ueberschreiben.
@@ -72,15 +74,24 @@ foreach (var (info, path) in kept)
 {
     var cls = info.TrainingClass!;
     var isVal = valSet.Contains(info.Haltung);
+    // LEER wird NUR im train-Split oversampled (val bleibt repraesentativ/ehrlich).
+    var copies = (!isVal && cls == "LEER") ? leerOversample : 1;
     var tally = isVal ? valTally : trainTally;
-    tally[cls] = tally.GetValueOrDefault(cls) + 1;
+    tally[cls] = tally.GetValueOrDefault(cls) + copies;
     if (!haltungenPerClass.TryGetValue(cls, out var hs)) { hs = new HashSet<string>(StringComparer.Ordinal); haltungenPerClass[cls] = hs; }
     hs.Add(info.Haltung);
     if (!dryRun)
     {
         var dstDir = Path.Combine(outDir, isVal ? "val" : "train", cls);
         Directory.CreateDirectory(dstDir);
-        File.Copy(path, Path.Combine(dstDir, Path.GetFileName(path)), overwrite: true);
+        var fn = Path.GetFileName(path);
+        File.Copy(path, Path.Combine(dstDir, fn), overwrite: true);
+        for (int k = 1; k < copies; k++)
+        {
+            var stem = Path.GetFileNameWithoutExtension(fn);
+            var ext = Path.GetExtension(fn);
+            File.Copy(path, Path.Combine(dstDir, $"{stem}_os{k}{ext}"), overwrite: true);
+        }
     }
 }
 
@@ -103,7 +114,7 @@ var report = new
 {
     created_utc = DateTimeOffset.UtcNow.ToString("O"),
     frames_root = framesRoot, eval_set = evalSet, out_dir = outDir,
-    seed, val_fraction = valFraction, dry_run = dryRun,
+    seed, val_fraction = valFraction, dry_run = dryRun, leer_oversample = leerOversample,
     frames_total = total,
     excluded_eval_by_name = exclEvalName,
     excluded_eval_by_hash = exclEvalHash,

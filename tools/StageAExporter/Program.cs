@@ -82,7 +82,7 @@ internal sealed record StageAExporterCliOptions(
         var dryRun = false;
         var validationRatio = 0.2;
         var workers = 0;
-        var requireBoundingBox = false;
+        var requireBoundingBox = true;
         var help = false;
 
         for (var i = 0; i < args.Length; i++)
@@ -117,6 +117,9 @@ internal sealed record StageAExporterCliOptions(
                     break;
                 case "--require-bbox":
                     requireBoundingBox = true;
+                    break;
+                case "--allow-dummy-bbox":
+                    requireBoundingBox = false;
                     break;
                 default:
                     throw new ArgumentException($"Unbekannte Option: {args[i]}");
@@ -173,7 +176,8 @@ internal sealed record StageAExporterCliOptions(
           --dry-run           Nur zaehlen, nichts kopieren
           --val-ratio <zahl>  Standard: 0.2
           --workers <zahl>    0 = automatisch
-          --require-bbox      Nur Samples mit echter Bounding-Box exportieren
+          --require-bbox      Nur Samples mit echter Bounding-Box exportieren (Standard)
+          --allow-dummy-bbox  Legacy-Modus: Samples ohne Box mit Ersatzbox exportieren
         """);
     }
 
