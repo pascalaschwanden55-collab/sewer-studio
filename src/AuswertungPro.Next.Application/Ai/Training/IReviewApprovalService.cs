@@ -23,7 +23,11 @@ public interface IReviewApprovalService
     /// Setzt ein Self-Training-Sample auf Approved und indexiert es in die KB.
     /// Optional wird eine BoundingBox auf dem Sample gesetzt (vor der Indexierung).
     /// </summary>
-    Task<ReviewApplyResult> ApproveSelfTrainingAsync(string sampleId, BoundingBox? box, CancellationToken ct);
+    Task<ReviewApplyResult> ApproveSelfTrainingAsync(
+        string sampleId,
+        BoundingBox? box,
+        CancellationToken ct,
+        TrainingSegmentationMask? mask = null);
 
     /// <summary>
     /// Setzt ein Self-Training-Sample auf Rejected und entfernt es aus der KB.

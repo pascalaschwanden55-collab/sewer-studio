@@ -42,5 +42,14 @@ public static class TrainingSampleMerge
             target.BboxWidth = source.BboxWidth;
             target.BboxHeight = source.BboxHeight;
         }
+        if (source.HasSamMask)
+        {
+            target.SamMaskRle = source.SamMaskRle;
+            target.SamMaskImageWidth = source.SamMaskImageWidth;
+            target.SamMaskImageHeight = source.SamMaskImageHeight;
+            target.SamMaskAreaPixels = source.SamMaskAreaPixels;
+            target.SamMaskConfidence = source.SamMaskConfidence;
+            target.SamMaskLabel = source.SamMaskLabel;
+        }
     }
 }

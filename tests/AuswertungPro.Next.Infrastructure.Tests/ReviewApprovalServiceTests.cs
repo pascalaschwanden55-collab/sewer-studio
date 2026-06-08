@@ -126,6 +126,39 @@ public sealed class ReviewApprovalServiceTests
         Assert.Empty(indexer.DeindexCalls);
     }
 
+    [Fact]
+    public async Task ApproveSelfTrainingAsync_WithSamMask_PersistsMaskOnSample()
+    {
+        var sample = MakeSample("S-MASK");
+        var store = new FakeStore(new[] { sample });
+        var indexer = new FakeIndexer();
+        var svc = new ReviewApprovalService(store, indexer);
+        var mask = new TrainingSegmentationMask(
+            MaskRle: "1,10,20",
+            ImageWidth: 720,
+            ImageHeight: 576,
+            MaskAreaPixels: 10,
+            Confidence: 0.91,
+            Label: "BAB");
+
+        var result = await svc.ApproveSelfTrainingAsync(
+            "S-MASK",
+            box: null,
+            CancellationToken.None,
+            mask);
+
+        Assert.True(result.Found);
+        var stored = store.Find("S-MASK");
+        Assert.NotNull(stored);
+        Assert.True(stored.HasSamMask);
+        Assert.Equal("1,10,20", stored.SamMaskRle);
+        Assert.Equal(720, stored.SamMaskImageWidth);
+        Assert.Equal(576, stored.SamMaskImageHeight);
+        Assert.Equal(10, stored.SamMaskAreaPixels);
+        Assert.Equal(0.91, stored.SamMaskConfidence);
+        Assert.Equal("BAB", stored.SamMaskLabel);
+    }
+
     // ── Test 2: Approve mit BoundingBox ─────────────────────────────────
 
     [Fact]

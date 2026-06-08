@@ -256,6 +256,7 @@ public partial class TrainingCenterWindow : Window
         }
         _drawing = false;
         Vm.PendingBox = null;
+        Vm.PendingSamMask = null;
     }
 
     private async void ReviewSegmentSam_Click(object sender, RoutedEventArgs e)
@@ -287,6 +288,7 @@ public partial class TrainingCenterWindow : Window
             BtnReviewSegmentSam.IsEnabled = false;
             ReviewSamStatusText.Text = "SAM laeuft...";
             SamMaskRenderer.ClearMasks(BoxCanvas);
+            Vm.PendingSamMask = null;
 
             _reviewSamService ??= CreateReviewSamService();
             var result = await _reviewSamService.SegmentFrameFileAsync(
@@ -305,9 +307,10 @@ public partial class TrainingCenterWindow : Window
                     ? sp.LoggerFactory.CreateLogger("TrainingReviewSam")
                     : null);
 
+            Vm.PendingSamMask = CreateTrainingSegmentationMask(result.Response);
             ReviewSamStatusText.Text = result.Response.Masks.Count == 0
-                ? "SAM: keine Maske"
-                : $"SAM: {result.Response.Masks.Count} Maske(n)";
+                ? BuildSamStatus(result.Response)
+                : $"SAM: {result.Response.Masks.Count} Maske(n) - wird mit Akzeptieren gespeichert";
         }
         catch (Exception ex)
         {
@@ -329,6 +332,32 @@ public partial class TrainingCenterWindow : Window
 
         return new TrainingReviewSamSegmentationService(
             new VisionPipelineTrainingReviewSamClient(pipelineCfg));
+    }
+
+    private static TrainingSegmentationMask? CreateTrainingSegmentationMask(SamResponse response)
+    {
+        var mask = response.Masks.FirstOrDefault(m => !string.IsNullOrWhiteSpace(m.MaskRle));
+        if (mask is null)
+            return null;
+
+        return new TrainingSegmentationMask(
+            mask.MaskRle,
+            response.ImageWidth,
+            response.ImageHeight,
+            mask.MaskAreaPixels,
+            mask.Confidence,
+            mask.Label);
+    }
+
+    private static string BuildSamStatus(SamResponse response)
+    {
+        if (!string.IsNullOrWhiteSpace(response.Error))
+            return $"SAM: keine Maske ({response.Error})";
+
+        if (response.SkippedBoxes > 0)
+            return $"SAM: keine Maske ({response.SkippedBoxes}/{response.RequestedBoxes} Box(en) uebersprungen)";
+
+        return "SAM: keine Maske";
     }
 
     private static int? ResolveReviewPipeDiameterMm()

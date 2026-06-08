@@ -28,7 +28,10 @@ public sealed class ReviewApprovalService : IReviewApprovalService
 
     /// <inheritdoc />
     public async Task<ReviewApplyResult> ApproveSelfTrainingAsync(
-        string sampleId, BoundingBox? box, CancellationToken ct)
+        string sampleId,
+        BoundingBox? box,
+        CancellationToken ct,
+        TrainingSegmentationMask? mask = null)
     {
         var allSamples = await _store.LoadAsync().ConfigureAwait(false);
         var match = allSamples.FirstOrDefault(s => s.SampleId == sampleId);
@@ -39,6 +42,8 @@ public sealed class ReviewApprovalService : IReviewApprovalService
         // Optionale BoundingBox VOR Status-Aenderung setzen (Spezifikation: box.Value.ApplyTo(match) BEFORE setting status)
         if (box.HasValue)
             box.Value.ApplyTo(match);
+        if (mask is not null)
+            mask.ApplyTo(match);
 
         match.Status = TrainingSampleStatus.Approved;
         match.KbIndexState = KbIndexState.Pending;

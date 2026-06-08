@@ -116,6 +116,30 @@ public sealed class TrainingSample
     /// <summary>Hat eine echte BoundingBox.</summary>
     public bool HasBbox => BboxXCenter.HasValue && BboxYCenter.HasValue && BboxWidth.HasValue && BboxHeight.HasValue;
 
+    /// <summary>SAM-RLE-Maske fuer gepruefte Segmentierungslabels. Null = keine Maske vorhanden.</summary>
+    public string? SamMaskRle { get; set; }
+
+    /// <summary>Original-Bildbreite der SAM-Maske in Pixeln.</summary>
+    public int? SamMaskImageWidth { get; set; }
+
+    /// <summary>Original-Bildhoehe der SAM-Maske in Pixeln.</summary>
+    public int? SamMaskImageHeight { get; set; }
+
+    /// <summary>Maskenflaeche in Pixeln.</summary>
+    public int? SamMaskAreaPixels { get; set; }
+
+    /// <summary>SAM-Konfidenz fuer die gespeicherte Maske.</summary>
+    public double? SamMaskConfidence { get; set; }
+
+    /// <summary>Label der SAM-Maske.</summary>
+    public string? SamMaskLabel { get; set; }
+
+    /// <summary>Hat eine echte SAM-Maske.</summary>
+    public bool HasSamMask =>
+        !string.IsNullOrWhiteSpace(SamMaskRle)
+        && SamMaskImageWidth is > 0
+        && SamMaskImageHeight is > 0;
+
     /// <summary>
     /// Zentrale Signatur-Berechnung fuer Dedup.
     /// CaseId ist Teil der Signatur, damit gleiche Codes in verschiedenen Haltungen nicht kollidieren.

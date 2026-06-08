@@ -105,6 +105,11 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// </summary>
     public BoundingBox? PendingBox { get; set; }
 
+    /// <summary>
+    /// Optionale SAM-Maske zur gezeichneten Review-Box. Wird beim Approve gespeichert.
+    /// </summary>
+    public TrainingSegmentationMask? PendingSamMask { get; set; }
+
     [ObservableProperty] private int _reviewQueueCount;
     [ObservableProperty] private string _reviewStatusText = "";
 
@@ -1597,6 +1602,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     partial void OnSelectedReviewItemChanged(InfraSelfImproving.ReviewQueueItem? value)
     {
         PendingBox = null;
+        PendingSamMask = null;
     }
 
     /// <summary>
@@ -1760,7 +1766,8 @@ public partial class TrainingCenterViewModel : ObservableObject
         InfraSelfImproving.FeedbackIngestionService feedback,
         InfraSelfImproving.ReviewQueueService queueService,
         CancellationToken ct = default,
-        BoundingBox? box = null)
+        BoundingBox? box = null,
+        TrainingSegmentationMask? mask = null)
     {
         if (item.Entry is not null)
         {
@@ -1778,7 +1785,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             {
                 var svc = BuildReviewApprovalService();
                 // box uebergeben: wenn Reviewer eine Box gezeichnet hat, wird HasBbox=true gesetzt (B5)
-                var result = await svc.ApproveSelfTrainingAsync(sampleId, box, ct).ConfigureAwait(false);
+                var result = await svc.ApproveSelfTrainingAsync(sampleId, box, ct, mask).ConfigureAwait(false);
                 if (result.Found)
                 {
                     var bboxInfo = box.HasValue ? " (Box gesetzt)" : "";
@@ -1882,17 +1889,19 @@ public partial class TrainingCenterViewModel : ObservableObject
         var item = SelectedReviewItem;
         if (item is null || ReviewQueueServiceRef is null) return;
 
-        // Box vor dem await captureren (UI-State kann sich aendern) (B5)
+        // Box/Maske vor dem await captureren (UI-State kann sich aendern) (B5)
         var box = PendingBox;
+        var mask = PendingSamMask;
 
         try
         {
             using var db = new KnowledgeBaseContext();
             var feedback = CreateFeedbackService(db);
-            await ApproveReviewItemAsync(item, feedback, ReviewQueueServiceRef, ct, box).ConfigureAwait(false);
+            await ApproveReviewItemAsync(item, feedback, ReviewQueueServiceRef, ct, box, mask).ConfigureAwait(false);
 
-            // Box-Model zuruecksetzen (visuelle Box wird via PropertyChanged/Selection-Change geloescht)
+            // Box-/Masken-Model zuruecksetzen (visuelle Box wird via PropertyChanged/Selection-Change geloescht)
             PendingBox = null;
+            PendingSamMask = null;
         }
         catch (Exception ex)
         {
