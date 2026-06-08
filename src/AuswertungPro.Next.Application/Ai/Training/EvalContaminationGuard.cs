@@ -209,4 +209,26 @@ public static class EvalContaminationGuard
             .Select(k => k!)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
+
+    // ── Kombinierte Export-Pruefung ────────────────────────────────────────
+
+    /// <summary>Warum (oder ob nicht) ein Frame vom Trainings-/YOLO-Export ausgeschlossen wird.</summary>
+    public enum ExportContaminationResult { Clean, EvalImageHash, EvalHaltung }
+
+    /// <summary>
+    /// Kombinierte Pruefung fuer den Trainings-/YOLO-Export: ein Frame ist kontaminiert, wenn er
+    /// INHALTSGLEICH zu einem Eval-Bild ist (Hash) ODER aus einer reservierten Eval-Haltung stammt
+    /// (CaseId). Reihenfolge Hash -> Haltung, damit der Grund eindeutig zaehlbar ist.
+    /// Leere Saetze -> Clean (Schutz inaktiv statt falscher Alarm).
+    /// </summary>
+    public static ExportContaminationResult ClassifyForExport(
+        IReadOnlySet<string> evalImageHashes,
+        IReadOnlySet<string> evalHaltungKeys,
+        string? framePath,
+        string? caseId)
+    {
+        if (IsEvalContaminated(evalImageHashes, framePath)) return ExportContaminationResult.EvalImageHash;
+        if (IsEvalHaltung(evalHaltungKeys, caseId)) return ExportContaminationResult.EvalHaltung;
+        return ExportContaminationResult.Clean;
+    }
 }

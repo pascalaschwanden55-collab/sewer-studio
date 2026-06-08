@@ -180,4 +180,44 @@ public sealed class EvalContaminationGuardTests
     public void LoadEvalHaltungKeys_MissingRoot_ReturnsEmpty()
         => Assert.Empty(EvalContaminationGuard.LoadEvalHaltungKeys(
             Path.Combine(Path.GetTempPath(), "no-such-eval-" + Guid.NewGuid().ToString("N"))));
+
+    [Fact]
+    public void ClassifyForExport_FlagsEvalHash_EvalHaltung_AndPassesClean()
+    {
+        // Audit R4: der YOLO-Export muss Eval-Bilder ausschliessen — per Inhalts-Hash UND per Haltung.
+        var root = Path.Combine(Path.GetTempPath(), "kb-eval-export", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var evalBytes = new byte[] { 5, 6, 7, 8, 9 };
+            var evalHash = Convert.ToHexString(SHA256.HashData(evalBytes)).ToLowerInvariant();
+            var hashes = new HashSet<string>(new[] { evalHash }, StringComparer.OrdinalIgnoreCase);
+            var haltungen = new HashSet<string>(new[] { "287425-81162" }, StringComparer.OrdinalIgnoreCase);
+
+            // inhaltsgleich zu einem Eval-Bild (anderer Name) -> EvalImageHash
+            var copy = Path.Combine(root, "candidate.png");
+            File.WriteAllBytes(copy, evalBytes);
+            Assert.Equal(EvalContaminationGuard.ExportContaminationResult.EvalImageHash,
+                EvalContaminationGuard.ClassifyForExport(hashes, haltungen, copy, "999999-888888"));
+
+            // sauberer Inhalt, aber reservierte Eval-Haltung (mit Suffix) -> EvalHaltung
+            var clean = Path.Combine(root, "clean.png");
+            File.WriteAllBytes(clean, new byte[] { 42, 43, 44 });
+            Assert.Equal(EvalContaminationGuard.ExportContaminationResult.EvalHaltung,
+                EvalContaminationGuard.ClassifyForExport(hashes, haltungen, clean, "287425-81162/2025_Saniert"));
+
+            // sauberer Inhalt + andere Haltung -> Clean
+            Assert.Equal(EvalContaminationGuard.ExportContaminationResult.Clean,
+                EvalContaminationGuard.ClassifyForExport(hashes, haltungen, clean, "111-222"));
+
+            // leere Saetze -> kein falscher Alarm
+            Assert.Equal(EvalContaminationGuard.ExportContaminationResult.Clean,
+                EvalContaminationGuard.ClassifyForExport(new HashSet<string>(), new HashSet<string>(), copy, "287425-81162"));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
 }

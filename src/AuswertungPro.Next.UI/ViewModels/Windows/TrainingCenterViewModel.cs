@@ -954,6 +954,12 @@ public partial class TrainingCenterViewModel : ObservableObject
             ProgressMax = approved.Count;
             ProgressValue = 0;
 
+            // Eval-Guard: kein eingefrorenes Eval-Bild darf in den Trainings-Export (Audit R4)
+            var sidecarEvalRoot = AppSettings.Load().EvalSetRoot;
+            var sidecarEvalHashes = EvalContaminationGuard.LoadEvalImageHashes(sidecarEvalRoot);
+            var sidecarEvalHaltungen = EvalContaminationGuard.LoadEvalHaltungKeys(sidecarEvalRoot);
+            int skipEvalHash = 0, skipEvalCase = 0, skipNoBox = 0;
+
             var exportSamples = new List<TrainingExportSample>();
             for (var i = 0; i < approved.Count; i++)
             {
@@ -962,21 +968,33 @@ public partial class TrainingCenterViewModel : ObservableObject
                 ProgressValue = i + 1;
                 StatusText = $"YOLO-Export: Lade Frame {i + 1}/{approved.Count}...";
 
+                switch (EvalContaminationGuard.ClassifyForExport(sidecarEvalHashes, sidecarEvalHaltungen, s.FramePath, s.CaseId))
+                {
+                    case EvalContaminationGuard.ExportContaminationResult.EvalImageHash: skipEvalHash++; continue;
+                    case EvalContaminationGuard.ExportContaminationResult.EvalHaltung: skipEvalCase++; continue;
+                }
+
+                // YOLO nur mit ECHTER Box — keine Dummy-BBox mehr (Audit R4)
+                if (string.IsNullOrWhiteSpace(s.Code) || !s.HasBbox) { skipNoBox++; continue; }
+
                 var bytes = await File.ReadAllBytesAsync(s.FramePath, ct).ConfigureAwait(false);
                 var base64 = Convert.ToBase64String(bytes);
 
-                var labels = new List<TrainingExportSampleLabel>();
-                if (!string.IsNullOrWhiteSpace(s.Code))
+                var labels = new List<TrainingExportSampleLabel>
                 {
-                    // Echte BBox aus TeacherAnnotation suchen (falls vorhanden)
-                    // Fallback: Dummy-BBox fuer Samples ohne Annotation
-                    labels.Add(new TrainingExportSampleLabel(
-                        ClassName: s.Code,
-                        XCenter: 0.5, YCenter: 0.5,
-                        Width: 0.8, Height: 0.8));
-                }
-
+                    new(s.Code, s.BboxXCenter!.Value, s.BboxYCenter!.Value, s.BboxWidth!.Value, s.BboxHeight!.Value)
+                };
                 exportSamples.Add(new TrainingExportSample(base64, labels));
+            }
+
+            if (skipEvalHash + skipEvalCase + skipNoBox > 0)
+                Log($"  uebersprungen: {skipEvalHash} Eval-Hash, {skipEvalCase} Eval-Haltung, {skipNoBox} ohne echte Box");
+
+            if (exportSamples.Count == 0)
+            {
+                Log("YOLO-Export: nach Eval-/Box-Filter keine Samples uebrig.");
+                StatusText = "YOLO-Export: keine exportierbaren Samples (Eval/Box-Filter).";
+                return;
             }
 
             StatusText = $"YOLO-Export: Sende {exportSamples.Count} Samples an Sidecar...";
@@ -1037,6 +1055,12 @@ public partial class TrainingCenterViewModel : ObservableObject
 
         Log($"YOLO-Export: {annotationsWithImages.Count} TeacherAnnotations mit Bildern, {approved.Count} TrainingSamples");
 
+        // Eval-Guard: kein eingefrorenes Eval-Bild in den Export (Hash + Haltung). (Audit R4)
+        var localEvalRoot = AppSettings.Load().EvalSetRoot;
+        var localEvalHashes = EvalContaminationGuard.LoadEvalImageHashes(localEvalRoot);
+        var localEvalHaltungen = EvalContaminationGuard.LoadEvalHaltungKeys(localEvalRoot);
+        int locSkipEvalHash = 0, locSkipEvalCase = 0;
+
         var imgTrain = Path.Combine(outputDir, "images", "train");
         var imgVal = Path.Combine(outputDir, "images", "val");
         var lblTrain = Path.Combine(outputDir, "labels", "train");
@@ -1058,6 +1082,12 @@ public partial class TrainingCenterViewModel : ObservableObject
                 var a = annotationsWithImages[i];
                 ProgressValue = i + 1;
                 StatusText = $"YOLO-Export (Teacher): {i + 1}/{annotationsWithImages.Count}...";
+
+                switch (EvalContaminationGuard.ClassifyForExport(localEvalHashes, localEvalHaltungen, a.FullFramePath, a.HaltungName))
+                {
+                    case EvalContaminationGuard.ExportContaminationResult.EvalImageHash: locSkipEvalHash++; continue;
+                    case EvalContaminationGuard.ExportContaminationResult.EvalHaltung: locSkipEvalCase++; continue;
+                }
 
                 var isTrain = i < splitIdx;
                 var imgDir = isTrain ? imgTrain : imgVal;
@@ -1110,6 +1140,12 @@ public partial class TrainingCenterViewModel : ObservableObject
                 if (!File.Exists(s.FramePath)) continue;
                 if (!s.HasBbox) continue;   // YOLO nur mit echter Box — keine Dummy-Labels, kein Bild ohne Label
 
+                switch (EvalContaminationGuard.ClassifyForExport(localEvalHashes, localEvalHaltungen, s.FramePath, s.CaseId))
+                {
+                    case EvalContaminationGuard.ExportContaminationResult.EvalImageHash: locSkipEvalHash++; continue;
+                    case EvalContaminationGuard.ExportContaminationResult.EvalHaltung: locSkipEvalCase++; continue;
+                }
+
                 var ext = Path.GetExtension(s.FramePath);
                 var imgDst = Path.Combine(imgDir, $"sample_{i:D6}{ext}");
                 try { File.Copy(s.FramePath, imgDst, overwrite: true); }
@@ -1147,6 +1183,9 @@ public partial class TrainingCenterViewModel : ObservableObject
         // classes.txt exportieren
         await VsaYoloClassMap.ExportClassesTxtAsync(
             Path.Combine(outputDir, "classes.txt"));
+
+        if (locSkipEvalHash + locSkipEvalCase > 0)
+            Log($"  Eval-Schutz: {locSkipEvalHash} per Hash, {locSkipEvalCase} per Haltung uebersprungen.");
 
         var msg = $"YOLO-Export fertig: {totalExported} Samples " +
                   $"({annotationsWithImages.Count} Teacher + {totalExported - annotationsWithImages.Count} Samples), " +
