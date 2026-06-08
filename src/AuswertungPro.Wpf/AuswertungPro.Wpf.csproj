@@ -1,8 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-  <!-- Keine expliziten Compile/Page-Einträge nötig, SDK-style Projekt bindet alles automatisch ein -->
-</Project>
