@@ -24,13 +24,37 @@ public class VisionPipelineClientTests
     }
 
     [Fact]
-    public void Constructor_SetsBaseAddress()
+    public void Constructor_DoesNotMutateBaseAddress_OfSharedHttpClient()
     {
+        // R1: VisionPipelineClient darf BaseAddress NICHT setzen (BuildUri baut absolute URIs),
+        // sonst kann ein geteilter HttpClient nicht von mehreren Clients genutzt werden.
         var uri = new Uri("http://localhost:8100");
         var httpClient = new HttpClient();
-        var client = new VisionPipelineClient(uri, httpClient);
 
-        Assert.Equal(uri, httpClient.BaseAddress);
+        _ = new VisionPipelineClient(uri, httpClient);
+
+        Assert.Null(httpClient.BaseAddress);
+    }
+
+    [Fact]
+    public async Task SharedHttpClient_SecondClientAfterFirstRequest_DoesNotThrow()
+    {
+        // R1-Regression: VideoAnalysisPipelineService konstruiert mehrere VisionPipelineClients
+        // mit DEMSELBEN HttpClient. Sobald der erste einen Request gesendet hat, darf das
+        // Konstruieren des zweiten nicht mehr werfen (frueher: BaseAddress-Set -> InvalidOperationException),
+        // und der zweite muss weiterhin funktionieren (absolute URIs).
+        var handler = new CaptureHandler("""{"status":"ok","version":"1.1.0","gpu":null}""");
+        var shared = new HttpClient(handler);
+
+        var first = new VisionPipelineClient(new Uri("http://127.0.0.1:8100"), shared);
+        await first.HealthCheckAsync();   // markiert den HttpClient als "gestartet"
+
+        var ex = Record.Exception(() => new VisionPipelineClient(new Uri("http://127.0.0.1:8100"), shared));
+        Assert.Null(ex);
+
+        var second = new VisionPipelineClient(new Uri("http://127.0.0.1:8100"), shared);
+        var health = await second.HealthCheckAsync();
+        Assert.NotNull(health);
     }
 
     [Fact]

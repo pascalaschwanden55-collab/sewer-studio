@@ -581,19 +581,9 @@ public partial class TrainingCenterWindow : Window
             TryDeleteFile(_selectedTeacherAnnotation.CroppedRegionPath);
             TryDeleteFile(_selectedTeacherAnnotation.YoloAnnotationPath);
 
-            // Aus Store entfernen (neu laden, filtern, speichern)
-            var all = await TeacherAnnotationStore.LoadAsync();
-            var remaining = all.Where(a => a.AnnotationId != _selectedTeacherAnnotation.AnnotationId).ToList();
-
-            // Direkt in JSON schreiben (Store hat keine Delete-Methode — Append-only umgehen)
-            var storePath = System.IO.Path.Combine(InfraKnowledgeBase.KnowledgeBasePaths.GetRoot(), "teacher_annotations.json");
-            var json = System.Text.Json.JsonSerializer.Serialize(remaining,
-                new System.Text.Json.JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
-                });
-            await File.WriteAllTextAsync(storePath, json);
+            // Aus Store entfernen — atomar unter dem Store-Lock (kein Lost-Update gegen
+            // gleichzeitiges AppendAsync aus dem Player-/Coding-Pfad). (Audit R2)
+            await TeacherAnnotationStore.DeleteAsync(_selectedTeacherAnnotation.AnnotationId);
 
             // Galerie neu laden
             await LoadTeacherAnnotationsAsync();

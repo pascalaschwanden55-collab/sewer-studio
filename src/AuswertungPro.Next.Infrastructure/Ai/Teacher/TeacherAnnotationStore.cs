@@ -11,9 +11,9 @@ using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 namespace AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 /// <summary>
-/// Append-only Store fuer Lehrer-Annotationen.
-/// Jede Speicherung erzeugt einen neuen Datensatz — kein Update, kein Delete.
-/// Thread-safe via SemaphoreSlim.
+/// Store fuer Lehrer-Annotationen (append-orientiert).
+/// Hinzufuegen ist append-only; Loeschen NUR ueber DeleteAsync, das Load+Filter+Save
+/// komplett innerhalb des Locks ausfuehrt. Thread-safe via SemaphoreSlim.
 /// </summary>
 public static class TeacherAnnotationStore
 {
@@ -82,6 +82,34 @@ public static class TeacherAnnotationStore
             }
 
             await SaveInternalAsync(existing);
+        }
+        finally
+        {
+            _fileLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Eine Annotation per AnnotationId entfernen. Load+Filter+Save laufen KOMPLETT innerhalb
+    /// von _fileLock (gleicher Lock wie AppendAsync) — kein Lost-Update gegen gleichzeitiges
+    /// AppendAsync. Gibt true zurueck, wenn etwas entfernt wurde. (Audit R2)
+    /// </summary>
+    public static async Task<bool> DeleteAsync(string annotationId)
+    {
+        if (string.IsNullOrEmpty(annotationId)) return false;
+
+        await _fileLock.WaitAsync();
+        try
+        {
+            var existing = await LoadInternalAsync();
+            var remaining = existing
+                .Where(a => !string.Equals(a.AnnotationId, annotationId, StringComparison.Ordinal))
+                .ToList();
+
+            if (remaining.Count == existing.Count) return false;   // nichts entfernt
+
+            await SaveInternalAsync(remaining);
+            return true;
         }
         finally
         {

@@ -29,7 +29,10 @@ public sealed class VisionPipelineClient
     {
         _baseUri = baseUri;
         _http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromMinutes(15) };
-        _http.BaseAddress = baseUri;
+        // KEIN _http.BaseAddress setzen: BuildUri() erzeugt immer absolute URIs. Ein gesetztes
+        // BaseAddress auf einem GETEILTEN HttpClient (VideoAnalysisPipelineService nutzt fuer
+        // mehrere Clients dieselbe Instanz) wirft InvalidOperationException, sobald der Client
+        // schon einen Request gesendet hat -> der Multi-Model-Hauptpfad bricht ab. (Audit R1)
         _sendSidecarToken = IsLoopbackUri(baseUri);
         _sidecarToken = _sendSidecarToken
             ? NormalizeToken(sidecarToken) ?? TryLoadSidecarToken()
