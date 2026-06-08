@@ -23,10 +23,10 @@ header h1{font-size:15px;margin:0;font-weight:650;color:var(--text)}
 .right{background:var(--card);border:1px solid var(--bd);border-radius:6px;padding:12px;box-shadow:var(--shadow)}
 video{width:100%;background:#000;border:1px solid var(--bd);border-radius:6px;max-height:62vh}
 .ctrls{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;align-items:center}
-.ctrls button,.nav button,.codequick button,.annoctrl button,.annobar button{
+.ctrls button,.nav button,.codequick button,.codegroups button,.codechoices button,.annoctrl button,.annobar button{
   background:var(--panel-2);color:var(--text);border:1px solid var(--bd);border-radius:4px;
   padding:7px 10px;cursor:pointer;font-size:13px;font-variant-numeric:tabular-nums}
-.ctrls button:hover,.nav button:hover,.codequick button:hover,.annoctrl button:hover,.annobar button:hover{background:#233044;border-color:#475569}
+.ctrls button:hover,.nav button:hover,.codequick button:hover,.codegroups button:hover,.codechoices button:hover,.annoctrl button:hover,.annobar button:hover{background:#233044;border-color:#475569}
 #tpos{font-size:14px;color:var(--muted);min-width:150px;text-align:center;font-variant-numeric:tabular-nums}
 .code{font-size:19px;font-weight:700;color:var(--text)}
 .code small{color:var(--muted);font-weight:400;font-size:13px}
@@ -41,6 +41,19 @@ input,select{width:100%;background:#0f172a;color:var(--text);border:1px solid va
 input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 1px rgba(37,99,235,.3)}
 .codequick{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .codequick button{flex:1;min-width:70px}
+.codebrowser{margin-top:10px;background:var(--panel);border:1px solid var(--bd);border-radius:6px;padding:8px}
+.codebrowser-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.codebrowser-title{font-size:12px;font-weight:650;color:var(--muted);text-transform:uppercase}
+.codebrowser-head input{flex:1;min-width:110px;padding:7px 8px;font-size:13px}
+.codegroups{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.codegroups button{padding:6px 8px;min-width:48px}
+.codegroups button.active{background:var(--accent);border-color:var(--accent-hover);color:#fff}
+.codechoices{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:6px;max-height:188px;overflow:auto;padding-right:2px}
+.codechoices button{text-align:left;min-height:54px;padding:7px 8px}
+.codechoices button.active{border-color:var(--warn);box-shadow:inset 3px 0 0 var(--warn)}
+.codechoices b{display:block;color:var(--text);font-size:13px;margin-bottom:2px}
+.codechoices small{display:block;color:var(--muted);font-size:11px;line-height:1.25;white-space:normal}
+.codeempty{color:var(--subtle);font-size:12px;padding:8px}
 .acts{display:flex;flex-direction:column;gap:8px;margin-top:16px}
 .acts button{border:1px solid transparent;border-radius:5px;padding:11px 12px;cursor:pointer;font-size:14px;font-weight:650;color:#fff}
 .b-ok{background:var(--accent);border-color:var(--accent-hover)}.b-ok:hover{background:var(--accent-hover)}
@@ -108,6 +121,14 @@ kbd{background:#0f172a;border:1px solid #475569;border-bottom-width:2px;border-r
     <input id="codein" list="codelist" autocomplete="off">
     <datalist id="codelist"></datalist>
     <div class="codequick" id="codequick"></div>
+    <div class="codebrowser">
+      <div class="codebrowser-head">
+        <span class="codebrowser-title">Code-Browser</span>
+        <input id="codesearch" autocomplete="off" placeholder="Code oder Text suchen">
+      </div>
+      <div class="codegroups" id="codegroups"></div>
+      <div class="codechoices" id="codechoices"></div>
+    </div>
 
     <label class="fld">Notiz (optional)</label>
     <input id="notein" placeholder="z.B. Schaden bei 0.3s frueher">
@@ -148,16 +169,61 @@ kbd{background:#0f172a;border:1px solid #475569;border-bottom-width:2px;border-r
 
 <script>
 const WIN=10;               // muss zum Server-Default (win=10) passen
-let ITEMS=[], KT={}, idx=0, dur=0, clipStart=0;
+let ITEMS=[], KT={}, idx=0, dur=0, clipStart=0, activeCodeGroup='';
 
 function el(id){return document.getElementById(id)}
 function toast(m){const t=el('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1600)}
 function fmt(t){return t.toFixed(2)+'s'}
+function escHtml(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
+function codeText(code){return code==='LEER'?'Kein Befund':(KT[code]||'')}
+function allCodes(){
+  const set=new Set(Object.keys(KT).map(c=>String(c).trim().toUpperCase()).filter(Boolean));
+  set.add('LEER');
+  const sorted=Array.from(set).sort((a,b)=>a.localeCompare(b,'de'));
+  return ['LEER',...sorted.filter(c=>c!=='LEER')];
+}
+function codeGroup(code){
+  code=(code||'LEER').trim().toUpperCase();
+  return code==='LEER'?'LEER':code.slice(0,Math.min(3,code.length));
+}
+function selectCode(code){
+  code=(code||'').trim().toUpperCase();
+  if(!code)return;
+  el('codein').value=code;
+  if(el('anncode'))el('anncode').value=code;
+  activeCodeGroup=codeGroup(code);
+  renderCodeBrowser();
+}
+function setCodeGroup(group){
+  activeCodeGroup=group;
+  if(el('codesearch'))el('codesearch').value='';
+  renderCodeBrowser();
+}
+function renderCodeBrowser(){
+  const groupsEl=el('codegroups'),choicesEl=el('codechoices');
+  if(!groupsEl||!choicesEl)return;
+  const codes=allCodes();
+  if(!activeCodeGroup)activeCodeGroup=codeGroup(el('codein').value||'LEER');
+  const groups=Array.from(new Set(codes.map(c=>codeGroup(c))));
+  groupsEl.innerHTML=groups.map(g=>`<button type="button" class="${g===activeCodeGroup?'active':''}" onclick="setCodeGroup('${escHtml(g)}')">${escHtml(g)}</button>`).join('');
+  const query=(el('codesearch')?.value||'').trim().toLowerCase();
+  const current=(el('codein').value||'').trim().toUpperCase();
+  const filtered=query
+    ? codes.filter(c=>(c+' '+codeText(c)).toLowerCase().includes(query))
+    : codes.filter(c=>codeGroup(c)===activeCodeGroup);
+  choicesEl.innerHTML=filtered.length
+    ? filtered.map(c=>`<button type="button" class="${c===current?'active':''}" onclick="selectCode('${escHtml(c)}')"><b>${escHtml(c)}</b><small>${escHtml(codeText(c)||'ohne Text')}</small></button>`).join('')
+    : '<div class="codeempty">Keine Treffer</div>';
+}
 
 async function load(){
   const r=await fetch('/findings.json');const d=await r.json();
   ITEMS=d.items;KT=d.klartext||{};
-  const dl=el('codelist');dl.innerHTML=Object.keys(KT).map(c=>`<option value="${c}">${c} — ${KT[c]}</option>`).join('');
+  const dl=el('codelist');dl.innerHTML=Object.keys(KT).sort((a,b)=>a.localeCompare(b,'de'))
+    .map(c=>`<option value="${escHtml(c)}">${escHtml(c)} - ${escHtml(KT[c])}</option>`).join('');
+  el('codesearch').addEventListener('input',()=>renderCodeBrowser());
+  el('codein').addEventListener('change',()=>selectCode(el('codein').value));
+  el('anncode').addEventListener('change',()=>selectCode(el('anncode').value));
   // erste offene Position
   idx=ITEMS.findIndex(x=>!x.decision);if(idx<0)idx=0;
   render();updateProg();
@@ -181,7 +247,9 @@ function render(){
   el('notein').value='';
   // Code-Schnellknoepfe
   el('codequick').innerHTML=[f.code,'LEER','BCD','BCE','BCA'].filter((v,i,a)=>a.indexOf(v)==i)
-    .map(c=>`<button onclick="el('codein').value='${c}'">${c}</button>`).join('');
+    .map(c=>`<button onclick="selectCode('${c}')">${c}</button>`).join('');
+  activeCodeGroup=codeGroup(f.code||'LEER');
+  renderCodeBrowser();
   // Original-Frame
   const ob=el('origbox'),oi=el('origimg');
   oi.onerror=()=>{ob.style.display='none'};
@@ -254,7 +322,7 @@ function openAnnotate(){
   const img=new Image();
   img.onload=()=>{anno.img=img;layoutAnno();el('annov').style.display='flex';redrawAnno();};
   img.src=dataUrl;
-  el('anncode').value=el('codein').value||f.code;
+  selectCode(el('codein').value||f.code);
   el('annotitle').textContent=`${f.code} — ${f.klartext} · ${f.haltung} · ${anno.chosenTime.toFixed(2)}s`;
   el('annostat').textContent='';
 }
