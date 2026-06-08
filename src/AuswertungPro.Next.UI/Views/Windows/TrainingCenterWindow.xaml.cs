@@ -14,6 +14,8 @@ using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -31,12 +33,27 @@ public partial class TrainingCenterWindow : Window
 {
     public TrainingCenterViewModel Vm { get; }
 
+    private static IVsaCodeSelectionCatalog? CodeSelectionCatalog
+        => TryGetAppServiceProvider()?.CodeSelectionCatalog;
+
     // Pipeline-Dots und Service-Indikatoren fuer Animation
     private Ellipse[] _pipelineDots = Array.Empty<Ellipse>();
     private Border[] _serviceDots = Array.Empty<Border>();
 
     // Review-Services (lazy, erst bei erster Review-Aktion)
     private InfraSelfImproving.ReviewQueueService? _reviewQueueService;
+
+    private static AuswertungPro.Next.UI.ServiceProvider? TryGetAppServiceProvider()
+    {
+        try
+        {
+            return App.Services as AuswertungPro.Next.UI.ServiceProvider;
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+    }
 
     // ── Box-Zeichnen auf Review-Karte (B5) ──────────────────────────────
     private Rectangle? _boxPreview;
@@ -456,11 +473,23 @@ public partial class TrainingCenterWindow : Window
 
     private async void ReviewCorrect_Click(object sender, RoutedEventArgs e)
     {
-        if (Vm.SelectedReviewItem is null) return;
-        var dlg = new CorrectionDialog { Owner = this };
-        if (dlg.ShowDialog() == true && !string.IsNullOrWhiteSpace(dlg.SelectedCode))
+        var item = Vm.SelectedReviewItem;
+        if (item is null) return;
+
+        var catalog = CodeSelectionCatalog;
+        if (catalog is null)
         {
-            try { await Vm.ApplyReviewCorrectionAsync(Vm.SelectedReviewItem, dlg.SelectedCode!); }
+            MessageBox.Show("Code-Katalog nicht verfuegbar.", "Korrektur",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var entry = BuildReviewProtocolEntry(item);
+        var explorerVm = new VsaCodeExplorerViewModel(entry, entry.MeterStart, entry.Zeit, catalog);
+        var dlg = new VsaCodeExplorerWindow(explorerVm) { Owner = this };
+        if (dlg.ShowDialog() == true && !string.IsNullOrWhiteSpace(dlg.SelectedEntry?.Code))
+        {
+            try { await Vm.ApplyReviewCorrectionAsync(item, dlg.SelectedEntry.Code); }
             catch (Exception ex)
             {
                 MessageBox.Show($"Fehler bei der Korrektur: {ex.Message}", "Korrektur",
@@ -501,6 +530,42 @@ public partial class TrainingCenterWindow : Window
             BtnOpenVideoLabelTool.IsEnabled = true;
         }
     }
+
+    private static ProtocolEntry BuildReviewProtocolEntry(InfraSelfImproving.ReviewQueueItem item)
+    {
+        var code = FirstNonEmpty(
+            item.SelfTrainingVsaCode,
+            item.SuggestedCode,
+            item.Entry?.SuggestedCode,
+            item.Entry?.Detection.VsaCodeHint);
+        var meterStart = item.SelfTrainingMeter ?? item.Entry?.Detection.MeterStart;
+        var meterEnd = item.SelfTrainingMeter ?? item.Entry?.Detection.MeterEnd;
+
+        var entry = new ProtocolEntry
+        {
+            Code = code,
+            Beschreibung = item.Label,
+            MeterStart = meterStart,
+            MeterEnd = meterEnd,
+            Source = ProtocolEntrySource.Manual
+        };
+
+        if (!string.IsNullOrWhiteSpace(code))
+        {
+            entry.CodeMeta = new ProtocolEntryCodeMeta { Code = code };
+        }
+
+        if (!string.IsNullOrWhiteSpace(item.SelfTrainingFramePath)
+            && File.Exists(item.SelfTrainingFramePath))
+        {
+            entry.FotoPaths.Add(item.SelfTrainingFramePath);
+        }
+
+        return entry;
+    }
+
+    private static string FirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v))?.Trim() ?? string.Empty;
 
     private async void TeacherRefresh_Click(object sender, RoutedEventArgs e)
     {
