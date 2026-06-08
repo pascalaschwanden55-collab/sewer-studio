@@ -721,6 +721,19 @@
                                                 MouseLeftButtonUp="BoxCanvas_MouseUp"/>
                                     </Grid>
 
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <Button x:Name="BtnReviewSegmentSam"
+                                                Content="SAM segmentieren"
+                                                Click="ReviewSegmentSam_Click"
+                                                Padding="10,4"
+                                                Margin="0,0,8,0"
+                                                ToolTip="Nutzt die gezeichnete Box und segmentiert den Schaden mit SAM"/>
+                                        <TextBlock x:Name="ReviewSamStatusText"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="#94A3B8"
+                                                   FontSize="11"/>
+                                    </StackPanel>
+
                                     <!-- Protokoll-Code (Ground-Truth) -->
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                         <TextBlock Text="Protokoll-Code: " Foreground="#94A3B8" FontSize="12"/>
@@ -759,7 +772,11 @@
                                     </StackPanel>
 
                                     <!-- Hinweis Box-Zeichnen (B5) -->
+                                    <TextBlock Text="Box ziehen -> SAM segmentieren -> Akzeptieren. Esc loescht Box und Maske."
+                                               Foreground="#475569" FontSize="10" FontStyle="Italic"
+                                               Margin="0,8,0,0"/>
                                     <TextBlock Text="Optional: Box ziehen (nur für YOLO) · Esc löscht"
+                                               Visibility="Collapsed"
                                                Foreground="#334155" FontSize="10" FontStyle="Italic"
                                                Margin="0,8,0,0"/>
                                 </StackPanel>

@@ -11,9 +11,12 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
@@ -39,6 +42,7 @@ public partial class TrainingCenterWindow : Window
     private Rectangle? _boxPreview;
     private Point _boxStart;
     private bool _drawing;
+    private TrainingReviewSamSegmentationService? _reviewSamService;
 
     public TrainingCenterWindow()
     {
@@ -223,6 +227,11 @@ public partial class TrainingCenterWindow : Window
     /// </summary>
     private void ClearBox()
     {
+        if (BoxCanvas is not null)
+            SamMaskRenderer.ClearMasks(BoxCanvas);
+        if (ReviewSamStatusText is not null)
+            ReviewSamStatusText.Text = "";
+
         if (_boxPreview is not null)
         {
             BoxCanvas?.Children.Remove(_boxPreview);
@@ -230,6 +239,88 @@ public partial class TrainingCenterWindow : Window
         }
         _drawing = false;
         Vm.PendingBox = null;
+    }
+
+    private async void ReviewSegmentSam_Click(object sender, RoutedEventArgs e)
+    {
+        var card = Vm.SelectedReviewCard;
+        if (card is null)
+        {
+            MessageBox.Show("Bitte zuerst einen Review-Kandidaten waehlen.", "SAM",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (Vm.PendingBox is not { } box)
+        {
+            MessageBox.Show("Bitte zuerst eine Box um den Schaden ziehen.", "SAM",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(card.FramePath) || !File.Exists(card.FramePath))
+        {
+            MessageBox.Show("Der Review-Frame ist nicht verfuegbar.", "SAM",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            BtnReviewSegmentSam.IsEnabled = false;
+            ReviewSamStatusText.Text = "SAM laeuft...";
+            SamMaskRenderer.ClearMasks(BoxCanvas);
+
+            _reviewSamService ??= CreateReviewSamService();
+            var result = await _reviewSamService.SegmentFrameFileAsync(
+                card.FramePath,
+                box,
+                card.ProtocolCode,
+                ResolveReviewPipeDiameterMm());
+
+            SamMaskRenderer.RenderMasks(
+                BoxCanvas,
+                result.Response,
+                result.QuantifiedMasks,
+                BoxCanvas.ActualWidth,
+                BoxCanvas.ActualHeight,
+                App.Services is ServiceProvider sp
+                    ? sp.LoggerFactory.CreateLogger("TrainingReviewSam")
+                    : null);
+
+            ReviewSamStatusText.Text = result.Response.Masks.Count == 0
+                ? "SAM: keine Maske"
+                : $"SAM: {result.Response.Masks.Count} Maske(n)";
+        }
+        catch (Exception ex)
+        {
+            ReviewSamStatusText.Text = "SAM Fehler";
+            MessageBox.Show($"SAM-Segmentierung fehlgeschlagen:\n{ex.Message}", "SAM",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            BtnReviewSegmentSam.IsEnabled = true;
+        }
+    }
+
+    private static TrainingReviewSamSegmentationService CreateReviewSamService()
+    {
+        var pipelineCfg = App.Services is ServiceProvider sp
+            ? sp.PipelineCfg
+            : new AppSettingsAiSettingsProvider().Load().ToPipelineConfig();
+
+        return new TrainingReviewSamSegmentationService(
+            new VisionPipelineTrainingReviewSamClient(pipelineCfg));
+    }
+
+    private static int? ResolveReviewPipeDiameterMm()
+    {
+        var pipelineCfg = App.Services is ServiceProvider sp
+            ? sp.PipelineCfg
+            : new AppSettingsAiSettingsProvider().Load().ToPipelineConfig();
+
+        return pipelineCfg.PipeDiameterMmOverride ?? 300;
     }
 
     private void BoxCanvas_MouseDown(object sender, MouseButtonEventArgs e)
