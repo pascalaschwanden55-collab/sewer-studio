@@ -385,6 +385,31 @@ public partial class TrainingCenterWindow : Window
     private TeacherAnnotation? _selectedTeacherAnnotation;
     private bool _teacherLoaded;
     private readonly TeacherAnnotationGalleryService _teacherGalleryService = new();
+    private readonly VideoLabelToolLauncher _videoLabelToolLauncher = new();
+
+    private void VideoLabelToolOpen_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            BtnOpenVideoLabelTool.IsEnabled = false;
+            var result = _videoLabelToolLauncher.Launch(new VideoLabelToolLaunchOptions());
+            VideoLabelToolStatusText.Text = result.ServerStarted
+                ? $"Gold-Label-Tool gestartet: {result.Url}"
+                : $"Gold-Label-Tool geoeffnet: {result.Url}";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"VideoLabelTool konnte nicht gestartet werden:\n{ex.Message}",
+                "Gold-Label-Tool",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+        finally
+        {
+            BtnOpenVideoLabelTool.IsEnabled = true;
+        }
+    }
 
     private async void TeacherRefresh_Click(object sender, RoutedEventArgs e)
     {
