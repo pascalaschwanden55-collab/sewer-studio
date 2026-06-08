@@ -489,7 +489,13 @@ public partial class TrainingCenterWindow : Window
         var dlg = new VsaCodeExplorerWindow(explorerVm) { Owner = this };
         if (dlg.ShowDialog() == true && !string.IsNullOrWhiteSpace(dlg.SelectedEntry?.Code))
         {
-            try { await Vm.ApplyReviewCorrectionAsync(item, dlg.SelectedEntry.Code); }
+            try
+            {
+                await Vm.ApplyReviewCorrectionAsync(
+                    item,
+                    dlg.SelectedEntry.Code,
+                    correctedDescription: dlg.SelectedEntry.Beschreibung);
+            }
             catch (Exception ex)
             {
                 MessageBox.Show($"Fehler bei der Korrektur: {ex.Message}", "Korrektur",

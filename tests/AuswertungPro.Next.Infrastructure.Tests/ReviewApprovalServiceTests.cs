@@ -197,7 +197,11 @@ public sealed class ReviewApprovalServiceTests
         var svc = new ReviewApprovalService(store, indexer);
 
         // Act
-        var result = await svc.RejectSelfTrainingAsync("S-004", correctedCode: "BAB", CancellationToken.None);
+        var result = await svc.RejectSelfTrainingAsync(
+            "S-004",
+            correctedCode: "BAB",
+            CancellationToken.None,
+            correctedDescription: "Riss");
 
         // Assert – Rueckgabe
         Assert.True(result.Found);
@@ -215,6 +219,7 @@ public sealed class ReviewApprovalServiceTests
         var corrected = store.Find("S-004_corr");
         Assert.NotNull(corrected);
         Assert.Equal("BAB", corrected.Code);
+        Assert.Equal("Riss", corrected.Beschreibung);
         Assert.Equal(TrainingSampleStatus.Approved, corrected.Status);
         Assert.Equal(KbIndexState.Indexed, corrected.KbIndexState);
         Assert.Equal(MatchLevelNames.ReviewCorrected, corrected.MatchLevel);

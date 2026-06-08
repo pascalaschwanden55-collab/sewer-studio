@@ -29,5 +29,9 @@ public interface IReviewApprovalService
     /// Setzt ein Self-Training-Sample auf Rejected und entfernt es aus der KB.
     /// Bei correctedCode wird ein neues korrigiertes Sample angelegt und indexiert.
     /// </summary>
-    Task<ReviewApplyResult> RejectSelfTrainingAsync(string sampleId, string? correctedCode, CancellationToken ct);
+    Task<ReviewApplyResult> RejectSelfTrainingAsync(
+        string sampleId,
+        string? correctedCode,
+        CancellationToken ct,
+        string? correctedDescription = null);
 }

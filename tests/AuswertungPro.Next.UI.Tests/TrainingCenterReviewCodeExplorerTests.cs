@@ -21,6 +21,7 @@ public sealed class TrainingCenterReviewCodeExplorerTests
         var method = source[methodStart..methodEnd];
         Assert.Contains("new VsaCodeExplorerWindow", method);
         Assert.Contains("BuildReviewProtocolEntry", source);
+        Assert.Contains("correctedDescription: dlg.SelectedEntry.Beschreibung", method);
         Assert.DoesNotContain("new CorrectionDialog", method);
     }
 

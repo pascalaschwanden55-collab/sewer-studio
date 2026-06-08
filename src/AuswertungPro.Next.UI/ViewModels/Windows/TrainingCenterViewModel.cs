@@ -1803,7 +1803,8 @@ public partial class TrainingCenterViewModel : ObservableObject
         string correctedCode,
         InfraSelfImproving.FeedbackIngestionService feedback,
         InfraSelfImproving.ReviewQueueService queueService,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? correctedDescription = null)
     {
         if (item.Entry is not null)
         {
@@ -1820,7 +1821,11 @@ public partial class TrainingCenterViewModel : ObservableObject
             else
             {
                 var svc = BuildReviewApprovalService();
-                var result = await svc.RejectSelfTrainingAsync(sampleId, correctedCode, ct).ConfigureAwait(false);
+                var result = await svc.RejectSelfTrainingAsync(
+                    sampleId,
+                    correctedCode,
+                    ct,
+                    correctedDescription).ConfigureAwait(false);
                 if (result.Found)
                 {
                     if (!string.IsNullOrEmpty(result.CorrectedSampleId))
@@ -1916,14 +1921,24 @@ public partial class TrainingCenterViewModel : ObservableObject
     }
 
     /// <summary>Wendet eine Review-Korrektur an: Original ablehnen+deindexieren, korrigiertes Sample anlegen+indexieren.</summary>
-    public async Task ApplyReviewCorrectionAsync(InfraSelfImproving.ReviewQueueItem item, string correctedCode, CancellationToken ct = default)
+    public async Task ApplyReviewCorrectionAsync(
+        InfraSelfImproving.ReviewQueueItem item,
+        string correctedCode,
+        CancellationToken ct = default,
+        string? correctedDescription = null)
     {
         if (item is null || ReviewQueueServiceRef is null || string.IsNullOrWhiteSpace(correctedCode)) return;
         try
         {
             using var db = new KnowledgeBaseContext();
             var feedback = CreateFeedbackService(db);
-            await RejectReviewItemAsync(item, correctedCode, feedback, ReviewQueueServiceRef, ct).ConfigureAwait(false);
+            await RejectReviewItemAsync(
+                item,
+                correctedCode,
+                feedback,
+                ReviewQueueServiceRef,
+                ct,
+                correctedDescription).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

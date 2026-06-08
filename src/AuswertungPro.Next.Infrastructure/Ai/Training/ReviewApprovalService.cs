@@ -63,7 +63,10 @@ public sealed class ReviewApprovalService : IReviewApprovalService
 
     /// <inheritdoc />
     public async Task<ReviewApplyResult> RejectSelfTrainingAsync(
-        string sampleId, string? correctedCode, CancellationToken ct)
+        string sampleId,
+        string? correctedCode,
+        CancellationToken ct,
+        string? correctedDescription = null)
     {
         var allSamples = await _store.LoadAsync().ConfigureAwait(false);
         var match = allSamples.FirstOrDefault(s => s.SampleId == sampleId);
@@ -93,7 +96,9 @@ public sealed class ReviewApprovalService : IReviewApprovalService
                 SampleId = $"{match.SampleId}_corr",
                 CaseId = match.CaseId,
                 Code = correctedCode,
-                Beschreibung = match.Beschreibung,
+                Beschreibung = string.IsNullOrWhiteSpace(correctedDescription)
+                    ? match.Beschreibung
+                    : correctedDescription.Trim(),
                 MeterStart = match.MeterStart,
                 MeterEnd = match.MeterEnd,
                 IsStreckenschaden = match.IsStreckenschaden,
