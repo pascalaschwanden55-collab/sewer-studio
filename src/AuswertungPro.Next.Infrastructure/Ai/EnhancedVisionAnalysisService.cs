@@ -415,7 +415,9 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
             .ToList();
 
         return new EnhancedFrameAnalysis(
-            Meter: dto.Meter,
+            // Plausibilitaet: 0..500 m; fehlgelesene Knotennummern (5+ stellig) -> null,
+            // damit kein halluzinierter Meter in die Timeline laeuft. (Audit R7)
+            Meter: MeterPlausibility.Sanitize(dto.Meter),
             PipeMaterial: dto.PipeMaterial ?? "unbekannt",
             PipeDiameterMm: dto.PipeDiameterMm,
             Findings: findings,

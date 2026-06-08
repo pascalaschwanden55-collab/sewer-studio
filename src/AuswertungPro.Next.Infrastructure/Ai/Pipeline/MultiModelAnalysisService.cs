@@ -487,16 +487,25 @@ public sealed class MultiModelAnalysisService
                     trace.QwenImageQuality = qwenResult.ImageQuality;
                     trace.QwenRawFindingCount = qwenResult.Findings.Count;
 
-                    // OSD-Meterstand IMMER uebernehmen (auch ohne Findings)
-                    if (qwenResult.Meter.HasValue)
+                    var badQuality = string.Equals(qwenResult.ImageQuality, "schlecht", StringComparison.OrdinalIgnoreCase);
+
+                    // OSD-Meter nur uebernehmen, wenn plausibel (0..500 m) UND nicht aus einem schlechten
+                    // Bild — sonst vergiftet ein halluzinierter/fehlgelesener Meter die fortlaufende
+                    // Timeline (lastMeter). Bei schlechtem Bild ist auch das OSD-Lesen unzuverlaessig. (Audit R7)
+                    if (qwenResult.Meter.HasValue && !badQuality
+                        && AuswertungPro.Next.Infrastructure.Ai.MeterPlausibility.IsPlausible(qwenResult.Meter.Value))
                     {
                         meter = qwenResult.Meter.Value;
                         lastMeter = meter;
                     }
+                    else if (qwenResult.Meter.HasValue)
+                    {
+                        _logger.LogDebug("Frame {Frame}: OSD-Meter {Meter} verworfen ({Reason})",
+                            frameIndex, qwenResult.Meter.Value, badQuality ? "schlechtes Bild" : "unplausibel");
+                    }
 
                     // ImageQuality-Gate: Bei schlechter Bildqualitaet Findings verwerfen
-                    // (OSD-Meter wird trotzdem uebernommen, nur Schadens-Findings sind unzuverlaessig)
-                    if (string.Equals(qwenResult.ImageQuality, "schlecht", StringComparison.OrdinalIgnoreCase))
+                    if (badQuality)
                     {
                         _logger.LogDebug("Frame {Frame}: ImageQuality=schlecht, {Count} Findings verworfen",
                             frameIndex, findings.Count);
