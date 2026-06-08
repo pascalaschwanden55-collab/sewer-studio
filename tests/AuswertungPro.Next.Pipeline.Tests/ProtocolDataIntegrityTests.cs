@@ -59,6 +59,51 @@ public sealed class ProtocolDataIntegrityTests
     }
 
     [Fact]
+    public async Task FullProtocolGeneration_LlmFailure_StillSetsQualityGate_Red()
+    {
+        // Audit R3: Bei LLM-Fehler darf ein Befund NICHT ohne QualityGate-Status entstehen
+        // (sonst zeigt die UI stilles "Gelb"). Ohne Evidenz liefert der Gate korrekt Rot.
+        using var service = new FullProtocolGenerationService(
+            CreateRuntimeSettings(),
+            new PassThroughPlausibility(),
+            new HttpClient(new FailingHandler()),
+            new EmptyRetrievalService());
+
+        var detection = new RawVideoDetection(
+            FindingLabel: "Riss",
+            MeterStart: 1.2,
+            MeterEnd: 1.2,
+            Severity: "high",
+            VsaCodeHint: "BAB",
+            PositionClock: "3",
+            ExtentPercent: 20,
+            HeightMm: 7,
+            WidthMm: 10,
+            IntrusionPercent: 15,
+            CrossSectionReductionPercent: 30,
+            DiameterReductionMm: 8,
+            MeterSource: "LinearEstimate",
+            IsMeterEstimated: true);
+
+        var result = await service.GenerateFromDetectionsAsync(
+            new[] { detection },
+            new FullProtocolGenerationRequest("H-01", "video.mp4", new[] { "BAB" }));
+
+        var entry = Assert.Single(result.MappedEntries);
+        Assert.NotNull(entry.QualityGateResult);       // nie null trotz LLM-Fehler
+        Assert.True(entry.QualityGateResult!.IsRed);    // ohne Evidenz: Rot, nicht Pseudo-Gelb
+    }
+
+    private sealed class FailingHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+            => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError)
+            {
+                Content = new StringContent("boom")
+            });
+    }
+
+    [Fact]
     public void ProtocolReplacement_archives_existing_current_before_reanalysis_replace()
     {
         var existing = new ProtocolDocument

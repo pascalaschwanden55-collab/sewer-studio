@@ -177,23 +177,34 @@ public sealed class FullProtocolGenerationService : IDisposable
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
+            // QualityGate MUSS auch im Fehler-/Fallback-Pfad laufen — sonst bleibt
+            // QualityGateResult null und die UI zeigt stilles "Gelb" fuer einen nie
+            // bewerteten Befund. Ohne LLM-Evidenz liefert der Gate korrekt Rot. (Audit R3)
             if (kbExamples.Count > 0)
             {
                 var fallback = kbExamples[0];
+                var fbEvidence = (detection.Evidence ?? new EvidenceVector()) with
+                {
+                    KbSimilarity = fallback.Score,
+                    DamageCategory = fallback.Code
+                };
                 return new MappedProtocolEntry(
-                    Detection: detection,
+                    Detection: detection with { Evidence = fbEvidence },
                     SuggestedCode: fallback.Code,
                     Confidence: Math.Clamp(fallback.Score, 0.35, 0.85),
                     Reason: "LLM-Fehler, KB-Fallback verwendet: " + ex.Message,
-                    Warnings: new[] { "Code-Mapping fehlgeschlagen, KB-Fallback verwendet." });
+                    Warnings: new[] { "Code-Mapping fehlgeschlagen, KB-Fallback verwendet." },
+                    QualityGateResult: _qualityGate.Evaluate(fbEvidence));
             }
 
+            var emptyEvidence = detection.Evidence ?? new EvidenceVector();
             return new MappedProtocolEntry(
                 Detection: detection,
                 SuggestedCode: null,
                 Confidence: 0,
                 Reason: ex.Message,
-                Warnings: new[] { "Code-Mapping fehlgeschlagen: " + ex.Message });
+                Warnings: new[] { "Code-Mapping fehlgeschlagen: " + ex.Message },
+                QualityGateResult: _qualityGate.Evaluate(emptyEvidence));
         }
 
         var checked_ = _plausibility.ApplyChecks(
